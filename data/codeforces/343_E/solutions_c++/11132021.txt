@@ -1,0 +1,145 @@
+#include<cstdio>
+#include<algorithm>
+#include<cstring>
+#include<iostream>
+#include<queue>
+#include<cmath>
+#include<deque>
+#define SF scanf
+#define PF printf
+using namespace std;
+typedef long long LL;
+typedef long double ld;
+const int MAXN = 300;
+const int MAXM = 1000;
+const int INF = 0x3f3f3f3f;
+int n, m;
+bool inS[MAXN+10];
+struct ISAP {
+	#define maxn MAXN
+	#define maxm MAXM
+	struct Node {
+		int v, c, next;
+	} Edge[maxm*4+10];
+	int adj[maxn+10], ecnt;
+	int d[maxn+10], gap[maxn+10], f[maxm*4+10];
+	int n, s, t;
+	void addedge(int u, int v, int c) {
+		Node &e = Edge[ecnt];
+		e.v = v; e.c = c; e.next = adj[u]; adj[u] = ecnt++;
+	}
+	void add(int u, int v, int c) {
+		addedge(u, v, c); addedge(v, u, 0);
+	}
+	void init() { memset(adj, -1, sizeof(adj)); }
+	void init_dis() {
+		queue <int> q;
+		memset(d, -1, sizeof(d));
+		memset(gap, 0, sizeof(gap));
+		memset(inS, 0, sizeof(inS));
+		memset(f, 0, sizeof(f));
+		d[t] = 0;
+		q.push(t);
+		while(!q.empty()) {
+			int u = q.front(); q.pop();
+			gap[d[u]]++;
+			for(int i = adj[u]; ~i; i = Edge[i].next) {
+				int v = Edge[i].v;
+				if(d[v] == -1) d[v] = d[u] + 1, q.push(v);
+			}
+		}
+	}
+	int aug(int u, int inc) {
+		int mindis = n-1, Inc = 0;
+		if(u == t) return inc;
+		for(int i = adj[u]; ~i; i = Edge[i].next) {
+			int v = Edge[i].v, c = Edge[i].c;
+			if(c > f[i]) {
+				if(d[v] == d[u] - 1) {
+					int del = min(c - f[i], inc - Inc);
+					del = aug(v, del);
+					Inc += del;
+					f[i] += del;
+					f[i^1] -= del;
+					if(inc == Inc) return Inc;
+					if(d[s] >= n) return Inc;
+				}
+				mindis = min(mindis, d[v]);
+			}
+		}
+		if(!Inc) {
+			gap[d[u]]--;
+			if(gap[d[u]] == 0) d[s] = n;
+			d[u] = mindis+1;
+			gap[d[u]]++;
+		}
+		return Inc;
+	}
+	void dfs(int u) {
+		inS[u] = true;
+		for(int i = adj[u]; ~i; i = Edge[i].next) {
+			int v = Edge[i].v, c = Edge[i].c;
+			if(c && c > f[i] && !inS[v]) 
+				dfs(v);
+		}
+	}
+	int Maxflow(int _s, int _t, int _n) {
+		s = _s; t = _t; n = _n;
+		int Flow = 0;
+		init_dis();
+		while(d[s] < n) Flow += aug(s, INF);
+		dfs(s);
+		return Flow;
+	}
+} sap;
+int a[MAXN+10], c[MAXN+10][MAXN+10];
+int ans[MAXN+10], cnt;
+int main() {
+	sap.init();
+	SF("%d%d", &n, &m);
+	for(int i = 1; i <= m; i++) {
+		int u, v, c;
+		SF("%d%d%d", &u, &v, &c);
+		sap.add(u, v, c);
+		sap.add(v, u, c);
+	}
+	memset(c, 0x3f, sizeof(c));
+	for(int i = 1; i <= n; i++) a[i] = 1;
+	for(int i = 2; i <= n; i++) {
+		int Flow = sap.Maxflow(i, a[i], n);
+		c[i][a[i]] = c[a[i]][i] = Flow;
+		for(int j = i+1; j <= n; j++)
+			if(inS[j] && a[j] == a[i])
+				a[j] = i;
+		for(int j = 1; j < i; j++)
+			c[i][j] = c[j][i] = min(Flow, c[a[i]][j]);
+	}
+	memset(inS, 0, sizeof(inS));
+	int u = 1, tot = 0, Next, sum = 0;
+	while(true) {
+		ans[++cnt] = u;
+		inS[u] = true;
+		Next = 0;
+		for(int j = 1; j <= n; j++) 
+			if(!inS[j] && (!Next || c[u][Next] < c[u][j]))
+				Next = j;
+		if(!Next) break;
+		tot += c[u][Next];
+		u = Next;
+	}
+	PF("%d\n", tot);
+	for(int i = 1; i <= cnt; i++) PF("%d%c", ans[i], i == n ? '\n' : ' ');
+}
+/*
+8 9
+2 3 1
+2 4 1
+2 5 3
+3 6 1
+4 7 2
+5 8 2
+6 1 1
+7 1 1
+8 1 3
+*/
+ 	     	 		 	 		     		   		

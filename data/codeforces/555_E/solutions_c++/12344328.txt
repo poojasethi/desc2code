@@ -1,0 +1,135 @@
+#include <cstdio>
+#include <vector>
+#include <cstdlib>
+
+using namespace std;
+
+struct maximum{
+	int maxID, maxD, minD, maxS, minS, minID;
+};
+
+vector< vector<int> > graphe, sources, destinations;
+vector< int > dfsID;
+vector<bool > dejaVu;
+vector <int> component;
+int compo_num;
+bool possible=true;
+
+int dfs(int id, int nextVal){
+	if(dfsID[id] != -1)
+		return nextVal;
+		
+	component[id]=compo_num;
+	dfsID[id]=nextVal;
+	nextVal++;
+	for(int i = 0; i < graphe[id].size(); i++) {
+		nextVal=dfs(graphe[id][i], nextVal);
+	}
+	return nextVal;
+}
+
+maximum detection(int id, int padre){
+//	printf("node %d\n", id+1);
+	dejaVu[id]=true;
+	maximum maxi;
+	maxi.maxID=dfsID[id];
+	maxi.minID=dfsID[id];
+	maxi.minD=dfsID[id];
+	maxi.maxD=dfsID[id];
+	maxi.minS=dfsID[id];
+	maxi.maxS=dfsID[id];
+
+	bool veo_padre=false;
+	int hijo;
+	maximum maxtemp;
+	for(int i = 0; i < graphe[id].size(); i++) {
+		hijo=graphe[id][i];
+		if(dfsID[hijo] <= dfsID[id]) //deja vu
+		{
+			if((hijo != padre) or veo_padre){
+				maxi.minID=min(maxi.minID, dfsID[hijo]);
+			}
+			else
+				veo_padre=true;
+		}
+		else if(not dejaVu[hijo]){ //fils
+			maxtemp=detection(hijo, id);
+			maxi.maxID=max(maxi.maxID, maxtemp.maxID);
+			maxi.minID=min(maxi.minID, maxtemp.minID);
+			maxi.maxD=max(maxi.maxD, maxtemp.maxD);
+			maxi.minD=min(maxi.minD, maxtemp.minD);
+			maxi.maxS=max(maxi.maxS, maxtemp.maxS);
+			maxi.minS=min(maxi.minS, maxtemp.minS);
+		}
+	}
+
+	//printf("middle %d\n", id+1);
+	for(int i = 0; i < sources[id].size(); i++) {
+		maxi.maxS=max(maxi.maxS, dfsID[sources[id][i]]);
+		maxi.minS=min(maxi.minS, dfsID[sources[id][i]]);
+	}
+	for(int i = 0; i < destinations[id].size(); i++) {
+		maxi.maxD=max(maxi.maxD, dfsID[destinations[id][i]]);
+		maxi.minD=min(maxi.minD, dfsID[destinations[id][i]]);
+	}
+
+	if(maxi.minID >= dfsID[id] and (maxi.maxD > maxi.maxID or maxi.minD < dfsID[id])
+			  					and (maxi.maxS > maxi.maxID or maxi.minS < dfsID[id]))
+			  possible=false;
+
+//	printf("exit %d\n", id+1);
+	return maxi;
+}
+
+int main(){
+	int n,m,q;
+	scanf("%d %d %d", &n, &m, &q);
+	graphe.resize(n);
+	int t1,t2;
+	for(int i = 0; i < m; i++) 
+	{
+		scanf("%d %d", &t1, &t2);
+		t1--;
+		t2--;
+		graphe[t1].push_back(t2);		
+		graphe[t2].push_back(t1);		//doubles arcs possibles
+	}
+	
+	dfsID.resize(n, -1);
+	component.resize(n);
+	int nextVal=0;
+	for(int i = 0; i < n; i++){ //gère forêt
+		compo_num=i;
+		nextVal=dfs(i, nextVal);
+	}
+	
+	sources.resize(n);
+	destinations.resize(n);
+	for(int i = 0; i < q; i++) 
+	{
+			scanf("%d %d", &t1, &t2);
+			t1--;
+			t2--;
+			if(component[t1] != component[t2]){
+				printf("No\n");
+				return 0;
+			}
+			sources[t1].push_back(t2);
+			destinations[t2].push_back(t1);
+	}
+
+
+	dejaVu.resize(n, false);
+
+	for(int i = 0; i < n; i++) {
+		if(not dejaVu[i])
+			detection(i, -1);
+	}
+
+	if(possible)
+		printf("Yes\n");
+	else
+		printf("No\n");
+	return 0;
+
+}

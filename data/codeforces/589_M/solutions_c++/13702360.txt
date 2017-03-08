@@ -1,0 +1,232 @@
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <queue>
+using namespace std;
+
+const double eps = 1e-7;
+
+// only care about first speed <= vp with which I reach a node.
+//
+
+int dx[] = {-1, 0, 1, 0};
+int dy[] = {0, -1, 0, 1};
+
+int w, l, n;
+double a, vm, vp;
+
+int X1, X2, Y1, Y2;
+int x[128], y[128];
+
+int di[128][128];
+
+bool oc[128][128];
+int dst[128][128];
+typedef pair<int, int> pii;
+
+void bfs(int id, int sx, int sy) {
+    memset(dst, -1, sizeof(dst));
+    queue<pii> q;
+    q.push(make_pair(sx, sy));
+    dst[sx][sy] = 0;
+    while (q.size()) {
+        pii p = q.front();
+        q.pop();
+        int x = p.first;
+        int y = p.second;
+        for (int i = 0; i < 4; ++i) {
+            int nx, ny;
+            nx = x + dx[i];
+            ny = y + dy[i];
+            if (nx >= 0 && ny >= 0 && nx <= w && ny <= l) {
+                if (dst[nx][ny] == -1) {
+                    dst[nx][ny] = dst[x][y] + 1;
+                    if (!oc[nx][ny]) {
+                        q.push(make_pair(nx, ny));
+                    }
+                }
+            }
+        }
+    }
+    for (int i = 0; i < n; ++i) {
+        if (i == id) {
+            di[id][i] = 0;
+            continue;
+        }
+        di[id][i] = dst[x[i]][y[i]];
+    }
+    if (id != n) {
+        di[id][n] = dst[X1][Y1];
+    } else {
+        di[id][n] = 0;
+    }
+
+    if (id != n + 1) {
+        di[id][n + 1] = dst[X2][Y2];
+    } else {
+        di[id][n + 1] = 0;
+    }
+}
+
+double ti[128], sp[128];
+
+struct state {
+    double time, speed;
+    int to;
+    bool operator<(const state &o) const {
+        return time > o.time;
+    }
+};
+
+bool go(int from, double s, int to, double &ti, double &es) {
+    double pa = di[from][to];
+    if (pa < -0.5) {
+        return false;
+    }
+    if (to < n) {
+        // limit speed to vp at end;
+        
+        double t1 = (vm - s) / a;
+        double p1 = (vm + s) / 2 * t1;
+        double p2 = pa - p1;
+        double rt = (vm - vp) / a;
+        double rp = rt * (vm + vp) / 2;
+        if (rp < p2 && p2 > 0) {
+            // can reach max;
+            ti = t1 + rt + (pa - p1 - rp) / vm;
+            es = vp;
+        } else {
+            // Unable to reach max.
+            // can reach vp?
+            t1 = (vp - s) / a;
+            p1 = (vp + s) / 2 * t1;
+            if (p1 > pa) {
+                // too slow. (s + a * t + s) / 2 * t = pa
+                // s * t + a * t^2 / 2 - pa = 0
+                double A = a / 2;
+                double B = s;
+                double C = -pa;
+                double det = B * B - 4.0 * A * C;
+                if (det < 0) {
+                    return false;
+                }
+                ti = 0.5 * (-B + sqrt(det)) / A;
+                es = s + a * ti;
+            } else {
+                // complicated shit.
+                double A = a;
+                double B = 2.0 * s;
+                double C = (s * s - vp * vp) / 2.0 / a - pa;
+                double det = B * B - 4.0 * A * C;
+                if (det < 0) {
+                    return false;
+                }
+                ti = 0.5 * (-B + sqrt(det)) / A;
+                ti = ti + (s + a * ti - vp) / a;
+                es = vp;
+            }
+        }
+    } else {
+        // limit speed to vm always;
+        // (s + a * t + s) / 2 * t = pa
+        //
+        // t^2 = s*2/a
+        
+        double t1 = (vm - s) / a;
+        double p1 = (vm + s) / 2 * t1;
+        double p2 = pa - p1;
+        double t2 = p2 / vm;
+        if (p2 > 0) {
+            ti = t1 + t2;
+            es = vm;
+        } else {
+            // s * t + a * t * t / 2 = pa
+            double A = a / 2;
+            double B = s;
+            double C = -pa;
+            double det = B * B - 4.0 * A * C;
+            if (det < 0) {
+                return false;
+            }
+            ti = 0.5 *  (-B + sqrt(det)) / A;
+            es = s + a * ti;
+        }
+    }
+    return true;
+}
+
+double dejkstra() {
+    priority_queue<state> pq;
+    for (int i = 0; i < n + 2; ++i) {
+        ti[i] = 1e200;
+    }
+    state el;
+    el.to = n;
+    el.time = 0;
+    el.speed = 0;
+    pq.push(el);
+    while (pq.size()) {
+        state s = pq.top();
+        pq.pop();
+        if (ti[s.to] <= s.time) {
+            continue;
+        }
+        // printf("REACH %d %lf %lf\n", s.to, s.time, s.speed);
+        if (s.to == n + 1) {
+            return s.time;
+        }
+        ti[s.to] = s.time;
+        for (int i = 0; i < n + 2; ++i) {
+            if (i == s.to) {
+                continue;
+            }
+            double nti, nsp;
+            if (go(s.to, s.speed, i, nti, nsp)) {
+                nti += s.time;
+                if (ti[i] > nti) {
+                    // printf("ED %d %lf %lf -> %d %lf %lf\n",
+                    //         s.to, s.time, s.speed,
+                    //         i, nti, nsp);
+                    el.to = i;
+                    el.time = nti;
+                    el.speed = nsp;
+                    pq.push(el);
+                }
+            }
+        }
+    }
+    return -1;
+}
+
+int main() {
+    scanf("%d %d %d %lf %lf %lf", &w, &l, &n, &a, &vm, &vp);
+    scanf("%d %d %d %d", &X1, &Y1, &X2, &Y2);
+    if (vp > vm) {
+        vp = vm;
+    }
+    memset(oc, 0, sizeof(oc));
+    for (int i = 0; i < n; ++i) {
+        scanf("%d %d", &x[i], &y[i]);
+        oc[x[i]][y[i]] = 1;
+    }
+    x[n] = X1;
+    y[n] = Y1;
+    x[n + 1] = X2;
+    y[n + 1] = Y2;
+
+    for (int i = 0; i < n; ++i) {
+        bfs(i, x[i], y[i]);
+    }
+    bfs(n, X1, Y1);
+    bfs(n + 1, X2, Y2);
+    // for (int i = 0; i < n + 2; ++i) {
+    //     for (int j = 0; j < n + 2; ++j) {
+    //         printf("%d ", di[i][j]);
+    //     }
+    //     printf("\n");
+    // }
+
+    printf("%.10lf\n", dejkstra());
+    return 0;
+}

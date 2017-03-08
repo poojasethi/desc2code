@@ -1,0 +1,251 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+template<typename T>inline void Read(T &x)
+{
+    int f = 1;
+    char t = getchar();
+    while (t < '0' || t > '9') {
+        if (t == '-') f = -1;
+        t = getchar();
+    }
+    x = 0;
+    while (t >= '0' && t <= '9') {
+        x = x * 10 + t - '0';
+        t = getchar();
+    }
+    x *= f;
+}
+
+template<typename T>inline void Write(T x)
+{
+    static int output[20];
+    int top = 0;
+    if (x < 0) putchar('-'), x = -x;
+    do {
+        output[++top] = x % 10;
+        x /= 10;
+    } while (x > 0);
+    while (top > 0) putchar('0' + output[top --]);
+    putchar('\n');
+}
+
+template<typename T>inline void chkmin(T &x, T y) { if (x > y) x = y; }
+template<typename T>inline void chkmax(T &x, T y) { if (x < y) x = y; }
+
+const int maxn = 300005;
+const int modulo = 1e9 + 7;
+const int seed = 29;
+
+int n;
+int m;
+char str[maxn];
+
+int fst[maxn];
+int v[maxn << 1], nxt[maxn << 1];
+int e_cn;
+
+int id[maxn];
+int fa[maxn];
+int up[maxn];
+int top[maxn];
+int dep[maxn];
+int son[maxn];
+int size[maxn];
+int counter;
+
+int hash_e[maxn];
+int hash_r[maxn];
+int pw[maxn];
+
+void addedge(int x, int y)
+{
+    e_cn ++, v[e_cn] = y;
+    nxt[e_cn] = fst[x], fst[x] = e_cn;
+}
+
+void input()
+{
+    Read(n);
+    scanf("%s", str + 1);
+    for (int i = 1; i < n; i++) {
+        int x, y;
+        Read(x);
+        Read(y);
+        addedge(x, y);
+        addedge(y, x);
+    }
+    Read(m);
+}
+
+void dfs1(int cn, int pr)
+{
+    size[cn] = 1;
+    son[cn] = -1;
+    fa[cn] = pr;
+    for (int i = fst[cn]; i; i = nxt[i]) {
+        if (v[i] != pr) {
+            dep[v[i]] = dep[cn] + 1;
+            dfs1(v[i], cn);
+            size[cn] += size[v[i]];
+            if (son[cn] == -1 || size[v[i]] > size[son[cn]]) {
+                son[cn] = v[i];
+            }
+        }
+    }
+}
+
+void dfs2(int cn, int pr)
+{
+    if (son[cn] != -1) {
+        top[son[cn]] = top[cn];
+        up[son[cn]] = ++counter;
+        id[counter] = son[cn];
+        hash_e[counter] = str[son[cn]] - 'a' + 1;
+        dfs2(son[cn], cn);
+    }
+    for (int i = fst[cn]; i; i = nxt[i]) {
+        if (v[i] != pr && v[i] != son[cn]) {
+            top[v[i]] = v[i];
+            up[v[i]] = ++counter;
+            id[counter] = v[i];
+            hash_e[counter] = str[v[i]] - 'a' + 1;
+            dfs2(v[i], cn);
+        }
+    }
+}
+
+void prepare()
+{
+    addedge(0, 1);
+    dfs1(0, 0);
+    dfs2(0, 0);
+    memcpy(hash_r, hash_e, sizeof(hash_e));
+    reverse(hash_r + 1, hash_r + counter + 1);
+    for (int i = 1; i <= counter; i++) {
+        hash_e[i] = (1ll * hash_e[i - 1] * seed % modulo + hash_e[i]) % modulo;
+        hash_r[i] = (1ll * hash_r[i - 1] * seed % modulo + hash_r[i]) % modulo;
+    }
+    pw[0] = 1;
+    for (int i = 1; i <= counter; i++) {
+        pw[i] = 1ll * pw[i - 1] * seed % modulo;
+    }
+}
+
+inline int gethash(int *res, int l, int r)
+{
+    return (res[r] - 1ll * res[l - 1] * pw[r - l + 1] % modulo + modulo) % modulo;
+}
+
+inline int climb(int x, int step)
+{
+    int del;
+    while ((del = dep[x] - dep[top[x]] + 1) <= step) {
+        step -= del;
+        x = fa[top[x]];
+    }
+    x = up[x];
+    return id[x - step];
+}
+
+inline int lca(int x, int y)
+{
+    int t1 = top[x];
+    int t2 = top[y];
+    while (t1 != t2) {
+        if (dep[t1] < dep[t2]) {
+            swap(x, y);
+            swap(t1, t2);
+        }
+        x = fa[t1], t1 = top[x];
+    }
+    if (dep[x] > dep[y]) swap(x, y);
+    return x;
+}
+
+#define rv(x) (counter - (x) + 1)
+
+inline int query_e(int x, int step)
+{
+    int res = 0;
+    int del;
+    while ((del = dep[x] - dep[top[x]] + 1) <= step) {
+        res = (1ll * res * pw[del] % modulo + gethash(hash_r, rv(up[x]), rv(up[top[x]]))) % modulo;
+        x = fa[top[x]];
+        step -= del;
+    }
+    if (step > 0) {
+        res = (1ll * res * pw[step] % modulo + gethash(hash_r, rv(up[x]), rv(up[x] - step + 1))) % modulo;
+    }
+    return res;
+}
+
+inline int query_r(int x, int step)
+{
+    int res = 0;
+    int del;
+    int now = 0;
+    while ((del = dep[x] - dep[top[x]] + 1) <= step) {
+        res = (res + 1ll * gethash(hash_e, up[top[x]], up[x]) * pw[now] % modulo) % modulo;
+        x = fa[top[x]];
+        step -= del;
+        now += del;
+    }
+    if (step > 0) {
+        res = (res + 1ll * gethash(hash_e, up[x] - step + 1, up[x]) * pw[now] % modulo) % modulo;
+    }
+    return res;
+}
+
+inline int strhash(int x, int y, int g, int len)
+{
+    int d1 = dep[x] - dep[g] + 1;
+    int d2 = dep[y] - dep[g];
+    if (len <= d1) {
+        return query_e(x, len);
+    } else {
+        return (1ll * query_e(x, d1) * pw[len - d1] % modulo + query_r(climb(y, d1 + d2 - len), len - d1)) % modulo;
+    }
+}
+
+int lcp(int a, int b, int c, int d)
+{
+    int t1 = lca(a, b);
+    int t2 = lca(c, d);
+    int l = 0;
+    int r = min(dep[a] + dep[b] - 2 * dep[t1] + 1, dep[c] + dep[d] - 2 * dep[t2] + 1);
+    int mid;
+    int res = 0;
+    while (l <= r) {
+        mid = (l + r) >> 1;
+        if (strhash(a, b, t1, mid) == strhash(c, d, t2, mid)) {
+            res = mid;
+            l = mid + 1;
+        } else {
+            r = mid - 1;
+        }
+    }
+    return res;
+}
+
+void solve()
+{
+    int a, b, c, d;
+    for (int i = 1; i <= m; i++) {
+        Read(a);
+        Read(b);
+        Read(c);
+        Read(d);
+        printf("%d\n", lcp(a, b, c, d));
+    }
+}
+
+int main()
+{
+    input();
+    prepare();
+    solve();
+    return 0;
+}
+
+                              

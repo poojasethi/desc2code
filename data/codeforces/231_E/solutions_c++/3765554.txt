@@ -1,0 +1,95 @@
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+using namespace std;
+
+#define FOR(it, c) for(__typeof((c).begin()) it = (c).begin(); it != (c).end(); it++)
+#define SZ(c) ((int)(c).size())
+
+const int N = 1e5+5;
+int g[N], w[N], wsum[N];
+int f[N], u[N];
+vector<int> a[N], b[N];
+vector<pair<int, int> > q[N];
+int qans[N], qchange[N];
+
+int p[N];
+void dfs(int x, int from=-1) {
+	u[x]=1;
+	w[x]=0;
+	p[x]=from;
+	FOR(it, a[x]) {
+		if(*it == from) continue;
+		if(u[*it] == 1) { //found a cycle
+			for(int j=x;j!=*it;j=p[j])
+				g[j]=*it, w[j]=1;
+			g[*it]=*it, w[*it]=1;
+		} else dfs(*it, x);
+	}
+	u[x]=2;
+}
+
+void go(int x, int from=-1) {
+	if(from>=0) wsum[x] = w[x] + wsum[from];
+	FOR(it, b[x])
+		if(*it != from)
+			go(*it, x);
+}
+
+int c[N];
+int FIND(int x) {
+	return c[x]==x?x:c[x]=FIND(c[x]);
+}
+void UNION(int x, int y) {
+	c[FIND(x)] = FIND(y);
+}
+
+void lca(int x, int from=-1) {
+	u[x] = 3;
+	FOR(it, b[x])
+		if(*it != from)
+			lca(*it, x);
+	FOR(it, q[x])
+		if(u[it->first] == 3)
+			qchange[it->second] = -2*wsum[FIND(it->first)] + w[FIND(it->first)];
+	if(from>=0) UNION(x, from);
+}
+
+const int MOD = 1e9+7;
+int two[N];
+int main(void) {
+	int n, m;
+	scanf("%d%d", &n, &m);
+	two[0]=1;
+	for(int i=1;i<=n;i++) two[i]=two[i-1]*2%MOD;
+	for(int i=1;i<=n;i++) g[i] = c[i] = i;
+	for(int i=0;i<m;i++) {
+		int x, y;
+		scanf("%d%d", &x, &y);
+		a[x].push_back(y);
+		a[y].push_back(x);
+	}
+	dfs(1);
+	for(int i=1;i<=n;i++)
+		FOR(it, a[i])
+			if(g[i] != g[*it]) {
+				b[g[i]].push_back(g[*it]);
+			}
+	go(g[1]);
+	int k;
+	scanf("%d", &k);
+	for(int i=0;i<k;i++) {
+		int x, y;
+		scanf("%d%d", &x, &y);
+		q[g[x]].push_back(make_pair(g[y], i));
+		q[g[y]].push_back(make_pair(g[x], i));
+		qans[i] = wsum[g[x]] + wsum[g[y]];
+	}
+	lca(g[1]);
+	for(int i=0;i<k;i++) qans[i] += qchange[i];
+	for(int i=0;i<k;i++) printf("%d\n", two[qans[i]]);
+		
+	return 0;
+}

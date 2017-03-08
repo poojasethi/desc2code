@@ -1,0 +1,90 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+#define MX 100010
+
+typedef pair<int,int> PI;
+#define F first
+#define S second
+#define MP(x,y) make_pair(x,y)
+
+struct node
+{
+	PI mx;
+	node* left;
+	node* right;
+	node(){ left=NULL; right=NULL; mx=MP(-1,-1); }
+};
+
+PI maxi(PI a, PI b)
+{
+	PI r;
+	if(a.F>=b.F) r.F = a.F, r.S = max(a.S,b.F);
+	else r.F = b.F, r.S = max(b.S,a.F);
+	return r;
+}
+
+node* roots[MX];
+int initRatings[MX], n, m, A, B, C, D, T;
+
+node* build(int l,int h)
+{
+	node* tmp = new node();
+	if(l==h){ tmp->mx = MP(initRatings[l],-1); return tmp; }
+	tmp->left = build(l,(l+h)/2);
+	tmp->right = build((l+h)/2+1,h);
+	tmp->mx = maxi(tmp->left->mx, tmp->right->mx);
+	return tmp;
+}
+
+PI query(node* cur,int l,int h,int a,int b)
+{
+	if(b<l || a>h) return MP(-1,-1);
+	if(a<=l && h<=b) return cur->mx;
+	return maxi(query(cur->left,l,(l+h)/2,a,b),query(cur->right,(l+h)/2+1,h,a,b));
+}
+
+node* update(node* cur,int l,int h,int ind,int val)
+{
+	node* tmp = new node();
+	if(l==h)
+	{  
+		tmp->mx = MP(val,-1);
+		return tmp; 
+	}
+	int mid = (l+h)/2;
+	if(ind>mid)
+	{
+		tmp->left = cur->left;
+		tmp->right = update(cur->right,mid+1,h,ind,val);
+	}
+	else
+	{
+		tmp->right = cur->right;
+		tmp->left = update(cur->left,l,mid,ind,val);
+	}
+	tmp->mx = maxi(tmp->left->mx, tmp->right->mx);
+	return tmp;
+}
+
+int main()
+{
+	scanf("%d %d %d %d %d %d",&n,&m,&A,&B,&C,&D);
+	for(int i=0;i<n;i++) scanf("%d",&initRatings[i]);
+	roots[0] = build(0,n-1);
+	scanf("%d",&T);
+	PI ans = MP(0,0);
+	for(int i=1;i<=T;i++)
+	{
+		int l, h, t = (int)((A*1LL*ans.F+D)%i);
+		scanf("%d %d",&l,&h);
+		ans = query(roots[t],0,n-1,l,h);
+		printf("%d %d\n",ans.F,ans.S);
+		int ind = (int)((B*1LL*ans.F+D)%n), val = (int)((C*1LL*ans.S+D)%m);
+		roots[i] = update(roots[i-1],0,n-1,ind,val);
+	}
+	return 0;
+}

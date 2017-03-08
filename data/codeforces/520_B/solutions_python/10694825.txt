@@ -1,0 +1,8 @@
+# coding =utf-8
+n ,m =map(int,raw_input().split())
+sol=0
+while n<m:
+	sol+=1 + (m%2)
+	m=(m+m%2)/2
+sol+=n-m
+print sol

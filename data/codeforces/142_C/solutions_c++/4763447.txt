@@ -1,0 +1,87 @@
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+#include <iostream>
+#include <string>
+#include <vector>
+
+const int CHOOSE[4][3] = {
+	{7, 2, 2}, {1, 7, 1},
+	{2, 2, 7}, {4, 7, 4}
+};
+
+int n, m;
+int used[99];
+int max;
+int now[99][3], ans[99][3];
+char map[99][99];
+
+void cover(int x, int y, int k, char color) {
+	for (int dx = 0; dx < 3; dx++) {
+		for (int dy = 0; dy < 3; dy++) {
+			if (CHOOSE[k][dx] >> dy & 1) {
+				map[x + dx][y + dy] = color;
+			}
+		}
+	}
+}
+
+void dfs(int depth, int x, int y, int left) {
+	if (depth + left / 5 <= max) {
+		return;
+	}
+	if (y == m) {
+		x++;
+		y = 0;
+	}
+	if (x == std::max(0, n - 2)) {
+		if (depth > max) {
+			max = depth;
+			for (int i = 0; i < max; i++) {
+				ans[i][0] = now[i][0];
+				ans[i][1] = now[i][1];
+				ans[i][2] = now[i][2];
+			}
+		}
+		return;
+	}
+	if (y + 3 <= m && x + 3 <= n) {
+		for (int k = 0; k < 4; k++) {
+			bool flag = true;
+			for (int i = 0; i < 3 && flag; i++) {
+				flag = ((~ used[x + i] >> y) & CHOOSE[k][i]) == CHOOSE[k][i];
+			}
+			if (flag) {
+				int tmp[3] = {used[x], used[x + 1], used[x + 2]};
+				now[depth][0] = x;
+				now[depth][1] = y;
+				now[depth][2] = k;
+				used[x] |= CHOOSE[k][0] << y;
+				used[x + 1] |= CHOOSE[k][1] << y;
+				used[x + 2] |= CHOOSE[k][2] << y;
+				dfs(depth + 1, x, y + 1, left - 5);
+				used[x] = tmp[0];
+				used[x + 1] = tmp[1];
+				used[x + 2] = tmp[2];
+			}
+		}
+	}
+	dfs(depth, x, y + 1, left - (~ used[x] >> y & 1));
+}
+
+int main() {
+	scanf("%d%d", &n, &m);
+	dfs(0, 0, 0, n * m);
+	for (int i = 0; i < n; i++) {
+		std::fill(map[i], map[i] + m, '.');
+	}
+	for (int i = 0; i < max; i++) {
+		cover(ans[i][0], ans[i][1], ans[i][2], 'A' + i);
+	}
+	printf("%d\n", max);
+	for (int i = 0; i < n; i++) {
+		map[i][m] = 0;
+		puts(map[i]);
+	}
+}
+

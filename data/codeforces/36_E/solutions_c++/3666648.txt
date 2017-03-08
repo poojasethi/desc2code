@@ -1,0 +1,128 @@
+#include<cstdio>
+#include<utility>
+#include<vector>
+#define N 10000
+#define pii pair<int,int>
+#define F first
+#define S second
+using namespace std;
+
+vector<pii> g[N]; // (v,e_id) backup
+
+bool e_used[N+1];
+int d[N];
+
+
+vector<int> etour; // euler circuit or path
+
+// O( V + E )
+void euler_tour(int v){
+	// if(g[v].emtpy()) print v
+	while( g[v].size() ){
+		int u= g[v].back().F,e_id=g[v].back().S;
+		g[v].pop_back(); //save edges in other graph
+		if(e_used[e_id]) continue;
+
+		e_used[e_id]=1;
+		euler_tour( u );
+		etour.push_back( e_id );
+	}
+}
+
+int vis[N],cmp;
+void dfs(int v){
+	vis[v]=cmp;
+	for(int i=0;i<g[v].size();++i){
+		int u=g[v][i].F;
+		if(!vis[u])
+			dfs(u);
+	}
+}
+
+bool check( int c, int& ov ){
+	int no=0,v; ov=-1;
+	for(int i=0;i<N;++i)
+		if(vis[i]==c){
+			v=i;
+			no+=d[i]&1;
+			if(d[i]&1)ov=i;
+		}
+	if(ov==-1) ov=v;
+	return no<=2;
+}
+
+int main(){
+	freopen ("output.txt","w",stdout);
+	freopen ("input.txt","r",stdin);
+	int n;scanf("%d",&n);
+	for(int i=0;i<n;++i){
+		int v,u;scanf("%d%d",&v,&u);--v,--u;
+		++d[v],++d[u];
+		g[v].push_back(pii(u,i));
+		g[u].push_back(pii(v,i));
+	}
+	int no=0,v; cmp=0;
+	int vo1=-1,vo2=-1;
+	for(int i=0;i<N;++i)if(d[i]){
+		v=i;
+		no+=d[i]&1;
+		if( d[i]&1  ) {
+			if(vo1==-1)
+				vo1=i;
+			else
+				vo2=i;
+		}
+		if(!vis[i]){
+			++cmp;
+			dfs(i);
+		}
+	}
+	
+	bool ok = !(n==1 || no>4 || cmp>2 );
+	vector<int> a,b;
+
+	if(ok){
+		if(cmp == 2){
+			if( check(1,vo1) && check(2,vo2) ){
+				euler_tour(vo1);		
+				a=etour;
+
+				etour.clear();
+				euler_tour(vo2);		
+				b=etour;
+			}
+			else
+				ok=0;
+		}else if(no <4){
+			if(no==2)v=vo1;
+			euler_tour(v);	
+			a.push_back( etour.back() ); etour.pop_back();
+			b=etour;
+		}else{ // no==4
+			g[vo1].push_back(pii(vo2,n)); ++d[vo1],++d[vo2];
+			g[vo2].push_back(pii(vo1,n));
+			
+			for(int i=0;i<N;++i) 
+				if(d[i] && (d[i]&1) )
+						vo1=i;
+			euler_tour(vo1);		
+			
+			int i;
+			for(i=0;i<etour.size() && etour[i]!=n;++i) a.push_back(etour[i]);
+			++i;
+			for(;i<etour.size();++i) b.push_back(etour[i]);
+		}	
+	}
+	if(!ok)
+		printf("-1\n");
+	else{
+		printf("%d\n",a.size());
+		for(int i=0;i<a.size();++i)
+			printf("%d ",a[i]+1);
+		printf("\n%d\n",b.size());
+		for(int i=0;i<b.size();++i)
+			printf("%d ",b[i]+1);
+		puts("");
+	}
+	return 0;
+}

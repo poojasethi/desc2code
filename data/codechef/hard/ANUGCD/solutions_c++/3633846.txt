@@ -1,0 +1,178 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+typedef pair<int,int> PII;
+
+#define inchar getchar_unlocked
+inline int inIntPos() {
+	int n,ch;
+	while((ch = inchar())<'0');
+	n =(ch-'0');
+	while((ch = inchar())>='0')
+		n=(n<<3)+(n<<1)+(ch-'0');
+	return n;
+}
+
+#define MAX_DISTINCT_PRIM 9
+#define MAX_N 100001
+int a[MAX_N];
+int h_prim[MAX_N][MAX_DISTINCT_PRIM];
+vector<int> positionsPerPrim[MAX_N];
+vector<int> allPosition;
+int startIndex[MAX_N];
+int endIndex[MAX_N];
+PII st[25*MAX_N];
+
+#define MAX_PRIM 9592
+// sqrt(MAX_N)
+#define MAX_SQRT_N 317
+char checkPrim[MAX_N];
+
+void prepare() {
+	int i,j;
+
+	for(i = 1; i < MAX_N; ++i) h_prim[i][0]=1;
+	h_prim[1][0]=0;
+	checkPrim[0]=0;
+	for(i = 2; i < MAX_N; ++i) checkPrim[i]=1;
+	for(i = 2; i < MAX_SQRT_N; ++i) {
+		if(checkPrim[i]) {
+			for(j=i; j<MAX_N; j+=i) {
+				checkPrim[j]=0;
+				h_prim[j][h_prim[j][0]++]=i;
+			}
+		}
+	}
+	for(i = MAX_SQRT_N; i < MAX_N; i+=2)
+		if(checkPrim[i]) {
+			for(j=i; j<MAX_N; j+=i) h_prim[j][h_prim[j][0]++]=i;
+		}
+}
+
+int gcdBiggerOne(int a, int b) {
+	if(h_prim[a][0]==2) return (b%h_prim[a][1])==0;
+
+	int a_c,b_c,i,j;
+	int *ap,*bp;
+
+	ap=&h_prim[a][0];
+	bp=&h_prim[b][0];
+	a_c=ap[0];
+	b_c=bp[0];
+
+	i=j=1;
+	do {
+		if(ap[i]==bp[j]) return 1;
+		if(ap[i]<bp[j]) {
+			++i;
+			if(i>=a_c) return 0;
+		}
+		else {
+			++j;
+			if(j>=b_c) return 0;
+		}
+	} while(1);
+	return 0;
+}
+
+PII buildST(int v, int tl, int tr) {
+	if( tl == tr) {
+		st[v] = PII(a[allPosition[tl]], 1);
+		return st[v];
+	}
+	int tm = (tl + tr)>>1;
+	int vl = v<<1;
+	PII rl = buildST(vl, tl, tm);
+	PII rr = buildST(vl+1, tm + 1, tr);
+
+	if(rl.first > rr.first) st[v] = rl;
+	else if(rr.first > rl.first) st[v] = rr;
+	else st[v] = PII(rl.first, rl.second + rr.second);
+
+	return st[v];
+}
+
+PII queryST(int v, int tl, int tr, int l, int r) {
+	if(r < tl || tr < l) return PII(-1, -1);
+	if(l <= tl && tr <= r) return st[v];
+
+	int tm = (tl + tr)>>1;
+	int vl = v<<1;
+	PII rl = queryST(vl  , tl, tm, l,r);
+	PII rr = queryST(vl+1, tm + 1, tr, l,r);
+
+	if(rl.first == -1) return rr;
+	if(rr.first == -1) return rl;
+	if(rl.first > rr.first) return rl;
+	if(rr.first > rl.first) return rr;
+	return PII(rl.first, rl.second + rr.second);
+}
+
+int main() {
+	int n,m,i,j,g,x,y;
+	int res,mres;
+
+	prepare();
+
+	n=inIntPos();
+	m=inIntPos();
+	for(i=1; i<=n; ++i) a[i]=inIntPos();
+
+	for(i=1; i<=n; ++i) {
+		int *b = h_prim[a[i]];
+		for(j=1;j<b[0]; ++j) {
+			positionsPerPrim[b[j]].push_back(i);
+		}
+	}
+
+	for(i=2; i<MAX_N; ++i) {
+		if(positionsPerPrim[i].empty()) continue;
+		startIndex[i]=allPosition.size();
+		for(j=0; j<(int)positionsPerPrim[i].size(); ++j)
+			allPosition.push_back(positionsPerPrim[i][j]);
+		endIndex[i]=allPosition.size()-1;
+	}
+
+	buildST(1,0,allPosition.size()-1);
+
+	for(j=0; j<m; ++j) {
+		g=inIntPos();
+		x=inIntPos();
+		y=inIntPos();
+		res=mres=-1;
+
+		if(g!=1) {
+			if(x==y) {
+				if(a[x]>1 && gcdBiggerOne(a[x],g)) {
+					res=a[x];
+					mres=1;
+				}
+			}
+			else {
+				for(i=1; i<h_prim[g][0]; ++i) {
+					int p=h_prim[g][i];
+					if(startIndex[p]>endIndex[p]) continue;
+					vector<int>& v=positionsPerPrim[p];
+					int l = lower_bound(v.begin(), v.end(), x) - v.begin();
+					int r = upper_bound(v.begin(), v.end(), y) - v.begin();
+					l += startIndex[p];
+					r += startIndex[p];
+					--r;
+					if(l > r) continue;
+					PII result = queryST(1, 0,allPosition.size()-1, l,r);
+
+					if(result.first>res) {
+						res=result.first;
+						mres=result.second;
+					}
+				}
+			}
+		}
+		printf("%d %d\n",res,mres);
+	}
+	return 0;
+}

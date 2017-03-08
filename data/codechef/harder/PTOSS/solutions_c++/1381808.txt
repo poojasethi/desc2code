@@ -1,0 +1,132 @@
+#include<iostream>
+#define MOD 1000000007
+
+using namespace std;
+
+long long mpow(long long a,long long r)
+{
+     if(!r)
+           return 1;
+     long long res=mpow(a,r>>1);
+     
+     res*=res;
+     res%=MOD;
+     
+     if(r&1ll)
+     {
+            res*=a;
+            res%MOD;
+     }
+     return res;
+} 
+void decrypt(char *s,bool *a,int n)
+{
+     int i=0,l=0;
+     
+     for(int i=0;s[i]!='\0'&&l<n;i++)
+     {
+             int k;
+             
+             k=(s[i]<='F')?(s[i]-'A'+26):(s[i]-'a');
+             
+             for(int j=0;j<5&&l<n;j++)
+                     a[l++]=(k>>(4-j))&1;
+     }
+}
+
+void kmp(int *fail,bool *s,int n)
+{
+     int k=0;
+     fail[1]=0;
+     
+     for(int i=2;i<=n;i++)
+     {
+             while(k&&s[k]!=s[i-1])
+                                      k=fail[k];
+             if(s[k]==s[i-1])
+                             k++;
+             
+             fail[i]=k;
+     }
+}
+int ne[2][1<<20];
+
+void build_ne(bool *A,int *p,int n) {
+    ne[A[0]][0]=1;
+    ne[!A[0]][0]=0;
+    
+    for(int i=1;i<n;i++) {
+        ne[A[i]][i]=i+1;
+        ne[!A[i]][i]=ne[!A[i]][p[i]];
+    }
+}
+
+int M[1<<20], C[1<<20];
+
+int get_res(bool *A,int n) {
+    M[0]=1;C[0]=0;
+    
+    for(int i=1;i<=n;i++)
+    {
+            M[i]=(M[i-1]*2)%MOD;
+            C[i]=(C[i-1]*2)%MOD;
+            
+            C[i]=(C[i]+MOD-2)%MOD;
+            
+            int k=ne[!A[i-1]][i-1];
+            
+            M[i]=(M[i]-M[k]+MOD)%MOD;
+            C[i]=(C[i]-C[k]+MOD)%MOD;
+    }
+    long long c=MOD-C[n];
+    
+    c *= mpow(M[n], MOD-2);
+    return c%MOD;
+}
+
+int main()
+{
+    int t;
+    
+    scanf("%d",&t);
+    
+    while(t--)
+    {
+              int n ,m;
+              char s1[200010],s2[200010];
+    
+              scanf("%d %s",&n,s1);
+              scanf("%d %s",&m,s2);
+              
+              bool Sb1[n],Sb2[m];
+              
+              decrypt(s1,Sb1,n);
+              decrypt(s2,Sb2,m);
+
+              
+              int fail_s1[n+1];
+              kmp(fail_s1,Sb1,n); 
+              
+              build_ne(Sb1,fail_s1,n);
+              int E0=get_res(Sb1,n);
+               
+              int flag=0,k=0;
+              
+              for(int i=0;i<m&&!flag;i++)
+              {
+                        k=ne[Sb2[i]][k];
+                        if(k==n)
+                        flag=1;             
+              }    
+              if(flag==1)
+              printf("0\n");
+              
+              else
+              {
+                  int res = ((long long)E0*M[k]) % MOD;
+                  res = (res + C[k]) % MOD;
+                  printf("%d\n",res);
+              }        
+    }
+    return 0;
+}

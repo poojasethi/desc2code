@@ -1,0 +1,87 @@
+#include <cstdio>
+#include <cstring>
+const int N=15,L=50010;
+char cont[L];
+int n,need[N][2];
+struct sa{
+	int dep,end[N];
+	sa *fa,*to[26];
+}*rt,*la,pl[2*L*N],*cu;
+sa *alloc(int dep){
+	sa *re=cu++;
+	re->dep=dep;
+	return re;
+}
+void extend(int v,int a){
+	sa *p=la,*np;
+	if(p->to[v]){
+		sa *q=p->to[v];
+		if(q->dep==p->dep+1){
+			np=q;
+		}else{
+			np=alloc(p->dep+1);
+			memcpy(np->to,q->to,sizeof(q->to));
+			np->fa=q->fa,q->fa=np;
+			while(p&&p->to[v]==q)
+				p->to[v]=np,p=p->fa;
+		}
+	}else{
+		np=alloc(p->dep+1);
+		while(p&&!p->to[v])
+			p->to[v]=np,p=p->fa;
+		if(!p){
+			np->fa=rt;
+		}else{
+			sa *q=p->to[v];
+			if(q->dep==p->dep+1){
+				np->fa=q;
+			}else{
+				sa *nq=alloc(p->dep+1);
+				memcpy(nq->to,q->to,sizeof(q->to));
+				nq->fa=q->fa;
+				q->fa=np->fa=nq;
+				while(p&&p->to[v]==q)
+					p->to[v]=nq,p=p->fa;
+			}
+		}
+	}
+	np->end[a]++;
+	la=np;
+}
+int tj[L];
+sa *qq[2*L*N];
+int main(){
+	scanf("%s",cont);
+	cu=pl;
+	la=rt=alloc(0);
+	for(char *i=cont;*i;i++)
+		extend(*i-'a',0);
+	scanf("%d",&n);
+	for(int j=1;j<=n;j++){
+		la=rt;
+		scanf("%s%d%d",cont,need[j],need[j]+1);
+		for(char *i=cont;*i;i++)
+			extend(*i-'a',j);
+	}
+	for(sa *i=pl;i<cu;i++)
+		tj[i->dep+1]++;
+	for(int i=1;i<L;i++)
+		tj[i]+=tj[i-1];
+	for(sa *i=pl;i<cu;i++)
+		qq[tj[i->dep]++]=i;
+	long long ans=0;
+	for(int i=cu-pl-1;i;i--){
+		sa *c=qq[i];
+		for(int j=0;j<=n;j++)
+			c->fa->end[j]+=c->end[j];
+		if(c->end[0]){
+			int j=1;
+			while(j<=n&&c->end[j]>=need[j][0]&&c->end[j]<=need[j][1])
+				j++;
+			if(j!=n+1) continue;
+			ans+=c->dep-c->fa->dep;
+		}
+	}
+	printf("%I64d\n",ans);
+	return 0;
+}

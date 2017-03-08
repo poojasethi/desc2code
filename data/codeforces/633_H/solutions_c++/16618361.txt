@@ -1,0 +1,128 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define pb push_back
+#define orta (bas + son >> 1)
+#define sag (k + k + 1)
+#define sol (k + k)
+#define endl '\n'
+#define foreach(i,x) for(type(x)i=x.begin();i!=x.end();i++)
+#define FOR(ii,aa,bb) for(int ii=aa;ii<=bb;ii++)
+#define ROF(ii,aa,bb) for(int ii=aa;ii>=bb;ii--)
+#define mp make_pair
+#define nd second
+#define st first
+#define type(x) __typeof(x.begin())
+
+typedef pair < int ,int > pii;
+
+const long long linf = 1e18+5;
+const int logN = 17;
+const int inf = 1e9;
+const int N = 3e4 + 50;
+
+int sum1[N << 2], sum0[N << 2], L[N << 2];
+
+int sq;
+int l, r, F[N], s, ans[N], mod, cnt[N], n, m, x, y, z, a[N], wh[N], start[N], finish[N], belong[N], S, t;
+vector< pair< pii , int > > all;
+map< int , int > H, w;
+
+bool cmp(pair< pii , int > x, pair< pii , int > y) {
+	if(x.st.st / sq == y.st.st / sq) return x.st.nd < y.st.nd;
+	return x < y;
+}
+
+int get(int x) {
+	if(x >= 0) return F[x];
+	if((-x) & 1) return F[-x]; return mod - F[-x];
+} 
+
+void merge(int k) {
+	t = L[k];
+	l = sol, r = sag;
+	sum1[k] = (get(t+1) * sum1[l] + get(t) * sum0[l]) % mod;
+	sum1[k] = (sum1[k] + get(t+1) * sum1[r] + get(t) * sum0[r]) % mod;
+	sum0[k] = (get(t) * sum1[l] + get(t-1) * sum0[l]) % mod;
+	sum0[k] = (sum0[k] + get(t) * sum1[r] + get(t-1) * sum0[r]) % mod;
+}
+
+void assign(int k, int bas, int son, int x, int op) {
+	if(bas == son) {
+		L[k] += op;
+		if(!cnt[bas]) { sum0[k] = sum1[k] = 0; return ; }
+		sum1[k] = wh[bas] * get(L[k]) % mod;  
+		sum0[k] = wh[bas] * get(L[k] - 1) % mod;
+		return ;
+	}
+	if(x <= orta) {
+		assign(sol, bas, orta, x, op);
+		L[sag] += op;
+		if(orta + 1 == son) {
+			if(cnt[son]) {
+				sum1[sag] = wh[son] * get(L[sag]) % mod;  
+				sum0[sag] = wh[son] * get(L[sag] - 1) % mod;
+			}
+		} else merge(sag);
+	}
+	else assign(sag, orta + 1, son, x, op);
+	merge(k);
+}
+
+int get() { return sum1[1]; }
+
+void add(int x) {
+	if(!cnt[x]++) assign(1, 1, s, x, +1);
+}
+
+void del(int x) {
+	if(!--cnt[x]) assign(1, 1, s, x, -1);
+}
+
+int main() {
+
+	scanf("%d %d", &n, &mod);
+	
+	sq = sqrt(n);
+
+	F[1] = 1;
+	FOR(i, 2, n) 
+		F[i] = (F[i-1] + F[i-2]) % mod;
+
+	FOR(i, 1, n) {
+		scanf("%d", &a[i]);
+		H[a[i]] = 1;
+	}
+
+	foreach(it, H) { w[it->st] = ++s; wh[s] = it->st; }
+	
+	FOR(i, 1, n) a[i] = w[a[i]];
+
+
+	scanf("%d", &m);
+
+	FOR(i, 1, m) {
+		scanf("%d %d", &x, &y);
+		all.pb(mp(mp(x, y), i));
+	}
+
+	sort(all.begin(), all.end(), cmp);
+
+	int l = 1, r = 0;
+
+	foreach(it, all) {
+		int x = it->st.st;
+		int y = it->st.nd;
+		while(r < y) add(a[++r]);
+		while(l < x) del(a[l++]);
+		while(r > y) del(a[r--]);
+		while(l > x) add(a[--l]);
+		ans[it->nd] = get();
+	}
+
+	FOR(i, 1, m)
+		printf("%d\n", ans[i]);
+
+	return 0;
+}

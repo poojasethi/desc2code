@@ -1,0 +1,199 @@
+#include <cstring>
+#include <cstdio>
+#include <ctime>
+ 
+using namespace std;
+ 
+const int modulo = 900000011;
+ 
+int binom[23][23], stirling1[23][23], stirling2[23][23], powSum[22][23];
+int sum[22], f[22], powP[23], powQ[23], powS[23], powT[23], powT1[23];
+ 
+struct array {
+	int data[21][21];
+	array() {
+		memset(data, 0, sizeof(data));
+	}
+};
+ 
+inline int multiply(int a, int b) {
+	if (a <= 30000 && b <= 30000) return a * b;
+	register int div, res;
+	asm("mul %3; div %4": "=a" (div), "=&d" (res): "a" (a), "r" (b), "r" (modulo));
+	return res;
+}
+ 
+inline int getPower(int a, int p) {
+	if (p == 0) return 1;
+	int res = getPower(a, p / 2);
+	res = multiply(res, res);
+	if (p % 2 == 1) res = multiply(res, a);
+	return res;
+}
+ 
+array calc(long long A, long long B, long long C, long long p, int T) {
+	array res;
+	if (A == 0 && C < B) return res;
+	if (A >= B || C >= B) {
+		array _res = calc(A % B, B, C % B, p, T);
+		memset(sum, 0, sizeof(sum));
+		int _p = p % modulo;
+		int _s = (A / B) % modulo;
+		int _t = (C / B) % modulo;
+		powP[0] = powS[0] = powT[0] = powT1[0] = 1;
+		for (int i = 1; i <= T + 2; i ++) {
+			powP[i] = multiply(powP[i - 1], _p);
+			powS[i] = multiply(powS[i - 1], _s);
+			powT[i] = multiply(powT[i - 1], _t);
+			powT1[i] = multiply(powT1[i - 1], _t + 1);
+		}
+		for (int i = 0; i <= T + 1; i ++)
+			for (int j = 0; j <= i + 1; j ++)
+				sum[i] = (sum[i] + multiply(powSum[i][j], powP[j])) % modulo;
+		for (int m = 0; m <= T; m ++) {
+			memset(f, 0, sizeof(f));
+			for (int i = 0; i <= m + 1; i ++)
+				for (int j = 0; j <= i; j ++) {
+					if (_s == 0 && j > 0) break;
+					register int tmp = multiply(powS[j], powT1[i - j]);
+					tmp = multiply(tmp, binom[i][j]);
+					if (m == 0 && i == 0) {
+						tmp = (modulo - tmp) % modulo;
+					} else {
+						tmp = multiply(tmp, powSum[m][i]);
+					}
+					f[j] = (f[j] + tmp) % modulo;
+				}
+			for (int n = 0; n <= T - m; n ++)
+				for (int i = 0; i <= m + 1; i ++)
+					if (sum[n + i] > 0) res.data[n][m] = (res.data[n][m] + multiply(f[i], sum[n + i])) % modulo;
+		}
+		for (int S = 0; S <= T; S ++) {
+			memset(f, 0, sizeof(f));
+			for (int i = 0; i <= S; i ++) {
+				if (_t == 0) {
+					f[i] = (f[i] + _res.data[i][S - i]) % modulo;
+					continue;
+				}
+				for (int j = 0; j <= S - i; j ++) {
+					register int tmp = multiply(binom[S - i][j], powT[S - i - j]);
+					tmp = multiply(tmp, _res.data[i][j]);
+					f[i] = (f[i] + tmp) % modulo;
+				}
+			}
+			for (int n = 0; n <= S; n ++) {
+				register int m = S - n;
+				for (int i = n; i <= S; i ++) {
+					if (_s == 0 && i > n) break;
+					register int tmp = multiply(powS[i - n], f[i]);
+					tmp = multiply(tmp, binom[m][S - i]);
+					res.data[n][m] = (res.data[n][m] + tmp) % modulo;
+				}
+			}
+		}
+	} else {
+		long long q = ((long double)A * p + C) / B;
+		long long _C = A * p + C - q * B;
+		while (_C < 0) _C += B;
+		array _res = calc(B, A, _C, q, T);
+		int _p = p % modulo;
+		int _q = q % modulo;
+		powP[0] = powQ[0] = 1;
+		for (int i = 1; i <= T; i ++) {
+			powP[i] = multiply(powP[i - 1], _p);
+			powQ[i] = multiply(powQ[i - 1], _q);
+		}
+		for (int n = 0; n <= T; n ++) {
+			memset(f, 0, sizeof(f));
+			for (int i = 0; i <= T - n; i ++)
+				for (int j = 0; j <= n; j ++) {
+					if (_p == 0 && j < n) continue;
+					register int tmp = multiply(powP[n - j], binom[n][j]);
+					tmp = multiply(tmp, _res.data[i][j]);
+					if ((i + j) % 2 == 1) tmp = (modulo - tmp) % modulo;
+					f[i] = (f[i] + tmp) % modulo;
+				}
+			for (int m = 0; m <= T - n; m ++)
+				for (int i = 0; i <= m; i ++) {
+					if (_q == 0 && i < m) continue;
+					register int tmp = multiply(f[i], binom[m][i]);
+					tmp = multiply(tmp, powQ[m - i]);
+					res.data[n][m] = (res.data[n][m] + tmp) % modulo;
+				}
+		}
+	}
+	return res;
+}
+ 
+int main() {
+	memset(binom, 0, sizeof(binom));
+	for (int i = 0; i <= 22; i ++) {
+		binom[i][0] = 1;
+		for (int j = 1; j <= i; j ++)
+			binom[i][j] = (binom[i - 1][j - 1] + binom[i - 1][j]) % modulo;
+	}
+	memset(stirling1, 0, sizeof(stirling1));
+	for (int i = 0; i <= 22; i ++) {
+		if (i == 0) stirling1[i][0] = 1;
+		for (int j = 1; j <= i; j ++)
+			stirling1[i][j] = (multiply(stirling1[i - 1][j], j) + stirling1[i - 1][j - 1]) % modulo;
+	}
+	memset(stirling2, 0, sizeof(stirling2));
+	for (int i = 0; i <= 22; i ++) {
+		if (i == 0) stirling2[i][0] = 1;
+		for (int j = 1; j <= i; j ++)
+			stirling2[i][j] = (multiply(stirling2[i - 1][j], i - 1) + stirling2[i - 1][j - 1]) % modulo;
+	}
+	memset(powSum, 0, sizeof(powSum));
+	for (int i = 0; i <= 21; i ++)
+		for (int j = 0; j <= i; j ++) {
+			register int tmp = multiply(stirling1[i][j], getPower(j + 1, modulo - 2));
+			for (int k = 0; k <= j + 1; k ++) {
+				if ((j + 1 - k) % 2 == 0) {
+					powSum[i][k] = (powSum[i][k] + multiply(stirling2[j + 1][k], tmp)) % modulo;
+				} else {
+					powSum[i][k] = (powSum[i][k] - multiply(stirling2[j + 1][k], tmp) + modulo) % modulo;
+				}
+			}
+		}
+	
+	int T;
+	scanf("%d", &T);
+	while (T > 0) {
+		long long N, A, B;
+		int K, L;
+		scanf("%lld%lld%lld%d%d", &N, &A, &B, &K, &L);
+		array res = calc(A, B, 0, N + 1, K + L);
+		register int _N = N % modulo;
+		for (int n = 0; n <= K + L; n ++) {
+			register int pow = 1;
+			for (int i = 0; i <= n + 1; i ++) {
+				res.data[n][0] = (res.data[n][0] + multiply(pow, powSum[n][i])) % modulo;
+				pow = multiply(pow, _N);
+			}
+		}
+		register int ans = 0;
+		for (int i = 0; i <= L; i ++)
+			for (int j = 0; j <= K; j ++) {
+				register int pow = 1;
+				for (int k = i; k >= 0; k --) {
+					register int tmp = multiply(stirling2[L][i], stirling2[K][j]);
+					tmp = multiply(tmp, binom[i][k]);
+					tmp = multiply(tmp, pow);
+					tmp = multiply(tmp, res.data[k][j]);
+					if ((L + K - i - j + k) % 2 == 1) tmp = (modulo - tmp) % modulo;
+					ans = (ans + tmp) % modulo;
+					pow = multiply(pow, _N);
+				}
+			}
+		for (int i = 1; i <= L; i ++)
+			ans = multiply(ans, getPower(i, modulo - 2));
+		for (int i = 1; i <= K; i ++)
+			ans = multiply(ans, getPower(i, modulo - 2));
+		printf("%d\n", ans);
+		T --;
+	}
+	
+	return 0;
+}
+ 

@@ -1,0 +1,120 @@
+#include <iostream>
+#include <set>
+#include <vector>
+
+using namespace std;
+
+#define MAXL 20
+#define pii pair<int, long long>
+
+set<int> vill;
+long long dist[100010];
+int height[100010], par[100010][MAXL + 10], start[100010], finish[100010], rev[100010];
+vector<pii> edges[100010];
+int findLowestFather(int x)
+{
+	set<int>::iterator it = vill.lower_bound(finish[x]);
+	set<int>::iterator it2 = vill.lower_bound(start[x]);
+	it2++;
+	if (it2 != it)
+		return x;
+	for (int i = MAXL; i >= 0; i--)
+	{
+		set<int>::iterator it = vill.lower_bound(finish[par[x][i]]);
+		set<int>::iterator it2 = vill.lower_bound(start[par[x][i]]);
+		it2++;
+		if (it2 == it)
+			x = par[x][i];
+	}
+	return par[x][0];
+}
+int LCA(int a, int b)
+{
+	if (height[a] < height[b])
+		swap(a, b);
+	for (int i = MAXL; i >= 0; i--)
+		if (height[par[a][i]] >= height[b])
+			a = par[a][i];
+	if (a == b)
+		return a;
+	for (int i = MAXL; i >= 0; i--)
+		if (par[a][i] != par[b][i])
+			a = par[a][i], b = par[b][i];
+	return par[a][0];
+
+}
+int st = 1;
+void process(int v)
+{
+	rev[st] = v;
+	start[v] = st++;
+	for (int i = 0; i < edges[v].size(); i++)
+		if (edges[v][i].first != par[v][0])
+		{
+			par[edges[v][i].first][0] = v;
+			dist[edges[v][i].first] = dist[v] + edges[v][i].second;
+			height[edges[v][i].first] = height[v] + 1;
+			process(edges[v][i].first);
+		}
+	finish[v] = st;
+}
+int main()
+{
+	int n;
+	cin >> n;
+	for (int i = 0; i < n - 1; i++)
+	{
+		int a, b, c;
+		cin >> a >> b >> c;
+		a++, b++;
+		edges[a].push_back(pii(b, c));
+		edges[b].push_back(pii(a, c));
+	}
+	edges[1].push_back(pii(2, 0));
+	edges[2].push_back(pii(1, 0));
+	height[1] = 1;
+	process(1);
+	for (int i = 1; i <= MAXL; i++)
+		for (int j = 1; j <= n + 1; j++)
+			par[j][i] = par[par[j][i - 1]][i - 1];
+	int q;
+	cin >> q;
+	long long val = 0;
+	vill.insert(start[1]);
+	for (int i = 0; i < q; i++)
+	{
+		char c;
+		cin >> c;
+		if (c == '?')
+		{
+			if (vill.size() == 1)
+			{
+				cout << 0 << endl;
+				continue;
+			}
+			set<int>::iterator it = (vill.begin());
+			it++;
+			//cout << *it << " " << *vill.rbegin() << endl;
+			cout << val - dist[LCA(rev[*it], rev[*vill.rbegin()])] << endl;
+		}
+		else if (c == '+')
+		{
+			int x;
+			cin >> x;
+			x++;
+			vill.insert(start[x]);
+			//cout << findLowestFather(x) << endl;
+			val += dist[x] - dist[findLowestFather(x)];
+		}
+		else if (c == '-')
+		{
+			int x;
+			cin >> x;
+			x++;
+			val -= dist[x] - dist[findLowestFather(x)];
+			vill.erase(start[x]);
+		}
+	}
+}
+
+	 	 		  	  	  	   	 	 			

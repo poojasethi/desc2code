@@ -1,0 +1,154 @@
+#include <bits/stdc++.h>
+
+#define mp make_pair
+#define st first
+#define nd second
+#define pb push_back
+
+using namespace std;
+
+typedef long long ll;
+typedef pair< ll,ll > pll;
+typedef pair< int,int > pii;
+
+const int inf = 1000000000, N = 100000, K = 1000000;
+
+int n, m, k, trie[K+5][26], ed[K+5], dad[K+5], fail[K+5], cnt[K+5], fen[K+5], beg[K+5], end[K+5], timer, last[N+5];
+bool h[K+5];
+vector<int> v[K+5];
+char s[K+5];
+
+void upd(int l, int r, int t) {
+	for (; r; r -= r & -r)
+		fen[r] += t;
+
+	for (l--; l; l -= l & -l)
+		fen[l] -= t;
+}
+
+int que(int x) {
+	int ans = 0;
+
+	for (; x <= k; x += x & -x) 
+		ans += fen[x];
+
+	return ans;
+}
+
+void dfs(int node) {
+	beg[node] = ++timer;
+
+	int sz = v[node].size();
+
+	for (int i = 0; i < sz; i++) {
+		dfs(v[node][i]);
+	}
+
+	end[node] = timer;
+
+	upd(beg[node], end[node], cnt[node]);
+}
+
+int main()
+{
+	int x;
+	char cmd;
+
+	scanf("%d %d", &m, &n);
+
+	k = 1;
+
+	for (int i = 1; i <= n; i++) {
+		scanf(" %s", s);
+		int len = strlen(s);
+		
+		int node = 1;
+		for (int j = 0; j < len; j++) {
+			if (trie[node][s[j] - 'a'] == 0) {
+				trie[node][s[j] - 'a'] = ++k;	
+				dad[k] = node;
+				ed[k] = s[j] - 'a';
+			}
+
+			node = trie[node][s[j] - 'a'];
+		}
+			
+		cnt[node]++;
+		last[i] = node;
+	}
+	
+	queue<int> Q;
+
+	for (int i = 0; i < 26; i++)
+		if (trie[1][i])
+			Q.push(trie[1][i]);
+
+	while (!Q.empty()) {
+		int x = Q.front();
+		Q.pop();
+
+		int node = fail[dad[x]];
+
+		while (node > 0 && trie[node][ed[x]] == 0)
+			node = fail[node];
+
+		if (node == 0)
+			fail[x] = 1;
+		else
+			fail[x] = trie[node][ed[x]];
+
+		v[fail[x]].pb(x);
+
+		for (int i = 0; i < 26; i++) {
+			if (trie[x][i])
+				Q.push(trie[x][i]);
+		}
+	}
+	
+	dfs(1);
+
+	for (int i = 1; i <= n; i++)
+		h[i] = true;
+
+	while (m--) {
+		scanf(" %c", &cmd);
+
+		if (cmd == '?') {
+			scanf(" %s", s);
+			
+			int len = strlen(s), ans = 0, node = 1;
+		
+			for (int i = 0; i < len; i++) {
+				while (node > 0 && trie[node][s[i]-'a'] == 0)
+					node = fail[node];
+
+				if (node == 0)
+					node = 1;
+				else
+					node = trie[node][s[i]-'a'];
+				
+				ans += que(beg[node]);
+			}
+
+			printf("%d\n", ans);
+		}
+		else if (cmd == '-') {
+			scanf("%d", &x);
+			if (h[x]) {
+				h[x] = false;
+				x = last[x];
+				upd(beg[x], end[x], -1);
+			}
+		}
+		else {
+			scanf("%d", &x);
+			if (!h[x]) {
+				h[x] = true;
+				x = last[x];
+				upd(beg[x], end[x], +1);
+			}
+		}
+	}
+	
+	return 0;
+}

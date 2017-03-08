@@ -1,0 +1,103 @@
+#include<cmath>
+#include<cstdio>
+#include<vector>
+ 
+#define	pb			push_back
+#define	rep(i,n)	for(int i=0;i<n;i++)
+ 
+using namespace std;
+ 
+typedef	vector<int>			vi;
+typedef	unsigned long long	ull;
+ 
+/* Xorshift RNG by George Marsaglia */
+ull xor64(){
+	static ull x=88172645463325252LL;
+	x^=(x<<13);
+	x^=(x>>7);
+	return x^=(x<<17);
+}
+ 
+ull modmul(ull a,ull b,ull m){	// a*b (mod m)
+	ull r=0;
+	for(;b;b>>=1,a=(a<<1)%m) if(b&1) r=(r+a)%m;
+	return r;
+}
+ 
+ull modpow(ull a,ull n,ull m){	// a^n (mod m)
+	ull r=1;
+	for(ull x=a;n;n>>=1,x=modmul(x,x,m)) if(n&1) r=modmul(r,x,m);
+	return r;
+}
+ 
+bool MillerRabin(ull n,int k=30){
+	if(n<=1)	return false;
+	if(!(n&1))	return n==2;
+	if(n%3==0)	return n==3;
+ 
+	int s=0;	// n-1 = 2^s * d (d: odd)
+	ull d=n-1;
+	while(!(d&1))	s++,d>>=1;
+ 
+	while(k--){
+		ull a=xor64()%(n-3)+2;
+		ull x=modpow(a,d,n);
+		if(x==1 || x==n-1)	continue;
+		bool b=false;
+		for(int r=1;r<s;r++){
+			x=modmul(x,x,n);
+			if(x==1)	return false;
+			if(x==n-1){ b=true; break; }
+		}
+		if(!b)	return false;
+	}
+ 
+	return true;
+}
+ 
+ull fact[30];
+ 
+int main(){
+	fact[0]=fact[1]=1;
+	for(int i=2;i<30;i++)	fact[i]=i*fact[i-1];
+ 
+	const int Ne=1001000;
+	static bool er[Ne]; er[0]=er[1]=true;
+	for(int i=2;i*i<Ne;i++) if(!er[i]) for(int j=i*i;j<Ne;j+=i) er[j]=true;
+ 
+	vi p; rep(i,Ne) if(!er[i]) p.pb(i);
+ 
+	int T;	scanf("%d",&T);
+	while(T--){
+		ull n;	scanf("%llu",&n);
+ 
+		if(n==4){ puts("1"); continue; }
+ 
+		int cnt=0;
+		bool b=false;
+		for(int i=0;(ull)p[i]*p[i]*p[i]<=n;i++){
+			if(n%p[i]==0){
+				n/=p[i],cnt++;
+				if(n%p[i]==0){ puts("-1"); b=true; break; }
+			}
+		}
+		if(b)	continue;
+ 
+		// first case ( n=1 )
+		if(n==1){ printf("%llu\n",fact[cnt]); continue; }
+ 
+		// second case ( n=p (p: prime) )
+		if(MillerRabin(n)){ printf("%llu\n",fact[cnt+1]); continue; }
+ 
+		// third case ( n=p^2 (p: prime) )
+		ull rtn=(ull)(sqrt((double)n)+0.5);
+		if((rtn-1)*(rtn-1)==n ||  rtn*rtn==n || (rtn+1)*(rtn+1)==n){
+			puts("-1"); continue;
+		}
+ 
+		// fourth case ( n=p*q (p,q: prime) )
+		printf("%llu\n",fact[cnt+2]);
+	}
+ 
+	return 0;
+}

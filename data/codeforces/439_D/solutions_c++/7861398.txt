@@ -1,0 +1,13 @@
+#include<bits/stdc++.h>
+using namespace std;
+long long ans;
+int n, m, a[100000], b[100000];
+main() {
+    scanf("%d %d", &n, &m);
+    for(int i=0; i<n; i++) scanf("%d", &a[i]);
+    for(int i=0; i<m; i++) scanf("%d", &b[i]);
+    sort(a, a+n);
+    sort(b, b+m, greater<int>());
+    for(int i=0; i<min(n, m)&&b[i]>a[i]; i++) ans+= (int)abs(a[i]-b[i]);
+    printf("%I64d\n", ans);
+}

@@ -1,0 +1,78 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#define rep(i,s,t) for (int i = s; i <= t; ++i)
+#define per(i,s,t) for (int i = s; i >= t; --i)
+#define LL long long
+using namespace std;
+int n, m, k;
+int a[2510][2510], b[2510][2510];
+int L[2510][10], R[2510][10], ql[10], qr[10], tmp[10], fl[10], fr[10];
+LL ans;
+char s[2510];
+void Solve(int u, int d, int l, int r){
+	if (d < u || r < l) return;
+	bool flag; int t;
+	if (r-l > d-u){
+		rep(i,u,d) rep(j,l,r) b[i][j] = a[i][j];
+		flag = 0;
+	}
+	else{
+		swap(u, l); swap(d, r);
+		rep(i,u,d) rep(j,l,r) b[i][j] = a[j][i];
+		flag = 1;
+	}
+	int mid = (l+r)>>1;
+	rep(i,u,d){
+		rep(j,1,k+1) L[i][j] = l-1, R[i][j] = r+1;
+		t = 0; per(j,mid,l) if (b[i][j]) { L[i][++t] = j; if (t == k+1) break; }
+		t = 0; rep(j,mid,r) if (b[i][j]) { R[i][++t] = j; if (t == k+1) break; }
+	}
+	rep(i,u,d){
+		int s = 0; rep(j,1,k+1) ql[j] = l-1, qr[j] = r+1;
+		rep(j,i,d){
+			s+=b[j][mid]; if (s > k) break;
+			rep(p,1,k+1) tmp[p] = ql[p];
+			for (int x = 1, y = 1; x-1+y-1 < k+1; ){
+				if (tmp[x] > L[j][y]) ql[x-1+y-1+1] = tmp[x], ++x;
+				else ql[x-1+y-1+1] = L[j][y], ++y;
+			}
+			rep(p,1,k+1) tmp[p] = qr[p];
+			for (int x = 1, y = 1; x-1+y-1 < k+1; ){
+				if (tmp[x] < R[j][y]) qr[x-1+y-1+1] = tmp[x], ++x;
+			else qr[x-1+y-1+1] = R[j][y], ++y;
+			}
+			rep(p,0,k) fl[p] = fr[p] = 0;
+			for (int x = 0, y = mid, xx = 0, p = 1; p <= k+1; ++p){
+				++xx;
+				if (p == k+1 || ql[p] != ql[p+1]){
+					fl[x] = y-ql[p]; x = xx; y = ql[p];
+				}
+			}
+			for (int x = 0, y = mid, xx = 0, p = 1; p <= k+1; ++p){
+				++xx;
+				if (p == k+1 || qr[p] != qr[p+1]){
+					fr[x] = qr[p]-y; x = xx; y = qr[p];
+				}
+			}
+			rep(p,s,k) ans+=(LL)fl[p]*fr[k+s-p]; 
+		}
+	}
+	if (flag == 0){
+		Solve(u, d, l, mid-1); Solve(u, d, mid+1, r);
+	}
+	else{
+		swap(u, l); swap(d, r);
+		Solve(u, mid-1, l, r); Solve(mid+1, d, l, r);
+	}
+}
+int main(){
+	scanf("%d%d%d", &n, &m, &k);
+	rep(i,1,n){
+		scanf("%s", s+1);
+		rep(j,1,m) a[i][j] = s[j]-'0';
+	}
+	Solve(1, n, 1, m);
+	printf("%I64d\n", ans);
+	return 0;
+}

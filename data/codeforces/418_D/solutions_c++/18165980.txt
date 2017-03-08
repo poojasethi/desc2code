@@ -1,0 +1,111 @@
+#include<stdio.h>
+#include<vector>
+#include<iostream>
+#include<algorithm>
+#define M 100005
+using namespace std;
+vector<int>edge[M];
+int K,ID[M];//挂在编号后的直径上哪个点 
+int val[M];//直径上每个分支的最远距离
+int dis[M];//每个点到直径的距离 
+int pre[M],mx,mxid;
+int A[M];
+void dfs(int x ,int f,int d){
+	pre[x]=f;
+	if(d>mx){mx=d;mxid=x;}
+	for(int i=0;i<edge[x].size();i++){
+		int y=edge[x][i];
+		if(y==f)continue;
+		dfs(y,x,d+1);
+	}
+}
+void idfs(int x,int d,int &mxdep){
+	dis[x]=d;if(d>mxdep)mxdep=d;
+	for(int i=0;i<edge[x].size();i++){
+		int y=edge[x][i];
+		if(ID[y])continue;
+		ID[y]=ID[x];
+		idfs(y,d+1,mxdep);
+	}
+}
+void SetID(int n){//对直径进行编号 
+	mx=-1;dfs(1,0,0);
+	mx=-1;dfs(mxid,0,0);
+	int x=mxid;K=0;
+	while(x){
+		ID[x]=++K;A[K]=x; x=pre[x];
+	}
+	for(int i=1;i<=K;i++){
+		val[i]=0;idfs(A[i],0,val[i]); 
+	}
+}
+struct ST{
+	int n;
+	int rmq1[M][20];//val+ID 
+	int rmq2[M][20];//val-ID
+	int log2[M];
+	void build(){
+		n=K;
+		for(int i=1,j=0;i<=n+3;i++){
+			log2[i]=j;
+			if(!(i&(i-1)))j++;
+		}
+		for(int i=1;i<=n;i++){
+			rmq1[i][0]=val[i]+i;
+			rmq2[i][0]=val[i]-i;
+		}
+		for(int j=1;1+(1<<j)-1<=n;j++)
+			for(int i=1;i+(1<<j)-1<=n;i++){
+				rmq1[i][j]=max(rmq1[i][j-1],rmq1[i+(1<<j-1)][j-1]);
+				rmq2[i][j]=max(rmq2[i][j-1],rmq2[i+(1<<j-1)][j-1]);
+			} 
+	}
+	int query1(int a,int b){ 
+		int k=log2[b-a+2]-1; 
+		return max(rmq1[a][k],rmq1[b-(1<<k)+1][k]);
+	}
+	int query2(int a,int b){
+		if(a>b)return 0;
+		int k=log2[b-a+2]-1;
+		return max(rmq2[a][k],rmq2[b-(1<<k)+1][k]);
+	}
+}st;
+int main(){ 
+	int n,m,x,y;
+	scanf("%d",&n);
+	for(int i=1;i<n;i++){
+		scanf("%d %d",&x,&y);
+		edge[x].push_back(y);
+		edge[y].push_back(x);
+	}
+	SetID(n); st.build(); 
+	scanf("%d",&m); 
+	while(m--){
+		scanf("%d %d",&x,&y);
+		if(ID[x]==ID[y]){
+			if(dis[y]<dis[x])x=y;
+			printf("%d\n",max(ID[x]-1,K-ID[x])+dis[x]);
+			continue;
+		}
+		if(ID[x]>ID[y])swap(x,y);  
+		int ld=min(dis[x]+ID[x]-1,dis[y]+ID[y]-1);//直径左端点到x和y的距离 
+		int rd=min(K-ID[x]+dis[x],K-ID[y]+dis[y]);
+		int ans=max(ld,rd);//直径的两个端点到x和y 
+		//printf("ld=%d rd=%d\n",ld,rd);
+		int a=ID[x]-dis[x],b=ID[y]+dis[y];
+		int k=(a+b)>>1;//[ID[x],k]去x，[k+1,ID[y]]到y 
+		//printf("k=%d\n",k); 
+		int lx=0,ly=0;
+		if(k<=ID[x])ly=st.query2(k+1,ID[y])+ID[y]+dis[y];  	  
+		else if(k>=ID[y])lx=st.query1(ID[x],k)-ID[x]+dis[x]; 
+		if(k>ID[x]&&k<ID[y]){  
+			ly=st.query2(k+1,ID[y])+ID[y]+dis[y];  	  
+			lx=st.query1(ID[x],k)-ID[x]+dis[x]; 
+		}
+		//printf("lx=%d ly=%d %d\n",lx,ly,st.query1(ID[x],k));
+		if(lx>ans)ans=lx;
+		if(ly>ans)ans=ly;
+		printf("%d\n",ans);
+	}
+	return 0;
+}

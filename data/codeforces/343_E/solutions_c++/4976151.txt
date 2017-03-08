@@ -1,0 +1,111 @@
+#include <cstdio>
+#include <memory.h>
+using namespace std;
+
+#define INF 2000000000
+#define min(x, y) ((x) < (y) ? (x) : (y))
+int n, m, i, x, y, z, ans, s, t, a[210][210], b[210][210], zhan[210], n1[210], d[210];
+bool used[210], can[210];
+
+bool Bfs() {
+	int q, h, i;
+	memset(d, 0, sizeof(d));
+	memset(can, true, sizeof(can));
+	for (n1[q = h = 1] = s, d[s] = 1; q <= h; q++)
+		for (i = 1; i <= n; i++)
+			if (!d[i] && a[n1[q]][i])	n1[++h] = i, d[i] = d[n1[q]] + 1;
+	return d[t];
+}
+
+int dfs(int k, int mi) {
+	if (k == t)	return mi;
+	int tmp, sum = 0, i;
+	for (i = 1; i <= n && mi; i++)
+		if (a[k][i] && d[i] == d[k] + 1 && can[i]) {
+			tmp = dfs(i, min(mi, a[k][i]));
+			a[k][i] -= tmp;
+			a[i][k] += tmp;
+			mi -= tmp;
+			sum += tmp;
+		}
+	if (!sum)	can[k] = false;
+	return sum;
+}
+
+void bfs() {
+	int q, h, i;
+	memset(used, false, sizeof(used));
+	for (n1[q = h = 1] = s, used[s] = true; q <= h; q++)
+		for (i = 1; i <= n; i++)
+			if (a[n1[q]][i] && !used[i])	n1[++h] = i, used[i] = true;
+}
+
+int max_flow() {
+	for (int i = 1; i <= n; i++)
+		for (int j = 1; j <= n; j++)	a[i][j] = (a[i][j] + a[j][i]) / 2, a[j][i] = a[i][j];
+	int ans = 0;
+	while (Bfs())	ans += dfs(s, INF);
+	bfs();
+	return ans;
+}
+
+void divide(int zhan[201]) {
+	if (zhan[0] == 1)	return ;
+	s = zhan[1];
+	t = zhan[2];
+	b[s][t] = b[t][s] = max_flow();
+	ans += b[s][t];
+	int zhan1[201];
+	bool used1[201];
+	memcpy(used1, used, sizeof(used1));
+	zhan1[0] = 0;
+	for (int i = 1; i <= zhan[0]; i++)	if (used1[zhan[i]])	zhan1[++zhan1[0]] = zhan[i];
+	divide(zhan1);
+	zhan1[0] = 0;
+	for (int i = 1; i <= zhan[0]; i++)	if (!used1[zhan[i]])	zhan1[++zhan1[0]] = zhan[i];
+	divide(zhan1);
+}
+
+void bfs1(int x) {
+	int q, h, i;
+	memset(used, false, sizeof(used));
+	for (n1[q = h = 1] = x, used[x] = true; q <= h; q++)
+		for (i = 1; i <= n; i++)
+			if (b[n1[q]][i] && !used[i])	n1[++h] = i, used[i] = true;
+}
+
+void work(int zhan[201]) {
+	if (zhan[0] == 1)	printf("%d ", zhan[1]);
+	else {
+		int zhan1[201];
+		bool used1[201];
+		int x = 0, y = 0;
+		for (int i = 1; i <= zhan[0]; i++)
+			for (int j = 1; j <= zhan[0]; j++)
+				if (b[zhan[i]][zhan[j]] && (!x || b[x][y] > b[zhan[i]][zhan[j]]))	x = zhan[i], y = zhan[j];
+		b[x][y] = b[y][x] = 0;
+		bfs1(x);
+		memcpy(used1, used, sizeof(used1));
+		zhan1[0] = 0;
+		for (int i = 1; i <= zhan[0]; i++)	if (used1[zhan[i]])	zhan1[++zhan1[0]] = zhan[i];
+		work(zhan1);
+		zhan1[0] = 0;
+		for (int i = 1; i <= zhan[0]; i++)	if (!used1[zhan[i]])	zhan1[++zhan1[0]] = zhan[i];
+		work(zhan1);
+	}
+}
+
+int main() {
+	scanf("%d%d", &n, &m);
+	
+	for (i = 1; i <= m; i++) {
+		scanf("%d%d%d", &x, &y, &z);
+		a[x][y] = a[y][x] = z;
+	}
+
+	for (i = 1; i <= n; i++)	zhan[++zhan[0]] = i;
+
+	divide(zhan);
+	printf("%d\n", ans);
+	work(zhan);
+}

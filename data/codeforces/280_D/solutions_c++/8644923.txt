@@ -1,0 +1,141 @@
+#include<cstdio>
+#include<cmath>
+#include<algorithm>
+#define PI pair<int,int>
+#define PII pair<int,PI>
+#define FR first
+#define SC second
+#define MP make_pair
+using namespace std;
+struct Tnode
+{
+	PII sum,lM,lm,rM,rm,M,m;
+	bool tag;
+}T[262144];
+int a[131073];
+PI A[25];
+int n,m,N;
+inline PII merge(PII x,PII y)
+{
+	return MP(x.FR+y.FR,MP(x.SC.FR,y.SC.SC));
+}
+inline void newnode(int i,int x,int y)
+{
+	PII A,lA,rA;
+	T[i].sum=MP(y,MP(x,x)); lA=MP(0,MP(x,x-1)); rA=MP(0,MP(x+1,x));
+	T[i].lM=max(T[i].sum,lA); T[i].lm=min(T[i].sum,lA);
+	T[i].rM=max(T[i].sum,rA); T[i].rm=min(T[i].sum,rA);
+	T[i].M=max(T[i].sum,lA); T[i].m=min(T[i].sum,lA);
+}
+inline Tnode update(Tnode &x,Tnode &y)
+{
+	Tnode z;
+	z.tag=false; z.sum=merge(x.sum,y.sum);
+	z.lM=max(x.lM,merge(x.sum,y.lM)); z.lm=min(x.lm,merge(x.sum,y.lm));
+	z.rM=max(y.rM,merge(x.rM,y.sum)); z.rm=min(y.rm,merge(x.rm,y.sum));
+	z.M=max(max(x.M,y.M),merge(x.rM,y.lM));
+	z.m=min(min(x.m,y.m),merge(x.rm,y.lm));
+	return z;
+}
+void build(int i,int l,int r)
+{
+	int A,mid;
+	if (l==r) newnode(i,l,a[l]);
+	else
+	{
+		mid=(l+r)/2;
+		build(i*2,l,mid); build(i*2+1,mid+1,r);
+		T[i]=update(T[i*2],T[i*2+1]);
+	}
+}
+inline void mutate(int i)
+{
+	swap(T[i].lM,T[i].lm); swap(T[i].rM,T[i].rm); swap(T[i].M,T[i].m);
+	T[i].sum.FR*=-1; T[i].lM.FR*=-1; T[i].lm.FR*=-1;
+	T[i].rM.FR*=-1; T[i].rm.FR*=-1; T[i].M.FR*=-1; T[i].m.FR*=-1;
+	T[i].tag^=1;
+}
+inline void release(int i,int l0,int r0)
+{
+	if ((l0<r0)&&T[i].tag)
+	{
+		mutate(i*2); mutate(i*2+1);
+	}
+	T[i].tag=false;
+}
+void modify(int i,int x,int l0,int r0,int d)
+{
+	int mid;
+	if (l0==r0) newnode(i,x,d);
+	else
+	{
+		mid=(l0+r0)/2; release(i,l0,r0);
+		if (x<=mid) modify(i*2,x,l0,mid,d);
+		else modify(i*2+1,x,mid+1,r0,d);
+		T[i]=update(T[i*2],T[i*2+1]);
+	}
+}
+void modify2(int i,int l,int r,int l0,int r0)
+{
+	int mid;
+	if ((l0>=l)&&(r0<=r)) mutate(i);
+	else
+	{
+		mid=(l0+r0)/2; release(i,l0,r0);
+		if (l<=mid) modify2(i*2,l,r,l0,mid);
+		if (r>=mid+1) modify2(i*2+1,l,r,mid+1,r0);
+		T[i]=update(T[i*2],T[i*2+1]);
+	}
+}
+Tnode query(int i,int l,int r,int l0,int r0)
+{
+	Tnode x,y;
+	int mid,cnt;
+	if ((l0>=l)&&(r0<=r)) return T[i];
+	mid=(l0+r0)/2; cnt=0; release(i,l0,r0);
+	if (l<=mid)
+	{
+		cnt++; x=query(i*2,l,r,l0,mid);
+	}
+	if (r>=mid+1)
+	{
+		cnt+=2; y=query(i*2+1,l,r,mid+1,r0);
+	}
+	if (cnt==1) return x;
+	if (cnt==2) return y;
+	return update(x,y);
+}
+int main()
+{
+	Tnode X;
+	int i,j,op,x,y,z,ans;
+	scanf("%d",&n);
+	for (i=1;i<=n;i++) scanf("%d",&a[i]);
+	N=1<<int(ceil(log(n)/log(2)));
+	build(1,1,N);
+	scanf("%d",&m);
+	for (i=1;i<=m;i++)
+	{
+		scanf("%d",&op);
+		if (op==0)
+		{
+			scanf("%d%d",&x,&y);
+			modify(1,x,1,N,y);
+		}
+		else
+		{
+			scanf("%d%d%d",&x,&y,&z);
+			ans=0;
+			for (j=1;j<=z;j++)
+			{
+				X=query(1,x,y,1,N);
+				if (X.M.FR<=0) break;
+				ans+=X.M.FR; A[j]=X.M.SC;
+				modify2(1,A[j].FR,A[j].SC,1,N);
+			}
+			for (j--;j>=1;j--) modify2(1,A[j].FR,A[j].SC,1,N);
+			printf("%d\n",ans);
+		}
+	}
+	return 0;
+}

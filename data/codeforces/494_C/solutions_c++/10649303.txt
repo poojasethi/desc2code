@@ -1,0 +1,91 @@
+#include<cstdio>
+#include<cstring>
+#include<cmath>
+#include<algorithm>
+#include<vector>
+#define pb push_back
+using namespace std;
+
+const int maxn = 100005;
+const int maxl = 5002;
+const int maxh = 17;
+
+int n,q,da[maxn][maxh];
+
+void rmq()
+{
+    for(int j=1;j<=log(n)/log(2);j++)
+        for(int i=1;i+(1<<j)-1<=n;i++)
+            da[i][j]=max(da[i][j-1],da[i+(1<<(j-1))][j-1]);
+}
+
+
+int query(int x,int y)
+{
+    int k =(int)(log(y-x+1)/log(2));
+    return max(da[x][k],da[y-(1<<k)+1][k]);
+}
+
+struct node
+{
+    int l,r;
+    double p;
+    node(){}
+    node(int a,int b,double c):l(a),r(b),p(c){}
+    bool operator<(const node& a)const
+    {
+        if(r!=a.r)
+            return r < a.r;
+        else
+            return l > a.l;
+    }
+}st;
+
+vector<node> vs;
+
+int ma[maxl];
+double tp[maxl],dp[maxl][maxl];
+
+bool vis[maxl];
+int main()
+{
+    scanf("%d%d",&n,&q);
+    for(int i=1;i<=n;i++)
+        scanf("%d",&da[i][0]);
+    rmq();
+    for(int i=0;i<q;i++)
+    {
+        scanf("%d%d%lf",&st.l,&st.r,&st.p);
+        //printf("p=%f\n",st.p);
+        vs.pb(st);
+    }
+    vs.pb(node(1,n,0));
+    sort(vs.begin(),vs.end());
+    for(int i=0;i<=q;i++)
+    {
+        ma[i] = query(vs[i].l,vs[i].r);
+        for(int j=0;j<=q;j++)
+            tp[j] = 1;
+        for(int j=0;j<i;j++)
+        {
+            if(vis[j]==0&&vs[j].l>=vs[i].l)
+            {
+                vis[j] = 1;
+                for(int k=0;k<=q;k++)
+                {
+                    if(ma[i]+k-ma[j]<=q)
+                        tp[k]*=dp[j][ma[i]+k-ma[j]];
+                }
+            }
+        }
+        for(int j=q;j;j--)
+            tp[j]-=tp[j-1];
+        dp[i][0] = tp[0]*(1-vs[i].p);
+        for(int j=1;j<=q;j++)
+            dp[i][j] = dp[i][j-1] + vs[i].p*tp[j-1]+(1-vs[i].p)*tp[j];
+    }
+    double r = dp[q][0]*ma[q];
+    for(int i=1;i<=q;i++)
+        r += (dp[q][i]-dp[q][i-1])*(ma[q]+i);
+    printf("%.10f\n",r);
+}

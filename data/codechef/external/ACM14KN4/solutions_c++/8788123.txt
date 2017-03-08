@@ -1,0 +1,158 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define gc getchar_unlocked
+typedef long long int ll;
+typedef pair<int,int> pii;
+
+struct Node
+{
+	ll sum,mx,inc,dec;
+};
+Node segtree[400005];
+ll A[100005];
+char qtype;
+
+inline void fs(int &x)//fast input
+{
+	register int c = gc();
+	x = 0;
+	int neg = 0;
+	for(;((c<48 || c>57) && c != '-');c = gc());//c<'0'||c>'9'
+	if(c=='-') {neg=1;c=gc();}
+	for(;c>=48 && c<=57;c = gc()) {x = (x<<1) + (x<<3) + c - 48;}
+	if(neg) x=-x;
+}
+
+void build(int node,int l,int r)
+{
+	if(l==r)//leaf node
+	{
+		segtree[node].mx=A[l];
+		segtree[node].sum=A[l];
+		segtree[node].inc=1;//single node
+		segtree[node].dec=1;//single node
+		return;
+	}
+
+	build(2*node,l,(l+r)/2);
+	build(2*node+1,(l+r)/2 + 1,r);
+
+	//build
+	segtree[node].mx=max(segtree[2*node].mx,segtree[2*node+1].mx);
+	segtree[node].sum=segtree[2*node].sum + segtree[2*node+1].sum;
+	segtree[node].inc=segtree[2*node].inc & segtree[2*node+1].inc & (A[(l+r)/2]<=A[(l+r)/2 + 1]);//imp for merge to parent node
+	segtree[node].dec=segtree[2*node].dec & segtree[2*node+1].dec & (A[(l+r)/2]>=A[(l+r)/2 + 1]);
+
+}
+
+//single update
+void update(int node, int l,int r,int index,ll val)
+{
+	if(index < l || r < index)return;
+
+	if(l==r)//leaf node
+	{
+		segtree[node].mx=val;
+		segtree[node].sum=val;
+		segtree[node].inc=1;
+		segtree[node].dec=1;
+		return;
+	}
+
+	update(2*node,l,(l+r)/2,index,val);
+	update(2*node+1,(l+r)/2 + 1,r,index,val);
+
+	segtree[node].mx=max(segtree[2*node].mx,segtree[2*node+1].mx);
+	segtree[node].sum=segtree[2*node].sum + segtree[2*node+1].sum;
+	segtree[node].inc=segtree[2*node].inc & segtree[2*node+1].inc & (A[(l+r)/2]<=A[(l+r)/2 + 1]);//imp for merge to parent node
+	segtree[node].dec=segtree[2*node].dec & segtree[2*node+1].dec & (A[(l+r)/2]>=A[(l+r)/2 + 1]);
+}
+
+//normal query
+ll query(int node,int l, int r, int ss,int se)
+{
+	if(qtype=='M')
+	{
+		if(se<l || r<ss)return INT_MIN;//node outside given segment
+
+		if(l>=ss && r<=se)//node inside
+			return segtree[node].mx;
+		else 
+			return max(query(2*node,l,(l+r)/2,ss,se),query(2*node+1,(l+r)/2 + 1,r,ss,se));
+	}
+
+	if(qtype=='S')
+	{
+		if(se<l || r<ss)return 0;//node outside given segment
+
+		if(l>=ss && r<=se)//node inside segment
+			return segtree[node].sum;
+		else 
+			return query(2*node,l,(l+r)/2,ss,se) + query(2*node+1,(l+r)/2 + 1,r,ss,se);
+	}
+
+	if(qtype=='I')
+	{
+		if(se<l || r<ss)return 1;//node outside given segment
+
+		if(l>=ss && r<=se)//node inside segment
+			return segtree[node].inc;
+		
+		if((l+r)/2 >=ss && (l+r)/2 <= se && ((l+r)/2 + 1) >=ss && ((l+r)/2 + 1) <=se)//mid and mid+1 in segment
+			return query(2*node,l,(l+r)/2,ss,se) & query(2*node+1,(l+r)/2 + 1,r,ss,se) & (A[(l+r)/2]<=A[(l+r)/2 + 1]);
+		
+		else
+			return query(2*node,l,(l+r)/2,ss,se) & query(2*node+1,(l+r)/2 + 1,r,ss,se);	
+	}
+
+	if(qtype=='D')
+	{
+		if(se<l || r<ss)return 1;//node outside given segment
+
+		if(l>=ss && r<=se)//node inside segment
+			return segtree[node].dec;
+
+		if((l+r)/2 >=ss && (l+r)/2 <= se && ((l+r)/2 + 1) >=ss && ((l+r)/2 + 1) <=se)//mid and mid+1 in segment
+			return query(2*node,l,(l+r)/2,ss,se) & query(2*node+1,(l+r)/2 + 1,r,ss,se) & (A[(l+r)/2]>=A[(l+r)/2 + 1]);
+		
+		else
+			return query(2*node,l,(l+r)/2,ss,se) & query(2*node+1,(l+r)/2 + 1,r,ss,se);
+	}
+
+}
+
+int main(int argc, char const *argv[])
+{
+	int n,m,x;
+	fs(n);fs(m);
+	for (int i = 1; i <= n; ++i)
+	{
+		fs(x);
+		A[i]=x;	
+	}
+	build(1,1,n);
+
+	int index,p,q,val;
+	while(m--)
+	{
+		//cin>>qtype;
+		scanf("%c",&qtype);
+		getchar();
+		if(qtype=='U')
+		{
+			//cin>>p>>val;
+			fs(index);fs(val);
+			A[index]=val;
+			update(1,1,n,index,val);
+		}
+		else
+		{
+			//cin>>p>>q;
+			fs(p);fs(q);
+			ll ans=query(1,1,n,p,q);
+			printf("%lld\n", ans);
+			//cout<<ans<<endl;
+		}
+	}
+	return 0;
+}

@@ -1,0 +1,221 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <cassert>
+#include <algorithm>
+
+using namespace std;
+const int N = 1200005;
+const char SENTI = '$';
+
+char s[N];
+int grp[N], sn[N], sa[N], pos[N], c[N], va[N], lcp[N], gap, n, g, q;
+inline bool cmp(int i, int j) {return s[i] != s[j] ? s[i] < s[j] : j < i;}
+inline bool equal(int i, int j) {return pos[i] == pos[j] && i + gap < n && pos[i + (gap >> 1)] == pos[j + (gap >> 1)];}
+void buildSA(char s[]) {
+	for (int i = 0; i < n; ++i)
+		sa[i] = i, pos[i] = s[i];
+	sort(sa, sa + n, cmp);
+	for (gap = 1; gap < n * 2; gap <<= 1) {
+		va[sa[0]] = 0;
+		for (int i = 1; i < n; ++i) {
+			int prev = sa[i - 1], next = sa[i];
+			va[next] = equal(prev, next) ? va[prev] : i;
+		}
+		for (int i = 0; i < n; ++i) {
+			pos[i] = va[i];
+			va[i] = sa[i];
+			c[i] = i;
+		}
+		for (int i = 0; i < n; ++i) {
+			int id = va[i] - gap;
+			if (id >= 0)
+				sa[c[pos[id]]++] = id;
+		}
+	}
+	for (int i = 0; i < n; ++i)
+		pos[sa[i]] = i;
+}
+// least common prefix, assuming sa is built
+void buildLCP(char s[]) {
+	for (int i = 0, k = 0; i < n; ++i) {
+		if (pos[i] != n - 1) {
+			for (int j = sa[pos[i] + 1]; s[i+k] == s[j+k]; ++k);
+			lcp[pos[i]] = k;
+			if (k) --k;
+		}
+		else lcp[pos[i]] = 0;
+	}
+}
+int st[20][N], lg[N];
+// build min sparse table for lcp
+void buildSparse() {
+	for (int i = 2; i <= n; ++i)
+		lg[i] = lg[i >> 1] + 1;
+	memcpy(st[0], lcp, sizeof(int) * n);
+	for (int j = 0; (2 << j) <= n; ++j) {
+		for (int i = 0; i + (2 << j) <= n; ++i) {
+			int k = i + (1 << j);
+			st[j+1][i] = min(st[j][i], st[j][k]);
+		}
+	}
+}
+int querySparse(int a, int b) {
+	if (b < a) swap(a, b);
+	int k = lg[b - a + 1];
+	int ab = b - (1 << k) + 1;
+	return min(st[k][a], st[k][ab]);
+}
+
+int sqrtn;
+int offl[N], offr[N], offpl[N], offpr[N];
+
+inline bool queryCmp(int a, int b) {
+	return (offpl[a] / sqrtn < offpl[b] / sqrtn) || (offpl[a] / sqrtn == offpl[b] / sqrtn && offpr[a] < offpr[b]);
+}
+
+pair<int, int> range(int mid, int k) {
+	// find the range of LCPs within k
+	int prefix;
+	if (lcp[mid - 1] >= k) {
+		int L = 0, R = mid;
+		while (L < R) {
+			int M = (L + R) / 2;
+			if (querySparse(M, mid - 1) < k) {
+				L = M + 1;
+			} else {
+				R = M;
+			}
+		}
+		prefix = L;
+	} else {
+		prefix = mid;
+	}
+	int suffix;
+	{
+		int L = mid, R = n - 1;
+		while (L < R) {
+			int M = (L + R) / 2;
+			if (querySparse(mid, M) >= k)
+				L = M + 1;
+			else
+				R = M;
+		}
+		suffix = L;
+	}
+	assert(prefix == suffix || querySparse(prefix, suffix - 1) >= k);
+	return make_pair(prefix, suffix);
+}
+
+
+int Q[N];
+int ans[N], ansmx[N];
+int tree[N], leaf[N];
+
+#define P (p << 1)
+#define M ((L + R) >> 1)
+
+inline void pull(int p) {
+	tree[p] = ((leaf[tree[P]] > leaf[tree[P|1]] || (leaf[tree[P]] == leaf[tree[P|1]] && tree[P] < tree[P|1]))
+		? tree[P]
+		: tree[P|1]);
+}
+
+void build(int p = 1, int L = 1, int R = g) {
+	if (L == R) {
+		tree[p] = L;
+		return;
+	}
+	build(P, L, M);
+	build(P|1, M + 1, R);
+	pull(p);
+}
+
+void add(int i, int x, int p = 1, int L = 1, int R = g) {
+	if (L == R) {
+		leaf[L] += x;
+		return;
+	}
+	if (i <= M) add(i, x, P, L, M);
+	else add(i, x, P|1, M+1, R);
+	pull(p);
+}
+
+int queryTree(int a, int b, int p = 1, int L = 1, int R = g) {
+	if (b < L || R < a) return a;
+	if (a <= L && R <= b) return tree[p];
+	int x = queryTree(a, b, P, L, M);
+	int y = queryTree(a, b, P|1, M+1, R);
+	pull(p);
+	return (leaf[x] > leaf[y] || (leaf[x] == leaf[y] && x < y)) ? x : y;
+}
+
+int insert(int id) {
+	int g = grp[sa[id]];
+	if (g) add(g, 1);
+}
+
+int remove(int id) {
+	int g = grp[sa[id]];
+	if (g) add(g, -1);
+}
+
+void mo() {
+	build();
+	sqrtn = sqrt(n) + 1;
+	for (int i = 0; i < q; ++i)
+		Q[i] = i;
+	sort(Q, Q + q, queryCmp);
+	int L = 0, R = -1;
+	for (int i = 0; i < q; ++i) {
+		int id = Q[i];
+		int pl = offpl[id];
+		int pr = offpr[id];
+		int l = offl[id];
+		int r = offr[id];
+		// cout << "my query: " << id << ' ' << pl << ' ' << pr << ' ' << l << ' ' << r << endl;
+		while (R < pr) insert(++R);
+		while (L > pl) insert(--L);
+		while (R > pr) remove(R--);
+		while (L < pl) remove(L++);
+		ans[id] = queryTree(l, r);
+		ansmx[id] = leaf[ans[id]];
+	}
+}
+
+int main() {
+	scanf("%s", s);
+	n = strlen(s);
+	s[n++] = SENTI;
+	fill(grp, grp + n, 0);
+	scanf("%d", &g);
+	for (int i = 0; i < g; ++i) {
+		scanf("%s", s + n);
+		int len = strlen(s + n);
+		s[n + len] = SENTI;
+		fill(grp + n, grp + n + len + 1, i + 1);
+		n += len + 1;
+	}
+	buildSA(s);
+	buildLCP(s);
+	buildSparse();
+	// for (int i = 0; i < n; ++i)
+		// cout << i << ": " << sa[i] << " " << grp[sa[i]] << " " << s + sa[i] << endl;
+	scanf("%d", &q);
+	for (int i = 0; i < q; ++i) {
+		int pl, pr;
+		scanf("%d%d%d%d", offl + i, offr + i, &pl, &pr);
+		pair<int, int> r = range(pos[pl - 1], pr - pl + 1); // O(log n)
+		offpl[i] = r.first;
+		offpr[i] = r.second;
+		// cout << "My query " << pl << ' ' << pr << ": " << endl;
+		// cout << r.first << ' ' << r.second << endl;
+		// for (int i = pl - 1; i < pr; ++i)
+			// cout << s[i]; cout << endl;
+		// cout << r.first << ' ' << r.second << endl;
+	}
+	mo();
+	for (int i = 0; i < q; ++i)
+		printf("%d %d\n", ans[i], ansmx[i]);
+}

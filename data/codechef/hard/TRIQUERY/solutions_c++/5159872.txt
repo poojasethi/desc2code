@@ -1,0 +1,75 @@
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+const int N = 300000+5;
+vector<int> p[N];
+vector< pair<int,int> > vt1[2][N], vt2[2][N];
+int a1[N*3], a2[N*3], ans[N];
+int n, q, top, top2;
+
+void input() {
+    int x, y, d;
+    scanf("%d%d", &n, &q);
+    top2 = 0;
+    for(int i = 0;i < n; i++) {
+        scanf("%d%d", &x, &y);
+        top2 = max(top2, x);
+        p[x].push_back(y);
+    }
+    for(int i = 0;i < q; i++) {
+        scanf("%d%d%d", &x, &y, &d);
+        top2 = max(top2, x+d);
+        if(x > 1) {
+            vt1[0][x-1].push_back(make_pair(i, x+y+d));   // - (y+d)
+            vt2[1][x-1].push_back(make_pair(i, y-1));   // + (y-1)
+        }
+        int pos = min(300000, x+d);
+        vt1[1][pos].push_back(make_pair(i, x+y+d));   // + (y+d)
+        vt2[0][pos].push_back(make_pair(i, y-1));   // - (y-1)
+    }
+}
+
+void update(int a[], int x) {
+    while(x <= top) {
+        a[x] ++;
+        x += x&-x;
+    }
+}
+
+int query(int a[], int x) {
+    int ret = 0;
+    while(x) {
+        ret += a[x];
+        x -= x&-x;
+    }
+    return ret;
+}
+
+void solve() {
+    top = 300000*3;
+    top2 = min(top2, 300000);
+    for(int i = 1;i <= top2; i++) {
+        for(int j = 0;j < p[i].size(); j++) {
+            update(a1, i+p[i][j]);
+            update(a2, p[i][j]);
+        }
+        for(int j = 0;j < vt1[0][i].size(); j++)
+            ans[vt1[0][i][j].first] -= query(a1, vt1[0][i][j].second);
+        for(int j = 0;j < vt1[1][i].size(); j++)
+            ans[vt1[1][i][j].first] += query(a1, vt1[1][i][j].second);
+        for(int j = 0;j < vt2[0][i].size(); j++)
+            ans[vt2[0][i][j].first] -= query(a2, vt2[0][i][j].second);
+        for(int j = 0;j < vt2[1][i].size(); j++)
+            ans[vt2[1][i][j].first] += query(a2, vt2[1][i][j].second);
+    }
+    for(int i = 0;i < q; i++)   printf("%d\n", ans[i]);
+}
+
+int main() {
+    input();
+    solve();
+    return 0;
+}

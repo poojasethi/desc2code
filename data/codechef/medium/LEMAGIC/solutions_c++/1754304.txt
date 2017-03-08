@@ -1,0 +1,131 @@
+#include <cstdlib>
+#include <iostream>
+#include <cstring>
+
+using namespace std;
+
+#define maxNM 100
+#define byte int
+char a[maxNM][maxNM];
+byte ml[maxNM][maxNM][4][10];
+
+int n, m, maxL, maxPosL;
+
+#define MLRAW 0
+#define MLROW 1
+#define MLCOL 2
+#define MLBOTH 3
+
+int GetDigitA(char c, int p, int mm)
+{
+	int d = c - '0';
+	if (mm == MLRAW) return d;
+	int pp = mm == MLBOTH ? p + p : p;
+	d = (d + pp) % 10;
+	return d;
+}
+
+byte MathMax(byte a, byte b)
+{
+	return a > b ? a : b;
+}
+
+void ExtendCell(int i, int j, int p, int ii, int jj)
+{
+	for (int mm = 0; mm < 4; mm++)
+	{
+		int d = GetDigitA(a[i][j], p, mm);
+
+		for (int mmm = 0; mmm < 4; mmm++)
+		{
+			if (ii == i && (mmm & MLROW) != (mm & MLROW) ||
+				jj == j && (mmm & MLCOL) != (mm & MLCOL)) continue;
+
+			for (int k = 0; k < 10; k++)
+			{
+				byte cml = ml[i][j][mm][k];
+				if (d != k)
+				{
+					cml = MathMax(cml, ml[ii][jj][mmm][k]);
+				}
+				else
+				{
+					for (int ki = d; ki < 10; ki++)
+					{
+						cml = MathMax(cml, (byte) (ml[ii][jj][mmm][ki] + 1));                                
+					}
+				}
+				ml[i][j][mm][k] = cml;
+			}
+		}                
+	}
+}
+
+void CalcML(int i, int j, int p)
+{
+	for (int mm = 0; mm < 4; mm++)
+	{
+		for (int k = 0; k < 10; k++)
+		{
+			ml[i][j][mm][k] = 0;
+		}
+		ml[i][j][mm][GetDigitA(a[i][j], p, mm)] = 1;
+	}
+
+	if (i > 0)
+	{
+		ExtendCell(i, j, p, i-1, j);
+	}
+
+	if (j > 0)
+	{
+		ExtendCell(i, j, p, i, j-1);
+	}
+}
+
+int GetMaxL()
+{
+	byte maxL = 1;
+	int i = n - 1, j = m - 1;
+	for (int mm = 0; mm < 4; mm++)
+	{
+		for (int k = 0; k < 10; k++)
+		{
+			maxL = MathMax(maxL, ml[i][j][mm][k]);
+		}
+	}
+	return maxL;
+}
+
+int main(int argc, char *argv[])
+{
+	int t;
+	cin >> t;
+
+	for (int it = 0; it < t; it++)
+	{            
+		cin >> n >> m;
+
+		for (int i = 0; i < n; i++)
+		{
+			cin >> a[i];
+		}
+
+		maxL = 1;
+		maxPosL = n + m - 1;
+
+		for (int p = 1; p < 10; p++)
+		{
+			for (int i = 0; i < n; i++)
+			{
+				for (int j = 0; j < m; j++)
+				{
+					CalcML(i, j, p);
+				}
+			}
+			maxL = MathMax(maxL, GetMaxL());
+		}
+
+		cout << maxL << endl;
+	}
+}

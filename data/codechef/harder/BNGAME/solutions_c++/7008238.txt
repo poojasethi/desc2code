@@ -1,0 +1,115 @@
+#include <bits/stdc++.h>
+#define DB(a) cerr << __LINE__ << ": " << #a << " = " << (a) << endl;
+using namespace std;
+ 
+typedef pair<int,int> PII;
+typedef vector<int> VI;
+typedef long long LL;
+const int MAX = 512345;
+const int INF = 32123;
+ 
+struct info{
+    int a,b,id;
+    info(){}
+    info(int x,int y,int z):a(x),b(y),id(z){}
+ 
+    bool operator < (const info &i) const{
+        if (a == i.a) return (b < i.b);
+        return (a < i.a);
+    }
+} A[MAX];
+ 
+struct Node{
+    int st,en;
+    int L,R,D;
+    Node(){}
+    Node(int l,int r):st(l),en(r),L(-1),R(-1),D(0){}
+} seg[3*MAX];
+ 
+int N,K;
+void Build(int node,int l,int r){
+    seg[node] = Node(l,r);
+    if (l == r) return;
+ 
+    int mid = (l+r)/2, lt = node << 1, rt = lt | 1;
+    Build(lt,l,mid);
+    Build(rt,mid+1,r);
+}
+ 
+void Merge(int node,int lt,int rt){
+    seg[node].L = (seg[lt].L != -1) ? seg[lt].L : seg[rt].L;
+    seg[node].R = (seg[rt].R != -1) ? seg[rt].R : seg[lt].R;
+    seg[node].D = max(seg[lt].D,seg[rt].D);
+    if (seg[lt].R != -1 and seg[rt].L != -1)
+        seg[node].D = max(seg[node].D,seg[rt].L-seg[lt].R);
+}
+ 
+void update(int node,int idx,int add){
+    if (seg[node].st == seg[node].en){
+        if (add) seg[node].L = seg[node].R = seg[node].st;
+        else seg[node].L = seg[node].R = -1;
+        return;
+    }
+ 
+    int mid = (seg[node].st + seg[node].en)/2, lt = node << 1, rt = lt | 1;
+    if (seg[lt].en >= idx)
+        update(lt,idx,add);
+    else
+        update(rt,idx,add);
+    Merge(node,lt,rt);
+}
+ 
+void Add(int idx){
+    update(1,idx,1);
+}
+ 
+void Remove(int idx){
+    update(1,idx,0);
+}
+ 
+bool query(){
+    return (seg[1].D <= K);
+}
+ 
+VI Added[MAX];
+void solve(){
+    cin >> N >> K;
+    int x,y,ans;
+    for(int i = 1; i <= N; ++i)
+        cin >> x >> y, A[i] = info(x,y,i);
+ 
+    sort(A+1,A+N+1);
+ 
+    Build(1,0,N+1);
+    Add(0);
+    Add(N+1);
+ 
+    x = 1, y = 1,ans = INT_MAX;
+    int upto = INF,start;
+ 
+    while(x <= N){
+        start = x;
+        y = x;
+        while(y <= N and A[y].a == A[x].a and A[y].b <= upto)
+            Add(A[y].id), Added[A[y].b].push_back(A[y].id),++y;
+        x = y;
+        while(query()){
+            for(int i = 0; i < Added[upto].size(); ++i)
+                Remove(Added[upto][i]);
+            --upto;
+        }
+ 
+        if (upto != INF)
+            ans = min(ans,(A[start].a)*(upto+1));
+        while(x <= N and A[x].a == A[start].a) ++x;
+    }
+    cout << ans << endl;
+}
+ 
+int main()
+{
+	ios_base::sync_with_stdio(0);
+	cin.tie(0);
+	solve();
+	return 0;
+}

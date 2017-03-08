@@ -1,0 +1,166 @@
+#include <vector>
+#include <math.h>
+#include <stdio.h>
+using namespace std;
+
+const int MAX=3100;
+char sieve[MAX];
+vector<int> prime;
+int sprime[MAX];
+int deprime[MAX];
+vector<int> sqfreefac[MAX];
+vector<int> sqfree;
+int dp[2][1<<16];
+
+int main(int argc, char* argv[])
+{
+    int h, i, j, k, t, n, mod;
+    for(i=2;i<MAX;i++)
+    {
+        if(!sieve[i])
+        {
+            prime.push_back(i);
+            for(j=i+i;j<MAX;j=j+i)
+            {
+                sieve[j]=1;
+            }
+        }
+    }
+    scanf("%d", &t);
+    for(h=0;h<t;h++)
+    {
+        scanf("%d %d", &n, &mod);
+        for(i=0;i<=n;i++)
+        {
+            deprime[i]=0;
+        }
+        int sqn=floor(sqrt(n));
+        int splen=0;
+        for(i=0;prime[i]<=sqn;i++)
+        {
+            int p=0, x=n;
+            while(x)
+            {
+                x/=prime[i];
+                p+=x;
+            }
+            if(p&1)
+            {
+                deprime[prime[i]]=splen;
+                sprime[splen++]=prime[i];
+            }
+        }
+        if(h) sqfree.clear();
+        int tp[20]={0};
+        for(i=1;i<=n;i++)
+        {
+            if(sqfreefac[i].size())
+            {
+                sqfreefac[i].clear();
+            }
+            int p=i, cnt=0;
+            for(j=0;j<splen;j++)
+            {
+                if(p%sprime[j]==0)
+                {
+                    p/=sprime[j];
+                    tp[cnt++]=sprime[j];
+                }
+            }
+            if(p==1)
+            {
+                sqfree.push_back(i);
+                for(j=0;j<cnt;j++)
+                {
+                    sqfreefac[i].push_back(tp[j]);
+                }
+            }
+        }
+        int end=1<<splen;
+        for(i=0;i<2;i++)
+        {
+            for(j=0;j<end;j++)
+            {
+                dp[i][j]=0;
+            }
+        }
+        int idx=0;
+        dp[idx][0]=1%mod;
+        for(i=0;i<sqfree.size();i++)
+        {
+            idx=1-idx;
+            int p=sqfree[i];
+            for(j=0;j<end;j++)
+            {
+                dp[idx][j]=dp[1-idx][j];
+            }
+            int mask=0;
+            for(j=0;j<sqfreefac[p].size();j++)
+            {
+                mask|=1<<(deprime[sqfreefac[p][j]]);
+            }
+            for(j=0;j<end;j++)
+            {
+                if(dp[1-idx][j] && !(j&mask))
+                {
+                    int pos=j|mask;
+                    dp[idx][pos]+=dp[1-idx][j];
+                    if(dp[idx][pos]>=mod)
+                    {
+                        dp[idx][pos]-=mod;
+                    }
+                }
+            }
+        }
+        //
+        int pstart=0;
+        for(i=0;i<prime.size();i++)
+        {
+            if(prime[i]>sqn)
+            {
+                pstart=i;
+                break;
+            }
+        }
+        for(i=pstart;prime[i]<=n;i++)
+        {
+            int len=n/prime[i];
+            if(len&1)
+            {
+                idx=1-idx;
+                for(j=0;j<end;j++)
+                {
+                    dp[idx][j]=0;
+                }
+                for(j=1;j<=len;j++)
+                {
+                    int sz=sqfreefac[j].size();
+                    if(sz || j==1)
+                    {
+                        int mask=0;
+                        for(k=0;k<sz;k++)
+                        {
+                            mask|=1<<(deprime[sqfreefac[j][k]]);
+                        }
+                        for(k=0;k<end;k++)
+                        {
+                            if(dp[1-idx][k] && !(k&mask))
+                            {
+                                int pos=k|mask;
+                                dp[idx][pos]+=dp[1-idx][k];
+                                if(dp[idx][pos]>=mod)
+                                {
+                                    dp[idx][pos]-=mod;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        int ans=dp[idx][end-1];
+        printf("%d\n", ans%mod);
+    }
+    return 0;
+}
+

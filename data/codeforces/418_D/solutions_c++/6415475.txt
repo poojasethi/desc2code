@@ -1,0 +1,193 @@
+#include <iostream>
+#include <ctime>
+#include <fstream>
+#include <cmath>
+#include <cstring>
+#include <cassert>
+#include <cstdio>
+#include <algorithm>
+#include <iomanip>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <set>
+#include <map>
+#include <complex>
+#include <utility>
+#include <cctype>
+#include <list>
+#include <deque>
+
+using namespace std;
+
+#define FORALL(i,a,b) for(int i=(a);i<=(b);++i)
+#define FOR(i,n) for(int i=0;i<(n);++i)
+#define FORB(i,a,b) for(int i=(a);i>=(b);--i)
+
+typedef long long ll;
+typedef long double ld;
+typedef complex<ld> vec;
+
+typedef pair<int,int> pii;
+typedef map<int,int> mii;
+
+#define pb push_back
+#define mp make_pair
+
+#define MAXN 100005
+#define MAXM MAXN
+#define INF 1000000
+#define MAXK 17
+
+// maximum seg tree
+#define left(i) (2*(i)+1)
+#define right(i) (2*(i)+2)
+struct seg_t {
+	vector<int> d;
+	int N;
+	
+	void init_(int* v, int* ord, int a, int b, int i) {
+		if (a==b) return void(d[i] = v[ord[a]]);
+		int m = (a+b)/2;
+		init_(v,ord,a,m,left(i)); init_(v,ord,m+1,b,right(i));
+		d[i] = max(d[left(i)], d[right(i)]);
+	}
+	
+	void init(int* v, int* ord, int N_) {
+		N = N_; d.resize(7*N);
+		init_(v,ord,0,N-1,0);
+	}
+	
+	int delta(int i) { return d[i] - max(d[left(i)], d[right(i)]); }
+	
+	void update(int low, int high, int v, int a, int b, int i) {
+		if (high < a || low > b) return;
+		if (low <= a && b <= high) return void(d[i] += v);
+		int m = (a+b)/2, del = delta(i);
+		update(low,high,v,a,m,left(i)); update(low,high,v,m+1,b,right(i));
+		d[i] = max(d[left(i)], d[right(i)]) + del;
+	}
+	
+	int get_max(int low, int high, int a, int b, int i) {
+		if (high < a || low > b) return -INF;
+		if (low <= a && b <= high) return d[i];
+		int m = (a+b)/2;
+		return max(get_max(low,high,a,m,left(i)),
+				   get_max(low,high,m+1,b,right(i))) + delta(i);
+	}
+};
+#undef left
+#undef right
+
+vector<int> E[MAXN], qus[MAXN];
+int lca[MAXN][MAXK];		// lca[i][k] is the 2^{kth} parent of node i
+int dep[MAXN], par[MAXN];
+int t1[MAXN],t2[MAXN];
+int ord[MAXN], ordc=0;
+int mid[MAXM], ans[MAXM], qa[MAXM], qb[MAXM];
+seg_t T;
+
+int nth(int a, int n) {
+	assert(n>=0);
+	for(int k=0;n;n>>=1,++k) if (n&1) a = lca[a][k];
+	return a;
+}
+
+void dfs1(int i) {
+	lca[i][0] = par[i];
+	FORALL(k,1,MAXK-1) lca[i][k] = lca[lca[i][k-1]][k-1];
+
+	t1[i] = t2[i] = ordc; ord[ordc] = i; ordc++;
+	int numE = E[i].size(), j;
+	FOR(x,numE) {
+		if ((j=E[i][x])==par[i]) continue;
+		dep[j] = dep[i] + 1; par[j] = i; dfs1(j);
+		t2[i] = t2[j];
+	}
+}
+
+void dfs2(int i, int N) {
+	// process all queries at i
+	for(int qq=0;qq<(int)qus[i].size();++qq) {
+		int q = qus[i][qq];
+		int j = (qb[q]==i?qa[q]:qb[q]);
+		if (dep[i] < dep[j]) {
+			ans[q] = max(ans[q], T.get_max(0,t1[mid[q]]-1,0,N-1,0));
+			ans[q] = max(ans[q], T.get_max(t2[mid[q]]+1,N-1,0,N-1,0));
+		} else if (dep[i] == dep[j]) {
+			assert(mid[q] != j);
+			int b = nth(j, dep[j]-dep[mid[q]] - 1);
+			ans[q] = max(ans[q], T.get_max(0,t1[b]-1,0,N-1,0));
+			ans[q] = max(ans[q], T.get_max(t2[b]+1,N-1,0,N-1,0));
+		} else {
+			ans[q] = max(ans[q], T.get_max(t1[mid[q]], t2[mid[q]], 0, N-1, 0));
+		}
+	}
+	
+	// traverse children
+	int numE = E[i].size(), j;
+	FOR(x,numE) {
+		if ((j = E[i][x]) == par[i]) continue;
+		T.update(0,N-1,1,0,N-1,0);
+		T.update(t1[j],t2[j],-2,0,N-1,0);
+			dfs2(j,N);
+		T.update(t1[j],t2[j],2,0,N-1,0);
+		T.update(0,N-1,-1,0,N-1,0);
+	}
+}
+
+// Get the n^th parent. The 0^th parent is the node itself
+int get_lca(int a, int b) {
+	if (dep[a] < dep[b]) swap(a,b);
+
+	a = nth(a, dep[a]-dep[b]);
+	assert(dep[a] == dep[b]);
+	for(int k=MAXK-1;k>=0;--k)
+		if (lca[a][k] != lca[b][k])
+			a = lca[a][k], b = lca[b][k];
+			
+	if (a!=b) a = b = lca[a][0];	
+	return a;
+}
+int get_middle(int a, int b) {
+	if (dep[a] < dep[b]) swap(a,b);
+	int c = get_lca(a,b);
+	int ac = dep[a] - dep[c], bc = dep[b] - dep[c];
+	return nth(a, (ac+bc)/2);
+}
+
+int main() {
+	int N,M,a,b;
+	cin >> N;
+	FORALL(i,2,N) {
+		scanf("%d%d",&a,&b);
+		E[a].pb(b);
+		E[b].pb(a);
+	}
+	
+	// process queries
+	cin >> M;
+	FOR(i,M) {
+		scanf("%d%d",qa+i,qb+i);
+		qus[qa[i]].pb(i); qus[qb[i]].pb(i);
+	}
+	
+	dfs1(1);		// init
+	T.init(dep,ord,N);
+	FOR(i,M) mid[i] = get_middle(qa[i],qb[i]), ans[i] = -INF;
+	dfs2(1,N);		// solve
+	FOR(i,M) printf("%d\n", ans[i]);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

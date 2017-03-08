@@ -1,0 +1,126 @@
+#include<set>
+#include<queue>
+#include<cstdio>
+#include<vector>
+#include<algorithm>
+#include<functional>
+ 
+#define pb push_back
+#define rep(i,n) for(int i=0;i<n;i++)
+ 
+using namespace std;
+ 
+typedef	vector<int> vi;
+typedef	pair<int,int> pii;
+ 
+const int INF=1<<29;
+ 
+struct Square{
+int x,y,a,parent,grundy;
+vi child;
+Square(){ parent=grundy=-1; child.clear(); }
+} sq[50000];
+ 
+int calcGrundyNumber(int id){
+if(~sq[id].grundy)	return sq[id].grundy;
+int g=0;
+rep(i,sq[id].child.size()){
+g^=calcGrundyNumber(sq[id].child[i]);
+}
+return sq[id].grundy=1+g;
+}
+ 
+// paint a square in tree p, then the grundy number of this tree is g
+int findSuitableSquare(int p,int g){
+// if(g==0)printf("> candidate %d\n",p);
+if(g==0)	return p;
+int ans=INF;
+int gp=calcGrundyNumber(p);
+rep(i,sq[p].child.size()){
+int c=sq[p].child[i];
+ans=min(ans,findSuitableSquare(c,(g-1)^(gp-1)^calcGrundyNumber(c)));
+}
+return ans;
+}
+ 
+enum SIDE{TOP=0,BOTTOM=1,LEFT=0,RIGHT=1};
+struct Event{
+int t,id;
+SIDE side;
+Event(int T,int ID,SIDE S):t(T),id(ID),side(S){}
+bool operator<(const Event &e)const{ return t<e.t; }
+bool operator>(const Event &e)const{ return e<*this; }
+};
+ 
+int tmp_parent[50000];
+ 
+int determineParent(int id){
+if(~tmp_parent[id]){
+int p=determineParent(tmp_parent[id]);
+sq[id].parent=p;
+sq[p].child.pb(id);
+}
+return sq[id].parent;
+}
+ 
+int main(){
+int T; scanf("%d",&T);
+while(T--){
+int n; scanf("%d",&n);
+rep(i,n){
+tmp_parent[i]=-1;
+sq[i]=Square();
+scanf("%d%d%d",&sq[i].x,&sq[i].y,&sq[i].a);
+}
+ 
+priority_queue< Event,vector<Event>,greater<Event> > pq;
+rep(i,n){
+pq.push(Event(sq[i].y,i,TOP));
+pq.push(Event(sq[i].y+sq[i].a,i,BOTTOM));
+}
+ 
+set<Event> st;
+while(!pq.empty()){
+Event e=pq.top(); pq.pop();
+int y=e.t,id=e.id;
+if(e.side==TOP){
+set<Event>::iterator it=st.lower_bound(Event(sq[id].x+sq[id].a,-1,LEFT));
+if(it!=st.end()){
+Event ee=*it;
+if(ee.side==RIGHT){
+sq[id].parent=ee.id;
+sq[ee.id].child.pb(id);
+}
+else{	// ee.side==LEFT
+tmp_parent[id]=ee.id; // find it later
+}
+}
+st.insert(Event(sq[id].x,id,LEFT));
+st.insert(Event(sq[id].x+sq[id].a,id,RIGHT));
+}
+else{	// e.side==BOTTOM
+st.erase(Event(sq[id].x,id,LEFT));
+st.erase(Event(sq[id].x+sq[id].a,id,RIGHT));
+}
+}
+ 
+rep(i,n) if(~tmp_parent[i]) determineParent(i);
+ 
+int g=0;
+rep(i,n)if(sq[i].parent==-1){	// for each root
+g^=calcGrundyNumber(i);
+}
+// rep(i,n)printf("%d parent: %d\n",i,sq[i].parent);
+// rep(i,n)printf("%d grundy: %d\n",i,calcGrundyNumber(i));
+if(g==0)	puts("Fit");
+else{
+int ans=INF;
+rep(i,n)if(sq[i].parent==-1){
+ans=min(ans,findSuitableSquare(i,g^calcGrundyNumber(i)));
+}
+printf("Fat %d\n",ans+1);
+}
+}
+ 
+return 0;
+}

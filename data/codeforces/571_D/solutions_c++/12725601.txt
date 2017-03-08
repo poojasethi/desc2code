@@ -1,0 +1,213 @@
+#include <stdio.h>
+#include <vector>
+
+using namespace std;
+
+const int maxn = 500100;
+
+struct Thistory{
+	int t;
+	int add;
+	long long sumadd;
+};
+
+struct Tuniv {
+	vector<Thistory> history;
+	int father, size;
+	long long val;
+	int valT, mergeT;
+	int head, tail, next;
+}univ[maxn+1];
+
+struct Tmil {
+	int father, size;
+	int clearT, mergeT;
+	int head, tail, next;
+}mil[maxn+1];
+
+int univpos[maxn+1], milpos[maxn+1];
+int n, m;
+
+void init() {
+	int i;
+	scanf("%d%d", &n, &m);
+	for (i = 1; i<=n; ++i) {
+		univ[i].father = -1;
+		univ[i].size = 1;
+		univ[i].val = univ[i].valT = univ[i].mergeT = 0;
+		univ[i].head = univ[i].tail = i;
+		univ[i].next = -1;
+		univpos[i] = i;
+
+		mil[i].father = -1;
+		mil[i].size = 1;
+		mil[i].clearT = mil[i].mergeT = 0;
+		mil[i].head = mil[i].tail = i;
+		mil[i].next = -1;
+		milpos[i] = i;
+	}
+}
+
+long long currentVal(int p) {
+	int f;
+	int clearT = 0;
+	int mergeT = 0;
+	long long val;
+	int start, stop, mid, yao, l;
+
+	// get most recent clearT
+	clearT = mil[p].clearT;
+	if (mil[p].father == -1) f = p;
+	else f = mil[p].father;
+	if (mil[p].mergeT < mil[f].clearT) {
+		if (mil[f].clearT > clearT) clearT = mil[f].clearT;
+	}
+
+	// get current val
+	mergeT = univ[p].mergeT;
+	if (univ[p].father == -1) f = p;
+	else f = univ[p].father;
+
+	if (clearT > mergeT) mergeT = clearT;
+	if (clearT > univ[p].valT) val = 0;
+	else val = univ[p].val;
+
+	l = univ[f].history.size() - 1;
+
+	// if (p == 2) {
+	// 	printf("\nf=%d: ",f);
+	// 	for (int i = 0; i <= stop; ++i) printf("(t=%d, add=%d, sumadd=%lld) ", univ[f].history[i].t,univ[f].history[i].add,univ[f].history[i].sumadd);
+	// 	printf("mergeT=%d\n", mergeT);
+	// }
+
+	if ((l >= 0) && (mergeT < univ[f].history[l].t)) {
+		if (mergeT < univ[f].history[0].t) {
+			val += univ[f].history[l].sumadd;
+		} else {
+			start = 0;
+			stop = l;
+			while (start <= stop) {
+				mid = (start + stop) / 2;
+				if (mergeT < univ[f].history[mid].t) {
+					yao = mid;
+					stop = mid - 1;
+				} else {
+					start = mid + 1;
+				}
+			}
+			// printf("yao=%d\n",yao);
+			val += univ[f].history[l].sumadd - univ[f].history[yao - 1].sumadd;
+		}
+	}
+
+	return val;
+}
+
+void mergeuniv(int t, int x, int y) {
+	int yuanx = x;
+	int k, p;
+	x = univpos[x];
+	y = univpos[y];
+	if (univ[x].size < univ[y].size) {
+		k = x;
+		x = y;
+		y = k;
+	}
+
+	p = univ[y].head;
+	while (p != -1) {
+		univ[p].val = currentVal(p);
+		// printf("in merge, val[%d]=%lld t=%d\n",p , univ[p].val,t);
+		univ[p].valT = univ[p].mergeT = t;
+		univ[p].father = x;
+		p = univ[p].next;
+	}
+	// printf("univ[1].history: t=%d add=%lld\n", univ[1].history[0].t,univ[1].history[0].add);
+
+	univ[x].size += univ[y].size;
+	univ[univ[x].tail].next = univ[y].head;
+	univ[x].tail = univ[y].tail;
+
+	univpos[yuanx] = x;
+}
+
+void mergemil(int t, int x, int y) {
+	int yuanx = x;
+	int k, p;
+	x = milpos[x];
+	y = milpos[y];
+	if (mil[x].size < mil[y].size) {
+		k = x;
+		x = y;
+		y = k;
+	}
+
+	p = mil[y].head;
+	while (p != -1) {
+		if ((mil[p].mergeT < mil[y].clearT) && (mil[y].clearT > mil[p].clearT)) {
+			mil[p].clearT = mil[y].clearT;
+		}
+		mil[p].mergeT = t;
+		mil[p].father = x;
+		p = mil[p].next;
+	}
+
+	mil[x].size += mil[y].size;
+	mil[mil[x].tail].next = mil[y].head;
+	mil[x].tail = mil[y].tail;
+
+	milpos[yuanx] = x;
+}
+
+void work() {
+	int t;
+	int x,y,q,tmp,i,j,k,fx,fy,sz,l;
+	char c;
+	Thistory h;
+	long long result;
+
+	for (t = 1; t <= m; ++t) {
+		do {
+			scanf("%c", &c);
+		} while ((c<'A') || (c>'Z'));
+
+		if (c=='U') {
+			scanf("%d%d", &x, &y);
+			mergeuniv(t, x, y);
+		} else if (c=='M') {
+			scanf("%d%d", &x, &y);
+			mergemil(t, x, y);
+		} else if (c=='A') {
+			scanf("%d",&x);
+			x = univpos[x];
+			sz = univ[x].size;
+			h.t = t;
+			h.add = sz;
+			l = univ[x].history.size();
+			if (l == 0) h.sumadd = h.add;
+			else h.sumadd = univ[x].history[l - 1].sumadd + h.add;
+			univ[x].history.push_back(h);
+
+		} else if (c=='Z') {
+			scanf("%d",&x);
+			x = milpos[x];
+			mil[x].clearT = t;
+		} else if (c=='Q') {
+			scanf("%d",&x);
+			result = currentVal(x);
+			printf("%lld\n", result);
+		}
+		/*printf("after %c:\n", c);
+		for (int j = 1; j<=2; ++j) {
+			printf("%lld ", currentVal(j));
+		}
+		printf("\n\n");*/
+ 	}
+}
+
+int main() {
+	//freopen("D.in", "r", stdin);
+	init();
+	work();
+	return 0;
+}

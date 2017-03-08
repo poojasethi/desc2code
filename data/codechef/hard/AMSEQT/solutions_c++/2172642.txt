@@ -1,0 +1,213 @@
+#include <algorithm>
+#include <functional>
+#include <map>
+#include <vector>
+#include <tr1/unordered_map>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+
+#define MAX_N 200000
+#define MOD_PRIME 1000000009
+#define pow2i(n) (1 << (n))
+
+using namespace std;
+using namespace std::tr1;
+
+int v[MAX_N];
+int s[MAX_N + 1];
+int tree[2 * (1 << 18)];
+
+size_t left_jump[MAX_N];
+size_t right_jump[MAX_N];
+
+int addmod(int x, int y)
+{
+	int sum = x + y;
+	if (sum >= MOD_PRIME)
+		sum -= MOD_PRIME;
+	return sum;
+}
+
+void add_to_mod(int &x, int y)
+{
+	x = addmod(x, y);
+}
+
+int submod(int x, int y)
+{
+	int diff = x - y;
+	if (diff < 0)
+		diff += MOD_PRIME;
+	return diff;
+}
+
+template<class T>
+void trim_unique(vector<T> &v)
+{
+	typename vector<T>::iterator it = unique(v.begin(), v.end());
+	typename vector<T>::difference_type diff = it - v.begin();
+	v.resize((typename vector<T>::size_type) diff);
+}
+
+size_t pow2(int k)
+{
+	size_t result = 1;
+	return result << k;
+}
+
+int get_msb(size_t n)
+{
+	int k = 0;
+	for (; n > 0; n >>= 1)
+		k++;
+	return k;
+}
+
+int get_upper_exp(size_t n)
+{
+	int k = get_msb(n);
+	size_t result = pow2(k - 1);
+	if (result == n)
+		return k - 1;
+	else
+		return k;
+}
+
+size_t build_interval_tree(int *tree, size_t num_elems)
+{
+	const int num_bits = get_upper_exp(num_elems);
+	size_t tree_size = pow2(num_bits + 1) - 1;
+	memset(tree, 0, tree_size * sizeof(*tree));
+	return tree_size;
+}
+
+int query_tree(const int *tree, int index, int start, int end,
+	int left, int right)
+{
+	if (right < start || end < left)
+		return 0;
+
+	if (left <= start && end <= right)
+		return tree[(size_t) index];
+
+	int left_index = (index << 1) + 1;
+	int right_index = left_index + 1;
+
+	int mid = start + ((end - start) >> 1);
+	int left_elem = query_tree(tree, left_index, start, mid,
+		left, right);
+	int right_elem = query_tree(tree, right_index, mid + 1, end,
+		left, right);
+	return addmod(left_elem, right_elem);
+}
+
+void update_full_tree(int *tree, size_t tree_size, int pos, int value)
+{
+	size_t vindex = (size_t) pos;
+	vindex += tree_size / 2;
+	while (true) {
+		add_to_mod(tree[vindex], value);
+		if (vindex == 0)
+			break;
+		else
+			vindex = (vindex - 1) >> 1;
+	}
+}
+
+int query_full_tree(const int *tree, size_t tree_size, int left, int right)
+{
+	return query_tree(tree, 0, 0, int(tree_size / 2), left, right);
+}
+
+template<class T>
+void construct_reverse_index(const vector<T> &elements, unordered_map<T, size_t> &reverse_index)
+{
+	size_t i = 0;
+	for (typename vector<T>::const_iterator it = elements.begin(); it != elements.end(); ++it, ++i)
+		reverse_index[*it] = i;
+}
+
+void compute_left_jump(const vector<int> &remainders, int diff)
+{
+	for (size_t i = 0, j = 0; i < remainders.size(); ++i) {
+		while (j < remainders.size() && remainders[j] + diff < remainders[i])
+			++j;
+		left_jump[i] = j;
+	}
+}
+
+void compute_right_jump(const vector<int> &remainders, int diff)
+{
+	for (size_t i = 0, j = 0; i < remainders.size(); ++i) {
+		while (j + 1 < remainders.size() && remainders[j + 1] <= remainders[i] + diff)
+			++j;
+		right_jump[i] = j;
+	}
+}
+
+int solve_problem()
+{
+	unordered_map<int, size_t> rindex;
+	vector<int> remainders;
+	int n, m;
+
+	if (scanf("%d %d", &n, &m) != 2)
+		return 1;
+
+	for (int i = 0; i < n; i++)
+		if (scanf("%d", &v[i]) != 1)
+			return 1;
+
+	s[0] = 0;
+	for (int i = 1; i <= n; i++)
+		s[i] = s[i - 1] + v[i - 1];
+
+	int mask = pow2i(m) - 1;
+	for (int i = 0; i <= n; i++)
+		remainders.push_back(s[i] & mask);
+	sort(remainders.begin(), remainders.end());
+	trim_unique(remainders);
+	construct_reverse_index(remainders, rindex);
+
+	compute_left_jump(remainders, mask / 2);
+	compute_right_jump(remainders, mask / 2 + 1);
+
+	size_t tree_size = build_interval_tree(tree, remainders.size());
+	update_full_tree(tree, tree_size, 0, 1);
+
+	int last_pos = int(remainders.size()) - 1;
+	for (int i = 1; i <= n; i++) {
+		int x = s[i] & mask;
+		int ex = (int) rindex[x];
+		int y;
+		if (x >= mask / 2) {
+			int sx = (int) left_jump[ex];
+			y = query_full_tree(tree, tree_size, sx, ex);
+		} else {
+			int sx = 1 + (int) right_jump[ex];
+			y = query_full_tree(tree, tree_size, 0, ex);
+			if (sx <= last_pos)
+				add_to_mod(y, query_full_tree(tree, tree_size, sx, last_pos));
+		}
+		if (i == n) {
+			printf("%d\n", y);
+			break;
+		}
+		update_full_tree(tree, tree_size, ex, y);
+	}
+
+	return 0;
+}
+
+int main()
+{
+	int num_tests;
+
+	if (scanf("%d", &num_tests) != 1)
+		return 1;
+	for (int i = 0; i < num_tests; i++)
+		solve_problem();
+
+	return 0;
+}

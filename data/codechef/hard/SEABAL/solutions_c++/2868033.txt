@@ -1,0 +1,255 @@
+#include <stdio.h>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+const int maxn = 5e5;
+#define read(x) scanf("%d",&(x))
+#define oo 1000000000
+
+void debug(int l, int r)
+{
+	printf("-----\n");
+		printf("%d %d\n",l,r);
+		printf("-----\n");
+}
+
+struct inter
+{
+	int x,y;
+
+	inter(int x1, int y1)
+	{
+		x = x1;
+		y = y1;
+	}
+	inter()
+	{}
+
+	bool operator < (const inter& a)const
+	{
+		if(x != a.x)return x < a.x;
+		return y < a.y;
+	}
+
+};
+
+struct node
+{
+	int pos;
+	int mn;
+
+	void merge(node a, node b)
+	{
+		if(a.mn <= b.mn)
+		{
+			pos = a.pos;
+			mn = a.mn;
+		}
+		else
+		{
+			pos = b.pos;
+			mn = b.mn;
+		}
+	}
+}tree[maxn];
+
+int n,m,k;
+int bal[maxn];
+int ans[maxn];
+int abi[maxn];
+vector<inter>lista;
+
+void init(int root, int l, int r)
+{
+	if(l == r)
+	{
+		tree[root].mn = lista[l].y;
+		tree[root].pos = l;
+		return ;
+	}
+
+	int m = (l + r) >> 1;
+	int lc = root << 1;
+	int rc = lc|1;
+
+	init(lc,l,m);
+	init(rc,m + 1,r);
+	tree[root].merge(tree[lc],tree[rc]);
+}
+
+node stquery(int root, int l, int r, int i, int j)
+{
+	if(l == i && r == j)
+		return tree[root];
+
+	int m = (l + r) >> 1;
+	int lc = root << 1;
+	int rc = lc|1;
+
+	if(j <= m)
+		return stquery(lc,l,m,i,j);
+	else if(i > m)
+		return stquery(rc,m + 1,r,i,j);
+	else
+	{
+		node a = stquery(lc,l,m,i,m);
+		node b = stquery(rc,m + 1,r, m + 1,j);
+		node res = node();
+		res.merge(a,b);
+		return res;
+	}
+
+}
+
+void stupdate(int root, int l, int r, int pos)
+{
+	if(l == r && r == pos)
+	{
+		tree[root].mn = oo;
+		tree[root].pos = -1;
+		return;
+	}
+
+	int m = (l + r) >> 1;
+	int lc = root << 1;
+	int rc = lc|1;
+
+	if(pos <= m)
+		stupdate(lc,l,m,pos);
+	else
+		stupdate(rc,m + 1,r,pos);
+	tree[root].merge(tree[lc],tree[rc]);
+
+}
+
+void update(int pos)
+{
+	if(pos <= 0)return ;
+	while(pos <= n)
+	{
+		abi[pos]++;
+		pos += (pos&-pos);
+	}
+}
+
+int query(int pos)
+{
+	if(pos <= 0)return 0;
+	int res = 0;
+	while(pos)
+	{
+		res += abi[pos];
+		pos -= (pos&-pos);
+	}
+	return res;
+}
+
+int lower(int pos)
+{
+	int res = pos;
+	int l = 0;
+	int r = pos;
+	int sum = query(pos);
+	int m;
+	while(l <= r)
+	{
+		m = (l + r) >> 1;
+		if(sum - query(m - 1) == (pos - m + 1))
+		{
+			r = m - 1;
+			res = m;
+		}
+		else
+			l = m + 1;
+	}
+	return res;
+}
+
+int upper(int pos)
+{
+	int l = pos;
+	int r = n + 1;
+	int res = pos;
+	int m;
+	int sum = query(pos - 1);
+
+	while(l <= r)
+	{
+		m = (l + r) >> 1;
+		if(query(m) - sum == (m - pos + 1))
+		{
+			l = m + 1;
+			res = m;
+		}
+		else
+			r = m - 1;
+	}
+	return res;
+
+}
+
+int solve(int i, int a)
+{
+	int cur = ans[i - 1] + a;
+	if(bal[cur] > 1)
+	{
+		bal[cur]--;
+		return ans[i - 1];
+	}
+	if(bal[cur] == 0)
+		return ans[i - 1];
+
+	bal[cur]--;
+	update(cur);
+
+	int l = lower(cur);
+	int r = upper(cur);
+	l = lower_bound(lista.begin(),lista.end(),inter(l,-1)) - lista.begin();
+
+	if(l == lista.size())return ans[i - 1];
+	node res = stquery(1,0, m - 1,l, m - 1);
+
+	int total = ans[i - 1];
+
+	while(res.mn <= r)
+	{
+		total++;
+		stupdate(1,0, m - 1,res.pos);
+		res = stquery(1,0, m - 1,l, m - 1);
+	}
+
+	return total;
+}
+
+int main()
+{
+	read(n),read(m);
+
+	for(int i = 1; i <= n; i++)
+		read(bal[i]);
+
+	int a = 0,b = 0;
+	for(int i = 0; i < m; i++)
+	{
+		read(a),read(b);
+		lista.push_back(inter(a,b));
+	}
+
+	sort(lista.begin(),lista.end());
+	init(1,0, m - 1);
+
+	read(k);
+	//debug(k,1);
+	for(int i = 1; i <= k; i++)
+	{
+		read(a);
+		ans[i] = solve(i,a);
+	}
+
+	for(int i = 1; i <= k ; i++)
+		printf("%d\n",ans[i]);
+
+	return 0;
+}

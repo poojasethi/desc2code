@@ -1,0 +1,129 @@
+#include<cmath>
+#include<cstdio>
+#include<cstdlib>
+#include<algorithm>
+using namespace std;
+#define MAX(a,b) if(b>a)a=b
+const double pi=acos(-1);
+struct complex{
+	double re,im;
+	complex(double _re=0.0,double _im=0.0){re=_re,im=_im;}
+}a[200001],b[200001],W[2][200001];
+complex operator + (const complex &A,const complex &B){return complex(A.re+B.re,A.im+B.im);}
+complex operator - (const complex &A,const complex &B){return complex(A.re-B.re,A.im-B.im);}
+complex operator * (const complex &A,const complex &B){return complex(A.re*B.re-A.im*B.im,A.re*B.im+A.im*B.re);}
+int N,L,tot,tmp,now;
+int rev[200001],sum[200001],vis[200001],size[200001],Max[200001],son[200001];
+int next[200001],ed[200001],cnt,num,p[200001],prime[200001];
+double ans;
+void fft(complex *a,int f){
+	for (int i=0;i<N;i++) if(i<rev[i]) swap(a[i],a[rev[i]]);
+	complex x,y;
+	for (int i=1;i<N;i<<=1)
+		for (int j=0,t=N/(i<<1);j<N;j+=i<<1)
+			for (int k=0,l=0;k<i;k++,l+=t)
+			x=a[j+k],y=W[f][l]*a[j+k+i],a[j+k]=x+y,a[j+k+i]=x-y;
+	if(f) for(int i=0;i<N;i++) a[i].re/=N;
+}
+void work(){
+	for (int i=0;i<N;i++){
+		int y=0;
+		for (int x=i,k=1;k<N;k<<=1,x>>=1) (y<<=1)|=x&1;
+		rev[i]=y;
+	}
+	for (int i=0;i<N;i++)
+	W[1][i]=W[0][i]=complex(cos(2*i*pi/N),sin(2*i*pi/N)),W[1][i].im=-W[0][i].im;
+}
+void FFT(){
+//	printf("L %d\n",L);
+	L=max(L,3);
+	for (N=1;N<L;N<<=1); N<<=1;
+	for (int i=1;i<=L;i++) a[i].re=sum[i];
+//for (int j=0;j<N;j++) printf("%lf ",a[j].re); printf("a\n");
+//for (int j=0;j<N;j++) printf("%lf ",b[j].re); printf("b\n");
+	work();
+	fft(a,0); fft(b,0);
+	for (int i=0;i<N;i++) a[i]=a[i]*b[i];
+	fft(a,1);
+//for (int j=0;j<N;j++) printf("%lf ",a[j].re); printf("fft\n");
+}
+void dfs_(int x){
+	vis[x]=1; size[x]=1; Max[x]=0;
+	for (int i=son[x];i;i=next[i])
+	if(!vis[ed[i]]){
+		dfs_(ed[i]);
+		size[x]+=size[ed[i]];
+		MAX(Max[x],size[ed[i]]);
+	}
+	vis[x]=0;
+}
+void dfs__(int x){
+	vis[x]=1;
+	MAX(Max[x],tot-size[x]);
+	if (Max[x]<tmp){
+		tmp=Max[x];
+		now=x;
+	}
+	for (int i=son[x];i;i=next[i])
+	if(!vis[ed[i]]) dfs__(ed[i]);
+	vis[x]=0;
+}
+void dfs___(int x,int dis){
+	vis[x]=1; b[dis].re+=1; MAX(L,dis);
+	for (int i=son[x];i;i=next[i])
+	if(!vis[ed[i]]) dfs___(ed[i],dis+1);
+	vis[x]=0;
+}
+void dfs____(int x,int dis){
+	vis[x]=1; sum[dis]++;
+	for (int i=son[x];i;i=next[i])
+	if(!vis[ed[i]]) dfs____(ed[i],dis+1);
+	vis[x]=0;
+}
+void dfs(int x){
+	dfs_(x);
+	tot=size[x]; tmp=0x7f7f7f7f;
+	dfs__(x);
+	vis[now]=1;// printf("now %d\n",now);
+	for (int i=son[now];i;i=next[i]){
+		if(!vis[ed[i]]){
+			dfs___(ed[i],1);
+			
+			FFT();
+			dfs____(ed[i],1);
+
+			for (int j=1;j<=num&&prime[j]<N;j++)
+			ans+=(int)(a[prime[j]].re+0.5);
+			for (int j=0;j<N;j++){
+				a[j].re=b[j].re=a[j].im=b[j].im=0;
+			}
+	//		printf("an %d\n",ans);
+		}
+	}
+	for (int j=1;j<N;j++){
+		if(!p[j]) ans+=sum[j]; //printf("%d ",sum[j]);
+		sum[j]=0;
+	}
+	//printf("sum\n");
+//	printf("ans %d\n",ans);
+	L=0;
+	for (int i=son[now];i;i=next[i])
+	if(!vis[ed[i]]) dfs(ed[i]);
+}
+int main(){
+	int n;
+	scanf("%d",&n);
+	p[0]=p[1]=1;
+	for (int i=2;i<=n;i++){
+		if(!p[i]) prime[++num]=i;
+		for (int j=i+i;j<=n;j+=i) p[j]=1;
+	}
+	for (int i=1;i<n;i++){
+		int x,y;
+		scanf("%d%d",&x,&y);
+		next[++cnt]=son[x]; son[x]=cnt; ed[cnt]=y;
+		next[++cnt]=son[y]; son[y]=cnt; ed[cnt]=x;
+	}
+	dfs(1);
+	printf("%.6lf\n",(double)ans*2/((double)n*(n-1)));
+}

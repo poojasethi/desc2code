@@ -1,0 +1,6 @@
+import re
+s = raw_input()
+if(re.match("(1|14|144)+$",s)):
+	print "YES"
+else:
+	print "NO"

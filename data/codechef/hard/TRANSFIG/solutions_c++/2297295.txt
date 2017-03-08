@@ -1,0 +1,313 @@
+#include <iostream>
+#include <stdlib.h>
+#include <vector>
+#include <algorithm>
+#define MAXN 100000
+#define BIGPRIME 1000000007
+
+using namespace std;
+
+//store inverse mod prime
+int *inv;
+//store factorial mod prime
+int *fac;
+//store factorial inverse mode prime - calculate as you go :)
+int *invfac;
+
+int k;
+int pre[MAXN];
+int post[MAXN];
+int invpre[MAXN];
+int invpost[MAXN];
+
+//recursively calculate power of x, y mod BIGPRIME
+int power(int x, int y)
+{
+	long long retVal;
+	long long pbytwo;
+	if (y == 0) {
+		retVal = 1;
+		return retVal;
+	}
+	if (y == 1) {
+		retVal = x;
+		retVal = retVal % BIGPRIME;
+		return retVal;
+	}
+	if (y % 2 == 0) {
+		pbytwo = power(x, y/2);	
+		pbytwo =  (pbytwo * pbytwo);
+		retVal =pbytwo % BIGPRIME;
+		return retVal;
+	}
+	else {
+		pbytwo = power(x, (y-1)/2);
+		pbytwo =  (pbytwo * pbytwo);
+		pbytwo = pbytwo % BIGPRIME;
+		pbytwo = pbytwo * x;
+		retVal = pbytwo % BIGPRIME;
+		return retVal;
+	}
+}
+
+//precompute prime inverses and store in array a for numbers till n
+
+void precomputeinv(int *a, int n)
+{
+	int i;
+	a[0] = 1;
+	int eval;
+	long long temp;
+	int fail = 0;
+	for(i=1;i<n;i++) {
+		eval = power(i+1, BIGPRIME-2);
+		a[i] = eval;
+	}
+	
+	//debug
+	/*
+	printf("Precomputation inv done \n");
+	for(i=0;i<n;i++) {
+		temp = a[i];
+		temp = temp * (i+1);
+		temp = temp % BIGPRIME;
+		if (temp != 1) {
+			fail = 1;
+		}
+		printf("%d %d %lld\n", i+1,a[i], temp);
+	}
+	printf("Precomputation inv printed fail %d \n", fail);
+	*/
+	return;
+}
+
+//precompute factorials and store in array a for numbers till n
+
+void precomputefac(int *a, int n)
+{
+	int i;
+	a[0] = 1;
+	int eval;
+	long long temp;
+	temp = 1;
+	int fail = 0;
+	for(i=1;i<n;i++) {
+		temp = temp * (i+1);
+		eval = temp % BIGPRIME;
+		a[i] = eval;
+		temp = eval;
+	}
+	//debug
+	/*
+	printf("Precomputation factorial done \n");
+	for(i=0;i<n;i++) {
+		printf("%d %d\n", i+1,a[i]);
+	}
+	printf("Precomputation factorial printed \n");
+	*/
+	return;
+}
+
+//precompute inversefactorials and store in array a for numbers till n
+
+//the first array is inverses precomputed, second is factorials precomputed, third is return array
+void precomputeinvfac(int * pcinv, int * pcfac, int *a,  int n)
+{
+	int i;
+	a[0] = 1;
+	int eval;
+	long long temp;
+	temp = 1;
+	int fail = 0;
+	for(i=1;i<n;i++) {
+		temp = temp * pcinv[i];
+		eval = temp % BIGPRIME;
+		a[i] = eval;
+		temp = eval;
+	}
+	//debug
+	/*
+	printf("Precomputation inverse factorial done \n");
+	for(i=0;i<n;i++) {
+		temp = a[i];
+		temp = temp * pcfac[i];
+		temp = temp % BIGPRIME;
+		if (temp != 1) {
+			fail = 1;
+		}
+		printf("%d %d \n", i+1,a[i]);
+	}
+	printf("Precomputation inverse factorial printed fail %d \n", fail);
+	*/
+	return;
+}
+
+
+//Calculate Combinatorial ncr given precomputed factorial array pcfac and precomputed inverse factorial array pcinvfacr
+int nCr(int n, int r)
+{
+	long long nfac, rfac, nminusrfac;
+	long long ltemp;
+	int retVal;
+	nfac = fac[n-1];
+	rfac = invfac[r-1];
+	nminusrfac = invfac[n-r-1];
+	ltemp = nfac * rfac;
+	ltemp = ltemp % BIGPRIME;
+	ltemp = ltemp * nminusrfac;
+	retVal = ltemp % BIGPRIME;
+	return retVal;
+
+	
+}
+
+int solve(int prei, int prej, int posti, int postj, int * soln)
+{
+	int  preikindices;
+	int  prejkindices;
+	int  postikindices;
+	int  postjkindices;
+	int i, j, ki;
+	int stroot;
+	int e;
+	int pass;
+	int numstelem;
+	int postptr;
+	int temp;
+	long long ltemp;
+	int nullst;
+	int invalidstring;
+	
+	if (prej - prei != postj - posti) {
+		return 0;
+	}
+
+	//Terminate when we have only one element and check if pre and post have the same 
+	if (prei == prej) {
+		if (pre[prei] == post[posti]) {
+			*soln = 1;
+			return 1;
+		}
+		return 0;
+	}
+	else {
+		//see if the first and last match - that is the root of this tree
+		if (pre[prei] != post[postj]) {
+			return 0;
+		}
+		//Go over from left to right and right and look for subtrees
+		ki = 0;
+		stroot=pre[prei+1];
+		preikindices = prei+1;
+		postikindices = posti;
+		
+		numstelem = 0;
+		ltemp = 1;
+		for(postptr=posti;postptr<postj;) {
+			e = invpost[stroot-1];
+			
+			//see if the postfix expression has the stroot in correct position
+			if (e < postikindices || e >= postj) {
+				//if st root lies on right of current poststring or on the left of this stree segment evaluated
+				return 0;
+			}		
+			numstelem = e - postptr + 1;
+			prejkindices = preikindices + numstelem - 1;
+			postjkindices = postptr + numstelem - 1;
+			postptr = postjkindices + 1;
+			
+			
+			//evaluate this array
+			pass = solve(preikindices, prejkindices, postikindices, postjkindices, &temp);
+						
+				
+			if (!pass) {
+				return 0;
+			}
+			ltemp = ltemp * temp;
+			ltemp = ltemp % BIGPRIME;	
+
+			ki++;
+			
+			preikindices = prejkindices + 1;
+			postikindices = postptr;
+			stroot = pre[preikindices];
+			
+		}
+
+		*soln = ltemp;
+	
+		
+		//Limit reached on subtrees
+		if (ki > k ) {
+			return 0;
+		}
+
+		//Finally see if we can keep null subtrees
+		if (ki < k) {
+			nullst = k - ki;
+			temp = nCr(k, nullst);
+			ltemp = temp * ltemp;
+			
+			ltemp = ltemp % BIGPRIME;
+			*soln = ltemp;
+		}
+
+		return 1;
+	}
+}
+
+int main()
+{
+	int t;
+	int i,j;
+	int n;
+	int e;
+	
+	int soln;
+	int pass;
+
+	
+	
+	//precompute factorials and inverses for combinatorics
+
+	inv = (int*)malloc(sizeof(int)*(MAXN));
+	fac = (int*)malloc(sizeof(int)*((MAXN)));
+	invfac = (int*)malloc(sizeof(int)*(MAXN));
+
+
+	//Do some precomputation for combinartorics
+	
+	precomputeinv(inv, MAXN);
+	precomputefac(fac, MAXN);
+	precomputeinvfac(inv, fac, invfac,MAXN);
+
+	cin >> t;
+	for(i=0;i<t;i++) {
+		cin >> n >> k;
+		for(j=0;j<n;j++) {
+			cin >> e;
+			pre[j] = e;
+			invpre[e-1] = j;
+		}
+		for(j=0;j<n;j++) {
+			cin >> e;
+			post[j] = e;
+			invpost[e-1] = j;
+		}
+		pass = solve(0, n-1, 0, n-1, &soln);
+		if (pass) {
+			cout << soln << '\n';
+		}
+		else {
+			cout << "0\n";
+		}
+	}
+
+	//free storage
+	free(inv);
+	free(invfac);
+	free(fac);
+
+	return 0;
+}

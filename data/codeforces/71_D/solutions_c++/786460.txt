@@ -1,0 +1,115 @@
+#include <cstdio>
+#include <map>
+#include <algorithm>
+using namespace std;
+
+typedef pair<int,int>two;
+#define X first
+#define Y second
+
+const char RankC[16] = " A23456789TJQK";
+const char SuitC[8] = " CDHS";
+const int maxn = 153;
+struct card {
+	int suit, rank;
+	void make(int a, int b) { rank = a; suit = b; }
+	bool read(int &x) {
+		char s[10]; scanf("%s", s);
+		if ((s[0] == 'J') && (s[1] == '1' || s[1] == '2'))
+			{x = s[1] - '0'; 	return true; }
+		switch (s[0]) {
+			case 'J': rank = 11; break;
+			case 'T': rank = 10; break;
+			case 'Q': rank = 12; break;
+			case 'K': rank = 13; break; 
+			case 'A': rank = 1; break;
+				default : rank = s[0] - '0'; break;
+		}
+		switch (s[1]) {
+			case 'C' : suit = 1; break; 
+			case 'D' : suit = 2; break;
+			case 'H' : suit = 3; break;
+			case 'S' : suit = 4; break;
+		}
+		return false;
+	}
+} a[maxn][maxn];
+int n, m, cnt = 0, r0, c0, r1, c1, joker[300][2], mark[99];
+two s[9999];
+bool used[105][60];
+
+bool cross() {
+	int rL = max(r0, r1), cL = max(c0, c1);
+	int rH = min(r0 + 2, r1 + 2), cH = min(c0 + 2, c1 + 2);
+	return rL <= rH && cL <= cH;
+}
+
+bool check(int p, int q) {
+	bool sameSuit = true, diffRank = true;
+	bool ex[15] = {0, 0};
+	for (int i = p; i <= p + 2; ++i)
+		for (int j = q; j <= q + 2; ++j) {
+			if (a[i][j].suit != a[p][q].suit) sameSuit = false;
+			if (ex[a[i][j].rank]) diffRank = false;
+			ex[a[i][j].rank] = true;
+		}
+	return sameSuit || diffRank;
+}
+
+bool work() {
+	int tot = 0;
+	for (int i = 1; i <= n - 2; ++i)
+		for (int j = 1; j <= m - 2; ++j) 
+			if (check(i, j)) s[++tot] = two(i, j);
+	for (int i = 1; i <= tot; ++i)
+		for (int j = i + 1; j <= tot; ++j) {
+			r0 = s[i].X; c0 = s[i].Y;
+			r1 = s[j].X; c1 = s[j].Y;
+			if (!cross()) return true;
+		}
+	return false;
+}
+
+bool solve() {
+	if (cnt == 0) { return work(); } else
+	if (cnt == 1) {
+		for (int nr = 1; nr <= 13; ++nr) 
+			for (int ns = 1; ns <= 4; ++ns) if (!used[nr][ns]) {
+				a[joker[0][0]][joker[0][1]].make(nr, ns);
+				if (work()) return true;
+			}
+		return false;
+	} else {
+		if (mark[0] != 1) { swap(joker[0][1], joker[1][1]); swap(joker[0][0], joker[1][0]); }
+		for (int i = 1; i <= 13; ++i) for (int j = 1; j <= 4; ++j) if (!used[i][j])
+		for (int k = 1; k <= 13; ++k) for (int l = 1; l <= 4; ++l) if (!(k == i && j == l) && !used[k][l]) {
+			a[joker[0][0]][joker[0][1]].make(i, j);
+			a[joker[1][0]][joker[1][1]].make(k, l);
+			if (work()) return true;
+		}
+		return false;
+	} 
+	return false;
+}
+
+int main() {
+	scanf("%d%d", &n, &m);
+	for (int i = 1; i <= n; ++i) 
+		for (int j = 1; j <= m; ++j) 
+			if (a[i][j].read(mark[cnt])) {
+				joker[cnt][0] = i;
+				joker[cnt++][1] = j;
+			} else used[a[i][j].rank][a[i][j].suit] = true;
+	if (solve()) {
+		puts("Solution exists.");
+		if (cnt == 0) puts("There are no jokers."); else
+		if (cnt == 1) printf("Replace J%d with %c%c.\n", mark[0], RankC[a[joker[0][0]][joker[0][1]].rank], SuitC[a[joker[0][0]][joker[0][1]].suit]); else {
+			printf("Replace J1 with %c%c ",		RankC[a[joker[0][0]][joker[0][1]].rank], SuitC[a[joker[0][0]][joker[0][1]].suit]);
+			printf("and J2 with %c%c.\n",		RankC[a[joker[1][0]][joker[1][1]].rank], SuitC[a[joker[1][0]][joker[1][1]].suit]);
+		}
+		printf("Put the first square to (%d, %d).\n", r0, c0);
+		printf("Put the second square to (%d, %d).\n", r1, c1);
+	} else puts("No solution.");
+	return 0;
+}
+

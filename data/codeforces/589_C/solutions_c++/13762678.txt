@@ -1,0 +1,101 @@
+#include <stdio.h>
+#include <string.h>
+#include <string>
+#include <iostream>
+#include <vector>
+#include <set>
+#include <map>
+#include <math.h>
+#include <algorithm>
+using namespace std;
+
+#define pb push_back
+#define mp make_pair
+#define f first
+#define s second
+#define LL long long
+
+char s[1015];
+LL cnt[26], arr[100005];
+LL acc[2010][26], shift_val[111][111][26];
+LL len;
+
+LL solve(LL R, LL p, int c, int ind)
+{
+	if (R < 0) {
+		return 0;
+	}
+	if (p == 1) {
+		return acc[R][c];
+	}
+	ind --;
+	p/=2;
+	arr[ind] %= (p*len);
+	if(R < p * len)
+		return solve(R, p, c, ind);
+	LL sol = p * cnt[c];
+	LL a = R - p*len - arr[ind];
+	if (a >= 0) {
+		sol += solve(a, p, c, ind);
+	}
+	LL rem = min (R - p*len + 1, arr[ind]);
+	if (rem) {
+		sol += shift_val[rem][ind][c];
+	}
+	return sol;
+}
+
+LL prep (LL R, LL L, char c) {
+	int ind = 0;
+	LL tmp = 1;
+	while(tmp * len < R)
+		tmp*=2, ind++;
+	LL sol = solve(R - 1, tmp, c - 'a', ind);
+	L--;
+	tmp = 1;
+	ind = 0;
+	while(tmp * len < L)
+		tmp*=2, ind++;
+	L--;
+	if(L >= 0) sol -= solve(L, tmp, c - 'a', ind);
+	return sol;
+}
+
+int main () {
+	int n, q;
+	scanf("%s", s);
+	len = strlen(s);
+	memset (acc, 0, sizeof(acc));
+	memset (shift_val, 0, sizeof(shift_val));
+	for(int i=0;i<len;i++) {
+		cnt[s[i] - 'a']++;
+		for (int j=0;i && (j<26);j++) {
+			acc[i][j] = acc[i-1][j];
+		}
+		acc[i][s[i]-'a']++;
+	}
+	scanf("%d %d", &n, &q);
+	for(int i=0;i<n;i++) {
+		scanf("%I64d", &arr[i]);
+	}
+	LL size = len;
+	for (int k=0;k<26;k++) {
+		size = len;
+		for (LL i=0;(i<n) && (size <= (long long)(1e18+1e-9));i++) {
+			arr[i] %= size;
+			for (LL j=1;j<=arr[i];j++) {
+				shift_val[j][i][k] = prep (size-arr[i]+j, size-arr[i]+1LL, k+'a');
+			}
+			size *= 2LL;
+		}
+	}
+	while(q--)
+	{
+		char c;
+		LL L, R;
+		scanf("%I64d %I64d %c", &L, &R, &c);
+		LL sol = prep (R, L, c);
+		printf("%I64d\n", sol);
+	}
+	return 0;
+} 

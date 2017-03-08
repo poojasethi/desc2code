@@ -1,0 +1,107 @@
+#include<cstdio>
+#include<cstring>
+#include<iostream>
+const 
+  int Max_N=501,INF=1<<14;
+using namespace std;
+
+inline int min(int a,int b)
+{return a>b?b:a;}
+
+ struct Chain
+ {
+   Chain *next;
+   int u,w;
+ }*Head[520];
+ inline void Add(int u,int v,int w)
+ {
+
+    Chain *tp=new Chain;
+    tp->u=u;tp->next=Head[v];Head[v]=tp;
+    tp->w=w;
+ }
+int best[Max_N][Max_N];
+int Cache[Max_N][Max_N];
+int color[Max_N];
+int dist[Max_N][Max_N];
+short dp[Max_N][Max_N][Max_N];
+int size[Max_N];
+int n;
+int x;
+
+char c;
+inline void read(int &a)
+{
+  a=0;do c=getchar();while(c<'0'||c>'9');
+  while(c<='9'&&c>='0')a=(a<<3)+(a<<1)+c-'0',c=getchar();
+}
+
+
+void dfs2(int u,int f,int r,int Dis)
+{
+     Dis=min(Dis,x+1);
+     dist[r][u]=Dis;
+     for(Chain *tp=Head[u];tp;tp=tp->next)
+        if(tp->u!=f)dfs2(tp->u,u,r,Dis+tp->w);
+}
+
+void dfs(int u,int f)
+{
+	size[u]=1;
+	int ch[Max_N],Ch=0;
+	for(Chain *tp=Head[u];tp;tp=tp->next)
+	   if(tp->u!=f)
+	   {
+	   	ch[Ch++]=tp->u;
+	   	dfs(tp->u,u);
+	   	size[u]+=size[tp->u];
+	   }
+	 for(int w=0;w<n;w++)
+	 {
+	 	if(dist[u][w]>x)
+	 		 {
+	 		 	for(int a=0;a<=n;a++)dp[u][a][w]=INF;
+                continue;
+	 		 }
+        int tot=1;
+        Cache[0][0]=0;
+        for(int i=0;i<Ch;i++)
+        {
+        	int c=ch[i];
+        	int nxt=tot+size[c];
+        	for(int j=0;j<nxt;j++)Cache[i+1][j]=INF;
+        	for(int j=0;j<tot;j++)
+        	{
+        		for(int k=0;k<=size[c];k++)
+        			 {
+        			 	if(k<size[c])Cache[i+1][j+k]=min(Cache[i+1][j+k],Cache[i][j]+dp[c][k][w]);
+        			 	Cache[i+1][j+k]=min(Cache[i+1][j+k],Cache[i][j]+best[c][k]);
+        			 }
+
+        	}
+            tot=nxt;
+        }
+      for(int j=0;j<tot;j++)dp[u][j][w]=Cache[Ch][j];
+	 }
+	for(int j=0;j<=size[u];j++)best[u][j]=INF;
+	for(int j=0;j<size[u];j++)
+		for(int w=0;w<n;w++)
+			best[u][j+1]=min(best[u][j+1],dp[u][j][w]+(color[w]==0));
+
+}
+
+int main()
+{
+  // freopen("std.in","r",stdin);
+  int a,b,cnt=0;
+  int c;
+	read(n),read(x);
+	for(int i=0;i<n;i++)read(color[i]),cnt+=color[i];
+    for(int i=0;i<n-1;i++)read(a),read(b),read(c),a--,b--,Add(a,b,c),Add(b,a,c);
+    int ans=INF;
+    for(int i=0;i<n;i++)dfs2(i,i,i,0);
+    dfs(0,0);
+    for(int i=0;i<=cnt;i++)ans=min(ans,best[0][i]);
+    cout<<(ans==INF?-1:ans)<<endl;
+   return 0;
+}

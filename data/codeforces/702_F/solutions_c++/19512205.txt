@@ -1,0 +1,237 @@
+#include<bits/stdc++.h>
+#define mp make_pair
+#define X first
+#define Y second
+#define rep(i,n) for(int i=0;i<n;i++)
+
+using namespace std;
+
+const int N=2e5+100;
+
+typedef pair<int,int> pii;
+
+struct node
+{
+	int l,r,fix,val,tagv,ans,taga,id;
+	node () {}
+	node (int _l,int _r,int _fix,int _val,int _tagv,int _ans,int _taga,int _id)
+	{
+		l=_l;
+		r=_r;
+		fix=_fix;
+		val=_val;
+		tagv=_tagv;
+		ans=_ans;
+		taga=_taga;
+		id=_id;
+		return;
+	}
+}trp[N];
+
+int ans[N];
+
+void push_up(int cur,int l,int r)
+{
+	trp[cur]=node(l,r,trp[cur].fix,trp[cur].val,trp[cur].tagv,trp[cur].ans,trp[cur].taga,trp[cur].id);
+	return;
+}
+
+void push_down(int cur)
+{
+	int l=trp[cur].l,r=trp[cur].r;
+	trp[l].val+=trp[cur].tagv;
+	trp[l].tagv+=trp[cur].tagv;
+	trp[l].ans+=trp[cur].taga;
+	trp[l].taga+=trp[cur].taga;
+	trp[r].val+=trp[cur].tagv;
+	trp[r].tagv+=trp[cur].tagv;
+	trp[r].ans+=trp[cur].taga;
+	trp[r].taga+=trp[cur].taga;
+	trp[cur].tagv=trp[cur].taga=0;
+	return;
+}
+
+inline int merge(int l,int r)
+{
+	if(!l)
+		return r;
+	if(!r)
+		return l;
+	push_down(l);
+	push_down(r);
+	if(trp[l].fix<trp[r].fix)
+	{
+		push_up(l,trp[l].l,merge(trp[l].r,r));
+		return l;
+	}
+	else
+	{
+		push_up(r,merge(l,trp[r].l),trp[r].r);
+		return r;
+	}
+}
+
+inline pii split(int cur,int k)
+{
+	if(!cur)
+		return mp(0,0);
+	push_down(cur);
+	pii tmp;
+	int l,r;
+	if(trp[cur].val<k)
+	{
+		tmp=split(trp[cur].r,k);
+		l=tmp.X;
+		r=tmp.Y;
+		push_up(cur,trp[cur].l,l);
+		return mp(cur,r);
+	}
+	else
+	{
+		tmp=split(trp[cur].l,k);
+		l=tmp.X;
+		r=tmp.Y;
+		push_up(cur,r,trp[cur].r);
+		return mp(l,cur);
+	}
+}
+
+inline int ins(int cur,int nw)
+{
+	pii tmp;
+	int l,r;
+	tmp=split(cur,trp[nw].val);
+	l=tmp.X;
+	r=tmp.Y;
+	return merge(l,merge(nw,r));
+}
+
+inline int getl(int cur)
+{
+	while(trp[cur].l)
+	{
+		push_down(cur);
+		cur=trp[cur].l;
+	}
+	return cur;
+}
+
+inline int getr(int cur)
+{
+	while(trp[cur].r)
+	{
+		push_down(cur);
+		cur=trp[cur].r;
+	}
+	return cur;
+}
+
+inline void dfs(int cur)
+{
+	if(!cur)
+		return;
+	push_down(cur);
+	ans[trp[cur].id]=trp[cur].ans;
+	dfs(trp[cur].l);
+	dfs(trp[cur].r);
+	return;
+}
+
+struct T_shirt
+{
+	int c,q;
+	void in()
+	{
+		scanf("%d%d",&c,&q);
+	}
+	bool operator < (const T_shirt &x) const
+	{
+		return q==x.q?c<x.c:q>x.q;
+	}
+}tsh[N];
+
+int n,root,tot,k;
+
+inline void out(int cur,int dep=0)
+{
+	if(!cur)
+		return;
+	if(trp[cur].l)
+		out(trp[cur].l,dep+1);
+	rep(i,dep)
+		putchar('\t');
+	printf("%d %d %d %d %d\n",trp[cur].val,trp[cur].tagv,trp[cur].ans,trp[cur].taga,trp[cur].id);
+	if(trp[cur].r)
+		out(trp[cur].r,dep+1);
+	return;
+}
+
+int main()
+{
+	scanf("%d",&n);
+	rep(i,n)
+		tsh[i].in();
+	sort(tsh,tsh+n);
+	scanf("%d",&k);
+	rep(i,k)
+	{
+		int x;
+		scanf("%d",&x);
+		int nw=++tot;
+		trp[nw]=node(0,0,rand(),x,0,0,0,i);
+		root=ins(root,nw);
+	}
+	rep(i,n)
+	{
+//		printf("%d\n",i);
+//		out(root);
+		int c=tsh[i].c;
+		pii tmp=split(root,c);
+		int l=tmp.X,r=tmp.Y,tl,tr;
+		/*puts("L");
+		out(l);
+		puts("R");
+		out(r);*/
+		if(!r)
+			continue;
+		trp[r].tagv-=c;
+		trp[r].val-=c;
+		trp[r].taga++;
+		trp[r].ans++;
+		if(!l)
+		{
+			root=r;
+			continue;
+		}
+		tl=getr(l);
+		tr=getl(r);
+		while(trp[tl].val>trp[tr].val)
+		{
+			/*puts("before");
+			puts("l");
+			out(l);
+			puts("r");
+			out(r);
+			puts("tr");
+			out(tr);*/
+			tmp=split(r,trp[tr].val+1);
+			l=ins(l,tmp.X);
+			r=tmp.Y;
+			/*puts("after");
+			puts("l");
+			out(l);
+			puts("r");
+			out(r);
+			puts("");*/
+			if(!l || !r)
+				break;
+			tl=getr(l);
+			tr=getl(r);
+		}
+		root=merge(l,r);
+	}
+	dfs(root);
+	rep(i,k)
+		printf("%d%c",ans[i],i==k-1?'\n':' ');
+	return 0;
+}

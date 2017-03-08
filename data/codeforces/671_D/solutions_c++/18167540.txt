@@ -1,0 +1,252 @@
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#ifdef WIN32
+	#define LL "%I64d"
+#else
+	#define LL "%lld"
+#endif
+
+#ifdef Lightning
+	#define debug(orz...) printf(orz)
+	const int DEBUG = 1;
+#else
+	#define debug(...)
+	const int DEBUG = 0;
+#endif
+
+#define file_able if (0)
+#define setfile(pro_name) freopen(pro_name".in", "r", stdin), freopen(pro_name".out", "w", stdout)
+#define closefile() fclose(stdin), fclose(stdout)
+
+#define cmax(_x, _y) (_x < (_y) ? _x = _y : 0)
+#define cmin(_x, _y) (_x > (_y) ? _x = _y : 0)
+#define gmax(_x, _y) ((_x) > (_y) ? (_x) : (_y))
+#define gmin(_x, _y) ((_x) < (_y) ? (_x) : (_y))
+
+namespace defs
+{
+	#define getc() getchar()
+
+	int read()
+	{
+		int aa, bb = 1, ch;
+		while (ch = getc(), (ch < '0' || ch > '9') && ch != '-');
+		ch == '-' ? aa = 0, bb = -1 : aa = ch - '0';
+		while (ch = getc(), ch >= '0' && ch <= '9') aa = aa * 10 + ch - '0';
+		return aa * bb;
+	}
+
+	const unsigned int rand_x = 1401010315;
+	const unsigned int rand_y = 1000000019;
+	
+	unsigned int rand_cur;
+
+	unsigned int rand_int()
+	{
+		return rand_cur = rand_cur * rand_x + rand_y;
+	}
+
+	const int inf = 1071026353;
+	const int mod = 1000000007;
+	const int modx = 998244353;
+	
+	const int maxn = 300010;
+}
+
+namespace heap
+{
+	using namespace defs;
+
+	struct cnode
+	{
+		long long key, fa, lazy;
+	} node[maxn];
+	
+	int ch[maxn][2], high[maxn], tot;
+	
+	void setlazy(int u, long long k)
+	{
+		node[u].key += k;
+		node[u].lazy += k;
+	}
+	
+	void pushdown(int u)
+	{
+		if (node[u].lazy)
+		{
+			setlazy(ch[u][0], node[u].lazy);
+			setlazy(ch[u][1], node[u].lazy);
+			node[u].lazy = 0;
+		}
+	}
+	
+	int merge(int u, int v)
+	{
+		if (u == 0 || v == 0)
+			return u + v;
+		pushdown(u);
+		pushdown(v);
+		if (node[u].key > node[v].key)
+			swap(u, v);
+		ch[u][1] = merge(ch[u][1], v);
+		if (high[ch[u][0]] < high[ch[u][1]])
+			swap(ch[u][0], ch[u][1]);
+		cmax(high[u], high[ch[u][1]] + 1);
+		return u;
+	}
+	
+	int pop(int u)
+	{
+		pushdown(u);
+		return merge(ch[u][0], ch[u][1]);
+	}
+}
+
+namespace links
+{
+	using namespace defs;
+
+	int to[maxn << 1], pre[maxn << 1], cost[maxn << 1];
+	int last[maxn], en;
+	
+	void addedge(int f, int t, int w)
+	{
+		to[++en] = t;
+		cost[en] = w;
+		pre[en] = last[f];
+		last[f] = en;
+	}
+}
+
+namespace tree
+{
+	using namespace defs;
+
+	int to[maxn << 1], pre[maxn << 1];
+	int last[maxn], en;
+	int fa[maxn], dep[maxn];
+	int low[maxn];
+	
+	void addedge(int f, int t)
+	{
+		to[++en] = t;
+		pre[en] = last[f];
+		last[f] = en;
+	}
+	
+	void visit(int now, int p)
+	{
+		fa[now] = p;
+		dep[now] = dep[p] + 1;
+		low[now] = now;
+		for (int i = links::last[now]; i; i = links::pre[i])
+			if (dep[links::to[i]] < dep[low[now]])
+				low[now] = links::to[i];
+		for (int i = last[now]; i; i = pre[i])
+		{
+			if (to[i] == p) continue;
+			visit(to[i], now);
+			if (dep[low[to[i]]] < dep[low[now]])
+				low[now] = low[to[i]];
+		}
+	}
+	
+	int root[maxn];
+	// long long f[maxn];
+	
+	void dfs(int now, int p)
+	{
+		long long sum = 0;
+		for (int i = last[now]; i; i = pre[i])
+		{
+			if (to[i] == p) continue;
+			dfs(to[i], now);
+			while (dep[heap::node[root[to[i]]].fa] > dep[now])
+				root[to[i]] = heap::pop(root[to[i]]);
+			sum += heap::node[root[to[i]]].key;
+		}
+		for (int i = last[now]; i; i = pre[i])
+		{
+			if (to[i] == p) continue;
+			long long tmp = sum - heap::node[root[to[i]]].key;
+			heap::setlazy(root[to[i]], tmp);
+			root[now] = heap::merge(root[now], root[to[i]]);
+		}
+		for (int i = links::last[now]; i; i = links::pre[i])
+		{
+			int t = ++heap::tot;
+			heap::node[t] = (heap::cnode) {links::cost[i] + sum, links::to[i], 0};
+			root[now] = heap::merge(root[now], t);
+		}
+	}
+}
+
+namespace lightningwork
+{
+	// my space
+
+	using namespace defs;
+
+	struct edge
+	{
+		int u, v, w;
+		
+		bool operator <(const edge &e) const
+		{
+			return w < e.w;
+		}
+	};
+	
+	edge e[maxn];
+
+	int n, m;
+
+	long long ans = 9999999999999999ll;
+
+	void work()
+	{
+		n = read();
+		m = read();
+		for (int i = 1; i < n; ++i)
+		{
+			int u = read(), v = read();
+			tree::addedge(u, v);
+			tree::addedge(v, u);
+		}
+		for (int i = 1; i <= m; ++i)
+		{
+			int u = read();
+			int v = read();
+			int w = read();
+			if (u != v) links::addedge(u, v, w);
+		}
+		tree::visit(1, 0);
+		for (int i = 2; i <= n; ++i)
+		{
+			if (tree::low[i] == i)
+			{
+				puts("-1");
+				return;
+			}
+		}
+		tree::dfs(1, 0);
+		while (heap::node[tree::root[1]].fa > 1)
+			tree::root[1] = heap::pop(tree::root[1]);
+		printf("%lld\n", heap::node[tree::root[1]].key);
+	}
+}
+
+int main()
+{
+	file_able setfile("roads");
+	lightningwork::work();
+	file_able closefile();
+	return 0;
+}
+

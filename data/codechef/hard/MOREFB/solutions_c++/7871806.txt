@@ -1,0 +1,138 @@
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long ll;
+typedef pair<int, int> ii;
+typedef vector<int> vi;
+typedef vector<ii> vii;
+template <class T> int size(const T &x) { return x.size(); }
+const int INF = 2147483647;
+#define rep(i,a,b) for (__typeof(a) i=(a); i<(b); ++i)
+#define iter(it,c) for (__typeof((c).begin()) it = (c).begin(); it != (c).end(); ++it)
+
+const double pi = acos(-1.0);
+
+ll mod = 99991;
+
+
+#include <complex>
+typedef complex<long double> cpx;
+
+cpx A[1000000],
+    B[1000000];
+
+// NOTE: n must be a power of two
+void fft(cpx *x, int n, bool inv=false) {
+    for (int i = 0, j = 0; i < n; i++) {
+        if (i < j) swap(x[i], x[j]);
+        int m = n>>1;
+        while (1 <= m && m <= j) j -= m, m >>= 1;
+        j += m;
+    }
+    for (int mx = 1; mx < n; mx <<= 1) {
+        cpx wp = exp(cpx(0, (inv ? -1 : 1) * pi / mx)), w = 1;
+        for (int m = 0; m < mx; m++, w *= wp) {
+            for (int i = m; i < n; i += mx << 1) {
+                cpx t = x[i + mx] * w;
+                x[i + mx] = x[i] - t;
+                x[i] += t;
+            }
+        }
+    }
+    if (inv) rep(i,0,n) x[i] /= cpx(n);
+}
+
+vector<ll> mul(vector<ll> a, vector<ll> b) {
+    int l = 1;
+    while (l < max(size(a),size(b)) + 1) l <<= 1;
+    l <<= 1;
+    rep(i,0,l) A[i] = B[i] = 0.0;
+    rep(i,0,size(a)) A[i] = a[i];
+    rep(i,0,size(b)) B[i] = b[i];
+    fft(A, l);
+    fft(B, l);
+    rep(i,0,l) A[i] *= B[i];
+    fft(A, l, true);
+    vector<ll> res;
+    bool started = false;
+    for (int i = l - 1; i >= 0; i--) {
+        ll here = static_cast<ll>(round(A[i].real()) + 1e-9);
+        // assert(abs(here - A[i].real()) < 1e-1);
+        // cout << here << " " << A[i].real() << endl;
+        if (here != 0) started = true;
+        if (!started) continue;
+        res.push_back(here % mod);
+    }
+    reverse(res.begin(), res.end());
+    return res;
+}
+
+ll mpow(ll a, ll b) {
+    ll res = 1;
+    while (b) {
+        if (b & 1) {
+            res = (res * a) % mod;
+        }
+        a = (a * a) % mod;
+        b >>= 1;
+    }
+    return res;
+}
+
+vi arr, cur;
+ll bt(int at, ll sum, int left, ll x) {
+    if (at == size(arr)) {
+        if (left > 0) return 0;
+        cout << sum << endl;
+        return mpow(x, sum);
+    }
+    ll res = bt(at + 1, sum, left, x);
+    if (left > 0) {
+        res += bt(at + 1, (sum + arr[at]) % (mod-1), left-1, x);
+        // res += bt(at + 1, sum + arr[at], left-1, x);
+        res %= mod;
+    }
+    return res;
+}
+
+// ll calc(ll x, int k) {
+//     return bt(0, 0, k, x);
+// }
+
+vector<ll> coeff1,
+           coeff2;
+
+vector<ll> calc(int l, int r, const vector<ll> &c) {
+    if (l > r) {
+        vector<ll> res;
+        res.push_back(1);
+        return res;
+    }
+    if (l == r) {
+        vector<ll> res;
+        res.push_back(c[l]);
+        res.push_back(1);
+        return res;
+    }
+    int m = (l+r) / 2;
+    vector<ll> a = calc(l,m, c),
+               b = calc(m+1,r, c);
+    return mul(a,b);
+}
+
+int main() {
+    int n, k;
+    scanf("%d %d", &n, &k);
+    ll phi = 44944,
+       iphi = 55048,
+       invst5 = 77972;
+    rep(i,0,n) {
+        int x;
+        scanf("%d", &x);
+        coeff1.push_back(mpow(phi, x));
+        coeff2.push_back(mpow(iphi, x));
+    }
+    ll x = calc(0,size(coeff1)-1, coeff1)[n-k],
+       y = calc(0,size(coeff2)-1, coeff2)[n-k];
+    cout << (((x - y) * invst5) % mod + mod) % mod << endl;
+    return 0;
+}

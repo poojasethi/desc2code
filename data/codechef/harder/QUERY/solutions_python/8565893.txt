@@ -1,0 +1,174 @@
+#include<cstdio>
+#include<algorithm>
+#include<cstring>
+#include<vector>
+ 
+#define N 100005
+#define M 40000005
+ 
+#define mid ((l+r)>>1)
+#define ls tree[t].l
+#define rs tree[t].r
+#define Ls tree[t1].l
+#define Rs tree[t1].r
+ 
+using namespace std;
+int i,j,m,n,p,k,now,last,x,y,top[N],tot;
+int fa[N],deep[N],st[N],size[N],son[N],root[N],A,B,Root;
+long long ans;
+struct Tre{
+	  long long s,c,sum;
+	  int l,r;
+}tree[M];
+char c[2];
+vector<int>v[N];
+long long get(long long s,long long c,long long len)
+{
+	 return 1ll*(s+s+c*(len-1))*len/2;
+}
+void update(int ll,int rr,int s,int c,int l,int r,int t,int t1)
+{
+	   if (ll<=l&&r<=rr) 
+	     tree[t].s+=s+(l-ll)*c,tree[t].c+=c,tree[t].sum+=get(s+1ll*(l-ll)*c,c,r-l+1);
+	   else 
+	   {
+	   	  if (ll<=mid) 
+		  {
+		  	  ls=++tot;
+		  	  tree[tot]=tree[Ls];
+			  update(ll,rr,s,c,l,mid,ls,Ls);
+		  }
+	   	  if (rr>mid)  
+		  {
+		      rs=++tot;
+		      tree[tot]=tree[Rs];
+		      update(ll,rr,s,c,mid+1,r,rs,Rs);
+		  }
+	   	  tree[t].sum=tree[ls].sum+tree[rs].sum+get(tree[t].s,tree[t].c,r-l+1);
+	   }
+}
+void ask(int ll,int rr,int l,int r,int t)
+{
+	  if (ll<=l&&r<=rr) ans+=tree[t].sum;
+	  else 
+	  {
+	  	 ans+=get(tree[t].s+1ll*(max(l,ll)-l)*tree[t].c,tree[t].c,min(r,rr)-max(l,ll)+1);
+	  	 if (ll<=mid) ask(ll,rr,l,mid,ls);
+	  	 if (rr>mid)  ask(ll,rr,mid+1,r,rs);
+	  }
+}
+void dfs(int x)
+{
+	  int i,p;
+	  for (i=0;i<(int)v[x].size();++i)
+	   {
+		   p=v[x][i];
+		   if (p==fa[x]) continue;
+		   fa[p]=x;
+		   deep[p]=deep[x]+1;
+		   dfs(p);
+		   size[x]+=size[p];
+		   if (!son[x]||size[p]>size[son[x]]) son[x]=p;
+	   }
+	   size[x]++;
+}
+void Dfs(int x,int tp)
+{
+   top[x]=tp;
+   st[x]=++tot;
+   if (son[x]) Dfs(son[x],tp);
+   int i;
+   for (i=0;i<(int)v[x].size();++i) if (fa[x]!=v[x][i]&&son[x]!=v[x][i]) Dfs(v[x][i],v[x][i]);
+}
+int lca(int x,int y)
+{
+	 while (top[x]!=top[y])
+	 {
+	 	 if (deep[top[x]]<deep[top[y]]) swap(x,y);
+	 	 x=fa[top[x]];
+	 }
+	 if (deep[x]<deep[y]) swap(x,y);
+	 return y;
+}
+int main()
+{
+ //	 freopen("1.in","r",stdin);
+ //	 freopen("1.out","w",stdout);
+	 scanf("%d%d",&n,&m);
+	 for (i=1;i<n;++i)
+	 {
+	 	 scanf("%d%d",&x,&y);
+	 	 v[x].push_back(y);
+	 	 v[y].push_back(x);
+	 }
+	 dfs(1); Dfs(1,1);
+	 tot=0;
+	 for (;m--;)
+	 {
+	 	 scanf("%s",c);
+	 	 if (c[0]=='l')
+		  {
+		     scanf("%d",&x); x=(x+ans%(last+1))%(last+1);
+			 now=x;
+		  }
+		  else  if (c[0]=='c')
+		  {
+		  	 scanf("%d%d%d%d",&x,&y,&A,&B);
+		  	 x=(x+ans%n)%n+1; y=(y+ans%n)%n+1;
+		  	 root[++last]=++tot;
+		  	 tree[tot]=tree[root[now]];
+		  	 now=last;
+		  	 int start=A,end=A+(deep[x]+deep[y]-2*deep[lca(x,y)])*B;
+		  	 while (top[x]!=top[y])
+		  	 {
+		  	 	  if (deep[top[x]]<deep[top[y]])
+		  	 	  {
+		  	 	  	  Root=++tot;
+		  	 	  	  tree[Root]=tree[root[last]];
+		  	 	  	  update(st[top[y]],st[y],end-(st[y]-st[top[y]])*B,B,1,n,Root,root[last]);
+		  	 	  	  end-=(st[y]-st[top[y]]+1)*B;
+		  	 	  	  root[last]=Root;
+		  	 	  	  y=fa[top[y]];
+		  	 	  }
+		  	 	  else 
+		  	 	  {
+		  	 	  	  Root=++tot;
+		  	 	  	  tree[Root]=tree[root[last]];
+		  	 	  	  update(st[top[x]],st[x],start+(st[x]-st[top[x]])*B,-B,1,n,Root,root[last]);
+		  	 	  	  start+=(st[x]-st[top[x]]+1)*B;
+		  	 	  	  root[last]=Root;
+		  	 	  	  x=fa[top[x]];
+		  	 	  }
+		  	 }
+		  	 if (deep[x]<deep[y])
+		  	 {
+		  	 	 Root=++tot;
+		  	 	 tree[Root]=tree[root[last]];
+		  	 	 update(st[x],st[y],end-(st[y]-st[x])*B,B,1,n,Root,root[last]);
+		  	 	 root[last]=Root;
+		  	 }
+		  	 else 
+		  	 {
+		  	 	 Root=++tot;
+		  	 	 tree[Root]=tree[root[last]];
+		  	 	 update(st[y],st[x],start+(st[x]-st[y])*B,-B,1,n,Root,root[last]);
+		  	 	 root[last]=Root;
+		  	 }
+		  }
+		  else 
+		  {
+		  	    scanf("%d%d",&x,&y);
+		  	    x=(x+ans%n)%n+1; y=(y+ans%n)%n+1;
+		  	    ans=0;
+		  	    while (top[x]!=top[y])
+		  	    {
+		  	    	  if(deep[top[x]]<deep[top[y]]) swap(x,y);
+		  	    	  ask(st[top[x]],st[x],1,n,root[now]);
+		  	    	  x=fa[top[x]];
+		  	    }
+		  	    if (deep[x]<deep[y]) swap(x,y);
+		  	    ask(st[y],st[x],1,n,root[now]);
+		  	    printf("%lld\n",ans);
+		  }
+	}
+} 

@@ -1,0 +1,99 @@
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <math.h>
+#include <map>
+#include <algorithm>
+using namespace std;
+
+long long n,m,k;
+
+const int tomod=1e9+7;
+
+template <class T>
+T fastpow(T a,T e,long long times){
+	if(times<=0)return e;
+	if(times==1)return a;
+	T p=fastpow(a,e,times/2);
+	return times%2?(a*(p*p%tomod))%tomod:p*p%tomod;
+}
+
+long long nid(long long a,long long b){
+	if(a==0&&b==0)return 0;
+	return (a-1)*m+b+1;
+}
+
+map<long long,long long> dict1;
+map<long long,long long> dict2;
+
+struct Side{
+	long long n1,n2;
+	int m1,m2;
+	long long nid1,nid2;
+	bool operator<(const Side &b)const{
+		return nid2<b.nid2;
+	}
+}side[50005];
+
+long long inline lowbit(long long x){
+	return x&(-x);
+}
+
+void add(map<long long,long long>&a,long long p,long long val){
+	while(p<=n){
+		a[p]=(a[p]+val)%tomod;
+		p+=lowbit(p);
+	}
+}
+
+long long sum(map<long long,long long>&a,long long p){
+	long long ans=0;
+	while(p>0){
+		ans=(ans+a[p])%tomod;
+		p-=lowbit(p);
+	}
+	return ans;
+}
+
+typedef long long LL;
+void extgcd(LL a,LL b,LL& d,LL& x,LL& y){
+	if(!b){
+		d=a;x=1;y=0;
+	}else{
+		extgcd(b,a%b,d,y,x);
+		y-=x*(a/b);
+	}
+}
+
+LL mod_inv(LL a,LL n){//a在模n意义下的逆元 
+	LL d,x,y;
+	extgcd(a,n,d,x,y);
+	return d==1?(x+n)%n:-1;
+}
+
+int main()
+{
+	scanf("%lld%lld%lld",&n,&m,&k);
+	long long ans=fastpow(m,1LL,n);
+	for(int i=0;i<k;i++){
+		scanf("%lld%d%lld%d",&side[i].n1,&side[i].m1,&side[i].n2,&side[i].m2);
+		side[i].nid1=nid(side[i].n1,side[i].m1);
+		side[i].nid2=nid(side[i].n2,side[i].m2);
+	}
+	sort(side,side+k);
+
+	for(int i=0;i<k;i++){
+		long long p1=(fastpow(m,1LL,max(side[i].n1-1,0LL))+dict2[side[i].nid1])%tomod;
+		p1=(p1+sum(dict1,side[i].n1-1)*fastpow(m,1LL,side[i].n1-1))%tomod;
+		
+		add(dict1,side[i].n2,p1*mod_inv(fastpow(m,1LL,side[i].n2),tomod));
+		dict2[side[i].nid2]=(dict2[side[i].nid2]+p1)%tomod;
+		
+		p1=(p1*fastpow(m,1LL,max(n-side[i].n2,0LL)))%tomod;
+		ans=(ans+p1)%tomod;
+	}
+	printf("%lld\n",ans);
+    return 0;
+}

@@ -1,0 +1,155 @@
+/*
+there is no doubt that we divided the pro into
+two parts, 
+on the left/right, on the middle
+sigma(dist(i,v))*(n1+n2)
+sigma(dist(i,v))+sigma(dist(i,u))+dist(u,v)*n1*n2
+f[i]:min{sigma(dist(j,i) | i is j's father)}
+g[i]:min{sigma(dist(x,i) | x and i are in the same tree)}
+h[i]:min{sigma(dist(x,y))+dist(x,i)*n1*n2}
+*/
+#include <cmath>
+#include <map>
+#include <vector>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <set>
+#include <bitset>
+#include <memory.h>
+#include <functional>
+#include <queue>
+#include <fstream>
+#include <ctime>
+#include <deque>
+#include <utility>
+#include <stack>
+#include <sstream>
+#include <list>
+#include <cctype> 
+#include <numeric> 
+using namespace std;
+#define sqr(_) ((_)*(_))
+
+typedef long long LL;
+
+typedef pair<int, int> Pii;
+typedef pair<LL, LL> Pll;
+#define x first
+#define y second
+#define mp make_pair
+#define pb push_back
+
+const int MAXN = 100000 + 10;
+
+int n1, n2, n3, size[MAXN];
+vector<int> e1[MAXN], e2[MAXN], e3[MAXN];
+LL f[MAXN], g[MAXN], h[MAXN][2];
+
+void init(int &n, vector<int> *e)
+{
+	for (int i = 1; i < n; ++i)
+	{
+		int x, y;
+		scanf("%d%d", &x, &y);
+		e[x].pb(y), e[y].pb(x);
+	}
+}
+void Vis1(int x, int fa, vector<int> *e)
+{
+	size[x] = 1;
+	for (int i = 0; i < (int)e[x].size(); ++i)
+		if (e[x][i] != fa)
+			Vis1(e[x][i], x, e),
+			f[x] += f[e[x][i]] + size[e[x][i]],
+			size[x] += size[e[x][i]];
+}
+int n, na, nb;
+LL Add;
+void Vis2(int x, int fa, vector<int> *e)
+{
+	if (fa)
+		Add += (LL)size[x] * (n - size[x]);
+	for (int i = 0; i < (int)e[x].size(); ++i)
+		if (e[x][i] != fa)
+			g[e[x][i]] = g[x] - size[e[x][i]] + (n - size[e[x][i]]),
+			Vis2(e[x][i], x, e);
+}
+LL Mashiro, sum, pdt;
+void Vis3(int x, int fa, vector<int> *e)
+{
+	h[x][0] = (LL)na * (g[x]);
+	h[x][1] = (LL)nb * (g[x]);
+	LL ma1 = h[x][0], ma2 = 0, mb1 = h[x][1], mb2 = 0;
+	int ra = x, rb = x;
+	for (int i = 0; i < (int)e[x].size(); ++i)
+		if (e[x][i] != fa)
+		{
+			int y = e[x][i];
+			Vis3(y, x, e);
+			h[x][0] = max(h[x][0], h[y][0] + pdt);
+			h[x][1] = max(h[x][1], h[y][1] + pdt);
+			if (ma1 < h[y][0] + pdt)
+				ma2 = ma1, ma1 = h[y][0] + pdt, ra = y;
+			else
+			if (ma2 < h[y][0] + pdt)
+				ma2 = h[y][0] + pdt;
+			if (mb1 < h[y][1] + pdt)
+				mb2 = mb1, mb1 = h[y][1] + pdt, rb = y;
+			else
+			if (mb2 < h[y][1] + pdt)
+				mb2 = h[y][1] + pdt;
+		}
+	if (ra != rb)
+		Mashiro = max(Mashiro, ma1 + mb1);
+	else
+	Mashiro = max(Mashiro, max(ma1 + mb2, ma2 + mb1));
+}
+//(n1+n)*n2+(n2+n)*n1 = 2*n1*n2+n*(n1+n2)
+Pll solve(int N, vector<int> *e, int Na, int Nb)
+{
+	n = N, sum = Na + Nb, pdt = (LL)Na * Nb;
+	na = Na, nb = Nb;
+	memset(f, 0, sizeof(f));
+	memset(g, 0, sizeof(g));
+	memset(h, 0, sizeof(h));
+	Vis1(1, 0, e);
+	g[1] = f[1];
+	Add = 0;
+	Vis2(1, 0, e);
+	Mashiro = 0;
+	Vis3(1, 0, e);
+	LL Tohka = 0;
+	for (int i = 1; i <= n; ++i)
+		Tohka = max(Tohka, g[i] * (sum));
+	Tohka += Add, Mashiro += Add;
+/*
+	cout << n << endl;
+	for (int i = 1; i <= n; ++i)
+		cout << f[i] << " " << g[i] << " " << h[i][0] << " " << h[i][1] << endl;
+	cout << Mashiro << " " << pdt * 2 + (LL)n * sum << " " << Tohka << endl;
+	puts("******");
+*/
+	return mp(Mashiro + pdt * 2 + (LL)n * sum, Tohka);
+}
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt", "r", stdin), freopen("output.txt", "w", stdout);
+#endif
+	cin >> n1 >> n2 >> n3;
+	init(n1, e1);
+	init(n2, e2);
+	init(n3, e3);
+	Pll w1 = solve(n1, e1, n2, n3), 
+		w2 = solve(n2, e2, n1, n3), 
+		w3 = solve(n3, e3, n1, n2);
+	LL Tohka = max(max(w1.x + w2.y + w3.y, w1.y + w2.x + w3.y), w1.y + w2.y + w3.x);
+	cout << Tohka << endl;
+	fclose(stdin);
+	fclose(stdout);
+	return 0;
+}
+

@@ -1,0 +1,139 @@
+/*
+Number of ways to distribute k berries for n people:
+C(k, n mod k) * P(n, n mod k) * (n - n mod k)! / [ ((n/k + 1)^(n mod k))  * (((n/k)!)^k)]
+in which P(n, k) = n!/(n - k)! and C(n, k) = P(n, k) / k!
+*/
+#include <assert.h>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+#include <iostream>
+#include <algorithm>
+
+#define FOR(i,a,b) for (int i = int(a); i <= b; i++)
+#define DOWN(i,a,b) for (int i = int(a); i >= b; i--)
+
+#define mod 3046201
+
+using namespace std;
+
+int node[122222 * 4], a[122222];
+long long frac[3444444];
+int n;
+
+void make_tree(int s, int l, int r) {
+    if (l == r) {
+        node[s] = a[l];
+        return;
+    }
+
+    int mid = (l + r) / 2;
+    int s1 = s << 1, s2 = s1 | 1;
+
+    make_tree(s1, l, mid);
+    make_tree(s2, mid + 1, r);
+    node[s] = node[s1] + node[s2];
+}
+
+int get(int s, int l, int r, int u, int v) {
+    if (v < l || r < u) return 0;
+    if (u <= l && r <= v) return node[s];
+
+    int mid = (l + r) / 2;
+    int s1 = s << 1, s2 = s1 | 1;
+
+    return get(s1, l, mid, u, v) + get(s2, mid + 1, r, u, v);
+}
+
+void update(int s, int l, int r, int u, int v) {
+    if (u < l || r < u) return;
+    if (l == r) {
+        node[s] = v;
+        return;
+    }
+
+    int mid = (l + r) / 2;
+    int s1 = s << 1, s2 = s1 | 1;
+
+    update(s1, l, mid, u, v);
+    update(s2, mid + 1, r, u, v);
+
+    node[s] = node[s1] + node[s2];
+}
+
+
+long long power(int n, int k) {
+    if (k == 0) return 1;
+    long long res = power(n, k / 2);
+    res = (res * res) % mod;
+
+    if (k % 2) res = (res * n) % mod;
+    return res;
+}
+
+long long division (int x, int y) {
+    long long res = x;
+    res = (res * power(y, mod - 2)) % mod;
+    return res;
+}
+
+long long P (int n, int k) {
+    long long res = division(frac[n], frac[n - k]);
+    return res;
+}
+
+long long C(int n, int k) {
+    long long res = division(P(n, k), frac[k]);
+    return res;
+}
+
+int call(int n, int k) {
+    long long A, B;
+
+    A = (C(k, n % k) * P(n, n % k)) % mod;
+    A = (A * frac[n - (n % k)]) % mod;
+    B = (power(n/k + 1, n % k) * power(frac[n/k],k)) % mod;
+
+    long long res = division (A, B);
+
+    res = (res + mod) % mod;
+    return res;
+}
+
+void init() {
+    //frac[n] = n! modulo 3046201
+    frac[0] = 1;
+    FOR (i, 1, 3000000) frac[i] = (frac[i - 1] * (1LL) * i) % mod;
+}
+
+int main() {
+    init();
+
+    cin >> n;
+    FOR (i, 1, n) scanf("%d", a + i);
+
+    make_tree(1, 1, n);
+
+    int q;
+    cin >> q;
+
+    string s;
+    while (q--) {
+        cin >> s;
+        int u, v;
+
+        if (s ==  "query") {
+            scanf("%d %d", &u, &v);
+            int sum = get(1, 1, n, u, v);
+            int k = v - u + 1;
+            printf("%d\n", call(sum, k));
+        }
+        else if (s == "change") {
+            scanf("%d %d", &u, &v);
+            update(1, 1, n, u, v);
+            a[u] = v;
+        }
+    }
+
+    return 0;
+}

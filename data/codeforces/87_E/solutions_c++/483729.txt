@@ -1,0 +1,116 @@
+#include<cstdio>
+#include<map>
+#include<ctime>
+#include<algorithm>
+using namespace std;
+
+#define x first
+#define y second
+
+const int maxn=200000+10;
+pair<int,int> p[maxn],q[maxn],r[maxn];
+map<int,int> up,low;
+int n,m;
+
+long long det(map<int,int> :: iterator a,map<int,int> :: iterator b,map<int,int> :: iterator c)
+{return (long long)(b->first-a->first)*(c->second-a->second)-(long long)(b->second-a->second)*(c->first-a->first);}
+
+long long det(pair<int,int> a,pair<int,int> b,pair<int,int> c)
+{return (long long)(b.x-a.x)*(c.y-a.y)-(long long)(c.x-a.x)*(b.y-a.y);}
+
+long long det(int x1,int y1,int x2,int y2,int x3,int y3)
+{return (long long)(x2-x1)*(y3-y1)-(long long)(x3-x1)*(y2-y1);}
+
+map<int,int> :: iterator operator +(map<int,int> :: iterator it,int a)
+{for (;a--;) it++;return it;}
+
+map<int,int> :: iterator operator -(map<int,int> :: iterator it,int a)
+{for (;a--;) it--;return it;}
+
+void process(pair<int,int> p[],int n)
+{
+    int pos=0;
+    for (int i=1;i<n;i++)
+    if (p[i]<p[pos]) pos=i;
+    for (int i=0;i<n;i++) p[i+n]=p[i];
+    for (int i=0;i<n;i++) p[i]=p[i+pos];
+}
+
+bool check(pair<int,int> a,pair<int,int> b,pair<int,int> c)
+{
+    long long k=det(a,b,c);
+    if (k) return k>0;
+    return (long long)(b.x-a.x)*(b.x-a.x)+(long long)(b.y-a.y)*(b.y-a.y)>=
+            (long long)(c.x-a.x)*(c.x-a.x)+(long long)(c.y-a.y)*(c.y-a.y);
+}
+
+void msum(pair<int,int> p[],pair<int,int> q[])
+{
+    p[n]=p[0];q[m]=q[0];
+    for (int i=0,u=0,v=0;i<n+m;i++)
+    {
+        r[i]=make_pair(p[u].x+q[v].x,p[u].y+q[v].y);
+        pair<int,int> a=make_pair(p[u].x+q[v+1].x,p[u].y+q[v+1].y);
+        pair<int,int> b=make_pair(p[u+1].x+q[v].x,p[u+1].y+q[v].y);
+        if (check(r[i],a,b)) v++;
+        else u++;
+    }
+    for (int i=0;i<n+m;i++) p[i]=r[i];
+    n+=m;
+}
+
+void add(map<int,int> &t,pair<int,int> p)
+{
+    if (t.count(p.x))
+    if (t[p.x]>=p.y) return;
+    t[p.x]=p.y;
+    map<int,int> :: iterator it=t.lower_bound(p.x);
+    if (it!=t.begin() && (it+1)!=t.end() && det((it-1),it,it+1)>=0)
+    {
+        t.erase(it->first);return;
+    }
+    if (it!=t.begin())
+    for (;it-1!=t.begin() && det(it-2,it-1,it)>=0;) t.erase((it-1)->first);
+    if (it+1!=t.end())
+    for (;it+2!=t.end() && det(it,it+1,it+2)>=0;) t.erase((it+1)->first);
+}
+
+bool check(map<int,int> &t,int x,int y)
+{
+    if (t.count(x)) return y<=t[x];
+    if (x<t.begin()->first || x>(t.end()-1)->first) return 0;
+    map<int,int> :: iterator it=t.lower_bound(x)-1;
+    //printf("%d %d %d %d\n",it->x,it->y,(it+1)->x,(it+1)->y);
+    return det(it->first,it->second,x,y,(it+1)->first,(it+1)->second)>=0;
+}
+
+int main()
+{
+    //freopen("input.txt","r",stdin);
+
+    scanf("%d",&n);
+    for (int i=0;i<n;i++) scanf("%d%d",&p[i].x,&p[i].y);
+    for (int k=0;k<2;k++)
+    {
+        scanf("%d",&m);
+        for (int i=0;i<m;i++) scanf("%d%d",&q[i].x,&q[i].y);
+        process(p,n);
+        process(q,m);
+        msum(p,q);
+    }
+
+    sort(p,p+n);
+    for (int i=0;i<n;i++) add(up,p[i]);
+    for (int i=0;i<n;i++) p[i].y*=-1;
+    sort(p,p+n);
+    for (int i=0;i<n;i++) add(low,p[i]);
+
+    for (scanf("%d",&m);m--;)
+    {
+        int x,y;
+        scanf("%d%d",&x,&y);x*=3;y*=3;
+        if (check(up,x,y) && check(low,x,-y))
+            printf("YES\n");
+        else printf("NO\n");
+    }
+}

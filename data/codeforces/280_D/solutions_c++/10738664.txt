@@ -1,0 +1,148 @@
+#include<set>
+#include<map>
+#include<ctime>
+#include<queue>
+#include<cmath>
+#include<cstdio>
+#include<vector>
+#include<cstring>
+#include<cstdlib>
+#include<iostream>
+#include<algorithm>
+#define inf 9000000000000000000LL
+#define ll long long 
+using namespace std;
+ll read()
+{
+    ll x=0,f=1;char ch=getchar();
+    while(ch<'0'||ch>'9'){if(ch=='-')f=-1;ch=getchar();}
+    while(ch>='0'&&ch<='9'){x=x*10+ch-'0';ch=getchar();}
+    return x*f;
+}
+int n,m;
+int a[100005];
+vector<pair<int,int> >q;
+struct data{
+    int lx,rx,mx,sum;
+    int lp,rp,p1,p2;
+    void ini(int l,int val){
+        lp=rp=p1=p2=l;
+        lx=rx=mx=val;
+        sum=val;
+    }
+};
+struct seg{
+    int l,r,a,b;bool flag;
+    data mn,mx;
+    void ini(int val){
+        mn.ini(l,-val);
+        mx.ini(l,val);
+    }
+}t[400005];
+void pushdown(int k)
+{
+    if(t[k].l==t[k].r)return;
+    if(t[k].flag)
+    {
+        swap(t[k<<1].mn,t[k<<1].mx);
+        swap(t[k<<1|1].mn,t[k<<1|1].mx);
+        t[k<<1].flag^=1;t[k<<1|1].flag^=1;t[k].flag^=1;
+    }
+}
+data merge(data a,data b)
+{
+    data t;
+    t.sum=a.sum+b.sum;
+
+    t.lx=a.lx;t.lp=a.lp;
+    if(a.sum+b.lx>t.lx)t.lx=a.sum+b.lx,t.lp=b.lp;
+
+    t.rx=b.rx;t.rp=b.rp;
+    if(b.sum+a.rx>t.rx)t.rx=b.sum+a.rx,t.rp=a.rp;
+
+    t.mx=a.rx+b.lx;t.p1=a.rp;t.p2=b.lp;
+    if(t.mx<a.mx)t.mx=a.mx,t.p1=a.p1,t.p2=a.p2;
+    if(t.mx<b.mx)t.mx=b.mx,t.p1=b.p1,t.p2=b.p2;
+    return t;
+}
+void update(int k)
+{
+    t[k].mn=merge(t[k<<1].mn,t[k<<1|1].mn);
+    t[k].mx=merge(t[k<<1].mx,t[k<<1|1].mx);
+}
+void build(int k,int l,int r)
+{
+    t[k].l=l;t[k].r=r;
+    if(l==r)
+    {
+        t[k].ini(a[l]);
+        return;
+    }
+    int mid=(l+r)>>1;
+    build(k<<1,l,mid);
+    build(k<<1|1,mid+1,r);
+    update(k);
+}
+void rever(int k,int x,int y)
+{
+    pushdown(k);
+    int l=t[k].l,r=t[k].r,mid=(l+r)>>1;
+    if(l==x&&y==r)
+    {
+        swap(t[k].mn,t[k].mx);t[k].flag^=1;
+        return;                                                          
+    }
+    if(y<=mid)rever(k<<1,x,y);
+    else if(x>mid)rever(k<<1|1,x,y);
+    else rever(k<<1,x,mid),rever(k<<1|1,mid+1,y);
+    update(k);
+}
+data query(int k,int x,int y)
+{
+    pushdown(k);
+    int l=t[k].l,r=t[k].r,mid=(l+r)>>1;
+    if(l==x&&y==r)return t[k].mx;
+    if(y<=mid)return query(k<<1,x,y);
+    if(x>mid)return query(k<<1|1,x,y);
+    return merge(query(k<<1,x,mid),query(k<<1|1,mid+1,y));
+}
+void solve(int l,int r,int k)
+{
+    int ans=0;
+    q.clear();
+    while(k--)
+    {
+        data t=query(1,l,r);
+        if(t.mx>0)ans+=t.mx;
+        else break;
+        rever(1,t.p1,t.p2);
+        q.push_back(make_pair(t.p1,t.p2));
+    }
+    for(int i=q.size()-1;i>=0;i--)
+        rever(1,q[i].first,q[i].second);
+    printf("%d\n",ans);
+}
+void change(int k,int pos,int val)
+{
+    pushdown(k);
+    int l=t[k].l,r=t[k].r,mid=(l+r)>>1;
+    if(l==r){t[k].ini(val);return;}
+    if(pos<=mid)change(k<<1,pos,val);
+    else change(k<<1|1,pos,val);
+    update(k);
+}
+int main()
+{
+    n=read();
+    for(int i=1;i<=n;i++)a[i]=read();
+    build(1,1,n);
+    int opt,l,r,k;
+    m=read();
+    while(m--)
+    {
+        opt=read();l=read();r=read();
+        if(opt==1){k=read();solve(l,r,k);}
+        else change(1,l,r);
+    }
+    return 0;
+}

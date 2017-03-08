@@ -1,0 +1,232 @@
+#include <assert.h>
+#include <memory.h>
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <iostream>
+#include <map>
+#include <numeric>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <string>
+#include <vector>
+
+using namespace std;
+
+#define pb push_back
+#define INF 1011111111
+#define FOR(i, a, b) for (int _n(b), i(a); i < _n; i++)
+#define rep(i, n) FOR(i, 0, n)
+#define CL(a, v) memset((a), (v), sizeof(a))
+#define mp make_pair
+#define X first
+#define Y second
+#define all(c) (c).begin(), (c).end()
+#define SORT(c) sort(all(c))
+
+typedef long long ll;
+typedef vector<int> VI;
+typedef pair<int, int> pii;
+
+/*** TEMPLATE CODE ENDS HERE */
+
+#define pb push_back
+#define mp make_pair
+#define REP(i, n) for (int i = 0; i < (int)(n); ++i)
+typedef long long LL;
+typedef pair<int, int> PII;
+
+const int MOD = 1e9 + 7;
+
+int n, qq;
+int qu[100001], qv[100001], ans[100001];
+int f[100001];
+vector<int> g[100001];
+const int ROOT = 800;
+vector<int> cv[100001];
+int c[100001];
+int cnt = 0;
+deque<int> q;
+int tin[100001], tout[100001], timer = 0;
+int par[100001];
+
+void dfs(int v, int rem) {
+  c[v] = cnt;
+  cv[cnt].pb(v);
+  if (rem == 0) return;
+  for (int to : g[v])
+    if (c[to] == -1) {
+      dfs(to, rem - 1);
+    }
+}
+
+void times(int v, int p) {
+  tin[v] = timer++;
+  par[v] = p;
+  for (int to : g[v])
+    if (to != p) {
+      times(to, v);
+    }
+  tout[v] = timer++;
+}
+
+inline bool isParent(int v, int p) {
+  return tin[p] <= tin[v] && tout[p] >= tout[v];
+}
+
+int a, b;
+vector<int> pa, pa2;
+vector<int> val[100001];
+vector<int> toClear;
+vector<int> buck[100001];
+int curAns = 0;
+vector<int> qs[100001];
+
+inline void modAdd(int &a, int b) {
+  a += b;
+  if (a >= MOD) a -= MOD;
+}
+
+inline void modSub(int &a, int b) {
+  a -= b;
+  if (a < 0) a += MOD;
+}
+
+void add(int x) {
+  if (val[x].empty()) {
+    toClear.pb(x);
+    val[x].pb(x);
+    modAdd(curAns, x);
+  } else {
+    modSub(curAns, val[x].back());
+    int nval = (LL)val[x].back() * x % MOD;
+    val[x].pb(nval);
+    modAdd(curAns, nval);
+  }
+}
+
+void rem(int x) {
+  assert(!val[x].empty());
+  modSub(curAns, val[x].back());
+  val[x].pop_back();
+  if (!val[x].empty()) modAdd(curAns, val[x].back());
+}
+
+void cl() {
+  for (int x : toClear) val[x].clear();
+  toClear.clear();
+  curAns = 0;
+}
+
+void moveA(int to) {
+  if (a == b || q[1] != to) {
+    add(f[to]);
+    q.push_front(to);
+  } else {
+    rem(f[q[0]]);
+    q.pop_front();
+  }
+  a = to;
+}
+
+void moveB(int to) {
+  int sz = (int)q.size();
+  if (b == a || q[sz - 2] != to) {
+    add(f[to]);
+    q.push_back(to);
+  } else {
+    rem(f[q[sz - 1]]);
+    q.pop_back();
+  }
+  b = to;
+}
+
+void go(int v, int p) {
+  for (int x : qs[v]) {
+    int e = qu[x];
+    pa.clear();
+    pa2.clear();
+    int bb = b;
+    while (!isParent(e, bb)) {
+      bb = par[bb];
+      pa.pb(bb);
+    }
+    while (e != bb) {
+      pa2.pb(e);
+      e = par[e];
+    }
+    reverse(pa2.begin(), pa2.end());
+    for (int y : pa) moveB(y);
+    for (int y : pa2) moveB(y);
+    ans[x] = curAns;
+  }
+  for (int to : g[v])
+    if (to != p) {
+      moveA(to);
+      go(to, v);
+      moveA(v);
+    }
+}
+
+int main() {
+#ifdef LOCAL_HOST
+  freopen("input.txt", "r", stdin);
+// freopen("output.txt","w",stdout);
+#endif
+
+  scanf("%d", &n);
+  REP(i, n) scanf("%d", f + i);
+  REP(i, n - 1) {
+    int from, to;
+    scanf("%d%d", &from, &to), --from, --to;
+    g[from].pb(to);
+    g[to].pb(from);
+  }
+  scanf("%d", &qq);
+  REP(i, qq) scanf("%d%d", qu + i, qv + i), --qu[i], --qv[i];
+  REP(i, n) c[i] = -1;
+  times(0, -1);
+  REP(i, n) if (c[i] == -1) {
+    dfs(i, ROOT);
+    ++cnt;
+  }
+  REP(i, qq) if (c[qu[i]] == c[qv[i]]) {
+    a = qu[i], b = qv[i];
+    pa.clear();
+    pa2.clear();
+    pa.pb(a);
+    while (!isParent(b, a)) {
+      pa.pb(par[a]);
+      a = par[a];
+    }
+    while (b != a) {
+      pa2.pb(b);
+      b = par[b];
+    }
+    for (int x : pa) add(f[x]);
+    for (int x : pa2) add(f[x]);
+    ans[i] = curAns;
+    cl();
+  }
+  else {
+    buck[c[qu[i]]].pb(i);
+  }
+  REP(i, cnt) if (!buck[i].empty()) {
+    for (int x : buck[i]) qs[qv[x]].pb(x);
+    a = b = cv[i][0];
+    add(f[a]);
+    q.clear();
+    q.pb(a);
+    go(a, -1);
+    for (int x : buck[i]) qs[qv[x]].clear();
+    cl();
+  }
+  REP(i, qq) printf("%d\n", ans[i]);
+
+#ifdef LOCAL_HOST
+  printf("TIME: %.3lf\n", double(clock()) / CLOCKS_PER_SEC);
+#endif
+
+  return 0;
+}

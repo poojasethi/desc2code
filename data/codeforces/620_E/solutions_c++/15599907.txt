@@ -1,0 +1,104 @@
+#include<cstdio>
+#include<iostream>
+#include<vector>
+#include<cstring>
+#define ll long long
+using namespace std;
+vector<int> f,adj[400100];
+int le[400100],re[400100];
+int c[400100];
+ll tree[2000000];
+int lazy[2000000];
+void dfs(int v,int p){
+  f.push_back(v);
+  le[v]=f.size()-1;
+  for(int i=0;i<adj[v].size();i++){
+    if(adj[v][i]!=p){
+      dfs(adj[v][i],v);
+    }
+  }
+  re[v]=f.size()-1;
+}
+void build(int l,int r,int idx){
+  if(l==r){
+    tree[idx]=1LL<<c[l];
+    return;
+  }
+  int mid=(l+r)/2;
+  build(l,mid,2*idx);
+  build(mid+1,r,2*idx+1);
+  tree[idx]=tree[2*idx] | tree[2*idx+1];
+}
+void update(int idx,int ss,int se,int qs,int qe,int c){
+  if(lazy[idx]!=0){
+    tree[idx]=1LL<<lazy[idx];
+    if(ss!=se){
+      lazy[2*idx]=lazy[2*idx+1]=lazy[idx];
+    }
+    lazy[idx]=0;
+  }
+  if(qs>se || qe< ss )
+    return;
+  if(qs<=ss && se<=qe){
+    tree[idx]=1LL<<c;
+    if(ss!=se){
+      lazy[2*idx]=lazy[2*idx+1]=c;
+    }
+    return;
+  }
+  int mid=(ss+se)/2;
+  update(2*idx, ss,mid, qs, qe,c);
+  update(idx*2+1,mid+1,se,qs,qe,c);
+  tree[idx]=tree[2*idx] | tree[2*idx+1];
+}
+ll query(int idx,int ss,int se,int qs,int qe ){
+  if(qe<ss || qs > se )
+    return 0;
+  if(lazy[idx]!=0){
+    tree[idx]=1LL<<lazy[idx];
+    if(ss!=se){
+      lazy[2*idx]=lazy[2*idx+1]=lazy[idx];
+    }
+    lazy[idx]=0;
+  }
+  if(qs<=ss && se<=qe){
+    return tree[idx];
+  }
+  int mid=(ss+se)/2;
+  return query(2*idx,ss,mid,qs,qe) | query(2*idx+1,mid+1,se,qs,qe);
+}
+int main(){
+  int n,m,a,b,y,x,tmp[400100];
+  scanf("%d%d",&n,&m);
+  for(int i=0;i<n;i++)
+    scanf("%d",&c[i]);
+  for( int i=1;i<n;i++){
+    scanf("%d%d",&x,&y);
+    adj[x].push_back(y);
+    adj[y].push_back(x);
+  }
+  dfs(1,1);
+  tmp[0]=0;
+  for(int i=0;i<n;i++){
+    tmp[ le[i+1] ]=c[i];
+  }
+  memcpy(c,tmp,sizeof(c) );
+  build(0,n-1,1);
+  for(int i=0;i<m;i++){
+    scanf("%d%d",&a,&b);
+    if(a==1){
+      int c;
+      scanf("%d",&c);
+      update(1,0,n-1,le[b],re[b],c);
+    }
+    else {
+      int ans=0;
+      ll q=query( 1,0,n-1,le[b],re[b] );
+      for(int j=1;j<=60;++j)
+	if( q&(1LL<<j))
+	  ++ans;
+      printf("%d\n",ans);
+    }
+  }
+  return 0;
+}

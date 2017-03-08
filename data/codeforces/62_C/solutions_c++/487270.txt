@@ -1,0 +1,105 @@
+#include<cstdio>
+#include<cmath>
+#include<algorithm>
+using namespace std;
+
+#define x first
+#define y second
+#define sqr(x) ((x)*(x))
+
+const int maxn=100+10;
+const double PI=3.1415926535897932384626433832795;
+
+pair<double,double> p[maxn][3];
+double X[maxn*maxn];
+pair< pair<double,double>,pair<double,double> > g[maxn];
+int n,m;
+double res;
+
+double det(pair<double,double> A,pair<double,double> B,pair<double,double> C)
+{return (B.x-A.x)*(C.y-A.y)-(C.x-A.x)*(B.y-A.y);}
+
+double gety(pair<double,double> A,pair<double,double> B,double x)
+{return (B.y-A.y)*(x-A.x)/(B.x-A.x)+A.y;}
+
+void rotate(double &x,double &y,double a)
+{
+	double p=x,q=y;
+	x=cos(a)*p-sin(a)*q;
+	y=sin(a)*p+cos(a)*q;
+}
+
+int main()
+{
+	//freopen("input.txt","r",stdin);
+
+	scanf("%d",&n);
+	for (int i=0;i<n;i++)
+	{
+		for (int j=0;j<3;j++)
+		{
+			scanf("%lf%lf",&p[i][j].x,&p[i][j].y);
+			rotate(p[i][j].x,p[i][j].y,PI/17);
+		}
+		sort(p[i],p[i]+3);
+	}
+	for (int i=0;i<n;i++)
+	{
+		for (int j=0;j<3;j++) X[m++]=p[i][j].x;
+		for (int j=0;j<3;j++)
+		{
+			pair<double,double> A,B,C,D;
+			A=p[i][j];B=p[i][(j+1)%3];
+			for (int k=i+1;k<n;k++)
+			for (int l=0;l<3;l++)
+			{
+				C=p[k][l];D=p[k][(l+1)%3];
+				double s1=det(A,C,B);
+				double s2=det(A,B,D);
+				if (fabs(s1+s2)<=1e-8) continue;
+				double xx=(s1*D.x+s2*C.x)/(s1+s2);
+				if (xx>max(min(A.x,B.x),min(C.x,D.x)) &&
+					xx<min(max(A.x,B.x),max(C.x,D.x)))
+					X[m++]=xx;
+			}
+		}
+	}
+	sort(X,X+m);
+	for (int i=1;i<m;i++)
+	if (X[i]-X[i-1]>1e-8)
+	{
+		double x1=X[i-1],x2=X[i];
+		double mid=(x1+x2)/2;
+
+		int tot=0;
+		for (int j=0;j<n;j++)
+		{
+			if (mid<=p[j][0].x || mid>=p[j][2].x) continue; 
+			if (p[j][0].x!=p[j][1].x && mid<=p[j][1].x)
+			{
+				g[tot].x.x=gety(p[j][0],p[j][1],mid);
+				g[tot].y.x=sqrt(sqr(gety(p[j][0],p[j][1],x1)-gety(p[j][0],p[j][1],x2))+sqr(x2-x1));
+			} else
+			{
+				g[tot].x.x=gety(p[j][1],p[j][2],mid);
+				g[tot].y.x=sqrt(sqr(gety(p[j][1],p[j][2],x1)-gety(p[j][1],p[j][2],x2))+sqr(x2-x1));
+			}
+			g[tot].x.y=gety(p[j][0],p[j][2],mid);
+			g[tot].y.y=sqrt(sqr(gety(p[j][0],p[j][2],x1)-gety(p[j][0],p[j][2],x2))+sqr(x2-x1));
+			if (g[tot].x.x>g[tot].x.y) swap(g[tot].x.x,g[tot].x.y),swap(g[tot].y.x,g[tot].y.y);
+			tot++;
+		}
+		if (!tot) continue;
+		sort(g,g+tot);g[tot].x.x=1e20;
+		for (int j=1;j<=tot;j++)
+		if (g[j].x.x<=g[0].x.y+1e-8)
+		{
+			if (g[j].x.y>g[0].x.y) {g[0].x.y=g[j].x.y;g[0].y.y=g[j].y.y;}
+		} else
+		{
+			res+=g[0].y.x+g[0].y.y;
+			g[0]=g[j];
+		}
+	}
+	printf("%0.9lf\n",res);
+}

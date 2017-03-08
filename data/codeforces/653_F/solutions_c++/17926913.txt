@@ -1,0 +1,71 @@
+#include <cstdio>
+#include <algorithm>
+#include <queue>
+#define N 500005
+#define MP make_pair
+#define PII pair<int, int>
+#define LL long long
+#define fi(a, b, c) for(int a = (b); a < (c); a++)
+#define FI(a, b, c) for(int a = (b); a <= (c); a++)
+using namespace std;
+
+int n, s[N], rb[N], has[N], h[N], r[N], q[N], nr[N], key;
+LL ans;
+char str[N];
+vector<int> v[N + N];
+priority_queue<PII> pq;
+
+int get(int x){
+	return x + key <= n ? r[x + key] : -1;
+}
+
+bool cmp(int x, int y){
+	return r[x] != r[y] ? r[x] < r[y] : get(x) < get(y);
+}
+
+int main(){
+	scanf("%d %s", &n, str + 1);
+	FI(i, 1, n){
+		q[i] = i;
+		r[i] = str[i];
+		s[i] = s[i - 1] + (str[i] == '(' ? 1 : -1);
+		v[s[i] + n].push_back(i);
+		pq.push(MP(s[i - 1], i));
+		while(pq.size() && pq.top().first > s[i]){
+			rb[pq.top().second] = i;
+			pq.pop();
+		}
+	}
+	
+	while(pq.size()){
+		rb[pq.top().second] = n + 1;
+		pq.pop();
+	}
+	
+	for(key = 1; key < n; key *= 2){
+		sort(q + 1, q + n + 1, cmp);
+		nr[q[1]] = 1;
+		FI(i, 2, n) nr[q[i]] = nr[q[i - 1]] + cmp(q[i - 1], q[i]);
+		FI(i, 1, n) r[i] = nr[i];
+	}
+	
+	int tmp = 0;
+	FI(i, 1, n){
+		if(r[i] == 1) h[i] = 0;
+		else{
+			if(tmp) tmp--;
+			int x = q[r[i] - 1];
+			while(str[x + tmp] == str[i + tmp]) tmp++;
+			h[i] = tmp;
+		}
+	}
+	
+	FI(i, 1, n){
+		if(q[i] + h[q[i + 1]] < rb[q[i]] - 1){
+			ans += upper_bound(v[s[q[i]] - 1 + n].begin(), v[s[q[i]] - 1 + n].end(), rb[q[i]] - 1) -
+			lower_bound(v[s[q[i]] - 1 + n].begin(), v[s[q[i]] - 1 + n].end(), q[i] + h[q[i + 1]]);
+		} // lazy handling the last
+	}
+	
+	printf("%I64d\n", ans);
+}

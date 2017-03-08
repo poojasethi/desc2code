@@ -1,0 +1,180 @@
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<cstdlib>
+#include<cmath>
+#include<algorithm>
+using namespace std;
+int const N=200005;
+struct Edge
+{
+    int u,c,next;
+    void read(int u,int c,int next)
+    {
+        this->u=u;
+        this->c=c;
+        this->next=next;    
+    }   
+}edge[N*2];
+int son[N],rcd_ord[N],sonNum[N],hash[N],tree_root[N];
+long long tree_val[N],rcd_edge[N],circle_val[N],son_root[N];
+int n,m,st,ed;
+bool vis[N];
+bool FindCircle(int x,int fa,int k)
+{
+    if(vis[x]==true){st=hash[x];ed=k-2;return true;}
+    vis[x]=true;
+    int t=son[x],u;
+    while(t)
+    {
+         u=edge[t].u;
+         if(u!=fa)
+         {
+            rcd_ord[k]=u;
+            if(!vis[u])hash[u]=k;
+            rcd_edge[k-1]=edge[t].c;
+            if(FindCircle(u,x,k+1))return true;
+         }
+         t=edge[t].next;
+    }
+    return false;
+}
+void dfs1(int x,int root,long long length)
+{
+    tree_root[x]=root; 
+    son_root[x]=length;
+    vis[x]=true; 
+    sonNum[x]=1;
+    tree_val[x]=0;
+    int t=son[x],u;
+    while(t)
+    {
+         u=edge[t].u;
+         if(!vis[u])
+         {
+              dfs1(u,root,length+edge[t].c);        
+              sonNum[x]+=sonNum[u]; 
+              tree_val[x]+=tree_val[u]+edge[t].c*sonNum[u];
+         }           
+         t=edge[t].next;
+    }   
+    
+    if(x!=root)vis[x]=false;
+}
+void dfs2(int x,int fa,int length)
+{
+    vis[x]=true;
+    if(x!=fa)
+    {
+         tree_val[x]=tree_val[fa]+(sonNum[tree_root[x]]-2*sonNum[x])*length;    
+    }
+    
+    int t=son[x],u;
+    while(t)
+    {
+         u=edge[t].u;
+         if(!vis[u])
+         {
+              dfs2(u,x,edge[t].c);      
+         }           
+         t=edge[t].next;
+    }   
+    
+    if(x!=fa)vis[x]=false;
+}
+void calc_tree()
+{
+    memset(vis,0,sizeof(vis));
+    for(int i=st;i<=ed;i++)
+    vis[rcd_ord[i]]=true;
+        
+    for(int i=st;i<=ed;i++)
+    {
+        dfs1(rcd_ord[i],rcd_ord[i],0);
+        
+        dfs2(rcd_ord[i],rcd_ord[i],0);
+    }
+}
+void calc_circle()
+{
+    int p=st,num=0,x;
+    long long tot=0,c=0;
+    for(int i=st;i<=ed;i++)
+    tot+=rcd_edge[i];
+    
+    x=rcd_ord[st];
+    circle_val[x]=0;
+    while(p+1<=ed&&c+rcd_edge[p]<=tot/2)
+    {
+        c+=rcd_edge[p];
+        circle_val[x]+=c*sonNum[rcd_ord[++p]];
+        num+=sonNum[rcd_ord[p]];
+    }
+    long long t=c;
+    for(int i=p+1;i<=ed;i++)
+    {
+         t+=rcd_edge[i-1];
+         circle_val[x]+=(tot-t)*sonNum[rcd_ord[i]];     
+    }
+    
+    for(int k=st+1;k<=ed;k++)
+    {
+         x=rcd_ord[k];
+         circle_val[x]=circle_val[rcd_ord[k-1]]+(n-2*num)*rcd_edge[k-1];
+         num-=sonNum[rcd_ord[k]]; 
+         c-=rcd_edge[k-1];
+         while(true)
+         {
+             int pp=p+1;
+             if(pp==ed+1)pp=st;     
+             if(c+rcd_edge[p]<=tot/2)
+             {
+                    c+=rcd_edge[p];
+                    circle_val[x]+=(2*c-tot)*sonNum[rcd_ord[pp]];
+                    num+=sonNum[rcd_ord[pp]]; 
+                    p=pp;       
+             }
+             else break;
+        }
+    }
+}
+void solve()
+{
+     long long tot_root=0,ans;
+     for(int i=st;i<=ed;i++)
+     tot_root+=tree_val[rcd_ord[i]];
+     for(int i=1;i<=n;i++)
+     {
+          ans=tot_root+tree_val[i]-tree_val[tree_root[i]]+(n-sonNum[tree_root[i]])*son_root[i]+circle_val[tree_root[i]];        
+          printf("%I64d ",ans);
+     }
+}
+int main()
+{
+
+    
+    int a,b,c;
+    scanf("%d",&n);
+    
+    for(int i=1;i<=n;i++)
+    {
+       scanf("%d%d%d",&a,&b,&c);
+       edge[i*2-1].read(b,c,son[a]);son[a]=i*2-1;
+       edge[i*2  ].read(a,c,son[b]);son[b]=i*2  ;      
+    }
+    rcd_ord[1]=hash[1]=1;
+    FindCircle(1,-1,2);
+    rcd_edge[st-1]=rcd_edge[ed];
+
+    
+    calc_tree();
+    calc_circle();
+    
+
+    
+    solve();
+    
+    
+    
+    return 0;
+}

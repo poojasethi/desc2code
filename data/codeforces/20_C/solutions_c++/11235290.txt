@@ -1,0 +1,52 @@
+#include <stdio.h>
+#include <queue>
+#include <vector>
+#define INF 100000000000000000
+using namespace std;
+int p[100000];
+long long d[1000000];
+vector<pair<int,int> > mp[1000000];
+void print(int k)
+{
+	if (p[k])
+		print(p[k]);
+	printf("%d ",k);
+}
+int main()
+{
+	priority_queue<pair<long long,int> > pq;
+	int n,m,i;
+	scanf("%d%d",&n,&m);
+	for (i=1;i<=n;i++)
+		d[i]=INF;
+	for (i=1;i<=m;i++)
+	{
+		int s,t,c;
+		scanf("%d%d%d",&s,&t,&c);
+		mp[s].push_back(make_pair(t,c));
+		mp[t].push_back(make_pair(s,c));
+	}
+	pq.push(make_pair(-(d[1]=0),1));
+	while (!pq.empty())
+	{
+		pair<long long,int> t=pq.top();
+		pq.pop();
+		t.first=-t.first;
+		if (t.first==d[t.second])
+			for (i=0;i<mp[t.second].size();i++)
+			{
+				pair<int,int> x=mp[t.second][i];
+				if (t.first+x.second<d[x.first])
+				{
+					pq.push(make_pair(-(t.first+x.second),x.first));
+					d[x.first]=t.first+x.second;
+					p[x.first]=t.second;
+				}
+			}
+	}
+	if (d[n]==INF)
+		printf("%d",-1);
+	else
+		print(n);
+	return 0;
+}

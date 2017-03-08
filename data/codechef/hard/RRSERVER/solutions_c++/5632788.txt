@@ -1,0 +1,103 @@
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+#define BITCOUNT(mask) ( __builtin_popcount((mask)) )
+
+int N, M;
+int adj[20];
+
+int ALL;
+
+/*
+int DP[1<<20];
+
+int solve() {
+   const int MAXMASK = (1<<N)-1;
+   memset(DP, 0x3f, sizeof(DP));
+   DP[0] = 0;
+   for (int mask = 1; mask <= MAXMASK; ++mask) {
+      for (int i = 0; i < N; ++i) {
+         if (mask & (1<<i)) continue;
+         int num_seen = BITCOUNT(mask & adj[i]);
+         int num_yet_seen = BITCOUNT( (MAXMASK ^ mask) & adj[i] );
+         int cost = - num_yet_seen * (N - 1 - i) +
+                    num_seen * (N - 1 - i);
+         DP[mask | (1<<i)] = min(DP[mask | (1<<i)], DP[mask] + cost);
+      }
+   }
+   return DP[MAXMASK];
+}
+*/
+
+bool cached[1<<20];
+int memo[1<<20];
+int go(int mask) {
+   if (mask == (1<<N)-1) return 0;
+   if (cached[mask]) return memo[mask];
+   int res = 1000000000;
+   int dist_to_end = (N - 1) - BITCOUNT(mask);
+   for (int i = 0; i < N; ++i) {
+      if (mask & (1<<i)) continue;
+      int num_seen = BITCOUNT(mask & adj[i]);
+      int num_yet_seen = BITCOUNT( (ALL ^ mask) & adj[i] );
+      int cost = num_yet_seen * dist_to_end -
+                     num_seen * dist_to_end;
+      int cur = go(mask | (1<<i)) + cost;
+/*
+      if (mask == 5)
+         cerr << i << ": " << cur << ' ' << cost << ' '
+              << num_seen << ' ' << num_yet_seen << endl;
+*/
+      res = min(res, cur);
+   }
+   cached[mask] = true;
+   return memo[mask] = res;
+}
+
+int solve() {
+   memset(cached, 0, sizeof(cached));
+   return go(0);
+}
+
+
+int solve_bf() {
+   int best = 1000000000;
+   int P[20];
+   for (int i = 0; i < N; ++i) P[i] = i;
+   do {
+      int cur = 0;
+      for (int i = 0; i < N; ++i) {
+         int u = P[i];
+         for (int j = 0; j < i; ++j) {
+            int v = P[j];
+            if (adj[u] & (1<<v))
+               cur += i-j;
+         }
+      }
+      best = min(best, cur);
+   } while (next_permutation(P, P+N));
+   return best;
+}
+
+int main(int argc, char* argv[]) {
+   ios_base::sync_with_stdio(false); 
+   cin.tie(NULL);
+
+   cin >> N >> M;
+   for (int m = 0; m < M; ++m) {
+      int u, v;
+      cin >> u >> v;
+      --u, --v;
+      adj[u] |= 1<<v;
+      adj[v] |= 1<<u;
+   }
+   ALL = (1<<N)-1;
+
+   cout << solve() << "\n";
+// cout << solve_bf() << "\n";
+
+   return 0;
+}

@@ -1,0 +1,203 @@
+#include <iostream>
+#include <vector>
+#include <cstdlib>
+#include <complex>
+#include <cmath>
+
+using namespace std;
+
+typedef long long int ll;
+typedef long double ld;
+
+typedef complex<ld> cd;
+typedef vector<cd> vcd;
+
+const int limite=100000;
+
+ll n;
+
+void escribe(ll v[limite],int n)
+{
+  for (int i=0;i<n;i++)
+    cout<<v[i]<<",";
+  cout<<endl;
+}
+
+void escribe(cd v[limite],int n)
+{
+  for (int i=0;i<n;i++)
+    cout<<"("<<real(v[i])<<","<<imag(v[i])<<")";
+  cout<<endl;
+}
+
+cd memprod[limite];
+
+void fft(cd v[limite])
+{
+  int bits=__builtin_ctz(n);
+  for (int i=0;i<n;i++) {
+    int inv=0;
+    for (int x=i,paso=0;paso<bits;paso++,x>>=1) inv=(inv<<1)|(x&1);
+    if (i<inv) swap(v[i],v[inv]);
+  }
+  for (int len=2;len<=n;len*=2) {
+    ld a=2*M_PI/len;
+    cd w(cos(a),sin(a));
+    int len2=len/2;
+    memprod[0]=cd(1,0);
+    for (int j=1;j<len2;j++)
+      memprod[j]=memprod[j-1]*w;
+    for (int i=0;i<n;i+=len) {
+      for (int j=0;j<len2;j++) {
+	cd a=v[i+j];
+	cd b=memprod[j]*v[i+len2+j];
+	v[i+j]=a+b;
+	v[i+len2+j]=a-b;
+      }
+    }
+  }
+}
+
+void fftinv(cd v[limite])
+{
+  fft(v);
+  for (int i=1,j=n-1;i<j;i++,j--) swap(v[i],v[j]);
+  ld divn=1.0/n;
+  for (int i=0;i<n;i++) v[i]*=divn;
+}
+
+ll modulo=1e9+7;
+int k;
+
+void vll2vcd(ll u[limite],cd v[limite])
+{
+  for (int i=0;i<=k;i++)
+    v[i]=cd(u[i],0);
+  for (int i=k+1;i<n;i++)
+    v[i]=cd(0,0);
+}
+
+cd v1[limite],v2[limite];
+
+void multiplica(ll u1[limite],ll u2[limite],ll u[limite])
+{
+  vll2vcd(u1,v1);
+  vll2vcd(u2,v2);
+  fft(v1);
+  fft(v2);
+  for (int i=0;i<n;i++)
+    v1[i]=v1[i]*v2[i];
+  fftinv(v1);
+  for (int i=0;i<=k;i++)
+    u[i]=ll(round(real(v1[i])))%modulo;
+}
+
+ll u1low[limite],u1big[limite],u1sum[limite],u2low[limite],u2big[limite],u2sum[limite];
+ll low[limite],med[limite],big[limite];
+
+void multiplicapart(ll u1[limite],ll u2[limite])
+{
+  for (int i=0;i<=k;i++) {
+    u1low[i]=u1[i]&((1<<15)-1);
+    u1big[i]=u1[i]>>15;
+    u1sum[i]=u1low[i]+u1big[i];
+    u2low[i]=u2[i]&((1<<15)-1);
+    u2big[i]=u2[i]>>15;
+    u2sum[i]=u2low[i]+u2big[i];
+  }
+  multiplica(u1low,u2low,low);
+  multiplica(u1sum,u2sum,med);
+  multiplica(u1big,u2big,big);
+  for (int i=0;i<=k;i++)
+    med[i]=(((med[i]-low[i]-big[i])%modulo)+modulo)%modulo;
+  for (int i=0;i<=k;i++)
+    u1[i]=(low[i]+(med[i]<<15)+(big[i]<<30))%modulo;
+}
+
+ll eleva(ll b,int e)
+{
+  if (e==0) return 1;
+  if (e%2==0) return eleva(b*b%modulo,e/2);
+  return b*eleva(b*b%modulo,e/2)%modulo;
+}
+
+ll inverso(ll x)
+{
+  return eleva(x,modulo-2);
+}
+
+
+ll expo[limite];
+ll fact[limite];
+ll factinv[limite];
+
+ll v1aux[limite];
+ll v2aux[limite];
+
+void cruza(ll v1[limite],ll v2[limite],int n2)
+{
+  //cout<<"cruza"<<endl;
+  //escribe(v1);
+  //escribe(v2);
+  ll prod=1;
+  for (int i=0;i<=k;i++) {
+    v1aux[i]=v1[i]*prod%modulo*factinv[i]%modulo;
+    prod=prod*expo[n2]%modulo;
+  }
+  for (int i=0;i<=k;i++)
+    v2aux[i]=v2[i]*factinv[i]%modulo;
+  //escribe(v1);
+  //escribe(v2);
+  multiplicapart(v1aux,v2aux);
+  //escribe(v);
+  for (int i=0;i<=k;i++)
+    v1[i]=v1aux[i]*fact[i]%modulo;
+  //escribe(v);
+}
+
+ll uno[limite];
+ll cero[limite];
+
+void computa(ll v[limite],int n)
+{
+  if (n==1) {
+    v[0]=0;
+    for (int i=1;i<=k;i++)
+      v[i]=1;
+    return;
+  }
+  if (n%2==1) {
+    computa(v,n-1);
+    cruza(v,uno,1);
+    return;
+  }
+  computa(v,n/2);
+  cruza(v,v,n/2);
+}
+
+ll v[limite];
+
+int main()
+{
+  ll nn;
+  cin>>nn>>k;
+  if (nn>k) {
+    cout<<0<<endl;
+    exit(0);
+  }
+  n=1;
+  while (n<=2*(k+1)) n*=2;
+  expo[0]=fact[0]=factinv[0]=1;
+  for (int i=1;i<=k;i++) {
+    expo[i]=expo[i-1]*2%modulo;
+    fact[i]=fact[i-1]*i%modulo;
+    factinv[i]=inverso(fact[i]);
+  }
+  for (int i=1;i<=k;i++)
+    uno[i]=1;
+  for (int i=0;i<=k;i++)
+    cero[i]=1;
+  computa(v,nn);
+  cruza(v,cero,0);
+  cout<<(v[k]%modulo+modulo)%modulo<<endl;
+}

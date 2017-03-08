@@ -1,0 +1,297 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <algorithm>
+#include <functional>
+#include <math.h>
+#include <map>
+
+inline bool fastreadIsEndOfLine(int* a)
+{
+  register char c = 0;
+  while (c < 33)
+    c = getchar();
+  *a = 0;
+  while (c > 33)
+  {
+    *a = (*a <<1)+(*a<<3) + c - '0';
+    c = getchar();
+    if(c == '\r' || c == '\n')
+      return true;
+  }
+
+  return false;
+}
+
+inline void fastread(int* a)
+{
+  register char c = 0;
+  while (c < 33)
+    c = getchar();
+  *a = 0;
+  while (c > 33)
+  {
+    *a = (*a <<1)+(*a<<3) + c - '0';
+    c = getchar();
+  }
+}
+
+inline void fastreadll(long long* a)
+{
+  register char c = 0;
+  while (c < 33)
+    c = getchar();
+  *a = 0;
+  while (c > 33)
+  {
+    *a = (*a <<1)+(*a<<3) + c - '0';
+    c = getchar();
+  }
+}
+
+inline void fastreadNeg(int* a)
+{
+  register char c = 0;
+  while (c < 33)
+    c = getchar();
+  *a = 0;
+  bool neg = false;
+  if(c == '-')
+  {
+	  c = getchar();
+	  neg = true;
+  }
+  while (c > 33)
+  {
+    *a = (*a <<1)+(*a<<3) + c - '0';
+    c = getchar();
+  }
+
+  if(neg)
+	  *a = -*a;
+}
+
+inline void readString(char *s)
+{
+  *s = getchar();
+  while(*s == '\r' || *s == '\n' || *s == -1)
+    *s = getchar();
+
+  while(*s != '\r' && *s != '\n' && *s != -1)
+  {
+    ++s;
+    *s = getchar();
+  }
+  *s = '\0';
+}
+
+int N, K, M, Q, O;
+int T = 1;
+int A[100000 + 1];
+int X, L, R, P, D;
+
+
+struct Div
+{
+  int     two;
+  int     three;
+  int     five;
+
+  Div() : two(0), three(0), five(0) {}
+  Div(int tw, int th, int fi) : two(tw), three(th), five(fi) {}
+  Div     operator +(const Div &r) const { return Div(two + r.two, three + r.three, five + r.five); }
+};
+
+struct Node
+{
+  bool    own;
+  Div     d;
+  int     l;
+  int     r;
+  Node *  pl;
+  Node *  pr;
+
+  Node(int _l, int _r) : d(), l(_l), r(_r), pl(0), pr(0) {}
+};
+
+Node * BuildSegmentTree(int l, int r)
+{
+  Node *n = new Node(l, r);
+  if(l == r)
+    return n;
+
+  const int m = (l + r) >> 1;
+  n->pl = BuildSegmentTree(l, m);
+  n->pr = BuildSegmentTree(m + 1, r);
+  return n;
+}
+
+void UpdateTwo(Node *n, int l, int r)
+{
+  // Exact match!
+  if(n->l == l && n->r == r)
+  {
+    n->d.two++;
+    return;
+  }
+
+  // We have something to the left
+  if(n->pl->r >= l)
+    UpdateTwo(n->pl, l < n->pl->l ? n->pl->l : l, r > n->pl->r ? n->pl->r : r);
+
+  // We have something to the right
+  if(n->pr->l <= r)
+    UpdateTwo(n->pr, l < n->pr->l ? n->pr->l : l, r > n->pr->r ? n->pr->r : r);
+}
+
+void UpdateThree(Node *n, int l, int r)
+{
+  // Exact match!
+  if(n->l == l && n->r == r)
+  {
+    n->d.three++;
+    return;
+  }
+
+  // We have something to the left
+  if(n->pl->r >= l)
+    UpdateThree(n->pl, l < n->pl->l ? n->pl->l : l, r > n->pl->r ? n->pl->r : r);
+
+  // We have something to the right
+  if(n->pr->l <= r)
+    UpdateThree(n->pr, l < n->pr->l ? n->pr->l : l, r > n->pr->r ? n->pr->r : r);
+}
+
+void UpdateFive(Node *n, int l, int r)
+{
+  // Exact match!
+  if(n->l == l && n->r == r)
+  {
+    n->d.five++;
+    return;
+  }
+
+  // We have something to the left
+  if(n->pl->r >= l)
+    UpdateFive(n->pl, l < n->pl->l ? n->pl->l : l, r > n->pl->r ? n->pl->r : r);
+
+  // We have something to the right
+  if(n->pr->l <= r)
+    UpdateFive(n->pr, l < n->pr->l ? n->pr->l : l, r > n->pr->r ? n->pr->r : r);
+}
+
+void UpdateChange(Node *n, int l, int num, const Div &d)
+{
+  if(n->l == l && n->r == l)
+  {
+    n->d.five = -d.five;
+    n->d.three = -d.three;
+    n->d.two = -d.two;
+    A[l] = num;
+    return;
+  }
+
+  if(l <= n->pl->r)
+    UpdateChange(n->pl, l, num, d + n->d);
+  else
+    UpdateChange(n->pr, l, num, d + n->d);
+}
+
+void PrintNodes(Node *n, const Div &d)
+{
+  if(n->pl == 0 && n->pr == 0)
+  {
+    int &r = A[n->l];
+
+    Div dd(d + n->d);
+
+    // Divide by two!
+    while((dd.two != 0) && !(r & 1))
+    {
+      --dd.two;
+      r >>= 1;
+    }
+
+    while((dd.three != 0) && (r % 3 == 0))
+    {
+      --dd.three;
+      r /= 3;
+    }
+
+    while((dd.five != 0) && (r % 5 == 0))
+    {
+      --dd.five;
+      r /= 5;
+    }
+
+    printf("%d ", r);
+    return;
+  }
+
+  PrintNodes(n->pl, d + n->d);
+  PrintNodes(n->pr, d + n->d);
+}
+
+
+
+int main()
+{
+#ifdef USE_DATA_TXT
+  freopen_s(&stream, "C:\\Projects\\TaskTemplate\\data.txt", "r", stdin);
+#endif
+#ifdef PRINT_PERF
+  auto start = std::chrono::high_resolution_clock::now();
+#endif
+
+  //fastread(&T);
+
+  const Div d;
+  while(T--)
+  {
+    fastread(&N);
+    for(int i = 1; i <= N; ++i)
+      fastread(A + i);
+    fastread(&M);
+
+    Node *n = BuildSegmentTree(1, N);
+
+    for(int i = 0; i < M; ++i)
+    {
+      fastread(&X);
+      if(X == 1)
+      {
+        fastread(&L);
+        fastread(&R);
+        fastread(&P);
+        if(P == 2)
+          UpdateTwo(n, L, R);
+        else if(P == 3)
+          UpdateThree(n, L, R);
+        else
+          UpdateFive(n, L, R);
+      }
+      else
+      {
+        fastread(&L);
+        fastread(&D);
+        UpdateChange(n, L, D, d);
+      }
+    }
+
+    PrintNodes(n, d);
+    printf("\n");
+  }
+
+#ifdef PRINT_PERF
+  PrintResultPerf(start);
+#endif
+#ifdef USE_DATA_TXT
+  if(stream)
+  {
+    fclose(stream);
+    stream = NULL;
+  }
+#endif
+
+  return 0;
+}

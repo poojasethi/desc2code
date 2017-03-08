@@ -1,0 +1,240 @@
+/*
+1. Dealing with the large N by using pointer to represent the segment tree we only care about the nodes that we did visit them some time.
+So we have at most M * LogN nodes.
+
+2. The events of type 2: just use lazy update.
+
+3. the events of type 1:
+Each node of the segment tree will store at most one price plan and so by travelling to a leaf node, we can find the highest price.
+When a new price is added, let say a plan p1 will cover the node u which is already store a plan p2.
+If we can pick the higher one in p1 and p2 (p1 is higher than p2 if the price according to p1 is higher than p2
+for all stores in node u) then we just update the information in node u and finish the update process for this node.
+If we cannot decide which one is higher, then there is an important observation that p1 (or p2) will be higher than p2 (or p1)
+in at least half number of stores in node u. Let l and r is the left child and the right child of u, then in one of those two child nodes,
+there is at least one node that we can decide which plan (p1 or p2) is higher then the other.
+Let say p1 is higher than p2 in node l, then we just store p1 in node u and try to update node r with p2.
+The update process will have the complexity of O(log^2N).
+*/
+#include <cstdio>
+#include <iostream>
+#include <fstream>
+#include <algorithm>
+#include <vector>
+#include <queue>
+#include <stack>
+#include <set>
+#include <map>
+#include <cstring>
+#include <cstdlib>
+#include <cmath>
+#include <string>
+#include <memory.h>
+#include <sstream>
+#include <complex>
+#include <cassert>
+#include <climits>
+
+#define REP(i,n) for(int i = 0, _n = (n); i < _n; i++)
+#define REPD(i,n) for(int i = (n) - 1; i >= 0; i--)
+#define FOR(i,a,b) for (int i = (a), _b = (b); i <= _b; i++)
+#define FORD(i,a,b) for (int i = (a), _b = (b); i >= _b; i--)
+#define FORN(i,a,b) for(int i=a;i<b;i++)
+#define FOREACH(it,c) for (__typeof((c).begin()) it=(c).begin();it!=(c).end();it++)
+#define RESET(c,x) memset (c, x, sizeof (c))
+
+#define PI acos(-1)
+#define sqr(x) ((x) * (x))
+#define PB push_back
+#define MP make_pair
+#define F first
+#define S second
+#define Aint(c) (c).begin(), (c).end()
+#define SIZE(c) (c).size()
+
+#define DEBUG(x) { cerr << #x << " = " << x << endl; }
+#define PR(a,n) {cerr<<#a<<" = "; FOR(_,1,n) cerr << a[_] << ' '; cerr <<endl;}
+#define PR0(a,n) {cerr<<#a<<" = ";REP(_,n) cerr << a[_] << ' '; cerr << endl;}
+#define LL long long
+
+using namespace std;
+
+struct Segment{
+   long long A, B;
+
+   Segment() { A = B = 0;}
+
+   Segment(long long A, long long B): A(A), B(B) {}
+
+   void clear() {
+       A = B = 0;
+   }
+
+   void add(Segment sm) {
+       A += sm.A;
+       B += sm.B;
+   }
+
+   long long calc(long long x) {
+       return x * A + B;
+   }
+};
+
+struct Node {
+   long long l, r;
+   bool coverred;
+   Segment price, fee;
+   Node *left, *right;
+
+   Node (long long l, long long r): l(l), r(r) {
+       coverred = false;
+
+       price.A = price.B = 0;
+       fee.A = fee.B = 0;
+       left = right = NULL;
+   }
+};
+
+Node *root;
+int N, M;
+
+void lazyUpdate(Node *node) {
+   if (node->l == node->r) return;
+
+   int mid = (node->l + node->r) / 2;
+   if (!node->left)
+       node->left  = new Node(node->l, mid);
+
+   if (!node->right)
+       node->right = new Node(mid + 1, node->r);
+
+   node->left->fee.add(node->fee);
+   node->right->fee.add(node->fee);
+   node->fee.clear();
+}
+
+//using the lazy update the the queries of type 2
+void updateFee(Node *node, Segment fee, long long u, long long v) {
+   if (v < node-> l || node->r < u) return;
+
+   if (u <= node -> l && node -> r <= v) {
+       node -> fee.A += fee.A;
+       node -> fee.B += fee.B;
+       return;
+   }
+
+   lazyUpdate(node);
+
+   updateFee(node -> left, fee, u, v);
+   updateFee(node -> right, fee, u, v);
+}
+
+void updatePrice(Node *node, Segment price, long long u, long long v) {
+   if (v < node -> l || node -> r < u) return;
+
+   lazyUpdate(node);
+
+   //if the segmnet "price" covers the current node
+   if (u <= node -> l && node -> r <= v) {
+       if (!node -> coverred) {
+           node -> coverred = true;
+           node -> price = price;
+           return;
+       }
+
+       Segment l1 = node -> price;
+       Segment l2 = price;
+       long long l1y1 = l1.calc(node -> l);
+       long long l2y1 = l2.calc(node -> l);
+
+       if (l1y1 < l2y1)
+           swap (l1, l2);
+
+       long long l1y2 = l1.calc(node -> r);
+       long long l2y2 = l2.calc(node -> r);
+
+       if (l1y2 >= l2y2) {
+           node -> price = l1;
+           return;
+       }
+
+       //if we cannot determine which one out of l1 and l2 is better in the context of the current node
+       //then we go down to two child node of the current node
+       long long mid = (node -> l + node -> r) / 2;
+       long long l1m = l1.calc(mid);
+       long long l2m = l2.calc(mid);
+
+       if (l1m > l2m) {
+           node -> price = l1;
+           updatePrice(node -> right, l2, u, v);
+       }
+       else {
+           node -> price = l2;
+           updatePrice(node -> left, l1, u, v);
+       }
+   }
+   else {
+       updatePrice(node -> left, price, u, v);
+       updatePrice(node -> right, price, u, v);
+   }
+}
+
+//We just travel all the way to the leaf to get the needed information
+void get(Node *node, long long u, long long &price, long long &fee, bool &ok) {
+   if (u < node -> l || node -> r < u) return;
+
+   fee += node -> fee.calc(u);
+
+   if (node -> coverred) {
+       ok = true;
+       price = max (price, node -> price.calc(u));
+   }
+
+   if (node -> left) get(node -> left, u, price, fee, ok);
+   if (node -> right) get(node -> right, u, price, fee, ok);
+}
+
+int main() {
+   cin >> N;
+   assert (1 <= N && N <= 1000000000);
+
+   root = new Node(1, N);
+
+   cin >> M;
+   assert (1 <= M && M <= 300000);
+   long long t, u, v, a, b, price, fee;
+   bool ok;
+   for (int i = 1; i <= M; i++) {
+       cin >> t;
+
+       if (t == 1) {
+           cin >> u >> v >> a >> b;
+           assert (1 <= u && u <= v && v <= N);
+           assert (abs(a) <= 1000000000 && abs(b) <= 1000000000);
+
+           b = a * (-u) + b;
+
+           updatePrice(root, Segment(a, b), u, v);
+       }
+       else if (t == 2) {
+           cin >> u >> v >> a >> b;
+
+           assert (1 <= u && u <= v && v <= N);
+           assert (abs(a) <= 10000 && abs(b) <= 10000);
+           b = a * (-u) + b;
+
+           updateFee(root, Segment(a, b), u, v);
+       }
+       else {
+           cin >> u;
+           assert (1 <= u && u <= N);
+           ok = false;
+           price = LONG_LONG_MIN;
+           fee = 0;
+
+           get(root, u, price, fee, ok);
+           if (!ok) cout << "NA" << endl;
+           else cout << price + fee << endl;
+       }
+   }
+   return 0;
+}

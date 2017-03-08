@@ -1,0 +1,179 @@
+#include <iostream>
+#include <vector>
+#include <cstdio>
+#include <algorithm>
+#include <set>
+#include <cstring>
+#include <map>
+
+using namespace std;
+
+int scf() { int x; scanf ( "%d" , &x ); return x; }
+int prf( int x ) { printf ( "%d" , x ); }
+int nl() { printf ("\n"); }
+int sp() { printf (" "); }
+int dad [ 50500 ],SG [ 50500 ];
+vector < int > ch [ 50500 ];
+
+struct node
+{
+       int x1 , y1 , x2 , y2;
+       node ( int a , int b , int c , int d ) { x1 = a; x2 = b; y1 = c; y2 = d; }
+};
+
+vector < node > v;
+
+struct cvor
+{
+       int x , wh , io;
+       
+       cvor () {}
+       cvor ( int a , int b , int c ) { x = a; wh = b; io = c; }
+       
+       bool operator < ( const cvor &t ) const
+       {
+            if ( x != t.x )
+               return x < t.x;
+            
+            if ( io != t.io )
+               return io > t.io;
+            
+            return v[wh].x2 < v[t.wh].x2;
+       }
+};
+
+struct krug
+{
+       int st , nd , wh;
+       
+       krug ( int a , int b , int c ) { st = a; nd = b; wh = c; }
+       
+       bool operator < ( const krug &t ) const
+       {
+               return nd < t.nd;
+       }
+};
+
+
+vector < cvor > sw;
+
+map < int , int > MP;
+map < int , int > :: iterator it;
+int x1 [ 50500 ] , x2[ 50500 ] , y1 [ 50500 ] , y2 [ 50500 ];
+
+int f ( int wh , int hm )
+{
+    if ( hm == 0 ) return wh + 1;
+    hm--;
+    
+    hm ^= SG[wh] - 1;
+    
+    int ret = 1000000000;
+    
+    for ( int i = 0; i < ch[wh].size(); i++ )
+        ret = min ( ret , f ( ch[wh][i] , SG[ch[wh][i]]^hm ) );
+    
+    return ret;
+}
+
+int DFS ( int x )
+{
+    if ( SG[x] != -1 )
+       return SG[x];
+    
+    if ( ch[x].size() == 0 )
+       return SG[x] = 1;
+    
+    SG[x] = 0;
+    
+    for ( int i = 0; i < ch[x].size(); i++ )
+        SG[x] ^= DFS ( ch[x][i] );
+
+    SG[x]++;
+    return SG[x];
+}
+
+void UBACI ( int wh )
+{
+     node t = v[wh];
+     
+     it = MP.lower_bound ( t.y1 );
+     it--;
+     
+     dad[wh] = it->second;
+     
+     MP[t.y1] = wh;
+     MP[t.y2] = dad[wh];
+}
+
+void IZBACI ( int wh )
+{
+     node t = v[wh];
+     
+     MP.erase ( t.y1 );
+     MP.erase ( t.y2 );
+}
+
+void solve()
+{
+     int n = scf();
+     
+     memset ( dad , -1 , sizeof dad );
+     memset ( SG , -1 , sizeof SG );
+     
+     MP.clear(); MP[-1000000000] = n;
+     sw.clear();
+     v.clear();
+     
+     for ( int i = 0; i < 50100; i++ )
+         ch[i].clear();
+     
+     for ( int i = 0; i < n; i++ )
+     {
+         int x = scf(), y = scf() ,a = scf();
+         
+         v.push_back ( node ( x , x + a, y , y + a ) );
+         
+         sw.push_back ( cvor ( x , i , 0 ) );
+         sw.push_back ( cvor ( x + a , i , 1 ) );
+
+     }
+     
+     sort( sw.begin() , sw.end() );
+     
+     for ( int i = 0; i < sw.size(); i++ )
+         if ( sw[i].io == 0 )
+            UBACI ( sw[i].wh );
+         else IZBACI ( sw[i].wh );
+
+     for ( int i = 0; i < n; i++ )
+         ch[dad[i]].push_back( i);
+
+     DFS ( n );
+     
+     SG[n]--;
+     
+     if ( SG[n] == 0 )
+     {
+          printf ( "Fit\n" );
+          return;
+     }
+     
+     int ret = 1000000000;
+     
+     for ( int i = 0; i < n; i++ )
+         if ( dad[i] == n )
+            ret = min ( ret , f ( i , SG[n] ^ SG[i] ) );
+     
+     printf ( "Fat %d\n", ret );
+}    
+
+int main()
+{
+    int n = scf();
+    
+    for ( int i = 0; i < n; i++ )
+        solve();
+
+    return 0;
+}

@@ -1,0 +1,108 @@
+#include<cstring>
+#include<iostream>
+#include<vector>
+#include<bits/stdc++.h>
+using namespace std;
+
+template<int V, int E> struct Dinic {
+	static const int INF = 2e9;
+
+	int dist[V], head[V], Q[V], work[V];
+	int capa[E], flow[E], next[E], point[E];
+	int n, m;
+
+	void init(int n) {
+		this->n = n; m = 0;
+		memset(head, -1, sizeof head);
+	}
+
+	void resetFlow() {
+		memset(flow, 0, sizeof flow);
+	}
+
+	void addEdge(int u, int v, int c1, int c2) {
+		point[m]=v, capa[m]=c1, flow[m]=0, next[m]=head[u], head[u]=m++;
+		point[m]=u, capa[m]=c2, flow[m]=0, next[m]=head[v], head[v]=m++;
+	}
+
+	bool bfs(int s, int t) {
+		memset(dist, -1, sizeof dist);
+		int tail = 0; Q[tail++] = s; dist[s] = 0;
+		for(int x = 0; x < tail; ++x)
+			for(int u = Q[x], i = head[u]; i >= 0; i = next[i])
+				if(dist[point[i]] < 0 && flow[i] < capa[i]) {
+					dist[point[i]] = dist[u] + 1;
+					Q[tail++] = point[i];
+				}
+		return dist[t] >= 0;
+	}
+
+	int dfs(int s, int t, int f) {
+		if(s == t) return f;
+		int res = 0;
+		for(int &i = work[s]; i >= 0; i = next[i])
+			if(dist[point[i]] == dist[s] + 1 && flow[i] < capa[i]) {
+				int d = dfs(point[i], t, min(f, capa[i] - flow[i]));
+				if(d > 0) return flow[i] += d, flow[i ^ 1] -= d, d;
+			}
+		return res;
+	}
+
+	int maxFlow(int s, int t) {
+		int totflow = 0;
+		while(bfs(s, t)) {
+			for(int i = 0; i < n; ++i) work[i] = head[i];
+			while(int d = dfs(s, t, INF)) totflow += d;
+		}
+		return totflow;
+	}
+};
+
+const int N = 200, M = 1000;
+Dinic<N, M << 1> network;
+int d[N][N], n, m, p[N];
+
+void enter() {
+	cin >> n >> m;
+	network.init(n);
+	for(int i = 0; i < m; ++i) {
+		int u, v, c; cin >> u >> v >> c;
+		network.addEdge(u - 1, v - 1, c, c);
+	}
+}
+
+void solve() {
+	memset(d, 0x3f, sizeof d); memset(p, 0, sizeof p);
+	for(int i = 1; i < n; ++i) {
+		network.resetFlow();
+		int flow = network.maxFlow(i, p[i]);
+		for(int j = i + 1; j < n; ++j)
+			if(network.dist[j] >= 0 && p[j] == p[i])
+				p[j] = i;
+		d[i][p[i]] = d[p[i]][i] = flow;
+		for(int j = 0; j < i; ++j) d[i][j] = d[j][i] = min(flow, d[p[i]][j]);
+	}
+}
+
+void print() {
+	vector<int> res (n, 0); int total = 0;
+	vector<bool> used (n, false); used[0] = true;
+	for(int i = 1; i < n; ++i) {
+		int best = -1, idx = -1;
+		for(int x = 0; x < n; ++x)
+			if(!used[x] && d[res[i-1]][x] > best)
+				best = d[res[i-1]][x], idx = x;
+		total += d[res[i-1]][idx];
+		used[idx] = true; res[i] = idx;
+	}
+	cout << total << '\n';
+	for(int i = 0; i < n; ++i)
+		cout << res[i] + 1 << ' ';
+}
+
+int main() {
+	enter();
+	solve();
+	print();
+	return 0;
+}

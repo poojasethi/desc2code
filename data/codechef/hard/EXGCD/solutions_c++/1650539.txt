@@ -1,0 +1,107 @@
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <set>
+#include <string>
+#include <queue>
+#include <vector>
+
+using namespace std;
+
+const int M = 1000000007;
+int K;
+int A[10], B[10];
+long long res[200100];
+
+bool eh_primo[200100], valid[200100];
+int least[200100];
+int sinal[200100];
+vector<int> valids;
+
+pair<int, int> euclides(int N, int M) {
+  if (M == 0) {
+    return make_pair(1, 0);
+  } else {
+    pair<int, int> rec = euclides(M, N % M), res;
+    int k = N / M;
+    res.first = rec.second; 
+    res.second = (rec.first - res.first * k);
+    return res;
+  }
+}
+
+int inv(int N) {
+  pair<int, int> res = euclides(N, M);
+  return res.first;
+}
+
+int main() {
+
+  int cases;
+
+  memset(eh_primo, true, sizeof(eh_primo));
+  for (int i = 2; i <= 200000; i++) {
+    if(eh_primo[i]) {
+      for (int j = 2*i; j <= 200000; j+=i) {
+        if (eh_primo[j] == true) {
+          eh_primo[j] = false;
+          least[j] = i;
+        }
+      }
+      least[i] = i;
+      sinal[i] = -1;
+      valid[i] = true;
+      valids.push_back(i);
+    } else if (valid[ i / least[i]] && least[i / least[i]] != least[i]) {
+      valid[i] = true;
+      valids.push_back(i);
+      sinal[i] = -sinal[i / least[i]];
+    }
+  }
+
+  scanf("%d", &cases);
+
+  for (int caso = 1; caso <= cases; caso++) {
+    scanf("%d", &K);
+    long long Q = 1;
+    long long P = 0;
+    int greater = 0;
+    for (int i = 0; i < K; i++) {
+      scanf("%d%d", &A[i], &B[i]);
+      Q = (Q*(B[i]-A[i]+1)) % M;
+      if (B[i] > greater) greater = B[i];
+    }
+    for (int gcd = 1; gcd <= greater; gcd++) {
+      res[gcd] = 0;
+      long long poss = 1;
+      for (int i = 0; i < K; i++) {
+        int r = B[i] - B[i] % gcd;
+        int l = A[i];
+        if (l % gcd != 0) {
+          l -= (l % gcd);
+          l += gcd;
+        }
+        if (l <= r) {
+          poss = (poss * ((r - l)/gcd + 1)) % M; 
+        } else poss = 0;
+      }
+      res[gcd] = poss;
+    }
+    for (int gcd = greater; gcd > 0; gcd--) {
+      long long total = res[gcd];
+      for (int i = 0; i < valids.size() && gcd <= greater / valids[i]; i++) {
+        total = (total + res[valids[i]*gcd]*sinal[valids[i]]) % M;
+      }
+      P = (P + total*gcd) % M;
+    }
+    
+    long long N = ((M - P) * (long long)inv(Q)) % M;
+    if (N < 0) N += M;
+    printf("%d\n", (int) N);
+  }
+  
+  return 0;
+}
+

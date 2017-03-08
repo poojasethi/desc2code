@@ -1,0 +1,253 @@
+#define _CRT_SECURE_NO_WARNINGS
+#pragma comment (linker, "/STACK:16777216")
+#include <iostream>
+#include <algorithm>
+#include <numeric>
+#include <vector>
+#include <queue>
+#include <list>
+#include <stack>
+#include <string>
+#include <fstream>
+#include <math.h>
+#include <limits>
+#include <set>
+#include <map>
+#include <sstream>
+#include <stdio.h>
+#include <time.h>
+#include <memory.h>
+#include <cassert>
+#include <complex>
+using namespace std;
+
+///////////////// macros and typedefs ///////////////////
+#define rep(i, n) for (int i = 0, _n = (n); i < _n; ++i)
+#define repd(i, n) for (int i = (n)-1; i >= 0; --i)
+#define _fill(a, x) memset((a), (x), sizeof((a)))
+#define DEB(k) cerr<<"debug: "#k<<"="<<k<<endl;
+#define all(c) (c).begin(), (c).end()
+#define mp(a, b) make_pair(a, b)
+#define l(c) (int)((c).size())
+#define sqr(a) ((a)*(a))
+#define inf 0x7f7f7f7f
+#define pb push_back
+#define ppb pop_back
+#define x first
+#define y second
+typedef long long ll;
+typedef vector<int> vi;
+typedef vector<double> vd;
+typedef pair<int,int> pi;
+
+int n, m;
+int v[30];
+double p[30];
+int c[30], d[30];
+// [have diamonds][want items][position]
+int dp[31][32][31];
+int n1, n2;
+int dia1[1<<15];
+int mon1[1<<15];
+int id1[1<<15];
+double pro1[1<<15];
+int dia2[1<<15];
+int mon2[1<<15];
+double pro2[1<<15];
+int id2[1<<15];
+double probFinal[31];
+
+int get(int dia, int ite, int pos) {
+	if (ite == 0) return 0;
+	if (pos == m) return ite ? 1000000000 : 0;
+	if (dp[dia][ite][pos] != -1) return dp[dia][ite][pos];
+	int ret = get(dia, ite, pos+1);
+	if (d[pos] <= dia)
+		ret = min(ret, get(dia-d[pos], ite-1, pos+1) + c[pos]);
+	return dp[dia][ite][pos] = ret;
+}
+
+bool cmp1(int i, int j) {
+	if (dia1[i] != dia1[j]) return dia1[i] < dia1[j];
+	return mon1[i] < mon1[j];
+}
+
+bool cmp2(int i, int j) {
+	if (dia2[i] != dia2[j]) return dia2[i] < dia2[j];
+	return mon2[i] < mon2[j];
+}
+
+void initialize() {
+	_fill(dp, -1);
+	for (int i = 0; i <= n; i++)
+		for (int j = 0; j <= m+1; j++)
+			dp[i][j][0] = get(i, j, 0);
+	n1 = n/2, n2 = n-n1;
+	rep(mask, 1<<n1) {
+		mon1[mask] = 0;
+		dia1[mask] = 0;
+		pro1[mask] = 1;
+		rep(i, n1)
+			if ((mask>>i)&1) {
+				mon1[mask] += v[i];
+				pro1[mask] *= p[i];
+			}
+			else {
+				dia1[mask]++;
+				pro1[mask] *= 1-p[i];
+			}
+		id1[mask] = mask;
+	}
+	rep(mask, 1<<n2) {
+		mon2[mask] = 0;
+		dia2[mask] = 0;
+		pro2[mask] = 1;
+		rep(i, n2)
+			if ((mask>>i)&1) {
+				mon2[mask] += v[n1+i];
+				pro2[mask] *= p[n1+i];
+			}
+			else {
+				dia2[mask]++;
+				pro2[mask] *= 1-p[n1+i];
+			}
+		id2[mask] = mask;
+	}
+	sort(id1, id1+(1<<n1), cmp1);
+	sort(id2, id2+(1<<n2), cmp2);
+	rep(i, m+1) probFinal[i] = 0;
+}
+
+int to[33];
+double prob[33];
+
+void solveSegments(int l1, int l2, int r1, int r2) {
+	int d1 = dia1[id1[l1]];
+	int m1 = mon1[id1[l1]];
+	int k = r1;
+	//[to[i-1]...to[i])
+	rep(i, m+1) prob[i] = 0;
+	rep(i, m+1) {
+		if (k == r2+1) { to[i] = k; continue; }
+		int money = m1 + mon2[id2[k]];
+		int diamonds = d1 + dia2[id2[k]];
+		if (money >= dp[diamonds][i+1][0])
+			to[i] = k;
+		else if (money >= dp[diamonds][i][0])
+			prob[i--] += pro2[id2[k++]];
+		else throw 1;
+	}
+	double p1 = pro1[id1[l1]];
+	rep(i, m+1)
+		probFinal[i] += p1 * prob[i];
+	for (int l = l1+1; l <= l2; l++) {
+		d1 = dia1[id1[l]];
+	    m1 = mon1[id1[l]];
+	    p1 = pro1[id1[l]];
+		rep(i, m+1) {
+			for ( ;; ) {
+				int k = to[i]-1;
+				if (k < r1 || (i && k < to[i-1])) break;
+				int money = m1 + mon2[id2[k]];
+				int diamonds = d1 + dia2[id2[k]];
+				if (dp[diamonds][i+1][0] > money)
+					break;
+				to[i]--;
+				prob[i] -= pro2[id2[k]];
+				prob[i+1] += pro2[id2[k]];
+			}
+			probFinal[i] += p1 * prob[i];
+		}
+	}
+}
+
+void solveRight(int l1, int l2) {
+	int nm = 1<<n2;
+	rep(i, nm) {
+		int j = i;
+		while (j+1 < nm && dia2[id2[j+1]] == dia2[id2[i]])
+			j++;
+		solveSegments(l1, l2, i, j);
+		i = j;
+	}
+}
+
+void solveLeft() {
+	initialize();
+	int nm = 1<<n1;
+	rep(i, nm) {
+		int j = i;
+		while (j+1 < nm && dia1[id1[j+1]] == dia1[id1[i]])
+			j++;
+		solveRight(i, j);
+		i = j;
+	}
+	double ret = 0, sum = 0;
+	rep(i, m+1)
+		ret += i*probFinal[i], sum += probFinal[i];
+	if (fabs(sum-1) > 1e-8) throw 1;
+	printf("%.4lf\n", ret);
+}
+
+void solveStupid() {
+	initialize();
+	for (int i = 0; i < (1<<n1); i++) {
+		//if (pro1[i] < 1e-8) continue;
+		for (int j = 0; j < (1<<n2); j++) {
+			int money = mon1[i] + mon2[j];
+			int diamonds = dia1[i] + dia2[j];
+			double pro = pro1[i] * pro2[j];
+			int k = 1;
+			for (; k < m+1; k++)
+				if (dp[diamonds][k][0] > money)
+					break;
+			probFinal[k-1] += pro;
+		}
+	}
+	double ret = 0;
+	rep(i, m+1) ret += i*probFinal[i];
+	printf("%.4lf\n", ret);
+}
+
+void solveCase() {
+	scanf("%d %d", &n, &m);
+	//n = 2+rand()%22, m = 1+rand()%30;
+	rep(i, n) {
+		scanf("%d %lf", v+i, p+i);
+		//v[i] = rand()*1ll*rand()%10000000;
+		//p[i] = rand()%100;
+		p[i] /= 100.0;
+	}
+	rep(i, m) {
+		scanf("%d %d", c+i, d+i);
+		//c[i] = rand()*1ll*rand()%10000000;
+		//d[i] = rand()%30;
+	}
+	//solveStupid();
+	solveLeft();
+	//puts("---");
+}
+
+void solution()
+{
+	srand(777);
+	int tc;
+	scanf("%d", &tc);
+	while (tc--)
+	//while (true)
+	//rep(IT, 7)
+		solveCase();
+}
+
+int main()
+{
+#ifdef MY_JUDGE
+    freopen("my.in", "rt", stdin);
+    //freopen("my.out", "wt", stdout);
+#endif
+    solution();
+#ifdef MY_JUDGE
+    fprintf(stderr, "Time: %.2lf sec\n", (clock()*1./CLOCKS_PER_SEC));
+#endif
+    return 0;
+}

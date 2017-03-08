@@ -1,0 +1,119 @@
+#include <algorithm>
+#include <iostream>
+#include <cstring>
+#include <string>
+#include <cstdio>
+#define eps 1.0e-9
+#define sgn(f) ((f)<(-eps)?-1:((f)>eps))
+using namespace std;
+struct point
+{
+    double x,y;
+    void input() {scanf("%lf%lf",&x,&y);}
+    point(double _x=0,double _y=0):x(_x),y(_y){};
+    point operator + (point a) {return point(x+a.x,y+a.y);}
+    point operator - (point a) {return point(x-a.x,y-a.y);}
+    point operator * (double p) {return point(x*p,y*p);}
+    point operator / (double p) {return point(x/p,y/p);}
+};
+typedef point Vector;
+double dmult(Vector a,Vector b) {return a.x*b.x+a.y*b.y;}
+double xmult(Vector a,Vector b) {return a.x*b.y-a.y*b.x;}
+struct Event
+{
+    double pos;
+    int kind;
+    Event(double _p=-1,int _k=-1) {pos=_p;kind=_k;}
+    bool operator < (const Event &t) const
+    {
+        if(sgn(pos-t.pos)!=0) return sgn(pos-t.pos)<0;
+        else return kind<t.kind;
+    }
+}t[5005];
+double GetPolyUnionArea(int n,point p[505][5])
+{
+    double s=0;
+    for(int i=0;i<n;++i)
+    {
+        for(int x=0;x<4;++x)
+        {
+            int m=2;
+            t[0]=Event(0.0,0);
+            t[1]=Event(1.0,0);
+            Vector v=p[i][x+1]-p[i][x];
+            double d=dmult(v,v);
+            for(int j=0;j<n;++j)
+            {
+                if(i==j) continue;
+                for(int y=0;y<4;++y)
+                {
+                    int ta=sgn(xmult(v,p[j][y]-p[i][x]));
+                    int tb=sgn(xmult(v,p[j][y+1]-p[i][x]));
+                    if(ta==0&&tb==0)
+                    {
+                        if(sgn(dmult(p[j][y+1]-p[j][y],v))>0&&j<i)
+                        {
+                            t[m++]=Event(dmult(p[j][y]-p[i][x],v)/d,1);
+                            t[m++]=Event(dmult(p[j][y+1]-p[i][x],v)/d,-1);
+                        }
+                    }
+                    else if(ta>=0&&tb<0)
+                         {
+                             double tc=xmult(p[j][y+1]-p[j][y],p[i][x]-p[j][y]);
+                             double td=xmult(p[j][y+1]-p[j][y],p[i][x+1]-p[j][y]);
+                             t[m++]=Event(tc/(tc-td),1);
+                         }
+                         else if(ta<0&&tb>=0)
+                              {
+                                  double tc=xmult(p[j][y+1]-p[j][y],p[i][x]-p[j][y]);
+                                  double td=xmult(p[j][y+1]-p[j][y],p[i][x+1]-p[j][y]);
+                                  t[m++]=Event(tc/(tc-td),-1);
+                              }
+                }
+            }
+            sort(t,t+m);
+            double cur=t[0].pos;
+            if(sgn(cur)<0) cur=0;
+            else if(sgn(cur-1)>0) cur=1;
+            int num=t[0].kind;
+            double tp=0;
+            for(int j=1;j<m;++j)
+            {
+                double w=t[j].pos;
+                if(sgn(w)<0) w=0;
+                else if(sgn(w-1)>0) w=1;
+                if(num==0) tp+=w-cur;
+                num+=t[j].kind;
+                cur=w;
+            }
+            s+=xmult(p[i][x],p[i][x+1])*tp;
+        }
+    }
+    return s*0.5;
+}
+int main()
+{
+    int n;
+    point p[505][5];
+    scanf("%d",&n);
+    double s=0;
+    for(int i=0;i<n;i++)
+    {
+        for(int j=0;j<4;j++) p[i][j].input();
+        double tp=xmult(p[i][3],p[i][0]);
+        for(int j=0;j<3;++j) tp+=xmult(p[i][j],p[i][j+1]);
+        if(sgn(tp)<0)
+        {
+            swap(p[i][0],p[i][3]);
+            swap(p[i][1],p[i][2]);
+            tp=-tp;
+        }
+        s+=tp;
+        p[i][4]=p[i][0];
+    }
+    s*=0.5;
+    s/=GetPolyUnionArea(n,p);
+    printf("%.10f\n",s);
+    return 0;
+}
+ 		 	 		 			 	   			  		 		   	

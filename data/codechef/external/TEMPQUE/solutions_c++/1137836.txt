@@ -1,0 +1,130 @@
+
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#include <cassert>
+using namespace std;
+
+#define s(T) scanf("%d", &T)
+
+const int max_n = 100005;
+
+int BIT[max_n];
+
+void incr(int pos, int val)
+{
+	while(pos < max_n)
+	{
+		BIT[pos] += val;
+		pos += pos & (-pos);
+	}
+}
+
+int query(int pos)
+{
+	int sum = 0;
+	while(pos > 0)
+	{
+		sum += BIT[pos];
+		pos -= pos & (-pos);
+	}
+	return sum;
+}
+
+
+int ind(int val)			//finds first pos in BIT where query(pos) >= val
+{
+	int lo = 0, hi = max_n-1, mid;
+	while(lo < hi)
+	{
+		int mid = (lo + hi)/2;
+		if(query(mid) >= val)
+			hi = mid;
+		else 
+			lo = mid+1;
+	}
+	return lo;
+}
+
+int arr[max_n];
+int fwd[max_n];
+int bwd[max_n];
+int N, Q;
+pair <int, int> vals[max_n];
+
+void input()
+{
+	s(N); s(Q);
+	for(int i= 1; i <= N; i++)
+		s(arr[i]);
+}
+
+void solve()
+{
+	for(int i = 1; i <= N; i++)
+		vals[i] = make_pair(arr[i], i);
+	sort(vals+1, vals+1 + N);
+	for(int i = 1; i <= N; i++)
+		bwd[i] = vals[i].second;
+	for(int i = 1; i <= N; i++)
+		fwd[bwd[i]] = i;
+	
+	for(int i = 0; i < max_n; i++)
+		BIT[i] = 0;
+	for(int i = 1, prev = 0; i <= N; i++)
+	{
+		incr(i, vals[i].first-prev);
+		prev = vals[i].first;
+	}
+	incr(N+1, 1000000000);
+	
+//	for(int i = 0; i <= N; i++)
+//		cerr << query(i) << endl;
+	
+	for(int i = 0; i < Q; i++)
+	{
+		int x, y;
+		s(x); s(y);
+		int val, idx, u, v;
+		switch (x) {
+			case 1:
+				val = query(fwd[y]) + 1;
+				idx = ind(val);
+//				swap(bwd[idx-1], bwd[y]);
+//				swap(fwd[y], fwd[idx-1]);
+				u = bwd[idx-1], v = fwd[y];
+				swap(fwd[y], fwd[u]);
+				swap(bwd[idx-1], bwd[v]);
+				
+				assert(fwd[bwd[y]] == y);
+				assert(fwd[bwd[idx-1]] == idx-1);
+				assert(bwd[fwd[y]] == y);
+				assert(bwd[fwd[idx-1]] == idx-1);
+				assert(fwd[y] == idx-1);
+				
+				incr(idx, -1);
+				incr(idx-1, 1);
+				break;
+			case 2:
+				if(y == 0)
+					printf("%d\n", N);
+				else
+				{
+					idx = ind(y);
+					printf("%d\n", N-idx+1);
+				}
+				break;
+			case 3:
+				idx = ind(y);
+				incr(idx, -1);
+				break;
+		}
+	}
+}
+
+int main()
+{
+	input();
+	solve();
+}

@@ -1,0 +1,286 @@
+
+#include <ctype.h>
+#include <malloc.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <queue>
+#include <assert.h>
+#include <limits.h>
+
+using namespace std;
+
+pair<char*, char*>
+mmap_stdin()
+{
+  void *result;
+
+  struct stat stat;
+  if (fstat(0, &stat) < 0) {
+    perror("fstat");
+    exit(1);
+  }
+
+  result = mmap(0, stat.st_size, PROT_READ, MAP_PRIVATE, 0, 0);
+  if (result == (void *) -1) {
+    perror("mmap");
+    exit(1);
+  }
+
+  return make_pair((char *) result, (char *) result + stat.st_size);
+}
+
+int
+read_int(pair<char*, char*> &buf)
+{
+  char *str = buf.first;
+  char *end = buf.second;
+  bool neg = false;
+  int val = 0;
+
+  while (str != end && isspace(*str)) str++;
+
+  if (*str == '-') {
+    str++;
+    neg = true;
+  }
+
+  while (str != end && isdigit(*str)) {
+    val = (*str) - '0' + 10*val;
+    str++;
+  }
+
+  buf.first = str;
+
+  if (neg)
+    return -val;
+  else
+    return val;
+}
+
+#define foreach(val,p) for (bool flag=true; flag; flag=false) for(typeof(p) it=(p); it.first != it.second; it.first++, flag=true) for(typeof(*it.first) val=*it.first; flag; flag=false)
+#define declare(typ,var,siz) typ *var = (typ *) malloc(sizeof(typ) * (siz))
+#define M(i,j) matrix[((i) << 10) + (j)]
+#define L(i,j) leftmap[(((i) << 6) & 0xff00) | ((j) >> 2)]
+
+inline void
+block_adjacent(int i, int j, int m, int n, char *matrix)
+{
+  int n_i = i-2;
+  if (n_i >= 0) {
+    int n_j = j-2;
+    if (n_j >= 0) {
+      if (M(n_i,n_j) == 'F' && M(i-1,j-1) != 'P') {
+	M(n_i, n_j) = 'B';
+      }
+    }
+    n_j = j+2;
+    if (n_j < n) {
+      if (M(n_i,n_j) == 'F' && M(i-1,j+1) != 'P') {
+	M(n_i, n_j) = 'B';
+      }
+    }
+  }
+  n_i = i+2;
+  if (n_i < m) {
+    int n_j = j-2;
+    if (n_j >= 0) {
+      if (M(n_i,n_j) == 'F' && M(i+1,j-1) != 'P') {
+	M(n_i, n_j) = 'B';
+      }
+    }
+    n_j = j+2;
+    if (n_j < n) {
+      if (M(n_i,n_j) == 'F' && M(i+1,j+1) != 'P') {
+	M(n_i, n_j) = 'B';
+      }
+    }
+  }
+}
+
+#define NIL (-1)
+
+inline bool
+bfs(int n, int *edges, int *match, int *dist)
+{
+  queue<int> q;
+  for(int u=0; u < n; u++) {
+    if (match[u] == NIL) {
+      dist[u] = 0;
+      q.push(u);
+    } else {
+      dist[u] = -1;
+    }
+  }
+  dist[NIL] = -1;
+  while (!q.empty()) {
+    int u = q.front();
+    q.pop();
+    if (u == NIL) continue;
+    for(int i=0; i < 4; i++) {
+      int v = edges[(u << 2) + i];
+      if (v == -1) break;
+      int w = match[v];
+      if (dist[w] != -1) continue;
+      dist[w] = dist[u] + 1;
+      q.push(w);
+    }
+  }
+  return dist[NIL] != -1;
+}
+
+bool
+dfs(int u, int *edges, int *match, int *dist)
+{
+  if (u == NIL) return true;
+  for(int i=0; i < 4; i++) {
+    int v = edges[(u << 2) + i];
+    if (v == -1) break;
+    int w = match[v];
+    if (dist[w] == dist[u] + 1 && dfs(w, edges, match, dist)) {
+      match[v] = u;
+      match[u] = v;
+      return true;
+    }
+  }
+  dist[u] = -1;
+  return false;
+}
+
+int
+main()
+{
+  pair<char*, char*> buf = mmap_stdin();
+  declare(char, matrix, 1024 * 700);
+
+  declare(int, leftmap, 175 * 256);
+  declare(int, edges, 2 * 4 * 175 * 175 + 1);
+  declare(int, match, 2 * 175 * 175);
+  declare(int, dist, 2 * 175 * 175 + 1);
+  // Offset by one (NIL element has index of -1)
+  dist++;
+
+  while(true) {
+    int m = read_int(buf);
+    if (m == 0) return 0;
+    int n = read_int(buf);
+    if (n == 0) return -1;
+
+    do { buf.first++; } while (isspace(*buf.first));
+
+    for (int i=0; i < m; i++) {
+      memcpy(&M(i,0), buf.first, sizeof(char) * n);
+      buf.first += n;
+      do { buf.first++; } while (isspace(*buf.first));
+    }
+    for (int i=0; i < m; i++) {
+      for (int j=0; j < n; j++) {
+	if (M(i,j) == 'G') {
+	  block_adjacent(i,j,m,n,matrix);
+	}
+      }
+    }
+
+    int result = 0;
+    for (int i0=0; i0 < 4; i0++) {
+      for (int j0=0; j0 < 2; j0++) {
+	int lcount=0, count=0;
+	for (int i=i0; i < m; i+=4) {
+	  int ioff = (i<<6) & 0xff00;
+	  for (int j=j0; j < n; j+=4) {
+	    if (M(i,j) == 'F') {
+	      leftmap[ioff | (j>>2)] = lcount;
+	      match[lcount] = -1;
+	      dist[lcount] = -1;
+	      edges[lcount << 2] = -1;
+	      edges[(lcount << 2) + 1] = -1;
+	      edges[(lcount << 2) + 2] = -1;
+	      edges[(lcount << 2) + 3] = -1;
+	      lcount++;
+	    }
+	  }
+	}
+	count = lcount;
+
+	for (int i=i0 ^ 2; i < m; i+=4) {
+	  for (int j=j0 + 2; j < n; j+=4) {
+	    if (M(i,j) == 'F') {
+	      match[count] = -1;
+	      dist[count] = -1;
+	      int ix = count << 2;
+	      int n_i = i-2;
+	      if (n_i >= 0) {
+		int n_j = j-2;
+		if (n_j >= 0) {
+		  if (M(n_i,n_j) == 'F' && M(i-1,j-1) != 'P') {
+		    int leftnode = L(n_i, n_j);
+		    edges[ix++] = leftnode;
+		    leftnode <<= 2;
+		    while (edges[leftnode] != -1) {leftnode++;}
+		    edges[leftnode] = count;
+		  }
+		}
+		n_j = j+2;
+		if (n_j < n) {
+		  if (M(n_i,n_j) == 'F' && M(i-1,j+1) != 'P') {
+		    int leftnode = L(n_i, n_j);
+		    edges[ix++] = leftnode;
+		    leftnode <<= 2;
+		    while (edges[leftnode] != -1) {leftnode++;}
+		    edges[leftnode] = count;
+		  }
+		}
+	      }
+	      n_i = i+2;
+	      if (n_i < m) {
+		int n_j = j-2;
+		if (n_j >= 0) {
+		  if (M(n_i,n_j) == 'F' && M(i+1,j-1) != 'P') {
+		    int leftnode = L(n_i, n_j);
+		    edges[ix++] = leftnode;
+		    leftnode <<= 2;
+		    while (edges[leftnode] != -1) {leftnode++;}
+		    edges[leftnode] = count;
+		  }
+		}
+		n_j = j+2;
+		if (n_j < n) {
+		  if (M(n_i,n_j) == 'F' && M(i+1,j+1) != 'P') {
+		    int leftnode = L(n_i, n_j);
+		    edges[ix++] = leftnode;
+		    leftnode <<= 2;
+		    while (edges[leftnode] != -1) {leftnode++;}
+		    edges[leftnode] = count;
+		  }
+		}
+	      }
+
+	      // Terminate adjacent list.
+	      edges[ix] = -1;
+	      count++;
+	    }
+	  }
+	}
+	result += count;
+
+	// Hopcroft-Karp algorithm
+	if (count > lcount && lcount > 0) {
+	  while (bfs(lcount, edges, match, dist)) {
+	    for(int i = 0; i < lcount; i++) {
+	      if (match[i] == NIL && dfs(i, edges, match, dist)) {
+		result--;
+	      }
+	    }
+	  }
+	}
+      }
+    }
+
+    printf("%d\n", result);
+  }
+
+  return 0;
+}

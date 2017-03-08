@@ -1,0 +1,244 @@
+#include <iostream>
+#include <string>
+#include <cstdlib>
+#include <queue>
+#include <cmath>
+#include <vector>
+
+using namespace std;
+
+void escribe(int v[],int d)
+{
+  for (int i=0;i<d;i++)
+    cout<<v[i]<<",";
+  cout<<endl;
+}
+
+int capacidad[50][50];
+vector<int> g[50];
+const int ini=48;
+const int fin=49;
+const int infinito=1000000000;
+int visto[50];
+int anterior[50];
+
+int aumenta()
+{
+  for (int i=0;i<50;i++)
+    visto[i]=0;
+  queue<int> q;
+  q.push(ini);
+  while (not q.empty()) {
+    int u=q.front();
+    q.pop();
+    vector<int> &ar=g[u];
+    for (int i=0;i<int(ar.size());i++) {
+      int v=ar[i];
+      if (not visto[v] and capacidad[u][v]) {
+	visto[v]=1;
+	q.push(v);
+	anterior[v]=u;
+	if (v==fin) {
+	  int f=infinito;
+	  while (v!=ini) {
+	    int antv=anterior[v];
+	    f=min(f,capacidad[antv][v]);
+	    v=antv;
+	  }
+	  v=fin;
+	  while (v!=ini) {
+	    int antv=anterior[v];
+	    capacidad[antv][v]-=f;
+	    capacidad[v][antv]+=f;
+	    v=antv;
+	  }
+	  return f;
+	}
+      }
+    }
+  }
+  return 0;
+}
+
+int maxflow()
+{
+  int f=0;
+  for (;;) {
+    int af=aumenta();
+    if (af==0) break;
+    f+=af;
+  }
+  return f;
+}
+
+
+int nsol;
+int sola[1000000],solb[1000000];
+
+void insertsol(int a,int b)
+{
+  //cout<<"insertsol "<<a<<" "<<b<<endl;
+  sola[nsol]=a;
+  solb[nsol]=b;
+  nsol++;
+}
+
+int n,d;
+int amount[6];
+int inicio[6];
+int cuantas[6][6];
+int cuantasbis[6][6];
+int amountbis[6];
+
+void calculaaristas(int i,int j,int numar)
+{
+  for (int paso=0;paso<numar;paso++,amountbis[j]--)
+    insertsol(inicio[i],inicio[j]+amountbis[j]);
+}
+
+int lista[4];
+
+void calcula()
+{
+  //cout<<"calcula"<<endl;
+  nsol=0;
+  int numar=n-1;
+  for (int i=0;i<d;i++)
+    for (int j=i;j<d;j++)
+      cuantasbis[i][j]=cuantas[i][j];
+  int c=0;
+  for (int i=0;i<d-2;i++) {
+    int cc=c;
+    for (int j=i;j<d-2;j++)
+      cc|=1<<lista[j];
+    for (int b=0;b<d;b++) {
+      if ((cc&(1<<b))==0) {
+	int a1=b;
+	int a2=lista[i];
+	if (a1>a2) swap(a1,a2);
+	if (cuantasbis[a1][a2]==0) return;
+	cuantasbis[a1][a2]--;
+	insertsol(inicio[a1],inicio[a2]);
+	numar--;
+	c|=1<<b;
+	break;
+      }
+    }
+  }
+  int a1=-1,a2=-1;
+  for (int b=0;b<d;b++) {
+    if ((c&(1<<b))==0) {
+      if (a1==-1) a1=b;
+      else {
+	a2=b;
+	break;
+      }
+    }
+  }
+  if (cuantas[a1][a2]==0) return;
+  //cout<<"superado"<<endl;
+  cuantasbis[a1][a2]--;
+  insertsol(inicio[a1],inicio[a2]);
+  numar--;
+  for (int i=0;i<d;i++) {
+    amountbis[i]=amount[i]-1;
+    if (amountbis[i]<cuantasbis[i][i])
+      return;
+    while (cuantasbis[i][i]) {
+      insertsol(inicio[i],inicio[i]+amountbis[i]);
+      numar--;
+      cuantasbis[i][i]--;
+      amountbis[i]--;
+    }
+  }
+  for (int i=0;i<50;i++)
+    g[i]=vector<int>();
+  for (int i=0;i<d;i++) {
+    for (int j=i+1;j<d;j++) {
+      int u=i*d+j;
+      capacidad[ini][u]=cuantasbis[i][j];
+      g[ini].push_back(u);
+      int v1=40+i,v2=40+j;
+      capacidad[u][v1]=infinito;
+      capacidad[u][v2]=infinito;
+      g[u].push_back(v1);
+      g[v1].push_back(u);
+      g[u].push_back(v2);
+      g[v2].push_back(u);
+    }
+  }
+  for (int i=0;i<d;i++) {
+    int v=40+i;
+    capacidad[v][fin]=amountbis[i];
+    g[v].push_back(fin);
+  }
+  /*
+  for (int i=0;i<50;i++) {
+    vector<int> &ar=g[i];
+    if (int(ar.size())) {
+      cout<<i<<":";
+      for (int j=0;j<int(ar.size());j++)
+	cout<<"("<<ar[j]<<","<<capacidad[i][ar[j]]<<")";
+      cout<<endl;
+    }
+  }
+  */
+  int f=maxflow();
+  if (f<numar) return;
+  for (int i=0;i<d;i++) {
+    for (int j=i+1;j<d;j++) {
+      int u=i*d+j;
+      int v1=40+i,v2=40+j;
+      calculaaristas(i,j,infinito-capacidad[u][v2]);
+      calculaaristas(j,i,infinito-capacidad[u][v1]);
+    }
+  }  
+  for (int i=0;i<nsol;i++)
+    cout<<sola[i]<<" "<<solb[i]<<endl;
+  exit(0);
+}
+
+void genera(int ilista)
+{
+  if (ilista==d-2) {
+    calcula();
+    return;
+  }
+  for (int i=0;i<d;i++) {
+    lista[ilista]=i;
+    genera(ilista+1);
+  }
+}
+
+int main()
+{
+  ios::sync_with_stdio(false);
+  cin>>n;
+  for (int i=0;i<n-1;i++) {
+    string s1,s2;
+    cin>>s1>>s2;
+    int m1=int(s1.size())-1;
+    int m2=int(s2.size())-1;
+    if (m1>m2) swap(m1,m2);
+    cuantas[m1][m2]++;
+    amount[m1]++;
+    amount[m2]++;
+  }
+  d=1;
+  for (int prod=1;10*prod<=n;d++,prod*=10) ;
+  if (d==1) {
+    for (int i=2;i<=n;i++)
+      cout<<1<<" "<<i<<endl;
+    exit(0);
+  }
+  inicio[0]=1;
+  for (int i=1;i<d;i++) {
+    inicio[i]=inicio[i-1]*10;
+    amount[i-1]=inicio[i]-inicio[i-1];
+  }
+  amount[d-1]=n-inicio[d-1]+1;
+  //escribe(inicio,d);
+  //escribe(amount,d);
+  genera(0);
+  cout<<-1<<endl;
+}

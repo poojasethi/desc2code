@@ -1,0 +1,119 @@
+#include <iostream>
+#include <sstream>
+#include <vector>
+#include <map>
+#include <queue>
+#include <stack>
+#include <algorithm>
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <climits>
+#include <cctype>
+#include <set>
+
+#define ms(obj, val) memset(obj, val, sizeof(obj))
+#define pb push_back
+
+using namespace std;
+
+typedef long long ll;
+
+#define MAXN 100005
+#define MAXM 100005
+
+int N, M, s, t;
+
+struct edge{
+	int to, id;
+	ll c;
+	edge(int id=-1, int to=-1, ll c=0): id(id), to(to), c(c) {}
+};
+
+vector<edge> G[MAXN], rG[MAXN];
+ll dG[MAXN], drG[MAXN];
+
+bool sPath[MAXM];
+int ans[MAXM];
+
+void dijk(int source, ll dist[MAXN], vector<edge>G[MAXN]){
+	memset(dist, -1, sizeof(ll)*N);
+	dist[source]=0;
+	priority_queue<pair<ll, int> > pq;
+	pq.push({0,source});
+	while(!pq.empty()){
+		int u=pq.top().second; pq.pop();
+		for(int i=0, v, uv; i<G[u].size(); i++){
+			v=G[u][i].to; uv=G[u][i].c;
+			if(dist[v]==-1 || dist[v]>dist[u]+uv){
+				dist[v]=dist[u]+uv;
+				pq.push({-dist[v], v});
+			}
+		}
+	}
+	for(int u=0; u<N; u++){
+		for(int i=0, v, uv; i<G[u].size(); i++){
+			v=G[u][i].to; uv=G[u][i].c;
+			if(dist[u]==-1 || dist[v]!=dist[u]+uv)
+				sPath[G[u][i].id]=false;
+		}
+	}
+}
+
+bool vis[MAXN];
+void findBridges(){
+	priority_queue<pair<ll, int> > pq;
+	pq.push({drG[s], s});
+	vis[s]=true;
+	while(!pq.empty()){
+		int u=pq.top().second; pq.pop();
+		if(u==t) return;
+		int cnt=0, ID=-1;
+		for(int i=0, v; i<G[u].size(); i++){
+			if(!sPath[G[u][i].id]) continue;
+			v=G[u][i].to;
+			cnt++;
+			if(!vis[v]){
+				ID=G[u][i].id;
+				pq.push({drG[v],v});
+				vis[v]=true;
+			}
+		}
+		if(pq.size()==1 && cnt==1 && ID!=-1){
+			ans[ID]=0;
+		}
+	}
+}
+
+
+int main(){
+	scanf("%d %d %d %d", &N, &M, &s, &t); s--; t--;
+	for(int i=0, u, v, c; i<M; i++){
+		scanf("%d %d %d", &u, &v, &c); u--; v--;
+		G[u].pb({i, v, c});
+		rG[v].pb({i, u, c});
+	}
+	ms(sPath,true);
+	dijk(s,dG, G);
+	dijk(t,drG, rG);
+	ms(ans,-1);
+
+	for(int u=0; u<N; u++){
+		for(int i=0, v, uv; i<G[u].size(); i++){
+			v=G[u][i].to; uv=G[u][i].c;
+			if(dG[u]==-1 || drG[v]==-1) continue;
+			int newC = dG[t]-1-dG[u]-drG[v];
+			if(newC>0)
+				ans[G[u][i].id]=uv-newC;
+		}
+	}
+
+	findBridges();
+
+	for(int i=0; i<M; i++){
+		if(ans[i]==-1) printf("NO\n");
+		if(ans[i]==0) printf("YES\n");
+		if(ans[i]>0) printf("CAN %d\n",ans[i]);
+	}
+}

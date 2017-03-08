@@ -1,0 +1,120 @@
+#include<stdio.h>
+#include<string.h>
+#include<algorithm>
+#include<queue>
+#include<set>
+#include<stdlib.h>
+#include<time.h>
+#include<vector>
+
+using namespace std;
+
+const int maxn=400010;
+
+int lft[maxn],rht[maxn];
+int first[maxn],nxt[maxn],vv[maxn],fa[maxn],vis[maxn];
+int is[maxn],len[maxn];
+void build(int n,int l,int r)
+{
+    lft[n]=l,rht[n]=r;
+    
+    if(l==r)
+	return;
+    int mid=(l+r)/2;
+    build(n<<1,l,mid);
+    build((n<<1)+1,mid+1,r);
+}
+void flow(int n)
+{
+    if(n<=200000)
+    len[n]=len[n<<1]+len[(n<<1)+1];
+    else
+	len[n]=0;
+    if(is[n])
+	len[n]=rht[n]-lft[n]+1;
+}
+void upd(int n,int l,int r,int k)
+{
+    if(l==lft[n]&&r==rht[n])
+    {
+	is[n]+=k;
+	flow(n);
+	return;
+    }
+    int mid=(lft[n]+rht[n])/2;
+    if(r<=mid)
+	upd(n<<1,l,r,k);
+    else if(l>mid)
+	upd((n<<1)+1,l,r,k);
+    else
+	upd(n<<1,l,mid,k),upd((n<<1)+1,mid+1,r,k);
+    flow(n);
+}
+int ans[maxn];
+int L[maxn],R[maxn],cnt;
+
+void dfs1(int n)
+{
+    L[n]=++cnt;
+    for(int e=first[n];e;e=nxt[e])if(vv[e]-fa[n])
+    {
+	fa[vv[e]]=n;
+	dfs1(vv[e]);
+    }
+    R[n]=cnt;
+}
+vector<int>V[maxn];
+void dfs(int n)
+{
+    for(int i=0;i<V[n].size();i++)
+    {
+	int v=V[n][i];
+	upd(1,L[v],R[v],1);
+	upd(1,L[n],R[n],1);
+    }
+    ans[L[n]]=len[1];
+    for(int e=first[n];e;e=nxt[e])if(vv[e]-fa[n])
+    {
+	fa[vv[e]]=n;
+	dfs(vv[e]);
+    }
+    for(int i=0;i<V[n].size();i++)
+    {
+	int v=V[n][i];
+	upd(1,L[v],R[v],-1);
+	upd(1,L[n],R[n],-1);
+    }
+}
+int main()
+{
+    int n,m,i,j,k;
+
+    int u,v,e=2;
+
+    scanf("%d%d",&n,&m);
+    build(1,1,n);
+    for(i=1;i<n;i++)
+    {
+	scanf("%d%d",&u,&v);
+	nxt[e]=first[u],vv[e]=v,first[u]=e++;
+	nxt[e]=first[v],vv[e]=u,first[v]=e++;
+    }
+
+    for(i=1;i<=m;i++)
+    {
+	scanf("%d%d",&u,&v);
+	V[u].push_back(v);
+	V[v].push_back(u);
+    }
+    dfs1(1);
+    dfs(1);
+
+    for(i=1;i<=n;i++)
+    {
+	j=ans[L[i]];
+	if(j)
+	    j--;
+	printf("%d ",j);
+    }
+    puts("");
+}

@@ -1,0 +1,105 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <bitset>
+using namespace std;
+const int maxn=100010,maxs=1010;
+typedef bitset<maxs> BS;
+
+BS I;
+int temp[maxn];
+int p;
+
+struct Segment_Tree
+{
+	BS v[maxn<<2],res;
+	int tag_add[maxn<<2];
+	int n;
+
+	#define ls (o<<1)
+	#define rs (o<<1|1)
+	#define mid ((l+r)>>1)
+
+	void Update(int o) {v[o]=v[ls]|v[rs];}
+	void Mark_Add(int o,int c) {v[o]=((v[o]<<c)|(v[o]>>(p-c)))&I;(tag_add[o]+=c)%=p;}
+	void Push_Down(int o)
+	{
+		if (tag_add[o])
+		{
+			Mark_Add(ls,tag_add[o]);
+			Mark_Add(rs,tag_add[o]);
+			tag_add[o]=0;
+		}
+	}
+
+	void Build(int o,int l,int r)
+	{
+		if (l==r) {v[o][temp[l]]=1;return;}
+		Build(ls,l,mid);
+		Build(rs,mid+1,r);
+		Update(o);
+	}
+
+	void Change(int o,int l,int r,int a,int b,int c)
+	{
+		if (a<=l && r<=b) {Mark_Add(o,c);return;}
+		Push_Down(o);
+		if (a<=mid) Change(ls,l,mid,a,b,c);
+		if (b> mid) Change(rs,mid+1,r,a,b,c);
+		Update(o);
+	}
+
+	void Query(int o,int l,int r,int a,int b)
+	{
+		if (a<=l && r<=b) {res|=v[o];return;}
+		Push_Down(o);
+		if (a<=mid) Query(ls,l,mid,a,b);
+		if (b> mid) Query(rs,mid+1,r,a,b);
+	}
+
+	void Init(int _n,int *a,int *ID) {n=_n;for (int i=1;i<=n;i++) temp[ID[i]]=a[i];Build(1,1,n);}
+	void Add(int a,int b,int c) {Change(1,1,n,a,b,c);}
+	BS Query(int a,int b) {res.reset();Query(1,1,n,a,b);return res;}
+}T;
+
+int head[maxn],next[maxn<<1],E[maxn<<1],Ecnt;
+int Prime[maxs],Primes;
+int a[maxn];
+int ID[maxn],QL[maxn],IDs;
+int n;
+
+void Add_Edge(int x,int y) {next[++Ecnt]=head[x];head[x]=Ecnt;E[Ecnt]=y;next[++Ecnt]=head[y];head[y]=Ecnt;E[Ecnt]=x;}
+
+void DFS(int x,int fa)
+{
+	int l=IDs+1;
+	for (int i=head[x];i;i=next[i]) if (E[i]!=fa) DFS(E[i],x);
+	ID[x]=++IDs;QL[x]=l;
+}
+
+bool Check_Prime(int x) {for (int i=2;i*i<=x;i++) if (x%i==0) return false;return true;}
+
+int main()
+{
+	scanf("%d%d",&n,&p);
+	for (int i=2;i<p;i++) if (Check_Prime(i)) Prime[++Primes]=i;
+	for (int i=0;i<p;i++) I[i]=1;
+	for (int i=1;i<=n;i++) scanf("%d",&a[i]),a[i]%=p;
+	for (int i=1,x,y;i<n;i++) scanf("%d%d",&x,&y),Add_Edge(x,y);
+	DFS(1,0);
+	T.Init(n,a,ID);
+	int q;scanf("%d",&q);
+	for (int i=1;i<=q;i++)
+	{
+		int t,v,x;
+		scanf("%d%d",&t,&v);
+		if (t==1) scanf("%d",&x),x%=p,T.Add(QL[v],ID[v],x);
+		if (t==2)
+		{
+			BS tbs=T.Query(QL[v],ID[v]);
+			int res=0;
+			for (int i=1;i<=Primes;i++) if (tbs[Prime[i]]) res++;
+			printf("%d\n",res);
+		}
+	}
+}

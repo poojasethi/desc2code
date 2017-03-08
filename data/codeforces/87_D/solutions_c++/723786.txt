@@ -1,0 +1,104 @@
+#include <map>
+#include <set>
+#include <cmath>
+#include <stack>
+#include <queue>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <sstream>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+#define li       	long long int
+#define rep(i,to)	for(li i=0;i<((li)(to));i++)
+#define pb       	push_back
+#define sz(v)    	((li)v.size())
+#define bit(n)   	(1ll<<(li)(n))
+
+
+#define MAX 100005
+#define x first
+#define y second
+
+pair<pair<li,li>,pair<li,li> > edge[MAX];
+li ans[MAX],used[MAX],sum[MAX],cnt=0;
+vector<pair<li,li> > E[MAX];
+
+//  UNION_N
+#define UNION_N MAX
+li union_parent[UNION_N];
+void union_init(){
+	rep(i,UNION_N) union_parent[i]=i;
+}
+li union_find(li a){
+	if(union_parent[a]==a) return a;
+	return union_parent[a]=union_find(union_parent[a]);
+}
+void union_union(li a,li b){
+	union_parent[union_find(a)]=union_find(b);
+	return ;
+}
+
+void dfs(li pos,li parent=-1){
+	if(used[pos]) return ;
+	used[pos]=true;
+	cnt+=sum[pos];
+	rep(i,sz(E[pos]))if(E[pos][i].x!=parent) dfs(E[pos][i].x,pos);
+}
+
+li cal(li pos,li parent=-1){
+	li res=sum[pos];
+	rep(i,sz(E[pos]))if(E[pos][i].x!=parent){
+		li tmp=cal(E[pos][i].x,pos);
+		ans[E[pos][i].y]=2*tmp*(cnt-tmp);
+		res+=tmp;
+	}
+	return res;
+}
+
+int main(){
+	union_init();
+	li n;
+	cin>>n;
+	rep(i,n-1) cin>>edge[i].y.x>>edge[i].y.y>>edge[i].x.x;
+	rep(i,n-1) edge[i].x.y=i;
+	sort(edge,edge+n-1);
+	rep(i,MAX) used[i]=false;
+	rep(i,MAX) sum[i]=1;
+	rep(pos,n-1){
+		li from=pos;
+		while(pos+1<n-1 && edge[pos].x.x==edge[pos+1].x.x) pos++;
+		li to=pos;
+		for(li i=from;i<=to;i++){
+			edge[i].y.x=union_find(edge[i].y.x);
+			edge[i].y.y=union_find(edge[i].y.y);
+			used[edge[i].y.x]=used[edge[i].y.y]=false;
+			E[edge[i].y.x].clear();
+			E[edge[i].y.y].clear();
+		}
+		for(li i=from;i<=to;i++){
+			E[edge[i].y.x].pb(make_pair(edge[i].y.y,edge[i].x.y));
+			E[edge[i].y.y].pb(make_pair(edge[i].y.x,edge[i].x.y));
+		}
+		for(li i=from;i<=to;i++)if(!used[edge[i].y.y]){
+			cnt=0;
+			dfs(edge[i].y.y);
+			cal(edge[i].y.y);
+		}
+		for(li i=from;i<=to;i++){
+			li a=sum[union_find(edge[i].y.y)];
+			li b=sum[union_find(edge[i].y.x)];
+			union_union(edge[i].y.x,edge[i].y.y);
+			sum[union_find(edge[i].y.y)]=a+b;
+		}
+	}
+	li maxi=*max_element(ans,ans+n-1);
+	vector<li> vec;
+	rep(i,n-1)if(maxi==ans[i]) vec.pb(i);
+	cout<<maxi<<" "<<sz(vec)<<endl;
+	rep(i,sz(vec)) cout<<vec[i]+1<<" "; cout<<endl;
+}

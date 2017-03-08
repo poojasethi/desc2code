@@ -1,0 +1,84 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define n	400005
+#define min(a,b)	((a)<(b)?(a):(b))
+#define For(i,a,b)	for(int i=a;i<=b;i++)
+
+int		N,M,Q,X[n],Y[n],L[n],R[n],F[n],S[n],T[n],ID[n],rev[n],Min[n],Ans[n],ch[n][2];
+
+#define CH	(ch=getchar())
+int		IN(){
+		int x=0,ch;
+		for	(;CH<'0'||ch>'9';);
+		for	(;ch>='0'&&ch<='9';CH)	(x*=10)+=ch-'0';
+		return	x;
+}
+bool	Cmp(int a,int b)	{return	R[a]<R[b];}
+
+bool	Top(int x)	{return	ch[F[x]][0]!=x&&ch[F[x]][1]!=x;}
+void	Rev(int x)	{if	(x)	rev[x]^=1,swap(ch[x][0],ch[x][1]);}
+void	Up(int x)	{Min[x]=min(T[x],min(Min[ch[x][0]],Min[ch[x][1]]));}
+void	Dn(int x)	{if	(rev[x]) Rev(ch[x][0]),Rev(ch[x][1]),rev[x]=0;}
+
+void	Rot(int x){
+		int y=F[x],z=F[y],k=ch[y][0]==x,t;
+		if	(t=ch[y][!k]=ch[x][k])	F[t]=y;
+		if	(ch[z][0]==y)	ch[z][0]=x;
+		if	(ch[z][1]==y)	ch[z][1]=x;
+		F[x]=z;	ch[F[y]=x][k]=y;	Up(y);
+}
+void	Splay(int x){
+		for	(Dn(x);!Top(x);Rot(x)){
+			int y=F[x],z=F[y];	Dn(z);Dn(y);Dn(x);
+			if	(!Top(y))	(ch[z][0]==y^ch[y][0]==x)?Rot(x):Rot(y);
+		}	Up(x);
+}
+int		Acc(int x){
+		int y=0;
+		for	(;x;x=F[y=x])	Splay(x),ch[x][1]=y,Up(x);
+		return	y;
+}
+
+void	Evt(int u)	{Acc(u);Splay(u);Rev(u);}
+void	Link(int u,int v)	{Evt(u);F[u]=v;Acc(u);}
+void	Cut(int u,int v)	{Acc(u);int t=Acc(v);F[t==u?v:u]=0;}
+int		Get(int u)	{for (u=Acc(u);ch[u][0];u=ch[u][0]);return u;}
+int		Query(int u,int v)	{Evt(u);v=Acc(v);return	Min[v];}
+
+void	Add(int x,int t){
+		for	(;x<=M;x+=x&-x)	S[x]+=t;
+}
+int		Ask(int x){	
+		int ret=0;
+		for	(;x;x-=x&-x)	ret+=S[x];
+		return	ret;
+}
+
+int		main(){
+		for	(int test=IN();test--;)	{
+			N=IN();	M=IN();	Q=IN();
+			For(i,0,N+M)F[i]=rev[i]=ch[i][0]=ch[i][1]=0,T[i]=Min[i]=1<<30;
+			For(i,1,M)	X[i]=IN(),Y[i]=IN(),S[i]=0;
+			For(i,1,Q)	L[i]=IN(),R[i]=IN(),ID[i]=i;
+			sort(ID+1,ID+Q+1,Cmp);
+
+			int tot=0;
+			for	(int i=1,j=1;i<=M&&j<=Q;i++){
+				if	(X[i]!=Y[i]){
+					T[N+i]=i;
+					if	(Get(X[i])!=Get(Y[i]))	{
+						tot++;	Add(i,1);	Link(X[i],N+i);	Link(N+i,Y[i]);
+					}	else	{
+						int x=Query(X[i],Y[i]);
+						Add(x,-1);	Cut(X[x],N+x);	Cut(N+x,Y[x]);
+						Add(i,1);	Link(X[i],N+i);	Link(N+i,Y[i]);
+					}
+				}
+				for	(;j<=Q&&R[ID[j]]==i;j++)	Ans[ID[j]]=N-tot+Ask(L[ID[j]]-1);
+			}
+			For(i,1,Q)	printf("%d\n",Ans[i]);
+		}
+}

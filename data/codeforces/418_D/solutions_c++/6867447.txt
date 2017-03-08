@@ -1,0 +1,145 @@
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <cstdlib>
+#include <algorithm>
+#include <vector>
+#include <utility>
+#include <queue>
+#include <functional>
+#include <map>
+#include <set>
+#include <cmath>
+
+#define fi first
+#define se second
+#define fo(i,a,b) for (int i = a; i <= b; i ++)
+#define fd(i,a,b) for (int i = a; i >= b; i --)
+#define fe(i,x,y) for (int i = x, y = lnk[i]; i; i = nxt[i], y = lnk[i])
+#define mkp make_pair
+#define pb push_back
+#define Fill(x,y) memset(x,y,sizeof(x))
+#define Cpy(x,y) memcpy(x,y,sizeof(x))
+#define Bit(x,y) ((((x) >> (y)) & 1))
+#define mit map<int,SI>::iterator
+#define sit SI::iterator
+#define SQR(x) ((x) * (x))
+
+using namespace std;
+ 
+typedef long long LL;
+typedef long double DB;
+typedef pair <DB, DB> PD;
+typedef pair <LL, LL> PLI;
+typedef pair <PD, int> PDI;
+typedef pair <int, int> PI;
+typedef pair <int, PI> PII;
+typedef pair <PI, PI> PIII;
+typedef set <PI> SI;
+typedef vector <int> VI;
+ 
+int Read()
+ {
+    char c; while (c = getchar(), (c != '-') && (c < '0' || c > '9'));
+    bool neg = (c == '-'); int ret = (neg ? 0 : c - 48);
+    while (c = getchar(), c >= '0' && c <= '9') ret = ret * 10 + c - 48;
+    return neg ? -ret : ret;
+ }
+ 
+const int MAXN = 100005, INF = 1e9;
+
+int rmq[MAXN][17], rmq2[MAXN][17], lg2[MAXN];
+int top, b[MAXN], c[MAXN], d[MAXN], md[MAXN];
+int N, M, cnt, dx, dy, st[MAXN], nxt[MAXN << 1], lnk[MAXN << 1], e[MAXN], q[MAXN], dep[MAXN], fa[MAXN];
+bool diameter[MAXN];
+
+void init()
+ {
+ 	scanf("%d", &N);
+ 	fo (i, 2, N)
+ 	 {
+ 	 	int x = Read(), y = Read();
+ 	 	lnk[++ cnt] = y, nxt[cnt] = st[x], st[x] = cnt;
+ 	 	lnk[++ cnt] = x, nxt[cnt] = st[y], st[y] = cnt;
+ 	 }
+ 	int tail = 1; q[1] = 1;
+ 	fo (head, 1, tail)
+ 	 {
+ 	 	int x = q[head];
+ 	 	fe (i, st[x], y) if (y != fa[x]) fa[y] = x, q[++ tail] = y;
+ 	 }
+ 	
+ 	tail = 1, dx = q[N], q[1] = dx; Fill(fa, 0);
+ 	fo (head, 1, tail)
+ 	 {
+ 	 	int x = q[head];
+ 	 	fe (i, st[x], y) if (y != fa[x]) fa[y] = x, q[++ tail] = y;
+ 	 }
+ 	dy = q[N];
+ 	for (int x = dy; x; x = fa[x])
+ 		diameter[x] = 1, b[++ top] = x, c[x] = top;
+ 	 	
+ 	tail = top;
+ 	fo (i, 1, top) q[i] = b[i], d[b[i]] = 0;
+ 	fo (head, 1, tail)
+ 	 {
+ 	 	int x = q[head]; md[c[x]] = d[x];
+ 	 	fe (j, st[x], y)
+ 	 		if (!c[y]) c[y] = c[x], q[++ tail] = y, d[y] = d[x] + 1;
+ 	 }
+ 	 
+ 	fo (i, 1, 16) lg2[1 << i] = i;
+ 	fo (i, 3, top) if (!lg2[i]) lg2[i] = lg2[i - 1];
+ 	
+ 	fo (i, 1, top) rmq[i][0] = md[i] - i, rmq2[i][0] = md[i] + i;
+ 	fo (j, 1, lg2[top])
+ 		fo (i, 1, top - (1 << j) + 1)
+ 			rmq[i][j] = max(rmq[i][j-1], rmq[i+(1<<(j-1))][j-1]), rmq2[i][j] = max(rmq2[i][j-1], rmq2[i+(1<<(j-1))][j-1]);
+ }
+ 
+int Query1(int l, int r)
+ {
+ 	if (l > r) return -INF;
+ 	int x = lg2[r - l + 1];
+ 	return max(rmq[l][x], rmq[r-(1<<x)+1][x]);
+ }
+ 
+int Query2(int l, int r)
+ {
+ 	if (l > r) return -INF;
+ 	int x = lg2[r - l + 1];
+ 	return max(rmq2[l][x], rmq2[r-(1<<x)+1][x]);
+ }
+ 
+void work()
+ {
+ 	scanf("%d", &M);
+ 	fo (ws, 1, M)
+ 	 {
+ 	 	int x = Read(), y = Read();
+ 	 	if (c[x] != c[y])
+ 	 	 {
+ 	 	 	if (c[x] > c[y]) swap(x, y);
+ 	 	 	int dist = d[x] + d[y] + c[y] - c[x];
+ 	 	 	if (d[x] > dist / 2) printf("%d\n", d[y] + max(c[y] - 1, top - c[y]));
+ 	 	 	else if (d[y] > dist / 2) printf("%d\n", d[x] + max(c[x] - 1, top - c[x]));
+ 	 	 	else
+ 	 	 	 {
+ 	 	 	 	int ans = max(d[x] + c[x] - 1, d[y] + top - c[y]);
+ 	 	 	 	// find boundaries
+ 	 	 	 	int k = c[x] + dist / 2 - d[x];
+ 	 	 	 	ans = max(ans, d[x] + Query2(c[x], k) - c[x]);
+ 	 	 	 	ans = max(ans, d[y] + Query1(k + 1, c[y]) + c[y]);
+ 	 	 	 	printf("%d\n", ans);
+ 	 	 	 }
+ 	 	 } else
+ 	 	 	printf("%d\n", min(d[x], d[y]) + max(c[x] - 1, top - c[x]));
+ 	 }
+ }
+ 
+int main()
+ {
+ 	init();
+ 	work();
+ 	return 0;
+ }

@@ -1,0 +1,89 @@
+#include<iostream>
+#include<cstdio>
+#include<ctime>
+#include<cstdlib>
+#include<algorithm>
+#include<vector>
+const int inf = 1<<30;
+using namespace std;
+struct Node{
+	int l,r,x,y,c,maxValue;
+	Node(){
+		l=r=x=y=c=maxValue=0;
+	}
+};
+
+vector<Node> t;
+int n,rt;
+
+int random(){	return (unsigned(rand())<<16)|unsigned(rand());	}
+
+int Max(int &v){	return t[v].maxValue;}
+
+int Cnt(int &v){
+	if(!v) return 0;
+	return t[v].c;
+}
+
+void norm(int &v){
+	if(!v) return;
+	t[v].c=Cnt(t[v].l)+Cnt(t[v].r)+1;
+	t[v].maxValue=t[v].x;
+	if(t[v].l) t[v].maxValue=max(Max(t[v].l),t[v].maxValue);
+	if(t[v].r) t[v].maxValue=max(Max(t[v].r),t[v].maxValue);
+}
+int merge(int &l,int &r){
+	if(!l || !r) return l+r;
+	if(t[l].y>t[r].y) {	t[l].r=merge(t[l].r,r);	norm(l);	return l;}
+	else		  {	t[r].l=merge(l,t[r].l);	norm(r);	return r;}
+}
+void split(int v,int x,int &l,int &r){
+	if(!v) return void(l=r=0);
+	if(Cnt(t[v].l)+1<=x)	split(t[v].r,x-Cnt(t[v].l)-1,t[v].r,r),l=v;
+	else			split(t[v].l,x,l,t[v].l),r=v;
+	norm(l); norm(r);
+}
+
+void insert(int i,int x){
+	int l,r;
+	split(rt,i-1,l,r);
+
+	Node tmp=Node();
+	tmp.x=x; tmp.y=random();
+	t.push_back(tmp); rt=t.size()-1; 
+	norm(rt);
+
+	l=merge(l,rt);
+	rt=merge(l,r);
+}
+
+void display(int v){
+	if(!v) return;
+	display(t[v].l);
+	printf("%d ",v);
+	display(t[v].r);
+}
+
+int FindPos(int &v,int &x){
+	if(!v) return 0; 
+	if(t[v].r &&  Max(t[v].r)>x)	return Cnt(t[v].l)+1+FindPos(t[v].r,x);
+	if(t[v].x>x)			return (Cnt(t[v].l)+1);
+	return FindPos(t[v].l,x);
+}
+
+int main(){
+//	freopen("input.txt","r",stdin);
+//	freopen("output.txt","w",stdout);
+	scanf("%d",&n); 
+	int a,c,k;
+	t.reserve(n); t.push_back(Node());
+	for(int i=0;i<n;i++){
+		scanf("%d%d",&a,&c);
+		c=i-c+1;
+		k=FindPos(rt,a)+1;
+		k=max(k,c);
+		cerr<<k<<endl;
+		insert(k,a);
+	}
+	display(rt);
+}

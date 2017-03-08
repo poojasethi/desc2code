@@ -1,0 +1,194 @@
+#include <map>
+#include <queue>
+#include <stack>
+#include <cmath>
+#include <cctype>
+#include <set>
+#include <bitset>
+#include <algorithm>
+#include <list>
+#include <vector>
+#include <sstream>
+#include <iostream>
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <math.h>
+#include <ctype.h>
+
+using namespace std;
+
+typedef long long ll;
+typedef pair<int,int> paii;
+typedef pair< ll, ll > pall;
+
+
+#define PI (2.0*acos(0))
+#define ERR 1e-5
+#define mem(a,b) memset(a,b,sizeof a)
+#define pb push_back
+#define popb pop_back
+#define all(x) (x).begin(),(x).end()
+#define mp make_pair
+#define SZ(x) (int)x.size()
+#define oo (1<<25)
+#define FOREACH(it,x) for(__typeof((x).begin()) it=(x.begin()); it!=(x).end(); ++it)
+#define Contains(X,item)        ((X).find(item) != (X).end())
+#define popc(i) (__builtin_popcountll(i))
+#define fs      first
+#define sc      second
+#define EQ(a,b)     (fabs(a-b)<ERR)
+#define MAX 100050
+#define twoL(X) (((ll)(1))<<(X))
+
+
+
+typedef struct item * pitem;
+struct item {
+	int prior, value, cnt;
+
+	bool rev;
+	pitem l, r;
+	item (int prior, int value) : prior(prior), value(value), l(NULL), r(NULL) , rev(false) , cnt(0)
+	{
+	}
+};
+
+int cnt (pitem it) {
+	return it ? it->cnt : 0;
+}
+
+void upd_cnt (pitem it) {
+	if (it)
+		it->cnt = cnt(it->l) + cnt(it->r) + 1;
+}
+
+void push_up(pitem it)
+{
+    upd_cnt(it);
+}
+void push_down (pitem it) {
+	if (it && it->rev) {
+		it->rev = false;
+		swap (it->l, it->r);
+		if (it->l)  it->l->rev ^= true;
+		if (it->r)  it->r->rev ^= true;
+	}
+}
+
+void merge (pitem & t, pitem l, pitem r) {
+    /// start from root t
+    /// merges two valid trees and stores in t
+    /// the two trees that are to be merged must be merge_able
+    /// two tree is merge_able only if one's key values are strictly less then the other one's key
+
+	push_down(l);
+	push_down(r);
+
+	if (!l || !r)
+		t = l ? l : r;
+	else if (l->prior > r->prior)
+		merge (l->r, l->r, r),  t = l;
+	else
+		merge (r->l, l, r->l),  t = r;
+
+	push_up(t);
+}
+
+void split (pitem t, pitem & l, pitem & r, int key, int add = 0) {
+    /// start from root t
+    /// splits the tree in two parts and stores left tree in l and right in r
+    /// split is done according to the key value provided
+    /// for every node x in left subtree its key_xi is strictly less then key
+    /// for every node x in right subtree its key_xi is strictly greater then key
+
+	if (!t)
+		return void( l = r = 0 );
+
+	push_down(t);
+
+	int cur_key = add + cnt(t->l);
+	if (key <= cur_key)
+		split (t->l, l, t->l, key, add),  r = t;
+	else
+		split (t->r, t->r, r, key, add + 1 + cnt(t->l)),  l = t;
+
+	push_up(t);
+}
+
+void reverse (pitem t, int l, int r) {
+	pitem t1, t2, t3;
+	split (t, t1, t2, l);
+	split (t2, t2, t3, r-l+1);
+	t2->rev ^= true;
+	merge (t, t1, t2);
+	merge (t, t, t3);
+}
+
+void output (pitem t,int &indx, int len) {
+    /// prints the array
+
+	if (!t)  return;
+	push_down(t);
+	output (t->l,indx,len);
+    if(indx==len-1) printf ("%d", t->value);
+	else printf ("%d ", t->value);
+	++indx;
+	output (t->r,indx,len);
+}
+
+void insert(int indx,int val, pitem &root)
+{
+    /// indx is zero based
+    /// if indx is greater than array size then item will be inserted in the last+1 index
+    /// if indx is negative then item will be inserted in the zeroth index
+
+    int prior= rand()%(1000000007) + 1;
+    pitem pit = new item( prior , val );
+
+    pitem leftTree=NULL,rightTree=NULL;
+    split(root,leftTree,rightTree,indx,0);
+
+    merge(leftTree,leftTree,pit);
+    merge(root,leftTree,rightTree);
+    return ;
+}
+
+pitem remove(int left, int right , pitem &root )
+{
+    pitem leftTree=NULL,middleTree=NULL,rightTree=NULL;
+
+    split(root,leftTree,middleTree, left , 0 );
+
+    split(middleTree,middleTree , rightTree , right-left+1,0  );
+
+    merge(root,leftTree,rightTree);
+    return middleTree;
+}
+
+int main()
+{
+    pitem root=NULL;
+
+    int n,m,a,b,c;
+    scanf("%d %d",&n,&m);
+    for(int i=1;i<=n;i++) insert(i-1,i,root);
+
+    pitem A,B,C;
+    for(int i=0;i<m;i++)
+    {
+        scanf("%d %d %d",&a,&b,&c);
+        A=remove(0,a-1,root);
+        B=remove(0,b-1,root);
+
+        merge(root,A,root);
+        C=remove(0,c-1,root);
+
+        reverse(B,0,b-1);
+        merge(root,B,root);
+        merge(root,C,root);
+    }
+    int indx=0;
+    output(root,indx,n);puts("");
+}

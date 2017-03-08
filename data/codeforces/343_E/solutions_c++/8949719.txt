@@ -1,0 +1,97 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+using namespace std;
+const int Maxn=205,Maxm=1005,inf=999999999+208;
+int n,m;
+int fst[Maxn],next[Maxm*2],to[Maxm*2],v[Maxm*2],sv[Maxm*2],En=1;
+int q[Maxn],flow[Maxn][Maxn];
+int S,T,Q[Maxn],dep[Maxn],ans=0,ord[Maxn],tot=0;
+
+int bfs() {
+	memset(dep+1,0,n<<2);
+	int l=1,r=2;
+	dep[Q[1]=S]=1;
+	while (l<r) {
+		int x=Q[l++];
+		for (int k=fst[x];k;k=next[k])
+			if (v[k]&&!dep[to[k]])
+				dep[Q[r++]=to[k]]=dep[x]+1;
+	}
+	return dep[T]>0;
+}
+
+int dfs(int x,int f) {
+	if (x==T) return f;
+	int r=f,t;
+	for (int k=fst[x];k;k=next[k])
+		if (v[k]&&dep[to[k]]>dep[x]) {
+			t=dfs(to[k],min(r,v[k]));
+			r-=t; v[k]-=t; v[k^1]+=t;
+			if (!r) break;
+		}
+	if (r==f) dep[x]=0;
+	return f-r;
+}
+
+int dinic(int s,int t) {
+	if ((S=s)==(T=t)) return inf;
+	memcpy(v+1,sv+1,En<<2);
+	int res=0;
+	while (bfs()) res+=dfs(S,inf);
+	return res;
+}
+
+void solve(int l,int r) {
+	static int q1[Maxn],q2[Maxn];
+	if (l>=r) return;
+	int cur=dinic(q[l],q[r]),t1=0,t2=0;
+	for (int i=l;i<=r;i++)
+		dep[q[i]]>0?q1[++t1]=q[i]:q2[++t2]=q[i];
+	for (int i=1;i<=n;i++)
+		for (int j=i+1;j<=n;j++)
+			if (((dep[i]==0)^(dep[j]==0))&&flow[i][j]>cur)
+				flow[i][j]=flow[j][i]=cur;
+	memcpy(q+l,q1+1,t1<<2);
+	memcpy(q+l+t1,q2+1,t2<<2);
+	solve(l,l+t1-1);
+	solve(l+t1,r);
+}
+
+void solve2(int l,int r) {
+	static int q1[Maxn],q2[Maxn];
+	if (l==r) {ord[++tot]=q[l]; return;}
+	int t1=0,t2=0,minv=inf;
+	for (int i=l;i<=r;i++)
+		for (int j=l;j<=r;j++)
+			minv=min(minv,flow[q[i]][q[j]]);
+	q1[++t1]=q[l];
+	for (int j=l+1;j<=r;j++)
+		if (flow[q1[1]][q[j]]>minv) q1[++t1]=q[j];else q2[++t2]=q[j];
+	ans+=minv;
+	memcpy(q+l,q1+1,t1<<2);
+	memcpy(q+l+t1,q2+1,t2<<2);
+	solve2(l,l+t1-1);
+	solve2(l+t1,r);
+}
+
+int main() {
+	scanf("%d%d",&n,&m);
+	for (int i=1,a,b,c;i<=m;i++) {
+		scanf("%d%d%d",&a,&b,&c);
+		next[++En]=fst[a]; fst[a]=En; to[En]=b; sv[En]=c;
+		next[++En]=fst[b]; fst[b]=En; to[En]=a; sv[En]=c;
+	}
+	memset(flow,63,sizeof flow);
+	for (int i=1;i<=n;i++) q[i]=i;
+	solve(1,n);
+	solve2(1,n);
+	printf("%d\n",ans);
+	for (int i=1;i<n;i++) printf("%d ",ord[i]);
+	printf("%d\n",ord[n]);
+	return 0;
+}

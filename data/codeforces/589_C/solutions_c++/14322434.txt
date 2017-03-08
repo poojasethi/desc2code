@@ -1,0 +1,144 @@
+#include<cstdio>
+#include<string>
+#include<map>
+#include<iostream>
+#include<algorithm>
+
+using namespace std;
+
+const long long LB = 110;
+const long long UB = 2e18;
+
+string init_str;
+string str;
+int cnt[220][26];
+
+int K[100100];
+int N;
+
+void process_naive(){
+	str=init_str;
+	long long ln=init_str.size();
+	for(int i=0;i<100100;i++){
+		K[i]%=ln;
+		ln*=2;
+		if(ln>UB) break;
+	}
+	int i=0;
+	for(i=0;;i++){
+		if(str.size()>LB) break;
+		string s1=str.substr((int)str.size()-K[i]);
+		string s2=str.substr(0,(int)str.size()-K[i]);
+		str=str+s1+s2;
+	}
+	for(int j=i;j<100100;j++){
+		K[j-i]=K[j];
+	}
+}
+
+//int last_char[100100];
+
+void init(){
+	process_naive();
+	//cout<<str<<endl;
+	for(int i=0;i<220;i++) for(int j=0;j<26;j++){
+		cnt[i][j]=0;
+	}
+	cnt[0][str[0]-'a']++;
+	for(int i=1;i<str.size();i++){
+		for(int j=0;j<26;j++){
+			cnt[i][j]=cnt[i-1][j];
+		}
+		cnt[i][str[i]-'a']++;
+	}/*
+	printf("c\n");
+	long long ln=str.size();
+	for(int i=0;;i++){
+		long long id=ln-1;
+		long long ln2=ln/2;
+		if(ln>UB) break;
+		for(int j=i;j>0;j--){
+			int k=K[j-1];
+			id-=k;
+			id-=ln2;
+			if(id<0) id+=ln2;
+			ln2/=2;
+		}
+		ln*=2;
+		last_char[i]=id;
+	}*/
+}
+
+int get_count(int l,int r,int c){//in the original string
+	if(l>r) return 0;
+	else if(l==0) return cnt[r][c];
+	else return cnt[r][c]-cnt[l-1][c];
+}
+
+int get_count(int c){
+	return cnt[str.size()-1][c];
+}
+
+map<long long,long long> memo[30];
+
+long long calc(long long r,int n,int c,bool special=false){//[0,r]
+	long long ln=(1ll<<n)*(str.size());
+	if(memo[c].count(r)==1) return memo[c][r];
+	if(n==0){
+		return get_count(0,r,c);
+	}
+	if(r<ln/2) return calc(r,n-1,c);
+	long long cnt1=(long long)get_count(c)*(1ll<<(n-1));
+	long long r2=r-ln/2;
+	int k=K[n-1];
+	long long res;
+	if(r2<k){
+		long long cnt2=calc(ln/2-k+r2,n-1,c);
+		long long cnt3=calc(ln/2-k-1,n-1,c,true);
+		res=cnt1+cnt2-cnt3;
+	}else{
+		long long cnt2=calc(ln/2-k-1,n-1,c,true);
+		long long cnt3=calc(r2-k,n-1,c);
+		res=cnt1*2-cnt2+cnt3;
+	}
+	if(special) memo[c][r]=res;
+	return res;
+}
+
+char ch[110];
+
+int M;
+
+int main(){
+	scanf("%s",ch);
+	init_str=ch;
+//	cin>>init_str;
+//	cin>>N>>M;
+	scanf("%d%d",&N,&M);
+	for(int i=0;i<N;i++) scanf("%d",K+i);
+//	for(int i=0;i<N;i++) cin>>K[i];
+	init();
+	/*for(int i=0;i<10;i++){
+		printf("%d ",last_char[i]);
+	}
+	printf("\n");*/
+	int N=0;
+	long long tmp=str.size();
+	while(tmp<UB){
+		tmp*=2;
+		N++;
+	}
+	for(int q=0;q<M;q++){
+		long long l,r;
+		//string s;
+		//cin>>l>>r>>s;
+		char tmp[10];
+		scanf("%I64d%I64d%s",&l,&r,tmp);
+		l--;r--;
+		long long ans1=calc(l-1,N,tmp[0]-'a');
+		long long ans2=calc(r,N,tmp[0]-'a');
+//		cout<<ans2-ans1<<"\n";
+		printf("%I64d\n",ans2-ans1);
+	}
+	return 0;
+}

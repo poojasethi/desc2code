@@ -1,0 +1,113 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <ctime>
+#include <cstdio>
+#include <set>
+using namespace std;
+
+const int MAXN = 100;
+const int MAXREM = 420;
+
+int values[MAXN];
+int n;
+int adj[MAXN][MAXN];
+int na[MAXN];
+
+struct Vertex {
+    int v;
+    int mask;
+    int rem;
+};
+
+bool operator< (const Vertex& v1, const Vertex& v2) {
+    if (v1.v < v2.v) return true;
+    if (v1.v > v2.v) return false;
+    if (v1.mask < v2.mask) return true;
+    if (v1.mask > v2.mask) return false;
+    if (v1.rem < v2.rem) return true;
+    return false;
+}
+
+typedef pair<int, Vertex> piv;
+int used[MAXN][1 << 6][MAXREM];
+
+bool isEnd(const piv& c) {
+    int v = c.second.v;
+    if (v != n - 1) return false;
+    int mask = c.second.mask;
+    int rem = c.second.rem;
+    for (int i = 2; i <= 7; ++i) {
+        if (mask & (1 << (i - 2))) {
+            if (rem % i != 0) return false;
+        }
+    }
+    return true;
+}
+
+void solveTest() {
+    for (int i = 0; i < n; ++i) {
+        scanf("%d", &values[i]);
+    }
+    memset(na, 0, sizeof na);
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            int temp;
+            scanf("%d", &temp);
+            if (temp) {
+                adj[i][na[i]] = j;
+                ++na[i];
+            }
+        }
+    }
+    memset(used, 0, sizeof used);
+    set<piv> frontier;
+    piv initial;
+    initial.first = values[0];
+    initial.second.v = 0;
+    if(values[0] > 1) initial.second.mask = 1 << (values[0] - 2);
+    initial.second.rem = values[0];
+    frontier.insert(initial);
+    int ret = -1;
+    while (!frontier.empty()) {
+        piv curr = *frontier.begin();
+        frontier.erase(frontier.begin());
+        if (isEnd(curr)) {
+            ret = curr.first;
+            break;
+        }
+        int v = curr.second.v;
+        for (int j = 0; j < na[v]; ++j) {
+            int i = adj[v][j];
+            piv temp;
+            temp.first = curr.first + values[i];
+            temp.second.v = i;
+            temp.second.mask = curr.second.mask;
+            if (values[i] > 1) temp.second.mask = curr.second.mask | (1 << (values[i] - 2));
+            temp.second.rem = (curr.second.rem * 10 + values[i]) % MAXREM;
+            int A = used[temp.second.v][temp.second.mask][temp.second.rem];
+            if (A > 0 && temp.first < A) {
+                piv toRem = temp;
+                toRem.first = A;
+                frontier.erase(frontier.find(toRem));
+            }
+            if (A == 0 || temp.first < A) {
+                used[temp.second.v][temp.second.mask][temp.second.rem] = temp.first;
+                frontier.insert(temp);
+            }
+        }
+    }
+    printf("%d\n", ret);
+}
+
+int main() {
+    while (true) {
+        scanf("%d", &n);
+        if (!n) break;
+        solveTest();
+    }
+    return 0;
+}

@@ -1,0 +1,202 @@
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <algorithm>
+#include <cassert>
+
+using namespace std;
+
+#define MAXN 50005
+
+struct CentroidDecomposition{
+  vector<int> L[MAXN];
+  int subsize[MAXN],cpar[MAXN];
+
+  void dfs(int cur, int p){
+    subsize[cur] = 1;
+
+    for(int i = 0;i < L[cur].size();++i){
+      int to = L[cur][i];
+
+      if(to != p && cpar[to] == -1){
+        dfs(to,cur);
+        subsize[cur] += subsize[to];
+      }
+    }
+  }
+
+  int centroid_decomposition(int cur, int p, int n, int prevc){
+    for(int i = 0;i < L[cur].size();++i){
+      int to = L[cur][i];
+
+      if(to != p && cpar[to] == -1 && 2 * subsize[to] > n){
+        return centroid_decomposition(to,cur,n,prevc);
+      }
+    }
+
+    cpar[cur] = prevc;
+    //printf("%d -> %d\n",prevc,cur);
+
+    for(int i = 0;i < L[cur].size();++i){
+      int to = L[cur][i];
+
+      if(cpar[to] == -1){
+        dfs(to,-1);
+        centroid_decomposition(to,cur,subsize[to],cur);
+      }
+    }
+
+    return cur;
+  }
+
+  int init(int start){
+    memset(cpar,-1,sizeof cpar);
+    dfs(start,-1);
+    return centroid_decomposition(start,-1,subsize[start],-2);
+  }
+}CD;
+
+bool not_prime[MAXN];
+int np,p[5133];
+
+int p2[17][MAXN],tin[MAXN],tout[MAXN],h[MAXN],cont2;
+
+void dfs2(int cur, int par, int curh){
+  p2[0][cur] = par;
+  h[cur] = curh;
+  tin[cur] = cont2++;
+
+  for(int i = 1;i <= 16;++i)
+    p2[i][cur] = p2[i - 1][ p2[i - 1][cur] ];
+
+  for(int i = 0;i < CD.L[cur].size();++i){
+    int to = CD.L[cur][i];
+
+    if(to != par)
+      dfs2(to,cur,curh + 1);
+  }
+
+  tout[cur] = cont2++;
+}
+
+inline bool is_ancestor(int u, int v){
+  return tin[u] <= tin[v] && tout[u] >= tout[v];
+}
+
+int lca(int u, int v){
+  if(is_ancestor(u,v)) return u;
+  if(is_ancestor(v,u)) return v;
+
+  for(int i = 16;i >= 0;--i)
+    if(!is_ancestor(p2[i][u],v))
+      u = p2[i][u];
+
+  return p2[0][u];
+}
+
+int dist(int u, int v){
+  return h[u] + h[v] - 2 * h[lca(u,v)];
+}
+
+vector<int> subtree[MAXN];
+int H[MAXN];
+
+void dfs(int cur, int curh){
+  subtree[cur].push_back(cur);
+  H[cur] = curh;
+
+  for(int i = 0;i < CD.L[cur].size();++i){
+    int to = CD.L[cur][i];
+    dfs(to,curh + 1);
+    vector<int> &v = subtree[to];
+
+    for(int j = 0;j < v.size();++j){
+      subtree[cur].push_back(v[j]);
+    }
+  }
+}
+
+int d[17][MAXN],cont[MAXN];
+
+int main(){
+  int N;
+
+  scanf("%d",&N);
+
+  for(int i = 1,u,v;i < N;++i){
+    scanf("%d %d",&u,&v);
+    CD.L[u].push_back(v);
+    CD.L[v].push_back(u);
+  }
+
+  int r = CD.init(1);
+  dfs2(1,1,0);
+
+  for(int i = 1;i <= N;++i)
+    CD.L[i].clear();
+
+  for(int i = 1;i <= N;++i)
+    if(i != r)
+      CD.L[ CD.cpar[i] ].push_back(i);
+
+  for(int i = 1;i <= N;++i){
+    int cur = i,dh = 0;
+
+    while(cur != -2){
+      d[dh][i] = dist(i,cur);
+      cur = CD.cpar[cur];
+      ++dh;
+    }
+  }
+
+  for(int i = 2;i <= N;++i){
+    if(!not_prime[i]){
+      p[np++] = i;
+
+      if(i <= N / i){
+        for(int j = i * i;j <= N;j += i)
+          not_prime[j] = true;
+      }
+    }
+  }
+
+  //reverse(p,p + np);
+
+  dfs(r,0);
+
+  long long ans = 0;
+
+  for(int i = 1;i <= N;++i){
+    ++cont[0];
+    int curh = H[i];
+
+    for(int j = 0;j < CD.L[i].size();++j){
+      int to = CD.L[i][j];
+
+      for(int k = 0;k < subtree[to].size();++k){
+        int to2 = subtree[to][k];
+        int D = d[ H[to2] - curh ][to2];
+
+        for(int x = 0;x < np;++x)
+          if(D <= p[x])
+            ans += cont[p[x] - D];
+      }
+
+      for(int k = 0;k < subtree[to].size();++k){
+        int to2 = subtree[to][k];
+        int D = d[ H[to2] - curh ][to2];
+        ++cont[D];
+      }
+    }
+
+    for(int j = 0;j < subtree[i].size();++j){
+      int to = subtree[i][j];
+      int D = d[ H[to] - curh ][to];
+      --cont[D];
+    }
+  }
+
+  printf("%.8f\n",(double)ans / ((long long)N * (N - 1) / 2));
+
+  return 0;
+}

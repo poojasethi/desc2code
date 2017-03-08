@@ -1,0 +1,120 @@
+#include <bits/stdc++.h>
+
+#define Task "GERALD07"
+#define fi freopen(Task".inp", "r", stdin)
+#define fo freopen(Task".out", "w", stdout)
+
+using namespace std;
+
+const int N = 200100;
+
+int n, m, q, x, cnt;
+int u[N], v[N], res[N], lab[N];
+pair <pair<int, int>, int> query[N];
+vector <pair<int, int> > store;
+
+bool cmp(pair<pair<int, int>, int> u, pair<pair<int, int>, int> v) {
+  if (u.first.first / x != v.first.first / x) {
+    return u.first.first < v.first.first;
+  }
+  return u.first.second < v.first.second;
+}
+
+void Reset() {
+  memset(lab, -1, sizeof(lab));
+  store.clear();
+  cnt = n;
+}
+
+int Root(int u) {
+  return (lab[u] > 0 ? Root(lab[u]) : u);
+}
+
+void Merge(int u, int v, int need) {
+  u = Root(u), v = Root(v);
+  if (u == v) {
+    return;
+  }
+  if (need) {
+    store.push_back(make_pair(u, lab[u]));
+    store.push_back(make_pair(v, lab[v]));
+  }
+  cnt--;
+  if(lab[u] > lab[v]) {
+    lab[v] += lab[u];
+    lab[u] = v;
+  } else {
+    lab[u] += lab[v];
+    lab[v] = u;
+  }
+}
+
+void Backup() {
+  for (int i = store.size() - 1; i >= 0; i--) {
+    int u = store[i].first, v = store[i].second;
+    lab[u] = v;
+  }
+  cnt += store.size() / 2;
+  store.clear();
+}
+
+void Go() {
+  Reset();
+  for (int i = 1; i <= q; i++) {
+    if (query[i].first.first / x == query[i].first.second / x)  {
+      int l = query[i].first.first, r = query[i].first.second;
+      for (int j = l; j <= r; j++) {
+        Merge(u[j], v[j], 1);
+      }
+      res[query[i].second] = cnt;
+      Backup();
+    }
+  }
+  int LastBlock = -1, last = -1;
+  for (int i = 1; i <= q; i++) {
+    int l = query[i].first.first, r = query[i].first.second;
+    if (l / x == r / x) {
+      continue;
+    }
+    if (LastBlock != l / x) {
+      LastBlock = l / x;
+      last = x * (l / x + 1);
+      Reset();
+    }
+    for (int j = last; j <= r; j++) {
+      Merge(u[j], v[j], 0);
+    }
+    last = r + 1;
+    for (int j = l; j < x * (l / x + 1); j++) {
+      Merge(u[j], v[j], 1);
+    }
+    res[query[i].second] = cnt;
+    Backup();
+  }
+}
+
+int main() {
+  //fi, fo;
+  ios_base::sync_with_stdio(0);
+  int t;
+  cin >> t;
+  while (t--) {
+    cin >> n >> m >> q;
+    x = sqrt(m);
+    for (int i = 0; i < m; i++) {
+      cin >> u[i] >> v[i];
+    }
+    for (int i = 1; i <= q; i++) {
+      cin >> query[i].first.first >> query[i].first.second;
+      query[i].first.first--;
+      query[i].first.second--;
+      query[i].second = i;
+    }
+    sort(query + 1, query + q + 1, cmp);
+    Go();
+    for (int i = 1; i <= q; i++) {
+      cout << res[i] << endl;
+    }
+  }
+  return 0;
+}

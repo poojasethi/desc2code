@@ -1,0 +1,383 @@
+#pragma comment(linker, "/STACK:108777216")
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <vector>
+#include <utility>
+#include <deque>
+#include <bitset>
+#include <set>
+#include <map>
+#include <algorithm>
+#include <string>
+#include <cmath>
+#include <queue>
+using namespace std;
+
+//---------------------------------------------- Graphs: graph structure --------------------------------------------------------
+namespace Namespace_Graph {
+  //   Comment it out for dynamic graph allocation
+  #define __STATIC_GRAPH_ALLOCATION__
+
+  #ifdef __STATIC_GRAPH_ALLOCATION__
+    int const MAX_VERTEX_COUNT = 300100;
+  #endif
+
+  class Graph {
+    public:
+      int Vertex_Count;
+
+      #ifdef __STATIC_GRAPH_ALLOCATION__
+        vector<int> Edges[MAX_VERTEX_COUNT];                // 0-based indexes of vertexes assumed
+      #else
+        vector<vector<int> > Edges;                         // 0-based indexes of vertexes assumed
+      #endif
+
+    public:
+      Graph(int Init_Vertex_Count = 0) {
+        Vertex_Count = Init_Vertex_Count;
+
+        #ifndef __STATIC_GRAPH_ALLOCATION__
+          Edges.resize(Vertex_Count);
+        #endif
+
+        for (int i = 0; i < Vertex_Count; i++)
+          Edges[i].clear();
+      }
+  };
+}
+
+//---------------------------------- Graphs: Maximum matching for bipartite graphs ----------------------------------------------
+/*                               Time: fastest Kuhn algorithm with cheat from Burunduk1,
+                                       O(E*sqrt(N)) or something like this                                                     */
+
+namespace Namespace_Maximum_Bipartite_Matching {
+  using namespace Namespace_Graph;
+
+  class Maximum_Bipartite_Matching {
+    private:
+      vector<int> nnew, flag;
+      int color;
+
+      int dfs(int v, const Graph & g, vector<int> & Right_Part_Match) {
+        if (flag[v] == color) return 0;
+        flag[v] = color;
+        for (int i = 0, e_len = (int) g.Edges[v].size(); i < e_len; i++) {
+          int Q = g.Edges[v][i];
+          if (Right_Part_Match[Q] == -1 || dfs(Right_Part_Match[Q], g, Right_Part_Match)) {
+            Right_Part_Match[Q] = v;
+            nnew[v] = Q;
+            return 1;
+          }
+        }
+        return 0;
+      }
+
+    public:
+      Maximum_Bipartite_Matching() {
+        nnew.clear();
+        flag.clear();
+        color = 0;
+      }
+
+      int find_Maximum_Bipartite_Matching(const Graph & g,
+                                        int Left_Vertex_Count, int Right_Vertex_Count,
+                                        vector<int> & Right_Part_Match) {
+        nnew.resize(Left_Vertex_Count);
+        flag.resize(Left_Vertex_Count);
+        for (int i = 0; i < Left_Vertex_Count; i++) {
+          nnew[i] = -1;
+          flag[i] = 0;
+        }
+
+        Right_Part_Match.resize(Right_Vertex_Count);
+        for (int i = 0; i < Right_Vertex_Count; i++)
+          Right_Part_Match[i] = -1;
+
+        for (int i = 0; i < Left_Vertex_Count; i++)
+          for (int j = 0, e_len = (int) g.Edges[i].size(); j < e_len; j++)
+            if (Right_Part_Match[g.Edges[i][j]] == -1) {
+              Right_Part_Match[g.Edges[i][j]] = i;
+              nnew[i] = g.Edges[i][j];
+              break;
+            }
+
+        color = 0;
+        for (int run = 1; run; ) {
+          run = 0;
+          color++;
+          for (int i = 0; i < Left_Vertex_Count; i++)
+            if (nnew[i] == -1 && dfs(i, g, Right_Part_Match))
+              run = 1;
+        }
+
+        int ans = 0;
+        for (int i = 0; i < Right_Vertex_Count; i++)
+          if (Right_Part_Match[i] != -1)
+            ans++;
+
+        return ans;
+      }
+  };
+}
+
+//-------------------------------- Graphs: Maximum antichain in partially ordered set -------------------------------------------
+/* Using Dilvorth theorem and maximum bipartite matching algorithm, assuming that initial g.Edges filled with pairs (x,y) of
+   initial set elements, that are in some appropriate reflexive, transitive and antisymmetric relation, i.e. (x,x) is here,
+   if (x,y) and (y,z) then (x,z) is here, if (x,y) and (y,x) are here then x == y. Antichain is a subset of initial set elements,
+   where every pair of elements are NOT in our reflexive, transitive and antisymmetric relation.
+
+                    Time: as time of maximum bipartite matching for bipartite graph with N vertexes in every part,
+                          where N is a number of vertexes into initial graph, O(E*sqrt(N)) or something like this              */
+
+namespace Namespace_Maximum_Antichain {
+  using namespace Namespace_Graph;
+  using namespace Namespace_Maximum_Bipartite_Matching;
+
+  class Maximum_Antichain {
+    private:
+      vector<int> l, r, l_used, r_used;
+
+      void dfs(int v, const Graph & g) {
+          l_used[v] = 1;
+
+          for (int i = 0, e_len = (int) g.Edges[v].size(); i < e_len; i++) {
+          int Q = g.Edges[v][i];
+                r_used[Q] = 1;
+                if (r[Q] != -1 && !l_used[r[Q]])
+                    dfs(r[Q], g);
+          }
+      }
+
+    public:
+      Maximum_Antichain() {
+        l.clear();
+        r.clear();
+        l_used.clear();
+        r_used.clear();
+      }
+
+      int find_Maximum_Antichain(const Graph & g, vector<int> & max_antichain) {
+
+//TODO: check (x,x) edges should be or not?
+
+        Maximum_Bipartite_Matching BM_finder;
+        BM_finder.find_Maximum_Bipartite_Matching(g, g.Vertex_Count, g.Vertex_Count, r);
+
+        l.resize(g.Vertex_Count);
+        l_used.resize(g.Vertex_Count);
+        r_used.resize(g.Vertex_Count);
+        for (int i = 0; i < g.Vertex_Count; i++) {
+          l[i] = -1;
+          l_used[i] = r_used[i] = 0;
+        }
+
+        for (int i = 0; i < g.Vertex_Count; i++)
+          if (r[i] != -1)
+            l[r[i]] = 0;
+
+        for (int i = 0; i < g.Vertex_Count; i++)
+          if (l[i] == -1 && !l_used[i])
+            dfs(i, g);
+
+        max_antichain.clear();
+        for (int i = 0; i < g.Vertex_Count; i++)
+          if (l_used[i] && !r_used[i])
+            max_antichain.push_back(i);
+
+        return (int) max_antichain.size();
+        }     
+    };
+}
+
+int const MAX_N = 760;
+
+struct pp_type {
+	int len;
+	int init_index;
+	char * ms;
+} pp[MAX_N];
+
+bool operator < (const pp_type &A, const pp_type &B) {
+	return A.len < B.len;
+}
+
+int const MAX_CH = 11010100;
+
+int const MAX_TEXT_LEN = MAX_CH;
+int const MAX_TRIE_LEN = MAX_CH;
+int const MAXC=0x7fffffff;
+
+char st_c[MAX_TEXT_LEN];
+
+struct my_mega_list {
+	int num;
+	my_mega_list *next;
+};
+
+struct {
+	int next[2];
+	my_mega_list *flag;
+	int suf_link,nearest,depth;
+
+	void init(int new_suf_link,int new_nearest,int new_depth) {
+		suf_link=new_suf_link;
+		nearest=new_nearest;
+		depth=new_depth;
+		flag = 0;
+		next[0] = next[1] = -1;
+	}
+} trie[MAX_TRIE_LEN+1];
+int trie_len;
+
+int t_used[MAX_TRIE_LEN+1];
+
+void init_trie() {
+	trie_len=1;
+	trie[0].init(0,0,0);
+}
+
+int find_next(int v,char ch) {
+	if (ch=='a') return trie[v].next[0];
+	else if (ch=='b') return trie[v].next[1];
+	return -1;
+}
+
+void add_string(char *st, int num) {
+	int v=0;
+	for (int i=0; st[i]; i++) {
+		int d=find_next(v,st[i]);
+		if (d==-1) {
+			trie[trie_len].init(-1,-1,trie[v].depth+1);
+			trie[v].next[st[i]-'a']=trie_len;
+			v=trie_len++;
+		}
+		else v=d;
+	}
+
+	my_mega_list * t = new my_mega_list;
+	t->num = num;
+	t->next = trie[v].flag;
+	trie[v].flag = t;
+}
+
+int go(int v,char ch) {
+	while (v) {
+		int d=find_next(v,ch);
+		if (d==-1) v=trie[v].suf_link;
+		else return d;
+	}
+	int d=find_next(v,ch);
+	if (d==-1) return 0;
+	return d;
+}
+
+void build_suf_links() {
+	queue<int> och;
+	och.push(0);
+	while (!och.empty()) {
+		int v=och.front();
+		och.pop();
+		for (int i=0; i<2; i++) {
+			int new_v=trie[v].next[i];
+			char new_ch='a'+i;
+			if (trie[new_v].suf_link==-1) {
+				if (v) trie[new_v].suf_link=go(trie[v].suf_link,new_ch);
+				else trie[new_v].suf_link=0;
+				och.push(new_v);
+			}
+		}
+	}
+}
+
+int find_nearest(int v) {
+	if (trie[v].nearest==-1)
+		if (trie[trie[v].suf_link].flag != 0) trie[v].nearest=trie[v].suf_link;
+		else trie[v].nearest=find_nearest(trie[v].suf_link);
+	return trie[v].nearest;
+}
+
+void build_nearest() {
+	for (int i=0; i<trie_len; i++)
+		if (trie[i].nearest==-1) trie[i].nearest=find_nearest(i);
+}
+
+
+char st[MAX_CH];
+int n;
+int sm[MAX_N][MAX_N];
+
+using namespace Namespace_Maximum_Antichain;
+
+Graph g;
+Maximum_Antichain ma_finder;
+
+int main() {
+	//freopen("input.txt","r",stdin);
+	//freopen("output.txt","w",stdout);
+
+	init_trie();
+
+	gets(st);
+	sscanf(st,"%d",&n);
+	
+	for (int i=0; i<n; i++) {
+		gets(st);
+		pp[i].len = (int) strlen(st);
+		pp[i].ms = new char [pp[i].len + 2];
+		strcpy(pp[i].ms,st);
+		pp[i].init_index = i;
+	}
+	
+	for (int i=0; i<n; i++) add_string(pp[i].ms,i);
+
+	build_suf_links();
+	build_nearest();
+
+	for (int i=0; i<n; i++)
+		for (int j=0; j<n; j++)
+			sm[i][j] = 0;
+
+  int t_flag = 0;
+	for (int i=0; i<n; i++) {
+		int v = 0;
+    t_flag++;
+		for (int j=0; j<pp[i].len; j++) {
+			v = go(v,pp[i].ms[j]);
+			int vv = v;
+			while (vv) {
+        if (t_used[vv] == t_flag) break;
+        t_used[vv] = t_flag;
+        
+				if (trie[vv].flag != 0) {
+					my_mega_list *t = trie[vv].flag;
+					while (t) {
+						int new_v = t->num;
+						if (new_v != i)
+              sm[new_v][i] = 1;
+						t = t->next;
+					}
+				}
+				vv=trie[vv].nearest;
+			}
+		}
+	}
+
+  g.Vertex_Count = n;
+  for (int i=0; i<n; i++)
+    for (int j=0; j<n; j++)
+      if (sm[i][j])
+        g.Edges[i].push_back(j);
+
+  vector<int> ans;
+  ma_finder.find_Maximum_Antichain(g,ans);
+
+  printf("%d\n",(int) ans.size());
+  for (int i=0; i<(int) ans.size(); i++) {
+    if (i>0) printf(" ");
+    printf("%d",ans[i]+1);
+  }
+
+	return 0;
+}

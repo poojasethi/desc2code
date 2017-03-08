@@ -1,0 +1,131 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cassert>
+using namespace std;
+int ans;
+bool lifting[3];
+bool lifted[3];
+bool hasMove[3],hasLift[3],hasThrow[3];
+int pos[3],rMove[3],rThrow[3];
+int liftWho[3];
+bool been[8*42*8*42*8*42];
+void dfs(int deep){
+	//printf("deep=%d\n",deep);
+
+	int totHash=0;
+	for(int i=0;i<3;i++){
+		int curHash=0;
+		if(hasMove[i])curHash=1;
+		curHash*=4;
+		if(!hasLift[i])curHash+=0;
+		else if(liftWho[i]==(i+1)%3)curHash+=1;
+		else if(liftWho[i]==(i+2)%3)curHash+=2;
+		else curHash+=3;
+		curHash*=42;
+		/*
+		if(!(pos[i]>=1 && pos[i]<=42))
+			printf("pos[%d]=%d\n",i,pos[i]);
+			*/
+		curHash+=pos[i]-1;
+//		assert(curHash>=0 && curHash<8*42);
+		totHash*=8*42;
+		totHash+=curHash;
+	}
+
+	/*
+	if(totHash>=(int)sizeof(been) || totHash<0){
+		printf("totHash=%d\n",totHash);
+		assert(false);
+	}
+	*/
+	if(been[totHash])return;
+	been[totHash]=true;
+
+	for(int i=0;i<3;i++)
+		ans=max(ans,pos[i]);
+	//Move
+	for(int i=0;i<3;i++)
+		if(!hasMove[i] && !lifting[i] && !lifted[i]){
+			for(int j=max(1,pos[i]-rMove[i]);j<=pos[i]+rMove[i];j++){
+				int back;
+				for(int k=0;k<3;k++)if(pos[k]==j)goto NextPos;
+				back=pos[i];
+				hasMove[i]=true;
+				pos[i]=j;
+				dfs(deep+1);
+				hasMove[i]=false;
+				pos[i]=back;
+NextPos:;
+			}
+		}
+
+	//Lift
+	for(int i=0;i<3;i++)
+		if(!hasLift[i] && !lifting[i] && !lifted[i]){
+			for(int j=0;j<3;j++)
+				if(j!=i && !lifted[j] && abs(pos[j]-pos[i])==1){
+					int back=pos[j];
+					pos[j]=pos[i];
+					hasLift[i]=true;
+					lifting[i]=true;
+					lifted[j]=true;
+					liftWho[i]=j;
+
+					if(liftWho[j]){
+						pos[liftWho[j]]=pos[i];
+					}
+					dfs(deep+1);
+					lifted[j]=false;
+					lifting[i]=false;
+					hasLift[i]=false;
+					pos[j]=back;
+					liftWho[i]=0;
+
+					if(liftWho[j]){
+						pos[liftWho[j]]=back;
+					}
+				}
+		}
+
+	//Throw
+	for(int i=0;i<3;i++)
+		if(!hasThrow[i] && lifting[i] && !lifted[i]){
+			for(int j=max(1,pos[i]-rThrow[i]);j<=pos[i]+rThrow[i];j++){
+				int bakWho;
+				for(int k=0;k<3;k++) if(pos[k]==j){
+					goto NextPos2;
+				}
+
+				hasThrow[i]=true;
+				lifting[i]=false;
+				lifted[liftWho[i]]=false;
+				pos[liftWho[i]]=j;
+				if(lifting[liftWho[i]]){
+					pos[liftWho[liftWho[i]]]=j;
+				}
+				bakWho=liftWho[i];
+				liftWho[i]=0;
+				dfs(deep+1);
+				hasThrow[i]=false;
+				lifting[i]=true;
+				lifted[bakWho]=true;
+				pos[bakWho]=pos[i];
+				if(lifting[bakWho]){
+					pos[liftWho[bakWho]]=pos[i];
+				}
+				liftWho[i]=bakWho;
+NextPos2:;
+			}
+		}
+}
+int main(){
+	for(int i=0;i<3;i++)
+		scanf("%d%d%d",&pos[i],&rMove[i],&rThrow[i]);
+
+	dfs(1);
+
+	cout<<ans<<endl;
+	return 0;
+}

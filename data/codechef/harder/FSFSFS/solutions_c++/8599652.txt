@@ -1,0 +1,376 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <queue>
+#include <algorithm>
+#include <vector>
+#include <cstring>
+#include <stack>
+#include <utility>
+#include <cassert>
+#include <map>
+#include <set>
+#include <string>
+using namespace std;
+#define INF (int(1e9))
+#define INFL (LL(1e18))
+#define in2(n,m) scanf("%d %d",&n,&m);
+#define in3(x,y,z) scanf("%d %d %d",&x,&y,&z);
+#define in4(p,q,r,s) scanf("%d %d %d %d",&p,&q,&r,&s);
+#define getcx getchar
+inline void in(int &n)
+{
+    n=0; int ch = getcx(); int sign = 1;
+    while(ch < '0' || ch > '9') { if(ch == '-') sign=-1; ch = getcx(); }
+    while(ch >= '0' && ch <= '9') { n = (n << 3) + (n << 1) + ch - '0', ch = getcx(); }
+    n = n * sign;
+}
+vector<int> prime;
+int arr[3005];
+void pre()
+{
+    int t;
+    t=2;
+    prime.push_back(2);
+    prime.push_back(3);
+    for(int i=5; i*i<=3000; )
+    {
+        if(arr[i]==0)
+        {
+            for(int j=i*i; j<=3000; j=j+i+i)
+            {
+                arr[j]=1;
+            }
+        }
+        i=i+t;
+        t=6-t;
+    }
+    t=2;
+    for(int i=5; i<=3000; )
+    {
+        if(arr[i]==0)
+        {
+            prime.push_back(i);
+        }
+        i=i+t;
+        t=6-t;
+    }
+}
+#define pii pair< int , int >
+vector<int> g;
+vector<pii> Z[3005];
+long long int mod;
+int memo[3005][65537];
+vector<int> adj[3005];
+int dp[65537];
+int currSum[65537],prevSum[65537];
+int FwdMapper[50],BwdMapper[50];
+bool state[1000];
+int func(int pos , int bitMask)
+{
+    if(pos==g.size())
+    {
+        if(bitMask==0)
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+    if(memo[pos][bitMask]!=-1)
+    {
+        return memo[pos][bitMask];
+    }
+    long long int ans = 0;
+    //do not do anyting
+    ans+=func(pos+1,bitMask);
+    if(ans>=mod)
+        ans%=mod;
+
+    //try to remove this one
+    int curr = g[pos];
+    bool fnd=true;
+    int currMask=bitMask;
+    for(int i=0; i<Z[curr].size(); i++)
+    {
+        int primeNo=Z[curr][i].first;
+        int primeCnt=Z[curr][i].second;
+        if(primeCnt>1)
+        {
+            fnd=false;
+            break;
+        }
+        if(state[primeNo]==false)
+        {
+            fnd=false;
+            break;
+        }
+        int bit=FwdMapper[primeNo];
+        if(!(bitMask&(1<<bit)))//0 means not present , nonZero means present
+        {
+            fnd=false;
+            break;
+        }
+        currMask&=~(1<<bit);
+    }
+    if(fnd==true)
+    {
+        ans+=func(pos+1,currMask);
+        if(ans>=mod)
+            ans%=mod;
+    }
+    memo[pos][bitMask]=ans;
+    return ans;
+}
+pair< bool , int > check(int pos,int bitMask,int n)
+{
+    int curr = pos;
+    bool fnd=true;
+    int currMask=bitMask;
+    for(int i=0; i<Z[curr].size(); i++)
+    {
+        int primeNo=Z[curr][i].first;
+        int primeCnt=Z[curr][i].second;
+        if(prime[primeNo]*prime[primeNo]>n)
+        {
+            //continue;
+            break;
+        }
+        if(primeCnt>1)
+        {
+            fnd=false;
+            break;
+        }
+        if(state[primeNo]==false)
+        {
+            fnd=false;
+            break;
+        }
+        int bit=FwdMapper[primeNo];
+        if(!(bitMask&(1<<bit)))//0 means not present , nonZero means present
+        {
+            fnd=false;
+            break;
+        }
+        currMask&=~(1<<bit);
+    }
+    return pair< bool , int >(fnd,currMask);
+}
+int main()
+{
+    //PreProcessing
+    pre();
+    for(int i=2; i<=3000; i++)
+    {
+        for(int j=0; j<prime.size(); j++)
+        {
+            int num=i;
+            if(num%prime[j]==0)
+            {
+                int cnt=0;
+                while(num%prime[j]==0)
+                {
+                    cnt++;
+                    num/=prime[j];
+                }
+                Z[i].push_back(pii(j,cnt));
+            }
+        }
+    }
+    //Done
+
+    int t;
+    in(t);
+    while(t--)
+    {
+        int n,m;
+        in(n);
+        in(m);
+        mod=m;
+
+        if(n==1)
+        {
+            printf("%d\n",2%mod);
+            continue;
+        }
+
+        int f[500]={0};
+        for(int i=2; i<=n; i++)
+        {
+            for(int j=0; j<Z[i].size(); j++)
+            {
+                int primeNo=Z[i][j].first;
+                int primeCnt=Z[i][j].second;
+                f[primeNo]+=primeCnt;
+            }
+        }
+
+        vector<int> v;//Carrying Id of small primeNumbers
+        vector<int> V;//Carrying Id of larger primeNumbers
+        for(int i=0; i<=499; i++)
+        {
+            if(f[i]%2==0)
+            {
+                continue;
+            }
+            int num=prime[i];
+            if(num*num<=n)
+            {
+                v.push_back(i);
+            }
+            else
+            {
+                V.push_back(i);
+            }
+        }
+
+        if(v.size()==0)
+        {
+            printf("%lld\n",2%mod);
+            continue;
+        }
+        for(int i=0; i<=499; i++)
+        {
+            state[i]=false;
+        }
+        int mapper=0;
+        for(int i=0; i<v.size(); i++)
+        {
+            FwdMapper[v[i]]=mapper;
+            state[v[i]]=true;
+            BwdMapper[mapper]=v[i];
+            mapper++;
+        }
+
+        for(int i=0; i<=n; i++)
+        {
+            adj[i].clear();
+        }
+
+        //Creating the graph
+        int _size=V.size();
+        for(int i=0; i<_size-1; i++)
+        {
+            for(int j=prime[V[i]]; j<=n; j+=prime[V[i]])
+            {
+                for(int k=prime[V[i+1]]; k<=n; k+=prime[V[i+1]])
+                {
+                    adj[j].push_back(k);
+                }
+            }
+        }
+        //Done
+
+
+        g.clear();
+        for(int i=2; i<=n; i++)
+        {
+            int num=i;
+            for(int j=0; j<v.size(); j++)
+            {
+                if(num%prime[v[j]]==0)
+                {
+                    num/=prime[v[j]];
+                }
+            }
+            if(num==1)
+            {
+                g.push_back(i);
+            }
+        }
+
+        int bitmask=0;
+        for(int i=0; i<v.size(); i++)
+        {
+            int bit=FwdMapper[v[i]];
+            bitmask|=(1<<bit);
+        }
+        memset(memo,-1,sizeof(memo));
+        for(int i=0; i<=bitmask; i++)
+        {
+            func(0,i);
+        }
+        for(int i=0; i<=bitmask; i++)
+        {
+            dp[i]=memo[0][i];
+        }
+
+
+
+        for(int i=0; i<=bitmask; i++)
+        {
+            currSum[i]=0;
+        }
+        for(int i=V.size()-1; i<=V.size()-1; i++)
+        {
+            for(int j=prime[V[i]]; j<=n; j+=prime[V[i]])
+            {
+                for(int k=0; k<=bitmask; k++)
+                {
+                    memo[j][k]=0;
+
+                    pair< bool , int > TT=check(j,k,n);
+                    bool fnd=TT.first;
+                    int currMask=TT.second;
+
+                    if(fnd==true)
+                    {
+                        memo[j][k]+=dp[currMask];
+                    }
+                    currSum[k]+=memo[j][k];
+                    currSum[k]%=mod;
+                }
+            }
+        }
+
+
+        //printf("bitmask is %d\n",bitmask);
+        int cnt=0;
+        for(int i=V.size()-2; i>=0; i--)
+        {
+            for(int j=0; j<=bitmask; j++)
+            {
+                prevSum[j]=currSum[j];
+                currSum[j]=0;
+            }
+            for(int j=prime[V[i]]; j<=n; j+=prime[V[i]])
+            {
+                for(int k=0; k<=bitmask; k++)
+                {
+                    cnt++;
+
+                    memo[j][k]=0;
+
+                    pair< bool , int > TT=check(j,k,n);
+                    bool fnd=TT.first;
+                    int currMask=TT.second;
+
+                    if(fnd==true)
+                    {
+                        memo[j][k]+=prevSum[currMask];
+                        if(memo[j][k]>=mod)
+                            memo[j][k]%=mod;
+                    }
+                    currSum[k]+=memo[j][k];
+                    currSum[k]%=mod;
+                }
+            }
+        }
+        //printf("cnt is %d\n",cnt);
+
+        long long int ans=0;
+        for(int i=prime[V[0]]; i<=n; i+=prime[V[0]])
+        {
+            ans+=memo[i][bitmask];
+            if(ans>=mod)
+                ans%=mod;
+        }
+        ans=ans+ans;
+        if(ans>=mod)
+            ans%=mod;
+        printf("%lld\n",ans);
+    }
+    return 0;
+}

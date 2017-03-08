@@ -1,0 +1,76 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+const int N = 1e5 + 10, MOD = 1e9 + 7;
+int n;
+int val[N], prod[N];
+vector<int> factors[N];
+long double lg_sum[N], lg_val[N];
+
+void preprocess(){
+	int i, j;
+	prod[0] = val[0];
+	for(i = 0; i < n; ++i)
+		lg_val[i] = log10(val[i]);
+	for(i = 1; i < n; ++i){
+		prod[i] = 1;
+		lg_sum[i] = 0.0;
+		for(j = i; j < n; j += i){
+			prod[i] = (1LL * prod[i] * val[j]) % MOD;
+			lg_sum[i] += lg_val[j];
+			factors[j].push_back(i);
+		}
+	}
+}
+
+int inv_mod(int num){
+	int ans = 1, power = MOD - 2;
+	while(power > 0){
+		if(power & 1)
+			ans = (1LL * ans * num) % MOD;
+		num = (1LL * num * num) % MOD;
+		power >>= 1;
+	}
+	return ans;
+}
+
+void update(int idx, int new_val){
+	double new_lg_val = log10(new_val);
+	--idx;
+	if(idx == 0){
+		val[0] = new_val;
+		lg_val[0] = new_lg_val;
+	}
+	else{
+		int i, j, sz = factors[idx].size(), inv_of_old_val = inv_mod(val[idx]);
+		for(i = 0; i < sz; ++i){
+			j = factors[idx][i];
+			prod[j] = (1LL * prod[j] * new_val) % MOD;
+			prod[j] = (1LL * prod[j] * inv_of_old_val) % MOD;
+			lg_sum[j] += new_lg_val - lg_val[idx];
+		}
+		val[idx] = new_val;
+		lg_val[idx] = new_lg_val;
+	}
+}
+
+int main(){
+	int i, q, ch, new_val;
+	scanf("%d", &n);
+	for(i = 0; i < n; ++i)
+		scanf("%d", &val[i]);
+	preprocess();
+	scanf("%d", &q);
+	while(q--){
+		scanf("%d", &ch);
+		if(ch == 1){
+			scanf("%d %d", &i, &new_val);
+			update(i, new_val);
+		}
+		else{
+			scanf("%d", &i);
+			printf("%d %d\n", (int) pow(10, lg_sum[i] + lg_val[0] - floor(lg_sum[i] + lg_val[0]) + 0.0000001), (1LL * prod[i] * val[0]) % MOD);
+		}
+	}
+	return 0;
+}

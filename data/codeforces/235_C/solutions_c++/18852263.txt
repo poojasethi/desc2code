@@ -1,0 +1,72 @@
+#include<cstdio>
+#include<cstring>
+#include<iostream>
+#define maxl 1000000
+struct suffixautomaton{
+	int ch[2*maxl+10][26],fa[2*maxl+10],cnt[2*maxl+10],mx[2*maxl+10],sz,root;
+	void extend(int &u,int c){
+		int nu=++sz;
+		mx[nu]=mx[u]+1;
+		while(u&&!ch[u][c])ch[u][c]=nu,u=fa[u];
+		if(!u)fa[nu]=root;
+		else{
+			int v=ch[u][c];
+			if(mx[v]==mx[u]+1)fa[nu]=v;
+			else{
+				int nv=++sz;
+				mx[nv]=mx[u]+1;
+				for(int i=0;i<26;i++)ch[nv][i]=ch[v][i];
+				fa[nv]=fa[v];
+				fa[v]=fa[nu]=nv;
+				while(u&&ch[u][c]==v)ch[u][c]=nv,u=fa[u];
+			}
+		}
+		cnt[u=nu]=1;
+	}
+	int c[maxl+10],que[2*maxl+10];
+	void build(){
+		char s[maxl+10];
+		scanf("%s",s);
+		int u=root=sz=1,len=strlen(s);
+		for(int i=0;i<len;i++)extend(u,s[i]-'a');
+		for(int i=1;i<=sz;i++)c[mx[i]]++;
+		for(int i=1;i<=len;i++)c[i]+=c[i-1];
+		for(int i=1;i<=sz;i++)que[c[mx[i]]--]=i;
+		for(int i=sz;i>0;i--)cnt[fa[que[i]]]+=cnt[que[i]];
+	}
+	int he,ta,sta[maxl+10],t;
+	bool vis[2*maxl+10];
+	void solve(){
+		int ans=0;
+		static char s[maxl+10];
+		scanf("%s",s);
+		int len=strlen(s);
+		for(int i=0;i<len;i++)que[i]=s[i]-'a';
+		he=0,ta=len-1;
+		int u=root;
+		for(int i=0;i<len;i++){
+			while(he<=ta&&ch[u][que[he]])u=ch[u][que[he++]];
+			if(he>ta){
+				if(vis[u])break;
+				vis[sta[++t]=u]=1;
+				ans+=cnt[u];
+			}
+			if(u==root)he++;
+			else if(len-ta+he-1==mx[fa[u]]+1)u=fa[u];
+			que[++ta]=s[i]-'a';
+		}
+		while(t)vis[sta[t--]]=0;
+		printf("%d\n",ans);
+	}
+}sam;
+using namespace std;
+int main(){
+	#ifndef ONLINE_JUDGE
+	freopen("C.in","r",stdin);
+	#endif
+	sam.build();
+	int T;
+	scanf("%d",&T);
+	while(T--)sam.solve();
+	return 0;
+}

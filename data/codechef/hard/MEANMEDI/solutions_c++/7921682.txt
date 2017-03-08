@@ -1,0 +1,90 @@
+#include<cmath>
+#include<cstdio>
+#include<cstring>
+#include<numeric>
+#include<algorithm>
+ 
+#define rep(i,n) for(int i=0;i<(n);i++)
+ 
+using namespace std;
+ 
+int n,k,a[60];
+ 
+// dp[i][j] : i å��ã�®å��ã�§ j ã��ä½�ã��ã��ã��ã�©ã��ã��
+// ã��è©¦ã��ã�¦ã��ã�� dp[j] ã��è��ã��ã��ã�¨ã��ã��ã��ã��ã��ã��
+ 
+int dp[36001]; // dp[j] : i bitç�®ã�¯ i å��ã�®å��ã�§ j ã��ä½�ã��ã��ã��ã�©ã��ã��ã��è¡¨ã��
+int nl[61],l[61][36001]; // l[i][j] := å·¦ã��ã�� a[i] ã�¾ã�§ã��ä½¿ã�£ã�¦ m å��ã�®å��ã�¨ã��ã�¦æ�¸ã��ã�� j ç�ªç�®ã�®æ�°
+int nr[61],r[61][36001]; // l[i][j] := å�³ã��ã�� a[i] ã�¾ã�§ã��ä½¿ã�£ã�¦ m å��ã�®å��ã�¨ã��ã�¦æ�¸ã��ã�� j ç�ªç�®ã�®æ�°
+ 
+void precalc(){
+	int m,Omega,sum=accumulate(a+n-k/2,a+n,0);
+ 
+	m=(k-1)/2; Omega=(1<<(m+1))-1;
+	memset(dp,0,sizeof dp);
+	dp[0]=1;
+	rep(i,n){
+		for(int j=sum-a[i];j>=0;j--){
+			dp[j+a[i]]|=(dp[j]<<1)&Omega;
+		}
+ 
+		nl[i]=0;
+		rep(j,sum+1) if(dp[j]&(1<<m)) l[i][nl[i]++]=j;
+	}
+ 
+	m=k/2; Omega=(1<<(m+1))-1;
+	memset(dp,0,sizeof dp);
+	dp[0]=1;
+	for(int i=n-1;i>=0;i--){
+		for(int j=sum-a[i];j>=0;j--){
+			dp[j+a[i]]|=(dp[j]<<1)&Omega;
+		}
+ 
+		nr[i]=0;
+		rep(j,sum+1) if(dp[j]&(1<<m)) r[i][nr[i]++]=j;
+	}
+}
+ 
+int nearest(const int *a,int sz,int tar){
+	int idx=lower_bound(a,a+sz,tar)-a;
+	if(idx==sz) return a[sz-1];
+	if(idx==0) return a[0];
+ 
+	return abs(a[idx-1]-tar)<abs(a[idx]-tar)?a[idx-1]:a[idx];
+}
+ 
+int main(){
+	int T; scanf("%d",&T);
+	while(T--){
+		scanf("%d%d",&n,&k);
+		rep(i,n) scanf("%d",a+i);
+		sort(a,a+n);
+ 
+		if(k==1){ puts("0"); continue; }
+		if(k==2){
+			int ans=1<<29;
+			rep(j,n) rep(i,j) ans=min(ans,abs(2*a[i]-(a[i]+a[j])));
+			printf("%.3f\n",ans/2.0);
+			continue;
+		}
+ 
+		precalc();
+ 
+		int ans=1<<29;
+		for(int i=(k-1)/2;n-i>k/2;i++){
+			int k_med=k*a[i]; // k times median
+ 
+			rep(j,nl[i-1]){
+				int L=l[i-1][j];
+				int R=nearest(r[i+1],nr[i+1],k_med-(L+a[i]));
+				int k_mean=L+a[i]+R; // k times mean
+				ans=min(ans,abs(k_mean-k_med));
+			}
+		}
+ 
+		printf("%.3f\n",(double)ans/k);
+	}
+ 
+	return 0;
+}
+ 

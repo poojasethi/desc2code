@@ -1,0 +1,186 @@
+#include<iostream>
+#include<cstdio>
+#include<vector>
+#include<map>
+#include<vector>
+#include <cassert>
+#include<cstring>
+
+#define maxm 1123456
+#define ll long long
+#define mod1 9999991
+#define mod2 1000000009
+#define base 29
+#define pln_ALPHA 26
+
+using namespace std;
+
+char inp[maxm];
+bool is_palin[maxm], is_palin1[maxm];
+ll power1[maxm], power2[maxm];
+int mxLen;
+string inpArr[maxm];
+struct node
+{
+    ll pln;
+    ll ends;
+    node* child[pln_ALPHA];
+};
+
+
+void rollingHash()
+{
+    int len = strlen(inp);
+
+    for(int i = 0; i < len; i++)is_palin[i] = false;
+    is_palin[len-1] = true;
+    ll str1 = inp[len-1] - 'a' + 1, rstr1 = inp[len-1] - 'a' + 1;
+    ll str2 = inp[len-1] - 'a' + 1, rstr2 = inp[len-1] - 'a' + 1;
+
+    for(int i = len-2; i >= 0; i--)
+    {
+        ll x = inp[i] - 'a' + 1;
+        str1 = (str1*base + x) % mod1;
+        rstr1 = (rstr1 + x*power1[len - i - 1]) % mod1;
+        str2 = (str2*base + x) % mod2;
+        rstr2 = (rstr2 + x*power2[len - i - 1]) % mod2;
+        //cout << str1 << " " << rstr1 << endl;
+        //cout << str2 << " " << rstr2 << endl;
+        //cout << endl;
+        if((str1 == rstr1) )is_palin[i] = true;
+    }
+}
+void rollingHash1()
+{
+    int len = strlen(inp);
+
+    for(int i = 0; i < len; i++)is_palin1[i] = false;
+    is_palin1[0] = true;
+    ll str1 = inp[0] - 'a' + 1, rstr1 = inp[0] - 'a' + 1;
+    ll str2 = inp[0] - 'a' + 1, rstr2 = inp[0] - 'a' + 1;
+
+    for(int i = 1; i < len; i++)
+    {
+        ll x = inp[i] - 'a' + 1;
+        str1 = (str1*base + x) % mod1;
+        rstr1 = (rstr1 + x*power1[i]) % mod1;
+        str2 = (str2*base + x) % mod2;
+        rstr2 = (rstr2 + x*power2[i]) % mod2;
+        if((str1 == rstr1))is_palin1[i] = true;
+    }
+}
+
+void insertTrie(node* root, int j)
+{
+    if(j == mxLen)
+    {
+        root->pln++;
+        root->ends++;
+        return;
+    }
+    if(is_palin[j])root->pln++;
+
+    int edge = inp[j] - 'a';
+    if(root->child[edge] == NULL)
+    {
+        node *temp = new node();
+        temp->pln = 0;
+        temp->ends = 0;
+        for(int i = 0; i < pln_ALPHA; i++)temp->child[i] = NULL;
+        root->child[edge] = temp;
+    }
+    insertTrie(root->child[edge], j+1);
+}
+
+ll get_ans(node* root)
+{
+    rollingHash1();
+    ll ans = 0;
+    int x = inp[mxLen-1] - 'a';
+    if(root->child[x] == NULL)return 0;
+    node* temp = root->child[x];
+    int i = -1;
+    for(i = mxLen-2; i >= 0; i--)
+    {
+        int x = inp[i] - 'a';
+        if(is_palin1[i])ans = (ans + temp->ends);
+        temp = temp->child[x];
+        if(temp == NULL)break;
+    }
+    //cout <<" a " << ans << endl;
+    if(i == -1 && temp != NULL)ans = ans + temp->pln;
+    //cout << " b " << ans << endl;
+    return ans;
+
+}
+
+int main()
+{
+    int t;
+    scanf("%d", &t);
+    power1[0] = 1;
+    power2[0] = 1;
+    for(ll i = 1; i < maxm; i++)
+    {
+        power1[i] = (base * power1[i-1]) % mod1;
+        power2[i] = (base * power2[i-1]) % mod2;
+    }
+
+    while(t--)
+    {
+        int n;
+        scanf("%d", &n);
+        node* root = new node();
+        root->ends = 0;
+        root->pln = 0;
+        for(int i = 0; i < pln_ALPHA; i++)
+        {
+            root->child[i] = NULL;
+        }
+        ll ans = 0;
+        int ix = 0;
+        while(n--)
+        {
+            scanf("%s", inp);
+            mxLen = strlen(inp);
+            inpArr[ix] = inp;
+            /*for(int j = 0; j < mxLen; j++)
+            {
+                inpArr[ix][j] = inp[j];
+            }*/
+            ix++;
+            rollingHash();
+
+
+            ans = ans + get_ans(root);
+            insertTrie(root, 0);
+            /*for(int i = 0; i < strlen(inp); i++)
+            {
+                if(is_palin[i])cout << i << " YES\n";
+                else cout << i << "NO\n";
+            }*/
+        }
+        node* root1 = new node();
+        root1->ends = 0;
+        root1->pln = 0;
+        //cout << endl;
+        for(int j = ix-1; j >= 0; j--)
+        {
+            int k;
+            for(k = 0; k < inpArr[j].length(); k++)
+            {
+                inp[k] = inpArr[j][k];
+            }
+            inp[k] = '\0';
+            mxLen = strlen(inp);
+            //cout << inpArr[j] << endl;
+            //cout << mxLen << endl;
+            rollingHash();
+
+            ans = ans + get_ans(root1);
+            insertTrie(root1, 0);
+            //cout << ans << endl;
+        }
+        cout << ans << endl;
+    }
+}

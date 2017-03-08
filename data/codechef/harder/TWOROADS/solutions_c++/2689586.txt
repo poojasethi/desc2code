@@ -1,0 +1,132 @@
+#include <cstdlib>
+#include <cctype>
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <iostream>
+#include <fstream>
+#include <map>
+#include <set>
+#include <queue>
+using namespace std;
+
+#define For(i,n) for(int i=0;i<n;i++)
+#define sz(i) int(i.size())
+#define mst(i,n) memset(i,n,sizeof(i))
+#define eps 1e-7
+#define MOD 1000000007
+#define LL long long
+#define pi acos(-1)
+#define ALL(n) n.begin(),n.end()
+#define pb push_back
+#define mp make_pair
+
+int n;
+#define type_t double
+type_t x[105],y[105];
+int X[105],Y[105];
+type_t sqr(type_t a){return a * a;}
+
+class PCA
+{
+public:
+	int num;
+	type_t sumX, sumY, sumX2, sumY2, sumXY;
+	type_t normalizedSumX, normalizedSumY, normalizedSumX2, normalizedSumY2, normalizedSumXY;
+	type_t avgX, avgY;
+	type_t p, q, r;
+	/*matrix:
+	|p r|
+	|r q|
+	*/
+	PCA(){
+		num = 0;
+		sumX = sumY = sumX2 = sumY2 = sumXY = 0;
+	};
+	~PCA(){};
+	void addNode(type_t x, type_t y){
+	    //cout << x << " " << y << endl;
+		num++;
+		sumX  += x;
+		sumY  += y;
+		sumX2 += x*x;
+		sumY2 += y*y;
+		sumXY += x*y;
+	}
+	void delNode(type_t x, type_t y){
+		num--;
+		sumX  -= x;
+		sumY  -= y;
+		sumX2 -= x*x;
+		sumY2 -= y*y;
+		sumXY -= x*y;
+	}
+	type_t update(){
+		if(num <= 2)
+			return 0;
+		avgX = sumX / num;
+		avgY = sumY / num;
+		normalizedSumX2 = sumX2 - sqr(sumX) / num;
+		normalizedSumY2 = sumY2 - sqr(sumY) / num;
+		normalizedSumXY = sumXY - sumX * sumY / num;
+
+		return 0.5*(normalizedSumX2 + normalizedSumY2)-sqrt(sqr(normalizedSumXY)+0.25*sqr(normalizedSumX2-normalizedSumY2));
+	}
+};
+
+int main(){
+	cin >> n;
+	PCA pca;
+	For(i, n) {
+	    cin >> x[i] >> y[i];
+	    X[i] = x[i] * 10;
+	    Y[i] = y[i] * 10;
+	    pca.addNode(x[i], y[i]);
+	}
+	//printf("%.8lf\n",pca.update());
+    //cout << pca.update() << endl;
+	//return 0;
+	type_t ans = pca.update();
+	For(i, n)
+		For(j, n) if(i != j){
+			vector<pair<pair<int, int> , int> >mapLength;
+			For(k, n){
+				//map point Pk to vector Pj-Pi
+				int dotP = (X[k]-X[i]) * (X[j]-X[i]) + (Y[k]-Y[i]) * (Y[j]-Y[i]);
+				//and should break the tie!!!
+				int crossP = (X[k]-X[i]) * (Y[j]-Y[i]) - (Y[k]-Y[i]) * (X[j]-X[i]);
+				//dotP /= sqrt( sqr(x[j]-x[i]) + sqr(y[j]-y[i]) );
+				mapLength.pb(mp(mp(dotP, crossP), k));
+			}
+			sort(ALL(mapLength));
+			PCA pca1, pca2;
+			//initialize
+			bool side[105];
+			For(k, n){
+				if(k == min(i, j) || (x[k]-x[i]) * (y[j]-y[i]) - (y[k]-y[i]) * (x[j]-x[i]) < 0 )
+					pca1.addNode(x[k], y[k]), side[k] = true;
+				else
+					pca2.addNode(x[k], y[k]), side[k] = false;
+			}
+			ans = min(ans, pca1.update() + pca2.update());
+			//scan
+			For(kk, n){
+			    int k = mapLength[kk].second;
+				if(side[k]){
+					pca1.delNode(x[k], y[k]);
+					pca2.addNode(x[k], y[k]);
+				}
+				else{
+					pca1.addNode(x[k], y[k]);
+					pca2.delNode(x[k], y[k]);
+				}
+				ans = min(ans, pca1.update() + pca2.update());
+				//cout << pca1.update() << " " << pca2.update() << endl;
+				//cout << pca1.num << " " << pca2.num << endl;
+			}
+		}
+	printf("%.15lf\n", ans / n);
+}

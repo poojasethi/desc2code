@@ -1,0 +1,137 @@
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <iostream>
+#include <stdlib.h>
+#include <assert.h>
+#include <vector>
+#include <string>
+#include <set>
+#include <map>
+using namespace std;
+typedef long long lint;
+
+const int MAX_N = 3e5 + 10;
+const int M = 1e9 + 7;
+lint po[MAX_N], ha[MAX_N];
+int s[MAX_N];
+char ch[3][MAX_N];
+
+void init_all(){
+	po[0] = 1;
+	for(int i = 1; i < MAX_N; i++) po[i] = po[i - 1] * M;
+}
+
+
+int sl[3]; // add sum len of each string
+inline int who(int a){
+	for(int i = 0; i < 3; i++){
+		if(a <= sl[i]) return i;
+	}
+	cerr<<"Error"<<endl;
+}
+inline int len(int a){
+	return sl[who(a)];
+}
+
+
+void init_ha(int * s, int n){
+	ha[0] = 0;
+	for(int i = 0; i < n; i++) ha[i + 1] = ha[i] * M + s[i];
+}
+inline lint hash(int a, int b){
+	return ha[b] - ha[a] * po[b - a];
+}
+inline bool equal(int a, int b, int t){
+	return hash(a, a + t) == hash(b, b + t);
+}
+inline int equal_len(int a, int b){
+	int l = 0, r = min(len(a) - a, len(b) - b) + 1, m;
+	while(r - l > 1){
+		m = l + r >> 1;
+		if(equal(a, b, m)) l = m;
+		else r = m;
+	}
+	return l;
+}
+inline bool cmp(int a, int b){
+	int l = equal_len(a, b);
+	return s[a + l] < s[b + l];
+}
+
+int sa[MAX_N], h[MAX_N], rk[MAX_N];
+vector<int> zu[MAX_N];
+int pa[MAX_N];
+int has[MAX_N][3];
+lint dp[MAX_N];
+
+int get_pa(int x){
+	return pa[x] == x ? x: pa[x] = get_pa(pa[x]);
+}
+void gao(int * s, int n, int minLen){ // by s
+	init_ha(s, n);
+	for(int i = 0; i < n; i++){
+		sa[i] = i;
+	}
+	sort(sa, sa + n, cmp);
+	for(int i = 0; i < n; i++) rk[sa[i]] = i;
+	for(int i = 0; i < n; i++) zu[i].clear();
+	for(int i = 1; i < n; i++){
+		h[i] = equal_len(sa[i - 1], sa[i]);
+		zu[h[i]].push_back(i);
+	}
+	
+	for(int i = 0; i < n; i++){
+		pa[i] = i;
+		for(int j = 0; j < 3; j++) has[i][j] = 0;
+		has[i][who(i)]++;
+	}
+	
+	fill(dp, dp + n, 0);
+	dp[n] = 0;
+	for(int i = n - 1; i > 0; i--){
+		dp[i] = dp[i + 1];
+		for(int j = 0; j < zu[i].size(); j++){
+			int p = zu[i][j], q = p - 1;
+			int fp = get_pa(sa[p]), fq = get_pa(sa[q]);
+			dp[i] += M - 1LL * has[fp][0] * has[fp][1] * has[fp][2] % M;
+			dp[i] %= M;
+			dp[i] += M - 1LL * has[fq][0] * has[fq][1] * has[fq][2] % M;
+			dp[i] %= M;
+			pa[fq] = fp;
+			for(int k = 0; k < 3; k++)
+				has[fp][k] += has[fq][k];
+			dp[i] += 1LL * has[fp][0] * has[fp][1] % M * has[fp][2] % M;
+			dp[i] %= M;
+		}
+	}
+	for(int i = 1; i <= minLen; i++){
+		printf("%d ", dp[i]);
+	}
+}
+
+int main() {
+	init_all();
+	
+	int l[3];
+	for(int i = 0; i < 3; i++){
+		scanf("%s", ch[i]);
+		l[i] = strlen(ch[i]);
+	}
+
+	sl[0] = l[0];
+	for(int i = 1; i < 3; i++) sl[i] = sl[i - 1] + l[i] + 1;
+
+	
+	int p = 0;
+	for(int i = 0; i < l[0]; i++) s[p++] = ch[0][i];
+	s[p++] = '#';
+	for(int i = 0; i < l[1]; i++) s[p++] = ch[1][i];
+	s[p++] = '$';
+	for(int i = 0; i < l[2]; i++) s[p++] = ch[2][i];
+	s[p++] = '\0';
+
+	gao(s, p, min(min(l[0], l[1]), l[2]));
+
+	return 0;
+}

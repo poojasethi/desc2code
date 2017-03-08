@@ -1,0 +1,141 @@
+#include<cstdio>
+#include<cstring>
+#include<iostream>
+#include<cstdlib>
+#include<algorithm>
+using namespace std;
+
+const int maxn=100010;
+int n,m,root,type,x;
+int fa[maxn];
+int h[maxn],cnt=0;
+int val[maxn],dep[maxn];
+struct edge{
+	int to,next;
+}G[maxn<<1];
+int tot=0;
+struct ASK{
+	int u,v,k,val,t;
+}Q[maxn];
+int rt[maxn],sum=0;
+struct Seg_Tree{
+	int L,R,v;
+}t[8000010];
+int anc[maxn][20];
+void add(int x,int y){
+	++cnt;G[cnt].to=y;G[cnt].next=h[x];h[x]=cnt;
+}
+void read(int &num){
+	num=0;char ch=getchar();
+	while(ch<'!')ch=getchar();
+	while(ch>='0'&&ch<='9')num=num*10+ch-'0',ch=getchar();
+}
+void build(int &o,int L,int R){
+	o=++sum;
+	if(L==R)return;
+	int mid=(L+R)>>1;
+	build(t[o].L,L,mid);
+	build(t[o].R,mid+1,R);
+}
+void UPD(int &o,int L,int R,int p){
+	t[++sum]=t[o];o=sum;
+	if(L==R){t[o].v++;return;}
+	int mid=(L+R)>>1;
+	if(p<=mid)UPD(t[o].L,L,mid,p);
+	else UPD(t[o].R,mid+1,R,p);
+	t[o].v=t[t[o].L].v+t[t[o].R].v;
+}
+int ask(int o,int L,int R,int x,int y){
+	if(L>=x&&R<=y)return t[o].v;
+	int mid=(L+R)>>1;
+	if(y<=mid)return ask(t[o].L,L,mid,x,y);
+	else if(x>mid)return ask(t[o].R,mid+1,R,x,y);
+	else return ask(t[o].L,L,mid,x,y)+ask(t[o].R,mid+1,R,x,y);
+	t[o].v=t[t[o].L].v+t[t[o].R].v;
+}
+void DFS(int u){
+	rt[u]=rt[fa[u]];
+	UPD(rt[u],1,m,val[u]);
+	for(int i=h[u];i;i=G[i].next){
+		int v=G[i].to;
+		if(v==fa[u])continue;
+		dep[v]=dep[u]+1;
+		DFS(v);
+	}return;
+}
+void pre_LCA(){
+	for(int i=1;i<=n;++i){
+		anc[i][0]=fa[i];
+		for(int j=1;(1<<j)<=n;++j)anc[i][j]=-1;
+	}
+	for(int j=1;(1<<j)<=n;++j){
+		for(int i=1;i<=n;++i){
+			if(anc[i][j-1]!=-1){
+				int a=anc[i][j-1];
+				anc[i][j]=anc[a][j-1];
+			}
+		}
+	}return;
+}
+int LCA(int p,int q){
+	if(dep[p]<dep[q])swap(p,q);
+	int log;
+	for(log=0;(1<<log)<=dep[p];++log);--log;
+	for(int i=log;i>=0;--i){
+		if(dep[p]-(1<<i)>=dep[q])p=anc[p][i];
+	}
+	if(p==q)return p;
+	for(int i=log;i>=0;--i){
+		if(anc[p][i]!=-1&&anc[p][i]!=anc[q][i]){
+			p=anc[p][i];q=anc[q][i];
+		}
+	}return anc[p][0];
+}
+int Get_ans(int u,int sum,int d,int k,int L,int R){
+	int log,tmp=u;
+	for(log=0;(1<<log)<=dep[u];++log);--log;
+	for(int i=log;i>=0;--i){
+		if(anc[u][i]!=-1&&dep[anc[u][i]]>d){
+			int a=anc[u][i];
+			int now=ask(rt[a],1,m,L,R);
+			now=sum-now+(val[a]<=R&&val[a]>=L);
+			now=dep[tmp]-dep[a]-now;
+			if(now<k)u=anc[u][i];
+		}
+	}return anc[u][0];
+}
+
+int main(){
+	read(n);
+	for(int i=1;i<=n;++i){
+		read(fa[i]);
+		if(!fa[i])root=i;
+		else add(fa[i],i);
+	}read(m);
+	for(int i=1;i<=n;++i)val[i]=m+1;
+	for(int i=1;i<=m;++i){
+		read(type);
+		if(type==1)read(x),val[x]=i;
+		else{
+			++tot;
+			read(Q[tot].u);read(Q[tot].v);
+			read(Q[tot].k);read(Q[tot].val);
+			Q[tot].t=i;
+		}
+	}m++;
+	build(rt[0],1,m);DFS(root);fa[root]=-1;pre_LCA();
+	for(int i=1;i<=tot;++i){
+		int u=Q[i].u,v=Q[i].v,k=Q[i].k,lim=Q[i].val,tim=Q[i].t;
+		int lca=LCA(u,v);lim++;
+		int L=ask(rt[u],1,m,lim,tim)-(val[u]<=tim&&val[u]>=lim);
+		int R=ask(rt[v],1,m,lim,tim)-(val[v]<=tim&&val[v]>=lim);
+		int mid=ask(rt[lca],1,m,lim,tim);
+		int S=L+R-2*mid+(val[lca]<=tim&&val[lca]>=lim);
+		S=dep[u]+dep[v]-2*dep[lca]-1-S;
+		if(S<k){printf("-1\n");continue;}
+		int tmp=L-mid+(val[lca]<=tim&&val[lca]>=lim);
+		tmp=dep[u]-dep[lca]-tmp;
+		if(tmp>=k)printf("%d\n",Get_ans(u,L,dep[lca],k,lim,tim));
+		else printf("%d\n",Get_ans(v,R,dep[lca]+1,S-k+1,lim,tim));
+	}return 0;
+}

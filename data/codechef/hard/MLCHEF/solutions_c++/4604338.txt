@@ -1,0 +1,133 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+#define MX 100005
+#define INF 2000000000
+
+using namespace std;
+
+vector <int> v[MX];
+int intime[MX];
+int outtime[MX];
+int health[MX];
+int lazy[4*MX];
+int alive[4*MX];
+int minhealth[4*MX];
+int actual[MX];
+int timer;
+
+void dfs(int curr, int prev)
+{
+     actual[timer] = curr;
+     intime[curr] = timer++;
+     for ( int i = 0; i < (int)v[curr].size(); i++ ) {
+         if ( v[curr][i] == prev ) continue;
+         dfs(v[curr][i], curr);
+     }
+     outtime[curr] = timer;
+}
+
+void build(int node, int left, int right)
+{
+     if ( left > right ) return;
+     if ( left == right ) {
+          minhealth[node] = health[actual[left]];
+          alive[node] = 1;
+          return;
+     }
+     int mid = (left+right)/2;
+     build(node*2, left, mid);
+     build(node*2+1, mid+1, right);
+     minhealth[node] = min(minhealth[node*2], minhealth[node*2+1]);
+     alive[node] = alive[node*2] + alive[node*2+1];
+}
+
+void check(int node, int left, int right)
+{
+     if ( lazy[node] != 0 ) {
+          minhealth[node] -= lazy[node];
+          if ( left != right ) {
+               lazy[node*2] += lazy[node];
+               lazy[node*2+1] += lazy[node];
+          }
+          lazy[node] = 0;
+     }
+     return;
+}
+
+void update(int node, int left, int right, int i, int j, int x)
+{
+     check(node, left, right);
+     if ( left > right || left > j || right < i ) return;
+     if ( left >= i && right <= j ) {
+          lazy[node] += x;
+          check(node, left, right);
+          return;
+     }
+     int mid = (left+right)/2;
+     update(node*2, left, mid, i, j, x);
+     update(node*2+1, mid+1, right, i, j, x);
+     minhealth[node] = min(minhealth[node*2], minhealth[node*2+1]);
+}
+
+int query(int node, int left, int right, int i, int j)
+{
+    check(node, left, right);
+    if ( left > right || left > j || right < i ) return 0;
+    if ( left == right ) {
+         if ( minhealth[node] <= 0 ) {
+              minhealth[node] = INF;
+              alive[node] = 0;
+         }
+         return alive[node];
+    }
+    if ( left >= i && right <= j ) {
+       if ( minhealth[node] <= 0 ) {
+            int mid = (left+right)/2;
+            query(node*2, left, mid, i, j);
+            query(node*2+1, mid+1, right, i, j);
+            alive[node] = alive[node*2] + alive[node*2+1];
+            minhealth[node] = min(minhealth[node*2], minhealth[node*2+1]);
+       }   
+       return alive[node];
+    }
+    
+    int mid = (left+right)/2;
+    int ans = 0;
+    ans += query(node*2, left, mid, i, j);
+    ans += query(node*2+1, mid+1, right, i, j);
+    alive[node] = alive[node*2] + alive[node*2+1];
+    minhealth[node] = min(minhealth[node*2], minhealth[node*2+1]);
+    return ans;
+}
+
+int main()
+{
+    int n,x,q,type,y;
+    cin >> n;
+    health[0] = INF;
+    for ( int i = 1; i <= n; i++ ) {
+        cin >> health[i] >> x;
+        v[i].push_back(x);
+        v[x].push_back(i);
+    }
+    timer = 0;
+    dfs(0,-1);
+    build(1,0,n);
+    cin >> q;
+    while ( q-- ) {
+          cin >> type;
+          if ( type == 1 ) {
+               cin >> x >> y;
+               update(1,0,n,intime[x]+1,outtime[x]-1,y);
+          }
+          else {
+               cin >> x;
+               int ans = query(1,0,n,intime[x]+1, outtime[x]-1);
+               cout << ans << endl;
+          }
+    }
+    return 0;
+}

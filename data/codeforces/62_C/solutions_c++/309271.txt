@@ -1,0 +1,92 @@
+/*
+ * 2011-02-28  Martin  <Martin@Martin-desktop>
+
+ * 
+ */
+#include <iostream>
+#include <fstream>
+#include <complex>
+#include <cmath>
+
+using namespace std;
+
+#define cmplxd complex <double>
+
+#define MaxiN 105
+
+inline int Sig(double X)
+{
+    if (fabs(X) < 1e-5)
+        return 0;
+    return (X < 0) ? - 1 : 1;
+}
+
+inline double Det(cmplxd A, cmplxd B)
+{
+    return real(A) * imag(B) - imag(A) * real(B);
+}
+
+inline bool isStrictCross(cmplxd A, cmplxd B, cmplxd C, cmplxd D)
+{
+    return Sig(Det(C - A, B - A)) * Sig(Det(D - A, B - A)) < 0 && Sig(Det(A - C, D - C)) * Sig(Det(B - C, D - C)) < 0;
+}
+
+inline cmplxd CrossPoint(cmplxd A, cmplxd B, cmplxd C, cmplxd D)
+{
+    double S1 = Det(C - A, B - A), S2 = Det(B - A, D - A);
+    return (C * S2 + D * S1) / (S1 + S2);
+}
+
+struct TTri
+{
+    cmplxd A, B, C;
+    inline bool In(cmplxd P)
+    {
+        return Sig(fabs(Det(A - P, B - P)) / 2.0 + fabs(Det(B - P, C - P)) / 2.0 + fabs(Det(C - P, A - P)) / 2.0 - fabs(Det(B - A, C - A)) / 2.0) == 0 && Sig(Det(A - P, B - P)) != 0 && Sig(Det(B - P, C - P)) != 0 && Sig(Det(C - P, A - P)) != 0;
+    }
+};
+
+int N, Tot;
+TTri Tri[MaxiN];
+pair <cmplxd, cmplxd> Seg[MaxiN * MaxiN * 9];
+double Ans;
+
+int main()
+{
+    scanf("%d", &N);
+    for (int i = 1; i <= N; ++ i)
+    {
+        int x1, x2, x3, y1, y2, y3;
+        scanf("%d%d%d%d%d%d", &x1, &y1, &x2, &y2, &x3, &y3);
+        Tri[i].A = cmplxd (x1, y1);
+        Tri[i].B = cmplxd (x2, y2);
+        Tri[i].C = cmplxd (x3, y3);
+        Seg[++ Tot] = make_pair(Tri[i].A, Tri[i].B);
+        Seg[++ Tot] = make_pair(Tri[i].B, Tri[i].C);
+        Seg[++ Tot] = make_pair(Tri[i].C, Tri[i].A);
+    }
+    for (int i = 1; i < Tot; ++ i)
+        for (int j = i + 1; j <= Tot; ++ j)
+            if (isStrictCross(Seg[i].first, Seg[i].second, Seg[j].first, Seg[j].second))
+            {
+                cmplxd CP = CrossPoint(Seg[i].first, Seg[i].second, Seg[j].first, Seg[j].second);
+                Seg[++ Tot] = make_pair(CP, Seg[i].second);
+                Seg[i].second = CP;
+                Seg[++ Tot] = make_pair(CP, Seg[j].second);
+                Seg[j].second = CP;
+            }
+    for (int i = 1; i <= Tot; ++ i)
+    {
+        cmplxd T = (Seg[i].first + Seg[i].second) / 2.0;
+        bool Flag = 0;
+        for (int j = 1; j <= N; ++ j)
+            if (Tri[j].In(T))
+            {
+                Flag = 1;
+                break;
+            }
+        if (!Flag)
+            Ans += abs(Seg[i].first - Seg[i].second);
+    }
+    printf("%.10lf\n", Ans);
+}

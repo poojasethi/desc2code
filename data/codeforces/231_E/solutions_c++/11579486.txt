@@ -1,0 +1,110 @@
+#include <vector>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+
+const int MAXLG = 20;
+const int MAXN = 100005;
+const int MOD = 1000000007;
+
+bool done[MAXN], bio[MAXN];
+
+int n, m, k;
+int cnum, cnt = 1;
+
+int anc[MAXN][MAXLG];
+int prev[MAXN], c[MAXN], out[MAXN];
+int dad[MAXN], sum[MAXN], pow[MAXN], dep[MAXN];
+
+vector<int> e[MAXN], ec[MAXN];
+
+void cycle(int x, int y) {
+    while (x != y) {
+        c[x] = cnt;
+        x = prev[x];
+    }
+    c[x] = cnt;
+}
+
+void dfs(int x) {
+    if (bio[x]) {
+        cycle(prev[x], x);
+        cnt++;
+        return;
+    } 
+    bio[x] = 1;
+    for (int i=0; i<e[x].size(); i++)
+        if (!c[e[x][i]] && out[e[x][i]] != x) {
+            prev[e[x][i]] = x;
+            out[x] = e[x][i];
+            dfs(e[x][i]); 
+        }
+}
+
+void build(int x) {
+    dep[x] = dep[dad[x]] + 1;
+    sum[x] = sum[dad[x]] + (int)(x < cnum);
+    for (int i=0; i<ec[x].size(); i++)
+        if (ec[x][i] != dad[x]) {
+            dad[ec[x][i]] = x;
+            build(ec[x][i]);
+        }
+}
+
+int get_lca(int x, int y) {
+    if (dep[x] < dep[y]) swap(x, y);
+    for (int i=MAXLG-1; i>=0; i--)
+        if (dep[anc[x][i]] >= dep[y]) 
+            x = anc[x][i];
+    if (x == y) return x;
+    for (int i=MAXLG-1; i>=0; i--)
+        if (anc[x][i] != anc[y][i]) {
+            x = anc[x][i];
+            y = anc[y][i];
+        }
+    return dad[x];
+}
+
+int main (void) {
+    ios::sync_with_stdio(false);
+    cin >> n >> m;
+    for (int i=0; i<m; i++) {
+        int x, y;
+        cin >> x >> y;
+        e[x].push_back(y);
+        e[y].push_back(x);
+    }
+    
+    dfs(1);
+    cnum = cnt;
+    for (int i=1; i<=n; i++)
+        if (!c[i]) {
+            c[i] = cnt;
+            cnt++;
+        }
+    for (int i=1; i<=n; i++)
+        for (int j=0; j<e[i].size(); j++)
+            if (c[e[i][j]] != c[i]) 
+                ec[c[i]].push_back(c[e[i][j]]);     
+    
+    build(1);
+    for (int i=1; i<cnt; i++)
+        anc[i][0] = dad[i];
+    for (int log=1; log<MAXLG; log++)
+        for (int i=1; i<cnt; i++)
+            anc[i][log] = anc[anc[i][log - 1]][log - 1];
+                
+    pow[0] = 1;
+    for (int i=1; i<cnt; i++)
+        pow[i] = pow[i - 1] * 2 % MOD;
+        
+    cin >> k;
+    for (int i=0; i<k; i++) {
+        int x, y;
+        cin >> x >> y;
+        x = c[x]; y = c[y];
+        int lca = get_lca(x, y);
+        cout << pow[sum[x] + sum[y] - 2 * sum[lca] + (int)(lca < cnum)] << endl;
+    }
+    return 0;
+}

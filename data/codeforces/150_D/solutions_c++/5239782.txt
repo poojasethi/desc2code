@@ -1,0 +1,40 @@
+#include<cstdio>
+#include<cstring>
+#include<cstdlib>
+#include<algorithm>
+#define inf 100000000
+#define N 160
+using namespace std;
+int i,n,a[N],f[N][N][N],g[N][N],h[N],len,j,k,t,l;
+char c[N];
+int main(){
+	scanf("%d",&n);
+	for(i=1;i<=n;++i){
+		scanf("%d",&a[i]);
+		if(a[i]<0)a[i]=-inf;
+	}
+	scanf("%s",c+1);
+	memset(f,250,sizeof(f));
+	for(i=0;i<=n+1;++i)
+		for(j=0;j<=n+1;++j)if(i>j)f[i][j][0]=0;
+	for(len=1;len<=n;++len){
+		for(i=1;i+len-1<=n;++i){
+			j=i+len-1;
+			for(l=i;l<j;++l)
+				for(k=0;k<=len;++k)f[i][j][k]=max(f[i][j][k],max(g[i][l]+f[l+1][j][k],f[i][l][k]+g[l+1][j]));
+			if(c[i]==c[j]){
+				t=(i==j?1:2);
+				for(k=t;k<=len;++k)f[i][j][k]=max(f[i][j][k],f[i+1][j-1][k-t]);
+			}
+			g[i][j]=-inf;
+			for(l=i;l<j;++l)g[i][j]=max(g[i][j],g[i][l]+g[l+1][j]);
+			for(l=1;l<=len;++l)g[i][j]=max(g[i][j],a[l]+f[i][j][l]);
+			f[i][j][0]=g[i][j];
+		}
+	}
+	for(i=1;i<=n;++i){
+		h[i]=h[i-1];
+		for(j=0;j<i;++j)h[i]=max(h[i],h[j]+g[j+1][i]);
+	}
+	printf("%d\n",h[n]);
+}

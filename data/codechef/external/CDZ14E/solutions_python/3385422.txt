@@ -1,0 +1,213 @@
+// AUTHOR : SIKANDER MAHAN
+// sikander_nsit
+// PLAGIARISM IS BAD
+
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <deque>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include<string.h>
+#define tr(c,it) for(typeof(c.begin()) it=c.begin();it!=c.end();++it)
+#define all(c) c.begin(),c.end()
+#define mod 1000000007
+#define itor(c) typeof(c.begin())
+#define ll long long
+#define vi vector<int>
+#define si set<int>
+#define msi multiset<int>
+#define ii pair<int,int>
+#define sii set<ii>
+#define vii vector<ii>
+#define vvi vector<vi>
+#define pb push_back
+#define mp make_pair
+
+using namespace std;
+
+struct node
+{
+    vector<int> v;
+    vector<ll> vs;
+};
+
+node segtree[400009];
+int arr[100002];
+vi vec;
+
+void initialise(int b,int e,int ind)
+{
+    int ind2=ind*2;
+    int ind1=ind2+1;
+    int temp,sz1,sz2,i,j;
+    if(b==e)
+    {
+        segtree[ind].v.pb(arr[b]);
+    }
+    else
+    {
+        initialise(b,(b+e)/2,ind2);
+        initialise((b+e)/2+1,e,ind1);
+        sz1=segtree[ind2].v.size();
+        sz2=segtree[ind1].v.size();
+        i=0,j=0;
+        while(true)
+        {
+            if(i==sz1)
+            {
+                while(j<sz2)
+                {
+                    segtree[ind].v.pb(segtree[ind1].v[j]);
+                    ++j;
+                }
+                break;
+            }
+            else if(j==sz2)
+            {
+                while(i<sz1)
+                {
+                    segtree[ind].v.pb(segtree[ind2].v[i]);
+                    ++i;
+                }
+                break;
+            }
+            else
+            {
+                if(segtree[ind2].v[i]<=segtree[ind1].v[j])
+                {
+                    segtree[ind].v.pb(segtree[ind2].v[i]);
+                    ++i;
+                }
+                else
+                {
+                    segtree[ind].v.pb(segtree[ind1].v[j]);
+                    ++j;
+                }
+            }
+        }
+    }
+    sz1=segtree[ind].v.size();
+    segtree[ind].vs.pb(0);
+    for(temp=0;temp<sz1;++temp)
+    {
+        segtree[ind].vs.pb(segtree[ind].vs[temp]+segtree[ind].v[temp]);
+    }
+}
+
+void query(int ind,int b,int e,int i,int j)
+{
+    if(i>e || j<b)
+        return;
+    if(b>=i && e<=j)
+    {
+        vec.pb(ind);
+        return;
+    }
+    query(ind*2,b,(b+e)/2,i,j);
+    query(ind*2+1,(b+e)/2+1,e,i,j);
+}
+
+int main()
+{
+    //ios::sync_with_stdio(false);
+    //freopen("input.txt","r",stdin);
+    //freopen("out.txt","w",stdout);
+    int t,i,j,n,m,l,r,sz,k,num,mx,temp;
+    ll sum;
+    int b[100],e[100];
+    vi vtemp;
+    int ind[100];
+    cin>>n;
+    for(i=0;i<n;++i)
+    {
+       cin>>arr[i];
+    }
+    initialise(0,n-1,1);
+    cin>>m;
+    for(i=0;i<m;++i)
+    {
+        vec.clear();
+        cin>>l>>r>>k;
+        query(1,0,n-1,l-1,r-1);
+        sz=vec.size();
+        sum=0;
+        for(j=0;j<sz;++j)
+        {
+            b[j]=0;
+            e[j]=min(k,(int)segtree[vec[j]].v.size());
+        }
+        while(true)
+        {
+            mx=0;
+            for(j=1;j<sz;++j)
+            {
+                if((e[j]-b[j]) > (e[mx]-b[mx]))
+                {
+                    mx=j;
+                }
+            }
+            if(e[mx]-b[mx]<2)
+            {
+                break;
+            }
+            temp=(e[mx]+b[mx]-1)/2;
+            num=segtree[vec[mx]].v[temp];
+            sum=0;
+            for(j=0;j<sz;++j)
+            {
+                ind[j]=upper_bound(segtree[vec[j]].v.begin()+b[j],segtree[vec[j]].v.begin()+e[j],num)-segtree[vec[j]].v.begin();
+                sum+=(ind[j]-b[j]);
+            }
+            sum-=(ind[mx]-temp-1);
+            ind[mx]=temp+1;
+            if(sum>=k)
+            {
+                for(j=0;j<sz;++j)
+                {
+                    e[j]=ind[j];
+                }
+            }
+            else
+            {
+                k-=sum;
+                for(j=0;j<sz;++j)
+                {
+                    b[j]=ind[j];
+                }
+            }
+        }
+        vtemp.clear();
+        for(j=0;j<sz;++j)
+        {
+            if(e[j]-b[j])
+            {
+                vtemp.pb(segtree[vec[j]].v[b[j]]);
+            }
+        }
+        sort(all(vtemp));
+        sum=0;
+        for(j=0;j<k;++j)
+        {
+            sum+=vtemp[j];
+        }
+        for(j=0;j<sz;++j)
+        {
+            sum+=segtree[vec[j]].vs[b[j]];
+        }
+        cout<<sum%mod<<endl;
+    }
+    return 0;
+}

@@ -1,0 +1,33 @@
+While Tom Cruise(Cage) fighting in the movie "Edge of Tomorrow", he finds himself in a modern lab, where he needs to kill the brain of a mutant species Omega.
+The DNA of the Omega is made up of characters of A, T, G and C like ours. He has certain enzymes which will cut and remove certain parts of this DNA.
+The mutant being an intelligent species, is able to reform its DNA, even after a piece of DNA is removed.
+
+You will be given a DNA sequence, and few enzymes. Suppose, a DNA sequence goes like this : ATGCTGCTATGCATGCAGTGACT, and you are given enzymes which can remove AT and GC sequences. Thereby, you need to remove all occurrences of AT from the DNA first and then reform the DNA and apply the next enzyme to remove all occurrences of GC. The output of the problem would be the string you get at last reforming the pieces which are not removed by these enzymes.
+Input
+The first line of input consists of an integer n that denotes the number of enzymes. The second line has the DNA sequence.
+The next n lines has the input B1, B2, B3... Bn.
+Output
+For given input DNA sequence, output a single line containing the final reformed DNA that is formed by repeatedly removing all the occurrences of B1, B2, B3... Bn from A.
+In case the DNA is completely consumed print 0 to indicate that there is no DNA left.
+
+Constraints
+
+1 <= n <= 10
+
+Example
+ Input:
+2
+ATACGCATGACGATGCATGCAGCAT
+ATA
+GC
+
+ Output:
+CATGACGATATAAT
+ Input:
+3
+ATGCATGCATCGACTCAGCATCAGCATCGACTA
+TG
+GC
+AT
+ Output:
+ACACCGACTCACACGACTA

@@ -1,0 +1,159 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <cctype>
+using namespace std;
+
+typedef long long int64;
+const int64 MOD = int64( 1e9 + 7 );
+
+const int MAX_L = int(1e6);
+
+char buf[MAX_L/5 + 1];
+char S[MAX_L + 1];
+char T[MAX_L + 1];
+int Slen, Tlen;
+int fail[MAX_L];
+int Z[2*MAX_L + 1];
+int towards[MAX_L];
+char combined[2*MAX_L + 2];
+int64 cons[MAX_L + 1], coef[MAX_L + 1];
+
+int64 calcPow(int64 x, int64 n, int64 mod = MOD) {
+	int64 ret = 1;
+	for (; n; n >>= 1, x = x * x % mod) if (n&1) {
+		ret = ret * x % mod;
+	}
+	return ret;
+}
+
+int64 inv(int64 x) {
+	return calcPow(x, MOD - 2);
+}
+inline void buildLongestPrefixMatch(const char* str){
+	const int len = Slen + Tlen + 1;
+	memset(Z, 0, sizeof(int)*len);
+	for (int i = 1, left = 0, right = 0; i < len; ++i) {
+		if ( i <= right ) {
+			Z[i] = min(right - i + 1, Z[i-left]);
+		}
+		for (; i+Z[i] < len && str[Z[i]] == str[i+Z[i]]; ++Z[i]) ;
+		if (i + Z[i] - 1 > right) {
+			left = i;
+			right = i + Z[i] - 1;
+		}
+	}
+}
+
+
+inline void buildFailureLink(){
+	int j = fail[0] = -1;
+	for (int i = 1; i <= Slen; i++) {
+		while( j >= 0 && S[j] != S[i-1]){
+			j = fail[j];
+		}
+		fail[i] = ++j;
+	}
+}
+
+int KMP_search(){
+	int i, j;
+	for(i=0, j=0; i<Tlen; i++){
+		while(j >= 0 && T[i] != S[j]){
+			j = fail[j];
+		}
+		if( ++j == Slen ){
+			return Slen;
+			j = fail[j];
+		}
+	}
+
+	return j;
+}
+
+inline int decode(char ch) {
+	if (islower(ch)) {
+		return ch - 'a' + 0;
+	}
+	else {
+		return ch - 'A' + 26;
+	}
+}
+
+inline void init() {
+	scanf("%d %s", &Slen, buf);
+	for (int i = 0, p = 0; buf[i]; ++i) {
+		const int a = decode(buf[i]);
+		for (int j = 5 - 1 ; j >= 0; --j) {
+			S[p++] = char('0' + ((a>>j)&1));
+		}
+	}
+	S[Slen] = '\0';
+	scanf("%d %s", &Tlen, buf);
+	for (int i = 0, p = 0; buf[i]; ++i) {
+		const int a = decode(buf[i]);
+		for (int j = 5 - 1 ; j >= 0; --j) {
+			T[p++] = char('0' + ((a>>j)&1));
+		}
+	}
+	T[Tlen] = '\0';
+}
+
+int solve() {
+	/*
+	{
+		int p = 0;
+		for (int i = 0; i < Slen; ++i) {
+			combined[p++] = S[i];
+		}
+		combined[p++] = '$';
+		for (int i = 0; i < Tlen; ++i) {
+			combined[p++] = T[i];
+		}
+		combined[p] = '\0';
+	}
+
+	buildLongestPrefixMatch(combined);
+	int k = 0;
+	for (int i = Slen; combined[i]; ++i) {
+		if (Z[i] == Slen) {
+			return 0;
+		}
+		if (i + Z[i] == Slen + Tlen + 1) {
+			k = Z[i];
+			break;
+		}
+	}
+	*/
+
+	buildFailureLink();
+	int k = KMP_search();
+	if (k == Slen) {
+		return 0;
+	}
+	fail[0] = 0;
+	coef[0] = 1;
+	cons[0] = 0;
+	towards[0] = 0;
+
+	for (int i = 0; i < Slen; ++i) {
+		if (i > 0) {
+			char nxt = S[i];
+			towards[i] = (nxt != S[fail[i]] ? fail[i] + 1: towards[fail[i]]);
+		}
+		coef[i+1] = (2 * coef[i] - coef[towards[i]] + MOD) % MOD;
+		cons[i+1] = (2 * cons[i] - cons[towards[i]] - 2 + 2*MOD) % MOD;
+	}
+
+	int64 e0 = inv(coef[Slen]) * (MOD - cons[Slen]) % MOD;
+	return (cons[k] + coef[k] * e0) % MOD;
+}
+
+int main() {
+	int t; scanf("%d", &t);
+	for (int _ = 0; _ < t; ++_) {
+		init();
+		printf("%d\n", solve());
+	}
+	return 0;
+}

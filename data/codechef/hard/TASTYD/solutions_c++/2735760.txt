@@ -1,0 +1,153 @@
+/*	Template by
+	Ashwin Kumar
+	IIT Delhi */
+#include<algorithm>		//min(), max(), reverse(), sort(), next_permutation(), prev_permutation(), swap()
+						//make_heap(), pop_heap(), push_heap(), sort_heap()
+#include<iostream>
+#include<cassert>		//assert()
+#include<cmath>			//cos(in radians), sin(), tan(), acos(), asin(), atan(), modf(break into frac and inte parts)
+						//log(), log10(), log2(), pow(), sqrt(), cbrt(), ceil(), floor(), fmod(), abs()  
+#include<cstdio>		//fclose(), fopen(), fprintf(), fscanf(), printf(), scanf(), gets(), puts()
+#include<cstdlib>		//srand(time(NULL)), rand(), itoa(), malloc(), free()
+#include<cstring>		//memcpy(), strcpy(), strcat(), strcmp(), memset(), strlen(), strtok(), strrchr()
+#include<sstream>
+#include<string>		//to_string(any numerical value), stoi(), stoll()
+#include<ctime>   
+#include<deque>			//iterators: begin(), end(), rbegin(), rend()
+						//access:	 operator[], at(), front(), back() 
+						//modifiers: push_back(), push_front(), pop_back(), pop_front(), erase(), clear()
+#include<list>			//begin(), end(), push_back(), pop_back()
+#include<map>			//begin(), end(), rbegin(), rend(), operator[], at(), clear(), find()
+						//priority_queue:  top(), push(), pop()
+#include<queue>			//front(), back(), push(), pop()
+#include<set>			//begin(), end(), rbegin(), rend(), insert(), erase(), clear(), find()
+#include<stack>			//top(), push(), pop()
+#include<vector>		//iterators: begin(), end(), rbegin(), rend()
+						//access:	 operator[], at(), front(), back()
+						//modifiers: push_back(), pop_back(), erase(), clear() 
+using namespace std;
+ 
+typedef long long LL;
+typedef pair<int, int> pii;
+#define MAX 200000
+#define INF 1000000
+#define MOD 1000000007
+
+map<int, vector<int> > hash;
+int arr[MAX];
+int sum[MAX];
+int *segtree;
+int N, K;
+LL ans = 0;
+
+int query(int ss, int se, int qs, int qe, int i)
+{
+	if (qe < ss || qs > se)
+		return -1;
+	if (qs <= ss && qe >= se)
+		return segtree[i];
+	int mid = (ss+se)/2;
+	int p1 = query(ss, mid, qs, qe, 2*i+1);
+	int p2 = query(mid+1, se, qs, qe, 2*i+2);
+	if (p1 == -1)
+		return p2;
+	if (p2 == -1)
+		return p1;
+	return ((arr[p1] < arr[p2]) ? p1 : p2);
+}
+
+void init_segtree(int ss, int se, int i)
+{
+	if (ss == se)
+	{
+		segtree[i] = ss;
+		return;
+	}
+	int mid = (ss+se)/2;
+	init_segtree(ss, mid, 2*i+1);
+	init_segtree(mid+1, se, 2*i+2);
+	int p1 = segtree[2*i+1];
+	int p2 = segtree[2*i+2];
+	segtree[i] = ((arr[p1] < arr[p2]) ? p1 : p2);
+}
+
+void make_segtree(void)
+{
+	int h = (int)ceil(log2(N));
+	segtree = new int[1<<(h+1)];
+	init_segtree(0, N-1, 0);
+}
+
+void divide_and_conquer(int L, int R)
+{
+	if (L > R)
+		return;
+	if (L == R)
+	{
+		ans++;
+		return;
+	}
+	int idx = query(0, N-1, L, R, 0);
+	divide_and_conquer(L, idx-1);
+	divide_and_conquer(idx+1, R);
+	if ((idx-L) <= (R-idx))
+	{
+		for (int i = L; i <= idx; i++)
+		{
+			int val = ((LL)((i-1 >= 0) ? sum[i-1] : 0)+(LL)(arr[idx]%K))%K;
+			map<int, vector<int> >::iterator it = hash.find(val);  
+			if (it != hash.end())
+			{
+				// for (int j = 0; j < it->second.size(); j++)
+				// {
+				// 	if ((it->second[j] >= idx) && (it->second[j] <= R))
+				// 		ans++;
+				// 	else if (it->second[j] > R)
+				// 		break;
+				// }
+				vector<int> &second = it->second;
+				ans += (upper_bound(second.begin(), second.end(), R)
+						-lower_bound(second.begin(), second.end(), idx));
+			}
+		}
+	}
+	else
+	{
+		for (int i = idx; i <= R; i++)
+		{
+			int val = ((LL)sum[i]+((LL)K-(LL)(arr[idx]%K)))%K;
+			map<int, vector<int> >::iterator it = hash.find(val);  
+			if (it != hash.end())
+			{
+				// for (int j = 0; j < it->second.size(); j++)
+				// {
+				// 	if ((it->second[j] >= L-1) && (it->second[j] <= idx-1))
+				// 		ans++;
+				// 	else if (it->second[j] > idx-1)
+				// 		break;
+				// }
+				vector<int> &second = it->second; 
+				ans += (upper_bound(second.begin(), second.end(), idx-1)
+				 		-lower_bound(second.begin(), second.end(), L-1));
+			}
+		}
+	}
+}
+
+int main()
+{
+	scanf("%d %d", &N, &K);
+	LL cum = 0;
+	hash[(int)cum].push_back(-1);
+	for (int i = 0; i < N; i++)
+	{
+		scanf("%d", &arr[i]);
+		cum = (cum+(LL)arr[i])%K;
+		sum[i] = (int)cum;
+		hash[(int)cum].push_back(i);
+	}
+	make_segtree();
+	divide_and_conquer(0, N-1);
+	printf("%lld\n", ans-N);
+	return 0;
+}

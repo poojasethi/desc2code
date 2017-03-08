@@ -1,0 +1,160 @@
+//#pragma comment(linker, "/STACK:1024000000,1024000000")
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+#include <string>
+#include <cstdio>
+#include <stack>
+#include <map>
+#include <vector>
+#include <set>
+#include <bitset>
+#include <string>
+#include <queue>
+using namespace std;
+#define rep(i,l,r) for(i = l; i <= r; i++)
+#define red(i,l,r) for(i=(l);i>=(r);i--)
+#define u_long unsigned long long
+#define fff(i, u) for(i = head[u]; i != -1; i = nxt[i])
+#define fin() freopen("in.txt", "r", stdin)
+#define fout() freopen("out.txt", "w", stdout)
+#define clr(vis, a) memset(vis, a, sizeof(vis))
+#define LL long long
+#define ls id << 1
+#define rs id << 1 | 1
+#define lson id << 1, l, mid
+#define rson id << 1 | 1, mid + 1, r
+#define mid ( (l + r) >> 1 )
+#define pb push_back
+#define mp make_pair
+#define pii pair<int, int>
+#define X first
+#define Y second
+#define eps 1e-9
+#define pi acos(-1)
+const int maxn = 5e5 + 10;
+const int maxm = 3e4 + 10;
+const int inf = 1e9;
+const LL mod = 1e9+7;
+int getint() {
+    char c;
+    while((c = getchar()) && !(c >= '0' && c <= '9') && c != '-');
+    int ret = c - '0', sgn = 0;
+    if(c == '-') sgn = 1, ret = 0;
+    while((c = getchar()) && c >= '0' && c <= '9')
+        ret = ret * 10 + c - '0';
+    if(sgn) ret = -ret;
+    return ret;
+}
+struct Complex{
+    double x, y;
+    Complex(double _x = 0.0, double _y = 0.0){
+        x = _x, y = _y;
+    }
+    Complex operator - (const Complex & b) const{
+        return Complex(x - b.x, y - b.y);
+    }
+    Complex operator + (const Complex & b) const{
+        return Complex(x + b.x, y + b.y);
+    }
+    Complex operator * (const Complex &b) const{
+        return Complex(x * b.x - y * b.y, x * b.y + y * b.x);
+    }
+};
+void change(Complex y[], int len){
+    int i, j, k;
+    for(int i = 1, j = len / 2; i < len - 1; i ++){
+        if(i < j) swap(y[i], y[j]);
+        k = len / 2;
+        while(j >= k){
+            j -= k;
+            k /= 2;
+        }
+        j += k;
+    }
+}
+void fft(Complex y[], int len, int on){
+    change(y, len);
+    for(int h = 2; h <= len; h <<= 1){// loglen 层
+        Complex wn(cos(on * 2 * pi / h), sin(on * 2 * pi / h));
+        for(int j = 0; j < len; j += h){// 每层的组数
+            Complex w(1, 0);
+            for(int k = j; k < j + h / 2; k ++){//两组合并
+                Complex u = y[k];
+                Complex t = w * y[k + h / 2];
+                y[k] = u + t;
+                y[k + h / 2] = u - t;
+                w = w * wn;
+            }
+        }
+    }
+    if(on == -1){
+        for(int i = 0; i < len; i ++){
+            y[i].x /= len;
+        }
+    }
+}
+const int sz = 2000;
+int cntl[maxn], cntr[maxn], a[maxn];
+Complex le[maxn], ri[maxn];
+int st[maxn], ed[maxn];
+int main(){
+    int n;
+    while(scanf("%d", &n) == 1){
+        clr(cntl, 0);
+        clr(cntr, 0);
+        int mx = 0;
+        for(int i = 1; i <= n; i ++){
+            int x = getint();
+            a[i] = x;
+            cntr[x]++;
+            mx = max(mx, x);
+        }
+        int mxb = (n - 1) / sz + 1;
+        st[0] = ed[0] = 0;
+        for(int i = 1; i <= mxb; i ++){
+            st[i] = ed[i-1] + 1;
+            ed[i] = i * sz;
+        }
+        ed[mxb] = n;
+        LL ans = 0;
+        int len = 1;
+        while(len <= 2 * mx) len <<= 1;
+        for(int i = 1; i <= mxb; i ++){
+            int l = st[i], r = ed[i];
+            for(int j = l; j <= r; j ++) cntr[a[j]]--;
+            for(int j = 0; j < len; j ++){
+                le[j] = Complex(cntl[j], 0);
+                ri[j] = Complex(cntr[j], 0);
+            }
+            fft(le, len, 1);
+            fft(ri, len, 1);
+            for(int j = 0; j < len; j ++){
+                le[j] = le[j] * ri[j];
+            }
+            fft(le, len, -1);
+            for(int j = l; j <= r; j ++){
+                ans += (LL)(le[2*a[j]].x + 0.5);
+            }
+            for(int j = l; j <= r; j ++){
+                for(int k = l; k < j; k ++){
+                    int temp = a[j] * 2 - a[k];
+                    if(temp >= 0) ans += cntr[temp];
+                }
+                for(int k = j + 1; k <= r; k ++){
+                    int temp = a[j] * 2 - a[k];
+                    if(temp >= 0) ans += cntl[temp];
+                }
+                cntl[a[j]] ++;
+            }
+        }
+        cout << ans << endl;
+    }
+    return 0;
+}
+
+
+
+

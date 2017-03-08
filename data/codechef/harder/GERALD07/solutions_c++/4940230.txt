@@ -1,0 +1,105 @@
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <cmath>
+#define ii pair<int, int>
+#define X first
+#define Y second
+const int N = 200005;
+using namespace std;
+int len, n, m, q;
+int ans[N];
+ii E[N], op[N];
+
+struct query {
+    int l, r, p;
+    query(int _l = 0, int _r = 0, int _p = 0)
+        {l = _l, r = _r, p = _p;}
+    bool operator < (const query &b) const {
+        return (len == 0 || l / len < b.l / len || (l / len == b.l / len && r < b.r));
+    }
+} Q[N];
+
+struct disjoint_set {
+    int lab[N];
+    int m;
+    disjoint_set()
+        {for(int i = 1; i <= n; i++) lab[i] = 0; m = 0;}
+    int root(int u, bool rev) {
+        if (lab[u] <= 0) return u;
+        if (rev)
+            op[m++] = ii(u, lab[u]);
+        return lab[u] = root(lab[u], rev);
+    }
+    void join(int u, int v, bool rev) {
+        if (lab[u] > lab[v]) swap(u, v);
+        if (lab[u] == lab[v]) {
+            if (rev)
+                op[m++] = ii(u, lab[u]);
+            lab[u]--;
+        }
+        if (rev)
+            op[m++] = ii(v, lab[v]);
+        lab[v] = u;
+    }
+    void reverse() {
+        for(int i = m - 1; i >= 0; i--)
+            lab[op[i].X] = op[i].Y;
+        m = 0;
+    }
+};
+
+int main() {
+    ios :: sync_with_stdio(0); cin.tie(0);
+    int ntest;
+    cin >> ntest;
+    while (ntest--) {
+        cin >> n >> m >> q;
+        len = sqrt(n);
+        //cout << len << endl;
+        for(int i = 0; i < m; i++)
+            cin >> E[i].X >> E[i].Y;
+        for(int i = 0; i < q; i++) {
+            cin >> Q[i].l >> Q[i].r;
+            Q[i].p = i;
+            Q[i].l--; Q[i].r--;
+        }
+        sort(Q, Q + q);
+        //cout << "sort " << endl;
+        int j = 0, right, lim;
+        for(int i = 0; i < q; i = j + 1) {
+            int block = Q[i].l / len; j = i;
+            while (j < q - 1 && block == Q[j + 1].l / len) j++;
+            right = lim = (block + 1) * len;
+            int cnt = n; disjoint_set dsu;
+            for(int k = i; k <= j; k++) {
+                //cout << k << " " << Q[k].l << " " << Q[k].r << endl;
+                while (right <= Q[k].r) {
+                    int x = dsu.root(E[right].X, 0);
+                    int y = dsu.root(E[right].Y, 0);
+                    if (x != y) {
+                        dsu.join(x, y, 0);
+                        cnt--;
+                    }
+                    right++;
+                }
+                //cout << right << " " << cnt << endl;
+                int tmp = cnt;
+                for(int t = Q[k].l; t < lim && t <= Q[k].r; t++) {
+                    int x = dsu.root(E[t].X, 1);
+                    int y = dsu.root(E[t].Y, 1);
+                    if (x != y) {
+                        dsu.join(x, y, 1);
+                        cnt--;
+                    }
+                }
+                //cout << cnt << endl;
+                ans[Q[k].p] = cnt;
+                cnt = tmp; dsu.reverse();
+            }
+        }
+        for(int i = 0; i < q; i++)
+            cout << ans[i] << '\n';
+    }
+    return 0;
+}

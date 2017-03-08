@@ -1,0 +1,212 @@
+#include <vector>
+#include <cstdio>
+#include <set>
+#include <map>
+#include <algorithm>
+#include <cstdlib>
+#include <sstream>
+#include <numeric>
+#include <queue>
+#include <iostream>
+#include <string>
+#include <cstring>
+#include <utility>
+#define sz(a) ((int)(a).size())
+#define pb push_back
+#define mk make_pair
+#define fi first
+#define se second
+#define Rep(i,j,k) for (int i=(j); i<=(k); i++)
+#define Repd(i,j,k) for (int i=(j); i>=(k); i--)
+#define ALL(c) (c).begin(),(c).end()
+#define TR(c,i) for(typeof((c).begin()) i = (c).begin(); i != (c).end(); i++)
+#define SUM(a) accumulate(all(a),string())
+#define online1
+#define RAND ((rand()<<15)+rand())
+using namespace std;
+typedef vector<int> VI;
+typedef vector<VI> VVI;
+typedef pair<int,int> II;
+typedef long long LL;
+
+const int MOD=1000000007;
+const int N=200000+10;
+
+int n;
+VI E[N], son[N], Anc[N];
+int d[N], fa[N], size[N];
+int ans=0, f[N], next[N];
+
+LL ff(int x, int y){
+	if (x==-1 && y==-1) return 0;
+	if (x==-1) return f[y];
+	if (y==-1) return f[x];
+	//-x---
+	//-y---
+	int x1=next[x],y1=next[y];
+	if (d[y1]-d[y]<d[x1]-d[x]) swap(x,y), swap(x1,y1);
+	if (sz(son[x1])) return 0;
+	if (d[y1]-d[y]==d[x1]-d[x]){
+		if (sz(son[y1])) return 0;
+		return 1;
+	}
+	int D=(d[y1]-d[y])-(d[x1]-d[x]);
+	return f[Anc[y1][D-1]];
+}
+
+LL doit(int a, int b, int c, int x, int y){
+	// b-r-c
+	//  |
+	//x-a-y
+	LL bx=ff(b,x), cy=ff(c,y);
+	//printf("a:%d b:%d c:%d x:%d y:%d ret=%d\n",a,b,c,x,y,(int)(bx*cy%MOD));
+	//cout<<endl;
+	return bx*cy%MOD;
+}
+
+LL doit(int a, int b, int c){
+	// b-r-c
+	//  |
+	//  a
+	int x=-1, y=-1;
+	if (sz(son[a])>0) x=son[a][0];
+	if (sz(son[a])>1) y=son[a][1];
+	LL ret=doit(a,b,c,x,y);
+	if (x!=y)
+		ret=(ret+doit(a,b,c,y,x))%MOD;
+	return ret;
+}
+
+int main(){
+	
+	cin>>n;
+	Rep(i,1,2*n-1){
+		int x,y;
+		scanf("%d%d",&x,&y);
+		E[x].pb(y);
+		E[y].pb(x);
+		d[x]++,	d[y]++;
+	}
+	
+	int r=-1;
+	Rep(i,1,2*n){
+		if (d[i]>3)
+			return puts("0"),0;
+		if (d[i]>2)
+			r=i;
+	}
+			
+	if (r==-1){
+		int ret=0;
+		Rep(i,1,n){
+			if (i==1 || i==n)
+				ret=(ret+n)%MOD;
+			else
+				ret=(ret+(n-i+i-1))%MOD;
+		}
+		cout<<ret*2%MOD;
+		return 0;
+	}
+	
+	memset(d,0xff,sizeof d); d[r]=1;
+	queue<int> Q; Q.push(r);
+	VI L;
+	while(!Q.empty()){
+		int x=Q.front(); Q.pop();
+		L.pb(x);
+		TR(E[x],y)
+			if (d[*y]==-1){
+				d[*y]=d[x]+1;
+				fa[*y]=x;
+				son[x].pb(*y);
+				Q.push(*y);
+			}
+	}
+	
+	Repd(_,sz(L)-1,0){
+		int x=L[_];
+		size[x]++;
+		size[fa[x]]+=size[x];
+		if (sz(son[x])==0){
+			next[x]=x;
+			f[x]=0;
+		}else
+		if (sz(son[x])==1){
+			int y=son[x][0];
+			next[x]=next[y];
+			
+			if (sz(son[y])==0){
+				f[x]=1;
+			}else{
+			
+				f[x]=0;
+			
+				//x--
+				//|
+				//y--
+				if (sz(son[y])==1)
+					f[x]=(f[x]+f[son[y][0]])%MOD;
+			
+				//x-y-
+				//  |
+				//---
+				
+				int y1=next[y];
+				
+				if (!sz(son[y1])){
+					if (size[x]%2==0)
+						f[x]++;
+				}else{
+					//x-y---
+					//     |
+					//-----y1
+					if (y!=y1)
+					Rep(o,0,1){
+						int p=son[y1][o], q=son[y1][1-o];
+						int p1=next[p];
+						if (sz(son[p1]) || d[p1]-d[y1]!=d[fa[y1]]-d[x])
+							continue;
+						f[x]=(f[x]+f[q])%MOD;
+					}
+					
+					//x-y---y1
+					Rep(o,0,1){
+						int p=son[y1][o], q=son[y1][1-o];
+						Rep(o1,0,1){
+							int i=-1, j=-1;
+							if (o1<sz(son[p]))
+								i=son[p][o1];
+							if (1-o1<sz(son[p]))
+								j=son[p][1-o1];
+							if (i==-1)
+								continue;
+							i=next[i];
+							if (sz(son[i]) || d[i]-d[p]!=d[y1]-d[x])
+								continue;
+							f[x]=(f[x]+ff(q,j))%MOD;
+						}
+					}
+				}
+			}
+			
+		}else{
+			next[x]=x;			
+			f[x]=0;
+			
+			Rep(o,0,1){
+				int y0=son[x][o], y1=son[x][1-o];
+				if (sz(son[y0])>1) continue;
+				if (sz(son[y0])==1) f[x]=(f[x]+ff(y1,son[y0][0]))%MOD;
+				if (sz(son[y0])==0) f[x]=(f[x]+f[y1])%MOD;
+			}
+		}
+		Anc[next[x]].pb(x);
+	}
+	
+	Rep(a,0,2)Rep(b,0,2)Rep(c,0,2)
+		if (a!=b && a!=c && b!=c)
+			ans=(ans+doit(son[r][a], son[r][b], son[r][c]))%MOD;
+	cout<<ans*2%MOD<<endl;
+
+    return 0;
+}

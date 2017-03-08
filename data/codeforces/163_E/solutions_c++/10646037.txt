@@ -1,0 +1,129 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+struct node{
+	int next[26],suff,b,e,cur;
+	vector < int > rsuff;
+};
+
+const int MAXN = 1000100;
+
+int fen[MAXN],fen_n,arr_n,q[MAXN],ql,qr;
+node *words[MAXN],arr[MAXN];
+char buf[MAXN];
+
+inline int get( int i ){
+	int ret = 0;
+	for( ; i ; i &= i-1 )
+		ret += fen[i];
+	return ret;
+}
+
+inline void f_add( int i , int d ){
+	for( ; i <= fen_n ; i += i & -i )
+		fen[i] += d;
+}
+
+inline node *add( char *s ){
+	node *v = &arr[0];
+	while( *s ){
+		int ch = *s++ - 'a';
+		if ( !v -> next[ch] )
+			v -> next[ch] = ++arr_n;
+		v = &arr[v -> next[ch]];
+	}
+	return v;
+}
+
+inline void fix( node *v , int d ){
+	if( (d == -1 and v -> cur) or (d == 1 and !v -> cur) ){
+		f_add(v -> b   ,  d);
+		f_add(v -> e+1 , -d);
+		v -> cur += d;
+	}
+}
+
+inline void aho(){
+	
+	for( int i = 0 ; i < 26 ; i++)
+		if( arr[0].next[i] )
+			q[qr++] = arr[0].next[i];
+	
+	while( ql < qr ){
+		
+		int id = q[ql++];
+		node *v = &arr[id];
+		
+		arr[v -> suff].rsuff.push_back( id );
+		
+		for( int i=0,x ; i < 26 ; i++ ){
+		
+			x = arr[v -> suff].next[i];
+		
+			if( v -> next[i] ){
+				arr[v -> next[i]].suff = x;
+				q[qr++] = v -> next[i];
+				
+			} else
+				v -> next[i] = x;
+		}
+	}
+}
+
+inline void dfs( node *v ){
+	
+	v -> b = ++fen_n;
+	
+	for( int i=0 ; i < (int)v -> rsuff.size() ; i++ )
+		dfs( &arr[v -> rsuff[i]] );
+	
+	v -> e = fen_n;
+}
+
+int main(){
+	
+	int N,K;
+	scanf("%d%d",&N,&K);
+	
+	for( int i=1 ; i <= K ; i++) {
+		scanf("%s",buf);
+		words[i] = add( buf );
+	}
+	
+	aho();
+	
+	dfs( &arr[0] );
+
+	for( int i=1 ; i <= K ; i++ )
+		fix( words[i] , 1 );
+
+	for( int i=0 ; i < N ; i++ ){
+		char c;
+		scanf(" %c",&c);
+		
+		if( c == '+' ){
+			int x;
+			scanf("%d",&x);
+			fix(words[x] ,  1);
+			
+		} else if( c == '-' ){
+			int x;
+			scanf("%d",&x);
+			fix(words[x] , -1);
+			
+		} else {
+			scanf("%s",buf);
+			char *s = buf;
+			long long res = 0;
+			node *cur = &arr[0];
+			while( *s ){
+				cur = &arr[cur -> next[*s - 'a']];
+				res += get(cur -> b);
+				s++;
+			}
+			printf("%I64d\n",res);
+		}
+	}
+	
+	return 0;
+}

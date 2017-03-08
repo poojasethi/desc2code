@@ -1,0 +1,134 @@
+#include<bits/stdc++.h>
+using namespace std;
+struct node{
+	int mini;int bits;
+};
+set<int> s[32];
+node stree[4*100010];
+int stree1[4*100010];
+int a[100010],mask=1<<30-1;
+void build(int nodeno,int tst,int tnd)
+{
+	if(tst==tnd)
+	{
+		stree[nodeno].mini=a[tst];
+		stree[nodeno].bits=a[tst];return;
+	}
+	build(2*nodeno,tst,(tst+tnd)/2);
+	build(2*nodeno+1,(tst+tnd)/2+1,tnd);
+	stree[nodeno].mini=min(stree[2*nodeno].mini,stree[2*nodeno+1].mini);
+	stree[nodeno].bits|=stree[2*nodeno].bits|stree[2*nodeno].bits;
+}
+void build1(int nodeno,int tst,int tnd)
+{
+	if(tst==tnd)
+	{
+		stree1[nodeno]=a[tst];
+		return;
+	}
+	build1(2*nodeno,tst,(tst+tnd)/2);
+	build1(2*nodeno+1,(tst+tnd)/2+1,tnd);
+	stree1[nodeno]=min(stree1[2*nodeno],stree1[2*nodeno+1]);
+}
+
+int query(int nodeno,int tst,int tnd,int st,int nd)
+{
+	//printf("query-->%d %d %d %d %d\n",nodeno,tst,tnd,st,nd);
+	if(tst==st && tnd==nd)
+	{
+		return stree[nodeno].mini;
+	}
+	if(st>(tst+tnd)/2)return query(2*nodeno+1,(tst+tnd)/2+1,tnd,st,nd);
+	else if(nd<=(tst+tnd)/2)return query(2*nodeno,tst,(tst+tnd)/2,st,nd);
+	else
+	return min(query(2*nodeno,tst,(tst+tnd)/2,st,(tst+tnd)/2),query(2*nodeno+1,(tst+tnd)/2+1,tnd,(tst+tnd)/2+1,nd));
+}
+int query1(int nodeno,int tst,int tnd,int st,int nd)
+{
+	//printf("query-->%d %d %d %d %d\n",nodeno,tst,tnd,st,nd);
+	if(tst==st && tnd==nd)
+	{
+		return stree1[nodeno];
+	}
+	if(st>(tst+tnd)/2)return query1(2*nodeno+1,(tst+tnd)/2+1,tnd,st,nd);
+	else if(nd<=(tst+tnd)/2)return query1(2*nodeno,tst,(tst+tnd)/2,st,nd);
+	else
+	return min(query1(2*nodeno,tst,(tst+tnd)/2,st,(tst+tnd)/2),query1(2*nodeno+1,(tst+tnd)/2+1,tnd,(tst+tnd)/2+1,nd));
+}
+
+void update(int nodeno,int tst,int tnd,int st,int nd,int no)
+{
+	if(stree[nodeno].bits & no){
+		//printf("update-->%d %d %d %d %d %d\n",nodeno,tst,tnd,st,nd,no);
+	if(tst==st && tnd==nd)
+	{
+		if(tst==tnd)
+		{stree[nodeno].mini=(stree[nodeno].mini & no),stree[nodeno].bits=(stree[nodeno].bits & no);return;}
+		if(stree[2*nodeno].bits & (~no))
+		update(2*nodeno,tst,(tst+tnd)/2,st,(tst+tnd)/2,no);
+		if(stree[2*nodeno+1].bits & (~no))
+		update(2*nodeno+1,(tst+tnd)/2+1,tnd,(tst+tnd)/2+1,nd,no);
+		stree[nodeno].mini=min(stree[2*nodeno].mini,stree[2*nodeno+1].mini);
+		stree[nodeno].bits=stree[2*nodeno].bits|stree[2*nodeno+1].bits;
+	}
+		if(stree[2*nodeno].bits & (~no))
+		update(2*nodeno,tst,(tst+tnd)/2,st,(tst+tnd)/2,no);
+		if(stree[2*nodeno+1].bits & (~no))
+		update(2*nodeno+1,(tst+tnd)/2+1,tnd,(tst+tnd)/2+1,nd,no);
+		stree[nodeno].mini=min(stree[2*nodeno].mini,stree[2*nodeno+1].mini);
+		stree[nodeno].bits=stree[2*nodeno].bits|stree[2*nodeno+1].bits;
+
+	}
+}
+void updatept(int nodeno,int tst,int tnd,int idx)
+{
+	if(tst==tnd){
+		stree1[nodeno]=a[idx];return;
+	}
+	if(idx<=(tst+tnd)/2)updatept(2*nodeno,tst,(tst+tnd)/2,idx);
+	else updatept(2*nodeno+1,(tst+tnd)/2+1,tnd,idx);
+	stree1[nodeno]=min(stree1[2*nodeno],stree1[2*nodeno+1]);
+}
+main()
+{
+	int n,q,i,j,r,index,type,b,e,no;
+	scanf("%d %d",&n,&q);
+	for(i=0;i<n;i++)
+	{
+		scanf("%d",&a[i]);
+		for(j=0;j<30;j++)
+		if(a[i]&(1<<j)){s[j].insert(i);//printf("%d pushed in %d map\n",a[i],j);
+		}
+	}
+	build1(1,0,n-1);
+	//printf("built --> minimum=%d\n",stree1[1]);
+	while(q--)
+	{
+		scanf("%d",&type);
+		if(type==0)
+		{
+			scanf("%d %d",&b,&e);
+			printf("%d\n",query1(1,0,n-1,b-1,e-1));
+		}
+		else 
+		{
+			scanf("%d %d %d",&b,&e,&no);
+			for(i=0;i<30;i++)
+			{
+				if(!(no&(1<<i)))
+				{//printf("updateinng %d at bit %d",no,i);
+					set<int> ::iterator it=s[i].lower_bound(b-1);
+					while(it!=s[i].end() && (*it<e))
+					{
+						int idx=*it;
+						set<int>::iterator it2=it;it2++;
+						a[idx]&=(~(1<<i));
+						updatept(1,0,n-1,idx);
+						s[i].erase(it);
+						it=it2;
+					}
+				}
+			}
+		}
+	}
+}

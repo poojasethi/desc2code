@@ -1,0 +1,233 @@
+#include <algorithm>
+#include <bitset>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <deque>
+#include <fstream>
+#include <functional>
+#include <iostream>
+#include <map>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <string>
+#include <utility>
+#include <vector>
+#define maxn 200006
+using namespace std;
+
+int n;
+vector<int> C;
+long long toward[maxn],around[maxn],sumC = 0,ret[maxn],depth[maxn],intree[maxn];
+map< pair<int,int>,int > mp;
+int pos[maxn],treesize[maxn],numChild[maxn];
+int num[maxn],low[maxn],pre[maxn],cnt;
+stack<int> s;
+
+struct Tree
+{
+    vector< pair<int,int> > adj[maxn];
+
+    void load()
+    {
+        memset(pos,-1,sizeof(pos));
+        memset(depth,0,sizeof(depth));
+        memset(treesize,0,sizeof(treesize));
+        memset(intree,0,sizeof(intree));
+        memset(numChild,0,sizeof(numChild));
+
+        for (int i = 0; i < C.size(); i++)
+        {
+            pos[C[i]] = i;  DFS(C[i],-1,i);
+        }
+        for (int i = 1; i <= n; i++)
+        {
+            int u = pos[i];  intree[C[u]] += depth[i];
+        }
+
+        for (int i = 0; i < C.size(); i++) DFScalc(C[i]);
+    }
+
+    void DFS(int u,int pre,int comIdx)
+    {
+        treesize[comIdx]++;  numChild[u] = 1;
+        int preIdx = -1;
+        for (int i = 0; i < adj[u].size(); i++)
+        {
+            int v = adj[u][i].first;
+            if (v == pre) preIdx = i; else
+            {
+                depth[v] = depth[u] + adj[u][i].second;  pos[v] = comIdx;
+                DFS(v,u,comIdx);
+                numChild[u] += numChild[v];
+            }
+        }
+        if (preIdx >= 0) adj[u].erase(adj[u].begin() + preIdx);
+    }
+
+    void DFScalc(int u)
+    {
+        for (int i = 0; i < adj[u].size(); i++)
+        {
+            int v = adj[u][i].first;
+            intree[v] = intree[u] + 1LL * adj[u][i].second * (treesize[pos[u]] - 2LL * numChild[v]);
+            DFScalc(v);
+        }
+    }
+
+    void goAround()
+    {
+        memset(around,0,sizeof(around));
+        long long treeSum = 0,weightSum = 0,linearSum = 0;
+        int v = 0;
+        for (int u = 0; u < C.size(); u++)
+        {
+            if (linearSum)
+            {
+                weightSum -= 1LL * treeSum * mp[make_pair(C[u - 1],C[u])];
+                linearSum -= mp[make_pair(C[u - 1],C[u])];
+                treeSum -= treesize[u];
+            }
+            else
+            {
+                v = u;  weightSum = linearSum = treeSum = 0;
+            }
+
+            while (1)
+            {
+                int k = (v + 1) % C.size();
+                if (2LL * (linearSum + mp[make_pair(C[v],C[k])]) > sumC) break; else
+                {
+                    linearSum += mp[make_pair(C[v],C[k])];
+                    weightSum += 1LL * linearSum * treesize[k];
+                    treeSum += treesize[k];
+                    v = k;
+                }
+            }
+            around[u] = weightSum;
+        }
+        v = C.size() - 1; weightSum = linearSum = treeSum = 0;
+        for (int u = C.size() - 1; u >= 0; u--)
+        {
+            if (linearSum)
+            {
+                weightSum -= 1LL * treeSum * mp[make_pair(C[u],C[u + 1])];
+                linearSum -= mp[make_pair(C[u],C[u + 1])];
+                treeSum -= treesize[u];
+            }
+            else
+            {
+                v = u;  weightSum = linearSum = treeSum = 0;
+            }
+
+            while (1)
+            {
+                int k = v - 1;  if (k < 0) k += C.size();
+                if (2LL * (linearSum + mp[make_pair(C[v],C[k])]) >= sumC) break; else
+                {
+                    linearSum += mp[make_pair(C[v],C[k])];
+                    weightSum += 1LL * linearSum * treesize[k];
+                    treeSum += treesize[k];
+                    v = k;
+                }
+            }
+            around[u] += weightSum;
+        }
+    }
+
+    void answer()
+    {
+        int sumTree = 0;
+        for (int i = 0; i < C.size(); i++) sumTree += intree[C[i]];
+
+        memset(ret,0,sizeof(ret));
+        for (int i = 1; i <= n; i++)
+        {
+            int u = pos[i];
+            ret[i] = sumTree - intree[C[u]] + intree[i] + around[u] + 1LL * (n - treesize[u]) * depth[i];
+        }
+        for (int i = 1; i <= n; i++) printf("%I64d ", ret[i]);
+        printf("\n");
+    }
+} T;
+
+struct Graph
+{
+    vector< pair<int,int> > adj[maxn];
+
+    void load()
+    {
+        cnt = 0;
+        for (int i = 0; i < n; i++)
+        {
+            int u,v,c;  scanf("%d %d %d", &u, &v, &c);
+            adj[u].push_back(make_pair(v,c));
+            adj[v].push_back(make_pair(u,c));
+        }
+        memset(num,0,sizeof(num));
+        memset(low,0,sizeof(low));
+        memset(pre,-1,sizeof(pre));
+    }
+
+    void DFS(int u)
+    {
+        num[u] = low[u] = ++cnt;  s.push(u);
+        for (int i = 0; i < adj[u].size(); i++)
+        {
+            int v = adj[u][i].first;
+            if (pre[u] == v) continue;
+            if (!num[v])
+            {
+                pre[v] = u;  DFS(v);  low[u] = min(low[u],low[v]);
+            }
+            else low[u] = min(low[u],low[v]);
+        }
+
+        if (low[u] == num[u])
+        {
+            vector<int> p;
+            while (1)
+            {
+                int x = s.top();  s.pop();  p.push_back(x);  if (x == u) break;
+            }
+            if (p.size() < 3) return;
+            C = p;
+            for (int i = 0; i < C.size(); i++)
+            {
+                int u = C[i],v = C[(i + 1) % C.size()];
+                mp[make_pair(u,v)] = mp[make_pair(v,u)] = true;
+            }
+        }
+    }
+
+    void final()
+    {
+        for (int u = 1; u <= n; u++)
+          for (int i = 0; i < adj[u].size(); i++)
+          {
+              int v = adj[u][i].first;
+              if (!mp.count(make_pair(u,v))) T.adj[u].push_back(adj[u][i]); else mp[make_pair(u,v)] = adj[u][i].second;
+          }
+        toward[C[0]] = 0;
+        for (int i = 1; i < C.size(); i++)
+          toward[C[i]] = toward[C[i - 1]] + mp[make_pair(C[i - 1],C[i])];
+        sumC = toward[C[C.size() - 1]] + mp[make_pair(C[0],C[C.size() - 1])];
+    }
+} G;
+
+int main()
+{
+    //freopen("g.in","r",stdin);
+
+    scanf("%d", &n);
+    G.load();
+    G.DFS(1);
+    G.final();
+    T.load();
+    T.goAround();
+    T.answer();
+}

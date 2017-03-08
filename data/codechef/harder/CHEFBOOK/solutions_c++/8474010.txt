@@ -1,0 +1,134 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<set>
+#include<map>
+#include<queue>
+#include<vector>
+#define min(a,b) ((a)<(b))?(a):(b)
+#define rep(i,j,k) for(int i=(int)j;i<=(int)k;i++)
+#define per(i,j,k) for(int i=(int)j;i>=(int)k;i--)
+using namespace std;
+typedef long long LL;
+typedef double db;
+const int N=405;
+int n,m;
+int code[N][2];
+int in[N],out[N];
+namespace __{
+	int tot;int node;
+	int head[N],np[N*N*4],p[N*N*4],flow[N*N*4],cost[N*N*4];
+	int S,T;
+	void init(){
+		rep(i,1,tot)np[i]=p[i]=flow[i]=cost[i]=0;
+		rep(i,1,node)head[i]=0;
+		tot=1;node=2;S=1;T=2;
+	}
+	void link(int &a,int &b,int c,int d){
+		if(!a)a=++node;
+		if(!b)b=++node;
+		++tot;
+		p[tot]=b;np[tot]=head[a];head[a]=tot;flow[tot]=c;cost[tot]=d;
+		++tot;
+		p[tot]=a;np[tot]=head[b];head[b]=tot;flow[tot]=0;cost[tot]=-d;
+	}
+	int q[N*N],pre[N],ped[N],dis[N],in[N];
+	int spfa(){
+		q[q[0]=1]=S;
+		rep(i,1,node)pre[i]=ped[i]=-1,dis[i]=1e9,in[i]=0;
+		dis[S]=0;in[S]=1;
+		rep(i,1,q[0]){
+			int x=q[i];
+			for(int u=head[x];u;u=np[u])if(flow[u])if(dis[p[u]]>dis[x]+cost[u]){
+				dis[p[u]]=dis[x]+cost[u];
+				ped[p[u]]=u;
+				pre[p[u]]=x;
+				if(!in[p[u]]){
+					in[p[u]]=1;
+					q[++q[0]]=p[u];
+				}
+			}
+			in[x]=0;
+		}
+		return pre[T];
+	}
+	int costflow(){
+		int ans=0;
+		while(spfa()!=-1){
+			int Mi=1e9;
+			for(int x=T;x!=S;x=pre[x])Mi=min(Mi,flow[ped[x]]);
+			ans+=Mi*dis[T];
+			for(int x=T;x!=S;x=pre[x])flow[ped[x]]-=Mi,flow[ped[x]^1]+=Mi;
+		}
+		return ans;
+	}
+};
+int s[N*N],t[N*N];
+int d[N][N],dd[N][N];
+int x[N*N],y[N*N];
+int dist[N];
+void ASS_WE_CAN(){
+	scanf("%d%d",&n,&m);
+	rep(i,1,2*n)rep(j,1,2*n)d[i][j]=(i==j)?0:1e9;
+	memset(code,0,sizeof code);
+	memset(in,0,sizeof in);
+	memset(out,0,sizeof out);
+	
+	__::init();
+	int sum=0;
+	rep(i,1,m){
+		int l;
+		scanf("%d%d%d%d%d",&x[i],&y[i],&l,&s[i],&t[i]);
+		out[x[i]]++;in[y[i]]++;
+		sum+=l;
+		t[i]-=l;
+		s[i]-=l;
+		__::link(code[y[i]][1],code[x[i]][0],1e9,t[i]);
+		__::link(code[x[i]][0],code[y[i]][1],1e9,-s[i]);
+		d[x[i]][y[i]+n]=min(d[x[i]][y[i]+n],-s[i]);
+		d[y[i]+n][x[i]]=min(d[y[i]+n][x[i]],t[i]);
+	}
+	rep(i,1,2*n)rep(j,1,2*n)dd[i][j]=d[i][j];
+	
+	rep(k,1,2*n)rep(i,1,2*n)rep(j,1,2*n)
+	dd[i][j]=min(dd[i][j],dd[i][k]+dd[k][j]);
+	rep(i,1,2*n)if(dd[i][i]<0){
+		printf("Unlike\n");
+		return;
+	}
+	rep(i,1,n){
+		__::link(code[i][0],__::T,out[i],0);
+		__::link(__::S,code[i][1],in[i],0);
+	}
+	int ans=__::costflow();
+	printf("%d\n",ans+sum);
+	
+	int gg=3;
+	rep(i,1,m){
+		if(__::flow[gg])d[x[i]][y[i]+n]=min(d[x[i]][y[i]+n],-t[i]);
+		gg+=2;
+		if(__::flow[gg])d[y[i]+n][x[i]]=min(d[y[i]+n][x[i]],+s[i]);
+		gg+=2;
+	}
+	
+	memset(dist,0,sizeof dist);
+	queue<int> q;rep(i,1,2*n)q.push(i);
+	while(!q.empty()){
+		int u=q.front();q.pop();
+		rep(v,1,2*n)if(dist[v]>dist[u]+d[u][v]){
+			dist[v]=dist[u]+d[u][v];
+			q.push(v);
+		}
+	}
+	int midist=0;
+	rep(i,1,2*n)if(midist>dist[i])midist=dist[i];
+	for(int i=1;i<=n*2;i++) dist[i]-=midist;
+	for(int i=1;i<=n;i++) printf("%d%c",dist[i]," \n"[i==n]);
+	for(int i=1;i<=n;i++) printf("%d%c",dist[i+n]," \n"[i==n]);
+}
+int main(){
+	int T;scanf("%d",&T);
+	while(T--)ASS_WE_CAN();
+	return 0;
+}
+

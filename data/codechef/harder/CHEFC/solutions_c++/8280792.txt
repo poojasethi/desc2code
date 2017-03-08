@@ -1,0 +1,196 @@
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <iostream>
+#include <vector>
+#include <queue>
+#define ll long long
+#define pb push_back
+using namespace std;
+const int N=1e5+9,inf=~0U >> 1;
+int ar[N],n;
+char cmd[10];
+int a[N];
+struct Splay
+{
+	struct Node
+	{
+		int val,size,sum,it;
+		bool rev;
+		Node *fa,*s[2];
+	}buf[N<<1],*nil,*root,*pool;
+	void push_up(Node *x)
+	{
+		x->sum=x->val+x->s[1]->sum+x->s[0]->sum;
+		x->size=1+x->s[0]->size+x->s[1]->size;
+	}
+	void init()
+	{
+		nil=pool=buf;
+		nil->s[0]=nil->s[1]=nil->fa=nil;
+		nil->size=0;
+		nil->val=nil->sum=0;
+		nil->it=0;
+		root=new_node(0,0,nil);
+		root->s[1]=new_node(0,0,root);
+		root->s[1]->s[0]=build(1,n,root->s[1]);
+		AC();
+		//dfs(root,1);
+		//puts("***");
+	}
+	Node  *build(int l,int r,Node *f)
+	{
+		if(l>r) return nil;
+		int mid=(l+r)>>1;
+		Node *cur=new_node(ar[mid],a[mid],f);
+		cur->s[0]=build(l,mid-1,cur);
+		cur->s[1]=build(mid+1,r,cur);
+		push_up(cur);
+		return cur;
+	}
+	Node *new_node(int val,int it,Node *f)
+	{
+		Node *x=++pool;
+		x->fa=f;
+		x->sum=x->val=val;
+		x->it=it;
+		x->size=1;
+		x->s[0]=x->s[1]=nil;
+		return x;
+	}
+	void rotate(Node* x) {
+        Node* y = x->fa;
+      //  push_down(x), push_down(y);
+        int f = y->s[0] == x ;
+        y->s[f ^ 1] = x->s[f] ;
+        if(x->s[f] != nil) x->s[f]->fa = y ;
+        x->fa = y->fa;
+        if(x->fa != nil){
+            if(x->fa->s[0] == y) x->fa->s[0] = x ;
+            else x->fa->s[1] = x;
+        }
+        x->s[f] = y;
+        y->fa = x;
+        push_up(y);
+    }
+    void splay(Node* x, Node* f){
+     //   push_down(x);
+        while(x->fa != f){
+            if(x->fa->fa == f) rotate(x) ;
+            else{
+                Node* y = x->fa , *z = y->fa ;
+                if((z->s[0]==y) == (y->s[0]==x)) rotate(y) ;
+                else rotate(x) ;
+                rotate(x) ;
+            }
+        }
+        push_up(x) ;
+        if(x->fa == nil) root = x ;
+    }
+    void select(int k, Node* f){
+        Node* x = root;
+        while(x != nil){
+          //  push_down(x);
+            int tmp = x->s[0]->size + 1;
+            if(tmp == k) break ;
+			//printf("tmp=%d k=%d\n",tmp,k);
+            if(tmp > k) x = x->s[0];
+            else x = x->s[1], k -= tmp;
+        }
+	//	dfs(x,1);
+		
+		//puts("LOCLOCLOC");
+        splay(x, f);
+    }
+	void adjust(int l,int r)
+	{
+		select(l,nil);
+		//dfs(root,1);
+		//puts("DDDD");
+		select(r,root);
+	}
+	void AC()
+	{
+		push_up(root->s[1]);
+		push_up(root);
+	}
+	int get_sum(int l,int r)
+	{
+		if(l>r) return 0;
+		adjust(l-1,r+1);
+		//printf("%d %d\n",l,r);
+		//dfs(root,1);
+		//puts("*****&");
+		return root->s[1]->s[0]->sum;
+	}
+	int get_it(int p)
+	{
+		select(p,nil);
+		return root->it;
+	}
+	void move(int l,int r)
+	{
+		if(l==2) return;
+		adjust(l-1,r+1);
+		Node *a1=root->s[1]->s[0];
+		root->s[1]->s[0]=nil;
+		AC();
+		//int L=root->it,R=root->s[1]->it;
+		adjust(1,2);
+		root->s[1]->s[0]=a1;
+		a1->fa=root->s[1];
+		push_up(root);
+		select(2,nil);
+		root->val=0;
+		push_up(root);
+		int v=get_it(2+r-l)!=get_it(3+r-l);
+		select(3+r-l,nil);
+		root->val=v;
+		push_up(root);
+		if(r+1<=n+1) 
+		{
+			v=get_it(r)!=get_it(r+1);
+			select(r+1,nil);
+			root->val=v;
+			push_up(root);
+		}
+	}
+	void dfs(Node* x,int mk){
+        if(x == nil) return;
+       // push_down(x);
+        dfs(x->s[0],mk<<1); 
+		printf("mk=%d val=%d sum=%d it=%d sz=%d\n",mk,x->val,x->sum,x->it,x->size);
+       // cout << x->val <<"id="<<mk<<"("<<(x->it)<<")"<<(x->sum)<<" ";
+        printf("\n\n");
+		dfs(x->s[1],mk<<1|1);//puts("\");
+    }
+}tree;
+ 
+int main()
+{
+	int _;
+	for(cin>>_;_--;)
+	{
+		scanf("%d",&n);
+		for(int i=1;i<=n;i++) scanf("%d",a+i);
+		for(int i=2;i<=n;i++) ar[i]=(a[i]!=a[i-1]);
+		//for(int i=1;i<=n;i++) printf("%d ",ar[i]);
+		//puts("");
+		tree.init();
+		int m;cin>>m;
+		while(m--)
+		{
+			int mk,l,r;scanf("%d%d%d",&mk,&l,&r);l++,r++;
+			if(mk==1) 
+			{
+				//printf("%d %d\n",l,r);
+				printf("%d\n",tree.get_sum(l+1,r)+1);
+			}
+			else 
+			{
+				tree.move(l,r);
+			}
+		}
+	}
+	return 0;
+} 

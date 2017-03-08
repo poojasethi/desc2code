@@ -1,0 +1,135 @@
+#include<cstdio>
+#include<cstring>
+#include<queue>
+
+using namespace std;
+
+
+const int MAX_SIZE = 50 * 210;
+const int EDGE_CNT = MAX_SIZE * 2 + 100 * 300 * 3;
+const int S = MAX_SIZE + 1, T = MAX_SIZE + 2;
+const int BOUND = 300000;
+const int INF = 0x3f3f3f3f;
+const int SHIFT = 100;
+
+int nodes[MAX_SIZE + 10], nxt[EDGE_CNT], to[EDGE_CNT], cap[EDGE_CNT];
+int a[55], b[55], c[55], l[55], r[55];
+int vn, en;
+
+inline void addEdge(int f, int t, int c){
+	to[en] = t;
+	cap[en] = c;
+	nxt[en] = nodes[f];
+	nodes[f] = en;
+	++ en;
+	to[en] = f;
+	cap[en] = 0;
+	nxt[en] = nodes[t];
+	nodes[t] = en;
+	++ en;
+}
+
+int n, m;
+
+inline int calc(int a, int b, int c, int v){
+	return a * v * v + b * v + c;
+}
+
+queue<int> q;
+int dist[MAX_SIZE + 10], he[MAX_SIZE + 10];
+
+inline int min(int a, int b) { return a < b ? a : b; }
+
+int augment(int cur, int lim){
+	if(cur == T)
+		return lim;
+	int flow = 0;
+	for(int& e = he[cur]; e != -1; e = nxt[e]){
+		if(cap[e] && dist[to[e]] == dist[cur] + 1){
+			int del = augment(to[e], min(lim, cap[e]));
+			lim -= del;
+			flow += del;
+			cap[e] -= del;
+			cap[e ^ 1] += del;
+			if(!lim)
+				break;
+		}
+	}
+	return flow;
+}
+
+bool bfs(){
+	memset(dist, -1, sizeof(dist));
+	dist[S] = 0;
+	q.push(S);
+	while(!q.empty()){
+		int cur = q.front();
+		q.pop();
+		for(int e = nodes[cur]; e != -1; e = nxt[e]){
+			if(cap[e] && dist[to[e]] == -1){
+				dist[to[e]] = dist[cur] + 1;
+				q.push(to[e]);
+			}
+		}
+	}
+	return dist[T] != -1;
+}
+
+int dinic(){
+	int flow = 0;
+	while(bfs()){
+		for(int i = 0; i < vn; i ++)
+			he[i] = nodes[i];
+		he[S] = nodes[S];
+		he[T] = nodes[T];
+		flow += augment(S, INF);
+	}
+	return flow;
+}
+
+int main(){
+	scanf("%d%d", &n, &m);
+	vn = 201 * n;
+	for(int i = 0; i < n; i ++)
+		scanf("%d%d%d", a + i, b + i, c + i);
+	for(int i = 0; i < n; i ++){
+		scanf("%d%d", l + i, r + i);
+		l[i] += SHIFT;
+		r[i] += SHIFT;
+	}
+	memset(nodes, -1, sizeof(nodes));
+	for(int i = 0; i < n; i ++){
+		for(int j = 0; j < l[i]; j ++){
+			if(j == 0)
+				addEdge(S, i * 201 + j, INF);
+			else
+				addEdge(i * 201 + j - 1, i * 201 + j, INF);
+		}
+		for(int j = l[i]; j <= r[i]; j ++){
+			if(j == 0)
+				addEdge(S, i * 201 + j, BOUND - calc(a[i], b[i], c[i], j - SHIFT));
+			else
+				addEdge(i * 201 + j - 1, i * 201 + j, BOUND - calc(a[i], b[i], c[i], j - SHIFT));
+		}
+		for(int j = r[i] + 1; j < 201; j ++){
+			addEdge(i * 201 + j - 1, i * 201 + j, INF);
+		}
+		addEdge(i * 201 + 200, T, INF);
+	}
+	while(m --){
+		int u, v, d;
+		scanf("%d%d%d", &u, &v, &d);
+		-- u; -- v;
+		for(int i = 200; i >= 0; i --){
+			if(i - d >= 0 && i - d <= 200)
+				addEdge(u * 201 + i, v * 201 + i - d, INF);
+		}
+		if(d < 0)
+			addEdge(S, v * 201 - d - 1, INF);
+	}
+	printf("%d\n", BOUND * n - dinic());
+
+	return 0;
+}
+
+

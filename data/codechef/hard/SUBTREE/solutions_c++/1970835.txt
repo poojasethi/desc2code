@@ -1,0 +1,284 @@
+/* First consider the case of having 2 diameters with disjoint paths then having common paths. Observer and generalize. Then take case of 3 diameters. Observe and make better generalizaton
+*/
+#include<cmath>
+#include<cstdio>
+#include<vector>
+#include<cstring>
+#include<algorithm>
+
+#define SET(v,i) memset(v, i, sizeof(v))
+#define FOR(i,a,b) for ( int i=a; i<b; i++ )
+#define maxi 1000000001
+#define wile(n) while(n-- > 0 )
+
+using namespace std;
+
+vector<int> level(100002,-1), dist(100002,0);
+bool visited[100002];
+int shortest[100002][55], lca[100002][55], in_time, out_time, n, in[100002], out[100002];
+
+inline int FAST_IO()
+{	int x=0;
+	char ch;
+	while (((ch=getchar_unlocked()) < 48 || ch > 57) && ch != '-');		// ASCII value 0->9
+	x = ch-48;
+	while ((ch=getchar_unlocked()) >= 48 && ch <= 57)
+		x=x*10+ch-48;
+	return x;
+}
+
+struct headers
+{	struct list *lnext, *linserted;
+	headers()
+	{	lnext= linserted= NULL; 	}
+} header[100002];
+
+struct list
+{	struct list *next;	
+	int wt, tptr;
+	list()
+	{	next=NULL;
+		wt=tptr=-1;
+	}
+};
+
+void dfstrav( int s, int l ,int wt)
+{	in[s] = ++in_time;						// used for is_ancestor() query
+	dist[s] = (lca[s][0] == -1 ) ? 0 : dist[lca[s][0]]+wt;		// calculate dist[i] from root node
+	level[s]=++l;
+	struct list *nd= header[s].lnext;
+	visited[s]=1;
+	while ( nd != NULL )
+	{	if ( visited[nd->tptr] == 0 )
+		{	lca[nd->tptr][0]=s;					// initialize for base case
+			shortest[nd->tptr][0]= nd->wt;
+			dfstrav(nd->tptr,l, nd->wt);
+		}
+		nd= nd->next;
+	}
+	out[s] = ++out_time;			// used for is_ancestor() query
+}
+
+void lca_process( )
+{	int i, j;
+	for (j = 1; 1 << j <= n; j++)
+	{	FOR(i,1,n+1)
+		{	if (lca[i][j - 1] != -1)
+			{	lca[i][j] = lca[lca[i][j - 1]][j - 1];
+				if ( lca[i][j] != -1 )			// important condition
+					shortest[i][j]= min ( shortest[i][j-1], shortest[lca[i][j-1]][j-1] );	// recuurence same as that of lca
+			}
+		}
+	}
+}
+
+// Find lca(p,q)
+int query( int p, int q )
+{	int tmp, log, i;
+	if ( level[p] < level[q] )
+	{	p=p^q;
+		q=p^q;
+		p=p^q;
+	}
+	for (log = 1; 1 << log <= level[p]; log++);
+	log--;
+	// equalizes the levels of p and q
+	for (i = log; i >= 0; i--)
+		if (level[p] - (1 << i) >= level[q])
+			p = lca[p][i];
+	if (p == q)
+		return p;
+	for (i = log; i >= 0; i--)
+		if (lca[p][i] != -1 && lca[p][i] != lca[q][i])
+			p = lca[p][i], q = lca[q][i];
+	return lca[p][0];
+}
+
+int LCA( vector<int> &U)
+{	int lca = U[0];
+	for (int i = 1; i < U.size(); ++i)
+		lca = query(lca, U[i]);
+	return lca;
+}
+
+// Finding minimum cost edge (similar to lca process )
+int query_shortest ( int p, int q )
+{	int tmp, log, i;
+	if ( level[p] < level[q] )		// level: p > q
+	{	p=p^q;
+		q=p^q;
+		p=p^q;
+	}
+	for (log = 1; 1 << log <= level[p]; log++);
+	log--;
+	tmp=maxi;
+	// modified form of lca query for finding shortest between 2 nodes
+	for (i = log; i >= 0; i--)
+		if (level[p] - (1 << i) >= level[q])
+		{	tmp= min(tmp, shortest[p][i]);
+			p = lca[p][i];
+		}
+	return tmp;
+}
+
+inline bool is_ancestor(int u, int v)
+{	return in[u] <= in[v] && out[u] >= out[v];	}
+
+inline bool is_ancestor(int u, const vector<int> &U)
+{	for (int i = 0; i < U.size(); ++i)
+	{	if (is_ancestor(u, U[i]))
+			return 1;
+	}
+	return 0;
+}
+
+inline int get_dist(int u, int v)
+{	// the path is u-w-v, where w is LCA of u and v. u-w part has length d[u]-d[w]. v-w part has length d[v]-d[w]
+	int w = query(u, v);
+	return ( dist[u] + dist[v] - ( dist[w] << 1 ) );
+}
+
+// returns the furthest distance from u to any vertex of k_points and save the distance to max_dist. Used for finding diameter of tree of given nodes
+int getFurthest( int u, const vector<int> &k_points, int &max_dist )
+{	int res = u;
+	max_dist = -1;
+	for (int i = 0; i < k_points.size(); ++i)
+	{	int d = get_dist(u, k_points[i]);
+		if ( max_dist < d)
+		{	max_dist = d;
+			res = k_points[i];
+		}
+	}
+	return res;
+}
+
+int get_min(int u, const vector<int> &U)
+{	int res = maxi;
+	for (int h = (log10(level[u])/log10(2))+1; h >= 0; --h) 			// idea from process of lca_query()
+	{	//printf("h: %d\n", h);
+		if (lca[u][h] == -1 || is_ancestor(lca[u][h], U) )
+			continue;
+		//printf("lca: %d\n", lca[u][h]);
+		res = min(res, shortest[u][h]);
+		u = lca[u][h];
+	}
+	res = min(res, shortest[u][0]);
+	return res;
+}
+
+int shortest_path( int u, int v )
+{	int lca= query(u,v);
+	int q1= query_shortest(u,lca);
+	int q2= query_shortest(v,lca);
+	// min(shoretst edge on u-w, shortest edge on w-v )
+	return min(q1, q2);
+}
+
+int main()
+{	int i,n1,n2,wt;
+	n=FAST_IO();
+	struct list *l1;
+	for (i=0; i<n-1; i++)
+	{	n1= FAST_IO();
+		n2= FAST_IO();
+		wt= FAST_IO();
+		l1= new struct list;
+		l1->wt=wt;
+		l1->next=NULL;
+		l1->tptr=n2;
+		if ( header[n1].linserted == NULL )
+			header[n1].lnext=l1;
+		else
+			header[n1].linserted->next=l1;
+		header[n1].linserted= l1;
+		l1= new struct list;
+		l1->wt=wt;
+		l1->next=NULL;
+		l1->tptr=n1;
+		if ( header[n2].linserted == NULL )
+			header[n2].lnext=l1;
+		else
+			header[n2].linserted->next=l1;
+		header[n2].linserted= l1;
+	}
+	int k;
+	FOR(i,1,n+1)
+	{	FOR(j,0,55)
+		{	lca[i][j]=-1;
+			shortest[i][j]= maxi;
+		}
+	}
+	FOR(i,0,55)
+		shortest[1][i]= maxi;
+	dist[1]=0;
+	dfstrav(1,-1,0);
+	lca_process();
+	lca[1][0]=-1;			// on a safer side
+	int t;
+	/*printf("lca\n");
+	for ( int i=1; i<=11; i++)
+	{	for ( int j=0; j<5; j++)
+			printf("%d\t", lca[i][j]);
+		printf("\n");
+	}
+	printf("shortest\n");
+	for ( int i=1; i<=11; i++)
+	{	for ( int j=0; j<5; j++)
+			printf("%d\t", shortest[i][j]);
+		printf("\n");
+	}*/
+	t=FAST_IO();
+	wile(t)
+	{	k= FAST_IO();
+		vector<int> k_points;
+		int max_dist,e;
+		FOR(i,0,k)
+		{	e=FAST_IO();
+			k_points.push_back(e);
+		}
+		int u = getFurthest(k_points[0], k_points, max_dist);
+		int v = getFurthest(u, k_points, max_dist);
+		printf("%d ", max_dist);
+		bool no_common_edge = 0;
+		vector<int> A, B;
+		FOR(i,0,k)
+		{	int cnt = 0;
+			if ( get_dist(u, k_points[i]) == max_dist)
+			{	B.push_back(k_points[i]);
+				++cnt;
+			}
+			if (get_dist(v, k_points[i]) == max_dist)
+			{	A.push_back(k_points[i]);
+				++cnt;
+			}
+			if (cnt == 2)
+			{	no_common_edge = 1;
+				break;
+			}
+		}
+		/*printf("A:\n");
+		for ( int i=0; i<A.size(); i++)
+			printf("%d  ",A[i]);
+		printf("\n");
+		printf("B:\n");
+		for ( int i=0; i<B.size(); i++)
+			printf("%d  ",B[i]);
+		printf("\n");*/
+		if (no_common_edge)
+		{	printf("-1\n");
+			continue;
+		}
+		int lca1 = LCA(A);
+		int lca2 = LCA(B);
+		//printf("lca1 : %d lca2: %d\n", lca1, lca2);
+		int min_edge, lca_common;
+		if ( is_ancestor(lca1, lca2) )
+			min_edge = get_min(lca2, A);
+		else if ( is_ancestor(lca2, lca1) )
+			min_edge = get_min(lca1, B);
+		else					// in this case the path lca1 - lca2 is the intersection of all ideal path		
+			min_edge = shortest_path(lca1, lca2);
+		printf("%d\n", min_edge);
+	}
+	return 0;
+}

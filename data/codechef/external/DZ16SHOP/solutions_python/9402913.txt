@@ -1,0 +1,279 @@
+#include <bits/stdc++.h>
+
+#define sd(x) scanf("%d",&x)
+#define sd2(x,y) scanf("%d%d",&x,&y)
+#define sd3(x,y,z) scanf("%d%d%d",&x,&y,&z)
+
+#define fi first
+#define se second
+#define pb(x) push_back(x)
+#define mp(x,y) make_pair(x,y)
+#define LET(x, a)  __typeof(a) x(a)
+#define foreach(it, v) for(LET(it, v.begin()); it != v.end(); it++)
+
+#define _ ios_base::sync_with_stdio(false);cin.tie(NULL);cout.tie(NULL);
+#define __ freopen("input.txt","r",stdin);freopen("output.txt","w",stdout);
+
+#define func __FUNCTION__
+#define line __LINE__
+
+using namespace std;
+
+typedef long long ll;
+typedef pair<int,int> pii;
+
+template<typename S, typename T> 
+ostream& operator<<(ostream& out, pair<S, T> const& p){out<<'('<<p.fi<<", "<<p.se<<')'; return out;}
+
+template<typename T>
+ostream& operator<<(ostream& out, vector<T> const & v){
+ll l = v.size(); for(ll i = 0; i < l-1; i++) out<<v[i]<<' '; if(l>0) out<<v[l-1]; return out;}
+
+void tr(){cout << endl;}
+template<typename S, typename ... Strings>
+void tr(S x, const Strings&... rest){cout<<x<<' ';tr(rest...);}
+
+const int N = 310;
+const ll INF = (1ll<<40);
+
+// min cost bipartite matching, to make it max profit, negate the cost matrix during initialization
+
+int card;
+ll res;
+ll cost[N][N];
+int x[N][N];
+ll lX[N], lY[N];
+int mateX[N], mateY[N];
+
+int pre1[N], pre2[N];
+ll p[N];
+int pi[N];
+
+pii q[N*2];
+int front, back;
+
+int n;
+
+void addEdge(int i, int j, ll c){
+	cost[i][j] = c;
+}
+
+void reinitialize(int _n){
+	n = _n;
+	for(int i = 1; i <= n; i++){
+		for(int j = 1; j <= n; j++){
+			x[i][j] = 0;
+		}
+	}
+}
+
+void dualInitialization(){
+	res = 0;
+	for(int i = 1; i <= n; i++){
+		lX[i] = cost[i][1];
+		for(int j = 2; j <= n; j++){
+			lX[i] = min(lX[i], cost[i][j]);
+		}
+	}
+	
+	for(int j = 1; j <= n; j++){
+		lY[j] = cost[1][j] - lX[1];
+		for(int i = 2; i <= n; i++){
+			lY[j] = min(lY[j], cost[i][j] - lX[i]);
+		}
+	}
+	
+}
+
+void primalInitialization(){
+	for(int i = 1; i <= n; i++) mateX[i] = mateY[i] = -1;
+	card = 0;
+	
+	for(int i = 1; i <= n; i++){
+		for(int j = 1; j <= n; j++){
+			if(mateY[j] == -1 and cost[i][j] - lX[i] - lY[j] == 0){
+				x[i][j] = 1;
+				card++;
+				mateX[i] = j;
+				mateY[j] = i;
+				res += cost[i][j];
+				break;
+			}
+		}
+	}
+}
+
+void pathInitialization(){
+	for(int i = 1; i <= n; i++){
+		pre1[i] = pre2[i] = -1;
+		p[i] = INF;
+		pi[i] = -1;
+	}
+
+	for(int i = 1; i <= n; i++){
+		if(mateX[i] == -1){
+			pre1[i] = 0;
+			q[back++] = mp(i,0);				
+			for(int j = 1; j <= n; j++){
+				ll tmp = cost[i][j] - lX[i] - lY[j];
+				if(tmp < p[j]){
+					p[j] = tmp;
+					pi[j] = i;
+				}
+			}
+		}
+	}
+}
+
+void labelingPropogation(int &path){
+	while(front < back){
+		int u = q[front].fi, type = q[front].se; front++;
+		if(type == 0){
+			for(int j = 1; j <= n; j++){
+				if(pre2[j] == -1 and cost[u][j] - lX[u] - lY[j] == 0){
+					pre2[j] = u;
+					q[back++] = mp(j,1);
+				}
+			}
+		}
+		else{
+			int v = mateY[u];
+			if(v != -1){
+				if(pre1[v] == -1){
+					pre1[v] = u;
+					q[back++] = mp(v,0);						
+					for(int j = 1; j <= n; j++){
+						ll tmp = cost[v][j] - lX[v] - lY[j];
+						if(pre2[j] == -1 and tmp < p[j]){
+							p[j] = tmp;
+							pi[j] = v;
+						}
+					}
+					
+				}
+			}
+			else{
+				path = u;
+				break;
+			}
+		}
+	}
+}	
+
+void dualIteration(){
+	ll del = INF;
+	for(int j = 1; j <= n; j++){
+		if(pre2[j] == -1) del = min(del, p[j]);
+	}
+	
+	for(int i = 1; i <= n; i++){
+		if(pre1[i] != -1) lX[i] += del;
+	}
+	
+	for(int j = 1; j <= n; j++){
+		if(pre2[j] != -1) lY[j] -= del;
+		else{
+			p[j] -= del;
+			if(p[j] == 0){
+				pre2[j] = pi[j];
+				q[back++] = mp(j,1);
+			}
+		}
+	}
+}
+
+void primalIteration(int &path){
+	int j = path, i;
+	while(j != 0){
+		i = pre2[j];
+		mateX[i] = j, mateY[j] = i;
+		x[i][j] = 1;
+		card++;
+		res += cost[i][j];
+
+		j = pre1[i];
+		if(j != 0){
+			x[i][j] = 0;
+			res -= cost[i][j];
+			card--;
+		}
+	}
+}
+
+ll minCostBipartiteMatching(){
+	dualInitialization();
+	primalInitialization();
+	
+	while(card < n){
+		front = back = 0;
+		pathInitialization();
+		
+		int path = -1;
+		
+		while(path == -1){
+			while(path == -1 and front < back) labelingPropogation(path);
+			if(path == -1) dualIteration();
+		}
+		primalIteration(path);
+	}
+	return res;
+}
+
+const int M = 10100;
+int X[N], Y[N], P[N];
+int a[M];
+int countingSort[M/10];
+
+void solve(){
+	int n, m;
+	sd2(n,m);
+	for(int i = 1; i <= n; i++){
+		sd3(X[i], Y[i], P[i]);
+	}
+	
+	memset(countingSort, 0, sizeof countingSort);
+
+	const ll inf = 1e9 + 1;
+	
+	int mx = 0, mn = inf;
+	for(int i = 1; i <= m; i++){
+		sd(a[i]);
+		countingSort[a[i]]++;
+		mx = max(mx, a[i]);
+		mn = min(mn, a[i]);
+	}
+
+	m = min(m, n);
+	
+	for(int i = mx, j = 1; i >= mn and j <= m ; i--){
+		while(j <= m and countingSort[i] > 0){
+			a[j++] = i;
+			countingSort[i]--;
+		}
+	}
+	
+	reinitialize(n);
+	
+	for(int i = 1; i <= n; i++){
+		for(int j = 1; j <= m; j++){
+			if(X[i] + Y[i] <= a[j]) cost[i][j] = (1ll*Y[i]*P[i]) + (ll) (a[j] - X[i] - Y[i]) * inf;
+			else if(X[i] <= a[j]) cost[i][j] = (ll) (a[j] - X[i]) * P[i];
+			else cost[i][j] = 0;
+		}
+		if(m < n) for(int j = m+1; j <= n; j++) cost[i][j] = 0;
+	}
+	
+	int maxgoods = 0;
+	for(int i = 1; i <= m; i++) maxgoods += a[i];
+	
+	ll cost = minCostBipartiteMatching();
+	printf("%d %d\n", (int) (maxgoods - cost/inf), (int) (cost%inf));
+}
+
+int main(){
+	int t; sd(t);
+	while(t--){
+		solve();
+	}
+	return 0;
+}

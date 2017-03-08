@@ -1,0 +1,135 @@
+#include<iostream>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+#include<queue>
+#include<set>
+#include<stack>
+#include<map>
+#include<vector>
+#define fi first
+#define se second
+#define pb push_back
+#define mk make_pair
+using namespace std;
+typedef long long ll;
+int read()
+{
+	char ch=getchar();int x,f=1;
+	while(ch<'0'||ch>'9')
+	{
+		if(ch=='-') f=-1;
+		ch=getchar();
+	}
+	x=ch-'0';
+	while(1)
+	{
+		ch=getchar();
+		if(ch<'0'||ch>'9') break;
+		x=x*10+ch-'0';
+	}
+	return x*f;
+}
+const int mod=998244353;
+const int Mod=1e9+7;
+const int base=233;
+const int maxn=2010;
+char s[2][maxn],w[maxn];
+int ans,f[maxn<<1][maxn],n,m,g[maxn<<1][maxn];
+int hash[2][maxn],hw[maxn],inv[maxn],pow[maxn];
+int trans(int &a,int b)
+{
+	a+=b;
+	return a>=Mod?a-=Mod:a;
+}
+int dec(int x,int v)
+{
+	x-=v;
+	return x<0?x+=mod:x;
+}
+int gethash(int *h,int l,int r)
+{
+	return dec(h[r],1ll*h[l - 1] * pow[r - l + 1] % mod);
+}
+int solve()
+{
+	memset(f,0,sizeof(f));memset(g,0,sizeof(g));
+	for(int i=1;i<=n;i++)
+	{
+		hash[0][i]=(1ll*hash[0][i-1]*base+s[0][i])%mod;
+		hash[1][i]=(1ll*hash[1][i-1]*base+s[1][i])%mod;
+	}
+	for(int i=1;i<=m;i++) 
+	{
+		hw[i]=(1ll*hw[i-1]*base+w[i])%mod;
+		inv[i]=(1ll*inv[i-1]*base+w[m-i+1])%mod;
+	}
+	for(int i=0;i<=n*2;i++) ++f[i][0];
+	for(int i=0;i<=n*2+2;i++) ++g[i][m];
+	for(int i=1;i<=n;i++)
+		for(int j=i+1;j<=n;j++)
+		{
+			int l=j-i+1;if(2*l>m) break;
+			int hs0=gethash(hash[0],i,j),hs1=gethash(hash[1],i,j);
+			int hw0=gethash(inv,m-l+1,m),hw1=gethash(hw,l+1,l+l);
+			int rhw0=gethash(hw,m-2*l+1,m-l),rhw1=gethash(inv,1,l);
+			if ((hs0 == hw0) && (hs1 == hw1)) ++f[j + n + 1][2 * l];
+			if ((hs0 == hw1) && (hs1 == hw0)) ++f[j][2 * l];
+			if ((hs0 == rhw0) && (hs1 == rhw1)) ++g[i][m - 2 * l];
+			if ((hs0 == rhw1) && (hs1 == rhw0)) ++g[i + n + 1][m - 2 * l];
+		}
+	int ret=0;
+	for(int i=0;i<n;i++)
+		for(int j=0;j<m;j++)
+		{
+			if(s[0][i+1]==w[j+1])
+			{
+				trans(f[i+1][j+1],f[i][j]);
+				if(s[1][i+1]==w[j+2]) trans(f[n+1+i+1][j+2],f[i][j]);
+			}
+			if(s[1][i+1]==w[j+1])
+			{
+				trans(f[n+1+i+1][j+1],f[n+1+i][j]);	
+				if(s[0][i+1]==w[j+2]) trans(f[i+1][j+2],f[n+1+i][j]);
+			}
+		}
+	for(int i=1;i<=n;i++)
+		for(int j=1;j<=m;j++)
+		{
+			trans(ret,1ll*f[i][j]*g[i+1][j]%Mod);
+			trans(ret,1ll*f[n+1+i][j]*g[n+i+1+1][j]%Mod);
+		}
+	return ret;
+}
+int main()
+{
+	//freopen(".in","r",stdin);
+	//freopen(".out","w",stdout);
+	scanf("%s%s%s",s[0]+1,s[1]+1,w+1);
+	n=strlen(s[0]+1);m=strlen(w+1);
+	pow[0]=1;
+	for(int i=1;i<=max(n,m);i++) pow[i]=1ll*pow[i-1]*base%mod;
+	if(m==1)
+	{
+		for(int i=1;i<=n;i++)
+			ans+=(s[0][i]==w[1])+(s[1][i]==w[1]);
+		printf("%d\n",ans);return 0;
+	}
+	ans=0;ans+=solve();
+	reverse(s[0]+1,s[0]+1+n);reverse(s[1]+1,s[1]+n+1);
+	ans+=solve();ans%=Mod;
+	if(m==2)
+	{
+		for(int i=1;i<=n;i++)
+		{
+			if((s[0][i]==w[1])&&(s[1][i]==w[2])) ans--;
+			if((s[0][i]==w[2])&&(s[1][i]==w[1])) ans--;
+		}
+	}
+	if(ans<0) ans+=Mod;
+	printf("%d\n",ans);
+	//fclose(stdin);
+	//fclose(stdout);
+	return 0;
+}

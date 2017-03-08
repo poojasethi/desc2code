@@ -1,0 +1,217 @@
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+using namespace std;
+
+typedef long long int64;
+
+const int MAX_N = (int)(1e5);
+
+struct RangeBitOperator{
+	static const int MAX_SIZE = ::MAX_N;
+	int SIZE;
+
+	/*
+	 * 不変条件:
+	 * countは常にその区間の1の個数を表す。flipやuniformの状態は関係ない。
+	 * uniformはその区間が全て同じ状態であるときは必ずtrueである。
+	 * flippedはその区間全体がflipされた状態であるかどうかを表す。
+	 * uniformが真ならNO_FLIPPED
+	 */
+
+	enum substate{
+		ALL_ON, ALL_OFF, NOT_UNIFORM,
+		ALL_FLIPPED, NO_FLIPPED, SOME_FLIPPED
+	};
+
+	struct data{
+		int count;
+		bool uniform;
+		bool flipped;
+		data():count(0), uniform(false), flipped(false){}
+		data(int count, bool uniform, bool flipped):count(count), uniform(uniform), flipped(flipped){}
+	};
+
+	data dats[4*MAX_SIZE];
+
+	void init(int size){
+		SIZE = (size==1 ? 2 :(1<<(32 - __builtin_clz(size-1))) );
+		for(int i=0; i<2*SIZE-1; i++){
+			dats[i] = data(0, true, false);
+		}
+		dats[0] = data(0, true, false);
+	}
+
+	void init(int orig[], int size){
+		SIZE = (size==1 ? 2 :(1<<(32 - __builtin_clz(size-1))) );
+		init(size, 0, 0, SIZE, orig);
+	}
+
+	int init(int length, int k, int left, int right, int orig[]){
+		if(right - left == 1){
+			return (dats[k] = data((left < length && orig[left] ? 1 : 0), true, false)).count;
+		}
+		return (dats[k] = data(
+				init(length, 2*k+1, left, (left+right)>>1, orig) +
+				init(length, 2*k+2, (left+right)>>1, right, orig),
+				false, false)).count;
+	}
+/*
+	void turn_on(int from, int to){
+		turn_on(from, to, 0, 0, SIZE, false, NOT_UNIFORM);
+	}
+
+	int turn_on(int from, int to, int k, int left, int right, bool flipped, substate ss){
+		const int length = right - left;
+		if(flipped && !dats[k].flipped){
+			dats[k].flipped = !dats[k].flipped;
+			dats[k].count = length - dats[k].count;
+		}
+		if(ss != NOT_UNIFORM){
+			dats[k] = data(ss == ALL_ON ? length : 0, true, false);
+		}
+		if(right <= from || to <= left){
+			return dats[k].count;
+		}
+		if(from <= left && right <= to){
+			dats[k] = data(length, true, false);
+		}
+		if(dats[k].uniform){
+			if(dats[k].count == length){
+				return dats[k].count;
+			}
+			else{
+				int new_count = turn_on(from, to, 2*k+1, left, (left+right)>>1, false, ALL_OFF) +
+						turn_on(from, to, 2*k+2, (left+right)>>1, right, false, ALL_OFF);
+				return (dats[k] = data(new_count, false, false)).count;
+			}
+		}
+		return dats[k].count = turn_on(from, to, 2*k+1, left, (left + right)>>1, dats[k].flipped, NOT_UNIFORM) +
+				turn_on(from, to, 2*k+2, (left + right)>>1, right, dats[k].flipped, NOT_UNIFORM);
+	}
+
+	void turn_off(int from, int to){
+		turn_off(from, to, 0, 0, SIZE, false, NOT_UNIFORM);
+	}
+
+	int turn_off(int from, int to, int k, int left, int right, bool flipped, substate ss){
+		//printf("from:%d, to:%d, k:%d, left:%d, right:%d, flip:%d, uni:%d\n", from, to, k, left, right, flipped, ss);
+		const int length = right - left;
+		if(flipped && !dats[k].flipped){
+			dats[k].flipped = !dats[k].flipped;
+			dats[k].count = length - dats[k].count;
+		}
+		if(ss != NOT_UNIFORM){
+			dats[k] = data(ss == ALL_ON ? length : 0, true, false);
+		}
+		if(right <= from || to <= left){
+			return dats[k].count;
+		}
+		if(from <= left && right <= to){
+			dats[k] = data(0, true, false);
+		}
+		if(dats[k].uniform){
+			if(dats[k].count == 0){
+				return dats[k].count;
+			}
+			else{
+				int new_count = turn_off(from, to, 2*k+1, left, (left+right)>>1, false, ALL_ON) +
+						turn_off(from, to, 2*k+2, (left+right)>>1, right, false, ALL_ON);
+				return (dats[k] = data(new_count, false, false)).count;
+			}
+		}
+		return dats[k].count = turn_off(from, to, 2*k+1, left, (left + right)>>1, dats[k].flipped, NOT_UNIFORM) +
+				turn_off(from, to, 2*k+2, (left + right)>>1, right, dats[k].flipped, NOT_UNIFORM);
+	}
+*/
+
+	void flip(int from, int to){
+		flip(from, to, 0, 0, SIZE);
+	}
+
+	int flip(int from, int to, int k, int left, int right){
+		const int length = right - left;
+		if(right <= from || to <= left){
+			return dats[k].count;
+		}
+		if(from <= left && right <= to){
+			dats[k].flipped = !dats[k].flipped;
+			return dats[k].count = length - dats[k].count;
+		}
+		int new_count = flip(from, to, 2*k+1, left, (left+right)>>1) +
+				flip(from, to, 2*k+2, (left+right)>>1, right);
+		return dats[k].count = (dats[k].flipped ? length - new_count : new_count);
+	}
+
+	int popcount(int from, int to){
+		return popcount(from, to, 0, 0, SIZE);
+	}
+
+	int popcount(int from, int to, int k, int left, int right){
+		if(right <= from || to <= left){
+			return 0;
+		}
+		if(from <= left && right <= to){
+			return dats[k].count;
+		}
+		int cnt = popcount(from, to, 2*k+1, left, (left+right)>>1)
+				 + popcount(from, to, 2*k+2, (left+right)>>1, right);
+		return dats[k].flipped ? (min(right, to) - max(left, from)) - cnt : cnt;
+	}
+};
+
+RangeBitOperator rbo[3];
+
+int ls[3], Q;
+
+void init(){
+	scanf("%d%d%d%d", ls+0, ls+1, ls+2, &Q);
+	for(int i=0; i<3; i++){
+		rbo[i].init(ls[i]);
+	}
+}
+
+void solve(){
+	for(int i=0; i<Q; i++){
+		int cmd;
+		scanf("%d", &cmd);
+		if(cmd < 3){
+			int x, y;
+			scanf("%d%d", &x, &y);
+			y++;
+			rbo[cmd].flip(x, y);
+			/*
+			printf("cnt:%d - ", rbo[cmd].popcount(0, ls[cmd]));
+			for(int j=0; j<ls[cmd]; j++){
+				printf("%d", rbo[cmd].popcount(j, j+1));
+			}puts("");
+			*/
+		}
+		else{
+			int x1, y1, z1, x2, y2, z2;
+			scanf("%d%d%d%d%d%d", &x1, &y1, &z1, &x2, &y2, &z2);
+			x2++; y2++; z2++;
+			int64 X1 = rbo[0].popcount(x1, x2), X2 = x2 - x1 - X1,
+					Y1 = rbo[1].popcount(y1, y2), Y2 = y2 - y1 - Y1,
+					Z1 = rbo[2].popcount(z1, z2), Z2 = z2 - z1 - Z1;
+			//printf("X1:%lld, Y1:%lld, Z1:%lld, X2:%lld, Y2:%lld, Z2:%lld\n", X1,Y1,Z1,X2,Y2,Z2);
+			printf("%lld\n", X1*Y1*Z1 + X1*Y2*Z2 + X2*Y1*Z2 + X2*Y2*Z1);
+		}
+		/*
+		for(int j=0; j<3; j++){
+			printf("j:%d, %d\n", j, rbo[j].popcount(0, ls[j]));
+		}
+		*/
+	}
+}
+
+int main(){
+	int T;
+	scanf("%d", &T);
+	for(int i=0; i<T; i++){
+		init();
+		solve();
+	}
+
+	return 0;
+}

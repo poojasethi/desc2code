@@ -1,0 +1,216 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+typedef long long ll;
+typedef pair<int,int> pii;
+
+const int maxN=100005,maxM=maxN,logN=18,treepoolsize=maxM*logN*logN*1.1;
+
+const int mo=(int)1e9+9;
+
+ll power(ll a,ll b){
+	if((a%=mo)<0) a+=mo;
+	if((b%=mo-1)<0) b+=mo-1;
+	ll s=1;
+	for(;b;b>>=1,a=a*a%mo) if(b&1) s=s*a%mo;
+	return s;
+}
+
+int	sqrt5=383008016,invsqrt5=power(sqrt5,-1),
+	q1[maxN]={1,int((1LL+sqrt5)*power(2,-1)%mo)},
+	q2[maxN]={1,int((1LL+mo-sqrt5)*power(2,-1)%mo)},
+	q3[maxN]={1,mo-q2[1]},
+	q4[maxN]={1,mo-q1[1]},
+	s1[maxN],
+	s2[maxN],
+	s3[maxN],
+	s4[maxN];
+int d1,d2,d3,d4;
+
+int N,len,tim;
+
+struct node;
+struct edge{
+	node *ed;
+	edge *next;
+} E[maxN<<1],*newE=E;
+struct node{
+	edge *son;
+	node *fa,*prefer,*top;
+	int depth,size;
+	int st,en;
+	void dfssize(){
+		size=1;
+		for(edge *e=son;e;e=e->next) if(e->ed!=fa){
+			e->ed->fa=this;
+			e->ed->depth=depth+1;
+			e->ed->dfssize();
+			size+=e->ed->size;
+			if(!prefer||e->ed->size>prefer->size) prefer=e->ed;
+		}
+	}
+	void dfs(){
+		if(fa&&fa->prefer==this) top=fa->top; else top=this;
+		st=len++;
+		if(prefer) prefer->dfs();
+		for(edge *e=son;e;e=e->next) if(e->ed!=fa&&e->ed!=prefer)
+			e->ed->dfs();
+		en=len;
+	}
+} V[maxN];
+
+struct tree{
+	tree *l,*r;
+	int d1,d2,d3,d4,sum;
+} treepool[treepoolsize],*newtree=treepool,*T[maxM];
+
+tree* cover(tree *las,int beg,int end,int L,int R){
+	if(end<=L||beg>=R) return las;
+	tree *cur=newtree++;
+	if(newtree-treepool>treepoolsize) for(;;);
+	if(las) *cur=*las;
+	if(beg>=L&&end<=R){
+		cur->d1=(cur->d1+d1)%mo;
+		cur->d2=(cur->d2+d2)%mo;
+		cur->d3=(cur->d3+d3)%mo;
+		cur->d4=(cur->d4+d4)%mo;
+		cur->sum=(cur->sum+(ll)d1*s1[end-beg]+(ll)d2*s2[end-beg]+(ll)d3*s3[end-beg]+(ll)d4*s4[end-beg])%mo;
+		d1=(ll)d1*q1[end-beg]%mo;
+		d2=(ll)d2*q2[end-beg]%mo;
+		d3=(ll)d3*q3[end-beg]%mo;
+		d4=(ll)d4*q4[end-beg]%mo;
+		return cur;
+	}
+	int mid=(beg+end)>>1;
+	cur->l=cover(cur->l,beg,mid,L,R);
+	cur->r=cover(cur->r,mid,end,L,R);
+	cur->sum=((cur->l?cur->l->sum:0)+(cur->r?cur->r->sum:0)+(ll)cur->d1*s1[end-beg]+(ll)cur->d2*s2[end-beg]+(ll)cur->d3*s3[end-beg]+(ll)cur->d4*s4[end-beg])%mo;
+	return cur;
+}
+
+int querysum(tree *cur,int beg,int end,int L,int R){
+	if(end<=L||beg>=R||!cur) return 0;
+	if(beg>=L&&end<=R) return cur->sum;
+	int mid=(beg+end)>>1;
+	int st=max(beg,L)-beg,en=min(end,R)-beg;
+	return (querysum(cur->l,beg,mid,L,R)+querysum(cur->r,mid,end,L,R)+(ll)cur->d1*(s1[en]-s1[st]+mo)%mo+(ll)cur->d2*(s2[en]-s2[st]+mo)%mo+(ll)cur->d3*(s3[en]-s3[st]+mo)%mo+(ll)cur->d4*(s4[en]-s4[st]+mo)%mo)%mo;
+}
+
+void addchain(node *u,node *v){
+	static pii seq1[logN+5],seq2[logN+5];
+	pii *top1=seq1,*top2=seq2;
+	while(u->top!=v->top){
+		if(u->top->depth>=v->top->depth){
+			*top1++=pii(u->top->st,u->st);
+			u=u->top->fa;
+		}
+		else{
+			*top2++=pii(v->top->st,v->st);
+			v=v->top->fa;
+		}
+	}
+	if(u->depth>=v->depth)
+		*top1++=pii(v->st,u->st);
+	else
+		*top2++=pii(u->st,v->st);
+	int cnt=0;
+	for(pii *cur=seq1;cur<top1;cur++){
+		cnt+=cur->second-cur->first+1;
+		d1=d2=0;
+		d3=(ll)invsqrt5*q1[cnt]%mo;
+		d4=(ll)(mo-invsqrt5)*q2[cnt]%mo;
+		T[tim]=cover(T[tim],0,N,cur->first,cur->second+1);
+	}
+	for(pii *cur=top2;cur-->seq2;){
+		d3=d4=0;
+		d1=(ll)invsqrt5*q1[cnt+1]%mo;
+		d2=(ll)(mo-invsqrt5)*q2[cnt+1]%mo;
+		T[tim]=cover(T[tim],0,N,cur->first,cur->second+1);
+		cnt+=cur->second-cur->first+1;
+	}
+}
+
+int querysumchain(node *u,node *v){
+	int ans=0;
+	while(u->top!=v->top){
+		if(u->top->depth>=v->top->depth){
+			ans=(ans+querysum(T[tim],0,N,u->top->st,u->st+1))%mo;
+			u=u->top->fa;
+		}
+		else{
+			ans=(ans+querysum(T[tim],0,N,v->top->st,v->st+1))%mo;
+			v=v->top->fa;
+		}
+	}
+	if(u->depth>=v->depth)
+		ans=(ans+querysum(T[tim],0,N,v->st,u->st+1))%mo;
+	else
+		ans=(ans+querysum(T[tim],0,N,u->st,v->st+1))%mo;
+	return ans;
+}
+
+node* getsubtree(node *u,node *v){
+	while(u->top->depth-1>v->depth) u=u->top->fa;
+	if(u->top==v->top)
+		return v->prefer;
+	else
+		return u->top;
+}
+
+int querysumsubtree(node *u,node *v){
+	if(u==v){
+		return querysum(T[tim],0,N,0,N);
+	}
+	else
+	if(v->st<=u->st&&u->en<=v->en){
+		node *w=getsubtree(u,v);
+		return (querysum(T[tim],0,N,0,N)-querysum(T[tim],0,N,w->st,w->en)+mo)%mo;
+	}
+	else{
+		return querysum(T[tim],0,N,v->st,v->en);
+	}
+}
+
+int main(){
+	int M; scanf("%d%d",&N,&M);
+	for(int i=2;i<=N;i++) q1[i]=(ll)q1[i-1]*q1[1]%mo,q2[i]=(ll)q2[i-1]*q2[1]%mo,q3[i]=(ll)q3[i-1]*q3[1]%mo,q4[i]=(ll)q4[i-1]*q4[1]%mo;
+	for(int i=0;i<N;i++) s1[i+1]=(s1[i]+q1[i])%mo,s2[i+1]=(s2[i]+q2[i])%mo,s3[i+1]=(s3[i]+q3[i])%mo,s4[i+1]=(s4[i]+q4[i])%mo;
+	for(int i=1;i<N;i++){
+		int x,y; scanf("%d%d",&x,&y);
+		*newE=(edge){V+y,V[x].son},V[x].son=newE++;
+		*newE=(edge){V+x,V[y].son},V[y].son=newE++;
+	}
+	V[1].dfssize();
+	V[1].dfs();
+	int ans=0;
+	for(tim=1;tim<=M;tim++){
+		static char type[3];
+		static int x,y;
+		scanf("%s%d",type,&x),x^=ans;
+		T[tim]=T[tim-1];
+		if(type[0]=='A'){
+			scanf("%d",&y);
+			addchain(V+x,V+y);
+		}
+		else
+		if(type[0]=='Q'){
+			scanf("%d",&y);
+			if(type[1]=='C'){
+				ans=querysumchain(V+x,V+y);
+			}
+			else
+			if(type[1]=='S'){
+				ans=querysumsubtree(V+x,V+y);
+			}
+			else
+				for(;;);
+			printf("%d\n",ans);
+		}
+		else
+		if(type[0]=='R'){
+			T[tim]=T[x];
+		}
+		else
+			for(;;);
+	}
+}

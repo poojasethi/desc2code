@@ -1,0 +1,169 @@
+#include <map>
+#include <set>
+#include <stack>
+#include <cmath>
+#include <queue>
+#include <vector>
+#include <cstdio>
+#include <string>
+#include <cstring>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+
+using namespace std;
+
+const int max_n = 333333;
+const long long inf = 1111111111111111111LL;
+
+vector<pair<int, int> > v;
+
+bool check(pair<int, int> a, pair<int, int> b, pair<int, int> c, pair<int, int> d) {
+    int q = ((c.first - d.first) > 0);
+    int w = (((a.first - b.first)) > 0);
+    if (q == 0) {
+        q = -1;
+    }
+    if (w == 0) {
+        w = -1;
+    }
+    return (1LL * (c.first - d.first) * (b.second - a.second) >= 1LL * (d.second - c.second) * (a.first - b.first)) == (q * w > 0);
+}
+
+void add(int k, int x) {
+    while (v.size()) {
+        pair<int, int> p = v[v.size() - 1];
+        if (p.first == k) {
+            if (x > p.second) {
+                v.pop_back();
+            } else {
+                break;
+            }
+        }
+        if (v.size() == 1) {
+            break;
+        }
+        pair<int, int> p2 = v[v.size() - 2];
+        if (check(p, p2, p, make_pair(k, x))) {
+            v.pop_back();
+        } else {
+            break;
+        }
+    }
+    v.push_back(make_pair(k, x));
+    //cout << v.size() << endl;
+    /*printf("add %I64d %I64d\n", k, x);
+    cout << "v : ";
+    for (int i = 0; i < v.size(); ++i) {
+        printf("(%I64d %I64d) ", v[i].first, v[i].second);
+    }
+    cout << endl;*/
+}
+
+long long find_ans(int xx) {
+    if (v.size() == 0) {
+        return -inf;
+    }
+    int l = -1, r = v.size() - 1;
+    while (r - l > 1) {
+        int mid = (l + r) / 2;
+        int z = (v[mid].first - v[mid + 1].first);
+        if ((1LL * xx * z < (v[mid + 1].second - v[mid].second)) == (z > 0)) {
+            r = mid;
+        } else {
+            l = mid;
+        }
+    }
+    return 1LL * v[r].first * xx + v[r].second;
+}
+
+const int sz = 444;
+
+int n, tp[max_n], a[max_n], b[max_n], f[max_n];
+long long ans[max_n];
+vector<pair<int, pair<int, int> > > all, nv, kall;
+
+int main() {
+    //freopen("input.txt", "r", stdin);
+    //freopen("output.txt", "w", stdout);
+    scanf("%d", &n);
+    for (int i = 0; i < n; ++i) {
+        scanf("%d", &tp[i]);
+        if (tp[i] == 1) {
+            scanf("%d%d", &a[i], &b[i]);
+        } else {
+            scanf("%d", &a[i]);
+            if (tp[i] == 2) {
+                --a[i];
+            }
+        }
+    }
+    for (int i = 0; i < n; i += sz) {
+        for (int j = i; j < i + sz && j < n; ++j) {
+            if (tp[j] == 2) {
+                f[a[j]] = 1;
+            }
+        }
+        v.clear();
+        for (int j = 0; j < all.size(); ++j) {
+            if (f[all[j].second.second] == 0) {
+                add(all[j].first, all[j].second.first);
+            }
+        }
+
+        for (int j = i; j < i + sz && j < n; ++j) {
+            if (tp[j] == 2) {
+                f[a[j]] = 0;
+            }
+        }
+        nv.clear();
+        kall.clear();
+        for (int j = i; j < i + sz && j < n; ++j) {
+            if (tp[j] == 1) {
+                nv.push_back(make_pair(a[j], make_pair(b[j], j)));
+            } else if (tp[j] == 2) {
+                f[a[j]] = 1;
+                kall.push_back(make_pair(j, make_pair(a[j], 0)));
+            } else {
+                ans[j] = find_ans(a[j]);
+                for (int k = 0; k < nv.size(); ++k) {
+                    if (f[nv[k].second.second] == 0) {
+                        ans[j] = max(ans[j], 1LL * nv[k].first * a[j] + nv[k].second.first);
+                    }
+                }
+            }
+        }
+        for (int j = i; j < i + sz && j < n; ++j) {
+            if (tp[j] == 3) {
+                for (int k = 0; k < kall.size(); ++k) {
+                    int q = kall[k].second.first;
+                    if (kall[k].first > j && q < j) {
+                        ans[j] = max(ans[j], 1LL * a[q] * a[j] + b[q]);
+                    }
+                }
+            }
+        }
+
+        nv.clear();
+        for (int j = i; j < i + sz && j < n; ++j) {
+            if (tp[j] == 1) {
+                nv.push_back(make_pair(a[j], make_pair(b[j], j)));
+            }
+        }
+        sort(nv.begin(), nv.end());
+        kall.clear();
+        merge(all.begin(), all.end(), nv.begin(), nv.end(), back_inserter(kall));
+        all = kall;
+    }
+    for (int i = 0; i < n; ++i) {
+        if (tp[i] == 3) {
+            if (ans[i] == -inf) {
+                printf("EMPTY SET\n");
+            } else {
+                printf("%I64d\n", ans[i]);
+            }
+        }
+    }
+    return 0;
+}
+

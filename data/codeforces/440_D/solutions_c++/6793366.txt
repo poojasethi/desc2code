@@ -1,0 +1,102 @@
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <cstring>
+
+using namespace std;
+const int inf = 1000005;
+
+int N, K;
+vector<int> G[405];
+int edgeid[405][405];
+int P[405];
+
+short dp[405][405][405];
+short prev[405][405][405];
+int compute(int v, int p)
+{
+	P[v] = p;
+	for(int i = 0; i < 405; i++) for(int j = 0; j < 405; j++) dp[v][i][j] = inf;
+	dp[v][0][1] = 0;
+	for(int i = 0; i < G[v].size(); i++)
+	{
+		int w = G[v][i];
+		if(w == p)
+		{
+			G[v].erase(G[v].begin() + i);
+			i--;
+			continue;
+		}
+		//cout << v << " -> " << w << endl;
+		compute(w, v);
+		for(int k = 1; k <= N; k++)
+		{
+			dp[v][i + 1][k] = dp[v][i][k] + 1; // cut off
+			prev[v][i + 1][k] = 0;
+
+			for(int j = 1; j < k; j++)
+				if(dp[v][i][k - j] + dp[w][G[w].size()][j] < dp[v][i + 1][k])
+				{
+					dp[v][i + 1][k] = dp[v][i][k - j] + dp[w][G[w].size()][j];
+					prev[v][i + 1][k] = j;
+				}
+		}
+	}
+}
+vector<int> E;
+void recover(int v, int k)
+{
+	if(k == 0) return;
+	for(int i = G[v].size(); i > 0; i--)
+	{
+		int w = G[v][i - 1];
+		int n = prev[v][i][k];
+		recover(w, n);
+		if(n == 0) E.push_back(edgeid[v][w]); // cut
+		k -= n;
+	}
+}
+void print(vector<int> V)
+{
+	for(int i = 0; i < V.size(); i++) cout << V[i] << ' ';
+	cout << endl;
+}
+
+int main()
+{
+	cin >> N >> K;
+	for(int i = 1; i < N; i++)
+	{
+		int a, b;
+		cin >> a >> b;
+		G[a].push_back(b);
+		G[b].push_back(a);
+		edgeid[a][b] = edgeid[b][a] = i;
+	}
+	compute(1, -1);
+	int res = dp[1][G[1].size()][K];
+	for(int r = 2; r <= N; r++) // root
+	{
+		//cout << r << ": " << dp[r][G[r].size()][K] << endl;
+		res = min(res, dp[r][G[r].size()][K] + 1);
+	}
+	cout << res << endl;
+	if(dp[1][G[1].size()][K] == res)
+	{
+		recover(1, K);
+		print(E);
+	}
+	else
+	{
+		for(int r = 2; r <= N; r++)
+		{
+			if(dp[r][G[r].size()][K] + 1 == res)
+			{
+				E.push_back(edgeid[r][P[r]]);
+				recover(r, K);
+				print(E);
+				return 0;
+			}
+		}
+	}
+}

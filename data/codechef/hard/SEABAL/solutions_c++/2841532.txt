@@ -1,0 +1,153 @@
+// -*- C++ -*-
+// File: a.cpp
+// Copyright (C) 2013
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <queue>
+#include <iostream>
+#include <cmath>
+#include <sstream>
+#include <map>
+#include <set>
+#include <numeric>
+#include <memory.h>
+#include <cstdio>
+#include <assert.h>
+
+using namespace std;
+
+#define pb push_back
+#define INF 1011111111
+#define FOR(i,a,b) for (int _n(b), i(a); i < _n; i++)
+#define rep(i,n) FOR(i,0,n)
+#define CL(a,v) memset((a),(v),sizeof(a))
+#define mp make_pair
+#define X first
+#define Y second
+#define all(c) (c).begin(), (c).end()
+#define SORT(c) sort(all(c))
+
+typedef long long ll;
+typedef vector<int> VI;
+typedef pair<int,int> pii;
+
+/*** TEMPLATE CODE ENDS HERE */
+
+const int maxn = 100010;
+
+int _left[maxn], _right[maxn];
+pii tree[2*maxn];
+
+
+int left(int at) {  return _left[at] ==  at ? at : left( _left[at] ); }
+
+int right(int at) { return _right[at] == at ? at : right( _right[at] ); }
+
+void update_left(int at, int a[maxn], const int n) {
+	if(at>0 && a[at-1]==0) _left[at] = at-1;
+	if(at+1<n && a[at+1]==0) _left[at+1] = at;
+}
+
+void update_right(int at, int a[maxn], const int n) {
+	if(at+1<n && a[at+1]==0) _right[at] = at+1;
+	if(at>0 && a[at-1]==0) _right[at-1] = at;
+}
+
+pii get_min(int l, int r, const int m) {
+	pii ans(INF,-1);
+	for(l+=m, r+=m; l <= r; l=(l+1)/2, r=(r-1)/2) {
+		if(l&1) {
+			ans = min(ans, tree[l]);
+		}
+		if((r&1)==0) {
+			ans = min(ans, tree[r]);
+		}
+	}
+	return ans;
+}
+
+void remove_element(int index, const int m) {
+	index += m;
+	tree[index].X = INF;
+	tree[index].Y = -1;
+	for(; index>1; index=index>>1) tree[index>>1] = min(tree[index], tree[index^1]);
+}
+
+pii p[maxn];
+
+int process(int at, int a[maxn], const int m) {
+	
+	update_left(at, a, m);
+	update_right(at, a, m);
+	
+	int l = left(at);
+	int r = right(at);
+	int ans = 0;
+	
+	int L = lower_bound(p,p+m,pii(l,-1))-p;
+	
+	while(true) {
+		pii q = get_min(L,m-1,m);
+		if(q.Y==-1) break;
+		if(q.X>r) break;
+		remove_element(q.Y, m);
+		++ans;
+	}
+	
+	return ans;
+}
+
+int a[maxn];
+
+
+int main() {
+#ifdef LOCAL_HOST
+    freopen("input.txt","r",stdin);
+    //freopen("output.txt","w",stdout);
+#endif
+
+    ios_base::sync_with_stdio(false);
+	
+	rep(i,maxn) _left[i] = _right[i] = i;
+	
+	int n,m,k;
+	cin >> n >> m;
+	rep(i,n) cin >> a[i];
+	rep(i,m) { 
+		cin >> p[i].X >> p[i].Y;
+		--p[i].X;
+		--p[i].Y; 
+	}
+	
+	sort(p,p+m);
+	
+	//build tree
+	rep(i,m) tree[i+m].X = p[i].Y, tree[i+m].Y = i;
+	for(int i = m-1; i >=1; --i) tree[i] = min(tree[2*i], tree[2*i+1]);
+					
+	rep(i,n) if(!a[i]) process(i,a,m);
+		
+	cin >> k;
+	
+	int ans = 0;
+	rep(it,k) {
+		int x;
+		cin >> x;
+		int y = x + ans - 1;		
+		if(a[y]>1) 
+			--a[y];		
+		else if(a[y]==1) {
+			--a[y];		
+			ans += process(y,a,m);				
+		}
+		
+		cout << ans << endl;
+	}
+
+#ifdef LOCAL_HOST
+    printf("TIME: %.3lf\n",double(clock())/CLOCKS_PER_SEC);
+#endif
+
+    return 0;
+}

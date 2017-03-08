@@ -1,0 +1,326 @@
+#include <bits/stdc++.h>
+using namespace std;
+const int N=100005, mo=1e9+7, M=200005;
+typedef long long ll;
+typedef pair<int, int> pii;
+#define mkpii(a, b) make_pair<int, int> (a, b)
+inline int getint() {
+	int x=0, c=getchar();
+	for(; c<48||c>57; c=getchar());
+	for(; c>47&&c<58; x=x*10+c-48, c=getchar());
+	return x;
+}
+int n, Q, q[N][2], tot=-1, val[N], col[M];
+set<pii> pos;
+map<int, int> sz;
+inline int C(int x) {
+	if(x>=mo) {
+		x-=mo;
+	}
+	return x;
+}
+struct dat {
+	int s1, s2, s3, s;
+	dat(int _s1=0, int _s2=0, int _s3=0, int _s=0):s1(_s1), s2(_s2), s3(_s3), s(_s) {}
+	dat operator + (const dat &x) const {
+		return dat(C(s1+x.s1), C(s2+x.s2), C(s3+x.s3), s+x.s);
+	}
+}dt[M];
+inline dat neg(dat a) {
+	return dat(C(mo-a.s1), C(mo-a.s2), C(mo-a.s3), -a.s);
+}
+namespace splay {
+	struct node *null;
+	struct node {
+		node *c[2], *f;
+		bool w;
+		int s, id;
+		void init() {
+			c[0]=c[1]=f=null;
+			w=1;
+			s=1;
+		}
+		void setc(node *x, int d) {
+			c[d]=x;
+			x->f=this;
+		}
+		bool d() {
+			return f->c[1]==this;
+		}
+		void up() {
+			s=c[0]->s+c[1]->s+w;
+		}
+	}Po[M], *iT=Po, *root;
+	node *newnode() {
+		iT->init();
+		return iT++;
+	}
+	void rot(node *x) {
+		node *f=x->f;
+		bool d=x->d();
+		f->f==null?(void)(x->f=null):f->f->setc(x, f->d());
+		f->setc(x->c[!d], d);
+		x->setc(f, !d);
+		f->up();
+	}
+	void splay(node *x, node *y) {
+		for(; x->f!=y; rot(x)) {
+			if(x->f->f!=y) {
+				x->d()==x->f->d()?rot(x->f):rot(x);
+			}
+		}
+		x->up();
+		if(y==null) {
+			root=x;
+		}
+	}
+	node *sel(int pos, node *x=root) {
+		int s=x->c[0]->s;
+		if(pos==s && x->w) {
+			return x;
+		}
+		return pos<s?sel(pos, x->c[0]):sel(pos-s-x->w, x->c[1]);
+	}
+	node *getrange(int l, int r) {
+		splay(sel(l-1), null);
+		splay(sel(r+1), root);
+		return root->c[1];
+	}
+	node *ins(int pos) {
+		node *x=newnode(), *y=getrange(pos+1, pos);
+		if(y->c[0]!=null) {
+			x->setc(y->c[0], 0);
+		}
+		y->setc(x, 0);
+		splay(x, null);
+		return x;
+	}
+	node *del(int pos) {
+		node *x=sel(pos);
+		x->w=0;
+		splay(x, null);
+		return x;
+	}
+	node *get(int pos) {
+		node *x=sel(pos);
+		splay(x, null);
+		return x;
+	}
+	void dfs(node *x) {
+		if(x==null) {
+			return;
+		}
+		dfs(x->c[0]);
+		x->id=++tot;
+		dfs(x->c[1]);
+	}
+	node *build(int l, int r, node *p[]) {
+		node *x=newnode();
+		int mid=(l+r)>>1;
+		if(l<mid) x->setc(build(l, mid-1, p), 0);
+		p[mid]=x;
+		if(mid<r) x->setc(build(mid+1, r, p), 1);
+		x->up();
+		return x;
+	}
+	void init(node *p[]) {
+		null=iT++;
+		null->init();
+		null->w=0;
+		null->s=0;
+		root=newnode();
+		root->setc(newnode(), 1);
+		root->c[1]->setc(build(1, n, p), 0);
+	}
+}
+namespace bit {
+	const int K=130, B=M/K+100;
+	dat s[B][B], Xd[M], Yd[M], s1[M];
+	int X[M], Y[M], blc;
+	void upd1(int x, const dat &d) {
+		for(int i=x; i<=tot; i+=i&-i) {
+			s1[i]=s1[i]+d;
+		}
+	}
+	dat sum1(int x) {
+		dat r;
+		for(int i=x; i; i-=i&-i) {
+			r=r+s1[i];
+		}
+		return r;
+	}
+	void upd(int x, int y, const dat &d) {
+		for(int i=x; i<=blc; i+=i&-i) {
+			for(int j=y; j<=blc; j+=j&-j) {
+				s[i][j]=s[i][j]+d;
+			}
+		}
+	}
+	dat sum(int x, int y) {
+		dat r;
+		for(int i=x; i; i-=i&-i) {
+			for(int j=y; j; j-=j&-j) {
+				r=r+s[i][j];
+			}
+		}
+		return r;
+	}
+	void update(int x, int y, const dat &d) {
+		int bx=(x-1)/K+1, by=(y-1)/K+1;
+		upd(bx, by, d);
+		if(y==1) {
+			upd1(x, d);
+		}
+		Y[x]=y;
+		X[y]=x;
+		Yd[x]=Yd[x]+d;
+		Xd[y]=Xd[y]+d;
+	}
+	dat ask(int x, int y) {
+		int bx=x/K, by=y/K;
+		dat r=sum(bx, by);
+		bx=bx*K+1, by=by*K+1;
+		for(int i=bx; i<=x; ++i) {
+			if(Y[i]<=y) {
+				r=r+Yd[i];
+			}
+		}
+		if(by==1) {
+			r=r+sum1(bx-1);
+			by=2;
+		}
+		for(int i=by; i<=y; ++i) {
+			if(X[i]<bx) {
+				r=r+Xd[i];
+			}
+		}
+		return r;
+	}
+}
+inline void upd(int x, int y, const dat &d) {
+	++y;
+	bit::update(x, y, d);
+}
+dat sum(int x, int y) {
+	++y;
+	return bit::ask(x, y);
+}
+void ins(int id, int y) {
+	int a=y, b=(ll)a*a%mo, c=(ll)b*a%mo;
+	dt[id]=dat(a, b, c, 1);
+	col[id]=y;
+	pii pi=mkpii(y, id);
+	if(sz[y]==0) {
+		upd(id, 0, dt[id]);
+		pos.insert(pi);
+		++sz[y];
+		return;
+	}
+	set<pii>::iterator it=pos.upper_bound(pi), it1=it;
+	--it1;
+	int idd;
+	if(it!=pos.end()) {
+		idd=it->second;
+	}
+	if(it==pos.begin() || it1->first!=y) {
+		upd(idd, 0, neg(dt[idd]));
+		upd(id, 0, dt[id]);
+		upd(idd, id, dt[idd]);
+	}
+	else if(it==pos.end() || it->first!=y) {
+		upd(id, it1->second, dt[id]);
+	}
+	else {
+		upd(idd, it1->second, neg(dt[idd]));
+		upd(idd, id, dt[idd]);
+		upd(id, it1->second, dt[id]);
+	}
+	pos.insert(pi);
+	++sz[y];
+}
+void del(int id) {
+	int y=col[id], idd, itt;
+	set<pii>::iterator it=pos.find(mkpii(y, id)), it1=it;
+	--it1;
+	if(it==pos.begin() || it1->first!=y) {
+		upd(id, idd=0, neg(dt[id]));
+	}
+	else {
+		upd(id, idd=it1->second, neg(dt[id]));
+	}
+	it1=it;
+	++it1;
+	if(it1!=pos.end() && it1->first==y) {
+		itt=it1->second;
+		upd(itt, id, neg(dt[itt]));
+		upd(itt, idd, dt[itt]);
+	}
+	pos.erase(it);
+	--sz[y];
+}
+splay::node *nd[N][2], *p[N];
+void work1() {
+	for(int i=1; i<=n; ++i) {
+		val[i]=getint();
+	}
+	for(int i=1; i<=Q; ++i) {
+		int opt=q[i][0]=getint(), x=getint(), y;
+		if(opt!=3) {
+			y=q[i][1]=getint();
+		}
+		if(opt==2) {
+			nd[i][0]=splay::get(x);
+		}
+		else if(opt==3) {
+			nd[i][0]=splay::del(x);
+		}
+		else if(opt==4) {
+			nd[i][0]=splay::ins(x);
+		}
+		else {
+			nd[i][0]=splay::get(x);
+			nd[i][1]=splay::get(y);
+		}
+	}
+}
+void work2() {
+	splay::dfs(splay::root);
+	--tot;
+	bit::blc=(tot-1)/bit::K+1;
+	int inv=166666668;
+	for(int i=1; i<=n; ++i) {
+		ins(p[i]->id, val[i]);
+	}
+	for(int i=1; i<=Q; ++i) {
+		int opt=q[i][0], y=q[i][1];
+		if(opt==4) {
+			ins(nd[i][0]->id, y);
+		}
+		else if(opt==3) {
+			del(nd[i][0]->id);
+		}
+		else if(opt==2) {
+			int id=nd[i][0]->id;
+			del(id);
+			ins(id, y);
+		}
+		else if(opt==1) {
+			int l=nd[i][0]->id, r=nd[i][1]->id;
+			dat d=sum(r, l-1)+neg(sum(l-1, l-1));
+			int s1=d.s1, s2=d.s2, s3=d.s3;
+			printf("%lld\n", (ll)(((ll)s1*s1%mo*s1%mo+(mo-(ll)s2*s1*3%mo))%mo+s3*2%mo)*inv%mo);
+		}
+		else if(opt==5) {
+			int l=nd[i][0]->id, r=nd[i][1]->id;
+			dat d=sum(r, l-1)+neg(sum(l-1, l-1));
+			printf("%d\n", d.s);
+		}
+	}
+}
+int main() {
+	n=getint(), Q=getint();
+	splay::init(p);
+	work1();
+	work2();
+	return 0;
+} 

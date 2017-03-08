@@ -1,0 +1,122 @@
+#include"stdio.h"
+#define K 1337
+#define REP(i,n) for(int i=0;i<n;i++)
+#define LOOP(i,n,m) for(int i=n;i<m;i++)
+//people 0,1,..,K-1
+int endNumber[101][10][7];		//endNumber[a][b][c]    stores the last person to say (b+1)10^a assuming direction changes whenever n = c(mod 7) and the first person says 0
+int endDirection[101][10][7];	//endDirection[a][b][c] stores the direction immediately after (b+1)10^a is said, assuming direction changes whenever n = c(mod 7) and the first person says 0
+int mod(int a,int p){
+	int ans= (a%p);
+	return (ans<0)?ans+p:ans;
+}
+bool check(int i){//checker implemented for brute force soln finder
+	while(i)
+		if(i%10==7)return 1;
+		else i=i/10;
+	return 0;
+}
+int solve(int n,const int& c,int& drn){//a brute force soln finder for small cases
+	drn=1,n++;
+	int x=-1;
+	LOOP(i,1,n){
+		x=mod(x+drn,K);
+		if(check(i)||i%7==c)
+			drn*=-1;
+	}
+	return x;
+}
+int modexp7(const int& n){			//return 10^n modulo 7
+	if(n==0)return 1;
+	if(n==1)return 10%7;
+	int mod=modexp7(n>>1);
+	mod=mod*mod;
+	if(n&1)mod*=10;
+	return mod%7;
+}
+int main()
+{
+	REP(c,7)//for 1 digit numbers, do brute force
+	{
+		REP(b,10)	endNumber[0][b][c]=solve(b+1,c,endDirection[0][b][c]);
+		endNumber[1][0][c]		=	endNumber[0][9][c];
+		endDirection[1][0][c]	=	endDirection[0][9][c];
+	}
+	LOOP(pow,1,101)
+	{
+		int digit=2;
+		for(;digit<8;digit++)
+		{
+			REP(c,7)
+			{
+				const int d1	=	endDirection[pow][digit-2][c];
+				int newc		=	mod(c+6*(digit-1)*modexp7(pow),7);
+				endNumber		[pow][digit-1][c]	=	mod(	endNumber[pow][digit-2][c]+(1+endNumber[pow][0][newc])*(K+d1)	,K);
+				endDirection	[pow][digit-1][c]	=	d1	*	endDirection	[pow][0][newc];
+			}
+		}
+		REP(c,7)	endDirection[pow][7-1][c]	*=	(c==0)?1:-1;// at n = 7*10^pow, a flip occurs that was not anticipated above
+		digit=8;
+		REP(c,7)	endNumber[pow][8-1][c]		=	endNumber[pow][7-1][c],
+				endDirection[pow][8-1][c]	=	-endDirection[pow][7-1][c]*((c==(8*modexp7(pow))%7)?-1:1);
+		for(digit=9;digit<=10;digit++)
+		{
+			REP(c,7)
+			{
+				const int d1	=	endDirection[pow][digit-2][c];
+				int newc		=	mod(c+6*(digit-1)*modexp7(pow),7);
+				endNumber		[pow][digit-1][c]	=	mod(	endNumber[pow][digit-2][c]+(1+endNumber[pow][0][newc])*(K+d1)	,K);
+				endDirection	[pow][digit-1][c]	=	d1	*	endDirection	[pow][0][newc];
+			}
+		}
+		if(pow<100)
+			REP(c,7)
+				endNumber[pow+1][0][c]		=	endNumber[pow][9][c],
+				endDirection[pow+1][0][c]	=	endDirection[pow][9][c];
+	}
+	//preprocessing over
+/**	REP(pow,5)
+		REP(digit,9)
+		{
+			printf("for n = %d",digit+1);
+			int num=digit+1;
+			REP(i,pow)
+				printf("0"),num*=10;
+			int d,n=solve(num,0,d)+1;
+			printf(", answer is (%d,%d) and the direction is (%d,%d)\n",endNumber[pow][digit][0]+1,n,endDirection[pow][digit][0],d);
+		}
+	for(int num=1;num<50;num++)
+	{
+				int d,n=solve(num,0,d)+1;
+				printf("n = %d => %d and %d \n",num,n,d);
+	}*/
+	int T;
+	scanf("%d",&T);
+	while(T--)
+	{
+		char inp[105];
+		scanf("%s",inp);
+		int pow=0;
+		int nnn=0;
+		while(inp[pow+1])nnn=nnn*10+(inp[pow++]-='0');
+		nnn=nnn*10+(inp[pow]-='0');
+		int n=-1,drn=1,c=0,pos=0;
+		while(pow>=0)
+		{
+			if(inp[pos]==0)
+			{
+				pos++,pow--;
+				continue;
+			}
+			int clookup=(7-c)%7;
+			n=mod(n+drn*(1+endNumber[pow][inp[pos]-1][clookup]),K);
+			drn	*=	endDirection[pow][inp[pos]-1][clookup];
+			c=mod(c+inp[pos]*modexp7(pow),7);
+			if(inp[pos]==7)
+				break;
+			pow--,pos++;
+		}
+		if(pow>0)//broken prematurely because of some 7 appearing at non last place
+			if(inp[pow+pos]&1)n=mod(n+drn,K);//odd
+		printf("%d\n",n+1);
+	}
+}

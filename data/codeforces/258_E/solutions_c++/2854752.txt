@@ -1,0 +1,97 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<vector>
+#define MAXN 100005
+using namespace std;
+
+int n,m,ans[MAXN],tot;
+int st[MAXN],en[MAXN],sum[MAXN*4],cov[MAXN*4];
+vector<int> e[MAXN],v[MAXN];
+
+void init()
+{
+    scanf("%d%d",&n,&m);
+    int i,j,k;
+    for(tot=0,i=1;i<n;i++)
+    {
+        scanf("%d%d",&j,&k);
+        e[j].push_back(k);
+        e[k].push_back(j);
+    }
+    for(tot=0,i=1;i<=m;i++)
+    {
+        scanf("%d%d",&j,&k);
+        v[j].push_back(k);
+        v[k].push_back(j);
+    }
+    return;
+}
+void dfs(int x,int father)
+{
+    st[x] = ++tot;
+    int i,t;
+    for(i=0;i<(int)e[x].size();i++)
+        if((t=e[x][i])!=father)
+            dfs(t,x);
+    en[x] = tot;
+}
+/*此处不需要初始化*/
+void pushup(int x,int l,int r)
+{
+    if(cov[x]) sum[x] = r-l+1;
+    else sum[x] = sum[x<<1]+sum[x<<1|1];
+}
+void update(int x,int a,int b,int l,int r,int val)
+{
+    if(a>r || b<l) return;
+    if(a<=l && r<=b) 
+    {
+        cov[x] += val;
+        if(cov[x]) sum[x] = r-l+1;
+        else
+        {
+            if(l==r) sum[x] = 0;
+            else sum[x] = sum[x<<1]+sum[x<<1|1];
+        }
+        return;
+    }
+    int mid = (l+r)>>1;
+    update(x<<1,a,b,l,mid,val);
+    update(x<<1|1,a,b,mid+1,r,val);
+    pushup(x,l,r);
+    return;
+}
+void solve(int u,int father)
+{
+    int i,t;
+    for(i=0;i<(int)v[u].size();i++)
+        update(1,st[v[u][i]],en[v[u][i]],1,n,1);
+    if(!v[u].empty())
+        update(1,st[u],en[u],1,n,1);
+    ans[u] = sum[1];
+    if(ans[u]) ans[u]--;
+    for(i=0;i<(int)e[u].size();i++)
+        if((t=e[u][i])!=father)
+            solve(t,u);
+    for(i=0;i<(int)v[u].size();i++)
+        update(1,st[v[u][i]],en[v[u][i]],1,n,-1);
+    if(!v[u].empty())
+        update(1,st[u],en[u],1,n,-1);
+    return;
+}
+void out()
+{
+    for(int i=1;i<=n;i++)
+        printf("%d ",ans[i]);
+    printf("\n");
+}
+int main()
+{
+    init();
+    tot = 0;
+    dfs(1,1);
+    solve(1,1);
+    out();
+    return 0;
+}

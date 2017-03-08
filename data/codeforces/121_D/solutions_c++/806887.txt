@@ -1,0 +1,92 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <iostream>
+#include <vector>
+using namespace std;
+typedef long long llong;
+const llong Inf=0x3f3f3f3f3f3f3f3fLL;
+llong luck[1<<19],nl;
+void dfs(llong x){
+    if(x>1000000000000000000LL) return;
+    luck[nl++]=x;
+    dfs(x*10+4);
+    dfs(x*10+7);
+}
+const int Max=100005;
+llong le[Max],re[Max];
+llong L[1<<19],R[1<<19];
+bool overflow(llong a,llong b,llong c){
+    //a+b*c>=Inf
+    return (Inf-a)/c<b;
+}
+int main(){
+    //dfs(0);
+    nl=0;
+    dfs(4);
+    dfs(7);
+    sort(luck,luck+nl);
+    nl=unique(luck,luck+nl)-luck;
+
+    int n;
+    llong k;
+    cin>>n>>k;
+
+    llong gap=1000000000000000000LL;
+    for(int i=0;i<n;++i){
+        cin>>le[i]>>re[i];
+        gap=min(gap,re[i]-le[i]);
+    }
+    sort(le,le+n);
+    sort(re,re+n);
+
+    {
+        int i=nl-1,j=n-1;
+        L[i]=0;
+        while(j>=0 && le[j]>luck[i]){
+            L[i]+=le[j]-luck[i];
+            if(L[i]>Inf) L[i]=Inf;
+            --j;
+        }
+        for(--i;i>=0;--i){
+            if(L[i+1]>=Inf ||overflow(L[i+1],n-1-j,luck[i+1]-luck[i]))
+                L[i]=Inf;
+            else L[i]=L[i+1]+(n-1-j)*(luck[i+1]-luck[i]);
+            while(j>=0 && le[j]>luck[i]){
+                L[i]+=le[j]-luck[i];
+                if(L[i]>Inf) L[i]=Inf;
+                --j;
+            }
+        }
+    }
+    {
+        int i=0,j=0;
+        R[i]=0;
+        while(j<n && re[j]<luck[i]){
+            R[i]+=luck[i]-re[j];
+            if(R[i]>Inf) R[i]=Inf;
+            ++j;
+        }
+        for(++i;i<nl;++i){
+            if(R[i-1]>=Inf ||overflow(R[i-1],j,luck[i]-luck[i-1]))
+                R[i]=Inf;
+            else R[i]=R[i-1]+j*(luck[i]-luck[i-1]);
+            while(j<n && re[j]<luck[i]){
+                R[i]+=luck[i]-re[j];
+                if(R[i]>Inf) R[i]=Inf;
+                ++j;
+            }
+        }
+    }
+
+    int ans=0;
+    int lt=0,rt=-1;
+    while(lt<nl){
+        if(rt<lt-1) rt=lt-1;
+        while(rt+1<nl && luck[rt+1]-luck[lt]<=gap && L[lt]+R[rt+1]<=k) ++rt;
+        ans=max(ans,rt+1-lt);
+        ++lt;
+    }
+    printf("%d\n",ans);
+    return 0;
+}

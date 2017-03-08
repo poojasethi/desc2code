@@ -1,0 +1,188 @@
+//Common headers
+#include<iostream>
+#include<vector>
+#include<utility>
+#include<algorithm>
+
+//Common functions
+#define max(i,j)	(( i > j )? i : j);
+#define min(i,j)	(( i < j )? i : j);
+
+
+
+#define ipair std::pair< int, int >
+
+
+	int m,n;
+	int enemyCount;
+	
+	char grid[51][51];
+
+#define RIGHT 	0
+#define UP		1
+#define LEFT	2
+using namespace std;
+
+class Enemy{
+	public:
+		int dead;
+		int i,j;
+		
+		void setDead(int v){
+			/*if(v!=-1 && v!=1){
+				cout << "INVALID VALUE FOR setDead";
+				return;
+			}*/
+			dead+= v;
+		}
+		void set(int I,int J, int d){
+			i= I;
+			j= J;
+			dead=  d;
+		}
+		
+		
+};
+
+vector< Enemy > enemies;
+
+bool allDead(){
+	for(int e=0;e<enemies.size();e++){
+		if( enemies[e].dead<=0)
+			return false;
+	}
+	return true;
+}
+
+class Laser{
+	public:
+	vector< int > kills[3];
+	int i,j;
+	void reset(){
+		kills[0].clear();
+		kills[1].clear();
+		kills[2].clear();
+	}
+	void set(int I,int J){
+		i= I;
+		j= J;
+	}
+	
+	void computeKills(){	//Stores the indexes of the killed enemies in the vector
+		reset();
+		
+		int eSize = enemies.size();
+		for(int e=0;e<eSize;e++){
+			if( enemies[e].i == i && enemies[e].j > j )
+				kills[RIGHT].push_back(e);
+			else if( enemies[e].i == i && enemies[e].j < j )
+				kills[LEFT].push_back(e);
+			else if( enemies[e].j == j && enemies[e].i < i )
+				kills[UP].push_back(e);
+		}
+	}
+	~Laser(){
+		reset();
+	}
+	
+};
+
+
+vector< Laser > lasers;
+
+
+bool bruteForce(int lIndex, int killedSoFar){
+	//Base case
+	if(lIndex>=lasers.size()){
+		return killedSoFar == enemies.size();
+		//return allDead();
+	}
+	int killedThisRound = 0;
+	
+	bool doneOnce = false;
+	for(int d=0;d<3;d++){
+		if( lasers[lIndex].kills[d].size()==0)	//TLE, Save wasteful recursions
+			continue;
+		else
+			doneOnce = true;
+		killedThisRound = 0;
+		for(int k=0;k< lasers[lIndex].kills[d].size() ;k++){
+			if(enemies[lasers[lIndex].kills[d][k]].dead==0)
+				killedThisRound++;
+			
+			enemies[lasers[lIndex].kills[d][k]].setDead(1);
+		}
+		
+		if( bruteForce(lIndex+1 , killedSoFar+killedThisRound))	//Oh my god! a match!
+			return true;
+			
+		for(int k=0;k< lasers[lIndex].kills[d].size() ;k++)
+			enemies[lasers[lIndex].kills[d][k]].setDead(-1);
+	}
+	if(doneOnce==false){
+		if( bruteForce(lIndex+1 , killedSoFar+killedThisRound))	//Oh my god! a match!
+			return true;
+	}
+	
+	return false;
+}
+
+
+
+int main(){
+	
+	int testCases= 0;
+	cin>>testCases;
+	Enemy e;
+	Laser l;
+	int enemyCount = 0;
+	while(testCases--){
+	
+	
+		lasers.clear();
+		enemies.clear();
+		
+		
+		cin>>m >> n;
+		for(int i=0;i<m;i++){
+				cin >> grid[i];
+				grid[i][n] = '\0';
+		}
+		//Build a list of enemies and lasers
+		enemyCount =0;
+		for(int i=0;i<m;i++){
+			for(int j=0;j<n;j++){
+				if(grid[i][j] == 'E'){
+					e.set( i, j, 0);
+					enemies.push_back(e);
+				}
+				else if( grid[i][j] =='L'){
+					l.set(i,j);
+					lasers.push_back(l);
+				}
+			}
+		}
+		
+		//Grid scanned. Compute the indexes of the enemies being killed by each laser in each direction;
+		for(int i=0;i<lasers.size();i++){
+			lasers[i].computeKills();
+		}
+		//BRUTE FOOOOOOOOOOOOOOOOOOOOOOOOOOOORCE!
+		if(bruteForce(0,0))
+			cout << "Possible\n";
+		else
+			cout << "Impossible\n";
+		
+		
+	}
+	
+	return 0;
+}
+
+
+/*Strategy: 
+Use 2 indexes to store enemies based on row / column. Use dead flag to mark an enemy as dead or alive
+Use recursion / DFS to brute force the solution. (remember to Reset the dead flags each time)
+Optimization:
+	
+*/

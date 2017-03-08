@@ -1,0 +1,97 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+const int N = 500005;
+#define ll long long
+
+struct node{
+	int val;
+	node *left, *right;
+	node(){
+		val = 0;
+		left = right = NULL;
+	}
+} *root[N];
+
+int n, A[N], pos[N];
+stack<pair<int, int> > S;
+
+void build_fake(node *current, int l, int r){
+	if(l != r){
+		int mid = (l + r)/2;
+		current->left = new node();
+		current->right = new node();
+		build_fake(current->left, l, mid);
+		build_fake(current->right, mid + 1, r);
+	}
+}
+
+void build(node *current, node *prev, int x, int l, int r){
+	if(l == r)	current->val = 1;
+	else{
+		int mid = (l + r)/2;
+		if(x <= mid){
+			current->right = prev->right;
+			current->left = new node();
+			build(current->left, prev->left, x, l, mid);
+		}
+		else{
+			current->left = prev->left;
+			current->right = new node();
+			build(current->right, prev->right, x, mid + 1, r);
+		}
+		current->val = current->left->val + current->right->val;
+	}
+}
+
+int query(node *after, node *before, int x, int l, int r){
+	if(l == r)	return A[l];
+	else{
+		int mid = (l + r)/2, count = after->left->val - before->left->val;
+		if(count >= x)	return query(after->left, before->left, x, l, mid);
+		else return query(after->right, before->right, x - count, mid + 1, r);
+	}
+}
+
+int main(){
+
+	ios_base::sync_with_stdio(false);
+	cin.tie(NULL);
+
+	cin>>n;
+
+	for(int i = 1; i <= n; i++){
+		cin>>A[i];
+		pos[A[i]] = i;
+	}
+
+	root[0] = new node();
+	build_fake(root[0], 1, n);
+
+	for(int i = 1; i <= n; i++){
+		root[i] = new node();
+		build(root[i], root[i - 1], pos[i], 1, n);
+	}
+
+	ll tot = 0;
+	int l, r, mid;
+
+	S.push(make_pair(1, n));
+
+	while(!S.empty()){
+		l = S.top().first, r = S.top().second;
+		S.pop();
+		if(l < r){
+			tot += (r - l + 1);
+			mid = query(root[r], root[l - 1], (r - l + 2)/2, 1, n);
+			S.push(make_pair(l, mid - 1));
+			S.push(make_pair(mid + 1, r));
+		}
+	}
+
+	cout<<tot<<endl;
+
+	//system("pause");
+	
+	return 0;
+}

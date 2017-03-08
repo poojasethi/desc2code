@@ -1,0 +1,297 @@
+#include<bits/stdc++.h>
+using namespace std;
+#define getcx getchar
+inline void in(int &n)
+{
+    n=0; int ch = getcx(); int sign = 1;
+    while(ch < '0' || ch > '9') { if(ch == '-') sign=-1; ch = getcx(); }
+    while(ch >= '0' && ch <= '9') { n = (n << 3) + (n << 1) + ch - '0', ch = getcx(); }
+    n = n * sign;
+}
+int arr[100005];
+vector<int> primes;
+void primeGeneration()
+{
+    primes.push_back(2);
+    primes.push_back(3);
+    int t = 2;
+    for(int i=5; i*i<=100000; )
+    {
+        if(arr[i]==0)
+        {
+            for(int j=i*i; j<=100000; j=j+i+i)
+            {
+                arr[j] = 1;
+            }
+        }
+        i = i+t;
+        t = 6-t;
+    }
+    t = 2;
+    for(int i=5; i<=100000; )
+    {
+        if(arr[i]==0)
+        {
+            primes.push_back(i);
+        }
+        i = i+t;
+        t = 6-t;
+    }
+    return;
+}
+#define pii pair< int , int >
+#define INF ((int)(1e9))
+#define temp 0
+#define perm 1
+#define V 1505
+int cap[V][V] , flow[V][V];
+int dist[V],ptr[V];
+bool bfs(int source,int sink,int start,int stop)
+{
+    for(int i=start; i<=stop; i++)
+    {
+        dist[i] = -1;
+    }
+    queue<int> Q;
+    Q.push(source);
+    dist[source] = 0;
+    while(!(Q.empty()))
+    {
+        int ver = Q.front();
+        Q.pop();
+        for(int i=start; i<=stop; i++)
+        {
+            if(dist[i]==-1 && flow[ver][i]<cap[ver][i])
+            {
+                Q.push(i);
+                dist[i] = dist[ver]+1;
+            }
+        }
+    }
+    if(dist[sink]==-1)
+    {
+        return false;
+    }
+    return true;
+}
+int dfs(int ver,int sink,int stop,int ans)
+{
+    if(ans==0 || ver==sink)
+    {
+        return ans;
+    }
+    while(ptr[ver]<stop)
+    {
+        ptr[ver]++;
+        int node = ptr[ver];
+        if(dist[node]!=dist[ver]+1)
+        {
+            continue;
+        }
+        int pathCap = dfs( node,sink,stop,min(ans,cap[ver][node]-flow[ver][node]) );
+        if(pathCap)
+        {
+            flow[ver][node]+=pathCap;
+            flow[node][ver]-=pathCap;
+            return pathCap;
+        }
+    }
+    return 0;
+}
+int maxFlow(int source,int sink,int start,int stop)
+{
+    int ans = 0;
+    while(1)
+    {
+        bool fnd = bfs(source,sink,start,stop);
+        if(fnd==false)
+        {
+            break;
+        }
+        for(int i=start; i<=stop; i++)
+        {
+            ptr[i] = 0;
+        }
+        while(1)
+        {
+            int pathCap = dfs(source,sink,stop,1000000000);
+            if(pathCap==0)
+            {
+                break;
+            }
+            ans+=pathCap;
+        }
+    }
+    return ans;
+}
+int func(int num)
+{
+    int ans = 1;
+    for(int i=0; i<primes.size(); i++)
+    {
+        if(num%primes[i]==0)
+        {
+            ans*=primes[i];
+            while(num%primes[i]==0)
+            {
+                num/=primes[i];
+            }
+        }
+    }
+    ans*=num;
+    return ans;
+}
+int gcd(int x,int y)
+{
+    if(y==0)
+        return x;
+    return gcd(y,x%y);
+}
+int a[405],b[405];
+int H[200005];
+pair< int , int > Left[V] , Right[V];
+int main()
+{
+    primeGeneration();
+    int t;
+    in(t);
+    while(t--)
+    {
+        int n;
+        in(n);
+        for(int i=1; i<=n; i++)
+        {
+            in(a[i]);
+        }
+        for(int i=1; i<=n; i++)
+        {
+            in(b[i]);
+        }
+        vector<int> v,A,B;
+        map< int , int > S;
+        for(int i=1; i<=n; i++)
+        {
+            for(int j=1; j<=n; j++)
+            {
+                if(a[i]<b[j])
+                {
+                    int x = gcd(a[i],b[j]);
+                    if(x!=1)
+                    {
+                        v.push_back(x);
+                        A.push_back(x);
+                        S.insert(pii(x,x));
+                    }
+                }
+                else if(a[i]>b[j])
+                {
+                    int x = gcd(a[i],b[j]);
+                    if(x!=1)
+                    {
+                        v.push_back(x);
+                        B.push_back(x);
+                        S.insert(pii(x,x));
+                    }
+                }
+            }
+        }
+        for(map<int,int>::iterator it=S.begin(); it!=S.end(); it++)
+        {
+            int x = it->second;
+            it->second = func(x);
+        }
+        for(int i=0; i<v.size(); i++)
+        {
+            v[i] = S[v[i]];
+        }
+        for(int i=0; i<A.size(); i++)
+        {
+            A[i] = S[A[i]];
+        }
+        for(int i=0; i<B.size(); i++)
+        {
+            B[i] = S[B[i]];
+        }
+        sort(v.begin(),v.end());
+        int cnt = 0;
+        map< int , int > M;
+        map< int , int >::iterator it;
+        for(int i=0; i<v.size(); i++)
+        {
+            it = M.find(v[i]);
+            if(it==M.end())
+            {
+                cnt++;
+                M.insert(pii(v[i],cnt));
+                H[cnt] = v[i];
+            }
+        }
+        //Prepare the graph for maxFlow
+        sort(A.begin(),A.end());
+        int cntLeft = 0;
+        int prevLeft = -1;
+        for(int i=0; i<A.size(); i++)
+        {
+            if(A[i]!=prevLeft)
+            {
+                cntLeft++;
+                Left[cntLeft].first = M[A[i]];
+                Left[cntLeft].second = 1;
+            }
+            else
+            {
+                Left[cntLeft].second++;
+            }
+            prevLeft = A[i];
+        }
+        sort(B.begin(),B.end());
+        int cntRight = 0;
+        int prevRight = -1;
+        for(int i=0; i<B.size(); i++)
+        {
+            if(B[i]!=prevRight)
+            {
+                cntRight++;
+                Right[cntRight].first = M[B[i]];
+                Right[cntRight].second = 1;
+            }
+            else
+            {
+                Right[cntRight].second++;
+            }
+            prevRight = B[i];
+        }
+        for(int i=0; i<=cntLeft+cntRight+1; i++)
+        {
+            for(int j=0; j<=cntLeft+cntRight+1; j++)
+            {
+                cap[i][j] = 0;
+            }
+        }
+        for(int i=1; i<=cntLeft; i++)
+        {
+            cap[0][i] = Left[i].second;
+        }
+        for(int i=cntLeft+1; i<=cntLeft+cntRight; i++)
+        {
+            cap[i][cntLeft+cntRight+1] = Right[i-cntLeft].second;
+        }
+        for(int i=1; i<=cntLeft; i++)
+        {
+            for(int j=cntLeft+1; j<=cntLeft+cntRight; j++)
+            {
+                int x = gcd( H[Left[i].first] , H[Right[j-cntLeft].first] );
+                if(x>1)
+                {
+                    cap[i][j] = INF;
+                }
+            }
+        }
+        memset(flow,0,sizeof(flow));
+        //Done
+        //int ans = maxFlow(0,cntLeft+cntRight+1,cntLeft+cntRight+2);
+        int ans = maxFlow(0,cntLeft+cntRight+1,0,cntLeft+cntRight+1);
+        printf("%d\n",ans);
+    }
+    return 0;
+}

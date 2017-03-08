@@ -1,0 +1,307 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <list>
+#include <queue>
+#include <stack>
+#include <map>
+#include <ctime>
+#include <utility>
+#include <climits>
+#include <cfloat>
+#include <iomanip>
+
+using namespace std;
+#define readint(n) scanf("%d",&n);
+#define readf(n) scanf("%f",&n);
+#define readu(n) scanf("%llu",&n);
+int pabs(int n){return (n>0?n:-n);}
+
+//#define db
+
+int n,d;
+long long int gret;
+
+void filter(long long n){
+	//cout<<n<<"  ";
+	char num[100];
+	sprintf(num,"%llu",n);
+	int len=strlen(num);
+	if(len>4){
+		for(int i=0;i<len-4;i++){
+			printf("%c",num[i]);
+		}
+		printf(".");
+		for(int i=len-4;i<len;i++){
+			printf("%c",num[i]);
+		}
+		printf("\n");
+		return;
+	}
+	else{
+		printf("0.");
+		for(int i=0;i<4-len;i++){
+			printf("0");
+		}
+		for(int i=0;i<len;i++){
+			printf("%c",num[i]);
+		}
+		printf("\n");
+	}
+	return;
+}
+
+struct ent{
+	vector<int> ar;
+	vector<int> pr;
+	//ent(){}
+	ent(vector<int> a,vector<int> v){
+		ar=a;
+		pr=v;
+	}
+};
+
+vector<int> *vec;
+int binSearch1(int val,int l,int u){
+	if(u-l<=1){
+		if((*vec)[u]<val){
+			return u;
+		}
+		return l;
+	}
+	int m=(u+l)/2;
+	if((*vec)[m]>=val){
+		return binSearch1(val,l,m);
+	}
+	else{
+		return binSearch1(val,m,u);
+	}
+}
+
+int binSearch2(int val,int l,int u){
+	if(u-l<=1){
+		if((*vec)[l]>val){
+			return l;
+		}
+		return u;
+	}
+	int m=(u+l)/2;
+	if((*vec)[m]>val){
+		return binSearch2(val,l,m);
+	}
+	else{
+		return binSearch2(val,m,u);
+	}
+}
+
+ent solve(vector<int> arr,vector<int> prob){
+#ifdef db
+	cout<<"arr: ";
+	for(int i=0;i<arr.size();i++){
+		cout<<arr[i]<<" ";
+	}
+	cout<<endl;
+	cout<<"prob: ";
+	for(int i=0;i<prob.size();i++){
+		cout<<prob[i]<<" ";
+	}
+	cout<<endl;
+#endif
+	
+	int m=arr.size();
+	if(m==1){
+		ent p(arr,prob);
+		return p;
+	}
+	else if(m==2){
+		if(arr[0]>arr[1]){
+			gret+=((100-prob[0])*(100-prob[1]));
+			gret+=(prob[0]*prob[1]);
+		}
+		if(arr[0]+d>arr[1]){
+			gret+=(prob[0]*(100-prob[1]));
+		}
+		if(arr[0]>arr[1]+d){
+			gret+=((100-prob[0])*prob[1]);
+		}
+		if(arr[0]>arr[1]){
+			swap(arr[0],arr[1]);
+			swap(prob[0],prob[1]);
+		}
+
+		prob[1]+=prob[0];
+		
+		ent p(arr,prob);
+		return p;
+	}
+	else{
+		vector<int> a1,b1;
+		vector<int> c1,d1;
+		for(int i=0;i<m/2;i++){
+			a1.push_back(arr[i]);
+			c1.push_back(prob[i]);
+		}
+		for(int i=m/2;i<m;i++){
+			b1.push_back(arr[i]);
+			d1.push_back(prob[i]);
+		}
+
+		ent l1=solve(a1,c1);
+		ent l2=solve(b1,d1);
+		
+#ifdef db
+		cout<<"printing subarrays\n";
+		for(int i=0;i<l1.ar.size();i++){
+			cout<<l1.ar[i]<<" "<<l1.pr[i]<<endl;
+		}
+		cout<<endl;
+		for(int i=0;i<l2.ar.size();i++){
+			cout<<l2.ar[i]<<" "<<l2.pr[i]<<endl;
+		}
+#endif
+
+		int p1=0,p2=0;		// indexes on l1 and l2
+		int maxcurr=l1.ar.size()+l2.ar.size();
+		
+#ifdef db
+		cout<<"merging\n";
+#endif
+		for(int curr=0;curr<maxcurr;curr++){
+			
+#ifdef db
+			cout<<"curr: "<<curr<<endl;
+#endif
+			
+			if(p1<l1.ar.size() && p2<l2.ar.size() && l1.ar[p1]<=l2.ar[p2]){
+#ifdef db
+				cout<<"   1"<<endl;
+#endif
+				
+#ifdef db
+				cout<<gret<<endl;
+#endif
+				if((l1.ar[p1]+d) > l2.ar[p2]){	// if increasing can dominate sth
+					vec=&(l2.ar);
+					int index=binSearch1(l1.ar[p1]+d,p2,l2.ar.size()-1);
+#ifdef db
+					cout<<"index :"<<index<<endl;
+#endif
+					int val=((l1.pr[p1]-(p1==0?0:l1.pr[p1-1]))*(100*(index-p2+1)-(l2.pr[index]-(p2==0?0:l2.pr[p2-1]))));
+					gret+=(long long int)val;
+				}
+#ifdef db
+				cout<<gret<<endl;
+#endif
+
+				arr[curr]=l1.ar[p1];
+				prob[curr]=(curr==0?0:prob[curr-1])+l1.pr[p1]-(p1==0?0:l1.pr[p1-1]);
+				++p1;
+			}
+			else if(p1<l1.ar.size() && p2<l2.ar.size() && l1.ar[p1]>l2.ar[p2]){
+#ifdef db
+				cout<<"   2"<<endl;
+#endif
+				
+#ifdef db
+				cout<<gret<<endl;
+#endif
+				int val=(100*(l1.ar.size()-p1)*(100-(l2.pr[p2]-(p2==0?0:l2.pr[p2-1]))));	// wheather the left ones rise or not, doesn't matter if this not rises
+				gret+=(long long int)val;
+#ifdef db
+				cout<<gret<<endl;
+#endif
+				
+				// this rises, all others rise as well
+				int value1=(l2.pr[p2]-(p2==0?0:l2.pr[p2-1]));
+				int value2=(l1.pr[l1.pr.size()-1]-(p1==0?0:l1.pr[p1-1]));
+				
+				gret+=(value1*value2);
+#ifdef db
+				cout<<gret<<endl;
+#endif
+				// now when this rises and others don't, search for how many still dominate this
+				if(l1.ar[l1.ar.size()-1]>l2.ar[p2]+d){
+					vec=&(l1.ar);
+					int index=binSearch2(l2.ar[p2]+d,p1,l1.ar.size()-1);
+#ifdef db
+					cout<<"index: "<<index<<endl;
+#endif
+					int value1=l2.pr[p2]-(p2==0?0:l2.pr[p2-1]);
+					int value2=(100*(l1.pr.size()-index)-(l1.pr[l1.pr.size()-1]-(index==0?0:l1.pr[index-1])));
+					gret+=(value1*value2);
+				}
+#ifdef db
+				cout<<gret<<endl;
+#endif
+				arr[curr]=l2.ar[p2];
+				prob[curr]=(curr==0?0:prob[curr-1])+l2.pr[p2]-(p2==0?0:l2.pr[p2-1]);
+				++p2;
+			}
+			else if(p1==l1.ar.size()){
+#ifdef db
+				cout<<"   3"<<endl;
+#endif
+				
+				arr[curr]=l2.ar[p2];
+				prob[curr]=(curr==0?0:prob[curr-1])+l2.pr[p2]-(p2==0?0:l2.pr[p2-1]);
+				++p2;
+			}
+			else{
+#ifdef db
+				cout<<"   4"<<endl;
+#endif
+				
+				arr[curr]=l1.ar[p1];
+				prob[curr]=(curr==0?0:prob[curr-1])+l1.pr[p1]-(p1==0?0:l1.pr[p1-1]);
+				++p1;
+			}
+		}
+		return ent(arr,prob);
+	}
+}
+
+
+int main(){
+	vector<int> garr;
+	vector<int> gprob;
+	int t,temp;
+	cin>>t;
+	while(t--){
+        garr.clear();
+        gprob.clear();
+		gret=0;
+		cin>>n>>d;
+		for(int i=0;i<n;i++){
+			cin>>temp;
+			garr.push_back(temp);
+		}
+		for(int i=0;i<n;i++){
+			cin>>temp;
+			gprob.push_back(temp);
+		}
+
+		ent e=solve(garr,gprob);
+#ifdef db
+		for(int i=0;i<e.ar.size();i++){
+			cout<<e.ar[i]<<" "<<e.pr[i]<<endl;
+		}
+#endif
+		//cout<<gret<<" ";
+		filter(gret);
+	}
+	return 0;
+}
+/*
+  int main(){
+  double d;
+  while(1){
+  cin>>d;
+  filter(d);
+  }
+  return 0;
+  }
+*/

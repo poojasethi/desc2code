@@ -1,0 +1,157 @@
+//zzy;
+#include<cstdio>
+const int n=100005;
+int X,Y,Z,i,e,N,M,P,K,T,All,damage,lAll,ldamage,Cnt,Root;
+int In[n],Out[n],Q[n],son[n],ed[n],next[n],deep[n],root[n],g[n];
+int fa[n][20];
+int f[25*n],L[25*n],R[25*n];
+void Addedge(int i,int j)
+{
+	ed[++e]=j,next[e]=son[i],son[i]=e;
+}
+void bfs()
+{
+	int i,j,k,l,r;
+	Q[1]=Root,In[Root]=1,deep[Root]=1;
+	for(l=r=1;l;)
+	{
+		i=Q[l];
+		if(!son[i])
+		{
+			for(k=0;1<<k<l;++k) fa[i][k]=Q[l-(1<<k)];
+			Out[i]=r,--l;
+		}
+		else
+		{
+			++r,Q[++l]=ed[son[i]];
+			deep[ed[son[i]]]=deep[i]+1;
+			In[ed[son[i]]]=r;
+			son[i]=next[son[i]];
+		}
+	}
+}
+int Lca(int x,int y)
+{
+	int i;
+	for(i=16;i>=0;--i)
+	{
+		if(deep[x]-(1<<i)>=deep[y])
+			x=fa[x][i];
+		if(deep[y]-(1<<i)>=deep[x])
+			y=fa[y][i];
+	}
+	if(x==y) return x;
+	for(i=16;i>=0;--i)
+		if(fa[x][i]!=fa[y][i])
+			x=fa[x][i],y=fa[y][i];
+	return fa[x][0];
+}
+void Build(int t,int l,int r)
+{
+	int mid=(l+r)/2;
+	if(l==r) return;
+	L[t]=++Cnt;
+	Build(L[t],l,mid);
+	R[t]=++Cnt;
+	Build(R[t],mid+1,r);
+}
+void Modify(int t,int p,int l,int r,int x,int y)
+{
+	int mid=(l+r)/2;
+	if(l==r)
+	{
+		f[t]+=y;
+		return;
+	}
+	if(x<=mid)
+	{
+		if(L[t]==L[p]||!L[t])
+		{
+			L[t]=++Cnt;
+			f[Cnt]=f[L[p]];
+		}
+		if(!R[t]) R[t]=R[p];
+		Modify(L[t],L[p],l,mid,x,y);
+	}
+	else
+	{
+		if(!L[t]) L[t]=L[p];
+		if(R[t]==R[p]||!R[t])
+		{
+			R[t]=++Cnt;
+			f[Cnt]=f[R[p]];
+		}
+		Modify(R[t],R[p],mid+1,r,x,y);
+	}
+	f[t]=f[L[t]]+f[R[t]];
+}
+int Query(int t,int l,int r,int ll,int rr)
+{
+	int mid=(l+r)/2;
+	if(l==ll&&r==rr) return f[t];
+	if(rr<=mid) return Query(L[t],l,mid,ll,rr);
+	if(ll>mid) return Query(R[t],mid+1,r,ll,rr);
+	return Query(L[t],l,mid,ll,mid)+Query(R[t],mid+1,r,mid+1,rr);
+}
+int Get(int X,int Ed,int St)
+{
+	return Query(root[Ed],1,N,1,In[X])-Query(root[St],1,N,1,In[X]);
+}
+void Find(int X,int K,int Ed,int St)
+{
+	int i,Y=X,All,damage;
+	for(i=16;i>=0;--i) if(fa[Y][i])
+	{
+		All=deep[X]-deep[fa[Y][i]];
+		damage=Get(X,Ed,St)-Get(fa[Y][i],Ed,St);
+		if(All-damage<K) Y=fa[Y][i];
+	}
+	printf("%d\n",Y);
+}
+int main() 
+{
+	scanf("%d",&N);
+	for(i=1;i<=N;++i)
+	{
+		scanf("%d",&X);
+		if(!X) Root=i;
+		else Addedge(X,i);
+	}
+	bfs();
+	root[0]=++Cnt;
+	Build(root[0],1,N);
+	scanf("%d",&M);
+	for(i=1;i<=M;++i)
+	{
+		scanf("%d",&P);
+		if(P==1)
+		{
+			scanf("%d",&X);
+			g[X]=i,root[i]=++Cnt;
+			Modify(root[i],root[i-1],1,N,In[X],1);
+			if(Out[X]!=N) Modify(root[i],root[i-1],1,N,Out[X]+1,-1);
+		}
+		else
+		{
+			scanf("%d%d%d%d",&X,&Y,&K,&T);
+			root[i]=root[i-1];
+			Z=Lca(X,Y);
+			All=deep[X]+deep[Y]-2*deep[Z]-1;
+			damage=Get(X,i,T)+Get(Y,i,T)-2*Get(Z,i,T)+(g[Z]>T)-(g[X]>T)-(g[Y]>T);
+			if(All-damage<K)
+			{
+				printf("-1\n");
+				continue;
+			}
+			if(X!=Z)
+			{
+				lAll=deep[X]-deep[Z]-1;
+				ldamage=Get(X,i,T)-Get(Z,i,T)-(g[X]>T);
+			}
+			else lAll=ldamage=0;
+			if(lAll-ldamage>=K) Find(X,K+(g[X]<=T),i,T);
+			else Find(Y,All-damage-K+(g[Y]<=T)+1,i,T);
+		}
+	}
+	return 0;
+}

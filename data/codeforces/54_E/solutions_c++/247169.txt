@@ -1,0 +1,213 @@
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+
+struct point {
+  double x, y;
+};
+
+double sqr(double a) { 
+  return a * a; 
+}
+
+class vector {
+public:
+  double x, y;
+  vector(point p1, point p2) {
+    x = p2.x - p1.x;
+    y = p2.y - p1.y;
+  }
+  vector() {
+    x = y = 0;
+  }
+  double len() {
+    return sqrt(sqr(x) + sqr(y));
+  }
+  double operator * (vector v) {
+    return v.x * x + v.y * y;
+  }
+};
+
+double dist(point p1, point p2) {
+  return sqrt(sqr(p1.x - p2.x) + sqr(p1.y - p2.y));
+}
+
+double tri_square(point p1, point p2, point p3) {
+  double a = dist(p1, p2), 
+    b = dist(p2, p3),
+    c = dist(p3, p1);
+  double p = (a + b + c) / 2;
+  return sqrt(p * (p - a) * (p - b) * (p - c));
+}
+
+#define MAXN 100000
+
+int n;
+point pts[MAXN];
+double tri_sq[MAXN];
+double sum[MAXN];
+bool one[MAXN];
+#define EPS 1e-8
+
+void swap(point & a, point & b) {
+  point tmp = a;
+  a = b;
+  b = tmp;
+}
+
+bool equal(double a, double b) {
+  return fabs(b - a) < EPS;
+}
+
+bool less(double a, double b) {
+  return a + EPS < b;
+}
+
+bool greater(double a, double b) {
+  return a > b + EPS;
+}
+
+double A, B, C;
+
+bool one_side(point p1, point p2) {
+  return greater( (A * p1.x + B * p1.y + C) * (A * p2.x + B * p2.y + C), 0 );
+}
+
+int main() {
+#ifndef ONLINE_JUDGE
+  freopen("input.txt", "r", stdin);
+  freopen("output.txt", "w", stdout);
+#endif
+  scanf("%d", &n);
+  point c; c.x = c.y = 0;
+  for(int i = 0; i < n; i++) {
+    scanf("%lf %lf", &pts[i].x, &pts[i].y);
+    c.x += pts[i].x; c.y += pts[i].y;
+  }
+  c.x /= n; c.y /= n;
+  for(int i = 0; i < n; i++) {
+    tri_sq[i] = tri_square(c, pts[i], pts[(i + 1) % n]);
+  }
+  sum[0] = 0;
+  for(int i = 0; i < n; i++) {
+    sum[i + 1] = sum[i] + tri_sq[i];
+  }
+  double res = 1e15;
+  int ptr = 1;
+  for(int i = 0; i < n; i++) {
+    int ii = (i + 1) % n,
+      iii = (ii + 1) % n;
+    A = pts[ii].x - pts[i].x, B = pts[ii].y - pts[i].y;
+    C = - A * pts[ii].x - B * pts[ii].y;
+    if( one[ii] = one_side(pts[i], pts[iii]) ) {
+      puts("0");
+      return 0;
+    }
+    double val = fabs(A * pts[ptr].x + B * pts[ptr].y + C) / sqrt(sqr(A) + sqr(B));
+    do {
+      int nptr = (ptr + 1) % n;
+      double nval = fabs(A * pts[nptr].x + B * pts[nptr].y + C) / sqrt(sqr(A) + sqr(B));
+      if( greater(nval, val) && !one_side(pts[i], pts[nptr]) ) {
+	val = nval;
+	ptr = nptr;
+      }
+      else break;
+    }
+    while(true);
+    double tmp = 0;
+    if(ii <= ptr) {
+      tmp = sum[ptr] - sum[ii] - tri_square(c, pts[ii], pts[ptr]);
+      if(ii == ptr) {
+	ptr = (ptr + 1) % n;
+      }
+    }
+    else {
+      tmp = sum[n] - (sum[ii] - sum[ptr]) - tri_square(c, pts[ii], pts[ptr]);
+    }
+    double d = dist(pts[ii], pts[ptr]);
+    tmp = 0.5 * val * sqrt(sqr(d) - sqr(val)) - tmp;
+    if( less( tmp, res ) ) {
+      res = tmp;
+    }
+  }
+  for(int i = 0; i < n; i++) {
+    if(one[i]) continue;
+    int ii = (i + n - 1) % n;
+    int iii = (i + 1) % n;
+    double cc = (pts[i].x - pts[ii].x) * (pts[iii].x - pts[i].x) + 
+      (pts[i].y - pts[ii].y) * (pts[iii].y - pts[i].y);
+    double len1 = (pts[i].x - pts[ii].x) * (pts[i].x - pts[ii].x) + 
+      (pts[i].y - pts[ii].y) * (pts[i].y - pts[ii].y);
+    len1 = sqrt(len1);
+    double len2 = (pts[iii].x - pts[i].x) * (pts[iii].x - pts[i].x) + 
+      (pts[iii].y - pts[i].y) * (pts[iii].y - pts[i].y);
+    len2 = sqrt(len2);
+    double ang = acos(cc / (len1 * len2));
+    if(less(ang , M_PI / 2)) ang += M_PI / 2;
+    one[i] = !less(ang , M_PI * 1.5);
+  }
+  for(int i = 0; i < n; i++) {
+    int ii = (i + 1) % n;
+    if(one[i] && one[ii]) {
+      double d = dist(pts[i], pts[ii]);
+      d = d * d / 4;
+      if(less(d, res)) {
+	res = d;
+      }
+    }
+  }
+  for(int i = 0, j = n - 1; i < j; i++, j--) {
+    swap(pts[i], pts[j]);
+  }
+  for(int i = 0; i < n; i++) {
+    tri_sq[i] = tri_square(c, pts[i], pts[(i + 1) % n]);
+  }
+  sum[0] = 0;
+  for(int i = 0; i < n; i++) {
+    sum[i + 1] = sum[i] + tri_sq[i];
+  }
+  ptr = 1;
+  for(int i = 0; i < n; i++) {
+    int ii = (i + 1) % n,
+      iii = (ii + 1) % n;
+    A = pts[ii].x - pts[i].x, B = pts[ii].y - pts[i].y;
+    C = - A * pts[ii].x - B * pts[ii].y;
+    if( one[ii] = one_side(pts[i], pts[iii]) ) {
+      double d = dist( pts[i], pts[ii] );
+      if( less( d * d / 4, res) ) {
+	res = d * d / 4;
+      }
+      if(ptr == ii) {
+	ptr = (ptr + 1) % n;
+      }
+      continue;
+    }
+    double val = fabs(A * pts[ptr].x + B * pts[ptr].y + C) / sqrt(sqr(A) + sqr(B));
+    do {
+      int nptr = (ptr + 1) % n;
+      double nval = fabs(A * pts[nptr].x + B * pts[nptr].y + C) / sqrt(sqr(A) + sqr(B));
+      if( greater(nval, val) && !one_side(pts[i], pts[nptr]) ) {
+	val = nval;
+	ptr = nptr;
+      }
+      else break;
+    }
+    while(true);
+    double tmp = 0;
+    if(ii <= ptr) {
+      tmp = sum[ptr] - sum[ii] - tri_square(c, pts[ii], pts[ptr]);
+      if(ii == ptr) {
+	ptr = (ptr + 1) % n;
+      }
+    }
+    else {
+      tmp = sum[n] - (sum[ii] - sum[ptr]) - tri_square(c, pts[ii], pts[ptr]);
+    }
+    double d = dist(pts[ii], pts[ptr]);
+    tmp = 0.5 * val * sqrt(sqr(d) - sqr(val)) - tmp;
+    if( less( tmp, res ) ) {
+      res = tmp;
+    }
+  }
+  printf("%.10lf\n", res);
+}

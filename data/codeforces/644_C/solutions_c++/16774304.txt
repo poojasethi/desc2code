@@ -1,0 +1,79 @@
+#include <cstdio>
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <map>
+using namespace std;
+
+#define MAX 100005
+
+struct Node {
+    vector<int> h_ids;
+    map<int, int> next;
+};
+
+int n;
+char url[60];
+vector<string> hostnames;
+map<string, int> hostname_id, path_id;
+vector<int> g[MAX], ans;
+
+int qnt_nodes;
+Node trie[MAX];
+
+void insert(int host) {
+    const vector<int>& v = g[host];
+    int node = 0;
+    for (int i = 0; i < v.size(); i++) {
+        if (trie[node].next.count(v[i]) == 0)
+            trie[node].next[v[i]] = qnt_nodes++;
+        node = trie[node].next[v[i]];
+    }
+    trie[node].h_ids.push_back(host);
+}
+
+void dfs(int node) {
+    const Node& no = trie[node];
+    if (no.h_ids.size() > 1)
+        ans.push_back(node);
+    map<int, int>::const_iterator it;
+    for (it = no.next.begin(); it != no.next.end(); it++)
+        dfs(it->second);
+}
+
+int main() {
+    scanf("%d", &n);
+    int qnt_hostnames = 0, qnt_paths = 0;
+    for (int i = 0; i < n; i++) {
+        scanf("%s", url);
+        int sep = 7, hid, pid;
+        while (url[sep] && url[sep] != '/') sep++;
+        char c = url[sep];
+        url[sep] = 0;
+        if (hostname_id.count(url+7) == 0) {
+            hostname_id[url+7] = qnt_hostnames++;
+            hostnames.push_back(url+7);
+        }
+        hid = hostname_id[url+7];
+        url[sep] = c;
+        if (path_id.count(url+sep) == 0)
+            path_id[url+sep] = qnt_paths++;
+        pid = path_id[url+sep];
+        g[hid].push_back(pid);
+    }
+    trie[0] = Node();
+    qnt_nodes = 1;
+    for (int i = 0; i < qnt_hostnames; i++) {
+        sort(g[i].begin(), g[i].end());
+        g[i].erase(unique(g[i].begin(), g[i].end()), g[i].end());
+        insert(i);
+    }
+    dfs(0);
+    printf("%d\n", (int) ans.size());
+    for (int i = 0; i < ans.size(); i++) {
+        const vector<int>& v = trie[ans[i]].h_ids;
+        for (int j = 0; j < v.size(); j++)
+            printf("http://%s ", hostnames[v[j]].c_str());
+        puts("");
+    }
+}

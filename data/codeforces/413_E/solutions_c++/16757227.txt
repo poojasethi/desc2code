@@ -1,0 +1,78 @@
+#include<stdio.h>
+#include<algorithm>
+#define M 200000
+using namespace std;
+int inf = 1e9 , n , q;
+char maze[2][M + 5];
+struct data{
+	int dist[2][2];
+	void init(){
+		for(int x = 0 ; x < 2 ; x++)
+			for(int y = 0 ; y < 2 ; y++)	dist[x][y] = inf;
+	}
+};
+void minimize(int &a,int b){
+	if(a > b)	a = b;
+}
+data merge(data X,data Y,int pos){
+	data ret;
+	if(X.dist[0][0] == -1)	return Y;
+	if(Y.dist[0][0] == -1)	return X;
+	ret.init();
+	for(int s = 0 ; s < 2 ; s++)
+		for(int t = 0 ; t < 2 ; t++){
+			for(int x = 0 ; x < 2 ; x++)
+				for(int y = 0 ; y < 2 ; y++){
+					if(X.dist[s][x] == inf || Y.dist[y][t] == inf)	continue;
+					if(x == y)	minimize(ret.dist[s][t] , X.dist[s][x] + Y.dist[y][t] + 1);
+					if(x != y && ( maze[y][pos - 1] == '.' || maze[x][pos] == '.' ))	minimize(ret.dist[s][t] , X.dist[s][x] + Y.dist[y][t] + 2);
+				}
+			}
+	return ret;
+}
+data invalid;
+struct segment_tree{
+	data tree[4*M + 5];
+	void build(int k,int p,int q){
+		if(p == q){
+			tree[k].init();
+			for(int s = 0 ; s < 2 ; s++)
+				for(int t = 0 ; t < 2 ; t++){
+					if(maze[s][p -1] == '.' && maze[t][p - 1] == '.')	tree[k].dist[s][t] = (s != t);
+				}
+			return ;
+		}
+		build(k*2 , p , (p + q)/2);
+		build(k*2 + 1 , (p + q)/2 + 1 , q);
+		tree[k] = merge(tree[k*2],tree[k*2 + 1],(p + q)/2);
+	}
+	data get(int k,int p,int q,int u,int v){
+		if(p > v || u > q)	return invalid;
+		if(p >= u && v >= q)	return tree[k];
+		data cleft = get(k*2 , p , (p + q)/2,u,v);
+		data cright = get(k*2 + 1 , (p + q)/2 + 1 , q , u , v);
+		return merge(cleft , cright , (p + q)/2);
+	}
+};
+segment_tree IT;
+void solve(){
+	for(int s = 0 ; s < 2 ; s++)
+		for(int t = 0 ; t < 2 ; t++)
+			invalid.dist[s][t] = -1;
+	IT.build(1 , 1 , n);
+	while(q > 0){
+		int u , v;
+		scanf("%d %d",&u,&v);
+		u--; v--;
+		if(u%n > v%n) swap(u , v);
+		data ret = IT.get(1 , 1 , n , u%n + 1 , v%n + 1);
+		printf("%d\n",( ret.dist[u / n][v / n] == inf ? -1 : ret.dist[u / n][v / n]));
+		q--;
+	}
+}
+main(){
+//	freopen("test.inp","r",stdin);
+	scanf("%d %d",&n,&q);
+	for(int i = 0 ; i < 2 ; i++) scanf("%s",maze[i]);
+	solve();
+}

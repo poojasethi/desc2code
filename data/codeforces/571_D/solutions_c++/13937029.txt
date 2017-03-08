@@ -1,0 +1,195 @@
+//Pham Huu Canh
+//D. Campus
+//Algorithm:
+//Complexity:
+//AC:
+
+#include <iostream>
+#include <fstream>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#include <algorithm>
+#include <vector>
+#include <queue>
+#include <stack>
+#include <map>
+#include <set>
+
+#define max64 9223372036854775807LL
+#define max32 2147483647
+#define maxty 1001001001
+#define max16 32767
+#define EPS 1e-8
+#define ll long long
+#define ull unsigned long long
+#define pb push_back
+#define mp make_pair
+#define PQ priority_queue
+#define LB lower_bound
+#define UB upper_bound
+#define fi first
+#define se second
+#define timmax(x, y)    ((x) > (y) ? (x) : (y))
+#define timmin(x, y)    ((x) < (y) ? (x) : (y))
+#define fori(i, n)      for((i) = 0; (i) < (n); (i)++)
+#define ford(i, n)      for((i) = (n-1); (i) >= 0; (i)--)
+#define fore(i, v)      for(typeof(v.begin()) i = v.begin(); i != v.end(); i++)
+#define repi(i, a, b)   for((i) = (a); (i) <= (b); (i)++)
+#define repd(i, a, b)   for((i) = (a); (i) >= (b); (i)--)
+#define all(tmpv)      tmpv.begin(), tmpv.end()
+
+#define fii "d.inp"
+#define foo "d.out"
+#define MOD 1000000007
+#define inf 1000111000111000111LL
+
+using namespace std;
+
+typedef pair<int, int> II;
+typedef vector<int> VI;
+#define nmax 500005
+
+char op[nmax];
+int qx[nmax], qy[nmax];
+ll res[nmax];
+int n, nq;
+
+struct DSU{
+    int trc[nmax], gr[nmax];
+    DSU(): trc(), gr() {}
+    
+    void clear()    {   for (int i = 1; i <= n; i++)    trc[i] = gr[i] = i; }
+    
+    int root(int i) {   return i == trc[i] ? i : trc[i] = root(trc[i]); }
+    
+    int get_mil(int x)  {   return gr[root(x)]; }
+    
+    void Union(int x, int y, int z){
+        x = root(x), y = root(y);
+        trc[y] = x;
+        gr[y] = z;
+    }
+    
+}dsu;
+
+int last_mil_upd_time[nmax], last_upd_time[nmax], actual_time[nmax], elem_gr[nmax];
+VI sub[nmax], military[nmax];
+
+int get_war_time(int x){
+    int g = elem_gr[x];
+    if (last_mil_upd_time[g] == actual_time[x]) return last_upd_time[x];
+    return last_mil_upd_time[g];
+}
+
+void war(){
+    int i;
+    
+    dsu.clear();
+    repi(i, 1, n){
+        last_mil_upd_time[i] = last_upd_time[i] = actual_time[i] = 0;
+        elem_gr[i] = i;
+        military[i].pb(i);
+    }
+    
+    repi(i, 1, nq){
+        int x = qx[i];
+        char c = op[i];
+        if (c != 'Q')   x = dsu.get_mil(x);
+        
+        if (c == 'M'){
+            int y = dsu.get_mil(qy[i]);
+            if (military[x].size() < military[y].size())    swap(x, y);
+            
+            dsu.Union(x, y, x);
+            
+            fore(ite, military[y]){
+                int z = *ite;
+                last_upd_time[z] = get_war_time(z);
+                actual_time[z] = last_mil_upd_time[x];
+                elem_gr[z] = x;
+                military[x].pb(z);
+            }
+        }
+        else if (c == 'Z')  last_mil_upd_time[x] = i;
+        else if (c == 'Q'){
+            int at = get_war_time(x);
+            if (at) sub[at].pb(i);
+        }
+    }
+}
+
+ll mil_val[nmax], uni_val[nmax];
+
+ll get_peace_val(int x){
+    int g = elem_gr[x];
+    return uni_val[x] + mil_val[g];
+}
+
+void peace(){
+    int i;
+    
+    dsu.clear();
+    repi(i, 1, n){
+        mil_val[i] = uni_val[i] = 0;
+        elem_gr[i] = i;
+        military[i].clear();
+        military[i].pb(i);
+    }
+    
+    repi(i, 1, nq){
+        int x = qx[i];
+        char c = op[i];
+        
+        if (c != 'Q')   x = dsu.get_mil(x);
+        
+        if (c == 'U'){
+            int y = dsu.get_mil(qy[i]);
+            if (military[x].size() < military[y].size())    swap(x, y);
+            
+            dsu.Union(x, y, x);
+            
+            fore(ite, military[y]){
+                int z = *ite;
+                uni_val[z] = get_peace_val(z) - mil_val[x];
+                elem_gr[z] = x;
+                military[x].pb(z);
+            }
+        }
+        else if (c == 'A')  mil_val[x] += military[x].size();
+        else if (c == 'Q')  res[i] += get_peace_val(x);
+        
+        fore(ite, sub[i])       res[*ite] -= get_peace_val(qx[*ite]);
+    }
+}
+
+void input()
+{
+    int i;
+    char s[10];
+    
+    scanf("%d %d", &n, &nq);
+    repi(i, 1, nq){
+        scanf("%s %d", &s, &qx[i]);
+        op[i] = s[0];
+        if (s[0] == 'U' || s[0] == 'M') scanf("%d", &qy[i]);
+    }
+    
+    war();
+    peace();
+    
+    repi(i, 1, nq)  if (op[i] == 'Q')   printf("%I64d\n", res[i]);
+}
+
+int main()
+{
+    #ifndef ONLINE_JUDGE
+        freopen(fii,"r",stdin);
+        freopen(foo,"w",stdout);
+    #endif
+
+    input();
+
+    return 0;
+}

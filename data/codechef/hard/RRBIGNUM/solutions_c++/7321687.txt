@@ -1,0 +1,274 @@
+/**************************************************************************
+
+1) Find number of ones , sum of 2^i +2^i + 1 ----------------2^j
+
+***************************************************************************/
+
+
+
+
+#include<bits/stdc++.h>
+using namespace std ;
+#define INF 1e8
+typedef long long ll;
+struct node
+{
+ll sum ; // sum of the range
+ll count ; // no of ones
+};
+
+const int maxn = 1e6 + 5 ;
+
+ll mod = 1e9 + 7 ;
+
+ll sum[ 5 * maxn ] ;
+
+ll val[ 5 * maxn] ;
+
+node tree[ 5 * maxn ] ;
+
+ll  arr[ 5 * maxn ] , lazy[5 * maxn ];
+
+void consseg ( int ind , int a , int b )
+{
+    // cout << ind << " i "<< a << " fg" << b << endl ;
+   // cout << ind ;
+    //cout << endl ;
+    if ( ( a > b ) || ( a < 0) || ( b < 0 ) )
+        return ;
+    if ( a == b )
+   {
+    tree[ind].count = arr[a] ;
+    tree[ind].sum = ( arr[a] * val[a] ) % mod  ;
+    return ;
+   }
+    else
+    {
+       int  mid = ( a + b ) / 2 ;
+    //    cout << mid << endl ;
+        consseg (  ( 2 * ind ) , a , mid ) ;
+        consseg (  ( ( 2 * ind ) + 1 ) ,   mid  + 1   , b  ) ;
+        tree[ind].count =   (  tree[(2 * ind )].count  +  tree[( ( 2 * ind ) + 1 )].count ) % mod  ;
+        tree[ind].sum =  (  tree[(2 * ind )].sum  +  tree[( ( 2 * ind ) + 1 )].sum ) % mod  ;
+        return ;
+    }
+}
+
+node query ( int ind , int a , int b , int i , int j )
+{
+
+node de ;
+de.count = de.sum = 0 ;
+
+if ( lazy[ind] != 0 )
+        {
+            tree[ind].count = ( ( b - a + 1 ) - tree[i].count ) % mod  ;  // make opposite of count
+             if ( a == 0 )
+            tree[ind].sum = ( ( sum[b]) - tree[ind].sum  ) % mod ;
+            else
+            tree[ind].sum = ( ( sum[b] - sum[a-1]) - tree[ind].sum ) % mod  ;
+
+            if ( tree[ind].sum < 0 )
+            tree[ind].sum += mod ;
+
+
+
+            if ( a != b)
+            {
+                lazy[ 2 * ind ] ^= 1  ;
+                lazy[ ( 2 * ind ) + 1 ] ^= 1 ;
+            }
+
+            lazy[ind] = 0 ;
+       }
+   if ( ( a > j) || ( i > b ) )
+        return  de ;
+
+
+
+   if ( ( a >= i ) && ( b <= j) )
+    return tree[ind] ;
+
+    node h = query(  2 * ind  ,  a ,  (a + b ) / 2   ,  i  , j  ) ;
+    node g = query(  (( 2 * ind) + 1 )   ,  (  ((a + b ) / 2) +  1 ) ,  b   ,  i  , j  ) ;
+    node gh ;
+    gh.count = h.count + g.count ;
+    gh.sum = ( h.sum + g.sum ) % mod  ;
+    return gh ;
+
+}
+
+void update (  int ind , int a , int b , int i , int j) // reverse everything
+{
+    if ( lazy[ind] != 0 )
+    {
+           tree[ind].count = ( b - a + 1 ) - tree[ind].count ;  // make opposite of count
+             if ( a == 0 )
+            tree[ind].sum = ( ( sum[b]) - tree[ind].sum ) % mod  ;
+            else
+            tree[ind].sum = ( ( sum[b] - sum[a-1]) - tree[ind].sum ) % mod  ;
+
+ if ( tree[ind].sum < 0 )
+            tree[ind].sum += mod ;
+
+            if ( a != b)
+            {
+                lazy[ 2 * ind ] ^= 1  ;
+                lazy[ ( 2 * ind ) + 1 ] ^= 1  ;
+            }
+
+            lazy[ind] ^= 1  ;
+    }
+
+    if ( ( a > j ) || ( i > b ) )
+        return  ;
+
+    if ( ( a >= i ) && ( b <= j ) )
+    {
+       tree[ind].count = ( b - a + 1 ) - tree[ind].count ;  // make opposite of count
+             if ( a == 0 )
+            tree[ind].sum = ( ( sum[b]) - tree[ind].sum ) % mod  ;
+            else
+            tree[ind].sum = ( ( sum[b] - sum[a-1]) - tree[ind].sum ) % mod  ;
+
+ if ( tree[ind].sum < 0 )
+            tree[ind].sum += mod ;
+
+          if ( b != a )
+          {
+              lazy[2*ind] ^= 1  ;
+              lazy[2*ind + 1 ] ^= 1   ;
+          }
+
+
+        return ;
+    }
+
+     update(  2 * ind  ,  a ,  (a + b ) / 2   ,  i , j  ) ;
+     update(  (( 2 * ind) + 1 )   ,  (  ((a + b ) / 2) +  1 ) ,  b   ,  i , j ) ;
+     tree[ind].count =   (  tree[(2 * ind )].count  +  tree[( ( 2 * ind ) + 1 )].count )  ;
+        tree[ind].sum =  (  tree[(2 * ind )].sum  +  tree[( ( 2 * ind ) + 1 )].sum ) % mod   ;
+        return ;
+}
+
+
+ll power(ll a,ll b,ll mod)
+{
+      if(b==0)
+            return 1;
+      ll temp=power(a,b/2,mod) % mod ;
+      temp=( ( temp % mod )  * ( temp % mod ) )%mod;
+      if(b&1)
+            temp=( ( temp % mod )  * ( a % mod ) )%mod;
+      return ( temp % mod )  ;
+}
+
+
+int main()
+{
+    int t , m ,  i , j , i1 , j1 , ix , iy , op  ;
+
+    string s ;
+    cin >> s ;
+
+    m = s.length() ;
+    val[0] = sum[0] = 1 ;
+
+   for( int i = 1  ; i < m ;  i++ )
+   {
+         val[i] = ( val[i-1] * 2 ) % mod ;
+        sum[i] = ( sum[i-1] % mod + val[i] % mod ) % mod ;
+   }
+
+    int q ;
+
+   for ( int i = 0 ; i < m ; i++)
+    {
+      arr[m-i-1] = s[i] - '0' ;
+    }
+
+
+int last ;
+
+
+
+    memset ( lazy , 0 , sizeof ( lazy )) ;
+    consseg ( 1 , 0 , ( m - 1) );
+ last = s[m-1] - '0' ;
+     node x = query( 1 , 0 , m - 1 , 0 , m - 1 ) ;
+      ll n = x.sum ;
+      ll ans2  = power( 2 ,  mod - 2 , mod ) ;
+    //  cout << " n is " << n << " " ;
+       //cout << " ans2 is " << ans2 << endl ;
+       int ans ;
+      if ( last & 1 )
+      {
+          n = ( n + 1 ) % mod ;
+
+         n = ( ( n % mod ) * ( ans2 % mod ) ) % mod ;
+          if ( n < 0 )
+            n += mod ;
+         cout << n  << endl ;
+
+      }
+      else
+      {
+        ll y = 1 ;
+        if ( x.count & 1 )
+          y = 0 ;
+
+
+         n = ( ( ans2 % mod ) * ( n % mod ) ) % mod ;
+     //     cout << " y is " << y << endl ;
+          y = ( y + n ) % mod ;
+
+          if ( y < 0 )
+            y += mod ;
+
+          cout << y % mod  << endl ;
+      }
+
+cin >> q ;
+
+    while ( q-- )
+    {
+      cin >> i1 >> j1 ;
+      i1-- ;
+      j1-- ;
+      i1 = m - i1 -1 ;
+      j1 = m - j1 - 1 ;
+      swap( i1 , j1 ) ;
+if ( i1 == 0)
+last ^= 1 ;
+
+      update( 1 , 0 , m - 1 , i1 , j1 ) ;
+      node x = query( 1 , 0 , m - 1 , 0 , m - 1 ) ;
+      ll n = x.sum ;
+     // cout << " n is " << n << " " ;
+      if ( last & 1 )
+      {
+          n = ( n + 1 ) % mod ;
+
+         n = ( ( n % mod ) * ( ans2 % mod ) ) % mod ;
+         if ( n < 0 )
+            n += mod ;
+         cout << n % mod  << endl ;
+      }
+      else
+      {
+        ll y = 1 ;
+        if ( x.count & 1 )
+          y = 0 ;
+
+
+         n = ( ( ans2 % mod ) * ( n % mod ) ) % mod ;
+
+          y = ( y + n ) % mod ;
+          if ( y < 0 )
+            y += mod ;
+          cout << y % mod  << endl ;
+      }
+    }
+    return 0 ;
+}
+

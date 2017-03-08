@@ -1,0 +1,105 @@
+#include <iostream>
+#include <cstring>
+#include <vector>
+#include <cstdlib>
+
+using namespace std;
+
+const int MAXN = 201;
+
+typedef pair <int, int> PII;
+
+#define X first 
+#define Y second
+
+int H, T, R, n, m, headH[MAXN], tailH[MAXN], headT[MAXN], tailT[MAXN], mark[MAXN][MAXN], dis[MAXN][MAXN];
+
+void bfs()
+{
+	memset(dis, 0, sizeof(dis));
+	vector <PII> Q;
+	Q.push_back(PII(H, T));
+	mark[H][T] = 1;
+	for (int i = 0 ; i < (int)Q.size() ; i++)
+	{
+		int u = Q[i].X, v = Q[i].Y;
+		for (int j = 1 ; j <= min(u, n) ; j++)
+		{
+			int uu = u - j + headH[j], vv = v + tailH[j];
+			if (uu + vv <= R && !mark[uu][vv])
+			{
+				Q.push_back(PII(uu, vv));
+				dis[uu][vv] = dis[u][v] + 1;
+				mark[uu][vv] = 1;
+			}
+		}
+		for (int j = 1 ; j <= min(v, m) ; j++)
+		{
+			int uu = u + headT[j], vv = v - j + tailT[j];
+			if (uu + vv <= R && !mark[uu][vv])
+			{
+				Q.push_back(PII(uu, vv));
+				dis[uu][vv] = dis[u][v] + 1;
+				mark[uu][vv] = 1;
+			}
+		}
+	}
+}
+
+void dfs(int h, int t)
+{
+	mark[h][t] = 2;
+	for (int i = 1 ; i <= min(h, n) ; i++)
+	{
+		int u = h - i + headH[i], v = t + tailH[i];
+		if (u + v <= R)
+		{
+			if (!mark[u][v])
+				dfs(u, v);
+			else if (mark[u][v] == 2)
+			{
+				cout << "Draw" << endl;
+				exit(0);
+			}
+		}
+		dis[h][t] = max(dis[h][t], dis[u][v]+1);
+	}
+	for (int i = 1 ; i <= min(t, m) ; i++)
+	{
+		int u = h + headT[i], v = t - i + tailT[i];
+		if (u + v <= R)
+		{
+			if (!mark[u][v])
+				dfs(u, v);
+			else if (mark[u][v] == 2)
+			{
+				cout << "Draw" << endl;
+				exit(0);
+			}
+		}
+		dis[h][t] = max(dis[h][t], dis[u][v]+1);
+	}
+	mark[h][t] = 1;
+}
+
+int main()
+{
+	cin >> H >> T >> R;
+	cin >> n;
+	for (int i = 1 ; i <= n ; i++)
+		cin >> headH[i] >> tailH[i];
+	cin >> m;
+	for (int i = 1 ; i <= m ; i++)
+		cin >> headT[i] >> tailT[i];
+	bfs();
+	if (dis[0][0])
+	{
+		cout << "Ivan" << endl << dis[0][0] << endl;
+		return 0;
+	}
+	memset(mark, 0, sizeof(mark));
+	memset(dis, 0, sizeof(dis));
+	dfs(H, T);
+	cout << "Zmey" << endl << dis[H][T] << endl;
+	return 0;
+}

@@ -1,0 +1,102 @@
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long lint;
+
+const int MAX_N = 1010101;
+const int MOD = 1000000007;
+
+inline void add(int& x, int y) {
+	if ((x += y) >= MOD) {
+		x -= MOD;
+	}
+}
+
+inline lint P1(int x) {
+	return 1LL * x * (x + 1) / 2 % MOD;
+}
+
+inline lint P2(int x) {
+	return 1LL * x * (x + 1) * (2 * x + 1) / 6 % MOD;
+}
+
+int sq[MAX_N], len[MAX_N], prime[MAX_N];
+int pr[MAX_N], euler[MAX_N];
+
+void dfs(map<int, int>::iterator it, int x, const int n, const map<int, int>::iterator end, lint& ans) {
+	if (it == end) {
+		ans += 1LL * x * euler[n / x];
+		return;
+	}
+	map<int, int>::iterator it2 = it++;
+	for (int i = 0; i <= it2->second; i++) {
+		dfs(it, x, n, end, ans);
+		x *= it2->first;
+	}
+}
+
+inline int calc(int n) {
+	map<int, int> mp;
+	mp.clear();
+	int m = n;
+	while (pr[n]) {
+		mp[pr[n]]++;
+		n /= pr[n];
+	}
+	lint ans = 0;
+	dfs(mp.begin(), 1, m, mp.end(), ans);
+	return ans % MOD;
+}
+
+inline int gao(int n) {
+	lint res = 0;
+	res = 2 * P2(n) - 2 * n * P1(n) + 1LL * n * n * n - 2LL * n * n;
+	res %= MOD;
+	res += MOD;
+	res += 2 * calc(n) % MOD;
+	return res % MOD;
+}
+
+int main() {
+	pr[1] = 0, euler[1] = 1;
+	int tot = 0;
+	for (int i = 2; i < MAX_N; i++) {
+		if (!pr[i]) {
+			euler[i] = i - 1;
+			prime[tot++] = i;
+			pr[i] = i;
+		}
+		for (int j = 0; j < tot; j++) {
+			if (i * prime[j] >= MAX_N) break;
+			pr[i * prime[j]] = prime[j];
+			if (i % prime[j] == 0) {
+				euler[i * prime[j]] = euler[i] * prime[j];
+				break;
+			} else {
+				euler[i * prime[j]] = euler[i] * (prime[j] - 1);
+			}
+		}
+	}
+	len[0] = 0, len[1] = 1;
+	for (int i = 2; i < MAX_N; i++) {
+		int tmp = len[i - 1];
+		add(tmp, MOD - len[i - 2]);
+		add(tmp, gao(i));
+		add(len[i], tmp + len[i - 1]);
+	}
+	sq[1] = 1;
+	for (int i = 2; i < MAX_N; i++) {
+		sq[i] = sq[i - 1];
+		add(sq[i], len[i - 1]);
+		add(sq[i], len[i]);
+	}
+	int T;
+	scanf("%d", &T);
+	while (T--) {
+		int n, m;
+		scanf("%d%d", &n, &m);
+		if (n > m) swap(n, m);
+		lint res = sq[n] + 1LL * len[n] * (m - n);
+		printf("%I64d\n", res % MOD);
+	}
+	return 0;
+}

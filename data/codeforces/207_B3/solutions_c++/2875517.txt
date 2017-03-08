@@ -1,0 +1,104 @@
+// RMQ double
+// RMQ 倍増
+
+#include<cstdio>
+#include<cstring>
+#include<cstdlib>
+#include<algorithm>
+
+void Get(int &T)
+{
+	char C;bool F=0;
+	for(;C=getchar(),C<'0'||C>'9';)if(C=='-')F=1;
+	for(T=C-'0';C=getchar(),C>='0'&&C<='9';T=T*10+C-'0');
+	F&&(T=-T);
+}
+
+int N;
+int A[500005];
+int F[25][500005];
+
+int Log2(int X)
+{
+	int Ans=0;
+	if(X>>16) {X>>=16;Ans|=16;}
+	if(X>>8) {X>>=8;Ans|=8;}
+	if(X>>4) {X>>=4;Ans|=4;}
+	if(X>>2) {X>>=2;Ans|=2;}
+	if(X>>1) {X>>=1;Ans|=1;}
+	return Ans;
+}
+
+void Init()
+{
+	Get(N);
+	for(int i=1;i<=N;i++)
+	{
+		Get(A[i]);
+		A[i+N]=A[i];
+	}
+	N+=N;
+	N--;
+	for(int i=1;i<=N;i++)
+	{
+		A[i]=i-A[i];
+		if(A[i]<1) A[i]=1;
+		F[0][i]=i;
+	}
+	
+	for(int j=1;(1<<j)<=N;j++)
+		for(int i=1;i+(1<<j)-1<=N;i++)
+			F[j][i]=A[F[j-1][i]]<A[F[j-1][i+(1<<(j-1))]]?
+				F[j-1][i]:F[j-1][i+(1<<(j-1))];
+}
+
+int Ask(int L,int R)
+{
+	if(L>R) std::swap(L,R);
+	int Log=Log2(R-L);
+	return A[F[Log][L]]<A[F[Log][R-(1<<Log)+1]]?
+		F[Log][L]:F[Log][R-(1<<Log)+1];
+}
+
+int G[25][500005];
+long long Ans;
+
+void Work()
+{
+	for(int i=1;i<=N;i++)
+		G[0][i]=Ask(i,A[i]);
+	for(int j=1;(1<<j)<=N;j++)
+		for(int i=1;i<=N;i++)
+			G[j][i]=G[j-1][G[j-1][i]];
+	for(int i=((N+1)>>1),Goal=1;i<=N;i++,Goal++)
+	{
+		int Ans0=0,Now=i;
+		
+		if(A[Now]<=Goal)
+			Ans0=1;
+		else
+		{
+			for(int k=Log2(N);k>=0;k--)
+				if(A[G[k][Now]]>Goal)
+				{
+					Now=Ask(Now,G[k][Now]);
+					Ans0|=(1<<k);
+				}
+			Ans0+=2;
+		}
+		Ans+=Ans0;
+	}
+}
+
+void Output()
+{
+	printf("%I64d\n",Ans);
+}
+
+int main()
+{
+	Init();
+	Work();
+	Output();
+	return 0;
+}

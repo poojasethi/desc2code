@@ -1,0 +1,190 @@
+#author Dale Flamm
+import sys, math
+
+
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+    def __sub__(self, other):
+        return Point(self.x - other.x, self.y - other.y)
+    def __add__(self, other):
+        return Point(self.x + other.x, self.y + other.y)
+    def __mul__(self, other):
+        return (self.x*other.y) - (self.y*other.x)
+    def __eq__(self, other):
+        if self.x == other.x and self.y == other.y:
+            return True
+        return False
+
+class Line:
+    def __init__(self, pta, ptb):
+        self.pta = pta
+        self.ptb = ptb
+    def getPta(self):
+        return self.pta
+    def getPtb(self):
+        return self.ptb
+    def getMag(self):
+        return math.hypot(float(self.ptb.x - self.pta.x),float(self.ptb.y - self.pta.y))
+
+class TestA:
+    def __init__(self, lna, lnb, lnc):
+        self.lna = lna
+        self.lnb = lnb
+        self.lnc = lnc
+        self.options = {1 : self.lnOne,
+               2 : self.lnTwo,
+               3 : self.lnThree,
+               }
+    def isA(self):
+        sides = self.getSides()#determines which lines may be sides
+        if(sides[0] == 0):#if no lines may be sides return false
+            return False
+        side1 = self.options[sides[0]]()
+        side2 = self.options[sides[1]]()
+        bar = self.options[sides[2]]()
+        if not self.aBar(side1, side2, bar):#checks if the third segement connects the other 2 points on different segments
+            return False
+        return True
+    def getAngle(self, pt1, pt2, cpt):
+        v1 = [(pt1.x-cpt.x),(pt1.y-cpt.y)]
+        v2 = [(pt2.x-cpt.x),(pt2.y-cpt.y)]
+        dprod = dot(v1, v2)
+        mag1 = math.hypot(v1[0],v1[1])
+        mag2 = math.hypot(v2[0],v2[1])
+        cos_ = dprod/(mag1 * mag2)
+        if cos_ >= 0 and cos_ != 1:
+            return True
+        return False
+    def getSides(self):
+        ln1 = self.lna
+        ln2 = self.lnb
+        ln3 = self.lnc
+        if(ln1.pta == ln2.pta):
+            if self.getAngle(ln1.ptb, ln2.ptb, ln1.pta):
+                return [1,2,3]
+        if(ln1.pta == ln2.ptb):
+            if self.getAngle(ln1.ptb, ln2.pta, ln1.pta):
+                return [1,2,3]
+        if(ln1.ptb == ln2.pta):
+            if self.getAngle(ln1.pta, ln2.ptb, ln1.ptb):
+                return [1,2,3]
+        if(ln1.ptb == ln2.ptb):
+            if self.getAngle(ln1.pta, ln2.pta, ln1.ptb):
+                return [1,2,3]
+        if(ln1.pta == ln3.pta):
+            if self.getAngle(ln1.ptb, ln3.ptb, ln1.pta):
+                return [1,3,2]
+        if(ln1.pta == ln3.ptb):
+            if self.getAngle(ln1.ptb, ln3.pta, ln1.pta):
+                return [1,3,2]
+        if(ln1.ptb == ln3.pta):
+            if self.getAngle(ln1.pta, ln3.ptb, ln1.ptb):
+                return [1,3,2]
+        if(ln1.ptb == ln3.ptb):
+            if self.getAngle(ln1.pta, ln3.pta, ln1.ptb):
+                return [1,3,2]
+        if(ln2.pta == ln3.pta):
+            if self.getAngle(ln2.ptb, ln3.ptb, ln2.pta):
+                return [2,3,1]
+        if(ln2.pta == ln3.ptb):
+            if self.getAngle(ln2.ptb, ln3.pta, ln2.pta):
+                return [2,3,1]
+        if(ln2.ptb == ln3.pta):
+            if self.getAngle(ln2.pta, ln3.ptb, ln2.ptb):
+                return [2,3,1]
+        if(ln2.ptb == ln3.ptb):
+            if self.getAngle(ln2.pta, ln3.pta, ln2.ptb):
+                return [2,3,1]
+        return [0,0,0]
+    def aBar(self, side1, side2, bar):#verifies if the third line connects the other two
+        if pointOnLineInProportion(side1, bar.pta):
+            if pointOnLineInProportion(side2, bar.ptb):
+                return True
+        if pointOnLineInProportion(side1, bar.ptb):
+            if pointOnLineInProportion(side2, bar.pta):
+                return True
+        return False
+    def lnOne(self):
+        return self.lna
+    def lnTwo(self):
+        return self.lnb
+    def lnThree(self):
+        return self.lnc
+
+
+def dot(ar1, ar2):
+    sum = 0
+    if len(ar1) == len(ar2):
+        for i in range(0, len(ar1)):
+            sum += ar1[i] * ar2[i]
+    return sum
+def pointOnLineInProportion(ln, pt):
+    drvLn = Line(ln.pta, pt)#a derived line for verifying the point is on the line
+    minx = min(ln.pta.x, ln.ptb.x)
+    miny = min(ln.pta.y, ln.ptb.y)
+    maxx = max(ln.pta.x, ln.ptb.x)
+    maxy = max(ln.pta.y, ln.ptb.y)
+    if (abs(drvLn.pta.x - drvLn.ptb.x) == 0 and abs(drvLn.pta.y - drvLn.ptb.y) == 0) or drvLn.ptb == ln.ptb:
+        return False
+    if ((pt.x - ln.ptb.x) * (ln.pta.y - ln.ptb.y) == (pt.y - ln.ptb.y) * (ln.pta.x - ln.ptb.x) and pt.x >= minx and pt.x <= maxx and pt.y >= miny and pt.y <= maxy):#checks if the point is on the line
+        mindrxmag = min(abs(pt.x - ln.pta.x), abs(pt.x - ln.ptb.x))
+        mindrymag = min(abs(pt.y - ln.pta.y), abs(pt.y - ln.ptb.y))
+        magxln = abs(ln.pta.x - ln.ptb.x)
+        magyln = abs(ln.pta.y - ln.ptb.y)
+        if(mindrxmag * 5 < magxln or mindrymag * 5 < magyln):
+            return False
+        else:
+            return True
+    return False
+
+
+
+numTests = int(raw_input())
+Tests = []
+for i in range(0, numTests):
+    Lines = []
+    
+    tempIn = raw_input('')
+    tempSplit = tempIn.split(' ')
+    tempPts = []
+    for x in tempSplit:
+        tempPts.append(int(x))
+    tPt1 = Point(tempPts[0], tempPts[1])
+    tPt2 = Point(tempPts[2], tempPts[3])
+    if tPt1 == tPt2:
+        print "No"
+        continue
+    Lines.append(Line(tPt1, tPt2))
+    
+    tempIn = raw_input('')
+    tempSplit = tempIn.split(' ')
+    tempPts = []
+    for x in tempSplit:
+        tempPts.append(int(x))
+    tPt1 = Point(tempPts[0], tempPts[1])
+    tPt2 = Point(tempPts[2], tempPts[3])
+    if tPt1 == tPt2:
+        print "No"
+        continue
+    Lines.append(Line(tPt1, tPt2))
+    
+    tempIn = raw_input('')
+    tempSplit = tempIn.split(' ')
+    tempPts = []
+    for x in tempSplit:
+        tempPts.append(int(x))
+    tPt1 = Point(tempPts[0], tempPts[1])
+    tPt2 = Point(tempPts[2], tempPts[3])
+    if tPt1 == tPt2:
+        print "No"
+        continue
+    Lines.append(Line(tPt1, tPt2))
+    
+    
+    tTest = TestA(Lines[0],Lines[1],Lines[2])
+    if tTest.isA():
+        print "YES"
+    else:
+        print "NO"

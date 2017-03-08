@@ -1,0 +1,112 @@
+#include <iostream>
+#include <limits>
+#include <string>
+#include <vector>
+#include <sstream>
+
+#define rep(i,x) for(int i=0; i<x; ++i)
+
+using namespace std;
+
+int n, N;
+vector<int> v, ic;
+const int MX = numeric_limits<int>::max();
+
+void init()
+{
+	for(int i=N-1; i>=1; --i)
+		v[i] = min(v[2*i], v[2*i+1]);
+}
+
+void update(int x, int val)
+{
+	ic[x] += val;
+
+	while(x/2)
+	{
+		x /= 2;
+		int old = v[x];
+		
+		int a = v[2*x] + ic[2*x];
+		int b = v[2*x+1] + ic[2*x+1];
+		
+		v[x] = min(a,b);
+		if (v[x] == old)
+			break;
+	}
+}
+
+void inc(int a, int b, int val)
+{
+	if (a==b)
+		update(a,val);
+	else
+	{
+		if (a&1)
+		{
+			inc(a,a,val);
+			a++;
+		}
+		if (!(b&1))
+		{
+			inc(b,b,val);
+			b--;
+		}
+		if (a<b)
+			inc(a/2,b/2,val);
+	}
+}
+
+int up(int x)
+{
+	int ret = v[x];
+	while(x)
+	{
+		ret += ic[x];
+		x /= 2;
+	}
+	return ret;
+}
+
+int rmq(int a, int b)
+{
+	if (a==b) return up(a);
+
+	int ret = MX;
+	if (a&1)
+		ret = min(ret,up(a++));
+	if (!(b&1))
+		ret = min(ret,up(b--));
+
+	return min(ret, (a<b) ? rmq(a/2,b/2) : MX);
+}
+
+int main()
+{
+	cin >> n;
+	N = 1;
+	while (N < n)
+		N <<= 1;
+
+	v.resize(2*N,MX);
+	ic.resize(2*N,0);
+
+	rep(i,n)
+		cin >> v[i+N];
+	init();
+	
+	int m; cin >> m;
+	rep(i,m)
+	{
+		string s;
+		while (getline(cin,s) && s==""); 
+		stringstream ss(s);
+		int a,b,val; ss >> a >> b; a+=N; b+=N;
+		if (ss >> val)
+			a <= b ? inc(a,b,val) : (inc(N,b,val), inc(a,N+n-1,val));
+		else
+			cout << (a <= b ? rmq(a,b) : min( rmq(N,b), rmq(a,N+n-1) ) ) << endl;
+	}
+	
+	return 0;
+}

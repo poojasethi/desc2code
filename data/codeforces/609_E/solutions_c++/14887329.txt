@@ -1,0 +1,72 @@
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+using namespace std;
+typedef long long LL;
+const int maxn=200010,maxm=200010;
+
+struct Edge {int u,v,w,id;}Ed[maxm];
+bool cmp(const Edge &a,const Edge &b) {return a.w<b.w;}
+
+int head[maxn],next[maxn<<1],E[maxn<<1],D[maxn<<1],Ecnt;
+void Add_Edge(int u,int v,int w) {next[++Ecnt]=head[u];head[u]=Ecnt;E[Ecnt]=v;D[Ecnt]=w;next[++Ecnt]=head[v];head[v]=Ecnt;E[Ecnt]=u;D[Ecnt]=w;}
+
+int fa[maxn][30],dep[maxn];
+LL dis[maxn][30];
+LL ans[maxm];
+int n,m;
+
+int f[maxn];
+int Find(int x) {return f[x]==x?x:f[x]=Find(f[x]);}
+void Kruskal()
+{
+	for (int i=1;i<=n;i++) f[i]=i;
+	int cnt=n;
+	for (int i=1;i<=m && cnt>1;i++)
+		if (Find(Ed[i].u)!=Find(Ed[i].v)) ans[0]+=Ed[i].w,f[Find(Ed[i].u)]=Ed[i].v,Add_Edge(Ed[i].u,Ed[i].v,Ed[i].w),cnt--;
+}
+
+void Build(int x,int father,int w,int depth)
+{
+	dep[x]=depth;
+	fa[x][0]=father;
+	dis[x][0]=w;
+	int k2=1,k=0;
+	while (fa[fa[x][k]][k]) fa[x][k+1]=fa[fa[x][k]][k],dis[x][k+1]=max(dis[x][k],dis[fa[x][k]][k]),k++;
+	for (int i=head[x];i;i=next[i]) if (E[i]!=father) Build(E[i],x,D[i],depth+1);
+}
+
+LL LCA_Max(int u,int v)
+{
+	if (dep[u]<dep[v]) swap(u,v);
+	int k2=1,k=0;
+	LL res=0;
+	while (dep[u]-(k2<<1)>=dep[v]) k2<<=1,k++;
+	while (dep[u]>dep[v])
+	{
+		if (dep[u]-k2>=dep[v]) res=max(res,dis[u][k]),u=fa[u][k];
+		k2>>=1;k--;
+	}
+	k=0;
+	while (fa[u][k]!=fa[v][k]) k++;
+	k--;
+	while (k>=0 && u!=v)
+	{
+		if (fa[u][k]!=fa[v][k]) res=max(res,max(dis[u][k],dis[v][k])),u=fa[u][k],v=fa[v][k];
+		k--;
+	}
+	if (u!=v) res=max(res,max(dis[u][0],dis[v][0]));
+	return res;
+}
+
+int main()
+{
+	scanf("%d%d",&n,&m);
+	for (int i=1;i<=m;i++) scanf("%d%d%d",&Ed[i].u,&Ed[i].v,&Ed[i].w),Ed[i].id=i;
+	sort(Ed+1,Ed+1+m,cmp);
+	Kruskal();
+	Build(1,0,0,1);
+	for (int i=1;i<=m;i++) ans[Ed[i].id]=ans[0]+Ed[i].w-LCA_Max(Ed[i].u,Ed[i].v);
+	for (int i=1;i<=m;i++) printf("%I64d\n",ans[i]);
+	return 0;
+}

@@ -1,0 +1,135 @@
+#include <algorithm>
+#include <iostream>
+#include <vector>
+using namespace std;
+
+const int NMAX = 100010;
+
+struct tree {
+	long long size;
+	vector<int> edges[NMAX];
+	long long nodes[NMAX];
+	long long s[NMAX], z[NMAX], p[NMAX];
+	long long maxdist, totaldist;
+	int maxdistid;
+
+	void dfs_dist1(int v, int prev) {
+		nodes[v] = 1;
+		s[v] = 0;
+		for (int i = 0; i < edges[v].size(); i++) {
+			int w = edges[v][i];
+			if (w != prev) {
+				dfs_dist1(w, v);
+				nodes[v] += nodes[w];
+				s[v] += (s[w] + nodes[w]);
+			}
+		}
+	}
+
+	void dfs_dist2(int v, int prev, long long val) {
+		z[v] = val;
+		for (int i = 0; i < edges[v].size(); i++) {
+			int w = edges[v][i];
+			if (w != prev) {
+				dfs_dist2(w, v, val + (s[v] - s[w] - nodes[w]) + (size - nodes[w]));
+			}
+		}
+	}
+
+	void dfs_dist3(int v, int prev) {
+		p[v] = p[prev] + 1;
+		for (int i = 0; i < edges[v].size(); i++) {
+			int w = edges[v][i];
+			if (w != prev) {
+				dfs_dist3(w, v);
+			}
+		}
+	}
+
+	void read(int n) {
+		size = n;
+		for (int i = 0; i < (size - 1); i++) {
+			int a, b; cin >> a >> b;
+			edges[a].push_back(b);
+			edges[b].push_back(a);
+		}
+
+		calc();
+	}
+
+	void calc() {
+		dfs_dist1(1, 0);
+		dfs_dist2(1, 0, 0);
+
+		maxdist = s[1] + z[1]; maxdistid = 1;
+		totaldist = maxdist;
+		for (int i = 2; i <= size; i++) {
+			if (s[i] + z[i] > maxdist) {
+				maxdist = s[i] + z[i];
+				maxdistid = i;
+			}
+			totaldist += (s[i] + z[i]);
+		}
+		totaldist /= 2;
+
+		p[0] = -1;
+		dfs_dist3(maxdistid, 0);
+	}
+
+	void debug() {
+		for (int i = 1; i <= size; i++) {
+			cerr << nodes[i] << " ";
+		}
+		cerr << endl;
+		for (int i = 1; i <= size; i++) {
+			cerr << "(" << s[i] << " " << z[i] << ") ";
+		}
+		cerr << endl;
+		cerr << "maxdist=" << maxdist << ", totaldist=" << totaldist << endl;
+	}
+};
+
+tree tA, tB, tC;
+
+long long test(tree& t1, tree& t2, tree& t3) {
+	long long best_result = 0;
+
+	for (int i = 1; i <= t2.size; i++) {
+		long long result = 0;
+		// all distances
+		result += (t1.totaldist + t2.totaldist + t3.totaldist);
+		// 1->2 (easy)
+		result += t1.maxdist * t2.size + t1.size * t2.size;
+		// 3->2 (easy)
+		result += t3.maxdist * t2.size + t3.size * t2.size;
+		// 1->2<-3 (easy)
+		result += t1.maxdist * t3.size + t3.maxdist * t1.size + 2 * t1.size * t3.size;
+		// rest (hard)
+		result += t1.size * t2.maxdist + t3.size * (t2.s[i] + t2.z[i]) + t1.size * t3.size * t2.p[i];
+
+		best_result = max(best_result, result);
+	}
+
+	return best_result;
+}
+
+int main() {
+	ios_base::sync_with_stdio(false);
+
+	int n1, n2, n3; cin >> n1 >> n2 >> n3;
+	tA.read(n1);
+	tB.read(n2);
+	tC.read(n3);
+
+	long long result = 0;
+	result = max(result, test(tA, tB, tC));
+	result = max(result, test(tC, tB, tA));
+	result = max(result, test(tA, tC, tB));
+	result = max(result, test(tB, tC, tA));
+	result = max(result, test(tB, tA, tC));
+	result = max(result, test(tC, tA, tB));
+
+	cout << result << endl;
+
+	return 0;
+}

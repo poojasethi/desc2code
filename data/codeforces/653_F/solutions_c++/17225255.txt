@@ -1,0 +1,93 @@
+#define Base n+1
+#define maxn 500050
+#define ll long long
+
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+
+char s[maxn];
+int tree[maxn<<1],range[maxn];
+int n,sum[maxn],qcnt,cnt[maxn<<1];
+
+struct storage{
+	int p,key,sign;
+	friend bool operator < (storage a,storage b){
+		return a.p<b.p;
+	}
+}q[maxn<<2];
+
+namespace Suffix_Automaton{
+	int last,root,tot,pos[maxn<<1];
+	struct Node{int len,par,go[2];}a[maxn<<1];
+	void extend(int w,int position){
+		int p=last,np=++tot;
+		a[np].len=a[last].len+1;
+		pos[np]=position;
+		while(p&&(!a[p].go[w]))a[p].go[w]=np,p=a[p].par;
+		if(!a[p].go[w])a[p].go[w]=np;
+		else{
+			int q=a[p].go[w];
+			if(a[q].len==a[p].len+1)a[np].par=q;
+			else{
+				int nq=++tot;a[nq]=a[q];
+				a[nq].len=a[p].len+1;pos[nq]=position;
+				a[np].par=a[q].par=nq;
+				for(;a[p].go[w]==q;p=a[p].par)a[p].go[w]=nq;
+			}
+		}last=np;
+	}
+	void build(char *s){
+		for(int i=n;i>=1;i--)
+			extend((s[i]=='('?0:1),n-i+1);
+	}
+};
+
+inline void add(int x,int v)
+{
+	for(int i=x;i<=n+Base;i+=(i&(-i)))
+	    tree[i]=std::min(tree[i],v);
+}
+
+inline int query(int x)
+{
+	int ret=0x3fffffff;
+	for(int i=x;i>0;i-=(i&(-i)))
+	    ret=std::min(ret,tree[i]);
+	return ret;
+}
+
+inline void read()
+{
+	scanf("%d%s",&n,s+1);
+}
+
+inline void solve()
+{
+	using namespace Suffix_Automaton;
+	for(int i=1;i<=n;i++)sum[i]=sum[i-1]+(s[i]=='('?1:-1);
+	build(s);memset(tree,0x3f,sizeof(tree));
+	for(int i=n;i>=1;i--){//i���ҵ�һ�����Ϸ�λ��Ϊj,��sum[j]-sum[i-1]=-1
+	    add(sum[i]+Base,i);
+		range[i]=query(sum[i-1]-1+Base);
+	}
+	int l,r,cur;
+	for(int i=1;i<=tot;i++){
+		l=pos[i]-a[i].len+1;r=pos[i]-(a[a[i].par].len+1)+1;
+		cur=pos[i];l=n-l+1;r=n-r+1;cur=n-cur+1;std::swap(l,r);
+		r=std::min(r,range[cur]-1);if(l>r)continue;
+		q[++qcnt]=(storage){l-1,sum[cur-1],-1};
+		q[++qcnt]=(storage){r,sum[cur-1],1};//����˵���cur,�Ҷ˵���[l,r]�ںϷ��Ӵ�,[cur,p]�Ϸ�,��sum[p]=sum[cur-1]
+	}
+	std::sort(q+1,q+qcnt+1);ll res=0;cur=0;
+	for(int i=1;i<=qcnt;i++){
+		while(cur+1<=q[i].p)++cnt[sum[++cur]+Base];
+		res+=(ll)q[i].sign*(ll)cnt[q[i].key+Base];
+	}
+	printf("%I64d\n",res);
+}
+
+int main()
+{
+	read();solve();
+}

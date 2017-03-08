@@ -1,0 +1,131 @@
+#include <cstdio>
+#include <cstdlib>
+#include <set>
+#define mid ((l+r)>>1)
+using namespace std;
+const int maxn=200005;
+const int maxt=10000005;
+const int inf=1000000001;
+int N,M;
+int fx[maxn],fy[maxn],fc[maxn],fp[maxn];
+long long ft[maxn];
+int root,tot_node,pp,qq,rr;
+int ls[maxt],rs[maxt],cover[maxt];
+int mp[maxn],mb[maxn];
+set<pair<int,int> > S;
+set<pair<int,int> >::iterator ii;
+void _qst(int l,int r)
+{
+    int i,j,m,t;
+    i=l;j=r;
+    m=fp[(i+j)>>1];
+    while(i<=j)
+    {
+        while(fx[fp[i]]<fx[m])i++;
+        while(fx[fp[j]]>fx[m])j--;
+        if(i<=j)
+        {
+            t=fp[i];fp[i]=fp[j];fp[j]=t;
+            i++;j--;
+        }
+    }
+    if(i<r)_qst(i,r);
+    if(l<j)_qst(l,j);
+}
+void _segment_pushdown(int i,int l,int r)
+{
+    if(ls[i]==0)
+        ls[i]=++tot_node;
+    cover[ls[i]]=cover[i];
+    if(rs[i]==0)
+        rs[i]=++tot_node;
+    cover[rs[i]]=cover[i];
+    cover[i]=0;
+}
+void _segment_modify(int &i,int l,int r)
+{
+    if(i==0)
+        i=++tot_node;
+    if(pp<=l&&r<=qq)
+    {
+        cover[i]=rr;
+        return;
+    }
+    if(cover[i]!=0)
+        _segment_pushdown(i,l,r);
+    if(pp<=mid)
+        _segment_modify(ls[i],l,mid);
+    if(qq>mid)
+        _segment_modify(rs[i],mid+1,r);
+}
+int _segment_query(int &i,int l,int r)
+{
+    if(i==0)
+        return -1;
+    if(cover[i]!=0)
+        return cover[i];
+    if(pp<=mid)
+        return _segment_query(ls[i],l,mid);
+    if(pp>mid)
+        return _segment_query(rs[i],mid+1,r);
+    return -1;
+}
+int main()
+{
+    //freopen("datax.in","r",stdin);
+    //freopen("my-2.out","w",stdout);
+    int i,j,k,t;
+    scanf("%d%d",&N,&M);
+    for(i=1;i<=N;i++)
+    {
+        scanf("%d%I64d",&fx[i],&ft[i]);
+        fy[i]=fx[i]+ft[i];
+        if(fy[i]>inf)
+            fy[i]=inf;
+        fp[i]=i;
+    }
+    _qst(1,N);
+    for(i=N;i>=1;i--)
+    {
+        j=fp[i];
+        pp=fx[j];qq=fy[j];rr=j;
+        _segment_modify(root,0,inf);
+    }
+    for(i=1;i<=M;i++)
+    {
+        scanf("%d%d",&mp[i],&mb[i]);
+        pp=mp[i];
+        k=_segment_query(root,0,inf);
+        if(k==-1)
+            S.insert(make_pair(mp[i],i));
+        else
+        {
+            t=fy[k];
+            fc[k]++;
+            ft[k]+=mb[i];
+            fy[k]+=mb[i];
+            if(fy[k]>inf)
+                fy[k]=inf;
+            while(true)
+            {
+                ii=S.lower_bound(make_pair(fx[k],0));
+                if(ii==S.end())
+                    break;
+                j=ii->second;
+                if(mp[j]>fy[k])
+                    break;
+                S.erase(ii);
+                fc[k]++;
+                ft[k]+=mb[j];
+                fy[k]+=mb[j];
+                if(fy[k]>inf)
+                    fy[k]=inf;
+            }
+            pp=t+1;qq=fy[k];rr=k;
+            _segment_modify(root,0,inf);
+        }
+    }
+    for(i=1;i<=N;i++)
+        printf("%d %I64d\n",fc[i],ft[i]);
+    return 0;
+}

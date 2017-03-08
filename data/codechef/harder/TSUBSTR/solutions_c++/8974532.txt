@@ -1,0 +1,128 @@
+#include <cstdio>
+#include <memory.h>
+#include <algorithm>
+#include <vector>
+#include <queue>
+#include <cstdlib>
+#define rep(i,x,y) for(int i=x;i<=y;i++)
+#define gc getchar()
+using namespace std;
+typedef long long ll;
+char s[300000],T[30];
+struct node
+{
+  int fat,nxt[26],len;
+  ll step;
+  void clear(int x,int y)
+  {
+    rep(i,0,25)
+      nxt[i]=0;
+    len=x;
+    fat=y;
+    step=-1;
+  }
+  int& operator [](int x)
+  {
+    return nxt[x];
+  }
+} ns[700000];
+int nn,root,place[250011],fat[250011],t1,t2,len[250011],t[30];
+bool vis[250011];
+vector <int> con[250011];
+queue <int> dui;
+int newnode(int len,int fat)
+{
+  ns[++nn].clear(len,fat);
+  return nn;
+}
+ll doit(int k)
+{
+  if(ns[k].step!=-1)return ns[k].step;
+  ns[k].step=1;
+  rep(i,0,25)
+    if(ns[k][i])ns[k].step+=doit(ns[k][i]);
+  return ns[k].step;
+}
+int main()
+{
+  int n,Q;
+  scanf("%d%d",&n,&Q);
+  scanf("%s",s+1);
+  nn=0;
+  rep(i,1,n-1)
+  {
+    scanf("%d%d",&t1,&t2);
+    con[t1].push_back(t2);
+    con[t2].push_back(t1);
+  }
+  place[0]=newnode(0,0);
+  len[1]=1;
+  memset(vis,0,sizeof(vis));
+  fat[1]=0;
+  vis[1]=1;
+  dui.push(1);
+  while(!dui.empty())
+  {
+    int u=dui.front();
+    int x=s[u]-'a',now=newnode(len[u],0),p=place[fat[u]];
+    if(x<0||x>25)exit(1);
+    place[u]=now;
+    while(p&&ns[p][x]==0)
+      ns[p][x]=now,p=ns[p].fat;
+    if(p==0)ns[now].fat=place[0];
+      else
+      {
+        int q=ns[p][x];
+        if(ns[q].len==ns[p].len+1)ns[now].fat=q;
+          else
+          {
+            int r=newnode(ns[p].len+1,ns[q].fat);
+            memcpy(ns[r].nxt,ns[q].nxt,sizeof(ns[q].nxt));
+            ns[now].fat=ns[q].fat=r;
+            while(p&&ns[p][x]==q)
+              ns[p][x]=r,p=ns[p].fat;
+          }
+      }
+    if(con[u].size()>0)
+      rep(i,0,con[u].size()-1)
+      {
+        int v=con[u][i];
+        if(!vis[v])
+        {
+          len[v]=len[u]+1;
+          vis[v]=1;
+          dui.push(v);
+          fat[v]=u;
+        }
+      }
+    dui.pop();
+  }
+  printf("%lld\n",doit(place[0]));
+  while(Q--)
+  {
+    ll k;
+  	scanf("%s%lld",T+1,&k);
+  	rep(i,1,26)
+  		t[i]=T[i]-'a';
+  	rep(i,1,26)
+  		if(t[i]<0||t[i]>25)exit(1);
+    int now=place[0];
+    if(k>ns[now].step)printf("-1");
+      else
+      {
+        while(k>0)
+        {
+          k--;
+          if(k==0)break;
+          int i;
+          for(i=1;i<=26;i++)
+            if(ns[now][t[i]]&&ns[ns[now][t[i]]].step<k)k-=ns[ns[now][t[i]]].step;
+              else if(ns[now][t[i]])break;
+          putchar(t[i]+'a');
+          now=ns[now][t[i]];              
+        }
+      }
+    putchar('\n');
+  }
+  return 0;
+} 

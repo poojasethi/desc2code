@@ -1,0 +1,69 @@
+#include <cstdio>
+// P = 11*2^21 + 1
+#define P 23068673LL
+#define B 21
+#define N 2097152LL
+#define IN 23068662LL
+#define R 38LL
+#define IR 21247462LL
+
+long long w[N], a[N], b[N];
+int br[N], t, ans, n, m;
+
+void breverse(long long *a) {
+	long long t;
+	for (int i = 0; i < N; ++i)
+		if (i < br[i]) {
+			t = a[i];
+			a[i] = a[br[i]];
+			a[br[i]] = t;
+		}
+}
+
+void nft(long long *a, long long s) {
+	w[0] = 1;
+	for (int i = 1; i < N; ++i)
+		w[i] = w[i - 1]*s%P;
+	breverse(a);
+	for (int bsz = 0; bsz < B; ++bsz) {
+		int sz = 1 << bsz;
+		for (long long *c = a; c < a + N; c += sz + sz)
+			for (int i = 0; i < sz; ++i) {
+				c[i + sz] = (c[i] + (P - w[i*(1 << B - 1 - bsz)])*c[i + sz])%P;
+				c[i] = (c[i] + c[i] - c[i + sz] + P)%P;
+			}
+	}
+}
+
+int main() {
+	for (int i = 0; i < B; ++i)
+		br[1 << i] = 1 << B - 1 - i;
+	for (int i = 0; i < N; ++i)
+		br[i] = br[i & -i] | br[i & i - 1];
+	for (int i = 0; i < N; ++i)
+		a[i] = b[i] = 0;
+	scanf("%d%d", &n, &m);
+	for (int i = 0; i < n; ++i) {
+		scanf("%d", &t);
+		a[t] = b[t] = 1;
+	}
+	nft(a, R);
+	for (int i = 0; i < N; ++i)
+		a[i] = a[i]*a[i]%P;
+	nft(a, IR);
+	for (int i = 0; i < N; ++i)
+		a[i] = a[i]*IN%P;
+	for (int i = 1; i <= m; ++i)
+		if (a[i] && !b[i]) {
+			puts("NO");
+			return 0;
+		} else ans += !a[i] && b[i];
+	puts("YES");
+	printf("%d\n", ans);
+	for (int i = 1; i <= m; ++i)
+		if (!a[i] && b[i]) {
+			printf("%d", i);
+			--ans ? putchar(' ') : puts("");
+		}
+	return 0;
+}

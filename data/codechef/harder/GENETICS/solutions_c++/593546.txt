@@ -1,0 +1,420 @@
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <queue>
+#include <iostream>
+#include <cmath>
+#include <sstream>
+#include <map>
+#include <set>
+#include <numeric>
+#include <memory.h>
+#include <cstdio>
+#include <assert.h>
+
+using namespace std;
+
+#define pb push_back
+#define INF 1000000001
+#define SZ(s) (int)((s).size())
+#define FOR(i,a,b) for (int _n(b), i(a); i < _n; i++)
+#define rep(i,n) FOR(i,0,n)
+#define ford(i,a,b) for(int i=(a),_b=(b);i>=_b;--i)
+#define CL(a,v) memset((a),(v),sizeof(a))
+#define mp make_pair
+#define X first
+#define Y second
+#define all(c) (c).begin(), (c).end()
+#define SORT(c) sort(all(c))
+
+struct DNA
+{
+    static const DNA empty_dna;
+
+    int A,G,T,C;
+
+    DNA() : A(0), G(0), T(0), C(0) {}
+    DNA(char c) : A(0), G(0), T(0), C(0) {  *this += c; }
+
+    void operator += (char c)
+    {
+        switch(c)
+        {
+            case 'A': A++; break;
+            case 'G': G++; break;
+            case 'T': T++; break;
+            case 'C': C++; break;
+        }
+    }
+
+    void clear()
+    {
+        A = G = C = T = 0;
+    }
+};
+
+const DNA DNA::empty_dna = DNA();
+
+void operator += (DNA &dna, const DNA &what)
+{
+    dna.A += what.A;
+    dna.C += what.C;
+    dna.G += what.G;
+    dna.T += what.T;
+}
+
+DNA operator + (DNA dna, const DNA &dna2)
+{
+    dna += dna2;
+    return dna;
+}
+
+void operator -= (DNA &dna, const DNA &what)
+{
+    if(dna.A < what.A || dna.C < what.C || dna.G < what.G || dna.T < what.T)
+    {
+        //cerr << "invalid frequency statistics" << endl;
+        //throw exception();
+    }
+
+    dna.A -= what.A;
+    dna.C -= what.C;
+    dna.G -= what.G;
+    dna.T -= what.T;
+}
+
+DNA operator - (DNA dna, const DNA &dna2)
+{
+    dna -= dna2;
+    return dna;
+}
+
+struct node;
+inline int cnt(node *p);
+
+struct node
+{
+    int count;
+    int prio;
+
+    DNA protein_freq;
+    char C;
+
+    node *l, *r;
+
+    node() : prio(-1), count(0), l(NULL), r(NULL) { protein_freq.clear(); }
+
+    node(char c, node *ll, node *rr): C(c), l(ll), r(rr)
+	{
+		update();
+	}
+
+    void update()
+    {
+        count = 1 + cnt(l) + cnt(r);
+
+        protein_freq.clear();
+        protein_freq += C;
+
+        if(l) protein_freq += l->protein_freq;
+        if(r) protein_freq += r->protein_freq;
+    }
+
+    void persistance_split(node* &l, node* &r, int index);
+};
+
+typedef node* pnode;
+
+const int MAXN = 2048000;
+int rnd[MAXN];
+node treap[MAXN];
+int counter;
+
+pnode newNode(char c, int prio = -1, pnode l = 0, pnode r = 0)
+{
+    treap[counter] = node(c, l, r) ;
+    treap[counter].prio = prio == -1 ? rnd[counter] : prio;
+
+    return &treap[counter++];
+}
+
+int cnt(node *p)
+{
+    return p == NULL ? 0 : p->count;
+}
+
+pnode merge(pnode l, pnode r)
+{
+    if(!l)
+        return r;
+    else if(!r)
+        return l;
+    else if(l->prio > r->prio)
+        return newNode(l->C, l->prio, l->l, merge(l->r, r));
+    else
+        return newNode(r->C, r->prio, merge(l,r->l), r->r);
+}
+
+void merge(pnode &t, pnode l, pnode r)
+{
+    if(!l)
+        t = r;
+    else if(!r)
+        t = l;
+    else if(l->prio > r->prio)
+        merge(l->r, l->r, r), t = l;
+    else
+        merge(r->l, l, r->l), t = r;
+
+    if(t!=NULL) t->update();
+}
+
+void node::persistance_split(pnode &l, pnode &r, int index)
+{
+    pnode t = 0;
+
+    if(index <= cnt(this->l))
+    {
+        if(this->l == 0)
+            l = 0;
+        else
+            this->l->persistance_split(l, t, index);
+
+        r = newNode(C, this->prio, t, this->r);
+    }
+    else
+    {
+        if(this->r == 0)
+            r = 0;
+        else
+            this->r->persistance_split(t, r, index - cnt(this->l) - 1);
+
+        l = newNode(C, this->prio, this->l, t);
+    }
+}
+
+//void print(pnode t)
+//{
+//	if (!t)  return;
+//	print (t->l);
+//	printf ("%c", t->C);
+//	print (t->r);
+//}
+
+//void convertToVChar(pnode t, vector<char> &out)
+//{
+//    if (!t)  return;
+//	convertToVChar (t->l, out);
+//    out.pb(t->C);
+//	convertToVChar (t->r, out);
+//}
+
+//pnode persistance_insert(pnode cur, pnode it, int index)
+//{
+//    if(cur==0) return it;
+//
+//    if(it->prio > cur->prio)
+//    {
+//        cur->persistance_split(it->l, it->r, index);
+//
+//        it->update();
+//
+//        return it;
+//    }
+//    else if(index <= cnt(cur->l))
+//    {
+//        pnode t = newNode(cur->C, cur->prio, cur->l, cur->r);
+//
+//        t->l = persistance_insert(cur->l, it, index);
+//
+//        t->update();
+//
+//        return t;
+//    }
+//    else
+//    {
+//        pnode t = newNode(cur->C, cur->prio, cur->l, cur->r);
+//
+//        t->r = persistance_insert(cur->r, it, index - cnt(cur->l) - 1);
+//
+//        t->update();
+//
+//        return t;
+//    }
+//}
+
+void split(pnode t, pnode &l, pnode &r, int index)
+{
+    if(t==NULL)
+    {
+        l = r = NULL;
+        return;
+    }
+    else if(index <= cnt(t->l))
+        split(t->l, l, t->l, index), r = t;
+    else
+        split(t->r, t->r, r, index - cnt(t->l) - 1), l = t;
+
+    t->update();
+}
+
+void insert(pnode &cur, pnode it, int index)
+{
+    if(cur==NULL)
+        cur = it;
+    else if(it->prio > cur->prio)
+        split(cur, it->l, it->r, index), cur = it;
+    else if(index <= cnt(cur->l))
+        insert(cur->l, it, index);
+    else
+        insert(cur->r, it, index - cnt(cur->l) - 1);
+
+    cur->update();
+}
+
+void add(pnode &root, int index, char c)
+{
+    pnode t = newNode(c);
+    //assert(t != 0);
+    //insert(root, t, index);
+
+    merge(root, root, t);
+}
+
+//void mutate(pnode t, int index, char c)
+//{
+//    //assert(index >= 0 && index < cnt(t));
+//
+//    //if(index < 0) add(t, 0, c);
+//    //if(index >= cnt(t)) add(t, cnt(t), c);
+//
+//    if(t==NULL) return;
+//    if(!(index >= 0 && index < cnt(t))) return;
+//
+//    if(index < cnt(t->l))
+//        mutate(t->l, index, c);
+//    else if(index > cnt(t->l))
+//        mutate(t->r, index - cnt(t->l) - 1, c);
+//    else
+//        t->C = c;
+//
+//    t->update();
+//}
+
+void cut(pnode tree, int l, int r, pnode &L, pnode &M, pnode &R)
+{
+	pnode tmp = NULL;
+	if(tree) tree->persistance_split(tmp, R, r);
+	if(tmp) tmp->persistance_split(L, M, l-1);
+
+	//split(tree, tmp, R, r);
+    //split(tmp, L, M, l-1);
+}
+
+pnode glue(pnode L, pnode M, pnode R)
+{
+	pnode tmp = NULL;
+	merge(tmp, L, M);
+    merge(tmp, tmp, R);
+    return tmp;
+}
+
+DNA count(pnode t, int index)
+{
+    if(t==NULL) return DNA::empty_dna;
+
+    if(index < cnt(t->l))
+        return count(t->l, index);
+
+    DNA ret = t->l != NULL ? t->l->protein_freq : DNA::empty_dna;
+
+    ret += t->C;
+
+    if(index > cnt(t->l))
+        ret += count(t->r, index - cnt(t->l)- 1);
+
+    return ret;
+}
+
+DNA count(pnode t, int k1, int k2)
+{
+    if(k1 > k2) return DNA::empty_dna;
+
+    return count(t, k2) - count(t,k1-1);
+}
+
+int N, Q;
+char buf[33000];
+pnode a[33000];
+
+int main()
+{
+	#ifndef ONLINE_JUDGE
+//        freopen("input2.txt","r",stdin);
+//        freopen("output.txt","w",stdout);
+	#endif
+
+    CL(a,0);
+
+    rep(i,MAXN) rnd[i] = i;
+    random_shuffle(rnd, rnd + MAXN);
+    counter = 0;
+
+    scanf("%d",&N);
+
+	rep(i,N)
+	{
+		scanf("%s",buf);
+		rep(j,strlen(buf))
+		{
+			//merge(a[i], a[i], newNode(buf[j]));
+			add(a[i], j, buf[j]);
+		}
+	}
+	scanf("%d",&Q);
+	rep(step,Q)
+	{
+		scanf("%s",buf);
+		if (strcmp(buf,"CROSS")==0)
+		{
+			int id1,id2,k1,k2;
+			scanf("%d%d%d%d",&id1,&id2,&k1,&k2);
+			id1--,id2--;
+			node * L1, * R1;
+			node * L2, * R2;
+            if(a[id1])	a[id1]->persistance_split(L1, R1, k1);
+			if(a[id2])  a[id2]->persistance_split(L2, R2, k2);
+			a[N++] = merge(L1,R2);
+			a[N++] = merge(L2,R1);
+		}
+		else if (strcmp(buf,"MUTATE")==0)
+		{
+			int id,k;
+			scanf("%d%d",&id,&k);
+			id--;
+			char c;
+			do c = getc(stdin); while (!isalpha(c));
+			node * L, * M, * R;
+			cut(a[id], k, k, L, M, R);
+			a[id] = glue(L, newNode(c), R);
+
+			//mutate(a[id], k-1, c);
+		}
+		else
+		{
+			int id,k1,k2;
+			scanf("%d%d%d",&id,&k1,&k2);
+			id--;
+			//node * L, * M, * R;
+			//cut(a[id], k1, k2, L, M, R);
+			//DNA dna = M ? M->protein_freq : DNA::empty_dna;
+			DNA dna = count(a[id], k1-1, k2-1);
+			int t[] = {dna.A, dna.G, dna.T, dna.C};
+			rep(j,4)
+				printf(" %d"+(j==0), t[j]);
+			printf("\n");
+		}
+	}
+
+	return 0;
+}

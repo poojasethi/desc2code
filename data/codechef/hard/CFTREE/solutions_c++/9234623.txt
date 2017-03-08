@@ -1,0 +1,81 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <memory.h>
+#include <vector>
+using namespace std;
+
+typedef pair <int, int> pii;
+const int MAX = 1e5;
+const int MOD = 1e9 + 7;
+int n, block, m, q, u;
+int sz[MAX + 1], pos[MAX + 1], depth[MAX + 1], val[MAX + 1], fibo[MAX << 1], fiboCache[MAX + 1], fiboPre[MAX + 1], res;
+char type[5];
+std::vector <int> adj[MAX + 1];
+pii query[MAX];
+
+void visit(const int& u){
+	sz[u] = 1;
+	for (int i = 0; i < adj[u].size(); ++i){
+		depth[adj[u][i]] = depth[u] + 1;
+		visit(adj[u][i]);
+		sz[u] += sz[adj[u][i]];
+	}
+	pos[u] = ++m;
+}
+
+void reset(const int& u){
+	val[u] = (val[u] + fiboCache[u]) % MOD;
+	for (int i = 0; i < adj[u].size(); ++i){
+		fiboCache[adj[u][i]] = (fiboCache[adj[u][i]] + (fiboPre[u] + fiboCache[u]) % MOD) % MOD;
+		fiboPre[adj[u][i]] = (fiboPre[adj[u][i]] + fiboCache[u]) % MOD;
+		reset(adj[u][i]);
+	}
+}
+
+bool belongSubtree(const int& u, const int& v){
+	return pos[u] <= pos[v] && pos[u] > pos[v] - sz[v];
+}
+
+int main(){
+	scanf("%d %d", &n, &q);
+	block = ceil(sqrt(q));
+	fibo[1] = fibo[2] = 1;
+	for (int i = 3; i < (MAX << 1); ++i)
+		fibo[i] = (fibo[i - 1] + fibo[i - 2]) % MOD;
+
+	for (int i = 2; i <= n; ++i){
+		scanf("%d", &u);
+		adj[u].push_back(i);
+	}
+	
+	visit(1);
+	m = 0;
+	for (int tt = 1; tt <= q; ++tt){
+		if (tt > 1 && m && tt / block > (tt - 1) / block){
+			memset(fiboPre + 1, 0, n * sizeof(int));
+			memset(fiboCache + 1, 0, n * sizeof(int));
+			for (int i = 1; i <= m; ++i){
+				fiboPre[query[i].first] = (fiboPre[query[i].first] + fibo[query[i].second - 1]) % MOD;
+				fiboCache[query[i].first] = (fiboCache[query[i].first] + fibo[query[i].second]) % MOD;
+			}
+			m = 0;
+			reset(1);
+		}
+		scanf("%s", type);
+		if (type[0] == 'U'){
+			++m;
+			scanf("%d %d", &query[m].first, &query[m].second);
+		}
+		else{
+			scanf("%d", &u);
+			res = val[u];
+			for (int i = 1; i <= m; ++i)
+			if (belongSubtree(u, query[i].first))
+				res = (res + fibo[query[i].second + depth[u] - depth[query[i].first]]) % MOD;
+			printf("%d\n", res);
+		}
+	}
+
+	return 0;
+}

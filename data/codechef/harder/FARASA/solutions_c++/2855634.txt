@@ -1,0 +1,153 @@
+#include<stdio.h>
+#include<stdlib.h>
+#define fo(i,a,b) dfo(int,i,a,b)
+#define fr(i,n) dfr(int,i,n)
+#define fe(i,a,b) dfe(int,i,a,b)
+#define fq(i,n) dfq(int,i,n)
+#define nfo(i,a,b) dfo(,i,a,b)
+#define nfr(i,n) dfr(,i,n)
+#define nfe(i,a,b) dfe(,i,a,b)
+#define nfq(i,n) dfq(,i,n)
+#define dfo(d,i,a,b) for (d i = (a); i < (b); i++)
+#define dfr(d,i,n) dfo(d,i,0,n)
+#define dfe(d,i,a,b) for (d i = (a); i <= (b); i++)
+#define dfq(d,i,n) dfe(d,i,1,n)
+#define ffo(i,a,b) dffo(int,i,a,b)
+#define ffr(i,n) dffr(int,i,n)
+#define ffe(i,a,b) dffe(int,i,a,b)
+#define ffq(i,n) dffq(int,i,n)
+#define nffo(i,a,b) dffo(,i,a,b)
+#define nffr(i,n) dffr(,i,n)
+#define nffe(i,a,b) dffe(,i,a,b)
+#define nffq(i,n) dffq(,i,n)
+#define dffo(d,i,a,b) for (d i = (b)-1; i >= (a); i--)
+#define dffr(d,i,n) dffo(d,i,0,n)
+#define dffe(d,i,a,b) for (d i = (b); i >= (a); i--)
+#define dffq(d,i,n) dffe(d,i,1,n)
+#define ll long long
+#define alok(n,t) ((t*)malloc((n)*sizeof(t)))
+#define pf printf
+#define sf scanf
+#define pln pf("\n")
+ 
+#define mod 2013265921
+#define root 440564289
+#define ex 27
+#define thresh 8000
+ 
+ll roots[ex + 1];
+ll ipow(ll b, ll e) {
+  if (e == 0) return 1;
+  if (e == 1) return b;
+  if (e & 1) return ipow(b, e - 1) * b % mod;
+  return ipow(b * b % mod, e >> 1);
+}
+ 
+int comp(const void *a, const void *b) {
+  return *(int*)a - *(int*)b;
+}
+ll *v;
+ 
+ll *A;
+ll *B;
+ll *C;
+ 
+void dft(ll *p, int n, ll w, ll *fp) {
+  if (n == 1) {
+    *fp = *p;
+    return;
+  }
+  int nh = n >> 1;
+  int j = 0;
+  for (int i = 0; i < n; i += 2) fp[j++] = p[i];
+  for (int i = 1; i < n; i += 2) fp[j++] = p[i];
+  ll ww = w * w % mod;
+  dft(fp,      nh, ww, p);
+  dft(fp + nh, nh, ww, p + nh);
+  ll pw = 1;
+  fr(i,nh) {
+    fp[i] =      (p[i] + pw * p[nh + i]) % mod;
+    fp[nh + i] = (p[i] - pw * p[nh + i]) % mod;
+    pw = pw * w % mod;
+  }
+}
+void idft(ll *p, int n, ll w, ll *fp) {
+  dft(p, n, ipow(w, n - 1), fp);
+  ll iv = ipow(n, mod - 2);
+  fr(i,n) fp[i] = fp[i] * iv % mod;
+}
+ 
+int main() {
+  fr(k,28) {
+    roots[k] = ipow(root, 1 << ex - k);
+  }
+  int n;
+  sf("%d", &n);
+  v = alok(n + 1, ll) + 1;
+  fr(i,n) sf("%lld", v + i);
+  *--v = 0;
+  fr(i,n) v[i + 1] += v[i];
+ 
+  if (n <= thresh) {
+    // naive
+    ll *sums = alok(n * (n + 1) >> 1, ll);
+    int ct = 0;
+    //pf("A\n");
+    fr(i,n) fe(j,i+1,n) sums[ct++] = v[j] - v[i];
+    #define basesh 18
+    #define base (1<<basesh)
+    #define basemk ((base)-1)
+    int *cts = alok(base,int);
+    int *hi = alok(ct,int);
+    ll *lst = alok(ct,ll);
+ 
+    //pf("A\n");
+    // bucket sort
+    for (ll thr = 1,tms = 0; thr <= v[n]; tms++,thr *= base) {
+      fr(i,base) cts[i] = 0;
+      fr(i,ct) cts[hi[i] = ((sums[i]>>(tms*basesh)) & (basemk))]++;
+      fo(i,1,base) cts[i] += cts[i - 1];
+      ffo(i,1,base) cts[i] = cts[i - 1];
+      cts[0] = 0;
+      fr(i,ct) lst[cts[hi[i]]++] = sums[i];
+      ll *tp = lst; lst = sums; sums = tp;
+    }
+    //pf("A\n");
+    //qsort(sums, ct, sizeof(ll), comp);
+    int ans = ct;
+    for (int i = 0, j = 1; j < ct; i++, j++) {
+      if (sums[i] == sums[j]) ans--;
+    }
+    //pf("A\n");
+    pf("%d\n", ans - 1);
+  } else {
+    // fft
+    ll s = v[n];
+    ll m = s + 1;
+    m |= m >> 1;
+    m |= m >> 2;
+    m |= m >> 4;
+    m |= m >> 8;
+    m |= m >> 16;
+    m ^= m >> 1;
+    m <<= 2;
+    A = alok(m, ll);
+    B = alok(m, ll);
+    C = alok(m, ll);
+    fr(i,m) A[i] = B[i] = 0;
+    fe(i,0,n) A[v[i]] = 1;
+    fe(i,0,n) B[v[n] - v[i]] = 1;
+ 
+    int k = 0;
+    for (int mm = m; mm > 1; mm >>= 1) k++;
+    ll w = roots[k];
+    dft(A, m, w, C);
+    dft(B, m, w, A);
+    fr(i,m) B[i] = A[i] * C[i] % mod;
+    idft(B, m, w, C);
+ 
+    int ans = 0;
+    fo(i,v[n]+1,m) ans +=!! C[i];
+    pf("%d\n", ans - 1);
+  }
+}

@@ -1,0 +1,43 @@
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+#include <vector>
+#include <queue>
+using namespace std;
+const int maxn=30005;
+int a[maxn*4],b[maxn*4],c[maxn*4];
+int hav[maxn];
+vector<int> ans;
+
+bool ok(int i) {
+	hav[b[i]]++;hav[c[i]]++;hav[a[i]]--;
+	if(hav[b[i]]<=9&&hav[c[i]]<=9) return true;
+	hav[b[i]]--;hav[c[i]]--;hav[a[i]]++;
+	return false;
+}
+
+int main()
+{
+//	freopen("aa.txt","r",stdin);
+	int n,i;cin>>n;
+	for(i=1;i<=n;i++) hav[i]=4;
+	n<<=2;
+	for(i=1;i<=n;i++) scanf("%d%d%d",&a[i],&b[i],&c[i]);
+	queue<int> p,q;
+	for(i=1;i<=n;i++) q.push(i);
+	while(ans.size()!=n) {
+    	while(!q.empty()) {
+	    	i=q.front();q.pop();
+	    	if(ok(i)) ans.push_back(i);
+	     	else p.push(i);
+		}
+		while(!p.empty()) {
+			q.push(p.front());p.pop();
+		}
+	}
+	puts("YES");
+	for(i=0;i<ans.size()-1;i++) printf("%d ",ans[i]);
+	printf("%d\n",ans.back());
+	return 0;
+}

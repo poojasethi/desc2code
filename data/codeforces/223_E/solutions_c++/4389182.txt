@@ -1,0 +1,107 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+
+const int N = 100005;
+const int M = 200005;
+using namespace std;
+
+struct vec{
+    int x, y, w, f;
+    vec(){}
+    vec(int x, int y, int f) : x(x), y(y), f(f){
+        w = x < 0 || (!x && y < 0) ? 0 : 1;//!(x < 0 || (x > 0 && y < 0));
+    }
+    bool operator < (vec const &T) const{
+        if (w != T.w) return w < T.w;
+        return x * 1LL * T.y > y * 1LL * T.x;
+    };
+};
+
+int ed[N], deg[N], Qe[N], sd[N];
+int qd[M], qn[M], flow[M];int esize;
+int px[N], py[N];
+vector<int> sum[N];
+vector<vec> sed[N];
+
+int n, m;
+int t, len, ret;
+
+double square(){
+    double result = 0;
+    for (int i = 0; i < len; i++) result += (double)px[Qe[i]] * (double)py[Qe[i+1]] - (double)px[Qe[i+1]] * (double)py[Qe[i]];
+    return result;
+}
+
+void insert(int x, int y){
+    qd[++esize] = y, qn[esize] = ed[x], ed[x] = esize;
+}
+
+bool vis[N];
+
+void dfs(int x){
+    vis[x] = 1;
+    sd[x] = 0;
+    for (int i=ed[x]; i; i=qn[i]){
+        if (!vis[qd[i]]){
+            dfs(qd[i]);
+            flow[i] = sd[qd[i]] + 1;
+            flow[i^1] = -flow[i];
+            sd[x] += flow[i];
+        }
+    }
+}
+
+int search(int x, int y){
+    return (int)(lower_bound(sed[x].begin(), sed[x].end(), vec(px[y] - px[x], py[y] - py[x], 0)) - sed[x].begin());
+}
+
+int main(){
+    scanf("%d%d", &n, &m);
+    esize = 1;
+    int x,y;
+    for (int i = 0; i < m; i++){
+        scanf("%d%d", &x, &y);
+        x--, y--;
+        insert(x, y), insert(y, x);
+    }
+    for (int i = 0; i < n; i++) 
+        scanf("%d%d", &px[i], &py[i]);
+
+    t = 0;
+    for (int i = 0; i < n; i++)
+        if (px[i] < px[t]) t = i;
+
+    dfs(t);
+
+    for (int i = 0; i < n; i++){
+        for (int j=ed[i]; j; j=qn[j]) sed[i].push_back(vec(px[qd[j]] - px[i], py[qd[j]] - py[i], flow[j]));
+        sort(sed[i].begin(), sed[i].end());
+        deg[i] = sed[i].size();
+        for (int j = 0; j < sed[i].size(); j++){
+            sum[i].push_back(sed[i][j].f);
+            if (j) sum[i][j] += sum[i][j-1];
+        }
+    }
+    
+    scanf("%d", &m);
+    while (m--){
+        scanf("%d", &len);
+        for (int i = 0; i < len; i++) scanf("%d", &Qe[i]), Qe[i]--;
+        Qe[len] = Qe[0];
+        double area = square();
+        if (area < 0) reverse(Qe, Qe + len);
+        Qe[len] = Qe[0];
+        ret = 0;
+        for (int i = 0; i < len; i++){
+            int t = Qe[i];
+            x = search(t, Qe[(i+len-1)%len]);
+            y = search(t, Qe[(i+1)]);
+            if (x >= y) ret += sum[t][x-1] - sum[t][y];
+            else ret += sum[t][deg[t]-1] - sum[t][y] + (x ? sum[t][x-1] : 0);
+        }
+        printf("%d\n", ret + len);
+    }
+    return 0;
+}

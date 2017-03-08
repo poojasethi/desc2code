@@ -1,0 +1,103 @@
+import sys
+import bisect
+
+class suffixautomaton:
+    def __init__(self, words, symbol = "#"):
+        self.words = []
+        self.sequence = ""
+        self.terminal = set()
+        self.nCounters = len(words)
+        self.states = [[0, None, {}]]
+        self.counters = [[0] * self.nCounters]
+
+        for w in words:
+            self.sequence += w
+            self.words.append(len(self.sequence))
+            self.sequence += symbol
+            symbol = chr(ord(symbol)+1)
+
+        pushback = []
+
+        sz = 1
+        last = 0
+        
+        for ci in range(len(self.sequence)):
+            c = self.sequence[ci]
+            
+            cur = sz
+            sz += 1
+            
+            self.states.append([self.states[last][0] + 1, None, {}])
+            self.counters.append([0] * self.nCounters)
+            word = bisect.bisect_left(self.words, ci)
+            self.counters[-1][word] = 1
+                
+            pushback.append((self.states[last][0] + 1, cur))
+            
+            p = last
+            while p <> None and c not in self.states[p][2]:
+                self.states[p][2][c] = cur
+                p = self.states[p][1]
+            
+            if p == None:
+                self.states[cur][1] = 0
+            else:
+                q = self.states[p][2][c]
+                if (self.states[p][0] + 1 == self.states[q][0]):
+                    self.states[cur][1] = q
+                else:
+                    clone = sz
+                    sz += 1
+
+                    pushback.append((self.states[p][0] + 1, clone))
+                    self.states.append([self.states[p][0] + 1, self.states[q][1], self.states[q][2].copy()])
+                    
+                    self.counters.append([0] * self.nCounters)
+                    
+                    while p <> None and self.states[p][2][c] == q:
+                        self.states[p][2][c] = clone
+                        p = self.states[p][1]
+                    self.states[cur][1] = clone
+                    self.states[q][1] = clone
+            last = cur
+        
+        pushback.sort(reverse = True)
+        for _, i in pushback:
+            for j in range(self.nCounters):
+                self.counters[self.states[i][1]][j] += self.counters[i][j]
+        
+        while last <> 0:
+            self.terminal.add(last)
+            last = self.states[last][1]
+
+    def __repr__(self):
+        S = ""
+        
+        for i, s in enumerate(self.states):
+            S += str(i) + " - " + str(self.counters[i]) + " - " + str(s) + "\n"
+        
+        return S
+
+
+    def CustomaryFunction1(self):
+        """ Minimal non-repeating substring among all uploaded string"""
+        
+        best = sys.maxint
+        for i in range(len(self.states)):
+            if reduce(lambda a, b: a and b, [self.counters[i][j] == 1 for j in range(self.nCounters)]):
+                best = min(best, self.states[self.states[i][1]][0] + 1)
+                
+        if best == sys.maxint:
+            return -1
+        
+        return best          
+
+def solve():
+    a = sys.stdin.readline().strip("\n\r")
+    b = sys.stdin.readline().strip("\n\r")
+    
+    A = suffixautomaton([a, b])
+        
+    print A.CustomaryFunction1()
+    
+solve()

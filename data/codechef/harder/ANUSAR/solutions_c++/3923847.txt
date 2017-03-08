@@ -1,0 +1,203 @@
+#include <cmath>
+#include <ctime>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <queue>
+#include <map>
+#include <set>
+#include <algorithm>
+#include <cctype>
+#include <stack>
+#include <complex>
+using namespace std;
+
+typedef long long int int64;
+
+#define EPS 10e-9
+#define INF 0x3f3f3f3f
+#define REP(i,n) for(int i=0; i<(n); i++)
+
+string s;
+int n;
+ 
+struct node {
+  int l, r, par, link;
+  map<char,int> next;
+ 
+  node (int l=0, int r=0, int par=-1)
+    : l(l), r(r), par(par), link(-1) {}
+  int len()  {  return r - l;  }
+  int &get (char c) {
+    //return next[vai(c)];
+    if (!next.count(c))  next[c] = -1;
+    return next[c];
+  }
+};
+vector<node> t;
+int sz;
+ 
+struct state {
+  int v, pos;
+  state() {}
+  state (int v, int pos) : v(v), pos(pos)  {}
+};
+ 
+state ptr;
+
+state go (state st, int l, int r) {
+  while (l < r)
+    if (st.pos == t[st.v].len()) {
+      st = state (t[st.v].get( s[l] ), 0);
+      if (st.v == -1)  return st;
+    }
+    else {
+      if (s[ t[st.v].l + st.pos ] != s[l])
+        return state (-1, -1);
+      if (r-l < t[st.v].len() - st.pos)
+        return state (st.v, st.pos + r-l);
+      l += t[st.v].len() - st.pos;
+      st.pos = t[st.v].len();
+    }
+  return st;
+}
+ 
+int split (state st) {
+  if (st.pos == t[st.v].len())
+    return st.v;
+  if (st.pos == 0)
+    return t[st.v].par;
+  node v = t[st.v];
+  int id = sz++;
+  t[id] = node (v.l, v.l+st.pos, v.par);
+  t[v.par].get( s[v.l] ) = id;
+  t[id].get( s[v.l+st.pos] ) = st.v;
+  t[st.v].par = id;
+  t[st.v].l += st.pos;
+  return id;
+}
+ 
+int get_link (int v) {
+  if (t[v].link != -1)  return t[v].link;
+  if (t[v].par == -1)  return 0;
+  int to = get_link (t[v].par);
+  return t[v].link = split (go (state(to,t[to].len()), t[v].l + (t[v].par==0), t[v].r));
+}
+ 
+void tree_extend (int pos) {
+  for(;;) {
+    state nptr = go (ptr, pos, pos+1);
+    if (nptr.v != -1) {
+      ptr = nptr;
+      return;
+    }
+ 
+    int mid = split (ptr);
+    int leaf = sz++;
+    t[leaf] = node (pos, n, mid);
+    t[mid].get( s[pos] ) = leaf;
+ 
+    ptr.v = get_link (mid);
+    ptr.pos = t[ptr.v].len();
+    if (!mid)  break;
+  }
+}
+ 
+inline void build_tree() {
+  sz = 1;
+  ptr = state(0, 0);
+  n = s.size();
+  t.clear();
+  t.resize(2*n);
+  for (int i=0; i<n; ++i)
+    tree_extend(i);
+}
+
+map<int, int64> fq;
+vector<int> d;
+vector<bool> used;
+
+/* Exemplo que percorre a arvore */
+void DFS(int u) {
+  
+  stack<int> p;
+  d.clear();
+  d.resize(2*n, 0);
+  used.clear();
+  used.resize(2*n, false);
+  p.push(u);
+  while (!p.empty()) {
+    u = p.top(); p.pop();
+    if (!used[u]) {
+      
+      p.push(u);
+      used[u] = true;
+      for (map<char,int>::iterator it = t[u].next.begin(); it != t[u].next.end(); it++) {
+        //printf("%c\n", it->first);
+        p.push(it->second);
+      }
+      
+    }
+    else {
+      d[u] = 0;
+      if (t[u].next.begin() == t[u].next.end()) d[u] = 1;
+      for (map<char,int>::iterator it = t[u].next.begin(); it != t[u].next.end(); it++) {
+        d[u] += d[it->second];
+      }
+      fq[d[u]] += t[u].r - t[u].l;
+    }    
+  }
+}
+
+// int main()
+// { 
+//   s = "banana$";
+//   n = 7;
+//   memset(fq, 0, sizeof(fq));
+//   build_tree();
+//   DFS(0);
+//   for (int i = 1; i <= 7; i++) {
+//     printf("%d %d\n", i, fq[i]);
+//   }
+//   for (int i = 0; i < 7; i++) {
+//     for (int j = i; j < 7; j++) {
+//       for (int k = i; k <= j; k++) {
+//         printf("%c", s[k]);
+//       }
+//       printf("\n");
+//     }
+//   }
+//   return 0;
+// }
+
+int main()
+{	
+  int t;
+  scanf("%d", &t);
+  REP(k, t) {
+    cin >> s;
+    s = s + "$";
+    n = s.size();
+    fq.clear();
+    build_tree();
+    //printf("AQUI\n");
+    DFS(0);
+    fq[1] -= n;
+    for (int i = n-1; i >= 1; i--) {
+      fq[i] = (int64) i * fq[i];
+      fq[i] = fq[i] + fq[i+1];
+    }
+
+    int q;
+    scanf("%d", &q);
+    REP(i, q) {
+      int x;
+      scanf("%d", &x);
+      printf("%lld\n", fq[x]);
+    }
+  }
+	return 0;
+}

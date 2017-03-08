@@ -1,0 +1,17 @@
+#include <iostream>
+#include <string>
+
+using namespace std;
+
+int main(){
+	int i, n;int sum = 0;
+	cin >> n;
+	for(i=2;i<n;++i){
+		int tmp=n;
+		while(tmp>0)sum += tmp%i,tmp/=i;
+	}
+	int s=n-2;
+	for(i=2;i<=n-2;++i)while(sum%i==0 && s%i==0)sum/=i,s/=i;
+	cout<<sum<<"/"<<s<<endl;
+	return 0;
+}

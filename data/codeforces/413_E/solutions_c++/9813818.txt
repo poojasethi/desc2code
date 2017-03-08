@@ -1,0 +1,79 @@
+#include<stdio.h>
+#define INF 10000000
+struct D{
+    int d[2][2];
+};
+
+D make(int a,int b,int c,int d){
+    D r;
+    r.d[0][0]=a;r.d[0][1]=b;
+    r.d[1][0]=c;r.d[1][1]=d;
+    return r;
+}
+
+int min(int a,int b){return a<b?a:b;}
+
+D merge(D a,D b){
+    D r;
+    r.d[0][0]=min(INF,min(a.d[0][0]+1+b.d[0][0],a.d[0][1]+1+b.d[1][0]));
+    r.d[0][1]=min(INF,min(a.d[0][0]+1+b.d[0][1],a.d[0][1]+1+b.d[1][1]));
+    r.d[1][0]=min(INF,min(a.d[1][0]+1+b.d[0][0],a.d[1][1]+1+b.d[1][0]));
+    r.d[1][1]=min(INF,min(a.d[1][0]+1+b.d[0][1],a.d[1][1]+1+b.d[1][1]));
+    return r;
+}
+
+D ar[200000];
+D seg[1<<19];
+int seg_n;
+char S[2][200001];
+
+void init_dfs(int k=0,int l=0,int r=seg_n){
+    if(r-l==1)return;
+    init_dfs(k*2+1,l,(l+r)/2);
+    init_dfs(k*2+2,(l+r)/2,r);
+    seg[k]=merge(seg[k*2+1],seg[k*2+2]);
+}
+
+void init(int n){
+    seg_n=1;
+    while(seg_n<n)seg_n*=2;
+    for(int i=0;i<seg_n*2-1;i++)seg[i]=make(-1,-1,-1,-1);
+    for(int i=0;i<n;i++)seg[i+(seg_n-1)]=ar[i];
+    init_dfs();
+}
+
+D query(int a,int b,int k=0,int l=0,int r=seg_n){
+    if(a<=l&&r<=b)return seg[k];
+    int mid=(l+r)/2;
+    if(b<=mid)return query(a,b,k*2+1,l,mid);
+    if(a>=mid)return query(a,b,k*2+2,mid,r);
+    D vl=query(a,b,k*2+1,l,mid);
+    D vr=query(a,b,k*2+2,mid,r);
+    return merge(vl,vr);
+}
+
+int main(){
+    int n,m,i;
+    scanf("%d %d",&n,&m);
+    scanf(" %s",S[0]);
+    scanf(" %s",S[1]);
+    for(i=0;i<n;i++){
+        int a=(S[0][i]=='.'?0:INF);
+        int b=(S[0][i]=='.'&&S[1][i]=='.'?1:INF);
+        int c=(S[1][i]=='.'?0:INF);
+        ar[i]=make(a,b,b,c);
+    }
+    init(n);
+    for(i=0;i<m;i++){
+        int a,b;
+        scanf("%d %d",&a,&b);
+        a--;b--;
+        if(a%n>b%n){int p=a;a=b;b=p;}
+        int x=a%n;
+        int y=b%n;
+        D r=query(x,y+1);
+        int ans=r.d[a/n][b/n];
+        printf("%d\n",ans==INF?-1:ans);
+    }
+    return 0;
+}

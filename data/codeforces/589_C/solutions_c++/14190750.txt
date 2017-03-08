@@ -1,0 +1,102 @@
+#include <cstdio>
+#include <cstring>
+
+int n, m, L;
+char s[1 << 17];
+int k[1 << 17];
+
+int st[1 << 17];
+int en[1 << 17];
+
+char gen[1 << 18];
+long long cnt[1 << 18][32];
+
+long long sol(long long p, int x) {
+    if (p < 0) {
+        return 0;
+    }
+    if (p < L) {
+        return cnt[p][x];
+    }
+    long long l = L;
+    int j = 0;
+    long long toc = 1;
+    while (l <= p) {
+        l = l * 2LL;
+        toc = toc * 2LL;
+        ++j;
+    }
+    toc /= 2;
+    long long sl = toc * (long long) cnt[L - 1][x];
+    long long rm = p - (l / 2 - 1);
+    --j;
+    if (rm >= k[j]) {
+        sl += (long long) cnt[en[j]][x] - cnt[st[j] - 1][x];
+        sl += sol(rm - k[j] - 1, x);
+    } else {
+        sl += cnt[st[j] + rm - 1][x] - cnt[st[j] - 1][x];
+    }
+    return sl;
+}
+
+int main() {
+    scanf("%s", s);
+    scanf("%d %d", &n, &m);
+    for (int i = 0; i < n; ++i) {
+        scanf("%d", &k[i]);
+    }
+    int ln = strlen(s);
+    L = ln;
+    memcpy(gen, s, ln * sizeof(char));
+    int j = 0;
+    while (j < n && ln < 20000) {
+        if (k[j] >= ln) {
+            k[j] %= ln;
+        }
+        en[j] = ln - 1;
+        st[j] = ln - k[j];
+        int ol = ln;
+        if (k[j]) {
+            memcpy(gen + ln, gen + st[j], k[j] * sizeof(char));
+            // printf("A %d %s\n", j, gen);
+            ln += k[j];
+        }
+        memcpy(gen + ln, gen, (ol - k[j]) * sizeof(char));
+        // printf("B %d %s\n", gen);
+        ln += ol - k[j];
+
+        ++j;
+    }
+    // printf("FIN %d %d\n", j, ln);
+    int f = ln - 1;
+    while (j < n && j <= 64) {
+        en[j] = f;
+        st[j] = en[j] - k[j] + 1;
+        f = st[j] - 1;
+        ++j;
+    }
+    // printf("OO %d %d\n", L, ln);
+    // for (int j = 0; j < n; ++j) {
+        // printf("AA %d %d\n", st[j], en[j]);
+    // }
+    // printf("%s\n", gen);
+    // printf("%d\n", strlen(gen));
+    for (int i = 0; i < ln; ++i) {
+        if (i == 0) {
+            memset(cnt[i], 0, sizeof(cnt[i]));
+        } else {
+            memcpy(cnt[i], cnt[i - 1], sizeof(cnt[i]));
+        }
+        cnt[i][ gen[i] - 'a' ]++;
+    }
+
+    for (int i = 0; i < m; ++i) {
+        long long l, r;
+        char buf[8];
+        scanf("%I64d %I64d %s", &l, &r, buf);
+        --l; --r;
+        printf("%I64d\n", sol(r, buf[0] - 'a') - sol(l - 1, buf[0] - 'a'));
+        // printf("WTF %d\n", cnt[r][buf[0] - 'a'] - cnt[l - 1][buf[0] - 'a']);
+    }
+    return 0;
+}

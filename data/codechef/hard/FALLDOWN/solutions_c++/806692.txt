@@ -1,0 +1,64 @@
+#include<cstdio>
+#include<algorithm>
+
+#define rep(i,n) for(int i=0;i<(n);i++)
+
+using namespace std;
+
+int h,w,a[2012][2012];
+
+int solve(){
+	// dp[i][j] := (i,j) からスタートしたときの最適解
+	static int dp[2013][2012];
+	rep(j,w) dp[h][j]=0;
+	for(int i=h-1;i>=0;i--){
+		// lsum[j] := max{ a[i][k]+a[i][k+1]+...+a[i][j] | k<=j }
+		// rsum[j] := max{ a[i][j]+a[i][j+1]+...+a[i][k] | j>=k }
+		static int lsum[2012],rsum[2012];
+		rep(j,w){
+			lsum[  j  ]=(j>0?max(lsum[j-1],0):0)+a[i][  j  ];
+			rsum[w-j-1]=(j>0?max(rsum[w-j],0):0)+a[i][w-j-1];
+		}
+
+		// ldown[j] := (i,j) からスタートして (i,j+1) を通らず (i,k) (k<=j) で次の行に降りるルートにおける最適解
+		// rdown[j] := (i,j) からスタートして (i,j-1) を通らず (i,k) (k>=j) で次の行に降りるルートにおける最適解
+		static int ldown[2012],rdown[2012];
+		rep(j,w){
+			ldown[  j  ]=lsum[  j  ]+dp[i+1][  j  ];
+			rdown[w-j-1]=rsum[w-j-1]+dp[i+1][w-j-1];
+			if(j>0){
+				ldown[  j  ]=max(ldown[  j  ],a[i][  j  ]+ldown[j-1]);
+				rdown[w-j-1]=max(rdown[w-j-1],a[i][w-j-1]+rdown[w-j]);
+			}
+		}
+
+		rep(j,w){
+			int route1=(j> 0 ?max(lsum[j-1],0):0)+rdown[j];
+			int route2=(j<w-1?max(rsum[j+1],0):0)+ldown[j];
+			dp[i][j]=max(route1,route2);
+		}
+	}
+
+	return *max_element(dp[0],dp[0]+w);
+}
+
+int main(){
+	int T; scanf("%d",&T);
+	while(T--){
+		int type; scanf("%d%d%d",&h,&w,&type);
+		if(type==1){
+			rep(i,h) rep(j,w) scanf("%d",a[i]+j);
+		}
+		else{
+			int x,p,q,m; scanf("%d%d%d%d",&x,&p,&q,&m);
+			int cur=x;
+			rep(i,h) rep(j,w) {
+				cur=(cur*p+q)%m;
+				a[i][j]=x-cur;
+			}
+		}
+		printf("%d\n",solve());
+	}
+
+	return 0;
+}

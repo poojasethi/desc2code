@@ -1,0 +1,168 @@
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long ll;
+typedef unsigned long long int llu;
+#define pb push_back
+#define mp make_pair
+#define X first
+#define Y second
+#define mem(a, v) memset(a, v, sizeof(a))
+#define PI acos(-1)
+#define S(a) scanf("%d",&a)
+#define SL(a) scanf("%lld",&a)
+#define S2(a, b) scanf("%d%d",&a,&b)
+#define nl printf("\n")
+#define DEB(x) cout<<#x<<" : "<<x<<endl;
+const ll mod = 1000000007LL;
+const int lmt = 100010;
+ 
+const int MAX = 100010;
+char s[MAX], as[MAX], bs[MAX];
+int iSA[MAX], SA[MAX];
+int cnt[MAX], nxt[MAX];
+bool bh[MAX], b2h[MAX];
+ 
+ 
+bool smaller_first_char(int a, int b){
+    return s[a] < s[b];
+}
+ 
+void suffixSort(int n){
+    for (int i=0; i<n; ++i){
+        SA[i] = i;
+    }
+    sort(SA, SA + n, smaller_first_char);
+    for (int i=0; i<n; ++i){
+        bh[i] = i == 0 || s[SA[i]] != s[SA[i-1]];
+        b2h[i] = false;
+    }
+ 
+    for (int h = 1; h < n; h <<= 1){
+        int buckets = 0;
+        for (int i=0, j; i < n; i = j){
+            j = i + 1;
+            while (j < n && !bh[j]) j++;
+            nxt[i] = j;
+            buckets++;
+        }
+        if (buckets == n) break;
+        for (int i = 0; i < n; i = nxt[i]){
+            cnt[i] = 0;
+            for (int j = i; j < nxt[i]; ++j){
+                iSA[SA[j]] = i;
+            }
+        }
+ 
+        cnt[iSA[n - h]]++;
+        b2h[iSA[n - h]] = true;
+        for (int i = 0; i < n; i = nxt[i]){
+            for (int j = i; j < nxt[i]; ++j){
+                int s = SA[j] - h;
+                if (s >= 0){
+                    int head = iSA[s];
+                    iSA[s] = head + cnt[head]++;
+                    b2h[iSA[s]] = true;
+                }
+            }
+            for (int j = i; j < nxt[i]; ++j){
+                int s = SA[j] - h;
+                if (s >= 0 && b2h[iSA[s]]){
+                    for (int k = iSA[s]+1; !bh[k] && b2h[k]; k++) b2h[k] = false;
+                }
+            }
+        }
+        for (int i=0; i<n; ++i){
+            SA[iSA[i]] = i;
+            bh[i] |= b2h[i];
+        }
+    }
+    for (int i=0; i<n; ++i){
+        iSA[SA[i]] = i;
+    }
+}
+ 
+int lcp[MAX];
+void getlcp(int n){
+    for (int i=0; i<n; ++i)
+        iSA[SA[i]] = i;
+ 
+    lcp[0] = 0;
+ 
+    for (int i=0, h=0; i<n; ++i){
+        if (iSA[i] > 0){
+            int j = SA[iSA[i]-1];
+            while (i + h < n && j + h < n && s[i+h] == s[j+h])
+                h++;
+            lcp[iSA[i]] = h;
+ 
+            if (h > 0)
+                h--;
+        }
+    }
+}
+ 
+int A[lmt], B[lmt], C[lmt], tc[lmt];
+ 
+int main(){
+    scanf("%s",s);
+    int Na = strlen(s);
+    suffixSort(Na);
+    getlcp(Na);
+    mem(tc, 0);
+    for(int i = 1; i < Na; i++){
+        tc[lcp[i]]--;
+    }
+    for(int i = Na; i > 0; i--){
+        tc[i] += tc[i+1];
+        A[i] = Na - i + 1 + tc[i];
+    }
+    strcpy(as, s);
+        
+    scanf("%s",s);
+    int Nb = strlen(s);
+    suffixSort(Nb);
+    getlcp(Nb);
+    mem(tc, 0);
+    for(int i = 1; i < Nb; i++){
+        tc[lcp[i]]--;
+    }
+    for(int i = Nb; i > 0; i--){
+        tc[i] += tc[i+1];
+        B[i] = Nb - i + 1 + tc[i];
+    }
+ 
+    s[Nb] = '#';
+    for(int i = 0; i < Na; i++)
+        s[Nb+i+1] = as[i];
+    s[Na+Nb+1] = '\0';
+    int Nc = strlen(s);
+    suffixSort(Nc);
+    getlcp(Nc);
+    mem(tc, 0);
+    for(int i = 1; i < Nc; i++){
+        tc[lcp[i]]--;
+    }
+    for(int i = Nc; i > 0; i--){
+        tc[i] += tc[i+1];
+        C[i] = Nc - i + 1 + tc[i];
+    }
+    for(int i = 1; i <= Nb; i++)
+        C[i] -= i;
+    int q;
+    S(q);
+    while(q--){
+        int x, k;
+        S2(x, k);
+        //DEB(x);
+        //DEB(k);
+        if(x == 1)
+            printf("%d\n",A[k] + B[k] - C[k]);
+        else if(x == 2)
+            printf("%d\n",C[k] - B[k]);
+        else if(x == 3)
+            printf("%d\n",C[k] - A[k]);
+        else
+            printf("%d\n",2*C[k] - A[k] - B[k]);
+    }
+    return 0;
+} 

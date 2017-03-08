@@ -1,0 +1,177 @@
+#include <iostream>
+#include <memory.h>
+#include <algorithm>
+#include <cstdio>
+#include <string>
+#include <queue>
+#include <vector>
+
+#define MOD 1000000007LL
+#define MX 1000006
+
+#define REP(i, n) for (int i = 0; i < (n); i++)
+#define INIT(i, n) memset(i, n, sizeof(i))
+
+using namespace std;
+
+struct node {
+	int l, r, par, link;
+	int nxt[26], ch;
+	
+	node(int l = 0, int r = 0, int par = -1):
+		l(l), r(r), par(par), ch(0), link(-1) { INIT(nxt, -1); }
+	int len() { return r - l; }
+	int &get(char c) { return nxt[c - 'a'];}
+};
+
+struct state {
+	int v, pos;
+	state(int v, int pos) :  v(v), pos(pos) {}
+}ptr(0, 0);
+
+queue <int> qleaf;
+vector <node> t;
+string s;
+char sg[MX], c;
+int sz = 1, n, leaves;
+int Q, add;
+long long rlt, substr;
+
+int add_edge_to_tree(int l, int r, int par) {
+	int id = sz++;
+	t.push_back(node(l, r, par));
+	t[par].ch++;
+	t[par].get(s[l]) = id;
+	return id;
+}
+
+int split(state st) {
+	if (st.pos == t[st.v].len()) return st.v;
+	if (!st.pos) return t[st.v].par;
+		
+	int id = add_edge_to_tree(t[st.v].l, t[st.v].l + st.pos, t[st.v].par);
+	node v = t[st.v];
+	t[v.par].ch--;
+	t[id].ch++;
+	t[id].get(s[v.l + st.pos]) = st.v;
+	t[st.v].par = id;
+	t[st.v].l += st.pos;
+	return id;
+}
+
+state go(state st, int l, int r) {
+	while (l < r) {
+		if (st.pos == t[st.v].len()) {
+			st = state(t[st.v].get(s[l]), 0);
+			if (st.v == -1) return state(-1, -1);
+		}
+		if (s[t[st.v].l + st.pos] != s[l]) return state(-1, -1);
+		if (r - l < t[st.v].len() - st.pos) return state(st.v, st.pos + r - l);
+		
+		l += t[st.v].len() - st.pos;
+		st.pos = t[st.v].len();		 
+	}
+	return st;
+}
+
+int get_link(int id) {
+	if (t[id].link != -1) return t[id].link;
+	if (t[id].par == -1) return 0;
+	int to = get_link(t[id].par);
+	return  t[id].link = split(go(state(to, t[to].len()), t[id].l + (!t[id].par), t[id].r));
+}
+
+void tree_extend(int pos) {
+	substr += leaves;
+	
+	while (true) {
+		state nptr = go(ptr, pos, pos + 1);
+		if (nptr.v != -1) {
+			ptr = nptr;
+			return;
+		}
+		
+		int mid = split(ptr);
+		qleaf.push(add_edge_to_tree(pos, n, mid));
+		leaves++;
+		substr++;
+		ptr.v = get_link(mid);
+		ptr.pos = t[ptr.v].len();
+		if (!mid) return;
+	}
+}
+
+void tree_delete(int pos) {
+	int leaf = qleaf.front();
+	qleaf.pop();
+	int par = t[leaf].par;
+	
+	while (!t[leaf].ch) {
+		if (ptr.v != leaf) {
+			substr -= min(pos, t[leaf].r) - t[leaf].l;
+			t[par].ch--;
+			int l = t[leaf].l;
+			t[par].get(s[l]) = -1;
+			leaf = par;
+			par = t[leaf].par;
+		} else {
+			if (ptr.pos == min(pos, t[leaf].r) - t[leaf].l)
+				break;
+				
+			int mid = split(ptr);
+			substr -= min(pos, t[leaf].r) - t[leaf].l;
+			t[mid].ch--;
+			int l = t[leaf].l;
+			t[mid].get(s[l]) = -1;
+			t[leaf] = t[mid];
+			t[t[mid].par].get(s[t[leaf].l]) = leaf;
+			t.pop_back();
+			sz--;
+			break;
+		}
+	}
+	if (t[leaf].ch) {
+		leaves--;
+		return;
+	}
+	
+	qleaf.push(leaf);
+	int to = (t[leaf].par) ? t[t[leaf].par].link: 0;
+	ptr = go(state(to, t[to].len()), t[leaf].l + (!t[leaf].par), t[leaf].r);
+	
+	t[leaf].l = pos - t[leaf].len();
+	t[leaf].r = n;
+}
+
+int del;
+
+main() {
+	#ifdef DEBUG
+		freopen("in.txt", "r", stdin);
+		freopen("out.txt", "w", stdout);
+	#endif
+	
+	t.reserve(MX * 3);
+	t.push_back(node());
+	
+	scanf("%d", &Q);
+	REP (i, Q) {
+		scanf(" %c", sg + i);
+		if (sg[i] == '+') {
+			scanf(" %c", &c);
+			s += c;
+			n++;
+		}		
+	}
+	REP (i, Q) {
+		if (sg[i] == '+') {
+			tree_extend(add);
+			add++;
+		} else {
+			tree_delete(add);
+			del++;
+		}
+		rlt = (rlt + substr) % MOD;
+	}
+	cout << rlt << endl;
+}

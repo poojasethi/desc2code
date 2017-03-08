@@ -1,0 +1,174 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <string>
+#include <vector>
+#include <map>
+#include <set>
+#include <deque>
+#include <stack>
+#include <algorithm>
+#include <sstream>
+#include <iostream>
+#include <cstdio>
+#include <cmath>
+#include <ctime>
+#include <cstring>
+#include <cassert>
+#include <queue>
+using namespace std;
+
+typedef long long ll;
+typedef pair<int, int> pii;
+typedef long double ld;
+typedef vector<int> vi;
+typedef vector<vi> vvi;
+#pragma comment(linker, "/STACK:250000000")
+template<typename T> int size(T& a){ return (int) a.size(); }
+template<typename T> T sqr(T a){ return a * a; }
+ 
+#define _(a, b) memset((a), (b), sizeof(a))
+#define fs first
+#define sc second
+#define pb push_back
+#define mp make_pair
+#define all(a) a.begin(), a.end()
+#define REP(i, a, b) for(int i = (a); i < (b); ++i)
+#define REPD(i, a, b) for(int i = (b) - 1; i >= (a); --i)
+
+const double EPS = 1e-9;
+inline bool ls(double a, double b) {
+	return a + EPS < b;
+}
+inline bool gr(double a, double b) {
+	return a > b + EPS;
+}
+inline bool eq(double a, double b) {
+	return fabs(a - b) < EPS;
+}
+
+const int MAXN = 50100;
+
+int h[MAXN];
+int head[MAXN];
+int to[MAXN << 1];
+int nxt[MAXN << 1];
+int edge;
+
+int q[MAXN << 1];
+int timer;
+
+void init() {
+	edge = 0;
+	_(head, -1);
+	timer = 0;
+}
+
+void ae(int i, int j) {
+	to[edge] = j;
+	nxt[edge] = head[i];
+	head[i] = edge++;
+}
+
+void add_edge(int i, int j) {
+	ae(i, j);
+	ae(j, i);
+}
+
+int tin[MAXN], tout[MAXN];
+int up[MAXN][20];
+int LG;
+
+void dfs(int u, int par = 0, int height = 0) {
+	tin[u] = timer++;
+	up[u][0] = par;
+	h[u] = height;
+	REP(i, 1, LG) up[u][i] = up[up[u][i - 1]][i - 1];
+	for(int e = head[u]; e != -1; e = nxt[e]) {
+		int v = to[e];
+		if(v == par) continue;
+		dfs(v, u, height + 1);
+	}
+	tout[u] = timer++;
+}
+
+bool upper(int u, int v) {
+	return tin[u] <= tin[v] && tout[u] >= tout[v];
+}
+
+int lca(int u, int v) {
+	if(upper(u, v)) return u;
+	if(upper(v, u)) return v;
+	REPD(i, 0, LG) {
+		if(!upper(up[u][i], v)) u = up[u][i];
+	}
+	return up[u][0];
+}
+
+int qsize;
+
+bool check(int v) {
+	REP(i, 0, qsize) {
+		if(q[i] == v) return false;
+	}
+	vector<pair<pii, int> > vt;
+	pii vtp = mp(tin[v], tout[v]);
+	int cnt = 0;
+	REP(i, 0, qsize) {
+		int u = q[i];
+		if(tin[v] > tin[u] || tout[v] < tout[u]) cnt++;
+		else vt.pb(mp(mp(tin[u], tout[u]), u));
+	}
+	if(cnt > 1) return false;
+	sort(all(vt));
+	REP(i, 0, size(vt) - 1) {
+		if(vt[i + 1].fs.fs <= vt[i].fs.sc) return false;
+	}
+	REP(i, 0, size(vt) - 1) {
+		if(lca(vt[i].sc, vt[i + 1].sc) != v) return false;
+	}
+	return true;
+}
+
+int main() {
+#ifdef shindo
+    freopen("input.txt", "r", stdin);
+    freopen("output.txt", "w", stdout);
+#else
+#endif
+
+	int T;
+	scanf("%d", &T);
+	REP(t, 0, T) {
+		int N, M;
+		scanf("%d %d", &N, &M);
+		init();
+		LG = 1;
+		while((1 << LG) <= N) LG++;
+		REP(i, 0, N - 1) {
+			int u, v;
+			scanf("%d %d", &u, &v);
+			u--, v--;
+			add_edge(u, v);
+		}
+		dfs(0);
+		REP(qq, 0, M) {
+			scanf("%d", &qsize);
+			REP(i, 0, qsize) {
+				scanf("%d", &q[i]);
+				q[i]--;
+			}
+			//random_shuffle(q, q + qsize);
+			if(qsize == 2) {
+				int vlca = lca(q[0], q[1]);
+				printf("%d\n", h[q[0]] + h[q[1]] - 2 * h[vlca] - 1); 
+			} else {
+				int vlca = lca(q[0], q[1]) ^ lca(q[1], q[2]) ^ lca(q[0], q[2]);
+				bool ok = check(vlca);
+				printf("%d\n", ok ? 1 : 0);
+			}
+		}
+	}
+
+#ifdef shindo
+    printf("\n\nWalltime = %.3lf\n", clock() * 1e-3);
+#endif
+}

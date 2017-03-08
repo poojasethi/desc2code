@@ -1,0 +1,121 @@
+#include<iostream>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+const int move[4][2]={0,0,0,1,1,0,1,1};
+const int N=1010;
+struct status{int l,r,h,z;}a[N*N];
+int n,m,x,y,vx,vy,h[N][N],tot;
+long long ans;
+int *p[N*N*2],p_tot;
+int cmp(int *a,int *b){return *a<*b;}
+int cmp2(status a,status b){return a.z<b.z;}
+struct Segment_Tree
+{
+	int tot;
+	struct Node{int l,r,son[2],MIN,cover;}a[N*N*2];
+	void update(int x)
+	{
+		a[x].MIN=min(a[a[x].son[0]].MIN,a[a[x].son[1]].MIN);
+		a[x].MIN=max(a[x].MIN,a[x].cover);
+	}
+	void build(int l,int r,int x=1)
+	{
+		if(x==1)tot=1;
+		a[x].l=l;a[x].r=r;
+		if(l<r)
+		{
+			int mid=(a[x].l+a[x].r)>>1;
+			a[x].son[0]=++tot;
+			build(l,mid,tot);
+			a[x].son[1]=++tot;
+			build(mid+1,r,tot);
+		}
+	}
+	int search(int l,int r,int x=1)
+	{
+		if(a[x].l>=l&&a[x].r<=r)return a[x].MIN;
+		int mid=(a[x].l+a[x].r)>>1,re=0x7fffffff;
+		if(l<=mid)re=min(re,search(l,r,a[x].son[0]));
+		if(r>mid)re=min(re,search(l,r,a[x].son[1]));
+		if(a[x].MIN>re)re=a[x].MIN;
+		return re;
+	}
+	void cover(int l,int r,int c,int x=1)
+	{
+		if(a[x].l>=l&&a[x].r<=r)
+		{
+			if(c>a[x].cover)
+			{
+				a[x].cover=c;
+				if(c>a[x].MIN)a[x].MIN=c;
+			}
+		}
+		else
+		{
+			int mid=(a[x].l+a[x].r)>>1;
+			if(l<=mid)cover(l,r,c,a[x].son[0]);
+			if(r>mid)cover(l,r,c,a[x].son[1]);
+			update(x);
+		}
+	}
+}tree;
+int main()
+{
+	int i,j,k,l;
+	scanf("%d%d%d",&n,&vx,&vy);
+	for(i=0;i<n;i++)
+		for(j=0;j<n;j++)
+		scanf("%d",&h[i][j]);
+	if(vx<0)
+	{
+		vx=-vx;
+		for(i=0;i<n;i++)
+			for(j=0;j<n-j-1;j++)
+			swap(h[j][i],h[n-j-1][i]);
+	}
+	if(vy<0)
+	{
+		vy=-vy;
+		for(i=0;i<n;i++)
+			for(j=0;j<n-j-1;j++)
+			swap(h[i][j],h[i][n-j-1]);
+	}
+	for(i=0;i<n;i++)
+		for(j=0;j<n;j++)
+		{
+			tot++;
+			a[tot].h=h[i][j];
+			for(k=0;k<4;k++)
+			{
+				x=i+move[k][0];
+				y=j+move[k][1];
+				l=x*vy-y*vx;//����vy
+				if(k==0)a[tot].l=a[tot].r=l,a[tot].z=x*vx+y*vy;
+				else
+				{
+					a[tot].l=min(a[tot].l,l);
+					a[tot].r=max(a[tot].r,l);
+				}
+			}
+			p[++p_tot]=&a[tot].l;
+			p[++p_tot]=&a[tot].r;
+		}
+	sort(p+1,p+p_tot+1,cmp);
+	for(i=1;i<=p_tot;i=j+1)
+	{
+		m++;
+		for(j=i;j<p_tot&&*p[j]==*p[j+1];j++);
+		for(l=i;l<=j;l++)*p[l]=m;
+	}
+	tree.build(1,m-1);
+	for(i=1;i<=tot;i++)
+	{
+		ans+=max(0,a[i].h-tree.search(a[i].l,a[i].r-1));
+		tree.cover(a[i].l,a[i].r-1,a[i].h);
+	}
+	cout<<ans<<endl;
+	return 0;
+}

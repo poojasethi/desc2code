@@ -1,0 +1,192 @@
+#include<cstdio>
+#include<iostream>
+#include<cstring>
+#include<vector>
+#include<memory.h>
+#include<cstdlib>
+#include<cmath>
+#include<cassert>
+#include<memory.h>
+#include<algorithm>
+#include<queue>
+#include<utility>
+#include<map>
+#include<bitset>
+#include<stack>
+using namespace std;
+
+typedef vector<int> VI;
+typedef long long LL;
+typedef unsigned long long uLL;
+typedef pair<int, int> PII;
+typedef vector<PII> VPII;
+#define pb push_back
+#define fi first
+#define se second
+#define mp make_pair
+#pragma comment(linker, "/STACK:266777216")
+
+const int inf=1000000000;
+const LL INF=LL(inf)*inf;
+const double eps=1e-9;
+const double PI=2*acos(0.0);
+
+//Constants
+#define NN 500005
+#define offset 250000 //This means -2499 will be 1 and 0 will be 2500 and 2499 will be 4999
+
+//Declarations
+stack<int>S;
+VI adj[NN];
+VI surplus, deficit, choc, caramel; //If choc > caramel => surplus else deficit
+int N;
+
+//For BFS
+queue<int>Q;
+int dist[NN];
+int visited[NN];
+
+int min(int a, int b){return a<b?a:b;}
+
+void build()
+{
+    int idx, new_idx;
+    while(!S.empty())
+    {
+        S.pop();
+    }
+    S.push(0);
+    while(!S.empty())
+    {
+        idx = S.top();
+        S.pop();
+        if(adj[idx+offset].size() == 0) //means new vertex in our graph
+        {
+            if(idx >= 0) //only go through deficit list
+            {
+                for(int i=0; i<deficit.size(); i++)
+                {
+                    new_idx = idx + deficit[i];
+                    adj[idx+offset].pb(new_idx + offset);
+                    S.push(new_idx);
+                }
+            }
+            if(idx <= 0)
+            {
+                for(int i=0; i<surplus.size(); i++)
+                {
+
+                    new_idx = idx + surplus[i];
+                    adj[idx+offset].pb(new_idx+offset);
+                    S.push(new_idx);
+                }
+            }
+        }
+    }
+}
+
+int bfs()
+{
+    fill(visited, visited+NN, 0);
+    fill(dist, dist+NN, inf);
+    while(!Q.empty())
+    {
+        Q.pop();
+    }
+    Q.push(0 + offset);
+    dist[0+ offset] = 0;
+    int u,v;
+    while(!Q.empty())
+    {
+        u = Q.front();
+        Q.pop();
+        if(visited[u] == 1)
+        {
+            continue;
+        }
+        visited[u] = 1;
+        for(int i=0; i<adj[u].size(); i++)
+            {
+                v = adj[u][i];
+                dist[v] =  min(dist[v], dist[u] + 1);
+                if(v == 0 + offset)
+                {
+                    dist[v] = dist[u] + 1;
+                    return(dist[v]);
+                }
+                if( visited[v] == 0)
+                {
+                    Q.push(v);
+                }
+
+            }
+    }
+}
+
+void solve2()
+{
+    //To build a graph (index - offset) denotes the difference...we start from zero and must reach zero again
+    //If diff>0 means surplus we add candies only from deficit list and vice versa
+    //Thus we can bound the indices tp -min(-2499) to +max(2499)
+    int ans;
+    build();
+    ans = bfs();
+    printf("%d\n", ans);
+}
+void solve()
+{
+    //Initializations
+    surplus.clear();
+    deficit.clear();
+    choc.clear();
+    caramel.clear();
+    for(int i=0; i<NN; i++)
+    {
+        adj[i].clear();
+    }
+
+    //Taking in input
+    int x, y, dx, dy;
+
+    scanf("%d", &N);
+    for(int i=0; i<N; i++)
+    {
+        scanf("%d%d", &x, &y);
+        choc.pb(x);
+        caramel.pb(y);
+    }
+    scanf("%d%d", &dx, &dy);
+
+    //Compute surplus/deficit for each candy
+    int diff;
+    for(int i=0; i<N; i++)
+    {
+        diff = dy*choc[i]- dx*caramel[i];
+        assert(diff!=0);
+        if(diff>0)
+        {
+            surplus.pb(diff);
+        }
+        else
+        {
+            deficit.pb(diff);
+        }
+    }
+    if(surplus.size() == 0 || deficit.size() == 0)
+    {
+        printf("%d\n", -1);
+    }
+    else
+    {
+        solve2();
+    }
+}
+
+int main()
+{
+    #ifndef ONLINE_JUDGE
+    freopen("input.txt","r",stdin);
+    freopen("output.txt","w",stdout);
+    #endif
+    solve();
+}

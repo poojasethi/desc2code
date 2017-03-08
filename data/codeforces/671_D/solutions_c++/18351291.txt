@@ -1,0 +1,125 @@
+#include<cstdio>
+#include<cstring>
+#include<set>
+#include<vector>
+#include<utility>
+#define rep(i,n) for(int i=0;i<n;i++)
+#define X first
+#define Y second
+#define mp make_pair
+#define pb push_back
+using namespace std;
+typedef long long LL;
+const int N=300005;
+multiset<pair<LL,int> > h1[N];
+multiset<pair<int,LL> > h2[N];
+vector<int> g[N];
+vector<pair<int,LL> > pth[N];
+int dep[N],par[N],to[N];
+int n,m;
+LL ans[N],delta[N];
+inline void init(int u=0,int f=-1,int d=0){
+	dep[u]=d;
+	par[u]=f;
+	rep(i,(int)g[u].size()){
+		int v=g[u][i];
+		if(v!=f)
+			init(v,u,d+1);
+	}
+	return;
+}
+inline bool dfs(int u=0){
+	int mx=-1,id;
+	rep(i,(int)g[u].size()){
+		int v=g[u][i];
+		if(v!=par[u]){
+			if(dfs(v))
+				return 1;
+			int t=h1[to[v]].size();
+			if(t>mx){
+				mx=t;
+				to[u]=to[v];
+				id=v;
+			}
+		}
+	}
+//	printf("%d %d %I64d %I64d\n",u,to[u],delta[to[u]],ans[to[u]]);
+	if(mx>=0){
+		if(!h2[to[u]].empty())
+			for(pair<int,LL> t=*h2[to[u]].begin();;)
+				if(-t.X>=dep[u]){
+					h1[to[u]].erase(mp(t.Y,-t.X)),h2[to[u]].erase(h2[to[u]].begin());
+					if(h2[to[u]].empty())
+						break;
+					t=*h2[to[u]].begin();
+				}
+				else
+					break;
+		rep(i,(int)g[u].size()){
+			int v=g[u][i];
+			if(v!=par[u] && v!=id){
+				ans[to[u]]+=ans[to[v]];
+				for(set<pair<LL,int> >::iterator it=h1[to[v]].begin();it!=h1[to[v]].end();it++){
+					pair<LL,int> t=*it;
+					if(t.Y>=dep[u])
+						continue;
+					t.X-=delta[to[v]];
+					t.X+=delta[to[u]];
+					h1[to[u]].insert(t);
+					h2[to[u]].insert(mp(-t.Y,t.X));
+				}
+				h1[to[v]].clear();
+				h2[to[v]].clear();
+			}
+		}
+	}
+	else
+		to[u]=u;
+	if(!u)
+		return 0;
+	rep(i,pth[u].size()){
+		pair<LL,int> t;
+		t.X=pth[u][i].Y+delta[to[u]];
+		t.Y=pth[u][i].X;
+		h1[to[u]].insert(t);
+		h2[to[u]].insert(mp(-t.Y,t.X));
+	}
+//	for(set<pair<LL,int> >::iterator it=h1[to[u]].begin();it!=h1[to[u]].end();it++)
+//		printf("\t%I64d %d\n",it->X,it->Y);
+	LL dlt=h1[to[u]].begin()->X-delta[to[u]];
+	ans[to[u]]+=dlt;
+	delta[to[u]]+=dlt;
+//	printf("%d\n",ans[to[u]]);
+	return h1[to[u]].empty();
+}
+int main(){
+	scanf("%d%d",&n,&m);
+	rep(i,n-1){
+		int x,y;
+		scanf("%d%d",&x,&y);
+		x--;
+		y--;
+		g[x].pb(y);
+		g[y].pb(x);
+	}
+	init();
+	while(m--){
+		int x,y;
+		LL c;
+		scanf("%d%d%I64d",&x,&y,&c);
+		x--;
+		y--;
+		if(x==y)
+			continue;
+		if(dep[x]<dep[y])
+			pth[y].pb(mp(dep[x],c));
+		else
+			pth[x].pb(mp(dep[y],c));
+	}
+	if(dfs())
+		puts("-1");
+	else
+		printf("%I64d\n",ans[to[0]]);
+	return 0;
+}
+	 			  	  	 						 		  					  	

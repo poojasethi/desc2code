@@ -1,0 +1,108 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <cmath>
+using namespace std;
+typedef long long LL;
+const double EPS = 1e-9, INF = 1e15, PI = acos(-1.0);
+#define FOR(i,s,e) for(int i=s;i<e;i++)
+#define flt(x,y) ((x)<(y)-EPS)
+#define fgt(x,y) flt(y,x)
+#define fle(x,y) !fgt(x,y)
+#define fge(x,y) !flt(x,y)
+#define feq(x,y) (fabs((x)-(y))<EPS)
+
+#define chkMn(x,y) x=min(x,y)
+#define chkMx(x,y) x=max(x,y)
+
+double sq(double x) { return x*x; }
+
+struct P{
+        double x, y;
+        P(){ }
+        P(double x,double y):x(x),y(y){ }
+        void eat(){ scanf("%lf%lf",&x,&y); }
+        P operator+(const P &p)const{ return P(x+p.x, y+p.y); }
+        P operator-(const P &p)const{ return P(x-p.x, y-p.y); }
+        P operator*(double k){ return P(x*k, y*k); }
+        double operator*(P p){ return x*p.x + y*p.y; }
+        double operator^(P p){ return x*p.y - y*p.x; }
+        double mag2() { return x*x+y*y; }
+        double mag(){ return sqrt(mag2()); }
+        bool operator<(const P &p)const {
+                if (feq(x,p.x)) return flt(y,p.y);
+                return flt(x,p.x);
+        }
+        bool operator==(const P &p)const {
+                return feq(x,p.x) && feq(y,p.y);
+        }
+        P rot(){ return P(-y,x); }
+        P rot(double the) {
+                return P(x*cos(the)-y*sin(the), x*sin(the)+y*cos(the));
+        }
+        P nor(){
+                if (feq(mag(),0))       return *this;
+                return *this*(1./mag());
+        }
+        P ref(P n) { // 2010-08-21: Reflect about vector "n"
+                n = n.nor();
+                return n*(n*(*this))*2 - *this;
+        }
+        void out() { printf("(%f,%f)\n", x, y); }
+};
+
+
+// ComputeIntersection
+bool ssi(P a, P b, P c, P d, P &res) {
+        P cd = d-c, ab = b-a;
+        if (feq(cd^ab, 0))                      return 0;
+        double t = ((a^ab) - (c^ab)) / (cd^ab);
+        double s = ((c^cd) - (a^cd)) / (ab^cd);
+        res = c + cd*t;
+        return 1;
+}
+
+// Strictly ccw
+bool Ccw(P a, P b, P c) { return fgt((b-a)^(c-a), 0); }
+
+// Lie on segment
+bool Btw(P a,P b,P c) { return feq((a-c).mag(), (b-a).mag()+(c-b).mag()); }
+
+double Ang(P a, P b) {
+        double res = atan2(a^b, a*b);
+        if (flt(res, 0)) res += 2*PI;
+        return res;
+}
+
+const int N = 20360;
+P p[N], dir[N];
+P a, b;
+double the[N], spd[N], low[N];
+int n, k;
+
+int main() {
+        a.eat();
+        b.eat();
+        scanf("%d", &n);
+        FOR(i,0,n) {
+                p[i].eat();
+                scanf("%lf%lf", the+i, spd+i);
+                dir[i]=P(cos(the[i]),sin(the[i]));
+        }
+        scanf("%d", &k);
+        double len=(a-b).mag();
+        FOR(i,0,n) {
+                low[i]=0;
+                if (fgt(spd[i],0))
+                FOR(j,0,2036+1) {
+                        P c=a+(b-a)*(j/2036.0);
+                        double ang=Ang(c-p[i],dir[i]);
+                        ang=min(ang, 2*PI-ang);
+                        low[i]=max(low[i], len*(j/2036.0) / (ang/spd[i]));
+                }
+        }
+        sort(low, low+n);
+        double ans = k==n ? 0 : low[n-1-k];
+        printf("%.20f\n", ans);
+        return 0;
+}

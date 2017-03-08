@@ -1,0 +1,118 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <string>
+#include <map>
+#include <set>
+#include <queue>
+using namespace std;
+
+#define len(a) int(a.size())
+const int MAXn = 5e5;
+const int INF = 2e9;
+typedef pair<int,int> pii;
+vector<pii> nb[MAXn];
+int pos[MAXn];
+int n, l;
+map<pair<pii,int>,int> ind;
+
+map<int,int> mp;
+int map_vertex(int x)
+{
+	if(mp.count(x))
+		return mp[x];
+	else
+	{
+		int s = mp.size();
+		mp[x] = s;
+		pos[s]=x;
+		return s;
+	}
+}
+
+bool mark[MAXn];
+int dist[MAXn], par[MAXn];
+void dijkstra(int v)
+{
+	set<pii> st;
+	for(int i = 0; i < (int)mp.size(); i++)
+	{
+		mark[i]=false;
+		dist[i]=INF;
+		par[i]=-1;
+		if(i!=v)
+			st.insert(make_pair(INF,i));
+	}
+	dist[v]=0;
+	st.insert(make_pair(0,v));
+	while(!st.empty())
+	{
+		pii p = *st.begin();
+		st.erase(st.begin());
+		int v = p.second;
+		for(int i = 0; i < (int)nb[v].size(); i++)
+		{
+			int u = nb[v][i].first,w=nb[v][i].second;
+			if(dist[u]>dist[v]+w)
+			{
+				st.erase(make_pair(dist[u],u));
+				dist[u]=dist[v]+w;
+				st.insert(make_pair(dist[u],u));
+				par[u]=v;
+			}
+		}
+	}
+}
+
+int main()
+{
+	ios::sync_with_stdio(false);
+	cin >> n >> l;
+	set<int> st;
+	for(int i = 0; i < n; i++)
+	{
+		int x,d,t,p;
+		cin >> x >> d >> t >> p;
+		t += p;
+		d += x;
+		x -= p;
+		if(x >= 0)
+		{
+			st.insert(x);
+			st.insert(d);
+			ind[make_pair(pii(x,d),t)] = i;
+			int v1 = map_vertex(x);
+			int v2 = map_vertex(d);
+			nb[v1].push_back(make_pair(v2,t));
+			//nb[v2].push_back(make_pair(v1,t));
+		}
+	}
+	st.insert(0);
+	st.insert(l);
+	vector<int> v;
+	for(set<int>::iterator it=st.begin(); it != st.end(); it++)
+		v.push_back(*it);
+	for(int i = 1; i < (int)v.size(); i++)
+	{
+		int v1 = map_vertex(v[i]), v2 = map_vertex(v[i-1]);
+		int w = v[i]-v[i-1];
+		nb[v1].push_back(make_pair(v2,w));
+		nb[v2].push_back(make_pair(v1,w));
+	}
+	dijkstra(map_vertex(0));
+	int vl=map_vertex(l);
+	cout << dist[vl] << endl;
+	vector<int> sol;
+	while(par[vl]!=-1)
+	{
+		int d = dist[vl]-dist[par[vl]];
+		if(abs(pos[vl]-pos[par[vl]]) != d)
+			sol.push_back(ind[make_pair(pii(pos[par[vl]],pos[vl]),d)]);
+		vl=par[vl];
+	}
+	cout << sol.size() << endl;
+	for(int i = sol.size()-1; i >=0 ; i--)
+		cout << sol[i]+1 << " ";
+	cout << endl;
+	return 0;
+}

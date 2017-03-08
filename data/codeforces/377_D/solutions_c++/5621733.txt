@@ -1,0 +1,69 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+struct data{
+	int v,n;
+}a[110001],b[110001];
+struct tnode{
+	int l,r,ls,rs,v,d;
+}t[900001];
+bool flag;
+int i,j,k,n,m,ans,l[110001],r[110001],v[110001],sz,lim,p1,p2,al,ar;
+void down(int p){
+	if (!t[p].d) return;
+	t[p].v+=t[p].d;
+	if (t[p].ls) t[t[p].ls].d+=t[p].d,t[t[p].rs].d+=t[p].d;
+	t[p].d=0;
+}
+void mt(int l,int r){
+	int p=++sz;
+	t[p].l=l;t[p].r=r;t[p].v=t[p].d=0;
+	if (l<r){
+		int m=(l+r)>>1;
+		t[p].ls=sz+1;mt(l,m);
+		t[p].rs=sz+1;mt(m+1,r);
+	}else t[p].ls=t[p].rs=0;
+}
+void change(int p,int l,int r,int v){
+	if (l<=t[p].l&&t[p].r<=r){
+		t[p].d+=v;return;
+	}
+	down(p);
+	int m=(t[p].l+t[p].r)>>1;
+	if (l<=m) change(t[p].ls,l,r,v);
+	if (r>=m+1) change(t[p].rs,l,r,v);
+	down(t[p].ls);down(t[p].rs);
+	t[p].v=max(t[t[p].ls].v,t[t[p].rs].v);
+}
+int query(int p,int v){
+	int res;
+	if (!t[p].ls) return t[p].l;
+	down(p);down(t[p].ls);down(t[p].rs);
+	t[p].v=max(t[t[p].ls].v,t[t[p].rs].v);
+	res=query((t[t[p].ls].v==v)?t[p].ls:t[p].rs,v);
+	return res;
+}
+bool cmp(data a,data b){
+	return a.v<b.v;
+}
+int main(){
+	scanf("%d",&n);
+	for (i=1,sz=lim=0;i<=n;i++) scanf("%d%d%d",&l[i],&v[i],&r[i]),a[i].v=l[i],a[i].n=i,b[i].v=v[i],b[i].n=i,lim=max(lim,r[i]);
+	mt(1,lim);
+	sort(a+1,a+1+n,cmp);sort(b+1,b+1+n,cmp);
+	for (i=1,p1=p2=1,ans=0;i<=lim&&p2<=n;i++){
+		flag=(p1<=n&&i>=a[p1].v);
+		for (;p1<=n&&i>=a[p1].v;p1++) change(1,v[a[p1].n],r[a[p1].n],1);
+		if (flag){
+			down(1);
+			if (t[1].v>ans) ans=t[1].v,al=i,ar=query(1,t[1].v);
+		}
+		for (;p2<=n&&i>=b[p2].v;p2++) change(1,v[b[p2].n],r[b[p2].n],-1);
+	}
+	printf("%d\n",ans);
+	for (i=1;i<=n;i++)
+	 if (l[i]<=al&&al<=v[i]&&v[i]<=ar&&ar<=r[i]) printf("%d ",i);
+	puts("");
+	return 0;
+}

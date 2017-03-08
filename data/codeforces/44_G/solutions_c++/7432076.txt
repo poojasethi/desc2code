@@ -1,0 +1,136 @@
+/* ***********************************************
+Author        :kuangbin
+Created Time  :2014/8/12 10:36:24
+File Name     :E:\2014ACM\ר��ѧϰ\KD��\CF44G.cpp
+************************************************ */
+
+#include <stdio.h>
+#include <string.h>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <queue>
+#include <set>
+#include <map>
+#include <string>
+#include <math.h>
+#include <stdlib.h>
+#include <time.h>
+using namespace std;
+const int MAXN = 100010;
+const int INF = 0x3f3f3f3f;
+struct Point{
+	int x,y,id;
+	Point(int _x = 0,int _y = 0,int _id = 0){
+		x = _x; y = _y; id = _id;
+	}
+};
+Point pp[MAXN],pp2[MAXN];//��Ҫ����
+struct Query{
+	int xl,xr,yl,yr,z;
+	int id;
+	void input(){
+		scanf("%d%d%d%d%d",&xl,&xr,&yl,&yr,&z);
+	}
+	bool operator <(const Query &b)const{
+		return z < b.z;
+	}
+}query[MAXN];
+struct Node
+{
+	Point e;
+	Node *lc,*rc;
+	bool div;
+	int Min;
+	int size;
+	void push_up(){
+		if(lc && rc)Min = min(lc->Min,rc->Min);
+		else Min = size?e.id:INF;
+	}
+}pool[MAXN*4];
+Node* root;
+Node* tail;
+bool cmpX(Point a,Point b){return a.x<b.x || (a.x==b.x&&a.y<b.y) || (a.x==b.x&&a.y==b.y&&a.id<b.id);}
+bool cmpY(Point a,Point b){return a.y<b.y || (a.y==b.y&&a.x<b.x) || (a.y==b.y&&a.x==b.x&&a.id<b.id);}
+bool cmp(Point a,Point b,bool div){return div?cmpY(a,b):cmpX(a,b);}
+Node* build(Point* a,int l,int r,bool div)
+{
+	int mid = (l+r)/2;
+	nth_element(a+l,a+mid,a+r+1,div?cmpY:cmpX);
+	Node *p = tail++;
+	p->div = div;
+	p->size = r-l+1;
+	p->e = a[mid];
+	if(l != r){
+		p->lc = build(a,l,mid,!div);
+		p->rc = build(a,mid+1,r,!div);
+	}
+	else{
+		p->lc = p->rc = NULL;
+	}
+	p->push_up();
+	return p;
+}
+void remove(Node* p,Point o)
+{
+	p->size--;
+	if(p->lc && p->rc){
+		if(cmp(p->e,o,p->div))remove(p->rc,o);
+		else remove(p->lc,o);
+	}
+	p->push_up();
+}
+int getMin(Node *p,int xl,int xr,int yl,int yr)
+{
+	if(!p || !p->size)return INF;
+	if(xl == -INF && xr == INF && yl == -INF && yr == INF)return p->Min;
+	if(!p->lc && !p->rc){
+		if(p->e.x >= xl && p->e.x <= xr && p->e.y >= yl && p->e.y <= yr)return p->Min;
+		else return INF;
+	}
+	if(!p->div){
+		int ret = INF;
+		if(xl <= p->e.x)
+			ret = min(ret,getMin(p->lc,xl,xr < p->e.x?xr:INF,yl,yr));
+		if(xr >= p->e.x)
+			ret = min(ret,getMin(p->rc,xl > p->e.x?xl:-INF,xr,yl,yr));
+		return ret;
+	}
+	else {
+		int ret = INF;
+		if(yl <= p->e.y)
+			ret = min(ret,getMin(p->lc,xl,xr,yl,yr < p->e.y?yr:INF));
+		if(yr >= p->e.y)ret = min(ret,getMin(p->rc,xl,xr,yl > p->e.y?yl:-INF,yr));
+		return ret;
+	}
+}
+int ans[MAXN];
+
+int main()
+{
+    //freopen("in.txt","r",stdin);
+    //freopen("out.txt","w",stdout);
+    int n,m;
+	while(scanf("%d",&n) == 1){
+		for(int i = 0;i < n;i++){query[i].input();query[i].id = i+1;}
+		sort(query,query+n);
+		scanf("%d",&m);
+		int x,y;
+		for(int i = 1;i <= m;i++){
+			scanf("%d%d",&x,&y);
+			pp[i] = Point(x,y,i);
+			pp2[i] = pp[i];
+		}
+		tail = pool;
+		root = build(pp,1,m,0);
+		for(int i = 0;i < n;i++){
+			int ret = getMin(root,query[i].xl,query[i].xr,query[i].yl,query[i].yr);
+			if(ret != INF){
+				ans[ret] = query[i].id;
+				remove(root,pp2[ret]);
+			}
+		}
+		for(int i = 1;i <= m;i++)printf("%d\n",ans[i]);
+	}
+    return 0;
+}

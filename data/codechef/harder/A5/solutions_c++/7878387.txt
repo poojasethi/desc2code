@@ -1,0 +1,152 @@
+#include<algorithm>
+#include<bitset>
+#include<cctype>
+#include<cmath>
+#include<cstring>
+#include<cstdio>
+#include<cstdlib>
+#include<ctime>
+#include<deque>
+#include<functional>
+#include<iomanip>
+#include<iostream>
+#include<list>
+#include<map>
+#include<numeric>
+#include<queue>
+#include<set>
+#include<sstream>
+#include<stack>
+#include<string>
+#include<utility>
+#include<vector>
+ 
+using namespace std;
+ 
+#define fore(i, a) for(int i = 0; i < (a); i++)
+#define forv(i, a) for(int i = 0; i < a.size(); i++)
+#define fort(i, a) for(typeof(a.begin()) i = a.begin(); i != a.end(); i++)
+#define all(x) x.begin(), x.end()
+#define pb push_back
+#define mp make_pair
+#define x first
+#define y second
+#define inf (1<<29)
+ 
+#define err(...)
+//#define err(...) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
+ 
+typedef long long ll;
+typedef vector<int> vi;
+ 
+#define maxn 2173
+#define MOD 1000000000
+ 
+int huff[maxn][2], dp[maxn][2], temp[2][maxn];
+int pref[maxn], cnt[maxn], all[maxn], binom[maxn], t[maxn], fac[maxn];
+int n, sum;
+ 
+inline int mult(int a, int b)
+{ return (1LL * a * b) % MOD; }
+ 
+int main()
+{
+	scanf("%d", &n);
+	fore(i,n) scanf("%d", &t[i]);
+	sort(t, t+n);
+ 
+	/* pref */
+	pref[0] = 0;
+	for(int i = 1; i <= n; i++) pref[i] = pref[i-1] + t[i-1];
+ 
+	/* cnt */
+	cnt[n-1] = 1;
+	for(int i = n-2; i >= 0; i--)
+		if(t[i] == t[i+1]) cnt[i] = cnt[i+1] + 1;
+		else cnt[i] = 1;
+ 
+	/* all */
+	all[0] = cnt[0];
+	for(int i = 1; i < n; i++)
+		if(t[i] == t[i-1]) all[i] = all[i-1];
+		else all[i] = cnt[i];
+ 
+	/* binom */
+	temp[0][0] = 1;
+	temp[1][1] = 1;
+	temp[1][0] = 1;
+	for(int i = 1; i <= n; i++)
+	{
+		bool flag = i&1;
+		temp[flag][i] = 1;
+		for(int j = 1; j < i; j++)
+		{
+			temp[flag][j] = temp[!flag][j] + temp[!flag][j-1];
+			if(temp[flag][j] >= MOD) temp[flag][j] -= MOD;
+		}
+		for(int j = 1; j <= n; j++) if(all[j] == i) binom[j] = temp[flag][cnt[j]];
+	}
+	binom[n] = 1;
+ 
+ 
+	/* fac */
+	fac[0] = 1;
+	for(int i = 1; i <= n; i++) fac[i] = mult(fac[i-1], (2*i-1));
+ 
+	/* debug */
+	for(int i = 0; i <= n; i++)
+	{
+		err("%d : ", i);
+		for(int j = 0; j <= n; j++) err("%d ", temp[i][j]);
+		err("\n");
+	}
+	err("\n");
+	for(int i = 1; i <= n; i++)
+	{
+		err("%d : ", i);
+		for(int j = 1; j <= n; j++) err("%d ", huff[i][j]);
+		err("\n");
+	}
+	err("binom = "); fore(i,n+1) err("%d ", binom[i]); err("\n");
+	err(" pref = "); fore(i,n+1) err("%d ", pref[i]); err("\n");
+	err(" cnt  = "); fore(i,n) err("%d ", cnt[i]); err("\n");
+	err(" all  = "); fore(i,n) err("%d ", all[i]); err("\n");
+ 
+	/* rozwiazanie */
+	dp[0][0] = 1;
+	for(int p = 1; p <= n; p++)
+	{
+		bool flag = p&1;
+ 
+		/* huff */
+		sum = 0;
+		priority_queue<int, vector<int>, greater<int> > q;
+		fore(i,p) q.push(t[i]);
+		while(q.size() > 1)
+		{
+			huff[q.size()][flag] = sum;
+			int u,v;
+			u = q.top();
+			q.pop();
+			v = q.top();
+			q.pop();
+			sum += u+v;
+			q.push(u+v);
+		}
+		huff[1][flag] = sum;
+ 
+		/* dp */
+		for(int c = p; c > 0; c--)
+		{
+			dp[c][flag] = 0;
+			if(huff[c][flag] == huff[c-1][!flag])
+				dp[c][flag] = dp[c-1][!flag];
+			if(c*2 <= p && huff[c][flag] == huff[c*2][flag] + pref[p])
+				dp[c][flag] = mult(dp[c*2][flag], mult(binom[p], fac[c])) + dp[c][flag];
+			if(dp[c][flag] >= MOD) dp[c][flag] -= MOD;
+			err("dp[%d][%d] = %d\n", c, p, dp[c][flag]);
+		}
+	}
+ 
+	printf("%d %d\n", sum, dp[1][n&1]);
+} 

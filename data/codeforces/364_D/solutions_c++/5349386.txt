@@ -1,0 +1,51 @@
+#include <cstdio>
+#include <iostream>
+#include <cstdlib>
+#include <algorithm>
+using namespace std;
+long long a[1000001]={0},b[50001],c[50001],ans=0;
+long long gcd (long long x,long long y) {
+	long long r;
+	do {
+		r=x%y;x=y;y=r;
+	} while (r!=0);
+	return x;
+}
+int main ( ) {
+	long long n,m,i,j,k,t,r;
+	scanf("%I64d",&n);
+	m=(n+1)/2;
+	for (i=1;i<=n;i++) scanf("%I64d",&a[i]);
+	for (k=1;k<=10;k++) {
+		t=a[(rand()%40000)*(rand()%40000)%n+1];
+		*b=0;
+		for (i=1;i*i<=t;i++) {
+			if (t%i==0) b[++*b]=i;
+		}
+		for (;i;i--) {
+			if (t%i==0 && i*i<t) b[++*b]=t/i;
+		}
+		for (i=1;i<=*b;i++) c[i]=0;
+		for (i=1;i<=n;i++) {
+			r=gcd(t,a[i]);
+			c[lower_bound(b+1,b+*b+1,r)-b]++;
+		}
+		for (i=*b;i;i--) {
+			long long s=0;
+			for (j=i;j<=*b;j++) {
+				if (b[j]%b[i]==0) s+=c[j];
+			}
+			if (s>=m) {ans=max(ans,b[i]);break;}
+		}
+	}
+	printf("%I64d\n",ans);
+	return 0;
+}
+/*
+6
+6 2 3 4 5 6
+
+
+5
+5 5 6 10 15
+*/

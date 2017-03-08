@@ -1,0 +1,147 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+using namespace std;
+const int N=100010;
+struct data
+{
+	int ls,rs,ms,lp,rp,mpl,mpr,sum;
+	void insert(int l,int val)
+	{
+		lp=rp=mpl=mpr=l;
+		ls=rs=ms=sum=val;
+	}
+};
+struct qwe
+{
+	data mn,mx;
+	int l,r,rev;
+	void news(int val)
+	{
+		mn.insert(l,-val);
+		mx.insert(l,val);
+	}
+}a[N<<2];
+int n,m,ty,pos,v,l,r,k,cnt,ans;
+int qel[30],qer[30],t[N];
+data merge(data a,data b)
+{
+	data ret;
+	ret.sum=a.sum+b.sum;
+	ret.ls=a.ls; ret.lp=a.lp;
+	ret.rs=b.rs; ret.rp=b.rp;
+	ret.ms=a.rs+b.ls; ret.mpl=a.rp; ret.mpr=b.lp;
+	if (a.sum+b.ls>ret.ls) ret.ls=a.sum+b.ls,ret.lp=b.lp;
+	if (b.sum+a.rs>ret.rs) ret.rs=b.sum+a.rs,ret.rp=a.rp;
+	if (a.ms>ret.ms) ret.ms=a.ms,ret.mpl=a.mpl,ret.mpr=a.mpr;
+	if (b.ms>ret.ms) ret.ms=b.ms,ret.mpl=b.mpl,ret.mpr=b.mpr;
+	return ret;	
+}
+void up(int x)
+{
+	a[x].mn=merge(a[x<<1].mn,a[x<<1|1].mn);
+	a[x].mx=merge(a[x<<1].mx,a[x<<1|1].mx);
+}
+void down(int x)
+{
+	if (a[x].l==a[x].r) return;
+	if (a[x].rev)
+	{
+		swap(a[x<<1].mn,a[x<<1].mx);
+		swap(a[x<<1|1].mn,a[x<<1|1].mx);
+		a[x<<1].rev^=1; a[x<<1|1].rev^=1;
+	}
+	a[x].rev=0;
+}
+void build(int rt,int l,int r)
+{
+	a[rt].l=l; a[rt].r=r;
+	if (l==r)
+	{
+		a[rt].news(t[l]);
+		return;
+	}
+	int mid=(l+r)>>1;
+	build(rt<<1,l,mid);
+	build(rt<<1|1,mid+1,r);
+	up(rt);
+}
+void change(int rt,int l,int r,int t)
+{
+	down(rt);
+	if (l==r)
+	{
+		a[rt].news(v);
+		return;
+	}
+	int mid=(l+r)>>1;
+	if (t<=mid) change(rt<<1,l,mid,t);
+	else change(rt<<1|1,mid+1,r,t);
+	up(rt);
+}
+data query(int rt,int l,int r,int L,int R)
+{
+	down(rt);
+	if (L<=l&&R>=r)	return a[rt].mx;
+	int mid=(l+r)>>1;
+	if (R<=mid) return query(rt<<1,l,mid,L,R);
+	else if (L>mid) return query(rt<<1|1,mid+1,r,L,R);
+	else return merge(query(rt<<1,l,mid,L,mid),query(rt<<1|1,mid+1,r,mid+1,R));
+}
+void reverse(int rt,int l,int r,int L,int R)
+{
+	down(rt);
+	if (L<=l&&R>=r)
+	{
+		a[rt].rev^=1;
+		swap(a[rt].mn,a[rt].mx);
+		return;
+	}
+	int mid=(l+r)>>1;
+	if (L<=mid) reverse(rt<<1,l,mid,L,R);
+	if (R>mid) reverse(rt<<1|1,mid+1,r,L,R);
+	up(rt);
+}
+void getans(int l,int r,int k)
+{
+	cnt=0; ans=0;
+	for (int i=1;i<=k;i++)
+	{
+		data e=query(1,1,n,l,r);
+		if (e.ms>0) ans+=e.ms;
+		else break;
+//		printf("%d %d %d\n",e.ms,e.mpl,e.mpr);
+		cnt++;
+		reverse(1,1,n,e.mpl,e.mpr);
+		qel[cnt]=e.mpl; qer[cnt]=e.mpr;
+	}
+	for (int i=1;i<=cnt;i++)
+		reverse(1,1,n,qel[i],qer[i]);
+	printf("%d\n",ans);
+}
+int main()
+{
+//	freopen("280.in","r",stdin);
+//	freopen("280.out","w",stdout);
+	scanf("%d",&n);
+	for (int i=1;i<=n;i++) scanf("%d",&t[i]);
+	build(1,1,n);
+	scanf("%d",&m);
+	for (int i=1;i<=m;i++)
+	{
+		scanf("%d",&ty);
+		if (ty==0)
+		{
+			scanf("%d%d",&pos,&v);
+			change(1,1,n,pos);
+		}
+		if (ty==1)
+		{
+			scanf("%d%d%d",&l,&r,&k);
+			getans(l,r,k);
+		}
+	}
+	return 0;
+}

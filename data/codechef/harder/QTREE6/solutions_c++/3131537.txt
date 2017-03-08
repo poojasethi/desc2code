@@ -1,0 +1,269 @@
+#include<bits/stdc++.h>
+using namespace std;
+
+#define FOR(it,A) for(typeof A.begin() it = A.begin(); it!=A.end(); it++)
+#define REP( i , n ) for( int i = 0 ; i < n ; ++i )
+#define sc( x ) scanf( "%d" , &x )
+#define clr( t , val ) memset( t , val , sizeof( t ) )
+
+#define all( v ) v.begin() , v.end()
+#define pb push_back
+
+#define test puts( "**********test*******");
+
+#define N 100005
+
+#define v1 ( (node<<1) + 1 )
+#define v2 v1 + 1
+#define med ( ( a + b )>>1 )
+#define LEFT v1 , a , med
+#define RIGHT v2 , med + 1 , b
+#define JOIN T[ node ] = T[ v1 ] + T[ v2 ]
+
+typedef vector< int > vi;
+
+struct stripe {
+	vi T;
+	vi flag;
+	int len;
+	stripe() {}
+	stripe( vi &a ) : len( a.size() ) {
+		int off = 1;
+		for (; off < len; off<<=1);
+		T = vi( off<<1 );
+		flag = vi( off<<1 );
+		build_tree( a , 0 , 0 , len - 1 );
+	}
+	void build_tree( vi &A , int node , int a , int b ){
+		if( a == b ){
+			T[ node ] = A[ a ];
+			return;
+		}
+		build_tree( A , LEFT );
+		build_tree( A , RIGHT );
+		JOIN;
+	}
+	void push( int node , int a , int b ){
+		T[ node ] += flag[ node ]*( b - a + 1 );
+		if( a != b ){
+			flag[ v1 ] += flag[ node ];
+			flag[ v2 ] += flag[ node ];
+		}
+		flag[ node ] = 0;
+	}
+	void update( int pos , int val ){ update( 0 , 0 , len - 1 , pos , pos , val );}
+	void update( int lo , int hi , int val ){ update( 0 , 0 , len - 1 , lo , hi , val );}
+	void update( int node , int a , int b , int lo , int hi , int val ){
+		push( node , a , b );
+		if( lo > b || a > hi ) return;
+		if( a >= lo && hi >= b ) {
+			flag[ node ] += val;
+			push( node , a , b );
+			return;
+		}
+		update( LEFT , lo , hi , val );
+		update( RIGHT , lo , hi , val );
+		JOIN;
+	}
+	int query( int pos ){ return query( 0 , 0 , len - 1 , pos , pos );}
+	int query( int lo , int hi ){ return query( 0 , 0 , len - 1 , lo , hi );}
+	int query( int node , int a , int b , int lo , int hi ){
+		push( node , a , b );
+		if( lo > b || a > hi ) return 0;
+		if( a >= lo && hi >= b ) return T[ node ];
+		return query( LEFT , lo , hi ) + query( RIGHT , lo , hi );
+	}
+};
+struct stripe2 {
+	stripe color , dp0 , dp1;
+	vi id;
+	stripe2(){}
+	stripe2( vi &color , vi &dp0 , vi &dp1 , vi &id ) : color( color ) , dp0( dp0 ) , dp1( dp1 ) , id( id ){}
+	
+} st[ N ];
+
+
+int chain[ N ] , tam[ N ] , h[ N ] , p[ N ];
+
+int n , q ; 
+int csz , cola[ N ];
+vi E[ N ];
+
+int Color[ N ];
+
+void update0( int u , int v , int val ) {
+	while( chain[ u ] != chain[ v ] ) {
+		if( h[ chain[ u ]]  < h[ chain[ v ] ]) swap( u , v );
+		int c = chain[ u ] ;
+		st[ c ].dp0.update( 0 , h[ u ] - h[ c ] , val ) ;
+		u = p[ chain[ u ] ];
+	}
+	if( h[ u ] < h[ v ] ) swap( u , v );
+	int c = chain[ u ];
+	st[ c ].dp0.update( h[ v ] - h[ c ] , h[ u ] - h[ c ] , val );
+}
+void update1( int u , int v , int val ) {
+	while( chain[ u ] != chain[ v  ] ) {
+		if( h[ chain[ u ]]  < h[ chain[ v ] ]) swap( u , v );
+		int c = chain[ u ] ;
+		st[ c ].dp1.update( 0 , h[ u ] - h[ c ] , val ) ;
+		u = p[ chain[ u ] ];
+	}
+	if( h[ u ] < h[ v ] ) swap( u , v );
+	int c = chain[ u ];
+	st[ c ].dp1.update( h[ v ] - h[ c ] , h[ u ] - h[ c ] , val );
+}
+// busca el nodo de color "col" con menor profundidad de tal manera que este conectado con u si el nodo u tuviera el color col.
+int findAncestor( int u , int col ){
+	if( u == 0 ) return u;
+	if( Color[ p[ u ] ] != col ) return u;
+	//cout << "u : " << u << endl;
+	u = p[ u ];
+	while( 1 )
+	{
+		//cout << "u : " << u << endl;
+		if( u == -1 ) return 0;
+		int c = chain[ u ] , pos = h[ u ] - h[ c ];
+		if( st[ c ].color.query( 0 , pos ) == col*( pos + 1 ) )
+		{
+			//cout << "lleno "<<endl;
+			if( p[ c ] != -1 && Color[ p[ c ] ] == col ) u = p[ c ];
+			else return c;
+		}
+		else
+		{
+			int lo = 0 , hi = pos;
+			while( hi - lo > 1 )
+			{
+				int mid = ( lo + hi )/2;
+				if( st[ c ].color.query( mid , pos ) == ( pos - mid + 1 )*col ) hi = mid;
+				else lo = mid;
+			}
+			//cout << "hi " << hi << endl;
+			return st[ c ].id[ hi ];
+		}
+	}
+	
+}
+
+void toggle( int u ){
+	int v = findAncestor( u , Color[ u ] );
+	int c = chain[ u ];
+	
+	if( p[ v ] != -1 ) v = p[ v ];
+	if( p[ u ] != -1 ) {
+		if( !Color[ u ] ){
+			int val = st[ c ].dp0.query( h[ u ] - h[ c ] );
+			update0( p[ u ] , v , -val );
+		}
+		else
+		{
+			int val = st[ c ].dp1.query( h[ u ] - h[ c ] );
+			update1( p[ u ] , v , -val );
+		}
+	}
+	v = findAncestor( u , Color[ u ]^1 );
+	if( p[ v ] != -1 ) v = p[ v ];
+	if( p[ u ] != -1 )
+	{
+		if( !Color[ u ] )
+		{
+			int val = st[ c ].dp1.query( h[ u ] - h[ c ] ); 
+			update1( p[ u ] , v , val );
+		}
+		else
+		{
+			int val = st[ c ].dp0.query( h[ u ] - h[ c ] ); 
+			update0( p[ u ] , v , val );
+		}
+	}
+	if( !Color[ u ] )
+		st[ c ].color.update( h[ u ] - h[ c ] , 1 );
+	else st[ c ].color.update( h[ u ] - h[ c ] , -1 );
+	Color[ u ] ^= 1;
+}
+int main(){
+	cin >> n;
+	REP( i , n - 1 ) {
+		int u,v; 
+		scanf( "%d%d" , &u , &v ); u--; v--;
+		E[ u ].pb( v );
+		E[ v ].pb( u );
+	}
+	// dfs's begin
+	clr( p , -1 );
+	csz = 0;
+	cola[ csz++ ] = 0;
+	p[ 0 ] = 0;
+	h[ 0 ] = 0;
+	REP( i , csz ) {
+		int u = cola[ i ];
+		FOR( e , E[ u ] ) {
+			int v = *e;
+			if ( ~p[ v ] ) continue;
+			cola[ csz++ ] = v;
+			p[ v ] = u;
+			h[ v ] = h[ u ] + 1;
+		}
+	}
+	for( int i = csz - 1 ; i >= 0 ; --i ) {
+		int u = cola[ i ];
+		tam[ u ] = 1;
+		FOR( e , E[ u ] ) {
+			int v = *e;
+			if( p[ u ] == v ) continue;
+			tam[ u ] += tam[ v ];
+		}
+	}
+	// dfs's end
+	clr( chain , -1 );
+	REP( i , csz ) {
+		int u = cola[ i ];
+		if ( ~chain[ u ] ) continue;
+		chain[ u ] = u;
+		int v = u;
+		while( 1 ) { 
+			int next = -1;
+			FOR( v , E[ u ] ) if( p[ *v ] == u )
+				if ( next ==-1 || tam[ next ] < tam[ *v ] ) next = *v;
+			if( next == -1 ) break;
+			chain[ next ] = chain[ u ];
+			u = next;
+		}
+		int len = h[ u ] - h[ v ] + 1;
+		vi color( len ) , dp0( len ) , dp1( len , 1 ) , id( len );
+		
+		REP( i , len ) {
+			dp0[ i ] = tam[ u ];
+			id[ i ] = u;
+			u = p[ u ];
+		}
+		reverse( all( id ) );
+		reverse( all( color ) );
+		reverse( all( dp0 ) );
+		reverse( all( dp1 ) );
+		st[ v ] = stripe2( color , dp0 , dp1 , id );
+	}
+	p[ 0 ] = -1;
+	sc( q );
+	int op , u;
+	//REP( i , n ) cout << i << " : " << chain[ i ] << endl;
+	REP( i , q ) {
+		sc( op ) , sc( u );
+		u --;
+		if( !op ) 
+		{
+			int v = findAncestor( u , Color[ u ] );
+			//cout << u << " " << v << endl;
+			//test
+			int c = chain[ v ];
+			if( !Color[ u ] )
+				printf( "%d\n" , st[ c ].dp0.query( h[ v ] - h[ c ] ) );
+			else printf( "%d\n" , st[ c ].dp1.query( h[ v ] - h[ c ] ) );
+		}
+		else
+		{
+			toggle( u );
+		}
+	}
+}

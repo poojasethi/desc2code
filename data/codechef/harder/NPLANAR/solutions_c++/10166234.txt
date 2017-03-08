@@ -1,0 +1,145 @@
+//#include "testlib.h"
+//#include <spoj.h>
+
+#include <iostream>
+#include <stdio.h>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <math.h>
+#include <cmath>
+#include <assert.h>
+#include <time.h>
+#include <memory.h>
+#include <set>
+#include <numeric>
+#include <map>
+#include <queue>
+#include <stack>
+#include <bitset>
+
+using namespace std;
+
+bitset<3001> adj[3001];
+int a[1000001], b[1000001];
+int cc[3001];
+
+vector< vector<int> > connected;
+vector< int > conn[111];
+map<long long, int> mp;
+
+
+//how does this work?????
+int f(long long mask) {
+    if (mask == 0) return 0;
+    if (mp.count(mask)) return mp[mask];
+    
+    int p = -1;
+    for(int cc = 0; cc <= 3 && p == -1; ++cc) {
+        for(int i = 0; i < connected.size(); ++i)
+        if (mask & (1ll << i)) {
+            int c = 0;
+            for(int j = 0; j < conn[i].size(); ++j)
+            if (mask & (1ll << conn[i][j]))
+                c++;
+            
+            if (c == cc) {
+                p = i;
+                break;
+            }
+        }
+    }
+    
+    assert(p != -1);
+   // p = 0;
+   // while ((mask >> p) % 2 == 0)
+   //     p++;
+    
+    int ans = 1e9, v;
+    long long mm;
+    for(int i = 0; i < 3; ++i) {
+        v = connected[p][i];
+        
+        mm = mask;
+        for(int j = 0; j < conn[p].size(); ++j) {
+            if (connected[conn[p][j]][0] != v && connected[conn[p][j]][1] != v && connected[conn[p][j]][2] != v) continue;
+            
+            if ((mm >> conn[p][j]) % 2)
+                mm -= (1ll << conn[p][j]);
+        }
+        if ((mm >> p) % 2)
+            mm -= (1ll << p);
+        
+        ans = min(ans, f(mm) + 1);
+    }
+    
+    return mp[mask] = ans;
+}
+
+int main() {
+    //ios::sync_with_stdio(0);
+    int t;
+    scanf("%d", &t);
+    while (t --> 0) {
+        int n, m;
+        scanf("%d %d", &n, &m);
+        for(int i = 1; i <= n; ++i)
+            adj[i].reset();
+        
+        for(int i = 0; i < m; ++i) {
+            scanf("%d %d", a+i, b+i);
+            adj[a[i]][b[i]] = 1;		//make undirected graph on bitset adjacency list
+            adj[b[i]][a[i]] = 1;
+        }
+        
+        set< vector<int> > triangles;	//set to store all trianlges
+        for(int i = 0; i < m; ++i) {
+            bitset<3001> bs = adj[a[i]] & adj[b[i]];	//stores neigh[u][i] AND neigh[v][i] for each edge (u,v)
+            if (bs.count() > 0) {					//if triangle forming
+                for(int k = 1; k <= n; ++k)
+                    if (bs[k] == 1) {
+                        vector<int> v; v.push_back(a[i]); v.push_back(b[i]); v.push_back(k);
+                        sort(v.begin(), v.end());
+                        triangles.insert(v);		//push vector containing nodes forming triangle into set
+                    }
+            }
+        }
+        
+        memset(cc, 0, sizeof cc);
+        for(set< vector<int> >::iterator it = triangles.begin(); it != triangles.end(); ++it)
+            cc[(*it)[0]]++, cc[(*it)[1]]++, cc[(*it)[2]]++;
+        
+        int ans = 0;
+        connected.clear();
+        for(set< vector<int> >::iterator it = triangles.begin(); it != triangles.end(); ++it) {
+            if (cc[(*it)[0]] == 1 && cc[(*it)[1]] == 1 && cc[(*it)[2]] == 1) {
+                ans++;							//count the number of unnecessary node 
+                cc[(*it)[0]]--, cc[(*it)[1]]--, cc[(*it)[2]]--;
+            }
+            else
+                connected.push_back((*it));		//get the connected triangles
+        }
+        //build the graph G' where each node corresponds to a triangle in original graph and
+        //2 nodes are connected by an edge if the 2 corresponding triangles in original graph share atleast one node
+        for(int i = 0; i < connected.size(); ++i) {
+            conn[i].clear();
+            
+            for(int j = 0; j < connected.size(); ++j)	//for each pair of triangles
+            if (i != j) {
+                bool good = 0;
+                for(int k = 0; k < 3; ++k)
+                    for(int p = 0; p < 3; ++p)
+                    if (connected[i][k] == connected[j][p])		//check if they share a common node
+                        good = 1;
+                
+                if (good)
+                    conn[i].push_back(j);	//undirected graph made since it loops over all n*(n-1) possibilities
+            }
+        }
+        
+        mp.clear();
+        printf("%d\n", ans + f((1ll << ((int)connected.size())) - 1));	//print ans
+    }
+    
+    return 0;
+}

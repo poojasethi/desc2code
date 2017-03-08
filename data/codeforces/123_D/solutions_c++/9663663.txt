@@ -1,0 +1,93 @@
+#include <bits/stdc++.h>
+
+#define pb push_back
+
+using namespace std;
+
+typedef long long int ll;
+
+const int maxl = 1000 * 100 + 5;
+const ll base = 701;
+
+string s;
+int n;
+
+int sa [ maxl ], dsu [ maxl ];
+ll hash [ maxl ], powe [ maxl ];
+
+vector < int > e [ maxl ];
+
+ll sum, ans;
+
+int par ( int index ){
+	return ( dsu [ index ] < 0 ? index : dsu [ index ] = par ( dsu [ index ] ) );
+}
+
+void merge ( int a, int b ){
+	a = par ( a ); b = par ( b );
+
+	if ( a == b )
+		return;
+	if ( dsu [ a ] > dsu [ b ] )
+		swap ( a, b );
+
+	ll A = -dsu [ a ], B = -dsu [ b ];
+	sum += A * B;
+
+	dsu [ a ] += dsu [ b ];
+	dsu [ b ] = a;
+}
+
+ll Hash ( int l, int r ){
+	return hash [ r ] - hash [ l ] * powe [ r - l ];
+}
+
+int lcp ( int i, int j ){
+	int lo = 0, hi = min ( n - i, n - j ) + 1;
+	while ( hi - lo != 1 ){
+		int mid = (hi + lo) >> 1;
+
+		if ( Hash ( i, i + mid ) == Hash ( j, j + mid ) )
+			lo = mid;
+		else
+			hi = mid;
+	}
+
+	return lo;
+}
+
+bool cmp ( const int &i, const int &j ){
+	int x = lcp ( i, j );
+
+	return s [ i + x ] < s [ j + x ];
+}
+
+int main (){
+	cin >> s; n = s.size (); s.push_back ( '\0' );
+
+	for ( int i = 0 ; i < n ; i++ )
+		hash [ i + 1 ] = hash [ i ] * base + s [ i ];
+	powe [ 0 ] = 1;
+	for ( int i = 1 ; i < maxl ; i++ )
+		powe [ i ] = powe [ i - 1 ] * base;
+
+	memset ( dsu, -1, sizeof dsu );
+	for ( int i = 0 ; i < n ; i++ )
+		sa [ i ] = i;
+
+	sort ( sa, sa + n, cmp );
+
+	for ( int i = 1 ; i < n ; i++ )
+		e [ lcp ( sa [ i ], sa [ i - 1 ] ) ].pb ( i - 1 );
+
+	sum = 1;
+	for ( int i = n - 1 ; i >= 0 ; i-- ){
+		for ( int j = 0 ; j < e [ i ].size () ; j++ )
+			merge ( e [ i ][ j ], e [ i ][ j ] + 1 );
+
+		ans += sum;
+	}
+	cout << ans << endl;
+	// ci, cj | sum += (2|ci+cj+1) - (2|ci+1) - (2|cj+1)
+	// ans += sum
+}

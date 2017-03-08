@@ -1,0 +1,87 @@
+#include <iostream>
+#include <fstream>
+#include <algorithm>
+#include <bitset>
+#include <cassert>
+#include <cctype>
+#include <cmath>
+#include <complex>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <deque>
+#include <iomanip>
+#include <map>
+#include <numeric>
+#include <queue>
+#include <set>
+#include <stack>
+#include <sstream>
+#include <string>
+#include <vector>
+using namespace std;
+
+#define EPS 1e-9
+#define INF MOD
+#define MOD 1000000007LL
+#define fir first
+#define iss istringstream
+#define sst stringstream
+#define ite iterator
+#define ll long long
+#define mp make_pair
+#define rep(i,n) rep2(i,0,n)
+#define rep2(i,m,n) for(int i=m;i<n;i++)
+#define pi pair<int,int>
+#define pb push_back
+#define sec second
+#define sh(i) (1LL<<i)
+#define sz size()
+#define vi vector<int>
+#define vc vector
+#define vl vector<ll>
+#define vs vector<string>
+
+int n,nf,ne,ns,fr[20];
+double rf,re,rs,df,de,ans;
+
+double insec(double a,double b,double c,double d){
+	return max( 0., min(b,d)-max(a,c) );
+}
+
+double f(){
+	double res=0;
+	vector<double> v;
+	rep(i,n)if(!fr[i]){
+		double X=i/2, F=2*rf*df, E=2*re*de;
+		rep(j,n)if(fr[j]){
+			double x=j/2;
+			F+=insec(X-rf, X+rf, x-rs, x+rs) *df;
+			E+=insec(X-re, X+re, x-rs, x+rs) *de;
+		}
+		res+=F;
+		v.pb(E-F);
+	}
+	sort(v.begin(),v.end());
+	reverse(v.begin(),v.end());
+	rep(i,ne)res+=v[i];
+	return res;
+}
+
+int main(){
+	cin>>nf>>ne>>ns>>rf>>re>>rs>>df>>de;
+	rf=sqrt(rf*rf-1);
+	re=sqrt(re*re-1);
+	rs=sqrt(rs*rs-1);
+	n=nf+ne+ns;
+	int temp=n-1;
+	rep(i,ns)fr[temp--]=1;
+	do{
+		int ok=1;
+		rep(i,n/2){
+			if(fr[i*2]==0 && fr[i*2+1]==1){ok=0;break;}
+		}
+		if(ok)ans=max(ans,f());
+	}while(next_permutation(fr,fr+n));
+	cout<<setprecision(9)<<ans;
+}

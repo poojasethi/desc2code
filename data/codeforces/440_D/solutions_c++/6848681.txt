@@ -1,0 +1,86 @@
+//In the name of God
+//...
+#include <algorithm>
+#include <iostream>
+#include <vector>
+using namespace std;
+typedef pair<int, int> pii;
+const int N = 400 + 4, oo = 1e9;
+
+int n, k, dp[N][N], par[N][N], ans[N][N], size[N], e[N];
+bool mark[N];
+vector<pii> adj[N];
+
+inline bool smin(int &a, int b) { return a > b? (a = b, true): false; }
+inline void cal_dp(int v) {
+	fill(dp[0] + 1, dp[N], oo);
+	dp[0][1] = 0;
+	int sum = 1;
+	for (int i = 1; i <= adj[v].size(); i++) {
+		int u = adj[v][i - 1].first, cur = size[u];
+		for (int j = 0; j <= sum + cur; j++)
+			dp[i][j] = oo;
+		for (int j = 1; j <= sum; j++)
+			for (int c = 0; c <= cur; c++) {
+				if (j + c > k)
+					continue;
+				if (smin(dp[i][j + c], dp[i - 1][j] + (c? ans[u][c]: 1)))
+					par[i][j + c] = c;
+			}
+		sum += cur;
+	}
+}
+void output(int v, int k) {
+//	cerr << v << ' ' << k << '\n';
+	vector<pii> req;
+	cal_dp(v);
+	for (int i = adj[v].size(); i; i--)
+		if (par[i][k]) {
+			req.push_back(pii(adj[v][i - 1].first, par[i][k]));
+			k -= par[i][k];
+		}
+		else
+			cout << adj[v][i - 1].second + 1 << ' ';
+	for (int i = 0; i < req.size(); i++)
+		output(req[i].first, req[i].second);
+}
+void dfs(int v) {
+	mark[v] = true;
+	size[v] = 1;
+	for (int i = 0; i < (int) adj[v].size(); i++) {
+		int u = adj[v][i].first;
+		if (mark[u]) {
+			e[v] = adj[v][i].second;
+			swap(adj[v][i], adj[v].back());
+			adj[v].pop_back();
+			i--;
+			continue;
+		}
+		dfs(u);
+		size[v] += size[u];
+	}
+	cal_dp(v);
+	for (int i = 0; i <= k; i++)
+		ans[v][i] = (i <= size[v]? dp[adj[v].size()][i]: oo);
+}
+int main() {
+	ios_base::sync_with_stdio(false);
+	cin >> n >> k;
+	for (int i = 0; i < n - 1; i++) {
+		int u, v;
+		cin >> u >> v;
+		u--, v--;
+		adj[u].push_back(pii(v, i));
+		adj[v].push_back(pii(u, i));
+	}
+	dfs(0);
+	int root = 0, mx = ans[0][k];
+	for (int i = 1; i < n; i++)
+		if (smin(mx, ans[i][k] + !!i))
+			root = i;
+	cout << mx << '\n';
+	if (root)
+		cout << e[root] + 1 << '\n';
+	output(root, k); cout << '\n';
+	return 0;
+}

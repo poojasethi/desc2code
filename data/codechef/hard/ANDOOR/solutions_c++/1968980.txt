@@ -1,0 +1,156 @@
+#include <stdio.h>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+#define ll long long
+
+const double PI=2*acos(0.0);
+
+vector<double> A, B;
+
+ll sqr(int n)
+{
+	return ((ll)n)*n;
+}
+
+// all the segments are counter-clockwise, and we need to make use of the fact that abs(a1-a2)<2*PI
+void addUp(double a1,double a2)
+{
+	if(a1>a2)
+		a2+=2*PI;
+	// so a1 and a2 has to be in [-PI,PI]
+	if(a1<-PI)
+	{
+		A.push_back(a1+2*PI);
+		B.push_back(PI);
+		A.push_back(-PI);
+		B.push_back(a2);
+	}
+	else if(a2>PI)
+	{
+		A.push_back(a1);
+		B.push_back(PI);
+		A.push_back(-PI);
+		B.push_back(a2-2*PI);
+	}
+	else
+	{
+		A.push_back(a1);
+		B.push_back(a2);
+	}
+}
+
+int main()
+{
+	int T, N, W, H;
+	int Q;
+	double total, ang, alpha, curA, curB, visible;
+	int covered;
+	ll Dij;
+
+	vector<int> X0, Y0, R0;
+	int X, Y, R;
+	double x0, y0, r0;
+
+	scanf("%d",&T);
+	while(T--)
+	{
+		scanf("%d %d %d",&W,&H,&N);
+		W*=100;
+		H*=100;
+		
+		X0.clear(), Y0.clear(), R0.clear();
+		for(int i=0;i<N;i++)
+		{
+			scanf("%lf %lf %lf",&x0,&y0,&r0);
+			X=(int)(x0*100+0.5);
+			Y=(int)(y0*100+0.5);
+			R=(int)(r0*100+0.5);
+			X0.push_back(X);
+			Y0.push_back(Y);
+			R0.push_back(R);
+		}
+		
+		total=0.0;
+		for(int i=0;i<N;i++)
+		{
+			X=X0[i], Y=Y0[i], R=R0[i];
+			A.clear(), B.clear();
+			// first see if it's out of the rectangle
+			if(X>=W+R || Y>=H+R)
+				continue;
+			// left
+			if(X<R)
+			{
+				ang=acos(-((double)X)/R);
+				addUp(ang,-ang);
+			}
+			// right
+			if(X+R>W)
+			{
+				ang=acos(((double)(W-X))/R);
+				addUp(-ang,ang);
+			}
+			// down
+			if(Y<R)
+			{
+				ang=asin(-((double)Y)/R);
+				addUp(-PI-ang,ang);
+			}
+			// up
+			if(Y+R>H)
+			{
+				ang=asin(((double)(H-Y))/R);
+				addUp(ang,PI-ang);
+			}
+			// for all the circles
+			covered=0;
+			for(int j=0;j<N;j++)
+			{
+				if(i==j)
+					continue;
+				int Xj=X0[j], Yj=Y0[j], Rj=R0[j];
+				Dij=sqr(X-Xj)+sqr(Y-Yj);
+				if(Rj>R && sqr(R-Rj)>=Dij)
+				{
+					covered=1;
+					break;
+				}
+				if(sqr(R+Rj)<=Dij || R>Rj&&sqr(R-Rj)>=Dij)
+					continue;
+				// atan2 to find the alpha value
+				alpha=atan2(1.0*(Yj-Y),1.0*(Xj-X));
+				// cosine theorem to find the angle
+				ang=acos((Dij+sqr(R)-sqr(Rj))/(2*sqrt(1.0*Dij)*R));
+				addUp(alpha-ang,alpha+ang);
+			}
+			if(covered==1)
+				continue;
+			// sort
+			sort(A.begin(),A.end());
+			sort(B.begin(),B.end());
+			visible=2*PI*R;
+			if(A.size()!=0)
+			{
+				curA=A[0], curB=B[0];
+				for(int j=1;j<A.size();j++)
+				{
+					if(curB<A[j])
+					{
+						visible-=R*(curB-curA);
+						curA=A[j];
+					}
+					curB=B[j];
+				}
+				visible-=R*(curB-curA);
+			}
+			total+=visible;
+		}	
+		printf("%.7lf\n",total*0.01);
+	}	
+
+	return 0;
+}

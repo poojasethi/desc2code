@@ -1,0 +1,143 @@
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <algorithm>
+#include <iostream>
+#include <set>
+#include <utility>
+#include <vector>
+#include <queue>
+#include <map>
+using namespace std;
+
+typedef long long ll;
+const int maxn = 1000000 + 10;
+int n, m, tot = 0, V[maxn], N[maxn], F[maxn];
+int root[maxn], op[maxn][2];
+char kind[maxn];
+vector<int> ask[maxn], change[maxn], q;
+int lastraid[maxn], L[maxn], R[maxn], sz[maxn];
+ll ans[maxn], tree[maxn];
+int Time = 0, cnt;
+
+void add(int a, int b)  {
+    ++ tot, V[tot] = b, N[tot] = F[a], F[a] = tot;
+}
+
+void dfsraid(int x)  {
+    for (int i = (int)change[x].size() - 1; i >= 0; i --)
+        q.push_back(-change[x][i]);
+    if (x <= n)  {
+        for (int i = 0; i < (int)ask[x].size(); i ++)  {
+            int tm = ask[x][i];
+            int ind = lower_bound(q.begin(), q.end(), -tm) - q.begin();
+            if (ind < (int)q.size())  lastraid[tm] = -q[ind];
+            else lastraid[tm] = 0;
+        }
+    }else  {
+        for (int p = F[x]; p > 0; p = N[p])
+            dfsraid(V[p]);
+    }
+    for (int i = 0; i < (int)change[x].size(); i ++)
+        q.pop_back();
+}
+
+void dfs(int x)  {
+    L[x] = ++ Time;
+    for (int p = F[x]; p > 0; p = N[p])
+        dfs(V[p]);
+    R[x] = Time;
+}
+void modify(int x, ll d)  {
+    for (; x >= 1 && x <= cnt; x += x & -x) tree[x] += d;
+}
+ll sum(int x)  {
+    ll ret = 0;
+    for (; x >= 1 && x <= cnt; x -= x & -x)  ret += tree[x];
+    return ret;
+}
+int main()  {
+    scanf("%d%d", &n, &m);
+    char cmd[10];
+    
+    for (int i = 1; i <= n; i ++) root[i] = i, change[i].clear(), ask[i].clear();
+    for (int i = 1; i <= m; i ++)  {
+        scanf("%s", cmd);
+        kind[i] = cmd[0];
+        scanf("%d", &op[i][0]);
+        if (kind[i] == 'A' || kind[i] == 'Z' || kind[i] == 'Q');
+        else scanf("%d", &op[i][1]);
+
+        if (kind[i] == 'M')  {
+            add(i + n, root[op[i][0]]);
+            add(i + n, root[op[i][1]]);
+            root[op[i][0]] = i + n;
+            root[op[i][1]] = 0;
+        }else if (kind[i] == 'Z')  {
+            change[root[op[i][0]]].push_back(i + n);
+        }
+        else if (kind[i] == 'Q')  {
+            ask[op[i][0]].push_back(i + n);
+        }
+    }
+    //calc lastraid[]
+    q.clear();
+    for (int i = 1; i <= n; i ++)
+        if (root[i] != 0)  dfsraid(root[i]);
+
+    for (int i = 1; i <= max(n, m); i ++) ask[i].clear();
+    for (int i = 1; i <= m; i ++) {
+        if (kind[i] != 'Q') continue;
+        ask[lastraid[i + n]].push_back(- (i + n));
+        ask[i + n].push_back(i + n);
+    }
+
+    memset(V, 0, sizeof V);
+    tot = 0;
+    memset(N, 0, sizeof N);
+    memset(F, 0, sizeof F);
+    cnt = n;
+    for (int i = 1; i <= n; i ++) root[i] = i;
+    for (int i = 1; i <= m; i ++)  {
+        if (kind[i] == 'U')  {
+            int a = op[i][0], b = op[i][1];
+            ++ cnt;
+            add(cnt, root[a]), add(cnt, root[b]);
+            root[a] = cnt;
+            root[b] = 0;
+        }
+    }
+
+    Time = 0;
+    for (int i = 1; i <= n; i ++)
+        if (root[i] != 0)  dfs(root[i]);
+    for (int i = 1; i <= n; i ++)  root[i] = i;
+    for (int i = 1; i <= m; i ++)  ans[i + n] = 0;
+
+    int cnt2 = n;
+    memset(tree, 0, sizeof tree);
+    for (int i = 1; i <= n; i ++)  sz[i] = 1;
+    for (int i = 1; i <= m; i ++)  {
+        if (kind[i] == 'U')  {
+            int a = op[i][0], b = op[i][1];
+            ++ cnt2;
+            sz[cnt2] = sz[root[a]] + sz[root[b]];
+            root[a] = cnt2;
+        }
+        else  if (kind[i] == 'A')  {
+            int x = root[op[i][0]];
+            modify(L[x], sz[x]);
+            modify(R[x] + 1, -sz[x]);
+        }
+        for (int j = 0; j < (int)ask[i + n].size(); j ++)  {
+            int qq = abs(ask[i + n][j]);
+            int x = op[qq-n][0];
+            if (ask[i + n][j] < 0)  ans[qq] -= sum(L[x]);
+            else ans[qq] += sum(L[x]);
+        }
+    }
+    for (int i = 1; i <= m; i ++)
+        if (kind[i] == 'Q')
+            printf("%I64d\n", ans[i + n]);
+    return 0;
+}

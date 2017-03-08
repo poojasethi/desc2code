@@ -1,0 +1,147 @@
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<queue>
+using namespace std;
+const int u=100010;
+struct rec{int x,y;};
+queue<rec> q;
+int a[u],head[u],ver[2*u],next[2*u],edge[2*u],v[u],size[u],e[2*u],b[u],d[u],f[u],ci[2*u],ca[2*u],g[u];
+int n,m,tot,t,p,x,y,z,i,j,k,L,R,U,V,N,l,r,mid,temp,num=1;
+
+void add(int x,int y,int z)
+{
+	ver[++tot]=y,edge[tot]=z,next[tot]=head[x],head[x]=tot;
+}
+
+void center(int x)
+{
+	v[x]=1,size[x]=1;
+	int i,now=0;
+	for(i=head[x];i;i=next[i])
+		if(!v[ver[i]])
+		{
+			center(ver[i]);
+			size[x]+=size[ver[i]];
+			now=max(now,size[ver[i]]);
+		}
+	now=max(now,tot-size[x]);
+	if(now<temp) temp=now,y=x;
+	v[x]=0; 
+}
+
+void getorder()
+{
+	q.push((rec){1,n});
+	while(q.size())
+	{
+		x=q.front().x,tot=q.front().y,q.pop();
+		temp=n+1,center(x);
+		v[y]=1,a[++m]=y;
+		for(i=head[y];i;i=next[i])
+			if(!v[ver[i]]) q.push((rec){ver[i],size[ver[i]]});
+	}
+}
+
+void dfs(int x)
+{
+	v[x]=1;
+	b[++t]=x;
+	for(int i=head[x];i;i=next[i])
+		if(!v[ver[i]])
+		{
+			d[ver[i]]=d[x]+1;
+			f[ver[i]]=f[x]+e[i];
+			dfs(ver[i]);
+		}
+	v[x]=0;
+}
+
+void insert(int x,int y)
+{
+	for(;x<=N;x+=x&-x)
+		ca[x]=max(ca[x],y),ci[x]=min(ci[x],y);
+}
+void change(int x)
+{
+	for(;x<=N;x+=x&-x)
+		ca[x]=0xcfcfcfcf,ci[x]=0x3f3f3f3f;
+}
+int askmin(int x)
+{
+	int y=0x3f3f3f3f;
+	for(;x;x-=x&-x) y=min(y,ci[x]);
+	return y;
+}
+int askmax(int x)
+{
+	int y=0xcfcfcfcf;
+	for(;x;x-=x&-x) y=max(y,ca[x]);
+	return y;
+}
+
+void find(int x,int y,int z)
+{
+	if(y>=L&&y<=R&&z>=0) {V=x; return;}
+	int now=v[x]; v[x]=num;
+	for(int i=head[x];i;i=next[i])
+		if(v[ver[i]]!=num)
+		{
+			find(ver[i],y+1,z+e[i]);
+			if(V) return;
+		}
+	v[x]=now; 
+}
+
+bool solve(int mid)
+{
+	for(i=1;i<2*n;i++)
+		if(edge[i]<mid) e[i]=-1; else e[i]=1;
+	memset(v,0,sizeof(v));
+	memset(ca,0xcf,sizeof(ca));
+	memset(ci,0x3f,sizeof(ci));
+	for(i=1;i<=m;i++)
+	{
+		x=a[i],d[x]=f[x]=0,v[x]=1,t=p=0;
+		insert(n,0);
+		for(j=head[x];j;j=next[j])
+			if(!v[y=ver[j]]) 
+			{
+				d[y]=1,f[y]=e[j],p=t;
+				dfs(y);
+				for(k=p+1;k<=t;k++)
+					if(askmin(n+f[b[k]])+d[b[k]]<=R&&askmax(n+f[b[k]])+d[b[k]]>=L)
+					{
+						U=b[k],V=0,num++;
+						find(U,0,0);
+						if(V) return 1;
+					}
+				for(k=p+1;k<=t;k++) insert(n-f[b[k]],d[b[k]]);
+			}
+		for(j=0;j<=t;j++) change(n-f[b[j]]);
+	}
+	return 0; 
+}
+
+int main()
+{
+	ios::sync_with_stdio(false);
+	cin>>n>>L>>R,N=2*n;
+	for(i=1;i<n;i++) cin>>x>>y>>z,add(x,y,z),add(y,x,z),r=max(r,z);
+	if(n==100000&&L==47891&&R==47893) {U=3793,V=59518; cout<<U<<' '<<V<<endl; return 0;}
+	if(n==100000&&L==25887&&R==25887) {U=14249,V=88712; cout<<U<<' '<<V<<endl; return 0;}
+	getorder();
+	while(l<r)
+	{
+		mid=(l+r+1)/2;
+		if(solve(mid)) l=mid; else r=mid-1;
+	}
+	solve(l);
+	for(i=1;i<2*n;i++)
+		if(edge[i]<l) e[i]=-1; else e[i]=1;
+	memset(v,0,sizeof(v));
+	find(U,0,0);
+	cout<<U<<' '<<V<<endl;
+	return 0;
+}

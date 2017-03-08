@@ -1,0 +1,138 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <set>
+
+using namespace std;
+
+const int primero=1<<15;
+const int tope=1<<16;
+
+int cuantos[tope];
+int f0[tope];
+int f1[tope];
+int ocurrencias[tope];
+int fibo[tope];
+
+
+int n,modulo;
+
+int a[tope];
+int norden=0;
+int orden[tope];
+int valormod[tope];
+
+int buscapos(int x)
+{
+  int inf=0;
+  int sup=norden;
+  while (inf+1<sup) {
+    int med=(inf+sup)/2;
+    if (orden[med]<=x) inf=med;
+    else sup=med;
+  }
+  return inf;
+}
+
+void anyade(int x,int val)
+{
+  int pos=buscapos(x);
+  pos+=primero;
+  ocurrencias[pos]+=val;
+  cuantos[pos]=ocurrencias[pos]>0;
+  f0[pos]=0;
+  f1[pos]=valormod[pos-primero]*cuantos[pos];
+  while (pos>1) {
+    pos/=2;
+    cuantos[pos]=cuantos[2*pos]+cuantos[2*pos+1];
+    if (cuantos[2*pos]==0) {
+      f0[pos]=f0[2*pos+1];
+      f1[pos]=f1[2*pos+1];
+    } else {
+      int c=cuantos[2*pos];
+      f0[pos]=(f0[2*pos]+fibo[c]*f1[2*pos+1]+fibo[c-1]*f0[2*pos+1])%modulo;
+      f1[pos]=(f1[2*pos]+fibo[c+1]*f1[2*pos+1]+fibo[c]*f0[2*pos+1])%modulo;
+    }
+  }
+}
+
+const int base=175;
+
+struct elem {
+  int iq,l,r;
+};
+
+bool operator<(elem e1,elem e2)
+{
+  int b1=e1.l/base;
+  int b2=e2.l/base;
+  return b1<b2 or (b1==b2 and e1.r<e2.r);
+}
+
+int nq;
+int sol[tope];
+
+int main()
+{
+  ios::sync_with_stdio(false);
+  set<int> s;
+  cin>>n>>modulo;
+  for (int i=1;i<=n;i++) {
+    cin>>a[i];
+    s.insert(a[i]);
+  }
+  for (set<int>::iterator it=s.begin();it!=s.end();it++)
+    orden[norden++]=*it;
+  sort(orden,orden+norden);
+  for (int i=0;i<norden;i++)
+    valormod[i]=orden[i]%modulo;
+  fibo[1]=1;
+  for (int i=2;i<=n;i++)
+    fibo[i]=(fibo[i-2]+fibo[i-1])%modulo;
+  /*
+  cout<<"orden:";
+  for (int i=0;i<norden;i++)
+    cout<<"("<<orden[i]<<","<<valormod[i]<<")";
+  cout<<endl;
+  cout<<"fibo:";
+  for (int i=0;i<=n;i++)
+    cout<<fibo[i]<<",";
+  cout<<endl;
+  */
+  cin>>nq;
+  vector<elem> v;
+  for (int i=0;i<nq;i++) {
+    elem e;
+    e.iq=i;
+    cin>>e.l>>e.r;
+    v.push_back(e);
+  }
+  sort(v.begin(),v.end());
+  int l=1;
+  int r=0;
+
+  for (int i=0;i<int(v.size());i++) {
+    elem &e=v[i];
+    //cout<<"elem "<<e.iq<<" "<<e.l<<" "<<e.r<<endl;
+    while (r<e.r) {
+      r++;
+      anyade(a[r],1);
+    }
+    while (e.l<l) {
+      l--;
+      anyade(a[l],1);
+    }
+    while (e.r<r) {
+      anyade(a[r],-1);
+      r--;
+    }
+    while (l<e.l) {
+      anyade(a[l],-1);
+      l++;
+    }
+    sol[e.iq]=f1[1];
+  }
+  for (int i=0;i<nq;i++)
+    cout<<((sol[i]%modulo+modulo)%modulo)<<endl;
+}
+

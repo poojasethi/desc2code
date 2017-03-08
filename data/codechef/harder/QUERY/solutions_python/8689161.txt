@@ -1,0 +1,188 @@
+#include<cmath>
+#include<cstdio>
+#include<vector>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+#define pb push_back
+typedef long long ll;
+typedef vector<int> vi;
+const int N=100010;
+struct segtree
+{
+    int lch,rch;
+    ll delta1,delta2,sum;
+}tree[30000000];
+int n,nodecnt,pathcnt;
+ll ans;
+int fa[N],size[N],belong[N],pathtop[N],lg2[N],pow2[20],rank[N],dep[N],st[N][20],root[N],pres[N];
+vi e[N];
+inline int read()
+{
+    char ch;
+    for (ch=getchar();ch<'0'||ch>'9';) ch=getchar();
+    int d=0;
+    for (;ch>='0'&&ch<='9';ch=getchar()) d=d*10+ch-'0';
+    return d;
+}
+void dfs(int k)
+{
+    int j=0;size[k]=1;
+    for (vi::iterator p=e[k].begin();p!=e[k].end();p++)
+        if (fa[k]!=(*p))
+        {
+            fa[*p]=k;dep[*p]=dep[k]+1;dfs(*p);size[k]+=size[*p];if ((!j)||size[j]<size[*p]) j=*p;
+        }
+    if (!j)
+    {
+        belong[k]=++pathcnt;rank[k]=1;return;
+    }
+    else
+        for (vi::iterator p=e[k].begin();p!=e[k].end();p++)
+            if (fa[k]!=(*p))
+            {
+                if (j==(*p))
+                {
+                    belong[k]=belong[*p];rank[k]=rank[*p]+1;
+                }
+                else
+                    pathtop[belong[*p]]=*p;
+			}
+}
+int lca(int x,int y)
+{
+    if (dep[x]<dep[y]) swap(x,y);
+    int t=dep[x]-dep[y],k=0;
+    while (t)
+    {
+		if (t&1) x=st[x][k];
+		k++;t>>=1;
+    }
+    if (x==y) return x;
+    k=lg2[dep[x]];
+    while (k>=0)
+    {
+        if (st[x][k]!=st[y][k]) {x=st[x][k];y=st[y][k];}
+        k--;
+    }
+    return fa[x];
+}
+int modify(int k,int l,int r,int l0,int r0,int A,int B)
+{
+    int nk=++nodecnt;
+    tree[nk].lch=tree[k].lch;tree[nk].rch=tree[k].rch;
+    tree[nk].delta1=tree[k].delta1;tree[nk].delta2=tree[k].delta2;
+    if (l<=l0&&r>=r0) 
+    {
+        tree[nk].delta1+=A;tree[nk].delta2+=B;
+        tree[nk].sum=tree[k].sum+ll(l0+r0)*(r0-l0+1)/2*A+ll(r0-l0+1)*B;
+        return nk;
+    }
+    int mid=(l0+r0)>>1;
+    if (l<=mid) tree[nk].lch=modify(tree[k].lch,l,r,l0,mid,A,B);
+    if (r>mid) tree[nk].rch=modify(tree[k].rch,l,r,mid+1,r0,A,B);
+    tree[nk].sum=tree[k].delta1*(r0-l0+1)*(l0+r0)/2+tree[k].delta2*(r0-l0+1)+tree[tree[nk].lch].sum+tree[tree[nk].rch].sum;
+    return nk;
+}
+void change(int now,int x,int y,int A,int B)
+{
+	int z=lca(x,y),dis=dep[x]+dep[y]-dep[z]*2;
+    int l=0,r=dis;
+    while (belong[x]!=belong[y])
+    {
+        int a=belong[x],b=belong[y];
+        if (dep[pathtop[a]]>dep[pathtop[b]])
+        {
+            root[now]=modify(root[now],pres[a-1]+rank[x],pres[a],1,n,A,B-(pres[a-1]+rank[x]-l)*A);
+            l=l+pres[a]-pres[a-1]-rank[x]+1;
+            x=fa[pathtop[a]];
+        }
+        else
+        {
+            root[now]=modify(root[now],pres[b-1]+rank[y],pres[b],1,n,-A,B+(pres[b-1]+rank[y]+r)*A);
+            r=r-pres[b]+pres[b-1]+rank[y]-1;
+            y=fa[pathtop[b]];
+        }
+    }
+    int a=belong[x];
+    if (rank[x]<=rank[y]) root[now]=modify(root[now],pres[a-1]+rank[x],pres[a-1]+rank[y],1,n,A,B-(pres[a-1]+rank[x]-l)*A); else root[now]=modify(root[now],pres[a-1]+rank[y],pres[a-1]+rank[x],1,n,-A,B+(pres[a-1]+rank[y]+r)*A);
+}
+void ask(int k,int l,int r,int l0,int r0)
+{
+	if (!k) return;
+	if (l==l0&&r==r0) {ans+=tree[k].sum;return;}
+	ans=ans+ll(l+r)*(r-l+1)/2*tree[k].delta1+ll(r-l+1)*tree[k].delta2;
+	int mid=(l0+r0)>>1;
+	if (l<=mid) ask(tree[k].lch,l,min(r,mid),l0,mid);
+	if (r>mid) ask(tree[k].rch,max(l,mid+1),r,mid+1,r0);
+}
+void query(int rt,int x,int y)
+{
+	ans=0;
+	while (belong[x]!=belong[y])
+	{
+		int a=belong[x],b=belong[y];
+		if (dep[pathtop[a]]>dep[pathtop[b]])
+		{
+			ask(rt,pres[a-1]+rank[x],pres[a],1,n);
+			x=fa[pathtop[a]];
+		}
+		else
+		{
+			ask(rt,pres[b-1]+rank[y],pres[b],1,n);
+			y=fa[pathtop[b]];
+		}
+	}
+	int a=belong[x];
+	if (rank[x]>rank[y]) swap(x,y);
+	ask(rt,pres[a-1]+rank[x],pres[a-1]+rank[y],1,n);
+}
+int main()
+{
+    #ifndef ONLINE_JUDGE
+        freopen("input.txt","r",stdin);
+        freopen("output.txt","w",stdout);
+    #endif
+    n=read();int m=read();
+    for (int i=1;i<n;i++)
+    {
+        int x=read(),y=read();
+        e[x].pb(y);e[y].pb(x);
+    }
+    pathcnt=0;dfs(1);
+    pathtop[belong[1]]=1;
+    lg2[1]=0;for (int i=2;i<=n;i++) lg2[i]=lg2[i>>1]+1;
+    pow2[0]=1;for (int i=1;i<=lg2[n];i++) pow2[i]=pow2[i-1]<<1;
+    for (int i=1;i<=n;i++) st[i][0]=fa[i];
+    for (int j=1;j<=lg2[n];j++)
+        for (int i=1;i<=n;i++)
+            st[i][j]=st[st[i][j-1]][j-1];
+    pres[0]=0;for (int i=1;i<=pathcnt;i++) pres[i]=pres[i-1]+rank[pathtop[i]];
+	int cnt=0;nodecnt=0;tree[0].lch=tree[0].rch=tree[0].delta1=tree[0].delta2=tree[0].sum=0;root[0]=0;
+    ans=0;int now=0;
+    while (m--)
+	{
+		char ch;
+		for (ch=getchar();ch!='c'&&ch!='q'&&ch!='l';) ch=getchar();
+		if (ch=='c')
+		{
+			int x=read(),y=read(),A=read(),B=read();swap(A,B);
+			x=(ans+x)%n+1;y=(ans+y)%n+1;
+			root[++cnt]=root[now];now=cnt;
+			change(cnt,x,y,A,B);
+		}
+		if (ch=='q')
+		{
+            int x=read(),y=read();
+            x=(ans+x)%n+1;y=(ans+y)%n+1;
+            query(root[now],x,y);
+            printf("%lld\n",ans);
+        }
+        if (ch=='l')
+        {
+            int x=read();
+			now=(ans+x)%(cnt+1);
+        }
+    }
+    return 0;
+}

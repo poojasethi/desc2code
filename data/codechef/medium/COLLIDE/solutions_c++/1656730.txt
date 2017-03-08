@@ -1,0 +1,126 @@
+
+#include <string>
+#include <stdlib.h>
+#ifndef ONLINE_JUDGE
+#include <windows.h>
+#endif
+
+const int L = 'L',
+		  R = 'R',
+		  U = 'U',
+		  D = 'D';
+
+class Asteroid {
+public:
+	short x, y;
+	char dir;
+};
+
+Asteroid ast[2012];
+
+int ex, ey;
+int edir;
+int numAst;
+
+bool haveCollision;
+double minTime;
+
+void collision(double t) {
+
+	if (t < 0.0)
+		t = -t;
+
+	haveCollision = true;
+
+	if (t < minTime)
+		minTime = t;
+}
+
+void simulate() {
+
+	haveCollision = false;
+	minTime = 9999999999.0;
+	int dx;
+
+	for (int a = 0; a < numAst; a++) {
+
+		if (edir == ast[a].dir)		// moving same direction, no collision ever
+			continue;
+		
+		if (ex == ast[a].x) {
+
+			if (edir == U && ast[a].dir == D) {			// earth going up, asteroid going down
+
+				if (ey < ast[a].y)	
+					collision((ast[a].y - ey) / 2.0);
+			}
+			else if (edir == D && ast[a].dir == U) {	// earth going down, asteroid going up
+
+				if (ey > ast[a].y)	
+					collision((ey - ast[a].y) / 2.0);
+			}
+		}
+		else if (ey == ast[a].y) {
+			if (edir == L && ast[a].dir == R) {			// earth going left, asteroid going right
+
+				if (ex > ast[a].x)	
+					collision((ex - ast[a].x) / 2.0);
+			}
+			else if (edir == R && ast[a].dir == L) {	// earth going right, asteroid going left
+
+				if (ex < ast[a].x)	
+					collision((ast[a].x - ex) / 2.0);
+			}
+		}
+		else if ((edir == U || edir == D) && (ast[a].dir == L || ast[a].dir == R))	{		// earth going up or down, asteroid going left or right
+			dx = (ast[a].dir == L ? ast[a].x - ex : ex - ast[a].x);
+			if (dx >= 0) {
+				if (dx == (edir == U ? ast[a].y - ey : ey - ast[a].y))
+					collision(dx);
+			}
+		}
+		else if ((edir == L || edir == R) && (ast[a].dir == U || ast[a].dir == D)) {		// earth going left or right, asteroid going up or down
+			dx = (edir == L ? ex - ast[a].x : ast[a].x - ex);
+			if (dx >= 0) {
+				if (dx == (ast[a].dir == U ? ey - ast[a].y : ast[a].y - ey))
+					collision(dx);
+			}
+		}
+	}
+
+
+}
+
+
+int main(int argc, char *argv[])
+{	
+#ifndef ONLINE_JUDGE
+	freopen ("COLLIDE.txt","r",stdin);
+	DWORD startTime = GetTickCount();
+#endif
+
+	int numTestCases;
+	scanf("%d", &numTestCases);
+
+	for (int c = 0; c < numTestCases; c++) {
+
+		scanf("%d %d %c", &ex, &ey, &edir);
+		scanf("%d", &numAst);
+
+		for (int a = 0; a < numAst; a++) {
+			scanf("%d %d %c", &ast[a].x, &ast[a].y, &ast[a].dir);
+		}
+
+		simulate();
+		if (!haveCollision)
+			printf("SAFE\n");
+		else
+			printf("%.1f\n", minTime);
+	}
+
+#ifndef ONLINE_JUDGE
+	DWORD elapsed = GetTickCount() - startTime;
+	printf("\ntime = %d", elapsed);
+	fclose (stdin);	
+#endif
+}

@@ -1,0 +1,80 @@
+#include <cstdio>
+#include <bitset>
+inline unsigned int getuint(){
+	char w=getchar();
+	while (w<'0'||'9'<w) w=getchar();
+	unsigned int ans=0;
+	for (;'0'<=w&&w<='9';w=getchar()) ans=ans*10+w-'0';
+	return ans;
+}
+const int MAXV=100005;
+struct Edge{int t, next;} G[MAXV<<1];int head[MAXV], e=1;
+int a[MAXV], dfseq[MAXV], dfsl[MAXV], dfsr[MAXV];
+void dfs(int x, int f){static int dfs_clock;dfseq[dfsl[x]=++dfs_clock]=x;for (int i=head[x];i;i=G[i].next) if (G[i].t!=f) dfs(G[i].t, x);dfsr[x]=dfs_clock;}
+std::bitset<1000> B0;
+int n, m;
+int is_prime(int n){for (int i=2;i<n;i++) if (n%i==0) return false;return true;}
+int prime[1005];
+struct SeGment_Tree{
+	struct node{
+		int l, r, mid;
+		node *s[2];
+		std::bitset<1000> B;
+		inline void update(){B=s[0]->B|s[1]->B;}
+		int shift;
+		inline void rot(int x){shift=(shift+x)%m, B=B<<x&B0|B>>m-x;}
+		inline void pushdown(){if (shift) s[0]->rot(shift), s[1]->rot(shift), shift=0;}
+	} pool[MAXV<<1], *poolnow, *root;
+	node *build(int l, int r){
+		node *p=poolnow++;p->l=l, p->r=r;
+		if (l==r) return p->B.reset(), p->B.set(a[dfseq[l]]%m), p;
+		int mid=p->mid=l+r>>1;
+		p->s[0]=build(l, mid), p->s[1]=build(mid+1, r);
+		return p->update(), p;
+	}
+	int l, r, x;
+	inline void rot(node *p){
+		if (l<=p->l&&p->r<=r) return p->rot(x);
+		p->pushdown();
+		int mid=p->mid;
+		if (l<=mid) rot(p->s[0]);if (mid<r) rot(p->s[1]);
+		p->update();
+	}
+	inline void rot(int _l, int _r, int _x){l=_l, r=_r, x=_x, rot(root);}
+	inline std::bitset<1000> query(node *p){
+		if (l<=p->l&&p->r<=r) return p->B;
+		p->pushdown();
+		int mid=p->mid;
+		if (l<=mid&&mid<r) return query(p->s[0])|query(p->s[1]); else return query(p->s[mid<r]);
+	}
+	inline int query(int _l, int _r){
+		l=_l, r=_r;
+		std::bitset<1000> B=query(root);
+		int ans=0;
+		for (int i=1;i<=*prime;i++) if (B.test(prime[i])) ans++;
+		return ans;
+	}
+	inline void init(){poolnow=pool, root=build(1, n);}
+} SGT;
+int main(){
+	//freopen("ex.in", "r", stdin);
+	n=getuint(), m=getuint();
+	B0.reset();for (int i=0;i<m;i++) B0.set(i);
+	for (int i=2;i<m;i++) if (is_prime(i)) prime[++*prime]=i;
+	for (int i=1;i<=n;i++) a[i]=getuint();
+	for (int i=1;i<n;i++){
+		int x=getuint(), y=getuint();
+		G[++e].t=y, G[e].next=head[x], head[x]=e;
+		G[++e].t=x, G[e].next=head[y], head[y]=e;
+	}
+	dfs(1, 0);
+	SGT.init();
+	for (int kase=getuint();kase--;) if (getuint()==1){
+		int x=getuint(), y=getuint()%m;
+		SGT.rot(dfsl[x], dfsr[x], y);
+	} else{
+		int x=getuint();
+		printf("%d\n", SGT.query(dfsl[x], dfsr[x]));
+	}
+	return 0;
+}

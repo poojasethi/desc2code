@@ -1,0 +1,126 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+// Uzumaki Naruto :)
+
+#define DB(a) cerr << __LINE__ << ": " << #a << " = " << (a) << endl
+#define dbg(A,sz) for(int i = 0; i < sz; ++i) cerr << A[i] << " "; cerr << "\n"
+#define pause() cin.get();cin.get();
+typedef long long LL;
+typedef pair<int,int> PII;
+typedef vector<int> VI;
+
+const int MAX = 112345;
+struct EDGE{
+    int to,next,wt;
+} edge[2*MAX];
+
+int A[MAX],head[MAX];
+int N,E,root;
+
+void addEdge(int x,int y,int wt){
+    edge[E].to = y;
+    edge[E].wt = wt;
+    edge[E].next = head[x];
+    head[x] = E++;
+}
+
+void path(){
+    stack<PII> s;
+    s.push(make_pair(root,0));
+
+    while(!s.empty()){
+        int x = s.top().first, cost = s.top().second;
+        s.pop();
+        if (A[x] != -1) continue;
+        A[x] = cost;
+        for(int i = head[x]; i != -1; i = edge[i].next){
+            int y = edge[i].to, wt = edge[i].wt;
+            if (A[y] != -1) continue;
+            s.push(make_pair(y,cost^wt));
+        }
+    }
+}
+
+struct node{
+    int p[2],en,cnt;
+    node(){
+        en = cnt = 0;
+        memset(p,-1,sizeof(p));
+    }
+} trie[40*MAX];
+int nodes;
+
+int addnode(){
+    return nodes++;
+}
+
+void add(int st,int num,int id){
+    if (id < 0) {
+        trie[st].cnt++, trie[st].en++;
+        return;
+    }
+
+    int d = ((num >> id) & 1),index;
+    trie[st].p[d] = (index = (trie[st].p[d] == -1) ? addnode() : trie[st].p[d]);
+    ++trie[st].cnt;
+    add(index,num,id-1);
+}
+
+void rem(int st,int num,int id){
+    if (id < 0){
+        --trie[st].cnt,--trie[st].en;
+        return;
+    }
+
+    int d = ((num >> id) & 1),index;
+    index = (trie[st].p[d]);                   //assert(index != -1);
+    --trie[st].cnt;
+    rem(index,num,id-1);
+    trie[st].p[d] = (trie[index].cnt <= 0) ? -1 : index;
+}
+
+int MXOR(int st,int num,int id){
+    if (id < 0 or (trie[st].p[0] == -1 and trie[st].p[1] == -1)) return 0;
+    int d = ((num >> id) & 1),index,ans = 0;
+    if (trie[st].p[d^1] != -1)
+        d = d ^ 1, ans += (1 << id);
+    index = trie[st].p[d];
+    ans += MXOR(index,num,id-1);
+    return ans;
+}
+
+void solve(){
+    E = 0; root = nodes = 1;
+    trie[0].cnt = 1;
+
+    memset(head,-1,sizeof(head));
+    memset(A,-1,sizeof(A));
+    cin >> N;
+
+    for(int i = 1; i < N; ++i){
+        int a,b,wt; cin >> a >> b >> wt;
+        addEdge(a,b,wt); addEdge(b,a,wt);
+    }
+
+    path();
+    for(int i = 1; i <= N; ++i)
+        add(0,A[i],29);
+    int ans = INT_MIN;
+    for(int i = 1; i <= N; ++i){
+        rem(0,A[i],29);
+        int res = MXOR(0,A[i],29);
+        ans = max(ans,res);
+    }
+
+    cout << ans << endl;
+}
+
+int main()
+{
+	ios_base::sync_with_stdio(0);
+	cin.tie(NULL);
+	int t; cin >> t;
+	while(t--) solve();
+	return 0;
+}

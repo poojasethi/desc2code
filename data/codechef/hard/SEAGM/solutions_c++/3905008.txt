@@ -1,0 +1,161 @@
+#include <iostream>
+#include <bits/stdc++.h>
+#define sereja true
+#define oppponent false
+#define N 105
+using namespace std;
+int dpTable1[105][105];
+double dpTable2[105][105];
+bool vis[105][105];
+int n;
+int a[N];
+// memo array is used for memoization of function isWinning
+int memo[N][N];
+int isWinning (int g, int taken) {
+int &res = memo[g][taken];
+// memoization step.
+// if res is negative (meaning that we have not computed the answer corresponding to (g, taken) state, we need to compute that), then we will
+// do the processing of that state.
+// otherwise, we will simply return the answer.
+if (res == -1) {
+res = 0;
+// if all the numbers has been taken out, it means there is no more numbers to play with.
+// hence the person playing this turn will lose because he wont be able to make any move.
+if (taken == n) {
+res = 0;
+} else {
+// tot denotes number of multiples of g in the array a.
+int tot = 0;
+for (int i = 0; i < n; i++) if (__gcd(g, a[i]) == g) tot++;
+
+// if not all multiples of g are thrown out, it means that there are still multiples of g currently in the array a.
+// we can use them in the game. gcd is not going to change being the number we are going to take will be multiple of g.
+// as gcd (g, t) = g if t = k * g (ie t is a multiple of g).
+if (taken < tot) {
+if (taken < tot && !isWinning(g, taken + 1)) {
+res = 1;
+}
+}
+
+// if have already won, no need to process the remaining the states. This is simply a pruning step, wont have much effect on the
+// overall complexity. You can chose to run this step too.
+if (res == 0) {
+// Now we will iterate over the numbers which are having gcd with g not equal to 1 (because we will lose in that case) and
+// not equal to g because we have already considered that case before.
+for (int i = 0; i < n; i++) {
+if (__gcd (g, a[i]) > 1) {
+if (__gcd(g, a[i]) == g) {
+continue;
+// this case has been already considered before.
+} else {
+if (!isWinning(__gcd(g, a[i]), taken + 1)) {
+res = 1;
+break;
+}
+}
+}
+}
+}
+}
+}
+return res;
+}
+/*
+bool dp(int lastGCD,int taken)
+{
+
+    if(lastGCD == 1)
+        return true;
+    if(taken == n)
+        return false;
+    if(vis[lastGCD][taken])
+        return dpTable1[lastGCD][taken];
+    vis[lastGCD][taken] = 1;
+    int tot = 0;
+        for(int i=0;i<n;++i) if(__gcd(A[i],lastGCD) == lastGCD) ++tot;
+    bool res = false;
+    if(tot>taken &&!dp(lastGCD,taken+1))
+        res = true;
+    if(!res)
+    {
+        for(int i=0;i<n;++i)
+        {
+            if(__gcd(A[i],lastGCD) != lastGCD)
+                if(!dp(__gcd(A[i],lastGCD),taken+1))
+                {
+                    res = 1;
+                    break;
+                }
+        }
+    }
+    return dpTable1[lastGCD][taken] = res;
+
+
+} */
+double dp2(int lastGCD,int taken)
+{
+    if(lastGCD == 1)
+        return 1.0;
+    if(taken == n)
+        return 0.0;
+    if(vis[lastGCD][taken])
+        return dpTable2[lastGCD][taken];
+    vis[lastGCD][taken] = 1;
+    double res = 0.0;
+    int tot = 0;
+    for(int i=0;i<n;++i) if(__gcd(a[i],lastGCD) == lastGCD) ++tot;
+    if(tot>taken)
+       res+= ( (1-dp2(lastGCD,taken+1)) * 1.0 * (tot-taken))/(n-taken);
+    for(int i=0;i<n;++i)
+    {
+        if(__gcd(a[i],lastGCD) != lastGCD)
+            res+=((1-dp2(__gcd(a[i],lastGCD),taken+1)) * 1.0 / (n-taken));
+    }
+
+    return dpTable2[lastGCD][taken] = res;
+
+
+}
+int main() {
+int T;
+cin >> T;
+
+while (T--) {
+cin >> n;
+int g = 0;
+for (int i = 0; i < n; i++) {
+cin >> a[i];
+g = __gcd(g, a[i]);
+}
+
+// if gcd g is > 1, then we can never make the game end with gcd = 1, because finally at the end gcd will be g and g > 1.
+// So in this case, both the players can keep moving until there are not any elements left.
+// So outcome of the game will be decided by parity directly.
+// if n is odd, it means that first player can pick the last number and second player will not have any option to move, Hence first player will win.
+// if n is even, then second player will win.
+// Note that in this case, even if game is played randomly, there wont be any effect on the outcome.
+if (g > 1) {
+// dont forget to print exactly 4 digits after the decimal.
+cout << n % 2 << " " << (n % 2) << ".0000" << endl;
+continue;
+}
+ // intiliaze memo array with -1, denoting state is not been processed yet.
+memset(memo, -1, sizeof(memo));
+int ok = false;
+if (isWinning(0, 0)) ok = true;
+if (ok) cout << 1 << " ";
+else cout << 0 << " ";
+
+// intiliaze memo1 array with -1, denoting state is not been processed yet.
+for (int i = 0; i < N; i++)
+for (int j = 0; j < N; j++)
+vis[i][j] = 0;
+
+double res = dp2(0, 0);
+
+// dont forget to print exactly 4 digits after the decimal.
+printf("%.4f\n", res);
+}
+
+return 0;
+}

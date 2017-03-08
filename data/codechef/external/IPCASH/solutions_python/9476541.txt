@@ -1,0 +1,90 @@
+#include <bits/stdc++.h>
+using namespace std;
+typedef pair<int, int> PII;
+const int MAXN = 200, MAXM = 600 + 10;
+
+struct Edge {
+  int u, v, w, c;
+  bool operator < (const Edge &rhs) const {
+    return w == rhs.w ? c < rhs.c : w < rhs.w;
+  }
+} E[MAXM];
+int L[MAXM], R[MAXM], H[MAXM];
+int dsu[MAXN], n, m1, m2, x;
+
+int get(int x) {
+  if (x != dsu[x]) dsu[x] = get(dsu[x]);
+  return dsu[x];
+}
+
+bool ok(int need) {
+  for (int i = 1; i <= n; ++i) dsu[i] = i;
+  for (int i = 0; i < m1 + m2; ++i) {
+    int u = get(L[i]), v = get(R[i]);
+    if (u != v) dsu[u] = v;
+  }
+  for (int i = 1; i <= n; ++i) {
+    if (get(i) != get(1)) return 0;
+  }
+  int low = 0, upp = 0;
+  for (int i = 1; i <= n; ++i) dsu[i] = i;
+  for (int i = 0; i < m1; ++i) {
+    int u = get(L[i]), v = get(R[i]);
+    if (u != v) dsu[u] = v, ++upp;
+  }
+  for (int i = 1; i <= n; ++i) dsu[i] = i;
+  for (int i = m1; i < m1 + m2; ++i) {
+    int u = get(L[i]), v = get(R[i]);
+    if (u != v) dsu[u] = v, ++low;
+  }
+  low = n - 1 - low;
+  return need >= low && need <= upp;
+}
+
+PII check(int add) {
+  for (int i = 1; i <= n; ++i) dsu[i] = i;
+  for (int i = 0; i < m1 + m2; ++i) {
+    E[i] = (Edge){L[i], R[i], H[i], i >= m1};
+    if (i < m1) E[i].w += add;
+  }
+  sort(E, E + m1 + m2);
+  int tot(0), cnt(0);
+  for (int i = 0; i < m1 + m2; ++i) {
+    int u = get(E[i].u), v = get(E[i].v);
+    if (u != v) {
+      dsu[u] = v; cnt += !E[i].c;
+      tot += E[i].w;
+    }
+  }
+  return PII(tot, cnt);
+}
+
+int solve(int need) {
+  if (!ok(need)) return -1;
+  int l = -105, r = 105, tot;
+  while (l <= r) {
+    int m = (l + r) >> 1;
+    PII now = check(m);
+    if (now.second >= need) l = m + 1, tot = now.first - need * m;
+    else r = m - 1;
+  }
+  return tot;
+}
+
+void run() {
+  scanf("%d%d%d%d", &n, &m1, &m2, &x);
+  for (int i = 0; i < m1 + m2; ++i) {
+    scanf("%d%d%d", L + i, R + i, H + i);
+  }
+  int a = solve(x);
+  int b = solve(n - 1 - x);
+  if (a == -1) a = b;
+  else if (b != -1) a = min(a, b);
+  printf("%d\n", a);
+}
+
+int main() {
+  int T; scanf("%d", &T);
+  for (int cas = 1; cas <= T; ++cas) run();
+  return 0;
+}

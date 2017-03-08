@@ -1,0 +1,194 @@
+#define _CRT_SECURE_NO_DEPRECATE
+#include <algorithm>
+#include <string>
+#include <set>
+#include <map>
+#include <vector>
+#include <queue>
+#include <iostream>
+#include <iterator>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <sstream>
+#include <fstream>
+#include <ctime>
+#include <cstring>
+#include <functional>
+#pragma comment(linker, "/STACK:66777216")
+using namespace std;
+#define pb push_back
+#define ppb pop_back
+#define pi 3.1415926535897932384626433832795028841971
+#define mp make_pair
+#define x first
+#define y second
+#define pii pair<int,int>
+#define pdd pair<double,double>
+#define INF 1000000000
+#define FOR(i,a,b) for (int _n(b), i(a); i <= _n; i++)
+#define FORD(i,a,b) for(int i=(a),_b=(b);i>=_b;i--)
+#define all(c) (c).begin(), (c).end()
+#define SORT(c) sort(all(c))
+#define rep(i,n) FOR(i,1,(n))
+#define rept(i,n) FOR(i,0,(n)-1)
+#define L(s) (int)((s).size())
+#define C(a) memset((a),0,sizeof(a))
+#define VI vector <int>
+#define ll long long
+#define MOD 1000000007
+
+int a,b,c,d,i,j,n,m,k;
+VI sm[200002];
+int dp[200002], next3[200002], h[200002], cs[200002];
+void dfs(int v, int pr = -1) {
+	cs[v] = 1;
+	int i = 0;
+	while (i < L(sm[v])) {
+		int w = sm[v][i];
+		if (w == pr) {
+			swap(sm[v][i], sm[v].back());
+			sm[v].ppb();
+			continue;
+		}
+		h[w] = h[v] + 1;
+		dfs(w, v);
+		cs[v] += cs[w];
+		next3[v] = next3[w];
+		++i;
+	}
+	if (pr == -1 || L(sm[v]) == 2) next3[v] = v;
+}
+int get_down(int v, int c) {
+	if (!c) return v;
+	return get_down(sm[v][0], c - 1);
+}
+int rec(int v, bool root = false);
+int rec2(int v1, int v2) {
+	if (L(sm[v1]) == 0 && L(sm[v2]) == 0) return 1;
+	if (next3[v1] != -1 && next3[v2] != -1) return 0;
+	if (cs[v1] > cs[v2]) swap(v1, v2);
+	if (next3[v1] != -1) return 0;
+	if (next3[v2] != -1) {
+		int down2 = h[next3[v2]] - h[v2];
+		int down1 = cs[v1] - 1;
+		if (down1 >= down2) return 0;
+	}
+	if (cs[v1] == cs[v2] && next3[v1] == -1 && next3[v2] == -1) return 1;
+
+	return rec(get_down(v2, cs[v1]));
+}
+
+int check(int v, int w, int left) {
+	if (next3[left] != -1) return 0;
+	int cnt = h[w] - h[v];
+	if ((cnt + cs[left]) % 2) return 0;
+	if (cs[left] > cnt) return 0;
+	return 1;
+}
+int check2(int v, int w) {
+	int cnt = h[w] - h[v];
+	if (cnt % 2) return 0;
+	return 1;
+}
+int check3(int v, int w, int left) {
+	if (next3[left] != -1) return 0;
+	int cnt = h[w] - h[v];
+	if (cs[left] >= cnt) return 0;
+	if ((cnt - cs[left] - 1) % 2 == 1) return 0;
+	return 1;
+}
+
+int rec(int v, bool root) {
+	if (root) {
+		VI ind;
+		rept(i, 3) ind.pb(i);
+		int ans = 0;
+		do {
+			int left = sm[v][ind[0]];
+			int middle = sm[v][ind[1]];
+			int right = sm[v][ind[2]];
+			if (L(sm[middle]) == 0) {
+				ans = (ans + (ll)rec(left) * rec(right)) % MOD;
+			}
+			if (L(sm[middle]) == 1) {
+				ans = (ans + (ll)rec(left) * rec2(right, sm[middle][0])) % MOD;
+				ans = (ans + (ll)rec2(left, sm[middle][0]) * rec(right)) % MOD;
+			}
+			if (L(sm[middle]) == 2) {
+				ans = (ans + (ll)rec2(left, sm[middle][0]) * rec2(right, sm[middle][1])) % MOD;
+				ans = (ans + (ll)rec2(left, sm[middle][1]) * rec2(right, sm[middle][0])) % MOD;
+			}
+		} while (next_permutation(all(ind)));
+		return ans;
+	}
+	if (dp[v] != -1) return dp[v];
+	if (cs[v] % 2 == 1) return dp[v] = 0;
+	if (cs[v] == 2) return dp[v] = 1;
+	int ans = 0;
+	if (next3[v] == -1) return cs[v] / 2;
+	if (L(sm[v]) == 1) {
+		int w = next3[v];
+		rept(i, 2) {
+			int down = sm[w][i];
+			int right = sm[w][i ^ 1];
+			if (L(sm[down]) == 0) {
+				if (check2(v, w)) ans = (ans + rec(right)) % MOD;
+			} else
+			if (L(sm[down]) == 1) {
+				if (check2(v, w)) ans = (ans + rec2(right, sm[down][0])) % MOD;
+				if (check(v, w, sm[down][0])) ans = (ans + rec(right)) % MOD;
+			} else
+			if (L(sm[down]) == 2) {
+				if (check(v, w, sm[down][0])) ans = (ans + rec2(right, sm[down][1])) % MOD;
+				if (check(v, w, sm[down][1])) ans = (ans + rec2(right, sm[down][0])) % MOD;
+			}
+			
+			int left = down;
+			if (check3(v, w, left)) ans = (ans + rec(right)) % MOD;
+		}
+		return dp[v] = ans;
+	}
+
+	// L(sm[v]) == 2
+	rept(i, 2) {
+		int w = sm[v][i];
+		int o = sm[v][i ^ 1];
+
+		if (L(sm[w]) == 2) continue;
+		if (L(sm[w]) == 0) ans = (ans + rec(o)) % MOD; else
+		ans = (ans + rec2(o, sm[w][0])) % MOD;
+	}
+
+	return dp[v] = ans;
+}
+int solve() {
+	int root = -1;
+	rept(i, m) {
+		if (L(sm[i]) > 3) return 0;
+		if (L(sm[i]) == 3) root = i;
+	}
+	if (root == -1) {
+		if (n == 1) return ((ll)n * n - n + 2) % MOD; else
+		return ((ll)n * n - n + 2) * 2 % MOD;
+	}
+	h[root] = 0;
+	memset(next3, -1, m * sizeof(int));
+	dfs(root);
+	memset(dp, -1, m * sizeof(int));
+	return 2LL * rec(root, 1) % MOD;
+}
+int main() {
+//	freopen("input.txt","r",stdin);
+//	freopen("output.txt","w",stdout);
+
+	scanf("%d", &n);
+	m = 2 * n;
+	rept(i, m - 1) {
+		int a, b;
+		scanf("%d%d", &a, &b); --a; --b;
+		sm[a].pb(b); sm[b].pb(a);
+	}
+
+	printf("%d\n", solve());
+}

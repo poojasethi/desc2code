@@ -1,0 +1,17 @@
+#include<cstdio>
+int a[5001],r[600001],n,z,p,i;
+main()
+{
+    freopen("input.txt", "r", stdin);
+    freopen("output.txt", "w", stdout);
+    scanf("%d",&n);
+    n<<=1;
+    for(i=1;i<=n;++i)
+    {
+        scanf("%d",&p);
+        if (a[p]>0) r[z++]=a[p],r[z++]=i,a[p]=0;
+        else a[p]=i;
+    }
+
+    if(z!=n) puts("-1");else for(i=0;i<z;i+=2)printf("%d %d\n",r[i+1],r[i]);
+}

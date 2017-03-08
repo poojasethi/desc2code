@@ -1,0 +1,91 @@
+#include<cstdio>
+#include<iostream>
+#include<cstring>
+#include<algorithm>
+#include<cmath>
+#include<vector>
+using namespace std;
+const int maxn=100+5;
+const double eps=1e-10;
+int dcmp(double a)
+{
+	if(fabs(a)<eps) return 0;
+	return a>0?1:-1;
+}
+struct point
+{
+	double x,y;
+	point(){}
+	point(double x,double y): x(x),y(y) {}
+	friend bool operator < (point a,point b)
+	{	
+		return (dcmp(a.x-b.x)<0)||(dcmp(a.x-b.x)==0&&dcmp(a.y-b.y)<0); 
+	}
+}A,B;
+vector<point> j;
+typedef point polygan[maxn];
+polygan poly;
+point operator + (point a,point b) { return point(a.x+b.x,a.y+b.y); }
+point operator - (point a,point b) { return point(a.x-b.x,a.y-b.y); }
+point operator * (point a,double b) { return point(a.x*b,a.y*b); }
+bool operator == (point a,point b) { return (dcmp(a.x-b.x)==0)&&(dcmp(a.y-b.y)==0); }
+double cross(point a,point b) { return a.x*b.y-a.y*b.x; }
+bool on(point a,point b,point c)
+{
+	if(dcmp(cross(b-a,c-a))!=0) return false;
+	if(dcmp(a.x-b.x)*dcmp(a.x-c.x)>0) return false;
+	if(dcmp(a.y-b.y)*dcmp(a.y-c.y)>0) return false;
+	return true;
+}
+point get(point p,point v,point q,point w)
+{
+	point u=p-q;
+	double t=cross(w,u)/cross(v,w);
+	return p+v*t;
+}
+double dist(point a,point b) { return sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y)); }
+int main()
+{
+	scanf("%lf %lf %lf %lf",&A.x,&A.y,&B.x,&B.y);
+	int n,cnt=0;
+	scanf("%d",&n);
+	for(int i=0;i<n;i++)
+		scanf("%lf %lf",&poly[i].x,&poly[i].y);
+	for(int i=0;i<n;i++)
+		if(on(poly[i],A,B)&&on(poly[(i+1)%n],A,B))
+			goto fail;
+	for(int i=0;i<n;i++)
+	{
+		if(dcmp(cross(A-B,poly[i]-poly[(i+1)%n]))==0)
+			continue;
+		point a=get(A,B-A,poly[i],poly[(i+1)%n]-poly[i]);
+		if(on(a,poly[i],poly[(i+1)%n])&&on(a,A,B))
+			j.push_back(a);
+	}
+	sort(j.begin(),j.end());
+	j.erase(unique(j.begin(),j.end()),j.end());
+	if(j.size()<=1)
+	{
+		fail:
+		printf("%.7lf\n",dist(A,B));
+	}
+	else
+	{
+		if(dist(A,j[0])>dist(A,j[1])) swap(j[0],j[1]);		
+		double ans=dist(j[0],j[1])*2,now=0.0; int r[5];
+		for(int k=0;k<2;k++)
+			for(int i=0;i<n;i++)
+				if(dcmp(cross(poly[i]-j[k],poly[(i+1)%n]-j[k]))==0)
+					r[k]=i;
+		for(int i=r[0];i%n!=r[1];i++)
+			now+=dist(poly[i%n],poly[(i+1)%n]);
+		now+=dist(j[1],poly[r[1]])-dist(j[0],poly[r[0]]);
+		if(dcmp(now-ans)<0) ans=now; now=0.0;
+		for(int i=r[0];(i+n)%n!=r[1];i--)
+			now+=dist(poly[(i+n)%n],poly[(i+1+n)%n]);
+		now+=dist(j[1],poly[(r[1]+1)%n])-dist(j[0],poly[(r[0]+1)%n]);
+		if(dcmp(now-ans)<0) ans=now;
+		printf("%.7lf\n",ans+dist(A,j[0])+dist(B,j[1]));
+	}
+	return 0;
+}

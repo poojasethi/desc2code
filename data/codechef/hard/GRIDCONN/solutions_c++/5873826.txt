@@ -1,0 +1,199 @@
+#include <iostream>
+#include <cassert>
+#include <cstdio>
+#include <cstring>
+using namespace std; 
+#define NMAX 310
+#define MOD (int)((1e9)+7)
+struct bigint
+{
+	char dig[NMAX];
+	int n;
+ 
+	bigint()
+	{
+		memset(dig,0,sizeof(dig));
+		n = 0;
+	}
+ 
+	bool operator<(const bigint &rhs)const
+	{
+		int i;
+		for(i = max(n-1,rhs.n-1); i >= 0; --i)
+		{
+			if(dig[i] < rhs.dig[i]) return 1;
+		}
+		return 0;
+	}
+ 
+	bigint& operator++()
+	{
+		int i;
+		for(i = 0; i < n; ++i)
+		{
+			++dig[i];
+			if(dig[i] < 10) 
+			return *this;
+			dig[i]=0;
+		}
+ 
+		++dig[n++];
+		return *this;
+	}
+ 
+	bigint& operator--()
+	{
+		assert(n);
+		int i;
+ 
+		for(i = 0; i < n-1; ++i)
+		{
+			--dig[i];
+			if(dig[i] >= 0) 
+			return *this;
+			dig[i] = 9;
+		}
+ 
+		--dig[n-1];
+		while(n && !dig[n-1])--n;
+ 
+		return *this;
+	}
+ 
+	inline int empty()
+	{
+		return !n;
+	}
+ 
+	void set_from_str(char *str, int len)
+	{
+		int i;
+		assert(str[0]^'0');
+		for(i = len-1; i >= 0; --i)
+		{
+			dig[len-i-1] = str[i]-'0';
+		}
+ 
+		n = max(n,len);
+		while(n > len) 
+		dig[--n] = 0;
+	}
+ 
+	void set_inf()
+	{
+		n = 301;
+		dig[n-1] = 1;
+	}
+};
+ char str[NMAX];
+int N;
+bigint sol_num;
+int sol_val;
+int dg_sum[NMAX];
+int pow10[NMAX];
+bigint num,tmp;
+inline int add(int a, int b)
+{
+	int c = a+b;
+	if(c >= MOD) 
+	c-= MOD;
+	if(c < 0) 
+	c += MOD;
+	return c;
+}
+ 
+inline int mul(int a, int b)
+{
+	return (1LL*a*b)%MOD;
+}
+ 
+ 
+int get_pos(bigint &num)
+{
+	int i,pos,n;
+ 	n = num.n;
+	pos = add( dg_sum[n-1] , mul(mul(pow10[n-1],num.dig[n-1]-1),n) );
+    for(i = num.n-2; i >=0 ;--i)
+    {
+		pos = add( pos, mul(mul(pow10[i],num.dig[i]),n));
+	}
+ 
+	return pos;
+}
+ 
+int check_range(int s, int e)
+{
+	if(str[s]=='0') 
+	return 0;
+	num.set_from_str(str+s,e-s+1);
+    tmp = num;
+	int i,k;
+	for(i = s-1; i >= 0;)
+	{
+		--tmp;
+		if(tmp.empty()) 
+		return 0;
+		for(k = 0; k < tmp.n && i >= 0; ++k, --i)
+		{
+			if((str[i]-'0')^tmp.dig[k]) 
+			return 0;
+		}
+	}
+ 
+	tmp = num;
+ 
+	for(i = e+1; i < N;)
+	{
+		++tmp;
+		for(k = tmp.n-1; k >= 0 && i < N; --k, ++i)
+		{
+			if((str[i]-'0')^tmp.dig[k]) 
+			return 0;
+		}
+	}
+ 
+	int pos = get_pos(num);
+ 
+	return add(pos,1-s);
+}
+ 
+ 
+void init()
+{
+	int i;
+ 
+	pow10[0] = 1;
+	for(i = 1; i < NMAX; ++i)
+	{
+		pow10[i] = mul(pow10[i-1],10);
+		dg_sum[i] = add(dg_sum[i-1], mul(mul(pow10[i-1],9),i));
+	}
+}
+ 
+int main()
+{
+	int t,i,j,tmp;
+	init();
+	scanf("%d",&t);
+	while(t--)
+	{
+		scanf("%s",str);
+		N = strlen(str);
+		sol_num.set_inf();
+		sol_val = -1;
+		for(i =0 ; i < N; ++i)
+		{
+			for(j = i; j < N; ++j)
+			{
+				tmp = check_range(i,j);
+				if(!tmp) 
+				continue;
+				if(num < sol_num) 
+				sol_num = num; 
+				sol_val = tmp;
+			}
+		}
+		printf("%d\n",sol_val);
+	}
+	return 0;
+} 

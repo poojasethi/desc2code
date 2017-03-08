@@ -1,0 +1,16 @@
+#include<iostream>
+using namespace std;
+int main()
+{char a[4],b[4],c[4];
+int m=0;
+cin>>a>>b>>c;
+if(a[0]==c[2])
+if(a[1]==c[1])
+if(a[2]==c[0])
+if(b[0]==b[2])
+m=1;
+if(m==1)
+cout<<"YES";
+if(m==0)
+cout<<"NO";
+}

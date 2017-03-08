@@ -1,0 +1,93 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+const int N = 5e5 + 5;
+const int LOGN = 20;
+const int M = N + N;
+
+int n;
+char s[N];
+
+int size, last;
+int to[M][2];
+int len[M];
+int first[M];
+int sufLink[M];
+
+void append(int c) {
+    int cur = size++;
+    len[cur] = len[last] + 1;
+    first[cur] = len[cur] - 1;
+    int p = last;
+    for (; ~p && to[p][c] == 0; p = sufLink[p]) to[p][c] = cur;
+    if (p == -1) {
+        sufLink[cur] = 0;
+    } else {
+        int q = to[p][c];
+        if (len[p] + 1 == len[q]) {
+            sufLink[cur] = q;
+        } else {
+            int clone = size++;
+            copy(to[q], to[q] + 2, to[clone]);
+            len[clone] = len[p] + 1;
+            first[clone] = first[q];
+            sufLink[clone] = sufLink[q];
+            for (; ~p && to[p][c] == q; p = sufLink[p]) to[p][c] = clone;
+            sufLink[cur] = sufLink[q] = clone;
+        }
+    }
+    last = cur;
+}
+
+void buildSAM() {
+    size = 1; last = 0;
+    sufLink[0] = -1;
+    for (int i = 0; i < n; ++i) append(s[i]);
+}
+
+int nxt[N][LOGN];
+
+void init() {
+    memset(nxt, -1, sizeof nxt);
+    vector<int> open;
+    for (int i = 0; i < n; ++i) {
+        if (s[i] == 1) {
+            open.push_back(i);
+        } else {
+            if (!open.empty()) {
+                nxt[i][0] = open.back(); open.pop_back();
+                for (int j = 1; j < LOGN; ++j) if (nxt[i][j - 1] > 0)
+                    nxt[i][j] = nxt[nxt[i][j - 1] - 1][j - 1];
+            }
+        }
+    }
+}
+
+int calc(int R, int L) {
+    int ans = 0;
+    for (int i = LOGN - 1; i >= 0; --i) if (L < nxt[R][i]) {
+        ans += 1 << i;
+        R = nxt[R][i] - 1;
+        if (R < 0) break;
+    }
+    return ans;
+}
+
+void solve() {
+    long long ans = 0;
+    for (int i = 1; i < size; ++i)
+        ans += calc(first[i], first[i] - len[i]) - calc(first[i], first[i] - len[sufLink[i]]);
+    cout << ans << endl;
+}
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin >> n;
+    cin >> s;
+    for (int i = 0; i < n; ++i) s[i] = s[i] == '(' ? 1 : 0;
+    buildSAM();
+    init();
+    solve();
+    return 0;
+}

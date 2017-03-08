@@ -1,0 +1,144 @@
+#include<iostream>
+#include<algorithm>
+#include<cstdio>
+#include<cstring>
+#include<vector>
+using namespace std;
+const int maxn=200000+10;
+struct node
+{
+  int lx,lp,rx,rp,sum;
+  int mx,p1,p2;
+};
+struct data
+{
+  node mx,mn;
+  int flag;
+}t[maxn*4];
+struct arr
+{
+  int l,r;
+};
+vector<arr> h;
+int n,m,op,a[maxn],cc;
+void init(node &p,int l,int v)
+{
+  p.lp=p.rp=p.p1=p.p2=l;
+  p.mx=p.lx=p.rx=p.sum=v;
+}
+node merge(node a,node b)
+{
+  node res;res.sum=a.sum+b.sum;
+  res.lx=a.lx;res.lp=a.lp;
+  if(a.sum+b.lx>res.lx) res.lx=a.sum+b.lx,res.lp=b.lp;
+  res.rx=b.rx;res.rp=b.rp;
+  if(b.sum+a.rx>res.rx) res.rx=b.sum+a.rx,res.rp=a.rp;
+  res.mx=a.mx;res.p1=a.p1;res.p2=a.p2;
+  if(b.mx>res.mx) res.mx=b.mx,res.p2=b.p2,res.p1=b.p1;
+  if(a.rx+b.lx>res.mx) res.mx=a.rx+b.lx,res.p1=a.rp,res.p2=b.lp;
+  return res;
+}
+void pushup(int p)
+{
+  t[p].mx=merge(t[p*2].mx,t[p*2+1].mx);
+  t[p].mn=merge(t[p*2].mn,t[p*2+1].mn);
+}
+void pushdown(int p)
+{
+  if(t[p].flag)
+  {
+    swap(t[p*2].mn,t[p*2].mx);
+	swap(t[p*2+1].mn,t[p*2+1].mx);
+	t[p].flag^=1;t[p*2].flag^=1;t[p*2+1].flag^=1;
+  }
+}
+void build(int p,int l,int r)
+{
+  if(l==r)
+  {
+    init(t[p].mx,l,a[l]);
+    init(t[p].mn,l,-a[l]);
+	return;
+  }
+  int mid=(l+r)>>1;
+  build(p*2,l,mid);build(p*2+1,mid+1,r);
+  pushup(p);
+}
+void update(int p,int l,int r,int x,int v)
+{
+  if(x<l||x>r) return;
+  if(l==r)
+  {
+    init(t[p].mx,l,v);
+	init(t[p].mn,l,-v);
+    return;
+  }
+  pushdown(p);
+  int mid=(l+r)>>1;
+  update(p*2,l,mid,x,v);
+  update(p*2+1,mid+1,r,x,v);
+  pushup(p);
+}
+void reverse(int p,int l,int r,int x,int y)
+{
+  if(l>y||r<x) return;
+  if(l>=x&&r<=y)
+  {
+    swap(t[p].mn,t[p].mx);
+	t[p].flag^=1;
+    return;
+  }
+  pushdown(p);int mid=(l+r)>>1;
+  reverse(p*2,l,mid,x,y);
+  reverse(p*2+1,mid+1,r,x,y);
+  pushup(p);
+}
+node query(int p,int l,int r,int x,int y)
+{
+  if(l>=x&&r<=y) 
+  {
+    return t[p].mx;
+  }
+  int mid=(l+r)>>1;
+  pushdown(p);
+  if(y<=mid) return query(p*2,l,mid,x,y);
+  else if(x>mid) return query(p*2+1,mid+1,r,x,y);
+  else return merge(query(p*2,l,mid,x,y),query(p*2+1,mid+1,r,x,y));
+}
+void solve(int l,int r,int k)
+{
+  int res=0;h.clear();
+  for(int i=1;i<=k;i++)
+  {
+    node hm=query(1,1,n,l,r);
+	if(hm.mx<=0) break;
+	else res+=hm.mx;
+	reverse(1,1,n,hm.p1,hm.p2);
+    h.push_back((arr){hm.p1,hm.p2});
+    //cout<<hm.p1<<' '<<hm.p2<<endl;
+  }
+  for(int i=h.size()-1;i>=0;i--)
+    reverse(1,1,n,h[i].l,h[i].r);
+  printf("%d\n",res);
+}
+int main()
+{
+  //freopen("3638.in","r",stdin);
+  //freopen("3638.out","w",stdout);
+  scanf("%d",&n);
+  for(int i=1;i<=n;i++) scanf("%d",&a[i]);
+  build(1,1,n);int op,l,r,k;
+  scanf("%d",&m);
+  for(int i=1;i<=m;i++)
+  {
+    cc++;
+    scanf("%d%d%d",&op,&l,&r);
+	if(op!=1) update(1,1,n,l,r),a[l]=r;
+	else
+	{
+	  scanf("%d",&k);
+	  solve(l,r,k);
+	}
+  }
+  return 0;
+}

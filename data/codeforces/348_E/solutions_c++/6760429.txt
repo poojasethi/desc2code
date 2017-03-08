@@ -1,0 +1,108 @@
+#include<cstdio>
+#include<algorithm>
+using namespace std;
+const int N=111111;
+int n,m,tot;
+int have[N],h[N],p[N*2],nxt[N*2],c[N*2];
+void addedge(int x,int y,int z){
+	p[++tot]=y,nxt[tot]=h[x],c[tot]=z,h[x]=tot;
+}
+int q[N],fa[N],vis[N],down1[N],down2[N],up[N],tr1[N],ef[N],tr2[N],down3[N];
+void down_up(){
+	int l,r;
+	q[l=r=1]=1,fa[1]=0,vis[1]=1;
+	for (;l<=r;l++)
+		for (int k=h[q[l]];k;k=nxt[k])
+			if (!vis[p[k]]) vis[p[k]]=1,fa[p[k]]=q[l],q[++r]=p[k];
+	for (int i=1;i<=n;i++)
+		for (int k=h[i],pre=0;k;pre=k,k=nxt[k])
+			if (p[k]==fa[i]){
+				ef[i]=c[k];
+				if (pre==0) h[i]=nxt[k]; else nxt[pre]=nxt[k];
+				break;
+			}
+	for (int i=n;i;i--){
+		int u=q[i];
+		down1[u]=down2[u]=tr1[u]=tr2[u]=0;
+		for (int k=h[u];k;k=nxt[k]){
+			int v=p[k];
+			if (!have[v] && !down1[v]) continue;
+			if (down1[v]+c[k]>down1[u]){
+				down3[u]=down2[u];
+				down2[u]=down1[u],tr2[u]=tr1[u];
+				down1[u]=down1[v]+c[k],tr1[u]=v;
+			}else if (down1[v]+c[k]>down2[u]){
+					down3[u]=down2[u];
+					tr2[u]=v,down2[u]=down1[v]+c[k];
+				  }else down3[u]=max(down3[u],down1[v]+c[k]);
+		}
+	}
+	for (int i=2;i<=n;i++){
+		int u=q[i];
+		int t1=up[fa[u]],
+			t2=(u==tr1[fa[u]])?down2[fa[u]]:down1[fa[u]];
+		if (!have[fa[u]] && max(t1,t2)==0) continue;
+		up[u]=max(t1,t2)+ef[u];
+	}
+}
+int in[N],out[N],ex[N];
+void in_out(){
+	for (int i=n;i;i--){
+		int u=q[i];
+		for (int k=h[u];k;k=nxt[k]){
+			int v=p[k];
+			int t1=up[u],
+				t2=(tr1[u]==v)?down2[u]:down1[u];
+			if (t1>t2) in[u]+=in[v];
+			ex[u]+=in[v];
+		}
+		if (up[u]>down1[u] && have[u]) ++in[u];
+	}
+	for (int i=1;i<=n;i++){
+		int u=q[i];
+		if (have[u] && down1[u]>down2[u] && down1[u]>up[u]) ++out[tr1[u]];
+		if (down1[u]>down2[u]) out[tr1[u]]+=out[u];
+		int sum=0;
+		for (int k=h[u];k;k=nxt[k]) sum+=in[p[k]];
+		if (down1[u]>up[u]){
+			if (down1[u]>down2[u]) out[tr1[u]]+=sum-in[tr1[u]];
+			if (down1[u]==down2[u] && down2[u]>down3[u]) out[tr1[u]]+=in[tr2[u]];
+		}
+		if (down2[u]>up[u]){
+			if (down2[u]>down3[u]) out[tr2[u]]+=in[tr1[u]];
+		}
+	}
+}
+int C[N];
+void get_ans(){
+	/*
+	for (int i=1;i<=n;i++)
+		if (!have[i]) printf("%d %d %d\n",i,in[i],out[i]);
+	*/
+	for (int i=1;i<=n;i++)
+		if (!have[i]) ++C[ex[i]+out[i]];
+	for (int i=n;i>=0;i--)
+		if (C[i]){
+			printf("%d %d\n",i,C[i]);
+			return;
+		}
+}
+int main(){
+	scanf("%d%d",&n,&m);
+	for (int i=1;i<=m;i++){
+		int x;
+		scanf("%d",&x);
+		have[x]=1;
+	}
+	tot=0;
+	for (int i=1;i<n;i++){
+		int x,y,z;
+		scanf("%d%d%d",&x,&y,&z);
+		addedge(x,y,z),addedge(y,x,z);
+	}
+	down_up();
+	in_out();
+	get_ans();
+	
+	return 0;
+}

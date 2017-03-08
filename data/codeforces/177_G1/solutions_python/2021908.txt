@@ -1,0 +1,118 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <map>
+#define FOR(i, n) for (int i = 0; i < (n); ++i)
+#define TR(it, c) for (typeof((c).begin()) it = (c).begin(); it != (c).end(); ++it)
+#define MOD 1000000007
+#define SMAX 100000
+using namespace std;
+
+typedef long long ll;
+
+vector<bool> bittify(const char *s) {
+	int n = strlen(s);
+	vector<bool> bits;
+	bits.reserve(n);
+	FOR (i, n) bits.push_back(s[i] == 'b');
+	return bits;
+}
+
+void multiply(ll a[2][2], ll b[2][2]) {
+	ll c[2][2] = {0LL};
+	FOR (i, 2) FOR (j, 2) FOR (k, 2)
+		c[i][j] = (c[i][j] + (a[i][k] * b[k][j]) % MOD) % MOD;
+	FOR (i, 2) FOR (j, 2) a[i][j] = c[i][j];
+}
+
+map<ll, ll> fibcache;
+ll fibonacci(const ll &n) {
+	if (n <= 0) return 0LL;
+	else if (n <= 2) return 1LL;
+	else if (fibcache.find(n) != fibcache.end()) return fibcache[n];
+	else {
+		ll f[2][2] = {{1LL, 1LL}, {1LL, 0LL}};
+		ll x[2][2] = {{1LL, 0LL}, {0LL, 1LL}};
+		ll nn = n - 1LL, m = 0;
+		for (int i = 62; i >= 0; --i) {
+			m <<= 1;
+			multiply(x, x);
+			if (m) fibcache[m + 1] = x[0][0];
+			if (nn & (1LL << i)) {
+				m |= 1LL;
+				multiply(x, f);
+				fibcache[m + 1] = x[0][0];
+			}
+		}
+		return x[0][0];
+	}
+}
+
+void replace(const vector<bool> &b, vector<bool> &b1, vector<bool> &b2) {
+	b1.clear(); b2.clear();
+	int n = b.size(), two = false;
+	int zeros = 0, ones = 0;
+	FOR (i, n) {
+		if (b[i]) ++ones, zeros = 0;
+		else ++zeros, ones = 0;
+		if (ones >= 3 || zeros >= 2) return;
+	}
+	FOR (i, n) {
+		if (b[i]) {
+			if (i < n - 1) {
+				if (b[i + 1]) b1.push_back(0);
+				else b1.push_back(1), ++i;
+			} else b1.push_back(0), two = true;
+		} else b1.push_back(1);
+	}
+	if (two) {
+		b2 = b1;
+		b2[b1.size() - 1] = 1;
+	}
+}
+
+char* str(const vector<bool> &b) {
+	char *s = new char[b.size() + 1];
+	memset(s, 0, (b.size() + 1) * sizeof(char));
+	FOR (i, b.size()) s[i] = b[i] ? 'b' : 'a';
+	return s;
+}
+
+inline bool operator<(const vector<bool> &a, const vector<bool> &b) {
+	if (a.size() != b.size()) return a.size() < b.size();
+	FOR (i, a.size()) if (a[i] != b[i]) return a[i] < b[i];
+	return false;
+}
+
+map< pair< vector<bool>, ll >, ll > calccache;
+ll calculate(const vector<bool> &b, const ll &k) {
+	if (k < 1 || b.empty()) return 0LL;
+	else if (b.size() == 1) {
+		if (b[0]) return fibonacci(k - 1);
+		else return fibonacci(k - 2) + (k == 1);
+	} else if (b.size() == 2 && b[0] && b[1]) return fibonacci(k - 3) - (!(k & 1LL) && k != 2);
+	else {
+		pair< vector<bool>, ll > id(b, k);
+		if (calccache.find(id) != calccache.end()) return calccache[id];
+		else {
+			vector<bool> b1, b2;
+			replace(b, b1, b2);
+			ll r1 = calculate(b1, k - 1);
+			ll r2 = calculate(b2, k - 1);
+			return calccache[id] = (r1 + r2) % MOD;
+		}
+	}
+}
+
+int main() {
+	ll k, m;
+	char str[SMAX + 2];
+	for (scanf("%I64d%I64d", &k, &m); m--; ) {
+		scanf("%s", str);
+		vector<bool> bitstr = bittify(str);
+		ll ans = calculate(bitstr, k);
+		printf("%I64d\n", ans);
+	}
+	return 0;
+}

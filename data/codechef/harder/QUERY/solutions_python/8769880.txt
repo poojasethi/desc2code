@@ -1,0 +1,389 @@
+#include <cstdio>
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <cmath>
+
+#include <cassert>
+
+using namespace std;
+
+#ifdef WIN32
+	#define LL "%I64d"
+#else
+	#define LL "%lld"
+#endif
+
+#ifdef Lightning
+#define debug(...) printf(__VA_ARGS__)
+const int DEBUG_FLAG = 1;
+#else
+#define debug(...)
+const int DEBUG_FLAG = 0;
+#endif
+
+#define DEBUG if (DEBUG_FLAG)
+#define NDEBUG if (!DEBUG_FLAG)
+#define print(__l) (DEBUG_FLAG ? printf(#__l" = "LL"\n", 1ll*(__l)) : 0)
+#define eprint(...) fprintf(stderr, __VA_ARGS__)
+
+#define IO_Able if (0)
+#define OpenFile(NAME) freopen(NAME".in","r",stdin),freopen(NAME".out","w",stdout)
+#define CloseFile() fclose(stdin),fclose(stdout)
+
+#define reg register int
+#define regll register long long
+#define FOR(_i,_sta,_end) for(reg _i=(_sta),__end=(_end);_i<=__end;++_i)
+#define REP(_i,_sta,_end) for(reg _i=(_sta),__end=(_end);_i>=__end;--_i)
+#define FORBY(_i,_sta,_end,_by) for(reg _i=(_sta),__end=(_end);_i<=__end;_i+=(_by))
+#define REPBY(_i,_sta,_end,_by) for(reg _i=(_sta),__end=(_end);_i>=__end;_i-=(_by))
+#define JUMP(_i,_sta,_jump) for(reg _i=(_sta);_i;_i=_jump[_i])
+
+#define gmax(_a,_b) ((_a)>(_b)?(_a):(_b))
+#define gmin(_a,_b) ((_a)<(_b)?(_a):(_b))
+#define cmax(_a,_b) (_a<(_b)?_a=(_b):0)
+#define cmin(_a,_b) (_a>(_b)?_a=(_b):0)
+#define positive(_a,_b) ((_a)<(_b)?(_b)-(_a):(_a)-(_b))
+
+inline long long read()
+{
+	register long long aa, bb, ch;
+	while (ch = getchar(), (ch < '0' || ch > '9') && ch != '-');
+	ch == '-' ? (aa = 0, bb = 1) : (aa = ch - '0', bb = 0);
+	while (ch = getchar(), ch >= '0' && ch <= '9')
+		aa = (aa << 3) + (aa << 1) + ch - '0';
+	return bb ? -aa : aa;
+}
+
+const int N = 200010;
+const int M = 30000010;
+
+namespace ChairTree
+{
+	int root[N], total, today;
+
+	int ch[M][2], cnt, T;
+	long long sum[M], lza[M], lzb[M];
+	
+	long long Ml, Mr, Ma, Mb, Ret;
+
+	#define copy(_a,_b) (sum[_a]=sum[_b],lza[_a]=lza[_b],lzb[_a]=lzb[_b],ch[_a][0]=ch[_b][0],ch[_a][1]=ch[_b][1])
+
+	int add(reg l, reg r, regll a, regll b, reg last)
+	{
+		debug("SET [%d, %d] by A ( %d )  B ( %d )  from %d\n", l, r, a, b, last);
+		reg i = ++cnt;
+		copy(i, last);
+		lza[i] += a;
+		lzb[i] += b;
+		sum[i] += (a + a + (r - l) * b) * (r - l + 1) / 2;
+//		debug("IDDDDDDDDDDDDDDDDDDDDD %d\n", i);
+		if (i < 0)
+		{
+			debug("%d\n", i);
+			exit(0);
+		}
+		return i;
+	}
+
+	void pushdown(reg i, reg l, reg r)
+	{
+		debug("PUSHDOWN %d %d %d\n", i, l, r);
+		if (lza[i] || lzb[i])
+		{
+			reg mid = l + r >> 1;
+			ch[i][0] = add(l, mid, lza[i], lzb[i], ch[i][0]);
+			ch[i][1] = add(mid + 1, r, lza[i] + lzb[i] * (mid - l + 1), lzb[i], ch[i][1]);
+			lza[i] = lzb[i] = 0;
+		}
+	}
+
+	int modify(reg l, reg r, reg last)
+	{
+		debug("MODIFY ML:"LL" MR:"LL" MA:"LL" MB:"LL" --- L:%d R:%d LAST:%d\n", Ml, Mr, Ma, Mb, l, r, last);
+		if (Ml <= l && Mr >= r)
+		{
+//			debug("In Modify ");
+			return add(l, r, Ma + (l - Ml) * Mb, Mb, last);
+		}
+		reg mid = l + r >> 1;
+		reg i = ++cnt;
+		copy(i, last);
+		debug("%d\n", cnt);
+		pushdown(i, l, r);
+		if (Ml <= mid)
+		{
+			ch[i][0] = modify(l, mid, ch[i][0]);
+		}
+		if (Mr > mid)
+		{
+			ch[i][1] = modify(mid + 1, r, ch[i][1]);
+		}
+		sum[i] = sum[ch[i][0]] + sum[ch[i][1]];
+		if (i < 0)
+		{
+			debug("%d\n", i);
+			exit(0);
+		}
+		return i;
+	}
+
+	void query(reg i, reg l, reg r)
+	{
+		debug("QUERY [%d, %d]\n", l, r);
+		if (Ml <= l && Mr >= r)
+		{
+//			debug("    GET "LL"\n", sum[i]);
+			Ret += sum[i];
+			return;
+		}
+		debug("%d\n", i);
+		pushdown(i, l, r);
+		reg mid = l + r >> 1;
+		if (Ml <= mid)
+		{
+			query(ch[i][0], l, mid);
+		}
+		if (Mr > mid)
+		{
+			query(ch[i][1], mid + 1, r);
+		}
+	}
+
+	int Modify(reg left, reg right, regll ma, regll mb, reg last)
+	{
+		if (left > right) return last;
+		if (right == 0) return last;
+		Ml = left;
+		Mr = right;
+		Ma = ma;
+		Mb = mb;
+		reg i = modify(1, T, last);
+		if (i < 0)
+		{
+			debug("%d\n", i);
+			exit(0);
+		}
+		return i;
+	}
+
+	long long Query(reg left, reg right, reg last)
+	{
+		debug("QUREY BEGIN FROM %d TO %d LAST %d\n", left, right, last);
+		debug("TOTAL %d TODAY %d ROOT %d\n", total, today, root[today]);
+		if (left > right) return 0;
+		if (right == 0) return 0;
+		Ret = 0;
+		Ml = left;
+		Mr = right;
+		query(last, 1, T);
+		return Ret;
+	}
+}
+
+namespace Tree
+{
+	using namespace ChairTree;
+
+	int to[N], pre[N], last[N], en;
+	int fa[N], dep[N], siz[N], son[N], top[N], dfn[N], dfn_tot;
+
+	inline void addedge(reg f, reg t)
+	{
+		to[++en] = t;
+		pre[en] = last[f];
+		last[f] = en;
+	}
+
+	void dfs(reg now, reg p)
+	{
+		dep[now] = dep[fa[now] = p] + 1;
+		JUMP (i, last[now], pre)
+		{
+			if (to[i] != p)
+			{
+				dfs(to[i], now);
+				siz[now] += siz[to[i]];
+				if (siz[to[i]] > siz[son[now]])
+				{
+					son[now] = to[i];
+				}
+			}
+		}
+		++siz[now];
+//		debug("%d -> %d\n", now, son[now]);
+	}
+
+	void dfs2(reg now, reg p)
+	{
+		dfn[now] = ++dfn_tot;
+		if (son[now])
+		{
+			top[son[now]] = top[now];
+			dfs2(son[now], now);
+			JUMP (i, last[now], pre)
+			{
+				if (to[i] != p && to[i] != son[now])
+				{
+					top[to[i]] = to[i];
+					dfs2(to[i], now);
+				}
+			}
+		}
+	}
+
+	long long solve_sum(reg u, reg v, reg rt)
+	{
+		regll ret = 0;
+		while (top[u] != top[v])
+		{
+			if (dep[top[u]] < dep[top[v]])
+			{
+				swap(u, v);
+			}
+			debug("tototo %d\n", rt);
+			ret += Query(dfn[top[u]], dfn[u], rt);
+			u = fa[top[u]];
+		}
+		if (dep[u] > dep[v])
+		{
+			swap(u, v);
+		}
+		debug("tototo %d\n", rt);
+		ret += Query(dfn[u], dfn[v], rt);
+		return ret;
+	}
+
+	struct P
+	{
+		int x;
+		long long a, b;
+	} p1, p2;
+
+	int solve_modify(reg u, reg v, regll a, regll b, reg last)
+	{
+		reg x = u, y = v, lca, dis;
+		while (top[x] != top[y])
+		{
+			if (dep[top[x]] < dep[top[y]])
+				swap(x, y);
+			x = fa[top[x]];
+		}
+		lca = dep[x] < dep[y] ? x : y;
+		dis = dep[u] + dep[v] - dep[lca] - dep[lca];
+//		debug("LCA = %d    Dis = %d\n", lca, dis);
+		p1 = (P) {u, a, b};
+		p2 = (P) {v, a + dis * b, -b};
+		reg i = ++cnt;
+		copy(i, last);
+		while (top[p1.x] != top[p2.x])
+		{
+			if (dep[top[p1.x]] < dep[top[p2.x]]) swap(p1, p2);
+			debug("%d->%d, a:%d, b:%d\n", top[p1.x], p1.x, (dep[p1.x] - dep[top[p1.x]]) * p1.b + p1.a, -p1.b);
+			i = Modify(dfn[top[p1.x]], dfn[p1.x], (dep[p1.x] - dep[top[p1.x]]) * p1.b + p1.a, -p1.b, i);
+			p1.a += (dep[p1.x] - dep[top[p1.x]] + 1) * p1.b;
+			p1.x = fa[top[p1.x]];
+		}
+		if (dep[p1.x] > dep[p2.x]) swap(p1, p2);
+		debug("%d->%d, a:%d, b:%d\n", p1.x, p2.x, p1.a, p1.b);
+
+		// assert(p1.a + (dep[p2.x] - dep[p1.x]) * p1.b == p2.a && p1.b == -p2.b);
+
+		i = Modify(dfn[p1.x], dfn[p2.x], p1.a, p1.b, i);
+		
+//		debug("MODIFY GET %d\n", i);
+
+		if (i < 0)
+		{
+			debug("%d\n", i);
+			exit(0);
+		}
+
+		return i;
+	}
+}
+namespace LightningWork
+{
+	// My Space
+
+	using namespace Tree;
+	using namespace ChairTree;
+
+	int n, m;
+
+	int readc(register char a, register char b, register char c)
+	{
+		register char ch = getchar();
+		while (ch != a && ch != b && ch != c)
+			ch = getchar();
+		return ch == a ? 1 : (ch == b ? 2 : 3);
+	}
+
+	void Main()
+	{
+		regll u, v, a, b, lastans = 0;
+		n = read();
+		m = read();
+		FOR (i, 1, n - 1)
+		{
+			u = read();
+			v = read();
+			addedge(u, v);
+			addedge(v, u);
+		}
+		reg troot = n / 2 + 1;
+		top[troot] = troot;
+		dfs(troot, 0);
+		dfs2(troot, 0);
+//		FOR (i, 1, n)
+//		{
+//			printf("%d : \n    FA : %d  Top : %d  Dep : %d  Dfn : %d\n", i, fa[i], top[i], dep[i], dfn[i]);
+//		}
+		T = n;
+//		debug("%d\n", root[today]);
+		while (m--)
+		{
+			switch (readc('c', 'q', 'l'))
+			{
+			case 1:
+				u = (read() + lastans) % n + 1;
+				v = (read() + lastans) % n + 1;
+				a = read();
+				b = read();
+//				assert(today >= 0);
+				root[++total] = solve_modify(u, v, a, b, root[today]);
+				today = total;
+				break;
+			case 2:
+				u = (read() + lastans) % n + 1;
+				v = (read() + lastans) % n + 1;
+//				assert(today >= 0);
+				lastans = solve_sum(u, v, root[today]);
+				printf(LL"\n", lastans);
+				break;
+			case 3:
+				a = (read() + lastans) % (total + 1);
+				today = (a + total + 1) % (total + 1);
+				break;
+			}
+			if (lastans < 0)
+			{
+				return;
+			}
+		}
+//		debug("%d %d "LL"\n", lza[root[today]], lzb[root[today]], sum[root[today]]);
+/*
+		FILE *tmp = fopen("t", "w");
+		fprintf(tmp, "%d\n", cnt);
+		fclose(tmp);
+*/
+	}
+}
+
+int main()
+{
+	IO_Able OpenFile("tmp");
+	LightningWork::Main();
+	IO_Able CloseFile();
+	return 0;
+}

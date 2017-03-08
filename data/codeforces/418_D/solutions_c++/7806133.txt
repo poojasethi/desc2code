@@ -1,0 +1,172 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<queue>
+#include<vector>
+#define lc (p<<1)
+#define rc ((p<<1)+1)
+#define LL long long
+using namespace std;
+struct edge
+{
+	int next,other;
+}e[400010];
+struct node
+{
+	int maxx,maxy;
+}Tr[800010];
+int D[200010],pre[200010],vis[200010],A,dis[200010],cnt,head[200010],tot,n,m,x,y,belong[200010],ord[200010],dep[200010];
+int Max[200010];
+queue<int> h;
+void read(int &x)
+{
+	char ch=getchar();int mark=1;for(;ch!='-'&&(ch<'0'||ch>'9');ch=getchar());if (ch=='-') mark=-1,ch=getchar();
+	for(x=0;ch>='0'&&ch<='9';ch=getchar()) x=x*10+ch-48;x*=mark;
+}
+int Far(int u)
+{
+	pre[u]=0;A++;dis[u]=0;
+	vis[u]=A;
+	h.push(u);
+	int Max=0,far=u;
+	while (h.size())
+	{
+		int u=h.front();
+		for(int i=head[u];i;i=e[i].next)
+		{
+			int v=e[i].other;
+			if (vis[v]!=A)
+			{
+				vis[v]=A;dis[v]=dis[u]+1;h.push(v);pre[v]=u;
+				if (dis[v]>Max)
+				{
+					Max=dis[v];far=v;
+				}
+			}
+		}
+		h.pop();
+	}
+	return far;
+}
+void Find(int u)
+{
+	u=Far(u);
+	u=Far(u);
+	for(;u;u=pre[u]) D[++cnt]=u;
+}
+void add(int x,int y)
+{
+	e[++tot].next=head[x];head[x]=tot;e[tot].other=y;
+	e[++tot].next=head[y];head[y]=tot;e[tot].other=x;
+}
+void bfs(int st)
+{
+	dis[st]=0;
+	h.push(st);belong[st]=st;
+	while (h.size())
+	{
+		int u=h.front();
+		for(int i=head[u];i;i=e[i].next)
+		{
+			int v=e[i].other;
+			if (vis[v]!=A)
+			{
+				vis[v]=A;dis[v]=dis[u]+1;h.push(v);pre[v]=u;belong[v]=st;
+			}
+		}
+		h.pop();
+	}
+}
+void dfs(int u)
+{
+	vis[u]=A;
+	Max[u]=dep[u];
+	for(int i=head[u];i;i=e[i].next)
+	{
+		int v=e[i].other;
+		if (vis[v]!=A)
+		{
+			dep[v]=dep[u]+1;dfs(v);Max[u]=max(Max[u],Max[v]);
+		}
+	}
+}
+void Build(int p,int l,int r)
+{
+	if (l==r-1) 
+	{
+		Tr[p].maxx=l+Max[D[l]];
+		Tr[p].maxy=-l+Max[D[l]];
+		return ;
+	}
+	int mid=(l+r)>>1;
+	Build(lc,l,mid);Build(rc,mid,r);
+	Tr[p].maxx=max(Tr[lc].maxx,Tr[rc].maxx);
+	Tr[p].maxy=max(Tr[lc].maxy,Tr[rc].maxy);
+}
+node Getmax(int p,int l,int r,int a,int b)
+{
+	if (l==a&&r==b) return Tr[p];
+	int mid=(l+r)>>1;
+	if (b<=mid) return Getmax(lc,l,mid,a,b);
+	if (a>=mid) return Getmax(rc,mid,r,a,b);
+	node t1=Getmax(lc,l,mid,a,mid),t2=Getmax(rc,mid,r,mid,b);
+	t1.maxx=max(t1.maxx,t2.maxx);t1.maxy=max(t1.maxy,t2.maxy);
+	return t1;
+}
+int main()
+{
+	//freopen("thirst.in","r",stdin);
+	//freopen("thirst.out","w",stdout);
+	read(n);
+	for(int i=1;i<n;i++)
+	{
+		read(x);read(y);add(x,y);
+	}
+	Find(1);
+	A++;
+	for(int i=1;i<=cnt;i++) vis[D[i]]=A;
+	for(int i=1;i<=cnt;i++) 
+	{
+		bfs(D[i]);
+		ord[D[i]]=i;
+	}
+	A++;
+	for(int i=1;i<=cnt;i++) vis[D[i]]=A;
+	for(int i=1;i<=cnt;i++) dfs(D[i]);
+	read(m);
+	Build(1,1,cnt+1);
+	for(int i=1;i<=m;i++)
+	{
+		read(x);read(y);
+		if (ord[belong[x]]>ord[belong[y]]) swap(x,y);
+		int ans=0;
+		if (belong[x]==belong[y]) ans=max(ans,min(dep[x],dep[y])+max(ord[belong[x]]-1,cnt-ord[belong[y]]));
+		else
+		{
+			int t=ord[belong[y]]-ord[belong[x]];
+			ans=max(ans,ord[belong[x]]-1+min(dep[x],t+dep[y]));
+			ans=max(ans,cnt-ord[belong[y]]+min(dep[y],t+dep[x]));
+		}
+		ans=max(ans,Max[x]-dep[x]);
+		ans=max(ans,Max[y]-dep[y]);
+		int l=dep[x]+dep[y]+ord[belong[y]]-ord[belong[x]];
+		if (l/2-dep[x]>0)
+		{
+			int t=l/2-dep[x];
+			if (t+ord[belong[x]]<ord[belong[y]])
+			{
+				ans=max(ans,Getmax(1,1,cnt+1,ord[belong[x]],ord[belong[x]]+t+1).maxx-ord[belong[x]]+dep[x]);
+			}
+		}
+		if (l/2-dep[y]>0)
+		{
+			int t=l/2-dep[y];
+			if (ord[belong[y]]-t>ord[belong[x]])
+			{
+				ans=max(ans,Getmax(1,1,cnt+1,ord[belong[y]]-t,ord[belong[y]]+1).maxy+ord[belong[y]]+dep[y]);
+			}
+		}
+		printf("%d\n",ans);
+	}
+	return 0;
+}

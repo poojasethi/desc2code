@@ -1,0 +1,66 @@
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+using namespace std;
+
+int n, i, j, q, a[200000 + 5], bn, fwt[200000 + 5], ans[200000 + 5], m, l, r, b[200000 + 5];
+vector<pair<int, int> > prefix[200000 + 5], suffix[200000 + 5];
+long long add = 0;
+
+void solve_prefix () {
+	for(i = 1; i <= n; i++) {
+		for(j = a[i]; j > 0; j = (j & (j - 1))) ++fwt[j];
+		for(q = 0; q < prefix[i].size(); q++) 
+			for(j = prefix[i][q].first; j <= bn; j = (j | (j - 1)) + 1) 
+				ans[abs(prefix[i][q].second)] += (prefix[i][q].second / abs(prefix[i][q].second)) * fwt[j];
+	}
+}
+
+void solve_suffix () {
+	for(i = 0; i <= bn; i++) fwt[i] = 0;
+	for(i = n; i > 0; i--) {
+		for(j = a[i]; j <= bn; j = (j | (j - 1)) + 1) ++fwt[j];
+		for(q = 0; q < suffix[i].size(); q++) 
+			for(j = suffix[i][q].first; j > 0; j = (j & (j - 1))) 
+				ans[abs(suffix[i][q].second)] += (suffix[i][q].second / abs(suffix[i][q].second)) * fwt[j];
+	}
+}
+
+int main (int argc, char * const argv[]) {
+//	freopen("input.txt", "r", stdin);
+	scanf("%d %d", &n, &m);
+	for(i = 1; i <= n; i++) {
+		scanf("%d", &a[i]);
+		b[i] = a[i];
+	}
+	sort(b + 1, b + n + 1);
+	bn = unique(b + 1, b + n + 1) - (b + 1);
+	for(i = 1; i <= n; i++) a[i] = lower_bound(b + 1, b + bn + 1, a[i]) - b;
+	for(i = 1; i <= m; i++) {
+		scanf("%d %d", &l, &r);
+		if (l > r) swap(l, r);
+		if (a[l] > a[r]) ++ans[i]; else if (a[l] < a[r]) ++ans[i];
+		prefix[l - 1].push_back(make_pair(a[l] + 1, -i));
+		suffix[l + 1].push_back(make_pair(a[l] - 1, -i));
+		prefix[r - 1].push_back(make_pair(a[r] + 1, -i));
+		suffix[r + 1].push_back(make_pair(a[r] - 1, -i));
+
+		prefix[l - 1].push_back(make_pair(a[r] + 1, +i));
+		suffix[l + 1].push_back(make_pair(a[r] - 1, +i));
+		prefix[r - 1].push_back(make_pair(a[l] + 1, +i));
+		suffix[r + 1].push_back(make_pair(a[l] - 1, +i));
+	}
+	for(i = 1; i <= n; i++) {
+		add += i - 1;
+		for(j = a[i]; j > 0; j = (j & (j - 1))) add -= fwt[j];
+		for(j = a[i]; j <= bn; j = (j | (j - 1)) + 1) ++fwt[j];
+	}
+//	cerr << add << endl;
+	for(i = 0; i <= bn; i++) fwt[i] = 0;
+	solve_prefix();
+	solve_suffix();
+	for(i = 1; i <= m; i++)
+		printf("%lld\n", add + ans[i]);
+    return 0;
+}

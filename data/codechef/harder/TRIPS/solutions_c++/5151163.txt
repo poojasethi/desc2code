@@ -1,0 +1,218 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+#define LOCAL 0
+#define DEBUG 0
+#define NMAX 100011
+#define SMAX 666
+#define HMAX 1000
+
+vector<pair<int, int> > vec[NMAX];
+int N;
+
+void ReadTree() {
+	int i, j, k, d;
+	if (LOCAL) {
+		srand(12345);
+		N = 30000;
+	} else scanf("%d", &N);
+	for (k = 1; k < N; k++) {
+		if (LOCAL) {
+			i = k + 1;
+			//if (k <= 10) j = 1 + (rand() % k);
+			//else j = k - 9 + (rand() % 10);
+			j = k;
+			d = 1 + (rand() % 2);
+		} else scanf("%d %d %d", &i, &j, &d);
+		vec[i].push_back(make_pair(j, d));
+		vec[j].push_back(make_pair(i, d));
+	}
+}
+
+vector<pair<int, int> > child[NMAX];
+char visited[NMAX];
+int parent[NMAX], level[NMAX], dtoroot[NMAX], depth[NMAX], hmax, dfsmin[NMAX], dfsmax[NMAX], dfsnum;
+
+void DFS1(int x) {
+	visited[x] = 1;
+	depth[x] = 0;
+	if (level[x] > hmax) hmax = level[x];
+	dfsnum++;
+	dfsmin[x] = dfsnum;
+	for (int y = 0; y < vec[x].size(); y++)
+		if (!visited[vec[x][y].first]) {
+			child[x].push_back(vec[x][y]);
+			parent[vec[x][y].first] = x;
+			level[vec[x][y].first] = level[x] + 1;
+			dtoroot[vec[x][y].first] = dtoroot[x] + vec[x][y].second;
+			DFS1(vec[x][y].first);
+			if (1 + depth[vec[x][y].first] > depth[x])
+				depth[x] = 1 + depth[vec[x][y].first];
+		}
+	dfsmax[x] = dfsnum;
+	if (DEBUG) fprintf(stderr, "x=%d: level=%d dtoroot=%d\n", x, level[x], dtoroot[x]);
+}
+
+int H;
+char special[NMAX];
+int snode[SMAX], nsnode, snodeidx[NMAX], sparent[NMAX];
+int cparent[NMAX][HMAX][2], nturns[NMAX][HMAX];
+int stk[NMAX], nstk, stklev[NMAX], clev;
+
+void DFS2(int x, int croot) {
+	nstk++;
+	stk[nstk] = x;
+	stklev[x] = nstk;
+	if (x != croot) {
+		if (dtoroot[x] - dtoroot[croot] >= HMAX) exit(2);
+		sparent[x] = croot;
+		for (int j = 0; j < HMAX; j++) {
+			if (dtoroot[x] - dtoroot[croot] <= j) {
+				cparent[x][j][0] = cparent[x][j][1] = x;
+				nturns[x][j] = 0;
+				continue;
+			}
+			
+			if (dtoroot[parent[x]] - dtoroot[croot] <= j)
+				cparent[x][j][0] = croot;
+			else
+				cparent[x][j][0] = cparent[parent[x]][j][0];
+			clev = stklev[cparent[x][j][0]];
+			while (dtoroot[x] - dtoroot[cparent[x][j][0]] > j) {
+				clev++;
+				cparent[x][j][0] = stk[clev];
+			}
+			if (cparent[x][j][0] == x) {
+				cparent[x][j][1] = x;
+				nturns[x][j] = 0;
+			} else {
+				cparent[x][j][1] = cparent[cparent[x][j][0]][j][1];
+				nturns[x][j] = 1 + nturns[cparent[x][j][0]][j];
+			}
+			if (DEBUG && j <= 4) {
+				fprintf(stderr, "x=%d j=%d: cparent0=%d cparent1=%d nturns=%d\n", x, j, cparent[x][j][0], cparent[x][j][1], nturns[x][j]);
+			}
+		}
+		if (special[x]) return;
+	}
+	for (int y = 0; y < child[x].size(); y++)
+		DFS2(child[x][y].first, croot);
+	nstk--;
+}
+
+void SelectSpecialNodes() {
+	int i, j;
+	for (H = 1; H * H < N; H++);
+	if (DEBUG) fprintf(stderr, "H=%d hmax=%d\n", H, hmax);
+	for (nsnode = 0, i = 1; i <= N; i++)
+		if ((level[i] % H) == 0 && (depth[i] >= H || level[i] == 0)) {
+			special[i] = 1;
+			nsnode++;
+			if (nsnode >= SMAX) exit(1);
+			snode[nsnode] = i;
+			snodeidx[i] = nsnode;
+		}
+	for (j = 0; j < HMAX; j++) {
+		cparent[1][j][0] = cparent[1][j][1] = 1;
+		nturns[1][j] = 0;
+	}
+	for (i = 1; i <= nsnode; i++) {
+		if (DEBUG) fprintf(stderr, "snode %d/%d: %d\n", i, nsnode, snode[i]);
+		nstk = 0;
+		DFS2(snode[i], snode[i]);
+	}
+}
+
+int ans, cap;
+
+void ShortJump(int& i, int& capi) {
+	if (capi < dtoroot[i] - dtoroot[parent[i]]) {
+		ans++;
+		capi = cap;
+	}
+	capi -= (dtoroot[i] - dtoroot[parent[i]]);
+	i = parent[i];
+}
+
+void LongJump(int& i, int& capi) {
+	if (special[i]) {
+		if (capi >= dtoroot[i] - dtoroot[sparent[i]]) {
+			capi -= (dtoroot[i] - dtoroot[sparent[i]]);
+		} else {
+			int j = cparent[i][capi][0];
+			ans++;
+			capi = cap;
+			if (capi >= dtoroot[j] - dtoroot[sparent[i]])
+				capi -= (dtoroot[j] - dtoroot[sparent[i]]);
+			else {
+				ans += nturns[j][capi];
+				j = cparent[j][capi][1];
+				capi -= (dtoroot[j] - dtoroot[sparent[i]]);
+			}
+		}
+		i = sparent[i];
+	} else ShortJump(i, capi);
+}
+
+void ProcessOperations() {
+	int q, Q, i, j, capi, capj;
+	
+	if (LOCAL) {
+		Q = 100000;
+	} else scanf("%d", &Q);
+	
+	for (q = 1; q <= Q; q++) {
+		if (LOCAL) {
+			i = 1 + (rand() % N);
+			j = 1 + (rand() % N);
+			cap = 1 + (rand() % 5000);
+		} else scanf("%d %d %d", &i, &j, &cap);
+
+		if (DEBUG) fprintf(stderr, "query i=%d j=%d cap=%d\n", i, j, cap);
+
+		capi = capj = cap;
+		ans = 0;
+
+		while (sparent[i] != sparent[j]) {
+			if (level[i] >= level[j])
+				LongJump(i, capi);
+			else
+				LongJump(j, capj);
+			if (DEBUG) fprintf(stderr, "after long jump: ans=%d i=%d capi=%d j=%d capj=%d\n", ans, i, capi, j, capj);
+		}
+
+		while (i != j) {
+			if (level[i] >= level[j])
+				ShortJump(i, capi);
+			else
+				ShortJump(j, capj);
+			if (DEBUG) fprintf(stderr, "after short jump: ans=%d i=%d capi=%d j=%d capj=%d\n", ans, i, capi, j, capj);
+		}
+
+		if (capi == cap && capj < cap) ans++;
+		if (capi < cap && capj == cap) ans++;
+		if (capi < cap && capj < cap) {
+			if (capi + capj >= cap) ans++;
+			else ans += 2;
+		}
+
+		if (!LOCAL) printf("%d\n", ans);
+	}
+}
+
+int main() {
+	int tstart = clock();
+//	freopen("x.txt", "r", stdin);
+	ReadTree();
+	DFS1(1);
+	SelectSpecialNodes();
+	ProcessOperations();
+	fprintf(stderr, "Duration=%.3lf sec\n", (double) (clock() - tstart) / CLOCKS_PER_SEC);
+	return 0;
+}

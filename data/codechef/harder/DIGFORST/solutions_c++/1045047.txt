@@ -1,0 +1,162 @@
+#include <cstdio>
+#include <iostream>
+#include <queue>
+#include <algorithm>
+#include <cassert>
+#include <set>
+using namespace std;
+ 
+typedef struct state {
+  int four, three, five, seven, vertex, mask;
+  
+  state() {
+    decodeFrom(0);
+  }
+ 
+  state(int hash) {
+    decodeFrom(hash);
+  }
+ 
+  struct state addDigit(int x, int newVertex) {
+    state S;
+    S.four = (four * 10 + x) % 4;
+    S.three = (three * 10 + x) % 3;
+    S.five = ((five * 10 + x) % 5) != 0;
+    S.seven = (seven * 10 + x) % 7;
+    S.vertex = newVertex;
+    S.mask = mask | getMask(x);
+    return S;
+  }
+ 
+  int getMask(int x) {
+    if(x == 1) return 0;
+    if(x == 6) return (1<<getMaskIndex(2)) | (1<<getMaskIndex(3));
+    return 1<<getMaskIndex(x);
+  }
+ 
+  int getMaskIndex(int x) {
+    switch(x) {
+      case 2 : return 0;
+      case 4 : return 1;
+      case 3 : return 2;
+      case 5 : return 3;
+      case 7 : return 4;
+      default : assert(false);
+    }
+  }
+ 
+  int isDivisibleByMaskIndex(int x) {
+    switch(x) {
+      case 0 : return four % 2 == 0;
+      case 1 : return four == 0;
+      case 2 : return three == 0;
+      case 3 : return five == 0;
+      case 4 : return seven == 0;
+    }
+  }
+ 
+  void decodeFrom(int x) {
+    vertex = x / (168*32);
+    mask = x % (168*32) / 168;
+    four =  x % 168 / 42;
+    three =  x % 42 / 14;
+    five =   x % 14 / 7;
+    seven =  x %  7 / 1;
+  }
+ 
+  int hash() {
+    return vertex * 168 * 32 +
+           mask *  168 +
+           four *   42 +
+           three *  14 +
+           five *    7 +
+           seven *   1 ;
+  }
+  
+  bool isFinal(int finalVertex) {
+    if(vertex != finalVertex) return false;
+    for(int i=0;i<5;i++) if(mask & (1<<i)) {
+      if(!isDivisibleByMaskIndex(i)) return false;
+    }
+    return true;
+  }
+ 
+  string printString() {
+    char buf[100];
+    sprintf(buf, "State(four = %d, three = %d, five = %d, seven = %d, mask = %s, vertex = %d)", four, three, five, seven, getMaskString().c_str(), vertex);
+    return string(buf);
+  }
+ 
+  string getMaskString() {
+    string s;
+    for(int i=0;i<5;i++) if( mask & (1<<i)) s += '1'; else s += '0';
+    return s;
+  }
+ 
+} state;
+ 
+int best[16800*32];
+int inf = 100000000;
+ 
+int vertexDigit[100];
+int edge[100][100];
+int n;
+ 
+class cmp {
+  public:
+    bool operator()(const int& A, const int& B) const {
+      if(best[A] == best[B]) return A < B;
+      return best[A] < best[B];
+    }
+};
+ 
+main() {
+  while(1) {
+    cin>>n;
+    if(n == 0) {
+      break;
+    }
+    for(int i=0;i<n;i++) cin>>vertexDigit[i];
+    for(int i=0;i<n;i++) for(int j=0;j<n;j++){
+      scanf(" %d", &edge[i][j]);
+    }
+ 
+    int N = 168 * 32 * n;
+    for(int i=0;i<N;i++) {
+      best[i] = inf;
+    }
+ 
+    set<int, cmp> S;
+    int start = state().addDigit(vertexDigit[0], 0).hash();
+    best[start] = vertexDigit[0];
+    S.insert(start);
+ 
+    int ret = -1;
+ 
+    while(!S.empty()) {
+      int u = *S.begin();
+      int c = best[u];
+      S.erase(S.begin());
+      state currentState(u);
+      int vertex = currentState.vertex;
+ 
+      if(currentState.isFinal(n-1)) {
+        ret = c;
+        break;
+      }
+      
+      for(int i=0;i<n;i++) if(edge[vertex][i]) {
+        int edgecost = vertexDigit[i];
+        int nu = currentState.addDigit(edgecost, i).hash();
+        int nc = c + edgecost;
+        if(best[nu] == inf) {
+          S.erase(nu);
+          best[nu] = nc;
+          S.insert(nu);
+        }
+      }
+    }
+ 
+    cout<<ret<<endl;
+  }
+}

@@ -1,0 +1,262 @@
+/*
+....
+*/
+
+#include <cmath>
+#include <map>
+#include <vector>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <set>
+#include <bitset>
+#include <memory.h>
+#include <functional>
+#include <queue>
+#include <fstream>
+#include <ctime>
+#include <deque>
+#include <utility>
+#include <stack>
+#include <sstream>
+#include <list>
+#include <cctype> 
+#include <numeric> 
+#include <iomanip>
+#include <assert.h>
+using namespace std;
+#define sqr(_) ((_)*(_))
+
+typedef pair<int, int> Pii;
+#define x first
+#define y second
+#define mp make_pair
+#define pb push_back
+
+typedef long long LL;
+
+const int MAXN = 100000 + 10;
+
+struct Splay_tree
+{
+	int l, r, f, maxs[2], mins, s, v, size;
+}t[MAXN * 2], empty;
+int ROOT;
+
+inline void Upd(int x)
+{
+	t[x].s = t[t[x].l].s + t[t[x].r].s + t[x].v;
+	t[x].maxs[0] = max(t[t[x].r].maxs[0], t[t[x].l].maxs[0] + t[t[x].r].s + t[x].v);
+	t[x].maxs[1] = max(t[t[x].r].maxs[1], t[t[x].l].maxs[1] - t[t[x].r].s - t[x].v);
+	t[x].mins = min(t[t[x].l].mins, t[t[x].r].mins + t[t[x].l].s + t[x].v);
+	t[x].size = t[t[x].l].size + t[t[x].r].size + 1;
+}
+inline void r_rotate(int x)
+{
+	int f = t[x].f, l = t[x].l;
+	(t[f].l == x ? (t[f].l) : (t[f].r)) = l; t[l].f = f;
+	t[x].l = t[l].r, t[t[x].l].f = x;
+	t[l].r = x, t[x].f = l;
+	Upd(x);
+}
+inline void l_rotate(int x)
+{
+	int f = t[x].f, r = t[x].r;
+	(t[f].l == x ? (t[f].l) : (t[f].r)) = r; t[r].f = f;
+	t[x].r = t[r].l, t[t[x].r].f = x;
+	t[r].l = x, t[x].f = r;
+	Upd(x);
+}
+inline void Splay(int x, int rootf)
+{
+	t[0] = empty;
+	for (; t[x].f != rootf; )
+	{
+		int f = t[x].f, g = t[f].f;
+		if (g == rootf)
+			if (t[f].l == x)
+				r_rotate(f);
+			else
+			l_rotate(f);
+		else
+		if (t[g].l == f)
+			if (t[f].l == x)
+				r_rotate(g),
+				r_rotate(f);
+			else
+			l_rotate(f),
+			r_rotate(g);
+		else
+		if (t[f].r == x)
+			l_rotate(g),
+			l_rotate(f);
+		else
+		r_rotate(f),
+		l_rotate(g);
+	}
+	Upd(x);
+	if (!rootf) ROOT = x;
+}
+inline int Getn(int x)
+{
+	Splay(x, 0);
+	return t[t[x].l].size + 1;
+}
+inline int Getpre(int x)
+{
+	for (x = t[x].l; t[x].r; x = t[x].r);
+	return x;
+}
+inline int Getnex(int x)
+{
+	for (x = t[x].r; t[x].l; x = t[x].l);
+	return x;
+}
+inline int Getp(int x, int k)
+{
+	for (; ; )
+	{
+		if (t[x].l && k <= t[t[x].l].size)
+			x = t[x].l;
+		else
+		if (t[t[x].l].size + 1 == k)
+			return x;
+		else
+		k -= t[t[x].l].size + 1, x = t[x].r;
+	}
+}
+
+int n, m, L[MAXN], R[MAXN], idx, pos[MAXN * 2];
+vector<int> e[MAXN];
+
+void DFS(int x)
+{
+	L[x] = ++idx; pos[idx] = x; t[idx].maxs[0] = 1;
+	t[idx].v = t[idx].s = 1;
+	for (int i = 0; i < (int)e[x].size(); ++i)
+		DFS(e[x][i]);
+	R[x] = ++idx; pos[idx] = x;
+	t[idx].v = t[idx].s = t[idx].mins = -1; t[idx].maxs[1] = 1;
+}
+void init()
+{
+	scanf("%d%d", &n, &m);
+	for (int i = 1; i <= n; ++i)
+	{
+		int num;
+		scanf("%d", &num);
+		for (int j = 1, x; j <= num; ++j)
+			scanf("%d", &x), e[i].pb(x);
+	}
+	DFS(1);
+	for (int i = 1; i < idx; ++i)
+		t[i].r = i + 1, t[i + 1].f = i;
+	Splay(idx, 0);
+}
+int Query(int x, int y)
+{
+	int Lx = Getn(L[x]), Rx = Getn(R[x]), Ly = Getn(L[y]), Ry = Getn(R[y]);
+	if (Lx > Ly) swap(x, y), swap(Lx, Ly), swap(Rx, Ry);
+	Splay(L[y], 0);
+	int dy = t[t[L[y]].l].s;
+	Splay(L[x], 0);
+	int dx = t[t[L[x]].l].s;
+	if (Ry < Rx)
+		return dy - dx;
+	Splay(L[y], ROOT);
+	return dx + dy - (dx + t[t[t[ROOT].r].l].mins) * 2;
+}
+/*
+int Query(int k)
+{
+	int x = ROOT;
+	for (; ; )
+	{
+		if (t[x].l && t[t[x].l].maxs >= k)
+			x = t[x].l;
+		else
+		if (t[t[x].l].s + t[x].v == k)
+			return pos[x];
+		else
+		k -= t[t[x].l].s + t[x].v, x = t[x].r;
+	}
+	return -1;
+}
+*/
+void Print(int x)
+{
+	if (t[x].l)
+		Print(t[x].l);
+	printf("%d %d ", pos[x], t[x].v);
+	if (t[x].r)
+		Print(t[x].r);
+}
+int Find(int x, int k, bool f)
+{
+	int px = 0, s = 0, pm = 0, d = f ? -1 : 1;
+	for (; ; )
+	{
+		if (s + t[t[x].r].maxs[f] >= k)
+			x = t[x].r;
+		else
+		if (s + t[t[x].r].s * d + t[x].v * d == k)
+			return pos[x];
+		else
+		s += (t[t[x].r].s + t[x].v) * d, x = t[x].l;
+	}
+	return -1;
+}
+void Opr(int x, int h)
+{
+	Splay(L[x], 0);
+	int dx = t[t[L[x]].l].s;
+	int y = Find(t[ROOT].l, h, 0);
+	Splay(L[x], 0);
+	int pl = Getpre(ROOT);
+	Splay(R[x], 0);
+	int pr = Getnex(ROOT);
+	Splay(pl, 0); Splay(pr, pl);
+	int px = t[pr].l;
+	t[px].f = 0, t[pr].l = 0;
+	Splay(pr, 0);
+	Splay(R[y], 0);
+	Splay(Getpre(ROOT), 0);
+	t[R[y]].l = px; t[px].f = R[y];
+	Splay(R[y], 0);
+//	Print(ROOT);
+//	puts("");
+//	exit(0);
+}
+void solve()
+{
+	for (int i = 1; i <= m; ++i)
+	{
+		int ty, x, y;
+		scanf("%d", &ty);
+		if (ty == 1)
+			scanf("%d%d", &x, &y),
+			printf("%d\n", Query(x, y));
+		else
+		if (ty == 2)
+			scanf("%d%d", &x, &y),
+			Opr(x, y);
+		else
+		scanf("%d", &x),
+		printf("%d\n", Find(ROOT, x + 1, 1));
+	}
+}
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt", "r", stdin), freopen("output.txt", "w", stdout);
+#endif
+	
+	init();
+	solve();
+	
+	fclose(stdin);
+	fclose(stdout);
+	return 0;
+}

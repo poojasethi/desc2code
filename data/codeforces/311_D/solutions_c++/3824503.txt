@@ -1,0 +1,79 @@
+//By momo™
+#include <cstdio>
+#include <algorithm>
+#define MXN 100010
+#define M 95542721
+#define LL long long
+using namespace std;
+
+LL CB[MXN][48];
+LL cube(LL x){ return (((x * x) % M) * x) % M; }
+
+int cov[MXN * 4];
+LL dat[MXN * 4][48];
+
+void update(int id){
+	int lc = id * 2 + 1;
+	int rc = id * 2 + 2;
+	for(int i = 0; i < 48; i++)
+		dat[id][i] = dat[lc][(i+cov[lc])%48] + dat[rc][(i+cov[rc])%48];
+}
+
+void push(int id){
+	int lc = id * 2 + 1;
+	int rc = id * 2 + 2;
+	cov[lc] = (cov[lc]+cov[id])%48;
+	cov[rc] = (cov[rc]+cov[id])%48;
+	cov[id] = 0; update(id);
+}
+
+void init(int l, int r, int id){
+	if(l != r){
+		int mid = (l + r) / 2;
+		init(l, mid, id * 2 + 1);
+		init(mid+1, r, id * 2 + 2);
+		update(id);
+	}
+	else for(int i = 0; i < 48; i++)
+		dat[id][i] = CB[l][i];
+}
+
+void insert(int l, int r, int a, int b, int id){
+	if(r < a || b < l) return;
+	if(a <= l && r <= b){
+		if((++cov[id]) == 48) cov[id] = 0;
+		return;
+	}
+	push(id);
+	int mid = (l + r) / 2;
+	insert(l, mid, a, b, id * 2 + 1);
+	insert(mid+1, r, a, b, id * 2 + 2);
+	update(id);
+}
+
+LL query(int l, int r, int a, int b, int id){
+	if(r < a || b < l) return 0;
+	if(a <= l && r <= b) return dat[id][cov[id]];
+	push(id);
+	int mid = (l + r) / 2;
+	LL v1 = query(l, mid, a, b, id * 2 + 1);
+	LL v2 = query(mid+1, r, a, b, id * 2 + 2);
+	return (v1 + v2) % M;
+}
+
+int main (){
+	int N; scanf("%d", &N);
+	for(int i = 1; i <= N; i++){
+		scanf("%I64d", &CB[i][0]);
+		for(int j = 1; j < 48; j++)
+			CB[i][j] = cube(CB[i][j-1]);
+	}
+	init(1, N, 0);
+	int Q; scanf("%d", &Q);
+	while(Q--){
+		int T, L, R;
+		scanf("%d%d%d", &T, &L, &R);
+		if(T == 2) insert(1, N, L, R, 0);
+		else printf("%I64d\n", query(1, N, L, R, 0));
+	}
+}

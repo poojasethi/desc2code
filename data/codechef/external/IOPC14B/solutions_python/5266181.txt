@@ -1,0 +1,327 @@
+
+//~        Author : Sarvesh Mahajan                             
+//               IIIT,Hyderabad                                   
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#include<bits/stdc++.h>
+using namespace std;
+#define pb push_back
+#define mp make_pair
+#define clr(x) x.clear()
+#define For(i,a,b) for(i=a;i<b;i++)
+#define loop(i,b) for(i=0;i<b;i++)
+#define Loop(i,b) for(i=1;i<=b;i++)
+#define pi(n) printf("%d ",n)
+#define si(n) scanf("%d",&n)
+typedef long long LL;
+const int MOD=1e9+7;
+typedef pair<LL,LL> PII;
+typedef vector<PII> VPII;
+typedef vector<int> VI;
+#define F first
+#define S second
+#define sz size
+#define pLL(x) cout<<x<<' '
+#define fill(x,c) memset(x,c,sizeof(x))
+#define DB(x)              cout<<__LINE__<<" :: "<<#x<< ": "<<x<<endl;
+#define DB2(x, y)          cout<<__LINE__<<" :: "<<#x<< ": "<<x<<" | "<<#y<< ": "<<y<<endl;
+#define DB3(x, y, z)       cout<<__LINE__<<" :: "<<#x<< ": "<<x<<" | "<<#y<< ": "<<y<<" | "<<#z<<": "<<z<<endl
+#define db 0
+const int maxn=1e5+5;
+const int LN=18;
+VI g[maxn];
+int depth[maxn],parent[LN][maxn],subtree_size[maxn],chainHead[maxn],posInBase[6*maxn],chainInd[maxn],nodeInPos[6*maxn];
+PII baseArray[maxn],qt[6*maxn];
+PII st[6*maxn];
+int chainNo,ptr;
+int LCA(int u,int v)
+{
+	if(depth[u]<depth[v])
+		swap(u,v);
+	int diff=depth[u]-depth[v];
+	int i;
+	for(i=0;i<LN;++i)
+	{
+		if(  (diff>>i)&1 )
+			u=parent[i][u];
+	}
+	if(u == v)
+		return u;
+	for(i = LN-1;i>=0;--i)
+	{
+		if(parent[i][u]!=parent[i][v])
+		{
+			u=parent[i][u];
+			v=parent[i][v];
+		}
+	}
+	return parent[0][u];
+
+}
+
+void make_tree(int current,int s,int e)
+{
+	if(s == e-1)
+	{
+		st[current].F=baseArray[s].F;
+		st[current].S=baseArray[s].S;
+		return ;
+	}
+
+	int c1=current*2;
+	int c2=c1+1;
+	int m=(s+e)/2;
+	make_tree(c1,s,m);
+	make_tree(c2,m,e);
+	st[current].F=st[c1].F+st[c2].F;
+	st[current].S=st[c1].S+st[c2].S;
+}
+
+void update_tree(int curr,int s,int e,int x,LL val)
+{
+	if(x<s || x>=e)
+		return ;
+	if(s == x && s == e-1)   //leaf node
+	{
+		st[curr].F+=val;
+		int pp=nodeInPos[s];
+		st[curr].S+=depth[pp]*val;              // I need value at sth index in tree
+	        if(db)DB2(curr,st[curr].S);
+
+		return ;
+	}
+
+	int left=curr*2;
+	int right=left+1;
+	int mid=(s+e)/2;
+	update_tree(left,s,mid,x,val);
+	update_tree(right,mid,e,x,val);
+
+	st[curr].F=st[left].F+st[right].F;
+	st[curr].S=st[left].S+st[right].S;
+//	DB2(curr,st[curr].F);
+	
+
+}
+void update(int i,int val)
+{
+	if(db)DB(posInBase[i])
+	update_tree(1,0,ptr,posInBase[i],(LL)val);
+}
+  
+
+void HLD(int curNode, int prev) 
+{
+	if(chainHead[chainNo] == -1)
+	{
+		chainHead[chainNo] = curNode; // Assign chain head
+	}
+	chainInd[curNode] = chainNo;
+	posInBase[curNode] = ptr; // Position of this node in baseArray which we will use in Segtree
+	nodeInPos[ptr]=curNode;
+	//DB2(curNode,ptr)
+	baseArray[ptr].F=baseArray[ptr].S = 0;
+	ptr++;
+	int sc = -1, ncost;
+	// Loop to find special child
+	for(int i=0; i<g[curNode].size(); i++) 
+		if(g[curNode][i] != prev)
+		{
+			if(sc == -1 || subtree_size[sc] < subtree_size[g[curNode][i]])
+			{
+				sc = g[curNode][i];
+				//ncost = costs[curNode][i];
+			}
+		}       
+	if(sc != -1)
+	{
+		// Expand the chain
+		HLD(sc, curNode);
+	}
+	for(int i=0; i<g[curNode].size(); i++) 
+		if(g[curNode][i] != prev)
+		{
+			if(sc != g[curNode][i])
+			{
+				// New chains at each normal node
+				chainNo++;
+				HLD(g[curNode][i], curNode);
+			}
+		} 
+}
+
+void dfs(int u,int prev,int _depth=1)
+{
+	int i,l=g[u].sz();
+	depth[u]=_depth;
+	subtree_size[u]=1;
+	parent[0][u]=prev;
+	loop(i,l)
+	{
+		int v=g[u][i];
+		if(v!=prev)
+		{
+			dfs(v,u,_depth+1);
+			subtree_size[u]+=subtree_size[v];
+		}
+	}
+}
+
+void query_tree(int curr,int s,int e,int ql,int qr)
+{
+	if(qr<s || ql>=e)
+	{
+		qt[curr].F=0;
+		qt[curr].S=0;
+		return ;
+	}
+
+	if(s >= ql && e-1<=qr)
+	{
+		qt[curr].F=st[curr].F;
+		qt[curr].S=st[curr].S;
+		return ;
+	}
+
+	int c1=curr*2;
+	int c2=c1+1;
+	int mid=(s+e)/2;
+	query_tree(c1,s,mid,ql,qr);
+	query_tree(c2,mid,e,ql,qr);
+	qt[curr].F=qt[c1].F+qt[c2].F;
+	qt[curr].S=qt[c1].S+qt[c2].S;
+}
+
+
+
+PII query_up(int u,int v)  // v is anc of u
+{
+	if(db)DB(chainInd[u]);
+	if(db)DB(chainInd[v]);
+	int uchain,vchain=chainInd[v];
+	PII ans;
+	ans.F=ans.S=0;
+	while(1)
+	{
+		uchain=chainInd[u];
+		if(uchain == vchain)
+		{
+			if(u == v)
+			{
+				query_tree(1,0,ptr,posInBase[u],posInBase[u]);
+				if(db){DB(qt[1].F);DB(qt[1].S);}
+				ans.F+=qt[1].F;
+				ans.S+=qt[1].S;
+				break;
+			}
+			query_tree(1,0,ptr,posInBase[v],posInBase[u]);
+			ans.F+=qt[1].F;
+			ans.S+=qt[1].S;
+			break;
+		}
+	if(db)DB2(chainHead[uchain],posInBase[chainHead[uchain]])
+
+	query_tree(1,0,ptr,posInBase[chainHead[uchain]],posInBase[u]);
+	//DB(qt[1].F);
+	ans.F+=qt[1].F;
+	ans.S+=qt[1].S;
+	u=chainHead[uchain];
+	u=parent[0][u];
+	}
+	if(db)DB2(ans.F,ans.S);
+	return ans;
+}
+
+
+void query(int u,int v,int r)
+{
+	int lca=LCA(u,v);
+	PII ans1=query_up(u,r);
+	LL a1=(depth[u]+1)*ans1.F-ans1.S;
+	if(db)DB(a1);
+	PII ans2=query_up(v,r);
+	LL a2=(depth[v]+1)*ans2.F-ans2.S;
+	if(db)DB(a2);
+	PII ans3=query_up(lca,r);
+
+	LL a3=(depth[lca]+1)*ans3.F-ans3.S;
+	PII ans4;
+	LL a4;
+	int val=parent[0][lca];
+	if(parent[0][lca]!=-1)
+	{
+	 ans4=query_up(parent[0][lca],r);
+	 a4=(depth[val]+1)*ans4.F-ans4.S;
+	}
+	else
+		a4=0;
+	LL res=a1+a2-a3-a4;
+	cout<<(res);
+	puts("");
+}
+
+	
+
+
+int main()
+{
+	int n,t,m,l,k,ans,i,j,res=0,fl;
+	t=1;
+	int x,y,r;
+	while(t--)
+	{
+		si(n);si(k);si(r);
+
+		r--;
+		loop(i,n-1)
+		{
+			si(x);
+			si(y);
+			x--;y--;
+			g[x].pb(y);
+			g[y].pb(x);
+		}
+		/*Initialise*/
+		for(i=0;i<n;++i)
+			for(int j=0;j<LN;++j)
+				parent[j][i]=-1;
+
+		for(i=0;i<n;++i)
+			chainHead[i]=-1;
+
+		dfs(r,-1);
+		HLD(r,-1);
+	//	make_tree(1,0,ptr);  //current node,start of range ,end
+
+
+		//DP for lca
+
+
+		for( i=1; i<LN; i++)
+			for(int j=0; j<n; j++)
+				if(parent[i-1][j] != -1)
+					parent[i][j] = parent[i-1][parent[i-1][j]];
+
+		char s[2];
+		while(k--)
+		{
+			scanf("%s%d%d",s,&x,&y);
+
+			if(s[0] == 'U')
+			  {
+			        x--;
+				update(x,y);
+			  }
+
+			else
+			{
+			x--;
+			y--;
+			query(x,y,r);
+		
+			}
+		}
+
+
+	}
+	return 0;
+}

@@ -1,0 +1,101 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+#define For(i,a,b) for(int i=a,_=b;i<=_;i++)
+#define Rep(i,a,b) for(int i=a,_=b;i>=_;i--)
+#define Fore(i,a) for(int i=Head[a],v;i;i=E[i].next)
+inline int read()
+{
+	int x=0,c=getchar(),f=0;
+	for(;c>'9'||c<'0';f=c=='-',c=getchar());
+	for(;c>='0'&&c<='9';x=(x<<1)+(x<<3)+c-'0',c=getchar());
+	return f?-x:x;
+}
+const int N=100000+10;
+struct Node
+{
+	int l,w;
+	bool operator <(const Node &b)const{return w<b.w||w==b.w&&l<b.l;}
+}Q[N];
+struct Edge{int to,next,w;}E[N<<1];
+int n,L,W,Cnt,Min,top,rt,Fa[N],Head[N],Size[N],Deep[N],Dis[N];
+bool Vis[N];
+typedef long long LL;
+LL C[N],Ans;
+inline void Update(int x,int v)
+{
+	for(;x<=n+1;x+=x&-x)C[x]+=v;
+}
+inline LL Query(int x)
+{
+	LL res=0;
+	for(;x;x-=x&-x)res+=C[x];
+	return res;
+}
+inline void Add(int u,int v,int w)
+{
+	E[++Cnt]=(Edge){v,Head[u],w};Head[u]=Cnt;
+	E[++Cnt]=(Edge){u,Head[v],w};Head[v]=Cnt;
+	//printf("%d %d %d\n",u,v,w);
+}
+inline void Find(int u,int pre,int Sum)
+{
+	Size[u]=1;Fa[u]=pre;int Max=0;
+	Fore(i,u)if((v=E[i].to)!=pre&&!Vis[v])
+	{
+		Find(v,u,Sum);
+		Size[u]+=Size[v];
+		Max=max(Max,Size[v]);
+	}
+	Max=max(Max,Sum-Size[u]);
+	if(Max<Min)Min=Max,rt=u;
+}
+inline void Dfs(int u,int pre)
+{
+	Q[++top]=(Node){Deep[u],Dis[u]};
+	Fore(i,u)if(!Vis[v=E[i].to]&&v!=pre)
+	{
+		Deep[v]=Deep[u]+1;
+		Dis[v]=Dis[u]+E[i].w;
+		if(Deep[v]<=L&&Dis[v]<=W)Dfs(v,u);
+	}
+}
+inline LL Calc(int u,int d,int c)
+{
+	Deep[u]=d,Dis[u]=c;
+	top=0;Dfs(u,0);
+	sort(Q+1,Q+top+1);
+	int h=1;LL res=0;
+	Rep(t,top,1)
+	{
+		while(h<=top&&Q[h].w+Q[t].w<=W)Update(Q[h++].l+1,1);
+		res+=Query(L-Q[t].l+1);
+	}
+	For(i,1,h-1)Update(Q[i].l+1,-1);
+	For(i,1,top)if((Q[i].l<<1)<=L&&(Q[i].w<<1)<=W)res--;
+	return res>>1;
+}
+inline void Work(int u,int Sum)
+{
+	Min=n;Find(u,0,Sum);u=rt;
+	Size[Fa[u]]=Sum-Size[u];
+	Ans+=Calc(u,0,0);
+	Vis[u]=1;
+	Fore(i,u)if(!Vis[v=E[i].to])
+	{
+		Ans-=Calc(v,1,E[i].w);
+		Work(v,Size[v]);
+	}
+}
+int main()
+{
+	n=read(),L=read(),W=read();
+	For(i,1,n-1)
+	{
+		int p=read(),w=read();
+		Add(p,i+1,w);
+	}
+	Work(1,n);
+	printf("%I64d\n",Ans);
+}

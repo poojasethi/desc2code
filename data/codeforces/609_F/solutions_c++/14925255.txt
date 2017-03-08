@@ -1,0 +1,83 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <set>
+using namespace std;
+typedef long long LL;
+const int maxn=200010;
+
+struct Frog {int x,t,id;}F[maxn];
+bool cmp (const Frog &a,const Frog &b) {return a.x<b.x;}
+struct Mosquito {int p,b;Mosquito(int _p,int _b):p(_p),b(_b){} bool operator< (const Mosquito &b) const {return p<b.p;}};
+typedef multiset<Mosquito>::iterator Mit;
+multiset <Mosquito> M;
+
+struct Segment_Tree
+{
+	LL a[maxn<<2],b[maxn<<2];
+	int eated[maxn<<2];
+	int pos[maxn],rank[maxn];
+	int n;
+
+	#define ls (o<<1)
+	#define rs ((o<<1)|1)
+	#define mid ((l+r)>>1)
+
+	void Update(int o) {b[o]=max(b[ls],b[rs]);}
+
+	void Build(int o,int l,int r,Frog *Frogs)
+	{
+		if (l==r) {rank[Frogs[l].id]=o;pos[l]=o;a[o]=Frogs[l].x;b[o]=Frogs[l].t+a[o];return;}
+		Build(ls,l,mid,Frogs);
+		Build(rs,mid+1,r,Frogs);
+		Update(o);
+	}
+	
+	int Query(int o,int l,int r,LL x)
+	{
+		if (l==r) if (a[o]>x || b[o]<x) return 0;else return l;
+		if (b[ls]>=x) return Query(ls,l,mid,x);
+		else return Query(rs,mid+1,r,x);
+	}
+	
+	void Change(int x,int t)
+	{
+		int o=pos[x];
+		b[o]+=t;
+		eated[o]++;
+		while (o>>=1) Update(o);
+	}
+	
+	void Print() {for (int i=1;i<=n;i++) printf("%d %I64d\n",eated[rank[i]],b[rank[i]]-a[rank[i]]);}
+	int Query(int x) {return Query(1,1,n,(LL)x);}
+	#undef ls
+	#undef rs
+	#undef mid
+}T;
+
+int n,m;
+
+int main()
+{
+	scanf("%d%d",&n,&m);
+	for (int i=1;i<=n;i++) scanf("%d%d",&F[i].x,&F[i].t),F[i].id=i;
+	sort(F+1,F+1+n,cmp);
+	T.Build(1,1,n,F);T.n=n;
+	for (int i=1,p,b;i<=m;i++)
+	{
+		scanf("%d%d",&p,&b);
+		Mosquito temp=Mosquito(p,b);
+		M.insert(temp);
+		Mit eatmos=M.find(temp);
+		int eatfrog;
+		while (eatmos!=M.end() && (eatfrog=T.Query((*eatmos).p)))
+		{
+			T.Change(eatfrog,temp.b);
+			M.erase(eatmos);
+			eatmos=M.lower_bound(temp);
+			temp=*eatmos;
+		}
+	}
+	T.Print();
+	return 0;
+}

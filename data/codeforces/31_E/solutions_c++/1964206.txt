@@ -1,0 +1,27 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+char s[40];
+long long w[19],f[19][19];
+
+int main()
+{
+    int n,x,i,j;
+    scanf("%d%s",&n,s);
+    w[1]=1;
+    for (i=2; i<=n; ++i) w[i]=w[i-1]*10;
+    for (i=0; i<=n; ++i)
+        for (j=0; j<=n; ++j)
+        {
+            x=s[n*2-i-j]-48;
+            if (i) f[i][j]=f[i-1][j]+x*w[i];
+            if (j) f[i][j]=max(f[i][j],f[i][j-1]+x*w[j]);
+        }
+    for (i=n, j=n; i || j;)
+    {
+        x=s[n*2-i-j]-48;
+        if (i && f[i-1][j]+x*w[i]==f[i][j]) --i,putchar('H');
+        else --j, putchar('M');
+    }
+    return 0;
+}

@@ -1,0 +1,200 @@
+//Hope is a good thing and maybe the best thing of all...
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <map>
+#include <list>
+#include <cstdio>
+#include <cstring>
+#include <cctype>
+#include <queue>
+#include <set>
+#include <climits>
+#include <iomanip>
+#include <cassert>
+using namespace std;
+
+#define trace(x) cerr << #x << "=" << x <<endl;
+#define trace2(x, y) cerr << #x << "=" << x << " " << #y << "=" << y <<endl;
+#define trackarr(x, n) {cerr << #x << ":" << endl; for (int p = 0; p < n; p++) {cerr << x[p] << " ";} cerr << endl;}
+#define track(x) {cerr << #x << ":" << endl; for (int p = 0; p < x.size(); p++) {cerr << x[p] << " ";} cerr << endl;}
+#define trackvv(x) {cerr << #x << ":" << endl; for (int i = 0; i < x.size(); i++) { cerr << "i:" << i << endl; for (int j = 0; j < x[i].size(); j++){cerr << x[i][j] << " ";} cerr << endl;} cerr << endl;}
+#define trackcr(x) {cerr << #x << ":" << endl; for (auto i = x.begin(); i != x.end(); i++) {cerr << *i << " ";} cerr << endl;}
+
+#define MAX 1000005
+#define MOD 1000000007
+#define INF 1e9
+
+struct node {
+    node *p[30];
+    int count;
+    node () {
+        for (int i = 0; i < 30; i++) {
+            p[i] = NULL;
+        }
+        count = 0;
+    }
+};
+
+class Trie {
+    node *root;
+    public:
+    Trie() {
+        root = create_new_node();
+    }
+
+    node* create_new_node() {
+        node *newnode = new node();
+        return newnode;
+    }
+
+    void insert(string &s, bool palindromeSuffix[]) {
+        node *x = root;
+        for (int i = 0; s[i]; i++) {
+            if (x->p[s[i] - 'a'] == NULL) {
+                x->p[s[i] - 'a'] = create_new_node();
+            }
+            x = x->p[s[i] - 'a'];
+            if (palindromeSuffix[i]) {
+                x->count++;
+            }
+        }
+    }
+
+    int query(string &s) {
+        node *x = root;
+        for (int i = 0; s[i]; i++) {
+            if (x->p[s[i] - 'a'] == NULL) {
+                return 0;
+            } else {
+                x = x->p[s[i] - 'a'];
+            }
+        }
+        return x->count;
+    }
+};
+
+//---------String Hashing---------
+const long long B = 100000007;
+const long long M = 1000000009;
+
+long long power(long long n, long long m)
+{
+    if (m == 0) return 1;
+    long long x = power(n, m / 2);
+    if (!(m & 1)) return (x * x) % M;
+    else return (((x * x) % M) * n) % M;
+}
+
+long long h[MAX], rh[MAX];
+long long pB[MAX], invB[MAX];
+
+void pInit() {
+    pB[0] = 1;
+    for (int i = 1; i < MAX; i++) {
+        pB[i] = (pB[i-1] * B) % M;
+    }
+
+    invB[MAX-1] = power(pB[MAX-1], M-2);
+    for (int i = MAX-2; i >= 0; i--) {
+        invB[i] = (invB[i+1] * B) % M;
+    }
+}
+
+void init(string &s, int n)
+{
+        h[0] = s[0];
+        for (int i = 1; i < n; i++) {
+            h[i] = ((s[i] * pB[i]) % M + h[i-1]) % M;
+        }
+
+        rh[n-1] = s[n-1];
+        for (int i = n-2; i >= 0; i--) {
+            rh[i] = ((s[i] * pB[n-1-i]) % M + rh[i+1]) % M;
+        }
+}
+
+long long getsubH( int i, int j, int n){
+    long long jh = h[j];
+    long long ih = (i > 0)? h[i-1]: 0;
+    long long subhash = ((jh + M - ih) * invB[i]) % M;
+    return subhash;
+}
+
+long long getsubrH(int i, int j, int n){
+    long long ih = rh[i];
+    long long jh = (j < n-1)? rh[j+1]: 0;
+    long long subhash = ((ih + M - jh) * invB[n-1-j]) % M;
+    return subhash;
+}
+//-------------------------------------------
+
+
+bool isSufPalindrome[MAX], isPrePalindrome[MAX];
+
+int main(){
+    //freopen("input.txt", "r", stdin);
+    //freopen("out1.txt", "w", stdout);
+
+    ios::sync_with_stdio(false);
+    pInit();
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        string s[n], t[n];
+        for (int i = 0; i < n; i++) {
+            cin >> s[i];
+            t[i] = s[i];
+            reverse(t[i].begin(), t[i].end());
+        }
+
+        long long count = 0;
+        map<long long, int> f;
+
+        Trie Pre, Suf;
+        for (int k = 0; k < n; k++) {
+
+            int length = s[k].size();
+            init(s[k], length);
+
+            for (int i = 0; i < length-1; i++) {
+                if (getsubH(i+1, length-1, length) == getsubrH(i+1, length-1, length)) {
+                    isSufPalindrome[i] = true;
+                } else {
+                    isSufPalindrome[i] = false;
+                }
+            }
+            isSufPalindrome[length-1] = false;
+
+            for (int i = 1; i < length; i++) {
+                if (getsubH(0, i-1, length) == getsubrH(0, i-1, length)) {
+                    isPrePalindrome[length-1-i] = true;
+                } else {
+                    isPrePalindrome[length-1-i] = false;
+                }
+            }
+            isPrePalindrome[length-1] = false;
+
+            Pre.insert(t[k], isPrePalindrome);
+            Suf.insert(s[k], isSufPalindrome);
+
+            //SameLength strings;
+            long long hash = getsubH(0, length-1, length);
+            long long revHash = getsubrH(0, length-1, length);
+
+            count += 2*f[hash];
+            f[revHash]++;
+        }
+
+        long long countA = 0, countB = 0;;
+        for (int k = 0; k < n; k++) {
+            countA += Suf.query(t[k]);
+            countB += Pre.query(s[k]);
+        }
+        //cout << countA << " " << countB << endl;
+
+        cout << countA + countB + count << endl;
+    }
+}

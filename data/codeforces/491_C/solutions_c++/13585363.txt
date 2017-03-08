@@ -1,0 +1,182 @@
+#include <cstdio>
+#include <algorithm>
+
+using namespace std;
+
+#define MAXM 2000006
+#define MAXN 55
+#define INF 2147483647
+
+int n, m;
+int w[MAXN][MAXN]; 
+int y[MAXN], z[MAXN]; 	
+int matchA[MAXN]; 		
+int matchB[MAXN]; 		
+bool S[MAXN], T[MAXN]; 	
+int slack[MAXN]; 		
+int slacki[MAXN]; 		
+int parent[MAXN]; 		
+char mes[MAXM], cor[MAXM];
+
+int iconv(char x) {
+	if ('a' <= x && x <= 'z') return x - 'a';
+	return (x - 'A') + 26;
+}
+
+char cconv(int x) {
+	if (x < 26) return 'a' + x;
+	return 'A' + x - 26;
+}
+
+
+void init_duals() {
+	for (int j = 0; j < n; j++) {
+		z[j] = 0;
+	}
+	for (int i = 0; i < n; i++) {
+		y[i] = w[i][0];
+		for (int j = 1; j < n; j++) {
+			y[i] = max(y[i], w[i][j]);
+		}
+	}
+}
+
+void update_duals() {
+	int delta = INF; 
+	for (int j = 0; j < n; j++) {
+		if (!T[j]) delta = min(delta, slack[j]);
+	}
+	for (int i = 0; i < n; i++) {
+		if (S[i]) y[i] -= delta;
+	}
+	for (int j = 0; j < n; j++) {
+		if (T[j]) {
+			z[j] += delta;
+		} else {
+			slack[j] -= delta;
+		}
+	}
+}
+
+void add_to_tree(int i, int pi) {
+	S[i] = true; 
+	parent[i] = pi; 
+	for (int j = 0; j < n; j++) {
+		if (y[i] + z[j] - w[i][j] < slack[j]) {
+			slack[j] = y[i] + z[j] - w[i][j];
+			slacki[j] = i;
+		}
+	}
+}
+
+bool augment() { 
+	int i, j; 
+	int queue[MAXN], end = 0, front = 0; 
+	                             
+	for (i = 0; i < n; i++) S[i] = false;
+	for (j = 0; j < n; j++) T[j] = false;
+	for (i = 0; i < n; i++) parent[i] = -1;
+	for (i = 0; i < n; i++) {
+		if (matchA[i] == -1) {
+			
+			queue[end++] = i;
+			parent[i] = -2;
+			S[i] = true;
+			break;
+		}
+	}
+	for (j = 0; j < n; j++) { 
+		slack[j] = y[i] + z[j] - w[i][j];
+		slacki[j] = i;
+	}
+
+	while (true) { 
+		while (front < end) { 
+			i = queue[front++]; 
+			for (j = 0; j < n; j++) { 
+				if (w[i][j] == y[i] + z[j] && !T[j]) {
+					if (matchB[j] == -1) break;	
+					T[j] = true; 
+					queue[end++] = matchB[j];	
+					add_to_tree(matchB[j], i); 
+				}
+			}
+			if (j < n) break; 
+		}
+		if (j < n) break; 
+
+		update_duals(); 
+		end = front = 0; 
+		for (j = 0; j < n; j++) {
+			if (!T[j] && slack[j] == 0) {
+				if (matchB[j] == -1) { 
+					i = slacki[j];
+					break;
+				} else {
+					T[j] = true; 
+					if (!S[matchB[j]]) {
+						queue[end++] = matchB[j];	
+						add_to_tree(matchB[j], slacki[j]);		
+					}
+				}
+			}
+		}
+		if (j < n) break; 
+	}
+
+	if (j < n) { 
+		int u = i, v = j, tj;
+		while (u != -2) {
+			tj = matchA[u];
+			matchB[v] = u;
+			matchA[u] = v;
+			
+			u = parent[u]; 
+			v = tj;
+		}
+		return true;
+	}
+	return false;
+}
+
+
+int hungarian() {
+	int maxW = 0; 
+	int matched = 0; 
+	for (int i = 0; i < n; i++) matchA[i] = -1;
+	for (int j = 0; j < n; j++) matchB[j] = -1;
+	init_duals(); 
+	while (matched < n) {
+		if (augment()) matched++; 
+	}
+	for (int i = 0; i < n; i++)
+		maxW += w[i][matchA[i]];
+	return maxW;
+}
+
+void readInput() {
+	scanf("%d %d", &m, &n);
+	scanf("%s %s", mes, cor);
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++) {
+			w[i][j] = 0;
+		}
+	}
+	for (int i = 0; i < m; i++) {
+		int r = iconv(mes[i]);
+		int c = iconv(cor[i]);
+		w[r][c]++;
+	}
+}
+
+int main() {
+	readInput();
+	printf("%d\n", hungarian());
+	for (int i = 0; i < n; i++) {
+		printf("%c", cconv(matchA[i]));
+	}
+	printf("\n");
+
+	return 0;
+}
+

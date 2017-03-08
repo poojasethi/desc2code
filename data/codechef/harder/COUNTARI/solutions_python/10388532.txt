@@ -1,0 +1,144 @@
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+
+//using namespace std;
+
+typedef long long LL;
+#define clr(a,b) memset(a,b,sizeof (a))
+const double PI = acos(-1.0);
+#define FOR(i,x) for(int i = 0, __END__ = (int)(x); i < __END__ ; i++)
+#define FORR(i,x) for(int i = 1, __END__ = (int)(x); i <= __END__ ; i++)
+#define REP(i,x,y) for(int i = (int)(x), __END__ = (int)(y); i <= __END__; i++)
+
+const int MAXN = 100000 + 5;
+
+struct complex
+{
+    double r,i;
+    complex(double r = 0,double i = 0):r(r),i(i){};
+    complex operator + (const complex &b){return complex(r + b.r, i + b.i);}
+    complex operator - (const complex &b){return complex(r - b.r, i - b.i);}
+    complex operator * (const complex &b){return complex(r * b.r - i * b.i, r * b.i + i * b.r);}
+};
+void change(complex y[],int len)
+{
+    int i,j,k;
+    for(i = 1, j = len / 2; i < len - 1; i++)
+    {
+        if(i < j) std::swap(y[i], y[j]);
+        k = len >> 1;
+        while( j >= k)
+        {
+            j -= k;
+            k >>= 1;
+        }
+        if(j < k)j += k;
+    }
+}
+void fft(complex y[],int len,int on)
+{
+    change(y,len);
+    for(int h = 2;h <= len;h <<= 1)
+    {
+        complex wn(cos(-on*2*PI/h),sin(-on*2*PI/h));
+        for(int j = 0;j < len;j += h)
+        {
+            complex w(1,0);
+            for(int k = j;k < j+h/2;k++)
+            {
+                complex u = y[k];
+                complex t = w*y[k+h/2];
+                y[k] = u+t;
+                y[k+h/2] = u-t;
+                w = w*wn;
+            }
+        }
+    }
+    if(on == -1)
+        for(int i = 0;i < len;i++)
+            y[i].r /= len;
+}
+int block_size;
+int a[100005];
+int sum[30004];
+complex Y1[1 << 17];
+complex Y2[1 << 17];
+int n;
+int len = 1 << 17;
+long long gao(int l, int r)//[l,r]
+{
+	l = std::max(0,l);
+	r = std::min(n - 1, r);
+	//printf("gao %d %d\n", l,r);
+	FOR(i,len) Y1[i] = Y2[i] = complex(0,0);
+	FOR(i,l) Y1[a[i]].r++;
+	REP(i,r + 1, n - 1) Y2[a[i]].r++;
+	fft(Y1,len,1);
+	fft(Y2,len,1);
+	FOR(i,len) Y1[i] = Y1[i] * Y2[i];
+	fft(Y1,len,-1);
+	LL ret = 0;
+	REP(i,l,r)
+		ret += (long long)(Y1[a[i] + a[i]].r + 0.5);
+	//printf("\tret %lld\n", ret);
+	return ret;
+}
+int main()
+{
+ 	scanf("%d",&n);
+ 	FOR(i,n) scanf("%d",&a[i]);
+ 	block_size = std::min(8*(int)sqrt(n),n);
+ 	//printf("bs = %d\n",block_size);
+ 	clr(sum,0);
+ 	LL ans = 0;
+ 	int tmp;
+ 	for(int st = 0; st < n; st += block_size)
+ 	{
+ 		REP(j,st, std::min(st+block_size-1,n-1))
+ 		{
+ 			REP(k,j+1,std::min(st+block_size-1,n-1))
+ 			{
+ 				tmp = a[j] + a[j] - a[k];
+ 				if(tmp >= 1 && tmp <= 30000)
+ 				{
+ 					//if(sum[tmp])printf("FIND %d %d\n", j,k);
+ 					ans += sum[tmp];
+ 				}
+ 			}
+ 			sum[a[j]]++;
+ 		}
+ 	}
+ 	//printf("ans1 = %lld\n", ans);
+ 	clr(sum,0);
+ 	FOR(i,n) sum[a[i]]++;
+ 	for(int st = 0; st < n; st += block_size)
+ 	{
+ 		FOR(add, block_size) if(st + add < n)
+ 		{
+ 			//printf("\t del %d %d\n", st + add,a[st + add]);
+ 			sum[a[st + add]]--;
+ 		}
+ 		REP(i,st, std::min(st+block_size - 1,n - 1))
+ 		{
+ 			REP(j,i+1,std::min(st+block_size - 1,n - 1))
+ 			{
+ 				tmp = a[j] + a[j] - a[i];
+ 				if(tmp >= 1 && tmp <= 30000)
+ 				{
+ 					//if(sum[tmp]) printf("FIND %d %d\n",i,j);
+ 					ans += sum[tmp];
+ 				}
+ 			}
+ 		}
+ 	}
+ 	//printf("ans2 = %lld\n", ans);
+ 	int cnt_block = (n + block_size - 1) / block_size;
+ 	REP(i,1,cnt_block - 2)
+ 		ans += gao(block_size * i , block_size * (i + 1) - 1);
+ 	printf("%lld\n", ans);
+    return 0;
+}

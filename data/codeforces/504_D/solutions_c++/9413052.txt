@@ -1,0 +1,82 @@
+#include <cassert>
+#include <cstdio>
+#include <cstring>
+
+const int n = 2050;
+const int maxl = 610;
+
+void l_mul ( unsigned *a, int b ) {
+  long long c = 0;
+  for (int i = 0; i < n / 32; i++) {
+    c = c + (long long)a[i] * b;
+    a[i] = c & 0xffffffff;
+    c >>= 32;
+  }
+  assert (c == 0);
+}
+void l_add ( unsigned *a, int b ) {
+  long long c = b;
+  for (int i = 0; i < n / 32; i++) {
+    c = c + (long long)a[i];
+    a[i] = c & 0xffffffff;
+    c >>= 32;
+  }
+  assert (c == 0);
+}
+
+unsigned a[n][n / 32];
+
+int main () {
+  memset (a, 0, sizeof (a));
+  int m;
+  assert (scanf ("%d", &m) == 1);
+  for (int i = 0; i < m; i++) {
+    char s[maxl];
+    assert (scanf ("%s", s) == 1);
+    unsigned x[n / 32];
+    memset (x, 0, sizeof (x[0]) * n / 32);
+    for (int j = 0; s[j]; j++) {
+      l_mul (x, 10);
+      l_add (x, s[j] - '0');
+    }
+    for (int j = 0; j < n; j++)
+      if (x[j / 32] & (1 << (j % 32)))
+        a[j][i / 32] |= (1 << (i % 32));
+  }
+
+  int v[n], vk = 0, var_i[n], var_j[n];
+  memset (v, 0, sizeof (v[0]) * n);
+  for (int i = 0; i < m; i++) {
+    int t = -1;
+    for (int j = 0; j < n; j++) {
+      if (v[j] || 0 == (a[j][i / 32] & (1 << (i % 32))))
+        continue;
+      t = j;
+      break;
+    }
+    if (t == -1) {
+      int ans[n], ansk = 0;
+      for (int k = 0; k < vk; k++)
+        if (a[var_j[k]][i / 32] & (1 << (i % 32)))
+          ans[ansk++] = var_i[k];
+      printf ("%d ", ansk);
+      for (int j = 0; j < ansk; j++)
+        printf ("%d%c", ans[j], "\n "[j < ansk - 1]);
+    } else {
+      printf ("%d\n", 0);
+      v[t] = 1;
+      var_i[vk] = i;
+      var_j[vk] = t;
+      vk++;
+      for (int j = 0; j < n; j++) {
+        if (t == j || 0 == (a[j][i / 32] & (1 << (i % 32))))
+          continue;
+        for (int k = 0; k < n / 32; k++)
+          a[j][k] ^= a[t][k];
+      }
+    }
+  }
+
+  return 0;
+}
+

@@ -1,0 +1,53 @@
+#include<iostream>
+#include<vector>
+#include<algorithm>
+#include<cstring>
+using namespace std;
+vector<int> ivec;
+int used[35];
+bool dfs(int i,int sum,int flag){
+if(sum==0&&flag>1)
+return true;
+if(sum==0&&flag<=1)
+return false;
+if(sum<0)
+return false;
+for(int j=i;j>=0;j--){
+if(used[j]==1)
+continue;
+used[j]=1;
+if(dfs(i-1,sum-ivec[j],flag+1))return true;
+used[j]=0;
+}
+return false;
+}
+int main(){
+int n;
+cin>>n;
+ivec.clear();
+memset(used,0,sizeof(used));
+for(int i=0;i!=n;i++){
+    int a;
+    cin>>a;
+    ivec.push_back(a);
+}
+int flag=0;
+sort(ivec.begin(),ivec.end());
+for(int i=0;i!=ivec.size();i++){
+if(ivec[i]!=1){
+    if(!dfs(i-1,ivec[i]-1,0))
+    {flag=1;break;}
+}
+}
+for(int i=0;i<ivec.size()-1;i++){
+if(used[i]==0)
+{flag=1;
+break;
+}}
+
+if(flag)
+cout<<"NO"<<endl;
+else
+cout<<"YES"<<endl;
+return 0;
+}

@@ -1,0 +1,129 @@
+#include <cstdio>
+#include <algorithm>
+#include <iostream>
+#include <cstring>
+#include <bitset>
+#include <cassert>
+
+#define REP(i, x, y) for (int i = x, _ = y; i <= _; ++ i)
+#define rep(i, x, y) for (int i = x, _ = y; i >= _; -- i)
+
+template <typename T> bool Chkmin(T &x, T y) { return y < x? x = y, true : false; }
+
+const int MAXN = 150 + 10, MAXM = MAXN, oo = 0x3f3f3f3f;
+
+int n;
+int ans;
+
+struct Matrix
+{
+    std::bitset<MAXN> lr[MAXN], ud[MAXN];
+    void Init()
+    {
+        REP (i, 1, n) {
+            lr[i].set(i);
+            ud[i].set(i);
+        }
+    }
+    void Set(int x, int y)
+    {
+        lr[x].set(y);
+        ud[y].set(x);
+    }
+} S, fr;
+
+Matrix operator * (const Matrix &a, const Matrix &b)
+{
+    Matrix c;
+    REP (i, 1, n) REP (j, 1, n)
+        if ((a.lr[i] & b.ud[j]).count() != 0)
+            c.Set(i, j);
+    return c;
+}
+
+struct Edge
+{
+    int u, v, w;
+    Edge(int u = 0, int v = 0, int w = 0):
+        u(u), v(v), w(w) {}
+    bool operator < (const Edge &e) const { return w < e.w; }
+} G[MAXM];
+
+int m;
+
+Matrix Pow(Matrix a, int p)
+{
+    Matrix c;
+    c.Init();
+    while (p) {
+        if (p & 1)
+            c = c * a;
+        a = a * a;
+        p >>= 1;
+    }
+    return c;
+}
+
+void Work(int d)
+{
+    static int dis[MAXN][MAXN];
+    memset(dis, 0x3f, sizeof(dis));
+    
+    REP (i, 1, n)
+        dis[i][i] = 0;
+    
+    REP (i, 1, n) REP (j, 1, n)
+        if (fr.lr[i][j])
+            Chkmin(dis[i][j], 1);
+    
+    REP (k, 1, n) REP (i, 1, n) REP (j, 1, n)
+        Chkmin(dis[i][j], dis[i][k] + dis[k][j]); // Floyd!
+
+    REP (i, 1, n)
+        if (S.lr[1][i])
+            Chkmin(ans, d + dis[i][n]);
+}
+
+void Input()
+{
+    int u, v, w;
+    scanf("%d%d", &n, &m);
+    REP (i, 1, m) {
+        scanf("%d%d%d", &u, &v, &w);
+        G[i] = Edge(u, v, w);
+    }
+}
+
+void Solve()
+{
+    ans = oo;
+    
+    std::sort(G + 1, G + m + 1);
+    
+    S.Init();
+    REP (i, 1, m) {
+        S = S * Pow(fr, G[i].w - G[i - 1].w);
+        fr.Set(G[i].u, G[i].v);
+        Work(G[i].w);
+    }
+
+    if (ans < oo)
+        printf("%d\n", ans);
+    else
+        puts("Impossible");
+}
+
+int main()
+{
+    if (fopen("D.in", "r") != NULL) {
+        freopen("D.in", "r", stdin);
+        freopen("D.out", "w", stdout);
+    }
+
+    Input();
+    Solve();
+
+    return 0;
+}
+
+                          

@@ -1,0 +1,86 @@
+#include<stdio.h>
+#include<algorithm>
+
+using namespace std;
+
+const int maxn = 100000 + 5;
+
+int n, k, root;
+int father[maxn], value[maxn], left[maxn], right[maxn];
+int minvalue[maxn], maxvalue[maxn];
+int depth[maxn];
+bool leaf[maxn];
+long long dp[maxn];
+pair<int, int> node[maxn];
+
+void dfs(int x, int d)
+{
+	depth[x] = d;
+	if(left[x]!=0)
+	{
+		leaf[x] = false;
+		dfs(left[x], d+1);
+		dfs(right[x], d+1);
+
+		minvalue[x] = minvalue[left[x]];
+		maxvalue[x] = maxvalue[right[x]];
+	}
+	else
+	{
+		leaf[x] = true;
+		minvalue[x] = value[x];
+		maxvalue[x] = value[x];
+	}
+}
+
+void dfs2(int x)
+{
+	if(left[x] != 0)
+	{
+		dp[left[x]] = dp[x] + minvalue[right[x]];
+		dp[right[x]] = dp[x] + maxvalue[left[x]];
+
+		dfs2(left[x]);
+		dfs2(right[x]);
+	}
+}
+
+int main()
+{
+	scanf("%d", &n);
+	for(int i=1; i<=n; i++)
+	{
+		scanf("%d%d", &father[i], &value[i]);
+		if(father[i] == -1) root = i;
+		node[i] = make_pair(value[i], i);
+	}
+
+	for(int i=1; i<=n; i++)
+	{
+		if(father[i] != -1)
+		{
+			if(value[father[i]] < value[i]) right[father[i]] = i;
+			else left[father[i]] = i;
+		}
+	}
+
+	dfs(root, 0);
+
+	dp[root] = 0;
+	dfs2(root);
+
+	sort(node+1, node+n+1);
+	scanf("%d", &k);
+	for(int i=0; i<k; i++)
+	{
+		int v;
+		scanf("%d", &v);
+		int index = lower_bound(node+1, node+n+1, make_pair(v, 0)) - node;
+		if(index != n+1 && leaf[node[index].second]) index = node[index].second;
+		else index = node[index-1].second;
+
+		printf("%.15lf\n", dp[index] * 1.0 / depth[index]);
+	}
+
+	return 0;
+}

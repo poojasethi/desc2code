@@ -1,0 +1,124 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <queue>
+#define N 210
+typedef long long ll;
+using namespace std;
+int s[210], nn , mod;
+int n, m, k;
+int next[N][22],pos,flag[N],fail[N];
+ll dp[210][210][510][2];
+
+int newnode(){
+    memset(next[pos],0,sizeof(next[pos]));
+    fail[pos]=0;
+    flag[pos] = 0;
+    return pos++;
+}
+
+
+void insert(int v){
+    int p=0,i;
+    for(i=0;i<nn;i++){
+        int k=s[i];
+        p=next[p][k]?next[p][k]:next[p][k]=newnode();
+    }
+    flag[p] += v;
+}
+
+void makefail(){
+    queue<int>q;
+    q.push(0);
+    while(!q.empty()){
+        int u=q.front();
+        q.pop();
+        for(int i=0;i<m;i++){
+            int v=next[u][i];
+            if(v==0) next[u][i]=next[fail[u]][i];
+            else q.push(v);
+            if(u&&v){
+                fail[v]=next[fail[u]][i];
+                flag[v] += flag[fail[v]];
+            }
+        }
+    }
+}
+
+int l[210], r[210], vv[210];
+int ls, rs, ss;
+
+ll dfs(int pos,int sta,int val,int first,int doing){
+	if(val > k) return 0;
+	if(pos == ss) {
+		if(val <= k) return 1;
+		return 0;
+	}
+    if(!doing && dp[pos][sta][val][first]!=-1) return dp[pos][sta][val][first];
+    ll ans=0;
+    int i,end;
+    if(doing)end=vv[pos]; else end=m - 1;
+
+    for(i=0;i<=end;i++){
+    	if(i==0 && !first) ans+=dfs(pos+1,sta,val+flag[sta],0,(doing && (i==end)));
+		else ans+=dfs(pos+1,next[sta][i],val+flag[next[sta][i]],1,(doing && (i==end)));
+        ans%=mod;
+    }
+    if(!doing){
+        dp[pos][sta][val][first]=ans;
+    }
+    return ans;
+}
+
+void solve(){
+    memset(dp,-1,sizeof(dp));
+    ss = rs;
+    for(int i = 0; i < ss; i++) vv[i] = r[i];
+   	ll ans1 = dfs(0,0,0,0,1);
+
+   	ss = ls;
+   	memset(dp,-1,sizeof(dp));
+   	for(int i = 0; i < ss; i++) vv[i] = l[i];
+   	ll ans2 = dfs(0,0,0,0,1);
+   	printf("%I64d\n",((ans1 - ans2)%mod + mod)%mod);
+}
+
+int main(){
+	mod = 1e9 + 7;
+    scanf("%d %d %d", &n, &m, &k);
+    scanf("%d", &ls);
+    for(int i = 0; i < ls; i++){
+    	scanf("%d", &l[i]);
+    }
+    for(int i = ls - 1; i >= 0; i--){
+    	if(l[i]){
+    		l[i]--;
+    		break;
+    	}
+    	else l[i] = m - 1;
+    }
+    if(!l[0]){
+    	for(int i = 1; i < ls; i++){
+    		l[i - 1] = l[i];
+    	}
+    	ls--;
+    }
+    scanf("%d", &rs);
+    for(int i = 0; i < rs; i++){
+    	scanf("%d", &r[i]);
+    }
+    pos = 0;
+    newnode();
+	for(int i=1;i<=n;i++){
+		scanf("%d", &nn);
+    	for(int j = 0; j < nn; j++){
+    		scanf("%d", &s[j]);
+    	}
+    	int v;
+    	scanf("%d", &v);
+		insert(v);
+	}
+	makefail();
+	solve();
+    return 0;
+}

@@ -1,0 +1,157 @@
+#include <algorithm>
+#include <iostream>
+#include <cstring>
+#include <climits>
+#include <cstdio>
+#include <vector>
+#define lch(u) ((u) << 1)
+#define rch(u) (((u) << 1) | 1)
+#define Clear(a, b) memset(a, b, sizeof a)
+using namespace std;
+typedef long long i64;
+const int N = 6e5 + 10, M = N << 2;
+const i64 Inf = LONG_LONG_MAX / 3;
+
+template<class T>
+inline bool GetMin(T &a, T b) {
+	if (a > b) { a = b; return 1; }
+	return 0;
+}
+
+template<class T>
+inline bool GetMax(T &a, T b) {
+	if (a < b) { a = b; return 1; }
+	return 0;
+}
+
+int n, m, cover[N][3];
+vector<int> a[N], b[N];
+int tms, en[N], to[N], next[N];
+
+inline void Link(int u, int v) {
+	to[++tms] = v;
+	next[tms] = en[u];
+	en[u] = tms;
+}
+
+int ord[N][2], node[N], tot;
+i64 ans, val[M], tag[M];
+
+inline void Update(int u) {
+	val[u] = min(val[lch(u)], val[rch(u)]);
+}
+
+inline void Apply(int u, i64 d) {
+	val[u] += d;
+	tag[u] += d;
+}
+
+inline void Push_Down(int u) {
+	if (tag[u]) {
+		Apply(lch(u), tag[u]);
+		Apply(rch(u), tag[u]);
+		tag[u] = 0;
+	}
+}
+
+void Modify(int u, int l, int r, int p, i64 d) {
+	if (l == r) {
+		val[u] = d;
+		return;
+	}
+	Push_Down(u);
+	int m = (l + r) >> 1;
+	if (p <= m) Modify(lch(u), l, m, p, d);
+	else Modify(rch(u), m + 1, r, p, d);
+	Update(u);
+}
+
+void Add(int u, int l, int r, int p, int q, i64 d) {
+	if (r < p || q < l) return;
+	if (p <= l && r <= q) {
+		Apply(u, d);
+		return;
+	}
+	Push_Down(u);
+	int m = (l + r) >> 1;
+	Add(lch(u), l, m, p, q, d);
+	Add(rch(u), m + 1, r, p, q, d);
+	Update(u);
+}
+
+i64 Query(int u, int l, int r, int p, int q) {
+	if (r < p || q < l) return Inf;
+	if (p <= l && r <= q) return val[u];
+	Push_Down(u);
+	int m = (l + r) >> 1;
+	i64 res = Inf;
+	GetMin(res, Query(lch(u), l, m, p, q));
+	GetMin(res, Query(rch(u), m + 1, r, p, q));
+	Update(u);
+	return res;
+}
+
+i64 f[N];
+
+void Dfs(int u, int fa) {
+	ord[u][0] = m + 1, ord[u][1] = 0;
+	i64 sum = 0;
+	for (int p = en[u]; p; p = next[p]) {
+		int v = to[p];
+		if (v != fa) {
+			Dfs(v, u);
+			GetMin(ord[u][0], ord[v][0]);
+			GetMax(ord[u][1], ord[v][1]);
+			sum += f[v];
+		}
+	}
+	if (u == 1) {
+		if (~ans)
+			ans = sum;
+		return;
+	}
+	for (int i = 0, j = a[u].size(); i < j; ++i) {
+		int k = a[u][i];
+		node[k] = ++tot;
+		Modify(1, 1, m, node[k], sum + cover[k][2]);
+		GetMin(ord[u][0], node[k]);
+		GetMax(ord[u][1], node[k]);
+	}
+	for (int i = 0, j = b[u].size(); i < j; ++i) {
+		int k = b[u][i];
+		Modify(1, 1, m, node[k], Inf);
+	}
+	for (int p = en[u]; p; p = next[p]) {
+		int v = to[p];
+		if (v != fa) 
+			Add(1, 1, m, ord[v][0], ord[v][1], sum - f[v]);
+	}
+	f[u] = Query(1, 1, m, ord[u][0], ord[u][1]);
+	if (f[u] > 1e15)
+		ans = -1;
+}
+
+int main() {
+
+	scanf("%d %d", &n, &m);
+	for (int i = 1; i < n; ++i) {
+		int u, v;
+		scanf("%d %d", &u, &v);
+		Link(u, v), Link(v, u);
+	}
+	for (int i = 1; i <= m; ++i) {
+		int u, v, d;
+		scanf("%d %d %d", &u, &v, &d);
+		cover[i][0] = u;
+		cover[i][1] = v;
+		cover[i][2] = d;
+		a[u].push_back(i);
+		b[v].push_back(i);
+	}
+	Clear(val, 60);
+	Dfs(1, 0);
+	if (ans > 1e15) ans = -1;
+	printf("%I64d\n", ans);
+
+	return 0;
+}

@@ -1,0 +1,25 @@
+def isvalid(s, c):
+    if c.difference(s):
+        return False
+    return True
+def main():
+    n = input()
+    l = raw_input().split()
+    s = set(l)
+    answer = 0
+    for _ in xrange(111, 1000):
+        a = [i for i in str(_)]
+        if isvalid(s, set(a)):
+            for __ in xrange(11, 100):
+                b = [i for i in str(__)]
+                if isvalid(s, set(b)):
+                    a1 = _ * int(b[0])
+                    a2 = _ * int(b[1])
+                    final = (a1*10)+a2
+                    a1_set = set([i for i in str(a1)])
+                    a2_set = set([i for i in str(a2)])
+                    final_set = set([i for i in str(final)])
+                    if a1<1000 and a2 < 1000 and final < 10000 and isvalid(s, a1_set) and isvalid(s, a2_set) and isvalid(s, final_set):
+                        answer += 1
+    print answer
+main()

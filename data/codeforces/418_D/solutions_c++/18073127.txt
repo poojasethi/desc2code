@@ -1,0 +1,158 @@
+#include<stdio.h>
+#include<string.h>
+#include<iostream>
+#include<algorithm>
+#include<vector>
+#include<queue>
+#define M 100005
+using namespace std;
+vector<int>edge[M];
+int tp[M],dst[M],fa[M],d[M],son[M];
+int n,m,S=1,E,mx,t=1;
+queue<int>Q;
+void DFS(int &a,int p,int f,int d){
+	fa[p]=f,son[p]=1;
+	if(mx<d){
+		mx=d;
+		a=p;
+	}
+	for(int i=0;i<edge[p].size();i++){
+		int to=edge[p][i];
+		if(to==f)continue;
+		DFS(a,to,p,d+1);
+		son[p]=max(son[p],son[to]+1);	
+	}
+}
+int BFS(int s,int used){
+	int dep=0;
+	d[s]=0,tp[s]=t;
+	Q.push(s);
+	while(!Q.empty()){
+		int cur=Q.front();Q.pop();
+	//	printf("%d\n",cur);
+		for(int i=0;i<edge[cur].size();i++){
+			int to=edge[cur][i];
+			if(to==used||to==fa[cur])continue;
+			//printf("to:%d\n",to);
+			Q.push(to);
+			d[to]=d[cur]+1;
+			tp[to]=t;
+			dep=max(d[to],dep);
+		}
+	}
+	return dep;
+}
+struct Segment_Tree{
+	struct node{
+		int L,R,mx1,mx2;
+	}tree[M<<2];
+	void up(int p){
+		tree[p].mx1=max(tree[p<<1].mx1,tree[p<<1|1].mx1);
+		tree[p].mx2=max(tree[p<<1].mx2,tree[p<<1|1].mx2);
+	}
+	void build(int L,int R,int p){
+		tree[p].L=L,tree[p].R=R;
+		if(L==R){
+			tree[p].mx1=dst[L]-L;
+			tree[p].mx2=dst[L]+L;
+			return;
+		}
+		int mid=L+R>>1;
+		build(L,mid,p<<1);
+		build(mid+1,R,p<<1|1);
+		up(p);
+	}
+	int query1(int L,int R,int p){
+		if(L>R)return -1000000000;
+		if(tree[p].L==L&&tree[p].R==R)return tree[p].mx1;
+		int mid=tree[p].L+tree[p].R>>1;
+		if(R<=mid)return query1(L,R,p<<1);
+		else if(L>mid)return query1(L,R,p<<1|1);
+		else return max(query1(L,mid,p<<1),query1(mid+1,R,p<<1|1));
+	}
+	int query2(int L,int R,int p){
+		if(L>R)return -1000000000;
+		if(tree[p].L==L&&tree[p].R==R)return tree[p].mx2;
+		int mid=tree[p].L+tree[p].R>>1;
+		if(R<=mid)return query2(L,R,p<<1);
+		else if(L>mid)return query2(L,R,p<<1|1);
+		else return max(query2(L,mid,p<<1),query2(mid+1,R,p<<1|1));
+	}
+}T;
+bool check(int mid,int a,int b,int l,int r){
+	if(abs(mid-l)+d[a]<=abs(r-mid)+d[b])return true;
+	return false;
+}
+int find(int a,int b,int l,int r){//最后一个离a近 
+	int L=1,R=t,res=0;
+	while(L<=R){
+		int mid=L+R>>1;
+		if(check(mid,a,b,l,r)){
+			res=mid;
+			L=mid+1;
+		}else R=mid-1;
+	}
+	return res;
+}
+int main(){
+	scanf("%d",&n);
+	for(int i=1;i<n;i++){
+		int a,b;
+		scanf("%d%d",&a,&b);
+		edge[a].push_back(b);
+		edge[b].push_back(a);
+	}
+	DFS(S,S,0,1);
+	E=S,mx=0;
+	memset(fa,0,sizeof(fa));
+	memset(son,0,sizeof(son));
+	DFS(E,E,0,1);
+	for(int i=S;true;t++){
+		for(int j=0;j<edge[i].size();j++){
+			int to=edge[i][j];
+			if(son[to]!=son[i]-1)continue;
+			dst[t]=BFS(i,to);
+			i=to;
+			break;
+		}
+		if(son[i]==1){
+			t++;
+			dst[t]=BFS(i,0);
+			break;
+		}
+	}
+	T.build(1,t,1);
+	scanf("%d",&m);
+	for(int i=1;i<=m;i++){
+		int a,b;
+		scanf("%d%d",&a,&b);	
+		int l=tp[a],r=tp[b];
+		if(l>r)swap(l,r),swap(a,b);
+		int mid=find(a,b,l,r);
+	//	printf("%d %d\n",l,r);
+		int ans=0;
+		if(l!=r){
+			if(mid<=l){
+				ans=max(ans,T.query1(1,min(l-1,mid),1)+l+d[a]);//离a近 
+				ans=max(ans,T.query1(mid+1,l-1,1)+r+d[b]);//离b近 
+				ans=max(ans,T.query1(l+1,r-1,1)+r+d[b]);
+				ans=max(ans,T.query2(r+1,t,1)-r+d[b]);
+			}else if(mid>=r){
+				ans=max(ans,T.query1(1,l-1,1)+l+d[a]);
+				ans=max(ans,T.query2(l+1,r-1,1)-l+d[a]);
+				ans=max(ans,T.query2(r+1,mid,1)-l+d[a]);
+				ans=max(ans,T.query2(mid+1,t,1)-r+d[b]);
+			}else{
+				ans=max(ans,T.query1(1,l-1,1)+l+d[a]);
+				ans=max(ans,T.query2(l+1,mid,1)-l+d[a]);
+				ans=max(ans,T.query1(mid+1,r-1,1)+r+d[b]);
+				ans=max(ans,T.query2(r+1,t,1)-r+d[b]);
+			}
+		}else{
+			ans=max(ans,T.query2(l+1,t,1)-l+min(d[a],d[b]));
+			ans=max(ans,T.query1(1,l-1,1)+l+min(d[b],d[a]));
+		}
+		printf("%d\n",ans);
+	}
+	return 0;
+}

@@ -1,0 +1,80 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+typedef long long LL;
+int g[55][55];
+int n, m;
+int g1, g2, s1, s2;
+
+LL go(int gp, int sp) {
+	LL dp[55][55] = {};
+	int glen = g[gp][2];
+	int sid = (sp>gp? lower_bound(g[sp]+2, g[sp]+n+1, glen): upper_bound(g[sp]+2, g[sp]+n+1, glen)) - g[sp];
+	if(sid > n) return 0;
+	
+	int slen = g[sp][sid];
+	/*printf("sid=%d slen=%d\n", sid, slen);
+	printf("s=%d\n", sp);
+	for(int i=1;i<=n;i++) printf("%d ", g[sp][i]);
+	puts("");*/
+	dp[0][0] = 1;
+	for(int i=1;i<=n;i++) {
+		int cG=0, cS=0, cB=0;
+		if(gp == i) cG = 1;
+		else if(sp==i) cS = 1;
+		else {
+			if(g[i][2] < glen || (g[i][2]==glen && i<gp)) cG = 1;
+			int id = (i>gp? lower_bound(g[i]+2, g[i]+n+1, glen):
+				   upper_bound(g[i]+2, g[i]+n+1, glen)) - g[i];
+			if(id <= n && (g[i][id] < slen || (g[i][id] == slen && i<sp))) cS = 1;
+			id = (i>sp? lower_bound(g[i]+2, g[i]+n+1, slen):
+					upper_bound(g[i]+2, g[i]+n+1, slen)) - g[i];
+			if(id <= n) cB = 1;
+		}
+		//printf("i=%d, (%d %d %d)\n", i, cG, cS, cB);
+		for(int gg=g2;gg>=0;--gg)
+			for(int s=s2;s>=0;--s)
+				if(dp[gg][s]) {
+					if(cG) dp[gg+1][s] += dp[gg][s];
+					if(cS) dp[gg][s+1] += dp[gg][s];
+					if(!cB) dp[gg][s] = 0;
+				}
+	}
+	LL ret=0;
+	for(int gg=g1;gg<=g2;gg++)
+		for(int s=s1;s<=s2;s++)
+			ret += dp[gg][s];
+	return ret;
+}
+
+int main(void) {
+	scanf("%d%d", &n, &m);
+	memset(g, -1, sizeof(g));
+	for(int i=0;i<m;i++) {
+		int x, y, d;
+		scanf("%d%d%d", &x, &y, &d);
+		g[x][y] = g[y][x] = d;
+	}
+	scanf("%d%d%d%d", &g1, &g2, &s1, &s2);
+	for(int i=1;i<=n;i++) g[i][i] = 0;
+	for(int k=1;k<=n;k++)
+		for(int i=1;i<=n;i++)
+			for(int j=1;j<=n;j++)
+				if(g[i][k]>=0 && g[k][j]>=0 && (g[i][j]==-1||g[i][j]>g[i][k]+g[k][j]))
+					g[i][j] = g[i][k] + g[k][j];
+	for(int i=1;i<=n;i++)
+		sort(g[i]+1, g[i]+n+1);
+	LL ans=0;
+	for(int gg=1;gg<=n;gg++)
+		for(int s=1;s<=n;s++)
+			if(s!=gg) {
+				LL ret = go(gg, s);
+				//printf("ret=%lld, gg=%d s=%d\n", ret, gg, s);
+				ans += ret;
+			}
+	printf("%I64d\n", ans);
+	return 0;
+}

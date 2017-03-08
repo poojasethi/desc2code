@@ -1,0 +1,111 @@
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+using namespace std;
+typedef long long lld;
+const int N=100005;
+int n,q,Lt;
+int a[N],b[N];
+int List[N];
+struct Node{
+    int l,r;
+    Node *lc,*rc;
+    vector <int> L;
+}Tr[N*6];
+
+bool cmp(int i,int j){
+    if (a[i]>a[j]) return true;
+    if (a[i]<a[j]) return false;
+    return b[i]>b[j];
+}
+
+void Select(){
+    int tmp=Lt;
+    Lt=0;
+    List[Lt++]=List[0];
+    for (int i=1;i<tmp;i++){
+        if (b[List[i]]<=b[List[Lt-1]]) continue;
+        List[Lt++]=List[i];
+    }
+}
+
+void Form(){
+    int tmp=Lt;
+    Lt=0;
+    List[Lt++]=List[0];
+    #define x List[i]
+    #define y List[Lt-1]
+    #define z List[Lt-2]
+    for (int i=1;i<tmp;i++){
+        while (Lt>1 && (lld)(a[x]-a[y])*(b[z]-b[y])<=(lld)(a[y]-a[z])*(b[y]-b[x])) Lt--;
+        List[Lt++]=List[i];
+    }
+    #undef x
+    #undef y
+    #undef z
+}
+
+void Make(Node *p){
+    Lt=0;
+    for (int i=p->l;i<=p->r;i++)
+      List[Lt++]=i;
+    sort(List,List+Lt,cmp);
+    Select();
+    Form();
+    p->L.resize(Lt);
+    for (int i=0;i<Lt;i++)
+      p->L[i]=List[i];
+}
+
+void build(int p,int l,int r){
+    Tr[p].l=l; Tr[p].r=r; Tr[p].L.clear(); Make(&Tr[p]);
+    if (l==r){
+        Tr[p].lc=Tr[p].rc=NULL;
+        return;
+    }
+    Tr[p].lc=&Tr[p*2];
+    Tr[p].rc=&Tr[p*2+1];
+    build(p*2,l,(l+r)/2);
+    build(p*2+1,(l+r)/2+1,r);
+}
+
+int Get_Best(vector<int> &L,lld t){
+    int S=L.size();
+    int l=0,r=S-1,mid;
+    while (l<r){
+        mid=(l+r)/2;
+        if (a[L[mid]]+t*b[L[mid]]<=a[L[mid+1]]+t*b[L[mid+1]])
+            l=mid+1;
+        else
+            r=mid;
+    }
+    return L[l];
+}
+
+int Get_Max(int i,int j,lld t){
+    if (a[i]+t*b[i]>a[j]+t*b[j]) return i;
+    return j;
+}
+
+int Get_value(Node *p,int l,int r,int t){
+    if (l<=p->l && p->r<=r)
+        return Get_Best(p->L,t);
+    int mid=(p->l+p->r)/2;
+    if (l<=mid && r>mid) return Get_Max(Get_value(p->lc,l,r,t),Get_value(p->rc,l,r,t),t);
+    if (l<=mid) return Get_value(p->lc,l,r,t);
+           else return Get_value(p->rc,l,r,t);
+}
+
+int main(){
+    scanf("%d%d",&n,&q);
+    for (int i=1;i<=n;i++)
+        scanf("%d%d",&a[i],&b[i]);
+    build(1,1,n);
+    int l,r,t;
+    for (int i=0;i<q;i++){
+        scanf("%d%d%d",&l,&r,&t);
+        printf("%d\n",Get_value(&Tr[1],l,r,t));
+    }
+}

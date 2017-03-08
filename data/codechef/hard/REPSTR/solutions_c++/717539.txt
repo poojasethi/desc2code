@@ -1,0 +1,208 @@
+#include <iostream>
+#include <stdio.h>
+#include <cstdlib>
+#include <vector>
+#include <map>
+#include <set>
+#include <bitset>
+#include <algorithm>
+#include <stack>
+#include <queue>
+#include <list>
+#include <deque>
+#include <cmath>
+#include <iomanip>
+#include <numeric>
+#include <functional>
+#include <math.h>
+#include <string>
+#include <cstring>
+#include <string.h>
+#include <new>
+#include <utility>
+#include <cassert>
+#include <climits>
+#define N 1000005
+using namespace std;
+
+// Begins Suffix Arrays implementation
+// O(n log n) - Manber and Myers algorithm
+// Refer to "Suffix arrays: A new method for on-line string searches",
+// by Udi Manber and Gene Myers
+ 
+//Usage:
+// Fill str with the characters of the string.
+// Call SuffixSort(n), where n is the length of the string stored in str.
+// That's it!
+ 
+//Output:
+// pos = The suffix array. Contains the n suffixes of str sorted in lexicographical order.
+//       Each suffix is represented as a single integer (the position of str where it starts).
+// RANK = The inverse of the suffix array. RANK[i] = the index of the suffix str[i..n)
+//        in the pos array. (In other words, pos[i] = k <==> RANK[k] = i)
+//        With this array, you can compare two suffixes in O(1): Suffix str[i..n) is smaller
+//        than str[j..n) if and only if RANK[i] < RANK[j]
+ 
+char str[N];		    //input
+int RANK[N],pos[N];		//output
+int cnt[N], nxt[N];	//internal
+bool bh[N], b2h[N];
+ //Compares two suffixes according to their first characters
+bool smaller_first_char(int a, int b)
+{
+  return str[a] < str[b];
+}
+ void suffixSort(int n)
+{
+		//sort suffixes according to their first characters
+		for (int i=0; i<n; ++i)
+		{
+			pos[i] = i;
+		}
+		  sort(pos, pos + n, smaller_first_char);
+		
+		  //{pos contains the list of suffixes sorted by their first character}
+ 
+		  for (int i=0; i<n; ++i)
+		  {
+			bh[i] = i == 0 || str[pos[i]] != str[pos[i-1]];
+			b2h[i] = false;
+		  }
+ 
+for (int h = 1; h < n; h <<= 1)
+{
+				//{bh[i] == false if the first h characters of pos[i-1] == the first h characters of pos[i]}
+				  int buckets = 0;
+				  for (int i=0, j; i < n; i = j)
+				  {
+						  j = i + 1;
+						  while (j < n && !bh[j])
+						  {
+							 j++;
+						  }
+						  nxt[i] = j;
+						  buckets++;
+				  }
+				  if (buckets == n) break; // We are done! Lucky bastards!
+				 //{suffixes are separted in buckets containing strings starting with the same h characters}
+ 
+								for (int i = 0; i < n; i = nxt[i])
+								{
+										  cnt[i] = 0;
+										  for (int j = i; j < nxt[i]; ++j)
+										  {
+											RANK[pos[j]] = i;
+										  }
+								}
+ 
+								cnt[RANK[n - h]]++;
+								b2h[RANK[n - h]] = true;
+
+			for (int i = 0; i < n; i = nxt[i])
+			{
+						 for (int j = i; j < nxt[i]; ++j)
+						 {
+							  int s = pos[j] - h;
+								  if (s >= 0)
+								  {
+									  int head = RANK[s];
+									  RANK[s] = head + cnt[head]++;
+									  b2h[RANK[s]] = true;
+								  }
+						 }
+									for (int j = i; j < nxt[i]; ++j)
+									{
+											int s = pos[j] - h;
+											if (s >= 0 && b2h[RANK[s]])
+											{
+												for (int k = RANK[s]+1; !bh[k] && b2h[k]; k++) 
+												b2h[k] = false;
+											}
+									}
+			}
+			for (int i=0; i<n; ++i)
+			{
+			  pos[RANK[i]] = i;
+			  bh[i] |= b2h[i];
+			}
+}
+		  for (int i=0; i<n; ++i)
+		  {
+			RANK[pos[i]] = i;
+		  }
+}//End of Suffix Sort Function
+// End of suffix array algorithm
+ 
+ 
+// Begin of the O(n) longest common prefix algorithm
+// Refer to "Linear-Time Longest-Common-Prefix Computation in Suffix
+// Arrays and Its Applications" by Toru Kasai, Gunho Lee, Hiroki
+// Arimura, Setsuo Arikawa, and Kunsoo Park.
+int height[N];
+// height[i] = length of the longest common prefix of suffix pos[i] and suffix pos[i-1]
+// height[0] = 0
+void getHeight(int n)
+{
+  for (int i=0; i<n; ++i) RANK[pos[i]] = i;
+  height[0] = 0;
+  for (int i=0, h=0; i<n; ++i)
+  {
+	  if (RANK[i] > 0)
+		{
+		  int j = pos[RANK[i]-1];
+		  while (i + h < n && j + h < n && str[i+h] == str[j+h]) h++;
+		  height[RANK[i]] = h;
+		  if (h > 0) h--;
+		}
+  }
+}
+
+// End of longest common prefixes algorithm
+
+void solve(int L, int H, int len){
+
+	int min_val=H, max_len = 1, curr_max_len = 0, curr_min_val = -1;
+
+	int i=1;
+
+	while(i<len){
+		curr_max_len = 0;
+		curr_min_val = 9999999;
+		while(i<len && height[i]>=L){
+			curr_max_len++;
+			curr_min_val = (curr_min_val>height[i])?height[i]:curr_min_val;
+			//cout << height[i] << " " << curr_max_len << " " << curr_min_val << " " << max_len << " " << min_val << endl;
+			i++;
+		}
+		i++;
+		curr_max_len++;
+		//cout << curr_max_len << " " << curr_min_val << " " << max_len << " " << min_val << endl;
+		//cout << curr_max_len << " " << curr_min_val << min_val << " " << max_len << endl;
+		min_val = ((curr_max_len>max_len || (curr_max_len==max_len && curr_min_val > min_val)) && curr_min_val <= H)?curr_min_val:min_val;
+		max_len = (curr_max_len>max_len && curr_min_val <= H)?curr_max_len:max_len;
+	}
+
+	cout << max_len << " " << min_val << endl;
+}
+		
+int main()
+{
+    
+
+	int L, H;
+	cin >> L;
+	cin >> H;
+	while(L||H){
+		cin >> str;
+		suffixSort(strlen(str));
+		getHeight(strlen(str));
+		//for(int i=1;i<strlen(str);i++)
+			//cout << height[i] << endl;
+		solve(L, H, strlen(str));
+		cin >> L;
+		cin >> H;
+	}
+	//system("pause");
+	return 0;
+}
+ 

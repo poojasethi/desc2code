@@ -1,0 +1,164 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+const int maxn = 200005;
+
+struct Edge {
+	int next, to;
+	bool is_bridge;
+} E[maxn << 1];
+
+int LEV, nn = 0, dfs_clock = 0, idx = 0, colors = 0;
+int head[maxn], dfn[maxn], low[maxn], color[maxn], belong[maxn], s[maxn], d[maxn], cnt_src[maxn], cnt_dst[maxn], cnt_lca[maxn];
+int par[maxn][20], dep[maxn];
+bool vis[maxn], fail = false;
+vector <int> V[maxn];
+
+void add(int a, int b) {
+	E[nn].to = b;
+	E[nn].next = head[a];
+	E[nn].is_bridge = false;
+	head[a] = nn++;
+}
+
+//find biconnected components
+void tarjan(int x, int fa) { 
+	dfn[x] = low[x] = ++dfs_clock;
+	for(int i = head[x]; ~i; i = E[i].next) {
+		int u = E[i].to;
+		if(!dfn[u]) {
+			tarjan(u, i);
+			low[x] = min(low[x], low[u]);
+			if(low[u] > dfn[x]) E[i].is_bridge = E[i ^ 1].is_bridge = true; 
+		} else if(i != (fa ^ 1)) { 
+			low[x] = min(low[x], dfn[u]);
+		}
+	}
+}
+
+void dfs0(int x) {
+	color[x] = colors;
+	for(int i = head[x]; ~i; i = E[i].next) {
+		int u = E[i].to;
+		if(!color[u]) dfs0(u);
+	}
+}
+void dfs(int x) { 
+	belong[x] = idx;
+	for(int i = head[x]; ~i; i = E[i].next) {
+		if(E[i].is_bridge) continue;
+		int u = E[i].to;
+		if(!belong[u]) dfs(u);
+	}
+}
+
+void dfs2(int x, int fa) {
+	vis[x] = 1;
+	par[x][0] = fa;
+	dep[x] = dep[fa] + 1;
+	for(int i = 0; i < V[x].size(); i++) {
+		int u = V[x][i];
+		if(u != fa) dfs2(u, x);
+	}
+}
+
+void dfs3(int x, int fa) {
+	vis[x] = 1;
+	for(int i = 0; i < V[x].size(); i++) {
+		int u = V[x][i];
+		if(u != fa) {
+			dfs3(u, x);
+			cnt_src[x] += cnt_src[u];
+			cnt_dst[x] += cnt_dst[u];
+			cnt_lca[x] += cnt_lca[u];
+		}	
+	}
+	if(cnt_lca[x] - cnt_src[x] < 0 && cnt_lca[x] - cnt_dst[x] < 0) fail = 1;
+}
+
+int lca(int x, int y) {
+	if(dep[x] > dep[y]) swap(x, y);
+	for(int i = LEV; i >= 0; i--) {
+		if((dep[y] - dep[x]) >> i & 1) y = par[y][i];
+	}
+	if(x == y) return y;
+	for(int i = LEV; i >= 0; i--) {
+		if(par[x][i] != par[y][i]) {
+			x = par[x][i];
+			y = par[y][i];
+		}
+	}
+	return par[x][0];
+}
+
+int main() {
+
+	memset(head, -1, sizeof(head));
+
+	int n, m, q, x, y;
+	scanf("%d%d%d", &n, &m, &q);
+	for(int i = 0; i < m; i++) {
+		scanf("%d%d", &x, &y);
+		add(x, y);
+		add(y, x);
+	}
+	for(int i = 1; i <= n; i++) {
+		if(!color[i]) {
+			++colors;
+			dfs0(i);
+		}
+	}
+	for(int i = 0; i < q; i++) {
+		scanf("%d%d", &s[i], &d[i]);
+		if(color[s[i]] != color[d[i]]) {
+			printf("No\n");
+			return 0;
+		}
+	}
+	for(int i = 1; i <= n; i++) {
+		if(!dfn[i]) tarjan(i, -1);
+	}
+	for(int i = 1; i <= n; i++) {
+		if(!belong[i]) {
+			++idx;
+			dfs(i);
+		}
+	}
+
+	//construct a tree
+	for(int i = 1; i <= n; i++) {
+		for(int j = head[i]; ~j; j = E[j].next) {
+			if(E[j].is_bridge) {
+				V[belong[i]].push_back(belong[E[j].to]);
+			}
+		}
+	}
+
+	for(int i = 1; i <= idx; i++) {
+		if(!vis[i]) dfs2(i, 0);
+	}
+
+	for(int j = 1; (1 << j) < idx; j++) {
+		for(int i = 1; i <= idx; i++) {
+			par[i][j] = par[par[i][j - 1]][j - 1];
+		}
+		LEV = j;
+	}
+
+	for(int i = 0; i < q; i++) {
+		int u = belong[s[i]];
+		int v = belong[d[i]];
+		cnt_src[u]++;
+		cnt_dst[v]++;
+		cnt_lca[lca(u, v)]++;
+	}
+	
+	memset(vis, 0, sizeof(vis));
+	for(int i = 1; i <= idx; i++) {
+		if(!vis[i]) dfs3(i, 0);
+	}
+	
+	printf("%s\n", fail ? "No" : "Yes");
+
+	return 0;
+}

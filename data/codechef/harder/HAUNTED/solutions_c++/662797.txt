@@ -1,0 +1,93 @@
+#include<iostream>
+#include<stdio.h>
+#include<string.h>
+#define max_ghost 30
+#define max_dim 30
+using namespace std;
+
+int ghostposx[max_ghost][500],ghostposy[max_ghost][500],pathlen[max_ghost],curpos[max_ghost];
+char maze[max_dim][max_dim];
+int mazest[max_dim],state[max_dim],oldstate[max_dim];
+void init(int x1,int y1, int x2, int y2, int &l, int ghost)
+{
+
+   for(;x1!=x2 || y1!=y2;)
+   {
+      ghostposx[ghost][l]=y1;
+      ghostposy[ghost][l++]=x1;
+      int dx=0,dy=0;
+      if(x1<x2)dx=1;
+      else if(x1>x2)dx=-1;
+      else if(y1<y2)dy=1;
+      else if(y1>y2)dy=-1;
+      x1+=dx;
+      y1+=dy;
+   }
+}
+
+int main()
+{
+
+    int test,h,w,g,t,sx,sy,ex,ey;
+    scanf("%d",&test);
+    while(test--)
+    {
+       scanf("%d%d%d%d",&h,&w,&g,&t);
+       for(int i=0; i<g; i++)
+       {
+          int len,x[20],y[20];
+          scanf("%d",&len);
+          pathlen[i]=0;
+          curpos[i]=0;
+          for(int j=0; j<len; j++)
+            scanf("%d%d",&x[j],&y[j]);
+          for(int j=0;j<len;j++)
+            init(x[j],y[j],x[(j+1)%len],y[(j+1)%len],pathlen[i],i);
+       }
+       for(int i=0;i<h;i++)
+        scanf(" %s",maze[i]);
+
+       for(int i=0;i<h;i++)
+        for(int j=0;j<w;j++)
+          if(maze[i][j]=='@')sx=i,sy=j;
+          else if(maze[i][j]=='$')ex=i,ey=j;
+
+      memset(mazest,0,sizeof(mazest));
+      memset(state,0,sizeof(state));
+      memset(oldstate,0,sizeof(oldstate));
+
+      for(int i=0;i<h;i++)
+         for(int j=0;j<w;j++)if(maze[i][j]!='#')mazest[i]|=(1<<j);
+
+      state[sx]=(1<<sy);
+      int res=-1,all=(1<<w)-1;
+      for(int i=1;i<=t;i++)
+      {
+         memcpy(oldstate,state,sizeof(state));
+         for(int j=0;j<h;j++)
+         {
+            state[j]|=(oldstate[j]<<1);
+            state[j]|=(oldstate[j]>>1);
+            if(j>0)state[j]|=oldstate[j-1];
+            if(j<(h-1))state[j]|=oldstate[j+1];
+            state[j]&=mazest[j];
+         }
+         for(int j=0;j<g;j++)
+         {
+            int x,y;
+            x=ghostposx[j][curpos[j]],y=ghostposy[j][curpos[j]];
+            state[x]&=all-(1<<y);
+            curpos[j]=(curpos[j]+1)%pathlen[j];
+            x=ghostposx[j][curpos[j]],y=ghostposy[j][curpos[j]];
+            state[x]&=all-(1<<y);
+         }
+         if(state[ex]&(1<<ey))
+         {
+            res=i;
+            break;
+         }
+      }
+      printf("%d\n",res);
+    }
+    return 0;
+}

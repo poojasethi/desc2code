@@ -1,0 +1,108 @@
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long LL;
+typedef vector < int > VI;
+typedef pair < int,int > II;
+typedef vector < II > VII;
+#define MOD 1000000007
+#define EPS 1e-12
+#define N 200100
+#define PB push_back
+#define MP make_pair
+#define F first 
+#define S second
+#define ALL(v) v.begin(),v.end()
+#define SZ(a) (LL)a.size()
+#define FILL(a,b) memset(a,b,sizeof(a))
+#define SLL(n) scanf("%lld",&n)
+#define PLLN(n) printf("%lld\n",n)
+#define PIN(n) printf("%d\n",n)
+#define REP(i,j,n) for(LL i=j;i<n;i++)
+#define TR1(x) cerr<<#x<<" : "<<x<<endl;
+#define TR2(x,y) cerr<<#x<<" : "<<x<<" | "<<#y<<" : "<<y<<endl;
+#define fast_io ios_base::sync_with_stdio(false);cin.tie(NULL)
+
+#define gc getchar_unlocked
+void scanint(int &x)
+{
+    register int c = gc();
+    x = 0;
+    for(;(c<48 || c>57);c = gc());
+    for(;c>47 && c<58;c = gc()) {x = (x<<1) + (x<<3) + c - 48;}
+}
+#define SI(n) scanint(n)
+int n , m;
+typedef struct segment{
+    LL l , r;
+    LL sum , mx;
+    bool inc , dec;
+}segment;
+LL a[N];
+segment st[3*N] , zero;
+inline segment merge_tree(segment seg1 , segment seg2){
+	if(seg1.l == -1)return seg2;
+    if(seg2.l == -1)return seg1;
+    segment ret;
+    ret.sum = seg1.sum + seg2.sum;
+    if(seg1.r <= seg2.l)ret.inc = seg1.inc & seg2.inc;
+    else ret.inc = 0;
+    if(seg1.r >= seg2.l)ret.dec = seg1.dec & seg2.dec;
+    else ret.dec = 0;
+    ret.mx = max(seg1.mx , seg2.mx);
+    ret.l = seg1.l;
+    ret.r = seg2.r;
+    return ret;
+}
+void make_tree(int l,int h,int root){
+    if(l==h){
+    	st[root].inc = st[root].dec = true;
+        st[root].l = st[root].r = st[root].sum = st[root].mx = a[l];
+        return;
+    }
+    int mid=(l+h)/2,c1=2*root+1,c2=2*root+2;
+    make_tree(l,mid,c1);
+    make_tree(mid+1,h,c2);
+    st[root] = merge_tree(st[c1] , st[c2]);
+}
+void update_tree(int pos,int x,int l,int h,int root){
+    if(pos<l || pos>h || l>h)return;
+    if(pos==l  && l==h){
+        st[root].l = st[root].r = st[root].sum = st[root].mx = x;
+        return;
+    }
+    int mid=(l+h)/2,c1=2*root+1,c2=2*root+2;
+    update_tree(pos,x,l,mid,c1);
+    update_tree(pos,x,mid+1,h,c2);
+    st[root] = merge_tree(st[c1] , st[c2]);
+}
+segment query_tree(int ql,int qh,int l,int h,int root){
+    if(ql>h || qh<l || l>h) return zero;
+    if(ql<=l && qh>=h) return st[root];
+    int mid=(l+h)/2,c1=2*root+1,c2=2*root+2;
+    segment q1=query_tree(ql,qh,l,mid,c1);
+    segment q2=query_tree(ql,qh,mid+1,h,c2);
+    return merge_tree(q1 , q2);
+}
+
+int main(){
+    zero.sum = zero.mx = 0;
+    zero.inc = zero.dec = true;
+    zero.l = zero.r = -1; 
+    SI(n); SI(m);
+    REP(i,0,n)SLL(a[i]);
+    make_tree(0,n-1,0);
+    while(m--){
+        char c[1]; int x , y; scanf("%s",c); SI(x); SI(y);
+        if(c[0] == 'U')
+            update_tree(x-1,y,0,n-1,0);
+        else if(c[0] == 'M')
+            PLLN(query_tree(x-1,y-1,0,n-1,0).mx);
+        else if(c[0] == 'S')
+            PLLN(query_tree(x-1,y-1,0,n-1,0).sum);
+        else if(c[0] == 'I')
+            PIN(query_tree(x-1,y-1,0,n-1,0).inc);
+        else 
+            PIN(query_tree(x-1,y-1,0,n-1,0).dec);
+    }
+    return 0;
+}

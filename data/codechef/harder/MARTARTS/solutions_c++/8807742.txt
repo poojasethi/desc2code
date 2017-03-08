@@ -1,0 +1,201 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <iostream>
+#define memcle(a) memset(a, 0, sizeof(a))
+using namespace std;
+typedef long long LL;
+const LL INF = 2e17;
+const int N = 110;
+ 
+struct num
+{
+	LL a, b;
+	num (LL _a = 0, LL _b = 0) {a = _a, b = _b;}
+};
+bool operator < (const num &x, const num &y) {return x.a == y.a ? x.b < y.b : x.a < y.a;}
+bool operator > (const num &x, const num &y) {return x.a == y.a ? x.b > y.b : x.a > y.a;}
+bool operator == (const num &x, const num &y) {return x.a == y.a && x.b == y.b;}
+num operator + (const num &x, const num &y) {return num(x.a + y.a, x.b + y.b);}
+num operator - (const num &x, const num &y) {return num(x.a - y.a, x.b - y.b);}
+num max(const num &x, const num &y) {return (x > y) ? x : y;}
+num min(const num &x, const num &y) {return (x < y) ? x : y;}
+ 
+num lx[N], ly[N], slack[N], c[N][N], ori[N][N], ans, infnum;
+int vx[N], vy[N], mx[N], my[N], n, en, ins[N][N], que[N], from[N];
+int adj[N * N], next[N * N], last[N], mm;
+ 
+struct edge 
+{
+	int i, j; 
+	num d;
+} e[N * N];
+ 
+bool cmp(edge x, edge y) {return x.d.a == y.d.a ? x.d.b > y.d.b : x.d.a < y.d.a;}
+ 
+void read(LL &x)
+{
+	char c = getchar();
+	for (; c < '0' || c > '9'; ) c = getchar();
+	x = 0;
+	for (; c >= '0' && c <= '9'; ) 
+		x = x * 10 + c - '0', c = getchar();
+}
+ 
+bool dfs(int x)
+{
+	int l = 0, r = 1;
+	que[1] = x;
+	vx[x] = 1;
+	for (; l < r; )
+	{
+		int u = que[++l];
+		for (int v = 1; v <= n; v++)
+			if (!vy[v])
+			{
+				num t = lx[u] + ly[v] - c[u][v];
+				if (t.a == 0 && t.b == 0)
+				{
+					vy[v] = 1;
+					if (my[v] == 0)
+					{
+						int t = mx[u];
+						mx[u] = v; my[v] = u;
+						int s = u;
+						for (; s != x; s = from[s])
+						{
+							int tt = mx[from[s]];
+							mx[from[s]] = t;
+							my[t] = from[s];
+							t = tt;
+						}
+						return 1;
+					} else 
+					{
+						que[++r] = my[v];
+						vx[my[v]] = 1;
+						from[my[v]] = u;
+					}
+				} else if (slack[v] > t) slack[v] = t;
+			}
+	}
+	
+	return 0;
+}
+ 
+void findpath(int S)
+{
+	for (int i = 1; i <= n; i++) slack[i] = num(INF, 0);
+	for (;;)
+	{
+		memcle(vx);
+		memcle(vy);
+		if (dfs(S)) break;
+		num aug = num(INF, 0);
+		for (int y = 1; y <= n; y++) if (!vy[y]) aug = min(aug, slack[y]);
+		for (int x = 1; x <= n; x++) if (vx[x]) lx[x] = lx[x] - aug;
+		for (int y = 1; y <= n; y++) if (vy[y]) ly[y] = ly[y] + aug; else slack[y] = slack[y] - aug;
+	}
+}
+ 
+void changecell(int x, int y, num wnew)
+{
+	num wold = c[x][y];
+	c[x][y] = wnew;
+	bool ok = 0;
+	
+	my[mx[x]] = 0;
+	mx[x] = 0;
+	lx[x] = infnum;
+	for (int i = 1; i <= n; i++) lx[x] = max(lx[x], c[x][i] - ly[i]);
+	findpath(x);
+	
+/*
+	if (wnew < wold)
+	{
+		my[mx[x]] = 0;
+		mx[x] = 0;
+		ok = 1;
+	} else if (wnew > wold && lx[x] + ly[y] < wnew)
+	{
+		lx[x] = infnum;
+		for (int i = 1; i <= n; i++) lx[x] = max(lx[x], c[x][i] - ly[i]);
+		if (mx[x] != y)
+		{
+			my[mx[x]] = 0;
+			mx[x] = 0;
+			ok = 1;
+		}
+	}
+
+	if (ok) findpath(x);
+*/
+}
+ 
+void hungarian()
+{
+	for (int i = 1; i <= n; i++) 
+	{
+		lx[i] = num(-INF, -INF);
+		for (int j = 1; j <= n; j++) lx[i] = max(lx[i], c[i][j]);
+	}
+	
+	for (int i = 1; i <= n; i++) findpath(i);
+}
+ 
+int main()
+{
+ 
+	infnum = num(-INF, -INF);
+	ans = infnum;
+	
+	scanf("%d", &n);
+	for (int i = 1; i <= n; i++)
+		for (int j = 1; j <= n; j++)
+		{
+			LL x, y;
+			read(x);
+			read(y);
+			c[i][j] = ori[i][j] = num(x - y, x);
+			e[++en].d = num(x - y, x);
+			e[en].i = i;
+			e[en].j = j;
+		}
+		
+	hungarian();
+	
+	sort(e + 1, e + 1 + en, cmp);
+	
+	for (int i = en; i >= 1; i--) 
+	{
+		int x = e[i].i, y = e[i].j;
+		
+		if (ori[x][y].a <= 0)
+		{
+			num cnt = num(0, 0);
+			for (int j = 1; j <= n; j++) cnt = cnt + lx[j];
+			for (int j = 1; j <= n; j++) cnt = cnt + ly[j];
+			ans = max(ans, cnt);
+			break;
+		} else 
+		{
+			num cnt = num(0, 0);
+			for (int j = 1; j <= n; j++) cnt = cnt + lx[j];
+			for (int j = 1; j <= n; j++) cnt = cnt + ly[j];
+			if (cnt < ans) break; 
+			
+			changecell(x, y, num(2e16, 0)); 
+			
+			cnt = num(0, 0);
+			for (int j = 1; j <= n; j++) if (j != x) cnt = cnt + lx[j];
+			for (int j = 1; j <= n; j++) if (j != y) cnt = cnt + ly[j];
+			ans = max(ans, cnt);
+			
+			changecell(x, y, num(-2e16, 0));
+		}
+	}
+	
+	cout << ans.b << ' ' << ans.b - ans.a << endl;
+	
+	return 0;
+}

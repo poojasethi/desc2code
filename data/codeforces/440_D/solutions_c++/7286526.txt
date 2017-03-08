@@ -1,0 +1,85 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef pair<int,int> pii;
+
+const int INF = 1000000000;
+const int MAXN = 405;
+int n, k, prev[MAXN], next[MAXN], first[MAXN], par[MAXN];
+int dp[MAXN][MAXN], best[MAXN][MAXN];
+vector<int> adj[MAXN];
+map<pii,int> ed;
+
+void build(int v, int d){
+  if(prev[d] >= 0) next[prev[d]] = v;
+  prev[d] = v;
+  prev[d + 1] = -1;
+  for(int i = 0; i < adj[v].size(); i++){
+    if(adj[v][i] != par[v]){
+      par[adj[v][i]] = v;
+      if(first[v] < 0) first[v] = adj[v][i];
+      build(adj[v][i], d + 1);
+    }
+  }
+}
+
+void update(int v, int r, int x, int b){
+  if(dp[v][r] > x){
+    dp[v][r] = x;
+    best[v][r] = b;
+  }
+}
+
+int check(int v, int r){
+  if(v < 0) return r == 0 ? 0 : INF;
+  if(dp[v][r] >= 0) return dp[v][r];
+  dp[v][r] = INF;
+  if(r == k){
+    update(v, r, check(next[v], r), -1);
+    update(v, r, (v > 0) + check(first[v], r - 1), r - 1);
+    update(v, r, check(first[v], r), r);
+  } else {
+    update(v, r, 1 + check(next[v], r), -1);
+    for(int i = 1; i <= r; i++){
+      update(v, r, check(first[v], i - 1) + check(next[v], r - i), i - 1);
+    }
+  }
+  return dp[v][r];
+}
+
+void print(int v, int r){
+  if(v < 0) return;
+  if(r == k){
+    if(best[v][r] < 0) print(next[v], r);
+    else if(best[v][r] < r){
+      if(v > 0) cout << ed[pii(min(v, par[v]), max(v, par[v]))] << ' ';
+      print(first[v], r - 1);
+    } else print(first[v], r);
+  } else {
+    if(best[v][r] < 0){
+      cout << ed[pii(min(v, par[v]), max(v, par[v]))] << ' ';
+      print(next[v], r);
+    } else print(first[v], best[v][r]), print(next[v], r - best[v][r] - 1);
+  }
+}
+
+int main(){
+  cin >> n >> k;
+  for(int i = 1; i < n; i++){
+    int a, b;
+    cin >> a >> b;
+    a--, b--;
+    if(a > b) swap(a, b);
+    ed[pii(a, b)] = i;
+    adj[a].push_back(b);
+    adj[b].push_back(a);
+  }
+  memset(par, -1, sizeof(par));
+  memset(prev, -1, sizeof(prev));
+  memset(next, -1, sizeof(next));
+  memset(first, -1, sizeof(first));
+  memset(dp, -1, sizeof(dp));
+  build(0, 0);
+  cout << check(0, k) << '\n';
+  print(0, k);
+}

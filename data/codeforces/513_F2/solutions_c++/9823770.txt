@@ -1,0 +1,246 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
+#include <queue>
+#include <map>
+#include <set>
+#include <vector>
+#include <string>
+#include <stack>
+#include <bitset>
+#define eps 1e-8
+#define FI first
+#define SE second
+using namespace std;
+typedef long long LL;
+
+const int MAXN=2005;
+const int MAXM=2000010;
+const int INF=0x3f3f3f3f;
+
+struct Node
+{
+    int from,to,next;
+    int cap;
+}edge[MAXM];
+int tol;
+int head[MAXN];
+int dep[MAXN];
+int gap[MAXN];
+
+int n;
+
+void init()
+{
+    tol=0;
+    memset(head,-1,sizeof(head));
+}
+
+void addedge(int u,int v,int w)
+{
+    edge[tol].from=u;
+    edge[tol].to=v;
+    edge[tol].cap=w;
+    edge[tol].next=head[u];
+    head[u]=tol++;
+    edge[tol].from=v;
+    edge[tol].to=u;
+    edge[tol].cap=0;
+    edge[tol].next=head[v];
+    head[v]=tol++;
+}
+
+void BFS(int start,int end)
+{
+    memset(dep,-1,sizeof(dep));
+    memset(gap,0,sizeof(gap));
+    gap[0]=1;
+    int que[MAXN];
+    int front,rear;
+    front=rear=0;
+    dep[end]=0;
+    que[rear++]=end;
+    while(front!=rear)
+    {
+        int u=que[front++];
+        if(front==MAXN)front=0;
+        for(int i=head[u];i!=-1;i=edge[i].next)
+        {
+            int v=edge[i].to;
+            if(dep[v]!=-1)continue;
+            que[rear++]=v;
+            if(rear==MAXN)rear=0;
+            dep[v]=dep[u]+1;
+            ++gap[dep[v]];
+        }
+    }
+}
+
+int SAP(int start,int end)
+{
+    int res=0;
+    BFS(start,end);
+    int cur[MAXN];
+    int S[MAXN];
+    int top=0;
+    memcpy(cur,head,sizeof(head));
+    int u=start;
+    int i;
+    while(dep[start]<n)
+    {
+        if(u==end)
+        {
+            int temp=INF;
+            int inser;
+            for(i=0;i<top;i++)
+               if(temp>edge[S[i]].cap)
+               {
+                   temp=edge[S[i]].cap;
+                   inser=i;
+               }
+            for(i=0;i<top;i++)
+            {
+                edge[S[i]].cap-=temp;
+                edge[S[i]^1].cap+=temp;
+            }
+            res+=temp;
+            top=inser;
+            u=edge[S[top]].from;
+        }
+        if(u!=end&&gap[dep[u]-1]==0)
+          break;
+        for(i=cur[u];i!=-1;i=edge[i].next)
+           if(edge[i].cap!=0&&dep[u]==dep[edge[i].to]+1)
+             break;
+        if(i!=-1)
+        {
+            cur[u]=i;
+            S[top++]=i;
+            u=edge[i].to;
+        }
+        else
+        {
+            int min=n;
+            for(i=head[u];i!=-1;i=edge[i].next)
+            {
+                if(edge[i].cap==0)continue;
+                if(min>dep[edge[i].to])
+                {
+                    min=dep[edge[i].to];
+                    cur[u]=i;
+                }
+            }
+            --gap[dep[u]];
+            dep[u]=min+1;
+            ++gap[dep[u]];
+            if(u!=start)u=edge[S[--top]].from;
+        }
+    }
+    return res;
+}
+
+char mp[25][25];
+struct Scayger {
+    int x, y, t;
+    inline void read() {
+        scanf("%d%d%d", &x, &y, &t);
+        --x; --y;
+    }
+} Boy[490], Girl[490], Boss;
+int N, M, male, female;
+int dis[23][23][23][23];
+
+inline bool in(int x, int y) {
+    return 0 <= x && x < N && 0 <= y && y < M;
+}
+
+queue <int> Q;
+int dx[] = {1, -1, 0, 0}, dy[] = {0, 0, 1, -1};
+void bfs(int sx, int sy, int dis[23][23]) {
+    if(mp[sx][sy] == '#') return;
+    dis[sx][sy] = 0;
+    Q.push(sx * M + sy);
+    while(!Q.empty()) {
+        int u = Q.front(); Q.pop();
+        int x = u / M, y = u % M;
+        for(int d = 0; d < 4; ++d) {
+            int xx = x + dx[d], yy = y + dy[d];
+            if(!in(xx, yy) || mp[xx][yy] == '#' || dis[xx][yy] != -1) continue;
+            dis[xx][yy] = dis[x][y] + 1;
+            Q.push(xx * M + yy);
+        }
+    }
+}
+
+inline bool check(LL val) {
+    init();
+    int S = 2 * N * M + male + female, T = S + 1;
+    n = T + 3;
+    for(int i = 0; i < male; ++i) {
+        addedge(S, 2 * N * M + i, 1);
+        int x = Boy[i].x, y = Boy[i].y;
+        for(int j = 0; j < N; ++j) {
+            for(int k = 0; k < M; ++k) {
+                if(dis[x][y][j][k] == -1) continue;
+                if(1LL * Boy[i].t * dis[x][y][j][k] > val) continue;
+                addedge(2 * N * M + i, j * M + k, 1);
+            }
+        }
+    }
+    for(int i = 0; i < female; ++i) {
+        addedge(2 * N * M + male + i, T, 1);
+        int x = Girl[i].x, y = Girl[i].y;
+        for(int j = 0; j < N; ++j) {
+            for(int k = 0; k < M; ++k) {
+                if(dis[x][y][j][k] == -1) continue;
+                if(1LL * Girl[i].t * dis[x][y][j][k] > val) continue;
+                addedge(N * M + j * M + k, 2 * N * M + male + i, 1);
+            }
+        }
+    }
+    for(int i = 0; i < N; ++i) {
+        for(int j = 0; j < M; ++j) {
+            if(mp[i][j] == '#') continue;
+            addedge(i * M + j, N * M + i * M + j, 1);
+        }
+    }
+    return SAP(S, T) == male;
+}
+
+int main() {
+    scanf("%d%d%d%d", &N, &M, &male, &female);
+    if(abs(male - female) != 1) {
+        puts("-1");
+        return 0;
+    }
+    for(int i = 0; i < N; ++i) scanf("%s", mp[i]);
+    Boss.read();
+    for(int i = 0; i < male; ++i) Boy[i].read();
+    for(int i = 0; i < female; ++i) Girl[i].read();
+    if(male < female) {
+        Boy[male++] = Boss;
+    }
+    else {
+        Girl[female++] = Boss;
+    }
+    memset(dis, -1, sizeof(dis));
+    for(int i = 0; i < N; ++i) {
+        for(int j = 0; j < M; ++j) {
+            bfs(i, j, dis[i][j]);
+        }
+    }
+    LL low = 0, high = 1e12, mid, res = -1;
+    while(low <= high) {
+        mid = (low + high) >> 1;
+        if(check(mid)) {
+            res = mid;
+            high = mid - 1;
+        }
+        else low = mid + 1;
+    }
+    printf("%I64d\n", res);
+    return 0;
+}

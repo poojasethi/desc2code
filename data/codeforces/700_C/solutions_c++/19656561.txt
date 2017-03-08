@@ -1,0 +1,160 @@
+
+#include <bits/stdc++.h>
+
+#define fi(a,b,c) for(int a=b; a<=c; a++)
+#define fd(a,b,c) for(int a=b; a>=c; a--)
+#define fii(a,b,c) for(int a=b; a<c; a++)
+#define pb push_back
+#define mp make_pair
+#define ft first
+#define sc second
+#define reset(a,b) memset(a,b, sizeof a)
+
+using namespace std;
+
+typedef long long ll;
+typedef pair <int, int> pii;
+typedef unsigned int ui;
+
+const int N = 30009;
+const ll oo = 1000;
+
+bool dd[N];
+int  mark[N];
+int pa[N];
+
+struct Edge {
+    int u, v, val, pos;
+    Edge() {u = v = val = pos = 0; }
+    Edge(int u, int v, int val, int pos) : u(u) , v(v), val(val), pos(pos) {}
+};
+
+int n, m, s, t;
+vector <Edge> ed[N];
+Edge E[N];
+int num[N], low[N];
+bool DEL[N];
+
+bool BFS() {
+    queue<int>Queue;
+    Queue.push(s); dd[s] = 1;
+    while (!Queue.empty()){
+        int u = Queue.front(); Queue.pop();
+        fii(i, 0, ed[u].size()) {
+            int v = ed[u][i].v;
+            if (dd[v]) continue;
+            Queue.push(v); dd[v] = 1;
+            pa[v] = u;
+            mark[v] = ed[u][i].pos;
+            if (v == t) return 1;
+        }
+    }
+    return 0;
+}
+
+vector <int> b;
+int cnt;
+bool ok[N];
+int ans, res1, res2;
+
+void find_path() {
+    int u = t;
+    while (u != s) {
+        b.pb(mark[u]); u = pa[u];
+    }
+}
+
+void visit(int u, int Edel) {
+    num[u] = ++cnt;
+    low[u] = n + 1;
+    ok[u] = 0;
+    fii(i, 0, ed[u].size()) {
+        int v = ed[u][i].v;
+        if (DEL[ed[u][i].pos]) continue;
+        if (Edel == ed[u][i].pos) continue;
+        if (!num[v]) {
+            pa[v] = u;
+            DEL[ed[u][i].pos] = 1;
+         //   cout <<u<<"->"<<v<<' '<<ed[u][i].pos <<endl;
+            mark[v] = ed[u][i].pos;
+            visit(v, Edel);
+            low[u] = min(low[v] , low[u]);
+        } else {
+            low[u] = min(low[u], num[v]);
+        }
+        ok[u] |= ok[v];
+    }
+    if (u == t) ok[u] = 1;
+
+  //  cout <<u <<' '<<ok[u]<<' '<<low[u] <<' '<<num[u] <<' '<<mark[u]<<endl;
+
+}
+
+void find_bridge(int Edel) {
+    fi(i, 1, n) low[i] = num[i]  = mark[i] = ok[i] =  0, pa[i] = -1;
+    fi(i, 1, m) DEL[i] = 0;
+    cnt  = 0 ;
+    visit(s, Edel);
+    DEL[Edel] = 1;
+    fi(v, 1, n) if (num[v]) {
+        int u = pa[v];
+        if (low[v] >= num[v] && u!= -1 && ok[v]) // la cau
+            {
+                if (ans == -1 || E[mark[v]].val + E[Edel].val < ans) {
+                    ans = E[mark[v]].val + E[Edel].val;
+                    res1 = mark[v];
+                    res2 = Edel;
+                }
+        }
+    }
+}
+
+int main()
+{
+  //  ios::sync_with_stdio(false);
+  //  freopen("test.in", "r", stdin);
+  //  freopen("test.out", "w", stdout);
+
+    scanf("%d %d ", &n, &m);
+
+    scanf("%d %d", &s, &t);
+
+    fi(i, 1, m) {
+        int x, y, z;
+        scanf("%d %d %d", &x , &y, &z);
+        ed[x].pb(Edge(x, y, z, i));
+        ed[y].pb(Edge(y, x, z, i));
+        E[i] = (Edge(x, y, z, i));
+    }
+
+    if (!BFS()) {
+        printf("0\n0");
+        return 0;
+    }
+   // cout <<"BFS"<<endl;
+
+    ans = -1;
+    res1 = res2 = 0;
+
+    fi(i, 1, n) dd[i] = 0;
+
+    find_path();
+
+    find_bridge(0);
+
+
+    fii(i, 0, b.size()){
+        find_bridge(b[i]);
+      //  if (val ==-1) continue;
+      //  if (val != -1) ans = (ans == -1 ? val + E[b[i]].val : min(ans, val + E[b[i]].val));
+    }
+
+    printf("%d\n", ans);
+    if (res1 != 0 && res2!= 0) {
+        printf("2\n%d %d", res1, res2);
+    } else if (res1 != 0) {
+        printf("1\n%d", res1);
+    }
+
+
+}

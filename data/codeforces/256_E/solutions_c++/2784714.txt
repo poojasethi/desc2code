@@ -1,0 +1,49 @@
+#include<cstdio>
+#include<cstring>
+const int N=100005,oo=777777777;
+#define rep(i,n) for (int i=1;i<n;i++)
+int b[4][4],n,m,x,y;
+long long f[N*4][4][4],ans;
+void updata(int t)
+{
+	int L=t*2,R=L+1; rep(i,4) rep(j,4) f[t][i][j]=0;
+	rep(i,4) rep(j,4) rep(k,4) f[t][i][k]+=f[L][i][j]*f[R][j][k];
+	rep(i,4) rep(j,4) f[t][i][j]%=oo;
+}
+void build(int t,int l,int r)
+{
+	if (l+1==r){
+		if (l==n) rep(i,4) f[t][i][i]=1;
+		else rep(i,4) rep(j,4) f[t][i][j]=b[i][j];
+		return;
+		}
+	int mid=(l+r)/2; build(t*2,l,mid); build(t*2+1,mid,r); updata(t);	
+}
+void modify(int t,int l,int r,int x,int y)
+{
+	if (l+1==r){
+		memset(f[t],0,sizeof(f[t]));
+		if (l==n)
+			if (!y) rep(i,4) f[t][i][i]=1;
+			else f[t][y][y]=1;
+		else
+			if (!y) rep(i,4) rep(j,4) f[t][i][j]=b[i][j];
+			else rep(i,4) f[t][y][i]=b[y][i];
+		return;
+		}
+	int mid=(l+r)/2;
+	if (x<mid) modify(t*2,l,mid,x,y); else modify(t*2+1,mid,r,x,y);
+	updata(t);
+}
+int main()
+{
+	scanf("%d%d",&n,&m);
+	rep(i,4) rep(j,4) scanf("%d",&b[i][j]);
+	build(1,1,n+1);
+	while (m--){
+		scanf("%d%d",&x,&y),ans=0; modify(1,1,n+1,x,y);
+		rep(i,4) rep(j,4) ans+=f[1][i][j];
+		printf("%d\n",ans%oo);
+		}
+	return 0;
+}

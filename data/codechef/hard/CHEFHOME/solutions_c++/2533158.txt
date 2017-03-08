@@ -1,0 +1,214 @@
+#include <iostream>
+#include <stdlib.h>
+#include <vector>
+#include <algorithm>
+#include <map>
+
+using namespace std;
+
+int array[1001];
+int xarray[1001];
+int yarray[1001];
+
+int main(){
+
+	int t,n;
+	cin >> t;
+	for(int i=0; i<t; i++){
+		cin >> n;
+		
+		long long xleft[n+1];
+		long long xright[n+1];
+		long long xdistance[n+1];
+		long long yleft[n+1];
+		long long yright[n+1];
+		long long ydistance[n+1];
+		
+		for(int j=1; j<=n; j++){
+			cin >> xarray[j];
+			cin >> yarray[j];
+			
+			xleft[j] = 0;
+			xright[j] = 0;
+			xdistance[j] = 0;
+			yleft[j] = 0;
+			yright[j] = 0;
+			ydistance[j] = 0;
+		}
+		
+		vector<int> my(xarray, xarray+n+1);
+		sort(my.begin()+1, my.end());
+		
+		vector<int> myvect(yarray, yarray+n+1);
+		sort(myvect.begin()+1, myvect.end());
+		
+		// calculate the left distance
+		
+		int inter=0;
+		for(int j=1; j<=n; j++){
+			if(j != 1) {
+				if(my[j]!=my[j-1]) {
+					inter = abs(my[j] - my[j-1]);
+					xleft[j] = xleft[j-1] + (j-1)*inter;
+				}
+				else xleft[j] = xleft[j-1];
+			}
+			else{
+				xleft[j] = 0;
+			}
+			
+			
+			if(j != 1) {
+				if(myvect[j]!=myvect[j-1]) {
+					inter = abs(myvect[j] - myvect[j-1]);
+					yleft[j] = yleft[j-1] + (j-1)*inter;
+				}
+				else yleft[j] = yleft[j-1];
+			}
+			else{
+				yleft[j] = 0;
+			}
+		}
+		
+		inter = 0;
+		for(int j=n; j>=1; j--){
+			if(j != n) {
+				if(my[j] != my[j+1]) {
+					inter = abs(my[j] - my[j+1]);
+					xright[j] = xright[j+1] + (n-j)*inter;
+				}
+				else xright[j] = xright[j+1];
+			}
+			else{
+				xright[j] = 0;
+			}
+			
+			if(j != n) {
+				if(myvect[j] != myvect[j+1]) {
+					inter = abs(myvect[j] - myvect[j+1]);
+					yright[j] = yright[j+1] + (n-j)*inter;
+				}
+				else yright[j] = yright[j+1];
+			}
+			else{
+				yright[j] = 0;
+			}
+		}
+		
+		for(int j=1; j<=n; j++){
+			xdistance[j] = xleft[j] + xright[j];
+			ydistance[j] = yleft[j] + yright[j];
+		}
+		
+		int xcount[n+1];
+		int ycount[n+1];
+		int elem = my[1];
+		map<int, int> mx;
+		for(int j=1; j<=n; ){
+			int c = 0;
+			while(j+c<=n && elem == my[j+c]){
+				mx[j+c] = j;
+				c++;
+			}
+			for(int k=0; k<c; k++){
+				xcount[k+j] = c;
+			}
+			j += c;
+			
+			if(j<=n) elem = my[j];
+		}
+		
+		elem = myvect[1];
+		map <int, int> m;
+		for(int j=1; j<=n;){
+			// y coord
+			int c = 0;
+			while(j+c<=n && elem == myvect[j+c]){
+				m[j+c] = j;
+				c++;
+			}
+			for(int k=0; k<c; k++){
+				ycount[k+j] = c;
+			}
+			j += c;
+			
+			if(j<=n) elem = myvect[j];
+		}
+		
+		long long xmin[n+1];
+		long long countx[n+1];
+		// answer for x
+		elem = 0;
+		for(int j=1; j<=n; j++){
+			countx[j] = 0;
+		
+			int same = xcount[j];
+			int leftnum = mx[j]-1;
+			int rightnum = n - leftnum - xcount[j];
+			if(leftnum+same < rightnum){
+				long long min = (my[mx[j]+xcount[j]] - my[leftnum+1]-1)*(leftnum+xcount[j]-rightnum);
+				xmin[j] = xdistance[j] + min;
+			}
+			else if(leftnum+same > rightnum) xmin[j] = xdistance[j];
+			else{
+				xmin[j] = xdistance[j];
+				countx[j] = my[mx[j]+xcount[j]] - my[leftnum+1]-1;
+			}
+			countx[j] ++;
+ 		}
+ 		
+ 		// answer for y
+ 		long long ymin[n+1];
+ 		long long county[n+1];
+		elem = 0;
+		for(int j=1; j<=n; j++){
+			county[j] = 0;
+		
+			int same = ycount[j];
+			int leftnum = m[j]-1;
+			int rightnum = n - leftnum - ycount[j];
+			if(leftnum+same < rightnum){
+				long long min = (myvect[m[j]+ycount[j]] - myvect[leftnum+1]-1)*(leftnum+ycount[j]-rightnum);
+				ymin[j] = ydistance[j] + min;
+			}
+			else if(leftnum+same > rightnum) ymin[j] = ydistance[j];
+			else{
+				ymin[j] = ydistance[j];
+				county[j] = myvect[m[j]+ycount[j]] - myvect[leftnum+1]-1;
+			}
+			county[j] ++;
+ 		}
+ 		
+ 		
+ 		
+ 		// number of minimums for x
+ 		long long min = xmin[1];
+ 		long long x_count = 0;
+ 		for(int j=1; j<=n; j+=xcount[j]){
+ 			if(xmin[j] < min){
+ 				min = xmin[j];
+ 				x_count = countx[j];
+ 			}
+ 			else if(xmin[j] == min){
+ 				x_count += countx[j];
+ 			}
+ 		}
+ 		
+ 		// number of minimums for y
+ 		min = ymin[1];
+ 		long long y_count = 0;
+ 		for(int j=1; j<=n; j+=ycount[j]){
+ 			if(ymin[j] < min){
+ 				min = ymin[j];
+ 				y_count = county[j];
+ 			}
+ 			else if(ymin[j] == min){
+ 				y_count += county[j];
+ 			}
+ 		}
+ 		
+ 		long long result = x_count*y_count;
+ 		cout << result << endl;
+	}
+	return 0;
+}

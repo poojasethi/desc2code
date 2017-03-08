@@ -1,0 +1,82 @@
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+using namespace std;
+const int N = 1e5 + 10;
+struct rec
+{
+	int xa, ya, xb, yb;
+}a[N];
+struct line
+{
+	int x, ya, yb, num;
+}b[N << 1];
+int hash[N << 1];
+int sum[N << 3], flag[N << 3];
+int n;
+long long ans = 0;
+bool cmp (const line &aa, const line &bb)
+{
+	return aa.x < bb.x;
+}
+void pushup(int x, int tl, int tr)
+{
+	if(flag[x])
+		sum[x] = hash[tr + 1] - hash[tl];
+	else if(tl != tr)
+		sum[x] = sum[x << 1] + sum[x << 1 | 1];
+	else
+		sum[x] = 0;
+	return;
+}
+void update(int x, int L, int R, int tl, int tr, int num)
+{
+	if(L <= tl && R >= tr)
+	{
+		flag[x] += num;
+		pushup(x, tl, tr);
+		return;
+	}
+	int mid = (tl + tr) >> 1;
+	if(L <= mid)
+		update(x << 1, L, R, tl, mid, num);
+	if(R > mid)
+		update(x << 1 | 1, L, R, mid + 1, tr, num);
+	pushup(x, tl, tr);
+}
+int main()
+{
+	scanf("%d", &n);
+	for(int i = 1; i <= n; ++i)
+	{
+		scanf("%d%d%d%d", &a[i].xa, &a[i].ya, &a[i].xb, &a[i].yb);
+		if(a[i].xa > a[i].xb)
+			swap(a[i].xa, a[i].xb);
+		if(a[i].ya > a[i]. yb)
+			swap(a[i].ya, a[i].yb);
+		++a[i].xb;
+		++a[i].yb;
+		hash[i * 2 - 1] = a[i].ya;
+		hash[i * 2] = a[i].yb;
+		b[i * 2 - 1].x = a[i].xa;
+		b[i * 2 - 1].num = 1;
+		b[i * 2].x = a[i].xb;
+		b[i * 2].num = -1;
+		b[i * 2].ya = b[i * 2 - 1].ya = a[i].ya;
+		b[i * 2].yb = b[i * 2 - 1].yb = a[i].yb;
+	}
+	sort(hash + 1, hash + 1 + n * 2);
+	sort(b + 1, b + 1 + n * 2, cmp);
+	b[0].x = b[1].x;
+	for(int i = 1; i <= n * 2; ++i)
+	{
+		int L, R;
+		L = lower_bound(hash + 1, hash + 1 + n * 2, b[i].ya) - hash;
+		R = lower_bound(hash + 1, hash + 1 + n * 2, b[i].yb) - hash - 1;
+		ans += (long long) (b[i].x - b[i - 1].x) * sum[1];
+		update(1, L, R, 1, n * 2 - 1, b[i].num);
+	}
+	printf("%lld\n", ans);
+	return 0;
+}

@@ -1,0 +1,156 @@
+/* Divanshu Garg */
+
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <deque>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <cstring>
+#include <climits>
+#include <cctype>
+#include <cassert>
+#include <complex>
+
+using namespace std;
+
+#define ull unsigned long long
+#define ill long long int
+#define pii pair<int,int>
+#define pb(x) push_back(x)
+#define F(i,a,n) for(int i=(a);i<(n);++i)
+#define FF(i,a,n) for(i=(a);i<(n);++i)
+#define REP(i,a,n) for(i=(a);i<(n);++i)
+#define FD(i,a,n) for(int i=(a);i>=(n);--i)
+#define FE(it,x) for(it=x.begin();it!=x.end();++it)
+#define V(x) vector<x>
+#define S(x) scanf("%d",&x)
+#define Sl(x) scanf("%llu",&x)
+#define M(x,i) memset(x,i,sizeof(x))
+#define debug(i,sz,x) F(i,0,sz){cout<<x[i]<<" ";}cout<<endl
+#define MAX(a,b) ((a)>(b)?(a):(b))
+ill ABS(ill a) { if ( a < 0 ) return (-a); return a; }
+#define fr first
+#define se second
+
+/* Relevant code begins here */
+
+/* Input from file or online */
+
+void input() {
+#ifndef ONLINE_JUDGE
+    freopen("input.txt","r",stdin);
+#endif
+}
+
+/* Input opener ends */
+
+#define N 500005	
+int a[N], pos[N];
+
+struct node {
+	int start, end, sum;
+	node *L, *R;
+	node() {
+		sum = 0;
+		L = R = NULL;
+	}
+} pool[21234567];
+int CNT = 0;
+node * root[N];
+
+node * create(int l,int r) {
+	node *tmp = &pool[CNT++];
+	tmp->start = l;
+	tmp->end = r;
+	tmp->sum = 0;
+	if ( l < r ) {
+		int mid = (l+r)/2;
+		tmp->L = create(l,mid);
+		tmp->R = create(mid+1,r);
+	}
+	return tmp;
+}
+
+node * change(node * other, int whr) {
+	node *tmp = &pool[CNT++];
+	tmp->start = other->start;
+	tmp->end = other->end;
+	tmp->sum = other->sum + 1;
+	tmp->L = other->L;
+	tmp->R = other->R;
+	if ( tmp->start < tmp->end ) {
+		int mid = (other->start + other->end)/2;
+		if ( whr <= mid ) tmp->L = change(other->L,whr);
+		else tmp->R = change(other->R,whr);
+	}
+	return tmp;
+}
+
+int getKthelement(node * upper, node * lower, int k) {
+	// cout << upper->start << " " << upper->end << " "  << k << endl;
+	if ( upper->start == upper->end ) return upper->start;
+	int lowerCnt = upper->L->sum - lower->L->sum;
+	if ( lowerCnt >= k )
+		return getKthelement(upper->L,lower->L,k);
+	return getKthelement(upper->R,lower->R,k-lowerCnt);
+}
+
+#define gc getchar
+
+void readInt(int &n) {
+	n = 0;
+	char ch = gc();
+	while ( !isdigit(ch) ) ch = gc();
+	while ( isdigit(ch) ) {
+		n = n*10 + (ch-48);
+		ch = gc();
+	}
+}
+
+int main() {
+    input();
+    int n; readInt(n);
+    F(i,0,n) {
+    	readInt(a[i]);
+    	pos[a[i]] = i;
+    }
+    root[0] = create(0,n-1);
+    F(i,1,n+1) {
+    	root[i] = change(root[i-1],pos[i]);
+    }
+
+    ill ans = 0;
+    queue<int> ql, qr;
+    ql.push(1); qr.push(n);
+    while ( !ql.empty() ) {
+    	int lo = ql.front(); ql.pop();
+    	int hi = qr.front(); qr.pop();
+    	int k = (hi-lo+2)/2;
+    	int get = a[getKthelement(root[hi],root[lo-1],k)];
+    	// cout << lo << " " << hi << " " << k << " " << get << endl;
+    	// return 0;
+    	if ( hi > lo ) ans += (hi-lo+1);
+    	if ( lo <= get-1 ) {
+    		ql.push(lo); qr.push(get-1);
+    	}
+    	if ( get+1 <= hi ) {
+    		ql.push(get+1); qr.push(hi);
+    	}
+    }
+    printf("%lld\n", ans);
+    return 0;
+}

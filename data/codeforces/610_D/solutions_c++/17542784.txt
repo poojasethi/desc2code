@@ -1,0 +1,105 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <map>
+#include <algorithm>
+using namespace std;
+const int MAXN = 4e5 + 5;
+typedef __int64 LL;
+struct data {
+	LL x1 , x2 , y , flag;
+	bool operator <(const data& cmp) const {
+		return y < cmp.y;
+	}
+}a[MAXN];
+struct segtree {
+	LL l , r , lazy , val;
+}T[MAXN << 2];
+map <LL , LL> mp;
+LL x[MAXN];
+
+void build(int p , int l , int r) {
+	int mid = (l + r) >> 1;
+	T[p].l = l , T[p].r = r , T[p].val = T[p].lazy = 0;
+	if(r - l == 1) {
+		return ;
+	}
+	build(p << 1 , l , mid);
+	build((p << 1)|1 , mid , r);
+}
+
+void pushup(int p) {
+	if(T[p].lazy) {
+		T[p].val = (x[T[p].r] - x[T[p].l]);
+	}
+	else if(T[p].r - T[p].l == 1) {
+		T[p].val = 0;
+	}
+	else {
+		T[p].val = T[p << 1].val + T[(p << 1)|1].val;
+	}
+}
+
+void updata(int p , int l , int r , int val) {
+	int mid = (T[p].l + T[p].r) >> 1;
+	if(T[p].l == l && T[p].r == r) {
+		T[p].lazy += val;
+		pushup(p);
+		return ;
+	}
+	if(r <= mid) {
+		updata(p << 1 , l , r , val);
+	}
+	else if(l >= mid) {
+		updata((p << 1)|1 , l , r , val);
+	}
+	else {
+		updata(p << 1 , l , mid , val);
+		updata((p << 1)|1 , mid , r , val);
+	}
+	pushup(p);
+}
+
+int main()
+{
+	int n , f = 0 , cnt = 0;
+	LL x1 , x2 , y1 , y2;
+	scanf("%d" , &n);
+	for(int i = 0 ; i < n ; i++) {
+		scanf("%I64d %I64d %I64d %I64d" , &x1 , &y1 , &x2 , &y2);
+		if(x1 > x2) 
+			swap(x1 , x2);
+		x2++;
+		if(y1 > y2)
+			swap(y1 , y2);
+		y2++;
+		a[f].x1 = x1 , a[f].x2 = x2 , a[f].y = y1 , a[f].flag = 1;
+		f++;
+		a[f].x1 = x1 , a[f].x2 = x2 , a[f].y = y2 , a[f].flag = -1;
+		f++;
+		if(!mp[x1]) {
+			mp[x1] = 1;
+			x[++cnt] = x1;
+		}
+		if(!mp[x2]) {
+			mp[x2] = 1;
+			x[++cnt] = x2;
+		}
+	}
+	build(1 , 1 , cnt);
+	sort(a , a + f);
+	sort(x + 1 , x + cnt + 1);
+	for(int i = 0 ; i < f ; i++) {
+		int pos = lower_bound(x + 1 , x + cnt + 1 , a[i].x1) - x;
+		a[i].x1 = pos;
+		pos = lower_bound(x + 1 , x + cnt + 1 , a[i].x2) - x;
+		a[i].x2 = pos;
+	}
+	LL res = 0;
+	updata(1 , a[0].x1 , a[0].x2 , a[0].flag);
+	for(int i = 1 ; i < f ; i++) {
+		res += (LL)(a[i].y - a[i - 1].y) * T[1].val;
+		updata(1 , a[i].x1 , a[i].x2 , a[i].flag);
+	}
+	printf("%I64d\n" , res);
+}

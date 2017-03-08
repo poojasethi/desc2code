@@ -1,0 +1,260 @@
+#include<cstdio>
+#include<iostream>
+#include<cstring>
+#include<vector>
+#include<memory.h>
+#include<cstdlib>
+#include<cmath>
+#include<cassert>
+#include<memory.h>
+#include<algorithm>
+#include<queue>
+#include<utility>
+#include<map>
+#include<bitset>
+using namespace std;
+
+typedef vector<int> VI;
+typedef long long LL;
+typedef unsigned long long uLL;
+typedef pair<int, int> PII;
+typedef vector<PII> VPII;
+#define pb push_back
+#define fi first
+#define se second
+#define mp make_pair
+#pragma comment(linker, "/STACK:266777216")
+
+const int inf=1000000000;
+const LL INF=LL(inf)*inf;
+const double eps=1e-9;
+const double PI=2*acos(0.0);
+
+#define MAXS 2097161
+#define MAXN 1000011
+#define MOD 1000000007
+
+char S[MAXN];
+LL A[MAXN];
+
+int N, M;
+
+struct node
+{
+    LL sum1, sum0, num1, num0;
+    bool lazy;//1 if this range has been flipped odd number of times, 0 otherwise
+    node(){}
+}tree[MAXS];
+
+
+void print(node a)
+{
+    cout<<a.sum0<<" "<<a.sum1<<" "<<a.num1<<" "<<a.num0<<" "<<a.lazy<<endl;
+}
+
+node merge(node l, node r)  //make sure to split before calling merge
+{
+    node a;
+    a.sum1 = l.sum1 + r.sum1;
+    if(a.sum1 >= MOD) a.sum1 -= MOD;
+    a.sum0 = l.sum0 + r.sum0;
+    if(a.sum0 >= MOD) a.sum0 -= MOD;
+    a.num1 = l.num1 + r.num1;
+    a.num0 = l.num0 + r.num0;
+    a.lazy = 0;
+    return a;
+}
+
+void build(int l, int r, int i)
+{
+    if(l>r)tree[i] = tree[0];
+    if(l==r)
+    {
+        tree[i].lazy = 0;
+        if(S[l] == '1')
+        {
+            tree[i].num1 = 1;
+            tree[i].num0 = 0;
+            tree[i].sum1 = A[l];
+            tree[i].sum0 = 0;
+        }
+        else
+        {
+            tree[i].num1 = 0;
+            tree[i].num0 = 1;
+            tree[i].sum1 = 0;
+            tree[i].sum0 = A[l];
+        }
+    }
+    else
+    {
+        int m = (l+r)/2;
+        build(l, m, 2*i);
+        build(m+1, r, 2*i+1);
+        tree[i] = merge(tree[2*i], tree[2*i+1]);
+    }
+}
+
+void split( int i, int l, int r)
+{
+   LL tmp;
+   int m = (l+r)/2;
+   if(tree[i].lazy== 1)
+   {
+       tree[i].lazy = 0;
+
+       tree[2*i].lazy^=1;
+       tmp = tree[2*i].num1;
+       tree[2*i].num1 = tree[2*i].num0;
+       tree[2*i].num0 = tmp;
+       tmp = tree[2*i].sum1;
+       tree[2*i].sum1 = tree[2*i].sum0;
+       tree[2*i].sum0 = tmp;
+
+       tree[2*i+1].lazy^=1;
+       tmp = tree[2*i+1].num1;
+       tree[2*i+1].num1 = tree[2*i+1].num0;
+       tree[2*i+1].num0 = tmp;
+       tmp = tree[2*i+1].sum1;
+       tree[2*i+1].sum1 = tree[2*i+1].sum0;
+       tree[2*i+1].sum0 = tmp;
+   }
+}
+
+LL update(int l, int r, int x, int y, int i, LL &cnum)
+{
+    LL tmp, ans=0;
+    if(l>y || r<x)return 0;
+    if(l>=x && r<=y )
+    {
+
+        cnum -= tree[i].num1;
+        ans -= tree[i].sum1;
+        if(ans<0) ans += MOD;
+        cnum += tree[i].num0;
+        ans += tree[i].sum0;
+        if(ans>=MOD) ans -= MOD;
+
+        tmp = tree[i].sum1;
+        tree[i].sum1 = tree[i].sum0;
+        tree[i].sum0 = tmp;
+
+        tmp = tree[i].num1;
+        tree[i].num1 = tree[i].num0;
+        tree[i].num0 = tmp;
+
+        if(l!=r)
+        {
+            tree[i].lazy ^= 1;
+        }
+
+    }
+    else
+    {
+        int m = (l+r)/2;
+        split(i, l, r);
+        ans += update(l, m, x, y, 2*i, cnum);
+        if(ans >= MOD) ans -= MOD;
+        ans += update(m+1, r, x, y, 2*i+1, cnum);
+        if(ans >=MOD) ans -= MOD;
+        tree[i] = merge(tree[2*i], tree[2*i + 1]);
+    }
+    return ans;
+}
+
+
+void solve()
+{
+    LL ans, cnum;
+    bool ld, ex; //1 if last digit (digit N-1) is 1, 0 otherwise
+    scanf("%s", S);
+    N = strlen(S);
+    A[N-1] = 1, A[N-2] = 1;
+    for(int i= N-3; i>=0; i--)
+    {
+        A[i] = A[i+1]*2;
+        if(A[i]>=MOD) A[i] -= MOD;
+    }
+
+
+    tree[0].num1 = 0;
+    tree[0].num0 = 0;
+    tree[0].sum1 = 0;
+    tree[0].sum0 = 0;
+    tree[0].lazy = 0;
+
+    build(0, N-1, 1);
+
+
+    if(S[N-1] == '1')ld = 1;
+    else ld = 0;
+
+    cnum = tree[1].num1;
+    ans = tree[1].sum1;
+
+    if(cnum%2 == 0 && ld == 0)
+    {
+        ans += 1;
+        if(ans>=MOD) ans-= MOD;
+        ex = 1;
+    }
+    else
+    {
+        ex = 0;
+    }
+    printf("%lld\n", ans);
+    if(ex == 1)
+    {
+        ans -= 1;
+        if(ans<0) ans+= MOD;
+    }
+    int x, y;
+    scanf("%d", &M);
+    for(int i=0; i<M; i++)
+    {
+
+
+        scanf("%d%d", &x, &y);
+        x--, y--;
+        //cout<<"i "<<i<<" "<<x<<" "<<y<<endl;
+        if(y == N-1) ld^= 1;
+        //cout<<"ld "<<ld<<endl;
+        //cout<<"old ans "<<ans<<endl;
+        //cout<<"old cnum "<<cnum<<endl;
+        ans += update(0, N-1, x, y, 1, cnum);
+        //cout<<"new cnum "<<cnum<<endl;
+        if(ans >= MOD) ans -= MOD;
+
+        //cout<<"init "<<ans<<endl;
+        if(cnum%2 == 0 && ld == 0)
+        {
+            ans += 1;
+            if(ans>=MOD) ans-= MOD;
+            ex = 1;
+        }
+        else
+        {
+            ex = 0;
+        }
+        //cout<<"cnum "<<cnum<<" Ex "<<ex<<" ld "<<ld<<endl;
+        printf("%lld\n", ans);
+        if(ex == 1)
+        {
+            ans -= 1;
+            if(ans<0) ans+= MOD;
+        }
+
+    }
+
+
+
+}
+
+int main()
+{
+    #ifndef ONLINE_JUDGE
+    freopen("input.txt","r",stdin);
+    freopen("output.txt","w",stdout);
+    #endif
+    solve();
+}

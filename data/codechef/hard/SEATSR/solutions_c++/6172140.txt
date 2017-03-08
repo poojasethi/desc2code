@@ -1,0 +1,68 @@
+#include <stdio.h>
+#include <stdlib.h> // abs
+#include <string.h> // strlen
+
+#define min(a,b) (a<=b?a:b)
+#define max(a,b) (a>=b?a:b)
+     
+long d[203][100001]; // distances 
+char s[100001], w[100001]; // input strings
+
+int main() {
+     
+    int T /* testcases */, a /* add/remove */, b /* replace */, k /* threshold */;
+    scanf("%d",&T); 
+    
+    while (T--)
+    {
+        scanf("%s\n%s\n%d %d %d\n",s,w,&a,&b,&k); // read input strings + parameters
+        long slen = strlen(s), wlen = strlen(w);
+        
+        if (a==0) // remove all characters with no costs
+        {
+            printf("0\n"); // terminate with zero costs without any further calculations
+            continue;
+        }
+        if (b==0)
+        {
+            if (a*abs(slen-wlen)>k)
+                printf("-1\n"); // distance too large
+            else
+                printf("%ld\n",a*abs(slen-wlen));
+            continue;
+        }
+        if ((slen-wlen>k)||(slen-wlen<-k)) // here a>0 and b>0
+        {
+            printf("-1\n"); // distance too large
+            continue;
+        }
+
+        // Wagner-Fischer algorithm with restricted edit distance
+        // only 'k' diagonals above and below main diagonal are kept
+
+        // initial values
+        for (long i=0; i<=100000; i++) d[0][i] = d[202][i] = 101; // 101 = infinite value outside 'k' subdiagonals
+        for (long i=0; i<=100; i++) d[i+101][0] = i*a; // distance of any s string to an empty string w
+        for (long j=0; j<=100; j++) d[-j+101][j] = j*a; // distance of any w string to an empty string s
+
+        // main loop
+        for (long j=1; j<=wlen; j++)
+        {
+            for (long i=max(1,j-100); i<=min(j+100,slen); i++)
+            {
+                if (s[i-1] == w[j-1])
+                    d[i-j+101][j] = d[i-j+101][j-1];
+                else
+                    d[i-j+101][j] = min(min(d[i-1-j+101][j]+a,d[i-j+1+101][j-1]+a),d[i-j+101][j-1]+b);
+           }
+        }
+        
+        // print edit distance 
+        if (d[slen-wlen+101][wlen]<=k)
+            printf("%ld\n",d[slen-wlen+101][wlen]);
+        else
+            printf("-1\n");
+    }
+
+    return 0;
+}

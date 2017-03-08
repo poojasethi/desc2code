@@ -1,0 +1,252 @@
+#include <stdio.h>
+#include <algorithm>
+#include <vector>
+#include <iostream>
+ 
+using namespace std;
+ 
+const unsigned int MOD = 1000000007;
+ 
+struct Position {
+	int j0;
+	int j1;
+	int j2;
+ 
+	Position(int j0, int j1, int j2) : j0(j0), j1(j1), j2(j2) {
+	}
+ 
+	bool equals(int j0, int j1, int j2) {
+		return (this->j0 == j0 && this->j1 == j1 && this->j2 == j2);
+	}
+ 
+	friend ostream& operator<<(ostream& os, const Position& p) {
+		return os << p.j0 << ", " << p.j1 << ", " << p.j2 << endl;
+	}
+ 
+	friend int operator==(const Position& pos1, const Position& pos2) {
+			return (pos1.j0 == pos2.j0 && pos1.j1 == pos2.j1 && pos1.j2 == pos2.j2);
+	}
+  
+};
+ 
+void generatePosition(vector<Position*>* src, int D) {
+	int s = 3 * D - 2;
+	for (int i = 2 * D - 1; i >= D; i--) {
+		for (int j = min(i, s - i); j >= 0; j--) {
+			int k = s - i - j;
+			if (i >= j && j >= k && i - D <= j && j - D <= k) {
+				src->push_back(new Position(i, j, k));
+			}
+		}
+	}
+}
+ 
+Position* incrementPosition(Position* pos) {
+	return new Position(pos->j0 + 1, pos->j1 + 1, pos->j2 + 1);
+}
+ 
+void simulateStep(int j0, int j1, int j2, int steps, int indexC, vector<Position*>* dst, int** M, int& D) {
+	if (steps > 0) {
+		if (j0 + 1 <= j1 + D) {
+			simulateStep(j0+1, j1, j2, steps - 1, indexC, dst, M, D);
+		}
+		if (j1 < j0 && j1 + 1 <= j2 + D) {
+			simulateStep(j0, j1 + 1, j2, steps - 1, indexC, dst, M, D);
+		}
+		if (j2 < j1) {
+			simulateStep(j0, j1, j2 + 1, steps - 1, indexC, dst, M, D);
+		}
+	} else {
+		for (unsigned int i = 0; i < dst->size(); i++) {
+			if ((*dst)[i]->equals(j0, j1, j2)) {
+				M[i][indexC]++;
+				break;
+			}
+		}
+	}
+}
+ 
+int** allocateM(unsigned int n) {
+	int** M = new int*[n];
+	for (unsigned int i = 0; i < n; i++) {
+		M[i] = new int[n];
+		for (unsigned int j = 0; j < n; j++) {
+			M[i][j] = 0;
+		}
+	}
+	return M;
+}
+ 
+void purge(vector<Position*>* vec) {
+	for (vector<Position*>::iterator it = vec->begin(); it != vec->end(); it++) {
+		delete (*it);
+	}
+}
+ 
+void purge(int** M, int n) {
+	for (int i = 0; i < n; i++) {
+		delete[] M[i];
+	}
+	delete[] M;
+}
+ 
+int** generateM(vector<Position*> *src, vector<Position*> *dst, int D) {
+	int** M = allocateM(src->size());
+ 
+	for (unsigned int i = 0; i < src->size(); i++) {
+		simulateStep((*src)[i]->j0, (*src)[i]->j1, (*src)[i]->j2, 3, i, dst, M, D);
+	}
+ 
+	return M;
+}
+ 
+int* multiplyMR(int** M, int* r, int n) {
+	int* res = new int[n];
+ 
+ 
+	for (int i = 0; i < n; i++) {
+		res[i] = 0;		
+		for (int j = 0; j < n; j++) {
+			long long t = r[j];
+			t *= M[i][j];
+			t %= MOD;
+			res[i] += (int)t;
+			res[i] %= MOD;
+		}
+	}
+	return res;
+}
+ 
+ 
+int** multiplyMM(int** M, int n) {
+	int** M2 = allocateM(n);
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++) {
+			for (int k = 0; k < n; k++) {
+				long long t = M[i][k];
+				t *= M[k][j];
+				t %= MOD;
+				M2[i][j] += (int)t;
+				M2[i][j] %= MOD;
+			}
+		}
+	}
+	return M2;
+}
+ 
+ 
+ 
+int*  multiply(int* r, int** M, int n, int k) {
+	while (k > 0) {
+		if (k & 1) {
+			int* t = r;
+			r = multiplyMR(M, r, n);
+			delete[] t;
+		}
+		k >>= 1;
+		int** M2 = M;
+		M = multiplyMM(M, n);
+		purge(M2, n);
+	}
+	purge(M, n);
+	return r;
+}
+ 
+void printM(int** M, int n) {
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++) {
+			cout<<M[i][j]<<" ";
+		}
+		cout<<endl;
+	}
+}
+ 
+void printPositions(vector<Position*>* vec) {
+ 
+	for (vector<Position*>::iterator it = vec->begin(); it != vec->end(); it++) {
+		cout<<(**it);
+	}
+}
+ 
+ 
+ 
+int main()
+{
+ 
+	const int SZ = 14;
+	unsigned int dp[SZ][SZ][SZ];
+ 
+	for (int i = 0; i < SZ; i++) {
+		for (int j = 0; j < SZ; j++) {
+			for (int k = 0; k < SZ; k++) {
+				dp[i][j][k] = 0;
+			}
+		}
+	}
+ 
+	dp[0][0][0] = 1;
+ 
+ 
+	int D;
+	int K;
+	scanf("%d %d",&D,&K); 
+ 
+	if (K % 3 != 0) {
+		printf("%d",0);
+		return 0;
+	}
+ 
+	K /= 3;
+ 
+	for (int i = 0; i < SZ - 1; i++) {
+		for (int j = max(0, i - D); j <= i; j++) {
+			for (int k = max(0, j - D); k <= j; k++) {
+				if (i + 1 <= j + D) {
+					dp[i+1][j][k] +=  dp[i][j][k];
+				}
+				if (j < i && j + 1 <= k + D) {
+					dp[i][j+1][k] += dp[i][j][k];
+				}
+				if (k < j) {
+					dp[i][j][k+1] += dp[i][j][k];
+				}
+			}
+		}
+	}
+	if (K < SZ) {
+		printf("%d",dp[K][K][K]);
+		return 0;
+	}
+ 
+	//liczba kroków 3 * D - 2
+	vector<Position*> src;
+	vector<Position*> dest;
+	generatePosition(&src, D);
+	dest.resize(src.size());
+	transform(src.begin(), src.end(), dest.begin(), incrementPosition);
+ 
+	//cout<<"Src:"<<endl;
+	//printPositions(&src);
+	//cout<<"Dest:"<<endl;
+	//printPositions(&dest);
+ 
+	int** M = generateM(&src, &dest, D);
+ 
+	//printM(M, src.size());
+	int* r = new int[src.size()];
+	for (unsigned int i = 0; i < src.size(); i++) {
+		r[i] = dp[src[i]->j0][src[i]->j1][src[i]->j2];
+	}
+ 
+	r = multiply(r, M, src.size(), K - D);
+ 
+	printf("%d", (r[src.size() - 2] + r[src.size() - 1]) % MOD);
+ 
+	delete[] r;
+	//purge(M, src.size());
+	purge(&src);
+	purge(&dest);
+	//getchar();
+	return 0;
+}
+ 

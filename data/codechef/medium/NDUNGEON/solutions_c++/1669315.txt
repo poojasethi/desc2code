@@ -1,0 +1,221 @@
+#include <iostream>
+#include <algorithm>
+#include <map>
+#include <vector>
+#define BUF 4096 // block size on my disk is 4KBs
+char ibuf[BUF];
+int ipt = BUF;
+int read_uint()
+{
+    while (ipt < BUF && ibuf[ipt] < '0') ipt++;
+    if (ipt == BUF)
+    {
+        fread(ibuf, 1, BUF, stdin);
+        ipt = 0;
+        while (ipt < BUF && ibuf[ipt] < '0')
+            ipt++;
+    }
+    int n = 0;
+    while (ipt < BUF && ibuf[ipt] >= '0')
+    n = (n*10)+(ibuf[ipt++]-'0');
+    if (ipt == BUF)
+    {
+        fread(ibuf, 1, BUF, stdin);
+        ipt = 0;
+        while (ipt < BUF && ibuf[ipt] >= '0')
+            n = (n*10)+(ibuf[ipt++]-'0');
+    }
+    return n;
+}
+
+void shortestpath(int[][80],int[][80],int,int);
+using namespace std;
+vector<pair<int,int> > included;
+int qx,qy,limit;
+int relax[80][80]={0};
+int realvalue[80][80];
+int main()
+{
+    int n,m;
+    n=read_uint();
+    m=read_uint();
+    int grid[80][80];
+    int solvedones[80][80]={0};
+    for(int i=1;i<=n;i++)
+        for(int j=1;j<=m;j++)
+        {
+            grid[i][j]=read_uint();
+            realvalue[i][j]=grid[i][j];
+        }
+        qx=read_uint();
+        qy=read_uint();
+        limit=read_uint();
+    if(qx==1 && qy==1)
+    {
+        if(grid[1][1]>limit)
+            cout<<"NO\n";
+        else
+        {
+            cout<<"YES\n";
+            cout<<limit-grid[1][1];
+        }
+    }
+    else
+        shortestpath(grid,solvedones,n,m);
+    return 0;
+}
+void shortestpath(int grid[][80],int solvedones[][80],int n,int m)
+{
+    pair<int,int> index;
+    if(included.empty())
+    {
+        int x,y;
+        x=1;
+        y=1;
+        grid[x][y+1]+=grid[x][y];
+        grid[x+1][y]+=grid[x][y];
+        index.first=x;
+        index.second=y;
+        included.push_back(index);
+        solvedones[x][y]=1;
+        relax[x][y]=1;
+    }
+    long long int min=1000000009;
+    int minx,miny;
+    for(int i=0;i<included.size();i++)
+    {
+        int x,y;
+        x=included[i].first;
+        y=included[i].second;
+
+            if(x+1<=n && solvedones[x+1][y]==0)
+            {
+                if(grid[x+1][y]<min)
+                {
+                    min=grid[x+1][y];
+                    minx=x+1;
+                    miny=y;
+                }
+            }
+            if(x-1>=1 && solvedones[x-1][y]==0)
+            {
+                if(grid[x-1][y]<min)
+                {
+                    min=grid[x-1][y];
+                    minx=x-1;
+                    miny=y;
+                }
+            }
+            if(y+1<=m && solvedones[x][y+1]==0)
+            {
+                if(grid[x][y+1]<min)
+                {
+                    min=grid[x][y+1];
+                    minx=x;
+                    miny=y+1;
+                }
+            }
+            if(y-1>=1 && solvedones[x][y-1]==0)
+            {
+                if(grid[x][y-1]<min)
+                {
+                    min=grid[x][y-1];
+                    minx=x;
+                    miny=y-1;
+                }
+            }
+
+    }
+    index.first=minx;
+    index.second=miny;
+    solvedones[minx][miny]=1;
+    included.push_back(index);
+    /*if(included.size()==11)
+    {
+        cout<<endl<<endl;
+        for(int i=1;i<=n;i++)
+        {
+            for(int j=1;j<=m;j++)
+                cout<<grid[i][j]<<" ";
+            cout<<endl;
+        }
+        return ;
+    }*/
+
+    //cout<<minx<<" "<<miny<<" "<<grid[4][2]<<endl;
+    //Halting State
+    if(minx==qx && miny==qy)
+    {
+        if(grid[minx][miny]>limit)
+            cout<<"NO\n";
+        else
+        {
+            cout<<"YES\n";
+            cout<<limit-grid[minx][miny];
+        }
+        return ;
+    }
+    else
+    {
+    //Relaxing Process
+        if(minx+1<=n && solvedones[minx+1][miny]==0)
+        {
+            if(relax[minx+1][miny]==0)
+            {
+                grid[minx+1][miny]+=grid[minx][miny];
+                relax[minx+1][miny]=1;
+            }
+            else
+            {
+                if((grid[minx][miny]+realvalue[minx+1][miny])<grid[minx+1][miny])
+                    grid[minx+1][miny]=grid[minx][miny]+realvalue[minx+1][miny];
+                relax[minx+1][miny]=1;
+            }
+        }
+        if(minx-1>=1 && solvedones[minx-1][miny]==0)
+        {
+            if(relax[minx-1][miny]==0)
+            {
+                grid[minx-1][miny]+=grid[minx][miny];
+                relax[minx-1][miny]=1;
+            }
+            else
+            {
+                if((grid[minx][miny]+realvalue[minx-1][miny])<grid[minx-1][miny])
+                    grid[minx-1][miny]=grid[minx][miny]+realvalue[minx-1][miny];
+                relax[minx-1][miny]=1;
+            }
+        }
+        if(miny+1<=m && solvedones[minx][miny+1]==0)
+        {
+            if(relax[minx][miny+1]==0)
+            {
+                grid[minx][miny+1]+=grid[minx][miny];
+                relax[minx][miny+1]=1;
+            }
+            else
+            {
+                if((grid[minx][miny]+realvalue[minx][miny+1])<grid[minx][miny+1])
+                    grid[minx][miny+1]=grid[minx][miny]+realvalue[minx][miny+1];
+                relax[minx][miny+1]=1;
+            }
+
+        }
+        if(miny-1>=1 && solvedones[minx][miny-1]==0)
+        {
+            if(relax[minx][miny-1]==0)
+            {
+                grid[minx][miny-1]+=grid[minx][miny];
+                relax[minx][miny-1]=1;
+            }
+            else
+            {
+                if((grid[minx][miny]+realvalue[minx][miny-1])<grid[minx][miny-1])
+                    grid[minx][miny-1]=grid[minx][miny]+realvalue[minx][miny-1];
+                relax[minx][miny-1]=1;
+            }
+        }
+        shortestpath(grid,solvedones,n,m);
+
+    }
+}

@@ -1,0 +1,58 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#define FOR(i,s,e) for (int i=(s); i<(e); i++)
+#define FOE(i,s,e) for (int i=(s); i<=(e); i++)
+#define FOD(i,s,e) for (int i=(s)-1; i>=(e); i--)
+#define CLR(a,x) memset(a, x, sizeof(a))
+#define EXP(i,l) for (int i=(l); i; i=qn[i])
+#define N 100005
+#define LLD long long int
+using namespace std;
+
+struct pt{
+	int x, y;
+	bool operator < (pt const &T) const{return x < T.x;}
+};
+
+pt a[N];
+int n, x, y, ret;
+int smn[N], smx[N], pmn[N], pmx[N];
+
+int solve(LLD d){
+	LLD mn, mx;
+	for (int i=0, j=0; i<n; i++){
+		while (j + 1 < n && a[j+1].x - a[i].x <= d) ++j;
+		if (!i && j == n - 1) continue;
+		if (!i) mn = smn[j+1], mx = smx[j+1];
+		else if (j == n - 1) mn = pmn[i-1], mx = pmx[i-1];
+		else{
+			mn = min(pmn[i-1], smn[j+1]);
+			mx = max(pmx[i-1], smx[j+1]);
+		}
+		if (mn + d >= mx) return 1;
+	}
+	return 0;
+}
+
+int main(){
+	scanf("%d", &n);
+	FOR(i,0,n){
+		scanf("%d%d", &x, &y);
+		a[i] = (pt){x+y, x-y};
+	}
+	sort(a, a + n);
+	pmn[0] = pmx[0] = a[0].y;
+	FOR(i,1,n) pmn[i] = min(pmn[i-1], a[i].y), pmx[i] = max(pmx[i-1], a[i].y);
+	smn[n-1] = smx[n-1] = a[n-1].y;
+	FOD(i,n-1,0) smn[i] = min(smn[i+1], a[i].y), smx[i] = max(smx[i+1], a[i].y);
+
+	for (LLD i=0, j=a[n-1].x-a[0].x, k; j>=i;){
+		k = i + (j - i) / 2;
+		if (solve(k)) ret = k, j = k - 1;
+		else i = k + 1;
+	}
+
+	printf("%.2f\n", ret/2.0 + 1e-9);
+	return 0;
+}

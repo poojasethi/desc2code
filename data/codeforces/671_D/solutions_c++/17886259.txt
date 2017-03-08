@@ -1,0 +1,100 @@
+#include <iostream>
+#include <cstdio>
+#define LL long long int
+#define MAXN 300005
+using namespace std;
+const LL inf=1e15+5;
+
+char ww;
+inline void GET(int &t)
+{
+    t=0;
+    do ww=getchar();while(ww<'0'||ww>'9');
+    do t=t*10+ww-'0', ww=getchar();while(ww>='0'&&ww<='9');
+}
+
+struct node{int v, next;}edge[MAXN<<2];
+int adj[MAXN], w[MAXN], h[MAXN], in[MAXN], out[MAXN], pos, tot, n, m;
+inline void add(int u,int v,int adj[])
+{edge[++tot].v=v, edge[tot].next=adj[u], adj[u]=tot;}
+
+int st[MAXN], en[MAXN];
+void dfs(int u,int fa)
+{
+    st[u]=pos+1;
+    int p, v;
+    for(p=in[u];p;p=edge[p].next)h[edge[p].v]=++pos;
+    for(p=adj[u];p;p=edge[p].next)if((v=edge[p].v)!=fa)dfs(v,u);
+    en[u]=pos;
+}
+
+LL dp[MAXN], sum[MAXN<<2], tmp[MAXN<<2];
+
+inline void up(int p){sum[p]=min(inf,min(sum[p<<1],sum[p<<1|1])+tmp[p]);}
+void update(int p,int l,int r,int pos,LL d)
+{
+    if(l==r){sum[p]=d;return;}
+    int mid=(l+r)/2;
+    if(pos<=mid)update(p<<1,l,mid,pos,d);
+    else update(p<<1|1,mid+1,r,pos,d);
+    up(p);
+}
+LL update(int p,int l,int r,int L,int R,LL d)
+{
+	if(l>R||r<L)return sum[p];
+	if(L<=l&&r<=R)
+	{
+		tmp[p]=min(inf,d+tmp[p]), sum[p]=min(inf,d+sum[p]);
+		return sum[p];
+	}
+	int mid=(l+r)>>1;
+	sum[p]=min(update(p<<1,l,mid,L,R,d),update(p<<1|1,mid+1,r,L,R,d))+tmp[p];
+	if(sum[p]>inf)sum[p]=inf;
+	return sum[p];
+}
+
+LL query(int p,int l,int r,int L,int R)
+{
+	if(l>R||r<L)return inf;
+    if(l==L&&r==R)return sum[p];
+    int mid=(l+r)/2;
+    if(R<=mid)return min(inf,query(p<<1,l,mid,L,R)+tmp[p]);
+    if(mid<L)return min(inf,query(p<<1|1,mid+1,r,L,R)+tmp[p]);
+    return min(inf,min(query(p<<1,l,mid,L,mid),query(p<<1|1,mid+1,r,mid+1,R))+tmp[p]);
+}
+
+LL solve(int u,int fa)
+{
+    LL all=0;
+    for(int p=adj[u], v;p;p=edge[p].next)
+        if((v=edge[p].v)!=fa)all=min(inf,all+solve(v,u));
+    if(u==1)return dp[u]=all;
+    int p, v;
+    for(p=in[u];p;p=edge[p].next)update(1,1,m,h[edge[p].v],w[edge[p].v]+all);
+    for(p=out[u];p;p=edge[p].next)update(1,1,m,h[edge[p].v],inf);
+    for(p=adj[u];p;p=edge[p].next)
+        if((v=edge[p].v)!=fa)
+            update(1,1,m,st[v],en[v],all-dp[v]);
+    return dp[u]=query(1,1,m,st[u],en[u]);
+}
+
+int main()
+{
+    int u, v;
+    GET(n), GET(m);
+    for(int i=1;i<n;++i)
+    {
+        GET(u), GET(v);
+        add(u,v,adj), add(v,u,adj);
+    }
+    for(int i=1;i<=m;++i)
+    {
+        GET(u), GET(v), GET(w[i]);
+        add(u,i,in), add(v,i,out);
+    }
+
+    dfs(1,0);
+    LL ans=solve(1,0);
+    printf("%I64d\n",ans>=inf?-1:ans);
+    return 0;
+}

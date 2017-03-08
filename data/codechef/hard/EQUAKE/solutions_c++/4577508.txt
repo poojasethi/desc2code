@@ -1,0 +1,114 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#define ls(i) (i << 1)
+#define rs(i) (i << 1 | 1)
+using namespace std;
+
+const int N = 800010, M = N << 2;
+
+int n, m, num[10010][12], a[N], v[10], d[12];
+
+void init() {
+    for (int i = 0; i <= 10000; ++i) {
+
+        int st = 0, x = i;
+        do {
+            v[st++] = x % 10;
+            x /= 10;
+        }while (x > 0);
+
+        for (int j = 0; j < 12; ++j) {
+            int val = 0;
+            for (int k = st - 1; k >= 0; --k)
+                val = val * 10 + v[(k - j + 12) % st];
+            num[i][j] = val;
+        }
+    }
+}
+
+struct segtree {
+    int lx[M], rx[M], maxn[M][12], f[M];
+
+    void build(int l, int r, int i) {
+        lx[i] = l, rx[i] = r; f[i] = 0;
+        if (l == r) {
+            for (int j = 0; j < 12; ++j)
+                maxn[i][j] = num[a[l]][j];
+            return;
+        }
+        int h = (l + r) >> 1;
+        build(l, h, ls(i));
+        build(h + 1, r, rs(i));
+        for (int j = 0; j < 12; ++j)
+            maxn[i][j] = max(maxn[ls(i)][j], maxn[rs(i)][j]);
+    }
+
+    void Rotate(int *c, int F) {
+        for (int i = 0; i < 12; ++i)
+            d[i] = c[i];
+        for (int i = 0; i < 12; ++i)
+            c[i] = d[(i + F) % 12];
+    }
+
+    void pushdown(int i) {
+        if (f[i]) {
+            Rotate(maxn[ls(i)], f[i]);
+            Rotate(maxn[rs(i)], f[i]);
+            f[ls(i)] += f[i];
+            f[rs(i)] += f[i];
+            f[i] = 0;
+        }
+    }
+
+    void pushup(int i) {
+        for (int j = 0; j < 12; ++j)
+            maxn[i][j] = max(maxn[ls(i)][j], maxn[rs(i)][j]);
+    }
+
+    void modify(int l, int r, int F, int i) {
+        if (l <= lx[i] && r >= rx[i]) {
+            Rotate(maxn[i], F);
+            f[i] = (f[i] + F) % 12;
+            return;
+        }
+        pushdown(i);
+        int h = (lx[i] + rx[i]) >> 1;
+        if (l <= h) modify(l, r, F, ls(i));
+        if (r > h) modify(l, r, F, rs(i));
+        pushup(i);
+    }
+
+    int query(int l, int r, int i) {
+        if (l <= lx[i] && r >= rx[i]) return maxn[i][0];
+        pushdown(i);
+        int h = (lx[i] + rx[i]) >> 1;
+        int ret = 0;
+        if (l <= h) ret = max(ret, query(l, r, ls(i)));
+        if (r > h) ret = max(ret, query(l, r, rs(i)));
+        return ret;
+    }
+
+}sg;
+
+int main() {
+//    freopen("in", "r", stdin);
+    init();
+    scanf("%d", &n);
+    for (int i = 1; i <= n; ++i)
+        scanf("%d", &a[i]);
+    sg.build(1, n, 1);
+    int c, l, r, F;
+    scanf("%d", &m);
+    while (m--) {
+        scanf("%d%d%d", &c, &l, &r);
+        ++l, ++r;
+        if (c == 0) {
+            scanf("%d", &F);
+            sg.modify(l, r, F, 1);
+        }
+        else
+            printf("%d\n", sg.query(l, r, 1));
+    }
+    return 0;
+}

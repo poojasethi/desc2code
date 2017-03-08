@@ -1,0 +1,351 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <deque>
+#include <stack>
+#include <cmath>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <bitset>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <cstring>
+#include <climits>
+#include <map>
+#include <cassert>
+#define mod 1000000009
+#define ull unsigned long long
+#define ill long long int
+#define pii pair<int,int>
+#define pb(x) push_back(x)
+#define F(i,a,n) for(i=(a);i<(n);++i)
+#define FD(i,a,n) for(i=(a);i>=(n);--i)
+#define FE(it,x) for(it=x.begin();it!=x.end();++it)
+#define V(x) vector<x>
+#define S(x) scanf("%d",&x)
+#define S1(x) scanf("%lld",&x)
+#define epsilon 0.000001
+
+using namespace std;
+
+
+#define REP(i,a,b) for(typeof(a) i=(a);i<(b);i++)
+#define ll long long int
+#define ii pair<int,int>
+#define CLEAR(x,val) memset(x,val,sizeof(x))
+#define SZ(v) (v).size()
+#define N 500006
+
+char str[N];                        //  input
+int rr[N], pos[N];                //  output
+int cnt[N], nn[N];                //internal
+bool bh[N], b2h[N];
+
+// Compares two suffixes according to their first characters
+bool smaller_first_char (int a, int b){
+  return str[a] < str[b];
+}
+
+void suffixSort(int n)
+{
+  //sort suffixes according to their first characters
+    for (int i=0; i<n; ++i){
+        pos[i] = i;
+    }
+    sort(pos, pos + n, smaller_first_char);
+    //{pos contains the list of suffixes sorted by their first character}
+
+    for (int i=0; i<n; ++i){
+        bh[i] = i == 0 || str[pos[i]] != str[pos[i-1]];
+        b2h[i] = false;
+    }
+
+    for (int h = 1; h < n; h <<= 1){
+        //{bh[i] == false if the first h characters of pos[i-1] == the first h characters of pos[i]}
+        int buckets = 0;
+        for (int i = 0, j; i < n; i = j){
+            j = i + 1;
+            while (j < n && !bh[j]) j++;
+                nn[i] = j;
+                buckets++;
+            }
+            if (buckets == n) break; // We are done! Lucky bastards!
+            //{suffixes are separted in buckets containing strings starting with the same h characters}
+
+            for (int i = 0; i < n; i = nn[i]){
+                cnt[i] = 0;
+                for (int j = i; j < nn[i]; ++j){
+                    rr[pos[j]] = i;
+                }
+            }
+
+            cnt[rr[n - h]]++;
+            b2h[rr[n - h]] = true;
+            for (int i = 0; i < n; i = nn[i]){
+                for (int j = i; j < nn[i]; ++j){
+                    int s = pos[j] - h;
+                    if (s >= 0){
+                        int head = rr[s];
+                        rr[s] = head + cnt[head]++;
+                        b2h[rr[s]] = true;
+                    }
+                }
+                for (int j = i; j < nn[i]; ++j){
+                    int s = pos[j] - h;
+                    if (s >= 0 && b2h[rr[s]]){
+                        for (int k = rr[s]+1; !bh[k] && b2h[k]; k++) b2h[k] = false;
+                    }
+                }
+            }
+            for (int i=0; i<n; ++i){
+                pos[rr[i]] = i;
+                bh[i] |= b2h[i];
+            }
+    }
+
+    for (int i=0; i<n; ++i){
+        rr[pos[i]] = i;
+    }
+}
+// End of suffix array algorithm
+
+
+// Begin of the O(n) longest common prefix algorithm
+// Refer to "Linear-Time Longest-Common-Prefix Computation in Suffix
+// Arrays and Its Applications" by Toru Kasai, Gunho Lee, Hiroki
+// Arimura, Setsuo Arikawa, and Kunsoo Park.
+
+int height[N];
+
+// height[i] = length of the longest common prefix of suffix pos[i] and suffix pos[i-1]
+// height[0] = 0
+
+class seg1
+{
+    public:
+        vector <int> a,b;
+
+        void space (int xx)
+        {
+            a.resize (6*xx);    b.resize (6*xx);
+            int i;
+            F (i, 0, 6*xx) {
+                a[i] = -1;
+                b[i] = 0;
+            }
+        }
+
+        void check (int x)
+        {
+            int ll1,rr;
+            ll1 = x*2;   rr = ll1+1;
+
+            if (a[ll1] < a[x]) {
+                a[ll1] = a[x];
+                b[ll1] = 1;
+            }
+            if (a[rr] < a[x]) {
+                a[rr] = a[x];
+                b[rr] = 1;
+            }
+
+            b[x] = 0;
+        }
+
+        void update (int node, int x, int y, int sx, int sy, int value)
+        {
+            if (x > y || sx > sy) return;
+            if (sy < x || sx > y) return;
+
+            if (sx <= x && sy >= y) {
+                if (a[node] >= value) return;
+                a[node] = value;
+                b[node] = 1;
+                return;
+            }
+
+            if (b[node] != 0) check (node);
+
+            int mid = (x+y)/2;
+            update (2*node, x, mid, sx, sy, value);
+            update (2*node +1, mid+1, y, sx, sy, value);
+        }
+
+        int query (int node, int x, int y, int index)
+        {
+            if (x == y) {
+                return a[node];
+            }
+
+            if (b[node] != 0) check (node);
+            int mid = (x+y)/2;
+            if (index <= mid) return query (2*node, x, mid, index);
+            return query (2*node +1, mid+1, y, index);
+        }
+
+};
+
+
+class seg
+{
+    public:
+        vector <int> a,b;
+        vector <int> s;
+
+        void space(int x)
+        {
+            a.resize (6*x);    b.resize (6*x);
+            s.resize (6*x);
+            int i;
+
+            // a is the minimum value
+            // b is the flag
+            // s is the index
+
+            F (i, 0, 6*x) {
+                a[i] = 10000000;
+                b[i] = 0;
+                s[i] = -1;
+            }
+        }
+
+        void check (int x)
+        {
+            int left1 = x*2;   int rr1 = left1+1;
+
+            if (a[left1] > a[x]) {
+                a[left1] = a[x];
+                b[left1] = 1;
+                s[left1] = s[x];
+            }
+
+
+
+            if (a[rr1] > a[x]){
+                a[rr1] = a[x];
+                b[rr1] = 1;
+                s[rr1] = s[x];
+            }
+
+            b[x] = 0;
+        }
+
+        void update (int node, int x, int y, int sx, int sy, int value, int index)
+        {
+            if (x > y || sx > sy) return;
+            if (sy < x || sx > y) return;
+
+            if (sx <= x && sy >= y) {
+                if (a[node] <= value) return;
+                a[node] = value;
+                b[node] = 1;
+                s[node] = index;
+                return;
+            }
+
+            if (b[node] == 1) {
+                check (node);
+            }
+
+            int mid = (x+y)/2;
+            update (node*2, x, mid, sx, sy, value, index);
+            update (node*2 +1, mid+1, y, sx, sy, value, index);
+        }
+
+
+        pii query (int node, int x, int y, int ii1)
+        {
+            if (x == y) {
+                return pii (s[node]+1, a[node]+s[node]);
+            }
+            if (b[node] != 0) check (node);
+            int m = (x+y)/2;    int mid = m;
+            if (ii1 <= m) return query (node*2, x, mid, ii1);
+            return query (node*2 +1, mid+1, y, ii1);
+        }
+};
+seg ob;
+seg1 oo;
+
+
+
+
+void getHeight(int n)
+{
+    int i;
+    for (int i=0; i<n; ++i) rr[pos[i]] = i;
+    height[0] = 0;
+
+    for (int i=0, h=0; i<n; ++i){
+        if (rr[i] > 0){
+            int j = pos[rr[i]-1];
+            while (i + h < n && j + h < n && str[i+h] == str[j+h]) h++;
+            height[rr[i]] = h;
+            if (h > 0) h--;
+        }
+    }
+
+
+
+    F (i, 0, n) {
+        int m = max (height[i], height[i+1]);
+        int last = pos[i]+m;
+        if (last == n) continue;
+       // cout << pos[i] << " " << last << " -- " << rr[i] << endl;
+        ob.update (1, 0, n-1, pos[i], last, (last-pos[i]+1), pos[i]);
+        oo.update (1, 0, n-1, last+1, n-1, pos[i]);
+    }
+
+
+}
+// End of lcp part
+
+int main()
+{
+  //  freopen ("input.txt", "r", stdin);
+
+    scanf ("%s", str);
+    int n = strlen(str);
+    ob.space (n);
+    oo.space (n);
+    suffixSort(n);
+    getHeight(n);
+
+    int i;
+    F (i, 0, n) {
+        pii pp = ob.query (1, 0, n-1, i);
+       // cout << pp.first << " aa " << pp.second << endl;
+
+        int len1=1000000;
+        if (pp.first != 0) len1 = pp.second-pp.first+1;
+
+        int index = oo.query (1, 0, n-1, i);
+        int len2 = 1000000;
+      //  cout << index << endl;
+    if (index != -1) len2 = i-index+1;
+          //  cout << len2 << endl << endl;
+
+        if (len1 < len2) {
+            printf ("%d %d\n", pp.first, pp.second-pp.first+1);
+            continue;
+        }
+        if (len2 < len1) {
+            printf ("%d %d\n", index+1, i+1-index);
+            continue;
+        }
+
+        if (rr[pp.first-1] < rr[index])  printf ("%d %d\n", pp.first, pp.second-pp.first+1);
+        else  printf ("%d %d\n", index+1, i+1-index);
+    }
+
+    return 0;
+}

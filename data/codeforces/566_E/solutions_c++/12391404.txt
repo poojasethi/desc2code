@@ -1,0 +1,276 @@
+#include <iostream>
+#include <cstdlib>
+#include <algorithm>
+
+using namespace std;
+
+const int limite=1001;
+
+int n;
+int pertenece[limite][limite];
+int hijo[limite][limite];
+int shijo[limite][limite];
+int hijo2[limite][limite];
+int set[limite];
+int padre[limite];
+
+void genera(int u)
+{
+  //cout<<"genera "<<u<<" "<<set[u]<<endl;
+  /*
+  cout<<"hijos ";
+  for (int v=1;v<=n;v++)
+    if (hijo[u][v])
+      cout<<v<<",";
+  cout<<endl;
+  cout<<"setshijos ";
+  for (int s=1;s<=n;s++)
+    if (shijo[u][s])
+      cout<<s<<",";
+  cout<<endl;
+  */
+  bool hayhijo2=false;
+  for (int w=1;w<=n;w++) {
+    if (w!=u and not hijo[u][w] and pertenece[w][set[u]]) {
+      hijo2[u][w]=1;
+      hayhijo2=true;
+    }
+  }
+  if (not hayhijo2) return;
+  for (int t=1;t<=n;t++) {
+    if (t!=set[u] and not shijo[u][t] and pertenece[u][t]) {
+      //cout<<"encontramos set "<<t<<endl;
+      int hijou=0;
+      for (int v=1;v<=n and hijou==0;v++)
+	if (pertenece[v][t] and hijo[u][v])
+	  hijou=v;
+      //cout<<"hijou "<<hijou<<endl;
+      for (int w=1;w<=n;w++) {
+	if (pertenece[w][t] and hijo2[u][w]) {
+	  if (hijo[hijou][w]==0) {
+	    hijo[hijou][w]=1;
+	    cout<<hijou<<" "<<w<<endl;
+	    padre[w]=hijou;
+	  }
+	  shijo[hijou][t]=1;
+	}
+      }
+    }
+  }
+  for (int s=1;s<=n;s++) {
+    if (shijo[u][s]) {
+      //cout<<"analizando set "<<s<<endl;
+      int hijou=0;
+      for (int w=1;w<=n and hijou==0;w++) {
+	if (pertenece[w][s] and hijo2[u][w]) {
+	  //cout<<"asignamos w padrew "<<w<<" "<<padre[w]<<endl;
+	  hijou=padre[w];
+	}
+      }
+      if (hijou!=0)
+	set[hijou]=s;
+      //cout<<"set "<<hijou<<" "<<s<<endl;
+      for (int v=1;v<=n;v++)
+	if (hijo[u][v])
+	  pertenece[v][s]=0;
+    }
+  }
+  for (int v=1;v<=n;v++)
+    if (hijo[u][v])
+      pertenece[v][set[u]]=0;
+  for (int s=1;s<=n;s++)
+    pertenece[u][s]=0;
+  for (int v=1;v<=n;v++)
+    if (hijo[u][v] and set[v])
+      genera(v);
+}
+
+int tamanyo[limite];
+int bset[limite][40];
+int rando[limite];
+int puntos[limite];
+int veo[limite];
+int ocurrencias[limite];
+
+bool incluido(int s1,int s2)
+{
+  int (&set1)[40]=bset[s1];
+  int (&set2)[40]=bset[s2];
+  for (int i=0;i<40;i++)
+    if ((set1[i]&set2[i])!=set1[i])
+      return false;
+  return true;
+}
+
+
+int main()
+{
+  ios::sync_with_stdio(false);
+  cin>>n;
+  int numtamanyon=0;
+  for (int s=1;s<=n;s++) {
+    cin>>tamanyo[s];
+    numtamanyon+=tamanyo[s]==n;
+    for (int i=0;i<tamanyo[s];i++) {
+      int u;
+      cin>>u;
+      pertenece[u][s]=1;
+      ocurrencias[u]++;
+      bset[s][u/30]|=1<<(u%30);
+    }
+  }
+
+  // Casos especiales:
+
+  if (n==1) exit(0);
+  if (numtamanyon==n) {
+    for (int u=2;u<=n;u++)
+      cout<<1<<" "<<u<<endl;
+    exit(0);
+  }
+  if (numtamanyon==2) {
+    int u1=0,u2=0;
+    for (int u=1;u<=n;u++) {
+      if (ocurrencias[u]==n) {
+	if (u1==0) u1=u;
+	else u2=u;
+      }
+    }
+    cout<<u1<<" "<<u2<<endl;
+    for (int s=1;s<=n;s++) {
+      if (tamanyo[s]!=n) {
+	for (int u=1;u<=n;u++) {
+	  if (u!=u1 and u!=u2) {
+	    if (pertenece[u][s]) cout<<u1<<" "<<u<<endl;
+	    else cout<<u2<<" "<<u<<endl;
+	  }
+	}
+	exit(0);
+      }
+    }
+  }
+
+  // Caso general:
+  //cout<<"caso general"<<endl;
+
+
+  for (int u=1;u<=n;u++)
+    rando[u]=u;
+  random_shuffle(rando+1,rando+n+1);
+  int hoja=0,shoja;
+  for (int i=1;i<=n and hoja==0;i++) {
+    int u=rando[i];
+    int tamanyomin=10000;
+    int smin;
+    for (int s=1;s<=n;s++) {
+      if (pertenece[u][s] and tamanyo[s]<tamanyomin) {
+	//cout<<"tamanyo "<<s<<" "<<tamanyo[s]<<endl;
+	tamanyomin=tamanyo[s];
+	smin=s;
+      }
+    }
+    //cout<<"smin "<<u<<" "<<smin<<endl;
+    bool eshoja=true;
+    for (int s=1;s<=n and eshoja;s++)
+      if (pertenece[u][s])
+	eshoja=incluido(smin,s);
+    if (eshoja) {
+      hoja=u;
+      shoja=smin;
+    }
+  }
+  set[hoja]=shoja;
+
+  //cout<<"hoja shoja: "<<hoja<<" "<<shoja<<endl;
+
+  for (int u=1;u<=n;u++)
+    if (u!=hoja and pertenece[u][shoja])
+      hijo2[hoja][u]=1;
+  for (int s=1;s<=n;s++) {
+    if (not pertenece[hoja][s]) {
+      int u1=0,u2=0,cuantos=0;
+      for (int u=1;u<=n;u++) {
+	if (pertenece[u][s] and hijo2[hoja][u]) {
+	  cuantos++;
+	  if (u1==0) u1=u;
+	  else u2=u;
+	}
+      }
+      if (cuantos==2) {
+	puntos[u1]++;
+	puntos[u2]++;
+      } else if (cuantos==1) {
+	puntos[u1]--;
+      }
+    }
+  }
+  int hijohoja,puntoshijohoja=0;
+  for (int u=1;u<=n;u++) {
+    if (puntos[u]>puntoshijohoja) {
+      hijohoja=u;
+      puntoshijohoja=puntos[u];
+    }
+  }
+  hijo[hoja][hijohoja]=1;
+  hijo2[hoja][hijohoja]=0;
+
+
+  cout<<hoja<<" "<<hijohoja<<endl;
+
+  for (int u=1;u<=n;u++) {
+    if (hijo2[hoja][u]) {
+      hijo[hijohoja][u]=1;
+      cout<<hijohoja<<" "<<u<<endl;
+    }
+  }
+
+
+  for (int s=1;s<=n;s++) {
+    if (not pertenece[hoja][s] and pertenece[hijohoja][s]) {
+      int h2=0;
+      for (int w=1;w<=n and h2==0;w++)
+	if (pertenece[w][s] and hijo2[hoja][w])
+	  h2=w;
+      for (int w=1;w<=n;w++)
+	if (pertenece[w][s] and w!=hijohoja and not hijo2[hoja][w])
+	  veo[w]=h2;
+    }
+  }
+  int shijohoja=0;
+  for (int s=1;s<=n and shijohoja==0;s++) {
+    if (s!=shoja and pertenece[hoja][s]) {
+      int veo1=0;
+      for (int u=1;u<=n and shijohoja==0;u++) {
+	if (pertenece[u][s] and veo[u]) {
+	  if (veo1 and veo[u]!=veo1)
+	    shijohoja=s;
+	  else
+	    veo1=veo[u];
+	}
+      }
+    }
+  }
+  if (shijohoja==0) {
+    int minimo=10000;
+    for (int s=1;s<=n;s++) {
+      if (tamanyo[s]>tamanyo[shoja] and pertenece[hoja][s] and tamanyo[s]<minimo) {
+	minimo=tamanyo[s];
+	shijohoja=s;
+      }
+    }
+  }
+
+  //cout<<"shijohoja: "<<shijohoja<<endl;
+
+  set[hijohoja]=shijohoja;
+  for (int s=1;s<=n;s++)
+    if (s!=shoja and s!=shijohoja and pertenece[hoja][s])
+      shijo[hijohoja][s]=1;
+  for (int s=1;s<=n;s++)
+    pertenece[hoja][s]=0;
+  for (int u=1;u<=n;u++)
+    pertenece[u][shoja]=0;
+  pertenece[hijohoja][shijohoja]=0;
+  genera(hijohoja);
+}
+

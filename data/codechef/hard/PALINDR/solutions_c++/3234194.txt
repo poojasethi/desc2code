@@ -1,0 +1,246 @@
+#include <algorithm>
+#include <iostream>
+#include <sstream>
+#include <cassert>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+#include <string>
+#include <vector>
+#include <bitset>
+#include <queue>
+#include <stack>
+#include <cmath>
+#include <deque>
+#include <ctime>
+#include <list>
+#include <set>
+#include <map>
+//zlb//
+
+using namespace std;
+
+typedef long long     LL;
+typedef pair<int,int> pii;
+
+double PI  = acos(-1);
+double EPS = 1e-7;
+int INF    = 1000000000;
+int MOD    = 1000000007;
+int MAXINT = 2147483647;
+LL INFLL   = 1000000000000000000LL;
+LL MAXLL   = 9223372036854775807LL;
+
+#define fi            first
+#define se            second
+#define mp            make_pair
+#define pb            push_back
+#define SIZE(a)       (int)a.size()
+#define MIN(a, b)     (a) = min((a), (b))
+#define MAX(a, b)     (a) = max((a), (b))
+#define input(in)     freopen(in,"r",stdin)
+#define output(out)   freopen(out,"w",stdout)
+#define RESET(a, b)   memset(a,b,sizeof(a))
+#define FOR(a, b, c)  for (int (a)=(b); (a)<=(c); (a)++)
+#define FORD(a, b, c) for (int (a)=(b); (a)>=(c); (a)--)
+#define FORIT(a, b)   for (__typeof((b).begin()) a=(b).begin(); a!=(b).end(); a++)
+
+int mx[8] = {-1,1,0,0,-1,-1,1,1};
+int my[8] = {0,0,-1,1,-1,1,-1,1};
+
+// ------------ //
+
+struct node
+{
+	int val[10],prior,cnt,own;
+	node *l,*r;
+	bool rev;
+	node() {}
+	node(int p)
+	{
+		val[0]=val[1]=val[2]=val[3]=val[4]=val[5]=val[6]=val[7]=val[8]=val[9]=0;
+		val[p]++;
+		prior = rand();
+		own=p;
+		cnt=1;
+		l=r=NULL;
+		rev=0;
+	}
+};
+
+typedef node* pnode;
+
+pnode root,t1,t2,t3,t4;
+
+int cnt(pnode p)
+{
+	if (p) return p->cnt;
+	else return 0;
+}
+
+void update2(pnode p){ // update the node
+	if (!p) return;
+	if(p->rev){
+		if(p->l)p->l->rev^=1;
+		if(p->r)p->r->rev^=1;
+		swap(p->l,p->r);
+		p->rev=0;
+	}
+	p->cnt=cnt(p->l)+1+cnt(p->r);
+	for(int j=0;j<10;j++){
+		p->val[j]=0;
+		if(p->l)p->val[j]+=p->l->val[j];
+		if(p->r)p->val[j]+=p->r->val[j];		
+	}
+	++p->val[p->own];
+}
+
+void update(pnode p)
+{
+	if (!p) return;
+	if (p->rev)
+	{
+		swap(p->l,p->r);
+		if (p->l) p->l->rev^=1;
+		if (p->r) p->r->rev^=1;
+		p->rev = 0;
+	}
+	p->cnt = cnt(p->l)+1+cnt(p->r);
+	FOR(a,0,9)
+	{
+		p->val[a] = 0;
+		if (p->l) p->val[a] += p->l->val[a];
+		if (p->r) p->val[a] += p->r->val[a];
+	}
+	p->val[p->own]++;
+}
+
+void merge(pnode &t,pnode l,pnode r)
+{
+	update(l);
+	update(r);
+	if      (!l) t = r;
+	else if (!r) t = l;
+	else if (l->prior > r->prior)
+	{
+		merge(l->r,l->r,r);
+		t = l;	
+	}
+	else
+	{
+		merge(r->l,l,r->l);
+		t = r;
+	}
+	update(t);
+}
+
+void split(pnode t,pnode &l,pnode &r,int key,int add=0)
+{
+	if (!t)
+	{
+		l = r = NULL;
+		return;
+	}
+	update(t);
+	int curkey = add+cnt(t->l)+1;
+	if (key <= curkey)
+	{
+		split(t->l,l,t->l,key,add);
+		r = t;
+	}
+	else
+	{
+		split(t->r,t->r,r,key,add+1+cnt(t->l));
+		l = t;
+	}
+	update(t);
+}
+
+LL inv[100005];
+LL fac[100005];
+LL mod = 1000000007;
+
+LL bigmod(int p,int con)
+{
+	if (p == 0) return 1;
+	else if (p%2==0)
+	{
+		LL tmp = bigmod(p/2,con);
+		return (tmp*tmp)%mod;
+	}
+	else
+	{
+		return ((LL)con*(bigmod(p-1,con)))%mod;
+	}
+}
+
+int main()
+{
+	inv[0] = 1;
+	fac[0] = 1;
+	inv[1] = 1;
+	fac[1] = 1;
+	FOR(a,2,100000)
+	{
+		inv[a] = (inv[a-1]*bigmod(mod-2,a))%mod;
+		fac[a] = (fac[a-1]*(LL)a)%mod;
+	}
+
+
+	int n,m;
+	scanf("%d%d",&n,&m);
+	getchar();
+	FOR(a,1,n)
+	{
+		char c = getchar();
+		merge(root,root,new node(c-'a'));
+	}
+	FOR(a,1,m)
+	{
+		int t,l,r;
+		scanf("%d%d%d",&t,&l,&r);
+		if (t == 1)
+		{
+			split(root,t1,t2,l);
+			split(t2,t3,t4,r-l+2);
+			t3->rev^=1;
+			merge(t2,t3,t4);
+			merge(root,t1,t2);
+		}
+		else
+		{
+			split(root,t1,t2,l);
+			split(t2,t3,t4,r-l+2);
+			int co[10];
+			RESET(co,0);
+			int red = 0;
+			int sum = 0;
+			FOR(a,0,9)
+			{
+				co[a] = t3->val[a];
+				//cout << a << " " << co[a] << endl;
+				if (co[a]%2==1)
+				{
+					red++;
+					co[a]--;
+				}
+				co[a]/=2;
+				sum += co[a];
+			}
+			if ((r-l+1)%2==1 && red != 1) puts("0");
+			else if ((r-l+1)%2==0 && red != 0) puts("0");
+			else
+			{
+				LL res = fac[sum];
+				FOR(a,0,9)
+				{
+					res *= inv[co[a]];
+					res %= mod;
+				}
+				printf("%lld\n",res);
+			}
+			merge(t2,t3,t4);
+			merge(root,t1,t2);
+		}
+	}
+}

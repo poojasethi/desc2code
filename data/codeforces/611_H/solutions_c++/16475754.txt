@@ -1,0 +1,156 @@
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#define mkp make_pair
+#define fir first
+#define sec second
+using namespace std;
+
+const int MaxN = 200010, MaxDig = 10;
+int cnt[MaxDig][MaxDig], pcnt[MaxDig];
+int epos[MaxDig][MaxDig], eu[MaxDig * MaxDig], ev[MaxDig * MaxDig], etot;
+int N, Digit;
+
+int &edge(int u, int v) {
+	return (u <= v ? cnt[u][v] : cnt[v][u]);
+}
+
+class Dinic_Template {
+public:
+	static const int MaxN = 210, MaxM = 1010, inf = 1 << 30;
+	int En[MaxN], Next[MaxM], Point[MaxM], F[MaxM], tot;
+	void init() {
+		memset(En, 0, sizeof(En));
+		tot = 1;
+	}
+	void Add(int x, int y, int z) {
+		Next[++tot] = En[x];	En[x] = tot;	Point[tot] = y;	F[tot] = z;
+		Next[++tot] = En[y];	En[y] = tot;	Point[tot] = x;	F[tot] = 0;
+	}
+	
+	int dist[MaxN], lst[MaxN], T;
+	int Q[MaxN];
+	bool bfs(int s, int t) {
+		int l = 0, r = 0;
+		memset(dist, 0, sizeof(dist));
+		dist[Q[++r] = t] = 1;
+		while (l != r) {
+			int u = Q[++l];
+			for (int i = En[u]; i; i = Next[i])
+				if (!dist[Point[i]] && F[i ^ 1]) 
+					dist[Q[++r] = Point[i]] = dist[u] + 1;
+		}
+		return dist[s];
+	}
+	int dfs(int now, int flow) {
+		if (now == T) return flow;
+		int ret = 0;
+		for (int &i = lst[now]; i; i = Next[i])
+			if ((dist[Point[i]] + 1 == dist[now]) && F[i]) {
+				int tmp = dfs(Point[i], min(flow - ret, F[i]));
+				F[i] -= tmp;
+				F[i ^ 1] += tmp;
+				ret += tmp;
+				if (ret == flow) return ret;
+			}
+		return ret;
+	}
+
+	int dinic(int s, int t) {
+		T = t;
+		int ret = 0;
+		while (bfs(s, t)) {
+			memcpy(lst, En, sizeof(En));
+			ret += dfs(s, inf);
+		}
+		return ret;
+	}
+}	G;
+
+pair <int, int> tree_edge[MaxDig];
+int ttot;
+int Fullset;
+
+int val[MaxDig], key[MaxDig];
+void Try_ans() {
+	G.init();
+	int sum = 0, s = Digit + etot + 1, t = s + 1;
+	for (int i = 1; i <= Digit; ++i) {
+		G.Add(i, t, pcnt[i] - 1);
+		sum += pcnt[i] - 1;
+	}
+	for (int i = 1; i <= etot; ++i) {
+		G.Add(i + Digit, eu[i], G.inf);
+		G.Add(i + Digit, ev[i], G.inf);
+		G.Add(s, i + Digit, edge(eu[i], ev[i]));
+	}
+	if (G.dinic(s, t) != sum) return;
+	for (int i = 1, pow = 1; i <= Digit; ++i, pow *= 10) 
+		val[i] = key[i] = pow;
+	for (int i = 1; i <= ttot; ++i)
+		printf("%d %d\n", key[tree_edge[i].fir], key[tree_edge[i].sec]);
+	for (int i = 1; i <= etot; ++i)
+		for (int j = G.En[i + Digit]; j; j = G.Next[j]) {
+			int u = G.Point[j];
+			if (u > Digit) continue;
+			int v = eu[i] + ev[i] - u;
+			for (int k = G.F[j ^ 1]; k; --k)
+				printf("%d %d\n", key[v], ++val[u]);
+		}
+	exit(0);
+}
+
+void dfs(int leaf, int used) {
+	if (used == Fullset) return Try_ans();
+	if (leaf == 0) return;
+	int now = 0;
+	for (; !((leaf >> now) & 1); ++now);
+	dfs(leaf ^ (1 << now), used);
+	for (int s = Fullset ^ used; s; s = (s - 1) & (Fullset ^ used)) {
+		bool flag = 1;
+		for (int i = 0; i < Digit; ++i)
+			if ((s >> i) & 1) {
+				if (--edge(now + 1, i + 1) < 0) flag = 0;
+				tree_edge[++ttot] = mkp(now + 1, i + 1);
+			}
+		if (flag) dfs((leaf | s) ^ (1 << now), used | s);
+		for (int i = 0; i < Digit; ++i)
+			if ((s >> i) & 1) {
+				--ttot;
+				++edge(now + 1, i + 1);
+			}
+	}
+}
+
+int main()
+{
+	scanf("%d", &N);
+	for (int pow = 1; pow <= N; pow *= 10) {
+		++Digit;
+		if (pow * 10 <= N) pcnt[Digit] = pow * 9;
+		else pcnt[Digit] = N - pow + 1;
+	}
+	for (int i = 1; i < N; ++i) {
+		char u[10], v[10];
+		scanf("%s%s", u, v);
+		++cnt[strlen(u)][strlen(v)];
+	}
+	for (int i = 1; i <= Digit; ++i)
+		for (int j = 1; j < i; ++j) {
+			cnt[j][i] += cnt[i][j];
+			cnt[i][j] = 0;
+		}
+	etot = 0;
+	for (int i = 1; i <= Digit; ++i)
+		for (int j = i; j <= Digit; ++j) {
+			epos[i][j] = ++etot;
+			eu[etot] = i;
+			ev[etot] = j;
+		}
+	Fullset = (1 << Digit) - 1;
+	dfs(1, 1);
+	puts("-1");
+	return 0;
+}

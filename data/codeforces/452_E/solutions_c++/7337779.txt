@@ -1,0 +1,127 @@
+#include <iostream>
+#include <ctime>
+#include <string>
+#include <cstring>
+#include <cstdio>
+#include <vector>
+#include <set>
+#include <map>
+#include <string>
+#include <cmath>
+#include <queue>
+#include <algorithm>
+#include <cassert>
+#include <sstream>
+using namespace std;
+
+typedef long long ll;
+typedef unsigned long long ull;
+typedef long double ld;
+typedef vector<int> vi;
+typedef pair<int, int> pii;
+typedef pair<ll, int> pli;
+const int inf = 1e9;
+const double eps = 1e-7;
+
+const int maxn = 301000;
+const ll mod = 1000000007;
+
+struct node {
+	int len, link;
+	map<char, int> next;
+	ll a1, a2, a3;
+};
+
+int sz = 1, last = 0;
+node t[maxn * 2];
+
+ll add[maxn];
+
+void sa_extend(char c)
+{
+	int cur = sz++;
+	t[cur].len = t[last].len + 1;
+	int p;
+	for (p = last; p != -1 && !t[p].next.count(c); p = t[p].link) {
+		t[p].next[c] = cur;
+	}
+	if (p == -1) {
+		t[cur].link = 0;
+	} else {
+		int q = t[p].next[c];
+		if (t[p].len + 1 == t[q].len) {
+			t[cur].link = q;
+		} else {
+			int clone = sz++;
+			t[clone] = t[q];
+			t[clone].len = t[p].len + 1;
+			while (p != -1 && t[p].next[c] == q) {
+				t[p].next[c] = clone;
+				p = t[p].link;
+			}
+			t[cur].link = t[q].link = clone;
+		}
+	}
+	
+	last = cur;
+}
+
+int main()
+{
+#if 0
+	freopen("in", "r", stdin);
+	//freopen("out", "w", stdout);
+#endif
+
+	int n = 3;
+	vector<string> s(n);
+	t[0].link = -1;
+	
+	int minlen = maxn;
+	for (int i = 0; i < n; ++i) {
+		cin >> s[i];
+		minlen = min(minlen, (int)s[i].size());
+		for (int j = 0; j < (int)s[i].size(); ++j) {
+			sa_extend(s[i][j]);
+		}
+		sa_extend('#');
+	}
+	for (int i = 0; i < n; ++i) {
+		int v = 0;
+		for (int j = 0; j < (int)s[i].size(); ++j) {
+			char c = s[i][j];
+			v = t[v].next[c];
+			if (i == 0) t[v].a1++;
+			else if (i == 1) t[v].a2++;
+			else if (i == 2) t[v].a3++;
+		}
+	}
+	vector<pii> a(sz);
+	for (int i = 0; i < sz; ++i) {
+		a[i] = pii(t[i].len, i);
+	}
+	sort(a.begin(), a.end());
+	reverse(a.begin(), a.end());
+	
+	for (int i = 0; i < sz; ++i) {
+		int id = a[i].second;
+		int l = t[id].link;
+		if (l != -1) {
+			t[l].a1 += t[id].a1;
+			t[l].a2 += t[id].a2;
+			t[l].a3 += t[id].a3;
+			ll p = (((t[id].a1 % mod) * (t[id].a2 % mod) % mod) * (t[id].a3 % mod)) % mod;
+			add[t[l].len + 1] += p;
+			add[t[id].len + 1] -= p;
+		}
+	}
+	
+	ll sum = 0;
+	for (int i = 1; i <= minlen; ++i) {
+		sum = (sum + add[i]) % mod;
+		sum = (sum + mod) % mod;
+		printf("%d ", (int)sum);
+	} 
+	
+	return 0;
+}

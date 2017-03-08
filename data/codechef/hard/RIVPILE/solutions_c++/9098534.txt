@@ -1,0 +1,107 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+#include <ext/pb_ds/priority_queue.hpp>
+using namespace std;
+using namespace __gnu_pbds;
+typedef long long LL;
+const int Maxn=260,MaxN=Maxn*Maxn,inf=999999999+208;
+int n,m,w,S,T;
+int px[Maxn],py[Maxn];
+int dist[MaxN];
+short ne[Maxn][Maxn][Maxn];
+
+inline int get() {
+	char ch;
+	while (!isdigit(ch=getchar()));
+	int v=ch-48;
+	while (isdigit(ch=getchar())) v=v*10+ch-48;
+	return v;
+}
+
+struct Cir{
+	int r,c;
+	Cir() {}
+	Cir(int r):r(r) {}
+	inline bool operator <(const Cir &rhs)const{
+		return r<rhs.r;
+	}
+}cir[Maxn];
+
+struct info{
+	int d,x;
+	info(int d,int x):d(d),x(x) {}
+	inline bool operator >(const info &rhs)const{
+		return d>rhs.d;
+	}
+};
+typedef __gnu_pbds::priority_queue<info,greater<info>,pairing_heap_tag> Heap;
+Heap H;
+Heap::point_iterator it[MaxN];
+
+inline void Tension(int x,int d) {
+	if (dist[x]>d) {
+		if (it[x]==0) it[x]=H.push(info(dist[x]=d,x));
+		else H.modify(it[x],info(dist[x]=d,x));
+	}
+}
+
+inline LL sqr(int x) {
+	return LL(x)*x;
+}
+
+int main() {
+	for (int _T=get();_T;_T--) {
+		n=get(); m=get(); w=get();
+		S=0; T=n*m+1;
+		for (int i=1;i<=n;i++) {
+			px[i]=get();
+			py[i]=get();
+		}
+		for (int i=1;i<=m;i++) {
+			cir[i].r=get();
+			cir[i].c=get();
+		}
+		sort(cir+1,cir+m+1);
+		for (int i=m-1;i>=1;i--)
+			cir[i].c=min(cir[i].c,cir[i+1].c);
+		for (int i=1;i<=n;i++)
+			for (int k=1;k<=n;k++) {
+				LL dis=sqr(px[i]-px[k])+sqr(py[i]-py[k]);
+				for (int j=m,t=1;j>=1;j--) {
+					while (t<=m&&sqr(cir[j].r+cir[t].r)<dis) t++;
+					ne[i][j][k]=t;
+				}
+			}
+		memset(dist,63,sizeof dist);
+		memset(it,0,sizeof it);
+		it[S]=H.push(info(dist[S]=0,S));
+		while (!H.empty()) {
+			int x=H.top().x;
+			H.pop();
+			if (x==T) break;
+			if (x==S) {
+				for (int i=1;i<=n;i++) {
+					int t=lower_bound(cir+1,cir+m+1,Cir(py[i]))-cir;
+					if (t<=m) Tension((i-1)*m+t,dist[x]+cir[t].c);
+				}
+			}
+			else {
+				int pi=(x-1)/m+1,ph=(x-1)%m+1;
+				if (ph<m) Tension(x+1,dist[x]+cir[ph+1].c-cir[ph].c);
+				short *cur=ne[pi][ph];
+				for (int i=1;i<=n;i++)
+					if (i!=pi&&cur[i]<=m) Tension((i-1)*m+cur[i],dist[x]+cir[cur[i]].c);
+				if (w-py[pi]<=cir[ph].r) Tension(T,dist[x]);
+			}
+		}
+		while (!H.empty()) H.pop();
+		if (dist[T]>inf) puts("impossible");
+		else printf("%d\n",dist[T]);
+	}
+	return 0;
+}

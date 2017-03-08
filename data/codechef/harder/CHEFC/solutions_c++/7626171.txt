@@ -1,0 +1,141 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#define PB push_back
+#define MP make_pair
+#define SZ size()
+#define all(v) v.begin(), v.end()
+#define REP(i, n) for(int i = 0; i < (int)n; i++)
+#define ITR(i, j, n) for(int i = j; i < (int)n; i++)
+#define mem(array, val) memset(array, val, sizeof(array))
+#define READ(filename) freopen(filename, "r", stdin)
+#define WRITE(filename) freopen(filename, "w", stdout)
+#define Pii pair <int, int>
+#define Fr first
+#define Sc second
+#define Long long long
+#define si(a) scanf("%d", &a)
+#define sl(a) scanf("%lld", &a)
+#define sd(a) scanf("%lf", &a)
+#define sii(a, b) scanf("%d%d", &a, &b)
+#define sll(a, b) scanf("%lld%lld", &a, &b)
+#define sdd(a, b) scanf("%lf%lf", &a, &b)
+#define Fast_IO ios_base::sync_with_stdio(0);cin.tie(0)
+
+#define MAX 200005
+#define MAX_PRIORITY 1000000000
+struct Treap {
+   int size, f, leftmost, rightmost;
+   const int value, prior;
+   Treap *left, *right;
+   Treap(int val, int pr = 0, Treap *l = NULL, Treap *r = NULL) :
+      value(val), prior(pr), left(l), right(r), size(1), f(0), leftmost(val), rightmost(val) {}
+   void update() {
+      size = 1;
+      f = 0;
+      leftmost = rightmost = value;
+      if(left) {
+         size += left->size;
+         leftmost = left->leftmost;
+         f += left->f;
+         if(left->rightmost != value) f++;
+      }
+      if(right) {
+         size += right->size;
+         rightmost = right->rightmost;
+         f += right->f;
+         if(right->leftmost != value) f++;
+      }
+   }
+   void push() {
+      // lazy propagation
+   }
+} *root;
+typedef Treap* pTreap;
+inline int count(pTreap id) { return (id) ? id->size : 0; }
+
+void split(pTreap t, pTreap &l, pTreap &r, int key)
+{
+   if(!t) return void(l = r = NULL);
+   t->push();
+   int cur = count(t->left) + 1;
+   if(key >= cur)
+      split(t->right, t->right, r, key - cur), l = t;
+   else
+      split(t->left, l, t->left, key), r = t;
+   t->update();
+}
+void merge(pTreap &t, pTreap l, pTreap r)
+{
+   if(!l || !r) return void(t = (l) ? l : r);
+   l->push();
+   r->push();
+   if(l->prior > r->prior)
+      merge(l->right, l->right, r), t = l;
+   else
+      merge(r->left, l, r->left), t = r;
+   t->update();
+}
+void insert(pTreap &t, pTreap it, int key)
+{
+   if(!t) return void(t = it);
+   t->push();
+   int cur = count(t->left) + 1;
+   if(it->prior > t->prior)
+      split(t, it->left, it->right, key), t = it;
+   else
+      insert(key < cur ? t->left : t->right, it, key - cur);
+   t->update();
+}
+
+void del(pTreap id)
+{
+   if(!id) return;
+   del(id->left);
+   del(id->right);
+   delete id;
+}
+
+void print(pTreap id)
+{
+   if(!id) return;
+   print(id->left);
+   printf("%d ", id->value);
+   print(id->right);
+}
+
+int main()
+{
+   //WRITE("abc.in");
+   srand(unsigned(time(NULL)));
+   int t;
+   si(t);
+   while(t--) {
+      int N, Q;
+      root = NULL;
+      si(N);
+      REP(i, N) {
+         int a;
+         si(a);
+         insert(root, new Treap(a, rand() % MAX_PRIORITY + 1), i);
+      }
+      si(Q);
+
+      while(Q--) {
+         int op, l, r;
+         si(op); sii(l, r);
+         pTreap T1, T2;
+         split(root, root, T1, l-1);
+         split(T1, T1, T2, r-l+1);
+         if(op == 1) printf("%d\n", T1->f + 1);
+         else swap(root, T1);
+         merge(T1, T1, T2);
+         merge(root, root, T1);
+         //print(root);
+         //puts("");
+      }
+      //del(root);
+   }
+
+   return 0;
+}

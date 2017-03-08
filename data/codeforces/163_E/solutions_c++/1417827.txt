@@ -1,0 +1,113 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#define FOR(i,s,e) for (int i=(s); i<(e); i++)
+#define FOE(i,s,e) for (int i=(s); i<=(e); i++)
+#define CLR(a, x) memset(a, x, sizeof(a))
+#define N 1000005
+#define LLD long long
+using namespace std;
+
+struct node{
+	int p[26], f;
+}   T[N];
+
+
+int n, m, t, cnt, x, tot, eg;
+int q[N], node[N], B[N], qd[N], qn[N], l[N], st[N], ed[N];
+char s[N], state[N];
+LLD ret;
+
+void bd(int x, int y){
+	qd[++eg] = y, qn[eg] = l[x], l[x] = eg;
+}
+
+void add(char s[], int v){
+	int x = 0, c;
+	for (int i=0; s[i]; i++){
+		c = s[i] - 'a';
+		if (!T[x].p[c]) T[x].p[c] = ++t;
+		x = T[x].p[c];
+	}
+	node[v] = x;
+}
+
+void build(){
+	int x, y, t;
+	q[0] = 0;
+	T[0].f = -1;
+
+	for (int i=0, j=0; j>=i; i++){
+		x = q[i];
+		for (int k=0; k<26; k++){
+			y = T[x].p[k];
+			if (y){
+				t = T[x].f;
+				while (t >= 0 && !T[t].p[k]) t = T[t].f;
+				if (t < 0) T[y].f = 0;
+				else T[y].f = T[t].p[k];
+				bd(T[y].f, y);
+				q[++j] = y;
+			}
+		}
+	}
+}
+
+void match(char s[]){
+	int x = 0, c, t;
+	for (int i=0; s[i]; i++){
+		c = s[i] - 'a';
+		while (x > 0 && !T[x].p[c]) x = T[x].f;
+		x = T[x].p[c];
+		if (x > 0)
+		for (int j=st[x]; j<=tot; j+=j&-j) ret += B[j];
+	}
+}
+
+void dfs(int x){
+	st[x] = ++t;
+	for (int i=l[x]; i; i=qn[i]){
+		dfs(qd[i]);
+	}
+	ed[x] = t;
+}
+
+void upd(int x, int v){
+	for (int i=x; i; i-=i&-i) B[i] += v;
+}
+
+int main(){
+	scanf("%d%d", &m, &n);
+	cnt = 0;
+	for (int i=1; i<=n; i++){
+		scanf("%s", s);
+		add(s, i);
+		state[i] = 1;
+	}
+	build();
+	t = 0;
+	dfs(0);
+	tot = t;
+	for (int i=1; i<=n; i++) upd(ed[node[i]], 1), upd(st[node[i]]-1, -1);
+
+	while (m--){
+		scanf("%s", s);
+		if (s[0] == '+'){
+			sscanf(s+1, "%d", &x);
+			if (!state[x]) upd(ed[node[x]], 1), upd(st[node[x]]-1, -1);
+			state[x] = 1;
+		}
+		else if (s[0] == '-'){
+			sscanf(s+1, "%d", &x);
+			if (state[x]) upd(ed[node[x]], -1), upd(st[node[x]]-1, 1);
+			state[x] = 0;
+		}
+		else{
+			ret = 0;
+			match(s + 1);
+			printf("%I64d\n", ret);
+		}
+	}
+	
+	return 0;
+}

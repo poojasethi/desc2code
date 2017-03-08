@@ -1,0 +1,107 @@
+#include <cstdio>
+#include <string>
+using namespace std;
+
+#define MOD 1000000007
+
+long long mpow(long long a, long long r) {
+    if(!r) return 1;
+    long long res=mpow(a,r>>1);
+    res*=res;
+    res%=MOD;
+    if(r&1ll) {
+        res*=a;
+        res%=MOD;
+    }
+    return res;
+}
+
+int N;
+char As[1<<18];
+char A[1<<20];
+int p[1<<20];
+
+void kmp() {
+    p[1]=0;
+    int k=0;
+    for(int i=2;i<=N;i++) {
+        while(k && A[i-1]!=A[k]) k = p[k];
+        if(A[i-1]==A[k]) k++;
+        p[i]=k;
+    }
+}
+
+/*ne[k][s] stores the state we reach if at state s we are presented with digit k.*/
+int ne[2][1<<20];
+
+void build_ne() {
+    ne[A[0]][0]=1;
+    ne[!A[0]][0]=0;
+    
+    for(int i=1;i<N;i++) {
+        ne[A[i]][i]=i+1;
+        ne[!A[i]][i]=ne[!A[i]][p[i]];
+    }
+}
+
+/*Calculates E[0]*/
+int M[1<<20], C[1<<20];
+
+int get_res() {
+    M[0] = 1; C[0] = 0;
+    for(int i=1;i<=N;i++) {
+        M[i]=(M[i-1]*2)%MOD;
+        C[i]=(C[i-1]*2)%MOD;
+        
+        C[i]=(C[i]+MOD-2)%MOD;
+        
+        int s = ne[!A[i-1]][i-1];
+        
+        M[i]=(M[i]-M[s]+MOD)%MOD;
+        C[i]=(C[i]-C[s]+MOD)%MOD;
+    }
+    long long c=MOD-C[N];
+    c *= mpow(M[N], MOD-2);
+    return c%MOD;
+}
+
+int bc;
+char Bs[1<<18];
+char B[1<<20];
+
+int main() {
+    int T;
+    scanf("%d",&T);
+    while(T--) {
+        scanf("%d %s", &N, As);
+        for(int i=0;As[i]!='\0';i++) {
+            int v=((As[i]>='a')?As[i]-'a':(26+As[i]-'A'));
+            int s=i*5;
+            for(int k=0;k<5;k++) A[s+k]=!!(v&(1<<(4-k)));
+        }
+        kmp();
+        build_ne();
+        int e0 = get_res();
+        
+        scanf("%d %s", &bc, Bs);
+        for(int i=0;Bs[i]!='\0';i++) {
+            int v=((Bs[i]>='a')?Bs[i]-'a':(26+Bs[i]-'A'));
+            int s=i*5;
+            for(int k=0;k<5;k++) B[s+k]=!!(v&(1<<(4-k)));
+        }
+        int st = 0;
+        int f = 0;
+        for(int i=0;i<bc && !f;i++) {
+            st = ne[B[i]][st];
+            if(st == N) f = 1;
+        }
+        if(f) printf("%d\n",0);
+        else {
+            /*Find E[st] using M[st], C[st] and E[0]*/
+            int res = ((long long)e0*M[st]) % MOD;
+            res = (res + C[st]) % MOD;
+            printf("%d\n",res);
+        }
+    }
+    return 0;
+}

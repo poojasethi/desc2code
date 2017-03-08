@@ -1,0 +1,177 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <cstdlib>
+#include <climits>
+#include <algorithm>
+#include <vector>
+#include <map>
+#include <set>
+#include <queue>
+#include <numeric>
+#include <sstream>
+#include <string>
+using namespace std;
+#define out(X) cerr << #X << ": " << (X) << endl
+#define SZ(X) ((int)(X.size()))
+#define REP(I,N) for (int I = 0; I < (N); ++I)
+#define FOR(I,L,H) for (int I = (L); I < (H); ++I)
+#define MP(X,Y) make_pair((X),(Y))
+#define PB push_back
+#define ALL(X) X.begin(), X.end()
+template <typename T> inline bool checkmin(T &a, const T &b) { return a > b ? a = b, 1 : 0; }
+template <typename T> inline bool checkmax(T &a, const T &b) { return a < b ? a = b, 1 : 0; }
+typedef long long lint;
+
+const int MAXN = 250000;
+const int MAXM = 1250000;
+const int dx[] = {-1, -1, 1, 1};
+const int dy[] = {-1, 1, -1, 1};
+
+
+struct Graph {
+    struct edge {
+        int v;
+        edge *next;
+    } *adj[MAXN], data[MAXM];
+
+    int sz, nx, ny;
+    int distx[MAXN], disty[MAXN];
+    int matx[MAXN], maty[MAXN];
+    int q[MAXN + MAXN];
+
+    void init() {
+        sz = 0;
+        REP(i, nx) {
+            adj[i] = NULL;
+        }
+    }
+
+    void insert(int u, int v) {
+        //printf("%d %d\n", u, v);
+        checkmax(nx, u + 1);
+        checkmax(ny, v + 1);
+        data[sz].v = v;
+        data[sz].next = adj[u];
+        adj[u] = data + sz++;
+    }
+
+    bool BFS() {
+        fill(distx, distx + nx, 0);
+        fill(disty, disty + ny, 0);
+        int tail = 0;
+        REP(i, nx) {
+            if (matx[i] == -1) {
+                q[tail++] = i;
+            }
+        }
+        bool found = false;
+        REP(head, tail) {
+            int x = q[head];
+            for (edge *e = adj[x]; e; e = e->next) {
+                int y = e->v;
+                if (!disty[y]) {
+                    disty[y] = distx[x] + 1;
+                    if (maty[y] == -1) {
+                        found = true;
+                    } else {
+                        distx[maty[y]] = disty[y] + 1;
+                        q[tail++] = maty[y];
+                    }
+                }
+            }
+        }
+        return found;
+    }
+
+    bool DFS(int x) {
+        for (edge *e = adj[x]; e; e = e->next) {
+            int y = e->v;
+            if (disty[y] == distx[x] + 1) {
+                disty[y] = 0;
+                if (maty[y] == -1 || DFS(maty[y])) {
+                    matx[x] = y;
+                    maty[y] = x;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    int HopcroftKarp() {
+        fill(matx, matx + nx, -1);
+        fill(maty, maty + ny, -1);
+        int res = 0;
+        while (BFS()) {
+            REP(i, nx) {
+                if (matx[i] == -1 && DFS(i)) {
+                    ++res;
+                }
+            }
+        }
+        return res;
+    }
+} g;
+
+int N, M;
+char bd[710][710];
+int id[710][710];
+
+char get(const int x, const int y) {
+    if (x >= 0 && x < N && y >= 0 && y <= M) {
+        return bd[x][y];
+    } else {
+        return 'P';
+    }
+}
+
+int main() {
+    while (scanf("%d%d", &N, &M), N + M) {
+        REP(i, N) {
+            scanf(" %s", bd[i]);
+        }
+        memset(id, -1, sizeof(id));
+        int nx = 0, ny = 0;
+        REP(i, N) {
+            REP(j, M) {
+                bool flag = get(i, j) == 'F';
+                for (int k = 0; k < 4 && flag; ++k) {
+                    if (get(i + dx[k], j + dy[k]) != 'P' &&
+                            get(i + dx[k] * 2, j + dy[k] * 2) == 'G') {
+                        flag = false;
+                    }
+                }
+                if (flag) {
+                    if ((i & 2) == 0) {
+                        id[i][j] = nx++;
+                    } else {
+                        id[i][j] = ny++;
+                    }
+                }
+            }
+        }
+        g.init();
+        REP(i, N) {
+            if ((i & 2) != 0) {
+                continue;
+            }
+            REP(j, M) {
+                if (id[i][j] == -1) {
+                    continue;
+                }
+                REP(k, 4) {
+                    if (get(i + dx[k], j + dy[k]) != 'P' &&
+                        get(i + 2 * dx[k], j + 2 * dy[k]) == 'F' &&
+                        id[i + 2 * dx[k]][j + 2 * dy[k]] != -1) {
+                        g.insert(id[i][j], id[i + 2 * dx[k]][j + 2 * dy[k]]);
+                    }
+                }
+            }
+        }
+        int ans = nx + ny - g.HopcroftKarp();
+        printf("%d\n", ans);
+    }
+    return 0;
+}

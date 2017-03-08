@@ -1,0 +1,106 @@
+#include <algorithm>
+#include <bitset>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <deque>
+#include <fstream>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <string>
+#include <utility>
+#include <vector>
+using namespace std;
+
+int m,n;
+
+struct item {
+    string name;
+    int type,pts[3],num;
+} A[105];
+
+map<string,int> itemIdx;
+int cap[105];
+
+struct add {
+    string name,equip;
+    int type,bonus;
+} B[1005];
+
+bool mark[1005];
+
+bool cmp(int fa,int fb) {
+    return B[fa].bonus < B[fb].bonus;
+}
+
+int main() {
+    //freopen("c.in.2","r",stdin);
+    scanf("%d", &m);
+    for (int i = 0; i < m; i++) {
+        string X;
+        cin >> A[i].name >> X >> A[i].pts[0] >> A[i].pts[1] >> A[i].pts[2] >> A[i].num;
+        itemIdx[A[i].name] = i;
+        if (X == "weapon") A[i].type = 0; else if (X == "armor") A[i].type = 1; else A[i].type = 2;
+    }
+    scanf("%d", &n);
+    for (int i = 0; i < n; i++) {
+        string X;
+        cin >> B[i].name >> X >> B[i].bonus >> B[i].equip;
+        cap[itemIdx[B[i].equip]]++;
+        if (X == "gladiator") B[i].type = 0; else if (X == "sentry") B[i].type = 1; else B[i].type = 2;
+    }
+    bool availMove = false;
+    for (int i = 0; i < m; i++) if (cap[i] < A[i].num) availMove = true;
+
+    int final[3];
+    vector<int> store[3];
+    int sum[3] = {-1,-1,-1};
+    for (int i = 0; i < m; i++) {
+        int value = A[i].pts[A[i].type];
+        vector<int> v;
+        if (availMove) {
+            for (int j = 0; j < n; j++) if (B[j].type == A[i].type) v.push_back(j);
+            sort(v.rbegin(),v.rend(),cmp);
+            while (v.size() > A[i].num) v.pop_back();
+            for (int j = 0; j < v.size(); j++) value += B[v[j]].bonus;
+        }
+        else {
+            for (int j = 0; j < n; j++) if (B[j].equip == A[i].name) {
+                v.push_back(j);
+                if (B[j].type == A[i].type) value += B[j].bonus;
+            }
+        }
+        if (value > sum[A[i].type]) {
+            sum[A[i].type] = value;
+            final[A[i].type] = i;
+            store[A[i].type] = v;
+        }
+    }
+    for (int i = 0; i < 3; i++)
+      for (int j = 0; j < store[i].size(); j++) mark[store[i][j]] = true;
+
+    int pos = 0;
+    for (int i = 0; i < 3; i++) {
+        int cnt = (int) store[i].size();
+        while (pos < n && cnt < A[final[i]].num) {
+            while (pos < n && mark[pos]) pos++;
+            if (pos >= n) break;
+            store[i].push_back(pos);
+            pos++;
+            cnt++;
+        }
+    }
+    for (int i = 0; i < 3; i++) {
+        cout << A[final[i]].name << ' ' << (int) store[i].size() << ' ';
+        for (int j = 0; j < store[i].size(); j++) cout << B[store[i][j]].name << ' ';
+        cout << endl;
+    }
+}

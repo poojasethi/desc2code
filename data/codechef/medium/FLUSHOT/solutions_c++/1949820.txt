@@ -1,0 +1,107 @@
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <vector>
+#include <limits>
+
+#define MAX(x,y) (x) >= (y) ? (x) : (y)
+#define MIN(x,y) (x) <= (y) ? (x) : (y)
+
+typedef struct extra_space_s {
+	double i;       // the person with extra space
+	double space;   // amount of extra space
+	double min_mov; // max movement of all people after i
+	double max_mov; // min movement of all people after i
+
+	extra_space_s(double ndx, double espace) :
+		i(ndx),
+		space(espace),
+		min_mov(std::numeric_limits<double>::max()),
+		max_mov(0)
+	{ }
+} extra_space_t;
+
+void enforce_personal_flu_bubbles()
+{
+	int N; // num of people in line
+	double T; // min distance allowed
+	double xi;
+	if(scanf("%d%lf", &N, &T) != 2)
+		exit(EXIT_FAILURE);
+
+	std::vector<double> x;
+	std::vector<extra_space_t> extra;
+	x.reserve(N);
+	extra.reserve(N);
+
+	// read and heap sort
+	for(int i = N-1; i >= 0; --i) {
+		if(scanf("%lf", &xi) != 1)
+			exit(EXIT_FAILURE);
+		if(xi < 0 || xi > 1000000.0)
+			exit(EXIT_FAILURE);
+		x.push_back(xi);
+		std::push_heap(x.begin(),x.end());
+	}
+	std::sort_heap(x.begin(),x.end());
+
+	// expand flu shot line
+	if(x[0] > 0.0)
+		extra.push_back(extra_space_t(0, x[0]));
+	double D = 0.0;
+	for(int i = 0; i < N-1; ++i) {
+		double d = x[i+1] - x[i];
+		double delta = T-d;
+		// keep stats on extra space that is found
+		for(unsigned int k = 0; k < extra.size(); ++k) {
+			extra[k].min_mov = MAX(0,MIN(delta, extra[k].min_mov));
+			extra[k].max_mov = MAX(delta, extra[k].max_mov);
+		}
+		if(delta < 0.0) {
+			extra.push_back(extra_space_t(i+1, -delta));
+			continue;
+		}
+		// this flu ridden person is already the correct distance
+		if(delta == 0.0)
+			continue;
+		// keep track of maximum distance anyone moved
+		if(delta > D)
+			D = delta;
+		// actually move the person (expand the line)
+		x[i+1] += delta;
+	}
+
+	// compress flu shot line using any extra space found
+	//printf("compressing");
+	double shift = 0.0;
+	for(unsigned int k = 0; k < extra.size(); ++k) {
+		//printf(".");
+		double a = MIN(extra[k].space, (extra[k].max_mov*0.5)-shift);
+		if(a <= 0.0)
+			break;
+		shift += a;
+	}
+	//printf("\n");
+	D -= shift;
+
+	// shift line closer to receptionist to optmize minimum distance
+	//D -= MIN(x[0], D*0.5);
+
+	// print minimum distance
+	printf("%.4lf\n", D);
+}
+
+int main()
+{
+	int num_test_cases;
+	if(scanf("%d", &num_test_cases) != 1)
+		exit(EXIT_FAILURE);
+	if(num_test_cases > 30)
+		exit(EXIT_FAILURE);
+
+	for(int i = num_test_cases; i > 0; --i)
+		enforce_personal_flu_bubbles();
+
+	return 0;
+}
+

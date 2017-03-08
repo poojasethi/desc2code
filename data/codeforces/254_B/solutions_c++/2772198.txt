@@ -1,0 +1,19 @@
+#include<stdio.h>
+int d[800],m[30]={0,31,28,31,30,31,30,31,31,30,31,30,31};
+int main(){
+	freopen("input.txt","r",stdin);
+	freopen("output.txt","w",stdout);
+	int i,j,n,mo,da,day,t,p,max;
+	for(i=1;i<=12;i++)m[i]+=m[i-1];
+	scanf("%d",&n);
+	for(i=0;i<n;i++){
+		scanf("%d%d%d%d",&mo,&da,&p,&t);
+		day=m[mo-1]+da+366;
+		for(j=1;j<=t;j++)
+		    d[day-j]+=p;
+	}
+	for(i=max=0;i<800;i++)
+		max=max>d[i]?max:d[i];
+	printf("%d\n",max);
+	return 0;
+}

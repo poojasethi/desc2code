@@ -1,0 +1,111 @@
+//code:00:27am - 00:51am 
+//debug:
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+#include <utility>
+#include <vector>
+#include <queue>
+#include <map>
+#include <set>
+using namespace std;
+
+typedef long long ll;
+
+const int maxn = 1000000 + 10;
+int n, m, root[maxn], fa[maxn], maxv[maxn], sz[maxn], va[maxn];
+int op[maxn][2], tot;
+ll sum[maxn], ans[maxn];
+char kind[maxn];
+vector<int> query[maxn];
+
+int getfa(int x)  {
+    return fa[x] == x ? x : fa[x] = getfa(fa[x]);
+}
+
+int getmax(int x)  {
+    if (fa[x] == x) return maxv[x];
+    maxv[x] = max(maxv[x], getmax(fa[x]));
+    return maxv[x];
+}
+
+ll getsum(int x)  { //sum[x] 
+    if (fa[x] == x)  return 0;
+    sum[x] = getsum(fa[x]) + sum[x];
+    return sum[x];
+}
+
+ll calc(int x)  {
+    getsum(x);
+    getfa(x);
+    if (fa[x] == x) return sum[x];
+    else return sum[x] + sum[fa[x]];
+}
+
+int main()  {
+    scanf("%d%d", &n, &m);
+    char comm[10];
+    tot = n;
+    memset(maxv, 0, sizeof maxv);
+    for (int i = 1; i <= n; i ++)
+        root[i] = i, fa[i] = i, maxv[i] = 0;
+
+    for (int i = 1; i <= m; i ++)  {
+        scanf("%s", comm);
+        kind[i] = comm[0];
+        scanf("%d", &op[i][0]);
+        if (kind[i] == 'U' || kind[i] == 'M')
+            scanf("%d", &op[i][1]);
+        if (kind[i] == 'Q')  {
+            query[getmax(op[i][0])].push_back(-i);
+            getfa(op[i][0]);
+            query[i].push_back(i);
+        }
+        if (kind[i] == 'M')  {
+            ++ tot;
+            maxv[tot] = 0;
+            fa[tot] = tot;
+            fa[root[op[i][0]]] = tot;
+            fa[root[op[i][1]]] = tot;
+            root[op[i][0]] = tot;
+            root[op[i][1]] = 0;
+        }
+        if (kind[i] == 'Z')  {
+            maxv[root[op[i][0]]] = i;
+        }
+    }
+
+    memset(sum, 0, sizeof sum);
+    memset(va, 0, sizeof va);
+    for (int i = 1; i <= n; i ++)
+        root[i] = fa[i] = i, sum[i] = va[i] = 0, sz[i] = 1;
+    tot = n;
+    for (int i = 1; i <= m; i ++) ans[i] = 0;
+    for (int i = 1; i <= m; i ++)  {
+        int x = op[i][0], y = op[i][1];
+        if (kind[i] == 'U')  {
+            ++ tot;
+            sz[tot] = sz[root[x]] + sz[root[y]];
+            fa[root[x]] = fa[root[y]] = tot;
+            root[x] = tot;
+            sum[tot] = va[tot] = 0;
+            fa[tot] = tot;
+        }
+        if (kind[i] == 'A')  {
+            //+ sz[root[x]]
+            sum[root[x]] += sz[root[x]];
+        }
+        for (int j = 0; j < (int)query[i].size(); j ++)  {
+            int t = abs(query[i][j]);
+            ll tmp = calc(op[t][0]);
+            if (query[i][j] < 0) ans[t] -= tmp;
+            else ans[t] += tmp;
+        }
+    }
+    for (int i = 1; i <= m; i ++)
+        if (kind[i] == 'Q')
+            printf("%I64d\n", ans[i]);
+    return 0;
+ }

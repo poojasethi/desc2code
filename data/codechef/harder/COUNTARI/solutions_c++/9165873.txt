@@ -1,0 +1,92 @@
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<cmath>
+using namespace std;
+#define len 3000
+#define MAX 30010
+#define LL long long
+const int U=100010;
+const int M=100010;
+LL ans,pre[U],suc[U],now[U];
+int n,num[U],sum,rev[M],dig[M],N,L,Len,maxn;
+struct S{
+	double x,y;
+	void prepare(double xx,double yy){x=xx;y=yy;}
+	S operator + (const S&xx){return (S){x+xx.x,y+xx.y};}
+    S operator - (const S&xx){return (S){x-xx.x,y-xx.y};}
+    S operator * (const S&xx){return (S){x*xx.x-y*xx.y,x*xx.y+y*xx.x};}
+}a[M],b[M],c[M],d[M];
+inline int in(){
+	int x=0; char ch=getchar();
+	while(ch<'0'||ch>'9') ch=getchar();
+	while(ch>='0'&&ch<='9') x=x*10+ch-'0',ch=getchar();
+	return x;
+}
+inline void FFT(S *a,int f){
+	int i,j,k;
+	S wn,w,x,y;
+	for(i=0;i<N;++i) d[i]=a[rev[i]];
+	for(i=0;i<N;++i) a[i]=d[i];
+	for(i=2;i<=N;i<<=1){
+		wn.prepare(cos(2*M_PI/i),f*sin(2*M_PI/i));
+		for(j=0;j<N;j+=i){
+			w.prepare(1,0);
+			for(k=j;k<j+i/2;++k){
+				x=a[k];
+				y=w*a[k+i/2];
+				a[k]=x+y;
+				a[k+i/2]=x-y;
+				w=w*wn;
+			}
+		}
+	}
+	if(f==-1) for(i=0;i<N;++i) a[i].x/=(double)N;
+}
+inline void calc(int x){
+	int i,st=(x-1)*len+1,en=min(n,x*len);
+	for(i=0;i<N;++i){
+		a[i].prepare(pre[i],0);
+		b[i].prepare(suc[i],0);
+	}
+	FFT(a,1);FFT(b,1);
+	for(i=0;i<N;++i) c[i]=a[i]*b[i];
+	FFT(c,-1);
+	for(i=st;i<=en;++i) ans+=(LL)(c[num[i]*2].x+0.5);
+}
+int main(){
+	int i,j,k;
+	n=in();
+	for(i=1;i<=n;++i){
+		num[i]=in();
+		suc[num[i]]+=1;
+		maxn=max(maxn,num[i]);
+	}
+	sum=(n/len)+(n%len?1:0);
+	for(N=1;N<MAX;N<<=1,L+=1); N<<=1;L+=1;
+	for(i=0;i<N;++i){
+		for(j=i,Len=0;j;j>>=1) dig[Len++]=j&1;
+		for(j=0;j<L;++j) rev[i]=rev[i]*2+dig[j];
+	}
+	for(i=1;i<=sum;++i){
+		int st=(i-1)*len+1,en=min(n,i*len);
+		for(j=st;j<=en;++j) suc[num[j]]-=1;
+		for(j=st;j<=en;++j){
+			 for(k=en;k>j;--k){
+				int cal=2*num[k]-num[j];
+				if(cal>=0&&cal<=maxn) 
+				  ans+=now[cal]+suc[cal];
+				now[num[k]]+=1;
+				cal=2*num[j]-num[k];
+			    if(cal>=0&&cal<=maxn)
+			      ans+=pre[cal]; 
+			}
+			for(k=j+1;k<=en;++k)
+			  now[num[k]]-=1;
+		}
+		calc(i);
+		for(j=st;j<=en;++j)
+		  pre[num[j]]+=1;
+	}
+	printf("%lld\n",ans);
+}

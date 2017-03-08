@@ -1,0 +1,174 @@
+#include <stdio.h>
+#include <vector>
+#include <set>
+#include <algorithm>
+#include <assert.h>
+using namespace std;
+static const int MAX = 100000003;
+
+struct Num {
+  int val;
+  int comp;
+  int fib, times; // 
+  Num(int val, int comp, int fib, int times): val(val), comp(comp), 
+    fib(fib), times(times) {}
+  bool operator< (const Num& n) const {
+    return val < n.val;
+  }
+};
+void func(int num, int nextIdx, const vector<vector<int> > &powersOfFib, 
+  set<Num> &ans) {
+  if (nextIdx >= powersOfFib.size())
+    return;
+  if (num >= MAX)
+    return;
+  for (int i = nextIdx; i < powersOfFib.size(); i++) {
+    for (int j = 0; j < powersOfFib[i].size(); j++) {
+      long long newNum = (long long)num * powersOfFib[i][j];
+      if (newNum < MAX) {
+        ans.insert(Num(newNum, num, i+3, j+1));
+        // printf("%d x %d = %d\n", num, powersOfFib[i][j], (int)newNum);
+        func(newNum, nextIdx+1, powersOfFib, ans);
+      } else {
+        break;
+      }
+    }
+  }
+}
+int findNumIdx(const vector<int>& arr, int num) {
+  int s = 0, e = arr.size();
+  while (e - s > 1) {
+    int mid = (s+e)>>1;
+    if (arr[mid] == num)
+      return mid;
+    if (arr[mid] < num)
+      s = mid;
+    else
+      e = mid;
+  }
+  return s;
+}
+int makeString(char* buf, int curLen, int numDots, int numTimes) {
+  int idx = curLen;
+  for (int i = 0; i < numTimes; ++i)
+  {
+    for (int j = 0; j < numDots; ++j)
+    {
+      buf[idx++] = '.';
+    }
+    buf[idx++] = '#';
+  }
+  return idx;
+}
+int genSequence(int idx, char* buf, int curLen, vector<int> &arr, 
+  vector<int> &compIdx, vector<int> &fibVal, vector<int> &timesVal) {
+  if (idx == 0) {
+    // buf[curLen++] = '.';
+    // buf[curLen++] = '#';
+    return curLen;
+  }
+  int numDots = fibVal[idx];
+  int numTimes = timesVal[idx];
+  curLen = makeString(buf, curLen, numDots, numTimes);
+  return genSequence(compIdx[idx], buf, curLen, arr, compIdx, fibVal, timesVal);
+}
+int main(int argc, char const *argv[])
+{
+  int c;
+  vector<int> fibArr;
+  fibArr.push_back(2); fibArr.push_back(3);
+  for (int i = 2; fibArr[fibArr.size()-1] <= MAX; ++i)
+  {
+    fibArr.push_back(fibArr[fibArr.size()-1] + fibArr[fibArr.size() - 2]);
+  }
+  vector<vector<int> > powersOfFib(fibArr.size(), vector<int>());
+  for (int i = 0; i < fibArr.size(); ++i)
+  {
+    long long num = fibArr[i];
+    while (num < MAX) {
+      powersOfFib[i].push_back(num);
+      num = num * fibArr[i];
+    }
+  }
+  // printf("got all producrts\n");
+  // for (int i = 0; i < powersOfFib.size(); ++i)
+  // {
+  //   for (int j = 0; j < powersOfFib[i].size(); ++j)
+  //   {
+  //     printf("%d ", powersOfFib[i][j]);
+  //   }
+  //   printf("\n");
+  // }
+  set<Num> ans;
+  func(1, 0, powersOfFib, ans); 
+  ans.insert(Num(1, 0, 0, 0));
+  // printf("size = %d\n", ans.size());
+  {
+    vector<int> arr;
+    vector<int> compIdx;
+    vector<int> fibVal;
+    vector<int> timesVal;
+    for (set<Num>::iterator it = ans.begin(); it != ans.end(); it++) {
+      arr.push_back(it->val);
+      fibVal.push_back(it->fib);
+      timesVal.push_back(it->times);
+    }
+    {
+      // int number = 1001;
+      // printf("numIdx for %d is %d and arr[%d] = %d\n", number, findNumIdx(arr, number), findNumIdx(arr, number), arr[findNumIdx(arr, number)]);
+    }
+    // return 0;
+    for (set<Num>::iterator it = ans.begin()++; it != ans.end(); it++) {
+      compIdx.push_back(lower_bound(arr.begin(), arr.end(), it->comp) - arr.begin());
+        // printf("find for %d is %d, arr[%d] = %d\n", it->comp, findNumIdx(arr, it->comp), findNumIdx(arr, it->comp), arr[findNumIdx(arr, it->comp)]);
+      // assert(it->comp == arr[findNumIdx(arr, it->comp)]);
+    }
+    // for (int i = arr.size()-10-1; i < arr.size(); ++i)
+    // {
+    //   printf("%d: comp = %d, %d, %d\n", arr[i], arr[compIdx[i]], fibVal[i], timesVal[i]);
+    // }
+    // printf("size of arr = %d\n", arr.size());
+    int t = 0;
+    scanf("%d\n", &t);
+    char *buf = new char[100000];
+    while(t--) {
+      int l, r, n;
+      scanf("%d %d %d\n", &l, &r, &n);
+      if (l == 0 && n == 1) {
+        printf("0 #\n");
+        continue;
+      }
+      if (l == 0)
+        n--;
+      long long idx = lower_bound(arr.begin(), arr.end(), l) - arr.begin();
+      while (arr[idx] < l)
+      printf("idx = %lld\n", idx);
+      if (idx + n - 1 >= arr.size()) {
+        printf("-1\n");
+        continue;
+      }
+      if (arr[idx + n - 1] > r) {
+        printf("-1\n");
+        continue;
+      }
+      if (idx + n - 1 == 0) {
+        printf("1 .\n");
+        continue;
+      }
+      int curLen = 0;
+      curLen = 
+        genSequence(idx + n - 1, buf, curLen, arr, compIdx, fibVal, 
+        timesVal);
+      buf[curLen-1] = 0;
+      printf("%d .#%s\n", arr[idx + n - 1], buf);
+    }
+  }
+  // for (set<int>::iterator it = ans.begin(); it != ans.end() && i < 100; it++, i++) {
+  //   printf("%d\n", *it);
+  // }
+  // for (int i = 0; i < ans.size(); ++i)
+  // {
+  //   printf("%d\n", ans[i]);
+  // }
+  return 0;
+}

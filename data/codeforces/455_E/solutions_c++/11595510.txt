@@ -1,0 +1,101 @@
+#include <set>
+#include <map>
+#include <cmath>
+#include <ctime>
+#include <cstdio>
+#include <vector>
+#include <cstring>
+#include <cstdlib>
+#include <algorithm>
+#define fi first
+#define se second
+#define mk make_pair
+#define pb push_back
+#define For(i,a,n)  for(int i=(a);i<=(n);i++)
+#define Forn(i,a,n) for(int i=(a);i>=(n);i--)
+using namespace std;
+typedef long long ll;
+typedef long double db;
+
+int S[100005],n,a[100005];
+struct line{
+	db k,b,x;
+	void make(int x,int y){
+		k=x; b=y;
+	}
+	db Cro(line x){
+		return (x.b-b)/(k-x.k);
+	}
+	db zhi(db val){
+		return k*val+b;
+	}
+	int operator <(const line &a)const{
+		if(k==a.k) return b>a.b; 
+		return k>a.k;
+	}
+}A[100005],data[100005*19],*cur=data;
+line *beg[400005],*las[400005],stk[100005];
+
+void build(int x,int L,int R){
+	line *tmp=cur;
+	beg[x]=las[x]=cur;
+	For(k,L,R) *(las[x]=cur)=A[k],cur++; las[x]++;
+	sort(beg[x],las[x]);
+	int top=0;
+	for(line *i=beg[x];i<las[x];i++){
+		line *j=i;
+		for(;j<las[x] && j->k==i->k;++j);--j;
+		while(top>1){
+			db x0=stk[top-1].Cro(*j);
+			db x1=stk[top].Cro(*j);
+			if(x1<=x0) --top;
+			else break;
+		}
+		if(top){
+			db x=stk[top].Cro(*j);
+			stk[top].x=x;
+		}
+		stk[++top]=*j; stk[top].x=2100000000;
+		i=j;
+	}
+	For(i,1,top) *tmp=stk[i],++tmp;	las[x]=tmp;
+	for(line *i=tmp;i<cur;i++) *i=(line){0,0,0};
+	cur=tmp;
+	if(L==R) return;
+	int md=(L+R)>>1;
+	build(x*2,L,md);
+	build(x*2+1,md+1,R);
+}
+
+db ask(int x,int L,int R,int ll,int rr,db val){
+	if(ll<=L && R<=rr){
+		if(L==1 && R==3)
+			L=1;
+		line *l=beg[x],*r=las[x]-1;
+		while(l+1<r){
+			line *md=data+((l-data+r-data)>>1);
+			if(md->x>=val) r=md;else l=md;
+		}
+		if(r->x>=val) l=r;
+		return l->zhi(val);
+	}
+	db ans=1e13; int md=(L+R)>>1;
+	if(ll<=md) ans=min(ans,ask(x*2,L,md,ll,rr,val));
+	if(md<rr)  ans=min(ans,ask(x*2+1,md+1,R,ll,rr,val));
+	return ans;
+}
+
+int main(){
+	scanf("%d",&n);
+	For(i,1,n)	scanf("%d",a+i),S[i]=S[i-1]+a[i];
+	For(i,1,n)	A[i].make(a[i],a[i]*i-S[i]);
+	build(1,1,n);
+	int Q;
+	scanf("%d",&Q);
+	For(i,1,Q){
+		int x,y;
+		scanf("%d%d",&x,&y);
+		printf("%I64d\n",S[y]+(long long)ask(1,1,n,y-x+1,y,x-y));
+	}
+	return 0;
+}

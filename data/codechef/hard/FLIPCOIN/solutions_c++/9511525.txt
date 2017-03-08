@@ -1,0 +1,190 @@
+#include <iostream>
+#include <sstream>
+#include <cstdio>
+#include <cmath>
+#include <cstring>
+#include <cctype>
+#include <string>
+#include <vector>
+#include <list>
+#include <set>
+#include <map>
+#include <queue>
+#include <stack>
+#include <algorithm>
+#include <functional>
+using namespace std; 
+#define DEBUG(x) cout << '>' << #x << ':' << x << endl;
+#define REP(i,n) for(int i=0;i<(n);i++)
+#define FOR(i,a,b) for(int i=(a);i<=(b);i++)
+#define FORD(i,a,b) for(int i=(a);i>=(b);i--)
+inline bool EQ(double a, double b) { return fabs(a-b) < 1e-9; }
+const int INF = 1<<29;
+typedef long long ll;
+inline int two(int n) { return 1 << n; }
+inline int test(int n, int b) { return (n>>b)&1; }
+inline void set_bit(int & n, int b) { n |= two(b); }
+inline void unset_bit(int & n, int b) { n &= ~two(b); }
+inline int last_bit(int n) { return n & (-n); }
+inline int ones(int n) { int res = 0; while(n && ++res) n-=n&(-n); return res; }
+template<class T> void chmax(T & a, const T & b) { a = max(a, b); }
+template<class T> void chmin(T & a, const T & b) { a = min(a, b); }
+
+/////////////////////////////////////////////////////////////////////
+
+bool Is_Lazy[10000000];
+bool Lazy_value[10000000];
+struct Node {
+	int Num_of_O;
+	int Num_of_Z;
+}Tree[10000000];
+
+void Update(int Node, int start, int end, int Lef, int Rig) {
+	
+	int L = Node << 1;
+	int R = L + 1;
+	int mid = (start + end) >> 1;
+
+	if(Is_Lazy[Node]) {
+		bool change = Lazy_value[Node];
+		if(change) {
+			swap(Tree[Node].Num_of_Z, Tree[Node].Num_of_O);
+			Is_Lazy[L] = 1;
+			Is_Lazy[R] = 1;
+			Lazy_value[L] ^= 1;
+			Lazy_value[R] ^= 1;
+		}
+		Is_Lazy[Node] = 0;
+		Lazy_value[Node] = 0;
+	}
+
+	if(start > end || start > Rig || end < Lef)
+		return;
+
+	if(start >= Lef && end <= Rig) {
+		swap(Tree[Node].Num_of_O, Tree[Node].Num_of_Z);
+		if(start != end) {
+			Is_Lazy[L] = 1;
+			Is_Lazy[R] = 1;
+			Lazy_value[L] ^= 1;
+			Lazy_value[R] ^= 1;
+		}
+
+		return;
+	}
+
+	Update(L, start, mid, Lef, Rig);
+	Update(R, mid + 1, end, Lef, Rig);
+
+	Tree[Node].Num_of_Z = Tree[L].Num_of_Z + Tree[R].Num_of_Z;
+	Tree[Node].Num_of_O = Tree[L].Num_of_O + Tree[R].Num_of_O;
+
+}
+
+int Query(int Node, int start, int end, int Lef, int Rig) {
+	
+	int L = Node << 1;
+	int R = L + 1;
+	int mid = (start + end) >> 1;
+
+	if(Is_Lazy[Node]) {
+		bool change = Lazy_value[Node];
+		if(change) {
+			swap(Tree[Node].Num_of_Z, Tree[Node].Num_of_O);
+			Is_Lazy[L] = 1;
+			Is_Lazy[R] = 1;
+			Lazy_value[L] ^= 1;
+			Lazy_value[R] ^= 1;
+		}
+		Is_Lazy[Node] = 0;
+		Lazy_value[Node] = 0;
+	}
+
+	if(start > end || start > Rig || end < Lef)
+		return 0;
+
+
+	if(start >= Lef && end <= Rig) {
+		return Tree[Node].Num_of_O;
+	}
+
+	int ans = Query(L, start, mid, Lef, Rig) + Query(R, mid + 1, end, Lef, Rig);
+	Tree[Node].Num_of_Z = Tree[L].Num_of_Z + Tree[R].Num_of_Z;
+	Tree[Node].Num_of_O = Tree[L].Num_of_O + Tree[R].Num_of_O;
+
+	return ans;
+}
+
+void Build(int Node, int start, int end) {
+	if(start > end) {
+		Tree[Node].Num_of_Z = Tree[Node].Num_of_O = 0;
+		return ;
+	}
+
+	if(start == end) {
+		Tree[Node].Num_of_O = 0;
+		Tree[Node].Num_of_Z = 1;
+		return;
+	}
+
+	int L = Node << 1;
+	int R = L + 1;
+	int mid = (start + end) >> 1;
+
+	Build(L, start, mid);
+	Build(R, mid + 1, end);
+
+	Tree[Node].Num_of_O = Tree[L].Num_of_O + Tree[R].Num_of_O;
+	Tree[Node].Num_of_Z = Tree[L].Num_of_Z + Tree[R].Num_of_Z;
+}
+
+void PRINT(int Node, int start, int end) {
+	printf("Node => %d (start, end) => (%d, %d) Num_of_Z => %d Num_of_O => %d\n", Node, start, end, Tree[Node].Num_of_Z, Tree[Node].Num_of_O);
+}
+
+void Print(int Node, int start, int end) {
+	if(start > end)
+		return;
+
+	PRINT(Node, start, end);
+		
+	if(start == end) {
+		return;
+	}
+
+	int L = Node << 1;
+	int R = L + 1;
+	int mid = (start + end) >> 1;
+
+	Print(L, start, mid);
+	Print(R, mid + 1, end);
+}
+
+int main()
+{
+	int N;
+	int Q;
+	scanf("%d%d", &N, &Q);
+
+	Build(1, 0, N - 1);
+
+	for(int i = 0; i < Q; ++i) {
+		int command;
+		int range_start;
+		int range_end;
+		scanf("%d%d%d", &command, &range_start, &range_end);
+		if(command == 0) {
+			Update(1, 0, N - 1, range_start, range_end);
+		} else {
+			int ans = Query(1, 0, N - 1, range_start, range_end);
+			printf("%d\n", ans);
+		}
+
+		/*puts("After Each command");
+		puts("");
+		Print(1, 0, N - 1);
+		puts("\nEnd");*/
+	}
+    return 0;
+}  
+

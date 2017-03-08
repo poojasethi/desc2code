@@ -1,0 +1,132 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <queue>
+#include <set>
+#include <vector>
+
+using namespace std;
+
+typedef pair<int,int> P;
+
+const int MAXN = 1000005;
+
+struct Node
+{
+	int To[2],fail,len;
+}T[MAXN * 2];
+
+char Ch[MAXN];
+int N,S,Lst,cnt;
+int F[MAXN][20],Pos[MAXN],Sum[MAXN];
+
+int Insert(int p,int c,int len)
+{
+	int nt = ++ cnt;
+	T[nt].len = len;
+	for(;p && !T[p].To[c];p = T[p].fail) T[p].To[c] = nt;
+	if (!p) T[nt].fail = S; else
+		if (T[T[p].To[c]].len == T[p].len + 1) T[nt].fail = T[p].To[c]; else
+		{
+			int q = ++ cnt,qt = T[p].To[c];
+			T[q] = T[qt];
+			T[q].len = T[p].len + 1;
+			T[qt].fail = T[nt].fail = q;
+			for(;p && T[p].To[c] == qt;p = T[p].fail) T[p].To[c] = q;
+		}
+	return nt;
+}
+
+void Calc_Right()
+{
+	for(int i = N,cur = S;i;i --)
+	{
+		cur = T[cur].To[Ch[i] == '('];
+		Pos[cur] = i;
+	}
+	static int R[MAXN],Cnt[MAXN];
+	for(int i = 1;i <= cnt;i ++) Cnt[T[i].len] ++;
+	for(int i = 1;i <= N;i ++) Cnt[i] += Cnt[i - 1];
+	for(int i = 1;i <= cnt;i ++) R[Cnt[T[i].len] --] = i;
+	for(int i = cnt;i;i --)
+		Pos[T[R[i]].fail] = Pos[R[i]];
+}
+
+int A[MAXN];
+
+int Su(int p)
+{
+	int s = 0;
+	for(;p;p -= p & -p) s += A[p];
+	return s;
+}
+
+void Add(int p)
+{
+	for(;p <= N;p += p & -p) A[p] ++;
+}
+
+void Get_Far()
+{
+	static P R[MAXN];
+	R[0] = P(Sum[0],0);
+	for(int i = 1;i <= N;i ++)
+	{
+		Sum[i] = Sum[i - 1];
+		if (Ch[i] == '(') Sum[i] ++; else Sum[i] --;
+		R[i] = P(Sum[i],i);
+	}
+	sort(R + 0,R + N + 1);
+	for(int i = 0;i <= N;)
+	{
+		int k = i;
+		for(;R[i].first == R[k].first;k ++);
+		for(int j = i;j < k - 1;j ++)
+		{
+			int u = R[j].second + 1,v = R[j + 1].second;
+			if (Su(v) - Su(u - 1) == 0) F[u][0] = v + 1; else F[u][0] = N + 2;
+		}
+		F[R[k - 1].second + 1][0] = N + 2;
+		for(int j = i;j < k;j ++) if (R[j].second) Add(R[j].second);
+		i = k;
+	}
+	F[N + 1][0] = F[N + 2][0] = N + 2;
+	for(int i = 1;i < 19;i ++)
+		for(int j = 1;j <= N + 2;j ++)
+			F[j][i] = F[F[j][i - 1]][i - 1];
+}
+
+int Calc(int p,int r)
+{
+	int c = 0;
+	for(int i = 18;i + 1;i --)
+		if (F[p][i] <= r)
+		{
+			p = F[p][i];
+			c += (1 << i);
+		}
+	return c;
+}
+
+int main()
+{
+	//freopen("data.in","r",stdin),freopen("data.out","w",stdout);
+	int v;
+	scanf("%d", &v);
+	scanf("%s", Ch + 1);
+	S = Lst = cnt = 1;
+	N = strlen(Ch + 1);	
+	//We need to reverse the whole string
+	for(int i = N;i;i --) Lst = Insert(Lst,Ch[i] == '(',N - i + 1);
+	Calc_Right();
+	Get_Far();
+	long long ans = 0;
+	for(int i = 2;i <= cnt;i ++)
+	{
+		int p = Pos[i],left = T[T[i].fail].len + 1,right = T[i].len;
+		if (F[p][0] == 0) continue;
+		ans += Calc(p,p + right) - Calc(p,p + left - 1);
+	}
+	printf("%I64d\n", ans);
+	return 0;
+}

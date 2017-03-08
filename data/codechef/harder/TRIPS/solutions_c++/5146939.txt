@@ -1,0 +1,161 @@
+#include<stdio.h>
+#include<iostream>
+#include<string.h>
+#include<queue>
+#include<algorithm>
+#include<string>
+#include<map>
+#include<set>
+#include<fstream>
+#include<math.h>
+#include<iomanip>
+#include<time.h>
+#include<assert.h>
+#include<stack>
+using namespace std;
+#define ll long long
+#define ull unsigned long long
+#define db double
+#define inf 1000000007
+#define mod 1000000007
+#define pii pair<int,int>
+#define vi vector<int>
+#define VS vector<string>
+#define all(x) x.begin(),x.end()
+#define mp make_pair
+#define pb push_back
+#define x first
+#define y second
+#define N 100005
+#define pi 3.14159265358979323846
+#define DBG(vari) cerr<<#vari<<"="<<(vari)<<endl;
+#define FOREACH(i,t) for(__typeof(t.begin()) i=t.begin();i!=t.end();i++)
+
+int d[N],p[N][18],l[N];
+int dp[N][18],n;
+vector<pii>g[N];
+void dfs(int u,int fa)
+{
+	for(int i=0;i<g[u].size();i++)
+	{
+		int j=g[u][i].x;
+		if(j==fa)continue;
+		d[j]=d[u]+g[u][i].y,p[j][0]=u;
+		l[j]=l[u]+1,dfs(j,u);
+	}
+}
+int lca(int a,int b)
+{
+	if(l[a]<l[b])swap(a,b);
+	int h=l[a]-l[b];
+	for(int i=17;i>=0;i--)
+	if(h&(1<<i))a=p[a][i];
+	if(a==b)return a;
+	for(int i=17;i>=0;i--)
+	if(p[a][i]!=p[b][i])a=p[a][i],b=p[b][i];
+	return p[a][0];
+}
+pii get(int a,int u)
+{
+	int ans=0;
+	for(int i=17;i>=0;i--)
+	{
+		int x=dp[a][i];
+		if(d[x]>d[u])ans+=1<<i,a=x;
+	}
+	return mp(ans,d[a]-d[u]);
+}
+int jump(int a,int c)
+{
+	int st=d[a];
+	for(int i=17;i>=0;i--)
+	{
+		int x=p[a][i];
+		if(st-d[x]<=c)a=x;
+	}
+	return a;
+}
+void init(int c)
+{
+	for(int i=0;i<n;i++)dp[i][0]=jump(i,c);
+	for(int i=1;i<=17;i++)
+	{
+		for(int j=0;j<n;j++)
+		{
+			int x=dp[j][i-1],y=dp[x][i-1];
+			dp[j][i]=y;
+		}
+	}
+}
+pii get(int a,int u,int c)
+{
+	int ans=0;
+	while(a!=u)
+	{
+		int x=jump(a,c);
+		if(d[x]>d[u])
+		{
+			ans++;a=x;
+		}
+		else break;
+	}
+	return mp(ans,d[a]-d[u]);
+}
+struct node
+{
+	int u,v,c,id;
+	bool operator <(const node&a)const
+	{
+		return c<a.c;
+	}
+}e[N];
+int res[N];
+int main()
+{
+	//freopen("input.txt","r",stdin);
+	//freopen("output.txt","w",stdout);
+    int T,i,j,ca=0,m,k;
+	while(~scanf("%d",&n))
+	{
+		for(i=1;i<n;i++)
+		{
+			int w;
+			scanf("%d%d%d",&j,&k,&w);j--,k--;
+			g[j].pb(mp(k,w));
+			g[k].pb(mp(j,w));
+		}
+		d[0]=0;p[0][0]=0;l[0]=0;
+		dfs(0,-1);
+		for(i=1;i<18;i++)
+		for(j=0;j<n;j++)p[j][i]=p[p[j][i-1]][i-1];
+		scanf("%d",&m);
+		for(i=0;i<m;i++)
+		{
+			scanf("%d%d%d",&e[i].u,&e[i].v,&e[i].c);e[i].id=i;
+		}
+		sort(e,e+m);int sz=50;
+		//DBG(sz)
+		for(i=0;i<m;i=j)
+		{
+			j=i;int c=e[i].c;
+			while(j<m&&e[j].c==c)j++;
+			if(c<sz)init(c);
+			for(k=i;k<j;k++)
+			{
+				int a=e[k].u-1,b=e[k].v-1,u=lca(a,b);
+				int ans=0;pii p,q;
+				if(c<sz)
+				{
+					p=get(a,u),q=get(b,u);
+				}
+				else p=get(a,u,c),q=get(b,u,c);
+				//cerr<<p.x<<" "<<p.y<<" "<<q.x<<" "<<q.y<<"\n";
+				ans=p.x+q.x+(p.y+q.y+c-1)/c;
+				res[e[k].id]=ans;
+			}
+		}
+		for(i=0;i<m;i++)
+		printf("%d\n",res[i]);
+	}
+    return 0;
+}

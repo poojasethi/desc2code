@@ -1,0 +1,199 @@
+#include <iostream>
+#include <fstream>
+#include <cstring>
+#include <string>
+#include <cstdlib>
+#include <cstdio>
+#include <algorithm>
+#include <cmath>
+#include <bitset>
+#include <ctime>
+#include <map>
+#include <queue>
+#include <set>
+using namespace std;
+
+const int maxn=200000+15;
+const int modd=1000000000+7;
+int n;
+int fre,head[maxn],node[2*maxn],next[2*maxn];
+int degre[maxn],root,fa[maxn];
+long long f[maxn];
+int hh,tt,line[maxn];
+int link[maxn];
+int doww[maxn],dep[maxn];
+long long ans;
+int ss[5];
+bool boo[5];
+bool vis[maxn];
+int sson[maxn][5];
+int tj[maxn];
+int ins(int x,int y)
+{
+	node[++fre]=y;
+	next[fre]=head[x];
+	head[x]=fre;
+	return 0;
+}
+int bfs()
+{
+	line[hh=tt=1]=root;
+	for (;hh<=tt;hh++)
+	 for (int u=head[line[hh]];u;u=next[u])
+	  if (node[u]!=fa[line[hh]])
+	  {
+	  	fa[node[u]]=line[hh];
+	  	tj[line[hh]]++;
+	  	dep[node[u]]=dep[line[hh]]+1;
+	  	sson[line[hh]][tj[line[hh]]]=node[u];
+	  	line[++tt]=node[u];
+	  }
+	for (hh=tt;hh>=1;hh--)
+	{
+		if (degre[line[hh]]!=2) doww[line[hh]]=line[hh];
+		else
+		{
+			for (int i=1;i<=tj[line[hh]];i++)
+			 doww[line[hh]]=doww[sson[line[hh]][i]];
+		}
+		link[line[hh]]=1;
+		for (int i=1;i<=tj[line[hh]];i++)
+		 link[line[hh]]+=link[sson[line[hh]][i]];
+	}
+	return 0;	
+}
+long long dp(int f1,int f2);
+long long dp(int f1)
+{
+	if (vis[f1]) return f[f1];
+	if (tj[f1]==0 || link[f1]%2!=0) return 0;
+	if (tj[f1]==2)
+	{
+		int s1=sson[f1][1],s2=sson[f1][2];
+		long long ans=0;
+		if (tj[s1]==0) ans+=dp(s2),ans%=modd;
+		 else if (tj[s1]==1) ans+=dp(sson[s1][1],s2),ans%=modd;
+		if (tj[s2]==0) ans+=dp(s1),ans%=modd;
+		 else if (tj[s2]==1) ans+=dp(s1,sson[s2][1]),ans%=modd;
+		vis[f1]=true;
+		f[f1]=ans;
+		return ans;
+	}
+	if (tj[doww[f1]]==0) return link[f1]/2;
+	int s1=sson[f1][1];
+	long long ans=0;
+	if (tj[s1]==0) ans++,ans%=modd;
+	 else if (tj[s1]==1) ans+=dp(sson[s1][1]),ans%=modd;
+	int w=doww[f1];
+	int hh=dep[w]-dep[f1];
+    for (int i=1;i<=2;i++)
+    {
+    	int qq=sson[w][i];
+    	if (tj[doww[qq]]==0 && link[qq]==hh-1)
+    	 ans+=dp(sson[w][3-i]),ans%=modd;
+    }
+	for (int i=1;i<=2;i++)
+	{
+		int qq=sson[w][i];
+		if (tj[doww[qq]]==0 && link[qq]==hh+1)
+		 ans+=dp(sson[w][3-i]),ans%=modd;
+		 else
+		  if (tj[qq]==2)
+		  for (int j=1;j<=2;j++)
+		  {
+		  	int ww=sson[qq][j];
+		  	if (tj[doww[ww]]==0 && link[ww]==hh)
+		  	 ans+=dp(sson[w][3-i],sson[qq][3-j]),ans%=modd;
+		  }
+	}
+	vis[f1]=true;
+	f[f1]=ans;
+	return ans;
+}
+long long dp(int f1,int f2)
+{
+	if (tj[f1]==0 && tj[f2]==0) return 1ll;
+	if (tj[f1]>1 || tj[f2]>1) return 0ll;
+	if (tj[f1]==1 && tj[f2]==1) return dp(sson[f1][1],sson[f2][1]);
+	if (tj[f1]==0) return dp(sson[f2][1]);
+	return dp(sson[f1][1]);
+}
+int dfs(int now)
+{
+	if (now>3)
+	{
+		if (tj[ss[2]]==0)
+		{
+			ans+=dp(ss[1])*dp(ss[3])%modd;
+			ans%=modd;
+		}
+		else
+		if (tj[ss[2]]==1)
+		{
+			ans+=dp(ss[1],sson[ss[2]][1])*dp(ss[3])%modd;
+			ans%=modd;
+			ans+=dp(ss[1])*dp(ss[3],sson[ss[2]][1])%modd;
+			ans%=modd;
+		}
+		else
+		{
+			ans+=dp(ss[1],sson[ss[2]][1])*dp(ss[3],sson[ss[2]][2])%modd;
+			ans%=modd;
+			ans+=dp(ss[1],sson[ss[2]][2])*dp(ss[3],sson[ss[2]][1])%modd;
+			ans%=modd;
+		}
+		return 0;
+	}
+	for (int i=1;i<=3;i++)
+	 if (!boo[i])
+	 {
+	 	boo[i]=true;
+	 	ss[now]=sson[root][i];
+	 	dfs(now+1);
+	 	boo[i]=false;
+	 }
+	return 0;
+}
+int main()
+{
+	scanf("%d",&n);
+	n*=2;
+	int maxx=0;
+	for (int i=1;i<n;i++)
+	{
+		int x,y;
+		scanf("%d%d",&x,&y);
+		ins(x,y);
+		ins(y,x);
+		degre[x]++;
+		degre[y]++;
+		maxx=max(maxx,degre[x]);
+		maxx=max(maxx,degre[y]);
+	}
+	if (maxx==1)
+	{
+		printf("2\n");
+		return 0;
+	}
+	if (maxx==2)
+	{
+		printf("%I64d\n",(2ll*(n/2)*(n/2-1)+4)%modd);
+		return 0;
+	}
+	if (maxx>3)
+	{
+		printf("0\n");
+		return 0;
+	}
+	for (int i=1;i<=n;i++)
+	 if (degre[i]==3)
+	 {
+	 	root=i;
+	 	break;
+	 }
+	bfs();
+	dfs(1);
+	ans=ans*2%modd;
+	printf("%I64d\n",ans);
+	return 0;
+}

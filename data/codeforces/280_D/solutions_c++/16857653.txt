@@ -1,0 +1,159 @@
+#include<cstdio>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+#define fo(i,a,b) for(int i=a;i<=b;i++)
+#define fd(i,a,b) for(int i=a;i>=b;i--)
+#define maxn 100005
+using namespace std;
+
+int n,m;
+
+int a[maxn];
+
+struct note{
+	int lx,lp,rx,rp,sum,mx,p1,p2;
+};
+
+struct seg{
+	note mi,ma;
+	int rev;
+}t[maxn * 4];
+
+void readin(note &p,int x,int y){
+	p.lp=p.rp=p.p1=p.p2=x;
+  	p.mx=p.lx=p.rx=p.sum=y;
+}
+
+note merge(note x,note y){
+	note ret;
+	ret.sum=x.sum+y.sum;
+	ret.lx=x.lx;
+	ret.lp=x.lp;
+  	if (x.sum+y.lx>ret.lx) {
+  		ret.lx=x.sum+y.lx;
+		ret.lp=y.lp;
+  	}
+ 	ret.rx=y.rx;
+	ret.rp=y.rp;
+  	if (y.sum+x.rx>ret.rx) {
+	  	ret.rx=y.sum+x.rx;
+		ret.rp=x.rp;
+	}
+  	ret.mx=x.mx;
+	ret.p1=x.p1;
+	ret.p2=x.p2;
+  	if (y.mx>ret.mx) {
+	  	ret.mx=y.mx;
+		ret.p2=y.p2;
+		ret.p1=y.p1;
+	}
+ 	if (x.rx+y.lx>ret.mx) {
+ 		ret.mx=x.rx+y.lx;
+		ret.p1=x.rp;
+		ret.p2=y.lp;
+ 	}
+  	return ret;
+}
+
+void update(int v){
+	t[v].ma=merge(t[v << 1].ma,t[v << 1 | 1].ma);
+	t[v].mi=merge(t[v << 1].mi,t[v << 1 | 1].mi);
+}
+
+void buildtree(int v,int l,int r){
+	if (l==r) {
+		readin(t[v].ma,l,a[l]);
+		readin(t[v].mi,l,-a[l]);
+		return;
+	}
+	int mid=(l+r) >> 1;
+	buildtree(v << 1,l,mid);
+	buildtree(v << 1 | 1,mid+1,r);
+	update(v);
+}
+
+void rever(int v){
+	if (t[v].rev) {
+		t[v].rev^=1;
+		t[v << 1].rev^=1;
+		t[v << 1 | 1].rev^=1;
+		swap(t[v << 1].ma,t[v << 1].mi);
+		swap(t[v << 1 | 1].ma,t[v << 1 | 1].mi);
+	}
+}
+
+void change(int v,int l,int r,int x){
+	if (l!=r) rever(v);
+	if (l==r) {
+		readin(t[v].ma,l,a[l]);
+		readin(t[v].mi,l,-a[l]);
+		return;
+	}
+	int mid=(l+r) >> 1;
+	if (x<=mid) change(v << 1,l,mid,x);
+	else change(v << 1 | 1,mid+1,r,x);
+	update(v);
+}
+
+note query(int v,int l,int r,int x,int y){
+	if (l!=r) rever(v);
+	if (l==x && r==y) return t[v].ma;
+	int mid=(l+r) >> 1;
+	if (y<=mid) return query(v << 1,l,mid,x,y);
+	else if (x>mid) return query(v << 1 | 1,mid+1,r,x,y);
+	else return merge(query(v << 1,l,mid,x,mid),query(v << 1 | 1,mid+1,r,mid+1,y));
+}
+
+void cir(int v,int l,int r,int x,int y){
+	if (l!=r) rever(v);
+	if (l==x && r==y) {
+		t[v].rev^=1;
+		swap(t[v].mi,t[v].ma);
+		return;
+	}
+	int mid=(l+r) >> 1;
+	if (y<=mid) cir(v << 1,l,mid,x,y);
+	else if (x>mid) cir(v << 1 | 1,mid+1,r,x,y);
+	else cir(v << 1,l,mid,x,mid),cir(v << 1 | 1,mid+1,r,mid+1,y);
+	update(v);
+}
+
+int del[25][2];
+
+void ask(int l,int r,int k){
+	int tot=0;
+	int ans=0;
+	fo(i,1,k) {
+		note tmp=query(1,1,n,l,r);
+		if (tmp.mx<=0) break;
+		ans+=tmp.mx;
+		tot=i;
+		del[tot][0]=tmp.p1;
+		del[tot][1]=tmp.p2;
+		cir(1,1,n,tmp.p1,tmp.p2);
+	}
+	printf("%d\n",ans);
+	fo(i,1,tot) cir(1,1,n,del[i][0],del[i][1]);
+}
+
+int main(){
+	scanf("%d",&n);
+	fo(i,1,n) scanf("%d",&a[i]);
+	buildtree(1,1,n);
+	scanf("%d",&m);
+	fo(i,1,m) {
+		int x,y,T;
+		scanf("%d%d%d",&T,&x,&y);
+		if (T==0) {
+			a[x]=y;
+			change(1,1,n,x);
+		}
+		else {
+			int k;
+			scanf("%d",&k);
+			ask(x,y,k);
+		}
+	}
+	return 0;
+}

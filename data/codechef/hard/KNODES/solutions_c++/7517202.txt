@@ -1,0 +1,261 @@
+
+///////////////////////////////////// 
+
+// File Name :
+
+// Purpose :
+
+// Creation Date : 19-07-2015
+
+// Last Modified : <modified_date>
+
+// Created By : Naveen Thomas 
+
+//////////////////////////////////////
+#include <string>
+#include <vector>
+#include <map>
+#include <list>
+#include <iterator>
+#include <set>
+#include <queue>
+#include <iostream>
+#include <sstream>
+#include <stack>
+#include <deque>
+#include <cmath>
+#include <memory.h>
+#include <cstdlib>
+#include <cstdio>
+#include <cctype>
+#include <algorithm>
+#include <utility> 
+using namespace std;
+#define CLOCK_START double start_t = clock();
+#define CLOCK_STOP cout << "Took: " << ((clock() - start_t) / CLOCKS_PER_SEC);
+#define FOR(i,a,b) for(int i=a; i<b; i++)
+#define ii pair<int,int>
+#define vi vector<int>
+#define vvi vector<vi>
+#define CLR(a, x) memset( a, x, sizeof( a ) )
+#define LL long long
+#define ULL unsigned long long
+inline void inp( int &n )//fast input function
+{
+	n=0;
+	unsigned int ch=getchar_unlocked();int sign=1; 
+	while( ch < '0' || ch > '9' ){if(ch=='-')sign=-1; ch=getchar_unlocked();}
+
+	while( ch >= '0' && ch <= '9' )
+		n = (n<<3)+(n<<1) + ch-'0', ch=getchar_unlocked();
+	n=n*sign;
+}
+const int MAXN = 100000;
+const int MAXH = 20;
+
+int LOG2[MAXN+1]; 
+vector<pair<int, int> > a[MAXN+1];
+int d[MAXN+1]; // d[u] is the depth of the vertex
+int in[MAXN+1]; // in[u] is the time when dfs enters to u
+int out[MAXN+1]; // out[u] is the time when dfs exits from u
+int p[MAXN+1][MAXH+1];
+int in_time; // the time counter for enters to dfs
+int out_time; // the time counter for exits from dfs
+int N;
+// checks where u is ancestor of v
+bool is_ancestor(int u, int v) {
+	// the O(1) condition for this, check any graph theory textbook for proof
+	return in[u] <= in[v] && out[u] >= out[v];
+}
+
+// returns ancestor v of u such that d[u]-d[v]=k
+int ancestor(int u, int k) {
+	// for this we represent k in binary as
+	// k = 2^h1 + 2^h2 + ... + 2^hs
+	// and change u to p[u][h] for each h=hi
+	// since p[u][h] exactly 2^h vertexes up from u
+	for (int h = 0; (1 << h) <= k; ++h) {
+		if (k & 1 << h) {
+			u = p[u][h];
+		}
+	}
+	return u;
+}
+
+// returns the least common ancestor of u and v
+int LCA(int u,int v) {
+	// check whether one of u and v is ancestor of another
+	if (is_ancestor(u, v)) {
+		return u;
+	}
+	if (is_ancestor(v, u)) {
+		return v;
+	}
+	// make u to be more deep vertex
+	if (d[u] < d[v]) {
+		swap(u, v);
+	}
+	// replace u by its ancestor to make d[u]=d[v]
+	// for this we need to lift u up by d[u]-d[v] vertexes
+	u = ancestor(u, d[u] - d[v]);
+
+	// standard technique to find LCA by some kind of binary search
+	for (int h = MAXH; h >= 0; --h) {
+		if (p[u][h] != p[v][h]) {
+			u = p[u][h];
+			v = p[v][h];
+		}
+	}
+	return p[u][0];
+}
+
+
+void dfs(int u) {
+	in[u] = ++in_time; // set enter time for u and increase counter
+	// loop over adjacent vertexes
+	for (int i = 0; i < a[u].size(); ++i) {
+		int v = a[u][i].first; // the adjacent vertex
+		if (v == p[u][0]) {
+			// skip v if it direct parent of u
+			continue;
+		}
+		d[v] = d[u] + 1; // depth of v is one more than for u
+		p[v][0] = u; // otherwise set u as a direct
+		dfs(v); // run dfs for v
+	}
+	out[u] = ++out_time; // set exit time for u and increase counter
+}
+
+void clear()
+{
+	for(int i=1; i<=N; i++)
+	{
+		a[i].clear();		
+	}
+	d[1]=0;
+	p[1][0]=0;
+	in_time=0;
+	out_time=0;	
+}
+
+void pre()
+{
+	// binary lifting for parents and minimums
+	for (int h = 0; h<MAXH; ++h) {
+		for (int u = 1; u <= N; ++u) {
+			int pu = p[u][h];
+			p[u][h + 1] = p[pu][h];
+		}
+	}
+}
+bool lies_in_path(int node_1, int node_2, int node_3) {
+      return is_ancestor(node_1, node_3) and is_ancestor(node_3, node_2);
+    }
+int main()
+{
+	// precalc of LOG2[n]
+	for (int h = 0; (1 << h) <= MAXN; ++h) {
+		for (int n = 1 << h; n <= MAXN && n < (1 << (h + 1)); ++n) {
+			LOG2[n] = h;
+		}
+	}
+
+	int T;
+	inp(T);
+	while(T--)
+	{
+		int Q,K;
+		inp(N);
+		clear();
+		int i=1;
+		while(i<N)
+		{
+			int x,y; inp(x); inp(y);
+			a[x].push_back(pair<int,int>(y,1));
+			a[y].push_back(pair<int,int>(x,1));
+			i++;
+		}
+		dfs(1);
+		pre();
+		inp(Q);	
+		while(Q--)
+		{
+			int K; inp(K);
+			vector<int> query_nodes;
+			int i=0;
+			while(i<K)
+			{
+				int x; inp(x);
+				query_nodes.push_back(x);i++;
+			}
+			/*int leftMost=-1; int rightMost=-1;
+			for(int i=0; i<input.size(); i++)
+			{
+				if(rightMost == -1 || in[input[i]]>in[rightMost])
+					rightMost = input[i];
+				if(leftMost==-1)
+					leftMost =input[i];	
+				else if(is_ancestor(leftMost, input[i]))
+					leftMost = input[i];
+				else if(is_ancestor(input[i], leftMost))
+					continue;
+				else if(in[input[i]]< in[leftMost])
+					leftMost = input[i];
+			}
+			bool flag= true;
+			int lca = LCA(leftMost, rightMost);
+			//cout<<leftMost<<" "<<lca<<" "<<rightMost<<"\n";
+			for(int i=0; i<input.size(); i++)
+			{
+				if(leftMost==rightMost && is_ancestor(input[i], leftMost))
+					continue;
+				if(is_ancestor(input[i], leftMost) && is_ancestor(lca,input[i]))
+					continue;
+				else if(is_ancestor(input[i], rightMost) && is_ancestor(lca,input[i]))
+					continue;
+				else
+				{
+					flag=false; break;
+				}
+			}
+			if(flag)
+				cout<<"YES\n";
+				else
+				cout<<"NO\n";*/
+			int l = in[query_nodes[0]],r = 0,l_node = query_nodes[0],r_node = 1;
+			for (int i = 0; i < K; ++i) {
+				int node = query_nodes[i];
+				// cout << "node = " << node << "," << in[node] << "\n";
+				if (r < in[node]) {
+					r = in[node];
+					r_node = node; 
+				}
+				if (is_ancestor(node, l_node) || is_ancestor(l_node, node)) {
+					if (is_ancestor(l_node, node)) {
+						l_node = node;
+						l = in[node];
+					}
+				} else {
+					if (l > in[node]) {
+						l_node = node;
+						l = in[node];
+					}
+				}
+			}
+			int lca_node = LCA(l_node, r_node);
+			bool yes = true;
+			for (int i = 0; i < K; ++i) {
+				if (l_node == r_node) {
+					yes &= is_ancestor(query_nodes[i], l_node);
+				} else {
+					yes &= lies_in_path(lca_node, l_node, query_nodes[i]) or lies_in_path(lca_node, r_node, query_nodes[i]);
+				}
+			}
+			cout << (yes?"Yes\n":"No\n");
+		}
+	}
+
+	return 0;
+}
+
+

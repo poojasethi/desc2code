@@ -1,0 +1,132 @@
+#include <bits/stdc++.h>
+#define ii pair< int, int>
+#define x first
+#define y second
+#define PB(x) push_back(x)
+using namespace std;
+
+const int N = 205;
+
+string s, F;
+char a[N][N];
+int n, m, q, mark[N][N], dx[10], dy[10], top, d[N][N], dig[N * N][10], num, in[N][N], pc[10];
+vector< ii> c[N][N], cyc[N * N], out_cyc;
+ii STACK[N * N];
+
+void INP()
+{
+    cin >> n >> m >> q;
+    for(int i = 1; i <= n; i ++)
+        for(int j = 1; j <= m; j ++) cin >> a[i][j];
+
+    for(int i = 0; i <= 9; i ++) cin >> dx[i] >> dy[i];
+}
+
+void dfs_cyc( int u, int v, int ok)
+{
+    if (d[u][v] == ok) {
+        num ++;
+        while(top) {
+            ii p = STACK[top --];
+            dig[num][a[p.x][p.y] - '0'] = 1;
+            mark[p.x][p.y] = 1;
+            cyc[num].PB( p);
+        }
+        return;
+    }
+    if (d[u][v]) return;
+    STACK[++ top] = ii( u, v);
+    d[u][v] = ok;
+
+    for(int i = 0; i < c[u][v].size(); i ++) {
+        int x = c[u][v][i].x;
+        int y = c[u][v][i].y;
+        dfs_cyc( x, y, ok);
+    }
+    if (top) top --;
+}
+
+void make_graph()
+{
+    for(int i = 1; i <= n; i ++)
+    for(int j = 1; j <= m; j ++) {
+        int digit = a[i][j] - '0';
+
+        int x = i + dx[digit];
+        int y = j + dy[digit];
+
+        if (1 > x || x > n || 1 > y || y > m) continue;
+        c[x][y].PB( ii( i, j));
+        in[i][j] = 1;
+    }
+
+    int tmp = 0;
+    for(int i = 1; i <= n; i ++)
+    for(int j = 1; j <= m; j ++) if (!d[i][j]) dfs_cyc( i, j, ++ tmp);
+
+    for(int i = 1; i <= n; i ++)
+    for(int j = 1; j <= m; j ++) if (!mark[i][j]) out_cyc.PB( ii( i, j));
+}
+
+int dfscheck( int u, int v, int pos)
+{
+    while(pos < s.size() && a[u][v] == s[pos]) pos ++;
+    if (pos == s.size()) return 1;
+
+    for(int i = 0; i < c[u][v].size(); i ++) {
+        int x = c[u][v][i].x;
+        int y = c[u][v][i].y;
+        if (dfscheck( x, y, pos)) return 1;
+    }
+
+    return 0;
+}
+
+int Check()
+{
+    int sz = s.size();
+    fill( pc, pc + 10, sz);
+    for(int i = sz - 1; i >= 0; i --) pc[s[i] - '0'] = i;
+
+    for(int i = 1; i <= num; i ++) {
+        int st = sz;
+
+        for(int j = 0; j <= 9; j ++)
+            if (!dig[i][j]) st = min( st, pc[j]);
+
+        if (st == sz) return 1;
+        for(int j = 0; j < cyc[i].size(); j ++) {
+            ii u = cyc[i][j];
+            for(int k = 0; k < c[u.x][u.y].size(); k ++) {
+                ii v = c[u.x][u.y][k];
+                if (!mark[v.x][v.y] && dfscheck( v.x, v.y, st)) return 1;
+            }
+        }
+    }
+
+    for(int i = 0; i < out_cyc.size(); i ++) {
+        int x = out_cyc[i].x;
+        int y = out_cyc[i].y;
+        if (!mark[x][y] && !in[x][y] && dfscheck( x, y, 0)) return 1;
+    }
+    return 0;
+}
+
+int main()
+{
+    ios_base::sync_with_stdio(0);
+
+    //freopen("596E.inp","r",stdin);
+    //freopen("596E.out","w",stdout);
+
+    INP();
+    make_graph();
+
+    for(int i = 1; i <= q; i ++) {
+        cin >> s;
+        reverse( s.begin(), s.end());
+        cout << (Check() ? "YES\n" : "NO\n");
+    }
+
+    return 0;
+}

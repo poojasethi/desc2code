@@ -1,0 +1,180 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#define PB push_back
+#define MP make_pair
+#define SZ size()
+#define all(v) v.begin(), v.end()
+#define REP(i, n) for(int i = 0; i < (int)n; i++)
+#define ITR(i, j, n) for(int i = j; i < (int)n; i++)
+#define mem(array, val) memset(array, val, sizeof(array))
+#define READ(filename) freopen(filename, "r", stdin)
+#define WRITE(filename) freopen(filename, "w", stdout)
+#define Pii pair <int, int>
+#define Fr first
+#define Sc second
+#define Long long long
+#define get(a) scanf("%d", &a)
+
+#include <bits/stdc++.h>
+using namespace std;
+
+#define PB push_back
+#define SZ size()
+#define all(v) v.begin(), v.end()
+#define REP(i, n) for(int i = 0; i < (int)n; i++)
+#define ITR(i, j, n) for(int i = j; i < (int)n; i++)
+#define mem(array, val) memset(array, val, sizeof(array))
+#define READ(filename) freopen(filename, "r", stdin)
+#define WRITE(filename) freopen(filename, "w", stdout)
+#define Pii pair <int, int>
+#define Fr first
+#define Sc second
+#define Long long long
+#define get(a) scanf("%d", &a)
+
+#define MAX 1005
+#define char_set 26
+vector <string> dictionary;
+string text;
+int cur;
+
+struct automata {
+  int next[char_set], f, end;
+  vector <int> output;
+
+  inline void set() { mem(next, -1); end = 0; output.clear(); }
+  void make_root() {
+    REP(i, char_set) next[i] = (next[i] == -1) ? 0:next[i];
+    f = -1;
+  }
+} node[MAX];
+
+inline int go(int state, char nx) { return node[state].next[nx]; }
+
+// works with either lower case alphabets or upper case
+void add(int pos)
+{
+  int state = 0;
+  REP(i, dictionary[pos].SZ) {
+    char ch = dictionary[pos][i]-'a';
+    if(node[state].next[ch] == -1) {
+      node[++cur].set();
+      node[state].next[ch] = cur;
+    }
+    state = node[state].next[ch];
+  }
+  node[state].end++;
+  //node[state].output.PB(pos);
+}
+
+void fail()
+{
+  queue <int> que;
+  REP(i, char_set) if(go(0, i)) {
+    int s = go(0, i);
+    node[s].f = 0;
+    que.push(s);
+  }
+
+  while(!que.empty()) {
+    int tp = que.front(); que.pop();
+
+    REP(i, char_set) {
+      if(node[tp].next[i] == -1) continue;
+      int s = node[tp].next[i], r = node[tp].f;
+      que.push(s);
+      while(node[r].next[i] == -1) r = node[r].f;
+      node[s].f = node[r].next[i];
+      r = node[r].next[i];
+      node[s].end += node[r].end;
+      //REP(i, node[r].output.SZ) node[s].output.PB(node[r].output[i]);
+    }
+  }
+}
+
+void Output(int state)
+{
+  if(!node[state].end) printf("no words end here");
+  REP(i, node[state].output.SZ) {
+    if(i) printf(" ");
+    printf("%s", dictionary[node[state].output[i]].c_str());
+  }
+  puts("");
+}
+
+void aho_corasick()
+{
+  node[0].set(); cur = 0;
+  REP(i, dictionary.SZ) add(i);
+  node[0].make_root();
+  fail();
+
+  // if additional operation be needed
+}
+
+int find_state(int state, int nxt)
+{
+  while(go(state, nxt) == -1) state = node[state].f;
+  return go(state, nxt);
+
+}
+
+int dp[MAX][MAX], n, m;
+int solve(int pos, int state)
+{
+  if(pos >= n) return 0;
+  if(dp[pos][state] != -1) return dp[pos][state];
+
+  int &ret = dp[pos][state];
+  if(text[pos] != '?') {
+    int tmp = find_state(state, text[pos]-'a');
+    return ret = node[tmp].end+solve(pos+1, tmp);
+  }
+  ret = 0;
+  REP(i, char_set) {
+    int tmp = find_state(state, i);
+    ret = max(ret, node[tmp].end+solve(pos+1, tmp));
+  }
+  return ret;
+}
+
+int main()
+{
+  ios_base::sync_with_stdio(0); cin.tie(0);
+  int t;
+  cin >> t;
+
+  while(t--) {
+    cin >> n >> m;
+    cin >> text;
+    REP(i, m) {
+      string s;
+      cin >> s;
+      dictionary.PB(s);
+    }
+    aho_corasick();
+    mem(dp, -1);
+    cout << solve(0, 0) << endl;
+    int state = 0, pos = 0;
+    while(pos < n) {
+      int mx = 0;
+      char ch = 'a';
+      if(text[pos] != '?') ch = text[pos];
+      else {
+        REP(i, char_set) {
+          int tmp = find_state(state, i);
+          if(node[tmp].end+solve(pos+1, tmp) > mx) { mx = node[tmp].end+solve(pos+1, tmp); ch = i+'a'; }
+        }
+      }
+      cout << ch;
+      pos++;
+      state = find_state(state, ch-'a');
+    }
+    cout << endl;
+
+    dictionary.clear();
+  }
+
+  return 0;
+}

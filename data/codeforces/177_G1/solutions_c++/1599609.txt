@@ -1,0 +1,176 @@
+#include<algorithm>
+#include<iostream>
+#include<cstring>
+#include<cstdio>
+#include<vector>
+#include<queue>
+#include<stack>
+#include<set>
+#include<map>
+using namespace std;
+
+typedef long long LL;
+typedef unsigned long long ULL;
+typedef vector<int> VI;
+typedef vector<bool> VB;
+typedef vector<LL> VLL;
+typedef vector<VI> VVI;
+typedef pair<int,int> PII;
+typedef vector<PII> VPII;
+
+#define FOR(x,y,z) for(int x=y;x<=z;++x)
+#define FORD(x,y,z) for(int x=y;x>=z;--x)
+#define FOReach(x,Z) for(__typeof((Z).begin()) x=(Z).begin();x!=(Z).end();++x)
+#define REP(x,y) for(int x=0;x<y;++x)
+
+#define PB push_back
+#define ALL(V) (V).begin(),(V).end()
+#define SIZE(V) ((int)(V).size())
+
+#define MP make_pair
+#define ST first
+#define ND second
+
+#define DBG
+
+#ifdef DBG
+	#define debug(...) fprintf(stderr, __VA_ARGS__)
+#else
+	#define debug(...)
+#endif
+
+int stmp;
+#define scanf stmp=scanf
+
+
+const int MAX = 100010;
+const int INF = 1000000001;
+const int MOD = 1000000007;
+
+LL n;
+
+struct mfib {
+	int M[2][2];
+	mfib() { REP(i,2) REP(j,2) M[i][j] = (bool)(i+j); }
+	mfib(int) { REP(i,2) REP(j,2) M[i][j] = 0; }
+	mfib operator*(const mfib &rhs) const {
+		mfib ret(0);
+		REP(i,2)
+			REP(j,2)
+				REP(k,2)
+					ret.M[i][j] = ((LL)ret.M[i][j] + (LL)M[i][k] * rhs.M[k][j]) % MOD;
+		return ret;
+	}
+};
+
+mfib w, s;
+
+int fib(LL k) {
+	if(k < 2)
+		return k;
+	s = mfib();
+	w = mfib();
+	k -= 2;
+	while(k)
+	{
+		if(k&1)
+			w = w * s;
+		s = s * s;
+		k >>= 1;
+	}
+	return w.M[1][1];
+}
+
+int cnt(VB &V, LL f) { // liczba wystapien jedno badz dwuznaku w f-tym slowie fib
+	if(V.size() == 1) {
+		if(V[0])
+			return f ? fib(f-1) : 1;
+		else
+			return fib(f);
+	}
+	else {
+		if(f < 2)
+			return 0;
+		if(!V[0] && !V[1]) { // aa -> ba
+			V[0] = 1;
+			--f;
+		}
+		if(!V[0] && V[1]) // ab
+			return fib(f-1);
+		if(V[0] && V[1]) // bb
+			return 0;
+		// ba
+		return fib(f-1) - ((f-1)&1);
+	}
+}
+
+int solve(VB &B) {
+	stack< pair<VB,LL> > S;
+	S.push(MP(B, n));
+	int ret = 0;
+	while(!S.empty())
+	{
+		VB V = S.top().ST;
+		LL f = S.top().ND;
+		S.pop();
+		if(SIZE(V) <= 2 || f == 0)
+			ret = (ret + cnt(V, f)) % MOD;
+		else {
+			VB N;
+			if(V.front())
+				N.PB(0);
+			bool d = false;
+			for(int i=SIZE(N);i<SIZE(V);)
+			{
+				if(V[i]) {
+					N.clear();
+					break;
+				}
+				if(i+1 < SIZE(V)) {
+					if(V[i+1]) {
+						N.PB(0);
+						i += 2;
+					}
+					else {
+						N.PB(1);
+						++i;
+					}
+				}
+				else {
+					d = true;
+					++i;
+				}
+			}
+			if(N.empty())
+				continue;
+			if(d) {
+				N.PB(0);
+				S.push(MP(N, f-1));
+				N.back() = 1;
+				S.push(MP(N, f-1));
+			}
+			else {
+				S.push(MP(N, f-1));
+			}
+		}
+	}
+	return ret;
+}
+
+int main(int argc, char *argv[]) {
+	ios_base::sync_with_stdio(0);
+	int m;
+	cin >> n >> m;
+	--n;
+	while(m--)
+	{
+		VB V;
+		string tmp;
+		cin >> tmp;
+		REP(i,SIZE(tmp))
+			V.PB(tmp[i] == 'a');
+		cout << solve(V) << endl;
+	}
+	return 0;
+}
+

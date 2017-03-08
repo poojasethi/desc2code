@@ -1,0 +1,189 @@
+#include <stdio.h>
+#include <iostream>
+#include <algorithm>
+#include <map>
+
+
+#define MOD 1000000007
+using namespace std;
+typedef struct edgepair
+{
+    long long int edge0;
+    long long int edge1;
+}edgepair;
+struct equaledgepair
+{
+    bool operator()(edgepair x, edgepair y)
+    {
+        return ((x.edge0 < y.edge0) || ((x.edge0 == y.edge0) && (x.edge1 < y.edge1)));
+    }
+};
+long long int mtopowern(long long int m, long long int n)
+{
+    //In some cases it is possible that n could be -1
+    if(n<1)
+        return 1;
+    long long int result =1;
+
+    for(long long int temp=m; n; n=n>>1, temp = (temp*temp)%MOD)
+    {
+        if(n&1)
+        {
+            result = (result * temp) % MOD;
+        }
+    }
+    return result;
+}
+
+typedef struct edge{
+    long long int edge0;
+    long long int edge1;
+    long long int edge2;
+    long long int edge3;
+    //0 for the original edge, 1 for reverse edge
+    int type;
+} edge;
+edge inputedges[100000];
+
+bool mysort(edge x, edge y)
+{
+    if(x.edge0 > y.edge0)
+        return false;
+    else if(x.edge0 < y.edge0)
+        return true;
+    else if(x.edge1 < y.edge1)
+        return true;
+    else if(x.type < y.type)
+        return true;
+    return false;
+
+    //return ((x.edge0 < y.edge0) || ((x.edge0 == y.edge0) && (x.type < y.type) && (x.edge1 < y.edge1)));
+}
+inline bool checksameinputpoint(long long int i)
+{
+    if(inputedges[i].type != inputedges[i-1].type)
+        return false;
+    return ((inputedges[i].edge0 == inputedges[i-1].edge0) && ((inputedges[i].edge1 == inputedges[i-1].edge1)));
+}
+int main()
+{
+    map<edgepair, long long int, equaledgepair>mymap;
+    long long int n;
+    long long int m;
+    long long int k;
+    long long int i;
+    scanf("%lld%lld%lld",&n,&m,&k);
+    for(i=0; i<k; i++)
+    {
+        scanf("%lld%lld%lld%lld",&inputedges[k+i].edge0, &inputedges[k+i].edge1, &inputedges[k+i].edge2, &inputedges[k+i].edge3); 
+        inputedges[k+i].type = 0;
+    }
+//    sort(inputedges+k, inputedges+2*k, mysort);
+
+    for(i=0; i<k; i++)
+    {
+        //scanf("%lld%lld%lld%lld",&inputedges[k+i].edge0, &inputedges[k+i].edge1, &inputedges[k+i].edge2, &inputedges[k+i].edge3); 
+        //inputedges[k+i].type = 0;
+        inputedges[i].type = 1;
+        inputedges[i].edge0 = inputedges[k+i].edge2;
+        inputedges[i].edge1 = inputedges[k+i].edge3;
+        inputedges[i].edge2 = inputedges[k+i].edge0;
+        inputedges[i].edge3 = inputedges[k+i].edge1;
+
+    }
+//    for(i=0; i<2*k; i++)
+//        printf("Type=%d, %lld %lld %lld %lld\n", inputedges[i].type, inputedges[i].edge0, inputedges[i].edge1, inputedges[i].edge2, inputedges[i].edge3);
+//    printf(".................\n");
+    sort(inputedges, inputedges+2*k, mysort);
+
+//    for(i=0; i<2*k; i++)
+//        printf("Type=%d, %lld %lld %lld %lld\n", inputedges[i].type, inputedges[i].edge0, inputedges[i].edge1, inputedges[i].edge2, inputedges[i].edge3);
+
+    long long int path = 1;
+    long long int prev = 0;
+    long long int newedgeonthisset = 0;
+    for(i=0; i<2*k; i++)
+    {
+        if(i>0)
+        {
+            //move the total number of path for (i-1)th entry if present and previous entry is not same
+            if(inputedges[i].edge0 != inputedges[i-1].edge0)
+            {
+                path = (path * mtopowern(m, inputedges[i-1].edge0 -prev))%MOD;
+                path = (path + newedgeonthisset)%MOD;
+                prev = inputedges[i-1].edge0;
+                newedgeonthisset = 0;
+
+
+            }
+
+        }
+
+        if(inputedges[i].type==0)
+        {
+            //edge is an outgoing edge
+            edgepair x;
+            x.edge0 = inputedges[i].edge0;
+            x.edge1 = inputedges[i].edge1;
+            if(mymap.find(x) == mymap.end())
+                mymap.insert(map<edgepair, int>::value_type(x,0));
+
+            //skip the entry if some path has already started from that vertex
+            if((i>0) && (checksameinputpoint(i))) 
+                    continue;
+            map<edgepair, long long int>::iterator it = mymap.find(x);
+            it->second = (it->second + (path * mtopowern(m, inputedges[i].edge0 -prev -1))%MOD)%MOD;
+
+
+        }
+        else
+        {
+            //edge is an incoming edge
+            //update the total number of paths available to particular set
+            edgepair x;
+            x.edge0 = inputedges[i].edge0;
+            x.edge1 = inputedges[i].edge1;
+            if(mymap.find(x) == mymap.end())
+                mymap.insert(map<edgepair, long long int>::value_type(x,0));
+            map<edgepair, long long int>::iterator it = mymap.find(x);
+            edgepair y;
+            y.edge0 = inputedges[i].edge2;
+            y.edge1 = inputedges[i].edge3;
+            map<edgepair, long long int>::iterator iit = mymap.find(y);
+
+            newedgeonthisset += iit->second;;
+            newedgeonthisset = (newedgeonthisset % MOD);
+            it->second = ((it->second) + iit->second)%MOD;
+
+
+
+        }
+    }
+
+    if(k>0)
+    {
+        //last level would be n+1
+        if(inputedges[2*k -1].edge0 == n+1)
+        {
+            path = (path * mtopowern(m, n - prev))%MOD;
+            path = (path + newedgeonthisset) % MOD;
+        }
+        else
+        {
+            path = (path * mtopowern(m, inputedges[2*k-1].edge0 - prev))%MOD;
+            path = (path + newedgeonthisset) % MOD;
+            prev = inputedges[2*k-1].edge0;
+            path = (path * mtopowern(m, n - prev))%MOD; 
+        }
+    }
+    else
+    {
+            path = (path * mtopowern(m, n - prev))%MOD; 
+    }
+
+    printf("%lld\n",path);
+
+
+
+    return 0;
+}

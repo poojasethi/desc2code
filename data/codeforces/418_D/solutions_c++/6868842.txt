@@ -1,0 +1,93 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<cmath>
+using namespace std;
+
+inline void READ(int &x)
+{
+	static char c;
+	x=0;
+	do c=getchar(); while (c<'0' || c>'9');
+	do x=x*10+c-48, c=getchar(); while (c>='0' && c<='9');
+}
+
+const int maxn=100005;
+
+int N, M, m, a[maxn], b[maxn<<1], c[maxn<<1], depth[maxn], father[maxn], root[maxn], f[maxn][20], g[maxn][20];
+
+int Bfs(int x, int from)
+{
+	int st, en, ret(x);
+	static int list[maxn];
+	list[st=en=1]=x;
+	depth[x]=0, father[x]=from, root[x]=from;
+	while (st<=en)
+	{
+		int now(list[st]);
+		if (depth[now]>depth[ret]) ret=now;
+		for (int i=a[now];i;i=c[i]) if (b[i]!=father[now])
+		{
+			depth[b[i]]=depth[now]+1;
+			father[b[i]]=now;
+			root[b[i]]=from;
+			list[++en]=b[i];
+		}
+		st++;
+	}
+	return ret;
+}
+
+inline int RMQ(int f[][20], int x, int y)
+{
+	if (y<=x) return 0;
+	int k=log2(y-x);
+	return max(f[x][k],f[y-(1<<k)][k]);
+}
+
+int main()
+{
+	READ(N);
+	for (int i=1;i<N;i++)
+	{
+		int x, y;
+		READ(x), READ(y);
+		m++, b[m]=y, c[m]=a[x], a[x]=m;
+		m++, b[m]=x, c[m]=a[y], a[y]=m;
+	}
+	int A=Bfs(1,0), B=Bfs(A,0);
+	for (int i=B,last=0;i;last=i,i=father[i])
+	{
+		int far(0);
+		root[i]=i;
+		for (int j=a[i];j;j=c[j]) if (b[j]!=last && b[j]!=father[i])
+			far=max(far,depth[Bfs(b[j],i)]+1);
+		f[depth[i]][0]=far+depth[i];
+		g[depth[i]][0]=far+depth[B]-depth[i];
+	}
+	for (int j=1,k=1;k<depth[B]-1;j++,k<<=1)
+		for (int i=0;i+k<depth[B];i++)
+		{
+			f[i][j]=max(f[i][j-1],f[i+k][j-1]);
+			g[i][j]=max(g[i][j-1],g[i+k][j-1]);
+		}
+	for (READ(M);M;M--)
+	{
+		int x, y, mid, l, r, ex(0), ey(0);
+		READ(x), READ(y);
+		l=depth[root[x]], r=depth[root[y]];
+		if (l<r) swap(x,y), swap(l,r);
+		if (root[x]!=x) l+=depth[x]+1, ex=depth[x]+1, x=root[x];
+		if (root[y]!=y) r-=depth[y]+1, ey=depth[y]+1, y=root[y];
+		mid=((l+r)>>1);
+		printf("%d\n",max(
+					max(
+						min(ex,ey+depth[x]-depth[y])+depth[B]-depth[x],
+						min(ey,ex+depth[x]-depth[y])+depth[y]),
+					max(
+						RMQ(f,depth[y]+1,min(mid+1,depth[x]))-r,
+						RMQ(g,max(depth[y]+1,mid+1),depth[x])-depth[B]+l)
+					));
+	}
+	return 0;
+}

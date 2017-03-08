@@ -1,0 +1,110 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <map>
+#include <vector>
+using namespace std;
+
+const int maxN=1000+10,maxL=maxN*maxN*2;
+const int MOD=int(1e9+7);
+
+typedef pair<int,int> II;
+#define PB push_back
+#define FORE(it,c) for(typeof(c.begin())it=c.begin();it!=c.end();it++)
+#define fs first
+#define sd second
+
+int n,m;
+char s[maxN][maxN];
+int po[maxN],a[maxN][maxN];
+int ns,pos[maxN];
+int tree[maxN*5],res;
+
+void enter(){
+    scanf("%d%d",&n,&m);
+    po[0]=1;
+    for (int i=1;i<=n;i++) po[i]=(27LL*po[i-1])%MOD;
+    ns=0;
+    for (int i=1;i<=n;i++){
+        scanf("%s",s[i]+1);
+        a[i][0]=0;
+        for (int j=1;j<=m;j++){
+            a[i][j]=(a[i][j-1]+1LL*(s[i][j]-'a'+1)*po[j-1])%MOD;
+            //printf("A[%d,%d]=%d\n",i,j,a[i][j]);
+        }
+        pos[i]=1;
+    }
+}
+
+bool xless(int xfs,int xsd,int yfs,int ysd){
+    for (int i=0;xsd+i<=m+1&&ysd+i<=m+1;i++) if (s[xfs][xsd+i]!=s[yfs][ysd+i])
+        return s[xfs][xsd+i]<s[yfs][ysd+i];
+    return (xfs<yfs);
+
+    //
+    int lo=0,hi=min(m-xsd+1,m-ysd+1),mid=4;
+    //printf("lo=%d,hi=%d,%lld,%lld\n",lo,hi,1LL*(a[xfs][xsd+mid-1]-a[xfs][xsd-1]+MOD)*po[ysd]%MOD,1LL*(a[yfs][ysd+mid-1]-a[yfs][ysd-1]+MOD)*po[xsd]%MOD);
+    while (lo<hi){
+        mid=(lo+hi)/2;
+        if (1LL*(a[xfs][xsd+mid-1]-a[xfs][xsd-1]+MOD)*po[ysd]%MOD==
+            1LL*(a[yfs][ysd+mid-1]-a[yfs][ysd-1]+MOD)*po[xsd]%MOD) lo=mid+1; else hi=mid;
+    }
+    //printf("lo=%d\n",lo);
+    lo--;
+    return (s[xfs][xsd+lo]<s[yfs][ysd+lo]||(s[xfs][xsd+lo]==s[yfs][ysd+lo]&&xfs<yfs));
+}
+
+int minstr(int x,int y){
+    if (xless(x,pos[x],y,pos[y])) return x;
+    return y;
+}
+
+void init(int lo,int hi,int i){
+    if (lo==hi){ tree[i]=lo;return;}
+    init(lo,(lo+hi)/2,i*2);
+    init((lo+hi)/2+1,hi,i*2+1);
+    tree[i]=minstr(tree[i*2],tree[i*2+1]);
+    //printf("MIN %d,%d=%d\n",lo,hi,tree[i]);
+}
+void change(int lo,int hi,int v,int i){
+    if (lo>v||hi<v) return;
+    if (lo==hi) return;
+    change(lo,(lo+hi)/2,v,i*2);
+    change((lo+hi)/2+1,hi,v,i*2+1);
+    tree[i]=minstr(tree[i*2],tree[i*2+1]);
+}
+void getmin(int lo,int hi,int u,int v,int i){
+    if (lo>v||hi<u) return;
+    if (u<=lo&&hi<=v) {res=minstr(res,tree[i]); return;}
+    getmin(lo,(lo+hi)/2,u,v,i*2);
+    getmin((lo+hi)/2+1,hi,u,v,i*2+1);
+}
+
+void solve(){
+    //printf("%d\n",xless(1,1,2,1)); return;
+    init(1,n,1);
+    int q,c,u,v; scanf("%d",&q);
+    while (q--){
+        scanf("%d%d",&c,&u); u++;
+        if (c==1){
+            if (pos[u]<=m) pos[u]++;
+            change(1,n,u,1);
+        }
+        else{
+            scanf("%d",&v); v++;
+            res=u; getmin(1,n,u,v,1);
+            printf("%d\n",res-1);
+        }
+    }
+}
+
+int main(){
+    //freopen("strrmq.inp","r",stdin);
+    //freopen("strrmq.out","w",stdout);
+    int t; scanf("%d",&t);
+    while (t--){
+        enter();
+        solve();
+    }
+    return 0;
+}

@@ -1,0 +1,322 @@
+#include <fstream>
+#include <sstream>
+
+#include <cstring>
+
+#ifndef ONLINE_JUDGE
+#include <stdio.h>
+#endif
+
+struct PointGroup
+{
+    int ex_ey;
+    int ex_oy;
+    int ox_ey;
+    int ox_oy;
+
+    void clear()
+    {
+        ex_ey = 0;
+        ex_oy = 0;
+        ox_ey = 0;
+        ox_oy = 0;
+    }
+
+    void Add(bool x_even, bool y_even)
+    {
+        if (x_even)
+        {
+            if (y_even)
+                ++ex_ey;
+            else
+                ++ex_oy;
+        }
+        else
+        {
+            if (y_even)
+                ++ox_ey;
+            else
+                ++ox_oy;
+        }
+    }
+};
+
+enum Bits
+{
+    Bit1 = 1,
+    Bit2 = Bit1 << 1,
+    Bit3 = Bit1 << 2,
+    Bit4 = Bit1 << 3,
+    Bit5 = Bit1 << 4,
+    Bit6 = Bit1 << 5,
+    Bit7 = Bit1 << 6,
+    Bit8 = Bit1 << 7,
+
+    BitX1 = Bit1,
+    BitX2 = Bit3,
+    BitX3 = Bit5,
+    BitX4 = Bit7,
+    BitY1 = Bit2,
+    BitY2 = Bit4,
+    BitY3 = Bit6,
+    BitY4 = Bit8,
+};
+
+template<int Num, int Bit>
+struct IsBitOn
+{
+    enum
+    {
+        Value = (Num & Bit) ? 1 : 0
+    };
+};
+
+template<bool IsAEven, bool IsBEven, bool IsCEven, bool IsDEven>
+struct IsNiceQuadringle{enum {Value = 0};};
+template<> struct IsNiceQuadringle<true,  true,  true,  true>{enum {Value = 1};};
+template<> struct IsNiceQuadringle<true,  true,  false, false>{enum {Value = 1};};
+template<> struct IsNiceQuadringle<true,  false, true,  false>{enum {Value = 1};};
+template<> struct IsNiceQuadringle<false, true,  true,  false>{enum {Value = 1};};
+template<> struct IsNiceQuadringle<false, true,  false, true>{enum {Value = 1};};
+template<> struct IsNiceQuadringle<false, false, true,  true>{enum {Value = 1};};
+template<> struct IsNiceQuadringle<true,  false, false, true>{enum {Value = 1};};
+template<> struct IsNiceQuadringle<false, false, false, false>{enum {Value = 1};};
+
+template<int Num, int Bit1, int Bit2>
+struct IsEven
+{
+    enum
+    {
+        Value = (
+                (IsBitOn<Num, Bit1>::Value == 1 && IsBitOn<Num, Bit2>::Value == 1) ||
+                (IsBitOn<Num, Bit1>::Value == 0 && IsBitOn<Num, Bit2>::Value == 0)) ? 1 : 0
+    };
+};
+
+enum Edge
+{
+    EdgeA,
+    EdgeB,
+    EdgeC,
+    EdgeD
+};
+
+template<int Num, Edge e> struct IsEdgeEven{};
+template<int Num> struct IsEdgeEven<Num, EdgeA>{enum {Value = (IsEven<Num, BitX1, BitX2>::Value && IsEven<Num, BitY1, BitY2>::Value) ? 1 : 0};};
+template<int Num> struct IsEdgeEven<Num, EdgeB>{enum {Value = (IsEven<Num, BitX2, BitX3>::Value && IsEven<Num, BitY2, BitY3>::Value) ? 1 : 0};};
+template<int Num> struct IsEdgeEven<Num, EdgeC>{enum {Value = (IsEven<Num, BitX3, BitX4>::Value && IsEven<Num, BitY3, BitY4>::Value) ? 1 : 0};};
+template<int Num> struct IsEdgeEven<Num, EdgeD>{enum {Value = (IsEven<Num, BitX4, BitX1>::Value && IsEven<Num, BitY4, BitY1>::Value) ? 1 : 0};};
+
+template<int Num, int BitNum1, int BitNum2>
+struct ChooseVertexCountFor
+{
+    static long long Count(const PointGroup& v)
+    {
+        return IsBitOn<Num, BitNum1>::Value
+            ? (IsBitOn<Num, BitNum2>::Value ? v.ex_ey : v.ex_oy)
+            : (IsBitOn<Num, BitNum2>::Value ? v.ox_ey : v.ox_oy);
+    }
+};
+
+template<int Mask>
+struct CountNiceQuadringles
+{
+    static long long GetCount(const PointGroup& v1, const PointGroup& v2, const PointGroup& v3, const PointGroup& v4)
+    {
+        long long result = CountNiceQuadringles<Mask - 1>::GetCount(v1, v2, v3, v4);
+        if (IsNiceQuadringle<IsEdgeEven<Mask, EdgeA>::Value == 1,
+                             IsEdgeEven<Mask, EdgeB>::Value == 1,
+                             IsEdgeEven<Mask, EdgeC>::Value == 1,
+                             IsEdgeEven<Mask, EdgeD>::Value == 1>::Value)
+        {
+            result += (ChooseVertexCountFor<Mask, BitX1, BitY1>::Count(v1) *
+                       ChooseVertexCountFor<Mask, BitX2, BitY2>::Count(v2) *
+                       ChooseVertexCountFor<Mask, BitX3, BitY3>::Count(v3) *
+                       ChooseVertexCountFor<Mask, BitX4, BitY4>::Count(v4));
+        }
+        return result;
+    }
+};
+
+template<>
+struct CountNiceQuadringles<0>
+{
+    static long long GetCount(const PointGroup& v1, const PointGroup& v2, const PointGroup& v3, const PointGroup& v4)
+    {
+        if (IsNiceQuadringle<IsEdgeEven<0, EdgeA>::Value == 1, IsEdgeEven<0, EdgeB>::Value == 1, IsEdgeEven<0, EdgeC>::Value == 1, IsEdgeEven<0, EdgeD>::Value == 1>::Value)
+        {
+            return (ChooseVertexCountFor<0, BitX1, BitY1>::Count(v1) *
+                    ChooseVertexCountFor<0, BitX2, BitY2>::Count(v2) *
+                    ChooseVertexCountFor<0, BitX3, BitY3>::Count(v3) *
+                    ChooseVertexCountFor<0, BitX4, BitY4>::Count(v4));
+        }
+        return 0;
+    }
+};
+
+bool ascii_table[256] = { 0 };
+bool ascii_table_even[256] = { 0 };
+
+class VertexProcessor
+{
+public:
+    VertexProcessor()
+    {
+
+        ascii_table['0'] = ascii_table['1'] = ascii_table['2'] = ascii_table['3'] = ascii_table['4'] = ascii_table['5'] =
+        ascii_table['6'] = ascii_table['7'] = ascii_table['8'] = ascii_table['9'] = ascii_table['-'] = true;
+
+        ascii_table_even['0'] = ascii_table_even['2'] = ascii_table_even['4'] =
+        ascii_table_even['6'] = ascii_table_even['8'] = true;
+    }
+
+    bool is_partofdigit(char ch)
+    {
+        return ascii_table[ch];
+    }
+
+    bool is_digit_even(char ch)
+    {
+        return ascii_table_even[ch];
+    }
+
+    char NextCh() {
+        static const int BUFSIZE = 128;
+        static char r_buffer[BUFSIZE + 1];
+        static int r_bufpos = BUFSIZE;
+
+        if (r_bufpos == BUFSIZE)
+        {
+            r_bufpos = 0;
+            size_t was_read = fread(r_buffer, 1, BUFSIZE, stdin);
+
+            r_buffer[was_read] = 0;
+        }
+
+        return r_buffer[r_bufpos++];
+    }
+
+	int readInt()
+	{
+		char ch = NextCh();
+        for (; !is_partofdigit(ch);)
+            ch = NextCh();
+
+		const bool sign = (ch != '-');
+		if (!sign)
+			ch = NextCh();
+
+		int result = 0;
+
+		for (; is_partofdigit(ch);)
+        {
+			result = 10 * result + ch - '0';
+            ch = NextCh();
+        }
+
+		return sign ? result : -result;
+	}
+
+    bool readSignAndLastDigit(bool& sign, bool& is_even)
+    {
+        char ch = NextCh();
+        for (; !is_partofdigit(ch);)
+            ch = NextCh();
+
+        if (ch == '-')
+            sign = false;
+        else
+            sign = true;
+
+        int digit_count = 0;
+
+        char last_char = ch;
+        for (; is_partofdigit(ch);)
+        {
+            ++digit_count;
+            last_char = ch;
+            ch = NextCh();
+        }
+
+        if (last_char == '0' && 1 == digit_count)
+            return false;
+
+        is_even = is_digit_even(last_char);
+        return true;
+    }
+
+    void readVertexes()
+    {
+        Clear();
+
+		const int vert_num = readInt();
+
+        for (int i = 0; i < vert_num; ++i)
+        {
+            bool sign_x, sign_y;
+            bool even_x, even_y;
+            bool process1 = readSignAndLastDigit(sign_x, even_x);
+            bool process2 = readSignAndLastDigit(sign_y, even_y);
+
+
+            if (process1 && process2)
+            {
+                if (sign_x)
+                {
+                    if (sign_y)
+                        right_up.Add(even_x, even_y);
+                    else
+                        right_down.Add(even_x, even_y);
+                }
+                else
+                {
+                    if (sign_y)
+                        left_up.Add(even_x, even_y);
+                    else
+                        left_down.Add(even_x, even_y);
+                }
+            }
+        }
+    }
+
+    void Clear()
+    {
+        right_up.clear();
+        left_up.clear();
+        right_down.clear();
+        left_down.clear();
+    }
+
+    long long Caculate() const
+    {
+        return CountNiceQuadringles<255>::GetCount(right_up, right_down, left_down, left_up);
+    }
+private:
+    PointGroup right_up;
+    PointGroup left_up;
+    PointGroup right_down;
+    PointGroup left_down;
+};
+
+#include <vector>
+#include <iostream>
+#include <cstdlib>
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+    std::freopen("generated.txt","r",stdin);
+#endif
+
+	VertexProcessor proc;
+
+	const int test_cases_num = proc.readInt();
+
+    for (int i = 0; i < test_cases_num; ++i)
+    {
+        proc.readVertexes();
+        printf("%lld\n", proc.Caculate());
+    }
+
+    return 0;
+}

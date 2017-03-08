@@ -1,0 +1,93 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#define N 1010
+using namespace std;
+
+int dx[4]= {0,0,1,-1};
+int dy[4]= {1,-1,0,0};
+int f[4][N][N],a[4][N][N];
+int n,m;
+int qx[N*N*4],qy[N*N*4],pos[N*N*4];
+char s[N];
+
+bool check(int i,int s1,int s2)
+{
+	if (i==0) {
+		if ((s1&2) && (s2&8)) return 1;
+		else return 0;
+	}
+	if (i==1) {
+		if ((s1&8) && (s2&2)) return 1;
+		else return 0;
+	}
+	if (i==2) {
+		if ((s1&1) && (s2&4)) return 1;
+		else return 0;
+	}
+	if (i==3) {
+		if ((s1&4) && (s2&1)) return 1;
+		else return 0;
+	}
+}
+
+int main()
+{
+	scanf("%d%d",&n,&m);
+	for (int i=1; i<=n; i++) {
+		scanf("%s",s+1);
+		for (int j=1; j<=m; j++) {
+			if (s[j]=='+') a[0][i][j]=15;
+			if (s[j]=='-') a[0][i][j]=8+2;
+			if (s[j]=='|') a[0][i][j]=4+1;
+			if (s[j]=='^') a[0][i][j]=4;
+			if (s[j]=='<') a[0][i][j]=8;
+			if (s[j]=='>') a[0][i][j]=2;
+			if (s[j]=='v') a[0][i][j]=1;
+			if (s[j]=='L') a[0][i][j]=4+2+1;
+			if (s[j]=='U') a[0][i][j]=8+2+1;
+			if (s[j]=='R') a[0][i][j]=8+4+1;
+			if (s[j]=='D') a[0][i][j]=8+4+2;
+			if (s[j]=='.') a[0][i][j]=0;
+		}
+		for (int j=1; j<=m; j++)
+			for (int k=1; k<4; k++)
+				a[k][i][j]=(a[k-1][i][j]>>1)+((a[k-1][i][j]&1)<<3);
+	}
+	int X1,Y1,X2,Y2;
+	scanf("%d%d%d%d",&X1,&Y1,&X2,&Y2);
+	memset(f,-1,sizeof(f));
+	int l=0,r=1;
+	f[0][X1][Y1]=0;
+	qx[1]=X1;
+	qy[1]=Y1;
+	pos[1]=0;
+	while (l<r) {
+		l++;
+		int x=qx[l],y=qy[l],p=pos[l];
+		if (x==X2 && y==Y2) break;
+		for (int i=0; i<4; i++) {
+			int xx=x+dx[i],yy=y+dy[i];
+			if (xx<1 || yy<1 || xx>n || yy>m) continue;
+			if (f[p][xx][yy]==-1 && check(i,a[p][x][y],a[p][xx][yy])) {
+				r++;
+				f[p][xx][yy]=f[p][x][y]+1;
+				qx[r]=xx;
+				qy[r]=yy;
+				pos[r]=p;
+			}
+		}
+		if (f[(p+1)%4][x][y]==-1) {
+			r++;
+			f[(p+1)%4][x][y]=f[p][x][y]+1;
+			qx[r]=x;
+			qy[r]=y;
+			pos[r]=(p+1)%4;
+		}
+	}
+	int ans=-1;
+	for (int i=0; i<4; i++) if (ans==-1) ans=f[i][X2][Y2];
+		else if (f[i][X2][Y2]!=-1) ans=min(ans,f[i][X2][Y2]);
+	printf("%d\n",ans);
+	return 0;
+}

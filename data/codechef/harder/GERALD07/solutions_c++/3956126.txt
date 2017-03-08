@@ -1,0 +1,175 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+using namespace std;
+const int Maxn=200005,inf=999999999+208;
+int n,m,q;//,fa[Maxn*2];
+  
+inline int get(){
+   int v;char ch;
+   while (!isdigit(ch=getchar())); v=ch-48;
+   while (isdigit(ch=getchar())) v=v*10+ch-48;
+   return v;
+}
+  
+struct Node{
+   int v;
+   Node *lc,*rc;
+}Pool[Maxn*25],*Null=Pool,*Tot=Null;
+  
+class Segment_Tree{
+   Node *root;
+   public:
+      void New(){root=Null;Null->lc=Null->rc=Null;}
+      inline void build(Segment_Tree &pre,int v){
+         Node *x=root=++Tot,*y=pre.root;
+         int l=0,r=m-1,mid;
+         while (l<r){
+            x->v=y->v+1;mid=(l+r)>>1;
+            if (v<=mid) x->rc=y->rc,x->lc=++Tot,x=x->lc,y=y->lc,r=mid;
+            else x->lc=y->lc,x->rc=++Tot,x=x->rc,y=y->rc,l=mid+1;
+         }
+         x->v=y->v+1;
+      }
+      inline int qry(Segment_Tree &pre,int v){
+         Node *x=root,*y=pre.root;int l=0,r=m-1,res=0,mid;
+         while (l<r){
+            mid=(l+r)>>1;
+            if (v<=mid) x=x->lc,y=y->lc,r=mid;
+            else res+=x->lc->v-y->lc->v,x=x->rc,y=y->rc,l=mid+1;
+         }
+         return res+x->v;
+      }
+}T[Maxn];
+  
+struct edge{
+   int u,v;
+   inline void init(){u=get();v=get();}
+}e[Maxn],*en=e,*Enull=e;
+  
+#define rev(x) swap(x->ch[0],x->ch[1]),x->rev^=1
+#define Min(a,b) ((a)<(b)?(a):(b))
+struct node{
+   node *ch[2],*f,*par;
+   int lab,top,v,minv;bool rev;
+   inline void update(){
+      minv=Min(ch[0]->minv,ch[1]->minv);
+      minv=Min(minv,v);
+   }
+   inline void pushdown(){
+      if (rev) rev(ch[0]),rev(ch[1]),rev=0;
+   }
+}pool[Maxn*2],*p[Maxn*2],*null=pool,*tot=pool;
+  
+inline void rotate(node *x,bool f){
+   static node *y;
+   y=x->f;x->top=y->top;
+   y->pushdown();x->pushdown();
+   y->f->ch[y->f->ch[1]==y]=x;x->f=y->f;
+   y->ch[f]=x->ch[!f];y->ch[f]->f=y;
+   x->ch[!f]=y;y->f=x;
+   y->update();
+}
+  
+inline void splay(node *x){
+   static node *y;
+   if (x->f==null) x->pushdown();
+   for (y=x->f;y!=null;y=x->f){
+      if (y->f==null) rotate(x,y->ch[1]==x);
+      else{
+         bool f=y->ch[1]==x;
+         if (f==(y->f->ch[1]==y)) rotate(y,f),rotate(x,f);
+         else rotate(x,f),rotate(x,!f);
+      }
+   }
+   x->update();
+}
+  
+inline void expose(node *x){
+   static node *y;
+   splay(x);
+   if (x->ch[1]!=null){
+      for (y=x->ch[1];y->ch[0]!=null;y=y->ch[0]) y->pushdown();
+      x->ch[1]->top=y->lab;y->par=x;
+      x->ch[1]->f=null;x->ch[1]=null;x->update();
+   }
+}
+  
+inline node *access(int lab){
+   static node *x,*y;
+   expose(x=p[lab]);
+   while (p[x->top]->par){
+      expose(y=p[x->top]->par);
+      y->ch[1]=x;x->f=y;
+      y->update();x=y;
+   }
+   return x;
+}
+  
+inline int getroot(int x){
+   return access(x)->top;
+}
+  
+inline void join(int u,int v){
+   static node *x;
+   x=access(v);rev(x);
+   p[v]->par=p[u];x->top=v;
+}
+  
+inline void cut(int u,int v){
+   expose(p[u]);expose(p[v]);
+   if (p[u]->par==p[v]) p[u]->par=0;
+   if (p[v]->par==p[u]) p[v]->par=0;
+}
+  
+inline void print(int x){
+   static int v,ch[10];
+   for (v=0;x;x/=10) ch[++v]=x%10;
+   while (v) putchar(ch[v--]+48);putchar(10);
+}
+  
+int main(){
+   for (int _T=get();_T;_T--){
+      n=get();m=get();q=get();
+      null->v=null->minv=inf;
+      null->ch[0]=null->ch[1]=null->f=null;
+      for (int i=1;i<=n+m;i++){
+         p[i]=++tot;tot->par=0;
+         tot->lab=tot->top=i;
+         tot->v=tot->minv=inf;
+         tot->ch[0]=tot->ch[1]=tot->f=null;
+      }
+      T[0].New();
+      for (int i=1;i<=m;i++){
+         (++en)->init();
+         int u=en->u,v=en->v,val=inf;
+         if (u!=v){
+            if (getroot(u)==getroot(v)){
+               access(u);node *mid=access(v);
+               val=Min(mid->v,mid->ch[1]->minv);
+               access(u);
+               val=Min(val,mid->ch[1]->minv);
+               cut(e[val].u,val+n);
+               cut(e[val].v,val+n);
+            }
+            else val=0;
+            p[i+n]->v=p[i+n]->minv=i;
+            join(u,i+n);
+            join(v,i+n);
+            T[i].build(T[i-1],val);
+         }
+         else T[i]=T[i-1];
+      }
+      for (int i=1;i<=q;i++){
+         int l=get(),r=get();
+         print(n-T[r].qry(T[l-1],l-1));
+      }
+      memset(Pool,0,sizeof(Node)*(Tot-Null+1));Tot=Null;
+      en=e;tot=null;
+   }
+   return 0;
+}

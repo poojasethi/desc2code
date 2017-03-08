@@ -1,0 +1,14 @@
+#include<cstdio>
+int a[101234];
+int main(){
+    int n;scanf("%d",&n);
+    for(int i=0;i<n;i++)scanf("%d",&a[i]);
+    int l=0,r=n-1;
+    int tl=0,tr=0;
+    while(l<=r){
+        if(tl>tr){tr+=a[r];r--;}
+        else{tl+=a[l];l++;}
+    }
+    printf("%d %d\n",l,n-l);
+    return 0;
+}

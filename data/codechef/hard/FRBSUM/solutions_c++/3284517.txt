@@ -1,0 +1,132 @@
+#include <algorithm>
+#include <iostream>
+#include <sstream>
+#include <memory>
+#include <vector>
+#include <string>
+#include <bitset>
+#include <queue>
+#include <stack>
+#include <list>
+#include <set>
+#include <map>
+#include <climits>
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+#include <ctime>
+#define FILL(a, v) (memset(a, v, sizeof(a)))
+#define foreach(i, Type, v) for(Type::iterator i=v.begin(); i!=v.end(); i++)
+using namespace std;
+typedef long long llong;
+typedef pair<int, int> Int2;
+
+const int Maxn = 100000+10;
+const int INF = 0x7f7f7f7f;
+const int MOD = 1000000007;
+const double eps = 1e-10;
+const double pi = acos(-1.0);
+
+inline void AddMod(int &x, int det) { x += det; if( x >= MOD ) x -= MOD; }
+inline int CompareTo(double a, double b) { return (a>b+eps) ? 1 : ((a+eps<b)?-1:0); }
+template<typename T> int sz(const T &a) { return a.size(); }
+template<typename T> T str2num(string s) { istringstream i(s); T x; i>>x; return x; }
+template<typename T> string x2str(T x) { ostringstream o; o<<x; return o.str(); }
+
+struct SegTree
+{
+	int l, r;
+	vector<int> a, sum;
+};
+
+int a[Maxn];
+SegTree seg[Maxn*3];
+
+void initTree(int p, int l, int r)
+{
+	int mid = (l+r)/2;
+
+    seg[p].l = l;  seg[p].r = r;
+	if( l == r )
+	{
+		seg[p].a.push_back(a[l]);
+		seg[p].sum.push_back(a[l]);
+		return;
+	}
+	initTree(p*2, l, mid);
+    initTree(p*2+1, mid+1, r);
+
+    vector<int> &t1 = seg[2*p].a, &t2=seg[2*p+1].a;
+    int i=0, j=0, n1=sz(t1), n2=sz(t2);
+    while( true )
+    {
+    	if( i==n1 && j==n2 )
+    		break;
+    	if( i == n1 )
+    		seg[p].a.push_back(t2[j++]);
+    	else if( j == n2 )
+    		seg[p].a.push_back(t1[i++]);
+    	else if( t1[i] <= t2[j] )
+    		seg[p].a.push_back(t1[i++]);
+    	else
+    		seg[p].a.push_back(t2[j++]);
+    }
+    seg[p].sum = seg[p].a;
+    for(int i=1; i<sz(seg[p].a); i++)
+    	seg[p].sum[i] = seg[p].sum[i-1]+seg[p].a[i];
+}
+int query(int p, int l, int r, int val)
+{
+	if( seg[p].l==l && seg[p].r==r )
+	{
+		int idx=-1, L=0, R=sz(seg[p].a)-1;
+		while( L <= R )
+		{
+			int mid = (L+R)>>1;
+			if( seg[p].a[mid] <= val )
+			{
+				idx = mid;
+				L = mid+1;
+			}
+			else
+				R = mid-1;
+		}
+		return idx==-1?0:seg[p].sum[idx];
+	}
+	if( r <= seg[p*2].r )
+		return query(p*2, l, r, val);
+	else if( l >= seg[p*2+1].l )
+		return query(p*2+1, l, r, val);
+	else
+		return query(p*2, l, seg[p*2].r, val) + query(p*2+1, seg[p*2+1].l, r, val);
+}
+
+int main()
+{
+	int n, m, u, v;
+    ios::sync_with_stdio(0);
+
+    cin>>n;
+    for(int i=1; i<=n; i++)
+    	cin>>a[i];
+    initTree(1, 1, n);
+
+    cin>>m;
+    while( m-- )
+    {
+    	cin>>u>>v;
+    	int k = 0;
+    	while( true )
+    	{
+    		int tmp = query(1, u, v, k+1);
+    		//printf("%d %d\n", k+1, tmp);
+    		if( tmp >= k+1 )
+    			k = tmp;
+    		else
+    			break;
+    	}
+    	printf("%d\n", k+1);
+    }
+
+    return 0;
+}

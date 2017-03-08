@@ -1,0 +1,167 @@
+#include <cassert>
+#include <iostream>
+#include <iterator>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cstdio>
+#include <cctype>
+#include <cstring>
+#include <utility>
+#include <map>
+#include <cstdlib>
+
+using namespace std;
+
+int x[150], y[150], Q[150];
+inline void maximize(long long &a, long long b) {
+    a = max(a, b);
+}
+inline long long area(long long x1, long long y1, long long x2, long long y2) {
+    return x1*y2 - y1*x2;
+}
+long long area(int i, int j) {
+    long long x0 = 0, y0 = 0;
+    long long x1 = x[i], y1 = y[i];
+    long long x2 = x1 + x[j], y2 = y1 + y[j];
+    return area(x0, y0, x1, y1) + area(x1, y1, x2, y2) + area(x2, y2, x0, y0);
+}
+long long area(int i, int j, int k) {
+    long long x0 = 0, y0 = 0;
+    long long x1 = x[i], y1 = y[i];
+    long long x2 = x1 + x[j], y2 = y1 + y[j];
+    long long x3 = x2 + x[k], y3 = y2 + y[k];
+    return area(x0, y0, x1, y1) + area(x1, y1, x2, y2) + area(x2, y2, x3, y3) + area(x3, y3, x0, y0);
+}
+inline pair<int, int> add(int i, int j) {
+    return make_pair(x[i]+x[j], y[i]+y[j]);
+}
+inline pair<int, int> add(int i, int j, int k) {
+    return make_pair(x[i]+x[j]+x[k], y[i]+y[j]+y[k]);
+}
+
+inline int randint(int n) {
+    return int(rand()/(1.0+RAND_MAX)*n);
+}
+
+inline void swapthem(int i, int j) {
+    swap(x[i], x[j]);
+    swap(y[i], y[j]);
+    swap(Q[i], Q[j]);
+}
+inline bool lt(int i, int j) {
+    if (Q[i] != Q[j]) {
+        return Q[i] < Q[j];
+    } else {
+        return (long long)y[i]*x[j] < (long long)y[j]*x[i];
+    }
+}
+void sortthem(int l, int r) {
+    if (l+1 < r) {
+        int pos = l + randint(r-l);
+        assert(pos < r);
+        swapthem(l, pos);
+        pos = l;
+        int i = l;       
+        while (++l < r) {
+            if (lt(l, pos)) {
+                swapthem(++i, l);
+            }
+        }
+        swapthem(pos, i);
+        sortthem(pos, i);
+        sortthem(i+1, r);
+    }
+}
+void upd(long long &sol, const vector<int> &inds) {
+    long long cand = 0;
+    vector<pair<long long, long long> > p;
+    long long a = 0;
+    long long b = 0;
+    for (int i=0; i<(int)inds.size(); ++i) {
+        p.push_back(make_pair(a, b));
+        a += x[inds[i]];
+        b += y[inds[i]];
+    }
+    p.push_back(make_pair(a, b));
+    for (int i=0; i+1<(int)p.size(); ++i) {
+        cand += area(p[i].first, p[i].second, p[i+1].first, p[i+1].second);
+    }
+    cand += area(p.back().first, p.back().second, p[0].first, p[0].second);
+    if (cand > sol) {
+        cerr << "update!\n";
+        for (int i=0; i<(int)inds.size(); ++i) {
+            cerr << x[inds[i]] << ' ' << y[inds[i]] << '\n';
+        }
+        cerr << cand << '\n';
+    }
+    sol = max(sol, cand);
+}
+void go(int at, int n, int xval, int yval, long long &sol, vector<int> &inds) {
+    if (inds.size()>6 || at==n) {
+        return;
+    }
+    if (xval==0 && yval==0 && inds.size()>=3) {
+        upd(sol, inds);
+    }
+    inds.push_back(at);
+    go(at, n, xval+x[at], yval+y[at], sol, inds);
+    inds.pop_back();
+    go(at+1, n, xval, yval, sol, inds);
+}
+int main() {
+    cin.sync_with_stdio(false);
+    int n;
+    cin >> n;
+    for (int i=0; i<n; ++i) {
+        cin >> x[i] >> y[i];
+        if (x[i] >= 0) {
+            Q[i] = (y[i]>=0 ? 1 : 4);
+        } else {
+            Q[i] = (y[i]>0 ? 2 : 3);
+        }
+    }
+    sortthem(0, n);
+
+    map< pair<int, int>, long long > largest;
+    for (int i=0; i<n; ++i) {
+        for (int j=i; j<n; ++j) {
+            maximize(largest[add(i, j)], area(i, j));
+            for (int k=j; k<n; ++k) {
+                maximize(largest[add(i, j, k)], area(i, j, k));
+            }
+        }
+    }
+    vector< pair<int, int> > V;
+    vector<long long> A;
+    for (map< pair<int, int>, long long>::const_iterator it=largest.begin(); it!=largest.end(); ++it) {
+        V.push_back(it->first);
+        A.push_back(it->second);
+    }
+
+    long long sol = 0;
+    for (int i=0; i<(int)V.size(); ++i) {
+        pair<int, int> other(-V[i].first, -V[i].second);
+        vector< pair<int, int> >::const_iterator p = lower_bound(V.begin(), V.end(), other);
+        if (p==V.end() || *p!=other) {
+            continue;
+        }
+        maximize(sol, A[i] + A[p-V.begin()]);
+    }
+    cout << sol/2 << '.' << (sol%2*5) << '\n';
+
+    /*
+    long long realbest = 0;
+    vector<int> v;
+    go(0, n, 0, 0, realbest, v);
+    if (realbest != sol) {
+        cerr << "expected " << sol << " but actually " << realbest << '\n';
+        for (int i=0; i<n; ++i) {
+            cerr << x[i] << ' ' << y[i] << '\n';
+        }
+    }
+    */
+
+	return 0;
+}

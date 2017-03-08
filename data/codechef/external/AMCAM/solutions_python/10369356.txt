@@ -1,0 +1,155 @@
+#include<bits/stdc++.h>
+
+#define MOD 1000000007
+#define MAX 404
+#define ll long long
+#define slld(t) scanf("%lld",&t)
+#define sd(t) scanf("%d",&t)
+#define pd(t) printf("%d\n",t)
+#define plld(t) printf("%lld\n",t)
+#define pcc pair<char,char>
+#define pii pair<int,int>
+#define pll pair<ll,ll>
+#define tr(container,it) for(typeof(container.begin()) it=container.begin();it!=container.end();it++)
+#define mp(a,b) make_pair(a,b)
+#define FF first
+#define SS second
+#define pb(x) push_back(x)
+#define vi vector<int>
+#define vpii vector<pii >
+#define vll vector<ll>
+#define clr(x) memset(x,0,sizeof(x))
+
+using namespace std;
+
+pii C[202],M[202];
+ll dist[202][202];
+int n,k;
+int cap[MAX][MAX];
+int from[MAX];
+bool visited[MAX];
+
+// source=s and sink=d
+int bfs(int s,int d){
+	queue<int> st;
+	st.push(s);
+	
+	clr(visited);
+	clr(from);
+
+	while(st.empty()==false){
+		int top=st.front();
+		st.pop();
+		
+		if(visited[top]) continue;
+		visited[top]=true;
+
+		if(top==d) break;
+		
+		for(int i=1;i<MAX;i++){
+			if(cap[top][i]){
+				if(!visited[i]){
+					st.push(i);
+					from[i]=top;
+				}
+			}
+		}
+	}
+	
+	if(!from[d]) return 0;
+	
+	int path_cap=MOD;
+	int tn=from[d],to=d;
+	while(to!=s){
+		if(cap[tn][to]<path_cap) path_cap=cap[tn][to];
+		to=tn;
+		tn=from[tn];
+	}
+	
+	tn=from[d],to=d;
+	while(to!=s){
+		cap[tn][to]-=path_cap;
+		cap[to][tn]+=path_cap;
+		to=tn;
+		tn=from[tn];
+	}
+	
+	return path_cap;
+}
+
+int flow(int s,int d){
+	int ans=0;
+	
+	int curr=bfs(s,d);
+	while(curr){
+		ans+=curr;
+		curr=bfs(s,d);
+	}
+	
+	return ans;
+}
+
+bool pos(ll d){
+	// restricted (i,j) will be those for which dist[i][j]>d
+	// make bipartite graph of those and find min vertex cover = x (say)
+	// return true if 2*n-x>=k 
+	
+	int source=0,sink=((n<<1)|1);
+	clr(cap);
+	
+	for(int i=1;i<=n;i++){
+		bool flag=0;
+		for(int j=1;j<=n;j++){
+			if(dist[i][j]>d){
+				flag=1;
+				cap[i][n+j]=1;
+				cap[n+j][sink]=1;
+			}
+		}
+		if(flag) cap[source][i]=1;
+	}
+	
+	int x=flow(source,sink);
+	
+	if(2*n-x>=k) return true;
+	return false;
+}
+
+ll bin(ll l,ll r){
+	if(l==r){
+		return l;
+	}
+	if(l==r-1){
+		if(pos(l)) return l;
+		return r;
+	}
+	
+	ll mid=(l+r)>>1;
+	if(pos(mid)) return bin(l,mid);
+	return bin(mid+1,r);
+}
+
+int main(){
+	sd(n);sd(k);
+	
+	for(int i=1;i<=n;i++){
+		sd(C[i].FF);sd(C[i].SS);
+	}
+	
+	for(int i=1;i<=n;i++){
+		sd(M[i].FF);sd(M[i].SS);
+	}
+		
+	ll low=MOD*1LL*MOD,high=0;
+		
+	for(int i=1;i<=n;i++){
+		for(int j=1;j<=n;j++){
+			dist[i][j]=(C[i].FF-M[j].FF)*1LL*(C[i].FF-M[j].FF)+(C[i].SS-M[j].SS)*1LL*(C[i].SS-M[j].SS);
+			if(dist[i][j]<low) low=dist[i][j];
+			if(dist[i][j]>high) high=dist[i][j];
+		}
+	}
+	
+	ll ans=bin(low,high);
+	printf("%.11lf",sqrt(ans));
+}

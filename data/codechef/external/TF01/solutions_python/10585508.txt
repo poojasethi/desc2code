@@ -1,0 +1,14 @@
+import sys
+
+for __ in range(input()) :
+    n , k = map(int,sys.stdin.readline().split())
+    lists = map(int,sys.stdin.readline().split())
+    dp = [0]*(k+1)
+    dp[0]=1
+    for i in lists :
+        for j in range(k-i,-1,-1) :
+            if dp[k] :
+                break
+            if dp[j] :
+                dp[j+i] = 1
+    print dp[k]

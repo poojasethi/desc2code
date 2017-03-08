@@ -1,0 +1,170 @@
+#include <stdio.h>
+#include <math.h>
+#include<iostream>
+#define MAX 500000
+
+void swap(int & a, int & b)
+{
+    int temp = a;
+    a = b;
+    b = temp;
+}
+
+struct node
+{
+    int count0,count1,count2;
+};
+node tree[MAX];  // To store segment tree
+int lazy[MAX] = {0};  // To store pending updates
+
+/***********************************UPDATE*************************************************************************/
+void updateRangeUtil(int si, int ss, int se, int us, int ue)
+{
+    if (lazy[si] != 0)
+    {
+        if(lazy[si]%3==0)
+        {
+            lazy[si]=0;
+        }
+        else if(lazy[si]%3==1)
+        {
+            swap(tree[si].count0,tree[si].count2);
+            swap(tree[si].count1,tree[si].count2);
+        }
+        else if(lazy[si]%3==2)
+        {
+            swap(tree[si].count0,tree[si].count1);
+            swap(tree[si].count1,tree[si].count2);
+        }
+        if (ss != se)
+        {
+            lazy[si*2 + 1]   += lazy[si];
+            lazy[si*2 + 2]   += lazy[si];
+        }
+        lazy[si] = 0;
+    }
+    if (ss>se || ss>ue || se<us)
+        return ;
+
+    if (ss>=us && se<=ue)
+    {
+        swap(tree[si].count0,tree[si].count2);
+        swap(tree[si].count1,tree[si].count2); 
+        if (ss != se)
+        {
+            lazy[si*2 + 1]++;
+            lazy[si*2 + 2]++;
+        }
+        return;
+    }
+    int mid = (ss+se)/2;
+    updateRangeUtil(si*2+1, ss, mid, us, ue);
+    updateRangeUtil(si*2+2, mid+1, se, us, ue);
+ 
+    tree[si].count0 = tree[si*2+1].count0 + tree[si*2+2].count0;
+    tree[si].count1 = tree[si*2+1].count1 + tree[si*2+2].count1;
+    tree[si].count2 = tree[si*2+1].count2 + tree[si*2+2].count2;
+}
+ 
+
+void updateRange(int n, int us, int ue)
+{
+   updateRangeUtil(0, 0, n-1, us, ue);
+}
+/*******************************GETSUM***************************************************************************************/
+int getSumUtil(int ss, int se, int qs, int qe, int si)
+{
+    if (lazy[si] != 0)
+    {
+        if(lazy[si]%3==0)
+        {
+            lazy[si]=0;
+        }
+        else if(lazy[si]%3==1)
+        {
+            swap(tree[si].count0,tree[si].count2);
+            swap(tree[si].count1,tree[si].count2);
+        }
+        else if(lazy[si]%3==2)
+        {
+            swap(tree[si].count0,tree[si].count1);
+            swap(tree[si].count1,tree[si].count2);
+        }
+        if (ss != se)
+        {
+            lazy[si*2 + 1]   += lazy[si];
+            lazy[si*2 + 2]   += lazy[si];
+        }
+        lazy[si] = 0;
+    }
+    if (ss>se || ss>qe || se<qs)
+        return 0;
+ 
+    if (ss>=qs && se<=qe)
+        return tree[si].count0;
+ 
+    int mid = (ss + se)/2;
+    return getSumUtil(ss, mid, qs, qe, 2*si+1) +
+           getSumUtil(mid+1, se, qs, qe, 2*si+2);
+}
+ 
+int getSum(int n, int qs, int qe)
+{
+    // Check for erroneous input values
+    if (qs < 0 || qe > n-1 || qs > qe)
+    {
+        printf("Invalid Input");
+        return -1;
+    }
+ 
+    return getSumUtil(0, n-1, qs, qe, 0);
+}
+/******************************************CONSTRUCT**************************************************************************************/ 
+void constructSTUtil(int ss, int se, int si)
+{
+    if (ss > se)
+        return ;
+ 
+    if (ss == se)
+    {
+        tree[si].count0=1;
+        tree[si].count1=0;
+        tree[si].count2=0;
+        return;
+    }
+    int mid = (ss + se)/2;
+    constructSTUtil(ss, mid, si*2+1);
+    constructSTUtil(mid+1, se, si*2+2);
+ 
+    tree[si].count0 = tree[si*2+1].count0 + tree[si*2+2].count0;
+    tree[si].count1 = tree[si*2+1].count1 + tree[si*2+2].count1;
+    tree[si].count2 = tree[si*2+1].count2 + tree[si*2+2].count2;
+}
+ 
+void constructST(int n)
+{
+    constructSTUtil(0, n-1, 0);
+}
+/****************************************MAIN********************************************************************/ 
+ 
+int main()
+{
+   int n,q;
+   scanf("%d %d",&n,&q);
+   constructST(n);
+   int a,b,c;
+   for(int i=0;i<q;i++)
+   {
+    scanf("%d %d %d",&a,&b,&c);
+    if(a==1)
+    {
+        printf("%d\n",getSum(n,b,c));
+    }
+    else if(a==0)
+    {
+        updateRange(n,b,c);
+    }
+   }
+ 
+    return 0;
+}

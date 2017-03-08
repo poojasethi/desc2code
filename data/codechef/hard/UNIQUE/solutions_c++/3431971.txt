@@ -1,0 +1,160 @@
+#include<cstdio>
+#include<cstring>
+#include<cmath>
+#include<algorithm>
+#include<set>
+#include<vector>
+using namespace std ;
+
+
+const int MAXN = 100000;
+const int MAXLOG = 17;
+
+int rank[MAXLOG+2][MAXN+5];
+int ix[MAXN+5];
+char str[MAXN+5];
+int len;
+int MAXi;
+
+int startIndex[MAXN+5];
+int uniqueFrom[MAXN+5];
+
+
+struct Answer{
+    int s,len;
+    Answer():
+        s(0),len(MAXN+1){}
+    Answer(int s,int len):
+        s(s),len(len){}
+    bool operator < (const Answer& that) const
+    {
+        if (len != that.len)return len < that.len;
+        return rank[MAXi-1][s] < rank[MAXi-1][that.s];
+    }
+};
+
+set<Answer> active;
+vector<Answer> toremove[MAXN+5];
+
+bool cmp(int i1,int i2)
+{
+    if (rank[MAXi-1][i1] != rank[MAXi-1][i2])return rank[MAXi-1][i1] < rank[MAXi-1][i2];
+    int half = 1<<(MAXi-1);
+    if (max(i1,i2)+half >= len)return i1 > i2;
+    return rank[MAXi-1][i1+half] < rank[MAXi-1][i2+half];
+}
+
+
+int sz[MAXN+5];
+int at[MAXN+5];
+int temp[MAXN+5];
+void countSort(int plus)
+{
+    for (int i=0;i<=max(256,len);i++)
+        sz[i] = 0;
+    for (int i=0;i<len;i++)
+        if (ix[i] + plus >= len)sz[0]++;
+        else sz[rank[MAXi-1][ix[i]+plus]+1]++;
+    at[0] = 0;
+    for (int i=1;i<=max(256,len);i++)
+        at[i] = at[i-1] + sz[i-1];
+    for (int i=0;i<len;i++)
+        if (ix[i]+plus >= len) temp[at[0]++] = ix[i];
+        else temp[at[rank[MAXi-1][ix[i]+plus]+1]++] = ix[i];
+    for (int i=0;i<len;i++)
+        ix[i] = temp[i];
+    return;
+}
+void suffixArrays()
+{
+    for (int c=0;c<len;c++){
+        rank[0][c] = str[c];
+        ix[c] = c;
+    }
+    for (MAXi=1;(1<<(MAXi-1))<len;MAXi++){
+        countSort(1<<(MAXi-1));
+        countSort(0);
+        rank[MAXi][ix[0]] = 0;
+        int cnt = 0;
+        for (int i=1;i<len;i++){
+            if (cmp(ix[i-1],ix[i]))cnt++;
+            rank[MAXi][ix[i]] = cnt;
+        }
+    }
+    return ;
+}
+
+
+void suffixArrays_Slow()
+{
+    for (int c=0;c<len;c++){
+        rank[0][c] = str[c];
+        ix[c] = c;
+    }
+    for (MAXi=1;(1<<(MAXi-1))<=len;MAXi++){
+        sort(ix,ix+len,cmp);
+        rank[MAXi][ix[0]] = 0;
+        int cnt = 0;
+        for (int i=1;i<len;i++){
+            if (cmp(ix[i-1],ix[i]))cnt++;
+            rank[MAXi][ix[i]] = cnt;
+        }
+    }
+    return ;
+}
+
+int lcp(int i1,int i2)
+{
+    int ret = 0;
+    for (int i=MAXi-1;i>=0;i--){
+        if (max(i1,i2)>=len)break;
+        if (rank[i][i1] == rank[i][i2]){
+            i1+=1<<i;
+            i2+=1<<i;
+            ret+=1<<i;
+        }
+    }
+    return ret;
+}
+
+
+int main()
+{
+    //freopen("unique.in","r",stdin);
+    int c,c2;
+    scanf("%s",str);
+    len = strlen(str);
+    suffixArrays();
+    int prev = 0;
+    for (int i=0;i<len;i++){
+        int cur = 0;
+        if (i + 1 < len)
+            cur = lcp(ix[i],ix[i+1]);
+        uniqueFrom[ix[i]] = 1 + max(cur,prev);
+        prev = cur;
+    }
+    for (c=0;c<len;c++)
+        startIndex[c] = -MAXN-2;
+    //memset(startIndex,-1,sizeof(startIndex));
+    int maxi = -MAXN-2;
+    for (c=0;c<len;c++){
+        startIndex[c+uniqueFrom[c]-1] = c;
+        if (uniqueFrom[c] + c <= len){
+            active.insert(Answer(c,uniqueFrom[c]));
+            //printf("adds %d %d\n",c+1,uniqueFrom[c]);
+            toremove[c + uniqueFrom[c] - 1].push_back(Answer(c,uniqueFrom[c]));
+        }
+        Answer a1,a2;
+        if (!active.empty())
+            a1 = *active.begin();
+        a2 = Answer(maxi,c-maxi+1);
+        if (a2 < a1)
+            swap(a1,a2);
+        printf("%d %d\n",a1.s+1,a1.len,a2.s+1,a2.len);
+        maxi = max(maxi,startIndex[c]);
+        for (c2=0;c2<toremove[c].size();c2++)
+            active.erase(toremove[c][c2]);
+        //printf("* %d\n",maxi);
+    }
+    return 0;
+}

@@ -1,0 +1,49 @@
+#include<stdio.h>
+#include<cstring>
+
+#define N 200010
+struct Edge {
+	int v, x, dir;
+}E[N << 1];
+
+int l[N], tot;
+int total[N], Up, rt[N];
+
+void add(int u, int v, int dir) {
+	E[tot].v = v;
+	E[tot].x = l[u];
+	E[tot].dir = dir;
+	l[u] = tot ++;
+}
+
+void dfs(int fa, int u, int up) {
+	total[u] = 0;
+	for(int i = l[u]; ~i; i = E[i].x) {
+		int v = E[i].v;
+		if(v == fa)		continue;
+		dfs(u, v, up + (E[i].dir == 1 ? 1: -1));
+		total[u] += total[v] + E[i].dir;
+	}
+	rt[u] = up;
+	if(up > Up)
+		Up = up;
+}
+
+int main() {
+	int n, u, v;
+	scanf("%d", &n);
+	memset(l, -1, sizeof l);
+	for(int i = 0; i < n - 1; i ++) {
+		scanf("%d%d", &u, &v);
+		add(u, v, 0);
+		add(v, u, 1);
+	}
+	Up = 0;
+	dfs(-1, 1, 0);
+	printf("%d\n", total[1] - Up);
+	for(int i = 1; i <= n; i ++)if(rt[i] == Up) {
+		printf("%d ", i);
+	}
+	puts("");
+	return 0;
+}

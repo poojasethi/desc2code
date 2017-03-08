@@ -1,0 +1,202 @@
+#define INPUT	"meanmedi.in"
+#define OUTPUT	"meanmedi.out"
+ 
+#define MULTI_CASE
+ 
+// f{{{ 
+ 
+#include <stdint.h>
+#include <algorithm>
+#include <bitset>
+#include <cmath>
+#include <cassert>
+#include <cctype>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <deque>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <list>
+#include <map>
+#include <numeric>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <utility>
+#include <vector>
+#include <limits>
+ 
+#define ITER_VECTOR(v, var) \
+	for (typeof((v).begin()) var = (v).begin(); var != (v).end(); var ++)
+ 
+#define ITER_VECTOR_IDX(v, var) \
+	for (typeof((v).size()) var = 0; var < (v).size(); var ++)
+ 
+using namespace std;
+ 
+// f}}}
+ 
+namespace Solve
+{
+	const int SEQLEN_MAX = 65,
+		  VAL_MAX = 1205,
+		  SUM_MAX = SEQLEN_MAX * VAL_MAX,
+		  INF = 1 << 30,
+		  KNAPSACK_NODE_MEMSIZE = SEQLEN_MAX * SUM_MAX * 2;
+ 
+	struct Knapsack
+	{
+		struct Seg
+		{
+			int low, high;
+		};
+		struct Node
+		{
+			int *val_begin, *val_end;
+		};
+		Node cap[SEQLEN_MAX];
+		void work(const int *seq, int seqlen, int nchosen);
+	};
+	Knapsack npsk_front, npsk_end;
+	int knapsack_mem[KNAPSACK_NODE_MEMSIZE], knapsack_mem_size;
+ 
+	int calc_min_diff(int len_front, int len_end, int tgt);
+ 
+	double work(int *seq, int seqlen, int nchosen);
+	void solve(FILE *fin, FILE *fout);
+}
+ 
+void Solve::solve(FILE *fin, FILE *fout)
+{
+	static int seq[SEQLEN_MAX];
+	int seqlen, nch, ncase = 1;
+#ifdef MULTI_CASE
+	fscanf(fin, "%d", &ncase);
+#endif
+	while (ncase --)
+	{
+		knapsack_mem_size = 0;
+		fscanf(fin, "%d%d", &seqlen, &nch);
+		for (int i = 0; i < seqlen; i ++)
+			fscanf(fin, "%d", &seq[i]);
+		fprintf(fout, "%.3lf\n", work(seq, seqlen, nch));
+	}
+}
+ 
+double Solve::work(int *seq, int seqlen, int nchosen)
+{
+	if (nchosen == 1)
+		return 0;
+	sort(seq, seq + seqlen);
+	if (nchosen == 2)
+	{
+		int ans = INF;
+		for (int i = 1; i < seqlen; i ++)
+			ans = min(ans, seq[i] - seq[i - 1]);
+		return ans * 0.5;
+	}
+	int len0 = (nchosen + 1) / 2 - 1,
+		len1 = nchosen - 1 - len0;
+	npsk_front.work(seq, seqlen - len1, len0);
+	static int seq_rev[SEQLEN_MAX];
+	reverse_copy(seq, seq + seqlen, seq_rev);
+	npsk_end.work(seq_rev, seqlen - len0, len1);
+	int ans = INF;
+	for (int i = len0; i + len1 + 1<= seqlen; i ++)
+		ans = min(ans, calc_min_diff(i, seqlen - 1 - i, seq[i] * (nchosen - 1)));
+	return double(ans) / nchosen;
+}
+ 
+int Solve::calc_min_diff(int len_front, int len_end, int tgt)
+{
+	int *i = npsk_front.cap[len_front - 1].val_begin,
+		*i_end = npsk_front.cap[len_front - 1].val_end,
+		*j = npsk_end.cap[len_end - 1].val_end - 1,
+		*j_begin = npsk_end.cap[len_end - 1].val_begin,
+		*j_end = j + 1;
+	if (i == i_end || j_begin == j_end)
+		return INF;
+	int ans = INF;
+	while (i != i_end)
+	{
+		while (j >= j_begin && *i + *j > tgt)
+			j --;
+		if (j >= j_begin)
+			ans = min(ans, tgt - (*i + *j));
+		j ++;
+		if (j < j_end)
+			ans = min(ans, *i + *j - tgt);
+		else j --;
+		i ++;
+	}
+	return ans;
+}
+ 
+void Solve::Knapsack::work(const int *seq, int seqlen, int nchosen)
+{
+	typedef uint32_t Mask_t;
+	assert(nchosen <= 30);
+	struct Dp_node
+	{
+		int sum;
+		Mask_t mask;
+		// mask[i]: whether the sum can be achieved by choosing i numbers
+	};
+	Mask_t mask_valid_sum = (1 << (nchosen + 1)) - 1;
+	static Dp_node f[2][SUM_MAX];
+	int nf[2];
+	nf[0] = 1;
+	f[0][0].sum = 0;
+	f[0][0].mask = 1;
+	for (int cur = 0, i = 0; i < seqlen; i ++)
+	{
+		assert(seq[i] >= 0);
+		int prev = cur;
+		cur ^= 1;
+		int nfp = nf[prev], seq_i = seq[i];
+		Dp_node *p1 = f[prev], *p2 = p1,
+				*p2_end = p2 + nfp,
+				*pt = f[cur];
+		p1[nfp].sum = SUM_MAX + 1;
+		cap[i].val_begin = knapsack_mem + knapsack_mem_size;
+		while (p2 != p2_end)
+		{
+			int s = min(p1->sum, p2->sum + seq_i);
+			pt->sum = s;
+			Mask_t m = 0;
+			if (p1->sum == s)
+				m |= (p1 ++)->mask;
+			if (p2->sum + seq_i == s)
+				m |= (p2 ++)->mask << 1;
+			pt->mask = m;
+			if (!(m & mask_valid_sum))
+				continue;
+			if ((m >> nchosen) & 1)
+				knapsack_mem[knapsack_mem_size ++] = s;
+			pt ++;
+		}
+		cap[i].val_end = knapsack_mem + knapsack_mem_size;
+		nf[cur] = pt - f[cur];
+	}
+}
+ 
+// f{{{ main
+int main()
+{
+#if defined(INPUT) && defined(OUTPUT) && !defined(STDIO) && !defined(ONLINE_JUDGE)
+	FILE *fin = fopen(INPUT, "r"),
+		 *fout = fopen(OUTPUT, "w");
+	Solve::solve(fin, fout);
+	fclose(fin);
+	fclose(fout);
+#else
+	Solve::solve(stdin, stdout);
+#endif
+}
+// f}}}
+// vim: filetype=cpp foldmethod=marker foldmarker=f{{{,f}}}
+ 

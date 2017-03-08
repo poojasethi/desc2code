@@ -1,0 +1,78 @@
+#include<cstdio>
+#include<vector>
+#include<complex>
+#include<algorithm>
+#include<cassert>
+
+typedef std::complex<double> com;
+
+
+com omega(com x, com y) {
+	return conj(x-y)/(x-y);
+}
+com rho(com x, com y) {
+	return (conj(x) * y - x * conj(y))/(x-y);
+}
+com intersection(com a, com b, com c, com d) {
+	return (rho(a,b) - rho(c,d))/(omega(a,b) - omega(c,d));
+}
+int turn2(com a, com b, com c) {
+	double x = imag((a-b)*conj(c-b));
+	return x < 0 ? -1 : x > 0;
+}
+bool straddles(com a, com b, com c, com d) {
+	return turn2(c, d, a) * turn2(c, d, b) == -1 &&
+		   turn2(a, b, c) * turn2(a, b, d) == -1;
+}
+
+com start, end;
+std::vector<com> x;
+std::vector<com> inter;
+std::vector<int> inter_index;
+int n;
+
+com readcom() {
+	int a, b;
+	scanf("%d%d", &a, &b);
+	return com(a,b);
+}
+com getx(int i) { return x[(i+n) % n]; }
+
+
+int main() {
+	start = readcom();
+	end   = readcom();
+	scanf("%d", &n);
+	for(int i=0;i<n;i++) x.push_back(readcom());
+	for(int i=0;i<n;i++) {
+		int j = (i+1)%n;
+		if(straddles(x[i], x[j], start, end)) {
+			inter.push_back(intersection(x[i], x[j], start, end));
+			inter_index.push_back(i);
+		}
+		if(turn2(start,end,x[i]) == 0) {
+			inter.push_back(x[i]);
+			inter_index.push_back(i);
+		}
+	}
+	assert(inter.size() <= 2);
+//	printf("%d\n", inter.size());
+	if(inter.size() < 2) {
+		printf("%.9f\n", abs(start-end));
+	} else {
+//		printf("%d %d\n", inter_index[0], inter_index[1]);
+		double to = std::min(abs(start-inter[0])+abs(inter[1]-end),
+							 abs(start-inter[1])+abs(inter[0]-end));
+
+		double a = abs(inter[0] - getx(inter_index[0]+1)) + abs(inter[1] - getx(inter_index[1]));
+		for(int i=(inter_index[0]+1) % n;i!=inter_index[1];i=(i+1) % n) a += abs(getx(i) - getx(i+1));
+		
+		double b = abs(inter[1] - getx(inter_index[1]+1)) + abs(inter[0] - getx(inter_index[0]));
+		for(int i=(inter_index[1]+1) % n;i!=inter_index[0];i=(i+1) % n) b += abs(getx(i) - getx(i+1));
+		
+		double c = abs(inter[0] - inter[1])*2;
+
+		printf("%.9f\n", to+std::min(a,std::min(b,c)));
+	}
+	return 0;
+}

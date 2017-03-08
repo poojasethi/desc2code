@@ -1,0 +1,155 @@
+#include <iostream>
+#include <cstring>
+#include <cmath>
+#include <cstdio>
+#include <climits>
+#include <ctime>
+#include <cassert>
+#include <cctype>
+#include <algorithm>
+#include <numeric>
+#include <map>
+#include <set>
+#include <queue>
+#include <string>
+#include <vector>
+#include <bitset>
+
+#define MN 100005
+#define MX 35
+#define X first
+#define Y second
+#define pb push_back
+#define bit(x) (1LL << (x))
+#define bnum(x) (__builtin_popcount(x))
+#define sqr(x) ((x) * (x))
+#define sz(x) ((int)(x.size()))
+#define PQ priority_queue
+
+using namespace std;
+typedef long long LL;
+typedef double DB;
+typedef pair<LL, LL> pLL;
+typedef vector<int> vi;
+
+template <class T> inline void chkmin(T &a, T b) {
+	if (b < a) a = b;
+}
+template <class T> inline void chkmax(T &a, T b) {
+	if (a < b) a = b;
+}
+
+vi con[MN];
+LL M;
+int n, m, K, X;
+LL a[MN];
+int mrk[MN];
+int pw[MX];
+LL pwc[MX];
+
+void input() {
+	int i, u, v;
+
+	scanf("%d%d%d", &n, &m, &K);
+	for (i = 0; i < m; i++) {
+		scanf("%d%d", &u, &v);
+		u--, v--;
+		con[u].pb(v);
+		con[v].pb(u);
+	}
+	for (i = 0; i < n; i++) scanf("%lld", a + i);
+	for (i = 0; i < K; i++) {
+		scanf("%d", pw + i);
+		pw[i]--;
+		mrk[pw[i]] = i + 1;
+	}
+	for (i = 0; i < K; i++) scanf("%lld", pwc + i);
+
+	scanf("%d%lld", &X, &M);
+	for (i = 0; i < X; i++) {
+		scanf("%d", &u);
+		M += pwc[u - 1];
+	}
+}
+
+int q[MN * 2], chk[MN];
+pLL p[MX];
+int pn;
+
+bool cmp(const pLL &a, const pLL &b) {
+	return 1.0 * a.X / a.Y > 1.0 * b.X / b.Y;
+}
+
+LL sum[MX], sumc[MX];
+void prepare() {
+	LL cst, tot;
+	int i, j, u, v;
+	int st, en, flg;
+
+	for (i = 0; i < n; i++) if (!chk[i]) {
+		flg = st = en = 0;
+		tot = 0;
+		q[en++] = i;
+		chk[i] = 1;
+
+		while (st < en) {
+			u = q[st++];
+			tot += a[u];
+			if (mrk[u] > 0) {
+				if (flg == 0) flg = 1, cst = pwc[mrk[u] - 1];
+				else chkmin(cst, pwc[mrk[u] - 1]);
+			}
+
+			for (j = 0; j < sz(con[u]); j++) {
+				v = con[u][j];
+				if (chk[v]) continue;
+				chk[v] = 1, q[en++] = v;
+			}
+		}
+
+		if (!flg) continue;
+		if (cst <= M) p[pn++] = pLL(tot, cst);
+	}
+}
+
+LL rlt;
+void solve(int k, LL cst, LL mm) {
+	/*if (sumc[k] <= cst) {
+		chkmax(rlt, mm + sum[k]);
+		return;
+	}*/
+
+	if(k == K+1){
+	    chkmax(rlt, mm );
+	    return ;
+	}
+
+	chkmax(rlt, mm);
+	if (mm + sum[k] <= rlt) return;
+	if (mm + 1.0 * p[k].X / p[k].Y * cst <= rlt) return;
+	if (k == pn) return;
+	if (cst >= p[k].Y) {
+		solve(k + 1, cst - p[k].Y, mm + p[k].X);
+	}
+	solve(k + 1, cst, mm);
+}
+
+int main() {
+//	freopen("in.txt", "r", stdin);
+//	freopen("out.txt", "w", stdout);
+
+	int i;
+	input();
+	prepare();
+	assert(pn <= 31);
+
+	sort(p, p + pn, cmp);
+	for (i = pn - 1; i >= 0; i--) {
+		sum[i] = sum[i + 1] + p[i].X;
+		sumc[i] = sumc[i + 1] + p[i].Y;
+	}
+
+	solve(0, M, 0);
+ 	cout << rlt << endl;
+	return 0;
+}

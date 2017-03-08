@@ -1,0 +1,62 @@
+#include <iostream>
+#include <map>
+#include <vector>
+#include <cstring>
+#include <utility>
+#include <algorithm>
+#include <cstdio>
+using namespace std;
+string b[30];
+vector <string> v;
+
+string function(int x1, int y1, int x2, int y2){
+    int x=x2-x1,y=y2-y1;
+	int i,j;
+    string ans,t;
+    t=""; 
+	for (int i=0;i<x;i++) 
+		for (int j=0;j<y;j++) 
+			t+=b[x1+i][y1+j]; 
+	ans=t;
+    t=""; 
+	for (int i=0;i<x;i++) 
+		for (int j=0;j<y;j++) 
+			t+=b[x2-1-i][y2-1-j]; 
+	ans=min(ans,t);
+    
+    if(x==y){
+        t=""; 
+		for (int i=0;i<y;i++) 
+			for (int j=0;j<x;j++) 
+				t+=b[x1+j][y2-1-i];
+		ans=min(ans,t);
+        t=""; 
+		for (int i=0;i<y;i++) 
+			for (int j=0;j<x;j++) 
+				t+=b[x2-1-j][y1+i];
+		ans=min(ans,t);
+    }
+    
+    return ans;
+}
+
+int main(){
+    int bx,by,i,j,x,y,ans=0,ansx=-1,ansy=-1;
+    cin>>bx>>by;
+    for (int i=0;i<bx;i++) cin >> b[i];
+    for(x=1;x<=bx;x++) if(bx%x == 0) for(y=1;y<=by;y++) if(by%y==0){
+        v.clear();
+        for (int i=0;i<bx/x;i++) for (int j=0;j<by/y;j++) v.push_back(function(i*x,j*y,(i+1)*x,(j+1)*y));
+        sort(v.begin(),v.end());
+        bool Ngood=false;
+        for (int i=0;i<v.size()-1;i++) 
+			if(v[i] == v[i+1]) Ngood=true;
+        if(!Ngood){
+            ans++;
+            if(ansx==(-1) || x*y<ansx*ansy) {ansx=x;ansy=y;}
+        }
+    } 
+    cout<<ans<<endl<<ansx<<' '<<ansy<<endl;
+    
+    return 0;
+}

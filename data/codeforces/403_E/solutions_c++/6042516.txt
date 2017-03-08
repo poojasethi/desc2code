@@ -1,0 +1,230 @@
+//program 403E
+
+#include<iostream>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+#include<vector>
+
+using namespace std;
+
+struct edge
+{
+  int x,y,number;
+};
+
+bool operator ==(edge a,edge b)
+{
+  return a.x==b.x&&a.y==b.y&&a.number==b.number;
+}
+
+bool operator <(edge a,edge b)
+{
+  if(a.y!=b.y)
+    return a.y<b.y;
+  if(a.x!=b.x)
+    return a.x<b.x;
+  return a.number<b.number;
+}
+
+int get()
+{
+  char c;
+  while(c=getchar(),(c<'0'||c>'9')&&(c!='-'));
+  bool flag=(c=='-');
+  if(flag)
+    c=getchar();
+  int x=0;
+  while(c>='0'&&c<='9')
+    {
+      x=x*10+c-48;
+      c=getchar();
+    }
+  return flag?-x:x;
+}
+
+void output(int x)
+{
+  if(x<0)
+    {
+      putchar('-');
+      x=-x;
+    }
+  int len=0,data[10];
+  while(x)
+    {
+      data[len++]=x%10;
+      x/=10;
+    }
+  if(!len)
+    data[len++]=0;
+  while(len--)
+    putchar(data[len]+48);
+}
+
+const int inf=1000000000;
+const edge BigEdge={0,inf,0};
+const edge SmallEdge={0,-inf,0};
+
+int counter;
+vector<int> g[2][200000];
+int dfn[2][200000],dfn2[2][200000],depth[2][200000];
+edge e[2][200000];
+bool flag[2][200000];
+int Left[2][524288],Right[2][524288],p0[2][524288],p1[2][524288];
+vector<edge> all[2][524288];
+
+void dfs(int turn,int x,int d)
+{
+  dfn[turn][x]=counter++;
+  depth[turn][x]=d;
+  for(int i=0;i<g[turn][x].size();i++)
+    dfs(turn,g[turn][x][i],d+1);
+  dfn2[turn][x]=counter;
+}
+
+void Build(int turn,int p,int l,int r)
+{
+  Left[turn][p]=l;
+  Right[turn][p]=r;
+  if(l<r)
+    {
+      int mid=(l+r)/2;
+      Build(turn,p*2,l,mid);
+      Build(turn,p*2+1,mid+1,r);
+    }
+}
+
+void Insert(int turn,int x,int y,int num)
+{
+  int p=1;
+  while(true)
+    {
+      all[turn][p].push_back((edge){x,y,num});
+      if(Left[turn][p]==Right[turn][p])
+        break;
+      if(x<=(Left[turn][p]+Right[turn][p])/2)
+        p=p*2;
+      else
+        p=p*2+1;
+    }
+}
+
+edge getmin(int turn,int p,int l,int r)
+{
+  if(Left[turn][p]==l&&Right[turn][p]==r)
+    {
+      int t=p0[turn][p];
+      while(t<=p1[turn][p]&&flag[turn][all[turn][p][t].number])
+        t++;
+      p0[turn][p]=t;
+      if(p0[turn][p]>p1[turn][p])
+        return BigEdge;
+      else
+        return all[turn][p][p0[turn][p]];
+    }
+  int mid=(Left[turn][p]+Right[turn][p])/2;
+  if(r<=mid)
+    return getmin(turn,p*2,l,r);
+  if(l>mid)
+    return getmin(turn,p*2+1,l,r);
+  return min(getmin(turn,p*2,l,mid),getmin(turn,p*2+1,mid+1,r));
+}
+
+edge getmax(int turn,int p,int l,int r)
+{
+  if(Left[turn][p]==l&&Right[turn][p]==r)
+    {
+      int t=p1[turn][p];
+      while(t>=p0[turn][p]&&flag[turn][all[turn][p][t].number])
+        t--;
+      p1[turn][p]=t;
+      if(p0[turn][p]>p1[turn][p])
+        return SmallEdge;
+      else
+        return all[turn][p][p1[turn][p]];
+    }
+  int mid=(Left[turn][p]+Right[turn][p])/2;
+  if(r<=mid)
+    return getmax(turn,p*2,l,r);
+  if(l>mid)
+    return getmax(turn,p*2+1,l,r);
+  return max(getmax(turn,p*2,l,mid),getmax(turn,p*2+1,mid+1,r));
+}
+
+int main()
+{
+  int n=get();
+  for(int i=1;i<n;i++)
+    {
+      int x=get()-1;
+      g[0][x].push_back(i);
+      e[0][i].x=x;
+      e[0][i].y=i;
+    }
+  for(int i=1;i<n;i++)
+    {
+      int x=get()-1;
+      g[1][x].push_back(i);
+      e[1][i].x=x;
+      e[1][i].y=i;
+    }
+  counter=0;
+  dfs(0,0,0);
+  counter=0;
+  dfs(1,0,0);
+  Build(0,1,0,n-1);
+  Build(1,1,0,n-1);
+  int turn=0,m=get();
+  vector<int> q;
+  q.push_back(m);
+  for(int turn=0;turn<2;turn++)
+    for(int i=1;i<n;i++)
+      {
+        if(turn&&i==m)
+          continue;
+        int u=dfn[turn][e[turn^1][i].x];
+        int v=dfn[turn][e[turn^1][i].y];
+        Insert(turn,u,v,i);
+        Insert(turn,v,u,i);
+      }
+  for(int turn=0;turn<2;turn++)
+    for(int i=0;i<524288;i++)
+      {
+        sort(all[turn][i].begin(),all[turn][i].end());
+        p0[turn][i]=0;
+        p1[turn][i]=(int)all[turn][i].size()-1;
+      }
+  memset(flag,0,sizeof(flag));
+  while(!q.empty())
+    {
+      vector<int> nextq;
+      nextq.clear();
+      printf(turn?"Red\n":"Blue\n");
+      sort(q.begin(),q.end());
+      for(int i=0;i<q.size();i++)
+        {
+          output(q[i]);
+          putchar((i+1==q.size())?'\n':' ');
+          int x=e[turn][q[i]].x,y=e[turn][q[i]].y;
+          if(depth[turn][y]>depth[turn][x])
+            x=y;
+          int l=dfn[turn][x],r=dfn2[turn][x]-1;
+          edge tmp;
+          while(tmp=getmin(turn,1,l,r),tmp.y<l)
+            {
+              flag[turn][tmp.number]=true;
+              nextq.push_back(tmp.number);
+            }
+          while(tmp=getmax(turn,1,l,r),tmp.y>r)
+            {
+              flag[turn][tmp.number]=true;
+              nextq.push_back(tmp.number);
+            }
+        }
+      q=nextq;
+      turn^=1;
+    }
+  return 0;
+}

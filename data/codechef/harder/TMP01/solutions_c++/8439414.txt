@@ -1,0 +1,180 @@
+#include<cassert>
+#include<queue>
+#include<cstdio>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+using namespace std;
+ 
+const int INF = 1000000000, C = 26, N = 1000005, MOD = 1000000007;
+ 
+int pos;
+ 
+int text[N];
+ 
+struct Node {
+	int l, r;
+	
+	Node *suf, *ch[C];
+ 
+	int dgr;
+ 
+	Node *fa;
+	
+	Node (int l = -1, int r = INF) : l(l), r(r) {
+		suf = fa = NULL;
+		memset(ch, 0, sizeof(ch));
+		dgr = 0;
+	}
+
+	Node* addEdge(Node *t) {
+		int c = text[t->l];
+		dgr += !ch[c];
+		ch[c] = t;
+		t->fa = this;
+		return t;
+	}
+ 
+	int len() {
+		return min(r, pos + 1) - l;
+	}
+};
+ 
+int top;
+ 
+Node pool[N << 1];
+ 
+Node *root, *nxtSuf, *cur;
+ 
+int remCnt, curP, curLen;
+ 
+long long size;
+ 
+queue<Node*> leaves;
+ 
+void init() {
+	top = 0, pos = -1;
+	remCnt = 0, curP = 0, curLen = 0;
+	nxtSuf = NULL;
+	root = cur = new(pool + (top++)) Node(-1, -1);
+	size = 0;
+}
+ 
+void link(Node *u) {
+	if (nxtSuf) {
+		nxtSuf->suf = u;
+	}
+	nxtSuf = u;
+}
+ 
+bool walk(Node *u) {
+	int len = u->len();
+	if (curLen >= len) {
+		curP += len;
+		curLen -= len;
+		cur = u;
+		return true;
+	}
+	return false;
+}
+ 
+void extend(int c) {
+	text[++pos] = c;
+	nxtSuf = NULL;
+	++remCnt;
+	while (remCnt) {
+		curP = curLen ? curP : pos;
+		int curE = text[curP];
+		if (!cur->ch[curE]) {
+			leaves.push(cur->addEdge(new(pool + (top++)) Node(pos)));
+			link(cur);
+		} else {
+			Node *nxt = cur->ch[curE];
+			if (walk(nxt)) {
+				continue;
+			}
+			if (text[nxt->l + curLen] == c) {
+				++curLen;
+				link(cur);
+				break;
+			}
+			Node *split = new(pool + (top++)) Node(nxt->l, nxt->l + curLen);
+			cur->addEdge(split);
+			leaves.push(split->addEdge(new(pool + (top++)) Node(pos)));
+			nxt->l += curLen;
+			split->addEdge(nxt);
+			link(split);
+		}
+		--remCnt;
+		if (cur == root && curLen > 0) {
+			curP = pos - (--curLen);
+		} else {
+			cur = cur->suf ? cur->suf : root;
+		}
+	}
+	size += leaves.size();
+}
+ 
+void eraseUp(Node *&u) {
+	size -= u->len();
+	int ch = text[u->l];
+	u = u->fa;
+	u->ch[ch] = NULL;
+	--(u->dgr);
+}
+ 
+void erase() {
+	Node *u = leaves.front();
+	leaves.pop();
+	while (u->dgr == 0 && u != cur) {
+		eraseUp(u);
+	}
+	if (u == cur) {
+		if (cur->dgr == 0 && curLen == 0) {
+			int len = u->len();
+			curLen = len;
+			curP = pos - len + 1;
+			cur = cur->fa;
+			eraseUp(u);
+		}
+		if (curLen) {
+			int curE = text[curP];
+			if (!cur->ch[curE]) {
+				Node *leaf = new(pool + (top++)) Node(pos - curLen + 1);
+				leaves.push(cur->addEdge(leaf));
+				size += leaf->len();
+				--remCnt;
+				if (cur == root && curLen > 0) {
+					curP = pos - (--curLen) + 1;
+				} else {
+					cur = cur->suf ? cur->suf : root;
+				}
+				while (curLen && walk(cur->ch[text[curP]])) {
+					continue;
+				}
+			}
+		}
+	}
+}
+ 
+int n;
+ 
+int main() {
+	int t;
+	scanf("%d", &t);
+	init();
+	int ans = 0;
+	while (t--) {
+		char op[2];
+		scanf("%s", op);
+		if (op[0] == '+') {
+			scanf("%s", op);
+			extend(op[0] - 'a');
+		} else {
+			erase();
+		}
+		ans = (ans + size) % MOD;
+	}
+	printf("%d\n", ans);
+	return 0;
+}

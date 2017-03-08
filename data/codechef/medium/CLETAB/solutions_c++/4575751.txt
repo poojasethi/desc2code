@@ -1,0 +1,125 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+
+#define SIZE 201
+
+using namespace std;
+
+int tables[SIZE], orders[2*SIZE], currentCustomerOrders[2*SIZE];
+vector<int> customerOrders[2*SIZE];
+bool customerOnTables[2*SIZE];
+
+void fillCustomerOrders(int noOfOrders) {
+  for(int i=1; i<=2*SIZE; i++)
+    customerOrders[i].clear();
+
+  for(int i=0; i<noOfOrders; i++)
+    customerOrders[orders[i]].push_back(i);
+
+  for(int i=1; i<=2*SIZE; i++)
+    customerOrders[i].push_back(-1);
+}
+
+int fillInitialTables(int noOfTables, int noOfOrders, int &cleaningsRequired) {
+  int i, j;
+  for(i=1; i<=2*SIZE; i++) {
+    currentCustomerOrders[i] = 0;
+    customerOnTables[i] = false;
+  }
+
+  for(i=0, j=0; i<noOfOrders && j<noOfTables; i++) {
+    if(!customerOnTables[orders[i]]) {
+      tables[j] = orders[i];
+      customerOnTables[orders[i]] = true;
+      j++;
+      cleaningsRequired++;
+    }
+    currentCustomerOrders[orders[i]]++;
+  }
+
+  return i;
+}
+
+int farthestInFuture(int noOfTables) {
+  int farthestCustomerNextOrder = -1, farthestCustomerIndex = -1;
+  for(int i=0; i<noOfTables; i++) {
+    int customer = tables[i];
+    int customerNextOrder = customerOrders[customer][currentCustomerOrders[customer]];
+
+    if(customerNextOrder < 0) {
+      return i;
+    }
+
+    if(customerNextOrder > farthestCustomerNextOrder) {
+      farthestCustomerNextOrder = customerNextOrder;
+      farthestCustomerIndex = i;
+    }
+  }
+
+  return farthestCustomerIndex;
+}
+
+void swapCustomers(int cust1TableIndex, int cust2OrderIndex) {
+  int cust1 = tables[cust1TableIndex], cust2 = orders[cust2OrderIndex];
+  tables[cust1TableIndex] = cust2;
+  customerOnTables[cust1] = false;
+  customerOnTables[cust2] = true;
+  currentCustomerOrders[cust2]++;
+}
+
+void printTables(int noOfTables) {
+  printf("%d: \n", noOfTables);
+  for(int i=0; i<noOfTables; i++) {
+    printf("%d ", tables[i]);
+  }
+  printf("\n");
+}
+
+void printOrders(int noOfOrders) {
+  printf("M: %d\n", noOfOrders);
+  for(int i=0; i<noOfOrders; i++) {
+    printf("%d ", orders[i]);
+  }
+  printf("\n");
+}
+
+int main() {
+  int T, N, M;
+
+  scanf("%d\n", &T);
+
+  while(T--) {
+    scanf("%d %d\n", &N, &M);
+
+    for(int i=0; i<M; i++) {
+      scanf("%d ", &orders[i]);
+    }
+
+    //printOrders(M);
+
+    fillCustomerOrders(M);
+
+    int cleaningsRequired = 0;
+    int orderIndex = fillInitialTables(N, M, cleaningsRequired);
+
+    //printTables(N);
+
+    while(orderIndex < M) {
+      if(!customerOnTables[orders[orderIndex]]) {
+        int farthestFutureIndex = farthestInFuture(N);
+        swapCustomers(farthestFutureIndex, orderIndex);
+        cleaningsRequired++;
+      }
+      else {
+        currentCustomerOrders[orders[orderIndex]]++;
+      }
+      orderIndex++;
+      //printTables(N);
+    }
+
+    printf("%d\n", cleaningsRequired);
+  }
+
+  return 0;
+}

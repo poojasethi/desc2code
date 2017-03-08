@@ -1,0 +1,82 @@
+#include <bits/stdc++.h>
+//Damned if I don't take what I want.
+
+using namespace std;
+
+typedef long long ll;
+typedef pair<ll, ll> pii;
+typedef pair<pii, ll> pip;
+
+const ll MAXN = 1e5 + 200;
+
+vector< pii >  seg[MAXN * 4];
+pip bsort[MAXN], temp[MAXN];
+ll a[MAXN], b[MAXN];
+
+inline bool over(ll x, ll y, ll t){
+	return ll(a[x]) + b[x] * t >= ll(a[y]) + b[y] * t;
+}
+
+void build(ll x, ll xl, ll xr){
+	//cerr << "entering " << x << " : " << xl << ", " << xr << endl;
+	
+	if (xr - xl == 1)
+		bsort[xl]= pip( pii(b[xl], a[xl]), xl );
+	else{
+		ll mid = (xl + xr) / 2, l = 2 * x, r = l + 1;
+		build(l, xl, mid);
+		build(r, mid, xr);
+	
+		copy(bsort + xl, bsort + xr, temp + xl);
+		merge(temp + xl, temp + mid, temp + mid, temp + xr, bsort + xl);
+	}
+
+	seg[x].push_back( pii( -1u, bsort[xr - 1].second) );
+	//cerr << "starting " << xl << ", " << xr << endl;
+	for (ll i = xr - 2; i >= xl; i--){
+		//cerr << "\tsize : " << seg[x].size() << endl;
+		ll id = bsort[i].second; pii last = seg[x].back();
+
+		while( seg[x].size() - 1 && over(id, last.second, last.first) ){
+			//cerr << "deleting " << a[last.second] << ", " << b[last.second] << " for " << a[id] << ", " << b[id] << " at time " << last.first  << endl;
+			//cin.get();
+			seg[x].pop_back();
+			last = seg[x].back();
+		}
+		
+		if (b[id] == b[last.second]) continue;
+		ll ans = (a[id] - a[last.second] + b[last.second] - b[id] - 1 ) / (b[last.second] - b[id]);
+		seg[x].push_back( pii(ans, id) );
+		//cerr << "inserting " << ans << ", " << id << endl;
+	}
+	//cerr << "finishing " << endl;
+	//cerr << "exiting " << x << " : " << xl << ", " << xr << endl;
+	reverse(seg[x].begin(), seg[x].end());
+}
+
+ll get(ll x, ll xl, ll xr, ll ql, ll qr, ll q){
+	if (xl >= qr || xr <= ql) return -1;
+	if (xl >= ql && xr <= qr) return lower_bound(seg[x].begin(), seg[x].end(), pii(q + 1, -1))->second;
+
+	ll mid = (xl + xr) / 2, l = 2 * x, r = l + 1;
+
+	ll y = get(l, xl, mid, ql, qr, q), t = get(r, mid, xr, ql, qr, q);
+	if (y == -1) return t;
+	if (t == -1) return y;
+	if (over(t, y, q)) return t;
+	else return y;
+}
+
+int main(){
+	ll n, q; scanf("%I64d%I64d", &n, &q);
+
+	for (ll i = 0; i < n; i++)
+		scanf("%I64d%I64d", &a[i], &b[i]);
+
+	build(1, 0, n);
+	while(q--){
+		ll l, r, t; scanf("%I64d%I64d%I64d", &l, &r, &t); l--;
+		printf("%I64d\n", get(1, 0, n, l, r, t) + 1);
+	}
+}
+

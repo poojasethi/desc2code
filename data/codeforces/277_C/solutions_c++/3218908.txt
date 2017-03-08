@@ -1,0 +1,136 @@
+#include <cstdio>
+#include <map>
+#include <vector>
+#include <algorithm>
+#include <set>
+using namespace std;
+
+#define F first
+#define S second
+#define mp make_pair
+
+int n, m, k;
+map<int, vector<pair<int, int> > > h, v;
+vector<int> games, type, pos;
+vector<vector<pair<int, int> > > wheres;
+
+void getcut()
+{
+	int a, b, c, d;
+	scanf("%d%d%d%d", &a, &b, &c, &d);
+	if (a == c)
+	{
+		if (b > d) swap(b, d);
+		v[a].push_back(mp(b, d));
+	}
+	else
+	{
+		if (a > c) swap(a, c);
+		h[b].push_back(mp(a, c));
+	}
+}
+
+void build(map<int, vector<pair<int, int> > >& m, int W, int H, int t)
+{
+	int z = 1, top = 0, k = -1;
+	for (typeof(m.begin()) it = m.begin(); it != m.end(); ++it)
+	{
+		int big = 0;
+		top += it->F-z;
+		if (it->F-z > 0) k = z;
+		z = it->F+1;
+		sort(it->S.begin(), it->S.end());
+		vector<int> col;
+		for (int i = 0; i < it->S.size(); ++i)
+			col.push_back(it->S[i].F), col.push_back(it->S[i].S);
+		col.push_back(H);
+		sort(col.begin(), col.end());
+		
+		set<int> o;
+		int now = 0, pp = 0, qq = 0;
+		type.push_back(t);
+		pos.push_back(it->F);
+		vector<pair<int, int> > where;
+		while (pp < col.size())
+		{
+			int last = now;
+			now = col[pp++];
+			while (qq < it->S.size() && it->S[qq].F < now)
+				o.insert(it->S[qq].S), ++qq;
+			while (!o.empty() && *o.begin() < now)
+				o.erase(o.begin());
+			if (o.empty())
+			{
+				big += now-last;
+				where.push_back(mp(last, now));
+			}
+		}
+		wheres.push_back(where);
+		games.push_back(big);
+	}
+	if (z != W)
+		top += W-z, k = W-1;
+	if (top&1) 
+	{
+		games.push_back(H);
+		type.push_back(t);
+		vector<pair<int, int> > where;
+		where.push_back(mp(0, H));
+		wheres.push_back(where);
+		pos.push_back(k);
+	}
+}
+
+void solve(int x)
+{
+	int p = 0, a = x, z;
+	while (a)
+	{
+		a >>= 1;
+		++p;
+	}
+	--p;
+	for (int i = 0; i < games.size(); ++i)
+	{
+		if ((long long)games[i]&1<<p)
+		{
+			z = i;
+			break;
+		}
+	}
+	int g = x^games[z], start = wheres[z][0].F, end = start; p = 0;
+	g = games[z]-g;
+	while (g)
+	{
+		if (wheres[z][p].S-wheres[z][p].F >= g)
+		{
+			end = wheres[z][p].F+g;
+			g = 0;
+		}
+		else g -= wheres[z][p].S-wheres[z][p].F;
+		++p;
+	}
+	if (type[z] == 0)
+		printf("%d %d %d %d\n", pos[z], start, pos[z], end);
+	else
+		printf("%d %d %d %d\n", start, pos[z], end, pos[z]);
+}
+
+int main()
+{
+	scanf("%d%d%d", &n, &m, &k);
+	while (k--) getcut();
+	build(h, m, n, 1); 
+	build(v, n, m, 0);
+	
+	int x = 0;
+	for (int i = 0; i < games.size(); ++i)
+		x ^= games[i];
+	if (x) 
+	{
+		printf("FIRST\n");
+		solve(x);
+	}
+	else printf("SECOND\n");
+}
+

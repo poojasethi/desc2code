@@ -1,0 +1,188 @@
+#include <cstdio>
+#include <stack>
+#include <vector>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+const int MAXN = 300005;
+
+inline int read(){
+    int a = 0, f = 1; char c = getchar();
+    while(c < '0' || c > '9'){if(c == '-') f = -1; c = getchar();}
+    while(c >= '0' && c <= '9'){a = a * 10 + (c - '0'); c = getchar();}
+    return a * f;
+}
+
+struct edge{
+	int e; edge *next;
+}*E[MAXN], epool[MAXN << 1], *etop = epool;
+
+void addedge(int b, int e){
+	edge *p = etop++;
+	p->e = e; p->next = E[b]; E[b] = p;
+}
+
+//Suffix Array
+char buf[MAXN], str[MAXN << 1];
+int L, h, sa[MAXN << 1], rk[MAXN << 1], tmp[MAXN << 1],
+	height[MAXN << 1], log[MAXN << 1], st[20][MAXN << 1];
+
+bool cmp(int a, int b){
+	if(rk[a] != rk[b]) return rk[a] < rk[b];
+	else{
+		int ra = a + h <= L ? rk[a + h] : -1;
+		int rb = b + h <= L ? rk[b + h] : -1;
+		return ra < rb;
+	}
+}
+
+void build_sa(){
+	for(int i = L; i; i--)
+		str[++L] = str[i];
+	for(int i = 1; i <= L; i++) sa[i] = i;
+	for(int i = 1; i <= L; i++) rk[i] = str[i];
+	for(h = 1; h <= L; h <<= 1){
+		sort(sa + 1, sa + L + 1, cmp);
+		for(int i = 1; i <= L; i++)
+			tmp[sa[i]] = tmp[sa[i - 1]] + cmp(sa[i - 1], sa[i]);
+		for(int i = 1; i <= L; i++)
+			rk[i] = tmp[i];
+	}
+	for(int i = 1; i <= L; i++) rk[sa[i]] = i;
+	for(int i = 1, j, h = 0; i <= L; i++){
+		h = max(0, h - 1);
+		if(rk[i] == 1) continue;
+		j = sa[rk[i] - 1];
+		while(i + h <= L && j + h <= L && str[i + h] == str[j + h])
+			h++;
+		height[rk[i]] = h;
+	}	
+	for(int i = 2; i <= L; i++) log[i] = log[i >> 1] + 1;
+	for(int i = 1; i <= L; i++) st[0][i] = height[i];
+	for(int i = 1, h = 2; h <= L; i++, h <<= 1)
+		for(int j = 1; j + h - 1 <= L; j++)
+			st[i][j] = min(st[i - 1][j], st[i - 1][j + h / 2]);
+}
+
+int lcp(int a, int b){
+	if(a == b) return L - a + 1;
+	int s = rk[a], t = rk[b];
+	if(s > t) swap(s, t);
+	int l = log[t - s];
+	return min(st[l][s + 1], st[l][t - (1 << l) + 1]);
+}
+
+//Heavy-Light Decomp
+int N, sz[MAXN], son[MAXN], top[MAXN], place[MAXN], ptot;
+int M, dep[MAXN], fa[MAXN], loc[MAXN];
+
+void dfs_get_info(int x, int f){
+	sz[x] = 1; son[x] = 0; 
+	fa[x] = f; dep[x] = dep[f] + 1; 
+	for(edge *p = E[x]; p; p = p->next)
+		if(p->e != f){
+			dfs_get_info(p->e, x);
+			sz[x] += sz[p->e];
+			if(sz[p->e] > sz[son[x]])
+				son[x] = p->e;
+		}	
+}
+
+void dfs_build(int x, int v){
+	top[x] = v; place[x] = ++ptot;
+	str[++L] = buf[x]; loc[ptot] = x;
+	if(son[x])
+		dfs_build(son[x], v);
+	for(edge *p = E[x]; p; p = p->next)
+		if(p->e != fa[x] && p->e != son[x])
+			dfs_build(p->e, p->e);
+}
+
+// u --> v
+
+struct range{
+	int l, r;
+	range(int _l = 0, int _r = 0) : l(_l), r(_r) {}
+};
+
+inline int len(int l, int r){
+	return r - l + 1;
+}
+
+range chain_query(int u, int v){
+	if(dep[u] < dep[v]) 
+		return range(place[u], place[v]);
+	else
+		return range(2 * N + 1 - place[u], 2 * N + 1 - place[v]);
+}
+
+vector<range> path_decomp(int u, int v){
+	vector<range> res;
+	static stack<range> tmp;
+	while(1){
+		if(top[u] == top[v]){
+			res.push_back(chain_query(u, v));
+			while(!tmp.empty()){
+				res.push_back(tmp.top());
+				tmp.pop();
+			}
+			return res;
+		}else{
+			if(dep[top[u]] < dep[top[v]]){
+				tmp.push(chain_query(top[v], v));
+				v = fa[top[v]];
+			}else{
+				res.push_back(chain_query(u, top[u]));
+				u = fa[top[u]];
+			}
+		}
+	}
+}
+
+int solve(int u, int v, int w, int x){
+	vector<range> p1 = path_decomp(u, v), 
+				  p2 = path_decomp(w, x);
+	int i = 0, j = 0, res = 0, st1 = p1[0].l, st2 = p2[0].l;
+	while(i < p1.size() && j < p2.size()){
+		int h = lcp(st1, st2), n = min(len(st1, p1[i].r), len(st2, p2[j].r));
+		if(h < n)
+			return res + h;
+		else{
+			res += n;
+			if(len(st1, p1[i].r) < len(st2, p2[j].r)){
+				i++;
+				st1 = p1[i].l;
+				st2 += n; 
+			}else if(len(st1, p1[i].r) > len(st2, p2[j].r)){
+				j++;
+				st2 = p2[j].l;
+				st1 += n;
+			}else{
+				i++;
+				st1 = p1[i].l;
+				j++;
+				st2 = p2[j].l;
+			}
+		}
+	}
+	return res;
+}
+
+int main(){
+	N = read();
+	scanf("%s", buf + 1);
+	for(int i = 1; i < N; i++){
+		int u = read(), v = read();
+		addedge(u, v); addedge(v, u);
+	}
+	dfs_get_info(1, 0);
+	dfs_build(1, 1);
+	build_sa();
+	M = read();
+	while(M--){
+		int a = read(), b = read(),
+			c = read(), d = read();
+		printf("%d\n", solve(a, b, c, d));
+	}
+	return 0;
+}

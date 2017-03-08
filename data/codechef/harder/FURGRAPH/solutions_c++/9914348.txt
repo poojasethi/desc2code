@@ -1,0 +1,178 @@
+#include <bits/stdc++.h>
+#include <cstdio>
+using namespace std;
+
+const int MAXN = 1e5 + 5;
+const int RN = 1e2 + 5;
+
+int n , m ;
+long long int a[MAXN];
+
+/* Author - code_hard123 */
+/* JIIT */
+
+struct Treap{
+    Treap * left , * right;
+    int priority;
+    int sz;
+    long long val , sum;
+    Treap(long long n){
+        left = NULL;
+        right = NULL;
+        priority = rand();
+        sz = 1;
+        val = n;
+    }
+    Treap(){
+       /* left = NULL;
+        right = NULL;
+        priority = -1;
+        sz = 0;
+        val = 0LL;
+        sum = 0LL; */
+    }
+    void initialize(long long u);
+    void up();
+
+} *root , node[MAXN];
+
+#define LOCALE 0
+#define RRN 5
+
+void Treap :: initialize(long long u){
+    left = NULL;
+    right = NULL;
+    priority = rand();
+    sz = 1;
+    val = u;
+    sum = u;
+}
+
+void Treap :: up(){
+    sz = 1;
+    if(left != NULL) sz += left -> sz;
+    if(right != NULL) sz += right -> sz;
+    sum = 0;
+    int value = 0;
+    if(left != NULL){
+        sum += left -> sum;
+        value = left -> sz;
+    }
+    sum += value & 1 ? -val : val;
+    ++value;
+    if(right != NULL){
+        sum += value & 1 ? -(right -> sum) : (right -> sum);
+    }
+}
+
+int ind = 0;
+
+Treap * newTreap(int u){
+node[ind].initialize(u);
+/*Treap * nextTreap = &node[ind];
+++ind; */
+return &node[ind++];
+}
+
+Treap * merge(Treap * x , Treap * y){
+    if(x == NULL) return y;
+    if(y == NULL) return x;
+    if(x -> priority >= y -> priority){
+        x -> right = merge(x -> right , y);
+        x -> up();
+        return x;
+    }
+    else{
+    y -> left = merge(x , y -> left);
+    y -> up();
+    return y;
+    }
+}
+
+void split(Treap * u , int ret , Treap * & x , Treap * & y){
+    if(ret <= 0) { x = NULL ; y = u; return; }
+    if(ret >= u -> sz)
+    {
+        x = u;
+        y = NULL;
+        return;
+    }
+
+    const int snd = u -> left != NULL ? u -> left -> sz : 0;
+    if(ret <= snd)
+    {
+        y = u;
+        split(u -> left , ret , x , u -> left);
+    }
+    else
+    {
+        x = u;
+        split(u -> right , ret - snd - 1 , u -> right , y);
+    }
+
+    u -> up();
+}
+
+
+void splitChild(Treap * u , long long k , Treap * & x , Treap * & y){
+    if(u == NULL){
+        x = NULL;
+        y = NULL;
+        return;
+    }
+
+    if(u -> val > k){
+        y = u;
+        splitChild(u -> left , k , x , u -> left);
+    }
+    else{
+        x = u;
+        splitChild(u -> right , k , u -> right , y);
+    }
+    u -> up();
+}
+
+
+void UNION(int u , long long weight){
+    Treap * x , * y;
+
+    splitChild(root , a[u] , root , y);
+    split(root , root -> sz - 1 , root , x);
+    root = merge(root , y);
+    a[u] = a[u] + weight;
+    x -> initialize(a[u]);
+
+    splitChild(root , a[u] , root , y);
+
+    root = merge(root , x );
+    root = merge(root , y );
+}
+
+int main()
+{
+    #ifndef LOCALE
+    fprintf(stderr , "error : file not found");
+    #endif // LOCALE
+    int tt;
+    scanf("%d" , &tt);
+    while(tt--){
+        scanf("%d %d" , &n, &m);
+        ind = 0;
+        root = NULL;
+        for(int i = 1; i <= n; ++i){
+            root = merge(root , newTreap(0));
+            a[i] = 0;
+        }
+        int u , v;
+        long long w;
+        while(m--){
+            scanf("%d %d %lld" , &u , &v , &w);
+            UNION(u , w);
+            UNION(v , w);
+            long long ans = root -> sum / 2;
+            if(root -> sz % 2 == 0) ans *= -1;
+            printf("%lld\n" , ans);
+        }
+    }
+    return 0;
+}

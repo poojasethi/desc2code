@@ -1,0 +1,89 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+const int MAXN = 100100;
+int N, Q;
+vector<int> adj[MAXN];
+int dep[MAXN]; //depth of node
+int subsz[MAXN]; //size of subtree, not including root of subtree
+int bitidx[MAXN]; //index of tree BIT
+int BIT[MAXN][2]; //0 = depth BIT, 1 = tree BIT
+int index = 1;
+
+void add(int idx, int val, int type)
+{
+	for (; idx < MAXN; idx += idx&-idx)
+		BIT[idx][type] += val;
+}
+
+int get(int idx, int type)
+{
+	int ret = 0;
+	for (; idx > 0; idx -= idx&-idx)
+		ret += BIT[idx][type];
+	return ret;
+}
+
+void dfs(int node, int par, int depth)
+{
+	dep[node] = depth;
+	bitidx[node] = index++;
+	for (int i = 0; i < adj[node].size(); i++)
+	{
+		int next = adj[node][i];
+		if (next == par)
+			continue;
+		dfs(next, node, depth + 1);
+		subsz[node] += subsz[next] + 1;
+	}
+}
+
+int main()
+{
+	ios::sync_with_stdio(false);
+
+	cin >> N >> Q;
+	for (int i = 0; i < N - 1; i++)
+	{
+		int a, b;
+		cin >> a >> b;
+		adj[a].push_back(b);
+		adj[b].push_back(a);
+	}
+
+	dfs(1, 0, 1);
+
+	for (int i = 0; i < Q; i++)
+	{
+		int type;
+		cin >> type;
+		if (type == 0)
+		{
+			int v, x, d;
+			cin >> v >> x >> d;
+
+			int e = bitidx[v] + min(d, subsz[v]) + 1;
+			add(e, -x, 1);
+
+			if (dep[v] - 1 <= d)
+			{
+				int rem = d - dep[v] + 2;
+				add(1, x, 0);
+				add(rem + 1, -x, 0);
+				add(min(e, bitidx[v] - dep[v] + rem + 1), x, 1);
+			}
+			else
+				add(bitidx[v] - d, x, 1);
+		}
+		else
+		{
+			int v;
+			cin >> v;
+			cout << get(dep[v], 0) + get(bitidx[v], 1) << "\n";
+		}
+	}
+
+	return 0;
+}

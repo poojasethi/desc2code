@@ -1,0 +1,128 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+const int MAX = 1100005;
+const int ALPHA = 37;
+
+struct state
+{
+    int len, link;
+    int next[ALPHA];
+
+    state() :
+        len(0), link(-1)
+    {
+        memset(next, -1, sizeof next);
+    }
+};
+
+state st[MAX];
+int sz;
+int last;
+int cnt[MAX][12];
+int L[15];
+int R[15];
+
+void sa_init()
+{
+    sz = last = 0;
+    st[0].len = 0;
+    st[0].link = -1;
+    ++sz;
+}
+
+void sa_extend(int c)
+{
+    int cur = sz++;
+    st[cur].len = st[last].len + 1;
+
+    int p;
+    for (p = last; p != -1 && st[p].next[c] == -1; p = st[p].link)
+        st[p].next[c] = cur;
+
+    if (p == -1)
+        st[cur].link = 0;
+    else
+    {
+        int q = st[p].next[c];
+        if (st[p].len + 1 == st[q].len)
+            st[cur].link = q;
+        else
+        {
+            int clone = sz++;
+            st[clone].len = st[p].len + 1;
+            memcpy(st[clone].next, st[q].next, sizeof st[q].next);
+            st[clone].link = st[q].link;
+
+            for (; p != -1 && st[p].next[c] == q; p = st[p].link)
+                st[p].next[c] = clone;
+
+            st[q].link = st[cur].link = clone;
+        }
+    }
+    last = cur;
+}
+
+void build(char *s, int p, int lo, int hi)
+{
+    L[p] = lo, R[p] = hi;
+    for (int i = 0; s[i]; ++i)
+        sa_extend(s[i] - 'a');
+    sa_extend(26 + p);
+}
+
+bool mark[MAX];
+int N;
+int ret = 0;
+
+void dfs(int u)
+{
+    if (mark[u])
+        return;
+
+    mark[u] = true;
+
+    for (int i = 0; i <= N; ++i)
+        if (st[u].next[26 + i] != -1)
+            cnt[u][i] = 1;
+
+    for (int i = 0; i < 26; ++i)
+        if (st[u].next[i] != -1)
+        {
+            dfs(st[u].next[i]);
+            for (int j = 0; j <= N; ++j)
+                cnt[u][j] += cnt[st[u].next[i]][j];
+        }
+
+    if (u)
+    {
+        bool ans = true;
+        for (int i = 0; i <= N; ++i)
+            ans &= cnt[u][i] >= L[i] && cnt[u][i] <= R[i];
+        if (ans)
+            ret += st[u].len - st[st[u].link].len;
+    }
+}
+
+char s[50005];
+
+int main()
+{
+    sa_init();
+    scanf("%s", s);
+    build(s, 0, 1, strlen(s));
+
+    int lo, hi;
+    scanf("%d", &N);
+
+    for (int i = 1; i <= N; ++i)
+    {
+        scanf("%s%d%d", s, &lo, &hi);
+        build(s, i, lo, hi);
+    }
+
+    dfs(0);
+    printf("%d\n", ret);
+    return 0;
+}

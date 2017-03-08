@@ -1,0 +1,70 @@
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#define rep(i,k) for (i=1; i<=k; i++)
+using namespace std;
+struct node {int x,y,z;} t[300005],x[300005];
+int p[300005],now,a[4][100005],i,j,n,o,ans,MIN,tree[262144][5],NOW;
+int cmp(node i,node j) {return i.z<j.z;}
+int CMP(node i,node j) {return i.x>j.x;}
+void Update(int x)
+{
+    if (!tree[x][3])return;
+    tree[x*2][3]=tree[x*2+1][3]=tree[x*2][2]=tree[x*2+1][2]=tree[x][3];
+    tree[x*2][4]=tree[x*2][0]-131072+tree[x][3];
+    tree[x*2+1][4]=tree[x*2+1][0]-131072+tree[x][3];
+    tree[x][3]=0;
+}
+void work(int root,int l,int r,int t)
+{
+    int mid=(tree[root][0]+tree[root][1])/2;
+    if (tree[root][0]==l && tree[root][1]==r) {tree[root][2]=tree[root][3]=t; tree[root][4]=tree[root][0]-131072+t; return;}
+    Update(root);
+    if (l<=mid) work(root*2,l,min(mid,r),t);
+    if (r>mid) work(root*2+1,max(mid+1,l),r,t);
+    tree[root][2]=min(tree[root*2][2],tree[root*2+1][2]);
+    tree[root][4]=min(tree[root*2][4],tree[root*2+1][4]);
+}
+int main()
+{
+    scanf("%d",&n);
+    rep (i,3) rep(j,n)
+    {
+        scanf("%d",&a[i][j]);
+        t[++o].x=i; t[o].y=j; t[o].z=a[i][j];
+    }
+    sort(t+1,t+o+1,cmp);
+    rep (i,o)
+    {
+        if (t[i].z!=t[i-1].z) now++;
+        a[t[i].x][t[i].y]=now;
+    }
+    rep (i,3)
+    {
+        rep(j,now) p[j]=n+1;
+        rep(j,n) if (p[a[i][j]]==n+1) p[a[i][j]]=j;
+        rep(j,now) if (i==1) x[j].x=p[j]; else if (i==2) x[j].y=p[j]; else x[j].z=p[j];
+    }
+    for (i=131072; i<262144; i++) {tree[i][0]=tree[i][1]=i;tree[i][4]=(i<=n+131072?i-131072:453266144);}
+    for (i=131071; i>=1; i--) {tree[i][0]=tree[i*2][0]; tree[i][1]=tree[i*2+1][1];tree[i][4]=min(tree[i*2][4],tree[i*2+1][4]);}
+    sort(x+1,x+now+1,CMP); ans=453266144;
+
+    rep (j,now+1)
+    {
+        if (x[j].x!=n+1) ans=min(ans,x[j].x+MIN);
+        NOW=1;
+        while (NOW<=131071)
+        {
+            Update(NOW);
+            if (tree[NOW*2][2]>(x[j].z==n+1?453266144:x[j].z)) NOW=NOW*2+1; else NOW*=2;
+        }
+        if (NOW-131072<=x[j].y) work(1,NOW,x[j].y+131071,x[j].z==n+1?453266144:x[j].z);
+        MIN=tree[1][4];
+        if (j==now+1) break;
+
+    }
+    cout<<ans;
+    return 0;
+}

@@ -1,0 +1,191 @@
+// zeulb----v2.0 //
+
+#include <algorithm>
+#include <iostream>
+#include <sstream>
+#include <cassert>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+#include <string>
+#include <vector>
+#include <bitset>
+#include <queue>
+#include <stack>
+#include <cmath>
+#include <deque>
+#include <ctime>
+#include <list>
+#include <set>
+#include <map>
+ 
+using namespace std;
+
+typedef long long     LL;
+typedef pair<int,int> pii;
+
+double PI  = acos(-1);
+double EPS = 1e-7;
+int INF    = 1000000000;
+int MOD    = 1000000007;
+int MAXINT = 2147483647;
+LL INFLL   = 1000000000000000000LL;
+LL MAXLL   = 9223372036854775807LL;
+
+#define fi            first
+#define se            second
+#define mp            make_pair
+#define pb            push_back
+#define SIZE(a)       (int)a.size()
+#define input(in)     freopen(in,"r",stdin)
+#define output(out)   freopen(out,"w",stdout)
+#define RESET(a, b)   memset(a,b,sizeof(a))
+#define FOR(a, b, c)  for (int (a)=(b); (a)<=(c); (a)++)
+#define FORD(a, b, c) for (int (a)=(b); (a)>=(c); (a)--)
+#define FORIT(a, b)   for (__typeof((b).begin()) (a)=(b).begin(); (a)!=(b).end(); (a)++)
+
+// ------------ //
+
+
+const int MAXN = 2005;
+
+struct Edge
+{
+    int to,rev,cap;
+};
+
+struct Dinic
+{
+    int n,s,t;
+    int dist[MAXN],cur[MAXN];
+    vector<Edge> adj[MAXN];
+
+    void AddEdge(int u,int v,int cap)
+    {
+        Edge i = {v,adj[v].size(),cap};
+        Edge j = {u,adj[u].size(),0};
+        adj[u].pb(i);
+        adj[v].pb(j);
+    }
+
+    Dinic(int _n,int _s,int _t)
+    {
+        n = _n;
+        s = _s;
+        t = _t;
+        FOR(a,1,n) adj[a].clear();
+    }
+
+    bool BuildLevelGraph()
+    {
+        fill(dist+1,dist+n+1,-1);
+        queue<int> q;
+        q.push(s),dist[s] = 0;
+
+        while(!q.empty())
+        {
+            int u = q.front();
+            q.pop();
+            FOR(a,0,SIZE(adj[u])-1)
+            {
+                Edge &nx = adj[u][a];
+                if (dist[nx.to] == -1 && nx.cap)
+                {
+                    dist[nx.to] = dist[u]+1;
+                    q.push(nx.to);
+                }
+            }
+        }
+
+        return (dist[t] != -1);
+    }
+
+    int BlockingFlow(int u,int f)
+    {
+        if (u == t) return f;
+        FOR(a,cur[u],SIZE(adj[u])-1)
+        {
+            cur[u] = a;
+            Edge &nx = adj[u][a];
+            if (dist[nx.to] == dist[u]+1 && nx.cap)
+            {
+                int ret = BlockingFlow(nx.to,min(f,nx.cap));
+                if (ret > 0)
+                {
+                    nx.cap -= ret;
+                    adj[nx.to][nx.rev].cap += ret;
+                    return ret;
+                }
+            }
+        }
+        return 0;
+    }
+
+    int MaxFlow()
+    {
+        int res = 0;
+        while(BuildLevelGraph())
+        {
+            fill(cur+1,cur+n+1,0);
+            while(int ret = BlockingFlow(s,INF))
+                res += ret;
+        }
+        return res;
+    }
+};
+
+
+
+map< pii,int > vs;
+map<int,int> side1,side2;
+
+int main()
+{
+    int tc;
+    scanf("%d",&tc);
+    while(tc--)
+    {
+        vs.clear();
+        side1.clear();
+        side2.clear();
+        int n = 0;
+        int m = 0;
+        int u,v;
+        int co = 0;
+        int lol;
+        scanf("%d",&lol);
+        vector<pii > sav;
+        FOR(a,1,lol)
+        {
+            int u,v;
+            scanf("%d%d",&u,&v);
+            if (vs.count(mp(u,0))==0)
+            {
+                vs[mp(u,0)] = ++co;
+            }
+            if (vs.count(mp(v,1))==0)
+            {
+                vs[mp(v,1)] = ++co;
+            }
+            if (!side1.count(vs[mp(u,0)])) side1[vs[mp(u,0)]] = ++n;
+            if (!side2.count(vs[mp(v,1)])) side2[vs[mp(v,1)]] = ++m;
+            sav.pb(mp(side1[vs[mp(u,0)]],side2[vs[mp(v,1)]]));
+        }
+        Dinic yo(n+m+2,n+m+1,n+m+2);
+        FOR(a,0,SIZE(sav)-1)
+        {
+            int u = sav[a].fi;
+            int v = sav[a].se;
+            yo.AddEdge(u,v+n,1);
+        }
+        FOR(a,1,n)
+        {
+            yo.AddEdge(n+m+1,a,1);
+        }
+        FOR(a,1,m)
+        {
+            yo.AddEdge(a+n,n+m+2,1);
+        }
+        printf("%d\n", yo.MaxFlow());
+    }
+}

@@ -1,0 +1,65 @@
+#include <algorithm>
+#include <cstdio>
+#include <vector>
+using namespace std;
+struct Query
+{
+	int b, id, ans;
+	bool operator<(const Query &rhs) const { return b < rhs.b; }
+	bool operator<(const int &rhs) const { return b < rhs; }
+};
+struct Interval
+{
+	int l, r, delta, ans;
+	Interval(int l, int r, int delta = 0, int ans = 0) : l(l), r(r), delta(delta), ans(ans) {}
+};
+const int MAGIC = 450;
+int n, k;
+pair<int, int> p[200000];
+Query q[200000];
+vector<Interval> v;
+int ans[200000];
+void rebuild()
+{
+	for (int i = 0; i < v.size(); ++i)
+		for (int j = v[i].l; j < v[i].r; ++j)
+			q[j].ans += v[i].ans, q[j].b += v[i].delta;
+	sort(q, q + k);
+	v.clear();
+	v.push_back(Interval(0, k));
+}
+int main()
+{
+	scanf("%d", &n);
+	for (int i = 0; i < n; ++i)
+		scanf("%d %d", &p[i].second, &p[i].first), p[i].first *= -1;
+	sort(p, p + n);
+	scanf("%d", &k);
+	for (int i = 0; i < k; ++i)
+		scanf("%d", &q[i].b), q[i].id = i;
+	rebuild();
+	for (int i = 0; i < n; ++i)
+	{
+		int c = p[i].second;
+		for (int j = 0, m = v.size(); j < m; ++j)
+		{
+			if (q[v[j].l].b + v[j].delta >= c)
+				v[j].delta -= c, ++v[j].ans;
+			else if (q[v[j].r - 1].b + v[j].delta >= c)
+			{
+				int pos = lower_bound(q + v[j].l, q + v[j].r, c - v[j].delta) - q;
+				v.push_back(Interval(pos, v[j].r, v[j].delta - c, v[j].ans + 1));
+				v[j].r = pos;
+			}
+		}
+		if (v.size() > MAGIC)
+			rebuild();
+	}
+	rebuild();
+	for (int i = 0; i < k; ++i)
+		ans[q[i].id] = q[i].ans;
+	for (int i = 0; i < k; ++i)
+		printf("%d ", ans[i]);
+	puts("");
+	return 0;
+}

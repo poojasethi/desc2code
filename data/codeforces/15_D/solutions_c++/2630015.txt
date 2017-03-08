@@ -1,0 +1,105 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+typedef long long llong;
+
+const int Max =1005;
+int n, m, a, b;
+int h[Max][Max];
+int base[Max][Max];
+llong sum[Max][Max];
+int dq[Max], fr, tl;
+
+pair<int,int> locs[Max * Max];
+int tot, nr;
+bool cmp(const pair<int, int> &p, const pair<int, int> &q){
+	if(sum[p.first][p.second] != sum[q.first][q.second])
+		return sum[p.first][p.second] < sum[q.first][q.second];
+	else return p < q;
+}
+
+int main(){
+	while(scanf("%d %d %d %d", &n, &m, &a, &b) == 4){
+		for(int i = 0;i < n; ++i){
+			for(int j = 0; j < m; ++j){
+				scanf("%d", h[i] + j);
+			}
+		}
+		
+		for(int i = 0;i < n; ++i){
+			fr = tl = 0;
+			for(int j = 0, k = 0; j + b <= m; ++j){
+				while(k < j + b){
+					while(fr < tl && h[i][k] <= h[i][dq[tl -1 ]]) --tl;
+					dq[tl++] = k++;
+				}
+				while(dq[fr] < j) ++fr;
+				base[i][j] = h[i][dq[fr]];
+			}
+		}
+
+		for(int j = 0;j + b <= m; ++j){
+			fr = tl = 0;
+			for(int i = 0, k = 0; i + a <= n; ++i){
+				while(k < i + a){
+					while(fr < tl && base[k][j] <= base[dq[tl - 1]][j]) --tl;
+					dq[tl++] = k++;
+				}
+				while(dq[fr] < i) ++fr;
+				base[i][j] = base[dq[fr]][j];
+			}
+		}
+
+		for(int i = 0;i < n; ++i){
+			sum[i][0] = 0;
+			for(int j = 0;j < b; ++j){
+				sum[i][0] += h[i][j];
+			}
+			for(int j = 0;j + b < m; ++j){
+				sum[i][j + 1] = sum[i][j] - h[i][j] + h[i][j + b];
+			}
+		}
+
+		for(int j = 0;j + b <= m; ++j){
+			llong prev = sum[0][j];
+			for(int i = 1;i < a; ++i){
+				sum[0][j] += sum[i][j];
+			}
+			for(int i = 0;i + a < n; ++i){
+				llong tmp = prev;
+				prev = sum[i + 1][j];
+				sum[i + 1][j] = sum[i][j] - tmp + sum[i + a][j];
+			}
+		}
+
+		tot = 0;
+		for(int i = 0;i + a <= n; ++i){
+			for(int j = 0;j + b <= m; ++j){
+				sum[i][j] -= llong(base[i][j]) * a * b;
+				locs[tot++] = make_pair(i, j);
+			}
+		}
+
+		sort(locs, locs + tot, cmp);
+		nr = 0;
+		for(int i = 0;i < tot; ++i){
+			int x = locs[i].first, y = locs[i].second;
+			if(h[x][y] >= 0){
+				locs[nr++] = locs[i];
+				for(int dx = max(-a + 1, -x); dx < a; ++dx){
+					for(int dy = max(-b + 1, -y); dy < b; ++dy){
+						h[x + dx][y + dy] = -1;
+					}
+				}
+			}
+		}
+		printf("%d\n", nr);
+		for(int i = 0;i < nr; ++i){
+			printf("%d %d %I64d\n",
+				locs[i].first + 1, locs[i].second + 1, sum[locs[i].first][locs[i].second]);
+		}
+	}
+	return 0;
+}
+	 								   	 	 			 	  	 	

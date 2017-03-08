@@ -1,0 +1,80 @@
+#include<stdio.h>
+#include<string.h>
+#include<algorithm>
+using namespace std;
+const int maxn=10600,maxm=40000,maxi=210;
+const long long big=300000,bigger=100000000;
+struct Edge
+{
+	int x,y;
+	long long flow;
+	Edge() {}
+	Edge(int x,int y,long long flow):x(x),y(y),flow(flow) {}
+}e[maxm];
+int n,m,a[maxn],b[maxn],c[maxn],l[maxn],r[maxn];
+long long ans=0;
+int S=1,T=2,ns=2,map[maxn][maxi];
+int es=1,he[maxn]={0},ne[maxm];
+int h[maxn]={0},gap[maxn]={0};
+void add(int x,int y,long long cap)
+{
+	//printf("%d %d %I64d\n",x,y,cap);
+	e[++es]=Edge(x,y,cap);
+	ne[es]=he[x],he[x]=es;
+	e[++es]=Edge(y,x,0);
+	ne[es]=he[y],he[y]=es;
+}
+long long sap(int x,long long flow)
+{
+	if(x==T) return flow;
+	int i;
+	long long t=flow;
+	for(i=he[x];i;i=ne[i])
+	{
+		int y=e[i].y;
+		long long &fl=e[i].flow,&fl0=e[i^1].flow;
+		if(h[y]+1==h[x]&&fl)
+		{
+			long long p=sap(y,min(t,fl));
+			fl-=p,fl0+=p;
+			if(!(t-=p)) return flow;
+		}
+	}
+	if(!(--gap[h[x]])) h[0]=ns;
+	++gap[++h[x]];
+	return flow-t;
+}
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("data.in","r",stdin);
+	freopen("data.out","w",stdout);
+#endif
+	int i,j;
+	scanf("%d%d",&n,&m);
+	for(i=1;i<=n;i++)
+		scanf("%d%d%d",&a[i],&b[i],&c[i]);
+	for(i=1;i<=n;i++)
+	{
+		scanf("%d%d",&l[i],&r[i]);
+		for(j=l[i]-1;j<=r[i];j++)
+			map[i][j+101]=++ns;
+		add(S,map[i][l[i]+100],bigger);
+		add(map[i][r[i]+101],T,bigger);
+		for(j=l[i];j<=r[i];j++)
+			add(map[i][j+100],map[i][j+101],big-(a[i]*j*j+b[i]*j+c[i]));
+	}
+	for(i=0;i<m;i++)
+	{
+		int u,v,d;
+		scanf("%d%d%d",&u,&v,&d);
+		for(j=l[u]-1;j<=r[u];j++)
+			if(l[v]-1<=j-d&&j-d<=r[v])
+				//printf("%d %d\n",map[u][j+101],map[v][j-d+101]),
+				add(map[u][j+101],map[v][j-d+101],bigger);
+	}
+	for(gap[0]=ns;h[0]<ns;) ans+=sap(S,bigger*n);
+	//printf("%I64d\n",ans);
+	printf("%I64d\n",big*n-ans);
+	return 0;
+}

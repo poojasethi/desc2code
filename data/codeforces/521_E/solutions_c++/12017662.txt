@@ -1,0 +1,148 @@
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <vector>
+using namespace std;
+
+const int N = 200005;
+
+int n, m;
+vector<pair<int, int> > G[N];
+vector<int> tree[N];
+bool intree[N], vis[N];
+int deep[N], father[N][20];
+pair<int, int> E[N];
+int sum[N];
+
+void init()
+{
+    cin >> n >> m;
+    for(int i = 1; i <= m; i ++)
+    {
+        int c, d;
+        scanf("%d%d", &c, &d);
+        G[c].push_back(make_pair(d, i));
+        G[d].push_back(make_pair(c, i));
+        E[i] = make_pair(c, d);
+    }
+}
+void soso1(int u, int fr)
+{
+    vis[u] = true, deep[u] = deep[father[u][0]] + 1;
+    for(int i = 0; i < G[u].size(); i ++)
+    {
+        int v = G[u][i].first;
+        if(G[u][i].second == fr) continue;
+        if(vis[v] == false)
+        {
+            intree[G[u][i].second] = true, father[v][0] = u;
+            tree[u].push_back(v);
+            soso1(v, G[u][i].second);
+        }
+    }
+}
+void soso2(int u)
+{
+    for(int i = 0; i < tree[u].size(); i ++)
+    {
+        int v = tree[u][i];
+        soso2(v), sum[u] += sum[v];
+    }
+}
+void build_lca()
+{
+    for(int j = 1; j <= 18; j ++)
+        for(int i = 1; i <= n; i ++)
+            father[i][j] = father[father[i][j - 1]][j - 1];
+}
+int lca(int x, int y)
+{
+    if(deep[x] < deep[y]) swap(x, y);
+    for(int i = 18; i >= 0; i --)
+    if(deep[father[x][i]] >= deep[y])
+        x = father[x][i];
+    if(x == y) return x;
+    for(int i = 18; i >= 0; i --)
+    if(father[x][i] != father[y][i])
+        x = father[x][i], y = father[y][i];
+    return father[x][0];
+}
+void print(vector<int> &ans)
+{
+    cout << ans.size() << " ";
+    for(int i = 0; i < ans.size(); i ++)
+        printf("%d ", ans[i]);
+    cout << endl;
+}
+void get_ans(int u, int v)
+{
+    build_lca();
+    vector<pair<int, int> > cur;
+    for(int i = 1; i <= m; i ++)
+    if(intree[i] == false && lca(E[i].first, u) == u  && lca(E[i].second, v) == E[i].second)
+    {
+        cur.push_back(E[i]);
+        if(cur.size() == 2) break;
+    }
+    u = lca(cur[0].first, cur[1].first);
+    if(lca(cur[0].second, cur[1].second) == cur[0].second) v = cur[1].second;
+    else v = cur[0].second;
+    
+    vector<int> ans;
+    for(int i = u; i != v; i = father[i][0]) ans.push_back(i);
+    ans.push_back(v), reverse(ans.begin(), ans.end());
+    print(ans), ans.clear();
+    
+    int t1 = lca(v, cur[0].second);
+    for(int i = v; i != t1; i = father[i][0]) ans.push_back(i);
+    ans.push_back(t1);
+    for(int i = cur[0].first; i != u; i = father[i][0]) ans.push_back(i);
+    ans.push_back(u);
+    print(ans), ans.clear();
+    
+    t1 = lca(v, cur[1].second);
+    for(int i = v; i != t1; i = father[i][0]) ans.push_back(i);
+    ans.push_back(t1);
+    for(int i = cur[1].first; i != u; i = father[i][0]) ans.push_back(i);
+    ans.push_back(u);
+    print(ans), ans.clear();
+}
+void work()
+{
+    for(int i = 1; i <= n; i ++)
+    if(vis[i] == false)
+        soso1(i, 0);
+    for(int i = 1; i <= m; i ++)
+    {
+        if(deep[E[i].first] < deep[E[i].second]) swap(E[i].first, E[i].second);
+        if(intree[i] == false)
+            sum[E[i].first] ++, sum[E[i].second] --;
+    }
+    for(int i = 1; i <= n; i ++)
+    if(father[i][0] == 0)
+        soso2(i);
+    if((*max_element(sum + 1, sum + n + 1)) < 2)
+    {
+        cout << "NO" << endl;
+        return ;
+    }
+    /*
+    for(int i = 1; i <= n; i ++)
+        cout << father[i][0] << " ";
+    cout << endl;
+    */
+    cout << "YES" << endl;
+    int u = max_element(sum + 1, sum + n + 1) - sum, v = father[u][0];
+    get_ans(u, v);
+}
+
+int main()
+{
+    //freopen("E.in", "r", stdin);
+    //freopen("E.out", "w", stdout);
+    init(), work();
+    return 0;
+}

@@ -1,0 +1,183 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <map>
+#include <cstdio>
+#include <cstring>
+
+#define ppi pair<pair<int, int>, int>
+#define pii pair<int, int>
+using namespace std;
+int val;
+int n, m;
+map<pair<int, int> , int> mm;
+vector<pii> vv;
+int last;
+int ll;
+
+int tot;
+int x[200006], y[200006], bucket[200006], compute[200006];
+ppi v[200006];
+int ans[200006];
+vector<int> p, rank;
+
+bool cmp(ppi p1,ppi p2)
+{
+        if(p1.first.first/val == p2.first.first/val) {
+             return p1.first.second < p2.first.second;
+        }
+        return p1.first.first/val < p2.first.first/val;
+}
+
+void init()
+{
+        for(int i = 0; i < 200005; i++) {
+            p[i] = i;
+            rank[i] = -1;
+        }
+}
+
+int getans(int l, int r)
+{
+    for(int i = l; i <= r; i++) {
+        int p1, p2;
+        p1 = x[i];
+        p2 = y[i];
+        while(p[p1] != p1) p1 = p[p1];
+        while(p[p2] != p2) p2 = p[p2];
+        if(p1 == p2) continue;
+        else {
+            if(rank[p1] > rank[p2]) p[p2] = p1;
+            else if(rank[p1] < rank[p2]) p[p1] = p2;
+            else {
+                    rank[p1] = rank[p2] + 1;
+                    p[p2] = p1;
+            }
+            tot--;
+        }
+    }
+    return tot;
+}
+
+void rollback()
+{
+        for(int i = vv.size()-1; i >= 0; i--) {
+            p[vv[i].first] = vv[i].first;
+            rank[vv[i].first] = vv[i].second;
+        }
+        vv.clear();
+}
+
+void extend(int l, int r)
+{
+    //cout << "extend " << l << " " << r << endl;
+    for(int i = l; i <= r; i++) {
+        int p1, p2;
+        p1 = x[i];
+        p2 = y[i];
+        while(p[p1] != p1) p1 = p[p1];
+        while(p[p2] != p2) p2 = p[p2];
+        if(p1 == p2) continue;
+        else {
+            if(rank[p1] > rank[p2]) p[p2] = p1;
+            else if(rank[p1] < rank[p2]) p[p1] = p2;
+            else {
+                    rank[p1] = rank[p2] + 1;
+                    p[p2] = p1;
+            }
+            tot--;
+        }
+    }
+}
+
+int getans2(int l, int r)
+{
+    int temp = tot;
+    for(int i = l; i <= r; i++) {
+        int p1, p2;
+        p1 = x[i];
+        p2 = y[i];
+        while(p[p1] != p1) p1 = p[p1];
+        while(p[p2] != p2) p2 = p[p2];
+        if(p1 == p2) continue;
+        else {
+            vv.push_back(pii(p1, rank[p1]));
+            vv.push_back(pii(p2, rank[p2]));
+            if(rank[p1] > rank[p2]) p[p2] = p1;
+            else if(rank[p1] < rank[p2]) p[p1] = p2;
+            else {
+                    rank[p1] = rank[p2] + 1;
+                    p[p2] = p1;
+            }
+            temp--;
+        }
+    }
+   // cout << "Here boy" << endl;
+    rollback();
+    return temp;
+}
+
+int main()
+{
+    int t;
+   // ios_base::sync_with_stdio(false);
+   //freopen("in", "r", stdin);
+   //freopen("oo", "w", stdout);
+    cin >> t;
+    p.resize(200005);
+    rank.resize(200005);
+    while(t--) {
+        init();
+        int q;
+     //   mm.clear();
+        cin >> n >> m >> q;
+
+        for(int i = 0; i < m; i++) {
+            scanf("%d%d", &x[i], &y[i]);
+            x[i]--;
+            y[i]--;
+        }
+        //cout << "DD" << endl;
+        for(int i = 0; i < q; i++) {
+           scanf("%d", &v[i].first.first);
+           scanf("%d", &v[i].first.second);
+            v[i].first.first--;
+            v[i].first.second--;
+            v[i].second = i;
+        }
+        val = sqrt(n);
+        sort(v, v+q, cmp);
+        for(int i = 0; i < q; i++) {
+            bucket[i] = v[i].first.first/val;
+        }
+        memset(compute, 0, sizeof(compute));
+        for(int i = 0; i < q; i++) {
+            if(v[i].first.second < (bucket[i]+1)*val) {
+                tot = n;
+                ans[v[i].second] = getans2(v[i].first.first, v[i].first.second);
+                compute[i] = 1;
+            }
+        }
+        int last;
+        for(int i = 0; i < q; i++) {
+            if(i == 0 || bucket[i] != bucket[i-1]) {
+                init();
+                last = (bucket[i]+1)*val;
+                ll = last;
+                tot = n;
+                //cout << "hi " << bucket[i] << " " << ll << " " << last << endl;
+                getans(ll, last);
+            }
+            if(compute[i]) continue;
+            if(v[i].first.second > last) {
+                    extend(last+1, v[i].first.second);
+                    last = v[i].first.second;
+            }
+            ans[v[i].second] = getans2(v[i].first.first, min(ll-1, v[i].first.second));
+        }
+        for(int i = 0; i < q; i++) {
+            printf("%d\n", ans[i]);
+        }
+    }
+}

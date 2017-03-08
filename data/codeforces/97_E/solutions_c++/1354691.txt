@@ -1,0 +1,187 @@
+#include<iostream>
+#include<cstring>
+#include<cstdio>
+#include<vector>
+#include<cmath>
+using namespace std;
+#define Fit(it,c) for (typeof(c.begin())it=c.begin();it!=c.end();it++)
+#define F(i,l,r) for (i=l;i<=r;i++)
+#define Clear(a) memset(a,0,sizeof(a))
+#define Neg(a) memset(a,255,sizeof(a))
+#define mp make_pair
+#define pb push_back
+#define x first
+#define y second
+#define PII pair<int,int>
+#define maxn 100010
+#define maxm 100010
+
+vector <PII> e[maxn];
+int n,m,u,v,i,j,q,idx,root;
+bool Intree[maxn],vis[maxn];
+int depth[maxn],S[maxn],C[maxn],F[maxn],Pos[maxn];
+int st[maxn*2][20][2];
+
+void dfs(int a,int u)
+{	
+	++idx;
+	st[idx][0][0]=depth[u];
+	st[idx][0][1]=u;
+	Pos[u]=idx;
+
+	F[u]=root;
+	vis[u]=1;
+	Fit(it,e[u])
+	if (it->x!=a)
+	{
+		if (!vis[it->x])
+		{
+			Intree[it->y]=1;
+			depth[it->x]=depth[u]+1;
+			dfs(u,it->x);
+			++idx;
+			st[idx][0][0]=depth[u];
+			st[idx][0][1]=u;
+		}
+		else
+		{
+			if (depth[it->x]>=depth[u]) continue;
+			if ((depth[it->x]-depth[u])%2==0)
+			{
+				S[it->x]--;
+				S[u]++;
+			}
+		}
+	}
+}
+
+void CountA_S(int a,int u)
+{
+	vis[u]=1;
+	Fit(it,e[u])
+	if (it->x!=a && Intree[it->y])
+	{
+		CountA_S(u,it->x);
+		S[u]+=S[it->x];
+	}
+}
+
+void CountB_S(int a,int u)
+{
+	S[u]+=S[a];
+	vis[u]=1;
+	Fit(it,e[u])
+	if (it->x!=a && Intree[it->y]) CountB_S(u,it->x);
+}
+
+void CountA_C(int a,int u)
+{
+	vis[u]=1;
+	Fit(it,e[u])
+	if (it->x!=a && Intree[it->y])
+	{
+		CountA_C(u,it->x);
+		C[u]+=C[it->x];
+	}
+}
+
+void CountB_C(int a,int u)
+{
+	C[u]+=C[a];
+	vis[u]=1;
+	Fit(it,e[u])
+	if (it->x!=a && Intree[it->y]) CountB_C(u,it->x);
+}
+
+int lg(int x)
+{
+	return (int)floor(log(x)/log(2));
+}
+
+int LCA(int u,int v)
+{
+	u=Pos[u]; v=Pos[v];
+	if (u>v) swap(u,v);
+	int l=lg(v-u+1);
+	if (st[u][l][0]<st[v-(1<<l)+1][l][0]) return st[u][l][1];
+	else return st[v-(1<<l)+1][l][1];
+}
+
+int main()
+{	
+	scanf("%d %d\n",&n,&m);
+	F(i,1,m)
+	{
+		scanf("%d %d\n",&u,&v);
+		e[u].pb(mp(v,i)); 
+		e[v].pb(mp(u,i));
+	}
+
+	Clear(vis);
+	F(i,1,n)
+	if (!vis[i])
+	{
+		root=i;
+		dfs(0,i);
+	}
+	
+	F(j,1,lg(idx))
+	F(i,1,idx-(1<<j)+1)
+	if (st[i][j-1][0]<st[i+(1<<(j-1))][j-1][0])
+	{
+		st[i][j][0]=st[i][j-1][0];
+		st[i][j][1]=st[i][j-1][1];
+	}
+	else
+	{
+		st[i][j][0]=st[i+(1<<(j-1))][j-1][0];
+		st[i][j][1]=st[i+(1<<(j-1))][j-1][1];
+	}
+
+	Clear(vis); F(i,1,n) if (!vis[i]) CountA_S(0,i);
+	Clear(vis); F(i,1,n) if (!vis[i]) CountB_S(0,i);
+	
+	F(u,1,n)
+	Fit(it,e[u])
+	if (!Intree[it->y])
+	{
+		if (depth[it->x]>=depth[u]) continue;
+		if ((depth[u]-depth[it->x])&1)
+		{
+			if (S[u]-S[it->x]>0)
+			{
+				C[u]++;
+				C[it->x]--;
+			}
+		}
+	}
+
+	Clear(vis); F(i,1,n) if (!vis[i]) CountA_C(0,i);
+	Clear(vis); F(i,1,n) if (!vis[i]) CountB_C(0,i);
+
+	scanf("%d\n",&q);
+	F(i,1,q)
+	{
+		scanf("%d %d\n",&u,&v);
+		if (F[u]!=F[v]) 
+		{
+			printf("No\n");
+			continue;
+		}
+		int z=LCA(u,v);
+		j=depth[u]+depth[v]-depth[z]*2;
+		if (j&1)
+		{
+			printf("Yes\n");
+			continue;
+		}
+		if (S[u]+S[v]-S[z]*2>0)
+		{
+			printf("Yes\n");
+			continue;
+		}
+		if (C[u]+C[v]-C[z]*2>0) printf("Yes\n");
+		else printf("No\n");
+	}
+	return 0;
+}

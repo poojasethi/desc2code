@@ -1,0 +1,270 @@
+#include<iostream>
+#include<bits/stdc++.h>
+using namespace std;
+#define MOD 1000000007
+#define ft first
+#define sd second
+#define VI vector<int>
+#define VLL vector<long long int>
+#define PII pair<int,int>
+#define pb push_back
+#define rsz(v,n) v.resize(n)
+// input and output
+#define scan(x) scanf("%d",&x)
+#define scanll(x) scanf("%lld",&x)
+#define ll long long int
+#define rep(i,x,y) for(i=x;i<y;i++)
+#define print(x) printf("%d\n",x)
+#define printll(x) printf("%lld\n",x)
+#define all(v) v.begin(),v.end()
+#define ms(v) memset(v,0,sizeof(v))
+#define FOR(i,a,b)  for(i=a;i<b;i++)
+#define f_in(st) freopen(st,"r",stdin)
+#define f_out(st) freopen(st,"w",stdout)
+#define PIE 3.14159265358979323846264338327950
+#ifdef ONLINE_JUDGE
+ inline void inp( int &n )
+ {
+    n=0;
+    int ch=getchar_unlocked();int sign=1;
+    while( ch < '0' || ch > '9' ){if(ch=='-')sign=-1; ch=getchar_unlocked();}
+
+    while(  ch >= '0' && ch <= '9' )
+            n = (n<<3)+(n<<1) + ch-'0', ch=getchar_unlocked();
+    n=n*sign;
+  }
+#else
+inline void inp(int &n){
+ cin>>n;
+}
+#endif
+#define MAX 100000
+int n,q,P[3];
+ll r;
+vector<ll> arr,power_R[3];
+struct node{
+ ll A,D,sum1,sum2;
+};
+
+node st[4*MAX][3];
+ll inv[3][3],inv2[3];
+
+
+inline ll power(ll a,ll b,ll c){
+ ll res=1;
+ a=a%c;
+ while(b>0){
+  if(b&1) res=(res*a)%c;
+  b/=2;
+  a=(a*a)%c;
+ }
+ return res%c;
+}
+// PRE COMPUTATION
+ll X[3][100005];
+ll Y[3][100005];
+inline void pre(int n){
+ power_R[0].resize(n+1);
+ power_R[1].resize(n+1);
+ power_R[2].resize(n+1);
+ power_R[0][0]=power_R[1][0]=power_R[2][0]=1;
+ X[1][0]=X[2][0]=1;
+ Y[1][0]=Y[2][0]=0;
+ for(int i=1;i<=n;i++){
+  if(r!=1)power_R[0][i]=(power_R[0][i-1]*r)%P[0];
+  power_R[1][i]=(power_R[1][i-1]*r)%P[1];
+  power_R[2][i]=(power_R[2][i-1]*r)%P[2];
+  X[1][i]=(X[1][i-1]+power_R[1][i])%P[1];
+  X[2][i]=(X[2][i-1]+power_R[2][i])%P[2];
+  
+  Y[1][i]=(Y[1][i-1]+i*power_R[1][i])%P[1];
+  Y[2][i]=(Y[2][i-1]+i*power_R[2][i])%P[2];
+  
+ }
+ // modular inversion
+ if(r!=1)inv[0][1]=power((r-1),P[0]-2,P[0]);
+ if(r!=1)inv[0][2]=power((r-1)*(r-1),P[0]-2,P[0]);
+ inv[1][1]=power((r-1),P[1]-2,P[1]);
+ inv[1][2]=power((r-1)*(r-1),P[1]-2,P[1]);
+ inv[2][1]=power((r-1),P[2]-2,P[2]);
+ inv[2][2]=power((r-1)*(r-1),P[2]-2,P[2]);
+ //cout<<inv[2][2]<<endl;
+ if(r!=1)inv2[0]=power(2,P[0]-2,P[0]);
+ inv2[1]=power(2,P[1]-2,P[1]);
+ inv2[2]=power(2,P[2]-2,P[2]);
+}
+
+
+inline void buildst(int idx,int ss,int se,int index){
+ if(ss==se){
+  st[idx][index].A=st[idx][index].D=st[idx][index].sum1=0;
+  st[idx][index].sum2=arr[ss];
+  return ;
+ }
+ int mid=(ss+se)>>1;
+ buildst(2*idx+1,ss,mid,index);
+ buildst(2*idx+2,mid+1,se,index);
+ st[idx][index].A=0;st[idx][index].D=0;st[idx][index].sum1=0;
+ st[idx][index].sum2=st[2*idx+1][index].sum2+st[2*idx+2][index].sum2;
+}
+ll cal(ll A,ll D,int n,int index){
+  ll res,res1;
+  res=((((A+(((n-1)*D)%P[index]))*power_R[index][n])%P[index])-A)%P[index];
+  res=(res+P[index])%P[index];
+  res=(res*(r-1))%P[index];
+  res1=(power_R[index][n-1]-1)%P[index];
+  res1=(res1+P[index])%P[index];
+  res1=(res1*D)%P[index];
+  res1=(res1*r)%P[index];
+  res=(res-res1)%P[index];
+  res=(res+P[index])%P[index];
+
+  return res;
+}
+
+inline ll compute_sum(ll A,ll D,int n,int index){
+ ll res,res1;
+	res=((A*X[index][n-1])%P[index]+(D*Y[index][n-1])%P[index])%P[index];
+// res=(res+P[index])%P[index];
+ return (res)%P[index];
+}
+
+// ADJUST
+inline void adjust(int idx,int ss,int se,int index){
+  ll A=st[idx][index].A;
+  ll D=st[idx][index].D;
+  int l=ss;
+  int r=se;
+  st[idx][index].sum1=(st[idx][index].sum1+compute_sum((A)%P[index],(D)%P[index],se-ss+1,index))%P[index];
+  if(ss!=se)
+  {
+         int mid=(ss+se)>>1;
+         st[2*idx+1][index].A=(st[idx*2+1][index].A+((A)%P[index]))%P[index];
+         st[2*idx+1][index].D=(st[idx*2+1][index].D+D)%P[index];
+         st[2*idx+2][index].A=(st[2*idx+2][index].A+((A+((mid+1-l)*D)%P[index])*power_R[index][mid+1-l])%P[index])%P[index];
+         st[2*idx+2][index].D=(st[2*idx+2][index].D+D*power_R[index][mid+1-l])%P[index];
+  }
+  st[idx][index].A=st[idx][index].D=0;
+}
+
+// RANGE UPDATE
+inline void update_range(int idx,int ss,int se,int l,int r,ll A,ll D,int index)
+{
+    if(st[idx][index].A||st[idx][index].D) adjust(idx,ss,se,index);
+
+    if(l>se||r<ss) return;
+
+    if(l<=ss&&se<=r){
+	   //cout<<"POW:::"<<power_R[index][ss-l]<<endl;
+      st[idx][index].sum1=(st[idx][index].sum1+compute_sum(((A+((ss-l)*D)%P[index])*power_R[index][ss-l])%P[index],(D*power_R[index][ss-l])%P[index],se-ss+1,index))%P[index];
+
+      int mid=(ss+se)>>1;
+      if(ss!=se){
+         st[2*idx+1][index].A=(st[idx*2+1][index].A+((A+((ss-l)*D)%P[index])*power_R[index][ss-l])%P[index])%P[index];
+         st[2*idx+1][index].D=(st[idx*2+1][index].D+D*power_R[index][ss-l])%P[index];
+         st[2*idx+2][index].A=(st[2*idx+2][index].A+((A+((mid+1-l)*D)%P[index])*power_R[index][mid+1-l])%P[index])%P[index];
+         st[2*idx+2][index].D=(st[2*idx+2][index].D+D*power_R[index][mid+1-l])%P[index];
+      }
+      return ;
+    }
+    int mid=(ss+se)>>1;
+    update_range(2*idx+1,ss,mid,l,r,A,D,index);
+    update_range(2*idx+2,mid+1,se,l,r,A,D,index);
+    st[idx][index].sum1=(st[idx*2+1][index].sum1+st[idx*2+2][index].sum1)%P[index];
+    st[idx][index].sum2=(st[idx*2+1][index].sum2+st[idx*2+2][index].sum2)%P[index];
+  //  cout<<"SUM "<<st[idx][index].sum1<<" "<<st[idx][index].sum2<<endl;
+}
+
+// POINT UPDATE
+inline void update_point(int idx,int ss,int se,int pos,ll val,int index){
+
+ if(st[idx][index].A||st[idx][index].D) adjust(idx,ss,se,index);
+ if(pos>se||pos<ss) return ;
+ if(ss==se){
+  st[idx][index].A=0;
+  st[idx][index].D=0;
+  st[idx][index].sum1=0;
+  st[idx][index].sum2=val;
+  return ;
+ }
+ int mid=(ss+se)>>1;
+  update_point(2*idx+1,ss,mid,pos,val,index);
+  update_point(2*idx+2,mid+1,se,pos,val,index);
+ st[idx][index].sum1=(st[idx*2+1][index].sum1+st[idx*2+2][index].sum1)%P[index];
+ st[idx][index].sum2=(st[idx*2+1][index].sum2+st[idx*2+2][index].sum2)%P[index];
+// cout<<st[idx][index].sum1<<" SUM "<<st[idx][index].sum2<<endl;
+}
+
+
+// QUERY
+ll query(int idx,int ss,int se,int l,int r,int index){
+ if(st[idx][index].A||st[idx][index].D) adjust(idx,ss,se,index);
+ if(l>se||r<ss) return 0;
+ if(l<=ss&&se<=r) return (st[idx][index].sum1+st[idx][index].sum2)%P[index];
+ int mid=(ss+se)>>1;
+ return ((query(2*idx+1,ss,mid,l,r,index)%P[index])+query(2*idx+2,mid+1,se,l,r,index)%P[index])%P[index];
+}
+
+// DEBUG
+void print_seg(){
+ for(int i=0;i<8;i++) cout<<"SUM "<<st[i][1].sum1<<endl<<"A "<<st[i][1].A<<endl<<"D "<<st[i][1].D<<endl;
+}
+// main
+int main()
+{
+	#ifndef ONLINE_JUDGE
+	f_in("in.cpp");
+	f_out("out.txt");
+	#endif
+
+    int t;
+    cin>>t;
+    while(t--){
+
+     scan(n);
+     scan(q);
+     scanll(r);
+     scan(P[1]);
+     scan(P[2]);
+     P[0]=r-1;
+     arr.resize(n);
+     for(int i=0;i<n;i++) scanll(arr[i]);
+
+   //  if(r!=1)buildst(0,0,n-1,0);
+     buildst(0,0,n-1,1);
+     buildst(0,0,n-1,2);
+     pre(n);
+     int choice;
+     ll S,D,X,Y,G;
+     while(q--){
+      scan(choice);
+      if(choice==0){
+        scanll(S);
+        scanll(D);
+        scanll(X);
+        scanll(Y);
+     //   if(r!=1)update_range(0,0,n-1,X-1,Y-1,S,D,0);
+        update_range(0,0,n-1,X-1,Y-1,S,D,1);
+        update_range(0,0,n-1,X-1,Y-1,S,D,2);
+      }else if(choice==1){
+       scanll(X);
+       scanll(G);
+       ll temp=query(0,0,n-1,X-1,X-1,2);
+               query(0,0,n-1,X-1,X-1,1);
+      //         if(r!=1)query(0,0,n-1,X-1,X-1,0);
+               temp=power(temp,G,P[2]);
+       //        if(r!=1)update_point(0,0,n-1,X-1,temp%P[0],0);
+               update_point(0,0,n-1,X-1,temp%P[1],1);
+               update_point(0,0,n-1,X-1,temp%P[2],2);
+      }
+      else{
+       scanll(X);
+       scanll(Y);
+       printll(query(0,0,n-1,X-1,Y-1,1));
+               query(0,0,n-1,X-1,Y-1,2);
+        //       if(r!=1)query(0,0,n-1,X-1,Y-1,0);
+      }
+     }
+    }
+  return 0;
+}

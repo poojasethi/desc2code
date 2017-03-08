@@ -1,0 +1,109 @@
+#include<bits/stdc++.h>
+using namespace std;
+
+int dp1[1000005],dp2[1000005],dp3[1000005];
+int m,n;
+
+long long int power(int x,int y)
+{
+    if(y==0)
+        return 1;
+    if(y&1)
+        return (power(x,y-1)*x)%m;
+    long long int ans=0;
+    ans=power(x,y/2);
+    return (ans*ans)%m;
+}
+
+struct node
+{
+    long long int val;
+    void merge(node l,node r)
+    {
+        val=(l.val*r.val)%m;
+    }
+};
+
+struct node createnode(long long int x)
+{
+    struct node temp;
+    temp.val=x;
+    return temp;
+}
+
+struct node createsegmenttree(struct node *arr,int *a,int root,int left,int right)
+{
+    if(left>right)
+        return createnode(0);
+    if(left==right)
+    {
+        arr[root]=createnode(a[left]);
+        return arr[root];
+    }
+    int leftchild=2*root+1;
+    int rightchild=leftchild+1;
+    int mid= (left+right)/2;
+    arr[root].merge(createsegmenttree(arr,a,leftchild,left,mid),createsegmenttree(arr,a,rightchild,mid+1,right));
+    return arr[root];
+}
+
+struct node query(struct node *arr,int root,int left ,int right,int l,int r)
+{
+    if(left>right)
+        return createnode(0);
+    if(l<0 || r>n-1)
+        return createnode(0);
+    if(l<=left && right<=r)
+        return arr[root];
+    int mid=(left+right)/2;
+    int leftchild=2*root+1;
+    int rightchild= leftchild+1;
+    if(r<=mid)
+        return query(arr,leftchild,left,mid,l,r);
+    if(l>mid)
+        return query(arr,rightchild,mid+1,right,l,r);
+    struct node res;
+    res.merge(query(arr,leftchild,left,mid,l,mid),query(arr,rightchild,mid+1,right,mid+1,r));
+    return res;
+}
+
+struct node seg1[4000006],seg2[4000006],seg3[4000006];
+void solve()
+{
+    for(int i=1;i<=n;i++)
+    {
+        dp1[i-1]=power(i,i-1);
+        dp2[i-1]=power(i,n-i+1);
+        dp3[i-1]=i;
+    }
+    seg1[0]=createsegmenttree(seg1,dp1,0,0,n-1);
+    seg2[0]=createsegmenttree(seg2,dp2,0,0,n-1);
+    seg3[0]=createsegmenttree(seg3,dp3,0,0,n-1);
+}
+
+int Min,Max,q,t,r;
+long long int ans;
+int main()
+{
+    scanf("%d",&t);
+    while(t--)
+    {
+        scanf("%d %d %d",&n,&m,&q);
+        solve();
+        while(q--)
+        {
+            scanf("%d",&r);
+            Min=min(r,n-r);
+            Max=max(r,n-r);
+
+            ans= query(seg1,0,0,n-1,0,Min-1).val;
+            if(r<(n-r))
+            ans= (ans*power(query(seg3,0,0,n-1,Min,Max-1).val,r))%m;
+            else
+            ans= (ans*power(query(seg3,0,0,n-1,Min,Max-1).val,n-r))%m;
+            ans= (ans*query(seg2,0,0,n-1,Max,n-1).val)%m;
+            cout<<ans<<"\n";
+        }
+    }
+return 0;
+}

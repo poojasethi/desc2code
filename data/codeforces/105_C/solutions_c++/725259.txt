@@ -1,0 +1,130 @@
+#include <ctime>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+
+#include <algorithm>
+#include <iostream>
+#include <bitset>
+#include <vector>
+#include <queue>
+#include <map>
+#include <set>
+
+using namespace std;
+
+const bool debug = true;
+
+struct obj
+{
+	int val, cap;
+	string name;
+	
+	obj(int nval, int ncap, string nname): val(nval), cap(ncap), name(nname) {}
+};
+
+struct man
+{
+	int val;
+	string name, home;
+	
+	man(int nval, string nname, string nhome): val(nval), name(nname), home(nhome) {}
+	
+	bool operator < (const man &m) const
+	{
+		return val > m.val;
+	}
+};
+
+int n, k;
+vector<obj> inv[3];
+vector<man> men[3];
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt", "r", stdin);
+	freopen("output.txt", "w", stdout);
+#endif
+	cin >> n;
+	map<string, int> est_cap;
+	for (int i = 0; i < n; i++)
+	{
+		string name, c;
+		int a, d, r, cap;
+		cin >> name >> c >> a >> d >> r >> cap;
+		if (c == "weapon") inv[0].push_back(obj(a, cap, name));
+		else if (c == "armor") inv[1].push_back(obj(d, cap, name));
+		else if (c == "orb") inv[2].push_back(obj(r, cap, name));
+		est_cap[name] = cap;
+	}
+	cin >> k;
+	set<string> unused;
+	for (int i = 0; i < k; i++)
+	{
+		string name, c, h;
+		int b;
+		cin >> name >> c >> b >> h;
+		unused.insert(name);
+		est_cap[h]--;
+		if (c == "gladiator") men[0].push_back(man(b, name, h));
+		else if (c == "sentry") men[1].push_back(man(b, name, h));
+		else if (c == "physician") men[2].push_back(man(b, name, h));
+	}
+	bool can = false;
+	for (map<string, int>::iterator it = est_cap.begin(); it != est_cap.end(); it++)
+		can |= it->second != 0;
+	if (!can)
+	{
+		int best[3] = {-1, -1, -1};
+		for (int i = 0; i < 3; i++)
+		{
+			best[i] = 0;
+			for (size_t j = 0; j < inv[i].size(); j++)
+			{
+				for (size_t z = 0; z < men[i].size(); z++)
+					if (inv[i][j].name == men[i][z].home) inv[i][j].val += men[i][z].val;
+				if (inv[i][j].val > inv[i][best[i]].val) best[i] = j;
+			}
+		}	
+		for (int i = 0; i < 3; i++)
+		{
+			obj c = inv[i][best[i]];
+			cout << c.name << " " << c.cap - est_cap[c.name];
+			for (int z = 0; z < 3; z++)
+				for (size_t j = 0; j < men[z].size(); j++)
+					if (c.name == men[z][j].home) cout << " " << men[z][j].name;
+			cout << endl;
+		}			
+		return 0;
+	}
+	for (int i = 0; i < 3; i++)
+		sort(men[i].begin(), men[i].end());
+	vector<string> answer[3];
+	int ec[3] = {-1, -1, -1}, best[3] = {-1, -1, -1};
+	for (int i = 0; i < 3; i++)
+	{
+		int bestval = -1;
+		for (size_t j = 0; j < inv[i].size(); j++)
+		{
+			int value = inv[i][j].val;
+			for (int k = 0; k < min(inv[i][j].cap, (int) men[i].size()); k++)
+				value += men[i][k].val;
+			if (value > bestval)
+				best[i] = j, bestval = value;
+		}
+		for (int k = 0; k < min(inv[i][best[i]].cap, (int) men[i].size()); k++)
+			answer[i].push_back(men[i][k].name), unused.erase(men[i][k].name);
+		ec[i] = inv[i][best[i]].cap - min(inv[i][best[i]].cap, (int) men[i].size());
+	}
+	for (int i = 0; i < 3; i++)
+	{
+		while (unused.size() && ec[i]) answer[i].push_back(*unused.begin()), unused.erase(unused.begin()), ec[i]--;
+		cout << inv[i][best[i]].name << " " << answer[i].size();
+		for (size_t j = 0; j < answer[i].size(); j++)
+			cout << " " << answer[i][j];
+		cout << endl;
+	}
+	return 0;
+}

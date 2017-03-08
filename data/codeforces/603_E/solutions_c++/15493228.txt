@@ -1,0 +1,128 @@
+#include <algorithm>
+#include <iostream>
+#include <cstring>
+#include <cstdio>
+#include <vector>
+#define lch(x) ((x)<<1)
+#define rch(x) (((x)<<1)|1)
+#define fi first
+#define se second
+#define pb push_back
+#define pbk pop_back 
+using namespace std;
+typedef pair<int, int> PII;
+typedef pair<int*, int> Data;
+const int N = 1e5+10, M = 3e5+10;
+
+int n, m;
+
+struct Dsu {
+	int count;
+	int siz[N], fa[N];
+	vector <Data> q; 
+
+	void Init() {
+		count = n;
+		for (int i=1; i<=n; ++i)
+			siz[i] = 1, fa[i] = i;
+	}
+
+	inline int Find(int u) {
+		for (; fa[u]!=u; u=fa[u]);
+		return u;
+	}
+
+	inline int Len() { return q.size(); }
+
+	inline void Revert(int x) {
+		--x;
+		for (int i=q.size()-1; i>x; --i) {
+			int *a, b;
+			a = q[i].fi, b = q[i].se;
+			*a = b;
+			q.pbk();
+		}
+	}
+
+	inline void Set(int *a, int b) {
+		q.pb(Data(a, *a));
+		*a = b;
+	}
+
+	inline void Merge(int u, int v) {
+		u = Find(u), v = Find(v);
+		if (u==v) return;
+		if (siz[u]>siz[v]) swap(u, v);
+		Set(&count, count-2*((siz[u]&1) && (siz[v]&1)));
+		Set(&fa[u], v);
+		Set(&siz[v], siz[u]+siz[v]);
+	}
+};
+
+int a[M], b[M];
+PII c[M];
+Dsu s;
+
+void Init() {
+	scanf("%d%d", &n, &m);
+	for (int i=1; i<=m; ++i) {
+		scanf("%d%d%d", &a[i], &b[i], &c[i].fi);
+		c[i].se = i;
+	}
+	sort(c+1, c+m+1);
+	s.Init();
+}
+
+int ans[M], t;
+vector <int> store[M<<2];
+
+void Modify(int x, int l, int r, int p, int q, int id) {
+	if (r<p || q<l) return;
+	if (p<=l && r<=q) { store[x].pb(id); return; }
+	int m=(l+r)>>1;
+	Modify(lch(x), l, m, p, q, id);
+	Modify(rch(x), m+1, r, p, q, id);
+}
+
+void Dfs(int x, int l, int r) {
+	int len=s.Len();
+	for (int i=0; i<store[x].size(); ++i) {
+		int id, u, v;
+		id = store[x][i];
+		u = a[id], v = b[id];
+		s.Merge(u, v);
+	}
+	if (l==r) {
+		for (; t<=m && s.count; ++t) {
+			int id, u, v;
+			id = c[t].se;
+			if (id>l) continue;
+			u = a[id], v = b[id];
+			s.Merge(u, v);
+			if (id<l) Modify(1, 1, m, id, l-1, id);
+		}
+		if (!s.count) ans[l] = c[t-1].fi;
+		else ans[l] = -1;
+	}
+	else {
+		int m=(l+r)>>1;
+		Dfs(rch(x), m+1, r);
+		Dfs(lch(x), l, m);
+	}
+	s.Revert(len);
+}
+
+void Solve() {
+	t = 1;
+	Dfs(1, 1, m);
+	for (int i=1; i<=m; ++i)
+		printf("%d\n", ans[i]);
+}
+
+int main() {
+
+	Init();
+	Solve();
+
+	return 0;
+}

@@ -1,0 +1,178 @@
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#define maxn 200010
+
+using namespace std;
+
+typedef long long ll;
+
+int st[maxn],aim[maxn<<1],nxt[maxn<<1],ln;
+int w[maxn<<1];
+int root[maxn];
+int n;
+void in_edge(int x,int y,int z){
+	aim[ln]=y;
+	nxt[ln]=st[x];
+	w[ln]=z;
+	st[x]=ln++;
+}
+int stack[maxn],next[maxn];
+void dfs(int R){
+	int stn=1;
+	stack[1]=R;
+	next[R]=st[R];
+	root[R]=0;
+	while (stn){
+		int k=stack[stn],i;
+		for (i=next[k];i!=-1;i=nxt[i]){
+			int v=aim[i];
+			if (stn>1 && v==stack[stn-1]) continue;
+			if (root[v]==-1){
+				next[k]=nxt[i];
+				next[v]=st[v];
+				root[v]=0;
+				stack[++stn]=v;
+				break;
+			}else
+			if (root[v]==0){
+				for (int j=stn;j>0 && stack[j]!=v;j--){
+					root[stack[j]]=1;
+				}
+				root[v]=1;
+			}
+		}
+		if (i==-1){
+			--stn;
+		}
+	}
+}
+int q[maxn];
+int tag[maxn];
+int tot[maxn];
+ll f[maxn];
+void bfs(int sp){
+	int qn=1;
+	tag[sp]=1;
+	q[0]=sp;
+	for (int p=0;p<qn;p++)
+		for (int i=st[q[p]];i!=-1;i=nxt[i])
+			if (!tag[aim[i]] && !root[aim[i]])
+				tag[q[qn++]=aim[i]]=1;
+	for (int p=qn-1;p>=0;p--){
+		int k=q[p];
+		f[k]=0;
+		tag[k]=0;
+		tot[k]=1;
+		for (int i=st[k];i!=-1;i=nxt[i])
+			if (!tag[aim[i]] && !root[aim[i]]){
+				int v=aim[i];
+				tot[k]+=tot[v];
+				f[k]+=f[v];
+				f[k]+=(ll)tot[v]*w[i];
+			}
+	}
+}
+int a[maxn<<1];
+int aw[maxn<<1];
+ll ts[maxn<<1],ss[maxn<<1],ws[maxn<<1];
+ll ts2[maxn<<1],ss2[maxn<<1],ws2[maxn<<1];
+void Make_cir(int x){
+	int an=1;
+	a[1]=x;
+	int p=x;
+	while (1){
+		for (int i=st[p];i!=-1;i=nxt[i])
+			if (root[aim[i]] && (an==1 || aim[i]!=a[an-1])){
+				aw[an]=w[i];
+				a[++an]=aim[i];
+				p=aim[i];
+				break;
+			}
+		if (p==x){
+			--an;
+			break;
+		}
+	}
+	for (int i=1;i<=an;i++){
+		a[an+i]=a[i];
+		aw[an+i]=aw[i];
+	}
+	ll tf=0;
+	for (int i=1;i<=an;i++) tf+=f[a[i]];
+
+	ss[0]=0;
+	for (int i=1;i<=(an<<1);i++) ss[i]=ss[i-1]+aw[i];
+	ts[0]=0;
+	for (int i=1;i<=(an<<1);i++) ts[i]=ts[i-1]+tot[a[i]];
+
+	ss2[(an<<1)+1]=0;
+	for (int i=(an<<1);i>0;i--) ss2[i]=ss2[i+1]+aw[i];
+	ts2[(an<<1)+1]=0;
+	for (int i=(an<<1);i>0;i--) ts2[i]=ts2[i+1]+tot[a[i]];
+
+	ws[0]=0;
+	for (int i=1;i<=(an<<1);i++) ws[i]=ws[i-1]+ts2[i+1]*aw[i];
+	ws2[(an<<1)+1]=0;
+	for (int i=(an<<1);i>0;i--) ws2[i]=ws2[i+1]+ts[i]*aw[i];
+
+	for (int i=1,p=1;i<=an;i++){
+		while (p<i+an && ss[p]-ss[i-1]<=ss2[p+1]-ss2[i+an]) ++p;
+		int x=a[i];
+		f[x]+=tf-f[x];
+		if (p>i){
+			f[x]+=ws[p-1]-ws[i-1]-ts2[p+1]*(ss[p-1]-ss[i-1]);
+		}
+		if (p<i+an-1){
+			f[x]+=ws2[p+1]-ws2[i+an]-ts[p]*(ss2[p+1]-ss2[i+an]);
+		}
+	}
+//	for (int i=0;i<n;i++) printf("i=%d f=%lld\n",i,f[i]);
+}
+void bfs2(int sp){
+	int qn=1;
+	q[0]=sp;
+	tag[sp]=1;
+	for (int p=0;p<qn;p++)
+		for (int i=st[q[p]];i!=-1;i=nxt[i])
+			if (!tag[aim[i]] && !root[aim[i]])
+				tag[q[qn++]=aim[i]]=1;
+	for (int p=0;p<qn;p++){
+		int k=q[p];
+		tag[k]=0;
+		for (int i=st[k];i!=-1;i=nxt[i])
+			if (tag[aim[i]] && !root[aim[i]]){
+				int v=aim[i];
+				ll tmp=f[k]-f[v]-(ll)w[i]*tot[v];
+				f[v]+=tmp+(ll)w[i]*(n-tot[v]);
+			}
+	}
+}
+int main(){
+	scanf("%d",&n);
+	memset(st,-1,sizeof(st));
+	ln=0;
+	for (int i=0;i<n;i++){
+		int u,v,w;
+		scanf("%d%d%d",&u,&v,&w);
+		--u,--v;
+		in_edge(u,v,w);
+		in_edge(v,u,w);
+	}
+	memset(root,-1,sizeof(root));
+	for (int i=0;i<n;i++)
+		if (root[i]==-1) dfs(i);
+	memset(tag,0,sizeof(tag));
+	for (int i=0;i<n;i++)
+		if (root[i]) bfs(i);
+	for (int i=0;i<n;i++)
+		if (root[i]){
+			Make_cir(i);
+			break;
+		}
+	for (int i=0;i<n;i++)
+		if (root[i]) bfs2(i);
+	for (int i=0;i<n;i++) printf("%I64d ",f[i]);
+	puts("");
+	return 0;
+}

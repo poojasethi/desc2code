@@ -1,0 +1,172 @@
+#include<cstdio>
+#include<cstdlib>
+#include<algorithm>
+#include<cstring>
+#include<vector>
+#define MAXN 200005
+using namespace std ;
+typedef long long LL ;
+
+int N, M, root ;
+int num[MAXN], son[MAXN][2], fa[MAXN] ;
+int mn[MAXN], mx[MAXN], sum[MAXN], val[MAXN] ;
+int show[MAXN][2], pt, pfa[MAXN] ;
+vector<int> dn[MAXN];
+
+void Update(int x)
+{
+	sum[x] = sum[son[x][0]]+sum[son[x][1]]+val[x] ;
+	mn[x] = min(mn[son[x][0]], mn[son[x][1]]+sum[son[x][0]]+val[x]) ;
+	mn[x] = min(mn[x], sum[son[x][0]]+val[x]) ;
+	mx[x] = max(mx[son[x][0]], mx[son[x][1]]+sum[son[x][0]]+val[x]) ;
+	mx[x] = max(mx[x], sum[son[x][0]]+val[x]) ;
+}
+void Rotate(int x, int d)
+{
+	int tmp = fa[x] ;
+	son[tmp][d^1] = son[x][d], fa[son[x][d]] = tmp ;
+	if(fa[tmp]) son[fa[tmp]][son[fa[tmp]][1] == tmp] = x ;
+	fa[x] = fa[tmp], fa[tmp] = x, son[x][d] = tmp ;
+	Update(tmp), Update(x) ;
+}
+void Splay(int x, int to)
+{
+	int tmp, d1, d2 ;
+	while((tmp=fa[x]) != to)
+	{
+		if(fa[tmp] == to) Rotate(x, son[tmp][0]==x) ;
+		else if((d1=(son[fa[tmp]][0]==tmp)) == (d2=(son[tmp][0]==x)))
+			Rotate(tmp, d1), Rotate(x, d2) ;
+		else Rotate(x, d2), Rotate(x, d1) ; 
+	}
+	if(to == 0) root = x ;
+}
+int Find_last(int x)
+{
+	Splay(x, 0) ;
+	for(x = son[x][0]; son[x][1]; x = son[x][1]) ;
+	if(x) Splay(x, 0) ;
+	return x ;
+}
+int Find_next(int x)
+{
+	Splay(x, 0) ;
+	for(x = son[x][1]; son[x][0]; x = son[x][0]) ;
+	if(x) Splay(x, 0) ;
+	return x ;
+}
+int Delete(int l, int r)
+{
+	int tmp, tl, tr, f ;
+	tl = Find_last(l) ;
+	tr = Find_next(r) ;
+	if(!(tl+tr)) {return r ;}
+	else if(!tl || !tr) 
+	{
+		f = (tr==0), tr += tl ;
+		Splay(tr, 0), tmp = son[tr][f] ;
+		son[tr][f] = fa[son[tr][f]] = 0, Update(tr); 
+		return tmp ;
+	}
+	Splay(tl, 0), Splay(tr, tl), tmp = son[tr][0] ;
+	son[tr][0] = fa[son[tr][0]] = 0 ;
+	Update(tr), Update(tl) ;
+	return tmp ;
+} 
+void Insert(int x, int y)
+{
+	int tmp = Find_next(x) ;
+	Splay(x, 0) ;
+	if(!tmp) son[x][1] = y, fa[y] = x, Update(x) ;
+	else
+	{
+		Splay(tmp, x) ;
+		son[tmp][0] = y, fa[y] = tmp ;
+		Update(tmp), Update(x) ;
+	}
+	Splay(y, 0) ;
+}
+int Ask_last(int x, int k)
+{
+	int tmp = 0 ;
+	k ++ ;
+	for(x;;)
+		if(mn[son[x][1]]+sum[son[x][0]]+val[x]+tmp <= k && mx[son[x][1]]+sum[son[x][0]]+val[x]+tmp >= k)
+			tmp += sum[son[x][0]]+val[x], x = son[x][1] ;
+		else if(sum[son[x][0]]+val[x]+tmp == k)
+		{
+			Splay(x, 0) ;
+			if(x == show[num[x]][0]) return num[x] ;
+			else return pfa[num[x]] ;
+		}
+		else x = son[x][0] ;
+}
+int Dis(int x, int y)
+{
+	x = show[x][0], y = show[y][0] ;
+	if(x == y) return 0 ;
+	Splay(y, 0), Splay(x, y) ;
+	if(x == son[y][1]) swap(x, y) ;
+	Splay(y, 0), Splay(x, y) ;
+	int tmp = min(sum[son[x][0]]+val[x], min(mn[son[x][1]]+sum[son[x][0]]+val[x], sum[x]+val[y])) ;
+	return sum[son[x][0]]+sum[x]+val[x]+val[y]-tmp*2 ;
+}
+void Trans(int x, int h)
+{
+	int tmp = x ;
+	x = show[x][0], Splay(x, 0) ;
+	int par = Ask_last(son[x][0], sum[son[x][0]]+val[x]-h-1) ;
+	pfa[tmp] = par ;
+	tmp = Delete(show[tmp][0], show[tmp][1]) ;
+	Insert(Find_last(show[par][1]), tmp) ;
+}
+
+void Dfs(int x)
+{
+	show[x][0] = ++pt, num[pt] = x ;
+	val[pt] = sum[pt] = mn[pt] = mx[pt] = 1 ;
+	if(root) Insert(root, pt) ;
+	root = pt ;
+	for(int i = 0; i < dn[x].size(); i ++)
+		pfa[dn[x][i]] = x, Dfs(dn[x][i]) ;
+	show[x][1] = ++pt, num[pt] = x ;
+	val[pt] = sum[pt] = mn[pt] = mx[pt] = -1 ;
+	if(root) Insert(root, pt) ;
+	root = pt ;
+}
+
+int main()
+{
+	int i, j, tmp, get ;
+	int type, fr, to ;
+	//freopen("1.in", "r", stdin) ;
+	//freopen("1.out", "w", stdout) ;
+	scanf("%d %d", &N, &M) ;
+	memset(mn, 62, sizeof(mn)) ;
+	for(i = 0; i <= 200000; i ++)
+		mx[i] = -2*N-2, mn[i] = 2*N+2 ;
+	for(i = 1; i <= N; i ++)
+	{
+		scanf("%d", &j) ;
+		while(j--) scanf("%d", &tmp), dn[i].push_back(tmp) ;
+	}
+	Dfs(1) ;
+	for(i = 1; i <= M; i ++)
+	{
+		scanf("%d", &type) ;
+		if(type == 1)
+		{
+			scanf("%d %d", &fr, &to) ;
+			printf("%d\n", Dis(fr, to)) ;
+		}
+		else if(type == 2)
+			scanf("%d %d", &fr, &to), Trans(fr, to) ;
+		else 
+		{
+			scanf("%d", &fr) ;
+			printf("%d\n", Ask_last(root, fr)) ;
+		}
+	}
+	//system("pause") ;
+	return 0 ;
+}

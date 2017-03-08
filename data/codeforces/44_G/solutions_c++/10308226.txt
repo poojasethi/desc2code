@@ -1,0 +1,78 @@
+#include<stdio.h>
+#include<algorithm>
+#include<iostream>
+using namespace std;
+const int N=100005;
+int n,D,q,Ans,K[N];
+
+struct Sq{int x1,y1,x2,y2,z,id;}S[N];
+
+bool operator<(Sq A,Sq B){return A.z<B.z;}
+
+struct Po
+{int mx[2],mn[2],d[2],Min,id,del;
+ Po *l,*r,*fa;
+ int& operator[](int t){return d[t];}
+ Po(int x=0,int y=0,int i=0){l=r=0;mn[0]=mx[0]=d[0]=x;mn[1]=mx[1]=d[1]=y;Min=id=i;del=0;}
+ void up(Po *x)
+ {if(!x) return;
+  for(int i=0;i<2;i++) mx[i]=max(mx[i],x->mx[i]),mn[i]=min(mn[i],x->mn[i]);
+  Min=min(Min,x->Min);
+ }
+ void up()
+ {if(del) mx[0]=mx[1]=-1e9,mn[0]=mn[1]=Min=1e9;
+  else mx[0]=mn[0]=d[0],mx[1]=mn[1]=d[1],Min=id;
+  up(l);up(r);
+ }
+}p[N],*root,Ap,*W[N];
+
+bool operator<(Po A,Po B){return A[D]<B[D];}
+
+#define Mid (l+r>>1)
+Po* Bu(int l,int r,int Now,Po* f)
+{if(l>r) return 0;
+ D=Now;nth_element(p+l,p+Mid,p+r+1);
+ Po *x=p+Mid;W[x->id]=x;x->fa=f;
+ return x->l=Bu(l,Mid-1,Now^1,x),x->r=Bu(Mid+1,r,Now^1,x),x->up(),x;
+}
+
+bool Inside(Po A,Po B)
+{int flag=1;
+ for(int i=0;i<2&&flag;i++) flag=A.mx[i]<=B.mx[i]&&A.mn[i]>=B.mn[i];
+ if(flag) return 1;
+ for(int i=0;i<2&&!flag;i++) flag=A[i]>B.mx[i]||A[i]<B.mn[i];
+ if(!flag&&!A.del) Ans=min(Ans,A.id);
+ return 0;
+}
+
+bool ok(Po *x,Po Ap)
+{if(!x) return 0;
+ for(int i=0;i<2;i++) if(x->mx[i]<Ap.mn[i]||x->mn[i]>Ap.mx[i]) return 0;
+ return 1;
+}
+
+void Ask(Po *x,Po Ap)
+{if(Inside(*x,Ap)) return (void)(Ans=min(Ans,x->Min));
+ if(ok(x->l,Ap)) Ask(x->l,Ap);
+ if(ok(x->r,Ap)) Ask(x->r,Ap);
+}
+
+void Del(int x)
+{W[x]->del=1;
+ while(W[x]) W[x]->up(),W[x]=W[x]->fa;
+}
+
+int main()
+{scanf("%d",&n);
+ for(int i=1;i<=n;i++) scanf("%d%d%d%d%d",&S[i].x1,&S[i].x2,&S[i].y1,&S[i].y2,&S[i].z),S[i].id=i;
+ sort(S+1,S+n+1);scanf("%d",&q);
+ for(int i=1,x,y;i<=q;i++) scanf("%d%d",&x,&y),p[i]=Po(x,y,i);
+ root=Bu(1,q,0,0);
+ for(int i=1;i<=n;i++)
+ {Ap.mn[0]=S[i].x1;Ap.mn[1]=S[i].y1;Ap.mx[0]=S[i].x2;Ap.mx[1]=S[i].y2;
+  Ans=1e9;Ask(root,Ap);
+  if(Ans<=q) K[Ans]=S[i].id,Del(Ans);
+ }
+ for(int i=1;i<=q;i++) printf("%d\n",K[i]);
+ return 0;
+}

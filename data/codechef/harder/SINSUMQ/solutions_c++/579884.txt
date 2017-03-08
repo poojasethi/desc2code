@@ -1,0 +1,157 @@
+#include<iostream>
+#include<iomanip>
+#include<cstring>
+#include<cmath>
+using namespace std;
+
+#define MEML 3000000
+
+    double pi = atan(1) * 4;
+    double alpha = (pi - 1) / 2;
+    double H = tan(alpha) / 2;
+    double R = sqrt(H * H + 0.25);
+    double delphi = 2 * (pi / 2 - alpha);
+    double phi0 = alpha - pi;  
+    double retx , rety;
+    
+void calc(int n , double dphi)
+{
+    double X = 0.5 + R * cos(phi0 + delphi * (double)(n)); 
+    double Y = H + R * sin(phi0 + delphi * (double)(n));
+    double SIN = sin(dphi) , COS = cos(dphi);
+    retx = X * SIN + Y * COS;
+    rety = X * COS - Y * SIN;
+}
+
+
+struct Node
+{
+    int L , R;
+    double sum , sum2 , phase;
+    double down;
+    Node *sonL , *sonR;
+    Node(){sonL = 0 , sonR = 0;}
+    void selfcalc()
+    {
+        calc(R - L + 1 , phase);
+        sum = retx;
+        sum2 = rety;
+    }
+    Node(int _L , int _R , double _s , double _p)
+    {
+        L = _L;
+        R = _R;
+        sum = _s;
+        phase = _p;
+        sonL = NULL;
+        sonR = NULL;
+        down = 0;
+        selfcalc();
+    }
+    void downdata()
+    {
+        if(down == 0)
+            return;
+        if(sonL > 0)
+        {
+            sonL->down += down;
+            sonR->down += down;
+        }
+        phase += down;
+        double SIN = sin(down) , COS = cos(down);
+        double Tsum = COS * sum + SIN * sum2;
+        double Tsum2 = -SIN * sum + COS * sum2;
+        down = 0;
+        sum = Tsum;
+        sum2 = Tsum2;
+    }
+}N[MEML];
+
+int n , q , z = 0;
+
+double Getsum(Node *w , int L , int R)
+{
+    w->downdata();
+    if(w->sonL == NULL)
+    {
+        calc(R - L + 1 , w->phase + double(L - w->L));
+        return retx;
+    }
+    if(L == w->L && R == w->R)
+    {
+        return w->sum;
+    }
+    if(R <= w->sonL->R)
+        return Getsum(w->sonL , L , R);
+    if(L >= w->sonR->L)
+        return Getsum(w->sonR , L , R);
+    return Getsum(w->sonL , L , w->sonL->R) + Getsum(w->sonR , w->sonR->L , R);
+}
+
+void Update(Node *w , int L , int R , double D)
+{
+    w->downdata();
+    int M;
+    if(L == w->L && R == w->R)
+    {
+        w->down += D;
+        w->downdata();
+        return;
+    }
+    if(w->sonL == NULL)
+    {
+        M = (w->L + w->R) / 2;
+        N[++z] = Node(w->L , M , 0 , w->phase);
+        N[++z] = Node(M + 1 , w->R , 0 , w->phase + M + 1 - w->L);
+        w->sonL = &N[z-1];
+        w->sonR = &N[z];
+    }
+    M = (w->L + w->R) / 2;
+    if(R <= M)
+    {
+        Update(w->sonL , L , R , D);
+        w->sonL->downdata();
+        w->sonR->downdata();
+        w->sum = w->sonL->sum + w->sonR->sum;
+        w->sum2 = w->sonL->sum2 + w->sonR->sum2;
+    }
+    else if(L > M)
+    {
+        Update(w->sonR , L , R , D);
+        w->sonL->downdata();
+        w->sonR->downdata();
+        w->sum = w->sonL->sum + w->sonR->sum;
+        w->sum2 = w->sonL->sum2 + w->sonR->sum2;
+    }
+    else
+    {
+        Update(w->sonL , L , M , D);
+        Update(w->sonR , M+1 , R , D);
+        w->sonL->downdata();
+        w->sonR->downdata();
+        w->sum = w->sonL->sum + w->sonR->sum;
+        w->sum2 = w->sonL->sum2 + w->sonR->sum2;
+    }
+    return;
+}
+
+int main()
+{
+    //freopen("in.txt" , "r" , stdin);
+    //freopen("out.txt" , "w" , stdout);
+    scanf("%d %d\n" , &n , &q);
+    z = 1;
+    N[1] = Node(0 , n - 1 , 0 , 0);
+    N[1].selfcalc();
+    for(int i = 1 ; i <= q ; i++)
+    {
+        int L , R , D;
+        scanf("%d %d %d\n" , &L , &R , &D);
+        if(D == 0)
+            printf("%.12lf\n" , Getsum(&N[1] , L , R));
+        else
+            Update(&N[1] , L , R , D);
+    }
+    //cout << z << endl;
+    return 0;
+}

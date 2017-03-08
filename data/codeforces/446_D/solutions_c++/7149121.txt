@@ -1,0 +1,124 @@
+#include<cmath>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<vector>
+#define fo(i,a,b) for (int i = a;i < b;i ++)
+#define fd(i,a,b) for (int i = a-1;i >= b;i --)
+#define eps 1e-4
+using namespace std;
+
+typedef long long LL;
+const int maxn = 505;
+
+int N,M,K,T,trap[maxn],trapi[maxn];
+vector<int> v[maxn];
+double A[maxn][maxn],B[maxn][maxn],vec[maxn],org[maxn][maxn],tra[maxn][maxn];
+
+void Initialize()
+{
+    scanf("%d%d%d",&N,&M,&K);
+    T = 1;
+    fo(i,0,N)
+    {
+        scanf("%d",&trap[i]);
+        if (trap[i]) trapi[T++] = i;
+    }
+    fo(i,0,M)
+    {
+        int a, b; scanf("%d%d",&a,&b);
+        a --, b --;
+        v[a].push_back(b), v[b].push_back(a);
+    }
+    fo(i,0,N)
+    {
+        A[i][i] = B[i][i] = 1.0;
+        double c = 1.0 / v[i].size();
+        fo(j,0,v[i].size())
+            if (!trap[v[i][j]]) A[i][v[i][j]] -= c;
+    }
+}
+
+
+void GaussEliminate()
+{
+    int rows = 0;
+    fo(col,0,N)
+    {
+        int next = rows;
+        fo(i,rows+1,N) if (fabs(A[i][col]) > fabs(A[next][col])) next = i;
+        if (fabs(A[next][col]) < eps) continue;
+        if (next != rows)
+            fo(i,0,N)
+                swap(A[next][i],A[rows][i]), swap(B[next][i],B[rows][i]);
+        double c = 1.0 / A[rows][col];
+        fo(i,0,N) A[rows][i] *= c, B[rows][i] *= c;
+        fo(i,rows+1,N)
+        {
+            double c = A[i][col];
+            fo(j,0,N) A[i][j] -= A[rows][j]*c, B[i][j] -= B[rows][j]*c;
+        }
+        rows ++;
+    }
+    fd(i,rows,0)
+    {
+        int col = 0; while (fabs(A[i][col]) < eps) col++;
+        if (col > i)
+        {
+            fo(j,0,N) swap(A[i][j],A[col][j]), swap(B[i][j],B[col][j]);
+            fo(j,i,col)
+            {
+                memset(A[j],0,sizeof A[j]);
+                memset(B[j],0,sizeof B[j]);
+                A[j][j] = 1;
+            }
+        }
+        fo(j,col+1,N)
+        {
+            fo(k,0,N) B[col][k] -= B[j][k] * A[col][j];
+            A[col][j] = 0;
+        }
+    }
+}
+
+void Mult(double A[maxn][maxn],double B[maxn][maxn])
+{
+    static double C[maxn][maxn];
+    fo(i,0,T) fo(j,0,T)
+    {
+        C[i][j] = 0;
+        fo(k,0,T) C[i][j] += A[i][k] * B[k][j];
+    }
+    fo(i,0,T) fo(j,0,T) A[i][j] = C[i][j];
+}
+
+void Work()
+{
+    GaussEliminate();
+    fo(t,1,T)
+    {
+        fo(i,0,N)
+        {
+            double c = 1.0 / v[i].size();
+            vec[i] = 0;
+            fo(j,0,v[i].size())
+                if (v[i][j] == trapi[t]) vec[i] += c;
+        }
+        fo(i,0,T) fo(j,0,N) org[i][t] += B[trapi[i]][j] * vec[j];
+    }
+    fo(t,0,T) tra[t][t] = 1;
+
+    for (int exp = K-1;exp;exp >>= 1)
+    {
+        if (exp & 1) Mult(tra,org);
+        Mult(org,org);
+    }
+    printf("%.8f\n",tra[0][T-1]);
+}
+
+int main()
+{
+    Initialize();
+    Work();
+    return 0;
+}

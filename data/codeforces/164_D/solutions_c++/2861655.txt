@@ -1,0 +1,63 @@
+#include <iostream>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+int n, K;
+int x[1000], y[1000];
+vector<int> dist;
+
+#define sqr(a) ((a) * (a))
+
+int D(int i, int j) {return sqr(x[i] - x[j]) + sqr(y[i] - y[j]);}
+vector<int> bad[1000];
+int del[1000];
+
+bool DFS(int depth, int K) {
+    if (depth == n) return true;
+    if (del[depth]) return DFS(depth + 1, K);
+
+    int tmpK = K;
+    for (int i = 0; i < (int)bad[depth].size(); i++) tmpK -= !del[bad[depth][i]]++;
+    if (tmpK >= 0 && DFS(depth + 1, tmpK)) return true;
+    for (int i = 0; i < (int)bad[depth].size(); i++) del[bad[depth][i]]--;  
+    
+    del[depth] = 1;
+    if (K - 1 > tmpK && DFS(depth + 1, K - 1)) return true;
+    del[depth] = 0;
+    
+    return false;
+}
+
+bool Check(int dist) {
+    for (int i = 0; i < n; i++) {
+        bad[i].clear(); del[i] = 0;
+        for (int j = 0; j < n; j++) if (D(i, j) > dist) bad[i].push_back(j);
+    }
+    return DFS(0, K);
+}
+
+int main() {
+//  freopen("data.in", "r", stdin);
+    scanf("%d%d", &n, &K);
+    for (int i = 0; i < n; i++) scanf("%d%d", x + i, y + i);
+    for (int i = 0; i < n; i++) for (int j = i + 1; j < n; j++)
+        dist.push_back(D(i, j));
+    sort(dist.begin(), dist.end());
+    dist.resize(unique(dist.begin(), dist.end()) - dist.begin());
+    int lo = 0, hi = (int)dist.size() - 1;
+    while (lo <= hi) {
+        int mid = (lo + hi) / 2;
+        if (Check(dist[mid])) hi = mid - 1;
+        else lo = mid + 1;
+    }
+    Check(dist[lo]);
+    int left = K;
+    for (int i = 0; i < n; i++) if (del[i]) printf("%d\n", i + 1), left--;
+    for (int i = 0; i < n && left; i++) if (!del[i]) printf("%d\n", i + 1), left--;
+    return 0;
+}

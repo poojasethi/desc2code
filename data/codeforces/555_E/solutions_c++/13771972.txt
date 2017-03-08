@@ -1,0 +1,90 @@
+#include <iostream>
+#include <set>
+#include <vector>
+#include <cstring>
+#include <map>
+#define ll long long
+#define pb push_back
+
+using namespace std;
+const int Maxn = 422222;
+const int log = 18;
+
+ll n, m, q, par[Maxn][log], up[Maxn], down[Maxn];
+ll c, r, color[Maxn], dis[Maxn], high[Maxn];
+vector <int> list[Maxn];
+set <ll> cut;
+map <ll , map<ll ,ll> > mul;
+
+void dfs(int v){
+	color[v] = true;
+	ll child = Maxn, pv = par[v][0];
+	for(int i = 0; i < list[v].size(); i++){
+		int u = list[v][i];
+		if(!color[u]){
+			dis[u] = dis[v] + 1;
+			par[u][0] = v;
+			dfs(u);
+			child = min(child, high[u]);
+		}else{
+			high[v] = min(high[v], dis[u]);
+		}
+	}
+	if(high[v] >= dis[pv] && mul[v][pv] < 2 && child >= dis[v] && v != r){
+		cut.insert(v);
+	}
+	high[v] = min(high[v], child);
+}
+
+ll lca(ll v, ll u){
+	if(dis[v] < dis[u])	swap(v, u);
+	ll d = dis[v] - dis[u];
+	if(d)	for(int j = log - 1; j >= 0; j--)	if(d & (1 << j))	v = par[v][j];
+	if(v == u)	return v;
+	for(int j = log - 1; j >= 0; j--)	if(par[v][j] != par[u][j])	v = par[v][j], u = par[u][j];
+	return par[v][0];
+}
+
+void d(int v){
+	color[v] = true;
+	for(int i = 0; i < list[v].size(); i++){
+		int u = list[v][i];
+		if(!color[u]){
+			d(u);
+			up[v] += up[u], down[v] += down[u];
+		}
+	}
+}
+int main(){
+	cin >> n >> m >> q;
+	for(int i = 1; i <= m; i++){
+		ll u, v;
+		cin >> v >> u;
+		list[v].pb(u), list[u].pb(v);
+		mul[v][u]++, mul[u][v]++;
+	}
+	for(int i = 1; i <= n; i++)	high[i] = Maxn;
+	for(int i = 1; i <= n; i++)		if(!color[i])	r = i, high[i] = 0, dfs(i);
+	for(int j = 1; j < log; j++)	for(int i = 1; i <= n; i++)	par[i][j] = par[par[i][j - 1]][j - 1];
+	for(int i = 1; i <= q; i++){
+		ll v, u, p;
+		cin >> v >> u;
+		p = lca(v, u);
+		up[p]--, down[p]--, up[v]++, down[u]++;
+		if(!p){
+			cout << "No\n";
+			return 0;
+		}
+	}
+	memset(color, 0, sizeof color);
+	for(int i = 1; i <= n; i++)		if(!color[i])	d(i);
+	for(set <ll> :: iterator it = cut.begin(); it != cut.end(); it++){
+		if(up[*it] && down[*it]){
+			cout << "No\n";
+			return 0;
+		}
+	}
+	cout << "Yes\n";
+	return 0;
+}
+ 		 	 		   			 		 	  	  		  			

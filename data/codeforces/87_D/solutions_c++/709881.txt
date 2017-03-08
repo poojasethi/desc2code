@@ -1,0 +1,89 @@
+#include <cstdio>
+#include <vector>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+#define maxn (200000)
+#define PB push_back
+
+typedef long long LL;
+
+vector<int> g[maxn], l[maxn];
+int f[maxn], sum[maxn], r[maxn], st[maxn], ed[maxn], v[maxn], size[maxn];
+bool vis[maxn];
+LL a[maxn];
+int root, n;
+
+int find(int x) {
+    return f[x] ? f[x] = find(f[x]) : x;
+}
+
+bool cmp(int a, int b) {
+    return v[a] < v[b];
+}
+
+void resize(int x) {
+    vis[x] = true, size[x] = sum[x];
+
+    for (int i = 0; i < g[x].size(); ++i) {
+        int k = g[x][i]; if (vis[k]) continue;
+        resize(k); size[x] += size[k];
+    }
+}
+
+void dfs(int x) {
+    vis[x] = true;
+
+    for (int i = 0; i < g[x].size(); ++i) {
+        int k = g[x][i]; if (vis[k]) continue; dfs(k);
+        a[l[x][i]] = ((LL) size[root] - size[k]) * (LL) size[k];
+    }
+
+    f[x] = root, g[x].clear(), l[x].clear();
+}
+
+int main() {
+    scanf("%d", &n);
+    for (int i = 1; i < n; ++i) scanf("%d%d%d", &st[i], &ed[i], &v[i]);
+
+    for (int i = 1; i < n; ++i) r[i] = i;
+    sort(r + 1, r + n,cmp);
+
+    for (int i = 1; i <= n; ++i) sum[i] = 1;
+    memset(vis, true, sizeof(vis));
+    for (int i = 1; i < n; ) {
+        int now = v[r[i]];
+        vector<int> q; q.clear();
+
+        for (; i < n && v[r[i]] == now; ++i) {
+            int x = find(st[r[i]]), y = find(ed[r[i]]);
+
+            vis[x] = vis[y] = false; q.PB(x), q.PB(y);
+            g[x].PB(y), g[y].PB(x), l[x].PB(r[i]), l[y].PB(r[i]);
+        }
+
+        for (int j = 0; j < q.size(); ++j) {
+            int k = q[j]; if (vis[k]) continue;
+            resize(k);
+        }
+
+        for (int j = 0; j < q.size(); ++j) vis[q[j]] = false;
+
+        for (int j = 0; j < q.size(); ++j) {
+            int k = q[j]; if (vis[k]) continue;
+            root = k; dfs(k); sum[root] = size[root], f[k] = 0;
+        }
+    }
+
+    LL ans = 0ll;
+    for (int i = 1; i < n; ++i) if (ans < a[i]) ans = a[i];
+    int cnt = 0;
+    for (int i = 1; i < n; ++i) if (ans == a[i]) cnt++;
+    printf("%I64d %d\n", ans * 2ll, cnt);
+    for (int i = 1; i < n; ++i) if (ans == a[i])
+        printf("%d%c", i, --cnt ? ' ' : '\n');
+
+    return 0;
+}

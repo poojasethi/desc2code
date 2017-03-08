@@ -1,0 +1,147 @@
+//By Lin
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+#include <map>
+#include <set>
+#include <bitset>
+#include <cmath>
+#include <string>
+#include <cstdlib>
+#include <vector>
+
+#define X first
+#define Y second
+#define mp make_pair
+#define sqr(x) ((x) * (x))
+#define Rep(i, n) for(int i = 0; i<(n); i++)
+#define foreach(it, n) for(__typeof(n.begin()) it = n.begin(); it != n.end(); it++)
+
+using namespace std;
+typedef long long LL;
+typedef pair<int, int> pii;
+
+#define esp 1e-8
+#define N 100010
+
+int n, m, K;
+struct Rect {
+    int x1, y1, x2, y2;
+    void read() {
+        scanf("%d%d%d%d", &x1, &y1, &x2, &y2);
+    }
+    void turn() {
+        x1 = (x1 + 1) / 2;
+        y1 = (y1 + 1) / 2;
+        x2 = x2 / 2;
+        y2 = y2 / 2;
+    }
+    bool isVaild() {
+        return x1 <= x2 && y1 <= y2;
+    }
+}data[N];
+
+int xcnt, xx[N*2];
+map<int, int> xmap;
+
+struct Line {
+    int y, x1, x2;
+    int val;
+}lines[N*2];
+
+bool cmp(const Line &a, const Line &b) {
+    return a.y < b.y;
+}
+
+struct Segtree {
+    int left[N*8], right[N*8], key[N*8];
+    int mark[N*8];
+    void build(int l, int r, int step) {
+        left[step] = l, right[step] = r, key[step] = 0;
+        mark[step] = 0;
+        if (l + 1 == r) return; 
+        int mid = l + r >> 1;
+        build(l, mid, step * 2);
+        build(mid, r, step * 2 + 1);
+    }
+    void update(int step) {
+        if (mark[step]) key[step] = xx[right[step]] - xx[left[step]];
+        else {
+            if (left[step] + 1 == right[step]) key[step] = 0;
+            else key[step] = key[step*2] + key[step*2+1];
+        }
+    }
+    void insert(int l, int r, int val, int step) {
+        if (l == left[step] && r == right[step]) {
+            mark[step] += val;
+            update(step);
+            return;
+        }
+        int mid = left[step] + right[step] >> 1;
+        if (r <= mid) insert(l, r, val, step * 2);
+        else if (mid <= l) insert(l, r, val, step * 2 + 1);
+        else {
+            insert(l, mid, val, step * 2);
+            insert(mid, r, val, step * 2 + 1);
+        }
+        update(step);
+    }
+}tree;
+
+LL cal() {
+    xcnt = 0;
+    xmap.clear();
+    Rep(i, m) {
+        xx[xcnt++] = data[i].x1;
+        xx[xcnt++] = data[i].x2 + 1;
+    }
+    sort(xx, xx + xcnt);
+    xcnt = unique(xx, xx + xcnt) - xx;
+    Rep(i, xcnt) xmap[xx[i]] = i;
+    int cnt = 0;
+    Rep(i, m) {
+        lines[cnt].x1 = xmap[data[i].x1];
+        lines[cnt].x2 = xmap[data[i].x2+1];
+        lines[cnt].y = data[i].y1;
+        lines[cnt++].val = 1;
+        lines[cnt].x1 = xmap[data[i].x1];
+        lines[cnt].x2 = xmap[data[i].x2+1];
+        lines[cnt].y = data[i].y2+1;
+        lines[cnt++].val = -1;
+    }
+    sort(lines, lines + cnt, cmp);
+//  puts("build start");
+    tree.build(0, xcnt + 1, 1);
+//  puts("build ok");
+    LL ans = 0;
+    int last = 0;
+    Rep(i, cnt) {
+        if (i) {
+            ans += tree.key[1] * 1ll * (lines[i].y - lines[i-1].y);
+//          printf("%d %d %d\n", tree.key[1], lines[i].y, lines[i-1].y);
+        }
+        tree.insert(lines[i].x1, lines[i].x2, lines[i].val, 1);
+    }
+//  printf("%lld\n", ans);
+    return ans;
+}
+
+LL ans[100];
+
+int main() {
+    scanf("%d%d%d", &n, &m, &K);
+    Rep(i, m) data[i].read();
+    int nn = 0;
+    bool result = false;
+    for (nn = 0; K; nn++, K >>= 1) {
+        if ((ans[nn] = cal()) % 2) result = true;
+        Rep(i, m) data[i].turn();
+        int mm = 0;
+        Rep(i, m) if (data[i].isVaild()) data[mm++] = data[i];
+        m = mm;
+//      printf("%d %lld\n", nn, ans[nn]);
+    }
+    printf("%s\n", result ? "Hamed" : "Malek" );
+    return 0;
+}

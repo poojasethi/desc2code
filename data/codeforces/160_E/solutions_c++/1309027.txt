@@ -1,0 +1,89 @@
+#include <cstdio>
+#include <algorithm>
+
+using namespace std;
+
+struct dat
+{
+    int l,r,tim,pl;
+}peo[100001],bus[100001];
+int tree[270000],n,m,que[140000],num[140000],ans[140000];
+
+bool cmp(dat a,dat b)
+{
+    return a.l<b.l;
+}
+
+void init()
+{
+    int i,len_que;
+    for (i = 1;i<=n;i++) que[i]=bus[i].tim;
+    sort(que+1,que+1+n);
+    len_que=1;
+    for (i = 2;i<=n;i++)
+        if (que[i]!=que[i-1]) que[++len_que]=que[i];
+    for (i = len_que+1;i<=131072;i++) que[i]=1<<30;
+}
+
+void update(int pl,int s,int i)
+{
+    pl=pl+131071;
+    if (tree[pl]>s) return;
+    num[pl-131071]=i;
+    while (pl>0 && tree[pl]<s)
+    {
+        tree[pl]=s;
+        pl/=2;
+    }
+}
+
+int get(int o,int l,int r,int tim,int lim)
+{
+    if (que[r]<tim) return -1;
+    if (tree[o]<lim) return -1;
+    if (l==r)
+    {
+        return num[r];
+    }
+    int s;
+    s=get(o*2,l,(l+r) / 2,tim,lim);
+    if (s==-1) s=get(o*2+1,(l+r) / 2+1,r,tim,lim);
+    return s;
+}
+
+void solve()
+{
+    int p1,p2,pl;
+    p1=p2=1;
+    while (p1<=n || p2<=m)
+    {
+        if (p1<=n && (p2>m || bus[p1].l<=peo[p2].l))
+        {
+            pl=lower_bound(que+1,que+1+n,bus[p1].tim)-que;
+            update(pl,bus[p1].r,bus[p1].pl);
+            p1++;
+        }
+        else
+        {
+            ans[peo[p2].pl]=get(1,1,131072,peo[p2].tim,peo[p2].r);
+            p2++;
+        }
+    }
+}
+
+int main()
+{
+    //freopen("buses.in","r",stdin);
+    //freopen("buses.out","w",stdout);
+    int i;
+    scanf("%d%d",&n,&m);
+    for (i = 1;i<=n;i++) scanf("%d%d%d",&bus[i].l,&bus[i].r,&bus[i].tim);
+    for (i = 1;i<=m;i++) scanf("%d%d%d",&peo[i].l,&peo[i].r,&peo[i].tim);
+    for (i = 1;i<=n;i++) bus[i].pl=i;
+    for (i = 1;i<=m;i++) peo[i].pl=i;
+    sort(bus+1,bus+1+n,cmp);
+    sort(peo+1,peo+1+m,cmp);
+    init();
+    solve();
+    for (i = 1;i<=m;i++) printf("%d\n",ans[i]);
+}

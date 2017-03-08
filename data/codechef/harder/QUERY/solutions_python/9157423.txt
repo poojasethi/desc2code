@@ -1,0 +1,133 @@
+#include<bits/stdc++.h>
+using namespace std;
+typedef long long int64;
+const int maxn=100015,maxm=100015;
+struct graph{
+	static const int maxm=200015;
+	struct edge{
+		edge *pre;int son,idx;
+		void add(edge *p,int s,int i){pre=p,son=s,idx=i;}
+	}e[maxm],*pos[maxn];
+	int tot;
+	void clear(){tot=0,memset(pos,0,sizeof(pos));}
+	void link(int u,int v,int i){
+		e[++tot].add(pos[u],v,i),pos[u]=e+tot;
+		e[++tot].add(pos[v],u,i),pos[v]=e+tot;
+	}
+}g;
+struct segment{
+	static const int maxm=50015,maxk=20,maxnode=maxm*maxk*maxk<<1;
+	struct node{
+		node *c[2];int64 s,A,B;
+		void update(int l){s=c[0]->s+c[1]->s+A*l+B*l*(l-1)/2;}
+	}*null,*root[maxm*maxk<<1],t[maxnode];
+	int L,R,ver,tot;
+	void assign(int l,int r){
+		L=l,R=r,ver=tot=0,root[0]=null=t;
+		null->c[0]=null->c[1]=null;
+		null->s=null->A=null->B=0;
+	}
+	int64 calc(int64 A,int64 B,int l){return A*l+B*l*(l-1)/2;}
+	node *newnode(node *x){node *cur=t+(++tot);return *cur=*x,cur;}
+	void modify(node *ever,node *&now,int l,int r,int a,int b,int64 A,int64 B){
+		now=newnode(ever);int mid=(l+r)>>1;
+		if (l==a&&r==b){now->A+=A,now->B+=B,now->s+=calc(A,B,r-l+1);return;}
+		if (b<=mid) modify(ever->c[0],now->c[0],l,mid,a,b,A,B);
+		else if (a>=mid+1) modify(ever->c[1],now->c[1],mid+1,r,a,b,A,B);
+		else modify(ever->c[0],now->c[0],l,mid,a,mid,A,B),modify(ever->c[1],now->c[1],mid+1,r,mid+1,b,A+(mid+1-a)*B,B);
+		now->update(r-l+1);
+	}
+	int64 query(node *now,int l,int r,int a,int b,int64 A,int64 B){
+		if (l==a&&r==b) return now->s+calc(A,B,r-l+1);int mid=(l+r)>>1;
+		if (b<=mid) return query(now->c[0],l,mid,a,b,A+now->A,B+now->B);
+		else if (a>=mid+1) return query(now->c[1],mid+1,r,a,b,A+now->A+(B+now->B)*(mid+1-l),B+now->B);
+		else return query(now->c[0],l,mid,a,mid,A+now->A,B+now->B)+query(now->c[1],mid+1,r,mid+1,b,A+now->A+(B+now->B)*(mid+1-l),B+now->B);
+	}
+	int modify(int t,int l,int r,int A,int B){return modify(root[t],root[++ver],L,R,l,r,A,B),ver;}
+	int64 query(int t,int l,int r){return query(root[t],L,R,l,r,0,0);}
+}seg;
+int n,m;
+void init(){
+	scanf("%d%d",&n,&m),g.clear();
+	for (int u,v,i=1;i<=n-1;++i) scanf("%d%d",&u,&v),g.link(u,v,i);
+}
+bool vis[maxn];
+int fa[maxn],dep[maxn],siz[maxn];
+void get_siz(int u){
+	siz[u]=1;
+	for (graph::edge *p=g.pos[u];p;p=p->pre)
+		if (!vis[p->idx]){
+			vis[p->idx]=1,fa[p->son]=u,dep[p->son]=dep[u]+1;
+			get_siz(p->son),siz[u]+=siz[p->son];
+		}
+}
+int tim,dfn[maxn],top[maxn];
+void get_top(int u,int t){
+	top[u]=t,dfn[u]=++tim;int heavy=0;
+	for (graph::edge *p=g.pos[u];p;p=p->pre)
+		if (p->son!=fa[u]) if (siz[p->son]>siz[heavy]) heavy=p->son;
+	if (heavy) get_top(heavy,t);
+	for (graph::edge *p=g.pos[u];p;p=p->pre)
+		if (p->son!=fa[u]&&p->son!=heavy) get_top(p->son,p->son);
+}
+int64 last_ans;
+int ver,cur,root[maxn];
+int lca(int x,int y){
+	while (top[x]!=top[y]){
+		if (dep[top[x]]<dep[top[y]]) swap(x,y);
+		x=fa[top[x]];
+	}
+	return dep[x]<dep[y]?x:y;
+}
+int dist(int x,int y){return dep[x]+dep[y]-2*dep[lca(x,y)]+1;}
+void modify(){
+	int x,y,A,B;
+	scanf("%d%d%d%d",&x,&y,&A,&B);
+	x=(x+last_ans)%n+1,y=(y+last_ans)%n+1;
+	root[++ver]=root[cur],cur=ver;
+	int lcnt=0,rcnt=dist(x,y)-1;
+	while (top[x]!=top[y]){
+		if (dep[top[x]]>dep[top[y]]){
+			root[ver]=seg.modify(root[ver],dfn[top[x]],dfn[x],A+(lcnt+dep[x]-dep[top[x]])*B,-B);
+			lcnt+=dep[x]-dep[top[x]]+1,x=fa[top[x]];
+		}
+		else{
+			root[ver]=seg.modify(root[ver],dfn[top[y]],dfn[y],A+(rcnt-(dep[y]-dep[top[y]]))*B,B);
+			rcnt-=dep[y]-dep[top[y]]+1,y=fa[top[y]];
+		}
+	}
+	if (dep[x]<dep[y]) root[ver]=seg.modify(root[ver],dfn[x],dfn[y],A+(rcnt-(dep[y]-dep[x]))*B,B);
+	else root[ver]=seg.modify(root[ver],dfn[y],dfn[x],A+(lcnt+dep[x]-dep[y])*B,-B);
+}
+void query(){
+	int x,y;scanf("%d%d",&x,&y);
+	x=(x+last_ans)%n+1,y=(y+last_ans)%n+1;
+	int64 res=0;
+	while (top[x]!=top[y]){
+		if (dep[top[x]]<dep[top[y]]) swap(x,y);
+		res+=seg.query(root[cur],dfn[top[x]],dfn[x]);
+		x=fa[top[x]];
+	}
+	if (dep[x]<dep[y]) swap(x,y);
+	printf("%lld\n",last_ans=res+seg.query(root[cur],dfn[y],dfn[x]));
+}
+void roll(){
+	int x;scanf("%d",&x);
+	x=(x+last_ans)%(ver+1),cur=x;
+}
+void work(){
+	get_siz(1),get_top(1,1),seg.assign(1,n);
+	for (int i=1;i<=m;++i){
+		char op[5];scanf("%s",op);
+		switch (op[0]){
+			case 'c':modify();break;
+			case 'q':query();break;
+			case 'l':roll();break;
+		}
+	}
+}
+int main(){
+	init();
+	work();
+	return 0;
+}

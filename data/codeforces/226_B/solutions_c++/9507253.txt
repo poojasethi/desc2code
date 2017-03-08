@@ -1,0 +1,34 @@
+#include <bits/stdc++.h>
+using namespace std;
+const int N=100010;
+long long int n,q,x,a[N],pr[N],sum[N];
+
+int main()
+{
+   ///freopen("r.txt","r",stdin);
+   scanf("%I64d",&n);
+   for(int i=1;i<=n;i++)
+     scanf("%I64d",&a[i]);
+    sort(a+1,a+1+n);
+   for(int i=1;i<=n;i++)
+     sum[i]=sum[i-1]+a[i];
+   for(int i=1;i<=N-5;i++)
+   {
+       int st,en=n-1,z=1;
+       long long int f=i;
+       while(en>0)
+       {
+           st=max(0LL,en-f);
+           pr[i]+=(sum[en]-sum[st])*z;
+           en=st, z++, f*=i;
+       }
+   }
+   scanf("%I64d",&q);
+   for(int i=0;i<q;i++)
+   {
+       scanf("%I64d",&x);
+       printf("%I64d ",pr[x]);
+   }
+
+    return 0;
+}

@@ -1,0 +1,91 @@
+#include <cassert>
+#include <cctype>
+#include <climits>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <string>
+#include <vector>
+#include <deque>
+#include <list>
+#include <set>
+#include <map>
+#include <bitset>
+#include <stack>
+#include <queue>
+#include <algorithm>
+#include <functional>
+#include <iterator>
+#include <numeric>
+#include <utility>
+using namespace std;
+
+#define s(a) scanf("%d",&a)
+#define sc(a) scanf("%c",&a)
+#define sl(a) scanf("%lld",&a)
+#define sd(a) scanf("%lf",&a)
+#define ss(a) scanf("%s",a)
+#define p(a) printf("%d\n",a)
+#define pc(a) printf("%c\n",a)
+#define pl(a) printf("%lld\n",a)
+#define pd(a) printf("%lf\n",a)
+#define ps(a) printf("%s\n",a)
+
+bool cmp(const pair<int ,int> &a, const pair<int ,int> &b)
+{
+    return a.second<=b.second;
+}
+
+int ans[400];
+int pos=0;
+void setv(int a,int b)
+{
+    while(a--) {
+        ans[pos++]=b;
+    }
+}
+
+void proc(int count,int *flag)
+{
+    if(count==1)*flag=1;
+    else if(count==2)*flag=0;
+    else {
+        setv(count-2,*flag);
+    }
+}
+
+void print()
+{
+    int pw=1,val=0;
+    for(int i=pos-1;i>=0;i--) {
+        if(ans[i]) {
+            val+=pw;
+        }
+        pw<<=1;
+    }
+    p(val);
+}
+
+int main()
+{
+    char c[100];
+    ss(c);
+    while(c[0]!='~') {
+        int count;
+        int flag=1;
+        while(c[0]!='#') {
+            count=strlen(c);
+            proc(count,&flag);
+            ss(c);
+        }
+        print();
+        pos=0;
+        ss(c);
+    }
+    return 0;
+}

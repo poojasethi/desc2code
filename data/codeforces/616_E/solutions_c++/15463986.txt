@@ -1,0 +1,43 @@
+#include<iostream>
+#include<algorithm>
+#include<cmath>
+using namespace std;
+const long long MOD=1000000007;
+
+int main()
+{
+	long long m,n;
+	cin>>n>>m;
+	long long mm=m;
+	m=min(m,n);
+	long long ans=0;
+	long long mins=n/m;
+	long long maxs=sqrt(n);
+	long long last=m;
+		while(mins<=maxs)
+	{
+		long long minss=(n)/(mins+1)+1;
+		long long maxss;
+		maxss=last;
+		minss=min(minss,last);
+		long long tmp=maxss-minss+1,tmp1=minss+maxss;
+		if(tmp%2==0)
+			tmp/=2;
+		else
+			tmp1/=2;
+        tmp%=MOD;
+		tmp1%=MOD;
+		ans+=mins*tmp%MOD*tmp1%MOD;
+		ans%=MOD;
+		mins++;
+		last=minss-1;
+	}
+	long long x=last;
+	for(long long int i=1;i<=x;i++)
+	{
+		ans+=n/i*i;
+		ans%=MOD;
+	}
+	cout<<(mm%MOD*(n%MOD)%MOD-ans+MOD)%MOD<<endl;
+	return 0;
+}

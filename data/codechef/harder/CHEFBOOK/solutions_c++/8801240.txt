@@ -1,0 +1,175 @@
+#include<cstdio>
+#include<algorithm>
+#include<cassert>
+#include<cstring>
+#include<iostream>
+#include<cstdlib>
+#include<cmath>
+#include<vector>
+#include<map>
+#include<set>
+#include<queue>
+#include<bitset>
+using namespace std;
+typedef long long ll;
+typedef double db;
+void gn(int &x){
+	int sg=1;char c;while(((c=getchar())<'0'||c>'9')&&c!='-');
+	if(c=='-')sg=-1,x=0;else x=c-'0';
+	while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+	x*=sg;
+}
+void gn(ll &x){
+	int sg=1;char c;while(((c=getchar())<'0'||c>'9')&&c!='-');
+	if(c=='-')sg=-1,x=0;else x=c-'0';
+	while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+	x*=sg;
+}
+const int mo=1000000007;
+int qp(int a,ll b){int ans=1;do{if(b&1)ans=1ll*ans*a%mo;a=1ll*a*a%mo;}while(b>>=1);return ans;}
+int gcd(int a,int b){return b?gcd(b,a%b):a;}
+int n,m;
+struct node{
+	int x,y,l,s,t;
+}a[11111];
+
+
+////////////////////////////////////
+typedef int nu;
+typedef int nc;
+const nu infu=1000000000;
+const nc infc=1000000000;
+const int MAXV=333+5;
+const int MAXE=177777+5;
+////////////////////////////////////
+int s,t;
+struct edge{int v,next;nu f;nc c;}e[MAXE*2];int g[MAXV],etot;
+void ae(int u,int v,nu f,nc c){
+	e[etot].v=v;e[etot].f=f;e[etot].c=c;e[etot].next=g[u];g[u]=etot++;
+	e[etot].v=u;e[etot].f=0;e[etot].c=-c;e[etot].next=g[v];g[v]=etot++;
+}
+void ae2(int u,int v,int c){
+	e[etot].v=v;e[etot].c=c;e[etot].next=g[u];g[u]=etot++;
+}
+nc co;
+int qu[1005],p,q,inq[1005];
+int d[1005];
+int mi[1005],ine[1005];
+int fn[1005];
+int flag=0;
+int spfa(){
+	p=q=0;
+	qu[q++]=s;inq[s]=1;
+	for (int i=1;i<=t;i++)d[i]=infc,fn[i]=0,inq[i]=0;
+	d[s]=0;mi[s]=infu;
+	while(p!=q){
+		int u=qu[p++];inq[u]=0;if(p==1005)p=0;
+		if(++fn[u]>t+2){
+			flag=1;
+			return 0;
+		}
+		for (int i=g[u];~i;i=e[i].next)
+			if(e[i].f && d[u]+e[i].c<d[e[i].v]){
+				d[e[i].v]=d[u]+e[i].c;
+				mi[e[i].v]=min(mi[u],e[i].f);
+				ine[e[i].v]=i;
+				if(!inq[e[i].v]){
+					qu[q++]=e[i].v;
+					if(q==1005)q=0;
+					inq[e[i].v]=1;
+				}
+			}
+	}
+	return d[t]<infc;
+}
+int fl;
+int cost(){
+	co=0;
+	fl=0;
+	while(spfa()){
+		int del=mi[t];
+		fl+=del;
+		co+=d[t]*del;
+		int p=t;
+		while(p!=s){
+			e[ine[p]].f-=del;
+			e[ine[p]^1].f+=del;
+			p=e[ine[p]^1].v;
+		}
+	}
+	return co;
+}
+void init(){
+	memset(g,-1,sizeof(g));
+	etot=0;
+}
+int C[60022];
+int Y[60022];
+void spfa2(){
+	p=q=0;
+	for (int i=1;i<=2*n;i++)d[i]=0,fn[i]=0,inq[i]=0;
+	for (int i=1;i<=2*n;i++)qu[q++]=i,inq[i]=1;
+	while(p!=q){
+		int u=qu[p++];inq[u]=0;if(p==1005)p=0;
+		for (int i=g[u];~i;i=e[i].next)
+			if(d[u]+e[i].c<d[e[i].v]){
+				d[e[i].v]=d[u]+e[i].c;
+				if(!inq[e[i].v]){
+					qu[q++]=e[i].v;
+					if(q==1005)q=0;
+					inq[e[i].v]=1;
+				}
+			}
+	}
+}
+int an[633];
+int main()
+{
+	int tes;
+	gn(tes);
+	while(tes--){
+		flag=0;
+		init();
+		memset(C,0,sizeof(C));
+		gn(n);gn(m);
+		for (int i=1;i<=m;i++)gn(a[i].x),gn(a[i].y),gn(a[i].l),gn(a[i].s),gn(a[i].t);
+		s=2*n+1,t=s+1;
+		for (int i=1;i<=m;i++){
+			C[a[i].x]++;
+			C[a[i].y+n]--;
+			ae(a[i].y+n,a[i].x,infu,a[i].t-a[i].l);
+			ae(a[i].x,a[i].y+n,infu,a[i].l-a[i].s);
+		}
+		int man=0;
+		for (int i=1;i<=2*n;i++)
+			if(C[i]<0)ae(s,i,-C[i],0),man-=C[i];
+			else if(C[i]>0)ae(i,t,C[i],0);
+		cost();
+		if(flag || fl!=man){
+			printf("Unlike\n");
+			continue;
+		}
+		for (int i=1;i<=2*m;i++){
+			Y[i]=e[i*2-1].f;
+		}
+		init();
+		for (int i=1;i<=m;i++){
+			ae2(a[i].y+n,a[i].x,a[i].t-a[i].l);
+			if(Y[i*2-1]!=0)ae2(a[i].x,a[i].y+n,a[i].l-a[i].t);
+			ae2(a[i].x,a[i].y+n,a[i].l-a[i].s);
+			if(Y[i*2]!=0)ae2(a[i].y+n,a[i].x,a[i].s-a[i].l);
+		}
+		spfa2();
+		int mi=infc;
+		for (int i=1;i<=2*n;i++)an[i]=d[i],mi=min(mi,d[i]);
+		for (int i=1;i<=2*n;i++)an[i]-=mi;
+		int co=0;
+		for (int i=1;i<=m;i++)co+=a[i].l+an[a[i].x]-an[a[i].y+n];
+		printf("%d\n",co);
+		for (int i=1;i<=n;i++)printf("%d ",an[i]);
+		printf("\n");
+		for (int i=n+1;i<=n+n;i++)printf("%d ",an[i]);
+		printf("\n");
+	}
+	return 0;
+}

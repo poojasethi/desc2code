@@ -1,0 +1,67 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+const int maxN=500000+10,maxT=maxN*5,maxB=20;
+
+int n,a[maxN],tree[maxT];
+int prev[maxB][maxN];
+
+void initTree(int lo,int hi,int i){
+    if (lo==hi){ tree[i]=lo; return;}
+    initTree(lo,(lo+hi)/2,i*2);
+    initTree((lo+hi)/2+1,hi,i*2+1);
+    if (a[tree[i*2]]-tree[i*2]>a[tree[i*2+1]]-tree[i*2+1])
+        tree[i]=tree[i*2];
+    else tree[i]=tree[i*2+1];
+}
+int getmax(int s,int e,int lo,int hi,int i){
+    if (lo>e||hi<s) return 0;
+    if (s<=lo&&hi<=e) return tree[i];
+    int x=getmax(s,e,lo,(lo+hi)/2,i*2),
+        y=getmax(s,e,(lo+hi)/2+1,hi,i*2+1);
+    if (a[x]-x>a[y]-y) return x; else return y;
+}
+
+void init(){
+    memset(tree,0,sizeof tree);
+    initTree(1,2*n,1);
+    memset(prev,0,sizeof prev);
+    for (int i=1;i<=2*n;i++) if (a[i]<i){
+        prev[0][i]=getmax(i-a[i],i-1,1,2*n,1);
+    }
+    for (int j=1;j<maxB;j++)
+        for (int i=1;i<=2*n;i++) if (prev[j-1][i]==0) prev[j][i]=0;
+        else prev[j][i]=prev[j-1][prev[j-1][i]];
+}
+int jump(int x,int y){
+    for (int i=0;i<maxB;i++) if ((y>>i)&1) x=prev[i][x];
+    return x;
+}
+
+void solve(){
+    long long res=0;
+    for (int i=n+1;i<=2*n;i++){
+        int x=i,y=0;
+        for (int j=maxB-1;j>=0;j--) if (prev[j][x]>i-n+1) x=prev[j][x], y+=(1<<j);
+        if (y>0) y--;
+        x=jump(i,y);
+        while (x>i-n+1){
+            y++;
+            if (x-a[x]<=i-n+1) break;
+            x=prev[0][x];
+        }
+        res+=y;
+    }
+    printf("%I64d\n",res);
+}
+
+int main(){
+    //freopen("tanks.inp","r",stdin);
+    scanf("%d",&n); a[0]=-maxN;
+    for (int i=1;i<=n;i++) scanf("%d",&a[i]), a[i+n]=a[i];
+    init();
+    solve();
+    return 0;
+}

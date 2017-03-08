@@ -1,0 +1,125 @@
+#include<iostream>
+#include<cstdio>
+#include<sstream>
+#include<fstream>
+#include<cctype>
+#include<cstdlib>
+#include<cmath>
+#include<ctime>
+#include<cstring>
+#include<string>
+#include<complex>
+#include<bitset>
+#include<map>
+#include<set>
+#include<vector>
+#include<algorithm>
+#include<queue>
+#include<deque>
+#include<stack>
+#include<iomanip>
+#include<utility>
+
+#define pb push_back
+#define pp pop_back
+#define xx first
+#define yy second
+#define mp make_pair
+
+using namespace std;
+
+typedef long long ll;
+typedef vector<int> vi;
+typedef pair<int,int> pii;
+
+const int maxn=300000+10;
+const int maxl=20;
+const ll base=1e6;
+const int inf=-1e9;
+const ll mod=1e9+7;
+ll F[maxn][maxl][3],ans;
+string s[3];
+int sz,ps[maxn][3];
+vector<pii> suf;
+vi adj[maxn];
+set<pii> S;
+set<pii>::iterator it;
+bool cmp(pii a,pii b){
+	return F[a.yy][19][a.xx]<F[b.yy][19][b.xx];
+}
+void suffixArray(){
+	for(int id=0;id<3;id++)for(int i=0;i<s[id].size();i++){
+		F[i][0][id]=s[id][i]-'a'+1;
+		suf.pb(mp(id,i));
+	}
+	for(int l=1;l<20;l++){
+		vector<ll> v;
+		for(int id=0;id<3;id++){
+			for(int i=0;i<s[id].size();i++){
+				if(i+(1<<(l-1))>s[id].size())F[i][l][id]=F[i][l-1][id]*base;
+				else F[i][l][id]=F[i][l-1][id]*base+F[i+(1<<(l-1))][l-1][id];
+				v.pb(F[i][l][id]);
+			}
+		}
+		sort(v.begin(),v.end());
+		v.resize(unique(v.begin(),v.end())-v.begin());
+		for(int id=0;id<3;id++)for(int i=0;i<s[id].size();i++)F[i][l][id]=lower_bound(v.begin(),v.end(),F[i][l][id])-v.begin()+1;
+	}
+	sort(suf.begin(),suf.end(),cmp);
+	S.insert(mp(0,sz-1));
+	ans=(ll)s[0].size()*(ll)s[1].size()*(ll)s[2].size();
+}
+int lcp(int p1,int id1,int p2,int id2){
+	int ret=0;
+	for(int l=19;l>=0;l--){
+		if(p1+(1<<l)<=s[id1].size() && p2+(1<<l)<=s[id2].size()){
+			if(F[p1][l][id1]==F[p2][l][id2]){
+				ret+=(1<<l);
+				p1+=(1<<l);
+				p2+=(1<<l);
+			}
+		}
+	}
+	return ret;
+}
+ll get(int l,int r){
+	ll ret=1;
+	for(int id=0;id<3;id++){
+		ll cnt=0;
+		cnt=ps[r+1][id]-ps[l][id];
+		ret*=cnt;
+	}
+	return ret;
+}
+void update(int pos){
+	it=S.lower_bound(mp(pos+1,inf));
+	it--;
+	ans-=get(it->xx,it->yy);
+	ans+=get(it->xx,pos);
+	ans+=get(pos+1,it->yy);
+	S.insert(mp(it->xx,pos));
+	S.insert(mp(pos+1,it->yy));
+	S.erase(it);
+}
+int main(){
+	ios_base::sync_with_stdio(false);
+	cin.tie(0);
+	cout.tie(0);
+	cin>>s[0]>>s[1]>>s[2];
+	sz=s[0].size()+s[1].size()+s[2].size();
+	suffixArray();
+	for(int i=0;i<sz-1;i++)adj[lcp(suf[i].yy,suf[i].xx,suf[i+1].yy,suf[i+1].xx)].pb(i);
+	for(int i=0;i<sz;i++){
+		for(int j=0;j<3;j++)if(i>0)ps[i+1][j]=ps[i][j];
+		for(int j=0;j<3;j++)ps[i+1][j]+=(suf[i].xx==j);
+	}
+	for(int l=1;l<=min((int)s[0].size(),min((int)s[1].size(),(int)s[2].size()));l++){
+		for(int i=0;i<adj[l-1].size();i++){
+			int pos=adj[l-1][i];
+			update(pos);
+		}
+		cout<<ans%mod<<" ";
+	}
+	cout<<endl;
+	return 0;
+}

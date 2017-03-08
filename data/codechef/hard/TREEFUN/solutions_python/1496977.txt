@@ -1,0 +1,122 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<math.h>
+#include<assert.h>
+#include<string.h>
+#define REP(i,a,b) for(i=a;i<b;i++)
+#define rep(i,n) REP(i,0,n)
+ 
+typedef struct struct_vector_int{ int size,mem; int *d; }intVector;
+intVector intVectorNull(){ intVector v; v.size=v.mem=0; return v; }
+ 
+void intVectorMemoryExpand(intVector *v){
+  int i, *t, m;
+  m=v->mem*2; if(m<5) m=5;
+  t=(int*)malloc(m*sizeof(int));
+  rep(i,v->size) t[i]=v->d[i];
+  if(v->mem) free(v->d);
+  v->d=t; v->mem=m;
+}
+ 
+void intVectorPushBack(intVector *v,int add){
+  if(v->mem==v->size) intVectorMemoryExpand(v);
+  v->d[(v->size)++] = add;
+}
+ 
+int N;
+intVector edge[51000];
+int up[51000][20];
+int level[51000];
+ 
+void levelize(int node, int depth, int bef){
+  int i, k;
+ 
+  up[node][0] = bef;
+  level[node] = depth;
+  
+  REP(i,1,20){
+    if(up[node][i-1]==-1){ up[node][i] = -1; continue; }
+    up[node][i] = up[up[node][i-1]][i-1];
+  }
+ 
+  rep(i,edge[node].size){
+    k = edge[node].d[i];
+    if(k==bef) continue;
+    levelize(k, depth+1, node);
+  }
+}
+ 
+int getUp(int node, int upup){
+  int i = 1, k = 0;
+ 
+  if(upup == 0) return node;
+  while(i*2 <= upup) i *= 2, k++;
+  return getUp(up[node][k], upup-i);
+}
+ 
+int LCA(int a, int b){
+  int i;
+  
+  if(a==b) return a;
+ 
+  if(level[a]>level[b]) a = getUp(a, level[a] - level[b]);
+  if(level[a]<level[b]) b = getUp(b, level[b] - level[a]);
+ 
+  if(a==b) return a;
+ 
+  if(up[a][0] == up[b][0]) return up[a][0];
+  REP(i,1,20) if(up[a][i]==up[b][i]) return LCA(up[a][i-1], up[b][i-1]);
+}
+ 
+int main(){
+  int T, M;
+ 
+  int i, j, k, d;
+  int S, in[51000], val[51000];
+ 
+  rep(i,51000) edge[i] = intVectorNull();
+ 
+  scanf("%d",&T);
+  while(T--){
+    scanf("%d%d",&N,&M);
+    rep(i,N) edge[i].size = 0;
+    rep(k,N-1){
+      scanf("%d%d",&i,&j); i--; j--;
+      intVectorPushBack(edge+i, j);
+      intVectorPushBack(edge+j, i);
+    }
+ 
+    levelize(0, 0, -1);
+    rep(i,N) val[i] = M+1000;
+ 
+    while(M--){
+      scanf("%d",&S);
+      rep(i,S) scanf("%d",in+i), in[i]--;
+ 
+      if(S==2){
+        k = LCA(in[0], in[1]);
+        d = level[in[0]] - level[k] + level[in[1]] - level[k];
+        printf("%d\n",d-1);
+      } else {
+        i = LCA(in[0], in[1]);
+        j = LCA(in[1], in[2]);
+        k = LCA(in[2], in[0]);
+        if(level[k] < level[i]) k = i;
+        if(level[k] < level[j]) k = j;
+
+        d = 0;
+        rep(i,S){
+          if(in[i]==k){ d=2; break; }
+          if(level[in[i]] <= level[k] || getUp(in[i], level[in[i]]-level[k]) != k){ d++; continue; }
+          j = getUp(in[i], level[in[i]]-level[k]-1);
+          if(val[j]==M){ d=2; break; }
+          val[j] = M;
+        }
+        
+        if(d<2) puts("1"); else puts("0");
+      }
+    }
+  }
+ 
+  return 0;
+}

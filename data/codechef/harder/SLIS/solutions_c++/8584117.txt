@@ -1,0 +1,101 @@
+#include <stdio.h>
+#include <algorithm>
+#include <set>
+#include <map>
+#include <complex>
+#include <iostream>
+#include <stack>
+#include <stdlib.h>
+#include <memory.h>
+#include <math.h>
+#include <string>
+#include <vector>
+#include <queue>
+#include <vector>
+
+using namespace std;
+
+const int MaxN = 1e5 + 10;
+const int MOD = 1e9 + 7;
+
+struct Node {
+  int len;
+  int cnt, cnt2;
+  Node(int _len = 0, int _cnt = 0, int _cnt2 = 0) : len(_len), cnt(_cnt), cnt2(_cnt2) {
+  }
+  Node operator+ (const Node &other) {
+    Node res;
+    res.len = max(len, other.len);
+    if (len == other.len) {
+      res.cnt = (cnt + other.cnt) % MOD;
+      res.cnt2 = (cnt2 + other.cnt2) % MOD;
+    } else if (len > other.len) {
+      res.cnt = cnt;
+      res.cnt2 = (cnt2 + (other.len == len - 1 ? other.cnt : 0)) % MOD;
+    } else {
+      res.cnt = other.cnt;
+      res.cnt2 = (other.cnt2 + (len == other.len - 1 ? cnt : 0)) % MOD;
+    }
+    return res;
+  }
+} t[4 * MaxN];
+
+int ts, n;
+int a[MaxN];
+
+Node get(int v, int L, int R, int l, int r) {
+  if (L == l && r == R) {
+    return t[v];
+  }
+  int M = (L + R) / 2;
+  if (r <= M) {
+    return get(v + v, L, M, l, r);
+  }
+  if (l > M) {
+    return get(v + v + 1, M + 1, R, l, r);
+  }
+  return get(v + v, L, M, l, M) + get(v + v + 1, M + 1, R, M + 1, r);
+}
+
+void upd(int v, int l, int r, int pos, Node &val) {
+  if (l != r) {
+    int m = (l + r) / 2;
+    if (pos <= m) {
+      upd(v + v, l, m, pos, val);
+    } else {
+      upd(v + v + 1, m + 1, r, pos, val);
+    }
+    t[v] = t[v + v] + t[v + v + 1];
+  } else {
+    t[v] = t[v] + val;
+  }
+}
+
+int main() {
+//  freopen("input.txt", "r", stdin);
+  scanf("%d", &ts);
+  while (ts --> 0) {
+    scanf("%d", &n);
+    vector < int > b;
+    for (int i = 0; i < n; ++i) {
+      scanf("%d", &a[i]);
+      b.push_back(a[i]);
+    }
+    sort(b.begin(), b.end());
+    b.resize(unique(b.begin(), b.end()) - b.begin());
+    for (int i = 0; i < n; ++i) {
+      a[i] = lower_bound(b.begin(), b.end(), a[i]) - b.begin() + 1;
+    }
+    int lBound = 0, rBound = (int)b.size();
+    memset(t, 0, sizeof(t));
+    Node zero = Node(0, 1, 0);
+    upd(1, lBound, rBound, 0, zero);
+    for (int i = 0; i < n; ++i) {
+      Node pref = get(1, lBound, rBound, lBound, a[i] - 1);
+      pref.len += 1;
+      upd(1, lBound, rBound, a[i], pref);
+    }
+    printf("%d\n", t[1].cnt2);
+  }
+  return 0;
+}

@@ -1,0 +1,310 @@
+#include <iostream>
+#include <list>
+#include <fstream>
+#include <cmath>
+#include <cstring>
+#include <cassert>
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <set>
+#include <deque>
+#include <map>
+#include <complex>
+#include <ctime>
+#include <cctype>
+#include <iomanip>
+#include <sstream>
+
+using namespace std;
+
+#define FORALL(i,a,b) for(int i=(a);i<=(b);++i)
+#define FOR(i,n) for(int i=0;i<(n);++i)
+#define FORB(i,a,b) for(int i=(a);i>=(b);--i)
+
+typedef long long ll;
+typedef long double ld;
+typedef complex<ld> vec;
+
+typedef pair<int,int> pii;
+typedef map<int,int> mii;
+
+#define pb push_back
+#define mp make_pair
+
+//Aho-Corasick algorithm
+
+#define MAXP 10000100     //maxmimum length of a pattern; 100010 is good; can get higher (millions)
+#define MAXK 755     //maximum # of patterns; 100010 is good
+
+//assumes ('a'..'z' = 0..25) and ('A'..'Z' = 26..51)
+//use ALPHA = 26 if only lower case
+#define alpha(c) (('a'<=(c)&&(c)<='z')?((c)-'a'):(26 + (c)-'A'))
+#define ALPHA 2
+
+//inserts the pattern p into the dfa (and merges common prefixes)
+//essentially constructs it like a trie
+//returns the index of the final node reached
+int insert_dfa(string& P, int& S, int M[MAXP][ALPHA]){
+    int st = 0, N = P.size();
+    FOR(i,N){
+        int c = alpha(P[i]);
+        if (M[st][c] > 0) st = M[st][c];
+        else st = M[st][c] = ++S;
+    }
+    return st;
+}
+
+//takes a set of pattern strings P[0] .. P[K-1]
+//constructs the (deterministic) finite automaton that accepts strings which end in a string of p
+//post-condition:
+//        M[q][a] will be the state to transition to from q, seeing letter a
+//        dfa_ac[MAXP] will point to any pattern string that exactly matches (is accepted by) this node
+//        dfa_next[MAXP], dfa_tail will form a linked-list style structure of all the matches
+//        dfa_lp[MAXP] will point to the node whose represented prefix is the longest suffix of this node
+//returns: the highest reached state
+int dfa_ac[MAXP];    //head (a longest string Pi that matches here)
+int dfa_next[MAXP];    //next in linked list
+int dfa_tail[MAXP]; //last non-zero node in list
+int dfa_lp[MAXP];    //longest string prefix who is a proper suffix here
+int make_dfa_many(string* P, int K, int M[MAXP][ALPHA]){
+    memset(dfa_ac,-1,sizeof(dfa_ac));
+    memset(dfa_next,-1,sizeof(dfa_ac));
+    memset(dfa_tail,-1,sizeof(dfa_ac));
+    memset(dfa_lp,0,sizeof(dfa_lp));
+    memset(M,0,sizeof(int)*MAXP*ALPHA);
+
+    int S = 0;    //S = # of states encountered
+
+    //insert each string
+    FOR(i,K){
+        int node = insert_dfa(P[i],S,M);
+
+        // keep track of all the strings which end on this node (i.e.: duplicates)
+        dfa_tail[node] = (dfa_tail[node] >= 0 ? dfa_tail[node] : i);
+        dfa_next[i] = dfa_ac[node];
+        dfa_ac[node] = i;
+    }
+
+    //compute fail/mismatch function by bfs outward from 0
+    queue<int> Q;
+    FOR(c,ALPHA) if (M[0][c]) Q.push(M[0][c]);    //we assume dfa_lp[i] = 0 if not set
+    while(!Q.empty()){
+        int i = Q.front();Q.pop();
+        assert(dfa_lp[i] >= 0);
+        FOR(c,ALPHA){
+            int j = M[i][c];
+            if (j){        //the longest prefix of (X+c) is some prefix of X, then add c
+                Q.push(j);
+                int st = dfa_lp[i];
+                while(st != 0 && !M[st][c]) st = dfa_lp[st];    //follow the graph backward until we find a prefix we can append c to
+                int node = M[st][c];
+                dfa_lp[j] = node;
+                if (dfa_ac[j] < 0){    //empty linked list
+                    dfa_ac[j] = dfa_ac[node];
+                    dfa_tail[j] = dfa_tail[node];
+                }else{
+                    dfa_next[dfa_tail[j]] = dfa_ac[node];
+                    dfa_tail[j] = dfa_tail[node];
+                }
+            }else M[i][c] = M[dfa_lp[i]][c];
+        }
+    }
+
+    return S;
+}
+
+bool adj[MAXK][MAXK];
+bool del[MAXK][MAXK];
+string S[MAXK];
+
+//parse each character in T
+//if dfa_ac[st] >= 0 then we have an accepted string, and we parse the linked list to find all
+//we may happen to mutate dfa_ac during this function
+//dfa_temp will restore dfa_ac back to its original state, just incase we want to reuse these strings
+int dfa_temp[MAXP];
+void dfa_match_many(int me, string* P, int K, int M[MAXP][ALPHA]){
+    string& T = P[me];
+    int st = 0;
+    int N = T.length();
+    int a;
+    FOR(i,N){
+        // process next character, move to next state
+        a = alpha(T[i]);
+        st = M[st][a];
+
+        for (int cur = dfa_ac[st]; cur >= 0 && !adj[me][cur]; cur = dfa_next[cur]) {
+            adj[me][cur] = true;
+        }
+    }
+}
+
+#define INF 1000000000
+#define zero 0
+#define MAXNODE 5000
+#define src (K)
+#define snk (K+1)
+
+#define out(x) (2*(x))
+#define in(x) (2*(x)+1)
+
+typedef int num;
+struct edge { int b; num cap, f; int rev_id; };
+vector<edge> E[MAXNODE];
+int vis[MAXNODE], depth[MAXNODE];
+
+bool bfs_aug(int s, int t, int iter) {
+    queue<int> Q;
+    Q.push(s); vis[s] = iter; depth[s] = 0;
+    int i,j,numE;
+    while(!Q.empty()) {
+        i = Q.front(); Q.pop();
+        if (i==t) return true;
+        numE = E[i].size();
+        FOR(x,numE) if (j=E[i][x].b, vis[j]<iter && E[i][x].cap > E[i][x].f)
+            vis[j] = iter, depth[j] = depth[i]+1, Q.push(j);
+    }
+
+    return false;
+}
+
+num dfs_aug(int i, int t, num res, int iter) {
+    if (i==t) return res;
+    if (vis[i] == iter) return 0;
+    assert(res > 0);
+    int numE = E[i].size();
+    num sum=zero, v=zero;
+    FOR(x,numE) {
+        int j = E[i][x].b, r = E[i][x].rev_id;
+        num c = min(E[i][x].cap - E[i][x].f,res);
+        v = 0;
+        if (c>zero && depth[j]==depth[i]+1 && (v=dfs_aug(j,t,c,iter)) > zero) {
+            E[i][x].f += v, E[j][r].f -= v, res -= v, sum += v;
+        }
+    }
+    assert(res >= zero);
+    if (res > 0) vis[i] = iter;
+    return sum;
+}
+
+num dinics(int s, int t) {
+    num ans = zero; memset(vis,0,sizeof(vis));
+    for(int phase = 1; bfs_aug(s,t,phase++)>0;)
+        ans += dfs_aug(s,t,INF,phase++);
+    return ans;
+}
+
+void clear_flow() {
+    FOR(i,MAXNODE) FOR(x,(int)E[i].size()) E[i][x].f = zero;
+}
+
+int Z = 0;
+
+void add_edge(int a, int b, num c) {
+    edge x = {b,c,zero,(int)E[b].size()};
+    edge y = {a,zero,zero,(int)E[a].size()};
+    E[a].pb(x); E[b].pb(y);
+    Z++;
+}
+
+bool mark[MAXNODE];
+int incover[MAXNODE];
+bool dead[MAXNODE];
+
+void final_find_aug(int s) {
+    queue<int> Q;
+    int numstart = E[s].size();
+    FOR(x,numstart) {
+        if (E[s][x].cap <= E[s][x].f) { incover[E[s][x].b / 2]++; continue; }
+
+        int j = E[s][x].b;
+        Q.push(j); mark[j] = true;
+    }
+    while(!Q.empty()) {
+        int i = Q.front(); Q.pop();
+        assert(i%2 == 0);
+        assert(mark[i]);
+
+        int numE = E[i].size();
+        FOR(x,numE) {
+            int j = E[i][x].b;
+            if (E[i][x].cap <= E[i][x].f) continue;
+            if (E[i][x].cap == 0) continue;
+            if (j==s) continue;
+
+            assert(j%2);
+            int found = 0;
+            int numF = E[j].size();
+            FOR(y,numF) {
+                int k = E[j][y].b;
+                if (E[j][y].cap <= E[j][y].f) continue;
+                if (E[j][y].cap > 0) continue;
+                found++;
+                assert(found == 1);
+                assert(k%2 == 0);
+                if (mark[k]) continue;
+                mark[k] = true;
+                incover[j/2]++;
+                incover[k/2]--;
+                Q.push(k);
+            }
+
+            assert(found == 1);
+        }
+    }
+}
+
+int M[MAXP][ALPHA];
+char buf[MAXP];
+
+int main() {
+    int K; scanf("%d",&K);
+    FOR(i,K) {
+        scanf("%s",buf);
+        S[i] = buf;
+    }
+
+
+    make_dfa_many(S,K,M);
+    FOR(i,K) dfa_match_many(i, S, K, M);
+
+    // remove any self-loops or duplicates
+    FOR(i,K) adj[i][i] = false;
+    FOR(i,K) FOR(j,K) if (adj[i][j] && adj[j][i] && j<i) dead[i] = true;
+    FOR(i,K) {
+        if (dead[i]) continue;
+        add_edge(out(src),out(i),1);
+        add_edge(in(i),in(snk),1);
+        FOR(j,K) if (!dead[j] && j != i && adj[i][j]) add_edge(out(i),in(j),1);
+    }
+
+    int ans = dinics(out(src),in(snk));
+
+    int numDead = 0;
+    FOR(i,K) if (dead[i]) numDead++;
+
+    final_find_aug(out(src));
+
+    printf("%d\n",K-numDead-ans);
+    int found = 0;
+    FOR(i,K) {
+        if (dead[i]) continue;
+        if (!incover[i]) {
+            found++;
+            if (found > 1) printf(" ");
+            printf("%d",i+1);
+        }
+    }
+    printf("\n");
+    assert(found == K-numDead-ans);
+}
+
+
+
+
+
+
+
+

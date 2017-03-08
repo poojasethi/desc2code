@@ -1,0 +1,29 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+int N,x,y;
+long long d[2005];
+int main()
+{
+	scanf("%d",&N);
+	for(int i=1;i<2002;i++)
+		d[i]=1ll<<60;
+	for (int i = 0; i < N; i++)
+	{
+		scanf("%d %d",&x,&y);
+		for(int j=N;j>=0;j--)
+		{
+			if(d[j]!=(1ll<<60))
+			{
+				if(j+x+1 >= N)
+					d[N]=min(d[N],d[j]+y);
+				else
+					d[j+x+1]=min(d[j+x+1],d[j]+y);
+				
+			}
+
+		}
+	}
+	printf("%I64d\n",d[N]);
+	return 0;
+}

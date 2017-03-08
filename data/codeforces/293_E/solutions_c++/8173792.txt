@@ -1,0 +1,120 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<iostream>
+#include<ctime>
+#define N 200005
+using namespace std;
+typedef long long LL;
+int n,L,W,head,tail,queue[N],fa[N],size[N],mxs[N],timestamp,bit[N],flag[N],len[N],dis[N];
+bool done[N];
+LL ans;
+struct edge{
+	edge*n;
+	int v,w;
+}Pool[N],*etp=Pool,*G[N];
+void addedge(int u,int v,int w){
+	etp->v=v;etp->w=w;etp->n=G[u];G[u]=etp++;
+	etp->v=u;etp->w=w;etp->n=G[v];G[v]=etp++;
+}
+void modify(int x){
+	for(x++;x<=n;x+=(x&(-x))){
+		if(flag[x]!=timestamp)
+			flag[x]=timestamp,bit[x]=0;
+		bit[x]++;
+	}
+}
+int query(int x){
+	int tmp=0;
+	for(x++;x>0;x-=(x&(-x))){
+		if(flag[x]!=timestamp)
+			flag[x]=timestamp,bit[x]=0;
+		tmp+=bit[x];
+	}return tmp;
+}
+int findcore(int begin){
+	fa[begin]=0;
+	for(queue[head=tail=1]=begin;head<=tail;head++){
+		int u=queue[head];
+		size[u]=1;mxs[u]=0;
+		for(edge*e=G[u];e;e=e->n){
+			int v=e->v;
+			if(!done[v]&&v!=fa[u]){
+				fa[v]=u;
+				queue[++tail]=v;
+			}
+		}
+	}
+	int sel=queue[tail];
+	for(int i=tail;i>=1;i--){
+		int u=fa[queue[i]],v=queue[i];
+		size[u]+=size[v];
+		if(size[v]>mxs[u])mxs[u]=size[v];
+		mxs[v]=max(mxs[v],tail-size[v]);
+		if(mxs[sel]>mxs[v])sel=v;
+	}
+	return sel;
+}
+struct PA{
+	int d,w;
+}pool[N];
+bool cmp(const PA&x,const PA&y){
+	return x.w<y.w;
+}
+LL calc(int begin){
+	++timestamp;
+	int old_head=head;
+	for(queue[tail=head]=begin;head<=tail;head++){
+		int u=queue[head];
+		pool[head]=(PA){len[u],dis[u]};
+		for(edge*e=G[u];e;e=e->n){
+			int v=e->v;
+			if(!done[v]&&v!=fa[u]){
+				fa[v]=u;
+				len[v]=len[u]+1;
+				dis[v]=dis[u]+e->w;
+				queue[++tail]=v;
+			}
+		}
+	}
+	sort(pool+old_head,pool+head,cmp);
+	LL an=0;
+	for(int i=tail,j=old_head;i>=old_head;i--){
+		while(j<=tail&&pool[j].w+pool[i].w<=W)
+			modify(pool[j].d),j++;
+		an+=query(L-pool[i].d);
+	}
+	return an;
+}
+void solve(int u){
+	u=findcore(u);
+	done[u]=head=1;
+	LL an=0;
+	for(edge*e=G[u];e;e=e->n)
+		if(!done[e->v]){
+			len[e->v]=1;dis[e->v]=e->w;fa[e->v]=u;
+			an-=calc(e->v);
+		}
+	pool[head]=(PA){0,0};
+	sort(pool+1,pool+head+1,cmp);
+	++timestamp;
+	for(int i=head,j=1;i>=1;i--){
+		while(j<=head&&pool[j].w+pool[i].w<=W)
+			modify(pool[j].d),j++;
+		an+=query(L-pool[i].d);
+	}
+	ans+=(an-1)/2;
+	for(edge*e=G[u];e;e=e->n)
+		if(!done[e->v])
+			solve(e->v);
+}
+int main(){
+	scanf("%d%d%d",&n,&L,&W);
+	L=min(n-1,L);
+	for(int i=2,v,w;i<=n;i++){
+		scanf("%d%d",&v,&w);
+		addedge(i,v,w);
+	}
+	solve(1);
+	printf("%I64d\n",ans);
+}

@@ -1,0 +1,131 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define N 100001
+long long mod=1000000009LL;
+//source: http://apps.topcoder.com/forums/?module=RevisionHistory&messageID=1171511
+
+long long rank[N],pos[N],height[N],str[N],cnt[N],next[N];
+bool bh[N], b2h[N];
+
+bool smaller_first_char(long long a, long long b)
+{
+    return str[a] < str[b];
+}
+
+void suffixsort(long long n)
+{
+    for (long long i=0; i<n; ++i)
+        pos[i] = i;
+    sort(pos, pos + n, smaller_first_char);
+    for (long long i=0; i<n; ++i)
+    {
+        bh[i] = i == 0 || str[pos[i]] != str[pos[i-1]];
+        b2h[i] = false;
+    }
+    for (long long h = 1; h < n; h <<= 1)
+    {
+        long long buckets = 0;
+        for (long long i=0, j; i < n; i = j)
+        {
+            j = i + 1;
+            while (j < n && !bh[j])
+                j++;
+            next[i] = j;
+            buckets++;
+        }
+        if (buckets == n)
+            break;
+        for (long long i = 0; i < n; i = next[i])
+        {
+            cnt[i] = 0;
+            for (long long j = i; j < next[i]; ++j)
+            {
+                rank[pos[j]] = i;
+            }
+        }
+        cnt[rank[n - h]]++;
+        b2h[rank[n - h]] = true;
+        for (long long i = 0; i < n; i = next[i])
+        {
+            for (long long j = i; j < next[i]; ++j)
+            {
+                long long s = pos[j] - h;
+                if (s >= 0)
+                {
+                    long long head = rank[s];
+                    rank[s] = head + cnt[head]++;
+                    b2h[rank[s]] = true;
+                }
+            }
+            for (long long j = i; j < next[i]; ++j)
+            {
+                long long s = pos[j] - h;
+                if (s >= 0 && b2h[rank[s]])
+                {
+                    for (long long k = rank[s]+1; !bh[k] && b2h[k]; k++)
+                        b2h[k] = false;
+                }
+            }
+        }
+        for (long long i=0; i<n; ++i)
+        {
+            pos[rank[i]] = i;
+            bh[i] |= b2h[i];
+        }
+    }
+    for (long long i=0; i<n; ++i)
+        rank[pos[i]] = i;
+}
+
+void getheight(long long n)
+{
+    for (long long i=0; i<n; ++i)
+        rank[pos[i]] = i;
+    height[0] = 0;
+    for (long long i=0, h=0; i<n; ++i)
+    {
+        if (rank[i] > 0)
+        {
+            long long j = pos[rank[i]-1];
+            while (i + h < n && j + h < n && str[i+h] == str[j+h])
+                h++;
+            height[rank[i]] = h;
+            if (h > 0)
+                h--;
+        }
+    }
+}
+
+int main()
+{
+    long long t;
+    cin>>t;
+    while(t--)
+    {
+        long long n,ans;
+        cin>>n;
+        long long arr[n];
+        for(long long i=0;i<n;i++)
+            cin>>arr[i];
+        for(long long i=0;i<n-1;i++)
+            str[i]=arr[i+1]-arr[i];
+        ans=(n*(n-1))/2;
+        ans%=mod;
+        suffixsort(n-1);
+        getheight(n-1);
+        for(long long i=1;i<n-1;i++){
+            ans-=height[i];
+            if(ans<0)
+                ans+=mod;
+        }
+        cout<<ans<<endl;
+    }
+}
+
+
+
+
+
+
+
+

@@ -1,0 +1,109 @@
+#include <cassert>
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+ 
+using namespace std;
+ 
+const int MOD = 1000000000 + 7;
+const int MAXN = 1024;
+ 
+int n, c[MAXN][MAXN], Tn, ret, mem[MAXN];
+long long k, p[MAXN];
+ 
+int pw (int k, int p) {
+	if (p == 0)
+		return 1;
+	if (p == 1)
+		return k;
+	int q = pw(k, p / 2);
+	q = (q * 1LL * q) % MOD;
+	if (p % 2 == 0)
+		return q;
+	else
+		return (q * 1LL * k) % MOD;
+}
+ 
+inline int divide (int a, int b) {
+	if (a < 0)
+		a += MOD;
+	if (b < 0)
+		b += MOD;
+	if (mem[b] == -1) {
+		mem[b] = pw(b, MOD - 2);
+	}
+	return (a * 1LL * mem[b]) % MOD;
+}
+ 
+int powers_sum (int k) {
+	if (k == 0)
+		return 0;
+	int ret = 0, current_prod = 1;
+	for(int i = 0; i <= n + 1; i++) {
+/*		int term = c[i][1];
+		for(int j = 1; j <= i; j++)
+			term = (term * 1LL * (k - j)) % MOD;
+		ret = (ret + 1LL * term) % MOD;*/
+		if (i >= 1)
+			current_prod = (current_prod * 1LL * (k - i)) % MOD;
+		ret = (ret + current_prod * 1LL * c[i][1]) % MOD;
+	}
+	return ret;
+}
+ 
+int naive_sum (int k) {
+	int ret = 0;
+	for(int i = 1; i <= k; i++) 
+		ret = (ret + pw(i, n)) % MOD;
+	return ret;
+}
+ 
+int main (int argc, char * const argv[]) {
+	cin >> Tn;
+//	assert(1 <= Tn && Tn <= 128);
+	while (Tn--) {
+		ret = 0;
+		cin >> k >> n;
+//		assert(1 <= k && k <= 10000LL);
+//		assert(0 <= n && n <= 10000);
+		if (n > 256) {			
+			for(int i = 1; i <= k; i++) if (__gcd(k, 1LL * i) == 1)
+				ret = (ret + pw(i, n)) % MOD;
+			cout << ret << endl;
+			continue;
+		}
+		for(int i = 0; i <= n + 2; i++)
+			mem[i] = -1;
+		for(int i = 1; i <= n + 2; i++) 
+			c[0][i] = pw(i, n) + c[0][i - 1];
+		for(int i = 1; i <= n + 1; i++) 
+			for(int j = 1; j <= n + 2 - i; j++)
+				c[i][j] = divide(c[i - 1][j + 1] - c[i - 1][j], i);
+		long long remains = k;
+		int pn = 0;
+		for(long long i = 2; i * i <= k; i++)
+			if (remains % i == 0) {
+				p[pn++] = i;
+				while (remains % i == 0)
+					remains /= i;
+			}
+		if (remains > 1)
+			p[pn++] = remains;
+		for(int i = 0; i < (1 << pn); i++) {
+			long long carry = 1, mu = 1;
+			for(int j = 0; j < pn; j++)
+				if (i & (1 << j)) {
+					carry *= p[j];
+					mu *= -1;
+				}
+			long long t = powers_sum((k / carry) % MOD);
+			t = (t * 1LL * pw(carry % MOD, n)) % MOD;
+			if (mu == -1)
+				t = (MOD - t) % MOD;
+			ret = (ret + t) % MOD;
+		}
+		cout << ret << endl;
+	}
+    return 0;
+}
+ 

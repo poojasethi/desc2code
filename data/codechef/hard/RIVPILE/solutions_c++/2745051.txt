@@ -1,0 +1,150 @@
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <new>
+#include <vector>
+#include <algorithm>
+#include <string>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <stack>
+#include <map>
+#include <queue>
+
+#define LL long long int
+#define MAX 100005
+#define INF 1000000009
+#define F first
+#define S second
+#define mp make_pair
+
+using namespace std;
+
+int n,m,w;
+pair<int,int> pile[250];
+pair<int,int> disc[250];
+int cost[250][250];
+bool visited[250][250];
+int edge[250][250][250];
+int res;
+
+bool is_connected(LL dx,LL dy,LL sr) {
+    if(dx*dx+dy*dy<=sr*sr)
+        return true;
+    else
+        return false;
+}
+
+//This dijkstra func returns shortest path cost from vertex 0 to vertex v-1;
+
+void dijkstra() {
+   res=INF;
+   for(int i=0;i<n;i++) {
+	for(int j=0;j<m;j++) {
+               cost[i][j]=INF;
+	       visited[i][j]=false;
+        }
+    }
+    priority_queue< pair<int,int> > q;
+    for(int i=0;i<n;i++) {
+	for(int j=0;j<m;j++) {
+             if(pile[i].S<=disc[j].F) {
+                 cost[i][j]=disc[j].S;
+                 q.push(mp(-cost[i][j],i*m+j));
+             }
+        }
+    }
+    while(q.size()) {
+        pair<int,int> tp=q.top();
+        int u=tp.second;int i=u/m;int j=u%m;
+        q.pop();
+        if(visited[i][j]) {
+            continue;
+        }
+        visited[i][j]=true;
+        if(pile[i].S + disc[j].F>=w) {
+            res=cost[i][j];
+            break;
+        }
+        int nec;//next edge cost
+        if(j+1<m) {
+            nec=cost[i][j]+disc[j+1].S-disc[j].S;
+            if(cost[i][j+1]>nec) {
+                  cost[i][j+1]=nec;
+                  q.push(mp(-cost[i][j+1],i*m + j+1));
+            }
+        }
+        for(int k=0;k<n;k++) {
+            if(k!=i) {
+                 if(edge[i][k][j]>=0) {
+                          int l=edge[i][k][j];
+                          nec=cost[i][j]+disc[l].S;
+                          if(cost[k][l]>nec) {
+                               cost[k][l]=nec;
+                               q.push(mp(-cost[k][l],k*m+l));
+                          }
+                 }
+            }
+        }
+    }
+}
+
+int main() {
+    //ios_base::sync_with_stdio(false);
+    //freopen("input.txt","r",stdin);
+    //freopen("output.txt","w",stdout);
+    int t;
+    scanf("%d",&t);
+    while(t--) {
+        scanf("%d %d %d",&n,&m,&w);
+        int x,y;
+        for(int i=0;i<n;i++) {
+          scanf("%d %d",&x,&y);
+          pile[i].F=x;
+          pile[i].S=y;
+        }
+        int r,c;
+        for(int i=0;i<m;i++) {
+          scanf("%d %d",&r,&c);
+          disc[i].F=r;
+          disc[i].S=c;
+        }
+        sort(disc,disc+m);
+        int nidx=1;
+        for(int i=1;i<m;i++) {
+            while(nidx>=1 && disc[i].S <= disc[nidx-1].S) {
+                nidx--;
+            }
+            disc[nidx]=disc[i];
+            nidx++;
+        }
+        m=nidx;
+	int rdi;//required disc index
+	//precalcuate edges
+	for(int i=0;i<n;i++) {
+		for(int j=0;j<n;j++) {
+			rdi=m-1;
+			for(int k=0;k<m;k++) {
+				if(!is_connected((pile[i].F-pile[j].F),(pile[i].S-pile[j].S),disc[k].F+disc[rdi].F)) {
+                                      edge[i][j][k]=-1;
+                                      continue;
+                                }
+                                while(rdi>=1 && is_connected((pile[i].F-pile[j].F),(pile[i].S-pile[j].S),disc[k].F+disc[rdi-1].F)) {
+                                       rdi--;
+                                } 
+                                edge[i][j][k]=rdi;       
+			}
+				
+		}
+	} 
+        dijkstra();
+        if(res==INF) {
+            printf("impossible\n");
+        }
+        else {
+            printf("%d\n",res);
+        }
+    }
+    return 0;
+}

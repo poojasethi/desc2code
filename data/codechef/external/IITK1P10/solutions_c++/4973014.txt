@@ -1,0 +1,177 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <vector>
+#include <stack>
+#include <assert.h>
+
+using namespace std;
+
+int n;
+vector<int> * tree;
+int * begin;
+int * end;
+long long * inorder;
+long long * val;
+int travIndex = 0;
+
+int * fenwick;
+
+
+
+void make_fenwick()
+{
+	int i, idx;
+	for(i=1; i<=n; i++)
+	{
+		if(inorder[i] == 0)
+		{
+			idx = i;
+			while (idx <= n){
+				fenwick[idx] += 1;
+				idx += (idx & -idx);
+			}
+		}
+	}
+}
+
+
+int query(int idx)
+{
+	int numZero = 0;
+	while (idx > 0){
+		numZero += fenwick[idx];
+		idx -= (idx & -idx);
+	}
+	return numZero;
+}
+
+void update(int idx, int v)
+{
+	int prev = inorder[idx];
+	inorder[idx] += v;
+	if(inorder[idx] != 0 && prev == 0)
+	{
+		while (idx <= n){
+			//printf("updated idx: %d\n", idx);
+			fenwick[idx]--;
+			assert(fenwick[idx] >= 0);
+			idx += (idx & -idx);
+		}
+	}
+	if(inorder[idx] == 0 && prev != 0)
+	{
+		while (idx <= n){
+			//printf("updated idx: %d\n", idx);
+			fenwick[idx]++;
+			idx += (idx & -idx);
+		}
+	}
+}
+
+void orderTraverse(int node)
+{	
+	//printf("orderTraverse-->%d\n", node);
+	if(!begin[node])
+	{
+		begin[node] = ++travIndex;
+		inorder[travIndex] = val[node];
+		//if(!tree[node].empty())
+		vector<int>::iterator it;
+		for(it = tree[node].begin(); it != tree[node].end(); it++)
+		{
+			orderTraverse(*it);
+		}
+		end[node] = travIndex;
+		//printf("completed orderTraverse-->%d\n", node);
+		
+	}
+}
+
+
+int main()
+{
+	int q, i, j;
+
+	scanf("%d%d", &n, &q);
+	
+	begin = (int *)calloc((n+1), sizeof(int));
+	end = (int *)calloc((n+1), sizeof(int));
+	inorder = (long long *)calloc((n+1), sizeof(long long));
+	val = (long long *)calloc((n+1), sizeof(long long));
+	tree = (vector<int> *)calloc( (n+1), sizeof(vector<int>) );
+	fenwick = (int *)calloc((n+1), sizeof(long long));
+	//printf("memories allocated!!\n");
+
+	int u, v;
+	for(i=1; i<n; i++)
+	{
+		scanf("%d %d", &u, &v);
+		tree[u].push_back(v);
+		tree[v].push_back(u);
+	}
+
+	//printf("tree constructed!!\n");
+	//long long temp;
+	for(i=1; i<=n; i++)
+	{
+		scanf("%lld", &val[i]);
+		//update(i, temp, n);		// building the fenwick tree
+	}
+
+	orderTraverse(1);
+	make_fenwick();
+
+
+
+	//*******************************
+	/*
+	printf("begin array is:\n");
+	for(i=1; i<=n; i++)
+		printf("%d, ", begin[i]); printf("\n");
+	printf("end array is:\n");
+	for(i=1; i<=n; i++)
+		printf("%d, ", end[i]); printf("\n");
+	printf("inorder values are:\n");
+	for(i=1; i<=n; i++)
+		printf("%lld, ", inorder[i]); printf("\n");
+	printf("fenwick array is:\n" );
+	for(i=1; i<=n; i++)
+		printf("%d, ", fenwick[i]); printf("\n");
+	*/
+	//*******************************
+
+	char c[2];
+	while(q--)
+	{
+		scanf("%s", c);
+		if(c[0] == 'Q')
+		{
+			scanf("%d", &u);
+			printf("%d\n", query(end[u]) - query(begin[u-1]) );
+		}
+		if(c[0] == 'U')
+		{
+			scanf("%d %d", &u, &v);
+			update(begin[u], v);	// because the index of u in "inorder" array is begin[u]
+
+			//*******************************************************
+			/*
+			printf("after update, inorder values are:\n");
+			for(i=1; i<=n; i++)
+				printf("%lld, ", inorder[i]); printf("\n");
+			printf("after update, fenwick array is:\n" );
+			for(i=1; i<=n; i++)
+				printf("%d, ", fenwick[i]); printf("\n");
+			*/
+			//*******************************************************
+		}
+	}
+
+
+	free(begin);
+	free(end);
+	free(tree);
+	free(val);
+	free(inorder);
+	return 0;
+}

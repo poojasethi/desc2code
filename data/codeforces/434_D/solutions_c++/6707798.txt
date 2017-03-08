@@ -1,0 +1,104 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<string>
+#include<queue>
+#include<vector>
+#define LL long long
+using namespace std;
+struct point
+{
+	int a,b,c,l,r;
+	inline int y(int x){return x*x*a+x*b+c;}
+}p[52];
+struct edge
+{
+	int next,other,va;
+}e[100010];
+int num[52][210],n,m,S,T,head[11111],pre[11111],vh[11111],di[11111],dis[11111],his[11111];
+int inf=100000000,tot,ans,Max,u,v,d;
+inline void read(int&x)
+{
+	char ch=getchar();int mk=1;for(;(ch<'0'||ch>'9')&&ch!='-';ch=getchar());
+	if (ch=='-') mk=-1,ch=getchar();
+	for(x=0;ch>='0'&&ch<='9';ch=getchar()) x=x*10+ch-48;x*=mk;
+}
+inline void add(int x,int y,int z)
+{
+	e[++tot].next=head[x];head[x]=tot;e[tot].other=y;e[tot].va=z;
+	e[++tot].next=head[y];head[y]=tot;e[tot].other=x;e[tot].va=0;
+}
+void flow()
+{
+	for(int i=S;i<=T;i++) di[i]=head[i];
+	vh[0]=T;int u=S,aug=inf;
+	while (dis[S]<T)
+	{
+		bool flag=0;his[u]=aug;
+		for(int i=di[u];i;i=e[i].next)
+		{
+			int v=e[i].other;
+			if (e[i].va>0&&dis[u]==dis[v]+1)
+			{
+				pre[v]=di[u]=i;flag=1;aug=min(aug,e[i].va);u=v;
+				if (u==T)
+				{
+					ans+=aug;
+					for(;u!=S;u=e[pre[u]^1].other) 
+					{
+						e[pre[u]].va-=aug;
+						e[pre[u]^1].va+=aug;
+					}
+					aug=inf;
+				}
+				break;
+			}
+		}
+		if (flag) continue;
+		if (--vh[dis[u]]==0) break;
+		int Min=T,j;
+		for(int i=head[u];i;i=e[i].next)
+		{
+			int v=e[i].other;
+			if (e[i].va>0&&dis[v]<Min)
+			{
+				Min=dis[v];j=i;
+			}
+		}
+		vh[dis[u]=Min+1]++;di[u]=j;
+		if (u!=S)
+		{
+			u=e[pre[u]^1].other;aug=his[u];
+		}
+	}
+}
+int main()
+{
+	read(n);read(m);
+	S=1;tot=1;
+	for(int i=1;i<=n;i++)
+	{
+		read(p[i].a);read(p[i].b);read(p[i].c);
+	}
+	int cnt=1;
+	Max=1000000;
+	for(int i=1;i<=n;i++)
+	{
+		read(p[i].l);read(p[i].r);
+		for(int j=p[i].l-1;j<=p[i].r;j++) num[i][j+101]=++cnt;
+		for(int j=p[i].l;j<=p[i].r;j++) add(num[i][j+101-1],num[i][j+101],Max-p[i].y(j));
+		add(S,num[i][p[i].l-1+101],inf);
+	}
+	T=++cnt;
+	for(int i=1;i<=n;i++) add(num[i][p[i].r+101],T,inf);
+	for(int i=1;i<=m;i++)
+	{
+		read(u);read(v);read(d);
+		for(int j=p[u].l-1;j<=p[u].r;j++) 
+			if (j-d>=p[v].l-1&&j-d<=p[v].r) add(num[u][j+101],num[v][j-d+101],inf);
+	}
+	flow();
+	ans=Max*n-ans;
+	printf("%d\n",ans);
+	return 0;
+}

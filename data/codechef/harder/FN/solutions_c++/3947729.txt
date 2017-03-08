@@ -1,0 +1,216 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<math.h>
+#include<string.h>
+#include<ctime>
+#define fo(i,a,b) dfo(int,i,a,b)
+#define fr(i,n) dfr(int,i,n)
+#define fe(i,a,b) dfe(int,i,a,b)
+#define fq(i,n) dfq(int,i,n)
+#define nfo(i,a,b) dfo(,i,a,b)
+#define nfr(i,n) dfr(,i,n)
+#define nfe(i,a,b) dfe(,i,a,b)
+#define nfq(i,n) dfq(,i,n)
+#define dfo(d,i,a,b) for (d i = (a); i < (b); i++)
+#define dfr(d,i,n) dfo(d,i,0,n)
+#define dfe(d,i,a,b) for (d i = (a); i <= (b); i++)
+#define dfq(d,i,n) dfe(d,i,1,n)
+#define ffo(i,a,b) dffo(int,i,a,b)
+#define ffr(i,n) dffr(int,i,n)
+#define ffe(i,a,b) dffe(int,i,a,b)
+#define ffq(i,n) dffq(int,i,n)
+#define nffo(i,a,b) dffo(,i,a,b)
+#define nffr(i,n) dffr(,i,n)
+#define nffe(i,a,b) dffe(,i,a,b)
+#define nffq(i,n) dffq(,i,n)
+#define dffo(d,i,a,b) for (d i = (b)-1; i >= (a); i--)
+#define dffr(d,i,n) dffo(d,i,0,n)
+#define dffe(d,i,a,b) for (d i = (b); i >= (a); i--)
+#define dffq(d,i,n) dffe(d,i,1,n)
+#define ll long long
+#define alok(n,t) ((t*)malloc((n)*sizeof(t)))
+#define pf printf
+#define sf scanf
+#define pln pf("\n")
+
+#define inf 111111111111111111ll
+
+ll ipow(ll b, ll e, ll n) {
+	if (e == 0) return 1;
+	if (e == 1) return b;
+	if (e & 1) return ipow(b, e - 1, n) * b % n;
+	return ipow(b * b % n, e >> 1, n);
+}
+
+ll x, y;
+void egcd(ll a, ll b) {
+	if (b == 0) {
+		x = 1;
+		y = 0;
+	} else {
+		egcd(b, a % b);
+		ll t = x - (a / b) * y;
+		x = y;
+		y = t;
+	}
+}
+ll inv(ll a, ll p) {
+	egcd(a, p);
+	return x % p;
+}
+
+
+struct pear {
+    ll a;
+    int j;
+};
+
+pear *yas = alok(111111, pear);
+pear *pas = alok(111111, pear);
+
+// buckets
+pear *tbuc = alok(111111, pear);
+int *bcts = alok(111111, int);
+pear **bucs = alok(111111, pear*);
+#define sort(pas) do {\
+    pear *obuc = tbuc;\
+    fr(i,m) { bucs[i] = obuc; obuc += bcts[i]; }\
+    ffr(i,m) { int bk = pas[i].a % m; bucs[bk][--bcts[bk]] = pas[i]; }\
+    fr(i,m) bcts[tbuc[i].a / m]++;\
+    obuc = pas;\
+    fr(i,m) { bucs[i] = obuc; obuc += bcts[i]; }\
+    ffr(i,m) { int bk = tbuc[i].a / m; bucs[bk][--bcts[bk]] = tbuc[i]; }\
+} while (0)
+
+// baby-step giant-step
+#define discrete_log(b,action) do {\
+    ll y = b;\
+    fr(i,m) {\
+        yas[i].a = y;\
+        yas[i].j = i;\
+        bcts[y % m]++;\
+        y = y * mult % p;\
+    }\
+    sort(yas);\
+    int L = 0;\
+    fr(j,m) {\
+        y = yas[j].a;\
+        ll im2 = yas[j].j*m2;\
+        while (L < m && pas[L].a < y) L++;\
+        while (L < m && pas[L].a == y) {\
+            action((im2+pas[L].j));\
+            L++;\
+        }\
+        if (L >= m) break;\
+    }\
+} while (0)
+
+
+ll legendre(ll a, ll p) {
+  a %= p;
+  return ipow(a,(p-1)>>1,p);
+}
+
+ll d_sqrt(ll a, ll p) {
+  a %= p;
+  if (!a) return 0;
+  
+  ll r,q,s,z,c,t,b,i;
+  q = p-1;
+  s = 0;
+  
+  while (q%2 == 0) {
+    s++;
+    q /= 2;
+  }
+  
+  srand(time(NULL));
+  do {
+    z = rand()%p;
+  } while (legendre(z,p) != p-1);
+  
+  c = ipow(z,q,p);
+  r = ipow(a,(q+1)>>1,p);
+  t = ipow(a,q,p);
+  
+  while (t != 1) {
+    i = 1;
+    while (ipow(t,1LL<<i,p) != 1) i++;
+    b = ipow(c,1LL<<(s-i-1),p);
+    r = (r*b)%p;
+    b = (b*b)%p;
+    t = (t*b)%p;
+    c = b;
+    s = i;
+  }
+  
+  return r;
+}
+
+#define subok(AA,BB,CC,action) do {\
+    ll A = AA;\
+    ll B = BB;\
+    ll C = CC;\
+    ll D = (B*B - ((A*C%p)<<2)) % p;\
+    if (D < 0) D += p;\
+    if (!D) {\
+        ll r = -B * inv(A<<1, p) % p;\
+        if (r < 0) r += p;\
+        discrete_log(r, action);\
+    } else if (ipow(D, (p - 1 >> 1), p) == 1) {\
+        ll sqrtD = d_sqrt(D, p);\
+        ll iv = inv(A<<1, p);\
+        ll r1 = (-B + sqrtD) * iv % p;\
+        ll r2 = (-B - sqrtD) * iv % p;\
+        if (r1 < 0) r1 += p;\
+        if (r2 < 0) r2 += p;\
+        discrete_log(r1, action);\
+        discrete_log(r2, action);\
+    }\
+} while (0)
+
+#define test(v) do {\
+	ll nv = (v) % p1;\
+	if (ans > nv) ans = nv;\
+} while (0)
+
+#define even_test(v) test((v))
+#define odd_test(v) test((v+1))
+
+
+#define solve(c,p) do {\
+    ll sqrt5 = d_sqrt(5, p);\
+    if (sqrt5 < 0) sqrt5 += p;\
+    ll phi = (1 + sqrt5) * (p + 1 >> 1) % p;\
+    ll base = phi+1;\
+    ll p1 = p - 1;\
+    ll d = c * sqrt5 % p;\
+    int m = int(sqrt(p)) + 1;\
+    ll m2 = m<<1;\
+    ll ap = 1;\
+    fr(j,m) {\
+        pas[j].a = ap;\
+        pas[j].j = j<<1;\
+        bcts[ap % m]++;\
+        ap = ap * base % p;\
+    }\
+    sort(pas);\
+    ll mult = inv(ap, p);\
+    if (mult < 0) mult += p;\
+    subok(1,   -d    %p,-1,even_test);\
+    subok(base,-d*phi%p, 1, odd_test);\
+} while (0)
+
+int main() {
+    fr(i,111111) bcts[i] = 0;
+	int z;
+    sf("%d", &z);
+	fq(cas,z) {
+		ll c, p;
+		sf("%lld%lld", &c, &p);
+	    ll ans = inf;
+	    solve(c, p);
+        if (ans >= inf) ans = -1;
+	    pf("%lld\n", ans);
+	}	    
+}

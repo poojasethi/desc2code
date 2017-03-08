@@ -1,0 +1,215 @@
+#include <cassert>
+#include <cstdio>
+#include <ctime>
+#include <cstdlib>
+#include <climits>
+#include <cstddef>
+#include <cctype>
+#include <cmath>
+#include <cstring>
+#include <fstream>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <iterator>
+#include <numeric>
+#include <algorithm>
+#include <map>
+#include <set>
+#include <queue>
+#include <stack>
+#include <vector>
+#include <bitset>
+#include <list>
+#include <string>
+#include <functional>
+#include <utility>
+using namespace std;
+typedef long long llint;
+int const N = 100000;
+int const M = 250000;
+int const B = 30;
+int n, m;
+int a[N];
+int ans[M];
+int seg[N][4];
+int num;
+int seg_copy[N][4];
+int num_copy;
+int mid[N][2];
+bool readin() {
+	if (scanf("%d%d", &n, &m) == EOF) {
+		return false;
+	}
+	for (int i = 0; i < n; ++i) {
+		scanf("%d", &a[i]);
+	}
+	return true;
+}
+void solve() {
+	int m_copy = m;
+	bool zero = true;
+	m = 0;
+	sort(a, a + n);
+	seg[0][0] = 0;
+	seg[0][1] = n - 1;
+	num = 1;
+	int i;
+	// case 1
+	// all current segments have the same bits starting from (i + 1)
+	for (i = B; m_copy > 0 && i >= 0; --i) {
+		memcpy(seg_copy, seg, sizeof(seg));
+		num_copy = num;
+		num = 0;
+		// check indivicual segment
+		llint sum = 0;
+		for (int j = 0; j < num_copy; ++j) {
+			int k;
+			for (k = seg_copy[j][0]; (a[k] & (1 << i)) == 0 && k <= seg_copy[j][1]; ++k) {
+			}
+			if (k - 1 >= seg_copy[j][0]) {
+				seg[num][0] = seg_copy[j][0];
+				seg[num][1] = k - 1;
+				llint cnt = seg[num][1] - seg[num][0] + 1;
+				sum += cnt * (cnt - 1) / 2;
+				++num;
+			}
+			if (seg_copy[j][1] >= k) {
+				seg[num][0] = k;
+				seg[num][1] = seg_copy[j][1];
+				llint cnt = seg[num][1] - seg[num][0] + 1;
+				sum += cnt * (cnt - 1) / 2;
+				++num;
+			}
+		}
+		if (sum <= m_copy) {
+			m_copy -= sum;
+			for (int j = 0; j < num; ++j) {
+				for (int x = seg[j][0]; x <= seg[j][1]; ++x) {
+					for (int y = x + 1; y <= seg[j][1]; ++y) {
+						ans[m++] = (a[x] ^ a[y]);
+					}
+				}
+			}
+			num = 0;
+			for (int j = 0; j < num_copy; ++j) {
+				int k;
+				for (k = seg_copy[j][0]; (a[k] & (1 << i)) == 0 && k <= seg_copy[j][1]; ++k) {
+				}
+				if (k - 1 >= seg_copy[j][0] && seg_copy[j][1] >= k) {
+					seg[num][0] = seg_copy[j][0];
+					seg[num][1] = k - 1;
+					seg[num][2] = k;
+					seg[num][3] = seg_copy[j][1];
+					++num;
+				}
+			}
+			zero = false;
+			break;
+		}
+	}
+	// case 2
+	for (--i; m_copy > 0 && i >= 0; --i) {
+		memcpy(seg_copy, seg, sizeof(seg));
+		num_copy = num;
+		num = 0;
+		// check individual pair of segments
+		llint sum = 0;
+		for (int j = 0; j < num_copy; ++j) {
+			int k;
+			for (k = seg_copy[j][0]; (a[k] & (1 << i)) == 0 && k <= seg_copy[j][1]; ++k) {
+			}
+			mid[j][0] = k - 1;
+			for (k = seg_copy[j][2]; (a[k] & (1 << i)) == 0 && k <= seg_copy[j][3]; ++k) {
+			}
+			mid[j][1] = k - 1;
+			sum += llint(mid[j][0] - seg_copy[j][0] + 1) * llint(mid[j][1] - seg_copy[j][2] + 1);
+			sum += llint(seg_copy[j][1] - mid[j][0]) * llint(seg_copy[j][3] - mid[j][1]);
+		}
+		if (sum <= m_copy) {
+			m_copy -= sum;
+			for (int j = 0; j < num_copy; ++j) {
+				for (int x = seg_copy[j][0]; x <= mid[j][0]; ++x) {
+					for (int y = seg_copy[j][2]; y <= mid[j][1]; ++y) {
+						ans[m++] = a[x] ^ a[y];
+					}
+				}
+				for (int x = mid[j][0] + 1; x <= seg_copy[j][1]; ++x) {
+					for (int y = mid[j][1] + 1; y <= seg_copy[j][3]; ++y) {
+							ans[m++] = a[x] ^ a[y];
+					}
+				}
+			}
+			num = 0;
+			for (int j = 0; j < num_copy; ++j) {
+				if (mid[j][0] >= seg_copy[j][0] && seg_copy[j][3] > mid[j][1]) {
+					seg[num][0] = seg_copy[j][0];
+					seg[num][1] = mid[j][0];
+					seg[num][2] = mid[j][1] + 1;
+					seg[num][3] = seg_copy[j][3];
+					++num;
+				}
+				if (seg_copy[j][1] > mid[j][0] && mid[j][1] >= seg_copy[j][2]) {
+					seg[num][0] = mid[j][0] + 1;
+					seg[num][1] = seg_copy[j][1];
+					seg[num][2] = seg_copy[j][2];
+					seg[num][3] = mid[j][1];
+					++num;
+				}
+			}
+		} else {
+			num = 0;
+			for (int j = 0; j < num_copy; ++j) {
+				if (mid[j][0] >= seg_copy[j][0] && mid[j][1] >= seg_copy[j][2]) {
+					seg[num][0] = seg_copy[j][0];
+					seg[num][1] = mid[j][0];
+					seg[num][2] = seg_copy[j][2];
+					seg[num][3] = mid[j][1];
+					++num;
+				}
+				if (seg_copy[j][1] > mid[j][0] && seg_copy[j][3] > mid[j][1]) {
+					seg[num][0] = mid[j][0] + 1;
+					seg[num][1] = seg_copy[j][1];
+					seg[num][2] = mid[j][1] + 1;
+					seg[num][3] = seg_copy[j][3];
+					++num;
+				}
+			}
+		}
+	}
+	// trailing
+	if (zero) {
+		while (m_copy--) {
+			ans[m++] = 0;
+		}
+	} else {
+		vector <pair <int, llint> > r;
+		for (i = 0; i < num; ++i) {
+			r.push_back(
+				make_pair(
+					a[seg[i][0]] ^ a[seg[i][2]],
+					llint(seg[i][1] - seg[i][0] + 1) * llint(seg[i][3] - seg[i][2] + 1)
+				)
+			);
+		}
+		sort(r.begin(), r.end());
+		for (vector <pair <int, llint> >::iterator it = r.begin(); it != r.end(); ++it) {
+			for (int j = 0; j < min(llint(m_copy), it->second); ++j) {
+				ans[m++] = it->first;
+			}
+			m_copy -= min(llint(m_copy), it->second);
+		}
+	}
+	// output
+	// don't foget to sort here
+	sort(ans, ans + m);
+	for (i = 0; i < m; ++i) {
+		printf("%d%c", ans[i], (i != m - 1) ? ' ' : '\n');
+	}
+}
+int main() {
+	while (readin()) {
+		solve();
+	}
+	return 0;
+}

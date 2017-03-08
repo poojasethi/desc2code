@@ -1,0 +1,11 @@
+#include <cstdio>
+
+int main() {
+    int a, b;
+    scanf("%d%d", &a, &b);
+    for (int i = 1; i <= a; i++)
+        printf("%d ", i);
+    for (int i = a + b + 1; i > a; i--)
+        printf("%d ", i);
+    return 0;
+}

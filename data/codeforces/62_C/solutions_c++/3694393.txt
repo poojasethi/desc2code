@@ -1,0 +1,121 @@
+#include <cstdio>
+#include <cstring>
+#include <cctype>
+#include <cmath>
+#include <stack>
+#include <string>
+#include <algorithm>
+#include <vector>
+#include <map>
+#include <set>
+#include <queue>
+using namespace std;
+#define INF 0x3f3f3f3f
+#define REP(i,n) for(int i=0; i<(n); i++)
+
+int cmp(long double a, long double b = 0){
+  if (fabs(a-b)<1e-6) return 0;
+  if (a<b) return -1;
+  return 1;
+}
+
+struct pt {
+  long double x,y;
+  explicit pt(long double x = 0, long double y = 0): x(x), y(y) {}
+
+  pt operator +(pt q){ return pt(x + q.x, y + q.y); }
+  pt operator -(pt q){ return pt(x - q.x, y - q.y); }
+  pt operator *(long double t){ return pt(x * t, y * t); }
+  pt operator /(long double t){ return pt(x / t, y / t); }
+  long double operator *(pt q){ return x * q.x + y * q.y; }
+  long double operator %(pt q){ return x * q.y - y * q.x; }
+
+  int cmp(pt q) const {
+    if (int t = ::cmp(x, q.x)) return t;
+    return ::cmp(y, q.y);
+  }
+  bool operator ==(pt q) const { return cmp(q) == 0; }
+  bool operator !=(pt q) const { return cmp(q) != 0; }
+  bool operator < (pt q) const { return cmp(q) < 0; }
+};
+
+long double norma(pt v) { return hypot(v.x,v.y); }
+
+int ccw(pt a, pt b, pt c){ /* b-a em relacao a c-a */
+  return cmp((b-a)%(c-a)); /* ccw=1 ; cw=-1 ; colinear=0 */
+  /* equivalente a cmp(triarea(a,b,c)), mas evita divisao */
+}
+
+/* intersecção nos extremos dos segmentos tbm é contada! */
+bool intersect_seg(pt p, pt q, pt r, pt s) {
+  pt A = q - p, B = s - r, C = r - p, D = s - q;
+  int a = cmp(A % C) + 2 * cmp(A % D);
+  int b = cmp(B % C) + 2 * cmp(B % D);
+  if (a == 3 || a == -3 || b == 3 || b == -3) return false;
+  if (a || b || p==r || p==s || q==r || q==s) return true;
+  int t = (p < r) + (p < s) + (q < r) + (q < s);
+  return t != 0 && t != 4;
+}
+
+/*acha intersecção de duas retas - da PUC*/
+pt acha(pt p, pt q, pt r, pt s){
+  pt a = q-p, b = s-r, c = pt(p%q,r%s);
+  return pt(pt(a.x, b.x)%c, pt(a.y, b.y)%c) / (a%b);
+}
+
+int intri(pt k, pt a, pt b, pt c){
+  int a1,a2,a3;
+
+  a1 = ccw(a,k,b);
+  a2 = ccw(b,k,c);
+  a3 = ccw(c,k,a);
+
+  if((a1*a2)>0 && (a2*a3)>0) return 1; /*dentro*/
+  return 0; /*fora*/
+}
+
+pt p[110][3];
+int n,a,b;
+
+bool isfree(pt px) {
+	REP(i,n)
+		if (intri(px,p[i][0],p[i][1],p[i][2])==1) return 0;
+	return 1;
+}
+
+int main() {
+	while (scanf("%d",&n)==1) {
+		REP(i,n)
+			REP(j,3) {
+				scanf("%d%d",&a,&b);
+				p[i][j].x=a; p[i][j].y=b;
+			}
+		
+		long double res=0;
+		REP(i,n)
+			REP(j,3) {
+				pt pa=p[i][j],pb=p[i][(j+1)%3];
+				vector<long double> ev;
+				ev.push_back(0);
+				ev.push_back(1);
+				
+				REP(i2,n) if (i2!=i)
+					REP(j2,3) {
+						pt pc=p[i2][j2],pd=p[i2][(j2+1)%3];
+						if (intersect_seg(pa,pb,pc,pd)) {
+							pt pi=acha(pa,pb,pc,pd);
+							ev.push_back(norma(pi-pa)/norma(pb-pa));
+						}
+					}
+				sort(ev.begin(), ev.end());
+				REP(k,ev.size()-1) {
+					pt pm=pa+(pb-pa)*(ev[k]+ev[k+1])/2.0;
+					if (isfree(pm))
+						res+=norma(pb-pa)*(ev[k+1]-ev[k]);
+				}
+			}
+			
+		printf("%.10lf\n",(double)res);
+	}
+	return 0;
+}

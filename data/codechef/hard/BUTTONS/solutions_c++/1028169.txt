@@ -1,0 +1,273 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <iostream>
+#include <vector>
+
+namespace IO
+{
+  const int SIZE = 1 << 19;
+  char buff[SIZE], *p = buff + SIZE;
+
+  char read_char ()
+  {
+    if (p == buff + SIZE)
+      {
+	fread (buff, 1, SIZE, stdin);
+	p = buff;
+      }
+    return *(p++);
+  }
+
+  inline int read_int ()
+  {
+    char c;
+
+    while (!isdigit (c = read_char ()));
+
+    int r = c - '0';
+    while (isdigit (c = read_char ()))
+      r = 10 * r + c - '0';
+
+    return r;
+  }
+}
+
+using namespace IO;
+
+using namespace std;
+
+int **Allocate2D (int size);
+void FREE (int **array, int size);
+void PopulateArray (int **A, int size);
+void ComputeXOR (int **A, int **B, int **C, int size);
+void FindButtonPresses (int **A, int **B, int size);
+void ButtonsPressed (int **A, int **B, int size, int val_row, int val_col,
+		     vector < int >*pressed_buttons, int fixed_row);
+void TidyPrint (vector < int >*pressed_buttons);
+int ButtonPresses (vector < int >*pressed_buttons);
+bool SimulateConversion (int **A, int **B, vector < int >*pressed_bottons,
+			 int size);
+
+
+void
+Debug (int **C, int size)
+{
+  for (int i = 0; i < size; i++)
+    {
+      for (int j = 0; j < size; j++)
+	{
+	  printf ("%d ", C[i][j]);
+	}
+      printf ("\n");
+    }
+}
+
+int
+main ()
+{
+  int test_cases;
+  test_cases = read_int ();
+  for (int i = 0; i < test_cases; i++)
+    {
+      int board_size = read_int ();
+      int **A = Allocate2D (board_size);
+      int **B = Allocate2D (board_size);
+      int **C = Allocate2D (board_size);
+      // cout << "Populating arrays. " << endl; 
+      PopulateArray (A, board_size);
+      PopulateArray (B, board_size);
+      ComputeXOR (A, B, C, board_size);
+      // Debug (C, board_size);
+      FREE (A, board_size);
+      FREE (B, board_size);
+      A = Allocate2D (board_size);
+      FindButtonPresses (A, C, board_size);
+      FREE (A, board_size);
+      FREE (C, board_size);
+    }
+}
+
+int **
+Allocate2D (int size)
+{
+  int **array = (int **) calloc (size, sizeof (int *));
+  for (int i = 0; i < size; i++)
+    {
+      array[i] = (int *) calloc (size, sizeof (int));
+    }
+  return array;
+}
+
+void
+FREE (int **array, int size)
+{
+  for (int i = 0; i < size; i++)
+    {
+      free (array[i]);
+    }
+  free (array);
+}
+
+void
+PopulateArray (int **A, int size)
+{
+  for (int i = 0; i < size; i++)
+    {
+      for (int j = 0; j < size; j++)
+	{
+	  A[i][j] = read_int ();
+	}
+    }
+}
+
+void
+ComputeXOR (int **A, int **B, int **C, int size)
+{
+  for (int i = 0; i < size; i++)
+    {
+      for (int j = 0; j < size; j++)
+	{
+	  C[i][j] = A[i][j] ^ B[i][j];
+	}
+    }
+}
+
+void
+FindButtonPresses (int **A, int **B, int size)
+{
+  if (B[0][0] == 0)
+    {
+      vector < int >pressed_buttons_11[2], pressed_buttons_12[2];
+      ButtonsPressed (A, B, size, 1, 1, pressed_buttons_11, 0);
+      ButtonsPressed (A, B, size, 0, 0, pressed_buttons_12, 0);
+// When the initial and final matrix is the same
+      if (min
+	  (ButtonPresses (pressed_buttons_11),
+	   ButtonPresses (pressed_buttons_12)) == 0)
+	{
+	  printf ("%d\n", 0);
+	  return;
+	}
+
+      if (ButtonPresses (pressed_buttons_11) <
+	  ButtonPresses (pressed_buttons_12))
+	{
+	  if (SimulateConversion (A, B, pressed_buttons_11, size) == false)
+	    {
+	      printf ("%d\n", -1);
+	      return;
+	    }
+	  TidyPrint (pressed_buttons_11);
+	}
+      else
+	{
+	  if (SimulateConversion (A, B, pressed_buttons_12, size) == false)
+	    {
+	      printf ("%d\n", -1);
+	      return;
+	    }
+	  TidyPrint (pressed_buttons_12);
+	}
+    }
+  else
+    {
+      vector < int >pressed_buttons_21[2], pressed_buttons_22[2];
+      ButtonsPressed (A, B, size, 1, 0, pressed_buttons_21, 0);
+      ButtonsPressed (A, B, size, 0, 1, pressed_buttons_22, 0);
+// When the final and the initial forms are the same
+      if (min
+	  (ButtonPresses (pressed_buttons_21),
+	   ButtonPresses (pressed_buttons_22)) == 0)
+	{
+	  printf ("%d\n", 0);
+	  return;
+	}
+      if (ButtonPresses (pressed_buttons_21) <
+	  ButtonPresses (pressed_buttons_22))
+	{
+	  if (SimulateConversion (A, B, pressed_buttons_21, size) == false)
+	    {
+	      printf ("%d\n", -1);
+	      return;
+	    }
+	  TidyPrint (pressed_buttons_21);
+	}
+      else
+	{
+	  if (SimulateConversion (A, B, pressed_buttons_22, size) == false)
+	    {
+	      printf ("%d\n", -1);
+	      return;
+	    }
+	  TidyPrint (pressed_buttons_22);
+	}
+    }
+}
+
+bool
+SimulateConversion (int **A, int **B, vector < int >*pressed_buttons,
+		    int size)
+{
+  vector < int >::const_iterator ii_row = (*pressed_buttons).begin ();
+  for (; ii_row != (*pressed_buttons).end (); ii_row++)
+    {
+      for (int j = 0; j < size; j++)
+	{
+	  A[*ii_row][j] ^= 1;
+	}
+    }
+  vector < int >::const_iterator ii_col = (*(pressed_buttons + 1)).begin ();
+  for (; ii_col != (*(pressed_buttons + 1)).end (); ii_col++)
+    {
+      for (int i = 0; i < size; i++)
+	{
+	  A[i][*ii_col] ^= 1;
+	}
+    }
+  for (int m = 0; m < size; m++)
+    for (int n = 0; n < size; n++)
+      if (A[m][n] != B[m][n])
+	return false;
+  return true;
+}
+
+void
+ButtonsPressed (int **A, int **B, int size, int val_row, int val_col,
+		vector < int >*pressed_buttons, int fixed_row)
+{
+  for (int i = 0; i < size; i++)
+    {
+      if (B[i][fixed_row] == val_row)
+	{
+	  pressed_buttons[0].push_back (i);
+	}
+      if (B[fixed_row][i] == val_col)
+	{
+	  pressed_buttons[1].push_back (i);
+	}
+    }
+}
+
+int
+ButtonPresses (vector < int >*pressed_buttons)
+{
+  return pressed_buttons[0].size () + pressed_buttons[1].size ();
+}
+
+void
+TidyPrint (vector < int >*pressed_buttons)
+{
+  vector < int >::const_iterator ii_row = (*pressed_buttons).begin ();
+  printf ("%d\n", (*pressed_buttons).size ());
+  for (; ii_row != (*pressed_buttons).end (); ii_row++)
+    {
+      printf ("%d\n", *ii_row);
+    }
+  vector < int >::const_iterator ii_col = (*(pressed_buttons + 1)).begin ();
+  printf ("%d\n", (*(pressed_buttons + 1)).size ());
+  for (; ii_col != (*(pressed_buttons + 1)).end (); ii_col++)
+    {
+      printf ("%d\n", *ii_col);
+    }
+}

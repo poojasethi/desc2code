@@ -1,0 +1,167 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define dbgs(x) cerr << (#x) << " --> " << (x) << ' '
+#define dbg(x) cerr << (#x) << " --> " << (x) << endl
+
+#define foreach(i,x) for(type(x)i=x.begin();i!=x.end();i++)
+#define FOR(ii,aa,bb) for(int ii=aa;ii<=bb;ii++)
+#define ROF(ii,aa,bb) for(int ii=aa;ii>=bb;ii--)
+
+#define type(x) __typeof(x.begin())
+
+#define orta (bas + son >> 1)
+#define sag (k + k + 1)
+#define sol (k + k)
+
+#define pb push_back
+#define mp make_pair
+
+#define nd second
+#define st first
+
+#define endl '\n'
+
+typedef pair < int ,int > pii;
+
+typedef long long ll;
+
+const int inf = 1e9;
+
+const int mod = 1e9+7;
+
+const int N = 1e5+5;
+
+int n, L, W, x, y, sum[N], F[N], h[N], root[N];
+
+long long res;
+
+vector< pii > v[N], g;
+
+void update(int x, int t) { x++; for( ;x > 0 && x < N ; x += x & -x) F[x] += t; }
+
+int query(int x) { x++; int sum = 0; for( ; x > 0 and x < N ; x -= x & -x) sum += F[x]; return sum; }
+
+int pre_calculate(int node,int last){
+	
+	sum[node] = 1;
+
+	foreach(it,v[node])
+
+		if(it->st != last && !h[it->st])
+
+			sum[node] += pre_calculate(it->st, node);
+
+	return sum[node];
+	
+}
+
+int find_centroid(int node,int last,int size){
+	
+	foreach(it,v[node])
+		
+		if(it->st != last && !h[it->st] && sum[it->st] > size)
+
+			return find_centroid(it->st, node, size);
+	
+	return node;
+
+}
+
+void dfs(int node, int last, int dist, int depth){
+
+	g.pb(mp(dist, depth));
+
+	foreach(it,v[node])
+
+		if(it->st != last && !h[it->st] && dist + it->nd <= W && depth + 1 <= L)
+
+			dfs(it->st, node, dist + it->nd, depth + 1);
+
+}
+
+ll calc(){
+	
+	ll ans = 0;
+
+	sort(g.begin(), g.end());
+
+	int j = 0;
+
+	ROF(i,(int)g.size()-1,0){
+	
+		while(j < g.size() && g[i].st + g[j].st <= W){ update(g[j++].nd,1); }
+		
+		ans += query(L - g[i].nd);
+
+	}
+
+	FOR(i,0,j-1) update(g[i].nd,-1);
+
+	return ans;
+
+}
+
+ll solve(int node){
+
+	ll res = 0;
+
+	pre_calculate(node, 0);
+
+	if(sum[node] == 1) return 0;
+
+	int centroid = find_centroid(node, 0, sum[node] >> 1);
+	
+	vector< pii > temp;
+
+	foreach(it,v[centroid])
+
+		if(!h[it->st]){
+			
+			g.clear();	dfs(it->st,centroid,it->nd,1);
+			
+			res -= calc();
+	
+			foreach(it,g) temp.pb(*it);
+	
+		}
+
+	g = temp;
+
+	g.pb(mp(0,0));
+
+	sort(g.begin(),g.end());
+
+	res += calc() - 1; res /= 2;
+
+	h[centroid] = 1;
+
+	foreach(it,v[centroid])
+	
+		if(!h[it->st])
+		
+			res += solve(it->st);
+
+	return res;
+
+}
+
+int main(){
+
+	scanf("%d %d %d", &n, &L, &W);
+
+	FOR(i,2,n){
+		
+		scanf("%d %d", &x, &y);
+		
+		v[i].pb(mp(x, y));
+		
+		v[x].pb(mp(i, y));
+
+	}
+	
+	cout << solve(1) << endl;
+
+    return 0;
+}

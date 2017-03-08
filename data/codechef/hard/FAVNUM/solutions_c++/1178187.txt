@@ -1,0 +1,197 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <cassert>
+#include <algorithm>
+
+//DS
+#include <string>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <set>
+#include <map>
+
+#define LL          long long int
+#define UL          unsigned long long int
+#define REP(i,n)    for(int i = 0; i < (n); i++)
+#define FOR(i,a,b,k)for(int i = (a); i < (b); i+=k)
+#define MAXS 1200
+#define FAIL -1
+#define MAXP 62
+
+using namespace std;
+
+UL ct[MAXS][20];
+UL L,R,K;
+int N, noOfStates,length;
+char pattern[MAXP][20];
+int len[MAXP];
+LL p10[20];
+int g[MAXS][10];
+int d[MAXS][10];
+int f[MAXS];
+bool output[MAXS];
+char str[20];
+
+int ni(){
+    int v;
+    scanf("%d", &v);
+    return v;
+}
+
+void itoa(UL x){
+    length = 0;
+    do{
+        str[length] = '0' + x%10;
+        x = x/10;
+        length++;
+    }while(x);
+    int i = 0, j = length-1;
+    while(i < j){
+        char c = str[i];str[i] = str[j];str[j] = c;
+        i++,j--;
+    }
+    str[length] = 0;
+}
+
+void preprocess(){
+    memset(g,FAIL,sizeof(g));
+
+    noOfStates = 1;
+    REP(i,N){
+        int curr = 0;
+        REP(j,len[i]){
+            int val = (pattern[i][j] - '0');
+            if(g[curr][val] != FAIL){
+                curr = g[curr][val];
+            }
+            else{
+                g[curr][val] = noOfStates;
+                curr = noOfStates;
+                noOfStates++;
+            }
+        }
+        output[curr] = true;
+    }
+
+    REP(i,10){
+        if(g[0][i] == FAIL){
+            g[0][i] = 0;
+        }
+    }
+
+    queue<int> q;
+    REP(i,10){
+        if(g[0][i]){
+            q.push(g[0][i]);
+            f[g[0][i]] = 0;
+        }
+    }
+
+    while(!q.empty()){
+        int r = q.front();
+        q.pop();
+
+        REP(i,10){
+            int s = g[r][i];
+            if(s != FAIL){
+                q.push(s);
+                int state = f[r];
+                while(g[state][i] == FAIL){
+                    state = f[state];
+                }
+                f[s] = g[state][i];
+                output[s] |= output[f[s]];
+            }
+        }
+    }
+
+    REP(i,noOfStates){
+        REP(j,10){
+            if(!output[i]){
+                int state = i;
+                while(g[state][j] == FAIL) state = f[state];
+                state = g[state][j];
+                d[i][j] = state;
+            }
+            else{
+                d[i][j] = i;
+            }
+        }
+    }
+
+    REP(i,noOfStates){
+        ct[i][0] = (output[i] == true);
+    }
+
+    FOR(i,1,19,1){
+        REP(j,MAXS){
+            FOR(k,0,10,1){
+                int n = d[j][k];
+                ct[j][i] += ct[n][i-1];
+            }
+        }
+    }
+}
+
+UL get(char* s){
+    UL ret = 0;
+    int i = 0;
+    while(s[i]){
+        ret = ret*10 + (s[i]- '0');
+        i++;
+    }
+    return ret;
+}
+
+UL Count(UL x){
+    if(x == 0) return 0;
+    UL ret = 0;
+    itoa(x);
+    int curr = 0;
+    REP(i,length){
+        int lim = str[i]-'0';
+        REP(j,lim){
+            int state = d[curr][j];
+            ret += ct[state][length-1-i];
+        }
+        curr = d[curr][lim];
+    }
+    if(output[curr]) ret++;
+    return ret;
+}
+
+void solve(){
+    K += Count(L-1);
+    UL tot = Count(R);
+    if(tot < K){
+        printf("no such number\n");
+        return;
+    }
+    UL mid;
+    while(L < R){
+        mid = (L+R)/2;
+        UL cnt = Count(mid);
+        if(cnt >= K){
+            R = mid;
+        }
+        else if(cnt < K){
+            L = mid+1;
+        }
+    }
+    printf("%llu\n",R);
+}
+
+int main(){
+    scanf("%llu %llu %llu %d", &L, &R, &K, &N);
+    REP(i,N){
+        scanf("%s", &pattern[i]);
+        len[i] = strlen(pattern[i]);
+    }
+    preprocess();
+    solve();
+    return 0;
+}

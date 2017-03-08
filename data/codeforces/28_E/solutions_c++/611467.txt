@@ -1,0 +1,201 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <complex>
+
+using namespace std;
+
+typedef long double ldouble;
+
+typedef complex<ldouble> point;
+
+/*
+ldouble absolut(ldouble x)
+{
+  if (x<0) return -x;
+  return x;
+}
+*/
+
+ldouble prodesc(point p1,point p2) {
+  return real(conj(p1)*p2);
+}
+
+ldouble prodvec(point p1,point p2)
+{
+  return imag(conj(p1)*p2);
+}
+
+
+ldouble error=0.000000000001;
+
+void llegeix(point &p)
+{
+  int x,y;
+  cin>>x>>y;
+  p=point(x,y);
+}
+
+int n;
+vector<point> poligon;
+point a;
+point v;
+ldouble vz;
+ldouble fdown;
+point u;
+ldouble uz;
+pair<ldouble,ldouble> tminim;
+bool hihatminim;
+point vfora;
+
+void nout(pair<ldouble,ldouble> t)
+{
+  if ((not hihatminim) or t<tminim) {
+    tminim=t;
+    hihatminim=true;
+  }
+}
+
+point computavfora()
+{
+  ldouble time=vz/uz;
+  return v+time*u;
+}
+
+point interseccio(point p1,point u1,point p2,point u2)
+{
+  return p1+(prodvec(p2-p1,u2)/prodvec(u1,u2))*u1;
+}
+
+// Interseccio de semirecta amb segment.
+void interseccio(point p1,point u1,point p2,point u2,point &p,
+		 bool &hihainterseccio)
+{
+  p=p1+(prodvec(p2-p1,u2)/prodvec(u1,u2))*u1;
+  if (prodesc(u1,p-p1)>-error and prodesc(u2,p-p2)>-error
+      and prodesc(-u2,p-(p2+u2))>-error) hihainterseccio=true;
+  else hihainterseccio=false;
+}
+
+void computapuntnoparalel(point p)
+{
+  if ((prodvec(v,vfora)>0 and prodvec(v,p-a)>-error and
+       prodvec(p-a,vfora)>-error) or
+      (prodvec(v,vfora)<0 and prodvec(v,p-a)<error and
+       prodvec(p-a,vfora)<error)) {
+    point inter=interseccio(a,v,p,u);
+    ldouble vtime=abs(inter-a)/abs(v);
+    ldouble vh=vtime*vz;
+    ldouble utime=abs(inter-p)/abs(u);
+    ldouble uh=utime*uz;
+    ldouble ftime=(vh-uh)/fdown;
+    nout(pair<ldouble,ldouble> (vtime,ftime));
+  }
+}
+
+void computaminimnoparalel()
+{
+  hihatminim=false;
+  vfora=computavfora();
+  for (int i=0;i<n;i++) {
+    point p=poligon[i];
+    computapuntnoparalel(p);
+    point pnext=poligon[(i+1)%n];
+    bool hihainterseccio;
+    point inter;
+    if (abs(prodvec(v,pnext-p))>error) {
+      interseccio(a,v,p,pnext-p,inter,hihainterseccio);
+      if (hihainterseccio)
+	computapuntnoparalel(inter);
+    }
+    if (abs(prodvec(vfora,pnext-p))>error) {
+      interseccio(a,vfora,p,pnext-p,inter,hihainterseccio);
+      if (hihainterseccio)
+	computapuntnoparalel(inter);
+    }
+  }
+}
+
+
+void computapuntcaiguda(point p)
+{
+  if (abs(v)<error) return;
+  if (abs(prodvec(v,p-a))>error) return;
+  if (prodesc(v,p-a)<-error) return;
+  ldouble vtime=abs(p-a)/abs(v);
+  ldouble vh=vtime*vz;
+  ldouble ftime=vh/fdown;
+  nout(pair<ldouble,ldouble> (vtime,ftime));
+}
+
+void computapuntnocaiguda(point p)
+{
+  point dir=v;
+  if (abs(v)<error) dir=u;
+  dir=dir/abs(dir);
+  if (abs(prodvec(dir,p-a))>error) return;
+  point vv(prodesc(v,dir),vz);
+  point uu(prodesc(u,dir),-uz);
+  point pp(prodesc(p-a,dir),0);
+  point aa(0,0);
+  if (abs(prodvec(vv,uu))<error) return;
+  point inter=interseccio(aa,vv,pp,uu);
+  ldouble vtime=abs(inter-aa)/abs(vv);
+  if (prodesc(vv,inter-aa)<error) return;
+  //ldouble utime=abs(inter-pp)/abs(uu);
+  if (prodesc(uu,pp-inter)<error) return;
+  nout(pair<ldouble,ldouble> (vtime,0));
+}
+
+void computaminimparalel()
+{
+  hihatminim=false;
+  for (int i=0;i<n;i++) {
+    point p=poligon[i];
+    computapuntcaiguda(p);
+    computapuntnocaiguda(p);
+    point pnext=poligon[(i+1)%n];
+    point dir=v;
+    if (abs(v)<error) dir=u;
+    bool hihainterseccio;
+    point inter;
+    if (abs(prodvec(dir,pnext-p))>error) {
+      interseccio(a,dir,p,pnext-p,inter,hihainterseccio);
+      if (hihainterseccio) {
+	computapuntcaiguda(inter);
+	computapuntnocaiguda(inter);
+      }
+      interseccio(a,-dir,p,pnext-p,inter,hihainterseccio);
+      if (hihainterseccio) {
+	computapuntcaiguda(inter);
+	computapuntnocaiguda(inter);
+      }
+    }
+  }
+}
+
+int main()
+{
+  cout.setf(ios::fixed);
+  cout.precision(8);
+  cin>>n;
+  poligon=vector<point> (n);
+  for (int i=0;i<n;i++) llegeix(poligon[i]);
+  llegeix(a);
+  llegeix(v);
+  cin>>vz;
+  cin>>fdown;fdown=-fdown;
+  llegeix(u);
+  cin>>uz;uz=-uz;
+  //cout<<a<<v<<vz<<","<<fdown<<u<<uz<<endl;
+  if (abs(v)<error and abs(u)<error)
+    hihatminim=false;
+  else if (abs(prodvec(v,u))<error)
+    computaminimparalel();
+  else
+    computaminimnoparalel();
+  if (hihatminim)
+    cout<<tminim.first<<" "<<tminim.second<<endl;
+  else
+    cout<<-1.0<<" "<<-1.0<<endl;
+}

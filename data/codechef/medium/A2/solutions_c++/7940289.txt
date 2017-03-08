@@ -1,0 +1,106 @@
+#include <stdio.h>
+#include <memory.h>
+ 
+ 
+#define THRESHOLD 100
+class Reader{
+private:
+	const unsigned int bufSize;
+	FILE *inputStream;
+	char *buffer;
+	char *start;
+	bool eofFlag;
+	unsigned int cread;
+	inline void checkBuffer(){
+		if(eofFlag)
+			return;
+		int diff = start+bufSize-buffer;
+		if(diff < THRESHOLD && !eofFlag){
+			memcpy(start, buffer, diff);
+			cread = fread(start+diff, 1, bufSize-diff, inputStream);
+			if(cread < bufSize-diff)
+				eofFlag = true;
+			buffer = start;
+		}
+	}
+public:
+	Reader(const unsigned int bufSize, FILE *inputStream):bufSize(bufSize),inputStream(inputStream){
+		buffer = start = new char[bufSize];
+		eofFlag = false;
+		cread = fread(start,1,bufSize,inputStream);
+		if(cread < bufSize)
+			eofFlag = true;
+	}
+	~Reader(){ delete[] start;}
+ 
+	int readInt(){
+		checkBuffer();
+		int num = 0;
+		bool negative = false;
+		for(;*buffer < '0' || *buffer > '9' || *buffer == '-';buffer++){}
+ 
+		negative = *buffer == '-';
+ 
+		for(;*buffer >= '0' && *buffer <= '9';buffer++){
+			num*= 10;
+			num+= *buffer - '0';
+		}
+		num *= negative?-1:1;
+		return num;
+	}
+	unsigned int readuInt(){
+		checkBuffer();
+		unsigned int num = 0;
+		for(;*buffer < '0' || *buffer > '9';buffer++){}
+ 
+		for(;*buffer >= '0' && *buffer <= '9';buffer++){
+			num*= 10;
+			num+= *buffer - '0';
+		}
+ 
+		return num;
+	}
+ 
+	void readLine(char *lineBuffer,int &size){
+		checkBuffer();
+		for(;*buffer == '\n' || *buffer == '\r' || *buffer == '\0';buffer++){}
+		if(*buffer == '\0'){
+			return;
+		}
+		for(;*buffer != '\n' && *buffer != '\r' && *buffer != '\0';buffer++,size++,lineBuffer++){
+			*lineBuffer = *buffer;
+		}
+		*lineBuffer = '\0';
+	}
+	void finishLine(){
+		for(;*buffer != '\n' && *buffer != '\r' && *buffer != '\0';buffer++){
+			if(start+bufSize-buffer < THRESHOLD)
+				checkBuffer();
+		}
+		return;
+	}
+};
+ 
+int main(){
+	unsigned int testCases,levelCount;
+	Reader rdr(65536,stdin);
+	testCases = rdr.readuInt();
+ 
+	for(unsigned int i = 0; i<testCases;i++){
+		bool result = true;
+		levelCount = rdr.readuInt();
+		unsigned int current;
+ 
+		long long counter = 1;
+		for(unsigned int j = 0; j<levelCount;j++,counter =(counter-current)<<1){
+			current = rdr.readuInt();
+			if(current > counter){
+				result = false;
+				break;
+			}
+		}
+		rdr.finishLine();
+		printf(result&&counter==0?"Yes\n":"No\n");
+	}
+	return 0;
+} 

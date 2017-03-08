@@ -1,0 +1,109 @@
+#include <iostream>
+#include <cstring>
+#include <vector>
+#include <sstream>
+#include <cmath>
+#include <set>
+#include <map>
+#include <sstream>
+#include <fstream>
+
+using namespace std;
+
+#define ff first
+#define ss second
+#define mp make_pair
+#define sqr(x) ((x)*(x))
+
+typedef long long ll;
+typedef pair <int, int> pie;
+
+const int maxN = 400 * 1000 + 1000;
+const int maxC = 26;
+
+#define cin fin
+#define cout fout
+#define set shit
+
+ifstream fin ("input.txt");
+ofstream fout ("output.txt");
+
+int n, m;
+string s;
+int seg[maxN][maxC];
+bool flag[maxN][maxC];
+
+inline void shift (int x, int c, int b, int e) {
+	if (flag[x][c]) {
+		flag[x][c] = 0;
+		if (e - b > 1) {
+			int m = (b + e) / 2;
+			flag[2 * x][c] = flag[2 * x + 1][c] = 1;
+			if (seg[x][c]) seg[2 * x][c] = m - b; else seg[2 * x][c] = 0;
+			if (seg[x][c]) seg[2 * x + 1][c] = e - m; else seg[2 * x + 1][c] = 0;
+		}
+	}
+}
+
+inline int set (int l, int r, int c, int v, int b, int e, int x) {
+	shift (x, c, b, e);
+	if (l == b && r == e) {
+		flag[x][c] = true;
+		int ret = v * (e - b) - seg[x][c];
+		seg[x][c] = v * (e - b);
+		return ret;
+	}
+	int m = (b + e) / 2, ans = 0;
+	if (l < m) ans += set (l, min (r, m), c, v, b, m, x * 2);
+	if (r > m) ans += set (max (l, m), r, c, v, m, e, x * 2 + 1);
+	seg[x][c] += ans;
+	return ans;
+}
+
+inline int find (int l, int r, int c, int b, int e, int x) {
+	shift (x, c, b, e);
+	if (l == b && r == e) return seg[x][c];
+	int m = (b + e) / 2, ans = 0;
+	if (l < m) ans += find (l, min (r, m), c, b, m, x * 2);
+	if (r > m) ans += find (max (l, m), r, c, m, e, x * 2 + 1);
+	return ans;
+}
+
+int temp[maxC];
+
+int main() {
+	ios::sync_with_stdio (false);
+
+	cin >> n >> m >> s;
+	for (int i = 0; i < n; i++)
+		set (i, i + 1, s[i] - 'a', 1, 0, n, 1);
+
+	for (int i = 0; i < m; i++) {
+		int l, r, odd = 0; cin >> l >> r; l--;
+		for (int j = 0; j < maxC; j++) {
+			temp[j] = find (l, r, j, 0, n, 1);
+			if (temp[j] % 2) odd++;
+		}
+		if (odd > 1) continue;
+		if (odd && (r - l) % 2 == 0) continue;
+		int cur = 0;
+		for (int j = 0; j < maxC; j++) {
+			set (l, r, j, 0, 0, n, 1);
+			if (temp[j] / 2)
+				set (l + cur, l + cur + temp[j] / 2, j, 1, 0, n, 1),
+				set (r - cur - temp[j] / 2, r - cur, j, 1, 0, n, 1);
+			if (temp[j] % 2)
+				set ((l + r) / 2, (l + r) / 2 + 1, j, 1, 0, n, 1);
+			cur += temp[j] / 2;
+		}
+	}
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < maxC; j++)
+			if (find (i, i + 1, j, 0, n, 1)) {
+				cout.put ('a' + j); break;
+			}
+	}
+	cout << endl;
+
+	return 0;
+}

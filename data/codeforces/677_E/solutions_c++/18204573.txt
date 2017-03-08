@@ -1,0 +1,148 @@
+#include <iostream>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <vector>
+
+using namespace std;
+
+typedef long long int ll;
+
+ll modulo=1e9+7;
+
+const int limite=1005;
+
+int movi[8]={0,-1,-1,-1,0,1,1,1};
+int movj[8]={1,1,0,-1,-1,-1,0,1};
+
+int n;
+
+int v[limite][limite];
+char buff[limite];
+int calculado0[limite][limite][8];
+int memdist0[limite][limite][8];
+
+int dist0(int i,int j,int d)
+{
+  if (v[i][j]==0) return 0;
+  int &mem=memdist0[i][j][d];
+  if (calculado0[i][j][d]) return mem;
+  calculado0[i][j][d]=1;
+  mem=1+dist0(i+movi[d],j+movj[d],d);
+  return mem;
+}
+
+int memamount[limite][limite][8][4];
+int calculadoamount[limite][limite][8][4];
+
+int amount(int i,int j,int d,int val)
+{
+  if (v[i][j]==0) return 0;
+  int &mem=memamount[i][j][d][val];
+  if (calculadoamount[i][j][d][val]) return mem;
+  calculadoamount[i][j][d][val]=1;
+  mem=(v[i][j]==val)+amount(i+movi[d],j+movj[d],d,val);
+  return mem;
+}
+
+int dos2tres[5*limite];
+vector<int> prod(1,1);
+
+bool menor(pair<int,int> p1,pair<int,int> p2)
+{
+  {
+    int minimo=min(p1.first,p2.first);
+    p1.first-=minimo;
+    p2.first-=minimo;
+  }
+  {
+    int minimo=min(p1.second,p2.second);
+    p1.second-=minimo;
+    p2.second-=minimo;
+  }
+  if (p1.first==p2.first) return p1.second<p2.second;
+  if (p1.second==p2.second) return p1.first<p2.first;
+  if (p1.first<p2.first and p1.second<p2.second) return true;
+  if (p1.first>p2.first and p1.second>p2.second) return false;
+  if (p1.first<p2.first) return p1.second<dos2tres[p2.first];
+  // p1.first>p2.first and p1.second<p2.second
+  return dos2tres[p1.first]<=p2.second;
+}
+
+int main()
+{
+  bool todo0=true;
+  dos2tres[0]=0;
+  int numtres=0;
+  for (int i=1;i<5*limite;i++) {
+    while (int(prod.size())<i+1) {
+      numtres++;
+      int c=0;
+      for (int j=0;j<int(prod.size());j++) {
+        int val=prod[j]*3+c;
+	prod[j]=val%2;
+	c=val/2;
+      }
+      while (c) {
+	prod.push_back(c%2);
+	c/=2;
+      }
+    }
+    dos2tres[i]=numtres;
+  }
+  /*
+  for (int i=0;i<10;i++)
+    cout<<dos2tres[i]<<",";
+  cout<<endl;
+  */
+  scanf("%d",&n);
+  for (int i=1;i<=n;i++) {
+    scanf("%s",buff);
+    for (int j=1;j<=n;j++) {
+      v[i][j]=buff[j-1]-'0';
+      todo0=todo0 and v[i][j]==0;
+    }
+  }
+  if (todo0) {
+    printf("0\n");
+    exit(0);
+  }
+  pair<int,int> sol(0,0);
+  for (int i=1;i<=n;i++) {
+    for (int j=1;j<=n;j++) {
+      for (int desp=0;desp<=1;desp++) {
+	int len0=limite;
+	for (int d=desp;d<8;d+=2)
+	  len0=min(len0,dist0(i,j,d));
+	if (len0>0) {
+	  /*
+	  cout<<endl<<endl;
+	  cout<<"posicion "<<i<<" "<<j<<endl;
+	  cout<<"desp "<<desp<<endl;
+	  cout<<"len0 "<<len0<<endl;
+	  */
+	  int num2=-3*(v[i][j]==2),num3=-3*(v[i][j]==3);
+	  for (int d=desp;d<8;d+=2) {
+	    num2+=amount(i,j,d,2)-amount(i+movi[d]*len0,j+movj[d]*len0,d,2);
+	    num3+=amount(i,j,d,3)-amount(i+movi[d]*len0,j+movj[d]*len0,d,3);
+	  }
+	  /*
+	  cout<<"num2 "<<num2<<endl;
+	  cout<<"num3 "<<num3<<endl;
+	  */
+	  pair<int,int> nextsol(num2,num3);
+	  if (menor(sol,nextsol))
+	    sol=nextsol;
+	}
+      }
+    }
+  }
+  int num2=sol.first;
+  int num3=sol.second;
+  ll so=1;
+  for (int i=0;i<num2;i++)
+    so=so*2%modulo;
+  for (int i=0;i<num3;i++)
+    so=so*3%modulo;
+  printf("%d\n",int(so));
+}

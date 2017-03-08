@@ -1,0 +1,51 @@
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define n	105
+#define m	5005
+#define DB	double
+
+int		N,M,x[m],y[m],w[m];
+DB		F[n],A[n][n];
+
+void	GTXY(){
+		for	(int i=1,j;i<=N;i++){
+			for	(j=i;j<=N&&!A[j][i];j++);
+			if	(j>N)	continue;
+			if	(j^i)	for	(int k=i;k<=N+1;k++)	swap(A[i][k],A[j][k]);
+
+			for	(int j=i+1;j<=N;j++){
+				DB	t=A[j][i]/A[i][i];
+				for	(int k=i;k<=N+1;k++)	A[j][k]-=t*A[i][k];
+			}
+		}
+		for	(int i=N;i;i--){
+			for	(int j=i+1;j<=N;j++)	A[i][N+1]-=F[j]*A[i][j];
+			if	(A[i][i])	F[i]=A[i][N+1]/A[i][i];
+		}
+}
+
+int		main(){
+		scanf("%d%d",&N,&M);
+		for	(int i=1;i<=M;i++){
+			scanf("%d%d%d",&x[i],&y[i],&w[i]);
+			if	(x[i]!=1&&x[i]!=N)	A[x[i]][y[i]]--,A[x[i]][x[i]]++;
+			if	(y[i]!=1&&y[i]!=N)	A[y[i]][x[i]]--,A[y[i]][y[i]]++;
+		}	A[1][1]=A[N][N]=A[N][N+1]=1;	GTXY();
+
+		DB	Min=1e16,Ans=0;
+		for	(int i=1;i<=M;i++){
+			DB	t=F[y[i]]-F[x[i]];
+			Min=min(Min,abs(w[i]/t));
+		}
+		if	(Min>10000000.0)	Min=0;
+		
+		for	(int i=1;i<=M;i++)
+			if	(x[i]==1||y[i]==1)	Ans+=F[y[i]*x[i]]*Min;
+		printf("%.7lf\n",Ans);
+		for	(int i=1;i<=M;i++)
+			printf("%.7lf\n",(F[y[i]]-F[x[i]])*Min);
+}

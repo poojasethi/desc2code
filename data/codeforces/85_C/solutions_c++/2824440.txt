@@ -1,0 +1,104 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <cstring>
+#include <string>
+#include <algorithm>
+
+using namespace std;
+
+typedef pair<int,int> pii;
+
+const int MAX = 1e5 + 5;
+int N, Q, root, P[MAX], V[MAX], L[MAX], R[MAX];
+double num[MAX], sum[MAX];
+int trav[MAX], tloc[MAX], tsize;
+pii q[MAX];
+double res[MAX];
+int cur;
+
+void push (int a){
+    tloc[a] = tsize;
+    trav[tsize] = V[a];
+    tsize ++;
+}
+
+void dfs (int a){
+    if (L[a] == -1){
+	push (a);
+	return;
+    }
+
+    dfs (L[a]);
+    push (a);
+    dfs (R[a]);
+}
+
+void dfs2 (int a){
+    if (L[a] == -1){
+	return;
+    }
+    num[L[a]] = num[R[a]] = num[a] + 1;
+    sum[L[a]] = sum[a] + trav[tloc[a] + 1];
+    sum[R[a]] = sum[a] + trav[tloc[a] - 1];
+
+    dfs2 (L[a]);
+    dfs2 (R[a]);
+}
+
+void get (int a, int cap){
+    if (L[a] == -1){
+	res[q[cur].second] = sum[a] / num[a];
+	cur ++;
+	return;
+    }
+    while (cur < Q){
+	if (q[cur].first < V[a]){
+	    get (L[a], V[a]);
+	}else if (q[cur].first < cap){
+	    get (R[a], cap);
+	}else{
+	    break;
+	}
+    }
+}
+
+int main(){
+    cin >> N;
+    memset (L, -1, sizeof (L));
+    memset (R, -1, sizeof (R));
+    root = -1;
+    for(int i=0; i<N; i++){
+	cin >> P[i] >> V[i]; P[i] --;
+	if (P[i] == -2){
+	    root = i;
+	    continue;
+	}
+	if (L[P[i]] == -1){
+	    L[P[i]] = i;
+	}else{
+	    if(V[L[P[i]]] < V[i]){
+		R[P[i]] = i;
+	    }else{
+		R[P[i]] = L[P[i]];
+		L[P[i]] = i;
+	    }
+	}
+    }
+
+    tsize = 0;
+    num[root] = sum[root] = 0;
+    dfs (root);
+    dfs2 (root);
+    cin >> Q;
+    for(int i=0; i<Q; i++){
+	int x; cin >> x;
+	q[i] = pii (x,i);
+    }
+    sort (q, q + Q);
+    cur = 0;
+    get (root, 1e9 + 1);
+    for(int i=0; i<Q; i++){
+	printf ("%.9f\n", res[i]);
+    }
+}

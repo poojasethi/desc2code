@@ -1,0 +1,141 @@
+#pragma comment(linker, "/stack:100000000")
+
+#include <cstdio>
+#include <iostream>
+#include <vector>
+#include <set>
+#include <map>
+#include <algorithm>
+#include <cstring>
+#include <string>
+#include <cmath>
+#include <ctime>
+#include <cassert>
+#include <queue>
+
+using namespace std;
+
+#define REP(i, n) for (int (i) = 0; (i) < (n); (i)++)
+#define sz(v) (int)(v).size()
+#define all(v) (v).begin(), (v).end()
+
+const int N = 1000010;
+const int MOD = 1000000007;
+
+int pi[2 * N];
+
+void prefix_function(char* s) {
+	int n = strlen(s);
+	for (int i=1; i<n; ++i) {
+		int j = pi[i-1];
+		while (j > 0 && s[i] != s[j])
+			j = pi[j-1];
+		if (s[i] == s[j])  ++j;
+		pi[i] = j;
+	}
+}
+
+char s[N];
+char t[N];
+char tmp[2 * N];
+int n, m;
+char a[50][10];
+int aut[N][2];
+int dp[N];
+
+void process(bool b) {
+	int x;
+	int len = strlen(tmp);
+	REP(i, len) {
+		if ('a' <= tmp[i] && tmp[i] <= 'z') {
+			x = tmp[i] - 'a';
+		} else {
+			x = 26 + tmp[i] - 'A';
+		}
+		REP(j, 5) {
+			if (!b) {
+				s[5 * i + j] = a[x][j];
+			} else {
+				t[5 * i + j] = a[x][j];
+			}
+		}
+	}
+}
+
+inline void add(int& x, int y) {
+	x += y;
+	if (x < 0) x += MOD;
+	x %= MOD;
+}
+
+int main() {
+#ifdef LOCAL
+	freopen("input.txt", "r", stdin);
+	freopen("output.txt", "w", stdout);
+#endif
+	REP(i, 32) {
+		int x = i;
+		string str;
+		while (x != 0) {
+			str += (char)('0' + x % 2);
+			x /= 2;
+		}
+		while (sz(str) < 5) str += "0";
+		reverse(all(str));
+		REP(j, 5) a[i][j] = str[j];
+	}
+	int tst;
+	scanf("%d\n", &tst);
+	REP(_, tst) {
+		scanf("%d ", &n);
+		gets(tmp);
+		process(0);
+		s[n] = 0;
+		scanf("%d ", &m);
+		gets(tmp);
+		process(1);
+		t[m] = 0;
+		REP(i, n) tmp[i] = s[i];
+		tmp[n] = '#';
+		for (int i = n + 1; i <= n + m; i++) {
+			tmp[i] = t[i - n - 1];
+		}
+		tmp[n + m + 1] = 0;
+		prefix_function(tmp);
+		bool OK = 0;
+		for (int i = n + 1; i <= n + m; i++) {
+			if (pi[i] == n) {
+				OK = 1;
+				break;
+			}
+		}
+		if (OK) {
+			puts("0");
+			continue;
+		}
+		int pos = pi[n + m], x;
+		prefix_function(s);
+		for (int i=0; i<n; ++i) {
+			for (char c='0'; c<='1'; ++c) {
+				if (i > 0 && c != s[i]) {
+					aut[i][c-'0'] = aut[pi[i-1]][c-'0'];
+				} else {
+					aut[i][c-'0'] = i + (c == s[i]);
+				}
+			}
+		}
+		for (int i = 0; i <= n + 5; i++)
+			dp[i] = 0;
+		for (int i = 0; i < n; i++) {
+			if (aut[i][0] == i || aut[i][1] == i) {
+				add(dp[i + 1], dp[i] + 2);
+			} else {
+				if (aut[i][0] == i + 1) x = aut[i][1];
+				else x = aut[i][0];
+				add(dp[i + 1], (2 * dp[i] % MOD + 2 - dp[x] + MOD) % MOD);
+			}
+		}
+		printf("%d\n", (dp[n] - dp[pos] + MOD) % MOD);
+	}
+	return 0;
+}

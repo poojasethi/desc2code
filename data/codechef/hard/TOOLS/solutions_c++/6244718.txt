@@ -1,0 +1,137 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define rep(i,n) for(int i = 0; i < n ; ++i)
+#define REP(i,a,b) for(int i = a ; i <= b; ++i)
+#define pii pair<int,int>
+#define pb(a) push_back(a)
+#define ll long long
+#define MOD 1000000007
+#define pil pair<int,long long>
+#define mp make_pair
+#define CLR(x,a) memset(x,a,sizeof(x))
+#define pll pair<ll,ll>
+#define inf 1000000000
+long long dp[1<<16][16] ;   //Shortest hamiltonian path ending at k and spanning mask and observing property * 
+long long dist(long long x1 , long long y1 , ll x2 , ll y2){
+    return (abs(x1-x2) + abs(y1-y2)) ; 
+}
+long long MIN(long long a,  long long b){
+    if(a <= b)
+        return a; 
+    return b ; 
+}
+int main(){
+  //  freopen("input.txt","r" , stdin) ; 
+    ios_base::sync_with_stdio(0) ; 
+    int tc, N , T; 
+    ll x1 , x2 , y1 ,y2 ; 
+    bool ok , paired; 
+    cin >> tc;
+    while(tc--){
+        cin >> N ;
+        vector<ll> cx(N) , cy(N) , tx(N) , ty(N) ; 
+        T = 2*N ;
+        for(int mask = 0 ; mask < (1<<T) ; ++mask){
+            for(int k = 0 ; k < T ; ++k){
+                dp[mask][k] = inf ; 
+            }
+        }
+        for(int i = 0 ; i < N ; ++i){
+            cin >> cx[i] >> cy[i] >> tx[i] >> ty[i] ; 
+        }
+        int cnt;
+        for(int mask = 0 ; mask < (1<<T) ; ++mask){
+            //chef also has to return to the starting position 
+            //His starting position is (0,0)
+            cnt = __builtin_popcount(mask) ;
+            ok = true ; 
+            vector<int> unpaired; 
+            for(int j = N ; j < (T) ; ++j){
+                //Counting the number of unpaired tools ; 
+                if((1<<j)&(mask)){
+                    if(!((1<<(j-N))&mask)){
+                        unpaired.push_back(j) ; 
+                    }
+                }
+            }
+            //There should be no unpaired chef; 
+            for(int j = 0 ; j < N ; ++j){
+                if((1<<j)&(mask)){
+                    if(!((1<<(j+N))&mask)){
+                        ok = false ;
+                        break ; 
+                    }
+                }
+            }
+            if((int)unpaired.size() > 2 ){
+                ok = false ; 
+            }
+            for(int k = 0 ; k < T ; ++k){
+                paired = true ;
+                for(int i = 0 ; i < (int)unpaired.size() ; ++i){
+                    if(unpaired[i] == k){
+                        paired = false ;
+                    }
+                }
+                if(k < N)
+                    paired = false ;
+                //Walk can't end at a paired tool . 
+                if(k >= N){
+                    x1 = tx[k-N] ; 
+                    y1 = ty[k-N] ; 
+                }
+                else{
+                    x1 = cx[k] ; 
+                    y1 = cy[k] ; 
+                }
+                //cout << x1 << " " << y1 << "\n" ; 
+                if(mask == 0){
+                    dp[mask][k] = inf; 
+                    continue ; 
+                }
+                if((!ok)or(paired)){
+                    dp[mask][k] = inf ; 
+                    continue ; 
+                }
+                if((1<<k)&(mask)){
+                    if(cnt == 1){
+                        dp[mask][k] = dist(x1,y1,0,0) ;
+                        //cout << x1 << " " << y1 << " " << dist(x1,y1,0,0) << "\n" ; 
+                    }
+                    else{
+                        for(int z = 0 ; z < T ; ++z){
+                            //Calculate the current dp[mask][k] from previous dp[mask][z] 
+                            if(z >= N){
+                                x2 = tx[z-N];
+                                y2 = ty[z-N]; 
+                            }
+                            else{
+                                x2 = cx[z] ; 
+                                y2 = cy[z] ; 
+                            }
+                            if((z != k) and ((1<<z)&(mask)))
+                                dp[mask][k] = MIN(dp[mask][k] , dp[mask^(1<<k)][z] + dist(x1,y1,x2,y2))  ; 
+                        }
+                    }
+                }
+                else{
+                    dp[mask][k] = inf ; 
+                }
+            }
+        }
+        ll ans = inf ; 
+        for(int k = 0 ; k < T ; ++k){
+            if(k >= N){
+                x1 = tx[k-N]; 
+                y1 = ty[k-N] ; 
+            }
+            else{
+                x1 = cx[k] ; 
+                y1 = cy[k] ; 
+            }
+            ans = MIN(ans,dp[(1<<T)-1][k] + dist(x1,y1,0,0)) ; 
+        }
+        cout << ans << "\n" ; 
+    }
+    return 0 ; 
+}

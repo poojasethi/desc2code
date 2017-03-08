@@ -1,0 +1,123 @@
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+#include <vector>
+#include <bitset>
+
+#define rep(i, l, r) for(int i=l; i<=r; i++)
+#define down(i, l, r) for(int i=l; i>=r; i--)
+#define travel(x) for(edge *p=fir[x]; p; p=p->n)
+#define clr(x,c) memset(x, c, sizeof(x))
+
+#define ll long long
+#define pb push_back
+#define lowbit(x) (x&-x)
+#define l(x) Left[x]
+#define r(x) Right[x]
+
+#define maxn 100009
+#define maxm 200009
+#define maxc 200009
+
+using namespace std;
+inline int read()
+{
+	int x=0, f=1; char ch=getchar();
+	while (ch<'0' || ch>'9') {if (ch=='-') f=-1; ch=getchar();}
+	while ('0'<=ch && ch<='9') x=x*10+ch-'0', ch=getchar();
+	return x*f;
+}
+
+struct edge{int y; edge *n;} e[maxm], *fir[maxn], *pt=e;
+void AddE(int x, int y){pt->y=y, pt->n=fir[x], fir[x]=pt++;}
+
+int n, m, Q, k[maxn], h[maxn], pos[maxn], mx[maxn], wh[maxn], tot;
+
+int rt, cn, Left[maxc], Right[maxc], ad[maxc];
+
+bool b[2009];
+bitset<2009>G,C,D,f[maxc],ans;
+
+void dfs(int x)
+{
+	pos[x]=++tot; wh[tot]=x;
+	travel(x) if (p->y!=h[x]) h[p->y]=x, dfs(p->y);
+	mx[x]=tot;
+}
+
+inline void Add(int t, int k)
+{
+	f[t]<<=k;
+	f[t]=((f[t]&D)>>Q)|(f[t]&C);
+	(ad[t]+=k)%=Q;
+}
+
+inline void putdown(int t)
+{
+	Add(l(t),ad[t]);
+	Add(r(t),ad[t]);
+	ad[t]=0;
+}
+
+void Build(int l, int r, int &t)
+{
+	t=++cn;
+	if (l==r) {f[t].set(k[wh[l]]); return;}
+	int mid=(l+r)>>1;
+	Build(l, mid, l(t));
+	Build(mid+1, r, r(t));
+	f[t]=f[l(t)]|f[r(t)];
+}
+
+void Add(int l, int r, int x, int y, int k, int t)
+{
+	if (l!=r && ad[t]) putdown(t);
+	if (x<=l && r<=y) {Add(t,k); return;}
+	
+	int mid=(l+r)>>1;
+	if (x<=mid) Add(l, mid, x, y, k, l(t));
+	if (mid<y) Add(mid+1, r, x, y, k, r(t));
+	f[t]=f[l(t)]|f[r(t)];
+}
+
+void Que(int l, int r, int x, int y, int t)
+{
+	if (l!=r && ad[t]) putdown(t);
+	if (x<=l && r<=y) 
+	{
+		ans|=f[t];
+		return;
+	}
+	int mid=(l+r)>>1;
+	if (x<=mid) Que(l, mid, x, y, l(t));
+	if (mid<y) Que(mid+1, r, x, y, r(t));
+}
+
+int main()
+{
+	n=read(); Q=read(); rep(i, 1, n) k[i]=read()%Q;
+	
+	rep(i, 2, Q-1) if (!b[i])
+	{
+		G.set(i);
+		for(int a=i+i; a<=Q; a+=i) b[a]=1;
+	}
+	rep(i, 0, Q-1) C.set(i);
+	rep(i, Q, Q+Q-1) D.set(i);
+	
+	rep(i, 1, n-1) {int x=read(), y=read(); AddE(x,y); AddE(y,x);} dfs(1);
+	Build(1, n, rt);
+	m=read(); while (m--) if (read()==1)
+	{
+		int x=read(), k=read()%Q; Add(1, n, pos[x], mx[x], k, rt);
+	}
+	else
+	{
+		int x=read();
+		ans.reset();
+		Que(1, n, pos[x], mx[x], rt);
+		ans&=G;
+		printf("%d\n", ans.count());
+	}
+	return 0;
+}

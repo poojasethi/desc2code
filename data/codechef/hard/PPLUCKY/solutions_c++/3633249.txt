@@ -1,0 +1,206 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <deque>
+#include <queue>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <cctype>
+#include <string>
+#include <cstring>
+#include <ctime>
+#include <string.h>
+
+using namespace std;
+
+/*typedef long long int64;
+typedef unsigned long long uint64;*/
+#define two(X) (1<<(X))
+#define twoL(X) (((int64)(1))<<(X))
+#define contain(S,X) (((S)&two(X))!=0)
+#define containL(S,X) (((S)&twoL(X))!=0)
+const double pi=acos(-1.0);
+const double eps=1e-11;
+/*template<class T> inline void checkmin(T &a,T b){if(b<a) a=b;}
+template<class T> inline void checkmax(T &a,T b){if(b>a) a=b;}
+template<class T> inline T sqr(T x){return x*x;}*/
+typedef pair<int,int> ipair;
+#define SIZE(A) ((int)A.size())
+#define LENGTH(A) ((int)A.length())
+#define MP(A,B) make_pair(A,B)
+#define PB(X) push_back(X)
+#define ll long long int
+#define si(x) scanf("%d",&x)
+#define sl(x) scanf("%lld",&x)
+#define pi(x) printf("%d",x)
+#define nl printf("\n")
+#define pl(x) printf("%lld",x)
+
+int intval[200000],st[400000],st1[400000];
+
+int make_tree_min(int s,int e,int idx)
+{
+    if(s==e)
+    {
+        st[idx]=intval[s];
+        return st[idx];
+    }
+    else
+    {
+        int mid = (s+e)/2;
+        int r1 = make_tree_min(s,mid,(2*idx+1));
+        int r2 = make_tree_min(mid+1,e,(2*idx+2));
+        st[idx] = max(r1,r2);
+        return st[idx];
+    }
+}
+void update_min(int ss,int se,int i,int index,int amount)
+{
+	if(i<ss||i>se)return;
+	else if(ss==se)st[index]=amount;
+	else if(se!=ss)
+	{
+		int mid=(ss+se)/2;
+		update_min(ss,mid,i,2*index+1,amount);
+		update_min(mid+1,se,i,2*index+2,amount);
+		st[index]=max(st[2*index+1],st[2*index+2]);
+	}
+}
+int query_min(int qs,int qe,int rs,int re,int idx)
+{
+    if(re<qs||rs>qe)
+    {
+        return -1;
+    }
+    else if(qs<=rs&&qe>=re)
+    {
+        return st[idx];
+    }
+    else
+    {
+        int mid = (rs+re)/2;
+        int r1 = query_min(qs,qe,rs,mid,(2*idx+1));
+        int r2 = query_min(qs,qe,mid+1,re,(2*idx+2));
+        return max(r1,r2);
+    }
+}
+int make_tree_sum(int s,int e,int idx)
+{
+    if(s==e)
+    {
+        st1[idx]=1;
+        return 1;
+    }
+    else
+    {
+        int mid = (s+e)/2;
+        int r1 = make_tree_sum(s,mid,(2*idx+1));
+        int r2 = make_tree_sum(mid+1,e,(2*idx+2));
+        st1[idx] = r1+r2;
+        return st1[idx];
+    }
+}
+
+
+void update(int ss,int se,int i,int index)
+{
+	if(i<ss||i>se)return;
+	st1[index]--;
+	if(se!=ss)
+	{
+		int mid=(ss+se)/2;
+		update(ss,mid,i,2*index+1);
+		update(mid+1,se,i,2*index+2);
+	}
+}
+
+
+int getsum(int ss,int se,int qs,int qe,int index)
+{
+	if(qs<=ss&&qe>=se) return st1[index];
+	if(se<qs||ss>qe) return 0;
+	int mid=(ss+se)/2;
+	return getsum(ss,mid,qs,qe,2*index+1)+getsum(mid+1,se,qs,qe,2*index+2);
+}
+
+int main()
+{
+	pair<int,int> pa[150000];
+	int T,n,t;
+	ll sum=0;
+	char a[200000];
+	si(T);
+	while(T--)
+	{
+		stack<int>s;
+		sum=0;
+		si(n);
+		for(int i=0;i<=n;i++)intval[i]=10000005;
+		make_tree_min(0,n-1,0);
+		scanf("%s",a);
+		for(int i=0;i<n;i++)
+		{
+			if(a[i]=='4')s.push(i);
+			else 
+			{
+				if(!s.empty())
+				{
+					t=s.top();
+					s.pop();
+					if(t+1==i)
+					{
+						intval[i]=1;
+						intval[t]=1;
+						update_min(0,n-1,i,0,1);
+						update_min(0,n-1,t,0,1);
+					}
+					else
+					{
+						int r=query_min(t+1,i-1,0,n-1,0);
+						intval[i]=r+1;
+						intval[t]=r+1;
+						update_min(0,n-1,i,0,r+1);
+						update_min(0,n-1,t,0,r+1);
+					}
+				}
+			}
+		}
+		for(int i=0;i<n;i++)
+		{
+			pa[i]=MP(intval[i],i);
+		}
+		sort(pa,pa+n);
+		make_tree_sum(0,n-1,0);
+		int start,end,k=0,r;
+		while(k<n&&pa[k].first<10000000)
+		{
+			r=pa[k].first;
+			start=k;
+			while(k<n&&pa[k].first==r)
+			{
+				sum=sum+getsum(0,n-1,0,pa[k].second,0);
+				end=k+1;
+				k+=2;
+			}
+			int loc=start;
+			while(loc<=end)
+			{
+				update(0,n-1,pa[loc].second,0);
+				loc++;
+			}
+		}
+		pl(sum);
+		nl;
+	}
+}

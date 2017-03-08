@@ -1,0 +1,146 @@
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <queue>
+#include <iostream>
+#include <cmath>
+#include <sstream>
+#include <map>
+#include <set>
+#include <numeric>
+#include <memory.h>
+#include <cstdio>
+#include <assert.h>
+
+using namespace std;
+
+#define pb push_back
+#define INF 1011111111
+#define FOR(i, a, b) for (int _n(b), i(a); i < _n; i++)
+#define rep(i, n) FOR(i, 0, n)
+#define CL(a, v) memset((a), (v), sizeof(a))
+#define mp make_pair
+#define X first
+#define Y second
+#define all(c) (c).begin(), (c).end()
+#define SORT(c) sort(all(c))
+
+typedef long long ll;
+typedef vector<int> VI;
+typedef pair<int, int> pii;
+
+/*** TEMPLATE CODE ENDS HERE */
+
+const int maxn = 20002;
+int a[maxn];
+ll ans[maxn];
+const int BLOCK = 144;
+
+ll tr[maxn];
+
+void add(int i, int x) {
+  for (++i; i < maxn; i += -i & i) tr[i] += x;
+}
+
+ll sum(int i) {
+  ll s = 0;
+  for (++i; i > 0; i -= -i & i) s += tr[i];
+  return s;
+}
+
+ll sum(int l, int r) { return sum(r) - sum(l - 1); }
+
+struct Node {
+  int l, r, idx;
+} nodes[maxn];
+
+bool cmp(const Node &a, const Node &b) {
+  if (a.l / BLOCK != b.l / BLOCK) return a.l / BLOCK < b.l / BLOCK;
+  return a.r < b.r;
+}
+
+void update(int i, ll &answer, int len, bool is_from_left, int sign) {
+  assert(sign == 1 || sign == -1);
+  ll cnt = is_from_left ? sum(a[i] - 1) : len - sum(a[i]);
+  answer += sign * cnt;
+  add(a[i], sign);
+}
+
+int main() {
+#ifdef LOCAL_HOST
+  freopen("input.txt", "r", stdin);
+// freopen("output.txt","w",stdout);
+#endif
+
+  int n;
+  scanf("%d", &n);
+  rep(i, n) scanf("%d", a + i);
+
+  {
+    VI b(a, a + n);
+    SORT(b);
+    int cnt = 0;
+    map<int, int> id;
+    rep(i, n) {
+      if (!id.count(b[i])) {
+        id[b[i]] = cnt;
+        ++cnt;
+      }
+    }
+    rep(i, n) a[i] = id[a[i]];
+  }
+
+  int q;
+  scanf("%d", &q);
+  rep(i, q) {
+    scanf("%d %d", &nodes[i].l, &nodes[i].r);
+    nodes[i].l--;
+    nodes[i].r--;
+    nodes[i].idx = i;
+  }
+
+  sort(nodes, nodes + q, cmp);
+
+  CL(tr, 0);
+
+  ll answer = 0;
+  int cur_l = 0, cur_r = 0;
+  rep(i, q) {
+    int l = nodes[i].l;
+    int r = nodes[i].r;
+
+    while (cur_l < l) {
+      int len = cur_r - cur_l;
+      update(cur_l, answer, len, true, -1);
+      ++cur_l;
+    }
+
+    while (cur_l > l) {
+      int len = cur_r - cur_l + 1;
+      --cur_l;
+      update(cur_l, answer, len, true, 1);
+    }
+
+    while (cur_r <= r) {
+      int len = cur_r - cur_l;
+      update(cur_r, answer, len, false, 1);
+      ++cur_r;
+    }
+
+    while (cur_r > r + 1) {
+      int len = cur_r - cur_l;
+      --cur_r;
+      update(cur_r, answer, len, false, -1);
+    }
+
+    ans[nodes[i].idx] = answer;
+  }
+
+  rep(i, q) printf("%lld\n", ans[i]);
+
+#ifdef LOCAL_HOST
+  printf("TIME: %.3lf\n", double(clock()) / CLOCKS_PER_SEC);
+#endif
+
+  return 0;
+}

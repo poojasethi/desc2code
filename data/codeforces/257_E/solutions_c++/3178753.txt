@@ -1,0 +1,164 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+#include<iostream>
+#include<fstream>
+#include<map>
+#include<ctime>
+#include<set>
+#include<queue>
+#include<cmath>
+#include<vector>
+#include<bitset>
+#include<functional>
+#define x first
+#define y second
+#define mp make_pair
+#define pb push_back
+using namespace std;
+
+typedef long long LL;
+typedef double ld;
+
+const int INF=1000000000;
+const int MAX=100000+10;
+
+int n,m;
+LL nowTime,ans[MAX],res;
+
+struct SB
+{
+	int t,s,f,num;
+}d[MAX];
+
+int operator < (const SB& a,const SB& b)
+{
+	return a.t<b.t;
+}
+
+vector< pair<int,int> > acc[MAX];
+
+struct Node
+{
+	int sum,minx,maxx;
+	Node()
+	{
+		sum=0;
+		minx=INF;
+		maxx=-INF;
+	}
+	Node(int a,int b,int c)
+	{
+		sum=a;
+		minx=b;
+		maxx=c;
+	}
+}tree[MAX*4];
+
+Node operator + (const Node& a,const Node& b)
+{
+	return Node(a.sum+b.sum,min(a.minx,b.minx),max(a.maxx,b.maxx));
+}
+
+void insert(int u,int l,int r,int x,pair<int,int> y)
+{
+	if(l==r)
+	{
+		acc[x].pb(y);
+		tree[u].minx=tree[u].maxx=x;
+		tree[u].sum=acc[x].size();
+		return;
+	}
+	int mid=(l+r)/2;
+	if(x<=mid)insert(u*2,l,mid,x,y);
+	else insert(u*2+1,mid+1,r,x,y);
+	tree[u]=tree[u*2]+tree[u*2+1];
+}
+
+void doit(int u,int l,int r,int x)
+{
+	if(l==r)
+	{
+		for(size_t i=0;i<acc[x].size();++i)
+		{
+			pair<int,int> c=acc[x][i];
+			if(c.y==-1)
+			{
+				ans[d[c.x].num]=nowTime;
+				--res;
+			}
+			else
+				insert(1,1,m,d[c.x].f,mp(c.x,-1));
+		}
+		acc[x].clear();
+		tree[u]=Node();
+		return;
+	}
+	int mid=(l+r)/2;
+	if(x<=mid)doit(u*2,l,mid,x);
+	else doit(u*2+1,mid+1,r,x);
+	tree[u]=tree[u*2]+tree[u*2+1];
+}
+
+Node ask(int u,int l,int r,int a,int b)
+{
+	if(r<a || b<l)return Node();
+	if(a<=l && r<=b)return tree[u];
+	int mid=(l+r)/2;
+	return ask(u*2,l,mid,a,b)+ask(u*2+1,mid+1,r,a,b);
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt","r",stdin);freopen("output.txt","w",stdout);
+#endif
+	int i,nowplace,nextplace;
+	scanf("%d%d",&n,&m);
+	for(i=1;i<=n;++i)
+	{
+		scanf("%d%d%d",&d[i].t,&d[i].s,&d[i].f);
+		d[i].num=i;
+	}
+	res=n;
+	nowplace=1;
+	nowTime=0;
+	sort(d+1,d+n+1);
+
+	for(i=1;res;)
+	{
+		doit(1,1,m,nowplace);
+		nextplace=INF;
+		Node ll,rr;
+		if(nowplace!=1)
+			ll=ask(1,1,m,1,nowplace-1);
+		if(nowplace!=m)
+			rr=ask(1,1,m,nowplace+1,m);
+
+		if(ll.sum==0 && rr.sum==0)
+			nextplace=nowplace;
+		else if(rr.sum>=ll.sum)
+			nextplace=rr.minx;
+		else nextplace=ll.maxx;
+
+		LL delta=abs(nextplace-nowplace);
+
+		if( i<=n  )
+		{
+			if( d[i].t-nowTime<=abs(nextplace-nowplace) || !delta )
+			{
+				if(delta)
+					nextplace=nowplace+(d[i].t-nowTime)*(nextplace>nowplace?1:-1);
+				delta=d[i].t-nowTime;
+			}
+			for(;i<=n && d[i].t-nowTime==delta;++i)
+				insert(1,1,m,d[i].s,mp(i,1));
+		}
+		nowTime+=delta;
+		nowplace=nextplace;
+	}
+	for(i=1;i<=n;++i)
+		cout<<ans[i]<<endl;
+	return 0;
+}

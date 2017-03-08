@@ -1,0 +1,129 @@
+#include<cmath>
+#include<cstdio>
+#include<cstring>
+#include<cstdlib>
+#include<iostream>
+#include<algorithm>
+
+#ifdef WIN32
+#define orz "%I64d"
+#else
+#define orz "%lld"
+#endif
+#define N 410
+#define mod 10007
+
+using namespace std;
+typedef long long LL;
+
+char s[N];
+int m,len,n,f[210][210][N],t1,t2,t3,tot,ans;
+struct Matrix{
+	int r,c;
+	int a[N][N];
+	void clean()
+	{
+		memset(a,0,sizeof(a));
+	}
+}A,c,t;
+int DFS(int l,int r,int x)
+{
+	int res=0;
+	if (f[l][r][x]!=-1)
+		return f[l][r][x];
+	if (l==r)
+		res=(x==0);
+	else
+	{
+		if (s[l]==s[r])
+		{
+			if (l+1==r)
+				res=(x==0);
+			else
+				res=DFS(l+1,r-1,x);
+		}
+		else
+		{
+			if (x>0)
+				res=(DFS(l+1,r,x-1)+DFS(l,r-1,x-1))%mod;
+		}
+	}
+	f[l][r][x]=res;
+	return res;
+}
+Matrix operator * (Matrix A,Matrix B)
+{
+	Matrix res;
+	res.clean();
+	res.c=A.c,res.r=B.r;
+	for (int i=1;i<=A.c;i++)
+		for (int j=i;j<=B.r;j++)
+		{
+			LL mem=0;
+			for (int k=i;k<=j;k++)
+				mem=mem+A.a[i][k]*B.a[k][j];
+			res.a[i][j]=mem%mod;
+		}
+	return res;
+}
+Matrix Mqpow(Matrix b,int x)
+{
+	Matrix mem,res;
+	mem.clean();
+	res.clean();
+	res.r=tot,res.c=tot;
+	mem.r=tot,mem.c=tot;
+	for (int i=1;i<=tot;i++)
+		res.a[i][i]=1,mem.a[i][i]=1;
+	mem=mem*b;
+	while (x)
+	{
+		if (x&1) res=res*mem;
+		x>>=1;
+		mem=mem*mem;
+	}
+	return res;
+}
+int main()
+{
+	memset(f,-1,sizeof(f));
+	scanf("%s",s+1);
+	scanf("%d",&n);
+	len=strlen(s+1);
+	n+=len;
+	m=(n+1)/2;
+	t1=len-1,t2=(len+1)/2,t3=t2;
+	tot=t1+t2+t3;
+	A.r=tot,A.c=tot;
+	for (int i=1;i<=t1;i++)
+		A.a[i][i]=24,A.a[i][i+1]=1;
+	for (int i=t1+1;i<=t1+t2;i++)
+	{
+		A.a[i][i]=25,A.a[i][i+t2]=1;
+		if (i<t1+t2)
+			A.a[i][i+1]=1;
+	}
+	for (int i=t1+t2+1;i<=tot;i++)
+		A.a[i][i]=26;
+	t.r=tot,t.c=tot,c.r=tot,c.c=tot;
+	for (int i=1;i<=tot;i++)
+		for (int j=1;j<=tot;j++)
+			t.a[i][j]=A.a[i][j];
+	A=Mqpow(A,m-1);
+	for (int i=1;i<=tot;i++)
+		for (int j=1;j<=tot;j++)
+			c.a[i][j]=A.a[i][j];
+	A=A*t;
+	for (int i=0;i<=t1;i++)
+	{
+		int j=(len-i+1)/2;
+		int k=m-i-j;
+		if (k<0) continue;
+		int t=DFS(1,len,i);
+		ans=(ans+t*A.a[t1-i+1][t1+t2+j])%mod;
+		if ((n&1) && (len-i)%2==0)
+			ans=(ans-(t*c.a[t1-i+1][t1+j])%mod+mod)%mod;
+	}
+	printf("%d\n",ans);
+	return 0;
+}

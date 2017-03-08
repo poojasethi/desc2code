@@ -1,0 +1,153 @@
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <cstdlib>
+#include <vector>
+#include <set>
+#include <map>
+#include <cassert>
+#include <ctime> 
+#include <cmath>
+#include <string>
+#include <cstring>
+#include <queue>
+using namespace std;
+
+#define f first
+#define s second
+#define pb push_back
+#define vi vector<int>
+#define all(v) (v).begin(), (v).end()
+#define sz(v) (int)(v).size()
+#define f0(a) memset(a, 0, sizeof(a))
+#define ll long long
+#define pii pair<int, int>
+#define mp make_pair
+#define end _end
+#define next _next
+const int maxn = (int)500*5000+10;
+
+struct State {
+	int next[63], link;
+	State() {
+		memset(next, -1, sizeof(next));
+		assert(next[0] == -1); assert(next[62] == -1);
+		link = -1;
+	}
+} st[maxn];
+
+int size = 1;
+int end[maxn];
+char s[maxn];
+int n;
+
+int q[maxn];
+int dp[maxn];
+
+int Id(char c) {
+	if ('a' <= c && c <= 'z') {
+		return c - 'a';
+	} else if ('A' <= c && c <= 'Z') {
+		return c - 'A' + 26;
+	} else if ('0' <= c && c <= '9') {
+		return c - '0' + 52;
+	} else if (c == '-') {
+		return 62;
+	} else assert(false);
+	return 0;
+}
+
+void build_links() {
+
+	int head = 0, tail = 0;
+	q[tail++] = 0;
+	
+	while (head != tail) {
+		int v = q[head++];
+		for (int c = 0; c < 63; ++c) if (st[v].next[c] > 0) {
+			int u = st[v].next[c];
+			int p = st[v].link;
+
+			while (p >= 0 && st[p].next[c] == -1)
+				p = st[p].link;
+
+			if (p >= 0) p = st[p].next[c]; else p = 0;
+
+			st[u].link = p;
+			assert(p >= 0);
+			
+			q[tail++] = u;
+		}
+	}
+
+
+	for (int i = 0; i < tail; ++i) {
+		int v = q[i];
+		for (int c = 0; c < 63; ++c) {
+			if (st[v].next[c] <= 0) {
+				if (st[v].link == -1) st[v].next[c] = 0; 
+				else st[v].next[c] = st[st[v].link].next[c];
+			}
+		}
+	}
+	assert(tail == size);
+}
+
+int main() {
+	scanf("%d", &n);
+	for (int i = 0; i < n; ++i) {
+		scanf("\n%s", s);
+		int len = strlen(s);
+		assert(len <= 5000);
+		int cur = 0;
+		for (int j = 0; j < len; ++j) {
+			int c = Id(s[j]);
+
+			assert(0 <= c && c < 63);
+			if (st[cur].next[c] == -1) 
+				st[cur].next[c] = size++;
+			cur = st[cur].next[c];	
+		}
+		assert(cur >= 0);
+		end[i] = cur;
+	}
+	if (size >= maxn) assert(false);
+	
+	build_links();
+
+	int m;
+	scanf("%d", &m);
+	for (int i = 0; i < m; ++i) {
+		scanf("\n%s", s);
+		int len = strlen(s);
+		assert(len <= 50000);
+
+		int cur = 0;
+		for (int j = 0; j < len; ++j) {
+
+			int c = Id(s[j]);
+			assert(0 <= c && c < 63);
+			cur = st[cur].next[c];
+			assert(cur >= 0);
+			assert(cur < maxn);
+			dp[cur]++;
+		}
+	}
+
+
+	for (int i = size - 1; i >= 0; --i) {
+		int v = q[i];
+
+		assert(0 <= v && v < maxn);
+		if (st[v].link >= 0) {
+			assert(0 <= st[v].link && st[v].link < maxn);
+			dp[st[v].link] += dp[v];
+		}
+	}
+
+	for (int i = 0; i < n; ++i) {
+		assert( 0 <= end[i] && end[i] < maxn);
+		cout << dp[end[i]] << endl;
+	}
+	return 0;
+}

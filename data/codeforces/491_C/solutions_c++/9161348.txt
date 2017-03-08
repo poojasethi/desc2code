@@ -1,0 +1,94 @@
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+
+using namespace std;
+
+const int maxn=60,INF=(1e9)+7;
+int n;
+int lx[maxn],ly[maxn],ux[maxn],uy[maxn],lnk[maxn],dis[maxn][maxn];
+
+bool path(int i)
+{
+    ux[i]=1;
+    for(int j=0;j<n;j++)
+        if(!uy[j]&&dis[i][j]==lx[i]+ly[j])
+        {
+            uy[j]=1;
+            if(lnk[j]==-1||path(lnk[j]))
+            {
+                lnk[j]=i;
+                return true;
+            }
+        }
+    return false;
+}
+
+int match()
+{
+    memset(lnk,-1,sizeof(lnk));
+    memset(ly,0,sizeof(ly));
+    for(int i=0;i<n;i++)
+    {
+        lx[i]=0;
+        for(int j=0;j<n;j++)
+            if(lx[i]<dis[i][j]) lx[i]=dis[i][j];
+    }
+    for(int k=0;k<n;k++)
+    {
+        while(1)
+        {
+            memset(ux,0,sizeof(ux));
+            memset(uy,0,sizeof(uy));
+         //   for(int i=0;i<n;i++) printf("%d %d\n",lx[i],ly[i]);
+            if(path(k)) break;
+            int del=INF;
+            for(int i=0;i<n;i++)
+                if(ux[i])
+                    for(int j=0;j<n;j++)
+                        if(!uy[j])
+                            del=min(del,lx[i]+ly[j]-dis[i][j]);
+            if(del==0||del==INF) break;
+            for(int i=0;i<n;i++)
+                if(ux[i]) lx[i]-=del;
+            for(int j=0;j<n;j++)
+                if(uy[j]) ly[j]+=del;
+        }
+    }
+    int sum=0;
+    for(int i=0;i<n;i++) sum+=lx[i];
+    for(int j=0;j<n;j++) sum+=ly[j];
+    return sum;
+}
+
+char s1[2000010],s2[2000010];
+
+int main()
+{
+    int len,a,b,ans;
+    scanf("%d%d",&len,&n);
+    scanf("%s",s1);
+    scanf("%s",s2);
+    for(int i=0;i<n;i++)
+        for(int j=0;j<n;j++)
+            dis[i][j]=0;
+    for(int i=0;i<len;i++)
+    {
+        if(s1[i]>='a'&&s1[i]<='z') a=s1[i]-'a';
+            else a=s1[i]-'A'+26;
+        if(s2[i]>='a'&&s2[i]<='z') b=s2[i]-'a';
+            else b=s2[i]-'A'+26;
+        dis[a][b]++;
+    }
+    ans=match();
+    printf("%d\n",ans);
+    for(int i=0;i<n;i++)
+        for(int j=0;j<n;j++)
+            if(lnk[j]==i)
+            {
+                if(j>=26) printf("%c",j+'A'-26);else printf("%c",j+'a');
+            }
+    printf("\n");
+    return 0;
+}

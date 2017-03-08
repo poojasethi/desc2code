@@ -1,0 +1,239 @@
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <map>
+#include <cmath>
+#include <stdio.h>
+#include <memory.h>
+#include <string.h>
+#include <string>
+#include <stack>
+#include <vector>
+#include <set>
+#include <queue>
+#include <bitset>
+#include <stdlib.h>
+#include <assert.h>
+ 
+using namespace std;
+ 
+#define FOR(i,a,b) for (int i = int(a); i <= b; i++)
+#define INF 1000000000
+#define mod 1000000007
+#define ll long long int
+// #define inp(x) scanf("%d",&x)
+#define inchar getchar_unlocked
+ 
+inline void inp( int &n )
+{
+n=0;
+int ch=inchar();int sign=1;
+while( ch < '0' || ch > '9' ){if(ch=='-')sign=-1; ch=inchar();}
+while( ch >= '0' && ch <= '9' )
+n = (n<<3)+(n<<1) + ch-'0', ch=inchar();
+n=n*sign;
+}
+ 
+typedef vector<int> vi;
+ 
+int prime[10000],a[100010],gind,sl,sr;
+vector<int> vec;
+bitset<100010> visited;
+vector<vi> primefact,tree,position;
+ 
+ 
+int buildseive(int n)
+{
+int i,j,x,y;
+  
+    j = 0;
+    for(i = 2;i<=n;i++)
+    {
+      if(visited[i] == 0)
+      {
+       prime[j] = i;
+       j++;
+      }
+      x = 2;
+      y = x*i;
+      while(y<=n)
+      {
+        visited[y] = 1;
+        x++;
+        y = x*i;
+      }
+    }
+    return j-1;
+ 
+}
+ 
+ 
+void findfactor(int x,int pos)
+ {
+  
+    int idx = 0 , pf = prime[idx];
+    while(x != 1 && (pf*pf<=x))
+     {
+        if(x % pf == 0)
+         {
+           primefact[pf].push_back(pos); 
+           while(x % pf == 0)
+            {
+              x /= pf;       
+            }      
+         }
+         pf = prime[++idx];      
+     }
+     if(x != 1)
+      {
+         primefact[x].push_back(pos);   
+      } 
+      
+ }
+ 
+ 
+vi factorize(int x)
+ {
+ 
+    vi fact;
+    int idx = 0 , pf = prime[idx];
+    while(x != 1 && (pf*pf<=x))
+     {
+        if(x % pf == 0)
+         {
+ 
+           fact.push_back(pf); 
+           while(x % pf == 0)
+            {
+              x /= pf;       
+            }      
+         }
+         pf = prime[++idx];      
+     }
+     if(x != 1)
+      {
+         fact.push_back(x);   
+      } 
+     return fact;
+ }
+ 
+ 
+void build(int node, int l, int r)
+ {
+    if(l == r) tree[gind][node] = primefact[gind][l];
+    else
+     {
+       int leftind = 2*node , rightind = leftind+1;
+       build(leftind,l,(l+r)/2);
+       build(rightind,(l+r)/2+1,r);
+       int lcontent = tree[gind][leftind],rcontent = tree[gind][rightind];
+       int lval = a[lcontent],rval = a[rcontent];
+       tree[gind][node] = lval>rval?lcontent:rcontent;      
+     } 
+ }
+ 
+ 
+int query(int node,int l,int r)
+ {
+    if(sl>r || sr<l) return -1;
+    // if current interval is within the query interval
+    if(sl<=l && sr>=r) return tree[gind][node];
+    int p1 = query(2*node,l,(l+r)/2);
+    int p2 = query(2*node+1,(l+r)/2+1,r);
+    
+    if(p1 == -1) return p2;
+    if(p2 == -1) return p1;
+    
+    return a[p1]>=a[p2]?p1:p2;        
+ }
+ 
+ 
+int main() {
+ 
+    visited.reset();
+    buildseive(100005);
+    int n,m;
+    inp(n);inp(m);
+    primefact.assign(100010,vi());
+    position.assign(100010,vi());
+    FOR(i,1,n)
+     { 
+       inp(a[i]);
+       position[a[i]].push_back(i);
+       findfactor(a[i],i);
+     }
+     tree.assign(100010,vi());
+     FOR(i,1,100002)
+       {
+         if(primefact[i].size()>0)
+          {
+      // create sement tree
+            
+            // initialization 
+            int length = (int)(2 * pow(2.0, floor((log((double)primefact[i].size()) / log(2.0)) + 5)));
+            tree[i].resize(length,0); 
+            gind = i;
+            
+            // build segment tree
+            build(1,0,primefact[i].size()-1);
+                                   
+          }        
+       }
+    
+     while(m--)
+      {
+        int l,r,gcd;
+        inp(gcd);inp(l);inp(r);       
+        vi gcdfactor = factorize(gcd);
+        
+        int maxfar = -1;
+        for(int i=0;i<gcdfactor.size();i++)
+         {
+           int num = gcdfactor[i];
+          
+           if(primefact[num].size() == 0) continue;
+          
+           int fl,fr;
+           int j=0;
+           if(l>primefact[num][primefact[num].size()-1] || r<primefact[num][0]) continue;
+           int ql = -1,qr = -1;
+           
+           ql = lower_bound(primefact[num].begin(),primefact[num].end(),l)-primefact[num].begin();
+           qr = upper_bound(primefact[num].begin(),primefact[num].end(),r)-primefact[num].begin();
+           qr--;
+      
+           if(ql>qr) continue;
+           
+        
+           gind = num;
+           
+          assert(ql>=0 && qr<primefact[num].size() && ql<=qr);
+          sl = ql;sr = qr;
+        
+          
+          int in = query(1,0,primefact[num].size()-1);
+          
+          maxfar = max(maxfar,a[in]);       
+                
+         }
+         
+         if(maxfar == -1)
+          printf("-1 -1\n");
+         else
+          {
+             int occ;        
+             int lind = lower_bound(position[maxfar].begin(),position[maxfar].end(),l)-position[maxfar].begin();
+             int rind = lower_bound(position[maxfar].begin(),position[maxfar].end(),r)-position[maxfar].begin();
+             if(rind >= position[maxfar].size()) occ = rind - lind;
+             else if(position[maxfar][rind] != r) occ = rind - lind;
+             else occ = rind - lind + 1;
+             printf("%d %d\n",maxfar,occ);                            
+          }
+                  
+      }
+     
+     
+     
+   
+	return 0;
+} 

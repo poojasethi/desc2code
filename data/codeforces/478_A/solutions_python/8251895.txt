@@ -1,0 +1,3 @@
+s = sum(map(int, raw_input().split()))
+print s / 5 if s % 5 == 0 and s / 5 else -1
+

@@ -1,0 +1,85 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+const int inf=1000000000;
+struct edge{
+	int t,next,v;
+}g[210001];
+bool v[110001];
+int i,j,k,n,m,tot,h[110001],fu[110001],fd[110001][5],dep[110001],a[110001],ans,num,tmp,s[110001],ld[110001],lu[110001],fa[110001],lca[110001][21];
+void addedge(int x,int y,int z){
+	g[++tot].t=y;g[tot].next=h[x];h[x]=tot;g[tot].v=z;
+	g[++tot].t=x;g[tot].next=h[y];h[y]=tot;g[tot].v=z;
+}
+int query(int x,int y){
+	if (dep[x]>dep[y]) swap(x,y);
+	for (int i=20;dep[x]<dep[y];y=lca[y][i])
+	 for (;i&&dep[lca[y][i]]<dep[x];i--);
+	for (int i=20;x!=y;x=lca[x][i],y=lca[y][i])
+	 for (;i&&lca[x][i]==lca[y][i];i--);
+	return x;
+}
+void add(int x,int y){
+	if (dep[x]>dep[y]) swap(x,y);
+	int k=query(x,y);
+	if (k==x) s[fa[x]]--,s[y]++;else s[x]++,s[y]++,s[fa[k]]-=2,a[k]--;
+}
+void dfs1(int x){
+	fd[x][0]=fd[x][1]=fd[x][4]=v[x]?0:-inf;
+	lca[x][0]=fa[x];
+	for (int i=1;lca[x][i-1];i++) lca[x][i]=lca[lca[x][i-1]][i-1];
+	for (int i=h[x];i;i=g[i].next)
+	 if (!dep[g[i].t]){
+	 	fa[g[i].t]=x;dep[g[i].t]=dep[x]+1;dfs1(g[i].t);
+	 	if (g[i].v+fd[g[i].t][0]>fd[x][0]) fd[x][4]=fd[x][1],fd[x][1]=fd[x][0],fd[x][3]=fd[x][2],fd[x][0]=g[i].v+fd[g[i].t][0],fd[x][2]=g[i].t;
+	 	else if (g[i].v+fd[g[i].t][0]>fd[x][1]) fd[x][4]=fd[x][1],fd[x][1]=g[i].v+fd[g[i].t][0],fd[x][3]=g[i].t;
+	 	else if (g[i].v+fd[g[i].t][0]>fd[x][4]) fd[x][4]=g[i].v+fd[g[i].t][0];
+	 }
+	if (fd[x][0]!=fd[x][1]) ld[x]=ld[fd[x][2]];else ld[x]=x;
+}
+void dfs2(int x){
+	for (int i=h[x];i;i=g[i].next)
+	 if (dep[g[i].t]>dep[x]){
+	 	tmp=(g[i].t==fd[x][2]?1:0);
+		if (fu[x]>=fd[x][tmp]){
+			fu[g[i].t]=g[i].v+fu[x];lu[g[i].t]=lu[x];
+		}else{
+			fu[g[i].t]=g[i].v+fd[x][tmp];//lu[g[i].t]=ld[fd[x][tmp+2]];
+			if (!tmp){
+				if (g[i].v+fd[g[i].t][0]==fd[x][0]) lu[g[i].t]=fd[x][4]==fd[x][0]?x:ld[fd[x][2]];
+				else lu[g[i].t]=fd[x][0]==fd[x][1]?x:ld[fd[x][2]];
+			}else{
+				if (fd[x][1]==fd[x][4]) lu[g[i].t]=x;else lu[g[i].t]=ld[fd[x][3]];
+			}
+		}
+		if (fu[x]==fd[x][tmp]) lu[g[i].t]=x;
+		dfs2(g[i].t);
+	 }
+	if (v[x]&&fu[x]!=fd[x][0]){
+		if (fu[x]>fd[x][0]) add(x,lu[x]);else add(x,ld[x]);
+	}
+}
+void calc(int x){
+	for (int i=h[x];i;i=g[i].next)
+	 if (dep[g[i].t]>dep[x]){
+	 	calc(g[i].t);s[x]+=s[g[i].t];
+	 }
+	a[x]+=s[x];
+}
+int main(){
+	scanf("%d%d",&n,&m);memset(v,0,sizeof(v));tot=0;memset(h,0,sizeof(h));memset(lca,0,sizeof(lca));memset(a,0,sizeof(a));
+	for (i=1;i<=m;i++) scanf("%d",&k),v[k]=1;
+	for (i=1;i<n;i++) scanf("%d%d%d",&j,&k,&tmp),addedge(j,k,tmp);
+	memset(dep,0,sizeof(dep));memset(s,0,sizeof(s));
+	dep[0]=0;dep[1]=1;fa[1]=0;dfs1(1);
+	fu[1]=v[1]?0:-inf;lu[1]=1;dfs2(1);
+	calc(1);
+	for (ans=-1,i=1;i<=n;i++)
+	 if (!v[i]){
+	 	if (a[i]>ans) ans=a[i],num=1;
+		else if (a[i]==ans) num++;
+	 }
+	printf("%d %d\n",ans,num);
+	return 0;
+}

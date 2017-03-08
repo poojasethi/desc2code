@@ -1,0 +1,144 @@
+#include <map>
+#include <set>
+#include <cmath>
+#include <stack>
+#include <queue>
+#include <string>
+#include <vector>
+#include <bitset>
+#include <fstream>
+#include <sstream>
+#include <numeric>
+#include <stdio.h>
+#include <string.h>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+#define li		int
+#define rep(i,to)	for(li i=0;i<((li)to);i++)
+#define pb		push_back
+#define sz(v)		((li)v.size())
+
+
+#define MAX 200005
+vector<pair<int,int> > E[MAX];
+vector<pair<int,int> > top;
+vector<vector<int> > res;
+vector<int> now;
+bool edge_used[MAX];
+bool can[MAX];
+int red=-1,red0,red1,cnt,top_cnt=0;
+
+void init(){
+	rep(i,MAX) edge_used[i]=false;
+	rep(i,MAX) can[i]=true;
+}
+
+void recur(int pos,int parent=-1){
+	can[pos]=false;
+	rep(i,sz(E[pos]))if(E[pos][i].second!=parent){
+		cnt++;
+		if(can[E[pos][i].first]){
+			recur(E[pos][i].first,E[pos][i].second);
+		}else{
+			red=E[pos][i].second;
+			red0=pos;
+			red1=E[pos][i].first;
+		}
+	}
+}
+
+void dfs(int pos,int parent=-1){
+	can[pos]=false;
+	now.pb(pos);
+	rep(i,sz(E[pos]))if(E[pos][i].second!=parent){
+		if(can[E[pos][i].first]){
+			dfs(E[pos][i].first,E[pos][i].second);
+			now.pb(pos);
+		}
+	}
+	rep(i,sz(E[pos]))if(E[pos][i].second!=parent && top_cnt!=sz(top)){
+		if(edge_used[E[pos][i].second]) continue;
+		edge_used[E[pos][i].second]=true;
+		res.pb(now);
+		now.clear();
+		now.pb(E[pos][i].second); now.pb(pos); now.pb(top[top_cnt].second);
+		res.pb(now);
+		now.clear();
+		dfs(top[top_cnt++].second);
+		now.pb(pos);
+	}
+}
+int main(){
+	int n,m;
+	cin>>n>>m;
+	rep(i,m){
+		li t0,t1;
+		cin>>t0>>t1;
+		E[t0-1].pb(make_pair(t1-1,i));
+		E[t1-1].pb(make_pair(t0-1,i));
+	}
+	if(n==1 || m==0){
+		if(n==1) cout<<"YES"<<endl<<"0"<<endl<<"1 1"<<endl;
+		else cout<<"NO"<<endl;
+		return 0;
+	}
+	init();
+	recur(0);
+	rep(i,n)if(can[i]){
+		cnt=0;
+		recur(i);
+		top.pb(make_pair(cnt,i));
+	}
+	sort(top.begin(),top.end());
+	reverse(top.begin(),top.end());
+	if(sz(E[0])==0){
+		if(red==-1){
+			int maxi=0;
+			rep(i,n)if(sz(E[maxi])<sz(E[i])) maxi=i;
+			red=E[maxi][sz(E[maxi])-1].second;
+			red0=maxi;
+			red1=E[maxi][sz(E[maxi])-1].first;
+		}
+		E[red0].erase(find(E[red0].begin(),E[red0].end(),make_pair(red1,red)));
+		E[red1].erase(find(E[red1].begin(),E[red1].end(),make_pair(red0,red)));
+		E[0].pb(make_pair(red0,red));
+		E[red0].pb(make_pair(0,red));
+		now.pb(0); res.pb(now); now.clear();
+		now.pb(red); now.pb(0); now.pb(red0); res.pb(now); now.clear();
+		li tmp0=red0,tmp=red;
+		init();
+		top.clear();
+		recur(0);
+		rep(i,n)if(can[i]){
+			cnt=0;
+			recur(i);
+			top.pb(make_pair(cnt,i));
+		}
+		sort(top.begin(),top.end());
+		reverse(top.begin(),top.end());
+		init();
+		can[0]=false;
+		edge_used[tmp]=true;
+		dfs(0);
+		res.pb(now);
+		res[2].erase(res[2].begin());
+	}else{
+		init();
+		dfs(0);
+		res.pb(now);
+	}
+
+	rep(i,n)if(can[i]){
+		cout<<"NO"<<endl;
+		return 0;
+	}
+
+	cout<<"YES"<<endl;
+	cout<<sz(res)/2<<endl;
+	rep(i,sz(res)){
+		if(i%2==0) cout<<sz(res[i])<<" ";
+		rep(j,sz(res[i])) cout<<res[i][j]+1<<" ";
+		cout<<endl;
+	}
+}

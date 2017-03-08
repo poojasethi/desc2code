@@ -1,0 +1,100 @@
+#include<cstdio>
+#include<vector>
+#include<set>
+#include<map>
+#include<queue>
+#include<algorithm>
+#include<string>
+#include<utility>
+#include<cassert>
+using namespace std;
+
+#define REP(i,a,b) for(i=a;i<b;i++)
+#define rep(i,n) REP(i,0,n)
+
+#define ll long long
+
+#define M 1000000007
+
+int mymin(int a, int b){ if(a<b) return a; return b; }
+int mymax(int a, int b){ if(a>b) return a; return b; }
+
+/* Range Minimum Query */
+/* res[n*k+i] = argmin( i<=k<i+2^k, arr[k] ) */
+void doublingRMQBuild(int arr[], int n, int res[]){
+  int i, k, hf;
+
+  rep(i,n) res[i] = i;
+  for(k=1;;k++){
+    hf = (1<<(k-1)); if(hf >= n) break;
+    rep(i,n){
+      res[n*k+i] = res[n*(k-1)+i];
+      if(i+hf < n && arr[res[n*k+i]] > arr[res[n*(k-1)+i+hf]]) res[n*k+i] = res[n*(k-1)+i+hf];
+    }
+  }
+}
+
+/* return argmin( a<=k<=b, arr[k] ) */
+int doublingRMQQuery(int arr[], int n, int rmq[], int a, int b){
+  int dep, wid = b-a+1, A, B;
+  for(dep=0;(1<<(dep+1))<=wid;dep++);
+  A = rmq[n*dep+a];
+  B = rmq[n*dep+b-(1<<dep)+1];
+  if(arr[A] > arr[B]) A = B;
+  return A;
+}
+
+ll pw(ll a,ll b, ll md){
+  ll r;
+  if(!b) return 1;
+  r = pw(a,b/2,md);
+  r = (r*r)%md;
+  if(b%2) r = (r*a)%md;
+  return r;
+}
+
+int N;
+int A[100001], A_i[100001], rmq[3000001], rmq_i[3000001];
+map<pair<int,int>,ll> memo;
+
+ll solve(int a, int b){
+  int k, mn, mx, ind_mn, ind_mx;
+  ll res = 0;
+  pair<int,int> p = make_pair(a,b);
+
+  if(a >= b) return 1;
+  if(memo.count(p)) return memo[p];
+
+  mn = doublingRMQQuery(A, N, rmq, a, b);
+  mx = doublingRMQQuery(A_i, N, rmq_i, a, b);
+
+  ind_mn = mymin(mn, mx);
+  ind_mx = mymax(mn, mx);
+
+  res = pw( (A[mx]-A[mn])%M, (ll)(ind_mn-a+1)*(b-ind_mx+1), M );
+  res = (res * solve(a, ind_mx-1))%M;
+  res = (res * solve(ind_mn+1, b))%M;
+  res = (res * pw(solve(ind_mn+1, ind_mx-1),M-2, M))%M; /* res = res / solve(ind_mn+1,ind_mx-1) */
+
+  return memo[p] = res;
+}
+
+int main(){
+  int i;
+  ll res;
+
+  assert( scanf("%d",&N)==1 );
+  assert( 2<=N && N<=100000 );
+  rep(i,N) assert( scanf("%d",A+i)==1 ), assert( 1<=A[i]&&A[i]<=1000000000 );
+
+  rep(i,N) A_i[i] = -A[i];
+
+  doublingRMQBuild(A, N, rmq);
+  doublingRMQBuild(A_i, N, rmq_i);
+
+  res = solve(0, N-1);
+  printf("%d\n",(int)res);
+  fprintf(stderr,"count %d\n",memo.size());
+
+  return 0;
+}

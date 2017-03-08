@@ -1,0 +1,128 @@
+#include<iostream>
+#include<cstdio>
+#define maxn 100000
+using namespace std;
+struct node{
+	int maxl,maxr,maxt,maxpl,maxpr,maxtl,maxtr,
+	    minl,minr,mint,minpl,minpr,mintl,mintr,
+		sumv;
+	bool rev;
+	void val(int v,int pos){
+		maxl=maxr=maxt=minl=minr=mint=sumv=v;
+		maxpl=maxpr=maxtl=maxtr=minpl=minpr=mintl=mintr=pos;
+		rev=0;
+	}
+	void merge(node &a,node &b){
+		if(a.maxl>a.sumv+b.maxl)maxl=a.maxl,maxpl=a.maxpl;
+						   else maxl=a.sumv+b.maxl,maxpl=b.maxpl;
+		if(a.minl<a.sumv+b.minl)minl=a.minl,minpl=a.minpl;
+						   else minl=a.sumv+b.minl,minpl=b.minpl;
+		if(b.maxr>b.sumv+a.maxr)maxr=b.maxr,maxpr=b.maxpr;
+						   else maxr=b.sumv+a.maxr,maxpr=a.maxpr;
+		if(b.minr<b.sumv+a.minr)minr=b.minr,minpr=b.minpr;
+						   else minr=b.sumv+a.minr,minpr=a.minpr;
+		if(a.maxr+b.maxl>a.maxt&&a.maxr+b.maxl>b.maxt)maxt=a.maxr+b.maxl,maxtl=a.maxpr,maxtr=b.maxpl;
+		else if(a.maxt>b.maxt)maxt=a.maxt,maxtl=a.maxtl,maxtr=a.maxtr;
+		else maxt=b.maxt,maxtl=b.maxtl,maxtr=b.maxtr;
+		if(a.minr+b.minl<a.mint&&a.minr+b.minl<b.mint)mint=a.minr+b.minl,mintl=a.minpr,mintr=b.minpl;
+		else if(a.mint<b.mint)mint=a.mint,mintl=a.mintl,mintr=a.mintr;
+		else mint=b.mint,mintl=b.mintl,mintr=b.mintr;
+		sumv=a.sumv+b.sumv;
+	}
+	void reverse(){
+		rev^=1;
+		swap(minl,maxl);swap(minpl,maxpl);
+		swap(minr,maxr);swap(minpr,maxpr);
+		swap(mint,maxt);swap(mintl,maxtl);swap(mintr,maxtr);
+		minl=-minl;minr=-minr;
+		maxl=-maxl;maxr=-maxr;
+		mint=-mint;maxt=-maxt;
+		sumv=-sumv;
+	}
+}s[maxn<<2];
+void pushdown(int o){
+	if(s[o].rev==0)return;
+	s[o<<1].reverse();
+	s[o<<1|1].reverse();
+	s[o].rev=0;	
+}
+void reverse(int o,int l,int r,int ql,int qr){
+	if(ql<=l&&r<=qr)s[o].reverse();
+	else{
+		pushdown(o);
+		int m=l+r>>1;
+		if(ql<=m)reverse(o<<1,l,m,ql,qr);
+		if(qr>m)reverse(o<<1|1,m+1,r,ql,qr);
+		s[o].merge(s[o<<1],s[o<<1|1]);
+	}
+}
+void update(int o,int l,int r,int p,int v){
+	if(l==r)s[o].val(v,p);
+	else{
+		pushdown(o);
+		int m=l+r>>1;
+		if(p<=m)update(o<<1,l,m,p,v);
+		else update(o<<1|1,m+1,r,p,v);
+		s[o].merge(s[o<<1],s[o<<1|1]);
+	}
+}
+void query(int o,int l,int r,int ql,int qr,node &q){
+	if(ql<=l&&r<=qr)q=s[o];
+	else{
+		pushdown(o);
+		int m=l+r>>1;
+		if(qr<=m)query(o<<1,l,m,ql,qr,q);
+		else if(ql>m)query(o<<1|1,m+1,r,ql,qr,q);
+		else{
+			node a,b;
+			query(o<<1,l,m,ql,qr,a);
+			query(o<<1|1,m+1,r,ql,qr,b);
+			q.merge(a,b);
+		}
+	}
+}
+void build(int o,int l,int r,int *a){
+	if(l==r)s[o].val(a[l],l);
+	else{
+		int m=l+r>>1;
+		build(o<<1,l,m,a);
+		build(o<<1|1,m+1,r,a);
+		s[o].merge(s[o<<1],s[o<<1|1]);
+	}
+}
+int a[maxn+10],ql[30],qr[30];
+int main(){
+	#ifndef ONLINE_JUDGE
+	freopen("280D.in","r",stdin);
+	#endif
+	int n;
+	scanf("%d",&n);
+	for(int i=1;i<=n;i++)scanf("%d",&a[i]);
+	build(1,1,n,a);
+	int q;
+	scanf("%d",&q);
+	while(q--){
+		int ty;
+		scanf("%d",&ty);
+		if(ty==0){
+			int pos,v;
+			scanf("%d%d",&pos,&v);
+			update(1,1,n,pos,v);
+		}else{
+			int l,r,k,tot=0,ans=0;
+			static node q;
+			scanf("%d%d%d",&l,&r,&k);
+			while(k--){
+				query(1,1,n,l,r,q);
+				if(q.maxt<=0)break;
+				ans+=q.maxt;
+				ql[tot]=q.maxtl,qr[tot]=q.maxtr;
+				reverse(1,1,n,ql[tot],qr[tot]);
+				tot++;
+			}
+			while(tot--)reverse(1,1,n,ql[tot],qr[tot]);
+			printf("%d\n",ans);
+		}
+	}
+	return 0;
+}

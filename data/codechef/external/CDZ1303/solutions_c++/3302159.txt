@@ -1,0 +1,136 @@
+#include<bits/stdc++.h>
+using namespace std;
+const long double pi=acos(-1.0);
+typedef pair<double,double> pd;
+typedef long long int ll;
+#define gc getchar_unlocked
+
+void scanint(int &x)
+{
+    register int c = gc();
+    x = 0;
+    for(;(c<48 || c>57);c = gc());
+    for(;c>47 && c<58;c = gc()) {x = (x<<1) + (x<<3) + c - 48;}
+}
+inline int powerof2(int a)
+{
+	int i=1;
+	while(i<a)
+		i=i<<1;
+	return i;
+}
+inline void printd(pd num)
+{
+	cout<<num.first<<" +j "<<num.second<<endl;
+}
+bool flag = false;
+pd ohm[262150];
+void precomp()
+{
+	int i;
+	for(i=0;i<262144;i++)
+	{
+		ohm[i].first = cos(2*pi*i/262144);
+		ohm[i].second = sin(2*pi*i/262144);
+	}
+}
+// Evaluates polynomial at 'points' number of complex roots
+inline void evaluate(pd polynomial[],int size,int points)
+{
+	if(size==1)
+	{
+		pd temp = polynomial[0];
+		for(int i=0;i<points;i++)
+			polynomial[i]=temp;
+		return;
+	}	
+	pd *even = (pd *)malloc((points/2)*sizeof(pd));
+	pd *odd  = (pd *)malloc((points/2)*sizeof(pd)); 
+	for(int i=0;i<size;i++)
+		if(i%2==0)
+			even[i/2]=polynomial[i];
+		else
+			odd[i/2]=polynomial[i];
+	int x=size/2,y=points/2;
+	evaluate(even,x,y);
+	evaluate(odd,x,y);	
+	for(int i=0;i<points/2;i++)
+	{
+		pd val,omega;
+		omega = ohm[(262144/points)*i];
+		val.first = omega.first*odd[i].first - omega.second*odd[i].second;
+		val.second = omega.first*odd[i].second + omega.second*odd[i].first;
+
+		polynomial[i].first = even[i].first + val.first; 
+		polynomial[i].second = even[i].second + val.second; 
+		polynomial[i+points/2].first = even[i].first - val.first; 
+		polynomial[i+points/2].second = even[i].second - val.second; 
+	}
+	return;
+}
+ll ans[1000005];
+pd polynomial1[1000006],polynomial2[1000006],res[1000006];
+pd P3[1000006];
+int i,j,deg1,deg2,coefficient;
+int main()
+{
+	//cout<<sizeof(double)<<" "<<sizeof(long double)<<endl;
+	//cout<<powerof2(200001)<<endl;
+	precomp();
+	int t;
+	scanint(t);
+	while(t--)
+	{
+		scanint(deg1);
+		scanint(deg2);
+		//deg2 = deg1;
+		int p1=0,p2=0;
+		for(i=0;i<=deg1;i++)
+		{
+			scanint(coefficient);
+			polynomial1[p1++]=make_pair(coefficient,0);
+		}
+		i=powerof2(max(deg1,deg2)+1);
+		while(p1<i)
+			polynomial1[p1++]=make_pair(0,0);
+		for(i=0;i<=deg2;i++)
+		{
+			scanint(coefficient);
+			polynomial2[p2++]=make_pair(coefficient,0);
+		}
+		i=powerof2(max(deg1,deg2)+1);
+		while(p2<i)
+			polynomial2[p2++]=make_pair(0,0);
+		evaluate(polynomial1,p1,i*2);
+		evaluate(polynomial2,p2,i*2);
+		for(j=0;j<2*i;j++)
+		{
+			// compute P3 = product(P1[j],P2[j]);
+			P3[j].first = polynomial1[j].first*polynomial2[j].first - polynomial1[j].second*polynomial2[j].second;
+			P3[j].second = polynomial1[j].first*polynomial2[j].second +  polynomial1[j].second*polynomial2[j].first;
+		}
+		
+		evaluate(P3,2*i,i*2);
+		ll MOD =1;
+		MOD = ((MOD<<32)-1);
+		for(j=0;j<2*i;j++)
+		{
+			pd a = P3[(2*i-j)%(2*i)];
+			ll resl;
+			if((ceil(a.first)-a.first)<(a.first-floor(a.first)))
+				resl = ceil(a.first);
+			else
+				resl = floor(a.first);
+			resl = (resl/(2*i));
+			resl = resl&MOD;
+			ans[j] = resl;;
+		}
+		printf("%d\n",deg1+deg2);
+		for(j=0;j<=(deg1+deg2);j++)
+		{
+			printf("%lld ",ans[j]);
+		}
+		cout<<endl;
+	}
+	return 0;
+}

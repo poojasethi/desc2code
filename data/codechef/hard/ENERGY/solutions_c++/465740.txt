@@ -1,0 +1,146 @@
+#include <iostream>
+#include <cstdio>
+#include <string>
+#include <vector>
+#include <set>
+#include <map>
+#include <queue>
+#include <cmath>
+#include <algorithm>
+using namespace std;
+#define pb push_back
+#define INF (int)1e9
+#define FOR(i,n) for(int (i)=0;(i)<(n);++(i))
+#define FORI(i,n) for(int (i)=1;(i)<=(n);++(i))
+#define mp make_pair
+#define pii pair<int,int>
+#define ll long long
+#define wez(n) int (n); scanf("%d",&(n));
+#define IN(x,y) ((y).find((x))!=(y).end()) 
+#define DBG(vari) cout<<#vari<<" = "<<vari<<endl;
+#define FOREACH(i,t) for (typeof(t.begin()) i=t.begin(); i!=t.end(); i++)
+#define TESTS wez(t)while(t--)
+#define REP(i,a,b) for(int (i)=(a);(i)<=(b);++i)
+#define REPD(i,a,b) for(int (i)=(a); (i)>=(b);--i)
+#define sz size()
+template<typename T,typename TT> inline ostream& operator<<(ostream &s,pair<T,TT> t) {return s<<"("<<t.first<<","<<t.second<<")";}
+template<typename T> inline ostream& operator<<(ostream &s,vector<T> t){FOR(i,t.sz)s<<t[i]<<" ";return s; }
+
+
+inline void pisz(int n) {
+   printf("%d\n",n);
+}
+
+bool mycomp (const pair<int,pii> &p, const pair<int,pii> &q) { // CZAS, (KTO, INOUT)
+   return (p.first < q.first);
+}
+
+bool dfs (int v, int depth, const vector<int> *adj, const vector<bool> &obecni, const vector<int> &matchedwith, vector<bool> &vis, vector<int> &augpath) {
+   if (vis[v]) return false;
+   vis[v] = 1;
+   
+   for (vector<int>::const_iterator it = adj[v].begin(); it != adj[v].end(); ++it) {
+      if (!obecni[*it]) continue;
+      
+      // spr. czy jest unmatched
+      if (matchedwith[*it] == -1 && (depth % 2 == 0)) {
+         // augmenting path!
+         augpath.pb(*it);
+         return true;
+      }
+
+      bool edgeinmatching = (matchedwith[*it] == v && matchedwith[v] == *it);
+      bool edgeok = (depth & 1) ? edgeinmatching : !edgeinmatching;
+      if (!edgeok) continue;
+      if (dfs(*it,depth+1,adj,obecni,matchedwith,vis,augpath)) {
+         augpath.pb(*it);
+         return true;
+      }
+   }
+   return false;
+}
+
+void seekaugpath (int skad, const vector<int> *adj, const vector<bool> &obecni, vector<int> &matchedwith, int &matchings) {
+   vector<bool> vis(506,0);
+   vector<int> augpath;
+   if (dfs(skad,0,adj,obecni,matchedwith,vis,augpath)) {
+      augpath.pb(skad);
+      FOR(h,augpath.size()-1) {
+         if (!(h&1)) {
+            matchedwith[augpath[h]] = augpath[h+1];
+            matchedwith[augpath[h+1]] = augpath[h];
+         }
+      }
+      ++matchings;
+   }
+}
+
+
+int main () {
+   TESTS {
+      vector<int> adj[505];
+      set<int> wants[205];
+      vector<pair<int,pii> > zd;
+      
+      wez(b)wez(g)wez(l)
+      FOR(i,b) {
+         wez(s)wez(t)wez(n)
+         zd.pb(mp(s,mp(i,0)));
+         zd.pb(mp(t,mp(i,1)));
+         FOR(j,n) {
+            wez(gno)
+            wants[i].insert(gno);
+         }
+      }
+      FOR(i,g) {
+         wez(s)wez(t)wez(n)
+         zd.pb(mp(s,mp(i+300,0)));
+         zd.pb(mp(t,mp(i+300,1)));
+         FOR(j,n) {
+            wez(bno)
+            if (IN(i,wants[bno])) {
+               adj[bno].pb(300+i);
+               adj[300+i].pb(bno);
+            }
+         }
+      }
+      
+      vector<int> wynik(202,0);
+      
+      int matchings = 0;
+      vector<int> matchedwith(503,-1);
+      sort(zd.begin(),zd.end(),mycomp);
+      zd.pb(mp(l,mp(-1,0)));
+      int prevt = 0;
+      vector<bool> obecni(502,0);
+      FOR(u,zd.size()) {
+         // wykonujemy zmiane
+         int czas = zd[u].first;
+         int kto = zd[u].second.first;
+         int inout = zd[u].second.second;
+         
+         // trzeba podsumowac poprzedni czas
+         wynik[matchings] += czas-prevt;
+         prevt = czas;
+         
+         if (kto == -1) continue;
+
+         // zmieniamy matching
+         if (inout == 1) {
+            obecni[kto] = 0;
+            int partner = matchedwith[kto];
+            if (partner != -1) { // the erased node was matched
+               matchedwith[kto] = matchedwith[partner] = -1;
+               --matchings;
+               seekaugpath(partner,adj,obecni,matchedwith,matchings);
+            }
+         } else {
+            obecni[kto] = 1;
+            seekaugpath(kto,adj,obecni,matchedwith,matchings);
+         }
+      }
+      
+      FOR(m,min(b,g)+1) printf("%d ",wynik[m]);
+      printf("\n");
+   }
+}

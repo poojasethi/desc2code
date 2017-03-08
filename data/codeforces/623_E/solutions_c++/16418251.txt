@@ -1,0 +1,174 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#define fru(j,n) for(int j=0; j<(n); ++j)
+#define tr(it,v) for(typeof((v).begin()) it=(v).begin(); it!=(v).end(); ++it)
+//#define tr(it,v) for(auto it=(v).begin(); it!=(v).end(); ++it)
+#define x first
+#define y second
+#define pb push_back
+#define ALL(G) (G).begin(),(G).end()
+
+#if 0
+#define DEB printf
+#else
+#define DEB(...)
+#endif
+
+typedef long long ll;
+typedef long long LL;
+typedef double D;
+typedef pair<int,int> pii;
+typedef vector<int> vi;
+
+const int inft = 1000000009;
+const int mod = 1000000007,sqr=30000;
+const int MAXN = 1000006;
+
+ll n,K;
+int sil[MAXN],odw[MAXN];
+int qp(ll a,int b){
+	ll ret=1;
+	while(b){
+		if(b%2)ret=ret*a%mod;
+		a=a*a%mod;
+		b/=2;
+	}
+	return ret;
+}
+namespace FFT {
+	typedef complex<double> CD;
+	typedef vector<CD> VC;
+
+	int deg, log_deg;
+
+	int rev(int a) {
+		int wyn=0;
+		fru(i,log_deg) {
+			wyn *= 2;
+			wyn += a%2;
+			a /= 2;
+		}
+		return wyn;
+	}
+
+	void DFT(int strona, VC &A) {
+		VC AD(deg);
+		fru(k,deg) AD[rev(k)] = A[k];
+		int m=1;
+		for(int s=1; s<=log_deg; s++) {
+			//jesli strona -1 to mamy odwrotne fft i wn -> wn^-1
+			D ang = strona*M_PI/m;
+			fru(j,m) {
+				CD po = polar(1.0, ang*j);
+				for(int k=j; k<deg; k += 2*m) {
+					CD t = po*AD[k+m];
+					CD u = AD[k];
+					AD[k] = u+t;
+					AD[k+m] = u-t;
+				}
+			}
+			m*=2;
+		}
+		swap(A,AD);
+	}
+
+	void FFT(const vi &AV, const vi &BV, vector<ll> &CV) {
+		int n=max(AV.size(),BV.size());
+		log_deg=1;
+		while((1<<log_deg) < n) log_deg++;
+		log_deg++;
+		deg = 1<<log_deg;
+		VC A(deg), B(deg), C(deg);
+		fru(i,AV.size()) A[i] = AV[i];
+		fru(i,BV.size()) B[i] = BV[i];
+		DFT(1,A);
+		DFT(1,B);
+		fru(i,deg) C[i] = A[i]*B[i];
+		DFT(-1,C);
+		CV.resize(deg);
+		fru(i,deg) CV[i] = round(real(C[i])/deg);
+	}
+	vi mnoz(vi A, vi &B, int b){
+		fru(i,A.size())A[i]=1LL*A[i]*qp(2,i*b)%mod;
+		//A*B modulo mod
+		vi AT[2],BT[2];
+		fru(i,2){
+			AT[i].resize(A.size());
+			BT[i].resize(B.size());
+		}
+		fru(i,A.size()){
+			AT[0][i]=A[i]/sqr;
+			AT[1][i]=A[i]%sqr;
+		}
+		fru(i,B.size()){
+			BT[0][i]=B[i]/sqr;
+			BT[1][i]=B[i]%sqr;
+		}
+		vector<ll> CT;
+		vi RET(K+1,0);
+		FFT(AT[0],BT[0],CT);
+		fru(i,K+1){
+			RET[i]+=1LL*sqr*sqr*(CT[i]%mod)%mod;
+			if(RET[i]>=mod)RET[i]-=mod;
+		}
+		DEB("RR:");
+		tr(it,RET)DEB("%d ",*it);DEB("\n");
+		FFT(AT[0],BT[1],CT);
+		fru(i,K+1){
+			RET[i]+=1LL*CT[i]%mod*sqr%mod;
+			if(RET[i]>=mod)RET[i]-=mod;
+		}
+		FFT(AT[1],BT[0],CT);
+		fru(i,K+1){
+			RET[i]+=1LL*CT[i]%mod*sqr%mod;
+			if(RET[i]>=mod)RET[i]-=mod;
+		}
+		FFT(AT[1],BT[1],CT);
+		fru(i,K+1){
+			RET[i]+=CT[i]%mod;
+			if(RET[i]>=mod)RET[i]-=mod;
+		}
+		return RET;
+	}
+}
+
+void solve() {
+	scanf("%lld%lld",&n,&K);
+	sil[0]=1;
+	fru(i,K+1)if(i)sil[i]=1LL*sil[i-1]*i%mod;
+	odw[K]=qp(sil[K],mod-2);
+	for(int i=K-1;i>=0;i--)odw[i]=1LL*odw[i+1]*(i+1)%mod;
+	if(n>K){puts("0");return;}
+	vi Id(K+1,0);
+	Id[0]=1;
+	vi A(K+1);
+	int a=1;
+	//fill A
+	fru(i,K+1)A[i]=odw[i];
+	A[0]=0;
+	while(n){
+		DEB("Id:");
+		tr(it,Id)DEB("%d ",*it);DEB("\n");
+		if(n%2)Id=FFT::mnoz(Id,A,a);
+		DEB("Id:");
+		tr(it,Id)DEB("%d ",*it);DEB("\n");
+		n/=2;
+		DEB("A:");
+		tr(it,A)DEB("%d ",*it);DEB("\n");
+		A=FFT::mnoz(A,A,a);
+		DEB("A:");
+		tr(it,A)DEB("%d ",*it);DEB("\n");
+		a*=2;
+	}
+	int ret=0;
+	fru(i,K+1){ret+=1LL*Id[i]*sil[K]%mod*odw[K-i]%mod;if(ret>=mod)ret-=mod;}
+	cout<<ret<<endl;
+}
+
+int main() {
+	int te = 1;
+	//	scanf("%d",&te);
+	fru(ti,te) solve();
+	return 0;
+}

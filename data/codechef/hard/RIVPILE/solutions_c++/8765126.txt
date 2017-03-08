@@ -1,0 +1,94 @@
+#include <set>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define n	255
+#define INF	(1<<30)
+#define I64	long long
+#define sqr(x)	(1ll*(x)*(x))
+#define For(i,a,b)	for(int i=a;i<=b;i++)
+
+int		Test,N,M,W,S,T,C,D,ID[n][n],st[n*n],Dis[n*n],V[n*n];
+struct	Hea{
+		int d,x;
+		bool	operator <	(const Hea&a)const{
+			return	d<a.d||d==a.d&&x<a.x;
+		}
+};		set<Hea>Q;
+
+struct	Nod{int x,y;}A[n];
+struct	Cir{int r,c;}B[n];
+struct	Edg{int v,c,next;}E[n*n*n];
+
+bool	Cmp(Cir a,Cir b)	{
+		return	a.c<b.c||a.c==b.c&&a.r>b.r;
+}
+inline	bool	Check(int x,int y,int a,int b){
+		I64	d1=sqr(A[x].x-A[y].x)+sqr(A[x].y-A[y].y),d2=sqr(B[a].r+B[b].r);
+		return	d2>=d1;
+}
+
+inline	void	Link(int u,int v,int c){
+		E[++D]=(Edg){v,c,st[u]};	st[u]=D;
+}
+int		Dij(){
+		For(i,1,C)	Dis[i]=INF,V[i]=0;	Dis[S]=0;
+		Q.clear();	Q.insert((Hea){0,S});
+
+		for	(;Q.size();){
+			Hea	t=*(Q.begin());	Q.erase(t);	int u=t.x;
+			if	(V[u])	continue;	V[u]=1;
+			if	(u==T)	break;
+
+			for	(int i=st[u],v;i;i=E[i].next)
+			if	(Dis[u]+E[i].c<Dis[v=E[i].v])
+				Dis[v]=Dis[u]+E[i].c,Q.insert((Hea){Dis[v],v});
+		}
+		return	Dis[T];
+}
+
+int		main(){
+	//	freopen("1.in","r",stdin);
+	//	freopen("RIVPILE.out","w",stdout);
+
+		scanf("%d",&Test);
+		for	(;Test--;)	{
+			scanf("%d%d%d",&N,&M,&W);
+			For(i,1,N)	scanf("%d%d",&A[i].x,&A[i].y);
+			For(i,1,M)	scanf("%d%d",&B[i].r,&B[i].c);	B[++M]=(Cir){0,0};
+			sort(B+1,B+M+1,Cmp);
+
+			int tot=0;	C=D=0;	S=++C;T=++C;
+			For(i,1,M)	if	(!tot||B[i].r>B[tot].r)	B[++tot]=B[i];	M=tot;
+			For(i,1,N)	For(j,1,M)	ID[i][j]=++C;
+
+			For(i,1,C)	st[i]=0;
+			For(i,1,N)	For(j,2,M)	Link(ID[i][j-1],ID[i][j],B[j].c-B[j-1].c),Link(ID[i][j],ID[i][j-1],0);
+			For(i,1,N)	For(j,1,N)	if	(i!=j)	{
+				for	(int k=1,t=M+1;k<=M;k++)	{
+					int flag=0;
+					for	(;t-1&&Check(i,j,k,t-1);t--)	flag=1;
+					if	(flag)	Link(ID[i][k],ID[j][t],B[t].c);
+				}
+			}
+
+			For(i,1,N)	{
+				int j=1;
+				for	(;j<=M&&A[i].y+B[j].r<W;j++);
+				if	(j<=M)	Link(S,ID[i][j],B[j].c);
+			}
+			For(i,1,N)	{
+				int j=1;
+				for	(;j<=M&&A[i].y-B[j].r>0;j++);
+				if	(j<=M)	Link(ID[i][j],T,0);
+			}
+
+	//		printf("%d %d\n",C,D);
+
+			int Ans=Dij();
+			if	(Ans==INF)	puts("impossible");
+				else	printf("%d\n",Ans);
+		}
+}

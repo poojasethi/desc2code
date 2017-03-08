@@ -1,0 +1,71 @@
+//By momo
+#include <cmath>
+#include <cstdio>
+#include <algorithm>
+#define N 1000
+#define INF 999999999.0
+using namespace std;
+
+int n, root;
+int vx[N], vy[N], mch[N], mx[N];
+double w[N][N], lv[N], rv[N];
+bool dfs(int x){
+	vx[x] = 1;
+	for(int y = 0; y < 2*n; y++){
+		double t = lv[x] + rv[y] - w[x][y];
+		if(!vy[y] && t < 1e-9){
+			vy[y] = 1;
+			if(mch[y] < 0 || dfs(mch[y])) return mch[y] = x, 1;
+		}
+	}
+	return 0;
+}
+
+void KuhnMunkres(){
+	fill(mch, mch + 2 * n, -1);
+	for(int i = 0; i < n; i++){
+		lv[i] = -INF;
+		for(int j = 0; j < 2*n; j++)
+			lv[i] = max(lv[i], w[i][j]);
+	}
+	for(int x = 0; x < n; x++) if(x != root){
+		for(int i = 0; i < 2*n; i++) vx[i] = vy[i] = 0;
+		while(!dfs(x)){
+			double d = INF;
+			for(int i = 0; i < n; i++) if(vx[i])
+				for(int j = 0; j < 2*n; j++) if(!vy[j])
+					d = min(d, lv[i] + rv[j] - w[i][j]);
+			for(int i = 0; i < n; i++) if(vx[i]) lv[i] -= d, vx[i] = 0;
+			for(int i = 0; i < 2*n; i++) if(vy[i]) rv[i] += d, vy[i] = 0;
+		}
+	}
+}
+
+int x[N], y[N];
+double sq(double g){ return g*g; }
+int main (){
+	scanf("%d", &n);
+	for(int i = 0; i < n; i++) for(int j = 0; j < 2*n; j++)
+		w[i][j] = -INF;
+	for(int i = 0; i < n; i++){
+		scanf("%d%d", &x[i], &y[i]);
+		if(y[i] > y[root]) root = i;
+	}
+	for(int i = 0; i < n; i++) for(int j = 0; j < n; j++){
+		if(y[i] < y[j]){
+			w[i][  2*j] = -(sqrt(sq(x[i]-x[j])+sq(y[i]-y[j])));
+			w[i][2*j+1] = -(sqrt(sq(x[i]-x[j])+sq(y[i]-y[j])));
+		}
+	}
+	KuhnMunkres();
+	double ans = 0; int cnt = 0;
+	for(int i = 0; i < 2*n; i++){
+		if(mch[i] != -1){
+			ans += w[mch[i]][i];
+			if(w[mch[i]][i] == -INF) return puts("-1"), 0;
+			cnt++;
+		}
+	}
+	if(cnt < n-1) return puts("-1"), 0;
+	printf("%.10lf\n", -ans);
+}

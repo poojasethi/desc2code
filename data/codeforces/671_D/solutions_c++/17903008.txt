@@ -1,0 +1,114 @@
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<cstdlib>
+#include<cmath>
+#include<algorithm>
+#include<vector>
+#include<set>
+#define N 300005
+#define INF (LL)(3e14)
+#define PAIR pair<LL,int>
+#define L(__) (__ << 1)
+#define R(__) (L(__) + 1)
+#define LL long long
+#define oo (1<<30)
+using namespace std;
+set<PAIR> :: iterator it;
+int u[N],v[N],w[N],lt[N],rt[N],n,m,dfn[N],cnt;
+vector<int> G[N],E[N]; set<PAIR> S[N];
+LL add[4*N],f[N],Min[4*N],ans,g[N];
+void dfs(int t,int fa)
+{
+	int i; dfn[t]=lt[t]=++cnt;
+	for(i=0;i<G[t].size();i++)
+		if(G[t][i]!=fa) dfs(G[t][i],t);
+	rt[t]=cnt;
+}
+void Add(int t,LL d){ add[t]+=d,Min[t]+=d;}
+void push(int t)
+{
+	if(add[t]==0) return ;
+	Add(L(t),add[t]);
+	Add(R(t),add[t]);
+	add[t]=0;
+}
+void modify(int t,int l,int r,int l1,int r1,LL d)
+{
+	int mid=(l+r)>>1;
+	if(l>r1 || r<l1) return ;
+	if(l>=l1&&r<=r1) return Add(t,d);
+	push(t);
+	modify(L(t),l,mid,l1,r1,d);
+	modify(R(t),mid+1,r,l1,r1,d);
+	Min[t]=min(Min[L(t)],Min[R(t)]);
+}
+LL query(int t,int l,int r,int l1,int r1)
+{
+	int mid=(l+r)>>1; LL res=2*INF;
+	if(l>r1 || r<l1) return 2*INF;
+	if(l>=l1&&r<=r1) return Min[t];
+	push(t);
+	res=min(res,query(L(t),l,mid,l1,r1));
+	res=min(res,query(R(t),mid+1,r,l1,r1));
+	Min[t]=min(Min[L(t)],Min[R(t)]);
+	return res;
+}
+void erase(int t)
+{
+	it=S[u[t]].begin();
+	if((*it)==PAIR(w[t],t)){
+		S[u[t]].erase(it);
+		modify(1,1,n,dfn[u[t]],dfn[u[t]],(*S[u[t]].begin()).first-w[t]);
+	  }
+	else S[u[t]].erase(PAIR(w[t],t));
+}
+void insert(int t)
+{
+	it=S[u[t]].begin();
+	if(w[t]<(*it).first){
+		modify(1,1,n,dfn[u[t]],dfn[u[t]],w[t]-(*it).first);
+		S[u[t]].insert(PAIR(w[t],t));
+	  }
+	else S[u[t]].insert(PAIR(w[t],t));
+}
+void dp(int t,int fa)
+{
+	int i;
+	for(i=0;i<G[t].size();i++)
+		if(G[t][i]!=fa)
+			dp(G[t][i],t),g[t]+=f[G[t][i]];
+	modify(1,1,n,dfn[t],dfn[t],g[t]+INF);
+	for(i=0;i<E[t].size();i++)
+		if(E[t][i]<0) erase(-E[t][i]);
+		else insert(E[t][i]);
+	for(i=0;i<G[t].size();i++)
+		if(G[t][i]!=fa)
+			modify(1,1,n,lt[G[t][i]],rt[G[t][i]],g[t]-f[G[t][i]]);
+	f[t]=query(1,1,n,lt[t],rt[t]);
+	return ;
+}
+int main()
+{
+	int i,x,y;
+	scanf("%d %d",&n,&m);
+	for(i=1;i<=n;i++)
+		S[i].insert(PAIR(INF,i));
+	for(i=1;i<n;i++){
+		scanf("%d %d",&x,&y);
+		G[x].push_back(y);
+		G[y].push_back(x);
+	  }
+	for(i=1;i<=m;i++){
+		scanf("%d %d %d",&u[i],&v[i],&w[i]);
+		E[u[i]].push_back(+i);
+		E[v[i]].push_back(-i);
+	  }
+	for(i=1;i<=n;i++) f[i]=INF;
+	dfs(1,0);
+	dp (1,0);
+	for(i=0;i<G[1].size();i++)
+		ans+=f[G[1][i]],ans=min(ans,INF);
+	cout<<(ans>=INF ? -1 : ans)<<endl;
+	return 0;
+}

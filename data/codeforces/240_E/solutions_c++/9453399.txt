@@ -1,0 +1,70 @@
+#include <cstdio>
+#include <bitset>
+#include <vector>
+#include <cstring>
+using namespace std;
+const int N = 100000 + 9;
+int n,m,ans,f[N * 20],fa[N * 20],se[N * 20],len[N];
+struct edge
+{
+	int u,v,w,id;
+}e[N];
+bool work(int rt,int n)
+{
+	static int inw[N],pre[N],vis[N],idx[N],prev[N];
+	int tot = -1,cnt = m;
+	while (tot) {
+		memset(inw,0x3f,sizeof inw); memset(vis,-1,sizeof vis); memset(idx,-1,sizeof idx);
+		for (int i = 1; i <= m; ++i)
+			if (inw[e[i].v] > e[i].w && e[i].u != e[i].v)
+				inw[e[i].v] = e[i].w,pre[e[i].v] = e[i].u,prev[e[i].v] = e[i].id;
+		for (int i = 1; i <= n; ++i)
+			if (i != rt) {
+				if (inw[i] == 0x3f3f3f3f) return false;
+				ans += inw[i];
+				++f[prev[i]];
+			}
+		pre[rt] = rt; inw[rt] = tot = 0;
+		for (int i = 1,t; i <= n; ++i)
+			if (vis[i] == -1) {
+				t = i;
+				for (; vis[t] == -1; t = pre[t]) vis[t] = i;
+				if (t == rt || vis[t] != i) continue;
+				idx[t] = ++tot;
+				for (int s = pre[t]; s != t; s = pre[s]) idx[s] = tot;
+			}
+		if (!tot) break;
+		for (int i = 1; i <= n; ++i) if (idx[i] == -1) idx[i] = ++tot;
+		for (int i = 1; i <= m; ++i) {
+			int tmp = prev[e[i].v];
+			e[i].w -= inw[e[i].v];
+			e[i].u = idx[e[i].u];
+			e[i].v = idx[e[i].v];
+			if (e[i].u == e[i].v) continue;
+			++cnt;
+			se[cnt] = e[i].id;
+			fa[cnt] = tmp;
+			e[i].id = cnt;
+		}
+		n = tot; rt = idx[rt];
+	}
+	for (int i = cnt; i > m; --i)
+		f[se[i]] += f[i],f[fa[i]] -= f[i];
+	return true;
+}
+int main()
+{
+	freopen("input.txt","r",stdin);
+	freopen("output.txt","w",stdout);
+	scanf("%d%d\n",&n,&m);
+	for (int i = 1; i <= m; ++i) {
+		scanf("%d%d%d",&e[i].u,&e[i].v,&e[i].w);
+		e[i].id = i;
+		len[i] = e[i].w;
+	}
+	if (!work(1,n)) return puts("-1"),0;
+	printf("%d\n",ans);
+	for (int i = 1; i <= m; ++i)
+		if (len[i] && f[i]) printf("%d ",i);
+	puts("");
+}

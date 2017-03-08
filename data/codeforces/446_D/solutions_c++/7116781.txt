@@ -1,0 +1,130 @@
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <cstdlib>
+#include <algorithm>
+#include <vector>
+#include <utility>
+#include <queue>
+#include <functional>
+#include <map>
+#include <set>
+
+#define fi first
+#define se second
+#define fo(i,a,b) for (int i = a; i <= b; i ++)
+#define fd(i,a,b) for (int i = a; i >= b; i --)
+#define fe(i,x,y) for (int i = x, y = lnk[i]; i; i = nxt[i], y = lnk[i])
+#define mkp make_pair
+#define pb push_back
+#define Fill(x,y) memset(x,y,sizeof(x))
+#define Cpy(x,y) memcpy(x,y,sizeof(x))
+#define Bit(x,y) ((((x) >> (y)) & 1))
+#define sit SI::iterator
+#define SQR(x) ((x) * (x))
+
+using namespace std;
+ 
+typedef long long LL;
+typedef long double DB;
+typedef pair <DB, DB> PD;
+typedef pair <LL, LL> PLI;
+typedef pair <PD, int> PDI;
+typedef pair <int, int> PI;
+typedef pair <int, PI> PII;
+typedef pair <PI, PI> PIII;
+typedef set <int> SI;
+typedef vector <int> VI;
+ 
+int Read()
+ {
+    char c; while (c = getchar(), (c != '-') && (c < '0' || c > '9'));
+    bool neg = (c == '-'); int ret = (neg ? 0 : c - 48);
+    while (c = getchar(), c >= '0' && c <= '9') ret = ret * 10 + c - 48;
+    return neg ? -ret : ret;
+ }
+ 
+const int MAXN = 505, MAXM = 100005;
+
+int N, M, K, n, col[MAXN], ind[MAXN], q[MAXN], deg[MAXN], g[MAXN][MAXN];
+double ans[MAXN], ret[MAXN], a[MAXN][MAXN << 1], b[MAXN][MAXN], c[MAXN][MAXN];
+VI trap;
+
+void init()
+ {
+	scanf("%d%d%d", &N, &M, &K);
+	fo (i, 1, N)
+	 {
+		col[i] = Read(), ind[i] = q[i] = i;
+		if (col[i]) trap.pb(i);
+	 }
+	fo (i, 1, M)
+	 {
+		int u = Read(), v = Read();
+		++ g[u][v], ++ g[v][u], ++ deg[u], ++ deg[v];
+	 }
+ }
+ 
+void work()
+ {
+	fo (i, 1, N)
+	 {
+		a[i][i] = a[i][i + N] = 1.0;
+		fo (j, 1, N) if ((i != j) && !col[j]) a[i][j] = -(double) g[i][j] / deg[j];
+	 }
+	fo (i, 1, N)
+	 {
+		int cb = 0;
+		fo (j, i, N) if (a[j][i]) { cb = j; break; }
+		if (cb != i)
+		 {
+			if (!cb) continue;
+			fo (j, 1, N + N) swap(a[cb][j], a[i][j]);
+			int u = q[i], v = q[cb];
+			swap(q[i], q[cb]);
+			ind[u] = cb, ind[v] = i;
+		 }
+		double ratio = a[i][i];
+		fo (j, 1, N + N) a[i][j] /= ratio;
+		fo (j, 1, N) if (i != j)
+		 {
+			ratio = a[j][i];
+			fo (k, 1, N + N) a[j][k] -= ratio * a[i][k];
+		 }
+	 }
+	n = trap.size();
+	fo (i, 1, n)
+		fo (j, 1, n)
+			fo (k, 1, N)
+				b[j][i] += a[ind[trap[i-1]]][k + N] * g[trap[j-1]][k] / deg[trap[j-1]];
+				
+	fo (i, 1, n) ans[i] = a[ind[trap[i-1]]][N + 1];
+	
+	for (K -= 2; K; K >>= 1)
+	 {
+		if (K & 1)
+		 {
+			fo (i, 1, n)
+			 {
+				ret[i] = 0;
+				fo (j, 1, n) ret[i] += ans[j] * b[j][i];
+			 }
+			fo (i, 1, n) ans[i] = ret[i];
+			K = K;
+		 }
+		fo (i, 1, n) fo (j, 1, n)
+		 {
+			c[i][j] = 0;
+			fo (k, 1, n) c[i][j] += b[i][k] * b[k][j];
+		 }
+		fo (i, 1, n) fo (j, 1, n) b[i][j] = c[i][j];
+	 }
+	printf("%.10f\n", ans[n]);
+ }
+ 
+int main()
+ {
+	init();
+	work();
+	return 0;
+ }

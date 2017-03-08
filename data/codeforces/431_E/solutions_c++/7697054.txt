@@ -1,0 +1,91 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef long long ll;
+
+struct node{
+  ll k, p, s, t;
+  node *l, *r;
+  node(ll k) : k(k), p(rand()), s(1), t(k), l(0), r(0) {}
+};
+
+inline ll size(node *t){ return t ? t -> s : 0; }
+inline ll sum(node *t){ return t ? t -> t : 0; }
+
+inline void update(node *t){
+  if(t == NULL) return;
+  t -> s = size(t -> l) + size(t -> r) + 1;
+  t -> t = sum(t -> l) + sum(t -> r) + t -> k;
+}
+
+void split(node *t, node *&l, node *&r, ll k){
+  if(t == NULL) l = r = NULL;
+  else if(k <= t -> k) split(t -> l, l, t -> l, k), r = t;
+  else split(t -> r, t -> r, r, k), l = t;
+  update(t);
+}
+
+void merge(node *&t, node *l, node *r){
+  if(l == NULL || r == NULL) t = l ? l : r;
+  else if(l -> p > r -> p) merge(l -> r, l -> r, r), t = l;
+  else merge(r -> l, l, r -> l), t = r;
+  update(t);
+}
+
+void insert(node *&t, node *n){
+  if(t == NULL) t = n;
+  else if(n -> p > t -> p) split(t, n -> l, n -> r, n -> k), t = n;
+  else insert(n -> k <= t -> k ? t -> l : t -> r, n);
+  update(t);
+}
+
+void erase(node *&t, ll k){
+  if(t == NULL) return;
+  else if(t -> k == k) merge(t, t -> l, t -> r);
+  else erase(k <= t -> k ? t -> l : t -> r, k);
+  update(t);
+}
+
+ll sum(node *t, ll p){
+  if(t == NULL) return 0;
+  if(p <= size(t -> l)) return sum(t -> l, p);
+  return sum(t -> l) + t -> k + sum(t -> r, p - size(t -> l) - 1);
+}
+
+const int MAXN = 100005;
+ll N, Q, A[MAXN], t, p, x, v;
+node *T;
+
+bool check(int m, ll v){
+  if(m == N) return 1;
+  ll k = sum(T, m + 1) - sum(T, m);
+  return k * m >= v + sum(T, m);
+}
+
+int main(){
+  ios::sync_with_stdio(0);
+  cin.tie(0);
+  cin >> N >> Q;
+  for(int i = 0; i < N; i++){
+    cin >> A[i];
+    insert(T, new node(A[i]));
+  }
+  cout << fixed << setprecision(4);
+  for(int i = 0; i < Q; i++){
+    cin >> t;
+    if(t == 1){
+      cin >> p >> x;
+      erase(T, A[p - 1]);
+      A[p - 1] = x;
+      insert(T, new node(x));
+    } else {
+      cin >> v;
+      int lo = 0, hi = N + 1, mid = (lo + hi) / 2;
+      while(lo < mid){
+        (!check(mid, v) ? lo : hi) = mid;
+        mid = (lo + hi) / 2;
+      }
+      cout << 1.0 * (v + sum(T, hi)) / hi << '\n';
+    }
+  }
+}

@@ -1,0 +1,46 @@
+#include <cstdio>
+
+const int mod = 1e9 + 7;
+
+long long pow_mod(long long a, long long k, int mod)
+{
+	long long s = 1;
+	while (k)
+	{
+		if (k & 1)
+			s = s * a % mod;
+		a = a * a % mod;
+		k >>= 1;
+	}
+	return s;
+}
+
+int p[200001];
+
+int main()
+{
+	int m;
+	scanf("%d", &m);
+	for (int i = 0; i < m; ++i)
+	{
+		int t = 0;
+		scanf("%d", &t);
+		p[t]++;
+	}
+	long long prod = 1;
+	for (int i = 0; i <= 200000; ++i)
+	{
+		prod = prod * (1 + p[i]) % ((mod - 1) * 2);
+	}
+	long long ans = 1;
+	for (int i = 0; i <= 200000; ++i)
+	{
+		if (p[i])
+		{
+			long long cnt = prod * p[i] / 2 % (mod - 1);
+			ans = ans * pow_mod(i, cnt, mod) % mod;
+		}
+	}
+	printf("%I64d\n", ans);
+	return 0;
+}

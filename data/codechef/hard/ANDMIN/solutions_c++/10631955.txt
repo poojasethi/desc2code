@@ -1,0 +1,115 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef long long ll;
+typedef pair<int,int> pii;
+const int N = 100001;
+const int MAXBIT = 30;
+int n, q;
+int A[N];
+vector<int> bit_st[MAXBIT][N<<2];
+int min_st[N<<2];
+
+void buildBit(int bit, int id=1, int l=0, int r=n) {
+	if (r-l < 2) {
+		if ((1<<bit) & A[l])
+			bit_st[bit][id].push_back(l);
+		return;
+	}
+	int mid = (l+r) >> 1;
+	buildBit(bit, id<<1, l, mid);
+	buildBit(bit, id<<1|1, mid, r);
+	bit_st[bit][id].resize(bit_st[bit][id<<1].size() + bit_st[bit][id<<1|1].size());
+	merge(bit_st[bit][id<<1].begin(), bit_st[bit][id<<1].end(),
+			bit_st[bit][id<<1|1].begin(), bit_st[bit][id<<1|1].end(),
+			bit_st[bit][id].begin());
+}
+
+void buildMin(int id=1, int l=0, int r=n) {
+	if (r-l < 2) {
+		min_st[id] = A[l];
+		return;
+	}
+	int mid = (l+r) >> 1;
+	buildMin(id<<1, l, mid);
+	buildMin(id<<1|1, mid, r);
+	min_st[id] = min(min_st[id<<1], min_st[id<<1|1]);
+}
+
+void modifyMin(int idx, int val, int id=1, int l=0, int r=n) {
+	if (r-l < 2) {
+		min_st[id] = A[l] = val;
+		return;
+	}
+	int mid = (l+r) >> 1;
+	if (idx < mid)
+		modifyMin(idx, val, id<<1, l, mid);
+	else
+		modifyMin(idx, val, id<<1|1, mid, r);
+	min_st[id] = min(min_st[id<<1], min_st[id<<1|1]);
+}
+
+void modifyBit(int bit, int ql, int qr, int id=1, int l=0, int r=n) {
+	if (ql>=r || l>=qr)
+		return;
+	if (ql<=l && r<=qr) {
+		vector<int>::iterator vit = bit_st[bit][id].begin();
+		for ( ; vit != bit_st[bit][id].end(); vit++) {
+			if (A[*vit] & (1<<bit))
+				modifyMin(*vit, A[*vit] & (0xffffffff ^ (1<<bit)));
+		}
+		bit_st[bit][id].resize(0);
+		return;
+	}
+	int mid = (l+r) >> 1;
+	if (!bit_st[bit][id<<1].empty())
+		modifyBit(bit, ql, qr, id<<1, l, mid);
+	if (!bit_st[bit][id<<1|1].empty())
+		modifyBit(bit, ql, qr, id<<1|1, mid, r);
+	/*merge(bit_st[bit][id<<1].begin(), bit_st[bit][id<<1].end(),
+			bit_st[bit][id<<1|1].begin(), bit_st[bit][id<<1|1].end(),
+			bit_st[bit][id].begin());*/
+}
+
+void modify(int X, int l, int r) {
+	for (int bit=0; bit<MAXBIT; bit++) {
+		if (!((1<<bit) & X)) {
+			modifyBit(bit, l, r);
+		}
+	}
+}
+
+int query(int ql, int qr, int id=1, int l=0, int r=n) {
+	if (ql>=r || l>=qr)
+		return 1<<MAXBIT;
+	if (ql<=l && r<=qr)
+		return min_st[id];
+
+	int mid = (l+r) >> 1;
+	return min(query(ql, qr, id<<1, l, mid),
+				query(ql, qr, id<<1|1, mid, r));
+}
+
+int main() {
+	scanf("%d %d", &n, &q);
+	for (int i=0; i<n; i++) {
+		scanf("%d", A+i);
+	}
+	buildMin();
+	for (int bit=0; bit<MAXBIT; bit++)
+		buildBit(bit);
+
+	int modification, l, r, X;
+	while(q--) {
+		scanf("%d", &modification);
+		if (modification) {
+			scanf("%d %d %d", &l, &r, &X);
+			modify(X, --l, r);
+		} else {
+			scanf("%d %d", &l, &r);
+			printf("%d\n", query(--l, r));
+		}
+	}
+
+	return 0;
+}

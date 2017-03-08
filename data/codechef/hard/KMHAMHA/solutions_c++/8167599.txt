@@ -1,0 +1,214 @@
+#include<cstdio>
+#include<iostream>
+#include<cstring>
+#include<vector>
+#include<memory.h>
+#include<cstdlib>
+#include<cmath>
+#include<cassert>
+#include<memory.h>
+#include<algorithm>
+#include<queue>
+#include<utility>
+#include<map>
+#include<bitset>
+#pragma comment(linker, "/STACK:266777216")
+using namespace std;
+ 
+typedef vector<int> VI;
+typedef long long LL;
+typedef unsigned long long uLL;
+typedef pair<int, int> PII;
+typedef vector<PII> VPII;
+#define pb push_back
+#define fi first
+#define se second
+#define mp make_pair
+ 
+ 
+const int inf=1000000000;
+const LL INF=LL(inf)*inf;
+const double eps=1e-9;
+const double PI=2*acos(0.0);
+ 
+//Parameters
+ 
+#define NN 1005 //number of vertices in one set
+#define MM 2111 //number of vertices in both sets together
+#define NIL 0
+ 
+ 
+int N;
+map<int,int>hash_X, hash_Y;
+map<int,int>::iterator it;
+ 
+ 
+class MaxMatching
+{
+public:
+    VI adj[MM];
+    int match[MM], dist[MM]; //vertices 1 to n belong to set U and n+1 to n+m belong to set V
+    int n, m;
+    MaxMatching()
+    {
+      for(int i=1; i<=MM; i++)
+      {
+          adj[i].clear();
+      }
+    }
+    void init(int a, int b)
+    {
+        this->n = a;
+        this->m = b;
+    }
+    void addEdge(int u, int v)
+    {
+        adj[u].pb(v);
+    }
+    bool bfs() //to find out layers and guide the dfs
+    {
+        int u, v;
+        queue<int>Q;
+        //Intitializations
+        while(!Q.empty())
+        {
+            Q.pop();
+        }
+        for(int i=1; i<=n; i++)
+        {
+            if(match[i] == NIL)
+            {
+                dist[i] = 0;
+                Q.push(i);
+            }
+            else
+            {
+                dist[i] = inf;
+            }
+        }
+        dist[NIL] = inf;
+        //The actual BFS
+        while(!Q.empty())
+        {
+            v = Q.front();
+            Q.pop();
+            if(dist[v]<dist[NIL])
+            {
+                for(int i=0; i<adj[v].size(); i++)
+                {
+                    u = adj[v][i];
+                    if(dist[match[u]] == inf) //means u is free
+                    {
+                        dist[match[u]] = dist[v]+1;
+                        Q.push(match[u]);
+                    }
+                }
+            }
+        }
+        return dist[NIL]!= inf; //return 0 if no more augmenting paths possible
+    }
+    bool dfs(int v)
+    {
+        int u;
+        if(v!=NIL)
+        {
+            for(int i=0; i<adj[v].size(); i++)
+            {
+                u = adj[v][i];
+                if(dist[match[u]] == dist[v]+1)
+                {
+                    if(dfs(match[u])) //The main step where edges along the augmenting path get flipped
+                    {
+                        match[v] = u;
+                        match[u] = v;
+                        return true;
+                    }
+                }
+            }
+            dist[v] = inf;
+            return false;
+        }
+        return true; //if v is NIL return true trivially
+    }
+    int HopcroftKarp()
+    {
+        fill(match, match+MM, NIL);
+        int matching = 0;
+        while(bfs())
+        {
+            for(int i=1; i<=n; i++)
+            {
+                if(match[i] == NIL)//means free
+                {
+                    if(dfs(i))
+                    {
+                        matching++;
+                    }
+                }
+            }
+        }
+        return matching;
+    }
+ 
+ 
+};
+ 
+ 
+ 
+void solve()
+{
+  //Taking in input
+  hash_X.clear();
+  hash_Y.clear();
+  MaxMatching mm;
+ 
+  int X, Y, hashed_X, hashed_Y;
+  int newid;
+  scanf("%d", &N);
+  for(int i=0; i<N; i++)
+  {
+      scanf("%d%d", &X, &Y);
+      //hash X(row)
+      if(hash_X.count(X) == 0)
+      {
+          newid = hash_X.size()+1;
+          hashed_X = newid;
+          hash_X[X] = newid;
+      }
+      else //element already present
+      {
+          hashed_X = hash_X[X];
+      }
+ 
+      //hash Y(column)
+        if(hash_Y.count(Y) == 0)
+      {
+          newid = hash_Y.size()+1 + NN;
+          hashed_Y = newid;
+          hash_Y[Y] = newid;
+      }
+      else //element already present
+      {
+          hashed_Y = hash_Y[Y];
+      }
+      mm.addEdge(hashed_X, hashed_Y);
+  }
+  mm.init(hash_X.size(), hash_Y.size());
+  int ans = mm.HopcroftKarp();
+  printf("%d\n", ans);
+ 
+}
+ 
+int main()
+{
+    #ifndef ONLINE_JUDGE
+    freopen("input.txt","r",stdin);
+    //freopen("output.txt","w",stdout);
+    #endif
+    int t;
+    scanf("%d", &t);
+    while(t--)
+    {
+        solve();
+    }
+}

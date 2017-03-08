@@ -1,0 +1,96 @@
+// 就是最经典的那种树化segment然后bitmask线段树。。
+#include<cstdio>
+#include<vector>
+using namespace std;
+
+#define ran 555555
+
+struct Node {
+	long long c, s;
+} t[ran*4];
+
+int n, q, cnt;
+int c[ran];
+vector<int> e[ran];
+int v[ran], l[ran], r[ran];
+
+void dfs(int cur, int p) {
+	v[cnt] = c[cur];
+	l[cur] = cnt++;
+	for(int i=0;i<e[cur].size();i++) {
+		int nxt = e[cur][i];
+		if(nxt!=p) dfs(nxt, cur);
+	}
+	r[cur] = cnt-1;
+}
+
+void build(int id, int l, int r) {
+	if(l==r) {
+		t[id].c = t[id].s = 1LL<<v[l];
+		return;
+	}
+	int mid = (l+r)/2;
+	build(id*2, l, mid);
+	build(id*2+1, mid+1, r);
+	t[id].s = t[id*2].s | t[id*2+1].s;
+}
+
+void modify(int id, int l, int r, int s, int e, int color) {
+	if(l==s&&r==e) {
+		t[id].c = t[id].s = 1LL<<color;
+		return;
+	}
+	if(t[id].c) { 
+		t[id*2].c = t[id*2].s = t[id].c;
+		t[id*2+1].c = t[id*2+1].s = t[id].c;
+		t[id].c = 0;
+	}
+	int mid = (l+r)/2;
+	if(s<=mid) modify(id*2, l, mid, s, min(e, mid), color);
+	if(e>mid) modify(id*2+1, mid+1, r, max(s, mid+1), e, color);
+	t[id].s = t[id*2].s | t[id*2+1].s;
+}
+
+long long query(int id, int l, int r, int s, int e) {
+	if(l==s&&r==e) {
+		return t[id].s;
+	}
+	if(t[id].c) { 
+		t[id*2].c = t[id*2].s = t[id].c;
+		t[id*2+1].c = t[id*2+1].s = t[id].c;
+		t[id].c = 0;
+	}
+	long long res = 0LL;
+	int mid = (l+r)/2;
+	if(s<=mid) res |= query(id*2, l, mid, s, min(e, mid));
+	if(e>mid) res |= query(id*2+1, mid+1, r, max(s, mid+1), e);
+	return res;
+}
+
+int main() {
+	scanf("%d%d", &n, &q);
+	for(int i=1;i<=n;i++) scanf("%d", &c[i]);
+	for(int i=1;i<n;i++) {
+		int x,y;
+		scanf("%d%d", &x, &y);
+		e[x].push_back(y);
+		e[y].push_back(x);
+	}
+	cnt=1;
+	dfs(1, -1);
+	
+	build(1, 1, n);
+	for(int i=0;i<q;i++) {
+		int op, id, det;
+		scanf("%d", &op);
+		if (op==1) {
+			scanf("%d%d", &id, &det);
+			modify(1, 1, n, l[id], r[id], det);
+		} else {
+			scanf("%d", &id);
+			printf("%d\n", __builtin_popcountll(query(1, 1, n, l[id], r[id])));
+		}
+	}
+	
+	return 0;
+}

@@ -1,0 +1,218 @@
+#include <iostream>
+#include <vector>
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+#include <ctime>
+#define N 10
+#define INF (int)1e9
+#define eps 1e-12
+
+
+using namespace std;
+struct ANS
+{
+	int x , y;
+	ANS(const int & _x = 0 , const int & _y = 0)
+	{
+		x = _x , y = _y;
+	}
+};
+struct LINE 
+{
+	int ne , e , val;
+	LINE (const int & _ne = 0 , const int & _e = 0 , const int & _val = 0)
+	{
+		ne = _ne , e = _e , val = _val;
+	}
+}li[2333];
+
+ANS len[233333] , rem[2333];
+vector <int> p[N];
+vector <ANS> ans[N][N];
+int num[N][N] , n , x , y , use[N][N] , tem[N][N] , sz , ans1 , ans2 , fa[N] , ano , s , t , fir[2333] , tot , sl , dep[2333] , que[2333] , head , tail;
+char sx[N] , sy[N];
+
+
+
+void add(int u , int v , int w)
+{
+	li[++ sl] = LINE(fir[u] , v , w) , fir[u] = sl;
+	li[++ sl] = LINE(fir[v] , u , 0) , fir[v] = sl;
+}
+void print()
+{
+	for(int i = 1;i < n;i ++)
+	{
+		x = len[i].x;
+		y = len[i].y;
+		if(x > y)swap(x , y);
+		ans1 = ans[x][y][use[x][y]].x;
+		ans2 = ans[x][y][use[x][y]].y;
+		if(ans1 > ans2)swap(ans1 , ans2);
+		if(len[i].x > len[i].y)swap(ans1 , ans2);
+		printf("%d %d\n",ans1,ans2);
+		use[x][y] ++;
+	}	
+}
+bool BFS()
+{
+	memset(dep , 0 , sizeof(dep));
+	head = tail = 0;
+	que[tail ++] = s;
+	dep[s] = 1;
+	while(head ^ tail)
+	{
+		int x = que[head ++];
+		for(int u = fir[x];u;u = li[u].ne)
+		{
+			if(li[u].val && !dep[li[u].e])
+			{
+				dep[li[u].e] = dep[x] + 1;
+				que[tail ++] = li[u].e;
+			}
+		}
+	}
+	return dep[t];
+}
+int DFS(int x , int maxl)
+{
+	if(x == t)return maxl;
+	int ret = 0;
+	for(int u = fir[x];u && maxl;u = li[u].ne)
+	{
+		if(dep[li[u].e] == dep[x] + 1)
+		{
+			int tem = DFS(li[u].e , min(maxl , li[u].val));
+			ret += tem;
+			maxl -= tem;
+			li[u].val -= tem;
+			li[u ^ 1].val += tem;
+		}
+	}
+	if(ret == 0)dep[x] = -1;
+	return ret;
+}
+int DINIC()
+{
+	int ret = 0;
+	while(BFS())
+	{
+		while(1)
+		{
+			int tem = DFS(s , INF);
+			if(tem == 0)break;
+			ret += tem;
+		}
+	}
+	return ret;
+}
+void build()
+{
+	memset(fir , 0 , sizeof(fir)) , sl = 1;
+	s = 0 , t = sz + (sz - 1) * sz / 2  + 1;
+	for(int i = 1;i <= sz;i ++)add(s , i , p[i].size() - 1);
+	for(int i = 1;i <= sz;i ++)for(int j = i + 1;j <= sz;j ++)
+	{
+		add(++ tot , t , tem[i][j]);
+		add(i , tot , INF);
+		add(j , tot , INF);
+		rem[tot] = ANS(i , j);
+	}
+}
+void solve()
+{
+	int x  , ret = 0 , need = 0; tot = sz;
+	for(int i = 1;i <= sz;i ++)
+	{
+		x = i;
+		for(int j = 1;j <= sz;j ++)
+		{
+			x = fa[x];
+			if(x == i)return;
+			if(x == 0)break;
+		}
+	}
+	for(int i = 1;i <= sz;i ++)need += p[i].size() - 1;
+	for(int i = 1;i <= sz;i ++)for(int j = i + 1;j <= sz;j ++)tem[i][j] = num[i][j];
+	for(int i = 1;i <= sz;i ++)
+	{
+		if(fa[i] > i)tem[i][fa[i]] --;
+		else tem[fa[i]][i] --;
+	}
+	build();
+	ret = DINIC();
+	if(ret != need)return ;
+	for(int i = 2;i <= sz;i ++)
+	{
+		ans1 = i , ans2 = fa[i];
+		if(ans1 > ans2)swap(ans1 , ans2);
+		ans[ans1][ans2].push_back(ANS(p[ans1][0] , p[ans2][0]));
+	}
+	for(int i = 1;i <= sz;i ++)
+	{
+		for(int u = fir[i];u;u = li[u].ne)
+		{
+			if(li[u].e == s)continue;
+			for(int j = 1;j <= li[u ^ 1].val;j ++)
+			{
+				ano = (i ^ rem[li[u].e].x ^ rem[li[u].e].y);
+				ans1 = i , ans2 = ano;
+				if(ans1 > ans2)swap(ans1 , ans2);
+				ans[ans1][ans2].push_back(ANS(p[i][p[i].size() - 1] , p[ano][0]));
+				p[i].pop_back();		
+			}
+		}
+	}
+	print();
+	exit(0);
+}
+void DFS(int x)
+{
+	if(x == sz + 1)
+	{
+		solve();
+		return ;
+	}
+	for(int i = 1;i <= sz;i ++)if(i != x && (num[x][i] || num[i][x]))
+	{
+		fa[x] = i;
+		DFS(x + 1);
+	}
+}
+int main ()
+{
+	//freopen("tree.in","r",stdin);
+	//freopen("tree.out","w",stdout);
+	scanf("%d",&n);
+	for(int i = 1;i < n;i ++)
+	{
+		scanf("%s %s", sx , sy );
+		x = strlen(sx);
+		y = strlen(sy);
+		len[i] = ANS(x , y);
+		if(x > y)swap(x , y);
+		num[x][y] ++;
+	}
+	for(int i = 1;i <= n;i ++)
+	{
+		x = i , sz = 0;
+		while(x){sz ++;x /= 10;}
+		p[sz].push_back(i);
+	}
+	for(int i = 1;i <= sz;i ++)
+	{
+		if(num[i][i] >= p[i].size()){printf("-1");return 0;}
+		for(int j = 1;j <= num[i][i];j ++)
+		{
+			ans[i][i].push_back(ANS(p[i][p[i].size() - 1] , p[i][p[i].size() - 2]));
+			p[i].pop_back();
+		}
+	}
+	DFS(2);
+	printf("-1");
+	return 0;
+}

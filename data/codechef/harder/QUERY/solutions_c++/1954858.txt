@@ -1,0 +1,420 @@
+//program QUERY
+
+#include<iostream>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+#include<vector>
+
+using namespace std;
+
+struct Node
+{
+  long long Sum,DeltaA,DeltaB;
+  Node *Lc,*Rc;
+};
+
+struct TreeData
+{
+  Node *Root;
+  int TreeLastChange;
+};
+
+struct Version
+{
+  int Data;
+  Version *Lc,*Rc;
+};
+
+int Get()
+{
+  char c;
+  while(c=getchar(),c<'0'||c>'9');
+  int X=0;
+  while(c>='0'&&c<='9')
+    {
+      X=X*10+c-48;
+      c=getchar();
+    }
+  return X;
+}
+
+void Output(long long X)
+{
+  int Len=0,Data[20];
+  while(X)
+    {
+      Data[Len++]=X%10;
+      X/=10;
+    }
+  if(!Len)
+    Data[Len++]=0;
+  while(Len--)
+    putchar(Data[Len]+48);
+  putchar('\n');
+}
+
+int N;
+long long LastAnswer;
+int CurrentTime,CurrentChange,LastTime;
+vector<int> G[100000];
+int Parent[100000],Depth[100000];
+int TreeNumber[100000],TreeEnd[100000],TreePos[100000],TreeLen[100000],TreeLastTime[100000];
+int DP[17][100000],Log[100000];
+vector<TreeData> Stack[100000];
+Node *CurrentTree[100000];
+Version *History[100001],*CurrentVer;
+
+Version *EmptyTree(int L,int R)
+{
+  Version *P=new Version;
+  P->Data=0;
+  if(L<R)
+    {
+      int Mid=(L+R)/2;
+      P->Lc=EmptyTree(L,Mid);
+      P->Rc=EmptyTree(Mid+1,R);
+    }
+  return P;
+}
+
+int GetVer(Version *P,int X,int Left,int Right)
+{
+  Version *T=P;
+  while(Left<Right)
+    {
+      int Mid=(Left+Right)/2;
+      if(X<=Mid)
+        {
+          T=T->Lc;
+          Right=Mid;
+        }
+      else
+        {
+          T=T->Rc;
+          Left=Mid+1;
+        }
+    }
+  return T->Data;
+}
+
+Version *UpdateVer(Version *P,int X,int Y,int Left,int Right)
+{
+  Version *Q=new Version;
+  *Q=*P;
+  if(Left==Right)
+    Q->Data=Y;
+  else
+    {
+      int Mid=(Left+Right)/2;
+      if(X<=Mid)
+        Q->Lc=UpdateVer(Q->Lc,X,Y,Left,Mid);
+      else
+        Q->Rc=UpdateVer(Q->Rc,X,Y,Mid+1,Right);
+    }
+  return Q;
+}
+
+int LCA(int X,int Y)
+{
+  if(Depth[X]<Depth[Y])
+    swap(X,Y);
+  int Diff=Depth[X]-Depth[Y];
+  while(Diff)
+    {
+      int P=Diff&-Diff;
+      Diff^=P;
+      X=DP[Log[P]][X];
+    }
+  if(X==Y)
+    return X;
+  for(int i=16;i>=0;i--)
+    if(DP[i][X]!=DP[i][Y])
+      {
+        X=DP[i][X];
+        Y=DP[i][Y];
+      }
+  return Parent[X];
+}
+
+Node *Build(int L,int R)
+{
+  Node *P=new Node;
+  P->Sum=P->DeltaA=P->DeltaB=0;
+  if(L<R)
+    {
+      int Mid=(L+R)/2;
+      P->Lc=Build(L,Mid);
+      P->Rc=Build(Mid+1,R);
+    }
+  return P;
+}
+
+void Update(Node *P,int Left,int Right)//??L,R
+{
+  if(!P->DeltaA&&!P->DeltaB)
+    return;
+  if(Left<Right)
+    {
+      Node *NewLeft=new Node;
+      *NewLeft=*(P->Lc);
+      Node *NewRight=new Node;
+      *NewRight=*(P->Rc);
+      P->Lc=NewLeft;
+      P->Rc=NewRight;
+      P->Lc->DeltaA+=P->DeltaA;
+      P->Lc->DeltaB+=P->DeltaB;
+      P->Rc->DeltaA+=P->DeltaA;
+      P->Rc->DeltaB+=P->DeltaB;
+    }
+  P->Sum+=P->DeltaA*(Right-Left+1);
+  P->Sum+=P->DeltaB*(Left+Right)*(Right-Left+1)/2;
+  P->DeltaA=P->DeltaB=0;
+}
+
+Node *TreeAdd(Node *P,int L,int R,int Left,int Right,long long A,long long B)//??L,R
+{
+  Node *Q=new Node;
+  *Q=*P;
+  if(L==Left&&R==Right)
+    {
+      Q->DeltaA+=A;
+      Q->DeltaB+=B;
+      return Q;
+    }
+  Update(Q,Left,Right);
+  int Mid=(Left+Right)/2;
+  if(R<=Mid)
+    Q->Lc=TreeAdd(Q->Lc,L,R,Left,Mid,A,B);
+  else if(L>Mid)
+    Q->Rc=TreeAdd(Q->Rc,L,R,Mid+1,Right,A,B);
+  else
+    {
+      Q->Lc=TreeAdd(Q->Lc,L,Mid,Left,Mid,A,B);
+      Q->Rc=TreeAdd(Q->Rc,Mid+1,R,Mid+1,Right,A,B);
+    }
+  Update(Q->Lc,Left,Mid);
+  Update(Q->Rc,Mid+1,Right);
+  Q->Sum=Q->Lc->Sum+Q->Rc->Sum;
+  return Q;
+}
+
+long long TreeSum(Node *P,int L,int R,int Left,int Right)//??L,R
+{
+  Update(P,Left,Right);
+  if(L==Left&&R==Right)
+    return P->Sum;
+  int Mid=(Left+Right)/2;
+  if(R<=Mid)
+    return TreeSum(P->Lc,L,R,Left,Mid);
+  if(L>Mid)
+    return TreeSum(P->Rc,L,R,Mid+1,Right);
+  return TreeSum(P->Lc,L,Mid,Left,Mid)+TreeSum(P->Rc,Mid+1,R,Mid+1,Right);
+}
+
+void PathAdd(int X,long long A,long long B)
+{
+  while(X!=-1)
+    {
+      int T=TreeNumber[X];
+      if(TreeLastTime[T]!=LastTime)
+        {
+          int Temp=GetVer(CurrentVer,T,0,100000);
+          int Left=0,Right=Stack[T].size()-1;
+          while(Left<Right)
+            {
+              int Mid=(Left+Right+1)/2;
+              if(Stack[T][Mid].TreeLastChange<=Temp)
+                Left=Mid;
+              else
+                Right=Mid-1;
+            }
+          CurrentTree[T]=Stack[T][Left].Root;
+          TreeLastTime[T]=LastTime;
+        }
+      Node *P=TreeAdd(CurrentTree[T],0,TreePos[X],0,TreeLen[T]-1,A+(Depth[X]-TreePos[X])*B,B);
+      Stack[T].push_back((TreeData){P,CurrentChange});
+      History[CurrentChange]=UpdateVer(History[CurrentChange],T,CurrentChange,0,100000);
+      CurrentTree[T]=Stack[T][Stack[T].size()-1].Root;
+      X=Parent[TreeEnd[X]];
+    }
+}
+
+long long PathSum(int X)
+{
+  long long Ans=0;
+  while(X!=-1)
+    {
+      int T=TreeNumber[X];
+      if(TreeLastTime[T]!=LastTime)
+        {
+          int Temp=GetVer(CurrentVer,T,0,100000);
+          int Left=0,Right=Stack[T].size()-1;
+          while(Left<Right)
+            {
+              int Mid=(Left+Right+1)/2;
+              if(Stack[T][Mid].TreeLastChange<=Temp)
+                Left=Mid;
+              else
+                Right=Mid-1;
+            }
+          CurrentTree[T]=Stack[T][Left].Root;
+          TreeLastTime[T]=LastTime;
+        }
+      Ans+=TreeSum(CurrentTree[T],0,TreePos[X],0,TreeLen[T]-1);
+      X=Parent[TreeEnd[X]];
+    }
+  return Ans;
+}
+
+void Init()
+{
+  CurrentTime=CurrentChange=LastTime=LastAnswer=0;
+  memset(TreeLastTime,0,sizeof(TreeLastTime));
+  static int Queue[100000];
+  int Front=0,Rear=1;
+  Queue[0]=0;
+  Parent[0]=-1;
+  Depth[0]=0;
+  while(Front<Rear)
+    {
+      int V=Queue[Front++];
+      for(int i=0;i<G[V].size();i++)
+        {
+          int U=G[V][i];
+          if(U==Parent[V])
+            continue;
+          Queue[Rear++]=U;
+          Parent[U]=V;
+          Depth[U]=Depth[V]+1;
+        }
+    }
+  static int Size[100000];
+  static bool Heavy[100000];
+  memset(Heavy,0,sizeof(Heavy));
+  for(int i=N-1;i>=0;i--)
+    {
+      int V=Queue[i],Max=-1,Best=-1;
+      Size[V]=1;
+      for(int j=0;j<G[V].size();j++)
+        {
+          int U=G[V][j];
+          if(U!=Parent[V])
+            {
+              Size[V]+=Size[U];
+              if(Size[U]>Max)
+                {
+                  Max=Size[U];
+                  Best=U;
+                }
+            }
+        }
+      Heavy[Best]=true;
+    }
+  int TotalTree=0;
+  static bool Visited[100000];
+  memset(Visited,0,sizeof(Visited));
+  for(int i=N-1;i>=0;i--)
+    {
+      int V=Queue[i];
+      if(!Heavy[V]||Visited[V])
+        continue;
+      static int Path[100000];
+      int Len=1;
+      Path[0]=V;
+      while(Heavy[V])
+        {
+          Visited[V]=true;
+          V=Parent[V];
+          Path[Len++]=V;
+        }
+      Visited[V]=true;
+      for(int l=0,r=Len-1;l<r;l++,r--)
+        swap(Path[l],Path[r]);
+      for(int j=0;j<Len;j++)
+        {
+          TreeNumber[Path[j]]=TotalTree;
+          TreeEnd[Path[j]]=Path[0];
+          TreePos[Path[j]]=j;
+        }
+      TreeLen[TotalTree]=Len;
+      Stack[TotalTree].push_back((TreeData){Build(0,Len-1),0});
+      CurrentTree[TotalTree]=Stack[TotalTree][0].Root;
+      TotalTree++;
+    }
+  for(int i=0;i<N;i++)
+    if(!Visited[i])
+      {
+        TreeNumber[i]=TotalTree;
+        TreeEnd[i]=i;
+        TreePos[i]=0;
+        TreeLen[TotalTree]=1;
+        Stack[TotalTree].push_back((TreeData){Build(0,0),0});
+        CurrentTree[TotalTree]=Stack[TotalTree][0].Root;
+        TotalTree++;
+      }
+  for(int i=0;i<N;i++)
+    DP[0][i]=Parent[i];
+  for(int i=1;i<17;i++)
+    for(int j=0;j<N;j++)
+      if(DP[i-1][j]==-1)
+        DP[i][j]=-1;
+      else
+        DP[i][j]=DP[i-1][DP[i-1][j]];
+  for(int i=0;i<17;i++)
+    Log[1<<i]=i;
+  CurrentVer=History[0]=EmptyTree(0,100000);
+}
+
+void Change()
+{
+  CurrentChange++;
+  int X=(Get()+LastAnswer)%N,Y=(Get()+LastAnswer)%N,Z=LCA(X,Y);
+  long long A=Get(),B=Get();
+  History[CurrentChange]=CurrentVer;
+  PathAdd(X,A+Depth[X]*B,-B);
+  PathAdd(Parent[Z],-A-Depth[X]*B,B);
+  PathAdd(Y,A+(Depth[X]-2*Depth[Z])*B,B);
+  PathAdd(Z,-A-(Depth[X]-2*Depth[Z])*B,-B);
+  CurrentVer=History[CurrentChange];
+}
+
+void Query()
+{
+  int X=(Get()+LastAnswer)%N,Y=(Get()+LastAnswer)%N,Z=LCA(X,Y);
+  LastAnswer=PathSum(X)+PathSum(Y)-PathSum(Z)-PathSum(Parent[Z]);
+  Output(LastAnswer);
+}
+
+void Rollback()
+{
+  LastTime=CurrentTime;
+  CurrentVer=History[(Get()+LastAnswer)%(CurrentChange+1)];
+}
+
+int main()
+{
+  N=Get();
+  int TotalQuery=Get();
+  for(int i=1;i<N;i++)
+    {
+      int X=Get()-1,Y=Get()-1;
+      G[X].push_back(Y);
+      G[Y].push_back(X);
+    }
+  Init();
+  while(TotalQuery--)
+    {
+      CurrentTime++;
+      char Type;
+      while(Type=getchar(),Type!='c'&&Type!='q'&&Type!='l');
+      if(Type=='c')
+        Change();
+      else if(Type=='q')
+        Query();
+      else
+        Rollback();
+    }
+  return 0;
+}

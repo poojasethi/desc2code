@@ -1,0 +1,129 @@
+//lazy propagation
+//segment tree for minimum range query
+#include<bits/stdc++.h>
+using namespace std;
+
+//low and high are the index of elements in the original array which are present under the root node
+int lazyRangeMinQuery(vector<int> &segment,vector<int> &lazy, int l, int r, int low, int high, int root)
+{
+    if(l>high || r<low)
+    {
+        //no overlap
+        //no solution from here
+        return 0;
+    }
+
+    if(lazy[root])
+    {
+        //this node needs to be updated
+        segment[root]=(high-low+1)-segment[root];
+
+        if(low!=high)
+        {
+            //not a leaf node
+            //mark its children for updation in lazy tree
+            lazy[2*root+1]=(lazy[2*root+1]+1)%2;
+            lazy[2*root+2]=(lazy[2*root+2]+1)%2;
+        }
+
+        //reset this node in lazy tree
+        lazy[root]=0;
+    }
+
+    if(l<=low && r>=high)
+    {
+        //total overlap
+        return segment[root];
+    }
+
+    //partial overlap
+    int mid=(low+high)/2;
+
+    return lazyRangeMinQuery(segment, lazy,l, r, low, mid, 2*root+1)+ lazyRangeMinQuery(segment, lazy, l, r, mid+1, high, 2*root+2);
+}
+
+//update the value of elements in the range to be value
+void lazyUpdateQuery(vector<int> &segment, vector<int> &lazy, int l, int r, int value, int low, int high, int root)
+{
+    if(lazy[root])
+    {
+        //this node needs to be updated
+        segment[root]=(high-low+1)-segment[root];
+
+        if(low!=high)
+        {
+            //not a leaf node
+            //mark its children for updation in lazy tree
+            lazy[2*root+1]=(lazy[2*root+1]+1)%2;
+            lazy[2*root+2]=(lazy[2*root+2]+1)%2;
+        }
+
+        //reset this node in lazy tree
+        lazy[root]=0;
+    }
+
+    //no overlap
+    if(low>r || high<l)
+    {
+        return ;
+    }
+
+    //total overlap
+    if(low>=l && high<=r)
+    {
+        //update the node and mark its children in the lazy tree for updation
+        segment[root]=(high-low+1)-segment[root];
+        
+        if(low!=high)
+        {
+            //not a leaf node
+            //mark its children for updation in lazy tree
+            lazy[2*root+1]=(lazy[2*root+1]+1)%2;
+            lazy[2*root+2]=(lazy[2*root+2]+1)%2;
+        }
+        
+        return ;
+    }
+
+    int mid=(low+high)/2;
+
+    lazyUpdateQuery(segment,lazy,l,r,value,low, mid,2*root+1);
+    lazyUpdateQuery(segment,lazy,l,r,value,mid+1,high,2*root+2);
+
+    segment[root]=(segment[2*root+1]+segment[2*root+2]);
+}
+
+int main()
+{
+    //freopen("in.in", "r", stdin);
+    //freopen("out.out","w",stdout);
+
+    int n,m,l,r,j;
+    //no. of elements in the array
+    cin>>n;
+
+    vector<int>segment(4*n,0);
+
+    //lazy tree initialized to 0 indicating all nodes are updated
+    vector<int> lazy(4*n,0);
+
+    //m update queries
+    cin>>m;
+
+    for(int i=1;i<=m;i++)
+    {
+        cin>>j>>l>>r;
+
+        if(j==0)
+        {
+            lazyUpdateQuery(segment,lazy,l,r,1,0,n-1,0);
+        }
+
+        else
+        {
+            cout<<lazyRangeMinQuery(segment,lazy,l,r,0,n-1,0)<<endl;
+        }
+    }
+
+    return 0;
+}

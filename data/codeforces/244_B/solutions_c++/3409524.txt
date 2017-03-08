@@ -1,0 +1,30 @@
+#include <cstdio>
+#include <iostream>
+#include <set>
+
+using namespace std;
+
+typedef long long int Lint;
+
+Lint N;
+
+set<Lint> s;
+
+inline void f( int a , int b , Lint k ){
+	if( k>N )	return;
+	s.insert(k);
+	if(10*k+a)	f(a,b,10*k+a);
+	if(10*k+b)	f(a,b,10*k+b);
+}
+
+int main()
+{
+	cin >> N;
+	
+	for( int i=0 ; i<9 ; i++ )
+		for( int j=i+1 ; j<10 ; j++ )
+			f(i,j,0);
+	
+	printf("%d\n",s.size()-1);	
+	return 0;
+}

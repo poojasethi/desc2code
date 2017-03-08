@@ -1,0 +1,99 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+typedef long long ll;
+const int kMaxN = 100000, kMod = 1000000007;
+int n, s[kMaxN], next_max[kMaxN], next_min[kMaxN];
+int stack[kMaxN], stop;
+int rec[kMaxN];
+
+int PowerMod(int a, int b) {
+	int res = 1, tmp = a;
+	while (b) {
+		if (b & 1) res = (ll)res * tmp % kMod;
+		b >>= 1;
+		tmp = (ll)tmp * tmp % kMod;
+	}
+	return res;
+}
+
+int main() {
+	scanf("%d", &n);
+	for (int i = 0; i < n; ++ i) scanf("%d", &s[i]);
+	for (int i = 0; i < n - 1; ++ i)
+			if (s[i] == s[i + 1]) {
+				puts("0");
+				return 0;
+			}
+	stop = 0, next_max[n - 1] = n;
+	stack[stop ++] = n - 1;
+	for (int i = n - 2; i >= 0; -- i) {
+		if (s[stack[0]] <= s[i]) next_max[i] = n;
+		else {
+			int lb = 0, rb = stop;
+			while (lb + 1 < rb) {
+				int mid = (lb + rb) >> 1;
+				if (s[stack[mid]] <= s[i]) rb = mid;
+				else lb = mid;
+			}
+			next_max[i] = stack[lb];
+		}
+		while (stop && s[i] >= s[stack[stop - 1]]) -- stop;
+		stack[stop ++] = i;
+	}
+	stop = 0, next_min[n - 1] = n;
+	stack[stop ++] = n - 1;
+	for (int i = n - 2; i >= 0; -- i) {
+		if (s[stack[0]] >= s[i]) next_min[i] = n;
+		else {
+			int lb = 0, rb = stop;
+			while (lb + 1 < rb) {
+				int mid = (lb + rb) >> 1;
+				if (s[stack[mid]] >= s[i]) rb = mid;
+				else lb = mid;
+			}
+			next_min[i] = stack[lb];
+		}
+		while (stop && s[i] <= s[stack[stop - 1]]) -- stop;
+		stack[stop ++] = i;
+	}
+	int res = 1;
+	for (int i = n - 1; i >= 0; -- i) {
+		int maxv = s[i], minv = s[i];
+		bool upd_max = false, upd_min = false;
+		int tmp = 1;
+		int l = next_max[i], r = next_min[i];
+		int j = i;
+		while (true) {
+			int k = min(l, r);
+			if (maxv - minv) {
+				res = (ll)res * PowerMod(maxv - minv, k - j) % kMod;
+				tmp = (ll)tmp * PowerMod(maxv - minv, k - j) % kMod;
+			}
+			if (l == n && r == n) break;	
+			if (upd_max && upd_min) {
+				res = (ll)res * rec[k] % kMod;
+				tmp = (ll)tmp * rec[k] % kMod;
+				break;
+			}
+			if (k == l) {
+				maxv = max(maxv, s[k]);
+				l = next_max[l];
+			}
+			if (k == r) {
+				minv = min(minv, s[k]);
+				r = next_min[r];
+			}
+			if (k == l) upd_max = true;
+			if (k == r) upd_min = true;
+			j = k;
+		}
+		rec[i] = tmp;
+	}
+	printf("%d\n", res);
+	return 0;
+}

@@ -1,0 +1,100 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+
+using namespace std;
+
+#define clr(f,x) memset(f,x,sizeof f)
+#define rep(it,a,b) for(int it=a;it<=b;++it)
+#define _rep(it,a,b) for(int it=a;it>=b;--it)
+#define For_edge(p,x) for(int p=H[x];p;p=X[p])
+#define tree x,int l,int r
+#define M int mid=l+r>>1
+#define LL long long
+const int MaxN=100010;
+const int MaxL=2500010;
+int H[MaxN],E[MaxN],X[MaxN],co=0;
+int st[MaxN],ed[MaxN],dep[MaxN],tt=0;
+int f[MaxN][17];
+int n,King;
+int root[MaxN];
+inline void add(int x,int y){
+	E[++co]=y,X[co]=H[x],H[x]=co;
+}
+void dfs(int x,int p){
+	dep[x]=dep[f[x][0]]+1;
+	st[x]=++tt;
+	for(p=H[x];p;p=X[p])if(E[p]!=f[x][0])dfs(E[p],0);
+	ed[x]=tt;
+}
+int L[MaxL],R[MaxL],sum[MaxL],tot=0;
+inline int node(int s,int l,int r){
+	sum[++tot]=s,L[tot]=l,R[tot]=r;
+	return tot;
+}
+int ins(int tree,int _l,int _r){
+	if(l==_l&&r==_r)return node(sum[x]+1,L[x],R[x]); M;
+	if(_l>mid)return node(sum[x],L[x],ins(R[x],mid+1,r,_l,_r));else
+	if(_r<=mid)return node(sum[x],ins(L[x],l,mid,_l,_r),R[x]);else
+		return node(sum[x],ins(L[x],l,mid,_l,mid),ins(R[x],mid+1,r,mid+1,_r));
+}
+inline int lca(int x,int y){
+	if(dep[x]<dep[y])swap(x,y);
+	int d=dep[x]-dep[y];
+	for(int i=0;d;d>>=1,++i)if(d&1)x=f[x][i];
+	if(x==y)return x;
+	_rep(i,16,0)if(f[x][i]!=f[y][i])x=f[x][i],y=f[y][i];
+	return f[x][0];
+}
+int Gsum(int tree,int y){
+	if(!x||!y)return 0;
+	if(l==r)return sum[x]; M;
+	if(y>mid)return Gsum(R[x],mid+1,r,y)+sum[x];
+		else return Gsum(L[x],l,mid,y)+sum[x];
+}
+inline int query(int x,int y,int s,int t){
+	return Gsum(root[s],1,n,st[x])-Gsum(root[s],1,n,st[y])
+			-Gsum(root[t],1,n,st[x])+Gsum(root[t],1,n,st[y]);
+}
+int D[MaxN];
+int main(){
+	scanf("%d",&n);
+	rep(i,1,n){
+		scanf("%d",&f[i][0]);
+		add(f[i][0],i);
+		if(!f[i][0])King=i;
+	}
+	
+	dfs(King,0);
+	rep(i,1,16)
+		rep(j,1,n)f[j][i]=f[f[j][i-1]][i-1];
+	int T,t,x,A,B,C,K,Y;
+	scanf("%d",&T);
+	rep(i,1,T){
+		scanf("%d",&t);
+		root[i]=root[i-1];
+		if(t==1){
+			scanf("%d",&x);
+			root[i]=ins(root[i],1,n,st[x],ed[x]);
+			D[x]=i;
+		}else{
+			scanf("%d%d%d%d",&A,&B,&K,&Y);
+			int _A=A,_B=B;
+			C=lca(A,B);
+			int cnt_AC=(dep[A]-dep[C]+1)-query(A,f[C][0],i,Y);
+			int cnt_BC=(dep[B]-dep[C])-query(B,C,i,Y);
+			if(D[A]<=Y)++K;
+			if(cnt_AC+cnt_BC<K){puts("-1");continue;}
+			if(cnt_AC<K)A=B,K=cnt_AC+cnt_BC-K+1;
+			_rep(j,16,0){
+				B=f[A][j];
+				int cnt=(dep[A]-dep[B])-query(A,B,i,Y);
+				if(cnt<K)K-=cnt,A=B;
+			}
+			if(A==_A||A==_B)puts("-1");else printf("%d\n",A);
+		}
+	}
+	return 0;
+}

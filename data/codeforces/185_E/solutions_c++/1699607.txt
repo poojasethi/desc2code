@@ -1,0 +1,220 @@
+#include <map>
+#include <set>
+#include <cmath>
+#include <ctime>
+#include <queue>
+#include <cstdio>
+#include <vector>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+typedef long long LL;
+const int maxn = 100005, maxm = 100005, MAXN = maxn + maxm, INF = 0x3f3f3f3f; 
+int n, m, tot, dis[maxn], idx[maxn];
+
+struct Point {
+	int x, y;
+	void init(int _x, int _y) {
+		x = _x;	y = _y;
+	}
+} PP[maxn], PS[maxm];
+
+struct Event {
+	int x, y, id;
+	void init(int _x, int _y, int _id) {
+		x = _x;	y = _y;	id = _id;
+	}
+	void rotate() {
+		int t = y;	y = x;	x = -t;
+	}
+} ebuff[MAXN];
+vector<Event> event;
+
+bool cmp(const Event &e1, const Event &e2) {
+	if (e1.y != e2.y) return e1.y < e2.y;
+	return e1.id < e2.id;
+}
+bool cmpDis(const int &a, const int &b) {
+	return dis[a] > dis[b];
+}
+
+vector<int> ptsX;
+struct EventSegmentTree {
+	int mn[MAXN << 2], root, segL, segR;
+	void init(int _segL, int _segR) {
+		root = 1;
+		segL = _segL;	segR = _segR;
+		memset(mn, 63, sizeof(mn));
+	}
+	void update(int p, int val) { update(root, segL, segR, p, val); }
+	void update(int rt, int rtl, int rtr, int p, int val) {
+		if (rtl == rtr) 
+			mn[rt] = min(mn[rt], val);
+		else {
+			int mid = (rtl + rtr) >> 1;
+			if (p <= ptsX[mid]) update(rt << 1, rtl, mid, p, val);
+			else update(rt << 1 | 1, mid + 1, rtr, p, val);
+			mn[rt] = min(mn[rt], min(mn[rt << 1], mn[rt << 1 | 1]));
+		}
+	}
+	int query(int l, int r) { return query(root, segL, segR, l, r); }
+	int query(int rt, int rtl, int rtr, int l, int r) {
+		if (l <= ptsX[rtl] && r >= ptsX[rtr])
+			return mn[rt];
+		int ret = INF, mid = (rtl + rtr) >> 1;
+		if (l <= ptsX[mid]) ret = min(ret, query(rt << 1, rtl, mid, l, r));
+		if (r > ptsX[mid]) ret = min(ret, query(rt << 1 | 1, mid + 1, rtr, l, r));
+		return ret;
+	}
+} est;
+
+int Manhaton(int tot = event.size()) {
+	ptsX.clear();
+	for (int i = 0; i < tot; i++)
+		ptsX.push_back(event[i].x);
+	sort(ptsX.begin(), ptsX.end());
+	ptsX.erase(unique(ptsX.begin(), ptsX.end()), ptsX.end());
+	est.init(0, ptsX.size() - 1);
+	sort(event.begin(), event.end(), cmp);
+	for (int i = 0; i < tot; i++)
+	if (event[i].id == -1) {
+//printf("Update: %d %d %d\n", event[i].id, event[i].x, -event[i].x - event[i].y);
+		est.update(event[i].x, -(event[i].x + event[i].y));
+	} else {
+		int tmp = est.query(-INF, event[i].x);
+//printf("Query: %d %d %d\n", event[i].id, event[i].x, tmp);
+		dis[event[i].id] = min(dis[event[i].id], event[i].x + event[i].y + tmp);
+	}
+}
+
+struct SegmentTree {
+	int root, segL, segR;
+	set<int> setY[maxn << 2];
+	void init(int _segL, int _segR) {
+		root = 1;
+		segL = _segL;	segR = _segR;
+		for (int i = 0, _i = maxn << 2; i < _i; i++)
+			setY[i].clear();		// can ommitted
+	}
+	void update(int x, int y) { update(root, segL, segR, x, y); }
+	void update(int rt, int rtl, int rtr, int x, int y) {
+//printf("update0: %d %d %d\n", rt, x, y);
+		if (x >= ptsX[rtl] && x <= ptsX[rtr]) 	//wrong
+			setY[rt].insert(y);
+		else
+			return;
+		if (rtl == rtr) return;
+		int mid = (rtl + rtr) >> 1;
+		update(rt << 1, rtl, mid, x, y);
+		update(rt << 1 | 1, mid + 1, rtr, x, y);
+	}
+	int query(int xL, int xR, int yL, int yR) {
+		return query(root, segL, segR, xL, xR, yL, yR);
+	}
+	int query(int rt, int rtl, int rtr, int xL, int xR, int yL, int yR) {
+		if (xL <= ptsX[rtl] && xR >= ptsX[rtr]) {
+			set<int>::iterator it = setY[rt].lower_bound(yL);
+			if (it == setY[rt].end() || *it > yR) return 0;
+			return 1;
+		}
+		if (rtl == rtr) return 0;
+		if (ptsX[rtl] > xR || ptsX[rtr] < xL) return 0;	//3
+		int mid = (rtl + rtr) >> 1;
+		int	ret = query(rt << 1, rtl, mid, xL, xR, yL, yR)
+				|  query(rt << 1 | 1, mid + 1, rtr, xL, xR, yL, yR);
+		//这里条件老搞错，干脆这里就不判了，用3来判
+		return ret;
+
+	}
+} ST;
+
+
+inline bool check0(int limit)
+{
+    int xl=-INF,xr=INF,yl=-INF,yr=INF;
+    for (int i=0;i<n;++i){
+        int u=idx[i];
+        xl=max(xl,PP[u].x+PP[u].y-limit);
+        xr=min(xr,PP[u].x+PP[u].y+limit);
+        yl=max(yl,PP[u].x-PP[u].y-limit);
+        yr=min(yr,PP[u].x-PP[u].y+limit);
+        
+        if (xl>xr) return false;
+        if (yl>yr) return false;
+        
+        if (i+1==n) return true;
+        
+        if (dis[idx[i+1]]<=limit){
+            int delta=limit-dis[idx[i+1]];
+            if (ST.query(xl-delta,xr+delta,yl-delta,yr+delta)) return true;
+        }
+    }
+    return false;
+}
+//*/
+int check(int limit) {
+	int x1 = -INF, y1 = -INF, x2 = INF, y2 = INF;
+	for (int i = 0; i < n; i++) {
+		int u = idx[i];
+		if (dis[u] <= limit) {
+			int remain = limit - dis[u];
+			bool flag = ST.query(x1 - remain, x2 + remain, y1 - remain, y2 + remain);
+			if (flag) return 1;
+		}
+		int curx = PP[u].x, cury = PP[u].y;
+		x1 = max(x1, curx + cury - limit);
+		x2 = min(x2, curx + cury + limit);
+		y1 = max(y1, curx - cury - limit);
+		y2 = min(y2, curx - cury + limit);
+		if (x1 > x2 || y1 > y2) return 0;
+	}
+	return 1;
+}
+
+int main() {
+//freopen("in1", "r", stdin);
+	scanf("%d %d", &n, &m);
+	tot = 0;
+	for (int i = 0, px, py; i < n; i++) {
+		scanf("%d %d", &px, &py);
+		ebuff[tot].init(px, py, i);
+		event.push_back(ebuff[tot++]);
+		PP[i].init(px, py);
+	}
+	for (int i = 0, px, py; i < m; i++) {
+		scanf("%d %d", &px, &py);
+		ebuff[tot].init(px, py, -1);
+		event.push_back(ebuff[tot++]);
+		PS[i].init(px, py);
+	}
+	memset(dis, 63, sizeof(dis));
+	for (int count = 0; count < 4; count++) {
+		Manhaton();
+//for (int i = 0; i < n; i++)
+//	printf("%d %c", dis[i], i == n - 1 ? '\n' : ' ');
+		event.clear();
+		for (int i = 0; i < tot; i++)
+			ebuff[i].rotate(), event.push_back(ebuff[i]);
+	}
+
+	ptsX.clear();
+	for (int i = 0; i < m; i++)
+		ptsX.push_back(PS[i].x + PS[i].y);
+	sort(ptsX.begin(), ptsX.end());
+	ptsX.erase(unique(ptsX.begin(), ptsX.end()), ptsX.end());
+	ST.init(0, ptsX.size() - 1);
+	for (int i = 0; i < m; i++)
+		ST.update(PS[i].x + PS[i].y, PS[i].x - PS[i].y);
+
+	for (int i = 0; i < n; i++) idx[i] = i;
+	sort(idx, idx + n, cmpDis);
+	int ll = 0, rr = dis[idx[0]], mid;
+	while (ll < rr) {
+		mid = (ll + rr) >> 1;
+		if (check(mid)) rr = mid;
+		else ll = mid + 1;
+	}
+	printf("%d\n", ll);
+}

@@ -1,0 +1,301 @@
+#include<cstdio>
+#include<algorithm>
+#include<ctime>
+#include<cstdlib>
+
+#define MAXX 500111
+
+int pre[MAXX],fa[MAXX],nxt[MAXX][2],val[MAXX];
+int to[MAXX];
+
+inline int gcd(int a,int b)
+{
+    static int r;
+    a=abs(a);
+    b=abs(b);
+    while(a)
+    {
+        r=b;
+        b=a;
+        a=r%a;
+    }
+    return b;
+}
+
+class node
+{
+    public:
+    int val[2],suf;
+    void up(int the)
+    {
+        val[0]+=the;
+        val[1]+=the;
+    }
+    inline int gcd()
+    {
+        return ::gcd(val[0],suf);
+    }
+}st[MAXX];
+
+inline node operator+(const node &l,const node &r)
+{
+    static node re;
+    re.val[0]=l.val[0];
+    re.val[1]=r.val[1];
+    re.suf=gcd(l.suf,gcd(r.val[0]-l.val[1],r.suf));
+    return re;
+}
+
+inline void up(int id)
+{
+    st[id].val[0]=st[id].val[1]=val[id];
+    st[id].suf=0;
+    if(nxt[id][0])
+        st[id]=st[nxt[id][0]]+st[id];
+    if(nxt[id][1])
+        st[id]=st[id]+st[nxt[id][1]];
+}
+
+inline void down(int id)
+{
+    if(to[id])
+    {
+        static int i;
+        for(i=0;i<2;++i)
+            if(nxt[id][i])
+            {
+                st[nxt[id][i]].up(to[id]);
+                val[nxt[id][i]]+=to[id];
+                to[nxt[id][i]]+=to[id];
+            }
+        to[id]=0;
+    }
+}
+
+inline void rot(int id,int tp)
+{
+    static int k;
+    k=pre[id];
+    nxt[k][tp^1]=nxt[id][tp];
+    if(nxt[id][tp])
+        pre[nxt[id][tp]]=k;
+    if(pre[k])
+        nxt[pre[k]][k==nxt[pre[k]][1]]=id;
+    pre[id]=pre[k];
+    nxt[id][tp]=k;
+    pre[k]=id;
+    up(k);
+    up(id);
+}
+
+int freshen(int id)
+{
+    int re(id);
+    if(pre[id])
+        re=freshen(pre[id]);
+    down(id);
+    return re;
+}
+
+inline void splay(int id)
+{
+    static int rt,k;
+    rt=freshen(id);
+    if(id!=rt)
+    {
+        std::swap(fa[id],fa[rt]);
+        do
+        {
+            rt=pre[id];
+            if(pre[rt])
+            {
+                k=(nxt[pre[rt]][0]==rt);
+                if(nxt[rt][k]==id)
+                {
+                    rot(id,k^1);
+                    rot(id,k);
+                }
+                else
+                {
+                    rot(rt,k);
+                    rot(id,k);
+                }
+            }
+            else
+                rot(id,id==nxt[rt][0]);
+        }while(pre[id]);
+    }
+}
+
+/*
+inline void splay(int id,int fa)
+{
+    freshen(id);
+    while(pre[id]!=fa)
+        rot(id,id==nxt[pre[id]][0]);
+}
+*/
+
+inline int access(int id)
+{
+    static int to;
+    for(to=0;id;id=fa[id])
+    {
+        splay(id);
+        if(nxt[id][1])
+        {
+            pre[nxt[id][1]]=0;
+            fa[nxt[id][1]]=id;
+        }
+        nxt[id][1]=to;
+        if(to)
+        {
+            pre[to]=id;
+            fa[to]=0;
+        }
+        up(to=id);
+    }
+    return to;
+}
+
+#define N 20
+int p[MAXX][N];
+int dp[MAXX];
+
+inline int lca(int a,int b)
+{
+    static int i,j;//,ta,tb,xa,xb;
+    /*
+    xa=a;
+    xb=b;
+    */
+    if(dp[a]<dp[b])
+        std::swap(a,b);
+    for(j=0,i=dp[a]-dp[b];i;i>>=1,++j)
+        if(i&1)
+            a=p[a][j];
+    if(a==b)
+        return a;
+    for(i=N-1;i>=0;--i)
+        if(p[a][i]!=p[b][i])
+        {
+            a=p[a][i];
+            b=p[b][i];
+        }
+//    ta=p[a][0];
+    return p[a][0];
+    /*
+    a=xa;
+    b=xb;
+    access(a);
+    access(b);
+    splay(a);
+    tb=fa[a]?fa[a]:a;
+    if(ta!=tb)
+        puts("@#%@#%");
+    return fa[a]?fa[a]:a;
+    */
+    /*
+    print(access(a));
+    puts("");
+    print(access(b));
+    puts("");
+    printf("a: %d %d\n",a,fa[a]);
+    */
+}
+
+#define MAXE (MAXX<<1)
+
+int edge[MAXX],too[MAXE],next[MAXE],cnt;
+
+inline void add(int a,int b)
+{
+    next[++cnt]=edge[a];
+    edge[a]=cnt;
+    too[cnt]=b;
+}
+
+void dfs(int now,int fa)
+{
+    ::fa[now]=fa;
+    dp[now]=dp[fa]+1;
+    up(now);
+    for(int i(edge[now]);i;i=next[i])
+        if(too[i]!=fa)
+        {
+            static int j;
+            for(j=1,p[too[i]][0]=now;j<N;++j)
+                p[too[i]][j]=p[p[too[i]][j-1]][j-1];
+            dfs(too[i],now);
+        }
+}
+
+int n,i,j,k,c,d,ans;
+char buf[11];
+
+int main()
+{
+    scanf("%d",&n);
+    for(i=1;i<n;++i)
+    {
+        scanf("%d %d",&j,&k);
+        ++j;
+        ++k;
+        add(j,k);
+        add(k,j);
+    }
+    for(i=1;i<=n;++i)
+        scanf("%d",val+i);
+    srand(time(NULL));
+    dfs(rand()%n+1,0);
+//    dfs(n-1,0);
+    scanf("%d",&n);
+    while(n--)
+    {
+        scanf("%s %d %d",buf,&i,&j);
+        ++i;
+        ++j;
+        splay(c=lca(i,j));
+//        printf("%d %d %d\n",i-1,j-1,c-1);
+        if(buf[0]=='F')
+        {
+            ans=val[c];
+            access(i);
+            splay(c);
+            if(nxt[c][1])
+                ans=gcd(ans,st[nxt[c][1]].gcd());
+            access(j);
+            splay(c);
+            if(nxt[c][1])
+                ans=gcd(ans,st[nxt[c][1]].gcd());
+            printf("%d\n",ans);
+        }
+        else
+        {
+            scanf("%d",&d);
+            access(i);
+            splay(c);
+            k=nxt[c][1];
+            if(k)
+            {
+                st[k].up(d);
+                val[k]+=d;
+                to[k]+=d;
+            }
+
+            access(j);
+            splay(c);
+            k=nxt[c][1];
+            if(k)
+            {
+                st[k].up(d);
+                val[k]+=d;
+                to[k]+=d;
+            }
+
+            val[c]+=d;
+            up(c);
+        }
+    }
+    return 0;
+}

@@ -1,0 +1,120 @@
+#include<stdio.h>
+#include<iostream>
+#include<vector>
+#include<algorithm>
+#include<assert.h>
+#define pii pair<int,int>
+#define IN(A, B, C)  ((B) <= (A) && (A) <= (C))
+#define AIN(A, B, C) assert(IN(A, B, C))
+
+using namespace std;
+const int maxn=100001;
+bool visit[maxn];
+int a[maxn];
+vector<int>primes,Z;
+vector<int>v[maxn],numlist[maxn];
+int interval[maxn][2];
+int n,m;
+pii ans,temp[2400005];
+void sieve(){
+    int i,j;
+    for(i=2;i<=100000;i++){
+            if(!visit[i])
+        for(j=i;j<=100000;j+=i){
+            v[j].push_back(i);
+            visit[j]=true;
+        }
+    }
+}
+
+void factorize(){
+    int i;
+    for(i=2;i<100001;i++){
+            int x=i;
+        for(int j=0;primes[j]*primes[j]<=i;j++){
+            if(x%primes[j]==0){
+                        v[i].push_back(primes[j]);
+                while(x%primes[j]==0){
+                    x/=primes[j];
+                }
+            }
+        }
+        if(x>1){
+            v[i].push_back(x);
+        }
+    }
+}
+pii build(int at, int L, int R)
+{
+	if(L == R)
+	{
+		temp[at] = pii(a[Z[L]], 1);
+		return temp[at];
+	}
+
+	int mid = (L + R) / 2;
+	pii A = build(at * 2, L, mid);
+	pii B = build(at * 2 + 1, mid + 1, R);
+
+	if(A.first > B.first) temp[at] = A;
+	else if(B.first > A.first) temp[at] = B;
+	else temp[at] = pii(A.first, A.second + B.second);
+
+	return temp[at];
+}
+pii query(int at, int L, int R, int l, int r)
+{
+	if(r < L || R < l) return pii(-1, -1);
+	if(l <= L && R <= r) return temp[at];
+
+	int mid = (L + R) / 2;
+	pii A = query(at * 2, L, mid, l, r);
+	pii B = query(at * 2 + 1, mid + 1, R, l, r);
+
+	if(A.first == -1) return B;
+	if(B.first == -1) return A;
+
+	if(A.first > B.first) return A;
+	if(B.first > A.first) return B;
+
+	return pii(A.first, A.second + B.second);
+}
+
+int main(){
+    //freopen("input.txt","r",stdin);
+sieve();
+//factorize();
+scanf("%d%d",&n,&m);
+int i;
+for(i=0;i<n;i++){
+    scanf("%d",&a[i]);
+    for(int j=0;j<v[a[i]].size();j++) numlist[v[a[i]][j]].push_back(i);
+}
+for(i=2;i<=100000;i++){
+    interval[i][0]=Z.size();
+    for(int j=0;j<numlist[i].size();j++) Z.push_back(numlist[i][j]);
+    interval[i][1]=Z.size()-1;
+}
+build(1,0,Z.size()-1);
+/*for(i=1;i<=10;i++){
+    cout<<i<<"="<<temp[i].first<<" "<<temp[i].second<<endl<<endl;
+}*/
+for(i=0;i<m;i++){
+    int g,x,y;
+    scanf("%d%d%d",&g,&x,&y);
+    x--; y--;
+     ans=pii(-1,-1);
+    for(int j=0;j<v[g].size();j++){
+            if(interval[v[g][j]][0]>interval[v[g][j]][1]) continue;
+        int l=lower_bound(numlist[v[g][j]].begin(),numlist[v[g][j]].end(),x)-numlist[v[g][j]].begin();
+        int r=upper_bound(numlist[v[g][j]].begin(),numlist[v[g][j]].end(),y)-numlist[v[g][j]].begin();
+        l+=interval[v[g][j]][0],r+=interval[v[g][j]][0];
+        //cout<<v[g][j]<<" "<<l<<" "<<r<<endl;
+        if(l>r-1) continue;
+        pii res=query(1,0,Z.size()-1,l,r-1);
+        if(res.first>ans.first) ans=res;
+    }
+    printf("%d %d\n",ans.first,ans.second);
+}
+return 0;
+}

@@ -1,0 +1,191 @@
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <ctime>
+#include <iostream>
+#include <map>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <string>
+using namespace std;
+
+typedef long long LL;
+
+#define RI(x) int x; scanf("%i", &x)
+#define RS(x) int x; scanf("%s", &x)
+#define RL(x) string x; getline(cin,x);
+#define ALL(x) x.begin(), x.end()
+
+#define FOR(i,a,b) for(int i=(a), _b=(b); i<_b; ++i)
+
+
+
+class BitArray {
+  public:
+	static const int k = 4; //Must be >= 1 and <= 64.
+
+	// Sets value of index i to v.
+	static long long set(long long s, int i, long long v) {
+	  // Set bits for index i to 0.
+	  long long mask = ~(((1LL << k)-1) << (i*k));
+	  s = s & mask;
+	  // Set bits for index i to v.
+	  mask = v << (i*k);
+	  return s | mask;
+	}
+
+	// RETURNS: Value of index i.
+	static long long get(long long s, int i) {
+	    long long mask = ((1LL << k)-1) << (i*k);
+	    return (s & mask) >> (i*k);
+	}
+
+	// Swap values of indices i and j.
+	static long long swap(long long s, int i, int j) {
+		long long temp = get(s,i);
+		s = set(s,i,get(s,j));
+		return set(s,j,temp);
+	}
+
+	static string toString(long long s) {
+	  stringstream ss;
+	  ss << "(";
+	  for(int i = 0; i < 64/k; ++i) {
+		  ss << get(s,i);
+		  if(i+1 < 64/k) ss << ",";
+	  }
+	  ss << ")";
+	  return ss.str();
+	}
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+typedef long long State;
+typedef int Cost;
+
+bool isGoal(const State &s) {
+	return false;
+}
+
+static int dr[] = {1,0};
+static int dc[] = {0,1};
+void getSuccs(const State &s, vector<State> &succs, vector<Cost> &costs) {
+	if(!isGoal(s)) {
+		FOR(r,0,3) FOR(c,0,3) FOR(i,0,2) {
+			int nr = r+dr[i];
+			int nc = c+dc[i];
+			if(nr >= 0 && nr < 3 && nc >= 0 && nc < 3) {
+				int j = 3*r+c;
+				int nj = 3*nr+nc;
+				LL curr = BitArray::get(s,j)+BitArray::get(s,nj);
+				if((curr&1)==1 && curr != 9 && curr != 15) {
+					State newS = BitArray::swap(s,j,nj);
+					succs.push_back(newS);
+				}
+			}
+		}
+	}
+}
+
+struct StateComparator {
+  public:
+    bool operator()(const State &s, const State &t) const {
+    	return s < t;
+    }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//RETURNS: Cost of path from start to a goal state or INF if no such path exists.
+const Cost INF = 1000000000;
+map<State,Cost,StateComparator> costsFromStart;
+//map<State,State,StateComparator> prev;
+//vector<State> path;
+//Cost maxCost = -1;
+
+Cost bfs(State start) {
+	queue<State> q;
+	q.push(start);
+	costsFromStart[start] = 0;
+	while(!q.empty()) {
+		const State& curr = q.front();
+		//cout << BitArray::toString(curr) << " " << costsFromStart[curr] << endl;
+		//sleep(1000);
+		if(isGoal(curr)) {
+			//path = makePath(curr,prev);
+			return costsFromStart[curr];
+		}
+		const Cost& currCost = costsFromStart[curr];
+		vector<State> succs;
+		vector<Cost> costs;
+		getSuccs(curr,succs,costs);
+		for(unsigned int i = 0; i < succs.size(); ++i) {
+			const State& succ = succs[i];
+			if(costsFromStart.count(succ) == 0) {
+				q.push(succ);
+				//prev[succ] = curr;
+				costsFromStart[succ] = currCost+1;
+			}
+		}
+		q.pop();
+		//if(q.empty()) maxCost = currCost;
+	}
+	return INF;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+int main() {
+	State goal = 0;
+	FOR(i,0,9) {
+		goal = BitArray::set(goal,i,i+1);
+	}
+	bfs(goal);
+	RI(t);
+	FOR(test,0,t) {
+		State start = 0;
+		FOR(i,0,9) {
+			RI(c);
+			start = BitArray::set(start,i,c);
+		}
+		if(costsFromStart.count(start) == 0) printf("-1\n");
+		else printf("%i\n",costsFromStart[start]);
+	}
+	return 0;
+}

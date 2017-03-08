@@ -1,0 +1,73 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#define i64 long long
+using namespace std;
+
+const int N = 2e5 + 10;
+int n, m, tot, p[N], dep[N], fa[N][20], r[N];
+i64 ls[N][20], ans;
+
+struct edge {i64 t, l, n;} e[N * 2];
+struct awn {i64 u, v, l;} fe[N], se[N];
+
+void add(int x, int y, i64 z) {
+	e[++tot].t = y; e[tot].l = z; e[tot].n = r[x]; r[x] = tot;
+}
+
+bool cmp(awn x, awn y) {return x.l < y.l;}
+
+int gf(int x) {
+	if (p[x] != x) p[x] = gf(p[x]);
+	return p[x];
+}
+
+void dfs(int u) {
+	for (int i = r[u]; i; i = e[i].n) {
+		int v = e[i].t;
+		if (v == fa[u][0]) continue;
+		dep[v] = dep[u] + 1;
+		fa[v][0] = u;
+		ls[v][0] = e[i].l;
+		dfs(v);
+	}
+}
+
+void work() {
+	for (int i = 1; i <= 18; i++) 
+		for (int j = 1; j <= n; j++) fa[j][i] = fa[fa[j][i - 1]][i - 1], ls[j][i] = max(ls[j][i - 1], ls[fa[j][i - 1]][i - 1]);
+	for (int k = 1; k <= m; k++) {
+		int u = fe[k].u, v = fe[k].v;
+		i64 l = 0;
+		if (dep[u] < dep[v]) swap(u, v);
+		for (int i = 18; i >= 0; i--) if (dep[fa[u][i]] >= dep[v]) l = max(l, ls[u][i]), u = fa[u][i];
+		for (int i = 18; i >= 0; i--) if (fa[u][i] != fa[v][i]) l = max(l, max(ls[u][i], ls[v][i])), u = fa[u][i], v = fa[v][i];
+		if (u != v) l = max(l, max(ls[u][0], ls[v][0]));
+		printf("%I64d\n", ans - l + fe[k].l);
+	}
+}
+
+int main() {
+
+	scanf("%d %d", &n, &m);
+	for (int i = 1; i <= m; i++) {
+		scanf("%lld %lld %lld", &fe[i].u, &fe[i].v, &fe[i].l);
+		se[i].u = fe[i].u; se[i].v = fe[i].v; se[i].l = fe[i].l;
+	}
+	sort(se + 1, se + m + 1, cmp);
+	for (int i = 1; i <= n; i++) p[i] = i;
+	for (int i = 1; i <= m; i++) {
+		int f1 = gf(se[i].u), f2 = gf(se[i].v);
+		if (f1 != f2) {
+			add(se[i].u, se[i].v, se[i].l);
+			add(se[i].v, se[i].u, se[i].l);
+			p[f1] = f2;
+			ans += se[i].l;
+		}
+	}
+	dfs(1);
+	work();
+	fclose(stdin);
+	fclose(stdout);
+	return 0;
+}

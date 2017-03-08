@@ -1,0 +1,151 @@
+#include <iostream>
+#include <vector>
+#include <cstdio>
+
+using namespace std;
+
+typedef long long int ll;
+
+const int limite=500005;
+
+struct elem {
+  int t0,c0,insercion0,next0;
+  ll val;
+  int tval,cval,insercionval,nextval;
+  elem() {
+    t0=insercion0=next0=0;
+    val=tval=insercionval=nextval=0;
+  }
+};
+
+struct conjunto {
+  int first,last,numelems,t0;
+  vector<pair<int,ll> > acum;
+  conjunto() {
+    numelems=1;t0=0;
+    acum.push_back(pair<int,int> (0,0));
+  }
+};
+
+int n,m;
+elem ve[limite];
+conjunto vc0[limite];
+conjunto vc[limite];
+int i2c0[limite];
+int i2c[limite];
+
+void actualizat0(int ie)
+{
+  if (ve[ie].insercion0<=vc0[ve[ie].c0].t0) ve[ie].t0=vc0[ve[ie].c0].t0;
+}
+
+int fusion0(int a,int b,int t)
+{
+  if (vc0[a].numelems<vc0[b].numelems) return fusion0(b,a,t);
+  ve[vc0[a].last].next0=vc0[b].first;
+  vc0[a].last=vc0[b].last;
+  vc0[a].numelems+=vc0[b].numelems;
+  for (int ind=vc0[b].first;ind!=0;ind=ve[ind].next0) {
+    actualizat0(ind);
+    ve[ind].c0=a;
+    ve[ind].insercion0=t;
+  }
+  return a;
+}
+
+ll acum(ll ic,ll t)
+{
+  vector<pair<int,ll> > &v=vc[ic].acum;
+  int inf=0;
+  int sup=int(v.size());
+  //cout<<"acum "<<inf<<" "<<sup<<endl;
+  while (inf+1<sup) {
+    int med=(inf+sup)/2;
+    if (v[med].first<t) inf=med;
+    else sup=med;
+  }
+  //cout<<"inf "<<inf<<endl;
+  return v.back().second-v[inf].second;
+}
+
+void actualizaval(int ie)
+{
+  //cout<<"actualizaval "<<ie<<endl;
+  actualizat0(ie);
+  if (ve[ie].tval<=ve[ie].t0) {
+    ve[ie].val=0;
+    ve[ie].tval=ve[ie].t0;
+  }
+  if (ve[ie].tval<=ve[ie].insercionval)
+    ve[ie].tval=ve[ie].insercionval;
+  ve[ie].val+=acum(ve[ie].cval,ve[ie].tval+1);
+  ve[ie].tval=max(ve[ie].tval,vc[ve[ie].cval].acum.back().first);
+}
+
+int fusion(int a,int b,int t)
+{
+  if (vc[a].numelems<vc[b].numelems) return fusion(b,a,t);
+  ve[vc[a].last].nextval=vc[b].first;
+  vc[a].last=vc[b].last;
+  vc[a].numelems+=vc[b].numelems;
+  for (int ind=vc[b].first;ind!=0;ind=ve[ind].nextval) {
+    actualizaval(ind);
+    ve[ind].cval=a;
+    ve[ind].insercionval=t;
+  }
+  return a;
+}
+
+
+int main()
+{
+  //ios::sync_with_stdio(false);
+  //cin>>n>>m;
+  scanf("%d %d",&n,&m);
+  for (int i=1;i<=n;i++) {
+    ve[i].c0=i;
+    ve[i].cval=i;
+  }
+  for (int i=1;i<=n;i++) {
+    vc0[i].first=vc0[i].last=i;
+    i2c0[i]=i;
+    vc[i].first=vc[i].last=i;
+    i2c[i]=i;
+  }
+  for (int t=1;t<=m;t++) {
+    char q;
+    //cin>>q;
+    scanf(" %c",&q);
+    //cout<<q<<endl;
+    if (q=='Z') {
+      int ind;
+      //cin>>ind;
+      scanf("%d",&ind);
+      ind=i2c0[ind];
+      vc0[ind].t0=t;
+    } else if (q=='M') {
+      int a,b;
+      //cin>>a>>b;
+      scanf("%d %d",&a,&b);
+      i2c0[a]=fusion0(i2c0[a],i2c0[b],t);
+    } else if (q=='A') {
+      int ind;
+      //cin>>ind;
+      scanf("%d",&ind);
+      ind=i2c[ind];
+      vc[ind].acum.push_back(pair<int,ll> (t,vc[ind].acum.back().second+vc[ind].numelems));
+    } else if (q=='U') {
+      int a,b;
+      //cin>>a>>b;
+      scanf("%d %d",&a,&b);
+      i2c[a]=fusion(i2c[a],i2c[b],t);
+    } else if (q=='Q') {
+      int ind;
+      //cin>>ind;
+      scanf("%d",&ind);
+      actualizaval(ind);
+      //cout<<ve[ind].val<<endl;
+      printf("%I64d\n",ve[ind].val);
+    }
+  }
+}

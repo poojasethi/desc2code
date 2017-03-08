@@ -1,0 +1,220 @@
+program monoploy;
+type link=^node;
+     node=record
+       l,r,fat:link;
+       bk:Longint;
+     end;
+     l2=^node2;
+     node2=record
+       next:l2;
+       t:Longint;
+     end;
+     l3=^node3;
+     node3=record
+       l,r:l3;
+       x,y,m,a:Longint;
+       all:int64;
+     end;
+
+var tree:array[0..200000]of link;
+    con:array[-1..200000]of l2;
+    fat,size,deep,l,r,cont:array[-1..200000]of longint;
+    visit:array[1..200000]of boolean;
+    n,m,q,i,j,t,t1,t2,time:Longint;
+    ch:char;
+    tem,now,tem2:link;
+    trs:l3;
+procedure ins(a,b:Longint);
+var tt:l2;
+begin
+  new(tt);
+  tt^.t:=b;
+  tt^.next:=con[a];
+  con[a]:=tt;
+end;
+procedure doit(k:Longint);
+var tt:L2;
+begin
+  //writeln(k-1);
+  inc(time);
+  l[k]:=time;
+  cont[time]:=k;
+  visit[k]:=true;
+  size[k]:=1;
+  tt:=con[k];
+  while tt<>nil do
+    begin
+      if visit[tt^.t]=false then
+        begin
+          deep[tt^.t]:=deep[k]+1;
+          fat[tt^.t]:=k;
+          doit(tt^.t);
+          size[k]:=size[k]+size[tt^.t];
+        end;
+      tt:=tt^.next;
+    end;
+  r[k]:=time;
+end;
+procedure rightr(x:Link);
+begin
+  x^.fat^.l:=x^.r;
+  if x^.r<>nil then x^.r^.fat:=x^.fat;
+  x^.r:=x^.fat;
+  x^.fat:=x^.fat^.fat;
+  x^.r^.fat:=x;
+  if x^.fat<>nil then
+    begin
+      if x^.r=x^.fat^.l then x^.fat^.l:=x
+        else x^.fat^.r:=x;
+    end;
+end;
+procedure leftr(x:Link);
+begin
+  x^.fat^.r:=x^.l;
+  if x^.l<>nil then x^.l^.fat:=x^.fat;
+  x^.l:=x^.fat;
+  x^.fat:=x^.fat^.fat;
+  x^.l^.fat:=x;
+  if x^.fat<>nil then
+    begin
+      if x^.l=x^.fat^.l then x^.fat^.l:=x
+        else x^.fat^.r:=x;
+    end;
+end;
+function splay(x:link):Link;
+var p:link;
+begin
+  splay:=x;
+  if x=nil then exit;
+  while splay^.fat<>nil do
+    begin
+      p:=splay^.fat;
+      if p^.fat=nil then
+        begin
+          if splay=p^.l then rightr(splay)
+            else leftr(splay);
+        end
+      else
+        begin
+          if p=p^.fat^.l then
+            begin
+              if splay=p^.l then rightr(p)
+                else leftr(splay);
+              rightr(splay);
+            end
+          else
+            begin
+              if splay=p^.l then rightr(splay)
+                else leftr(p);
+              leftr(splay);
+            end;
+        end;
+    end;
+end;
+function getleft(x:Link):Link;
+begin
+  getleft:=x;
+  if x=nil then exit;
+  while getleft^.l<>nil do
+    getleft:=getleft^.l;
+end;
+procedure buildtree(a,b:Longint;tree:l3);
+begin
+  tree^.x:=a;
+  tree^.y:=b;
+  tree^.m:=(a+b)shr 1;
+  tree^.a:=0;
+  if a=b then
+    begin
+      tree^.all:=deep[cont[a]];
+      exit;
+    end;
+  new(tree^.l);
+  new(tree^.r);
+  buildtree(a,tree^.m,tree^.l);
+  buildtree(tree^.m+1,b,tree^.r);
+  tree^.all:=tree^.l^.all+tree^.r^.all;
+end;
+procedure change(a,b,c:Longint;tree:l3);
+begin
+  //if tree=trs then writeln(a,' ',b,' ',c);
+  if(a>tree^.y)or(b<tree^.x)then exit;
+  if(a<=tree^.x)and(tree^.y<=b)then
+    begin
+      tree^.a:=tree^.a+c;
+      tree^.all:=tree^.all+c*(tree^.y-tree^.x+1);
+      exit;
+    end;
+  change(a,b,c,tree^.l);
+  change(a,b,c,tree^.r);
+  tree^.all:=tree^.l^.all+tree^.r^.all+int64(tree^.a)*(tree^.y-tree^.x+1);
+end;
+function getsum(a,b,c:Longint;tree:l3):int64;
+begin
+  if(a>tree^.y)or(b<tree^.x)then exit(0);
+  if(a<=tree^.x)and(tree^.y<=b)then exit(int64(c)*(tree^.y-tree^.x+1)+tree^.all);
+  getsum:=getsum(a,b,c+tree^.a,tree^.l)+getsum(a,b,c+tree^.a,tree^.r);
+end;
+begin
+  readln(t);
+  tree[0]:=nil;
+  for t:=1 to t do
+    begin
+      readln(n);
+      for i:=1 to n do
+        con[i]:=nil;
+      for i:=1 to n-1 do
+        begin
+          readln(t1,t2);
+          ins(t1+1,t2+1);
+          ins(t2+1,t1+1);
+        end;
+      deep[1]:=0;
+      fillchar(visit,sizeof(visit),false);
+      time:=0;
+      doit(1);
+      new(trs);
+      buildtree(1,n,trs);
+      for i:=1 to n do
+        begin
+          new(tree[i]);
+          with tree[i]^do
+            begin
+              l:=nil;
+              r:=nil;
+              fat:=nil;
+              bk:=i;
+            end;
+        end;
+      readln(q);
+      for i:=1 to q do
+        begin
+          //writeln(i);
+          readln(ch,t1);
+          inc(t1);
+          if ch='q'then writeln(getsum(l[t1],r[t1],0,trs)/size[t1]:0:9)
+          else
+            begin
+              tem:=nil;
+              now:=tree[t1];
+              while now<>nil do
+                begin
+                  splay(now);
+                  if now^.r<>nil then
+                    begin
+                      tem2:=getleft(now^.r);
+                      change(l[tem2^.bk],r[tem2^.bk],1,trs);
+                      now^.r^.fat:=nil;
+                      now^.r:=nil;
+                    end;
+                  tem2:=getleft(splay(tem));
+                  if tem2<>nil then change(l[tem2^.bk],r[tem2^.bk],-1,trs);
+                  now^.r:=tem;
+                  if tem<>nil then tem^.fat:=now;
+                  tem:=now;
+                  now:=tree[fat[getleft(now)^.bk]];
+                end;
+            end;
+        end;
+    end;
+end.

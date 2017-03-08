@@ -1,0 +1,181 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <cassert>
+#include <algorithm>
+
+//DS
+#include <string>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <set>
+#include <map>
+
+#define LL          long long int
+#define UL          unsigned long long int
+#define REP(i,n)    for(int i = 0; i < (n); i++)
+#define FOR(i,a,b,k)for(int i = (a); i < (b); i+=k)
+#define MAXS 1200
+#define FAIL -1
+#define MAXP 62
+
+using namespace std;
+
+UL ct[MAXS][20];
+UL L,R,K;
+int N, noOfStates,length;
+char pattern[MAXP][20];
+int len[MAXP];
+int g[MAXS][10];
+int q[MAXS][2];
+char str[20];
+
+int ni(){
+    int v;
+    scanf("%d", &v);
+    return v;
+}
+
+void itoa(UL x){
+    length = 0;
+    do{
+        str[length] = '0' + x%10;
+        x = x/10;
+        length++;
+    }while(x);
+    int i = 0, j = length-1;
+    while(i < j){
+        char c = str[i];str[i] = str[j];str[j] = c;
+        i++,j--;
+    }
+    str[length] = 0;
+}
+
+UL total(int i){
+    UL ret = 1LL;
+    REP(j,i){
+        ret*=10LL;
+    }
+    return ret;
+}
+
+void preprocess(){
+    memset(g,FAIL,sizeof(g));
+    noOfStates = 2;
+    REP(i,N){
+        int curr = 0, val;
+        REP(j,len[i]-1){
+            val = (pattern[i][j] - '0');
+            if(g[curr][val] != FAIL){
+                curr = g[curr][val];
+            }
+            else{
+                curr = g[curr][val] = noOfStates++;
+            }
+        }
+        val = (pattern[i][len[i]-1] - '0');
+        g[curr][val] = 1;
+    }
+
+    REP(i,10){
+        g[1][i] = 1;
+    }
+
+    int end = 0;
+	REP(i,10){
+        if(g[0][i] == FAIL){
+            g[0][i] = 0;
+        }
+        else{
+            q[end][0] = g[0][i];
+            q[end][1] = 0;
+            end++;
+        }
+	}
+	REP(i,end){
+		REP(j,10){
+            if(g[q[i][0]][j] == FAIL || g[q[i][1]][j] == 1){
+                g[q[i][0]][j] = g[q[i][1]][j];
+            }
+            else if(g[q[i][0]][j] != 1) {
+                q[end][0] = g[q[i][0]][j];
+                q[end][1] = g[q[i][1]][j];
+                end++;
+            }
+		}
+	}
+
+    ct[1][0] = 1;
+    FOR(i,1,19,1){
+        REP(j,MAXS){
+            ct[j][i] = 0;
+            FOR(k,0,10,1){
+                int n  = g[j][k];
+                ct[j][i] += ct[n][i-1];
+            }
+        }
+    }
+}
+
+UL get(char* s){
+    UL ret = 0;
+    int i = 0;
+    while(s[i]){
+        ret = ret*10 + (s[i]- '0');
+        i++;
+    }
+    return ret;
+}
+
+UL Count(UL x){
+    if(!x) return 0;
+    UL ret = 0;
+    itoa(x);
+
+    int curr = 0;
+    REP(i,length){
+        int lim = str[i]-'0';
+        REP(j,lim){
+            int state = g[curr][j];
+            ret += ct[state][length-1-i];
+        }
+        curr = g[curr][lim];
+    }
+    if(curr == 1) ret++;
+    return ret;
+}
+
+void solve(){
+    K += Count(L-1);
+    UL tot = Count(R);
+    if(tot < K){
+        printf("no such number\n");
+        return;
+    }
+    UL mid;
+    while(L < R){
+        mid = (L+R)/2;
+        UL cnt = Count(mid);
+        if(cnt >= K){
+            R = mid;
+        }
+        else if(cnt < K){
+            L = mid+1;
+        }
+    }
+    printf("%llu\n",R);
+}
+
+int main(){
+    scanf("%llu %llu %llu %d", &L, &R, &K, &N);
+    REP(i,N){
+        scanf("%s", &pattern[i]);
+        len[i] = strlen(pattern[i]);
+    }
+    preprocess();
+    solve();
+    return 0;
+}

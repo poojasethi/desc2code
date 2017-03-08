@@ -1,0 +1,174 @@
+// #includes {{{
+#include <algorithm>
+#include <numeric>
+
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <queue>
+#include <deque>
+#include <stack>
+#include <set>
+#include <map>
+
+#include <cstdio>
+#include <cstdlib>
+#include <cctype>
+#include <cassert>
+#include <cstring>
+
+#include <cmath>
+#include <complex>
+using namespace std;
+// }}}
+// pre-written code {{{
+#define REP(i,n) for(int i=0;i<(int)(n);++i)
+#define RREP(i,a,b) for(int i=(int)(a);i<=(int)(b);++i)
+#define FOR(i,c) for(__typeof((c).begin())i=(c).begin();i!=(c).end();++i)
+#define ALL(c) (c).begin(), (c).end()
+
+typedef long long Int;
+typedef long long ll;
+typedef long double ld;
+// }}}
+
+const int N=50010;
+int n;
+
+int x[N],y[N],a[N];
+typedef pair<int,int> pii;
+#define MP make_pair
+
+struct Node{
+	int parent,g;
+	vector<int> child;
+};
+
+struct Sq{
+	int i,t;
+	Sq(int i,int t):i(i),t(t){}
+};
+
+bool xless(const Sq &l, const Sq &r){
+	int xl=x[l.i],xr=x[r.i];
+	if(l.t==1)xl+=a[l.i];
+	if(r.t==1)xr+=a[r.i];
+	if(xl<xr)return true;
+	else if(xl>xr)return false;
+	else{
+		return y[l.i]>y[r.i];
+	}
+}
+
+bool operator<(const Sq &l,const Sq &r){
+	int yl=y[l.i],yr=y[r.i];
+	if(l.t==1)yl+=a[l.i];
+	if(r.t==1)yr+=a[r.i];
+	return yl<yr;
+}
+Node tree[N];
+int ans;
+
+int findG(int i){
+	int &g=tree[i].g;
+	if(g!=-1)return g;
+	if(tree[i].child.size()==0)return g=1;
+	int s=0;
+	REP(j,tree[i].child.size()){
+		int i2=tree[i].child[j];
+		s=(findG(i2)^s);
+	}
+	return (g=(s+1));
+}
+
+bool bfs(int i,int v){
+//	cout<<"bfs: "<<i<<" "<<v<<endl;
+	bool found=false;
+	vector<int> &child=tree[i].child;
+	if(v==0){
+		ans=min(ans,i);
+		found=true;
+	}else{
+		int g=tree[i].g-1;
+		v--;
+		REP(j,child.size()){
+			int i2=child[j],v2=(v^g^tree[i2].g);
+			bfs(i2,v2);
+		}
+	}
+	return found;
+}
+
+
+void main2(){
+	vector<Sq> v;
+	vector<int> root;
+	ans=N;
+	scanf("%d",&n);
+	REP(i,n){
+		tree[i].child.clear();
+		scanf("%d%d%d",x+i,y+i,a+i);
+		v.push_back(Sq(i,0));
+		v.push_back(Sq(i,1));
+	}
+	sort(v.begin(),v.end(),xless);
+	set<Sq> st;
+	for(int i=0;i<v.size();i++){
+		int id=v[i].i;
+		if(v[i].t==0){
+			set<Sq>::iterator it=st.upper_bound(Sq(id,0));
+			int i2=it->i;
+			if(it==st.end()){
+				tree[id].parent=-1;
+			}else if(it->t==0){
+				tree[id].parent=tree[i2].parent;
+			}else{
+				tree[id].parent=it->i;
+			}
+			st.insert(Sq(id,0));
+			st.insert(Sq(id,1));
+		}else{//v[i].second==1;
+			st.erase(Sq(id,0));
+			st.erase(Sq(id,1));
+		}
+	}
+	REP(i,n){
+		tree[i].g=-1;
+		int parent=tree[i].parent;
+		if(parent!=-1){
+			tree[parent].child.push_back(i);
+		}else{
+			root.push_back(i);
+		}
+	}
+	int s=0;
+	REP(i,root.size()){
+		s^=findG(root[i]);
+	}
+/*
+	REP(i,n){
+		cout<<i<<" "<<tree[i].parent<<" "<<tree[i].g<<endl;
+	}
+	cout<<s<<endl;
+	cout<<endl;
+*/
+	if(s==0){
+		printf("Fit\n");
+	}else{
+		REP(i,root.size()){
+			bfs(root[i],(s^tree[root[i]].g));
+		}
+		printf("Fat %d\n",ans+1);
+	}
+}
+
+int main() {
+	int T;scanf("%d", &T);
+	REP(ct, T){
+		main2();
+	}
+	return 0;
+}
+// vim: fdm=marker:commentstring=\ \"\ %s:nowrap:autoread
+

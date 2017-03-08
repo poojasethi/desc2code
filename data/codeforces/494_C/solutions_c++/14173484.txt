@@ -1,0 +1,125 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define type(x) __typeof((x).begin())
+#define foreach(it, x) for(type(x) it = (x).begin(); it != (x).end(); it++)
+typedef long long ll;
+typedef pair < int, int > ii;
+
+const int inf = 1e9 + 333;
+const ll linf = 1e18 + inf;
+
+const int N = 1e5 + 5;
+const int M = 5000 + 5;
+
+int n, m;
+int a[N], t[N << 1];
+int L[M], R[M], res[M];
+double p[M];
+vector < int > v[M];
+bool h[M], calc[M][M << 1], dad[M];
+double dp[M][M << 1];
+
+int get(int l, int r) {
+	int res = 0;
+	for(l += N, r += N; l <= r; l = (l + 1) >> 1, r = (r - 1) >> 1) {
+		if(l & 1) res = max(res, t[l]);
+		if(~r & 1) res = max(res, t[r]);
+	}
+	return res;
+}
+
+#define hash ______hash
+
+void hash(int x) {
+	h[x] = 1;
+	foreach(it, v[x]) {
+		int u = *it;
+		if(!h[u])
+			hash(u);
+	}
+}
+
+int mx;
+
+double f(int x, int k) {
+	if(res[x] > k)
+		return 0;
+	double &r = dp[x][k - mx + M];
+	if(calc[x][k - mx + M])
+		return r;
+	calc[x][k - mx + M] = 1;
+	double s1 = 1, s2 = 1;
+	foreach(it, v[x]) {
+		int u = *it;
+		s1 *= f(u, k);
+		s2 *= f(u, k - 1);
+	}
+	r = s1 * (1 - p[x]);
+	if(k != res[x])
+		r += s2 * p[x];
+	return r;
+}
+
+int main() {
+
+	scanf("%d %d", &n, &m);
+
+	for(int i = 1; i <= n; i++) {
+		scanf("%d", a + i);
+		mx = max(mx, a[i]);
+		t[i + N] = a[i];
+	}
+
+	for(int i = N - 1; i >= 1; i--)
+		t[i] = max(t[i + i], t[i + i + 1]);
+
+	vector < ii > q;
+
+	for(int i = 1; i <= m; i++) {
+		scanf("%d %d %lf", L + i, R + i, p + i);
+		res[i] = get(L[i], R[i]);
+		q.push_back(ii(R[i] - L[i], i));
+	}
+
+	sort(q.begin(), q.end());
+
+	for(int it = 0; it < q.size(); it++) {
+		int x = q[it].second;
+		memset(h, 0, sizeof(h));
+		for(int jt = it - 1; jt >= 0; jt--) {
+			int i = q[jt].second;
+			if(L[x] <= L[i] and R[i] <= R[x] and !h[i]) {
+				dad[i] = 1;
+				v[x].push_back(i);
+				hash(i);
+			}
+		}
+	}
+
+//	for(int i = 1; i <= m; i++) {
+//		printf("i = %d --> ", i);
+//		foreach(it, v[i]) {
+//			int x = *it;
+//			printf("%d ", x);
+//		}
+//		puts("");
+//	}
+
+	double ans = 0, lx = 0;
+
+	for(int val = mx; val <= mx + m; val++) {
+		double x = 1;
+		for(int i = 1; i <= m; i++) {
+			if(!dad[i]) {
+				x *= f(i, val);
+			}
+		}
+		ans += val * (x - lx);
+		lx = x;
+	}
+
+	printf("%.9lf\n", ans);
+
+}

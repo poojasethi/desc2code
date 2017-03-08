@@ -1,0 +1,95 @@
+// By LPQ
+#include <bits/stdc++.h>
+using namespace std;
+
+const int maxn = 200005;
+
+#define ls (t << 1)
+#define rs (t << 1 | 1)
+
+struct Node {
+    int left, right;
+    int first, last;
+    int lazy;
+    int data[10][10];
+} T[maxn << 2];
+
+char str[maxn];
+
+void push_up(int t) {
+    for(int i = 0; i < 10; i++) {
+        for(int j = 0; j < 10; j++) {
+            T[t].data[i][j] = T[ls].data[i][j] + T[rs].data[i][j];
+        }
+    }
+    T[t].first = T[ls].first;
+    T[t].last = T[rs].last;
+    if(T[ls].last != T[rs].first) T[t].data[T[ls].last][T[rs].first]++;
+}
+void push_down(int t) {
+    if(~T[t].lazy) {
+        T[ls].lazy = T[rs].lazy = T[t].lazy;
+        memset(T[ls].data, 0, sizeof(T[ls].data));
+        memset(T[rs].data, 0, sizeof(T[rs].data));
+        T[ls].first = T[ls].last = T[t].lazy;
+        T[rs].first = T[rs].last = T[t].lazy;
+        T[t].lazy = -1;
+    }
+}
+void build(int l, int r, int t) {
+    T[t].left = l;
+    T[t].right = r;
+    T[t].lazy = -1;
+    if(l == r) {
+        memset(T[t].data, 0, sizeof(T[t].data));
+        T[t].first = T[t].last = str[l] - 'a';
+        return;
+    }
+    int mid = (l + r) >> 1;
+    build(l, mid, ls);
+    build(mid + 1, r, rs);
+    push_up(t);
+}
+void update(int l, int r, int c, int t) {
+    if(T[t].left == l && T[t].right == r) {
+        memset(T[t].data, 0, sizeof(T[t].data));
+        T[t].first = T[t].last = c;
+        T[t].lazy = c;
+        return;
+    }
+    push_down(t);
+    if(r <= T[ls].right) {
+        update(l, r, c, ls);
+    } else if(l >= T[rs].left) {
+        update(l, r, c, rs);
+    } else {
+        update(l, T[ls].right, c, ls);
+        update(T[rs].left, r, c, rs);
+    }
+    push_up(t);
+}   
+int main() {
+    int n, m, k, c, l, r;
+    scanf("%d%d%d", &n, &m, &k);
+    scanf("%s", str + 1);
+    build(1, n, 1);
+    while(m--) {
+        scanf("%d", &c);
+        if(c == 1) {
+            scanf("%d%d%s", &l, &r, str);
+            update(l, r, str[0] - 'a', 1);
+        } else {
+            scanf("%s", str);
+            int ans = n;
+            for(int i = 0; i < k; i++) {
+                for(int j = i + 1; j < k; j++) {
+                    int u = str[i] - 'a';
+                    int v = str[j] - 'a';
+                    ans -= T[1].data[u][v];
+                }
+            }
+            printf("%d\n", ans);
+        }
+    }
+    return 0;
+}

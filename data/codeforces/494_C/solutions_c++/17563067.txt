@@ -1,0 +1,82 @@
+#include <vector>
+#include <iomanip>
+#include <cstring>
+#include <algorithm>
+#include <iostream>
+const int maxn = 5007,mm=100007;
+double dp[maxn][maxn];
+int N, M, arr[mm], size[maxn], max[maxn];
+std::vector<int> lis[maxn];
+struct Node{int l, r, mx;}seg[mm * 4];
+void build(int l, int r, int k)
+{
+	seg[k].l = l, seg[k].r = r;
+	if(l == r) {seg[k].mx = arr[l]; return;}
+	int mid = (l + r) / 2; build(l, mid, 2*k), build(mid+1, r, 2*k+1);
+	seg[k].mx = std::max(seg[2*k].mx, seg[2*k+1].mx);
+}
+int ask(int l, int r, int k){
+	if(l <= seg[k].l && seg[k].r <= r) return seg[k].mx;
+	int mid = (seg[k].l + seg[k].r) / 2;
+	if(r <= mid) return ask(l, r, 2*k);
+	else if(l > mid) return ask(l , r , 2*k+1);
+	else return std::max(ask(l, mid, 2*k), ask(mid+1, r, 2*k+1));
+}
+struct Q
+{
+	int l, r; double p;
+	Q() { }
+	Q(int l, int r, double p)
+	:l(l), r(r), p(p) { }
+} q[maxn];
+void dfs(int u, int f)
+{
+	for(int i = 0; i < lis[u].size(); i ++){
+		int v = lis[u][i];
+		if(v == f) continue;
+		dfs(v, u); 
+	}
+
+	for(int i = 0; i <= M; i ++){
+		double take = q[u].p, ntake = 1.0 - q[u].p;
+		for(int j = 0; j < lis[u].size(); j ++){
+			int v = lis[u][j]; if(v == f) continue;
+			int t = std::min(M, max[u] - max[v] + i - 1);
+			if(i != 0) take *= dp[v][t];
+			t = std::min(M, max[u] - max[v] + i);
+			ntake *= dp[v][t];
+		}
+		if(i != 0) dp[u][i] = take + ntake;
+		else dp[u][i] = ntake;
+	}
+}
+bool cmp(Q &a, Q &b){return a.l < b.l || (a.l == b.l && a.r > b.r);}
+int main()
+{
+    std::ios::sync_with_stdio(false);
+	std::cin >> N >> M;
+	for(int i = 1; i <= N; i ++){
+		std::cin >> arr[i];
+	}
+	build(1, N, 1);
+	for(int i = 1; i <= M; i ++){
+		std::cin >> q[i].l >> q[i].r >> q[i].p;
+	}
+	q[0] = Q(1, N, 0.0);
+	std::sort(q , q + M + 1, cmp);
+	for(int i = 0; i <= M; i ++) max[i] = ask(q[i].l, q[i].r, 1);
+	for(int i = 1; i <= M; i ++){
+		for(int j = i - 1; j >= 0; j --){
+			if(q[j].l <= q[i].l && q[i].r <= q[j].r){
+				lis[j].push_back(i); break;
+			}
+		}
+	}
+	dfs(0, -1);
+	double ans = 0.0;
+	ans += dp[0][0] * max[0];
+	for(int j = 1 ; j <= M; j ++){
+		ans += (dp[0][j] - dp[0][j - 1]) * (max[0] + j);
+	}
+	std::cout << std::fixed << std::setprecision(9) << ans << '\n';
+}

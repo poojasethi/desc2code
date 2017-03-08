@@ -1,0 +1,124 @@
+#include <cstdio>
+#include <cmath>
+int a[510];
+int id[510], idn;
+int b[510][510];
+struct M {
+	double c[110][110];
+};
+M c;
+double d[510];
+M mul(M u, M v, int n) {
+	M res;
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++) {
+			res.c[i][j] = 0;
+		}
+	}
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++) {
+			for (int k = 0; k < n; k++) {
+				res.c[i][j] += u.c[i][k] * v.c[k][j];
+			}
+		}
+	}
+	return res;
+}
+M pw(M m, int k, int n) {
+	if (k == 0) {
+		M res;
+		for (int i = 0; i < n; i++) {
+			for (int j = 0; j < n; j++) {
+				res.c[i][j] = i == j ? 1.0 : 0.0;
+			}
+		}
+		return res;
+	}
+	if (k == 1) {
+		return m;
+	}
+	M res = pw(m, k/2, n);
+	res = mul(res, res, n);
+	if (k & 1) {
+		res = mul(res, m, n);
+	}
+	return res;
+}
+double aa[510][610];
+double e[510], f[510];
+int deg[510];
+int main() {
+	int n, m, k;
+	scanf("%d%d%d", &n, &m, &k);
+	for (int i = 0; i < n; i++) {
+		scanf("%d", &a[i]);
+		if (a[i]) {
+			id[i] = idn++;
+		}
+	}
+	for (int i = 0; i < m; i++) {
+		int u, v;
+		scanf("%d%d", &u, &v);
+		--u; --v;
+		b[u][v]++;
+		b[v][u]++;
+		deg[u]++; deg[v]++;
+	}
+	for (int i = 0; i < n; i++) {
+		if (a[i]) {
+			aa[i][i] = 1.0;
+			aa[i][id[i]+n] = 1.0;
+			continue;
+		}
+		for (int j = 0; j < n; j++) {
+			aa[i][j] = 1.0 * b[i][j] / deg[i];
+		}
+		aa[i][i] = -1.0;
+	}
+	for (int i = 0; i < n; i++) {
+		double tmp = -1;
+		int j, k;
+		for (j = i; j < n; j++) {
+			if (fabs(aa[j][i]) > tmp) {
+				tmp = fabs(aa[j][i]);
+				k = j;
+			}
+		}
+		for (j = 0; j < idn + n; j++) {
+			tmp = aa[i][j];
+			aa[i][j] = aa[k][j];
+			aa[k][j] = tmp;
+		}
+		tmp = 1.0 / aa[i][i];
+		for (j = 0; j < idn + n; j++) {
+			aa[i][j] *= tmp;
+		}
+		for (j = 0; j < n; j++) {
+			if (i == j) continue;
+			tmp = aa[j][i];
+			for (k = 0; k < idn + n; k++) {
+				aa[j][k] -= tmp * aa[i][k];
+			}
+		}
+	}
+	for (int i = 0; i < n; i++) {
+		if (!a[i]) continue;
+		int ii = id[i];
+		for (int j = 0; j < n; j++) {
+			if (!a[j]) continue;
+			c.c[ii][id[j]] = 0.0;
+			for (int k = 0; k < n; k++) {
+				c.c[ii][id[j]] += aa[k][ii+n] * b[j][k];
+			}
+			c.c[ii][id[j]] /= deg[j];
+		}
+		d[ii] = aa[0][ii+n];
+	}
+	c = pw(c, k-2, idn);
+	double ans = 0.0;
+	for (int i = 0; i < idn; i++) {
+		ans += c.c[idn-1][i] * d[i];
+	}
+	printf("%.12f\n", ans);
+	return 0;
+}

@@ -1,0 +1,72 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+const int N = 105, M = 5005, inf = 1<<30;
+const double eps = 1e-9;
+int n, m, X[M], Y[M], cnt[N][N], lim[N][N];
+namespace equ {
+	int h[N], u[N];
+	double a[N][N], A[N], B[N];
+	inline bool iszero(double x) {
+		return x < eps && x > -eps;
+	}
+	void solve() {
+		for (int i=0; i<n-2; ++i) h[i] = i+1;
+		double rate;
+		for (int i=2; i<n; ++i) {
+			for (int q=0, w=h[0]; w; q=w,w=h[w]) if (!iszero(a[w][i])) {
+				h[q] = h[w]; u[i] = w;
+				for (int w2=1; w2<=n-2; ++w2) if (w2!=w && !iszero(a[w2][i])) {
+					rate = a[w2][i] / a[w][i];
+					for (int j=2; j<=n; ++j)
+						a[w2][j] -= a[w][j] * rate;
+				}
+				break;
+			}
+		}
+		int w;
+		for (int i=2; i<n; ++i) {
+			w = u[i];
+			if (!iszero(a[w][i]))
+				A[i] = -a[w][n]/a[w][i];
+		}
+		A[n] = 1, B[n] = 0;
+		for (int i=2; i<=n; ++i)
+			A[0] += a[0][i] * A[i];
+	}
+	inline double Abs(double x) {return x < 0 ? -x : x;}
+	inline double chk(int i, int j, double lim) {
+		return iszero(A[i]-A[j]) ? 1e100 : lim / Abs(A[i]-A[j]);
+	}
+} 
+int main() {
+	scanf("%d%d", &n, &m);
+	int x, y, z;
+	for (int i=1; i<=n; ++i)
+		for (int j=1; j<=n; ++j)
+			lim[i][j] = inf;
+	for (int i=1; i<=m; ++i) {
+		scanf("%d%d%d", &x, &y, &z);
+		X[i] = x, Y[i] = y;
+		++cnt[x][y], ++cnt[y][x];
+		lim[x][y] = lim[y][x] = min(lim[x][y], z);
+	}
+	for (int i=2; i<n; ++i) {
+		equ::a[i-1][i] += cnt[i][1];
+		for (int j=2; j<=n; ++j)
+			equ::a[i-1][i] += cnt[i][j],
+			equ::a[i-1][j] -= cnt[i][j];
+	}
+	for (int i=2; i<=n; ++i)
+		equ::a[0][i] = cnt[1][i];
+	equ::solve();
+	double mx = 1e100;
+	for (int i=1; i<=n; ++i)
+		for (int j=i+1; j<=n; ++j)
+			mx = min(mx, equ::chk(i, j, lim[i][j]));
+	printf("%.10lf\n", mx * equ::A[0]);
+	for (int i=1; i<=m; ++i)
+		printf("%.10lf\n", (equ::A[Y[i]] - equ::A[X[i]]) * mx);
+	return 0;
+}

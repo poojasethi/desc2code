@@ -1,0 +1,112 @@
+#include<bits/stdc++.h>
+using namespace std;
+typedef long long int64;
+const int maxn=100010,maxm=70010,maxs=2333,maxb=40010;
+const double pi=acos(-1);
+struct mycomplex{
+	double r,i;
+	mycomplex(): r(0),i(0) { }
+	mycomplex(double r_,double i_): r(r_),i(i_) { }
+};
+mycomplex operator+(const mycomplex &a,const mycomplex &b){
+	return mycomplex(a.r+b.r,a.i+b.i);
+}
+mycomplex operator-(const mycomplex &a,const mycomplex &b){
+	return mycomplex(a.r-b.r,a.i-b.i);
+}
+mycomplex operator*(const mycomplex &a,const mycomplex &b){
+	return mycomplex(a.r*b.r-a.i*b.i,a.r*b.i+a.i*b.r);
+}
+mycomplex operator/(const mycomplex &a,double b){
+	return mycomplex(a.r/b,a.i/b);
+}
+void FFT(mycomplex *a,int n,int rev){
+	static int r[maxm]; r[0]=0;
+	for(int i=1;i<n;++i){
+		r[i]=r[i-(i&-i)]+(n>>1)/(i&-i);
+		if(r[i]>i) swap(a[i],a[r[i]]);
+	}
+	for(int s=2;s<=n;s<<=1){
+		mycomplex wn(cos(2*pi/s*rev),sin(2*pi/s*rev));
+		for(int i=0;i<n;i+=s){
+			mycomplex w(1,0),u,v;
+			for(int j=0;j<(s>>1);++j,w=w*wn){
+				u=a[i+j],v=a[i+j+(s>>1)]*w;
+				a[i+j]=u+v,a[i+j+(s>>1)]=u-v;
+			}	
+		}
+	}
+	if(rev==+1) return;
+	for(int i=0;i<n;++i)
+		a[i]=a[i]/n;
+}
+void multiply(int *a,int *b,int64 *c,int n){
+	static mycomplex A[maxm],B[maxm],C[maxm];
+	for(int i=0;i<n;++i)
+		A[i]=mycomplex(a[i],0),B[i]=mycomplex(b[i],0);
+	FFT(A,n,+1),FFT(B,n,+1);
+	for(int i=0;i<n;++i) C[i]=A[i]*B[i];
+	FFT(C,n,-1);
+	for(int i=0;i<n;++i) c[i]=round(C[i].r);
+}
+int beg[maxb],end[maxb],size,cnt;
+int a[maxn],n,m;
+
+void init(){
+	scanf("%d",&n),m=0;
+	for(int i=1;i<=n;++i)
+		scanf("%d",a+i),m=max(m,a[i]);
+	m=2<<(int)(ceil(log2(m+1)));	
+	size=2*(int)sqrt(m*log2(m)),cnt=0;
+	if(size<3) size=3; if(size>n) size=n;
+	for(int i=1;i<=n;i+=size)
+		++cnt,beg[cnt]=i,end[cnt]=min(n,i+size-1);
+}
+
+int64 calc1(){
+	static int f[maxm]; int64 ans=0;
+	for(int k=1;k<=cnt;++k){
+		for(int i=beg[k];i<=end[k];++i){
+			for(int j=end[k],v;j>i;--j)
+				if(v=2*a[j]-a[i],v>=0) f[v]=0;
+			for(int j=end[k],v;j>i;--j){
+				if(v=2*a[j]-a[i],v>=0) ans+=f[v];
+				++f[a[j]];
+			}
+		}
+	}
+	return ans;
+}
+int64 calc2(){
+	static int lf[maxm],rf[maxm]; int64 ans=0;
+	memset(lf,0,sizeof(lf)),memset(rf,0,sizeof(rf));
+	for(int i=1;i<=n;++i) ++rf[a[i]];
+	for(int k=1;k<=cnt;++k){
+		for(int i=beg[k];i<=end[k];++i) --rf[a[i]];
+		for(int i=beg[k];i<=end[k];++i)
+			for(int j=i+1,v;j<=end[k];++j){
+				if(v=2*a[i]-a[j],v>=0) ans+=lf[v];
+				if(v=2*a[j]-a[i],v>=0) ans+=rf[v];
+			}
+		for(int i=beg[k];i<=end[k];++i) ++lf[a[i]];
+	}
+	return ans;
+}
+int64 calc3(){
+	static int lf[maxm],rf[maxm]; static int64 f[maxm];
+	memset(lf,0,sizeof(lf)),memset(rf,0,sizeof(rf)); int64 ans=0;
+	for(int i=1;i<=n;++i) ++rf[a[i]];
+	for(int k=1;k<=cnt;++k){
+		for(int i=beg[k];i<=end[k];++i) --rf[a[i]];
+		multiply(lf,rf,f,m);		
+		for(int i=beg[k];i<=end[k];++i) ans+=f[2*a[i]];
+		for(int i=beg[k];i<=end[k];++i) ++lf[a[i]];
+	}
+	return ans;
+}
+
+int main(){
+	init();
+	printf("%lld\n",calc1()+calc2()+calc3());
+	return 0;
+}

@@ -1,0 +1,87 @@
+#include <algorithm>
+#include <stdio.h>
+#include <memory.h>
+#include <queue>
+#include <cmath>
+#include <set>
+#include <map>
+#include <string.h>
+#include <string>
+#include <ctype.h>
+#include <ctime>
+#include <bitset>
+#include <vector>
+#include <cassert>
+
+using namespace std;
+
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
+template <class T> inline void chkmin(T &a, T b) { if (a>b) a=b; }
+template <class T> inline void chkmax(T &a, T b) { if (a<b) a=b; }
+
+typedef long long INT;
+typedef pair<int, int> pii;
+
+#define NN 110000
+#define LG 20
+int M, vst[NN], id[NN], dp[NN], par[NN][LG];
+int E, first[NN], next[NN*2], node[NN*2];
+set<int> st;
+
+void dfs(int u) {
+	int i, v;
+	vst[u]=M; id[M]=u; M++;
+	for (i=1; i<LG; i++) par[u][i]=par[par[u][i-1]][i-1];
+	for (i=first[u]; i; i=next[i]) {
+		v=node[i];
+		if (v==par[u][0]) continue;
+		par[v][0]=u; dp[v]=dp[u]+1;
+		dfs(v);
+	}
+}
+int lca(int u, int v) {
+	int i;
+	if (dp[u]>dp[v]) swap(u, v);
+	for (i=LG-1; i>=0; i--) 
+		if (dp[v]-dp[u]>=(1<<i)) v=par[v][i];
+	if (u==v) return u;
+	for (i=LG-1; i>=0; i--)
+		if (par[u][i]!=par[v][i]) u=par[u][i], v=par[v][i];
+	return par[u][0]; 
+}
+int calc(int u) {
+	int v, w;
+	if (st.empty()) return 1;
+	set<int>::iterator it=st.lower_bound(vst[u]);
+	if (it!=st.end()) v=id[*it];
+	else v=id[*st.begin()];
+	if (it!=st.begin()) w=id[*--it];
+	else w=id[*st.rbegin()];
+	return dp[u]-dp[lca(u, v)]-dp[lca(u, w)]+dp[lca(v, w)];
+}
+int main() {
+	int N, K, i, j, u, v, cnt, ans;
+	
+	scanf("%d%d", &N, &K);
+	for (i=1; i<N; i++) {
+		scanf("%d%d", &u, &v);
+		u--, v--;
+		node[++E]=v; next[E]=first[u]; first[u]=E;
+		node[++E]=u; next[E]=first[v]; first[v]=E;
+	}
+	
+	dp[0]=0; dfs(0); 
+	for (ans=i=j=cnt=0; i<N; i++) {
+		while (j<N && cnt+calc(j)<=K) {
+			cnt+=calc(j); st.insert(vst[j]);
+			j++;
+		}
+		chkmax(ans, j-i);
+		if (j==N) break;
+		st.erase(vst[i]); cnt-=calc(i);
+	}
+	
+	printf("%d\n", ans);
+	
+	return 0;
+}

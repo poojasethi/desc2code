@@ -1,0 +1,89 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+
+using namespace std;
+
+const int infinito=1000000;
+
+void minimiza(int &a,int b)
+{
+  a=min(a,b);
+}
+
+int n;
+vector<int> g[10000];
+int numhojas[10000];
+
+void eliminapadre(int u,int p)
+{
+  vector<int> &ar=g[u];
+  vector<int> nextar;
+  for (int i=0;i<int(ar.size());i++) {
+    int v=ar[i];
+    if (v!=p) {
+      nextar.push_back(v);
+      eliminapadre(v,u);
+    }
+  }
+  ar=nextar;
+}
+
+int computanumhojas(int u)
+{
+  vector<int> &ar=g[u];
+  numhojas[u]=int(ar.size())==0 or (u==1 and int(ar.size())==1);
+  for (int i=0;i<int(ar.size());i++)
+    numhojas[u]+=computanumhojas(ar[i]);
+  return numhojas[u];
+}
+
+int nextsol[5001];
+
+void fusiona(int nu,int cu,int solu[5001],int nv,int csolv[2][5001])
+{
+  for (int i=0;i<=nu+nv;i++)
+    nextsol[i]=infinito;
+  for (int cv=0;cv<2;cv++) {
+    int (&solv)[5001]=csolv[cv];
+    for (int iu=0;iu<=nu;iu++)
+      for (int iv=0;iv<=nv;iv++)
+	minimiza(nextsol[iu+iv],solu[iu]+solv[iv]+(cu!=cv));
+  }
+  for(int i=0;i<=nu+nv;i++)
+    solu[i]=nextsol[i];
+}
+
+int sol[5001][2][5001];
+
+void calcula(int u)
+{
+  vector<int> &ar=g[u];
+  int nu=int(ar.size())==0 or (u==1 and int(ar.size())==1);
+  if (nu==1)
+    sol[u][0][0]=sol[u][1][1]=infinito;
+  for (int i=0;i<int(ar.size());i++) {
+    int v=ar[i];
+    calcula(v);
+    fusiona(nu,0,sol[u][0],numhojas[v],sol[v]);
+    fusiona(nu,1,sol[u][1],numhojas[v],sol[v]);
+    nu+=numhojas[v];
+  }
+}
+
+int main()
+{
+  cin>>n;
+  for (int i=0;i<n-1;i++) {
+    int u,v;
+    cin>>u>>v;
+    g[u].push_back(v);
+    g[v].push_back(u);
+  }
+  eliminapadre(1,0);
+  computanumhojas(1);
+  calcula(1);
+  //cout<<numhojas[1]<<endl;
+  cout<<min(sol[1][0][numhojas[1]/2],sol[1][1][numhojas[1]/2])<<endl;
+}
+

@@ -1,0 +1,130 @@
+#include <cstdio>
+#include <map>
+#include <vector>
+#include <cstring>
+#include <algorithm>
+#include <cassert>
+using namespace std;
+ 
+typedef pair<int, int> PII;
+ 
+const int N = 51200;
+ 
+int n;
+int parent[N];
+ 
+//////////// SG begin ////////////////
+ 
+vector<int> g[N], base;
+ 
+void buildGraph()
+{
+	base.clear();
+	for(int i = 0; i < n; i++) g[i].clear();
+	for(int i = 0; i < n; i++) {
+		if(parent[i] == -1) base.push_back(i);
+		else g[parent[i]].push_back(i);
+	}		
+}
+ 
+int sg[N];
+ 
+int getSG(int v)
+{
+	if(sg[v] != -1) return sg[v];
+	if(g[v].size() == 0) return sg[v] = 1;
+	sg[v] = 0;
+	for(int i = 0; i < g[v].size(); i++) sg[v] ^= getSG(g[v][i]);
+	return sg[v] = sg[v]+1;
+}
+ 
+int getSGSum()
+{
+	memset(sg, -1, sizeof(sg));
+	int sum = 0;
+	for(int i = 0; i < base.size(); i++) sum ^= getSG(base[i]);
+	return sum;
+}
+ 
+bool canMove[N];
+ 
+void markIt(int v, int needXor)
+{
+	if(needXor == 0) { canMove[v] = true; return; }
+	if(g[v].size() == 0) return;
+	// children Xor
+	int chXor = 0;
+	for(int i = 0; i < g[v].size(); i++) chXor ^= sg[g[v][i]];
+	for(int i = 0; i < g[v].size(); i++) markIt(g[v][i], (needXor-1) ^ chXor ^ sg[g[v][i]]);
+}
+ 
+void getMarks()
+{
+	memset(canMove, false, sizeof(canMove));
+	int xorSum = 0;
+	for(int i = 0; i < base.size(); i++) xorSum ^= sg[base[i]];
+	for(int i = 0; i < base.size(); i++) markIt(base[i], xorSum ^ sg[base[i]]);
+}
+ 
+//////////// SG end ////////////////
+ 
+class Event {
+public:
+	int id, tm, x1, x2, tp;
+	Event(int _id, int _tm, int _x1, int _x2, int _tp) : id(_id), tm(_tm), x1(_x1), x2(_x2), tp(_tp) {}
+	bool operator <(const Event& e) const { return tm < e.tm; }
+};
+ 
+vector<Event> ve;
+ 
+int main()
+{
+	// freopen("G:\\a.txt", "r", stdin);
+	int T;
+	scanf("%d", &T);
+	for(int t = 0; t < T; t++) {
+		ve.clear();
+		memset(parent, -1, sizeof(parent));
+		
+		// printf("..........\n");
+		
+		scanf("%d", &n);
+		for(int i = 0; i < n; i++) {
+			int a, b, c;
+			scanf("%d %d %d", &a, &b, &c);
+			ve.push_back(Event(i, a, b, b+c, 0));
+			ve.push_back(Event(i, a+c, b, b+c, 1));
+		}
+		
+		sort(ve.begin(), ve.end());
+ 
+		// printf("????????\n");
+		map<int, int> dict;
+		for(int i = 0; i < (int)ve.size(); i++) {
+			int id = ve[i].id;
+			if(ve[i].tp == 0) {
+				// enter 
+				map<int, int>::iterator it = dict.lower_bound(ve[i].x1);
+				if(it == dict.end()) parent[id] = -1;
+				else parent[id] = it->second;
+				dict[ve[i].x1] = parent[id];
+				dict[ve[i].x2] = id;
+			} else {
+				// exit
+				dict.erase(ve[i].x1);
+				dict.erase(ve[i].x2);
+			}
+		}
+		
+		// printf("!!!!!!!!!\n");
+		
+		buildGraph();
+		int xorSum = getSGSum();
+		printf("%s", xorSum == 0 ? "Fit" : "Fat");
+		if(xorSum == 0) { printf("\n"); continue; }
+		getMarks();
+		int lo = -1;
+		for(int i = 0; i < n; i++) if(canMove[i]) { lo = i; break; }
+		printf(" %d\n", lo+1);
+	}
+}

@@ -1,0 +1,121 @@
+#include <cmath>
+#include <queue>
+#include <set>
+#include <map>
+#include <iostream>
+#include <cstdio>
+#include <ctime>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+ 
+struct vertex {
+	vertex *left, *right;
+	int size, key, priority;
+	bool reversed;
+} arr[100005];
+ 
+int kol = 0;
+ 
+int get_size(const vertex *cur) {
+	if (!cur) {
+		return 0;
+	} else {
+		return cur->size;
+	}
+}
+ 
+void update(vertex *cur) {
+	if (cur == NULL) {
+		return;
+	}
+	if (cur->reversed) {
+		cur->reversed = false;
+		swap(cur->left, cur->right);
+		if (cur->left) {
+			cur->left->reversed ^= 1;
+		}
+		if (cur->right) {
+			cur->right->reversed ^= 1;
+		}
+	}
+}
+ 
+void split(vertex *cur, int pos, vertex *&left, vertex *&right) {
+	update(cur);
+	if (cur == NULL) {
+		left = NULL;
+		right = NULL;
+		return;
+	} else if (get_size(cur->left) + 1 > pos) {
+		split(cur->left, pos, left, cur->left);
+		right = cur;
+	} else {
+		split(cur->right, pos - get_size(cur->left) - 1, cur->right, right);
+		left = cur;
+	}
+	cur->size = get_size(cur->left) + get_size(cur->right) + 1;
+}
+ 
+vertex *merge(vertex *left, vertex *right) {
+	if (!left || !right) {
+		return left ? left : right;
+	}
+	update(left);
+	update(right);
+	if (left->priority > right->priority) {
+		left->right = merge(left->right, right);
+		left->size = get_size(left->left) + get_size(left->right) + 1;
+		return left;
+	} else {
+		right->left = merge(left, right->left);
+		right->size = get_size(right->left) + get_size(right->right) + 1;
+		return right;
+	}
+}
+ 
+void print(vertex *cur) {
+	if (cur == NULL) {
+		return;
+	}
+	update(cur);
+	print(cur->left);
+	printf("%d ", cur->key);
+	print(cur->right);
+}
+ 
+int get_rand() {
+	return ((rand() & 0xfffd) << 15) | rand();
+}
+ 
+int main(){
+	srand(123456789);
+	int n, m;
+	scanf("%d%d", &n, &m);
+	vertex *root = NULL;
+	for (int i = 0; i < n; i++) {
+		arr[i].key = i + 1;
+		arr[i].priority = get_rand();
+		arr[i].left = NULL;
+		arr[i].right = NULL;
+		arr[i].reversed = false;
+		arr[i].size = 1;
+		root = merge(root, &arr[i]);
+	}
+	for (int i = 0; i < m; ++i) {
+		int a, b, c;
+		scanf("%d%d%d", &a, &b, &c);
+		vertex *ap, *bp, *cp;
+//		making algo
+		split(root, a, ap, root);
+		split(root, b, bp, root);
+		root = merge(ap, root);
+		split(root, c, cp, root);
+		bp->reversed = true;
+		root = merge(bp, root);
+		root = merge(cp, root);		
+	}
+	print(root);
+	puts("");
+	return 0;
+}

@@ -1,0 +1,234 @@
+from math import sqrt, asin
+from itertools import permutations
+
+
+or_fun = lambda x, y: x or y
+
+def float_cmp(x, y = 0, tol = 1e-12):
+    return (-1 if x + tol < y else 0) if x <= y + tol else 1
+
+
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __str__(self):
+        return "({0.x:.2f}, {0.y:.2f})".format(self)
+
+    @classmethod
+    def midpoint(point_class, p, q):
+        x = .5 * (p.x + q.x)
+        y = .5 * (p.y + q.y)
+
+        return point_class(x, y)
+
+    @staticmethod
+    def distance(p, q):
+        dx = q.x - p.x
+        dy = q.y - p.y
+
+        return sqrt(dx**2 + dy**2)
+
+
+class Line:
+    def __str__(self):
+        return "{0.A:.2f} x + {0.B:.2f} y + {0.C:.2f} = 0".format(self)
+
+    @classmethod
+    def from_two_points(line_class, p, q):
+        self = line_class()
+
+        self.A = q.y - p.y
+        self.B = p.x - q.x
+        self.C = -(self.A * p.x + self.B * p.y)
+
+        return self
+
+    @classmethod
+    def from_line(line_class, A, B, C):
+        self = line_class()
+
+        self.A = A
+        self.B = B
+        self.C = C
+
+        return self
+
+    @classmethod
+    def bisector(line_class, p, q):
+        mid = Point.midpoint(p, q)
+        line = line_class.from_two_points(p, q)
+
+        return line.perpendicular_line(mid)
+
+    def perpendicular_line(self, p):
+        return Line.from_line(-self.B, self.A, self.B * p.x - self.A * p.y)
+
+    def line_intersection(self, l2):
+        den = self.A * l2.B - self.B * l2.A
+        if float_cmp(den) == 0:
+            return []
+
+        x = (self.B * l2.C - self.C * l2.B) / den
+        y = (self.C * l2.A - self.A * l2.C) / den
+
+        return [Point(x, y)]
+
+
+class Circle:
+    def __init__(self, x, y, r):
+        self.c = Point(x, y)
+        self.r = r
+
+    def __str__(self):
+        return "[{0.c!s}, {0.r:.2f}]".format(self)
+
+    @classmethod
+    def from_two_circles(circle_class, c1, c2):
+        pc1, qc1 = c1.vertical_points()
+        pc2, qc2 = c2.vertical_points()
+
+        line_c1_c2 = Line.from_two_points(c1.c, c2.c)
+        line_pc1_pc2 = Line.from_two_points(pc1, pc2)
+        line_pc1_qc2 = Line.from_two_points(pc1, qc2)
+
+        p = line_c1_c2.line_intersection(line_pc1_pc2)[1]
+        q = line_c1_c2.line_intersection(line_pc1_qc2)[1]
+
+        mid = Point.midpoint(p, q)
+        r = Point.distance(p, mid)
+
+        return circle_class(mid.x, mid.y, r)
+
+    def point_contains(self, p):
+        return float_cmp(Point.distance(p, self.c), self.r) <= 0
+
+    def circle_contains(self, c):
+        return float_cmp(Point.distance(self.c, c.c) + c.r, self.r) < 0
+
+    def circle_intersects(self, c):
+        return float_cmp(Point.distance(self.c, c.c), self.r + c.r) <= 0
+
+    def vertical_points(self):
+        p = Point(self.c.x, self.c.y + self.r)
+        q = Point(self.c.x, self.c.y - self.r)
+
+        return p, q
+
+    def line_intersection(self, l):
+        C = l.C + l.A * self.c.x + l.B * self.c.y
+        norm = l.A**2 + l.B**2
+
+        x = - l.A * C / norm
+        y = - l.B * C / norm
+
+        dist1 = sqrt(x**2 + y**2)
+
+        if float_cmp(dist1, self.r) > 0:
+            return []
+
+        elif float_cmp(dist1, self.r) == 0:
+            x += self.c.x
+            y += self.c.y
+
+            return [Point(x, y)]
+
+        dist2 = self.r**2 - C**2 / norm
+        mult = sqrt(dist2 / norm)
+
+        p = Point(x + l.B * mult + self.c.x, y - l.A * mult + self.c.y)
+        q = Point(x - l.B * mult + self.c.x, y + l.A * mult + self.c.y)
+
+        return [p, q]
+
+    def circle_intersection(self, c):
+        xc = c.c.x - self.c.x
+        yc = c.c.y - self.c.y
+
+        A = -2 * xc
+        B = -2 * yc
+        C = xc**2 + yc**2 + self.r**2 - c.r**2
+
+        line = Line.from_line(A, B, C)
+        circle = Circle(0, 0, self.r)
+
+        points = circle.line_intersection(line)
+
+        if len(points) == 0:
+            return []
+
+        elif len(points) == 1:
+            return [Point(points[0].x + self.c.x, points[0].y + self.c.y)]
+
+        elif len(points) == 2:
+            p, q = points
+            return [Point(p.x + self.c.x, p.y + self.c.y), \
+                    Point(q.x + self.c.x, q.y + self.c.y)]
+
+
+## Is this distance legit?
+def is_legit(d):
+    global cinema, home, shop
+
+    ## Circles enforced by the conditions
+    c1 = Circle(cinema.x, cinema.y, mid)
+    c2 = Circle(home.x, home.y, max_bob - mid)
+    c3 = Circle(shop.x, shop.y, max_alice - Point.distance(shop, home) - mid)
+
+    #print "cinema", c1
+    #print "home", c2
+    #print "shop", c3
+
+    ## Check containment and intersections
+    common_points = False
+    for c1, c2, c3 in permutations((c1, c2, c3)):
+        if c1.circle_contains(c2):
+            return c2.circle_intersects(c3)
+        elif c2.circle_contains(c1):
+            return c1.circle_intersects(c3)
+        else:
+            ic1c2 = c1.circle_intersection(c2)
+            common_points |= reduce(or_fun, (c3.point_contains(p)   for p in ic1c2), False)
+
+    return common_points
+
+
+
+## Read input
+
+t1, t2 = map(float, raw_input().split())
+
+cinema = Point(*map(float, raw_input().split()))
+home = Point(*map(float, raw_input().split()))
+shop = Point(*map(float, raw_input().split()))
+
+
+## Calculate maximum distance for Alice and Bob
+
+max_alice = Point.distance(cinema, shop) + Point.distance(shop, home) + t1
+max_bob = Point.distance(cinema, home) + t2
+
+
+## Actual logic
+
+if max_bob >= max_alice - t1:
+    ## Bob can join Alice to the shop and then home
+    print min(max_alice, max_bob)
+
+else:
+    ## Binary search for maximum distance
+    low, high = 0.0, min(max_alice, max_bob)
+
+    while float_cmp(low, high):
+        mid = (low + high) / 2
+
+        legit = is_legit(mid)
+        #print " [{}, {}] : {} {}\n".format(low, high, mid, legit)
+
+        if legit:
+            low = mid
+        else:
+            high = mid
+
+    print "{:.6f}".format(mid)

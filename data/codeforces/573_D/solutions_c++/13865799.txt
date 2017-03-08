@@ -1,0 +1,106 @@
+#include<cstdio>
+#include<iostream>
+#include<cmath>
+#include<cstring>
+#include<algorithm>
+#define maxn 30005
+//#define inf 4557430888798830399
+using namespace std;
+typedef long long int64;
+char ch;
+int n,q,x,y,posa[maxn],posb[maxn],ban[maxn];
+int64 f[maxn],val[maxn][3];
+struct DATA{
+	int64 val;
+	int id;
+}a[maxn],b[maxn];
+bool cmp(DATA a,DATA b){return a.val<b.val;}
+bool ok;
+void read(int &x){
+	for (ok=0,ch=getchar();!isdigit(ch);ch=getchar()) if (ch=='-') ok=1;
+	for (x=0;isdigit(ch);x=x*10+ch-'0',ch=getchar());
+	if (ok) x=-x;
+}
+void read(int64 &x){
+	for (ok=0,ch=getchar();!isdigit(ch);ch=getchar()) if (ch=='-') ok=1;
+	for (x=0;isdigit(ch);x=x*10+ch-'0',ch=getchar());
+	if (ok) x=-x;
+}
+void calc(int id){
+	val[id][0]=val[id][1]=val[id][2]=-1;
+	if (id>=1&&ban[id]!=id) val[id][0]=max(val[id][0],a[id].val*b[id].val);
+	if (id>=2&&ban[id]!=id-1&&ban[id-1]!=ban[id]) val[id][1]=max(val[id][1],a[id].val*b[id-1].val+a[id-1].val*b[id].val);
+	if (id>=3){
+		if (ban[id]!=id-2&&ban[id-1]!=id&&ban[id-2]!=id-1) val[id][2]=max(val[id][2],a[id].val*b[id-2].val+a[id-1].val*b[id].val+a[id-2].val*b[id-1].val);
+		if (ban[id]!=id-1&&ban[id-1]!=id-2&&ban[id-2]!=id) val[id][2]=max(val[id][2],a[id].val*b[id-1].val+a[id-1].val*b[id-2].val+a[id-2].val*b[id].val);
+	}
+}
+struct Matrix{
+	int64 v[3][3];
+	Matrix(){memset(v,-1,sizeof(v));}
+	Matrix operator *(Matrix b){
+		Matrix c;
+		for (int i=0;i<3;i++) for (int k=0;k<3;k++)
+			if (v[i][k]!=-1) for (int j=0;j<3;j++)
+				if (b.v[k][j]!=-1) c.v[i][j]=max(c.v[i][j],v[i][k]+b.v[k][j]);
+		return c;
+	}
+};
+struct seg{
+	Matrix p[maxn<<2];
+	#define ls k<<1
+	#define rs (k<<1)+1
+	void modify(int k,int x){
+		p[k].v[0][0]=val[x][0],p[k].v[0][1]=val[x][1],p[k].v[0][2]=val[x][2];
+		p[k].v[1][0]=0,p[k].v[1][1]=-1,p[k].v[1][2]=-1;
+		p[k].v[2][0]=-1,p[k].v[2][1]=0,p[k].v[2][2]=-1;
+		/*cout<<k<<endl;
+		for (int i=0;i<3;i++,cout<<endl)for (int j=0;j<3;j++) cout<<p[k].v[i][j]<<' ';
+		cout<<endl;	*/
+	}
+	void build(int k,int l,int r){
+		if (l==r){modify(k,l);return;}
+		int m=(l+r)>>1;
+		build(ls,l,m),build(rs,m+1,r);
+		p[k]=p[rs]*p[ls];
+		/*cout<<k<<endl;
+		for (int i=0;i<3;i++,cout<<endl)for (int j=0;j<3;j++) cout<<p[k].v[i][j]<<' ';
+		cout<<endl;*/
+	}
+	void modify(int k,int l,int r,int x){
+		if (l==r){modify(k,x);return;}
+		int m=(l+r)>>1;
+		if (x<=m) modify(ls,l,m,x);
+		else modify(rs,m+1,r,x);
+		p[k]=p[rs]*p[ls];
+	/*	cout<<k<<endl;
+		for (int i=0;i<3;i++,cout<<endl)for (int j=0;j<3;j++) cout<<p[k].v[i][j]<<' ';
+		cout<<endl;*/
+	}
+}T;
+int main(){
+	read(n),read(q);
+	for (int i=1;i<=n;i++) read(a[i].val),a[i].id=i;
+	for (int i=1;i<=n;i++) read(b[i].val),b[i].id=i;
+	sort(a+1,a+n+1,cmp),sort(b+1,b+n+1,cmp);
+	for (int i=1;i<=n;i++) posa[a[i].id]=i;
+	for (int i=1;i<=n;i++) posb[b[i].id]=i;
+	for (int i=1;i<=n;i++) ban[i]=posb[a[i].id];
+	for (int i=1;i<=n;i++) calc(i);
+	T.build(1,1,n);
+	/*cout<<max(max(T.p[1].v[0][0],T.p[1].v[0][1]),T.p[1].v[0][2])<<endl;
+	printf("%I64d\n",max(max(T.p[1].v[0][0],T.p[1].v[0][1]),T.p[1].v[0][2]));
+	cout<<"-----------------------------------------------------------"<<endl;*/
+	while (q--){
+		read(x),read(y),x=posa[x],y=posa[y],swap(ban[x],ban[y]);
+		for (int i=max(1,x-2);i<=min(n,x+2);i++) calc(i);
+		for (int i=max(1,y-2);i<=min(n,y+2);i++) calc(i);
+		for (int i=max(1,x-2);i<=min(n,x+2);i++) T.modify(1,1,n,i);
+		for (int i=max(1,y-2);i<=min(n,y+2);i++) T.modify(1,1,n,i);
+	//	cout<<max(T.p[1].v[0][0],T.p[1].v[0][1])<<endl;
+	//	cout<<max(max(T.p[1].v[0][0],T.p[1].v[0][1]),T.p[1].v[0][2])<<endl;
+		printf("%I64d\n",max(max(T.p[1].v[0][0],T.p[1].v[0][1]),T.p[1].v[0][2]));
+	///	cout<<"-----------------------------------------------------------"<<endl;
+	}
+	return 0;
+}

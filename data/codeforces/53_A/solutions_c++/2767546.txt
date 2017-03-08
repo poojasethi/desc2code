@@ -1,0 +1,20 @@
+#include <algorithm>
+#include <iostream>
+using namespace std;
+int n;
+string ar[100],s;
+int main()
+{
+    cin >> s >> n;
+    for(int i=0; i<n; i++)
+        cin >> ar[i];
+    sort(ar,ar+n);
+    for(int i=0; i<n; i++)
+        if(s==ar[i].substr(0,s.size()))
+        {
+            cout << ar[i];
+            return 0;
+        }
+    cout<<s;
+    return 0;
+}

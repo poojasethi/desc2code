@@ -1,0 +1,35 @@
+#include <iostream>
+#include <map>
+using namespace std;
+int P[1001];
+int main(){
+    int n, a, tot = 0;
+    map<string,int> M;
+    cin>>n;
+    string t;
+    for (int i = 0; i < n; i++)
+        cin>>t>>a, M[t]=max(a,M[t]);
+    for (map<string,int>::iterator j = M.begin(); j!=M.end(); j++)
+        P[j->second]++, tot++;
+    int b,c;
+    cout<<tot<<endl;
+    for (map<string,int>::iterator j = M.begin(); j!=M.end(); j++){
+        c = 0;
+        for (int i = j->second+1; i <= 1000; i++)
+            c+=P[i];
+        cout<<j->first<<" ";
+        if (c*100>tot*50)
+            cout<<"noob";
+        else if (c*100>20*tot)
+            cout<<"random";
+        else if (c*100>10*tot)
+            cout<<"average";
+        else if (c*100>tot)
+            cout<<"hardcore";
+        else
+            cout<<"pro";
+        cout<<endl; 
+    }
+    //system("PAUSE");
+    return 0;
+}

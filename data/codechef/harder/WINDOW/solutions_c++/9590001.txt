@@ -1,0 +1,158 @@
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+
+typedef long long i64;
+typedef long double f128;
+
+const int N = 23, S = 1000 + 10, MOD = 900000011;
+const i64 INF = 8000000000000000000LL;
+
+i64 calc(i64 a, i64 n, i64 b, i64 c) {
+  if (b >= 0 && (!n || (INF - b) / a / n)) return (a * n + b) / c;
+  i64 d = ((f128)a * n + b) / c;
+  i64 r = a * n + b - d * c;
+  if (r >= c) ++d;
+  if (r < 0) --d;
+  return d;
+}
+
+int size;
+i64 f[S][N][N];
+
+inline void add(i64 &lhs, i64 rhs) { if ((lhs += rhs) >= INF) lhs %= MOD; }
+
+inline int power(int base, int exp) {
+  base %= MOD;
+  int res = 1;
+  for (; exp; exp >>= 1) {
+    if (exp & 1) res = (i64)res * base % MOD;
+    base = (i64)base * base % MOD;
+  }
+  return res;
+}
+
+int fact[N], inv[N], binom[N][N], bincf[N][N];
+int ber[N], coef[N][N];
+
+inline void preprocess() {
+  fact[0] = 1;
+  for (int i = 1; i < N; ++i) fact[i] = (i64)fact[i - 1] * i % MOD;
+  inv[N - 1] = power(fact[N - 1], MOD - 2);
+  for (int i = N - 2; i >= 0; --i) inv[i] = inv[i + 1] * (i + 1LL) % MOD;
+  binom[0][0] = 1;
+  for (int i = 1; i < N; ++i)
+    for (int j = 0; j <= i; ++j)
+      binom[i][j] = (binom[i - 1][j] + (j ? binom[i - 1][j - 1] : 0)) % MOD;
+  ber[0] = 1;
+  for (int i = 1; i + 1 < N; ++i) {
+    int temp = 0;
+    for (int j = 0; j < i; ++j) temp = (temp + (i64)binom[i + 1][j] * ber[j]) % MOD;
+    ber[i] = (i64)(MOD - temp) * power(binom[i + 1][i], MOD - 2) % MOD;
+  }
+  for (int i = 0; i + 1 < N; ++i)
+    for (int j = 0, inv = power(i + 1, MOD - 2); j <= i; ++j)
+      coef[i][i + 1 - j] = (i64)ber[j] * binom[i + 1][j] % MOD * inv % MOD;
+  bincf[0][0] = 1;
+  for (int i = 1; i < N; ++i)
+    for (int j = 0; j < N; ++j)
+      bincf[i][j] = (bincf[i - 1][j] * (MOD - (i - 1LL)) + (j ? bincf[i - 1][j - 1] : 0)) % MOD;
+  for (int i = 0; i < N; ++i)
+    for (int j = 0; j < N; ++j)
+      bincf[i][j] = (i64)bincf[i][j] * inv[i] % MOD;
+}
+
+inline int sum(i64 n, int k) {
+  (++n) %= MOD;
+  int res = 0;
+  for (int i = 0, j = 1; i <= k + 1; ++i, j = n * j % MOD) res = (res + (i64)coef[k][i] * j) % MOD;
+  return res;
+}
+
+int dep = 0;
+
+void solve(i64 n, i64 a, i64 b, i64 c, int dep = 0) {
+  i64 (*res)[N] = f[dep], (*temp)[N] = f[dep + 1];
+  for (int i = 0; i <= size; ++i)
+    for (int j = 0; i + j <= size; ++j)
+      res[i][j] = 0;
+  if (n < 0) return;
+  if (!a) {
+    static int lhs[N], rhs[N];
+    for (int i = 0; i <= size; ++i) lhs[i] = sum(n, i);
+    rhs[0] = 1;
+    for (int i = 1, t = (b / c) % MOD; i <= size; ++i) rhs[i] = (i64)t * rhs[i - 1] % MOD;
+    for (int i = 0; i <= size; ++i)
+      for (int j = 0; i + j <= size; ++j)
+        res[i][j] = (i64)lhs[i] * rhs[j];
+  } else if (llabs(a) >= c) {
+    solve(n, a % c, b, c, dep + 1);
+    for (int i = 0; i <= size; ++i)
+      for (int j = 0; i + j <= size; ++j)
+        for (int k = 0, t = 1; k <= j; ++k, t = (a / c) % MOD * t % MOD)
+          add(res[i][j], (i64)binom[j][k] * t % MOD * temp[i + k][j - k]);
+  } else if (llabs(b) >= c) {
+    solve(n, a, b % c, c, dep + 1);
+    for (int i = 0; i <= size; ++i)
+      for (int j = 0; i + j <= size; ++j)
+        for (int k = 0, t = 1; k <= j; ++k, t = (b / c) % MOD * t % MOD)
+          add(res[i][j], (i64)binom[j][k] * t % MOD * temp[i][j - k]);
+  } else {
+    i64 m = calc(a, n, std::min(b, a + b - c), c);
+    solve(m, c, c - b - 1 + a, a, dep + 1);
+    static int lhs[N], rhs[N];
+    for (int i = 0; i <= size; ++i) lhs[i] = sum(n, i);
+    rhs[0] = 1;
+    for (int i = 1, t = (m + 1) % MOD; i <= size; ++i) rhs[i] = (i64)t * rhs[i - 1] % MOD;
+    static i64 mem[N][N];
+    for (int i = 0; i <= size; ++i) {
+      for (int k = 0; i + k < size; ++k) {
+        mem[i][k] = 0;
+        for (int l = 0; l <= i + 1; ++l) add(mem[i][k], (i64)coef[i][l] * temp[k][l]);
+        mem[i][k] %= MOD;
+      }
+    }
+    for (int i = 0; i <= size; ++i) {
+      for (int j = 0; i + j <= size; ++j) {
+        res[i][j] = 0;
+        for (int k = 0; k < j; ++k) add(res[i][j], (i64)binom[j][k] * mem[i][k]);
+        res[i][j] = (i64)lhs[i] * rhs[j] - res[i][j];
+      }
+    }
+  }
+  for (int i = 0; i <= size; ++i)
+    for (int j = 0; i + j <= size; ++j)
+      res[i][j] %= MOD;
+}
+
+int main() {
+  preprocess();
+  int tcase;
+  for (scanf("%d", &tcase); tcase--;) {
+    i64 n, a, b;
+    int k, l;
+    scanf("%lld%lld%lld%d%d", &n, &a, &b, &k, &l);
+    size = k + l + 1;
+    solve(n, a, 0, b);
+    int ans = 0;
+    static int p[N], q[N];
+    for (int i = 0; i <= k + 1; ++i) p[i] = 0;
+    for (int i = 0; i <= l; ++i) q[i] = 0;
+    for (int i = 0; i <= k + 1; ++i)
+      for (int u = 0; u <= i; ++u)
+        p[u] = (p[u] + (i64)bincf[k + 1][i] * binom[i][u]) % MOD;
+    for (int j = 0; j <= l; ++j)
+      for (int v = 0; v <= j; ++v)
+        q[v] = (q[v] + (i64)bincf[l][j] * binom[j][v] % MOD * power(n % MOD, j - v)) % MOD;
+    i64 (*cur)[N] = f[0];
+    for (int u = 0; u <= k + 1; ++u) {
+      for (int v = 0; v <= l; ++v) {
+        int temp = (i64)p[u] * q[v] % MOD * cur[v][u] % MOD;
+        if (v & 1) temp = (MOD - temp) % MOD;
+        ans = (ans + temp) % MOD;
+      }
+    }
+    printf("%d\n", (ans + MOD) % MOD);
+  }
+  return 0;
+}

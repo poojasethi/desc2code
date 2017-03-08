@@ -1,0 +1,103 @@
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <deque>
+
+using namespace std;
+
+typedef long long ll;
+
+const int MAXN = 1e5 + 10, SQ = 320;
+
+struct S {
+	S() {
+	}
+	ll val(int time) {
+		return 1ll * a + 1ll * time * b;
+	}
+	int a, b, ind;
+} sk[MAXN];
+
+vector<S> part[SQ];
+deque<S> stc[SQ];
+int stB[SQ], enB[SQ];
+
+bool compA(const S& x, const S& y) {
+	return x.a == y.a ? x.b > y.b : x.a > y.a;
+}
+
+struct Q {
+	Q() {
+	}
+	int l, r, t, ind;
+} q[MAXN];
+
+bool compT(const Q& x, const Q& y) {
+	return x.t < y.t;
+}
+
+ll when(const S& x, const S& y) {
+	int p = y.a - x.a;
+	int q = x.b - y.b;
+	if (q < 0)
+		q *= -1, p *= -1;
+	return (p + q - 1) / q;
+}
+
+ll ansQ[MAXN];
+
+int main() {
+	int n, qs;
+	cin >> n >> qs;
+	for (int i = 0; i < n; i++)
+		cin >> sk[i].a >> sk[i].b, sk[i].ind = i;
+	for (int i = 0; i < qs; i++)
+		cin >> q[i].l >> q[i].r >> q[i].t, q[i].ind = i, q[i].l--;
+	int ind = 0;
+	for (int i = 0; i < n; i++) {
+		if (i > 0 && i % SQ == 0)
+			enB[ind] = i, ind++, stB[ind] = i;
+		part[ind].push_back(sk[i]);
+	}
+	enB[ind] = n;
+	ind++;
+	for (int i = 0; i < ind; i++) {
+		sort(part[i].begin(), part[i].end(), compA);
+		stc[i].push_back(part[i][0]);
+		for (int j = 1; j < part[i].size(); j++) {
+			if (part[i][j].b <= stc[i].back().b)
+				continue;
+			while (stc[i].size() > 1 && when(part[i][j], stc[i][stc[i].size() - 1]) <= when(stc[i].back(), stc[i][stc[i].size() - 2]))
+				stc[i].pop_back();
+			stc[i].push_back(part[i][j]);
+		}
+	}
+	sort(q, q + qs, compT);
+	for (int i = 0; i < qs; i++) {
+		for (int j = 0; j < ind; j++)
+			while (stc[j].size() > 1 && stc[j][0].val(q[i].t) <= stc[j][1].val(q[i].t))
+				stc[j].pop_front();
+		ll ans = 0, index = -1;
+		for (int j = 0; j < ind; j++) {
+			if (q[i].l > stB[j] || enB[j] > q[i].r)
+				continue;
+			ans = max(ans, stc[j][0].val(q[i].t));
+			if (stc[j][0].val(q[i].t) == ans)
+				index = stc[j][0].ind;
+		}
+		for (int j = 0; j < SQ && j + q[i].l < q[i].r; j++) {
+			ll tmp = sk[q[i].l + j].val(q[i].t);
+			if (ans < tmp)
+				ans = tmp, index = sk[q[i].l + j].ind;
+		}
+		for (int j = 0; j < SQ && q[i].r - j > q[i].l; j++) {
+			ll tmp = sk[q[i].r - j - 1].val(q[i].t);
+			if (ans < tmp)
+				ans = tmp, index = sk[q[i].r - j - 1].ind;
+		}
+		ansQ[q[i].ind] = index;
+	}
+	for (int i = 0; i < qs; i++)
+		cout << ansQ[i] + 1 << '\n';
+	return 0;
+}

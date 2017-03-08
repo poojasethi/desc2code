@@ -1,0 +1,147 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <climits>
+#include <cstdlib>
+#include <algorithm>
+#include <map>
+
+using namespace std;
+typedef long long lag;
+
+int t;
+lag x[4][2], mn;
+lag ans[4][2];
+
+bool ok(int i, lag x, lag y) {
+	return x == ::x[i][0] || y == ::x[i][1];
+}
+
+lag man(int i, lag x, lag y) {
+	return abs(x - ::x[i][0]) + abs(y - ::x[i][1]);
+}
+
+lag solve(lag x, lag y, lag s) {
+	// perform maximal matching to all points
+	int ass[4] = {0, 1, 2, 3};
+	lag wha = LLONG_MAX;
+	do {
+		if (ok(ass[0], x, y) && ok(ass[1], x + s, y) && ok(ass[2], x + s, y + s) && ok(ass[3], x, y + s)) {
+			lag cur = max(man(ass[0], x, y), max(man(ass[1], x + s, y), max(man(ass[2], x + s, y + s), man(ass[3], x, y + s))));
+			wha = min(wha, cur);
+			if (cur < mn) {
+				mn = cur;
+				ans[ass[0]][0] = x;
+				ans[ass[0]][1] = y;
+				ans[ass[1]][0] = x + s;
+				ans[ass[1]][1] = y;
+				ans[ass[2]][0] = x + s;
+				ans[ass[2]][1] = y + s;
+				ans[ass[3]][0] = x;
+				ans[ass[3]][1] = y + s;
+			}
+		}
+	} while (next_permutation(ass, ass + 4));
+	return wha;
+}
+
+bool test(int r[4]) {
+	// form a rectangle
+	map<lag, int> mx[2], my[2];
+	for (int i = 0; i < 4; ++i)
+		mx[r[i]] [x[i][r[i]]]++;
+	for (int i = 0; i < 2; ++i) {
+		for (map<lag, int>::iterator it = mx[i].begin(); it != mx[i].end(); ++it) {
+			map<lag, int>::iterator nx = it;
+			++nx;
+			if (nx != mx[i].end()) {
+				// anchor to edges of other
+				lag x1 = it->first;
+				lag x2 = nx->first;
+				for (map<lag, int>::iterator ed = mx[!i].begin(); ed != mx[!i].end(); ++ed) {
+					lag y = ed->first;
+					lag s = x2 - x1;
+					// cout << x1 << ' ' << x2 << ' ' << y << ' ' << s << endl;
+					if (i == 0) {
+						solve(x1, y, s);
+						solve(x1, y - s, s);
+					} else {
+						solve(y, x1, s);
+						solve(y - s, x1, s);
+					}
+				}
+			}
+		}
+	}
+	// special case: two verticals or two horizontals
+	if (mx[0].size() == 2 && mx[1].size() == 0 && mx[0].begin()->second == 2) {
+		lag first = mx[0].begin()->first;
+		lag last = mx[0].rbegin()->first;
+		lag s = last - first;
+		// double ternary search
+		lag a = LLONG_MAX, b = LLONG_MIN;
+		for (int i = 0; i < 4; ++i) {
+			a = min(a, x[i][1]);
+			b = max(b, x[i][1]);
+		}
+		lag L = a - s, R = b + s;
+		while (L + 5 < R) {
+			lag M1 = (2 * L + R) / 3;
+			lag M2 = (L + 2 * R) / 3;
+			if (solve(first, M1, s) < solve(first, M2, s))
+				R = M2;
+			else
+				L = M1;
+		}
+		while (L <= R)
+			solve(first, L++, s);
+	} else if (mx[1].size() == 2 && mx[0].size() == 0 && mx[1].begin()->second == 2) {
+		lag first = mx[1].begin()->first;
+		lag last = mx[1].rbegin()->first;
+		lag s = last - first;
+		// double ternary search
+		lag a = LLONG_MAX, b = LLONG_MIN;
+		for (int i = 0; i < 4; ++i) {
+			a = min(a, x[i][0]);
+			b = max(b, x[i][0]);
+		}
+		lag L = a - s, R = b + s;
+		while (L + 5 < R) {
+			lag M1 = (2 * L + R) / 3;
+			lag M2 = (L + 2 * R) / 3;
+			if (solve(M1, first, s) < solve(M2, first, s))
+				R = M2;
+			else
+				L = M1;
+		}
+		while (L <= R)
+			solve(L++, first, s);
+	}
+}
+
+int main() {
+	ios::sync_with_stdio(false);
+	cin.tie(0);
+	cin >> t;
+	while (t--) {
+		for (int i = 0; i < 4; ++i)
+			cin >> x[i][0] >> x[i][1];
+		mn = LLONG_MAX;
+		for (int i = 0; i < 2; ++i) {
+			for (int j = 0; j < 2; ++j) {
+				for (int k = 0; k < 2; ++k) {
+					for (int l = 0; l < 2; ++l) {
+						int r[4] = {i, j, k, l};
+						test(r);
+					}
+				}
+			}
+		}
+		if (mn == LLONG_MAX) cout << "-1\n";
+		else {
+			cout << mn << '\n';
+			for (int i = 0; i < 4; ++i)
+				cout << ans[i][0] << ' ' << ans[i][1] << '\n';
+		}
+	}
+}

@@ -1,0 +1,127 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#define  SIZE 100001
+#define  LOGSIZE 18
+using namespace std;
+vector<int> adjList[SIZE];
+int degree[SIZE], parent[SIZE];
+bool visited[SIZE];
+int parentOfNode[SIZE][LOGSIZE];
+int depth[SIZE];
+void dfs(int node)
+{
+	visited[node] = true;
+	int i,size=adjList[node].size(),nextNode;
+	for(i=0;i<size;++i){
+		nextNode = adjList[node][i];
+		if(visited[nextNode])
+			continue;
+		parent[nextNode] = node;
+		depth[nextNode] = depth[node]+1;
+		dfs(nextNode);
+	}
+}
+int n, logn;
+void findPrefixParents()
+{
+	int i,j;
+	for(i=1;i<=n;++i){
+		parentOfNode[i][0] = parent[i];
+	}
+	parentOfNode[1][0] = 0;
+	for(j=1;j<=logn;++j){
+		for(i=1;i<=n;++i){
+			parentOfNode[i][j] = parentOfNode[parentOfNode[i][j-1]][j-1];
+		}
+	}
+}
+struct Data
+{
+	int first,second;
+	int index;
+	bool operator<(const Data &data)const{
+		if(first == data.first)
+			return second < data.second;
+		return first < data.first;
+	}
+};
+Data data[SIZE];
+int rank[SIZE][LOGSIZE];
+void sortStrings(){
+	int i,j;
+	for(i=1;i<=n;++i){
+		rank[i][0] = degree[i];
+	}
+	for(j=1;j<=logn;++j){
+		for(i=1;i<=n;++i){
+			data[i].first = rank[i][j-1];
+			if(depth[i] > (1<<(j-1)))
+				data[i].second = rank[parentOfNode[i][j-1]][j-1];
+			else
+				data[i].second = -1;
+			data[i].index = i;
+		}
+		sort(data+1, data+n+1);
+		rank[data[1].index][j] = 1;
+		for(i=2;i<=n;++i){
+			rank[data[i].index][j] = rank[data[i-1].index][j];
+			if((data[i].first != data[i-1].first || data[i].second != data[i-1].second)
+				&& data[i].index != data[i-1].index)
+			{
+				++rank[data[i].index][j];
+			}
+		}	
+	}
+}
+long long lcp(int u, int v){
+	if(rank[u][logn] == rank[v][logn])
+		return min(depth[u], depth[v]);
+	long long ret=0;
+	int i;
+	for(i=logn;i>=0 && u && v;--i){
+		if(rank[u][i] == rank[v][i]){
+			ret += (1<<i);
+			u = parentOfNode[u][i];
+			v = parentOfNode[v][i];
+		}
+	}
+	return ret;
+}
+long long count(){
+	long long ret = depth[data[1].index];
+	int i;
+	for(i=2;i<=n;++i){
+		ret += (depth[data[i].index] - lcp(data[i].index,data[i-1].index));
+	}
+	return ret;
+}
+int main(){
+	int u,v,i;
+	memset(degree, 0, sizeof(degree));
+	memset(parent, 0, sizeof(parent));
+	memset(visited,0, sizeof(visited));
+	memset(depth,  0, sizeof(depth));
+	memset(parentOfNode, 0, sizeof(parentOfNode));
+	scanf("%d",&n);
+	for(logn=0;(1<<logn) < n; ++logn);
+	++logn;
+	logn = min(17,logn);
+	for(i=1;i<n;++i){
+		scanf("%d%d",&u,&v);
+		adjList[u].push_back(v);
+		adjList[v].push_back(u);
+		++degree[u];
+		++degree[v];
+	}
+	depth[0] = 0; depth[1] = 1;
+	parent[1] = 1; parent[0] = 0;
+	dfs(1);
+	findPrefixParents();
+	sortStrings();
+	printf("%lld", count());
+	return 0;
+}

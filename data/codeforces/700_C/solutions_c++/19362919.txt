@@ -1,0 +1,165 @@
+#include <iostream> 
+#include <cstdio>
+#include <vector>
+#include <cmath>
+#include <cstring>
+
+using namespace std;
+
+#define For(i , a , b) for (int i = a , _b = b ; i <= _b ; ++i)
+#define Ford(i , a  ,b) for (int i = a , _b = b : i >= _b ; --i)
+#define Rep(i , n) for (int i = 0 , _n = n ; i < _n ; ++i)
+#define sz(A) ((int)A.size())
+#define LL(x) (x << 1)
+#define RR(x) ((x << 1) | 1)
+
+typedef pair<int , int> pt;
+
+const int maxn = 1024 , maxm = 60000 + 123;
+int n , m;
+int s , t;
+
+struct DSU{
+	int lab[maxn];
+
+	DSU() {
+		For(i , 0 , maxn - 1) lab[i] = 0;
+	}
+	int find(int x) {
+		return lab[x] <= 0 ? x : lab[x] = find(lab[x]);
+	}
+	bool isConnected(int x , int y) {
+		return find(x) == find(y);
+	}
+	void join(int x , int y) {
+		if (lab[x] < lab[y]) lab[y] = x; else {
+			if (lab[x] == lab[y]) --lab[y]; lab[x] = y;
+		}
+	}
+	bool addEdge(int u , int v) {
+		u = find(u) , v = find(v);
+		return u != v ? (join(u ,v) , true) : false;
+	}
+} dsu;
+
+struct edge{
+	int u , v , w;
+} e[maxm];
+bool inTree[maxm];
+vector<int> V[maxn];
+
+void ReadData() {
+	cin >> n >> m;
+	cin >> s >> t;
+	For(i , 1 , m) {
+		int u , v , w; cin >> u >> v >> w;
+		e[i] = (edge){u , v , w};
+		e[i + m] = (edge){v , u , w};
+		V[u].push_back(i);
+		V[v].push_back(i + m);
+		if (dsu.addEdge(u , v)) {
+			inTree[i] = inTree[i + m] = true;
+		}
+	}
+}
+
+const long long INF = 1e18;
+long long res = INF;
+bool banned[maxm];
+
+int tin[maxn] , low[maxn] , timer , papa[maxn] , tout[maxn] , toPar[maxn];
+inline void dfs(const int u , const int prevId) {
+	tin[u] = low[u] = ++timer;
+	for (int i = 0 ; i < V[u].size() ; i++) {
+		int id = V[u][i] , v = e[id].v;
+		if (id == prevId || abs(id - prevId) == m) continue;
+		if (banned[id]) continue;
+		if (tin[v] == 0) {
+			papa[v] = u; toPar[v] = id; dfs(v , id); low[u] = min(low[u] , low[v]); 
+		} else low[u] = min(low[u] , tin[v]);
+	}
+	tout[u] = timer;
+}
+bool isson(const int u , const int v) {
+	return tin[u] <= tin[v] && tout[v] <= tout[u];
+}
+
+pair<int , int> Solve() {
+	timer = 0;
+	For(i , 1 , n) {
+		tin[i] = low[i] = tout[i] = papa[i] = 0;
+		toPar[i] = 0;
+	}
+	dfs(s , -10000000);
+
+	if (tin[t] == 0) {
+		return pt(0 , -1);
+	}
+
+	int mnId = -1;
+	For(i , 1 , n) if (isson(i , t)) {
+		int v = papa[i];
+		if (!v) continue; 
+		if (low[i] >= tin[i]) {
+			int id = toPar[i];
+			if (mnId == -1 || e[mnId].w > e[id].w) mnId = id;
+		}
+	}
+
+	if (mnId == -1) {
+		return make_pair(-1 , -1);
+	}
+	return make_pair(e[mnId].w , mnId);
+}
+
+vector<int> modi;
+
+void update(long long cur , vector<int> New) {
+	if (cur < res) { 
+		res = cur; modi = New;
+	}
+}
+
+int ori(int i) {
+	if (i > m) i -= m; return i;
+}
+
+void Process() {
+	if (!dsu.isConnected(s , t)) {
+		cout << 0 << endl;
+		cout << 0 << endl;
+		return;
+	}
+
+	memset(banned , false , sizeof(banned));
+
+	For(i , 1 , m) if (inTree[i]) {
+		banned[i] = banned[i + m] = true;
+		pair<int , int> z = Solve();
+		banned[i] = banned[i + m] = false;
+		if (z.first == -1) continue;
+		vector<int> x; x.push_back(ori(i)); 
+		if (z.second != -1) x.push_back(ori(z.second));
+		update(z.first + e[i].w  , x);
+	}
+
+	if (res == INF) {
+		cout << -1 << endl;
+	} else {
+		cout << res << endl;
+		cout << (int) modi.size() << endl;
+		for (int i = 0 ; i < modi.size() ; i++) cout << modi[i] << " "; cout << endl;
+	}
+}
+
+int main() {
+	ios_base::sync_with_stdio(false);
+	cin.tie(NULL);
+
+	//freopen("input.inp" , "r" , stdin);
+	ReadData();
+	Process(); 
+
+	return 0;
+
+}			

@@ -1,0 +1,165 @@
+#include<stdio.h>
+#include<algorithm>
+using namespace std;
+const int maxn=100050;
+const long long INF=1e18;
+int n,q;
+long long h[maxn];
+int root,l[maxn]={0},r[maxn]={0},f[maxn]={0};
+long long siz[maxn]={0},sum[maxn]={0};
+void update(int x)
+{
+	siz[x]=siz[l[x]]+siz[r[x]]+1;
+	sum[x]=sum[l[x]]+sum[r[x]]+h[x];
+}
+void link(int x,int y,int c)
+{
+	if(x) f[x]=y;
+	(c?r[y]:l[y])=x;
+}
+void rot(int x)
+{
+	int y=f[x],z=f[y];
+	if(!z) root=x,f[x]=0;
+	else link(x,z,r[z]==y);
+	if(x==l[y])
+		link(r[x],y,0),link(y,x,1);
+	else
+		link(l[x],y,1),link(y,x,0);
+	update(x);
+	update(y);
+}
+void splay(int x,int des)
+{
+	int y,z;
+	while(f[x]!=des)
+	{
+		y=f[x],z=f[y];
+		if(z!=des)
+			rot((r[z]==y)==(r[y]==x)?y:x);
+		rot(x);
+	}
+}
+int find(int x)
+{
+	int i=root,j;
+	while(h[i]!=x)
+	{
+		j=(h[i]<x?r[i]:l[i]);
+		if(!j) break;
+		i=j;
+	}
+	return i;
+}
+int prev(int x)
+{
+	if(!l[x])
+	{
+		while(l[f[x]]==x) x=f[x];
+		x=f[x];
+	}
+	else
+	{
+		x=l[x];
+		while(r[x]) x=r[x];
+	}
+	return x;
+}
+int next(int x)
+{
+	if(!r[x]) 
+	{
+		while(r[f[x]]==x) x=f[x];
+		x=f[x];
+	}
+	else
+	{
+		x=r[x];
+		while(l[x]) x=l[x];
+	}
+	return x;
+}
+void del(int p)
+{
+	int d1,d2;
+	d1=prev(p);
+	d2=next(p);
+	splay(d1,0);
+	splay(d2,root);
+	l[r[root]]=0;
+	update(r[root]);
+	update(root);
+}
+void insert(int p)
+{
+	int d=find(h[p]),d0;
+	if(h[d]>h[p])
+		d0=prev(d);
+	else 
+		d0=next(d),swap(d0,d);
+	splay(d0,0);
+	splay(d,root);
+	update(p);
+	link(p,r[root],0);
+	update(r[root]);
+	update(root);
+}
+double query(long long v)
+{
+	int i=root,j;
+	long long siz0=siz[l[i]],sum0=sum[l[i]]+h[i];
+	while(i==n+2||siz0*h[i]-sum0!=v)
+	{
+		if(siz0*h[i]-sum0<v)
+		{
+			if(!r[i]) break;
+			i=r[i];
+			siz0+=siz[l[i]]+1;
+			sum0+=sum[l[i]]+h[i];
+
+		}
+		else 
+		{
+			if(!l[i]) break;
+			i=l[i];
+			siz0-=siz[r[i]]+1;
+			sum0-=sum[r[i]]+h[f[i]];
+		}
+	}
+	if(i==n+2||siz0*h[i]-sum0>v) siz0--,sum0-=h[i],i=prev(i);
+	return h[i]+(double)(v-siz0*h[i]+sum0)/siz0;
+}
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("data.in","r",stdin);
+#endif
+	int i,j;
+	scanf("%d%d",&n,&q);
+	h[1]=0,h[n+2]=INF;
+	update(1);
+	update(n+2);
+	link(n+2,root=1,1);
+	for(i=2;i<=n+1;i++)
+	{
+		scanf("%I64d",&h[i]);
+		insert(i);
+	}
+	while(q--)
+	{
+		int o,x;
+		long long p;
+		scanf("%d%I64d",&o,&p);
+		if(o==1)
+		{
+			p++;
+			scanf("%d",&x);
+			del(p);
+			h[p]=x;
+			insert(p);
+		}
+		else
+			printf("%lf\n",query(p));
+	}
+	return 0;
+}

@@ -1,0 +1,157 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<iostream>
+#include<vector>
+#include<algorithm>
+using namespace std;
+typedef long long LL;
+const int maxn=3E5+77;
+const LL INF=1E18+77;
+
+char _mem[30000007];
+int _cnt=0;
+void *alloc(size_t size){
+	void *ret=_mem+_cnt;
+	_cnt+=size;
+	return ret;
+}
+
+void ans(LL v){
+	printf("%I64d\n",v);
+	exit(0);
+}
+
+int N,M;
+vector<pair<int,int> > W[maxn];
+typedef vector<pair<int,int> >::iterator PIT;
+PIT WT[maxn];
+
+vector<int> toDel[maxn];
+typedef vector<int>::iterator IT;
+
+struct EDGE{
+	int to,next;
+}edges[maxn*2];
+int cEdge=1,head[maxn];
+void addEdge(int from,int to){
+	edges[cEdge]=(EDGE){to,head[from]};
+	head[from]=cEdge++;
+}
+
+struct SEG{
+	SEG *ch[2];
+	LL v,mn;
+	void *operator new(size_t size){return alloc(size);}
+	void maintain(){
+		mn=min(ch[0]->mn,ch[1]->mn)+v;
+	}
+}*tree;
+void segInit(SEG *&tr=tree,int L=1,int R=N){
+	tr=new SEG;
+	if(L==R) return;
+	int M=L+((R-L)>>1);
+	segInit(tr->ch[0],L,M);
+	segInit(tr->ch[1],M+1,R);
+}
+void segAdd(SEG *tr,int L,int R,int qL,int qR,LL v){
+	if(qL==L && qR==R){
+		tr->v+=v;
+		tr->mn+=v;
+		return;
+	}
+	int M=L+((R-L)>>1);
+	if(qR<=M) segAdd(tr->ch[0],L,M,qL,qR,v);
+	else if(qL>M) segAdd(tr->ch[1],M+1,R,qL,qR,v);
+	else segAdd(tr->ch[0],L,M,qL,M,v),segAdd(tr->ch[1],M+1,R,M+1,qR,v);
+	tr->maintain();
+}
+LL segQuery(SEG *tr,int L,int R,int qL,int qR){
+	if(qL==L && qR==R) return tr->mn;
+	int M=L+((R-L)>>1);
+	if(qR<=M) return segQuery(tr->ch[0],L,M,qL,qR)+tr->v;
+	else if(qL>M) return segQuery(tr->ch[1],M+1,R,qL,qR)+tr->v;
+	else return min(segQuery(tr->ch[0],L,M,qL,M),segQuery(tr->ch[1],M+1,R,M+1,qR))+tr->v;
+}
+
+int pre[maxn],suf[maxn],dfs_cnt,H[maxn],pa[maxn],cIn[maxn];
+void dfs(int u,int f){
+	pre[u]=++dfs_cnt;
+	H[u]=H[f]+1;
+	pa[u]=f;
+	++cIn[f];
+	for(int k=head[u];k;k=edges[k].next){
+		int v=edges[k].to;
+		if(v==f) continue;
+		dfs(v,u);
+	}
+	suf[u]=dfs_cnt;
+}
+
+void solveW(int x){
+	sort(W[x].begin(),W[x].end());
+}
+
+LL dp[maxn];
+void solve(int u){
+	for(IT it=toDel[u].begin();it!=toDel[u].end();++it){
+		int v=*it;
+		LL cur=(WT[v]++)->first;
+		while(WT[v]!=W[v].end() && H[WT[v]->second]>=H[u]) ++WT[v];
+		if(WT[v]==W[v].end()) cur=INF;
+		else{
+			cur=WT[v]->first-cur;
+			toDel[WT[v]->second].push_back(v);
+		}
+		segAdd(tree,1,N,pre[v],pre[v],cur);
+	}
+	toDel[u].clear();
+	LL s=0;
+	for(int k=head[u];k;k=edges[k].next){
+		int v=edges[k].to;
+		if(v==pa[u]) continue;
+		s+=dp[v];
+	}
+	if(u==1) ans(s);
+	segAdd(tree,1,N,pre[u],pre[u],s);
+	if(W[u].empty()){
+		segAdd(tree,1,N,pre[u],pre[u],INF);
+	}else{
+		segAdd(tree,1,N,pre[u],pre[u],WT[u]->first);
+		toDel[WT[u]->second].push_back(u);
+	}
+	for(int k=head[u];k;k=edges[k].next){
+		int v=edges[k].to;
+		if(v==pa[u]) continue;
+		segAdd(tree,1,N,pre[v],suf[v],s-dp[v]);
+	}
+	dp[u]=segQuery(tree,1,N,pre[u],suf[u]);
+	if(dp[u]>=INF) ans(-1);
+}
+
+int Q[maxn],qhead,qrear;
+
+int main(){
+	scanf("%d%d",&N,&M);
+	for(int i=1;i<N;++i){
+		int u,v;scanf("%d%d",&u,&v);
+		addEdge(u,v);addEdge(v,u);
+	}
+	while(M--){
+		int u,v,c;scanf("%d%d%d",&u,&v,&c);
+		if(u!=v) W[u].push_back(make_pair(c,v));
+	}
+	dfs(1,0);
+	for(int i=1;i<=N;++i){
+		solveW(i);
+		WT[i]=W[i].begin();
+		if(!cIn[i]) Q[qrear++]=i;
+	}
+	segInit();
+	while(qhead<qrear){
+		int u=Q[qhead++];
+		--cIn[pa[u]];
+		if(!cIn[pa[u]]) Q[qrear++]=pa[u];
+		solve(u);
+	}
+	printf("%I64d\n",dp[1]);
+}

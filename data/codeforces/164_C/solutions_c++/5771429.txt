@@ -1,0 +1,88 @@
+#include<iostream>
+#include<cstdio> 
+#include<cstring>
+#include<cmath>
+#include<cstdlib>
+#include<algorithm>
+#include<queue>
+using namespace std;
+
+#define rep(i, s, t) for (int i = s; i <= t; ++i)
+#define INF 1000000000
+const int MAX_N = 3333, MAX_M = 3333 * 26 * 4;
+int nm, nxt[MAX_M], c[MAX_N], flow[MAX_M], g[MAX_M], cost[MAX_M];
+int iq[MAX_N], pre[MAX_N], pk[MAX_N], d[MAX_N];
+int S, T, N, n, m;
+queue<int> q;
+int tot, ans;
+
+void addedge(int x, int y, int w, int ct){
+    g[nm] = y; nxt[nm] = c[x]; c[x] = nm; flow[nm] = w; cost[nm] = ct; nm++;
+}
+
+void add(int x, int y, int w, int ct){
+    addedge(x, y, w, ct);
+    addedge(y, x, 0, -ct);
+}
+
+bool spfa(){
+    rep(i, 1, T) d[i] = -INF;
+    d[S] = 0;
+    q.push(S);
+    memset(iq, 0, sizeof iq);
+    while (!q.empty()){
+        int i = q.front(); q.pop(); iq[i] = 0;
+        for (int k = c[i]; ~k; k = nxt[k]){
+            int j = g[k];
+            if (d[j] < d[i] + cost[k] && flow[k]){
+                d[j] = d[i] + cost[k];
+                pre[j] = i; pk[j] = k;
+                if (!iq[j]){
+                    iq[j] = 1;
+                    q.push(j);
+                }
+            }
+        }
+    }
+    return d[T] != -INF;
+}
+
+void aug(){
+    int res = INF;
+    for (int i = T; i != S; i = pre[i])
+        res = min(res, flow[pk[i]]);
+    tot += res; ans += res * d[T];
+    for (int i = T; i != S; i = pre[i])
+        flow[pk[i]] -= res, 
+        flow[pk[i] ^ 1] += res;
+}
+
+int l[1111], r[1111], w[1111], edge[1111];
+int b[2222];
+
+int main(){
+    int k;
+    scanf("%d%d", &n, &k);
+    rep(i, 1, n){
+        scanf("%d%d%d", &l[i], &r[i], &w[i]);
+        r[i] += l[i];
+        b[++N] = l[i];
+        b[++N] = r[i];
+    }
+    memset(c, -1, sizeof c);
+    sort(b + 1, b + 1 + N);
+    N = unique(b + 1, b + 1 + N) - b - 1;
+    S = N + 1, T = N + 2;
+    add(S, 1, k, 0);
+    add(N, T, k, 0);
+    rep(i, 1, N - 1) add(i, i + 1, INF, 0);
+    rep(i, 1, n){
+        l[i] = lower_bound(b + 1, b + 1 + N, l[i]) - b;
+        r[i] = lower_bound(b + 1, b + 1 + N, r[i]) - b;
+        add(l[i], r[i], 1, w[i]);
+        edge[i] = nm - 1;
+    }
+    while (spfa()) aug();
+    rep(i, 1, n)
+        printf("%d ", flow[edge[i]] > 0);
+} 

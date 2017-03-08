@@ -1,0 +1,94 @@
+#include <stdio.h>
+#include <algorithm>
+#include <memory.h>
+#include <vector>
+using namespace std;
+#define M 800100
+typedef __int64 ll;
+
+int k, K;
+int n;
+int x[M], y[M], x1[M], y1[M];
+int stoy[M];
+int ns, ny;
+ll len[M];
+int f[M];
+
+
+struct seg{
+	int x;
+	int y1, y2, d;
+	seg(int x, int y1, int y2, int d):x(x), y1(y1), y2(y2), d(d){};
+	seg(){};
+}s[M];
+
+bool cmp(seg a, seg b){
+	return a.x != b.x ? a.x < b.x : a.d > b.d;
+}
+
+void input() {
+	scanf("%d", &n);
+	scanf("%d %d", &n, &K);
+	while(K>1) k++, K>>=1;
+    for(int i = 0; i < n; i++) {
+    	scanf("%d %d %d %d", x + i, y + i, x1 + i, y1 + i);
+		x[i]--;
+		y[i]--;
+    }
+}
+
+
+void insert(int id, int l, int r, int mn, int mx, int d) {
+	if(mn <= l && mx >= r){
+		f[id] += d;
+	}else{
+		int m = (l + r) / 2;
+		if(mn < m) insert(id * 2 + 1, l, m, mn, mx, d);
+		if(mx > m) insert(id * 2 + 2, m, r, mn, mx, d);
+	}
+
+	if(f[id]) len[id] = stoy[r] - stoy[l];
+	else len[id] = len[id * 2 + 1] + len[id * 2 + 2];
+	return;
+}
+
+bool calc() {
+	int ns = ny = 0;
+	for(int i = 0; i < n; i++){
+		stoy[ny++] = y[i] >> k;
+		stoy[ny++] = y1[i] >> k;
+	}
+	sort(stoy, stoy + ny);
+	ny = unique(stoy, stoy + ny) - stoy;
+
+	int ay, by;
+	for(int i = 0; i < n; i++){
+		ay = lower_bound(stoy, stoy + ny, y[i] >> k) - stoy;
+		by = lower_bound(stoy, stoy + ny, y1[i] >> k) - stoy;
+		s[ns++] = seg(x[i], ay, by, 1);
+		s[ns++] = seg(x1[i], ay, by, -1);
+	}
+
+	sort(s, s + ns, cmp);
+	memset(len, 0, sizeof(len));
+	memset(f, 0, sizeof(f));
+
+	ll res = 0;
+	for(int i = 0; i < ns; i++){
+		if(i) res += len[0] * ((s[i].x >> k) - (s[i - 1].x >> k));
+		insert(0, 0, ny, s[i].y1, s[i].y2, s[i].d);
+	}
+	return res & 1;
+}
+
+int main() {
+	//freopen("E1.in", "r", stdin);
+	input();
+	bool result = 0;
+	while(k >= 0 && !result) {
+		result |= calc();
+		k--;
+	}
+	puts(result ? "Hamed" : "Malek");
+	return 0;
+}

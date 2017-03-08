@@ -1,0 +1,69 @@
+#include <stdio.h>
+#include <string.h>
+#define MOD 12345
+#define MaxN 128
+
+int a[MaxN][MaxN], b[MaxN][MaxN], c[MaxN][MaxN], g[32][1010], len[32], v[32], p[32], N;
+
+void Mul(int a[MaxN][MaxN], int b[MaxN][MaxN])
+{
+    memset(c, 0, sizeof(c));
+    for (int k = 0; k < N; ++k)
+        for (int i = 0; i < N; ++i) if (a[i][k])
+            for (int j = 0; j < N; ++j) if (b[k][j])
+                c[i][j] = (c[i][j]+a[i][k]*b[k][j]) % MOD;
+    memcpy(a, c, sizeof(c));
+}
+
+int main()
+{
+    long long L;
+    int m, t;
+    char ch;
+
+    while (scanf("%I64d%d", &L, &m) != EOF) {
+        memset(v, 0, sizeof(v));
+        memset(b, 0, sizeof(b));
+        while (m--) {
+            scanf(" %c%d", &ch, &t); ch -= 'A';
+            g[ch][len[ch]++] = t;
+            if (!v[ch]) v[ch] = t;
+            else v[ch] *= t;
+        }
+        int n = 0;
+        p[0] = 1;
+        for (int i = 0; i < 26; ++i) if (v[i]) {
+            v[n] = v[i];
+            for (int j = 0; j < len[i]; ++j) g[n][j] = g[i][j];
+            len[n++] = len[i];
+        }
+        for (int i = 1; i <= n; ++i) p[i] = p[i-1]*v[i-1];
+        N = p[n];
+        for (int i = 0; i < N; ++i) {
+            for (int j = 0; j < n; ++j) {
+                int d = i%p[j+1]/p[j], nd = d + 1;
+                if (nd == v[j]) nd = 0;
+                int ni = i+p[j]*(nd-d);
+                ++b[ni][i];
+            }
+        }
+        for (int i = 0; i < N; ++i) for (int j = 0; j < N; ++j) a[i][j] = i==j;
+        for (; L; L >>= 1, Mul(b, b)) if (L&1) Mul(a, b);
+        int ans = 0;
+        for (int i = 0; i < N; ++i) {
+            bool fail = 0;
+            for (int j = 0; j < n; ++j) {
+                int v = i%p[j+1]/p[j];
+                bool valid = 0;
+                for (int k = 0; k < len[j]; ++k) if (!(v%g[j][k])) valid = 1;
+                if (!valid) {
+                    fail = 1;
+                    break;
+                }
+            }
+            if (!fail) ans = (ans + a[i][0]) % MOD;
+        }
+        printf("%d\n", ans);
+    }
+    return 0;
+}

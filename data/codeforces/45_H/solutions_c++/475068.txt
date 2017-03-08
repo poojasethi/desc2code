@@ -1,0 +1,178 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<vector>
+#include<set>
+#include<cstdlib>
+#include<ctime>
+using namespace std;
+#define MAXN 905
+#define MAXM 200005
+int n,m;
+bool con[MAXN][MAXN];
+struct Edge
+{
+    int to,next;
+} edge[MAXM];
+int box[MAXN],low[MAXN],id[MAXN],state[MAXN];
+vector<int> yy[MAXN];
+int color[MAXN];
+vector<pair<int,int> > bridge;
+int cnt,node_num;
+void add(int a,int b)
+{
+    edge[cnt].to=b;
+    edge[cnt].next=box[a];
+    box[a]=cnt++;
+}
+void dfs(int u,int pre,int dep)
+{
+    state[u]=1;
+    id[u]=low[u]=dep;
+    bool flag=true;
+    for(int i=box[u]; i!=-1; i=edge[i].next)
+    {
+        int v=edge[i].to;
+        if(v==pre&&flag)
+        {
+            flag=false;
+            continue;
+        }
+        if(state[v]==1) low[u]=min(low[u],id[v]);
+        else if(state[v]==0)
+        {
+            dfs(v,u,dep+1);
+            low[u]=min(low[u],low[v]);
+        }
+        if(low[v]>id[u]) bridge.push_back(make_pair(u,v));
+    }
+    state[u]=2;
+}
+void set_color(int u)
+{
+    yy[color[u]].push_back(u);
+    for(int i=box[u]; i!=-1; i=edge[i].next)
+    {
+        int v=edge[i].to;
+        if(color[v]) continue;
+        if(low[v]>id[u])
+        {
+            color[v]=++node_num;
+            yy[node_num].clear();
+        }
+        else color[v]=color[u];
+        set_color(v);
+    }
+}
+int du[MAXN];
+vector<pair<int,int> > ans;
+bool vst[2*MAXN];
+bool find(int u,int v,int pre)
+{
+    if(u==v) return true;
+    for(int i=box[u];i!=-1;i=edge[i].next)
+    {
+        int nx=edge[i].to;
+        if(nx==pre) continue;
+        if(find(nx,v,u))
+        {
+            vst[i]=vst[i^1]=true;
+            return true;
+        }
+    }
+    return false;
+}
+bool ck()
+{
+    memset(vst,0,sizeof(vst));
+    for(vector<pair<int,int> >::iterator it=ans.begin();it!=ans.end();it++)
+        find(color[it->first],color[it->second],0);
+    for(int i=0;i<cnt;i+=2) if(!vst[i]) return false;
+    return true;
+}
+pair<int,int> x[MAXN][MAXN];
+int main()
+{
+    //freopen("in.txt","w",stdout);
+    srand(time(0));
+    scanf("%d%d",&n,&m);
+    if(n==2)
+    {
+        printf("-1");
+        return 0;
+    }
+    cnt=0;
+    memset(box,-1,sizeof(box));
+    memset(con,0,sizeof(con));
+    for(int i=0; i<m; i++)
+    {
+        int u,v;
+        scanf("%d%d",&u,&v);
+        if(con[u][v])
+        {
+            printf("-1\n");
+            return 0;
+        }
+        con[u][v]=con[v][u]=true;
+        add(u,v);
+        add(v,u);
+    }
+    bridge.clear();
+    memset(state,0,sizeof(state));
+    dfs(1,0,0);
+
+    memset(color,0,sizeof(color));
+    yy[1].clear();
+    color[1]=node_num=1;
+    set_color(1);
+
+    if(node_num==1)
+    {
+        printf("0\n");
+        return 0;
+    }
+
+
+    memset(box,-1,sizeof(box));
+    cnt=0;
+    memset(du,0,sizeof(du));
+    for(vector<pair<int,int> >::iterator it=bridge.begin(); it!=bridge.end(); it++)
+    {
+        int u=it->first,v=it->second;
+        add(color[u],color[v]);
+        add(color[v],color[u]);
+        du[color[u]]++;
+        du[color[v]]++;
+    }
+    for(int i=1;i<=n;i++)
+        for(int j=1;j<=n;j++)
+            if(color[i]!=color[j]&&!con[i][j])
+                x[color[i]][color[j]]=make_pair(i,j);
+    //printf("%d %d\n",x[1][2].first,x[1][2].second);
+    vector<int> leaves;
+    for(int i=1; i<=node_num; i++)
+    {
+        if(du[i]==1) leaves.push_back(i);
+    }
+    int sz=(int)leaves.size();
+    while(true)
+    {
+        ans.clear();
+        for(int i=1;i<sz;i+=2)
+        {
+            ans.push_back(x[leaves[i-1]][leaves[i]]);
+        }
+        if(sz&1) ans.push_back(x[leaves[0]][leaves[sz-1]]);
+        if(ck())
+        {
+            printf("%d\n",(sz+1)/2);
+            for(vector<pair<int,int> >::iterator it=ans.begin();it!=ans.end();it++)
+                printf("%d %d\n",it->first,it->second);
+            return 0;
+        }
+        random_shuffle(leaves.begin(),leaves.end());
+        //for(int i=0;i<sz;i++) printf("%d ",leaves[i]);
+        //printf("\n");
+    }
+    return 0;
+}

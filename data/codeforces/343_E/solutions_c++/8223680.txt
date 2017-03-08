@@ -1,0 +1,104 @@
+#include <algorithm>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+#include <vector>
+#define N 2010
+#define inf 1000000000
+#define For(i,x,y) for (i=x;i<=y;i++)
+using namespace std;
+struct ww {
+	int x,y,z;
+} bi[N*N];
+int i,j,k,n,m,x,y,z,t,S,T,num,re;
+int a[N],b[N],d[N],next[N],head[N],h[N][N],g[N],gg[N],F[N],f[N],ff[N][N];
+vector<int> c,an,q[N];
+inline void add(int x,int y,int z) {
+	a[++t]=y,b[t]=d[t]=z,next[t]=head[x],head[x]=t;
+	a[++t]=x,b[t]=d[t]=z,next[t]=head[y],head[y]=t;
+}
+bool bfs() {
+	int l,r,v;
+	g[l=r=1]=S; F[S]=++num; gg[S]=1;
+	for (;l<=r;l++) for (v=head[g[l]];v;v=next[v]) if (b[v]&&F[a[v]]!=num) {
+		F[a[v]]=num; gg[a[v]]=gg[g[l]]+1; g[++r]=a[v];
+		if (a[v]==T) return 1;
+	}
+	return 0;
+}
+int dfs(int x,int y) {
+	if (x==T) return y;
+	int v,w=0,re;
+	for (v=head[x];v&&w<y;v=next[v])
+	if (b[v]&&F[a[v]]==num&&gg[a[v]]==gg[x]+1&&(re=dfs(a[v],min(b[v],y-w))))
+		b[v]-=re,b[v^1]+=re,w+=re;
+	if (!w) gg[x]=0;
+	return w;
+}
+void dfs(vector<int> a) {
+	int i,j;
+	if (a.size()==1) return;
+	S=a[0],T=a[1];
+	int an=0;
+	For(i,2,t) b[i]=d[i];
+	for (;bfs();an+=dfs(S,inf));
+	For(i,1,n)For(j,1,n) if ((F[i]==num)^(F[j]==num)) h[i][j]=min(h[i][j],an);
+	vector<int> b,c;
+	for (i=0;i<a.size();i++) {
+		int A=a[i];
+		if (F[A]==num) b.push_back(A);
+		else c.push_back(A);
+	}
+	dfs(b),dfs(c);
+}
+void dfs1(int x,int y,int &mi,int &an1,int &an2) {
+	int i;
+	for (i=0;i<q[x].size();i++) {
+		int A=q[x][i];
+		if (A==y||ff[x][A]) continue;
+		if (h[x][A]<mi) mi=h[x][A],an1=x,an2=A;
+		dfs1(A,x,mi,an1,an2);
+	}
+}
+void Dfs(int x) {
+	int mi=inf,an1,an2;
+	dfs1(x,0,mi,an1,an2);
+	if (mi==inf) {
+		printf("%d ",x);
+		return;
+	}
+	ff[an1][an2]=ff[an2][an1]=1;
+	Dfs(an1);
+	Dfs(an2);
+}
+inline bool cc1(const ww &a,const ww &b) {
+	return a.z>b.z;
+}
+int get(int x) {
+	return f[x]==x?x:f[x]=get(f[x]);
+}
+int main() {
+	scanf("%d%d",&n,&m); t=1;
+	For(i,1,m) scanf("%d%d%d",&x,&y,&z),add(x,y,z);
+	For(i,1,n)For(j,1,n) if (i!=j) h[i][j]=inf;
+	For(i,1,n) c.push_back(i);
+	dfs(c);
+	t=0;
+	For(i,1,n)For(j,i+1,n) bi[++t]=(ww){i,j,h[i][j]};
+	For(i,1,n) f[i]=i;
+	sort(bi+1,bi+t+1,cc1);
+	int an=0;
+	For(i,1,t) {
+		ww A=bi[i];
+		if (get(A.x)!=get(A.y)) {
+			f[get(A.x)]=get(A.y);
+			an+=A.z;
+			q[A.x].push_back(A.y);
+			q[A.y].push_back(A.x);
+		}
+	}
+	printf("%d\n",an);
+	Dfs(1);
+	printf("\n");
+	return 0;
+}

@@ -1,0 +1,121 @@
+/* This solution is based on the editorials */
+
+#include<cstdio>
+#include<vector>
+
+#define pb       push_back
+#define rep(i,n) for(int i=0;i<(n);i++)
+
+using namespace std;
+
+typedef long long   ll;
+typedef	vector<int> vi;
+
+const int INF=(1<<31)-1;
+
+int n,lim,dis[100][100];
+vi tree[100],sublist[100];
+bool sub[100][100]; // sub[u][v] ==true <=> the subtree rooted at u includes v
+
+void maketree(int u,int parent){
+	rep(v,n){
+		if(v!=parent && dis[u][v]<INF) {
+			tree[u].pb(v);
+			sub[u][v]=true;
+			maketree(v,u);
+		}
+	}
+}
+
+int dp1[100][100],dp2[100];
+
+int dfs1(int v,int c);
+int dfs2(int u);
+
+int dfs1(int v,int c){
+	if(~dp1[v][c]) return dp1[v][c];
+
+	// case 1
+	if(tree[v].size()==0){ // v is a leaf
+		return dp1[v][c]=0;
+	}
+
+	// case 2
+	if(v==c || !sub[v][c]){
+		int ans=0;
+		rep(i,tree[v].size()){
+			int u=tree[v][i];
+			if(dis[u][c]<=lim) ans+=max(dfs2(u),dfs1(u,c)+dis[u][v]);
+			else               ans+=dfs2(u);
+		}
+		return dp1[v][c]=ans;
+	}
+
+	// case 3
+	int ans=0;
+	rep(i,tree[v].size()){
+		int u=tree[v][i];
+		if(sub[u][c]) ans+=dis[u][v]+dfs1(u,c);
+		else{
+			if(dis[u][c]<=lim) ans+=max(dfs2(u),dfs1(u,c)+dis[u][v]);
+			else               ans+=dfs2(u);
+		}
+	}
+	return dp1[v][c]=ans;
+}
+
+int dfs2(int u){
+	if(~dp2[u]) return dp2[u];
+
+	int ans=0;
+	rep(i,sublist[u].size()){
+		int c=sublist[u][i];
+		if(dis[u][c]<=lim) ans=max(ans,dfs1(u,c));
+	}
+	return dp2[u]=ans;
+}
+
+int main(){
+	int T; scanf("%d",&T);
+	while(T--){
+		scanf("%d%d",&n,&lim);
+
+		// initialize
+		rep(u,n){
+			tree[u].clear();
+			sublist[u].clear();
+			rep(v,n){
+				dis[u][v]=INF;
+				sub[u][v]=false;
+				dp1[u][v]=-1;
+			}
+			dp2[u]=-1;
+		}
+
+		rep(i,n-1){
+			int u,v,w; scanf("%d%d%d",&u,&v,&w);
+			dis[u][v]=dis[v][u]=w;
+		}
+
+		maketree(0,-1);
+
+		// Warshall-Floyd
+		rep(u,n) dis[u][u]=0;
+		rep(k,n) rep(i,n) rep(j,n) {
+			if((ll)dis[i][k]+dis[k][j]<dis[i][j]) dis[i][j]=dis[i][k]+dis[k][j];
+		}
+
+		// transitive closure
+		rep(u,n) sub[u][u]=true;
+		rep(k,n) rep(i,n) rep(j,n) {
+			sub[i][j]|=(sub[i][k] && sub[k][j]);
+		}
+		rep(u,n) rep(v,n) if(sub[u][v]) sublist[u].pb(v);
+
+		int ans=0;
+		rep(u,n) if(dis[0][u]<=lim) ans=max(ans,dfs1(0,u));
+		printf("%d\n",ans);
+	}
+
+	return 0;
+}

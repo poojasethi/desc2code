@@ -1,0 +1,156 @@
+#include <bits/stdc++.h>
+#define N 266666
+using namespace std;
+
+int modex(long long a,int b,int MOD){
+    long long res = 1;
+    while(b > 0){
+        if(b&1) res = res * a % MOD;
+        a = a * a % MOD;
+        b>>=1;
+    }
+    return (int)res;
+}
+
+long long R[2] , P[2] , X[2][N] , Y[2][N] , potR[2][N];
+int numbers[N];
+
+/**********segment tree **************/
+long long S[2][N] , D[2][N],SUM[2][N];
+void build(int v,int b,int e){
+    S[0][v] = S[1][v] = 0;
+    D[0][v] = D[1][v] = 0;
+
+    if(b == e) SUM[0][v] = numbers[b] % P[0] , SUM[1][v] = numbers[b] % P[1];
+    else{
+        int mid = (b+e)>>1;
+        build(2*v+1,b,mid);
+        build(2*v+2,mid+1,e);
+        for(int i = 0; i < 2; ++i)
+        {   SUM[i][v] = SUM[i][2*v+1] + SUM[i][2*v+2];
+            if(SUM[i][v] >= P[i]) SUM[i][v] -= P[i];
+        }
+    }
+}
+
+int val(int ind,int s,int d,int k){
+    return ((s*X[ind][k])%P[ind] + (d*Y[ind][k])%P[ind] ) % P[ind];
+}
+
+void push(int ind,int v,int b,int e,int s,int d){
+        SUM[ind][v] = SUM[ind][v] + val(ind,s,d,e-b+1);
+        if(SUM[ind][v] >= P[ind]) SUM[ind][v] -= P[ind];
+        S[ind][v] += s;
+        if(S[ind][v] >= P[ind]) S[ind][v] -= P[ind];
+        D[ind][v] += d;
+        if(D[ind][v] >= P[ind]) D[ind][v] -= P[ind];
+}
+
+long long update(int ind,int v,int b,int e,int i,int j,int s,int d){
+
+    if(e < i || b > j || i > j) return SUM[ind][v];
+    if( i <= b && e <= j){
+        push(ind,v,b,e,s,d);
+        return SUM[ind][v];
+    }
+    int ss , dd , rt , t , mid = (b+e)>>1;
+    if(S[ind][v] || D[ind][v]){
+        push(ind,2*v+1,b,mid,S[ind][v],D[ind][v]);
+        t = mid - b + 1 , rt = potR[ind][t];
+        ss = ( (S[ind][v] + t*D[ind][v])%P[ind]) * rt % P[ind];
+        dd = (D[ind][v]*rt) % P[ind];
+        push(ind,2*v+2,mid+1,e,ss,dd);
+        S[ind][v] = D[ind][v] = 0;
+    }
+    SUM[ind][v] = update(ind,2*v+1,b,mid,i,j,s,d);
+    t = max(0,mid - i + 1); rt = potR[ind][t];
+    ss = ( (s + (long long)t*d)%P[ind]) * rt % P[ind];
+    dd = ((long long)d*rt) % P[ind];
+
+    SUM[ind][v] += update(ind,2*v+2,mid+1,e,max(i,mid+1),j,ss,dd);
+
+    if(SUM[ind][v] >= P[ind]) SUM[ind][v] -= P[ind];
+
+    return SUM[ind][v];
+}
+
+int query(int ind,int v,int b,int e,int i,int j){
+    if(e < i || b > j) return 0;
+    if(i <= b && e <= j) return SUM[ind][v];
+
+    int ss , dd , t , rt , mid = (b+e)>>1;
+    if(S[ind][v] || D[ind][v]){
+        push(ind,2*v+1,b,mid,S[ind][v],D[ind][v]);
+        t = mid - b + 1 , rt = potR[ind][t];
+        ss = ( (S[ind][v] + t*D[ind][v])%P[ind]) * rt % P[ind];
+        dd = (D[ind][v]*rt) % P[ind];
+        push(ind,2*v+2,mid+1,e,ss,dd);
+        S[ind][v] = D[ind][v] = 0;
+    }
+    int res = query(ind,2*v+1,b,mid,i,j) + query(ind,2*v+2,mid+1,e,i,j);
+        if(res >= P[ind]) res -= P[ind];
+    return res;
+}
+
+/************************/
+
+int main(){
+ 
+    int tc , n , Q ;
+    cin >> tc;
+
+    while(tc--){
+        scanf("%d %d %lld %lld %lld",&n,&Q,&R[0],&P[0],&P[1]);
+        R[1] = R[0] % P[1];
+        R[0] = R[0] % P[0];
+
+        potR[0][0] = potR[1][0] = 1;
+        for(int i = 0; i < n; ++i)
+        {   potR[0][i+1] = potR[0][i] * R[0] % P[0];
+            potR[1][i+1] = potR[1][i] * R[1] % P[1];
+        }
+
+        for(int i = 0; i < n; ++i)
+        {   scanf("%d",&numbers[i]);
+            X[0][i+1] = (X[0][i] + potR[0][i] ) % P[0];
+            X[1][i+1] = (X[1][i] + potR[1][i] ) % P[1];
+            Y[0][i+1] = (Y[0][i] + i * potR[0][i] ) % P[0];
+            Y[1][i+1] = (Y[1][i] + i * potR[1][i] ) % P[1];
+        }
+
+        build(0,0,n-1);
+
+        int x , y , tipo , s ,d;
+        while(Q--){
+            scanf("%d",&tipo);
+
+            if(tipo == 0){
+                scanf("%d %d %d %d",&s,&d,&x,&y); x--; y--;
+                update(0,0,0,n-1,x,y,s,d);
+                update(1,0,0,n-1,x,y,s,d);
+
+            }else if(tipo == 1){
+                scanf("%d %d",&x,&y); x--;
+                int parcial = query(1,0,0,n-1,x,x);
+                int t = modex(parcial,y,P[1]);
+
+                int val = t - parcial + P[1];
+                if(val >= P[1]) val -= P[1];
+                update(1,0,0,n-1,x,x,val,0);
+
+                t%=P[0];
+                parcial = query(0,0,0,n-1,x,x);
+                val = t - parcial + P[0];
+                if(val >= P[0]) val-=P[0];
+                update(0,0,0,n-1,x,x,val,0);
+            }else{
+                scanf("%d %d",&x,&y); x--; y--;
+                printf("%d\n",query(0,0,0,n-1,x,y));
+            }
+        }
+
+    }
+
+    return 0;
+}
+

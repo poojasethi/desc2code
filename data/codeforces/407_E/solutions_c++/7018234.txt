@@ -1,0 +1,136 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+typedef long long ll;
+#define N 200010
+struct segnode{
+	ll v,t;
+}t[N << 2];
+const ll inf = 40000000000000000LL;
+#define ls (x << 1)
+#define rs (x << 1 | 1)
+void upd(int x){
+	t[x].v = min(t[ls].v,t[rs].v);
+}
+void down(int x){
+	if(t[x].t){
+		t[ls].t += t[x].t;
+		t[ls].v += t[x].t;
+		t[rs].t += t[x].t;
+		t[rs].v += t[x].t;
+		t[x].t = 0;
+	}
+}
+void build(int l,int r,int x){
+	if(l == r){
+		t[x].v = inf;
+		t[x].t = 0;
+		return;
+	}
+	int mid = (l + r) >> 1;
+	build(l,mid,ls);
+	build(mid + 1,r,rs);
+	upd(x);
+}
+void add(int ql,int qr,ll vv,int l,int r,int x){
+	if(ql <= l && r <= qr){
+		t[x].v += vv;
+		t[x].t += vv;
+		return;
+	}
+	down(x);
+	int mid = (l + r) >> 1;
+	if(ql <= mid)	add(ql,qr,vv,l,mid,ls);
+	if(mid < qr)	add(ql,qr,vv,mid + 1,r,rs);
+	upd(x);
+}
+void travel(int l,int r,int x){
+	if(l == r){
+		printf("%d %I64d\n",l,t[x].v);
+		return;
+	}
+	down(x);
+	int mid = (l + r) >> 1;
+	travel(l,mid,ls);
+	travel(mid + 1,r,rs);
+}
+int q1[N],q2[N],n,c[N],cnt[N],fail = 0,AL = 1,AR = 0;
+ll bin[N],a[N],v1[N],v2[N],K,D;
+void addone(int x){
+	if(++ cnt[x] == 2)	++ fail;
+}
+void delone(int x){
+	if(-- cnt[x] == 1)	-- fail;
+}
+int find(int l,int r,int x,ll V){
+	if(l == r)	return l;
+	down(x);
+	int mid = (l + r) >> 1;
+	if(t[ls].v <= V)	return find(l,mid,ls,V);
+	if(t[rs].v <= V)	return find(mid + 1,r,rs,V);
+	return 0;
+}
+void updans(int _l,int _r){
+	if((_r - _l > AR - AL) || ((_r - _l == AR - AL) && (_l < AL)))	AL = _l, AR = _r;
+}
+int main(){
+//	freopen("data.in","r",stdin);
+	scanf("%d%I64d%I64d",&n,&K,&D);
+	build(1,n,1);
+	for(int i = 1;i <= n;i ++)	scanf("%I64d",&a[i]),a[i] += 1000000007,bin[i] = a[i];
+	if(!D){
+		int pre = 1;
+		for(int i = 2;i <= n;i ++){
+			if(a[i] != a[i - 1]){
+				updans(pre,i - 1);
+				pre = i;
+			}
+		}
+		updans(pre,n);
+		printf("%d %d\n",AL,AR);
+		return 0;
+	}
+	sort(bin + 1,bin + n + 1);
+	int cnt = unique(bin + 1,bin + n + 1) - bin - 1;
+	for(int i = 1;i <= n;i ++)	c[i] = lower_bound(bin + 1,bin + cnt + 1,a[i]) - bin; 
+	int s1 = 1,e1 = 0,s2 = 1,e2 = 0,L = 1;
+	for(int i = 1;i <= n;i ++){
+		if(i > 1){
+			if(a[i - 1] % D != a[i] % D){
+				for(int j = L;j < i;j ++)	delone(c[j]);
+				add(L,i - 1,inf,1,n,1);
+				L = i;
+			}
+		}
+		addone(c[i]);
+		while(fail){
+			delone(c[L]);
+			add(L,L,inf,1,n,1);
+			L ++;
+		}
+		add(i,i,-inf + 1LL * i * D,1,n,1); 
+		q1[++ e1] = i;
+		v1[e1] = a[i];
+		while(s1 < e1 && v1[e1 - 1] < v1[e1]){
+			add(q1[e1 - 1],q1[e1] - 1,v1[e1] - v1[e1 - 1],1,n,1);
+			v1[e1 - 1] = v1[e1];
+			-- e1;
+		}
+		q2[++ e2] = i;
+		v2[e2] = a[i];
+		while(s2 < e2 && v2[e2 - 1] > v2[e2]){
+			add(q2[e2 - 1],q2[e2] - 1,v2[e2 - 1] - v2[e2],1,n,1);
+			v2[e2 - 1] = v2[e2];
+			-- e2;
+		}
+		int pos = find(1,n,1,1LL * (K + i) * D);
+		if(pos)	updans(pos,i);
+	}
+	printf("%d %d\n",AL,AR); 
+	return 0;
+}
+
+		

@@ -1,0 +1,42 @@
+#include<iostream>
+#include<algorithm>
+#include<cmath>
+#include<cstring>
+#include<cstdio>
+#include<queue>
+#include<vector>
+using namespace std;
+priority_queue<int,vector<int>,greater<int> >q;
+long long ans=0,tot=0;
+#define N 510000
+int n,a[N],b[N];
+int main(){
+    scanf("%d",&n);
+    for(int i=1;i<=n;i++)scanf("%d",&a[i]),ans+=a[i];
+    sort(a+1,a+n+1);
+    while(n){
+      int x=a[n],y=0;
+      while(a[n-1]==a[n])++y,--n;
+      --n;++y;b[0]=0;
+      while(tot && y)--tot,b[++b[0]]=x,y--;
+      while(y>=2 && !q.empty()){
+        int t=q.top();q.pop();
+        if(t>x)b[++b[0]]=2*x-t,b[++b[0]]=t;
+        else b[++b[0]]=x,b[++b[0]]=x;
+        y-=2;
+      }
+      if(y && !q.empty()){
+        int t=q.top();q.pop();
+        if(t<x)b[++b[0]]=x;
+        else q.push(t);
+      }
+      tot+=y;
+      while(b[0])q.push(b[b[0]]),b[0]--;
+    }
+    while(!q.empty()){
+      int x=q.top();q.pop();
+      if(x>0)ans-=x;
+    }
+    cout<<ans<<endl;
+    return 0;
+}

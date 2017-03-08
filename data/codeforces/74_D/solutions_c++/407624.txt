@@ -1,0 +1,148 @@
+#include <cstdio>
+#include <set>
+#include <algorithm>
+#include <utility>
+#include <map>
+
+using namespace std;
+
+typedef pair < int, int > pii;
+
+const int MAX_Q = 100005;
+const int MAX_N = 1000000005;
+
+struct cmp_end {
+	bool operator () (const pii &a, const pii &b) {
+		return a.second < b.second;
+	}
+};
+
+struct cmp_size {
+	bool operator () (const pii &a, const pii &b) {
+		int sa = a.second - a.first + 1;
+		int sb = b.second - b.first + 1;
+		if (sa != sb)
+			return sa > sb;
+		return a.first > b.first;
+	}
+};
+
+set < pii, cmp_end > by_end;
+set < pii, cmp_size > by_size;
+map < int, int > place;
+pii queries[MAX_Q];
+set < int > used;
+map < int, int > place_id;
+int freq[MAX_Q];
+
+int read_tree(int id) {
+	int ans = 0;
+	while (id > 0) {
+		ans += freq[id];
+		id -= id & -id;
+	}
+	return ans;
+}
+
+void update_tree(int id, int val) {
+	while (id < MAX_Q) {
+		freq[id] += val;
+		id += id & -id;
+	}
+}
+
+void arrive(int x) {
+	pii pos = *by_size.begin();
+	by_size.erase(pos);
+	by_end.erase(pos);
+
+	place[x] = (pos.first + pos.second + 1) / 2;
+	
+	by_size.insert(make_pair(pos.first, place[x] - 1));
+	by_size.insert(make_pair(place[x] + 1, pos.second));
+
+	by_end.insert(make_pair(pos.first, place[x] - 1));
+	by_end.insert(make_pair(place[x] + 1, pos.second));
+}
+
+void leave(int x) {
+	set < pii, cmp_end >::iterator ibefore, iafter;
+	ibefore = iafter = by_end.lower_bound(make_pair(place[x], place[x]));
+	--ibefore;
+	pii before, after;
+	before = *ibefore;
+	after = *iafter;
+
+	by_end.erase(before); by_end.erase(after);
+	by_size.erase(before); by_size.erase(after);
+	place[x] = 0;
+
+	by_end.insert(make_pair(before.first, after.second));
+	by_size.insert(make_pair(before.first, after.second));
+}
+
+int query(int a, int b) {
+	a = *used.lower_bound(a);
+	
+	set < int >::iterator ib;
+	ib = used.upper_bound(b); --ib;
+	b = *ib;
+	
+	if (a > b)
+		return 0;
+	
+	int pa = place_id[a];
+	int pb = place_id[b];
+	return read_tree(pb) - read_tree(pa - 1);
+}
+
+int main() {
+	int n, q; scanf("%d %d", &n, &q);
+
+	by_end.insert(make_pair(1, n));
+	by_size.insert(make_pair(1, n));
+	for (int i = 0; i < q; i++) {
+		int x; scanf("%d", &x);
+		if (x == 0) {
+			int a, b; scanf("%d %d", &a, &b);
+			queries[i] = make_pair(a, b);
+		}
+		else {
+			if (place[x] == 0) {
+				arrive(x);
+				used.insert(place[x]);
+			}
+			else
+				leave(x);
+			queries[i] = make_pair(0, x);
+		}
+	}
+
+	used.insert(0); used.insert(MAX_N - 1);
+
+	int curr = 0;
+	set < int >::iterator it;
+	for (it = used.begin(); it != used.end(); ++it)
+		place_id[*it] = curr++;
+
+	by_end.clear(); by_end.insert(make_pair(1, n));
+	by_size.clear(); by_size.insert(make_pair(1, n));
+	place.clear();
+	for (int i = 0; i < q; i++) {
+		int x = queries[i].first, y = queries[i].second;
+		if (x == 0) {
+			if (place[y] == 0) {
+				arrive(y);
+				update_tree(place_id[place[y]], 1);
+			}
+			else {
+				update_tree(place_id[place[y]], -1);
+				leave(y);
+			}
+		}
+		else
+			printf("%d\n", query(x, y));
+	}
+
+	return 0;
+}

@@ -1,0 +1,70 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#define MAXN 800001
+#define MAXT 800001
+using namespace std;
+struct query{
+    long long x;
+	long long y,ans;
+}q[MAXN];
+long long m,last,size,len,g,c[MAXT][27],l[MAXT],f[MAXT],o[MAXT],h[MAXT],a[MAXN];
+long long t[MAXN],r[MAXT];
+char s[MAXN];
+bool cmp_query(const long long &a,const long long &b) {return q[a].y<q[b].y;}
+bool cmp_nodes(const long long &x,const long long &y) {return r[x]<r[y];}
+void modify(long long x,long long d) {for (;x<=len;x+=x&-x) t[x]+=d;}
+long long sum(long long x) {
+    long long ret=0;
+    for (;x;x-=x&-x) ret+=t[x];
+	return ret;
+}
+void add(long long x,long long &last) {
+    long long lastnode=last,newnode=++size;l[newnode]=l[lastnode]+1;r[newnode]=1;
+	for (;lastnode && c[lastnode][x]==0;lastnode=f[lastnode]) c[lastnode][x]=newnode;
+	if (!lastnode) f[newnode]=1;
+	else{
+	  long long nownode=c[lastnode][x];
+	  if (l[lastnode]+1==l[nownode]) f[newnode]=nownode;
+	  else{
+	    long long auxnode=++size;l[auxnode]=l[lastnode]+1;
+		for (long long i=0;i<=26;i++) c[auxnode][i]=c[nownode][i];
+		f[auxnode]=f[nownode];f[nownode]=f[newnode]=auxnode;
+		for (;lastnode && c[lastnode][x]==nownode;lastnode=f[lastnode]) c[lastnode][x]=auxnode;
+	  }
+	}
+	last=newnode;
+}
+void getright() {
+    static long long q[MAXT],deg[MAXT];
+	long long left=0,right=0;
+	for (long long i=1;i<=size;i++) if (f[i]) deg[f[i]]++;
+	for (long long i=1;i<=size;i++)
+	  if (!deg[i]) q[++right]=i;
+	while (left<right) {
+	  left++;if (f[q[left]]) r[f[q[left]]]+=r[q[left]];
+	  if (f[q[left]] && !--deg[f[q[left]]]) q[++right]=f[q[left]];
+	}
+}
+int main() {
+	scanf("%s",s+1);len=strlen(s+1);last=size=1;
+	for (long long i=1;i<=len;i++) add(s[i]-'a'+1,last);
+	getright();
+	scanf("%lld",&m);
+	for (long long i=1;i<=m;i++) {o[i]=i;scanf("%lld%lld",&q[i].x,&q[i].y);}
+	for (long long i=1;i<=size;i++) a[i]=i;
+	sort(o+1,o+m+1,cmp_query);
+	sort(a+1,a+size+1,cmp_nodes);
+	for (long long i=1,p=1;i<=m;i++) {
+	  long long j=i;
+	  while (i<m && q[o[i]].y==q[o[i+1]].y) i++;
+	  while (p<=size && r[a[p]]<q[o[i]].y) p++;
+	  long long z=p;
+	  while (p<=size && r[a[p]]==q[o[i]].y) p++;
+	  for (long long k=z;k<p;k++) modify(l[f[a[k]]]+1,1),modify(l[a[k]]+1,-1);
+	  for (long long k=j;k<=i;k++) q[o[k]].ans=sum(q[o[k]].x);
+	  for (long long k=z;k<p;k++) modify(l[f[a[k]]]+1,-1),modify(l[a[k]]+1,1);
+	}
+	for (long long i=1;i<=m;i++) printf("%lld\n",q[i].ans);
+	return 0;
+}

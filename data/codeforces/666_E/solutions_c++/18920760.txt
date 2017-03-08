@@ -1,0 +1,133 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#define pii pair<int,int>
+#define x first
+#define y second
+#define MAXN 1100009
+#define MAXM 25000005
+using namespace std;
+
+char s[MAXN], w[MAXN];
+struct node
+{
+	int lc, rc;
+	pii tag;
+}t[MAXM];
+pii ans;
+int tot, n, L, R, fa[MAXN][20];
+
+void ins(int &p,int l,int r,int x)
+{
+	if(!p)p=++tot, t[p].tag=pii(0,-l);
+	if(l==r){++t[p].tag.x;return;}
+	int mid=l+r>>1;
+	if(x<=mid)ins(t[p].lc,l,mid,x);
+	else ins(t[p].rc,mid+1,r,x);
+	t[p].tag=max(t[t[p].lc].tag,t[t[p].rc].tag);
+}
+int Union(int p,int q)
+{
+	if(!p||!q)return p+q;
+	int v=++tot;
+	if(!t[p].lc&&!t[p].rc){t[v].tag=pii(t[p].tag.x+t[q].tag.x,t[p].tag.y);return v;}
+	t[v].lc=Union(t[p].lc,t[q].lc), t[v].rc=Union(t[p].rc,t[q].rc);
+	t[v].tag=max(t[t[v].lc].tag,t[t[v].rc].tag);
+	return v;
+}
+void query(int p,int l,int r)
+{
+	if(!p)return ;
+	if(L<=l&&r<=R){ans=max(ans,t[p].tag);return;}
+	int mid=l+r>>1;
+	if(L<=mid)query(t[p].lc,l,mid);
+	if(mid<R)query(t[p].rc,mid+1,r);
+}
+
+int q[MAXN], cnt[MAXN], loc[MAXN];
+struct Sam
+{
+    int pos, last, ch[MAXN][26], link[MAXN], len[MAXN], rt[MAXN];
+	inline int Copy(int p,int c)
+	{
+		int x=++pos, y=ch[p][c]; len[x]=len[p]+1;
+		for(int i=0;i<26;++i)ch[x][i]=ch[y][i]; link[x]=link[y], link[y]=x;
+		while (~p && ch[p][c]==y) ch[p][c]=x, p=link[p];
+		return x;
+	}
+    inline void add(int c,int idx)
+    {
+		if(ch[last][c])
+		{
+			if (len[last]+1!=len[ch[last][c]]) Copy(last,c);
+			last=ch[last][c];
+		}
+		else
+		{
+			int o=++pos, p=last; len[o]=len[last]+1; last=o;
+			while (~p && !ch[p][c]) ch[p][c]=o, p=link[p];
+			link[o]=~p?(len[p]+1==len[ch[p][c]]?ch[p][c]:Copy(p,c)):0;
+		}
+		if(idx)ins(rt[last],1,n,idx);
+    }
+    void work()
+    {
+        int tot=0;
+        for(int i=1;i<=pos;++i)++cnt[link[i]];
+        for(int i=1;i<=pos;++i)if(!cnt[i])q[++tot]=i;
+        for(int i=1, u;i<=tot;++i)
+        {
+            u=q[i];
+            if(link[u]==1)
+            {
+                int look;
+                look=i;
+            }
+            rt[link[u]]=Union(rt[link[u]],rt[u]);
+            if(!--cnt[link[u]])q[++tot]=link[u];
+        }
+        for(int i=tot, u;i;--i)
+        {
+            u=q[i], fa[u][0]=link[u];
+            for(int j=1;fa[fa[u][j-1]][j-1];++j)
+                fa[u][j]=fa[fa[u][j-1]][j-1];
+        }
+    }
+    int Find(int u,int dep)
+    {
+		u=loc[u];
+        for(int i=19;~i;--i)
+            if(fa[u][i]&&len[u]-len[fa[u][i]]<dep)
+                dep-=len[u]-len[fa[u][i]], u=fa[u][i];
+        if(len[u]-len[link[u]]<dep)u=link[u];
+        return rt[u];
+    }
+}sam;
+
+int main()
+{
+    scanf("%s%d",s+1,&n);
+	sam.link[0]=-1;
+    for(int i=1;s[i];++i)sam.add(s[i]-'a',0), loc[i]=sam.last;
+    for(int i=1;i<=n;++i)
+    {
+        sam.last=0;
+        scanf("%s",w);
+        for(int j=0;w[j];++j)sam.add(w[j]-'a',i);
+    }
+
+    sam.work();
+    int m, b, e;
+    scanf("%d",&m);
+    while(m--)
+    {
+        scanf("%d%d%d%d",&L,&R,&b,&e);
+        ans=pii(0,0);
+        query(sam.Find(e,b),1,n);
+        if(ans.x)printf("%d %d\n",-ans.y,ans.x);
+        else printf("%d 0\n",L);
+    }
+    return 0;
+}
+
+	  	 		 							      				  	

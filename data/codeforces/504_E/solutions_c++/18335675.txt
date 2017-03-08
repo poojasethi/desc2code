@@ -1,0 +1,207 @@
+#include <bits/stdc++.h>
+
+#define ll long long
+
+#define SZ(x) (int)(x).size()
+#define pb push_back
+
+template<class T>inline void chkmax(T &x, const T &y) {if(x < y) x = y;}
+template<class T>inline void chkmin(T &x, const T &y) {if(x > y) x = y;}
+
+template<class T>
+inline void read(T &x) {
+    char c;int f = 1;x = 0;
+    while(((c=getchar()) < '0' || c > '9') && c != '-');
+    if(c == '-') f = -1;else x = c-'0';
+    while((c=getchar()) >= '0' && c <= '9') x= x*10+c-'0';
+    x *= f;
+}
+int outn;
+char out[(int)2e7];
+template<class T>
+inline void write(T x) {
+    if(x < 0) out[outn++] = '-', x = -x;
+    if(x) {
+        static int tmpn;
+        static char tmp[20];
+        tmpn = 0;
+        while(x) tmp[tmpn++] = x%10+'0', x /= 10;
+        while(tmpn) out[outn++] = tmp[--tmpn];
+    }
+    else out[outn++] = '0';
+}
+
+const int N = 3e5;
+const int LOG = 19;
+const int B = 131;
+const int MOD = 998244353;
+
+int n, m;
+char s[N+9];
+struct graph {
+    int sz, head[N+9], to[N*2+9], ne[N*2+9];
+    graph() {
+        sz = 1, memset(head, 0, sizeof head);
+    }
+    inline void addedge(int u, int v) {
+        to[sz] = v, ne[sz] = head[u], head[u] = sz++;
+        to[sz] = u, ne[sz] = head[v], head[v] = sz++;
+    }
+}g;
+
+int pw[N+9];
+struct data {
+    int l;int v;
+    data() {}
+    data(int _l, int _v):l(_l), v(_v) {}
+    inline friend data operator + (const data &p, const data &q) {
+        return data(p.l+q.l, (p.v+(ll)q.v*pw[p.l]%MOD)%MOD);
+    }
+    inline friend data operator - (const data &p, const data &q) {
+        return data(p.l-q.l, (p.v-(ll)q.v*pw[p.l-q.l]%MOD+MOD)%MOD);
+    }
+    inline friend bool operator == (const data &p, const data &q) {
+        return p.l == q.l && p.v == q.v;
+    }
+}up[N+9], dw[N+9];
+
+int fa[N+9];
+int dep[N+9], sz[N+9], hvy[N+9];
+int dfn[N+9], pos[N+9], top[N+9], tot;
+
+void dfs(int now, int fa) {
+    sz[now] = 1, ::fa[now] = fa;
+    for(int i = g.head[now], to; i; i = g.ne[i])
+        if((to = g.to[i]) != fa) {
+            dep[to] = dep[now]+1;
+            dfs(to, now);
+            sz[now] += sz[to];
+            if(!hvy[now] || sz[to] > sz[hvy[now]])
+                hvy[now] = to;
+        }
+}
+
+void dfs2(int now, int fa) {
+    pos[now] = ++tot, dfn[tot] = now;
+    if(hvy[now]) {
+        top[hvy[now]] = top[now];
+        dfs2(hvy[now], now);
+    }
+    for(int i = g.head[now], to; i; i = g.ne[i])
+        if((to = g.to[i]) != fa && to != hvy[now])
+            top[to] = to, dfs2(to, now);
+}
+
+struct path {
+    int s, l;bool f;// false -> down, true -> up
+    path() {}
+    path(int _s, int _l, bool _f):s(_s), l(_l), f(_f) {}
+    inline void go(int len) {
+        if(!f) s = dfn[pos[s]+len];
+        l -= len;
+    }
+    inline data get(int len) {
+        if(f) return up[dfn[pos[s]+l-1]]-up[dfn[pos[s]+l-1-len]];
+        else return dw[s]-dw[dfn[pos[s]+len]];
+    }
+};
+
+inline std::vector<path> get(int u, int v) {
+    std::vector<path> a, b;
+    while(top[u] != top[v]) {
+        if(dep[top[u]] > dep[top[v]]) {
+            a.pb(path(top[u], dep[u]-dep[top[u]]+1, true));
+            u = fa[top[u]];
+        }
+        else {
+            b.pb(path(top[v], dep[v]-dep[top[v]]+1, false));
+            v = fa[top[v]];
+        }
+    }
+    if(dep[u] > dep[v]) a.pb(path(v, dep[u]-dep[v]+1, true));
+    else b.pb(path(u, dep[v]-dep[u]+1, false));
+    std::reverse(b.begin(), b.end());
+    for(int i = 0; i < SZ(b); ++i) a.pb(b[i]);
+    return a;
+}
+
+inline int binary(path &p, path &q) {
+    int l = 0, r = std::min(p.l, q.l);
+    while(l < r) {
+        int mid = (l+r+1)>>1;
+        if(p.get(mid) == q.get(mid)) l = mid;
+        else r = mid-1;
+    }
+    return l;
+}
+
+inline int qry(std::vector<path> &p, std::vector<path> &q) {
+    int ans = 0;
+    while(!p.empty() && !q.empty()) {
+        path &u = p.back(), &v = q.back();
+        if(u.l > v.l) {
+            if(u.get(v.l) == v.get(v.l)) {
+                ans += v.l;
+                q.pop_back();
+                u.go(v.l);
+            }
+            else return ans+binary(u, v);
+        }
+        else if(u.l == v.l) {
+            if(u.get(u.l) == v.get(v.l)) {
+                ans += u.l;
+                p.pop_back(), q.pop_back();
+            }
+            else return ans+binary(u, v);
+        }
+        else {
+            if(u.get(u.l) == v.get(u.l)) {
+                ans += u.l;
+                p.pop_back();
+                v.go(u.l);
+            }
+            else return ans+binary(u, v);
+        }
+    }
+    return ans;
+}
+
+int main() {
+#ifndef ONLINE_JUDGE
+    freopen("504E.in", "r", stdin);
+    freopen("504E.out", "w", stdout);
+#endif
+
+    read(n);
+    scanf("%s", s+1);
+    for(int i = 1; i < n; ++i) {
+        int u, v;
+        read(u), read(v);
+        g.addedge(u, v);
+    }
+    pw[0] = 1;
+    for(int i = 1; i <= n; ++i)
+        pw[i] = (ll)pw[i-1]*B%MOD;
+    dfs(1, 0), top[1] = 1, dfs2(1, 0);
+    for(int i = 1; i <= n; ++i)
+        up[dfn[i]] = data(1, s[dfn[i]])+up[dfn[i-1]];
+    for(int i = n; i >= 1; --i)
+        dw[dfn[i]] = data(1, s[dfn[i]])+dw[dfn[i+1]];
+    read(m);
+    while(m--) {
+        int a, b, c, d;
+        read(a), read(b), read(c), read(d);
+        std::vector<path> p1 = get(a, b), p2 = get(c, d);
+        std::reverse(p1.begin(), p1.end()), std::reverse(p2.begin(), p2.end());
+        write(qry(p1, p2)), out[outn++] = '\n';
+    }
+    if(outn) out[--outn] = 0;
+    puts(out);
+    
+#ifndef ONLINE_JUDGE
+    fclose(stdin);fclose(stdout);
+#endif
+    return 0;
+}
+
+                                                                                                                                                  

@@ -1,0 +1,36 @@
+#include<iostream>
+#include<cstdio>
+
+using namespace std;
+
+const int maxn = 25 , maxm = 1010;
+
+int n , f[maxn][maxn];
+bool tub[maxm];
+
+bool caln( int i , int tot ) {
+	f[1][i] = f[i][1] = tot + 1;
+	f[2][i] = f[i][2] = tot + 2;
+	for ( int j = 3 ; j < i ; j++ )
+		f[j][i] = f[i][j] = f[i][2] - f[2][1] + f[j][1];
+	for ( int j = 1 ; j < i ; j++ )
+		if ( tub[f[i][j]] ) return false;
+	for ( int j = 1 ; j < i ; j++ )
+		tub[f[i][j]] = true;
+	return true;
+}
+
+int main() {
+	scanf( "%d" , &n );
+	f[1][2] = f[2][1] = 1;
+	tub[1] = true;
+	for ( int i = 3 ; i <= n ; i++ )
+		for ( int j = 1 ; j <= maxm ; j++ )
+			if ( caln( i , j ) ) break;
+	for ( int i = 1 ; i <= n ; i++ ) {
+		for ( int j = 1 ; j <= n ; j++ )
+			printf( "%d " , f[i][j] );
+		printf( "\n" );
+	}
+	return 0;
+}

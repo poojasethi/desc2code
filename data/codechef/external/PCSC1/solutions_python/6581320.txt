@@ -1,0 +1,14 @@
+import sys
+def numberToBase(n, b):
+    temp=''
+    while n:
+        temp+=str(n % b)
+        n /= b
+    return temp
+a=map(int,sys.stdin.readline().split())
+i=0
+while a[i]!=-1:
+    s=numberToBase(a[i],7)
+    s=s[::-1]
+    sys.stdout.write(s+" ")
+    i+=1

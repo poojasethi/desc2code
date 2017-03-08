@@ -1,0 +1,149 @@
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <vector>
+#include <queue>
+#include <set>
+using namespace std;
+const int N = 200005;
+int a,b,c,d,e,f,g,h,i,j,k;
+vector<int> Del, tmp;
+bool v[2][N];
+struct Segment_Tree
+{
+    struct node
+    {
+        int left,right;
+        priority_queue<pair<int,int> > E;
+    };
+    node tree[N << 2];
+    void Build(int root,int left,int right)
+    {
+        tree[root].left = left, tree[root].right = right;
+        if(left == right) return ;
+        int mid = (left + right) >> 1;
+        Build(root << 1, left, mid);
+        Build(root << 1 | 1, mid + 1, right);
+    }
+    void Add(int root,int pos,pair<int,int> ee)
+    {
+        tree[root].E.push(ee); 
+        if(tree[root].left == pos && tree[root].right == pos) return ;
+        int mid = (tree[root].left + tree[root].right) >> 1;
+        if(pos <= mid) Add(root << 1, pos, ee);
+        else Add(root << 1 | 1, pos, ee);
+    }
+    void Find(int root,int ll,int rr,int L,int R,int type,int now)
+    {
+        if(tree[root].left == ll && tree[root].right == rr)
+        {
+            if(type == 0)
+            {
+                while(!tree[root].E.empty())
+                {
+                    pair<int,int> it = tree[root].E.top();
+                    it.first *= -1;
+                    if(it.first >= L) break;
+                    if(v[now][it.second] == false)
+                        v[now][it.second] = true, Del.push_back(it.second);
+                    tree[root].E.pop();
+                }
+            }
+            else
+            {
+                while(!tree[root].E.empty())
+                {
+                    pair<int,int> it = tree[root].E.top();
+                    if(it.first <= R) break;
+                    if(v[now][it.second] == false)
+                        v[now][it.second] = true, Del.push_back(it.second);
+                    tree[root].E.pop();
+                }
+            }
+            return ;
+        }
+        int mid = (tree[root].left + tree[root].right) >> 1;
+        if(rr <= mid) Find(root << 1, ll, rr, L, R, type, now);
+        else if(ll > mid) Find(root << 1 | 1, ll, rr, L, R, type, now);
+        else
+        {
+            Find(root << 1, ll, mid, L, R, type, now);
+            Find(root << 1 | 1, mid + 1, rr, L, R, type, now);
+        }
+    }
+};
+struct Tree
+{
+    vector<int> tree[N];
+    int father[N], deep[N];
+    pair<int,int> site[N];
+    int tot;
+    Segment_Tree Seg[2];
+    void Add_Edge(int x,int y)
+    {
+        tree[y].push_back(x);
+    }
+    void Build()
+    {
+        for(int ii = 2; ii <= a; ii ++)
+            Add_Edge(ii, father[ii]);
+        Seg[0].Build(1, 1, a), Seg[1].Build(1, 1, a);
+    }
+    void soso(int x)
+    {
+        site[x].first = ++tot;
+        deep[x] = deep[father[x]] + 1;
+        for(int ii = 0; ii < tree[x].size(); ii ++)
+            soso(tree[x][ii]);
+        site[x].second = tot;
+    }
+    void Work(int now,int x,int y,int L,int R)
+    {
+        if(deep[x] < deep[y]) swap(x, y);
+        Seg[0].Find(1, L, R, L, R, 1, now);
+        Seg[1].Find(1, L, R, L, R, 0, now);
+    }
+};
+Tree T[2];
+
+int main()
+{
+    cin >> a;
+    for(i = 2; i <= a; i ++) scanf("%d", &T[0].father[i]);
+    for(i = 2; i <= a; i ++) scanf("%d", &T[1].father[i]);
+    T[0].Build(), T[1].Build();
+    T[0].soso(1), T[1].soso(1);
+    for(i = 2; i <= a; i ++)
+    {
+        int p = T[1].site[i].first, q = T[1].site[T[0].father[i]].first;
+        if(p > q) swap(p, q);
+        T[0].Seg[0].Add(1, p, make_pair(q, i - 1));
+        T[0].Seg[1].Add(1, q, make_pair(-p, i - 1));
+        p = T[0].site[i].first, q = T[0].site[T[1].father[i]].first;
+        if(p > q) swap(p, q);
+        T[1].Seg[0].Add(1, p, make_pair(q, i - 1));
+        T[1].Seg[1].Add(1, q, make_pair(-p, i - 1));
+    }
+    cin >> c; Del.push_back(c), v[0][c] = true;
+    int now = 0;
+    while(true)
+    {
+        if(Del.size() == 0) break;
+        if(now == 0) printf("Blue\n");
+        else printf("Red\n");
+        sort(Del.begin(), Del.end());
+        for(i = 0; i < Del.size(); i ++)
+            printf("%d ", Del[i]);
+        printf("\n");
+
+        tmp = Del, Del.clear();
+        for(i = 0; i < tmp.size(); i ++)
+            T[now ^ 1].Work(now ^ 1, tmp[i] + 1, T[now].father[tmp[i] + 1], T[now].site[tmp[i] + 1].first, T[now].site[tmp[i] + 1].second);
+        now ^= 1;
+    }
+    //cout << (double)clock() / CLOCKS_PER_SEC << endl;
+    return 0;
+}

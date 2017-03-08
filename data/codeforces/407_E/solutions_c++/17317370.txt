@@ -1,0 +1,116 @@
+#include<cstdio>
+#include<algorithm>
+const int N=200010,M=524300;
+int n,k,d,i,j,mi=~0U>>1,a[N],b[N],c[N],l[N],ap[N],cnt,q0[N],t0,q1[N],t1,t,L=1,R;
+inline void read(int&a){
+  char c;bool f=0;a=0;
+  while(!((((c=getchar())>='0')&&(c<='9'))||(c=='-')));
+  if(c!='-')a=c-'0';else f=1;
+  while(((c=getchar())>='0')&&(c<='9'))(a*=10)+=c-'0';
+  if(f)a=-a;
+}
+inline void uans(int l,int r){if(r-l>R-L||r-l==R-L&&l<L)L=l,R=r;}
+inline int lower(int x){
+  int l=1,r=n,mid,t;
+  while(l<=r)if(b[mid=(l+r)>>1]<=x)l=(t=mid)+1;else r=mid-1;
+  return t;
+}
+inline int abs(int x){return x>0?x:-x;}
+int ma[M],mb[M],mc[M],mac[M],mbc[M],mabc[M],ta[M],tb[M];
+inline int min(int a,int b){return a<b?a:b;}
+inline void taga(int x,int p){ma[x]=ta[x]=p;mac[x]=mc[x]+p;mabc[x]=mbc[x]+p;}
+inline void tagb(int x,int p){mb[x]=tb[x]=p;mbc[x]=mc[x]+p;mabc[x]=mac[x]+p;}
+inline void pb(int x){
+  if(~ta[x])taga(x<<1,ta[x]),taga(x<<1|1,ta[x]),ta[x]=-1;
+  if(tb[x]<=0)tagb(x<<1,tb[x]),tagb(x<<1|1,tb[x]),tb[x]=1;
+}
+inline void up(int x){
+  ma[x]=min(ma[x<<1],ma[x<<1|1]);
+  mb[x]=min(mb[x<<1],mb[x<<1|1]);
+  mac[x]=min(mac[x<<1],mac[x<<1|1]);
+  mbc[x]=min(mbc[x<<1],mbc[x<<1|1]);
+  mabc[x]=min(mabc[x<<1],mabc[x<<1|1]);
+}
+void build(int x,int a,int b){
+  mc[x]=mac[x]=mbc[x]=mabc[x]=a;
+  ta[x]=-1,tb[x]=1;
+  if(a==b)return;
+  int mid=(a+b)>>1;
+  build(x<<1,a,mid),build(x<<1|1,mid+1,b);
+}
+void changea(int x,int a,int b,int c,int d,int p){
+  if(c<=a&&b<=d){taga(x,p);return;}
+  pb(x);
+  int mid=(a+b)>>1;
+  if(c<=mid)changea(x<<1,a,mid,c,d,p);
+  if(d>mid)changea(x<<1|1,mid+1,b,c,d,p);
+  up(x);
+}
+void changeb(int x,int a,int b,int c,int d,int p){
+  if(c<=a&&b<=d){tagb(x,p);return;}
+  pb(x);
+  int mid=(a+b)>>1;
+  if(c<=mid)changeb(x<<1,a,mid,c,d,p);
+  if(d>mid)changeb(x<<1|1,mid+1,b,c,d,p);
+  up(x);
+}
+void dfs(int x,int a,int b,int p){
+  if(a==b){t=a;return;}
+  pb(x);
+  int mid=(a+b)>>1;
+  if(mabc[x<<1]<=p)dfs(x<<1,a,mid,p);else dfs(x<<1|1,mid+1,b,p);
+  up(x);
+}
+void ask(int x,int a,int b,int c,int d,int p){
+  if(t)return;
+  if(c<=a&&b<=d){
+    if(mabc[x]<=p)dfs(x,a,b,p);
+    return;
+  }
+  pb(x);
+  int mid=(a+b)>>1;
+  if(c<=mid)ask(x<<1,a,mid,c,d,p);
+  if(d>mid)ask(x<<1|1,mid+1,b,c,d,p);
+  up(x);
+}
+int main(){
+  read(n),read(k),read(d);
+  for(i=1;i<=n;i++){
+    read(a[i]);
+    if(a[i]<mi)mi=a[i];
+  }
+  if(!d){
+    for(i=j=1;i<=n;i++){
+      if(a[i]!=a[j])j=i;
+      uans(j,i);
+    }
+    uans(j,n);
+    return printf("%d %d",L,R),0;
+  }
+  for(i=1;i<=n;i++)a[i]-=mi,b[i]=a[i];
+  for(std::sort(b+1,b+n+1),i=1;i<=n;i++)c[i]=lower(a[i]);
+  for(i=j=1;i<=n;i++){
+    if(!ap[c[i]])cnt++;ap[c[i]]++;
+    while(cnt<i-j+1){
+      ap[c[j]]--;if(!ap[c[j]])cnt--;
+      j++;
+    }
+    l[i]=j;
+  }
+  for(i=j=1;i<=n;i++){
+    if(abs(a[i]-a[i-1])%d)j=i;
+    if(l[i]<j)l[i]=j;
+  }
+  build(1,1,n);
+  for(i=1;i<=n;i++){
+    while(t0&&a[q0[t0]]<a[i])t0--;
+    changea(1,1,n,q0[t0]+1,i,a[i]/d);
+    q0[++t0]=i;
+    while(t1&&a[q1[t1]]>a[i])t1--;
+    changeb(1,1,n,q1[t1]+1,i,-a[i]/d);
+    q1[++t1]=i;
+    t=0,ask(1,1,n,l[i],i,k+i);
+    uans(t,i);
+  }
+  return printf("%d %d",L,R),0;
+}

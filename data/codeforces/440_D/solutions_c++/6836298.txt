@@ -1,0 +1,97 @@
+#include <bits/stdc++.h>
+
+#define dbg(x) cout << #x << " = " << x << endl
+#define dbg2(x,y) cout << #x << " = " << x << ", " << #y << " = " << y << endl
+#define out(x) cout << (x) << endl
+#define out2(x,y) cout << (x) << " " << (y) << endl
+
+using namespace std;
+
+typedef short sint;
+const sint maxN = 400 + 2;
+
+sint N, K;
+vector<pair<sint, sint> > adj[maxN];
+vector<sint> dp[maxN];
+vector<sint> fat;
+sint rec[maxN][maxN][maxN];
+vector<sint> final;
+
+// dp[i][j] denotes the minimum number of delete-edges (of trying to build j-node sub-tree)
+// when we set the noder 'i' as a root node in the rooted tree
+void dfs(sint u, sint pre)
+{
+    dp[u] = vector<sint> (K + 1, 0x03ff);
+    dp[u][1] = 0; fat[u] = pre;
+    for(sint i = 0; i < (sint)adj[u].size(); i ++) {
+        sint v = adj[u][i].first;
+        if( v == pre ) continue;
+        dfs(v, u);
+        for(sint j = K; j >= 1; j --) { // there at least one node (namely the node 'u' itself)
+            // we have the minimum value of dp[u][j] before trying to visit the node 'v'
+            // then, we can either delete <u, v> or keep <u, v>
+            // in case deleting <u, v>, it means that dp[u][j] <--- dp[u][j] + 1
+            // otherwise, dp[u][j] <--- min{dp[u][j], dp[u][j-k] + dp[v][k]}
+            dp[u][j] ++; rec[u][v][j] = 0; // in case deleting u ---> v
+            for(sint k = 1; k < j; k ++) {
+                sint w = dp[u][j - k] + dp[v][k];
+                if( dp[u][j] > w ) {
+                    dp[u][j] = w;
+                    rec[u][v][j] = k;
+                }
+            }
+        }
+    }
+}
+
+void get_final(sint u, sint pre, sint t)
+{
+    // in a reverse way
+    for(sint i = (sint)adj[u].size() - 1; i >= 0; i --) {
+        sint v = adj[u][i].first;
+        sint d = adj[u][i].second;
+        if( v == pre ) continue;
+        if( rec[u][v][t] ) {
+            get_final(v, u, rec[u][v][t]);
+            t -= rec[u][v][t];
+        } else
+            final.push_back(d);
+    }
+}
+
+int main()
+{
+    cin >> N >> K;
+    sint u, v; pair<sint, sint> o;
+    for(sint i = 1; i < N; i ++) {
+        cin >> u >> v;
+        o.first = v, o.second = i;
+        adj[u].push_back(o);
+        o.first = u, o.second = i;
+        adj[v].push_back(o);
+    }
+    for(sint i = 1; i <= N; i ++)
+        dp[i].clear();
+    fat = vector<sint> (N + 1, -1);
+    dfs(1, -1);
+    sint res = dp[1][K], rt = 1;
+    for(sint i = 2; i <= N; i ++)
+        if( res > dp[i][K] + 1 ) {
+            res = dp[i][K] + 1;
+            rt = i;
+        }
+    cout << res << endl;
+    final.clear();
+    for(sint j = 0; j < (sint)adj[rt].size(); j ++)
+        if( fat[rt] == adj[rt][j].first ) {
+            final.push_back(adj[rt][j].second);
+            break;
+        }
+    get_final(rt, fat[rt], K);
+    for(sint i = 0; i < (sint)final.size(); i ++) {
+        if( i )
+            cout << " ";
+        cout << final[i]; }
+    cout << endl;
+    return 0;
+}

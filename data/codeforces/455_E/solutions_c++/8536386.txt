@@ -1,0 +1,165 @@
+#include<stdio.h>
+#include<queue>
+#include<iostream>
+#include<string.h>
+#include<vector>
+#include<algorithm>
+#include<map>
+using namespace std;
+
+const int maxn=100010;
+
+struct NN
+{
+	int pos;
+	int t;
+
+	NN(int p=0,int tt=0)
+	{
+		pos=p,t=tt;
+	}
+
+	bool operator <(const NN &n)const
+	{
+		return t>n.t;
+	}
+};
+
+priority_queue<NN>q;
+
+int fa[maxn];
+int s[maxn],a[maxn];
+
+int fin(int n)
+{
+	if(n==fa[n])
+		return n;
+	return fa[n]=fin(fa[n]);
+}
+
+int get(int n,int t)
+{
+	int f=fin(n);
+	if(t<=n-f+1)
+		return s[n]-s[n-t];
+	return s[n]-s[f-1]+a[f]*(t-(n-f+1));
+}
+
+int BS(int pos)
+{
+	int l=1,r=100005,mid;
+
+	while(l<r)
+	{
+		mid=(l+r)/2;
+		if(get(pos-1,mid)<get(pos,mid))
+			r=mid;
+		else
+			l=mid+1;
+	}
+	return l;
+}
+
+int tim[maxn];
+
+int lft[maxn<<2],rht[maxn<<2];
+int M[maxn<<2];
+
+void build(int n,int l,int r)
+{
+	lft[n]=l,rht[n]=r;
+	if(l==r)
+	{
+		M[n]=tim[l];
+		return;
+	}
+	int mid=(l+r)/2;
+	build(n<<1,l,mid);
+	build((n<<1)+1,mid+1,r);
+	M[n]=max(M[n<<1],M[(n<<1)+1]);
+}
+
+int ask(int n,int l,int r)
+{
+	if(l==lft[n]&&r==rht[n])
+		return M[n];
+	int mid=(lft[n]+rht[n])/2;
+	if(r<=mid)
+		return ask(n<<1,l,r);
+	else if(l>mid)
+		return ask((n<<1)+1,l,r);
+	return max(ask(n<<1,l,mid),ask((n<<1)+1,mid+1,r));
+}
+
+int main()
+{
+	int n,m,i,j,k;
+
+	scanf("%d",&n);
+	for(i=1;i<=n;i++)
+	{
+		scanf("%d",&a[i]);
+		s[i]=s[i-1]+a[i];
+		fa[i]=i;
+		rht[i]=i;
+	}
+
+	for(i=2;i<=n;i++)if(a[i]>a[i-1])
+		q.push(NN(i,BS(i)));
+
+	while(!q.empty())
+	{
+		NN tmp=q.top();q.pop();
+		int pos=tmp.pos;
+		int t=tmp.t;
+
+		if(fin(pos)==fin(pos-1))
+			continue;
+
+		tim[pos]=t;
+		fa[pos]=fin(pos-1);
+		rht[fin(pos-1)]=rht[pos];
+
+		if(t>n)
+			continue;
+		if(rht[pos]<n&&a[rht[pos]+1]>a[fin(pos)])
+			q.push(NN(rht[pos]+1,BS(rht[pos]+1)));
+	}
+
+	for(i=1;i<=n;i++)if(!tim[i])
+		tim[i]=110000;
+	for(i=1;i<=n;i++)
+		tim[i]=tim[i]+n-i;
+	build(1,1,n);
+
+	scanf("%d",&m);
+	int r,c;
+	while(m--)
+	{
+		scanf("%d%d",&r,&c);
+
+		int st;
+		
+		if(tim[c]>=r+n-c)
+			st=c;
+		else
+		{
+			int ll=1,rr=c,mid;
+			while(ll<rr)
+			{
+				mid=(ll+rr)/2;
+				if(ask(1,mid,c)<r+n-c)
+					rr=mid;
+				else
+					ll=mid+1;
+			}
+			st=ll-1;
+		}
+		int ans;
+		if(c-st+1>=r)
+			ans=s[c]-s[c-r];
+		else
+			ans=s[c]-s[st-1]+a[st]*(r-(c-st+1));
+		printf("%d\n",ans);
+	}
+}

@@ -1,0 +1,219 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+
+using namespace std;
+
+typedef long long int ll;
+
+struct arista {
+  int u,v,c;
+};
+
+const int limite=1000000;
+int n,m;
+arista a[limite];
+int iarista[limite];
+
+int q;
+int qu[limite];
+int qv[limite];
+int sol[limite];
+int qprof[limite];
+
+vector<int> utoq[limite];
+
+bool compara(int i1,int i2)
+{
+  return a[i1].c<a[i2].c;
+}
+
+int preorden[limite];
+vector<pair<int,int> > g[limite];
+int pospreorden[limite];
+int numpreorden=0;
+
+void generapreorden(int u,int p,int prof)
+{
+  pospreorden[u]=numpreorden;
+  preorden[numpreorden]=prof;
+  numpreorden++;
+  vector<pair<int,int> > &ar=g[u];
+  for (int i=0;i<int(ar.size());i++) {
+    int v=ar[i].first;
+    if (v!=p) {
+      generapreorden(v,u,prof+1);
+      preorden[numpreorden]=prof;
+      numpreorden++;
+    }
+  }
+}
+
+const int infinito=1000000000;
+
+int primero,tope;
+int minimo[limite];
+int maximo[limite];
+
+void inserta(int pos,int val)
+{
+  pos+=primero;
+  minimo[pos]=maximo[pos]=val;
+  while (pos>1) {
+    pos/=2;
+    minimo[pos]=min(minimo[2*pos],minimo[2*pos+1]);
+    maximo[pos]=max(maximo[2*pos],maximo[2*pos+1]);
+  }
+}
+
+int minimoentre(int pos1,int pos2)
+{
+  if (pos1>pos2) swap(pos1,pos2);
+  pos1+=primero;
+  pos2+=primero;
+  if (pos1==pos2) return minimo[pos1];
+  int mini=min(minimo[pos1],minimo[pos2]);
+  while(pos1+1!=pos2) {
+    if (pos1%2==0)
+      mini=min(mini,minimo[pos1+1]);
+    if (pos2%2==1)
+      mini=min(mini,minimo[pos2-1]);
+    pos1/=2;
+    pos2/=2;
+  }
+  return mini;
+}
+
+int maximoentre(int pos1,int pos2)
+{
+  if (pos1>pos2) return 0;  
+  pos1+=primero;
+  pos2+=primero;
+  if (pos1==pos2) return maximo[pos1];
+  int maxi=max(maximo[pos1],maximo[pos2]);
+  while(pos1+1!=pos2) {
+    if (pos1%2==0)
+      maxi=max(maxi,maximo[pos1+1]);
+    if (pos2%2==1)
+      maxi=max(maxi,maximo[pos2-1]);
+    pos1/=2;
+    pos2/=2;
+  }
+  return maxi;
+}
+
+void generasol(int u,int p,int posval)
+{
+  vector<int> &aiq=utoq[u];
+  for (int i=0;i<int(aiq.size());i++) {
+    int iq=aiq[i];
+    int posvalant=qprof[iq];
+    sol[iq]=max(sol[iq],maximoentre(posvalant,posval-1));
+  }
+  vector<pair<int,int> > &ar=g[u];
+  for (int i=0;i<int(ar.size());i++) {
+    pair<int,int> &pa=ar[i];
+    int v=pa.first;
+    int c=pa.second;
+    if (v!=p) {
+      inserta(posval,c);
+      generasol(v,u,posval+1);
+    }
+  }
+}
+
+int padre[limite];
+
+int identificador(int u)
+{
+  if (padre[u]<0) return u;
+  int idpu=identificador(padre[u]);
+  padre[u]=idpu;
+  return idpu;
+}
+
+int main()
+{
+  cin>>n>>m;
+  for (int i=0;i<m;i++) {
+    cin>>a[i].u>>a[i].v>>a[i].c;
+    a[i].u--;
+    a[i].v--;
+    iarista[i]=i;
+  }
+  sort(iarista,iarista+m,compara);
+  for (int i=0;i<n;i++)
+    padre[i]=-1;
+  ll totalc=0;
+  for (int i=0;i<m;i++) {
+    int u=a[iarista[i]].u;
+    int v=a[iarista[i]].v;
+    int c=a[iarista[i]].c;
+    int idu=identificador(u);
+    int idv=identificador(v);
+    if (idu!=idv) {
+      padre[idu]=idv;
+      g[u].push_back(pair<int,int> (v,c));
+      g[v].push_back(pair<int,int> (u,c));
+      totalc+=c;
+    }
+  }
+  int componentes=0;
+  for (int u=0;u<n;u++)
+    componentes+=padre[u]==-1;
+  if (componentes>2) {
+    int q;
+    cin>>q;
+    for (int i=0;i<q;i++) {
+      int u,v;
+      cin>>u>>v;
+      u--;v--;
+      cout<<-1<<endl;
+    }
+    exit(0);
+  }
+  if (componentes==2) {
+    int q;
+    cin>>q;
+    for (int i=0;i<q;i++) {
+      int u,v;
+      cin>>u>>v;
+      u--;v--;
+      u=identificador(u);
+      v=identificador(v);
+      if (u==v)
+	cout<<-1<<endl;
+      else
+	cout<<totalc<<endl;
+    }
+    exit(0);
+  }
+  generapreorden(0,-1,0);
+  {
+    int nn=numpreorden+1;
+    primero=1;
+    while (nn>0) {
+      nn/=2;
+      primero*=2;
+    }
+    tope=2*primero;
+    for (int i=0;i<tope;i++)
+      minimo[i]=infinito;
+    for (int i=0;i<numpreorden;i++)
+      inserta(i,preorden[i]);
+  }
+  cin>>q;
+  for (int i=0;i<q;i++) {
+    cin>>qu[i]>>qv[i];
+    qu[i]--;
+    qv[i]--;
+    qprof[i]=minimoentre(pospreorden[qu[i]],pospreorden[qv[i]]);
+    utoq[qu[i]].push_back(i);
+    utoq[qv[i]].push_back(i);
+  }
+  generasol(0,-1,0);
+  for (int i=0;i<q;i++)
+    cout<<totalc-sol[i]<<endl;
+}

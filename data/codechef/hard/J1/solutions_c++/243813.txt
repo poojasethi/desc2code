@@ -1,0 +1,157 @@
+#include <vector>
+#include <list>
+#include <cassert>
+#include <sstream>
+#include <map>
+#include <set>
+#include <climits>
+#include <deque>
+#include <fstream>
+#include <stack>
+#include <bitset>
+#include <stack>
+#include <queue>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <cstring>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+using namespace std;
+
+template<class A, class B> A cvt(B x) {stringstream s;s<<x;A r;s>>r;return r;}
+
+#define FOR(i,a,b) for(int i= (int )a ; i < (int )b ; ++i) 
+#define REP(i,n) FOR(i,0,n)
+#define PB push_back
+#define PP pop()
+#define EM empty()
+#define INF 1000000000
+#define PF push_front
+#define ALL(x) x.begin(),x.end()
+#define SORT(x) sort(ALL(x))
+#define V(x) vector< x >
+#define Debug false
+#define PRINT(x)        cout << #x << " " << x << endl
+#define LET(x,a) 	    __typeof(a) x(a)
+#define IFOR(i,a,b) 	for(LET(i,a);i!=(b);++i)
+#define EACH(it,v)  	IFOR(it,v.begin(),v.end())
+#define PRESENT(c,x) 	((c).find(x) != (c).end())
+#define SZ(x) 		x.size();
+#define CPRESENT(c,x) 	(find(c.begin(),c.end(),x) != (c).end())
+#define D(N) 		int N
+#define S(N)		scanf("%d",&N)
+
+typedef pair<int,int>  PI;
+typedef pair<int,PI>   TRI;
+typedef V( int )       VI;
+typedef V( PI  )       VII;
+typedef V( string )    VS;
+typedef long long      LL;
+
+
+#define N 9
+
+char Inp[N+1][N+1];
+
+struct DiagonalSudoku {
+	
+	
+	int Row[N+1], Col[N+1], Grid[N+1], Diagonals[2];
+	int TotalAbsent, Available[N+1][N+1], Sudoku[N+1][N+1];
+	
+	void Set(int& t,int i)   { /* Sets the ith Bit.*/
+		t |= (1 << i); 
+	}
+	void unSet(int& t,int i) { /* Unset the ith Bit */
+		t &= ~(1 << i);
+	}
+	bool Ret(int t,int i) { /* Checks the ith Bit. */
+		return t & (1 << i);
+	}
+	void Set(int i,int j,int k) {
+		if(i == j    ) Set(Diagonals[0],k);
+		if(i == 8 - j) Set(Diagonals[1],k);
+		Set(Row[i],k); Set(Col[j],k);
+		Set(Grid[(i/3)*3+j/3],k);
+	}
+	bool CanbeSet(int i,int j,int k) {
+		int t = Row[i] | Col[j] | Grid[(i/3)*3+j/3] | ((i == j)*Diagonals[0]) | ((i + j == 8)*Diagonals[1]);
+		return !Ret(t,k);
+	}
+	void unSet(int i,int j,int k) {
+		if(i == j )     unSet(Diagonals[0],k);
+		if(i == 8 - j ) unSet(Diagonals[1],k);
+		unSet(Row[i],k); unSet(Col[j],k);
+		unSet(Grid[(i/3)*3+j/3],k);
+	}
+	DiagonalSudoku():TotalAbsent(0) {
+		
+		memset(Row,0, sizeof Row );memset(Col,0, sizeof Row);
+		memset(Grid,0, sizeof Row);memset(Diagonals,0,8);
+		REP(i,N) REP(j,N) Sudoku[i][j] = (Inp[i][j] == '.' ? -1 : (Inp[i][j] - '0'));
+		
+		/* Make all the Necessary Setting */
+		REP(i,N) REP(j,N) {
+			
+			if(Sudoku[i][j] != -1) Set(i,j,Sudoku[i][j]-1);
+			else TotalAbsent++;
+		}
+		REP(i,N) REP(j,N) if(Sudoku[i][j] == -1) {
+			REP(k,N) if(CanbeSet(i,j,k)) ++Available[i][j];
+		}
+	}
+	int Options(int i,int j) {
+		int ret = 0;
+		REP(k,N) if(CanbeSet(i,j,k)) ++ret;
+		return ret;
+	}
+	bool Solve() {
+		
+		if(TotalAbsent) {
+			
+			/* Now Choose which R and C has the lowest number of possibilities. 
+			 */
+			int i = 0,j = 0,t = 2918,y;
+			REP(r,N) REP(c,N) if(Sudoku[r][c] == -1 ) 
+				if(t > (y = Options(r,c))) {
+					t = y;
+					i = r; j = c;
+				}
+			/* So i,j seemingly has the minimum spreading tree */
+			REP(k,N) {
+				if(CanbeSet(i,j,k)) {  /* If the Value can be set to k */
+					
+					Set(i,j,k) ;Sudoku[i][j] = k + 1;
+					TotalAbsent--;
+					if(Solve()) return true;	
+					TotalAbsent++;	
+					unSet(i,j,k);Sudoku[i][j] = -1;
+				}
+			}
+			return false;
+		}
+		return true;
+	}
+	void Print() {
+		REP(i,9) { REP(j,9) printf("%d",Sudoku[i][j]); puts(""); }
+		puts("");
+	}
+};
+
+int main() {
+	
+	int kases; scanf("%d",&kases);
+	while ( kases-- ) {
+		REP(i,9) scanf(" %s",Inp[i]);
+		DiagonalSudoku Solve; 
+		if ( Solve.Solve() ) Solve.Print();
+	}	
+	return 0;
+}

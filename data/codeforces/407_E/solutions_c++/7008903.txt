@@ -1,0 +1,92 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<set>
+using namespace std;
+
+const int maxn=2e5+5, inf=0x7fffffff;
+
+struct NODE { int v, d; };
+
+int N, K, D, LEN(-1), ST, top1, top2, stack1[maxn], stack2[maxn], A[maxn];
+NODE f[maxn<<1];
+set<int> flag;
+
+#define pos(l,r) (((l)+(r))|((l)!=(r)))
+
+void Ins(int l, int r, int ql, int qr, int v)
+{
+	int mid((l+r)>>1);
+	NODE &now=f[pos(l,r)], &son1=f[pos(l,mid)], &son2=f[pos(mid+1,r)];
+	if (l==ql && r==qr)
+	{
+		now.v+=v, now.d+=v;
+		return;
+	}
+	if (now.d)
+	{
+		son1.v+=now.d, son2.v+=now.d;
+		son1.d+=now.d, son2.d+=now.d;
+		now.d=0;
+	}
+	if (qr<=mid) Ins(l,mid,ql,qr,v); else
+	if (ql>mid) Ins(mid+1,r,ql,qr,v); else
+		Ins(l,mid,ql,mid,v), Ins(mid+1,r,mid+1,qr,v);
+	now.v=min(son1.v,son2.v);
+}
+
+int Find(int l, int r, int ql, int qr, int v)
+{
+	int mid((l+r)>>1);
+	NODE &now=f[pos(l,r)], &son1=f[pos(l,mid)], &son2=f[pos(mid+1,r)];
+	if (now.v>v+K) return inf;
+	if (l==r)	return l;
+	if (now.d)
+	{
+		son1.v+=now.d, son2.v+=now.d;
+		son1.d+=now.d, son2.d+=now.d;
+		now.d=0;
+	}
+	if (qr<=mid) return Find(l,mid,ql,qr,v);
+	if (ql>mid) return Find(mid+1,r,ql,qr,v);
+	int got=Find(l,mid,ql,mid,v);
+	return got<inf?got:Find(mid+1,r,mid+1,qr,v);
+}
+
+int main()
+{
+	scanf("%d%d%d",&N,&K,&D);
+	for (int i=1;i<=N;i++) scanf("%d",&A[i]);
+	if (!D)
+		for (int i=1;i<=N;i++)
+		{
+			int j(i);
+			while (j<N && A[j+1]==A[j]) j++;
+			if (j-i>LEN) LEN=j-i, ST=i;
+			i=j;
+		}
+	else
+		for (int i=1,j=1;i<=N;i++)
+		{
+			if ((A[i]-A[j])%D)
+			{
+				j=i;
+				flag.clear();
+			}
+			if (!flag.insert(A[i]).second)
+			{
+				while (A[j]!=A[i]) flag.erase(A[j++]);
+				j++;
+			}
+			for (;top1 && A[stack1[top1]]<A[i];top1--)
+				Ins(1,N,stack1[top1-1]+1,stack1[top1],(A[i]-A[stack1[top1]])/D);
+			for (;top2 && A[stack2[top2]]>A[i];top2--)
+				Ins(1,N,stack2[top2-1]+1,stack2[top2],(A[stack2[top2]]-A[i])/D);
+			stack1[++top1]=stack2[++top2]=i;
+			Ins(1,N,i,i,i);
+			int got=Find(1,N,j,i,i);
+			if (i-got>LEN) LEN=i-got, ST=got;
+		}
+	printf("%d %d\n",ST,ST+LEN);
+	return 0;
+}

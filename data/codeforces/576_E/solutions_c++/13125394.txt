@@ -1,0 +1,177 @@
+#include <iostream>
+#include <sstream>
+#include <algorithm>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <vector>
+
+const int N = 500005;
+
+int n, m, k, q;
+std::pair<int, int> edge[N];
+std::vector<std::pair<int, int> > tree[N << 2];
+std::pair<int, int> query[N];
+int color[N];
+int next[N];
+bool ans[N];
+
+struct Union_Find_Set {
+    int father[N];
+    int size[N];
+    bool length[N];
+    
+    void reset() {
+        for (int i = 1; i <= n; i ++) {
+            father[i] = i;
+            size[i] = 1;
+            length[i] = false;
+        }
+    }
+    
+    int get_root(int x) {
+        if (father[x] == x) {
+            return x;
+        }
+        return get_root(father[x]);
+    }
+    
+    bool get_length(int x) {
+        bool ret = false;
+        
+        if (father[x] == x) {
+            return ret;
+        }
+        return ret = get_length(father[x]) ^ length[x];
+    }
+    
+    void restore(int u, int v) {
+        size[v] -= size[u];
+        father[u] = u;
+        length[u] = false;
+    }
+};
+Union_Find_Set dsu[55];
+
+void init() {
+    std::cin >> n >> m >> k >> q;
+    for (int i = 1; i <= m; i ++) {
+        scanf("%d%d", &edge[i].first, &edge[i].second);
+    }
+    for (int i = 1; i <= q; i ++) {
+        scanf("%d%d", &query[i].first, &query[i].second);
+    }
+}
+
+void add(int root, int left, int right, int ql, int qr, std::pair<int, int> ch) {
+    if (ql > qr) {
+        return ;
+    }
+    if (ql == left && qr == right) {
+        tree[root].push_back(ch);
+        return ;
+    }
+    int mid = (left + right) >> 1;
+    if (qr <= mid) {
+        add(root << 1, left, mid, ql, qr, ch);
+        return ;
+    }
+    if (ql > mid) {
+        add(root << 1 | 1, mid + 1, right, ql, qr, ch);
+        return ;
+    }
+    add(root << 1, left, mid, ql, mid, ch);
+    add(root << 1 | 1, mid + 1, right, mid + 1, qr, ch);
+}
+
+void dfs(int root, int left, int right, std::vector<std::pair<std::pair<int, int>, int> > &vec) {
+    for (int i = 0; i < (int)tree[root].size(); i ++) {
+        int u = edge[tree[root][i].first].first, v = edge[tree[root][i].first].second;
+        int w = tree[root][i].second;
+        
+        int root_u = dsu[w].get_root(u);
+        int root_v = dsu[w].get_root(v);
+        if (dsu[w].size[root_u] > dsu[w].size[root_v]) {
+            std::swap(u, v);
+            std::swap(root_u, root_v);
+        }
+        
+        if (root_u != root_v) {
+            dsu[w].size[root_v] += dsu[w].size[root_u];
+            dsu[w].length[root_u] = dsu[w].get_length(u) ^ dsu[w].get_length(v) ^ true;
+            dsu[w].father[root_u] = root_v;
+            vec.push_back(std::make_pair(std::make_pair(root_u, root_v), w));
+        }
+    }
+    if (left == right) {
+        int u = edge[query[left].first].first, v = edge[query[left].first].second;
+        int w = query[left].second;
+        
+        if (dsu[w].get_root(u) == dsu[w].get_root(v) && dsu[w].get_length(u) ^ dsu[w].get_length(v) ^ true) {
+            ans[left] = false;
+        } else {
+            ans[left] = true;
+            color[query[left].first] = query[left].second;
+        }
+        add(1, 1, q, left + 1, next[left], std::make_pair(query[left].first, color[query[left].first]));
+    } else {
+        int mid = (left + right) >> 1;
+        std::vector<std::pair<std::pair<int, int>, int> > t1, t2;
+        
+        dfs(root << 1, left, mid, t1);
+        for (int i = (int)t1.size() - 1; i >= 0; i --) {
+            int u = t1[i].first.first, v = t1[i].first.second;
+            int w = t1[i].second;
+            
+            dsu[w].restore(u, v);
+        }
+        dfs(root << 1 | 1, mid + 1, right, t2);
+        for (int i = (int)t2.size() - 1; i >= 0; i --) {
+            int u = t2[i].first.first, v = t2[i].first.second;
+            int w = t2[i].second;
+            
+            dsu[w].restore(u, v);
+        }
+    }
+}
+
+void work() {
+    int pos[N];
+    std::fill(pos + 1, pos + m + 1, -1);
+    for (int i = 1; i <= q; i ++) {
+        if (pos[query[i].first] != -1) {
+            next[pos[query[i].first]] = i;
+        }
+        pos[query[i].first] = i;
+    }
+    for (int i = 1; i <= m; i ++) {
+        if (pos[i] != -1) {
+            next[pos[i]] = q;
+        }
+    }
+    for (int i = 1; i <= k; i ++) {
+        dsu[i].reset();
+    }
+    
+    std::fill(color + 1, color + m + 1, 0);
+    std::vector<std::pair<std::pair<int, int>, int> > t;
+    dfs(1, 1, q, t);
+    
+    for (int i = 1; i <= q; i ++) {
+        if (ans[i]) {
+            std::cout << "YES" << std::endl;
+        } else {
+            std::cout << "NO" << std::endl;
+        }
+    }
+}
+
+int main() {
+    //freopen("E.in", "r", stdin);
+    
+    init();
+    work();
+    
+    return 0;
+}

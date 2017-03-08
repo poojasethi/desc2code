@@ -1,0 +1,207 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+const int MAXN = 50005;
+typedef long long ll;
+
+struct node{
+    int isroot;
+    ll sum,sumtot,sumval,lazy,val,tot,all;
+    node *ch[2],*p,*fa;
+    node(){
+    isroot=sum=sumtot=sumval=lazy=val=tot=all=0;
+    ch[0]=ch[1]=p=fa=this;
+    }
+    void setc(node *o,int d)
+    {
+        ch[d]=o;
+        o->p=this;
+    }
+    int cd()
+    {
+        return this==p->ch[1] ? 1:0;
+    }
+    void add(ll x)
+    {
+        all+=x*tot*2;
+        lazy+=x;
+    }
+    void pd();
+    void pushup()
+    {
+        sumval=ch[0]->sumval+ch[1]->sumval+val;
+        sumtot=ch[0]->sumtot+ch[1]->sumtot+tot;
+        sum=ch[0]->sum+ch[1]->sum+val*tot;
+    }
+}Tnull,*null=&Tnull;
+
+node hehe[MAXN];
+node *vex[MAXN];
+node *C=hehe;
+
+void node::pd()
+{
+    if(lazy!=0){
+        for(int i=0;i<2;i++)if(ch[i]!=null)ch[i]->add(lazy);
+        lazy=0;
+    }
+}
+
+node *newnode()
+{
+    C->isroot=C->sum=C->sumtot=C->sumval=C->lazy=C->val=C->tot=C->all=0;
+    C->fa=C->ch[1]=C->ch[0]=C->p=null;
+    return C++;
+}
+
+void pushdown(node *o)
+{
+    node *stk[MAXN];
+    int top=0;
+    while(o!=null){
+        stk[top++]=o;
+        o=o->p;
+    }
+    for(int i=top-1;i>=0;i--)stk[i]->pd();
+}
+
+void rot(node *o)
+{
+    int d=o->cd();
+    node *k=o->p;
+    k->setc(o->ch[d^1],d);
+    k->p->setc(o,k->cd());
+    o->setc(k,d^1);
+    k->pushup();
+    if(k->isroot){
+        k->isroot=0;
+        o->isroot=1;
+        o->fa=k->fa;
+        k->fa=null;
+    }
+}
+
+void splay(node *o)
+{
+    pushdown(o);
+    while(o->p!=null){
+        if(o->p->p==null)rot(o);
+        else o->cd() == o->p->cd() ? (rot(o->p),rot(o)) : (rot(o),rot(o)) ;
+    }
+    o->pushup();
+}
+
+void access(node *o)
+{
+    for(node*v=null ; o!=null ; o=o->fa)
+    {
+        splay(o);
+        o->ch[1]->isroot=1;
+        o->ch[1]->fa=o;
+        o->ch[1]->p=null;
+        o->tot+=o->ch[1]->sumtot;
+        o->setc(v,1);
+        o->tot-=v->sumtot;
+        v->isroot=0;
+        v->fa=null;
+        v=o;
+    }
+}
+
+vector<int> head[MAXN];
+int a[MAXN];
+ll ans;
+
+void dfs(int u,int p)
+{
+    vex[u]=newnode();
+    vex[u]->val=a[u];
+    vex[u]->fa=vex[p];
+    vex[u]->tot=1;
+    vex[u]->all=1;
+    int L=head[u].size();
+    for(int i=0;i<L;i++){
+        int v=head[u][i];
+        if(v==p)continue;
+        dfs(v,u);
+        vex[u]->all+=vex[u]->tot*vex[v]->tot*2;
+        vex[u]->tot+=vex[v]->tot;
+    }
+    ans+=vex[u]->all*vex[u]->val;
+    vex[u]->pushup();
+}
+
+node *getfa(node *o)
+{
+    splay(o);
+    if(o->ch[0]==null)return o->fa;
+    node *k=o->ch[0];
+    while(k->ch[1]!=null){
+        k=k->ch[1];
+    }
+    return k;
+}
+
+void fx(node *u,node *v)
+{
+    access(u),splay(v);
+    if(v->fa!=null)swap(u,v);//设置u的父亲为v
+    node *k=getfa(u);
+    if(k==v)return;
+
+    access(k),splay(k);
+    k->tot-=u->sumtot,k->pushup();
+    ans-=u->sumtot*k->sum*2;
+    k->add(-u->sumtot);
+
+    access(v),splay(v);
+    ans+=u->sumtot*v->sum*2;
+    v->add(u->sumtot);
+    v->tot+=u->sumtot,v->pushup();
+    u->fa=v;
+}
+
+void addw(node* u,ll w)
+{
+    access(u),splay(u);
+    ans+=u->all*(w-u->val);
+    u->val=w;
+}
+
+int main()
+{
+    int n;
+    scanf("%d",&n);
+    for(int i=2;i<=n;i++){
+        int p;
+        scanf("%d",&p);
+        head[p].push_back(i);
+    }
+    for(int i=1;i<=n;i++){
+        scanf("%d",&a[i]);
+    }
+    ans=0;
+    vex[0]=null;
+    dfs(1,0);
+    printf("%.10lf\n",ans*1.0/((ll)n*(ll)n));
+    int m;
+    scanf("%d",&m);
+    for(int i=0;i<m;i++){
+        char s[2];
+        int u,v;
+        scanf("%s%d%d",s,&u,&v);
+        if(s[0]=='P'){
+            fx(vex[v],vex[u]);
+        }
+        else {
+            addw(vex[u],v);
+        }
+        printf("%.10lf\n",ans*1.0/((ll)n*(ll)n));
+    }
+    return 0;
+}

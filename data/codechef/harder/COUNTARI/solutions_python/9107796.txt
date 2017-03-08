@@ -1,0 +1,69 @@
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<cmath>
+#include<algorithm>
+#define N 100005
+#define up 30005
+#define LL long long
+#define LD double
+using namespace std;
+struct use{
+	LD r,i;
+	void init(LD rr,LD ii){r=rr;i=ii;}
+	use operator+(const use&x){return(use){r+x.r,i+x.i};}
+	use operator-(const use&x){return(use){r-x.r,i-x.i};}
+	use operator*(const use&x){return(use){r*x.r-i*x.i,r*x.i+x.r*i};}
+}a[N],b[N],c[N],A[N];
+int ai[N],rev[N],en[N]={0},uu,l;
+LL c1[N]={0LL},c2[N]={0LL},cnt[up]={0LL};
+void fft(use *a,int f){
+	int i,j,k;use w,wn,x,y;
+	for (i=0;i<uu;++i) A[i]=a[rev[i]];
+	for (i=0;i<uu;++i) a[i]=A[i];
+	for (i=2;i<=uu;i<<=1){
+		wn.init(cos(2*M_PI/i),f*sin(2*M_PI/i));
+		for (j=0;j<uu;j+=i){
+			w.init(1.,0.);
+			for (k=j;k<j+i/2;++k){
+				x=a[k];y=w*a[k+i/2];
+				a[k]=x+y;a[k+i/2]=x-y;
+				w=w*wn;
+			}
+		}
+	}if (f==-1) for (i=0;i<uu;++i) a[i].r/=1.*uu;
+}
+LL calc(int x){
+	int i,j;LL ans=0LL;
+	for (i=0;i<uu;++i) a[i].init(c1[i],0.);
+	for (i=0;i<uu;++i) b[i].init(c2[i],0.);
+	fft(a,1);fft(b,1);
+	for (i=0;i<uu;++i) c[i]=a[i]*b[i];
+	fft(c,-1);
+	for (i=en[x-1]+1;i<=en[x];++i) ans+=(LL)(c[2*ai[i]].r+0.5);
+	return ans;}
+int main(){
+	int n,i,j,k,ci,len,bl;LL ans=0LL;
+	scanf("%d",&n);len=2000;bl=(n-1)/len+1;
+	for (uu=1,l=0;uu<up;uu<<=1,++l);uu<<=1;++l;
+	for (i=0;i<uu;++i){
+		for(ci=0,j=i;j;j>>=1) en[++ci]=j&1;
+		for(j=1;j<=l;++j) rev[i]=(rev[i]<<1)|en[j];
+	}for (i=1;i<=n;++i){
+		en[(i-1)/len+1]=i;
+		scanf("%d",&ai[i]);
+		++c2[ai[i]];
+	}for (i=1;i<=bl;++i){
+		for (j=en[i-1]+1;j<=en[i];++j) --c2[ai[j]];
+		for (j=en[i-1]+1;j<=en[i];++j){
+			for (k=en[i];k>j;--k){
+				ci=ai[k]*2-ai[j];
+				if (ci>0&&ci<up) ans+=cnt[ci]+c2[ci];
+				++cnt[ai[k]];
+				ci=ai[j]*2-ai[k];
+				if (ci>0&&ci<up) ans+=c1[ci];
+			}for (k=j+1;k<=en[i];++k) --cnt[ai[k]];
+		}ans+=calc(i);
+		for (j=en[i-1]+1;j<=en[i];++j) ++c1[ai[j]];
+	}printf("%lld\n",ans);
+}

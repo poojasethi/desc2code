@@ -1,0 +1,104 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+const int maxn = 2e5 + 10, len = 700;
+
+typedef pair<int, int> pii;
+int test, n, m, nq, ex[maxn], ey[maxn];
+
+struct query {
+    int l, r, id;
+    query() {}
+    query(int l, int r, int id) : l(l), r(r), id(id) {}
+};
+bool cmp(query a, query b) { return a.r < b.r; }
+vector<query> a[maxn];
+
+void enter() {
+    cin >> n >> m >> nq;
+    for(int i = 1; i <= len; ++i) a[i].clear();
+    for(int i = 1; i <= m; ++i) cin >> ex[i] >> ey[i];
+    for(int i = 1; i <= nq; ++i) {
+        int l, r;
+        cin >> l >> r;
+        a[(l-1)/len+1].push_back(query(l,r,i));
+    }
+}
+
+int ret, p[maxn], ans[maxn];
+vector<pii> save;
+
+int get(int v) {
+    while (p[v] > 0) v = p[v];
+    return v;
+}
+
+void unite(int u, int v, bool flag) {
+    u = get(u), v = get(v);
+    if (u == v) return;
+    if (flag) {
+        save.push_back(pii(u,p[u]));
+        save.push_back(pii(v,p[v]));
+    }
+    --ret;
+    if (p[u] > p[v]) swap(u, v);
+    p[u] += p[v]; p[v] = u;
+}
+
+void roll_back() {
+    for(; !save.empty(); save.pop_back() ) {
+        pii xy = save.back();
+        p[xy.first] = xy.second;
+    }
+}
+
+void solve() {
+    int rgt = 0; ret = n;
+    for(int block = 1, _m = (m-1)/len+1; block <= _m; ++block) {
+        rgt += len; rgt = min(rgt, m);
+        for(int i = 1; i <= n; ++i) p[i] = -1;
+        sort(a[block].begin(), a[block].end(), cmp);
+        int cur = rgt+1;
+        ret = n;
+        for(int it = 0; it < a[block].size(); ++it)
+        {
+            int l = a[block][it].l, r = a[block][it].r, id = a[block][it].id;
+            if (r <= rgt) {
+                ret = n;
+                for(int i = l; i <= r; ++i)
+                    unite(ex[i], ey[i], false);
+                ans[id] = ret;
+                ret = n;
+                for(int i = l; i <= r; ++i) {
+                    p[ex[i]] = p[ey[i]] = -1;
+                }
+                continue;
+            }
+
+            while (cur <= r) {
+                unite(ex[cur], ey[cur], false);
+                ++cur;
+            }
+
+            int backup = ret;
+            for(int i = rgt; i >= l; --i) unite(ex[i], ey[i], true);
+            ans[id] = ret;
+            ret = backup;
+            roll_back();
+        }
+    }
+}
+
+int main() {
+    ios_base :: sync_with_stdio(0);
+    
+    cin >> test;
+    for(; test; --test) {
+        enter();
+        solve();
+        for(int i = 1; i <= nq; ++i) printf("%d\n", ans[i]);
+    }
+}

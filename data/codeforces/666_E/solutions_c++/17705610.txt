@@ -1,0 +1,215 @@
+#include<cstdio>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+#include<cmath>
+#define fo(i,a,b) for(int i=a;i<=b;i++)
+#define fd(i,a,b) for(int i=a;i>=b;i--)
+#define maxn 1000005
+#define maxsq 25
+using namespace std;
+
+char s[maxn];
+
+int n,m,len;
+
+int bel[maxn],mx[maxn];
+
+int height[maxn],rank[maxn],sa[maxn],x[maxn],y[maxn],wss[maxn],wv[maxn];
+
+int rmq[maxn][maxsq],lo[maxn],block;
+
+struct seg{
+	int ma,w;
+}tree[maxn * 4],ans[maxn];
+
+struct note{
+	int l,r,lb,id,lg,rg;
+}ask[maxn];
+
+bool cmp(int *rank,int i,int j,int k){
+	return rank[i]==rank[j] && rank[i+k]==rank[j+k];
+}
+
+void SA(){
+	int i,j,m='z'+1,p;
+	fo(i,1,len) wss[x[i]=s[i]]++;
+	fo(i,1,m) wss[i]+=wss[i-1];
+	fo(i,1,len) sa[wss[x[i]]--]=i;
+	for(j=1,p=0;p<len;m=p,j*=2) {
+		for(p=0,i=len-j+1;i<=len;i++) y[++p]=i;
+		for(i=1;i<=len;i++) if (sa[i]>j) y[++p]=sa[i]-j;
+		for(i=1;i<=len;i++) wv[i]=x[y[i]];
+		for(i=1;i<=m;i++) wss[i]=0;
+		for(i=1;i<=len;i++) wss[wv[i]]++;
+		for(i=1;i<=m;i++) wss[i]+=wss[i-1];
+		for(i=len;i;i--) sa[wss[wv[i]]--]=y[i];
+		swap(x,y);
+		for(x[sa[1]]=1,i=2,p=1;i<=len;i++)
+			x[sa[i]]=cmp(y,sa[i-1],sa[i],j) ? p : ++p;
+	}
+}
+
+void get_height(){
+	fo(i,1,len) rank[sa[i]]=i;
+	int k=0,j;
+	for(int i=1;i<=len;height[rank[i++]]=k)
+		for(k ? k-- : k,j=sa[rank[i]-1];s[i+k]==s[j+k];k++);
+	fo(i,1,len) {
+		if (mx[sa[i]]<height[i]) height[i]=mx[sa[i]];
+		if (mx[sa[i-1]]<height[i]) height[i]=mx[sa[i-1]];
+	}
+}
+
+void RMQ(){
+	lo[1]=0;
+	fo(i,2,len) lo[i]=lo[i / 2]+1;
+	fo(i,1,len) rmq[i][0]=height[i];
+	fo(i,1,lo[len])
+		fo(j,1,len-(1 << i)+1) {
+			if (rmq[j][i-1]<rmq[j + (1 << (i-1))][i-1]) rmq[j][i]=rmq[j][i-1];
+			else rmq[j][i]=rmq[j + (1 << (i-1))][i-1];
+		}
+}
+
+int askmin(int l,int r){
+	int nowlen=r-l+1;
+	int w=lo[nowlen];
+	if (rmq[l][w]<rmq[r-(1 << w)+1][w]) return rmq[l][w];
+	else return rmq[r-(1 << w)+1][w];
+}
+
+bool cmp1(note i,note j){
+	return i.lb<j.lb || i.lb==j.lb && i.r>j.r;
+}
+
+void add(int v,int l,int r,int x,int y){
+	if (l==r) {
+		tree[v].ma+=y;
+		tree[v].w=l;
+		return;
+	}
+	int mid=(l+r) >> 1;
+	if (x<=mid) add(v << 1,l,mid,x,y);
+	else add(v << 1 | 1,mid+1,r,x,y);
+	tree[v].ma=max(tree[v << 1].ma,tree[v << 1 | 1].ma);
+	if (tree[v].ma==tree[v << 1].ma) tree[v].w=tree[v << 1].w;
+	else tree[v].w=tree[v << 1 | 1].w;
+}
+
+seg query(int v,int l,int r,int x,int y){
+	if (l==x && r==y) return tree[v];
+	int mid=(l+r) >> 1;
+	if (y<=mid) return query(v << 1,l,mid,x,y);
+	else if (x>mid) return query(v << 1 | 1,mid+1,r,x,y);
+	else {
+		seg tmp=query(v << 1,l,mid,x,mid);
+		seg tmp1=query(v << 1 | 1,mid+1,r,mid+1,y);
+		if (tmp.ma>=tmp1.ma) return tmp;
+		else return tmp1;
+	}
+}
+
+void build(int v,int l,int r){
+	tree[v].ma=0;
+	tree[v].w=l;
+	if (l==r) return;
+	int mid=(l+r) >> 1;
+	build(v << 1,l,mid);
+	build(v << 1 | 1,mid+1,r);
+}
+
+int main(){
+	int last=0,nlen=0;
+	char c=getchar();
+	while (c<'a' || c>'z') c=getchar();
+	while (c>='a' && c<='z') {
+		s[++len]=c;
+		bel[len]=0;
+		nlen++;
+		c=getchar();
+	}
+	fo(i,1,len) mx[i]=len-i+1;
+	len++;
+	s[len]='$';
+	mx[len]=0;
+	last=len;
+	scanf("%d",&n);
+	fo(i,1,n) {
+		nlen=0;
+		char c=getchar();
+		while (c<'a' || c>'z') c=getchar();
+		while (c>='a' && c<='z') {
+			s[++len]=c;
+			bel[len]=i;
+			nlen++;
+			c=getchar();
+		}
+		fo(j,last+1,len) mx[j]=nlen-(j-last)+1;
+		len++;
+		s[len]='$';
+		mx[len]=0;
+		last=len;
+	}
+	block=sqrt(len);
+	SA();
+	get_height();
+	RMQ();
+	scanf("%d",&m);
+	fo(i,1,m) {
+		int x,y;
+		scanf("%d%d%d%d",&ask[i].lg,&ask[i].rg,&x,&y);
+		ask[i].id=i;
+		int nowlen=y-x+1;
+		x=rank[x];
+		int l=1,r=x-1,ok=x;
+		while (l<=r) {
+			int mid=(l+r) / 2;
+			if (askmin(mid+1,x)>=nowlen) {
+				ok=mid;
+				r=mid-1;
+			}
+			else l=mid+1;
+		}
+		ask[i].l=ok;
+		l=x+1,r=len,ok=x;
+		while (l<=r) {
+			int mid=(l+r) / 2;
+			if (askmin(x+1,mid)>=nowlen) {
+				ok=mid;
+				l=mid+1;
+			}
+			else r=mid-1;
+		}
+		ask[i].r=ok;
+		ask[i].lb=ask[i].l / block;
+	}
+	build(1,1,n);
+	sort(ask+1,ask+m+1,cmp1);
+	int l=1,r=1;
+	if (bel[sa[1]]!=0) add(1,1,n,bel[sa[1]],1);
+	fo(i,1,m) {
+		int nl=ask[i].l;
+		int nr=ask[i].r;
+		while (l<nl) {
+			if (bel[sa[l]]!=0) add(1,1,n,bel[sa[l]],-1);
+			l++;
+		}
+		while (l>nl) {
+			l--;
+			if (bel[sa[l]]!=0) add(1,1,n,bel[sa[l]],1);
+		}
+		while (r<nr) {
+			r++;
+			if (bel[sa[r]]!=0) add(1,1,n,bel[sa[r]],1);
+		}
+		while (r>nr) {
+			if (bel[sa[r]]!=0) add(1,1,n,bel[sa[r]],-1);
+			r--;
+		}
+		seg tmp=query(1,1,n,ask[i].lg,ask[i].rg);
+		ans[ask[i].id]=tmp;
+	}
+	fo(i,1,m) printf("%d %d\n",ans[i].w,ans[i].ma);
+	return 0;
+}

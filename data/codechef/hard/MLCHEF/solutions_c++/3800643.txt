@@ -1,0 +1,217 @@
+//Krzysztof Pieprzak
+#include <iostream>
+#include <fstream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cmath>
+#include <string>
+#include <cstring>
+#include <vector>
+#include <queue>
+#include <set>
+#include <list>
+#include <deque>
+#include <stack>
+#include <map>
+#include <ctime>
+#include <cassert>
+
+using namespace std;
+
+typedef long long ll;
+typedef long double ld;
+typedef unsigned long long ull;
+typedef unsigned int uint;
+typedef vector<int> vi;
+typedef vector<ll> vll;
+typedef pair<int,int> pii;
+typedef pair<long long, long long> pll;
+typedef vector<pii> vpii;
+typedef vector<pll> vpll;
+
+#define Size(x) (int)x.size()
+#define VAR(v,n) typeof(n)v = (n)
+#define FOR(i,a,b) for(VAR(i,a); i < (b); ++i)
+#define FORE(i,a,b) for(VAR(i,a); i <= (b); ++i)
+#define FORREV(i,a,b) for(VAR(i,b); i >= (a); --i)
+#define FORSTEP(i,a,b,step) for(VAR(i,a); i < (b); i += (step))
+#define FOREACH(i,c) for(VAR(i,(c).begin()); i != (c).end(); ++i)
+#define ALL(x) x.begin(),x.end()
+#define CLEAR(t) memset(t, 0, sizeof(t))
+#define F first
+#define S second
+#define MP make_pair
+#define PUB push_back
+#define POB pop_back
+#define pieprzu ios_base::sync_with_stdio(0);
+
+const int    INF = 1000000001;
+const double EPS = 10e-9;
+
+const int MAXN = 100001;
+const int MAXLOGN = 17;
+
+struct Node
+{
+    int minH;
+    int dec;
+    int alive;
+};
+
+vi t[MAXN];
+int h[MAXN];
+pii range[MAXN];
+
+Node tree[1<<(MAXLOGN+1)];
+int start = 1<<MAXLOGN;
+
+void dfs(int v, int &pos)
+{
+    range[v].F = pos+1;
+    tree[start+pos].minH = v==0 ? INF : h[v];
+    tree[start+pos].alive = 1;
+    FOREACH (w, t[v]) dfs(*w,++pos);
+    range[v].S = pos+1;
+}
+
+inline void updateNode(int v)
+{
+    if (v >= start) return;
+
+    tree[v].minH = INF;
+    if (tree[v<<1].alive) tree[v].minH = min(tree[v].minH,tree[v<<1].minH-tree[v<<1].dec);
+    if (tree[v<<1|1].alive) tree[v].minH = min(tree[v].minH,tree[v<<1|1].minH-tree[v<<1|1].dec);
+
+    tree[v].alive = tree[v<<1].alive + tree[v<<1|1].alive;
+}
+
+void createTree(int v)
+{
+    if (v >= start) return;
+    createTree(v<<1);
+    createTree(v<<1|1);
+    updateNode(v);
+}
+
+void decrease(int v, int x, int xx)
+{
+    tree[v].dec += x;
+    if (tree[v].minH <= tree[v].dec+xx)
+    {
+        if (v < start)
+        {
+            decrease(v<<1,tree[v].dec,xx);
+            decrease(v<<1|1,tree[v].dec,xx);
+            tree[v].dec = 0;
+            updateNode(v);
+        }
+        else
+        {
+            tree[v].minH = INF;
+            tree[v].alive = 0;
+        }
+    }
+}
+
+void update(int v, int bg, int ed, int a, int b, int x, int xx)
+{
+    if (bg == a && ed == b) decrease(v, x, xx);
+    else
+    {
+        int md = (bg+ed)>>1;
+        if (a < md) update(v<<1,bg,md,a,min(md,b),x,xx+tree[v].dec);
+        if (b > md) update(v<<1|1,md,ed,max(a,md),b,x,xx+tree[v].dec);
+    }
+
+    if (v < start) updateNode(v);
+}
+
+void update(int v, int x)
+{
+    if (range[v].F == range[v].S) return;
+    update(1, 0, start, range[v].F, range[v].S, x, 0);
+}
+
+int get(int v, int bg, int ed, int a, int b)
+{
+    if (bg == a && ed == b) return tree[v].alive;
+
+    int ret = 0;
+    int md = (bg+ed)>>1;
+    if (a < md) ret += get(v<<1,bg,md,a,min(md,b));
+    if (b > md) ret += get(v<<1|1,md,ed,max(a,md),b);
+
+    return ret;
+}
+
+int get(int v)
+{
+    if (range[v].F == range[v].S) return 0;
+    return get(1, 0, start, range[v].F, range[v].S);
+}
+
+inline void printTree()
+{
+    /*for (int lvl = 1; lvl <= start; lvl <<= 1)
+    {
+        for (int i = 0; i < lvl; ++i)
+        {
+            printf("(%d,%d,%d) ", tree[lvl+i].minH, tree[lvl+i].dec, tree[lvl+i].alive);
+        }
+        printf("\n");
+    }*/
+}
+
+void rob()
+{
+    int n;
+    scanf("%d", &n);
+    ++n;
+
+    for (start = 1; start < n; start<<=1);
+
+    int a, b;
+    FOR (i, 1, n)
+    {
+        scanf("%d %d", &a, &b);
+        h[i] = a;
+        t[b].PUB(i);
+    }
+
+    int pos = 0;
+    dfs(0,pos);
+
+    createTree(1);
+    printTree();
+
+    int q;
+    scanf("%d", &q);
+
+    int type;
+    FOR (i, 0, q)
+    {
+        scanf("%d", &type);
+        if (type == 1)
+        {
+            scanf("%d %d", &a, &b);
+            update(a,b);
+        }
+        else
+        {
+            scanf("%d", &a);
+            printf("%d\n", get(a));
+        }
+        printTree();
+    }
+}
+
+int main()
+{
+    int test = 1;
+    //scanf("%d", &test);
+
+    while (test--) rob();
+
+    return 0;
+}

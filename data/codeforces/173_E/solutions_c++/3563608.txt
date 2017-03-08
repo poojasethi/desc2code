@@ -1,0 +1,112 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+#define IO(a,b) freopen(a,"r",stdin);\
+				freopen(b,"w",stdout)
+#define REP(i,n) for(int i=0;i<n;++i)
+#define FOR(i,a,b) for(int i=a;i<=b;++i)
+
+#define N 100010
+#define P 10000000
+
+int n,k,q,maxage,root1,root2,pt,p;
+int T[N],A[N],W[N],X[N],Y[N],Z[N],Q[N],ans[N];
+
+int L[P],R[P],D[P];
+
+bool cmp_p(const int &a,const int &b){return T[a]>T[b];}
+bool cmp_q(const int &a,const int &b){return Z[a]>Z[b];}
+inline int node(int l,int r,int d){return ++pt,L[pt]=l,R[pt]=r,D[pt]=d,pt;}
+
+int add(int x,int l,int r,int w,int delta){
+	if(!x) x=node(0,0,0);
+	D[x]+=delta;
+	if(!D[x]) return 0;
+	if(l!=r){
+		int mid=(l+r)>>1;
+		if(w<=mid) L[x]=add(L[x],l,mid,w,delta);
+		else R[x]=add(R[x],mid+1,r,w,delta);	
+	}
+	return x;
+}
+int sum(int x,int l,int r,int ll,int rr){
+	if(!x||ll>r||rr<l) return 0;
+	if(ll<=l&&rr>=r) return D[x];
+	int mid=(l+r)>>1;
+	return sum(L[x],l,mid,ll,rr)+sum(R[x],mid+1,r,ll,rr);
+}
+
+int add_max(int x,int l,int r,int w,int data){
+	if(!x) x=node(0,0,data);
+	if(l!=r){
+		D[x]=max(D[x],data);
+		int mid=(l+r)>>1;
+		if(w<=mid) L[x]=add_max(L[x],l,mid,w,data);
+		else R[x]=add_max(R[x],mid+1,r,w,data);	
+	}
+	return x;
+}
+int query(int x,int l,int r,int ll,int rr){
+	if(!x||ll>r||rr<l) return 0;
+	if(ll<=l&&rr>=r) return D[x];
+	int mid=(l+r)>>1;
+	return max(query(L[x],l,mid,ll,rr),query(R[x],mid+1,r,ll,rr));
+}
+
+void bug(int x,int l,int r){
+	cout<<x<<" "<<l<<" "<<r<<" "<<L[x]<<" "<<R[x]<<" "<<D[x]<<endl;
+	int mid=(l+r)>>1;
+	if(L[x]) bug(L[x],l,mid);
+	if(R[x]) bug(R[x],mid+1,r);
+}
+
+int main(){
+	//IO("camp.in","camp.out");
+	
+	scanf("%d%d",&n,&k);
+	FOR(i,1,n) scanf("%d",T+i);
+	FOR(i,1,n) scanf("%d",A+i),maxage=max(maxage,A[i]);
+	FOR(i,1,n) root1=add(root1,1,maxage,A[i],1);
+	
+	FOR(i,1,n) W[i]=i;
+	sort(W+1,W+n+1,cmp_p);
+	
+	scanf("%d",&q);
+	FOR(i,1,q){
+		scanf("%d%d",X+i,Y+i);
+		if(A[X[i]]>A[Y[i]]) swap(X[i],Y[i]);
+		Z[i]=max(T[X[i]],T[Y[i]]);
+		Q[i]=i;
+	}
+	sort(Q+1,Q+q+1,cmp_q);
+	
+	p=1;
+	FOR(i,1,n){
+		int j;
+		
+		j=i;while(j<n&&T[W[i]]==T[W[j+1]]) ++j;
+		FOR(o,i,j){
+			int tmp=sum(root1,1,maxage,A[W[o]]-k,A[W[o]]+k);
+			root2=add_max(root2,1,maxage,A[W[o]],tmp);
+		}
+		FOR(o,i,j) root1=add(root1,1,maxage,A[W[o]],-1);
+		i=j;
+		
+		//bug(root2,1,maxage);
+		//cout<<endl;
+		
+		while(Z[Q[p]]==T[W[i]]){
+			ans[Q[p]]=query(root2,1,maxage,A[Y[Q[p]]]-k,A[X[Q[p]]]+k);
+			++p;	
+		}
+	}
+	
+	FOR(i,1,q)
+		if(ans[i]>1) printf("%d\n",ans[i]);
+		else printf("-1\n");
+	return 0;
+}

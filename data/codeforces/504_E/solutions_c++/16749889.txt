@@ -1,0 +1,112 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+inline unsigned int getuint(){
+	char w=getchar();
+	while (w<'0'||'9'<w) w=getchar();
+	unsigned int ans=0;
+	for (;'0'<=w&&w<='9';w=getchar()) ans=ans*10+w-'0';
+	return ans;
+}
+int N;
+const int MAXV=300005, MAXN=MAXV<<1;
+struct Edge{int t, next;} G[MAXV<<1];int head[MAXV], e=1;
+char str0[MAXV], str[MAXN];
+int downid[MAXV], upid[MAXV];
+struct Heavy_Light_Decomposition{
+	int queue[MAXV], depth[MAXV], pre[MAXV], size[MAXV], son[MAXV], top[MAXV];
+	inline int LCA(int x, int y){while (top[x]!=top[y]) if (depth[top[x]]>depth[top[y]]) x=pre[top[x]]; else y=pre[top[y]];return depth[x]<depth[y]?x:y;}
+	inline void print(int x, int y){
+		int lca=LCA(x, y);
+		static char a[MAXV];
+		int n=0;
+		while (y!=lca) a[++n]=str0[y], y=pre[y];
+		while (x!=lca) putchar(str0[x]), x=pre[x];
+		putchar(str0[lca]);
+		for (int i=n;i;i--) putchar(a[i]);puts("");
+	}
+	inline int query(int x, int y, std::pair<int, int> a[]){
+		static std::pair<int, int> b[233];
+		int n=0, m=0;
+		while (top[x]!=top[y])
+			if (depth[top[x]]>depth[top[y]]) a[++n]=std::make_pair(upid[x], depth[x]-depth[pre[top[x]]]), x=pre[top[x]];
+			else b[++m]=std::make_pair(downid[top[y]], depth[y]-depth[pre[top[y]]]), y=pre[top[y]];
+		if (depth[x]>depth[y]) a[++n]=std::make_pair(upid[x], depth[x]-depth[y]+1); else b[++m]=std::make_pair(downid[x], depth[y]-depth[x]+1);
+		for (int i=1, j=m;i<j;i++, j--) std::swap(b[i], b[j]);
+		for (int i=1;i<=m;i++) a[++n]=b[i];
+		//for (int i=1;i<=n;i++) for (int j=0;j<a[i].second;j++) putchar(str[a[i].first+j]);puts("");
+		return n;
+	}
+	void init(int n){
+		depth[queue[1]=1]=1;
+		for (int x, l=1, r=1;l<=r;size[x]=1, l++) for (int i=head[x=queue[l]];i;i=G[i].next)
+			if (!depth[G[i].t]) depth[queue[++r]=G[i].t]=depth[x]+1; else pre[x]=G[i].t;
+		for (int x, l=n;l;l--) for (int i=head[x=queue[l]];i;i=G[i].next) if (G[i].t!=pre[x]) size[x]+=size[size[G[i].t]>size[son[x]]?son[x]=G[i].t:G[i].t];
+		for (int x, l=1;l<=n;l++) if (!top[x=queue[l]]){
+			static int a[MAXV], m;m=0;
+			for (int y=x;y;y=son[y]) top[a[++m]=y]=x;
+			for (int i=1;i<=m;i++) str[downid[a[i]]=++N]=str0[a[i]];
+			for (int i=m;i;i--) str[upid[a[i]]=++N]=str0[a[i]];
+		}
+	}
+} HLD;
+int sa[MAXN], rank[MAXN], height[MAXN];
+struct Range_Minimum_Query{
+	int maxpow2[MAXN], rmq[20][MAXN];
+	inline int query(int l, int r){
+		if (l>r) return 0x3f3f3f3f;
+		int t=maxpow2[r-l+1];
+		return std::min(rmq[t][l], rmq[t][r-(1<<t)+1]);
+	}
+	void init(int n, int a[]){
+		for (int i=1, j=-1;i<=n;maxpow2[i++]=j) if ((i&-i)==i) j++;
+		memcpy(rmq[0]+1, a+1, sizeof(*a)*n);
+		for (int j=0;1<<j+1<=n;j++) for (int *f=rmq[j], *g=rmq[j+1], i=n-(1<<j+1)+1;i;i--) g[i]=std::min(f[i], f[i+(1<<j)]);
+	}
+} RMQ;
+inline int LCP(int i, int j){if (rank[i]>rank[j]) std::swap(i, j);return std::min(N-i+1, RMQ.query(rank[i]+1, rank[j]));}
+void suffix_array(int n, int m){
+	static int c[MAXN], tmp[2][MAXN<<1], *x=tmp[0], *y=tmp[1];
+	for (int i=1;i<=n;i++) c[x[i]=str[i]-'a'+1]++;
+	for (int i=2;i<=m;i++) c[i]+=c[i-1];
+	for (int i=n;i;i--) sa[c[x[i]]--]=i;
+	for (int k=1, l=0;k<n;k<<=1, l=0){
+		for (int i=n-k+1;i<=n;i++) y[++l]=i;
+		for (int i=1;i<=n;i++) if (sa[i]>k) y[++l]=sa[i]-k;
+		memset(c+1, 0, sizeof(*c)*m);
+		for (int i=1;i<=n;i++) c[x[i]]++;
+		for (int i=2;i<=m;i++) c[i]+=c[i-1];
+		for (int i=n;i;i--) sa[c[x[y[i]]]--]=y[i];
+		std::swap(x, y), x[sa[1]]=m=1;
+		for (int i=2;i<=n;x[sa[i++]]=m) if (y[sa[i-1]]!=y[sa[i]]||y[sa[i-1]+k]!=y[sa[i]+k]) m++;
+		if (n==m) break;
+	}
+	for (int i=1;i<=n;i++) rank[sa[i]]=i;
+	for (int i=1, j, k=0;i<=n;height[rank[i++]]=k?k--:0) for (j=sa[rank[i]-1];str[i+k]==str[j+k];k++);
+	RMQ.init(n, height);
+}
+int main(){
+	//freopen("ex.in", "r", stdin);
+	int n=getuint();
+	scanf("%s", str0+1);
+	for (int i=1;i<n;i++){
+		int x=getuint(), y=getuint();
+		G[++e].t=y, G[e].next=head[x], head[x]=e;
+		G[++e].t=x, G[e].next=head[y], head[y]=e;
+	}
+	HLD.init(n), suffix_array(N, 26);
+	for (int kase=getuint();kase--;){
+		static std::pair<int, int> a[233], b[233];
+		int x1=getuint(), y1=getuint(), l1=HLD.query(x1, y1, a), x2=getuint(), y2=getuint(), l2=HLD.query(x2, y2, b), ans=0;
+		//HLD.print(x1, y1), HLD.print(x2, y2);
+		for (int i=1, j=1, t1=0, t2=0;i<=l1&&j<=l2;){
+			int l=std::min(LCP(a[i].first+t1, b[j].first+t2), std::min(a[i].second-t1, b[j].second-t2));
+			t1+=l, t2+=l, ans+=l;
+			if (t1!=a[i].second&&t2!=b[j].second) break;
+			if (t1==a[i].second) i++, t1=0;
+			if (t2==b[j].second) j++, t2=0;
+		}
+		printf("%d\n", ans);
+	}
+	return 0;
+}

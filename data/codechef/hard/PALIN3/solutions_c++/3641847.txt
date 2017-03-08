@@ -1,0 +1,177 @@
+#include<cstdio>
+#include<iostream>
+#include<algorithm>
+#include<cmath>
+#include<vector>
+#include<set>
+#include<map>
+#include<cstring>
+#include<string>
+#include<cstdlib>
+#include<ctime>
+#include<cassert>
+
+using namespace std;
+
+#define FNAME ""
+#define FILE 0
+
+#define pb push_back
+#define mp make_pair
+#define LL long long
+#define ULL unsigned long long
+#define LD long double
+
+#ifdef WIN32
+	#define I64 "%I64d"
+#else
+	#define I64 "%lld"
+#endif
+
+const int p = 1e9+7, Maxn = 1e6+5;
+
+char s[Maxn];
+int n, sum[Maxn], nul[Maxn][5], ssum[Maxn][5], k, t, s2;
+long long Ans;
+
+struct h
+{
+	unsigned long long x;
+	
+	h():x(0){}
+	h(unsigned long long x):x(x){}
+
+	bool operator == (const h &b) const
+	{
+		return x == b.x;
+	}
+	bool operator != (const h &b) const
+	{
+		return x != b.x;
+	}
+	bool operator < (const h &b) const
+	{
+		return x < b.x;
+	}
+	h operator + (const h &b) const
+	{
+		return h(x + b.x);
+	}
+	h operator - (const h &b) const
+	{
+		return h(x - b.x);
+	}
+	h operator * (const h &b) const
+	{
+		return h(x * b.x);
+	}
+	void operator = (const h &b)
+	{
+		x = b.x;
+	}
+};
+
+h ps[Maxn + 5], Hash1[2][Maxn];
+
+h get (int k, int l, int r)
+{
+	if (k == 0)
+		return (Hash1[k][r] - Hash1[k][l - 1]) * ps[Maxn - (l - 1)];
+	return (Hash1[k][r] - Hash1[k][l + 1]) * ps[Maxn - (n - l)];
+}
+
+int lcp (int ind)
+{
+	int l = 0;
+	int r = min(ind + 1, n - ind);
+	while (r - l > 1)
+	{
+		int m = (l + r) / 2;
+		if (get(0, ind - m + 1, ind) != get(1, ind + m + 1, ind + 2))
+			r = m;
+		else
+			l = m;
+	}
+	return l;
+}
+
+int lcp2 (int ind)
+{
+	int l = 0;
+	int r = min(ind + 1, n - ind - 1);
+	while (r - l > 1)
+	{
+		int m = (l + r) / 2;
+		if (get(0, ind - m + 1, ind) != get(1, ind + m + 2, ind + 3))
+			r = m;
+		else
+			l = m;
+	}
+	return l;
+}
+
+int main()
+{
+	#if (FILE == 1)
+	freopen(FNAME".in", "r", stdin);
+	freopen(FNAME".out", "w", stdout);
+	#endif
+	ps[0] = 1;
+	for (int i = 1; i <= Maxn; i++)
+		ps[i] = ps[i - 1] * p;
+	gets(s);
+	n = strlen(s);
+	for (int i = 0; i < n; i++)
+	{
+		sum[i + 1] = sum[i] + s[i] - '0';
+		Hash1[0][i + 1] = Hash1[0][i] + ps[i + 1] * s[i];
+	}
+	for (int i = n - 1; i >= 0; i--)
+		Hash1[1][i + 1] = Hash1[1][i + 2] + ps[(n - i)] * s[i];
+	//cout << get(0, 1, 1).x << " " << get(1, 3, 3).x << endl;
+	ssum[0][0] = 1;
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			nul[i + 1][j] += nul[i][j];
+			ssum[i + 1][j] += ssum[i][j];
+		}
+		if (s[i] == '0')
+			nul[i + 1][sum[i + 1] % 3]++;
+		ssum[i + 1][sum[i + 1] % 3]++;	
+	}
+	//printf("%d %d\n", ssum[1][0], ssum[0][0]);
+	for (int i = 0; i < n; i++)
+	{
+		k = lcp(i);
+		t = (s[i] - '0') % 3;
+		s2 = (sum[i] - t + 3) % 3;
+		//if (i - k - 1 < 0 && nul[i][s2])
+		//	Ans++;			
+		Ans -= (nul[i][s2] - nul[i - k][s2]); 
+		//printf("%d %d %d\n", i, s2, ssum[i][s2] - ssum[i - k][s2]); 
+		//printf("%I64d\n", Ans);
+		//printf("s2 = %d i = %d k = %d\n", s2, i, k);
+		Ans += ssum[i][s2] - ssum[i - k - 1][s2];
+		//if (s2 == 0)
+		//	Ans++;
+		//if (k == 0 && (s[i] - '0') % 3 == 0)
+		//	Ans++;
+		//printf("%I64d\n", Ans);
+		//printf("i = %d k = %d\n", i, k);
+		if (i != n - 1 && s[i] == s[i + 1])
+		{
+			k = lcp2(i);
+			t = (sum[i + 1]) % 3;
+			Ans -= (nul[i][t] - nul[i - k][t]); 
+			Ans += ssum[i][t] - ssum[i - k - 1][t];
+			if (s[i] == '0')
+				Ans--;
+			//if (s[i] != '0' && (s[i] - '0') % 3 == 0)
+			//	Ans++;
+		}
+	}	
+	printf("%lld\n", Ans);
+	return 0;
+}

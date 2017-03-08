@@ -1,0 +1,19 @@
+#include <iostream>
+#include <string>
+using namespace std;
+int main(){
+	int a1=0,b1=0;
+	string a,b;
+	cin>>a>>b;
+	for(int i=0;i<a.size();i++){
+		if(a[i]=='['&&b[i]=='8')b1++;
+		else if(a[i]=='['&&b[i]=='(')a1++;
+		else if(a[i]=='('&&b[i]=='8')a1++;
+		else if(a[i]=='('&&b[i]=='[')b1++;
+		else if(a[i]=='8'&&b[i]=='(')b1++;
+		else if(a[i]=='8'&&b[i]=='[')a1++;
+	}
+	if(a1>b1)cout<<"TEAM 1 WINS";
+	if(a1<b1)cout<<"TEAM 2 WINS";
+	if(a1==b1) cout<<"TIE";
+}

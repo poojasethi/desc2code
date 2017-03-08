@@ -1,0 +1,120 @@
+//2016-05-27 20:56:32.394000
+#include <algorithm>
+#include <stdio.h>
+#include <memory.h>
+#include <string.h>
+#include <vector>
+#include <queue>
+#include <set>
+#include <map>
+#include <string>
+
+using namespace std;
+
+typedef pair<int, int> pii;
+typedef long long INT;
+
+#define NN 110000
+
+int N;
+int a[NN], deg[NN], par[NN];
+vector<int> adj[NN];
+INT ans[NN], mx1[NN], mx2[NN], mx3[NN];
+
+void dfs(int u) {
+	mx1[u]=a[u]; mx2[u]=0; mx3[u]=0;
+	for (int i=0; i<deg[u]; i++) {
+		int v=adj[u][i];
+		if (v==par[u]) continue;
+		par[v]=u; dfs(v);
+		
+		if (mx1[v]+a[u]>mx1[u]) {
+			mx3[u]=mx2[u];
+			mx2[u]=mx1[u];
+			mx1[u]=mx1[v]+a[u];
+		} 
+		else if (mx1[v]+a[u]>mx2[u]) {
+			mx3[u]=mx2[u];
+			mx2[u]=mx1[v]+a[u];
+		}
+		else if (mx1[v]+a[u]>mx3[u]) {
+			mx3[u]=mx1[v]+a[u];
+		}
+		ans[u]=max(ans[u], ans[v]);
+	}
+	ans[u]=max(ans[u], mx1[u]);
+	ans[u]=max(ans[u], mx1[u]+mx2[u]-a[u]);
+}
+
+INT dfs(int u, INT len, INT best) {
+	INT res=0;
+	INT val1=0, val2=0;
+	
+	for (int i=0; i<deg[u]; i++) {
+		int v=adj[u][i];
+		if (v==par[u]) continue;
+		if (ans[v]>val1) {
+			val2=val1;
+			val1=ans[v];
+		} else if (ans[v]>val2) {
+			val2=ans[v];
+		}
+	}
+	
+	for (int i=0; i<deg[u]; i++) {
+		int v=adj[u][i];
+		
+		if (v==par[u]) continue;
+		
+		INT Len=0;
+		INT Best=0;
+		
+		if (mx1[u]==mx1[v]+a[u]) Len=mx2[u];
+		else Len=mx1[u];
+		
+		if (val1==ans[v]) Best=val2;
+		else Best=val1;
+		
+		Best=max(Best, best);
+		Best=max(Best, len+Len);
+		
+		if (mx1[u]==mx1[v]+a[u]) {
+			Best=max(Best, mx2[u]+mx3[u]-a[u]);
+		} else if (mx2[u]==mx1[v]+a[u]) {
+			Best=max(Best, mx1[u]+mx3[u]-a[u]);
+		} else {
+			Best=max(Best, mx1[u]+mx2[u]-a[u]);
+		}
+		
+		Len=max(Len, len+a[u]);
+		
+		res=max(res, ans[v]+Best);
+		
+		res=max(res, dfs(v, Len, Best));
+	}
+	
+	return res;
+}
+
+int main() {
+	int u, v;
+	
+	scanf("%d", &N);
+	for (int i=0; i<N; i++) scanf("%d", &a[i]);
+	for (int i=0; i<N-1; i++) {
+		scanf("%d%d", &u, &v);
+		u--, v--;
+		adj[u].push_back(v);
+		adj[v].push_back(u);
+		deg[u]++; deg[v]++;
+	}
+	
+	par[0]=-1;
+	dfs(0);
+	
+	INT res=dfs(0, 0, 0);
+	
+	printf("%I64d\n", res);
+	
+	return 0;
+}

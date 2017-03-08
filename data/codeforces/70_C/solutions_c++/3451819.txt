@@ -1,0 +1,60 @@
+#include<cstdio>
+#include<cstdlib>
+#include<algorithm>
+using namespace std;
+#include<map>
+map<pair<int,int>,int>A,B;
+int maxx,maxy;
+long long w,ansx=100001,ansy=100001;
+int gcd(int x,int y)
+{
+    if(y==0)return x;
+    return gcd(y,x%y);
+}
+int rev(int x)
+{
+    int tmp=0;
+    while(x)
+    {
+     tmp=tmp*10+x%10;
+     x/=10;
+    } 
+    return tmp;
+}
+int main()
+{
+    //freopen("1.txt","r",stdin);
+    //freopen("2.txt","w",stdout);
+    scanf("%d%d%d",&maxx,&maxy,&w);
+    for(int j=1;j<=maxy;j++)
+    {
+     int g=gcd(rev(j),j),revj=rev(j);
+     B[make_pair(revj/g,j/g)]++;
+    }
+    long long cnt=0;
+    int j=maxy,i;
+    for(i=1;i<=maxx;i++)
+    {
+     int g=gcd(rev(i),i),revi=rev(i);
+     pair<int,int>tmp;
+     tmp=make_pair(i/g,revi/g);
+     A[tmp]++;
+     cnt+=B[tmp];
+     while(1)
+     {
+      int g=gcd(rev(j),j),revj=rev(j);
+      pair<int,int>tmp;
+      tmp=make_pair(revj/g,j/g);
+      if(cnt-A[tmp]<w)break;
+      cnt-=A[tmp];
+      B[tmp]--;
+      j--;
+     }
+     if(cnt>=w&&(long long)i*j<ansx*ansy)
+     ansx=i,ansy=j;
+    }
+    if(ansx<=maxx)
+    printf("%I64d %I64d\n",ansx,ansy);
+    else printf("-1");
+    return 0;
+}

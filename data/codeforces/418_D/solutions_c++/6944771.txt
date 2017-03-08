@@ -1,0 +1,121 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<set>
+#include<vector>
+#include<map>
+#include<queue>
+#include<string>
+#include<bitset>
+#include<iomanip>
+#include<iostream>
+#include<cmath>
+using namespace std;
+#define rep(i,x,y) for(i=x;i<=y;i++)
+#define _rep(i,x,y) for(i=x;i>=y;i--)
+#define REP(i,x,y) for(int i=(x);i<=(y);i++)
+#define _REP(i,x,y) for(int i=(x);i>=(y);i--)
+#define CL(S,x) memset(S,x,sizeof(S))
+#define CP(S1,S2) memcpy(S1,S2,sizeof(S2))
+#define ALL(x,S) for(__typeof((v).end()) x=S.begin();x!=S.end();x++)
+#define pb push_back
+#define IN insert
+#define ER erase
+#define BE begin()
+#define ED end() 
+#define LB lower_bound
+#define UB upper_bound
+#define mp make_pair
+#define fi first
+#define se second
+#define upmin(x,y) x=min(x,y)
+#define upmax(x,y) x=max(x,y)
+#define COUT(S,x) cout<<fixed<<setprecision(x)<<S<<endl
+template<class T> inline void read(T&x){bool fu=0;char c;for(c=getchar();c<=32;c=getchar());if(c=='-')fu=1,c=getchar();for(x=0;c>32;c=getchar())x=x*10+c-'0';if(fu)x=-x;};
+template<class T> inline void read(T&x,T&y){read(x);read(y);}
+template<class T> inline void read(T&x,T&y,T&z){read(x);read(y);read(z);}
+inline char getc(){char c;for(c=getchar();c<=32;c=getchar());return c;}
+
+typedef long long ll;
+typedef long double ld;
+typedef pair<int,int> pii;
+
+const int N=100010;
+int n,m,i,j,k,l,p,x,y,z,y2,res;
+vector<int> ch[N];int fa[N][21],d[N],st[N],ed[N];
+int ans[N];
+struct node{int a,b,pos;};vector<node> q[N];
+
+struct seg
+{
+	int add[N<<2],s[N<<2];
+	void padd(int i,int t){add[i]+=t;s[i]+=t;}
+	void D(int i){padd(i*2,add[i]),padd(i*2+1,add[i]);add[i]=0;}
+	void U(int i){s[i]=max(s[i*2],s[i*2+1]);}
+	void F(int i,int x,int y,int l,int r,int ki)
+	{
+		if(y<l||x>r||l>r)return;
+		if(x>=l&&y<=r){if(ki==1)upmax(res,s[i]);else padd(i,res);return;}
+		D(i);F(i*2,x,(x+y)/2,l,r,ki);F(i*2+1,(x+y)/2+1,y,l,r,ki);U(i);
+	}
+}T;
+
+int step(int x,int p){REP(j,0,20)if(p>>j&1)x=fa[x][j];return x;}
+int lca(int x,int y)
+{
+	if(d[x]<d[y])swap(x,y);x=step(x,d[x]-d[y]);if(x==y)return x;
+	_REP(j,20,0)if(fa[x][j]!=fa[y][j])x=fa[x][j],y=fa[y][j];return fa[x][0];
+}
+void dfs(int i,int f)
+{
+	d[i]=d[f]+1;fa[i][0]=f;st[i]=++st[0];
+	for(int k=1;k<=20;k++)fa[i][k]=fa[fa[i][k-1]][k-1];
+	for(int k=0;k<ch[i].size();k++)
+	{
+		int u=ch[i][k];if(u==f)continue;
+		dfs(u,i);
+	}
+	ed[i]=st[0];
+}
+void go(int i)
+{
+	for(int k=0;k<q[i].size();k++)
+	{
+		res=0,T.F(1,1,n,q[i][k].a,q[i][k].b,1),upmax(ans[q[i][k].pos],res);
+		//printf("%d %d %d %d\n",i,q[i][k].a,q[i][k].b,res);
+	}
+	
+	res=1;T.F(1,1,n,1,n,2);
+	for(int k=0;k<ch[i].size();k++)
+	{
+		int u=ch[i][k];if(u==fa[i][0])continue;
+		res=-2;T.F(1,1,n,st[u],ed[u],2);
+		go(u);
+		res=2;T.F(1,1,n,st[u],ed[u],2);
+	}
+	res=-1;T.F(1,1,n,1,n,2);
+}
+
+
+int main()
+{
+    //freopen("1.in","r",stdin);freopen("1.out","w",stdout);
+	read(n);rep(i,1,n-1)read(x,y),ch[x].pb(y),ch[y].pb(x);
+	dfs(1,0);
+	read(m);
+	rep(i,1,m)
+	{
+		read(x,y);if(d[x]>d[y])swap(x,y);z=lca(x,y);
+		int dis=d[x]+d[y]-2*d[z];
+		int u=(dis-1)/2;y2=step(y,u);
+		q[y].pb((node){st[y2],ed[y2],i});
+		q[x].pb((node){1,st[y2]-1,i});
+		q[x].pb((node){ed[y2]+1,n,i});
+	}
+	
+	rep(i,1,n)res=d[i]-1,T.F(1,1,n,st[i],st[i],2);
+	go(1);
+	rep(i,1,m)printf("%d\n",ans[i]);
+	
+    return 0;
+}

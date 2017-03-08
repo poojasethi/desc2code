@@ -1,0 +1,156 @@
+#ifdef _WIN32
+#  define LL "%I64d"
+#else
+#  define LL "%Ld"
+#endif
+
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <cstring>
+#include <ctime>
+#include <vector>
+#include <deque>
+#include <set>
+#include <map>
+#include <queue>
+#include <stack>
+#include <bitset>
+#include <string>
+#include <algorithm>
+#include <complex>
+#include <utility>
+#include <cassert>
+using namespace std;
+#define null NULL
+#define mp make_pair
+#define pb(a) push_back(a)
+#define sz(a) ((int)(a).size())
+#define all(a) a.begin() , a.end()
+#define fi first
+#define se second
+#define relaxMin(a , b) (a) = min((a),(b))
+#define relaxMax(a , b) (a) = max((a),(b))
+#define SQR(a) ((a)*(a))
+typedef vector<int> vi;
+typedef pair<int,int> pii;
+typedef long long ll;
+// LCA + path_len + climb + is_parent
+#define MAX 100010
+#define LOG 17
+int N , jmp[MAX][LOG];
+vi fo[MAX];
+int dpt[MAX] , tin[MAX] , tout[MAX] , tim;
+void read_tree(){
+  scanf("%d" , &N);
+  for(int i=1;i<N;++i){
+   int a , b;
+   scanf("%d%d" , &a , &b);
+   --a , --b;
+   fo[a].pb(b) , fo[b].pb(a);
+                      }
+}
+void init(int vr , int par = -1){
+  tin[vr] = tim++;
+  if(par != -1) dpt[vr] = dpt[par] + 1;
+  if(par == -1) jmp[vr][0] = vr;
+  else jmp[vr][0] = par;
+  if(par != -1) fo[vr].erase(find(all(fo[vr]) , par));
+  for(int i=1;i<LOG;++i)
+   jmp[vr][i] = jmp[jmp[vr][i-1]][i-1];
+  for(int i=0;i<sz(fo[vr]);++i)
+   init(fo[vr][i] , vr);
+  tout[vr] = tim++;
+}
+bool is_parent(int vr , int of){
+  return tin[vr] <= tin[of] && tout[of] <= tout[vr];
+}
+int lca(int a , int b){
+  if(is_parent(a , b)) return a;
+  if(is_parent(b , a)) return b;
+  for(int L=LOG-1;L>=0;--L)
+   if(!is_parent(jmp[a][L] , b))
+    a = jmp[a][L] , ++L;
+  return jmp[a][0];
+}
+int path_len(int a , int b){
+  int L = lca(a , b);
+  return dpt[a] + dpt[b] - 2*dpt[L];
+}
+int climb(int vr , int how){
+  for(int i=LOG-1;i>=0;--i)
+   while(how >= (1<<i))
+    vr = jmp[vr][i] , how -= (1<<i);
+  return vr;
+}
+// </end>
+int path_len(pii w){
+  return path_len(w.fi , w.se);
+}
+void update(pii& w , pii with){
+  if(path_len(w) < path_len(with))
+   w = with;
+}
+pii merge_tree(pii f , pii s){
+  if(f.fi == -1 || s.fi == -1)
+   return f.fi == -1 ? s : f;
+  pii ret = f;
+  update(ret , s);
+  update(ret , mp(f.fi , s.fi)) , update(ret , mp(f.fi , s.se));
+  update(ret , mp(f.se , s.fi)) , update(ret , mp(f.se , s.se));
+  return ret;
+}
+pii best_down[MAX];
+pii best_up[MAX];
+void down_dfs(int vr){
+  best_down[vr] = mp(vr , vr);
+  for(int i=0;i<sz(fo[vr]);++i){
+   int to = fo[vr][i];
+   down_dfs(to);
+   best_down[vr] = merge_tree(best_down[vr] , best_down[to]);
+                               }
+}
+void up_dfs(int vr , pii up){
+  best_up[vr] = up;
+  up = merge_tree(up , mp(vr , vr));
+  vector<pii> le(sz(fo[vr])) , ri(sz(fo[vr]));
+  for(int i=0;i<sz(fo[vr]);++i)
+   ri[i] = le[i] = best_down[fo[vr][i]];
+  for(int i=1;i<sz(le);++i)
+   le[i] = merge_tree(le[i-1] , le[i]);
+  for(int i=sz(ri)-2;i>=0;--i)
+   ri[i] = merge_tree(ri[i+1] , ri[i]);
+  for(int i=0;i<sz(fo[vr]);++i){
+   int to = fo[vr][i];
+   pii cur = up;
+   if(i) cur = merge_tree(le[i-1] , cur);
+   if(i+1 < sz(ri)) cur = merge_tree(ri[i+1] , cur);
+   up_dfs(to , cur);
+                               }
+}
+int main(){
+  read_tree();
+  init(0);
+  down_dfs(0);
+  up_dfs(0 , mp(-1,-1));
+  int Q;
+  scanf("%d" , &Q);
+  while(Q-- > 0){
+   int a , b;
+   scanf("%d%d" , &a , &b);
+   --a , --b;
+   int L = lca(a , b);
+   if(path_len(a , L) < path_len(b , L))
+    swap(a , b);
+   int go = (path_len(a , b) - 1) / 2;
+   int p = climb(a , go);
+   int best = 0;
+   relaxMax(best , path_len(a , best_down[p].fi));
+   relaxMax(best , path_len(a , best_down[p].se));
+   relaxMax(best , path_len(b , best_up[p].fi));
+   relaxMax(best , path_len(b , best_up[p].se));
+   printf("%d\n" , best);
+                }
+  return 0;
+}

@@ -1,0 +1,234 @@
+/*
+ 	C++ Template
+	Gaurav Babbar
+*/
+
+#include<bits/stdc++.h>
+#define MOD 1000000007
+#define MAX 1000005
+#define mp make_pair
+#define pb push_back
+#define gc getchar
+#define pc putchar
+#define ll long long
+#define llu unsigned long long
+#define fill(a, val) memset(a, val, sizeof(a))
+
+ll ABS(ll a){if(a>0) return a; else return (-1*a);}
+int gcd(int a,int b){if (b==0) return a;else return gcd(b,a%b);}
+llu power(llu b,llu exp,llu m) {llu ans=1; b%=m; while(exp){if(exp&1) ans=(ans*b)%m; exp>>=1; b=(b*b)%m; } return ans; }
+using namespace std;
+
+#define DisplayDebuggingInfo 0
+#define debug(args...) {dbg,args; if(DisplayDebuggingInfo) cerr<<endl;}
+struct debugger
+{
+      template<typename T> debugger& operator,(const T& v)
+      {
+          if(DisplayDebuggingInfo)
+          {
+              cerr<< v <<" ";
+              return *this;
+          }
+      }
+}dbg;
+
+inline void inp(ll &n)
+{
+  n = 0;
+  int ch = gc();
+  int sign = 1;
+  while(ch < '0' || ch > '9') {
+    if (ch == '-') sign = -1;
+    ch = gc();
+  }
+  while(ch >= '0' && ch <= '9')
+    n = (n<<3) + (n<<1) + ch - '0', ch = gc();
+  n = n*sign;
+}
+
+inline void outp(ll a)
+{
+  char snum[25];
+  int i=0;
+  do
+  {
+    snum[i++]=a%10+48;
+    a=a/10;
+  } while(a!=0);
+  i=i-1;
+  while(i>=0)
+    pc(snum[i--]);
+  pc('\n');
+}
+
+/* Main Code sarts here */
+
+ll n,q,arr[MAX];
+struct node
+{
+    ll first,second;
+}tree[MAX<<2];
+
+void reset()
+{
+}
+
+void input()
+{
+    inp(n);inp(q);
+    for(ll i=1;i<=n;++i)
+    {
+        inp(arr[i]);
+    }
+}
+
+void initialize(int node,int b,int e)
+{
+    if (b == e)
+    {//debug(node,b,e);
+          if(arr[b]%2==0)
+          {
+              tree[node].first = arr[b];
+              tree[node].second = 1;
+          }
+          else
+          {
+              tree[node].first = LONG_LONG_MAX;
+              tree[node].second = 0;
+          }
+    }
+    else
+    {
+          int mid = (b+e)>>1;
+          initialize(2*node, b, mid);
+          initialize(2*node+1, mid+1, e);
+          if (tree[2 * node].first < tree[2 * node + 1].first)
+           {
+               tree[node].first = tree[2 * node].first;
+               tree[node].second = tree[2 * node].second;
+           }
+          else if (tree[2 * node].first > tree[2 * node + 1].first)
+          {
+              tree[node].first = tree[2 * node+1].first;
+              tree[node].second = tree[2 * node+1].second;
+          }
+          else
+          {
+              tree[node].first = tree[2 * node].first;
+              tree[node].second = tree[2 * node].second + tree[2 * node+1].second ;
+          }
+    }
+}
+
+pair<ll,ll> segQuery(int node,int b,int e,int i,int j)
+{
+    pair<ll,ll> p1, p2;
+
+      if (i > e || j < b)
+          return mp(LONG_LONG_MAX,0);
+
+      if (b >= i && e <= j)
+          return mp(tree[node].first,tree[node].second);
+
+      int mid = (b+e)>>1;
+      p1 = segQuery(2*node, b,mid, i, j);
+      p2 = segQuery(2*node+1,mid+1, e, i, j);
+
+      if (p1.first == -1)
+          return p2;
+      if (p2.first == -1)
+          return p1;
+      if (p1.first < p2.first)
+          return p1;
+      if(p1.first==p2.first)
+      {
+          p1.second = p1.second+p2.second;
+          return p1;
+      }
+      return p2;
+}
+
+void update(int node, int b, int e, int i, int j, int value)
+{
+            if(b > e || b > j || e < i) return;
+            if(b==e)
+            {
+                if(value%2==0)
+                {
+                  tree[node].first = value;
+                  tree[node].second = 1;
+                }
+                  else
+                  {
+                      tree[node].first = LONG_LONG_MAX;
+                      tree[node].second = 0;
+                  }
+                return;
+            }
+            int mid = (b+e)>>1;
+            update(node*2, b, mid , i, j, value);
+            update(1+node*2, mid+1, e, i, j, value);
+            if (tree[2 * node].first < tree[2 * node + 1].first)
+           {
+               tree[node].first = tree[2 * node].first;
+               tree[node].second = tree[2 * node].second;
+           }
+          else if (tree[2 * node].first > tree[2 * node + 1].first)
+          {
+              tree[node].first = tree[2 * node+1].first;
+              tree[node].second = tree[2 * node+1].second;
+          }
+          else
+          {
+              tree[node].first = tree[2 * node].first;
+              tree[node].second = tree[2 * node].second + tree[2 * node+1].second ;
+          }
+}
+
+void preprocess()
+{
+    initialize(1,1,n);
+}
+
+void solve()
+{
+    //for(int i=1;i<=2*n+2;++i){debug(i,tree[i].first,tree[i].second)}
+    for(int i=1;i<=q;++i)
+    {
+        ll x;inp(x);
+        if(x==1)//query
+        {
+            ll l,r;
+            inp(l);inp(r);
+            pair<ll,ll> ans = segQuery(1,1,n,l,r);
+            if(ans.first==LONG_LONG_MAX)
+                cout<<"-1 ";
+            else
+                cout<<ans.first<<" ";
+            outp(ans.second);
+        }
+        else if(x==2)
+        {
+            ll l,value;
+            inp(l);inp(value);
+            arr[l]=value;
+            update(1,1,n,l,l,value);
+        }
+        //for(int i=1;i<=2*n+2;++i){debug(i,tree[i].first,tree[i].second)}
+    }
+}
+
+int main()
+{
+   ll t=1;
+   //inp(t);
+   while(t--)
+   {
+	   reset();
+	   input();
+	   preprocess();
+	   solve();
+   }
+   return 0;
+}

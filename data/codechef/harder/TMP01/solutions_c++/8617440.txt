@@ -1,0 +1,255 @@
+#include<cstdio>
+#include<algorithm>
+#include<cassert>
+#include<cstring>
+#include<iostream>
+#include<cstdlib>
+#include<cmath>
+#include<vector>
+#include<map>
+#include<set>
+#include<queue>
+#include<bitset>
+using namespace std;
+typedef long long ll;
+typedef double db;
+void gn(int &x){
+	int sg=1;char c;while(((c=getchar())<'0'||c>'9')&&c!='-');
+	if(c=='-')sg=-1,x=0;else x=c-'0';
+	while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+	x*=sg;
+}
+void gn(ll &x){
+	int sg=1;char c;while(((c=getchar())<'0'||c>'9')&&c!='-');
+	if(c=='-')sg=-1,x=0;else x=c-'0';
+	while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+	x*=sg;
+}
+const int mo=1000000007;
+int qp(int a,ll b){int ans=1;do{if(b&1)ans=1ll*ans*a%mo;a=1ll*a*a%mo;}while(b>>=1);return ans;}
+int gcd(int a,int b){return b?gcd(b,a%b):a;}
+///////////////////
+#define MAXN 1000005
+#define SIZE 26
+///////////////////
+int n,m=SIZE+1,s[MAXN],sa[MAXN],tmp1[MAXN],tmp2[MAXN],cnt[MAXN],*rk,h[MAXN];
+void da(){
+     int *x=tmp1,*y=tmp2,num,i,j,len;
+     for (i=0;i<m;i++)cnt[i]=0;
+     for (i=0;i<n;i++)cnt[s[i]]++;
+     for (i=1;i<m;i++)cnt[i]+=cnt[i-1];
+     for (i=n-1;i>=0;i--)sa[--cnt[s[i]]]=i;
+     for (num=i=1,x[sa[0]]=0;i<n;i++)
+         x[sa[i]]=s[sa[i-1]]==s[sa[i]]?num-1:num++;
+     for (len=1;num<n;len<<=1){
+         for (j=0;j<len;j++)y[j]=n-len+j;
+         for (i=0;j<n;i++)if(sa[i]>=len)y[j++]=sa[i]-len;
+        
+         for (i=0;i<num;i++)cnt[i]=0;
+         for (i=0;i<n;i++)cnt[x[i]]++;
+         for (i=1;i<num;i++)cnt[i]+=cnt[i-1];
+         for (i=n-1;i>=0;i--)sa[--cnt[x[y[i]]]]=y[i];
+         
+         swap(x,y);
+         for (num=i=1,x[sa[0]]=0;i<n;i++)
+             x[sa[i]]= y[sa[i-1]]==y[sa[i]]&&y[sa[i-1]+len]==y[sa[i]+len] ?num-1:num++;
+     }
+     rk=x;
+}
+void ch(){
+     int i,j,l;
+     for (i=l=0;i<n-1;h[rk[i++]]=l)
+         for (l?l--:0,j=sa[rk[i]-1];s[j+l]==s[i+l];l++);
+     h[0]=0;
+}
+int minl[2222222],minr[2222222];int delen=0;
+int st[20][1111111];
+int l2[1111111];
+void inist(){
+	for (int i=0;i<n;i++)st[0][i]=h[i];
+	for (int j=1;j<20;j++)
+		for (int i=0;i+(1<<j)<=n;i++)
+			st[j][i]=min(st[j-1][i],st[j-1][i+(1<<j-1)]);
+	l2[1]=0;
+	for (int i=2;i<=n;i++)l2[i]=(i&(i-1))?l2[i-1]:l2[i-1]+1;
+}
+char query[1111111];
+/////////
+int tmpan,I,v;
+void predque(int l,int r,int x){
+	if(r<=I){
+		if(minl[x]){
+			if(l==r)tmpan=l;
+			else{
+				int mid=l+r>>1;
+				if(minl[x<<1|1])predque(mid+1,r,x<<1|1);
+				else predque(l,mid,x<<1);
+			}
+		}
+	}else{
+		int mid=l+r>>1;
+		if(I>mid)predque(mid+1,r,x<<1|1);
+		if(tmpan==0)predque(l,mid,x<<1);
+	}
+}
+int pred(int x){
+	tmpan=0;I=x-1;
+	if(1<=I)predque(1,n-1,1);
+	return tmpan;
+}
+void suffque(int l,int r,int x){
+	if(I<=l){
+		if(minl[x]){
+			if(l==r)tmpan=l;
+			else{
+				int mid=l+r>>1;
+				if(minl[x<<1])suffque(l,mid,x<<1);
+				else suffque(mid+1,r,x<<1|1);
+			}
+		}
+	}else{
+		int mid=l+r>>1;
+		if(I<=mid)suffque(l,mid,x<<1);
+		if(tmpan==0)suffque(mid+1,r,x<<1|1);
+	}
+}
+int suff(int x){
+	tmpan=0;I=x+1;
+	if(I<=n-1)suffque(1,n-1,1);
+	return tmpan;
+}
+/////////
+int tl[1111111],tr[1111111];
+ll cursu=0;int curcnt=0;
+
+#define Minl(x,y) (tl[x]<tl[y]?x:y)
+#define Minr(x,y) (tr[x]<tr[y]?x:y)
+
+int ii[3],vv[3];int tot;
+void upd(int l,int r,int x){
+	if(l==r){
+		for  (int k=0;k<tot;k++)if(l==ii[k]){
+			if(vv[k])minl[x]=minr[x]=l;
+			else minl[x]=minr[x]=0;
+			break;
+		}
+	}else{
+		int mid=l+r>>1;
+		int bol=0,bor=0;
+		for (int k=0;k<tot;k++)bol|=ii[k]>=l && ii[k]<=mid,bor|=ii[k]>mid && ii[k]<=r;
+		if(bol)upd(l,mid,x<<1);
+		if(bor)upd(mid+1,r,x<<1|1);
+		minl[x]=Minl(minl[x<<1],minl[x<<1|1]);
+		minr[x]=Minr(minr[x<<1],minr[x<<1|1]);
+	}
+}
+inline void upd(int i,int V){
+	I=i,v=V;
+	upd(1,n-1,1);
+}
+inline void upd(){
+	upd(1,n-1,1);
+}
+
+////////
+
+inline int lcp(int i,int j){
+	if(i==j)return n-1-sa[i];
+	else{
+		if(i>j)swap(i,j);i++;
+		int l=j-i+1,k=l2[l];
+		return max(0,min(n-1-max(sa[i-1],sa[j])-delen,min(st[k][i],st[k][j-(1<<k)+1])));
+	}
+}
+void del(int x){
+	curcnt--;
+	int pr=pred(x),su=suff(x);
+	cursu-=tl[x]-delen;
+	tot=0;
+	ii[tot]=x;vv[tot++]=0;
+	//upd(x,0);
+	int h=lcp(pr,su);
+	if(pr){
+		tr[pr]=n-1-sa[pr]-h;
+		ii[tot]=pr;vv[tot++]=1;
+		//upd(pr,1);
+	}if(su){
+		cursu-=tl[su]-delen;
+		tl[su]=n-1-sa[su]-h;
+		cursu+=tl[su]-delen;
+		//upd(su,1);
+		ii[tot]=su;vv[tot++]=1;
+	}
+	upd();
+}
+
+void fix(){
+	while(tl[minl[1]]<=delen){
+		del(minl[1]);
+	}
+	while(tr[minr[1]]<=delen){
+		del(minr[1]);
+	}
+}
+void add(int x){
+	int pr=pred(x),su=suff(x);
+	int h1=lcp(pr,x),h2=lcp(x,su);
+	if(n-1-sa[x]-max(h1,h2)<=delen)return;
+	tot=0;
+	if(pr){
+		tr[pr]=n-1-sa[pr]-h1;
+		//upd(pr,1);
+		ii[tot]=pr;vv[tot++]=1;
+	}
+	if(su){
+		cursu-=tl[su]-delen;
+		tl[su]=n-1-sa[su]-h2;
+		cursu+=tl[su]-delen;
+		upd(su,1);
+		ii[tot]=su;vv[tot++]=1;
+	}
+	tl[x]=n-1-sa[x]-h1;
+	cursu+=tl[x]-delen;
+	tr[x]=n-1-sa[x]-h2;
+	//upd(x,1);
+	ii[tot]=x;vv[tot++]=1;
+	upd();
+	curcnt++;
+	fix();
+}
+int main()
+{
+	tl[0]=tr[0]=1000000000;
+	int q;
+	gn(q);
+	for (int i=1;i<=q;i++){
+		char c;while((c=getchar())!='+' && c!='-');
+		if(c=='+'){
+			while((c=getchar())<'a'||c>'z');
+			query[i]=c;
+		}else query[i]='-';
+	}
+	n=0;
+	for (int i=1;i<=q;i++)if(query[i]!='-')s[n++]=query[i]-'a'+1;
+	for (int i=0;i<n-i-1;i++)swap(s[i],s[n-i-1]);
+	s[n++]=0;
+	da();
+	ch();
+	inist();
+
+	ll ans=0;
+	int ad=n-2;
+	for (int i=1;i<=q;i++){
+		if(query[i]=='-'){
+			delen++;
+			cursu-=curcnt;
+			fix();
+		}else{
+			add(rk[ad]);
+			ad--;
+		}
+		ans+=cursu;
+	}
+	cout<<ans%mo<<endl;
+	return 0;
+}

@@ -1,0 +1,165 @@
+//Question ::
+//
+//
+//Given a graph of N nodes. i-th node has a height H[i], and cost C[i].
+//You can travel nodes in one of the mode either non-decreasing order of height or non-increasing order of height of nodes.
+//Whenever you change mode on i-th node it will cost you C[i]. Find the path of minimum cost from node 1 to N.
+//
+//
+//
+//concept :
+//
+//
+//Make a copy of given graph G1, let it be G2. G1 will have a directed edge from node A to B if and only if H[A] <= H[B] and there was edge between A and B in orignal graph, delete all other edges. G2 will have a directed edge from node A to B if and only if H[A] >= H[B] and there was edge between A and B in orignal graph, delete all other edges.
+//
+//Now G1 represents mode "up the road" (i.e. non-decreasing mode). Now G2 represents mode "down the road" (i.e. non-increasing mode).
+//
+//All the edges in G1 and G2 have cost 0. This represent it will not cost you anything as long as you are in single graph.
+//
+//Now to allow changing of mode we will connect corresponding nodes of both the graph with cost C[i] of that node. Thus, whenever you will change mode on i-th node it will cost C[i].
+//
+//Now we will add a source and destination node. Source node will be connected to node 1 of G1 with cost C[1] and node 1 of G2 with cost C[1]. Because you need to pay to chose initial mode. Destination node will be connected to node N of G1 with cost 0 and node N of G2 with cost 0. Because it makes no difference wether you end up on G1's node N or G2's node N. So if given graph had n nodes e edges, final graph will have node N = 2 * n + 2 and edges E = e + n + 4
+//
+//Now we will use dijkstra's algorithm to find minimum cost path from source to destination in this new graph.
+//
+//
+//
+//
+//sample diagram:
+//
+//
+//
+//travel from town 1 to N, in minimum amount of cost
+//
+//
+//
+//             (1)-------mode-1 increaseing --------------(n)\                                                    |
+//          /   |                                          |   \
+//( source)/   c[1]                                        c[n]  \(destination)
+//         \    |                                          |     /
+//          \   |                                          |    /
+//           \ (n+1)-----mode-2  decreasing--------------(n+1)/
+//
+//     total nodes source + 2*n + destination = 2*n+2
+//     total edges = interconnected + n edges to travel exactly n nodes + source +destination = n+e+2+2
+//
+
+
+#include<bits/stdc++.h>
+using namespace std;
+
+
+
+
+//dijkistra here
+typedef pair< long long , int > pii;
+const int MAX = 2*100000+143;
+#define INF = (long long)1e18;
+vector< pair<int,long long> > G[MAX];
+long long int d[MAX];
+
+long long dijkstra(int start , int n) {
+    int u, v, i;
+    long long c,w;
+
+
+    priority_queue< pii, vector< pii >, greater< pii > > Q;
+
+
+    for(int i=0;i<MAX;i++)
+        d[i]=1e18;
+    //memset(d, 1e18 , sizeof(d));
+    Q.push(pii(0, start));
+    d[start] = 0;
+
+
+    while(!Q.empty()) {
+        u = Q.top().second; // node
+        c = Q.top().first; // node cost so far
+        Q.pop(); // remove the top item.
+
+        if(d[u] < c) continue;
+
+
+        if(u==2*n+1)
+        return d[2*n+1];
+
+        for(i = 0; i < G[u].size(); i++) {
+            v = G[u][i].first; // node
+            w = G[u][i].second; // edge weight
+
+
+            if(d[v] > d[u] + w) {
+                d[v] = d[u] + w;
+                Q.push(pii(d[v], v));
+            }
+        }
+    }
+
+    return d[2*n+1];
+}
+
+
+//end;
+int main(){
+
+     int N,M;
+     cin>>N>>M;
+
+     //vector< pair<int,int> >G[2*N+5];
+
+     int H[N+143];
+     long long C[N+143];
+
+     memset(H,0,sizeof(H));
+     memset(C,0,sizeof(C));
+     for(int i=1;i<=N;i++){
+
+        cin>>H[i];
+     }
+
+     //G[0].push_back({1,0});
+     //G[0].push_back({N+1,0});
+     // form interconnections here
+     for(int i=1;i<=N;i++){
+
+        cin>>C[i];
+        G[i].push_back({N+i,C[i]});
+        G[N+i].push_back({i,C[i]});
+     }
+
+     //scan edges and form G.form G as G1 and G2 G1=increasing and G2=decreasing
+     //given the graph is bi-directional
+     for(int i=1;i<=M;i++){
+
+        int X,Y;
+        cin>>X>>Y;
+        //edge from X to Y
+        //increasing mode
+        if(H[X]<=H[Y])
+        G[X].push_back({Y,0});
+        //decreasing mode
+        if(H[X]>=H[Y])
+        G[N+X].push_back({N+Y,0});
+        //increasing mode
+        if(H[Y]<=H[X])
+        G[Y].push_back({X,0});
+        //decreasing mode
+        if(H[Y]>=H[X])
+        G[N+Y].push_back({N+X,0});
+
+    }
+
+    // build intial costs here (source -1 or source - N+1 with c[1] as we are starting mode)
+    G[0].push_back({1,C[1]});
+    G[0].push_back({N+1,C[1]});
+    // N to destionation or 2*N to destination is equal to zero as we are already at destination
+    G[N].push_back({2*N+1,0});
+    G[2*N].push_back({2*N+1,0});
+
+    long long int Res=dijkstra(0,N);
+    if(Res==1e18)
+    cout<<"-1"<<endl;
+    else
+    cout<<Res<<endl;
+}

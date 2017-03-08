@@ -1,0 +1,136 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<set>
+#include<map>
+#include<cmath>
+#include<vector>
+#define rep(i,j,k) for(int i=(int)j;i<=(int)k;i++)
+#define per(i,j,k) for(int i=(int)j;i>=(int)k;i--)
+using namespace std;
+typedef long long LL;
+typedef double db;
+const double pi=acos(-1.0);
+const int P=2003;
+const int N=(1<<16);
+inline int Pow(int a,int b){
+	int c=1;
+	for(;b;b>>=1,a=a*1ll*a%P)if(b&1)c=c*1ll*a%P;
+	return c;
+}
+//---------------------------------------
+struct com{
+	double re,im;
+	inline com(double _re=0.0,double _im=0.0){
+		re=_re;im=_im;
+	}
+}W[2][(1<<16)+5];
+inline com operator *(const com &a,const com &b){
+	return com(a.re*b.re-a.im*b.im,a.re*b.im+a.im*b.re);
+}
+inline com operator +(const com &a,const com &b){
+	return com(a.re+b.re,a.im+b.im);
+}
+inline com operator -(const com &a,const com &b){
+	return com(a.re-b.re,a.im-b.im);
+}
+int rev[(1<<16)+5];
+void init(){
+	rep(i,0,N-1){
+		int x=i;int y=0;
+		for(int k=1;k<N;k<<=1,x>>=1)(y<<=1)|=(x&1);
+		rev[i]=y;
+	}
+	W[0][0]=W[1][0]=com(1,0);
+	com V=com(cos(2.*pi/N),sin(2.*pi/N));
+	com VV=V;VV.im*=-1.0;
+	rep(i,1,N-1){
+		W[0][i]=W[0][i-1]*V;
+		W[1][i]=W[1][i-1]*VV;
+	}
+}
+inline void FFT(com *A,int f){
+	rep(i,0,N-1)if(i<rev[i]){
+		com tmp=A[i];A[i]=A[rev[i]];A[rev[i]]=tmp;
+	}
+	for(int i=1;i<N;i<<=1)
+	for(int j=0,t=N/(i<<1);j<N;j+=(i<<1))
+	for(int k=0,l=0;k<i;k++,l+=t){
+		com y=A[j+k];
+		com x=A[i+j+k]*W[f][l];
+		A[j+k]=x+y;
+		A[i+j+k]=y-x;
+	}
+	if(f)rep(i,0,N-1)A[i].re/=N;
+}
+com tA[N+5],tB[N+5];
+inline void mul(int *A,int *B,int *C){
+	rep(i,0,N-1)tA[i]=com(A[i],0);
+	rep(i,0,N-1)tB[i]=com(B[i],0);
+	FFT(tA,0);FFT(tB,0);
+	rep(i,0,N-1)tA[i]=tA[i]*tB[i];
+	FFT(tA,1);
+	rep(i,0,N-1){
+		C[i]=(LL)(tA[i].re+0.1)%P;
+	}
+}
+//--------------------------------------
+int w[1005][1005];
+int T;
+int n,k,l,f;
+int fac[51000];
+int inv[51000];
+int G[N+5];
+int H[N+5];
+int tmp1[N+5];
+int tmp2[N+5];
+void Main(){
+	init();
+	scanf("%d%d%d%d",&n,&k,&l,&f);
+	rep(i,0,f)rep(j,0,f)w[i][j]=0;
+	w[0][0]=1;
+	rep(i,1,f)rep(j,0,f){
+		if(j)w[i][j]=w[i-1][j-1];
+		w[i][j]=(w[i][j]+w[i-1][j]*1ll*j)%P;
+	}
+	rep(i,0,N-1)G[i]=0;
+	rep(i,0,f)G[i]=w[f][i];
+	rep(i,0,N-1)H[i]=0;
+	H[0]=1;
+	
+	int bb=l;
+	while(bb){
+		if(bb&1){
+			mul(H,G,tmp1);
+			rep(i,0,N-1)H[i]=tmp1[i];
+		}
+		mul(G,G,tmp1);
+		rep(i,0,N-1)G[i]=tmp1[i];
+		bb>>=1;
+	}
+	int ans=0;
+	int invv=Pow(k,P-2);
+	int t=1;
+	rep(i,0,l*f){
+		int val=H[i]*1ll*Pow(invv,i)%P;
+		val=val*1ll*t%P;
+		ans=(ans+val)%P;
+		t=t*1ll*(n-i)%P;
+	}
+	printf("%d\n",ans);
+}
+int main(){
+	fac[0]=1;
+	rep(i,1,50000)fac[i]=fac[i-1]*1ll*i%P;
+	inv[50000]=Pow(fac[50000],P-2);
+	per(i,49999,0)inv[i]=inv[i+1]*1ll*(i+1)%P;
+	
+	scanf("%d",&T);
+	while(T--){
+		Main();
+	}
+	return 0;
+}
+
+
+

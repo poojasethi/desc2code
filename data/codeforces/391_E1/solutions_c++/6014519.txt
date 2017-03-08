@@ -1,0 +1,212 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+#include <queue>
+#include <iostream>
+using namespace std;
+
+typedef long long llint;
+
+//ideja je posto imamo 3 stabalca izaberemo jedno za srednje i oznacimo ga s yi, ostale xi, zi
+//sad raspisemo sve summande
+//dist( i, j ) -> distanca izmedu cvorova i, j
+//imamo 4 komponente razllictih sumanada
+//fiksiramo dva cvora Y1,Y2 i iz drugih stabalca X, Z
+//prva -> svako stabalce sa sobom, to oznacimo s tree_sum( .... )
+//druga -> X sa Y: za svaki xi( velicina n1 ) i za svaki y1( velicina n2 ) = suma( dist( xi, X ) ) * n2 +
+//suma( dist( Y, yi ) ) ) * n1 + n1 * n2 ( jer tolko puta brojimo dodani edge )
+//treca -> Y sa Z : analogno gore je suma( dista( Y2, yi ) ) * n3 + suma( dist( Z, zi ) ) * n2 + n2 * n3
+//cetvrta je najkompleksnija a to je X na Z
+//forumla je suma( dist( X, xi ) ) * n3 + suma( dist( Z, zi ) ) * n1 + dist( y1, y2 ) * n1 * n3 ( to nam
+//( je precka tj. srednje stabalce )  + n1 * n3 * 2 ( jer koristimo 2 nadodana edge-a
+//to sada osnovne formule, al to bi bilo N ^ 4 jer moramo birat Y1, Y2, X, Z
+//ali prema gornjim sumama mozemo skontat da mi ustvari ( zadatak je da maximiziramo ) moramo birati
+// X u kojem je sum( dist( xi, X ) ) -> maksimalna, analgono vrijedi za Z
+//spustili smo slzenost na N ^ 2, tj. moramo samo birati Y1, Y2, sto je dovoljno za N <= 10 ^ 3
+//kakva li ce biti bolesnoca ako je N <= 10 ^ 5??
+
+//prvo treba efikasno racunati za svaki cvor kolko je suma distanci prema drugima
+//to se moze recimo tako dinamikom gdje pamtim, dolje je detaljnije objasnjeno!
+//dakle sad imam izraz n1 * sum( Y1, yi ) + n3 * sum( Y2, yi ) + dist( y1, y2 ) * n1 * n3
+//fiksiramo za svaki cvor da je Y1 i onda najdemo dva njegova najbolja Y2
+
+
+const int N = 1005;
+
+int n[ 4 ];
+
+vector< int > graf[ N ][ 4 ];
+vector< int > suma_bez[ N ][ 4 ];
+
+int subtree[ N ][ 4 ]; // suma distanci unutar nekog cvora
+int cnt_subtree[ N ][ 4 ]; //kolko cvorova
+int dp[ N ][ 4 ]; // rjesenje za pojedini cvor
+
+bool bio[ N ];
+
+int dist[ N ][ N ][ 4 ];
+int sum[ N ][ 4 ];
+int kolko[ 4 ]; // koji je maximalni za izabrat u odredenom stabalcu
+int cons[ 4 ]; //prvi dio sumacija
+
+inline void make_edge( int x, int y, int id ) {
+    graf[ x ][ id ].push_back( y );
+    graf[ y ][ id ].push_back( x );
+}
+
+inline void load( ) {
+    for( int i = 1; i <= 3; i++ ) scanf( "%d", &n[ i ] );
+    for( int i = 1; i <= 3; i++ ) {
+        for( int j = 0; j < n[ i ] - 1; j++ ) {
+            int x, y;
+            scanf( "%d %d", &x, &y );
+            make_edge( x, y, i );
+        }
+    }
+}
+
+queue< int > Q;
+
+void dfs( int x = 1, int par = -1, int who = 0 ) {
+    cnt_subtree[ x ][ who ] = 1;
+    for( int i = 0; i < graf[ x ][ who ].size( ); i++ ) {
+        int sus = graf[ x ][ who ][ i ];
+        if( sus == par ) continue;
+        dfs( sus, x, who );
+        cnt_subtree[ x ][ who ] += cnt_subtree[ sus ][ who ];
+        subtree[ x ][ who ] += subtree[ sus ][ who ] + cnt_subtree[ sus ][ who ];
+    }
+}
+
+void dfs2( int x, int par, int who ) {
+    if( x != 1 ) {
+        //ovo je formula za sumu_distanci
+        //definiram dp[ x ] -> suma za x-ti cvor
+        //od parenta oduzmen cijelo njegovo podstablo i broj cvorova( to je ustvari kolko puta se edge prema 
+        //roditelju koristi
+        //sad imam sumu distanci za cijelo stablo izuzev momentalne grane i onda jos izracunam kolko treba
+        //ovo samo gledam na papir i racunam, moze se kratiti nesto, ali da je jasnije
+        dp[ x ][ who ] = dp[ par ][ who ] - 
+                        ( subtree[ x ][ who ] + cnt_subtree[ x ][ who ] ) 
+                        + ( n[ who ] - cnt_subtree[ x ][ who ] ) 
+                        + subtree[ x ][ who ];
+    }
+    for( int i = 0; i < graf[ x ][ who ].size( ); i++ ) {
+        if( graf[ x ][ who ][ i ] == par ) continue;
+        dfs2( graf[ x ][ who ][ i ], x, who );
+    }
+}
+        
+
+
+
+
+inline void bfs( int x, int who ) {
+    memset( bio, 0, sizeof( bio ) );
+    Q.push( x );
+    Q.push( 0 );
+    while( !Q.empty( ) ) {
+        int node = Q.front( ); Q.pop( );
+        int udalj = Q.front( ); Q.pop( );
+        bio[ node ] = 1;
+        for( int j = 0; j < graf[ node ][ who ].size( ); j++ ) {
+            if( bio[ graf[ node ][ who ][ j ] ] ) continue;
+            dist[ x ][ graf[ node ][ who ][ j ] ][ who ] = udalj + 1;
+            bio[ graf[ node ][ who ][ j ] ] = 1;
+            Q.push( graf[ node ][ who ][ j ] );
+            Q.push( udalj + 1 );
+        }
+    }
+}
+
+inline void calc_sum( int x, int who ) {
+    for( int i = 1; i <= n[ who ]; i++ ) sum[ x ][ who ] += dist[ x ][ i ][ who ];
+}
+
+inline void solve( ) {
+    for( int i = 1; i <= 3; i++ ) {
+        for( int j = 1; j <= n[ i ]; j++ ) bfs( j, i );
+    }
+  /*  for( int i = 1; i <= 3; i++ ) {
+        for( int j = 1; j <= n[ i ]; j++ ) calc_sum( j, i );
+    }*/
+    //TEST!!
+    for( int i = 1; i <= 3; i++ ) {
+        dfs( 1, -1, i );
+        dp[ 1 ][ i ] = subtree[ 1 ][ i ];
+        dfs2( 1, -1, i );
+        for( int j = 1; j <= n[ i ]; j++ ) {
+            sum[ j ][ i ] = dp[ j ][ i ];
+        }
+    }
+   /* printf( "Za svaki cvor suma ::\n" );
+    for( int i = 1; i <= 3; i++ ) {
+        printf( "stablo == %d\n", i );
+        for( int j = 1; j <= n[ i ]; j++ ) {
+            printf( "node == %d, suma_distanci == %d\n", j, dp[ j ][ i ] );
+        }
+        system( "pause" );
+    }*/
+    
+  /*  for( int i = 1; i <= 3; i++ ) {
+        for( int j = 1; j <= n[ i ]; j++ ) {
+            printf( "id == %d, node == %d\n", i, j );
+            printf( "Distance::\n" );
+            for( int f = 1; f <= n[ i ]; f++ ) {
+                printf( "ka %d == %d\n", f, dist[ j ][ f ][ i ] );
+            }
+            system( "pause" );
+        }
+    }*/
+   /* for( int i = 1; i <= 3; i++ ) {
+        for( int j = 1; j <= n[ i ]; j++ ) {
+            printf( "id == %d, node == %d, suma == %d\n", i, j, sum[ j ][ i ] );
+            system( "pause" );
+        }
+    }*/
+    for( int i = 1; i <= 3; i++ ) {
+        int mx = 0;
+        for( int j = 1; j <= n[ i ]; j++ ) mx = max( mx, sum[ j ][ i ] );
+        kolko[ i ] = mx;
+    }
+    for( int i = 1; i <= 3; i++ ) {
+        int suma = 0;
+        for( int j = 1; j <= n[ i ]; j++ ) suma += sum[ j ][ i ];
+        suma /= 2; // svaki edge 2 puta
+        cons[ i ] = suma;
+    }
+    llint konstanta = ( llint )cons[ 1 ] + cons[ 2 ] + ( llint )cons[ 3 ];
+    llint sol = 0;
+    //cout << "KONSTANTA == " << konstanta << endl;
+    //system( "Pause" );
+    for( int i = 1; i <= 3; i++ ) {
+        for( int j = 1; j <= n[ i ]; j++ ) {
+            for( int f = 1; f <= n[ i ]; f++ ) {
+                //if( j == f ) continue;
+                int Y1 = j;
+                int Y2 = f;
+                llint ans = 0;
+                int middle = i;
+                middle--;
+                int first = ( middle + 1 ) % 3 + 1;
+                int second = ( middle + 2 ) % 3 + 1;
+                middle++;
+                ans += ( llint )kolko[ first ] * n[ middle ] + ( llint )sum[ Y1 ][ middle ] * n[ first ] + ( llint )n[ middle ] * n[ first ];
+                ans += ( llint )kolko[ second ] * n[ middle ] + ( llint )sum[ Y2 ][ middle ] * n[ second ] + ( llint )n[ second ] * n[ middle ];
+                ans += ( llint )kolko[ first ] * n[ second ] + ( llint ) kolko[ second ] * n[ first ] + ( llint )dist[ Y1 ][ Y2 ][ middle ] * n[ first ] * n[ second ] + 2 * n[ first ] * n[ second ];
+                ans += konstanta;
+                if( ans > sol ) sol = ans;
+            }
+        }
+    }
+    cout << sol << endl;
+}
+
+int main( void ) {
+    load( );
+    solve( );
+    //system( "pause" );
+    return 0;
+}

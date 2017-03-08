@@ -1,0 +1,196 @@
+#include <cassert>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+const double kEps = 1E-6;
+const int kMaxN = 10000, kMaxR = 100000;
+int n, m, f[kMaxN], idx[kMaxR + 1];
+bool vis[kMaxR + 1];
+
+int Gcd(int a, int b) {
+	return (b ? Gcd(b, a % b) : a);
+}
+
+double FGcd(double a, double b) {
+	return (b > kEps ? FGcd(b, fmod(a, b)) : a);
+}
+
+void Solve() {
+	scanf("%d", &n);
+	memset(idx, -1, sizeof(idx));
+	for (int i = 0; i < n; ++ i) {
+		scanf("%d", &f[i]);
+		idx[f[i]] = i;
+	}
+	if (n == 2) {
+		printf("%d %d\n", f[0], f[1]);
+		printf("%d %d\n", f[0], f[1]);
+		return;
+	}
+	if (n == 3) {
+		printf("%d %d\n", f[0], f[1]);
+		printf("%d %d\n", f[1], f[2]);
+		return;
+	}
+	if (n == 4) {
+		printf("%d %d\n", f[0], f[1]);
+		printf("%d %d\n", f[2], f[3]);
+		return;
+	}
+	for (int t = 1; t < 4; ++ t) {
+		m = n, memset(vis, false, sizeof(vis));
+		int l = 0, r = t;
+		if (t == 3) l = 1, r = 2;
+		vis[f[l]] = vis[f[r]] = true, m -= 2;
+		for (int a = f[l], b = f[r]; ; ) {
+			int c = b * 2 - a;
+			if (c > f[n - 1]) break;
+			if (idx[c] == -1) break;
+			vis[c] = true, -- m;
+			a = b, b = c;
+		}
+		if (m > 17) continue;
+		vector<int> seq;
+		for (int i = 0; i < n; ++ i)
+			if (!vis[f[i]]) seq.push_back(f[i]);
+		if (m < 3 || (m == 3 && (long long)seq[1] * seq[1] == (long long)seq[0] * seq[2])) {
+			for (int i = 0, fir = 1; i < n; ++ i)
+				if (vis[f[i]]) {
+					if (fir) fir = 0;
+					else printf(" ");
+					printf("%d", f[i]);
+				}	
+			puts("");
+			int cnt = 2 - m;
+			for (int i = 0, fir = 1; i < n; ++ i)
+				if (!vis[f[i]] || cnt > 0) {
+					if (fir) fir = 0;
+					else printf(" ");
+					printf("%d", f[i]);
+					cnt -= vis[f[i]];
+				}
+			puts("");
+			return;
+		}
+		vector<double> fac(m);
+		for (int i = 0; i < m; ++ i) fac[i] = log(seq[i]);
+		double lq = 0.0;
+		for (int i = 0; i < m - 1; ++ i) lq = FGcd(lq, fac[i + 1] - fac[i]);
+		int a = seq[0], b = (int)(exp(fac[0] + lq) + 0.5);
+		if (a == b) continue;
+		if (b > f[n - 1] || idx[b] == -1) continue;
+		if (!vis[a]) -- m;
+		if (!vis[b]) -- m;
+		vis[a] = vis[b] = true;
+		for ( ; ; ) {
+			if ((long long)b * b % a != 0) break;
+			if ((long long)b * b / a > f[n - 1]) break;
+			int c = (long long)b * b / a;
+			if (idx[c] == -1) break;
+			if (!vis[c]) vis[c] = true, -- m;
+			a = b, b = c;
+		}
+		if (!m) {
+			printf("%d", f[l]);
+			for (int a = f[l], d = f[r] - f[l]; ; ) {
+				if (a > f[n - 1] - d) break;
+				a += d;
+				if (idx[a] == -1) break;
+				printf(" %d", a);
+			}
+			puts("");
+			a = seq[0], b = (int)(exp(fac[0] + lq) + 0.5);
+			printf("%d %d", a, b);
+			for ( ; ; ) {
+				if ((long long)b * b % a != 0) break;
+				if ((long long)b * b / a > f[n - 1]) break;
+				int c = (long long)b * b / a;
+				if (idx[c] == -1) break;
+				printf(" %d", int(c));
+				a = b, b = c;
+			}
+			puts("");
+			return;
+		}
+	}
+	for (int t = 1; t < 4; ++ t) {
+		m = n, memset(vis, false, sizeof(vis));
+		int l = 0, r = t;
+		if (t == 3) l = 1, r = 2;
+		vis[f[l]] = vis[f[r]] = true, m -= 2;
+		for (int a = f[l], b = f[r]; ; ) {
+			if ((long long)b * b % a != 0) break;
+			long long c = (long long)b * b / a;
+			if (c > f[n - 1]) break;
+			if (idx[c] == -1) break;
+			vis[c] = true, -- m;
+			a = b, b = c;
+		}
+		vector<int> seq;
+		for (int i = 0; i < n; ++ i)
+			if (!vis[f[i]]) seq.push_back(f[i]);
+		if (m < 3) {
+			int cnt = 2 - m;
+			for (int i = 0, fir = 1; i < n; ++ i)
+				if (!vis[f[i]] || cnt > 0) {
+					if (fir) fir = 0;
+					else printf(" ");
+					printf("%d", f[i]);
+					cnt -= vis[f[i]];
+				}	
+			puts("");
+			for (int i = 0, fir = 1; i < n; ++ i)
+				if (vis[f[i]]) {
+					if (fir) fir = 0;
+					else printf(" ");
+					printf("%d", f[i]);
+				}
+			puts("");
+			return;
+		}
+		int d = 0;
+		for (int i = 0; i < m - 1; ++ i) d = Gcd(d, seq[i + 1] - seq[i]);
+		vis[seq[0]] = true, -- m;
+		for (int a = seq[0]; ; ) {
+			if (a > f[n - 1] - d) break;
+			a += d;
+			if (idx[a] == -1) break;
+			if (!vis[a]) vis[a] = true, -- m;
+		}
+		if (!m) {
+			printf("%d", seq[0]);
+			for (int a = seq[0]; ; ) {
+				if (a > f[n - 1] - d) break;
+				a += d;
+				if (idx[a] == -1) break;
+				printf(" %d", a);
+			}
+			puts("");
+			printf("%d %d", f[l], f[r]);
+			for (int a = f[l], b = f[r]; ; ) {
+				if ((long long)b * b % a != 0) break;
+				long long c = (long long)b * b / a;
+				if (c > f[n - 1]) break;
+				if (idx[c] == -1) break;
+				printf(" %d", int(c));
+				a = b, b = c;
+			}
+			puts("");
+			return;
+		}
+	}
+	assert(0);
+}
+
+int main() {
+	int t;
+	for (scanf("%d", &t); t --; )
+		Solve();
+	return 0;
+}

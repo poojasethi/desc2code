@@ -1,0 +1,106 @@
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <bitset>
+using namespace std;
+const int maxN=210;
+typedef bitset<maxN> bits;
+int n,m,mat[maxN][maxN];
+bool invalid[maxN][maxN];
+char buf[maxN];
+bits cur_map[maxN];
+bits nxt_map[maxN];
+bits * ptr_cur_map;
+bits * ptr_nxt_map;
+bits * ptr_tmp_map;
+void toggle(bits * ptr_map,int b,const bits &bt) {
+	if(!(1<=b&&b<=n)) return;
+	ptr_map[b]^=bt;
+}
+void press(int a,int b,const bits &bt) {
+	if (a<n) toggle(ptr_nxt_map,b,bt);
+	toggle(ptr_cur_map,b-1,bt);
+	toggle(ptr_cur_map,b+1,bt);
+	toggle(ptr_cur_map,b,bt);
+}
+int nEqu;
+bits equ[maxN*2];
+int base[maxN];
+bool solve() {
+	int nBase=0;
+	for(int ei=1;ei<=nEqu;ei++) {
+		for(int bi=1;bi<=nBase;bi++)
+			if(equ[ei][base[bi]])
+				equ[ei]^=equ[bi];
+		int pos=0;
+		for(int i=1;i<=n;i++)
+			if(equ[ei][i]) {
+				pos=i;break;
+			}
+		if(pos) {
+			++nBase;
+			equ[nBase]=equ[ei];
+			base[nBase]=pos;
+		} else
+			if(equ[ei][0])
+				return false;
+	}
+	return true;
+}
+int main() {
+	int T;
+	for(scanf("%d",&T);T;T--){
+		scanf("%d%d",&n,&m);
+		for(int i=1;i<=n;i++) {
+			scanf("%s",buf+1);
+			for(int j=1;j<=n;j++)
+				mat[i][j]=buf[j]=='1';
+		}
+		memset(invalid,0,sizeof(invalid));
+		for(int i=1;i<=m;i++) {
+			int x,y;
+			scanf("%d%d",&x,&y);
+			invalid[x][y]=true;
+		}
+		for(int i=1;i<=n;i++) {
+			cur_map[i].reset();
+			cur_map[i][0] = mat[1][i];
+			nxt_map[i].reset();
+			nxt_map[i][0] = mat[2][i];
+		}
+		ptr_cur_map =  cur_map ;
+		ptr_nxt_map =  nxt_map ;
+		nEqu=0;
+		for(int i=1;i<=n;i++) {
+			static bits tmp;
+			tmp.reset();
+			tmp[i]=1;
+			
+			press(1,i,tmp);
+			if(invalid[1][i])
+				equ[++nEqu]=tmp;
+		}
+		for(int i=2;i<=n;i++) {
+			ptr_tmp_map = ptr_cur_map;
+			ptr_cur_map = ptr_nxt_map;
+			ptr_nxt_map = ptr_tmp_map;
+			for(int j=1;j<=n;j++) {
+				static bits tmp;
+				tmp= ptr_nxt_map[j];
+                                if(i<n) {
+					ptr_nxt_map[j].reset();
+					ptr_nxt_map[j][0] = mat[i+1][j];
+				}
+				press(i,j,tmp);
+				if(invalid[i][j])
+					equ[++nEqu]=tmp;
+			}
+			if(i==n)
+				for(int j=1;j<=n;j++)
+					equ[++nEqu]=ptr_cur_map[j];
+		}
+		puts(solve()?"YES":"NO");
+	}
+} 
+

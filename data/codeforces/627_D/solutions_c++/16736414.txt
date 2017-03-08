@@ -1,0 +1,109 @@
+#include<cstring>
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+#include<queue>
+#define rep(i,l,r) for (int i=l;i<=r;i++)
+#define down(i,l,r) for (int i=l;i>=r;i--)
+#define clr(x,y) memset(x,y,sizeof(x))
+#define maxn 200500
+#define inf int(1e9)
+#define ll long long
+#define mm 1000000007
+using namespace std;
+struct node{int sum,mx;}pref[maxn],suf[maxn];
+struct p{int x,y;};
+int vis[maxn],s[maxn],f[maxn],dp[maxn],head[maxn],c[maxn],a[maxn],q[maxn];
+int n,m,r,tot,l,mid;
+ll read(){
+	ll x=0,f=1; char ch=getchar();
+	while (!isdigit(ch)){if (ch=='-') f=-1; ch=getchar();}
+	while (isdigit(ch)){x=x*10+ch-'0'; ch=getchar();}
+	return x*f;
+}
+struct data{int obj,pre;
+}e[maxn*2];
+void insert(int x,int y){
+	e[++tot].obj=y; e[tot].pre=head[x]; head[x]=tot;
+}
+node join(node a,node b){
+	node z;
+	z.sum=a.sum+b.sum;
+	z.mx=max(a.mx,b.mx);
+	return z;
+}
+void dfs(int u,int fa){
+	s[u]=1;
+	int sum=0,mx=0;
+	for(int j=head[u];j;j=e[j].pre){
+		int v=e[j].obj;
+		if (v==fa) continue;
+		dfs(v,u);
+		s[u]+=s[v];
+		if (s[v]==f[v]) sum+=f[v]; else mx=max(mx,f[v]);
+	}
+	f[u]=mx+sum+1;
+	if (!c[u]) f[u]=0;
+}
+void solve(int u,int fa,int up){
+	clr(vis,0);
+	queue<p> Q; Q.push((p){1,0}); 
+	while (!Q.empty()){ 
+		int u=Q.front().x,up=Q.front().y; Q.pop(); vis[u]=1;
+		int sum=0,cnt=0,mx=0;
+		for (int j=head[u];j;j=e[j].pre){
+			int v=e[j].obj;
+			if (vis[v]) continue;
+			q[++cnt]=v;
+			if (s[v]==f[v]) sum+=f[v]; else mx=max(mx,f[v]);
+		}
+		if (up==n-s[u]) sum+=up; else mx=max(mx,up);
+		dp[u]=sum+mx+1;
+		if (!c[u]) dp[u]=0;
+		
+	//	pref[0]=0; rep(i,1,cnt) pref[i]=pref[i-1]+f[q[i]];
+	//	suf[cnt+1]=0; down(i,cnt,1) suf[i]=suf[i+1]+f[q[i]];
+		rep(i,1,cnt){
+			int now=q[i]; 
+			pref[i]=pref[i-1];
+			if (s[now]==f[now]) pref[i].sum+=f[now];
+			else pref[i].mx=max(pref[i].mx,f[now]);
+		}
+		suf[cnt+1]=(node){0,0};
+		down(i,cnt,1) {
+			int now=q[i];
+			suf[i]=suf[i+1];
+			if (s[now]==f[now]) suf[i].sum+=f[now];
+			else suf[i].mx=max(suf[i].mx,f[now]);	
+		}
+		rep(i,1,cnt){
+			int now=q[i];
+			node z=join(pref[i-1],suf[i+1]);
+			if (n-s[u]==up) z.sum+=up; else z.mx=max(z.mx,up);
+			int new_up=z.sum+z.mx+1;
+			if (!c[u]) new_up=0;
+			Q.push((p){now,new_up});
+		}
+	}
+}
+int main(){
+//	freopen("in.txt","r",stdin);
+	n=read(); m=read();
+	rep(i,1,n) a[i]=read(),r=max(r,a[i]);
+	rep(i,1,n-1){
+		int x=read(),y=read();
+		insert(x,y); insert(y,x);
+	}
+	l=1; int ans=0; r++;
+	while (l<r){
+		mid=(l+r)/2;
+		rep(i,1,n) if (a[i]>=mid) c[i]=1; else c[i]=0;
+		dfs(1,0);
+		solve(1,0,0);
+		int mx=0;
+		rep(i,1,n) if (dp[i]>mx) mx=dp[i];
+		if (mx>=m) ans=mid,l=mid+1; else r=mid;
+	} 
+	printf("%d\n",ans);
+	return 0;
+}

@@ -1,0 +1,84 @@
+#include<bits/stdc++.h>
+using namespace std;
+int arr[1000005],par[205];
+int m,k,n,i;
+int min1(int x,int y)
+{
+	if(x==-1)
+	return y;
+	else
+	return (x<y)?x:y;
+}
+void uni(int x,int y)
+{
+	if(par[x]==par[y])
+		return;
+	if(par[x]==x)
+	{
+		for(int i=1;i<=m;i++)
+		{
+			if(par[i]==par[y] && i!=y)
+			{
+				par[i]=x;
+			}
+		}
+		par[y]=x;
+		
+ 
+	}
+	else
+	uni(par[x],y);
+}
+int main()
+{
+	int t;
+	int dp[205];
+	scanf("%d",&t);
+	
+	while(t--)
+	{
+		
+		scanf("%d%d%d",&m,&k,&n);
+		int x,y;
+		for(int i=1;i<=m;i++)
+		par[i]=i;
+		for(int i=0;i<k;i++)
+		{
+			scanf("%d%d",&x,&y);
+			uni(x,y);
+		}
+		for(int i=1;i<=n;i++)
+			scanf("%d",&arr[i]);
+		dp[0]=-1;
+		for(i=1;i<=m;i++)
+		{
+			dp[i]=dp[i-1];
+			if(arr[1]==i)
+				dp[i]=0;
+			if(par[arr[1]]==par[i] && dp[i]!=0)
+				dp[i]=1;
+ 
+		}
+		for(int i=2;i<=n;i++)
+		{
+			for(int j=1;j<=m;j++)
+			{
+				if(dp[j]!=-1)
+				{
+					if(par[arr[i]]==par[j])
+					{
+						if(arr[i]==j)
+							dp[j]=min1(dp[j-1],dp[j]);
+						else
+							dp[j]=min1(dp[j-1],dp[j]+1);
+					}
+					else
+				 		dp[j]=dp[j-1];
+				}
+ 
+			}
+		}
+		printf("%d\n",dp[m]);
+	}
+	return 0;
+} 

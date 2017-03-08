@@ -1,0 +1,72 @@
+#include<cstdio>
+#include<map>
+#include<cmath>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+#define rep(i,a,b) for (int i=a;i<b;++i)
+typedef long long ll;
+#define mk make_pair
+const int N=400005,oo=1<<30;
+int n,m,T,l,Q,top,k[N],st[N],ed[N],next[N],son[N],id[N],num[N];
+int b[N],v[N],in[N],c[N],s[N],f[N],ans[N],d[N],ox[N],oy[N],u[N],flag[N];
+int *e[N],eee[N],*ee=eee; double ang[N];
+struct node{
+	int x,y; node(){}
+	node(int _x,int _y):x(_x),y(_y){}
+	node operator -(const node &A){return node(x-A.x,y-A.y);}
+	double operator %(const node &A){return double(x)*A.y-double(y)*A.x;}
+	double angle(){return atan2(y+0.,x+0.);}
+	void read(){scanf("%d%d",&x,&y);}
+}a[N];
+map<pair<int,int>,int> E;
+bool cmp(const int i,const int j){return ang[i]<ang[j];}
+void reg(int i)
+{
+	int p=i; c[T]=1;
+	do b[p]=1,++s[T],num[p]=T,p^=1,p=next[p]<1?son[-next[p]]:next[p]; while (p!=i);
+	++T;
+}
+int get(int x){return f[x]==x?x:(ox[++top]=x,oy[top]=f[x],flag[top]=1,f[x]=get(f[x]));}
+void add(int x,int y)
+{
+	x=get(x),y=get(y);
+	if (x!=y) ox[++top]=x,oy[top]=y,flag[top]=0,f[x]=y,c[y]+=c[x],s[y]+=s[x];
+}
+void back(int last)
+{
+	for (int i=top;i>last;--i){
+		int x=ox[i],y=oy[i];
+		if (flag[i]) f[x]=y; else f[x]=x,c[y]-=c[x],s[y]-=s[x];
+	}
+	top=last;
+}
+void work(int l,int r)
+{
+	if (l+1==r){int x=get(in[l]); ans[l]=(s[x]+k[l])/2-c[x]+1; return;}
+	int mid=l+r>>1,last=top;
+	rep(i,mid,r) rep(j,0,k[i]) if (!--b[e[i][j]]) add(st[e[i][j]],ed[e[i][j]]);
+	work(l,mid); back(last); rep(i,mid,r) rep(j,0,k[i]) ++b[e[i][j]];
+	rep(i,l,mid) rep(j,0,k[i]) if (!--b[e[i][j]]) add(st[e[i][j]],ed[e[i][j]]);
+	work(mid,r); back(last); rep(i,l,mid) rep(j,0,k[i]) ++b[e[i][j]];
+}
+int main()
+{
+	scanf("%d%d",&n,&m),l=2;
+	rep(i,0,m) scanf("%d%d",st+l,ed+l),--st[l],--ed[l],ed[l+1]=st[l],st[l+1]=ed[l],l+=2;
+	rep(i,0,n) a[i].read(),son[i]=-i;
+	rep(i,2,l) E[mk(st[i],ed[i])]=i,ang[i]=(a[ed[i]]-a[st[i]]).angle(),id[i]=i;
+	sort(id+2,id+l,cmp); rep(j,2,l){int i=id[j],x=st[i]; next[i]=son[x],son[x]=i;}
+	rep(i,2,l) if (!b[i]) reg(i);
+	rep(i,2,l) u[i]=st[i]<ed[i],st[i]=num[i],ed[i]=num[i^1],b[i]=0;
+	scanf("%d",&Q);
+	rep(i,0,Q){
+		scanf("%d",k+i),e[i]=ee,ee+=k[i];
+		rep(j,0,k[i]) scanf("%d",d+j),--d[j]; d[k[i]]=*d; double area=0;
+		rep(j,0,k[i]) area+=a[d[j]]%a[d[j+1]],
+			e[i][j]=E[mk(min(d[j],d[j+1]),max(d[j],d[j+1]))],++b[e[i][j]];
+		if (area>0) swap(d[0],d[1]); in[i]=ed[E[mk(d[0],d[1])]];
+	}
+	rep(i,0,T) f[i]=i; rep(i,2,l) if (u[i] && !b[i]) add(st[i],ed[i]);
+	work(0,Q); rep(i,0,Q) printf("%d\n",ans[i]); return 0;
+}

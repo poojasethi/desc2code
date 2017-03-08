@@ -1,0 +1,189 @@
+#include <cmath>
+#include <ctime>
+#include <cctype>
+#include <cstdio>
+#include <cassert>
+#include <climits>
+#include <cstdlib>
+#include <cstring>
+#include <iomanip>
+#include <iostream>
+#include <memory.h>
+#include <algorithm>
+
+#include <map>
+#include <set>
+#include <list>
+#include <deque>
+#include <queue>
+#include <stack>
+#include <bitset>
+#include <string>
+#include <vector>
+#include <complex>
+
+#pragma comment(linker, "/STACK:1024000000,1024000000")
+
+#define CPS CLOCKS_PER_SEC
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
+#define FastIO { ios_base::sync_with_stdio(false), cin.tie(NULL); }
+
+using namespace std;
+
+template <class T> void chkmin(T &a, T b) { if (a > b) a = b; }
+template <class T> void chkmax(T &a, T b) { if (a < b) a = b; }
+
+typedef long long LL;
+typedef long double LD;
+typedef pair <int, int> PII;
+
+#define L 19
+#define N 300010
+
+int n;
+char C[N];
+int head[N], to[N << 1], next[N << 1];
+
+void AddEdge(int a, int b, int e) {
+    to[e] = b;
+    next[e] = head[a];
+    head[a] = e;
+}
+
+int dp[N];
+int P[L][N];
+
+void DFS(int cur, int p = 0) {
+    P[0][cur] = p;
+    dp[cur] = dp[p] + 1;
+    for (int i = 1, prv = p; i < L; i ++) prv = P[i][cur] = P[i - 1][prv];
+    for (int i = head[cur]; i; i = next[i]) {
+        int nxt = to[i];
+        if (nxt != p) DFS(nxt, cur);
+    }
+}
+
+struct Node {
+    int id, a, b;
+    Node (int id = 0, int a = 0, int b = 0) : id(id), a(a), b(b) {}
+
+    bool operator < (const Node &p) const { return a != p.a ? a < p.a : b < p.b; }
+} ptr[N << 1];
+
+int ord[L][N << 1];
+
+void TreeSuffixArray() {
+    for (int i = 1; i <= n; i ++) {
+        ord[0][i] = C[i] - 'a' + 1;
+        ord[0][i + n] = C[i] - 'a' + 1;
+    }
+    for (int b = 1; b < L; b ++) {
+        for (int i = 1; i <= n; i ++) {
+            int pa = P[b - 1][i];
+            ptr[i] = Node(i, ord[b - 1][i], ord[b - 1][pa]);
+            ptr[i + n] = Node(i + n, ord[b - 1][pa + n], ord[b - 1][i + n]);
+        }
+        sort(ptr + 1, ptr + n + n + 1);
+        int tot = 0;
+        for (int i = 1; i <= n + n; i ++) {
+            if (i == 1 || ptr[i].a != ptr[i - 1].a || ptr[i].b != ptr[i - 1].b) tot ++;
+            ord[b][ptr[i].id] = tot;
+        }
+    }
+}
+
+int Lift(int a, int delta) {
+    for (int i = 0; i < L; i ++) if (delta & (1 << i)) a = P[i][a];
+    return a;
+}
+
+int LCA(int a, int b) {
+    if (dp[a] <= dp[b]) swap(a, b);
+    a = Lift(a, dp[a] - dp[b]);
+    if (a == b) return a;
+    for (int i = L - 1; i >= 0; i --) {
+        if (P[i][a] != P[i][b]) {
+            a = P[i][a];
+            b = P[i][b];
+        }
+    }
+    return P[0][a];
+}
+
+int LCP(int a, int b, int del) {
+    if (!del) return 0;
+
+    int rlt = 0;
+    for (int i = L - 1; i >= 0; i --) {
+        if (rlt + (1 << i) > del) continue;
+        int A, B;
+        if (a >= n) A = Lift(a - n, del - rlt - (1 << i)) + n;
+        else A = a;
+        if (b >= n) B = Lift(b - n, del - rlt - (1 << i)) + n;
+        else B = b;
+        if (ord[i][A] == ord[i][B]) {
+            if (a <= n) a = P[i][a];
+            if (b <= n) b = P[i][b];
+            rlt += 1 << i;
+        }
+    }
+
+    return rlt;
+}
+
+int query(int a, int b, int c, int d) {
+    int x = LCA(a, b);
+    int y = LCA(c, d);
+    if (dp[a] - dp[x] < dp[c] - dp[y]) {
+        a ^= c ^= a ^= c;
+        b ^= d ^= b ^= d;
+        x ^= y ^= x ^= y;
+    }
+
+    int rlt = 0;
+    int del = dp[c] - dp[y];
+    int add = LCP(a, c, del);
+    if (add < del) return add;
+    rlt += add;
+
+    a = Lift(a, del);
+    int d1 = dp[a] - dp[x] + 1;
+    int d2 = dp[d] - dp[y] + 1;
+    if (d1 >= d2) return rlt + LCP(a, d + n, d2);
+
+    int dd = Lift(d, d2 - d1);
+    add = LCP(a, dd + n, d1);
+    rlt += add;
+    if (add != d1) return rlt;
+
+    d1 = dp[b] - dp[x];
+    d2 = dp[d] - dp[dd];
+    if (d1 > d2) b = Lift(b, d1 - d2);
+    else d = Lift(d, d2 - d1);
+    return rlt + LCP(b + n, d + n, min(d1, d2));
+}
+
+int main() {
+
+    scanf("%d", &n);
+    scanf("%s", C + 1);
+    for (int i = 1; i < n; i ++) {
+        int a, b;
+        scanf("%d %d", &a, &b);
+        AddEdge(a, b, i);
+        AddEdge(b, a, i + n - 1);
+    }
+    DFS(1);
+    TreeSuffixArray();
+
+    int q;
+    for (scanf("%d", &q); q --; ) {
+        int a, b, c, d;
+        scanf("%d %d %d %d", &a, &b, &c, &d);
+        printf("%d\n", query(a, b, c, d));
+    }
+
+    return 0;
+}

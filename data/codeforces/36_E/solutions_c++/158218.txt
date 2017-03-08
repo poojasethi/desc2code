@@ -1,0 +1,138 @@
+#include <cstdio>
+#include <cmath>
+#include <vector>
+#include <algorithm>
+#include <cstring>
+#include <cassert>
+using namespace std;
+
+typedef long long llong;
+typedef pair<int, int> PII;
+
+const int N = 2*10240;
+
+class UFSet {
+public:
+	int p[N];
+	void clear() { memset(p, -1, sizeof(p)); }
+	int find(int x) { return p[x] == -1 ? x : (p[x] = find(p[x])); }
+	int unionSet(int x, int y) { if(find(x) != find(y)) p[find(x)] = find(y); }
+};
+
+UFSet ufs;
+int n, m;
+int idc[N], deg[N];
+bool evst[N], nvst[N];
+
+int getO(int k)
+{
+	if(idc[k] != -1) return idc[k];
+	idc[k] = n++;
+	return idc[k];
+}
+
+vector<PII> g[N];
+
+vector<int> path;
+vector< vector<int> > P;
+
+int ind[N];
+
+void go(int u)
+{
+	nvst[u] = true;
+	while(ind[u] != g[u].size()) {
+		int id = ind[u]++;
+		int ei = g[u][id].second;
+		if(evst[ei]) continue;
+		evst[ei] = true;
+		go(g[u][id].first);
+		path.push_back(ei);
+	}
+}
+
+int main()
+{
+	freopen("input.txt", "r", stdin);
+	freopen("output.txt", "w", stdout);
+	
+	ufs.clear();
+	memset(idc, -1, sizeof(idc));
+	memset(deg, -0, sizeof(deg));
+	n = 0;
+	scanf("%d", &m);
+	
+	for(int i = 0; i < m; i++) {
+		int a, b; scanf("%d %d", &a, &b);
+		a = getO(a);
+		b = getO(b);
+		g[a].push_back(PII(b, i));
+		g[b].push_back(PII(a, i));
+		ufs.unionSet(a, b);
+		deg[a]++; deg[b]++;
+	}
+	
+	vector<int> odd, comp;
+	
+	for(int i = 0; i < n; i++) if(deg[i]%2 == 1) odd.push_back(i);
+	if(odd.size() > 4) {
+		printf("-1\n");
+		return 0;
+	}
+	
+	for(int i = 0; i < n; i++) comp.push_back(ufs.find(i));
+	sort(comp.begin(), comp.end());
+	comp.erase(unique(comp.begin(), comp.end()), comp.end());
+	if(comp.size() > 2) {
+		printf("-1\n");
+		return 0;
+	}
+	
+	for(int i = 0; i < (int)odd.size(); i += 2) {
+		g[odd[i]].push_back(PII(odd[i+1], m+i/2));
+		g[odd[i+1]].push_back(PII(odd[i], m+i/2));
+	}
+	
+	memset(evst, false, sizeof(evst));
+	memset(nvst, false, sizeof(nvst));
+	memset(ind, 0, sizeof(ind));
+	
+	P.clear();
+	for(int i = 0; i < n; i++) if(!nvst[i]) {
+		path.clear();
+		go(i);
+		vector<int> VP;
+		int pseg = 0;
+		for(int j = 0; j < (int)path.size(); j++) if(path[j] >= m) { pseg = j; break; }
+		
+		for(int j = 0; j < (int)path.size(); j++) {
+			int id = (pseg+j)%path.size();
+			if(path[id] >= m) {
+				if(VP.size() != 0) P.push_back(VP);
+				VP.clear();
+			} else {
+				VP.push_back(path[id]);
+			}
+		}
+		
+		if(VP.size() != 0) P.push_back(VP);
+	}
+	
+	if(P.size() == 1) {
+		if(P[0].size() <= 1) { printf("-1\n"); return 0; }
+		vector<int> P1;
+		P1.push_back(P[0].back());
+		P[0].pop_back();
+		P.push_back(P1);
+	}
+	
+	if(P.size() != 2) { printf("-1\n"); return 0; }
+	for(int i = 0; i < (int)P.size(); i++) {
+		printf("%d\n", P[i].size());
+		for(int j = 0; j < (int)P[i].size(); j++) printf("%d%c", P[i][j]+1, j == P[i].size()-1 ? '\n' : ' ');
+	}
+	
+	return 0;
+}
+
+

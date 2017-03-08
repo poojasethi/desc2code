@@ -1,0 +1,28 @@
+#include<bits/stdc++.h>
+using namespace std;
+
+char s[100100];
+
+int main(){
+    int n,K;
+    scanf("%d%d",&n,&K);
+    int now=0;
+
+    scanf("%s",s);
+    while(K--){
+        while(now+1<n&&!('4'==s[now]&&'7'==s[now+1]))now++;
+        if(now==n-1)break;
+        if(0==(now&1)){
+            s[now]=s[now+1]='4';
+            if(now+2<n&&s[now+2]=='7'){
+                K&=1;
+            }
+        }
+        else{
+            s[now]=s[now+1]='7';
+        }
+        if(now)now--;
+    }
+    puts(s);
+    return 0;
+}

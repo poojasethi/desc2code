@@ -1,0 +1,145 @@
+#include <algorithm>
+#include <iostream>
+#include <cstring>
+#include <climits>
+#include <vector>
+#include <cstdio>
+#include <cmath>
+#include <set>
+#define lch(x) ((x)<<1)
+#define rch(x) (((x)<<1)|1)
+#define fi first
+#define se second
+#define Clear(a, b) memset(a, b, sizeof a)
+#define Copy(a, b) memcpy(a, b, sizeof a)
+using namespace std;
+typedef long long i64;
+const int N=2e5+10, M=20, INF=INT_MAX/2;
+
+int n, q;
+int tms, en[N], to[N], next[N];
+int dep[N], dfn[N], idx, anc[N][M];
+
+inline int Lca(int u, int v) {
+	if (dep[u] < dep[v]) swap(u, v);
+	for (int i=M-1; i>=0; --i)
+		if (dep[anc[u][i]] >= dep[v]) u = anc[u][i];
+	if (u==v) return u;
+	for (int i=M-1; i>=0; --i)
+		if (anc[u][i] != anc[v][i]) u = anc[u][i], v = anc[v][i];
+	return anc[u][0];
+}
+
+inline void Link(int u, int v) {
+	to[++tms] = v;
+	next[tms] = en[u];
+	en[u] = tms;
+}
+
+void Dfs(int u, int fa=0) {
+	dep[u] = dep[fa]+1;
+	dfn[u] = ++idx;
+	for (int p=en[u]; p; p=next[p]) {
+		int v=to[p];
+		if (v==fa) continue;
+		anc[v][0] = u;
+		Dfs(v, u);
+	}
+}
+
+void Init() {
+	scanf("%d", &n);
+	for (int i=1; i<n; ++i) {
+		int u, v;
+		scanf("%d%d", &u, &v);
+		Link(u, v), Link(v, u);
+	}
+	Dfs(1);
+	for (int j=1; j<M; ++j)
+		for (int i=1; i<=n; ++i)
+			anc[i][j] = anc[anc[i][j-1]][j-1];
+}
+
+int m;
+i64 f[N][2];
+int node[N], stk[N], all[N], fa[N];
+bool vital[N];
+
+inline bool cmp(int x, int y) {
+	return dfn[x] < dfn[y];
+}
+
+i64 Calc(int u) {
+	i64 delta=0, sum=0;
+	f[u][0] = f[u][1] = 0;
+	if (vital[u]) f[u][1] = INF;
+	for (int p=en[u]; p; p=next[p]) {
+		int v=to[p];
+		if (v==fa[u]) continue;
+		if (Calc(v)==-1 || (vital[u] && vital[v] && anc[v][0]==u)) return -1;
+		if (vital[u])
+			f[u][0] += min(f[v][0]+1, f[v][1]);
+		else {
+			f[u][0] += f[v][1], delta = min(delta, f[v][0]-f[v][1]);
+			f[u][1] += min(f[v][0], f[v][1]), sum += f[v][1];
+		}
+	}
+	if (!vital[u]) {
+		f[u][0] += delta;
+		f[u][1] = min(f[u][1]+1, sum);
+	}
+	return min(f[u][0], f[u][1]);
+}
+
+void Solve() {
+	scanf("%d", &q);
+	tms=0, Clear(en, 0);
+	for (int i=1; i<=q; ++i) {
+		scanf("%d", &m);
+		int cnt=m, top=0;
+		for (int i=1; i<=m; ++i) {
+			scanf("%d", &node[i]);
+			vital[node[i]] = 1;
+			all[i] = node[i];
+		}
+		sort(node+1, node+m+1, cmp);
+		if (node[1] != 1)
+			stk[++top] = all[++cnt] = 1;
+		for (int i=1; i<=m; ++i) {
+			if (!top)
+				stk[++top] = node[i];
+			else {
+				int lca=Lca(stk[top], node[i]);
+				for (; top && dep[stk[top]] > dep[lca]; --top) {
+					if (dep[stk[top-1]] <= dep[lca]) fa[stk[top]] = lca;
+					else fa[stk[top]] = stk[top-1];
+				}
+				if (stk[top] != lca) {
+					all[++cnt] = lca;
+					fa[lca] = stk[top];
+					stk[++top] = lca;
+				}
+				fa[node[i]] = lca;
+				stk[++top] = node[i];
+			}
+		}
+		for (int i=1; i<=cnt; ++i) {
+			int u=all[i];
+			if (fa[u]) Link(fa[u], u);
+		}
+		printf("%I64d\n", Calc(1));
+		tms = 0;
+		for (int i=1; i<=cnt; ++i) {
+			int u=all[i];
+			fa[u] = en[u] = vital[u] = 0;
+		}
+	}
+}
+
+int main() {
+
+	Init();
+	Solve();
+
+	return 0;
+}

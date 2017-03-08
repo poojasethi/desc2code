@@ -1,0 +1,80 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+
+using namespace std;
+
+typedef long double ld;
+
+ld vet[3];
+ld *prob = vet + 1;
+ld memo[2 << 18]; // extra bit: mask size
+
+#define INF 1e100
+
+ld solve(int mask, int n) {
+  // mask == 111...1, everyone is dead
+  if (mask == (1 << n) - 1) {
+    return 0;
+  }
+  // memoization
+  ld& res = memo[mask | (1 << n)]; // extra bit: mask size
+  if (res) {
+    return res;
+  }
+  res = INF;
+  // each shot
+  for (int i = 0; i < n; i++) {
+    ld num = 1, den = 1;
+    bool good = false;
+    for (int j = -1; j <= 1; j++) {  // left, straigth, right
+      int index = i + j;
+      int mask_index = 1 << index;
+      if (index < 0 || index == n || (mask & mask_index)) {
+        // nothing to kill
+        den -= prob[j];
+        continue;
+      }
+      good = true;  // at least one killed
+      ld next;
+      if ((mask << 1) & mask_index) { // right is dead
+        if ((mask >> 1) & mask_index) { // left is dead
+          next =
+            solve(mask & (mask_index - 1), index) + // right part
+            solve(mask >> (index + 1), n - index - 1); // left part
+            // (index) + (n - index - 1) = (n - 1), one bit less
+        } else { // right is alive
+          next =
+            solve(mask & (mask_index - 1), index) + // right
+            solve(mask >> index | 1, n - index); // left
+        }
+      } else if ((mask >> 1) & mask_index) { // only right is alive
+        next =
+          solve((mask & (mask_index - 1)) | mask_index, index + 1) +
+          solve(mask >> (index + 1), n - index - 1);
+      } else {
+        next = solve(mask | mask_index, n);
+      }
+      num += prob[j] * next;
+    }
+    if (good) {
+      res = min(res, num / den);
+    }
+  }
+  return res;
+}
+
+int main() {
+  int T;
+  cin >> T;
+  while (T--) {
+    memset(memo, 0, sizeof(memo));
+    int n;
+    cin >> n >> vet[0] >> vet[1] >> vet[2];
+    vet[0] /= 100;
+    vet[1] /= 100;
+    vet[2] /= 100;
+    ld res = solve(0, n);
+    printf("%.6llf\n", res);
+  }
+}

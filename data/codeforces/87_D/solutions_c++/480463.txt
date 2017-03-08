@@ -1,0 +1,122 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+struct vertex {
+  int current_root;
+  int cnt;
+  int depth;
+  vector<int> ch;
+};
+
+vector<vertex> v;
+
+struct road {
+  int id;
+  int a, b;
+  int cost;
+  long long flowers;
+
+  bool operator < (const road& rhs) const {
+    if (cost != rhs.cost)
+      return cost < rhs.cost;
+    return v[a].depth > v[rhs.a].depth;
+  }
+};
+
+vector<road> r;
+
+
+void dfs(int i, int p) {
+  v[i].depth = p == -1 ? 0 : v[p].depth+1;
+  for (int j=0; j < v[i].ch.size(); j++)
+    if (v[i].ch[j] != p)
+      dfs(v[i].ch[j], i);
+}
+
+int get_root(int a) {
+  int root = a;
+  while (v[root].current_root != root)
+    root = v[root].current_root;
+  int i = a;
+  while (i != root) {
+    int j = v[i].current_root;
+    v[i].current_root = root;
+    i = j;
+  }
+  return root; 
+}
+
+void attach(int b, int a) {
+  int root = get_root(a);
+  v[root].cnt += v[b].cnt;
+  v[b].current_root = root;
+}
+
+int main() {
+  int N;
+  cin >> N;
+  v.resize(N);
+
+  r.resize(N-1);
+  for (int i=0; i < N-1; i++)
+    r[i].id = i+1;
+  for (int i=0; i < N-1; i++) {
+    cin >> r[i].a >> r[i].b >> r[i].cost;
+    r[i].a--; r[i].b--;
+    v[r[i].a].ch.push_back(r[i].b);
+    v[r[i].b].ch.push_back(r[i].a);
+    r[i].flowers = 0;
+  }
+
+  dfs(0, -1);
+
+  for (int i=0; i < N-1; i++)
+    if (v[r[i].a].depth > v[r[i].b].depth)
+      swap(r[i].a, r[i].b);
+
+  sort(r.begin(), r.end());
+
+  for (int i=0; i < N; i++) {
+    v[i].current_root = i;
+    v[i].cnt = 1;
+  }
+
+  int i=0;
+  while (i < N-1) {
+    int j=i;
+    while (r[j].cost == r[i].cost) {
+      attach(r[j].b, r[j].a);
+      j++;
+    }
+
+    j=i;
+    while (r[j].cost == r[i].cost) {
+      int total_cnt = v[get_root(r[j].a)].cnt;
+      int below_cnt = v[r[j].b].cnt;
+
+//      cout << "For road " << r[j].id << ": " << total_cnt << " " << below_cnt << endl;
+
+      r[j].flowers += (long long)(below_cnt)*(total_cnt-below_cnt)*2;
+      j++;
+    }
+    i = j;
+  }
+
+  long long max_flowers = 0;
+  for (int i=0; i < r.size(); i++)
+    max_flowers = max(max_flowers, r[i].flowers);
+
+  vector<int> res;
+  for (int i=0; i < r.size(); i++)
+    if (max_flowers == r[i].flowers)
+      res.push_back(r[i].id);
+
+  sort(res.begin(), res.end());
+  cout << max_flowers << " " << res.size() << endl;
+  for (int i=0; i < res.size(); i++)
+    cout << res[i] << " ";
+  cout << endl;
+};

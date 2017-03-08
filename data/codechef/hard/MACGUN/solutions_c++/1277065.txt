@@ -1,0 +1,172 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std ;
+
+#define fo(i,a,b) for(int i=a;i<=b;i++)
+#define fi(i,a,b) for(int i=a;i>=b;i--)
+// #define EachedgeOf(x,e) for ( int e = nxt[First[x]] ; e != Last[v] ; e = nxt[e] )
+
+const int TrueN = 700*700   + 9 ;
+// const int TrueM = 700*700*4 + 9 ;
+
+const int MaxN = TrueN ;
+// const int MaxM = TrueM + 2*TrueN ;
+const int INF  = 1000000000 ;
+
+struct Bipartite {
+		int ntot ; 						// The total number of vertices
+		int Adj[MaxN][5] ;
+	//	int etot ; 						// The total number of edges (with sentries)
+	//	int First[MaxN] , Last[MaxN] ; 				// The sentries of each vertices
+	//	int pre[MaxM] , nxt[MaxM] , Node[MaxM] , Oppo[MaxM] ; 	// The links.
+	//	int deg[MaxN] ;						// Cnt the degree.
+		int Side[MaxN] ;                                	// Whether x is in X, or not? 0:X  1:Y
+		
+		void Init() {
+			ntot = 0 ;
+		//	etot = 0 ;
+		}
+		
+		int New( int side ) { // side = 0/1, return the id of new vectex
+			Side[++ntot] = side ;
+		//	deg[ntot] = 0 ;
+		//	First[ntot] = ++etot ; Last[ntot] = ++etot ; pre[Last[ntot]] = First[ntot] ; nxt[First[ntot]] = Last[ntot] ;
+			Adj[ntot][0] = 0 ;
+			return ntot ;
+		}
+		
+		void AddEdge( int u , int v ) {
+			Adj[u][++Adj[u][0]] = v ;
+			Adj[v][++Adj[v][0]] = u ;
+			
+		//	etot ++ ;
+		//	nxt[etot] = nxt[First[u]] ;
+		//	pre[etot] = First[u] ;
+		//	pre[nxt[etot]] = nxt[pre[etot]] = etot ;
+		//	Node[etot] = v ;
+		//	
+		//	etot ++ ;
+		//	nxt[etot] = nxt[First[v]] ;
+		//	pre[etot] = First[v] ;
+		//	pre[nxt[etot]] = nxt[pre[etot]] = etot ;
+		//	Node[etot] = u ;
+		//	
+		//	Oppo[etot] = etot-1 ;
+		//	Oppo[etot-1] = etot ;
+		//	
+		//	deg[u] ++ ; deg[v] ++ ;
+		}
+		
+		/**********************************************************************************/
+		int Dist[MaxN] , Pair_G1[MaxN] , Pair_G2[MaxN] ;
+		int Q[MaxN] , L , R ; // The Queue
+		
+		bool BFS() {
+			L = 1 ; R = 0 ;	
+			fo(v,1,ntot) if ( Side[v] == 0 ) if ( Pair_G1[v] == 0 ) Q[++R] = v ;
+			fo(v,0,ntot) Dist[v] = INF ;
+			while ( L <= R ) {
+				int v = Q[L++] ;
+			//	EachedgeOf(v,e) {
+			//		int u = Node[e] ;
+				fo(i,1,Adj[v][0]) {
+					int u =Adj[v][i] ;
+					if ( Dist[u] == INF ) {
+						Dist[u] = Dist[v] + 1 ;
+						Dist[ Pair_G2[u] ] = Dist[u] + 1 ;
+						if ( Pair_G2[u] != 0 ) Q[++R] = Pair_G2[u] ;
+					}
+				}
+			}
+			return ( Dist[0] != INF ) ;
+		}
+		
+		int stop ;
+		bool DFS( int v ) {
+			if ( v != 0 ) {
+			//	EachedgeOf(v,e) {
+			//		int u = Node[e] ;
+				fo(i,1,Adj[v][0]) {
+					int u = Adj[v][i] ;
+					if ( Dist[u] == Dist[v] + 1 ) {
+						Dist[u] = INF ;
+						if ( DFS( Pair_G2[u] ) ) {
+							Pair_G2[u] = v ;
+							Pair_G1[v] = u ;
+							return true ;
+						}
+					}
+				}
+				return false ;
+			}
+			return true ;
+		}
+		
+		int Hopcroft_Karp() {
+			// 0 is NIL
+			fo(v,0,ntot) Pair_G1[v] = Pair_G2[v] = 0 ;
+			int matching = 0 ;
+			while ( BFS() ) {
+				fo(v,1,ntot) if ( Side[v] == 0 ) {
+					if ( Pair_G1[v] == 0 ) {
+						if ( DFS(v) ) {
+							matching ++ ;
+						}
+					}
+				}
+			}
+			return matching ;
+		}
+} Func ;
+
+int N , M , id[709][709] ;
+char Map[709][709] ;
+
+const int Dx[4] = { -1 , -1 , +1 , +1 } ;
+const int Dy[4] = { -1 , +1 , -1 , +1 } ;
+
+#define InMap(xx,yy) ( (xx)>=1&&(yy)>=1&&(xx)<=N&&(yy)<=M )
+
+int main(){
+/*	freopen("MACGUN2.in","w",stdout) ;
+	printf("700 700\n") ;
+	fo(i,1,700) {
+		fo(j,1,700) {
+			int rr = rand()%3 ;
+			if ( rr == 0 ) printf("F") ;
+			if ( rr == 1 ) printf("G") ;
+			if ( rr == 2 ) printf("P") ;
+		}
+		printf("\n") ;
+	}
+	printf("0 0\n") ;
+	fclose(stdout) ;
+*///	freopen("MACGUN1.in","r",stdin) ;
+	while ( 2 == scanf( "%d%d" , &N , &M ) && ( N || M ) ) {
+		Func.Init() ;
+		fo(i,1,N) { scanf("\n") ; fo(j,1,M) scanf( "%c" , &Map[i][j] ) ; }
+		fo(i,1,N) fo(j,1,M) {
+			id[i][j] = -1 ;
+			if ( Map[i][j] != 'F' ) continue ;
+			bool p = true ;
+			fo(k,0,3)
+				if ( InMap(i+2*Dx[k],j+2*Dy[k]) && Map[i+2*Dx[k]][j+2*Dy[k]] == 'G' && Map[i+Dx[k]][j+Dy[k]] != 'P' ) p = false ;
+			if ( !p ) continue ;
+			id[i][j] = Func.New( i % 4 <= 1 ? 0 : 1 ) ;
+		}
+		fo(i,1,N) fo(j,1,M) if ( id[i][j] != -1 )
+			fo(k,2,3)
+				if ( InMap(i+2*Dx[k],j+2*Dy[k]) && id[i+2*Dx[k]][j+2*Dy[k]] != -1 && Map[i+Dx[k]][j+Dy[k]] != 'P' )
+					Func.AddEdge(id[i][j] , id[i+2*Dx[k]][j+2*Dy[k]]) ;
+		
+		printf( "%d\n" , Func.ntot - Func.Hopcroft_Karp() ) ;
+	}
+}
+
+
+
+
+
+
+

@@ -1,0 +1,94 @@
+#include<cstdio>
+#include<algorithm>
+using namespace std;
+
+#define long long long
+
+#define l(x) ((x) * 2 + 1)
+#define r(x) (l(x) + 1)
+
+const int MAX_N = 1e5 + 5;
+const int MAX_T = 1 << 18;
+
+struct Node{
+  int *s;
+  int n;
+  int f, l;
+};
+  
+int n, q;
+int m[MAX_N];
+int c[MAX_N];
+Node a[MAX_T];
+
+#define cross(x, y, z) ((long)(c[x] - c[y]) * (m[z] - m[y]) >= (long)(c[y] - c[z]) * (m[y] - m[x]))
+
+inline void push(Node& x, int l){
+  for(; x.n >= 2 and cross(x.s[x.n - 2], x.s[x.n - 1], l); x.n--);
+  if(x.n and m[x.s[x.n - 1]] == m[l] and c[x.s[x.n - 1]] < c[l]){
+    x.n--;
+  }
+  x.s[x.n++] = l;
+}
+
+#define line_cmp(x, y) (m[x] != m[y]? m[x] < m[y]: c[x] < c[y])
+
+inline void init_tree(int x, int f, int l){
+  a[x].s = new int[l - f];
+  a[x].f = f, a[x].l = l;
+  if(l - f == 1){
+    a[x].s[a[x].n++] = f;
+    return;
+  }
+  init_tree(l(x), f, f + l >> 1);
+  init_tree(r(x), f + l >> 1, l);
+  int i1 = 0, i2 = 0;
+  for(; i1 < a[l(x)].n and i2 < a[r(x)].n; ){
+    if(line_cmp(a[l(x)].s[i1], a[r(x)].s[i2])){
+      push(a[x], a[l(x)].s[i1++]);
+    }
+    else if(line_cmp(a[r(x)].s[i2], a[l(x)].s[i1])){
+      push(a[x], a[r(x)].s[i2++]);
+    }
+    else{
+      push(a[x], a[l(x)].s[i1++]);
+      i2++;
+    }
+  }
+  for(; i1 < a[l(x)].n; push(a[x], a[l(x)].s[i1++]));
+  for(; i2 < a[r(x)].n; push(a[x], a[r(x)].s[i2++]));
+} 
+
+#define func(l, x) ((long)m[l] * x + c[l])
+
+inline int query(int x, int f, int l, int t){
+  if(l <= a[x].f or f >= a[x].l){
+    return n;
+  }
+  if(a[x].f >= f and a[x].l <= l){
+    int lo = 1, hi = a[x].n - 1, mid;
+    while(lo <= hi){
+      mid = lo + hi >> 1;
+      func(a[x].s[mid], t) < func(a[x].s[mid - 1], t)
+	? hi = mid - 1
+	: lo = mid + 1;
+    }
+    return a[x].s[hi];
+  }
+  int p = query(l(x), f, l, t);
+  int q = query(r(x), f, l, t);
+  return func(p, t) > func(q, t)? p: q;
+}
+
+int main(){
+  scanf("%d %d", &n, &q);
+  for(int i = 0; i < n; i++){
+    scanf("%d %d", &c[i], &m[i]);
+  }
+  init_tree(0, 0, n);
+  for(; q--; ){
+    int f, l, t;
+    scanf("%d %d %d", &f, &l, &t);
+    printf("%d\n", query(0, f - 1, l, t) + 1);
+  }
+}

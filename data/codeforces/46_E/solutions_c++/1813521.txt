@@ -1,0 +1,31 @@
+#include <iostream>
+using namespace std;
+#define FOR(i, a, n) for(__typeof(n) i = (a); i<(n); ++i)
+#define REP(i, n, a) for(__typeof(n) i = (n); i>=(a); --i)
+typedef long long   ll ;
+const int MAXN = 1500 + 10 ;
+const ll INF = (1LL<<60) ;
+ll dp[MAXN][2] , a , sum[MAXN] , n , m , ans = -INF ;
+int main() {
+    ios_base::sync_with_stdio(false) ;
+    cin >> n >> m ;
+    FOR (i,0,n) {
+        FOR (j,0,m) {
+            cin >> a ;
+            sum[j] = ((j>0)?sum[j-1]:0)+a ;
+        }
+        if (i%2 == 0) {
+            dp[0][0] = -INF ;
+            FOR (j,1,m)
+                dp[j][0] = sum[j]+max ( dp[j-1][0]-sum[j-1] , dp[j-1][1] ) ;
+        } else {
+            dp[m-1][1] = -INF ;
+            REP (j,m-2,0)
+                dp[j][1] = sum[j] + max( dp[j+1][1]-sum[j+1] , dp[j+1][0] ) ;
+        }
+    }
+    FOR (j,0,m)
+        ans = max(ans,dp[j][(n-1)%2]) ;
+    cout << ans << endl ;
+    return 0 ;
+}

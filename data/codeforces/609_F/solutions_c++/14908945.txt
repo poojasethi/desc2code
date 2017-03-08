@@ -1,0 +1,95 @@
+#include <cstdio>
+#include <algorithm>
+#include <set>
+#define N 200005
+#define L (d << 1)
+#define R (L | 1)
+#define M (l + r >> 1)
+#define LL long long
+#define fi(a, b, c) for(int a = (b); a < (c); a++)
+#define fd(a, b, c) for(int a = (b); a > (c); a--)
+#define FI(a, b, c) for(int a = (b); a <= (c); a++)
+#define FD(a, b, c) for(int a = (b); a >= (c); a--)
+#define fe(a, b, c) for(int a = (b); a; a = c[a])
+using namespace std;
+
+int n, m, a[N], q[N], x[N], y[N], t[1 << 19], p, cnt[N];
+multiset<pair<LL, int> > s;
+LL c[N], b[N];
+
+bool cmp(int x, int y){
+	return a[x] < a[y];
+}
+
+void push(int d, int l, int r){
+	if(t[d] && l < r) t[L] = t[R] = t[d];
+	t[d] = 0;
+}
+
+void update(int d, int l, int r, int a, int b, int p){
+	if(a <= l && b >= r){
+		t[d] = p + 1;
+		return;
+	}
+	
+	push(d, l, r);
+	if(a <= M) update(L, l, M, a, b, p);
+	if(b > M) update(R, M + 1, r, a, b, p);
+}
+
+int query(int d, int l, int r, int p){
+	if(t[d]) return t[d] - 1;
+	if(l == r) return -1;
+	if(p > M) return query(R, M + 1, r, p);
+	return query(L, l, M, p);
+}
+
+int main(){
+	scanf("%d %d", &n, &m);
+	fi(i, 0, n){
+		scanf("%d %I64d", &a[i], &b[i]);
+		q[i] = i;
+	}
+	sort(q, q + n, cmp);
+	
+	fi(i, 0, m){
+		scanf("%d %d", &x[i], &y[i]);
+		c[i] = x[i];
+	}
+	sort(c, c + m);
+	p = unique(c, c + m) - c;
+	
+	FD(i, n - 1, 0){
+		int lo = lower_bound(c, c + p, a[q[i]]) - c;
+		int hi = upper_bound(c, c + p, b[q[i]] + a[q[i]]) - c - 1;
+		//printf("%d upd %I64d %I64d\n", q[i], c[lo], c[hi]);
+		if(lo <= hi) update(1, 0, p - 1, lo, hi, q[i]);
+	}
+	
+	fi(i, 0, m){
+		int l = lower_bound(c, c + p, x[i]) - c;
+		int r = query(1, 0, p - 1, l);
+		
+		if(r < 0) s.insert(make_pair(x[i], y[i]));
+		else{
+			LL prev = b[r] + a[r];
+			b[r] += y[i];
+			cnt[r]++;
+			
+			while(true){
+				multiset<pair<LL, int> >::iterator lp = s.lower_bound(make_pair(a[r], -1));
+				if(lp == s.end() || lp->first > b[r] + a[r]) break;
+				b[r] += lp->second;
+				cnt[r]++;
+				s.erase(lp);
+			}
+			
+			int lo = lower_bound(c, c + p, prev) - c;
+			int hi = upper_bound(c, c + p, b[r] + a[r]) - c - 1;
+			if(lo <= hi) update(1, 0, p - 1, lo, hi, r);
+		}
+	}
+	
+	fi(i, 0, n) printf("%d %I64d\n", cnt[i], b[i]); 
+	scanf("\n");
+}

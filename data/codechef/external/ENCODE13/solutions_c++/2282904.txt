@@ -1,0 +1,168 @@
+/*
+username: leandro
+*/
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#include <iostream>
+#include <cstring>
+#include <cmath>
+#include <ctime>
+#include <cstdlib>
+#include <complex>
+#include <set>
+#include <map>
+#include <sstream>
+#include <queue>
+#include <stack>
+#include <cassert>
+
+using namespace std;
+
+//////////////////////////////////////
+typedef long long i64;
+typedef complex<double> pnt;
+typedef pair<int, int> pii;
+typedef vector<int> vi;
+//////////////////////////////////////
+const int oo = 1 << 30;
+const double PI = M_PI;
+const double EPS = 1e-15;
+//////////////////////////////////////
+#define F first
+#define S second
+#define foreach(i, u) \
+		for (typeof(u.begin()) i = u.begin(); i != u.end(); i++)
+#define REP(i, n) \
+		for (int i = 0; i < (n); i++)
+#define FOR(i, n) \
+		for (int i = 1; i <= (n); i++)
+//////////////////////////////////////
+#define DEBUG(x) \
+		cout << #x << " = " << x << endl
+
+namespace FFT
+{
+	const int
+		MaxN = 1 << 20;
+
+	const i64
+		MOD = 1073872897, g = 7;
+
+	i64 A[MaxN];
+	i64 B[MaxN];
+	i64 pow_mod(i64 a, i64 b)
+	{
+		if (!b)
+			return 1;
+		if (b % 2)
+			return (a * pow_mod(a, b - 1)) % MOD;
+		i64 x = pow_mod(a, b / 2);
+		return (x * x) % MOD;
+	}
+
+	void fft(i64 *a, int n, i64 sign, i64 scale)
+	{
+		int k = 0;
+		while ((1 << k) < n) k++;
+
+		for (int i = 0; i < n; i++)
+		{
+			int q = 0;
+			for (int j = 0; j < k; j++)
+			{
+				q <<=1;
+				if(i & (1 << j)) q++;
+			}
+			if(i < q)
+				swap(a[i], a[q]);
+		}
+
+		i64 x = pow_mod(g, (MOD - 1) / n);
+		for (int q = 2; q <= n; q *= 2)
+		{
+			int q2 = q / 2;
+			i64 wn = pow_mod(x, n + sign * n / q), w = 1;
+			for (int i = 0; i < q2; i++)
+			{
+				for (int j = i; j < n; j += q)
+				{
+					i64 v = (w * a[j + q2]) % MOD;
+					a[j + q2] = (a[j] - v + MOD) % MOD;
+					a[j] = (a[j] + v) % MOD;
+				}
+				w = (w * wn) % MOD;
+			}
+		}
+		for (int i = 0; i < n; i++)
+			a[i] = (a[i] * scale) % MOD;
+	}
+	//c = a x b
+	void multiplication(i64 *a, int sizea, i64 *b, int sizeb, i64 *c)
+	{
+		int n = 1;
+		while (n < sizea + sizeb - 1)
+			n = 2 * n;
+
+		for (int i = 0; i < sizea; i++) A[i] = a[i];
+		for (int i = sizea; i < n; i++) A[i] = 0;
+
+		fft(A, n, 1, 1);
+
+		for (int i = 0; i < sizeb; i++) B[i] = b[i];
+		for (int i = sizeb; i < n; i++) B[i] = 0;
+
+		fft(B, n, 1, 1);
+
+		for (int i = 0; i < n; i++)
+			A[i] = (A[i] * B[i]) % MOD;
+
+		fft(A, n, -1, MOD - (MOD - 1) / n);
+		for (int i = 0; i < sizea + sizeb; i++)
+			c[ i ] = A[i];
+	}
+};
+
+const int OFFSET = 10000;
+const int OFFSET_2 = 2 * OFFSET;
+const int OFFSET_3 = 3 * OFFSET;
+const int OFFSET_4 = 4 * OFFSET;
+const int OFFSET_6 = 6 * OFFSET;
+
+int n;
+i64 A[OFFSET_6 + 5];
+i64 B[OFFSET_6 + 5];
+i64 C[OFFSET_6 + 5];
+i64 D[OFFSET_6 + 5];
+
+int main()
+{
+	cin.sync_with_stdio(false);
+
+	cin >> n;
+	for (int i = 0; i < n; i++)
+	{
+		int x;
+		cin >> x;
+		A[ x + OFFSET ]++;
+	}
+
+	FFT::multiplication(A, OFFSET_2, A, OFFSET_2, B);
+	FFT::multiplication(A, OFFSET_2, B, OFFSET_4, C);
+
+	for (int i = 0; i < OFFSET_2; i++)
+		D[2 * i] = A[ i ];
+
+	FFT::multiplication(D, OFFSET_4, A, OFFSET_2, B);
+
+	for (int i = 0; i < OFFSET_6; i++)
+	{
+		C[ i ] -= 3 * B[ i ];
+		if (i % 3 == 0 && C[ i ])
+			C[ i ] += 2 * A[i / 3];
+		if (C[ i ])
+			cout << i - OFFSET_3 << " : " << C[ i ] / 6 << "\n";
+	}
+
+	return 0;
+}

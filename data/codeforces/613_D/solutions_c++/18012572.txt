@@ -1,0 +1,107 @@
+#include <cstring>
+#include <cstdio>
+#include <algorithm>
+
+using namespace std;
+
+const int MAXN = 1e5 + 5;
+
+int tot, Last[MAXN], Next[MAXN * 2], Go[MAXN * 2];
+int N, Q, Time, Fa[MAXN][21], Deep[MAXN], L[MAXN], R[MAXN], D[MAXN], P[MAXN], Flag[MAXN], Tag[MAXN];
+
+bool Cmp(int A, int B) { return L[A] < L[B];}
+
+void Link(int u, int v) {
+	Next[++ tot] = Last[u], Last[u] = tot, Go[tot] = v;
+}
+
+void Init() {
+	scanf("%d", &N);
+	for (int i = 1; i < N; i ++) {
+		int u, v;
+		scanf("%d%d", &u, &v);
+		Link(u, v), Link(v, u);
+	}
+}
+
+void Dfs(int Now, int Pre) {
+	L[Now] = ++ Time, Fa[Now][0] = Pre, Deep[Now] = Deep[Pre] + 1;
+	for (int p = Last[Now]; p; p = Next[p]) 
+		if (Go[p] != Pre) Dfs(Go[p], Now);
+	R[Now] = Time;
+}
+
+void PreFa() {
+	for (int j = 1; j <= 20; j ++)
+		for (int i = 1; i <= N; i ++)
+			Fa[i][j] = Fa[Fa[i][j - 1]][j - 1];
+}
+
+int Lca(int u, int v) {
+	if (Deep[u] < Deep[v]) swap(u, v);
+	for (int i = 20; i + 1; i --) 
+		if (Deep[Fa[u][i]] >= Deep[v]) u = Fa[u][i];
+	if (u == v) return u;
+	for (int i = 20; i + 1; i --) 
+		if (Fa[u][i] != Fa[v][i]) u = Fa[u][i], v = Fa[v][i];
+	return Fa[u][0];
+}
+
+int Dp(int Now, int Ask) {
+	int Ans = 0, tot = 0;
+	for (int p = Last[Now]; p; p = Next[p]) {
+		Ans += Dp(Go[p], Ask);
+		tot += Tag[Go[p]];
+	}
+	if (Flag[Now] == Ask) {
+		Ans += tot;
+		Tag[Now] = 1;
+	} else {
+		if (tot > 1) Ans ++;
+		if (tot <= 1) Tag[Now] = tot; else Tag[Now] = 0;
+	}
+	return Ans;
+}
+
+void Solve() {
+	Dfs(1, 0), PreFa();
+	scanf("%d", &Q);
+	for (int Ask = 1; Ask <= Q; Ask ++) {
+		tot = 0;
+		int M, All, New = 0;
+		scanf("%d", &M);
+		All = M;
+		for (int i = 1; i <= M; i ++) {
+			scanf("%d", &P[i]);
+			Flag[P[i]] = Ask;
+		}
+		bool Judge = 0;
+		
+		for (int i = 1; i <= M; i ++) 
+			if (Flag[P[i]] == Ask && Flag[Fa[P[i]][0]] == Ask) Judge = 1;
+		if (Judge) {
+			printf("-1\n");
+			continue;
+		}
+		
+		sort(P + 1, P + M + 1, Cmp);
+		for (int i = 1; i <= M - 1; i ++) P[++ All] = Lca(P[i], P[i + 1]);
+		sort(P + 1, P + All + 1, Cmp);
+		for (int i = 1; i <= All; i ++) if (P[i] != P[i - 1]) P[++ New] = P[i];
+		D[0] = 0;
+		for (int i = 1; i <= New; i ++) {
+			int Now = P[i];
+			Last[Now] = 0;
+			while (D[0] && (R[Now] < L[D[D[0]]] || L[Now] > R[D[D[0]]])) -- D[0];
+			if (D[0] > 0) Link(D[D[0]], Now);
+			D[++ D[0]] = Now;
+		}
+		
+		printf("%d\n", Dp(P[1], Ask));	
+	}
+}
+
+int main() {
+	Init();
+	Solve();
+}

@@ -1,0 +1,110 @@
+#include <cstdio>
+#include <vector>
+#include <queue>
+#include <algorithm>
+using namespace std;
+typedef long long ll;
+#define N 2500
+#define M (N*N)
+#define D 500
+#define fo(i,a,b) for (int i = (a); i < (b); i++)
+#define UP 1000000000000LL
+
+namespace MF {
+	int n, m, s, t, to[M]; ll fl[M], cp[M]; int dst[N];
+	vector<int> al[N];
+	queue<int> q;
+
+	void init(int _n) {
+		n = _n+2; m = 0; s = _n; t = _n+1;
+		fo(i,0,n) al[i].clear();
+	}
+	void add(int a, int b, ll c) {
+		al[a].push_back(m); to[m] = b; fl[m] = 0; cp[m] = c; m++;
+		al[b].push_back(m); to[m] = a; fl[m] = 0; cp[m] = 0; m++;
+	}
+	bool bfs() {
+		fo(i,0,n) dst[i] = i==s ? 0 : -1;
+		q.push(s);
+		while (!q.empty()) {
+			int at = q.front(); q.pop();
+			fo(i,0,al[at].size()) {
+				int e = al[at][i];
+				if (dst[to[e]] != -1 || fl[e] == cp[e]) continue;
+				dst[to[e]] = dst[at]+1;
+				q.push(to[e]);
+			}
+		}
+		return dst[t] != -1;
+	}
+	ll aug(int at, ll cf) {
+		if (at==t) return cf;
+		fo(i,0,al[at].size()) {
+			int e = al[at][i];
+			if (dst[to[e]] != dst[at]+1 || fl[e] == cp[e]) continue;
+			ll tf = aug(to[e], min(cf, cp[e] - fl[e]));
+			if (tf) {
+				fl[e] += tf;
+				fl[e^1] -= tf;
+				return tf;
+			}
+		}
+		dst[at] = -1;
+		return 0;
+	}
+	ll mf() {
+		ll ans = 0;
+		while (bfs()) for (int add = aug(s,1e18); add; add = aug(s,1e18)) ans += add;
+		return ans;
+	}
+}
+
+int n, m, ml, fml, id[24][24], y[D], x[D], iut, my[D], mx[D], fy[D], fx[D], by, bx; ll mt[D], ft[D], dst[D][D], bt;
+int dy[] = {1,0,0,-1};
+int dx[] = {0,1,-1,0};
+ll mi = 0, ma = UP, mid;
+char gr[24][24];
+int main() {
+	scanf("%d %d %d %d", &n, &m, &ml, &fml);
+	if (abs(ml-fml) != 1) {
+		puts("-1"); return 0;
+	}
+	fo(i,0,n) {
+		scanf("%s", gr[i]);
+		fo(j,0,m) if (gr[i][j]=='.') {
+			id[i][j] = iut;
+			y[iut] = i; x[iut] = j;
+			iut++;
+		}
+	}
+	scanf("%d %d %lld", &by, &bx, &bt); by--; bx--;
+	fo(i,0,ml) scanf("%d %d %lld", my+i, mx+i, mt+i), my[i]--, mx[i]--;
+	fo(i,0,fml) scanf("%d %d %lld", fy+i, fx+i, ft+i), fy[i]--, fx[i]--;
+	if (ml > fml) {
+		fy[fml] = by; fx[fml] = bx; ft[fml] = bt; fml++;
+	}
+	else {
+		my[ml] = by; mx[ml] = bx; mt[ml] = bt; ml++;
+	}
+	fo(i,0,iut) fo(j,i+1,iut) dst[i][j] = dst[j][i] = UP;
+	fo(i,0,iut) fo(d,0,4) {
+		int ny = y[i] + dy[d], nx = x[i] + dx[d];
+		if (ny < 0 || ny >= n || nx < 0 || nx >= m || gr[ny][nx]=='#') continue;
+		dst[i][id[ny][nx]] = 1;
+	}
+	fo(i,0,iut) fo(j,0,iut) fo(k,0,iut) dst[j][k] = min(dst[j][k], dst[j][i] + dst[i][k]);
+	while (mi != ma) {
+		mid = (mi+ma)/2;
+		MF::init(ml+2*(iut+fml));
+		fo(i,0,ml) MF::add(MF::s,i,1);
+		fo(i,0,iut) MF::add(ml + 2*i, ml + 2*i + 1, 1);
+		fo(i,0,fml) MF::add(ml + 2*iut + 2*i, ml + 2*iut + 2*i + 1, 1), MF::add(ml + 2*iut + 2*i + 1, MF::t, 1);
+		fo(i,0,ml) fo(j,0,iut) if (dst[j][id[my[i]][mx[i]]] < UP && mt[i]*dst[j][id[my[i]][mx[i]]] <= mid) MF::add(i, ml + 2*j, 1);
+		fo(i,0,fml) fo(j,0,iut) if (dst[j][id[fy[i]][fx[i]]] < UP && ft[i]*dst[j][id[fy[i]][fx[i]]] <= mid) MF::add(ml + 2*j + 1, ml + 2*iut + 2*i, 1);
+		if (MF::mf() == ml) ma = mid;
+		else mi = mid+1;
+	}
+	printf("%lld\n", mi==UP ? -1 : mi);
+
+	return 0;
+}

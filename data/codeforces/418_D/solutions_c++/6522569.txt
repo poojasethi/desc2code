@@ -1,0 +1,108 @@
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+#define REP(i,n) for (int i=1;i<=(n);++i)
+#define FOR(i,a,b) for (int i=(a);i<=(b);++i)
+#define ROF(i,a,b) for (int i=(a);i>=(b);--i)
+#define FEC(p,u) for (edge*p=head[u];p;p=p->nxt)
+using namespace std;
+typedef long long LL;
+
+int n, nq;
+struct edge{ int b; edge *nxt; }e[210000], *le(e);
+edge *head[110000];
+void add(int u, int v){ le->b = v, le->nxt = head[u], head[u] = le++; }
+int fa[110000][20], d[110000];
+int fur[110000][3], fd[110000][20], fu[110000][20];
+
+void update(int x, int y){
+	if (y > fur[x][2]){ fur[x][2] = y;
+	if (fur[x][2] > fur[x][1]){ swap(fur[x][2], fur[x][1]);
+	if (fur[x][1] > fur[x][0]){ swap(fur[x][1], fur[x][0]);
+	}}}
+}
+void dfs(int x){
+	fur[x][0] = 1, fur[x][1] = fur[x][2] = 0;
+	FEC(p,x) if (p->b != fa[x][0]){
+		fa[p->b][0] = x, d[p->b] = d[x]+1;
+		dfs(p->b);
+		update(x, fur[p->b][0]+1);
+	}
+}
+void init(){
+	scanf("%d", &n);
+	int u, v;
+	REP(i,n-1){
+		scanf("%d%d", &u, &v);
+		add(u, v); add(v, u);
+	}
+	scanf("%d", &nq);
+	fa[1][0] = 0, d[1] = 1;
+	dfs(1);
+	REP(i,n){
+		if (fa[i][0] == 0) fd[i][0] = 0, fu[i][0] = 0;
+		else if (fur[fa[i][0]][0] == fur[i][0]+1) fd[i][0] = fur[fa[i][0]][1]+1, fu[i][0] = fur[fa[i][0]][1];
+		else fd[i][0] = fur[fa[i][0]][0]+1, fu[i][0] = fur[fa[i][0]][0];
+	}
+	REP(j,17) REP(i,n){
+		fa[i][j] = fa[fa[i][j-1]][j-1];
+		if (fd[fa[i][j-1]][j-1]) fd[i][j] = max(fd[i][j-1], fd[fa[i][j-1]][j-1]+(1<<j-1)); else fd[i][j] = fd[i][j-1];
+		if (fu[fa[i][j-1]][j-1]) fu[i][j] = max(fu[fa[i][j-1]][j-1], fu[i][j-1]+(1<<j-1)); else fu[i][j] = 0;
+	}
+}
+int go(int x, int y){
+	for (int j = 0; y; y >>= 1, ++j) if (y&1) x = fa[x][j];
+	return x;
+}
+int getd(int x, int y){
+	int ret(0), d0 = d[x];
+	for (int j = 0; y; y >>= 1, ++j) if (y&1){
+		if (fd[x][j]) ret = max(ret, fd[x][j]+d0-d[x]);
+		x = fa[x][j];
+	}
+	return ret;
+}
+int getu(int x, int y){
+	int ret(0), d0 = d[x]-y;
+	for (int j = 0; y; y >>= 1, ++j) if (y&1){
+		if (fu[x][j]) ret = max(ret, fu[x][j]+d[fa[x][j]]-d0);
+		x = fa[x][j];
+	}
+	return ret;
+}
+void work(){
+	int u, v, lca, mid, p, q, t, ret;
+	scanf("%d%d", &u, &v);
+	if (d[u] < d[v]) swap(u, v);
+	p = u, q = v;
+	p = go(p, d[p]-d[q]);
+	ROF(j,17,0) if (fa[p][j] != fa[q][j]) p = fa[p][j], q = fa[q][j];
+	if (p != q) lca = fa[p][0]; else lca = p;
+	mid = go(u, d[u]+d[v]-2*d[lca]-1>>1);
+	ret = max(fur[u][0], getd(u, d[u]-d[mid]));
+	if (v != lca) ret = max(ret, fur[v][0]);
+	t = getu(mid, d[mid]-d[lca]-1);
+	if (t) ret = max(ret, t+d[v]-d[lca]+1);
+	if (v != lca) ret = max(ret, getd(v, d[v]-d[lca]-1));
+	if (fd[lca][17]) ret = max(ret, fd[lca][17]+d[v]-d[lca]);
+	p = go(u, d[u]-d[lca]-1);
+	if (v != lca) q = go(v, d[v]-d[lca]-1); else q = v;
+	t = fur[lca][0]; p = fur[p][0]+1, q = q != lca ? fur[q][0]+1 : 0;
+	if (p < q) swap(p, q);
+	if (t == p){
+		t = fur[lca][1];
+		if (t == q) t = fur[lca][2];
+	}
+	if (t) ret = max(ret, t+d[v]-d[lca]);
+	printf("%d\n", ret-1);
+}
+int main(){
+	init();
+	while (nq--) work();
+	return 0;
+}
+

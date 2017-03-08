@@ -1,0 +1,164 @@
+#include<cstdio>
+const int n=50005;
+char ch;
+int i,N,T,x,y,z,lca,Ans,res,e;
+int A[n],B[n],C[n],son[n],Q[n],f[n],flag[n];
+int size[n],path[n],deep[n],fa[n],u[n],d[n];
+int ed[2*n],next[2*n],tmp[10*n],*now;
+int gcd(int a,int b)
+{
+	if(!b) return a;
+	return gcd(b,a%b);
+}
+struct Tree
+{
+	int n,*f,*g;
+	void build(int t,int l,int r)
+	{
+		int mid=(l+r)/2;
+		if(l==r){f[t]=g[t]=C[l];return;}
+		build(2*t,l,mid),build(2*t+1,mid+1,r);
+		f[t]=gcd(f[2*t],f[2*t+1]);
+		g[t]=g[2*t]+g[2*t+1];
+	}
+	void Build(int _n)
+	{
+		f=now,now+=4*_n+1;
+		g=now,now+=4*_n+1;
+		for(int i=1;i<=_n;++i) C[i]=B[i]-B[i-1];
+		n=_n,build(1,1,n);
+	}
+	void Modify(int t,int l,int r,int x,int y)
+	{
+		int mid=(l+r)/2;
+		if(l==r){f[t]+=y,g[t]+=y;return;}
+		if(x<=mid) Modify(2*t,l,mid,x,y);
+		else Modify(2*t+1,mid+1,r,x,y);
+		f[t]=gcd(f[2*t],f[2*t+1]);
+		g[t]=g[2*t]+g[2*t+1];
+	}
+	void Change(int x,int y,int z)
+	{
+		Modify(1,1,n,x,z);
+		if(y<n) Modify(1,1,n,y+1,-z);
+	}
+	int Query(int t,int l,int r,int ll,int rr)
+	{
+		int mid=(l+r)/2,f1,f2;
+		if(l==ll&&r==rr) return f[t];
+		if(rr<=mid) return Query(2*t,l,mid,ll,rr);
+		if(ll>mid) return Query(2*t+1,mid+1,r,ll,rr);
+		f1=Query(2*t,l,mid,ll,mid),f2=Query(2*t+1,mid+1,r,mid+1,rr);
+		return gcd(f1,f2);
+	}
+	int Ask(int t,int l,int r,int ll,int rr)
+	{
+		int mid=(l+r)/2,f1,f2;
+		if(l==ll&&r==rr) return g[t];
+		if(rr<=mid) return Ask(2*t,l,mid,ll,rr);
+		if(ll>mid) return Ask(2*t+1,mid+1,r,ll,rr);
+		f1=Ask(2*t,l,mid,ll,mid),f2=Ask(2*t+1,mid+1,r,mid+1,rr);
+		return f1+f2;
+	}
+	int Find(int x,int y)
+	{
+		int f1,f2,f3;
+		if(x<y)
+		{
+			f1=Query(1,1,n,x+1,y),f2=Ask(1,1,n,1,x);
+			return gcd(f1,f2);
+		}
+		return f2=Ask(1,1,n,1,x);
+	}
+}tree[n];
+void Addedge(int i,int j)
+{
+	ed[++e]=j,next[e]=son[i],son[i]=e;
+}
+void bfs()
+{
+	int l,r,i,j,p,Max;
+	Q[1]=1,f[1]=1;
+	for(l=0,r=1;l<r;)
+	{
+		i=Q[++l];
+		for(j=son[i];j;j=next[j]) if(!f[ed[j]])
+			f[ed[j]]=1,deep[ed[j]]=deep[i]+1,fa[ed[j]]=i,Q[++r]=ed[j];
+	}
+	for(i=1;i<=N;++i) size[i]=1;
+	for(l=N;l;--l)
+	{
+		p=Max=0,i=Q[l],size[fa[i]]+=size[i];
+		for(j=son[i];j;j=next[j])
+			if(fa[ed[j]]==i&&size[ed[j]]>Max)
+				Max=size[ed[j]],p=j;
+		if(p) path[i]=p;
+	}
+	for(r=1;r<=N;++r)
+	{
+		i=Q[r];
+		if(!flag[i])
+		{
+			l=0;
+			for(j=i;j;j=ed[path[j]])
+				u[j]=i,flag[j]=1,d[j]=++l,B[l]=A[j];
+			tree[i].Build(l);
+		}
+	}
+}
+int Lca(int x,int y)
+{
+	while(u[x]!=u[y])
+		if(deep[u[x]]>=deep[u[y]])
+			if(x!=u[x]) x=u[x];
+			else x=fa[x];
+		else
+			if(y!=u[y]) y=u[y];
+			else y=fa[y];
+	if(deep[x]<=deep[y]) return x;
+	return y;
+}
+void Work_Find(int x,int lca)
+{
+	for(;x!=lca;)
+		if(u[x]==u[lca]) res=tree[u[x]].Find(d[lca]+1,d[x]),Ans=gcd(Ans,res),x=lca;
+		else res=tree[u[x]].Find(1,d[x]),Ans=gcd(Ans,res),x=fa[u[x]];
+}
+void Work_Change(int x,int lca,int z)
+{
+	for(;x!=lca;)
+		if(u[x]==u[lca]) tree[u[x]].Change(d[lca]+1,d[x],z),x=lca;
+		else tree[u[x]].Change(1,d[x],z),x=fa[u[x]];
+}
+int main()
+{
+	scanf("%d",&N);
+	for(i=1;i<N;++i)
+	{
+		scanf("%d%d",&x,&y),++x,++y;
+		Addedge(x,y),Addedge(y,x);
+	}
+	for(i=1;i<=N;++i) scanf("%d",&A[i]);
+	now=tmp,bfs();
+	for(scanf("%d",&T);T--;)
+	{
+		for(ch=getchar();ch!='F'&&ch!='C';ch=getchar());
+		if(ch=='F')
+		{
+			scanf("%d%d",&x,&y),++x,++y;
+			lca=Lca(x,y);
+			Ans=tree[u[lca]].Find(d[lca],d[lca]);
+			Work_Find(x,lca),Work_Find(y,lca);
+			if(Ans<0) Ans=-Ans;
+			printf("%d\n",Ans);
+		}
+		else
+		{
+			scanf("%d%d%d",&x,&y,&z),++x,++y;
+			lca=Lca(x,y);
+			tree[u[lca]].Change(d[lca],d[lca],z);
+			Work_Change(x,lca,z),Work_Change(y,lca,z);
+		}
+	}
+	return 0;
+}

@@ -1,0 +1,267 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
+#include <iostream>
+#include <cstring>
+#include <vector>
+#include <string>
+#include <cassert>
+#include <ctime>
+
+using namespace std;
+
+#ifdef WIN32
+	#define LLD "%I64d"
+#else
+	#define LLD "%lld"
+#endif
+
+
+typedef long long ll;
+typedef pair<int, int> pii;
+typedef vector<int> vi;
+typedef vector<vi> vvi;
+typedef vector<bool> vb;
+typedef vector<vb> vvb;
+typedef vector<ll> vll;
+typedef vector<vll> vvll;
+
+#define TASKNAME "text"
+#define pb push_back
+#define mp make_pair
+#define EPS (1E-9)
+#define INF ((int)1E9)
+#define sqr(x) ((x) * (x))
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
+#define sz(x) ((int)(x).size())
+        
+const int maxn = 500;
+char s[maxn][maxn + 1];
+bool used[maxn];
+
+int n;
+
+void resort(int y, int *cur, int *group, int &groupSz, int grpos, int pos, int type) {
+	if (grpos == -1)
+		return;
+	int r = 0;
+	for (int i = 0; i < group[grpos]; i++) {
+		if ((int)s[y][cur[pos + i]] == type)
+			swap(cur[pos + i], cur[pos + (r++)]);
+	}
+	if (!r || group[grpos] == r)
+		return;
+	
+	int insertGroup = group[grpos] - r;
+	group[grpos] = r;
+	for (int i = groupSz - 1; i > grpos; i--)
+		group[i + 1] = group[i];
+	group[grpos + 1] = insertGroup;
+	++groupSz;
+}
+
+int came[maxn];
+int maxu;
+
+int groupTmp[maxn][maxn];
+int counts[maxn];
+
+bool solve(int depth, int *cur, int cnt) {
+	if (!cnt)
+		return 1;
+	
+	int mxsum = -1, mxpos = -1;
+	for (int y = 0; y < n; y++) {
+		if (used[y])
+			continue;
+		
+		int csum = 0;
+		for (int i = 0; i < cnt; i++)
+			csum += s[y][cur[i]];
+		
+		if (mxsum < csum)
+			mxsum = csum, mxpos = y;
+	}
+
+	if (mxsum == -1)
+		return 1;
+	
+	int *group = groupTmp[depth];
+	int groupSz;
+	if (mxsum && mxsum < cnt) {
+		groupSz = 2;
+		group[0] = group[1] = 0;
+		
+		int r = 0;
+		for (int i = 0; i < cnt; i++) {
+			group[!s[mxpos][cur[i]]]++;
+			if (s[mxpos][cur[i]])
+				swap(cur[i], cur[r++]);
+		}
+	} else
+		groupSz = 1, group[0] = cnt;
+	
+// 	eprintf("start!\n");
+// 	eprintf("cur:\n");
+// 	for (int i = 0; i < cnt; i++)
+// 		eprintf("%d%c", cur[i], " \n"[i == cnt - 1]);
+// 	eprintf("group:\n");
+// 	for (int i = 0; i < groupSz; i++)
+// 		eprintf("%d%c", group[i], " \n"[i == groupSz - 1]);	
+	
+	++maxu;
+	while (1) {
+		bool ch = 0;
+		for (int y = 0; y < n; y++) {
+			if (used[y] || came[y] == maxu)
+				continue;
+			int alert = 0;
+			int pos = 0;
+			for (int i = 0; i < groupSz; i++) {
+				counts[i] = 0;
+				for (int iter = 0; iter < group[i]; iter++) {
+					counts[i] += s[y][cur[pos]];
+					pos++;
+				}
+				alert += !!counts[i];
+			}
+			if (alert <= 1)
+				continue;
+			came[y] = maxu;
+			ch = 1;
+			
+			int sum = group[0];
+			int start = 0;
+			for (int i = 1; i < groupSz; i++) {
+				if (!counts[i - 1] && counts[i]) {
+					start = i;
+					break;
+				}
+				sum += group[i];
+			}
+			if (!start)
+				sum = 0;
+			pos = start;
+					
+		int ended = 0;
+			pii tmp[2] = {mp(-1, 0), mp(-1, 0)};
+			for (int iter = 0; iter < groupSz; iter++) {
+				if (counts[pos] && ended)
+					return 0;
+				if (iter && (!group[pos] || counts[pos] < group[pos]))
+					ended = 1;
+				if (counts[pos] && counts[pos] < group[pos])
+					tmp[ended] = mp(pos, sum);
+				
+				sum += group[pos];
+				if (++pos >= groupSz)
+					pos -= groupSz, sum = 0;
+			}
+			
+// 			eprintf("(%d,%d) (%d,%d)\n", tmp[0].first, tmp[0].second, tmp[1].first, tmp[1].second);
+			if (tmp[0].first != -1 && tmp[0].first > tmp[1].first) {
+				resort(y, cur, group, groupSz, tmp[0].first, tmp[0].second, 0);
+				resort(y, cur, group, groupSz, tmp[1].first, tmp[1].second, 1);
+			} else {
+				resort(y, cur, group, groupSz, tmp[1].first, tmp[1].second, 1);
+				resort(y, cur, group, groupSz, tmp[0].first, tmp[0].second, 0);
+			}	
+		}
+		if (ch)
+			continue;
+		break;
+	}
+	bool ok = (groupSz == 1);
+	for (int x = 0, sum = 0, grid = 0; !ok && x < cnt; x++) {
+		if (x != sum)
+			continue;
+		int xn = !x ? cnt - 1 : x - 1;
+		ok = 1;
+		for (int y = 0; y < n; y++) {
+			if (used[y])
+				continue;
+			if (s[y][cur[x]] && s[y][cur[xn]]) {
+				ok = 0;
+				break;
+			}
+		}
+		if (ok) {
+			rotate(group, group + grid, group + groupSz);
+			rotate(cur, cur + sum, cur + cnt);
+			break;
+		}
+			
+		sum += group[grid];
+		grid++;
+	}
+	
+// 	eprintf("cur:\n");
+// 	for (int i = 0; i < cnt; i++)
+// 		eprintf("%d%c", cur[i], " \n"[i == cnt - 1]);
+// 	eprintf("group:\n");
+// 	for (int i = 0; i < groupSz; i++)
+// 		eprintf("%d%c", group[i], " \n"[i == groupSz - 1]);	
+// 	exit(1);
+	
+	if (!ok)
+		return 0;
+	used[mxpos] = 1;
+	
+	int pos = 0;
+	for (int i = 0; i < groupSz; i++) {
+		if (!solve(depth + 1, cur + pos, group[i]))
+			return 0;
+		pos += group[i];
+	}
+	
+	used[mxpos] = 0;
+	for (int y = 0; y < n; y++) {
+		if (used[y])
+			continue;
+		int groups = 0;
+		for (int x = 0; x < cnt; x++) {
+			if (s[y][cur[x]] && (!x || !s[y][cur[x - 1]]))
+				++groups;
+		}
+		assert(groups <= 1);
+	}
+	
+	return 1;
+}
+
+int cur[maxn];
+
+int main() {     
+	#ifdef DEBUG
+		freopen(TASKNAME".in", "r", stdin);
+		freopen(TASKNAME".out", "w", stdout);
+	#endif
+	
+	while (scanf("%d", &n) >= 1) {
+		for (int i = 0; i < n; i++) {
+			scanf("%s", s[i]);
+			for (int j = 0; j < n; j++)
+				s[i][j] -= '0';
+		}
+		
+		for (int i = 0; i < n; i++)
+			cur[i] = i;
+		
+		maxu = 0;
+		memset(came, 0, sizeof(came));
+		memset(used, 0, sizeof(used));
+		if (solve(0, cur, n)) {
+			printf("YES\n");
+			for (int i = 0; i < n; i++) {
+				for (int j = 0; j < n; j++)
+					printf("%d", s[i][cur[j]]);
+				printf("\n");
+			}
+// 			exit(1);
+		} else
+			printf("NO\n");
+// 		break;
+	}	
+	return 0;
+}

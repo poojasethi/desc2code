@@ -1,0 +1,120 @@
+#include <iostream>
+#include <cstdio>
+#include <cctype>
+#include <string>
+#include <cmath>
+#include <vector>
+#include <algorithm>
+#include <stack>
+#include <queue>
+#include <map>
+#include <set>
+#include <sstream>
+#include <fstream>
+#include <ctime>
+#include <cassert>
+#include <cstring>
+
+using namespace std;
+
+#define REP(i,n) FOR(i,0,n)
+#define FOR(i,a,b) for(int i = a; i < b; i++)
+#define ROF(i,a,b) for(int i=a;i>b;i--)
+#define GI ({int t;scanf("%d",&t);t;})
+#define GL ({LL t;scanf("%lld",&t);t;})
+#define GD ({double t;scanf("%lf",&t);t;})
+#define SET(x,a) memset(x,a,sizeof(x))
+#define all(a) (a.begin(),a.end())
+#define rall(a) (a.rbegin(),a.rend())
+#define INF (int)1e9
+#define EPS (double)1e-9
+
+typedef unsigned long long ULL;
+typedef long long LL;
+typedef set <int> si;
+typedef pair< int,int > ii;
+typedef pair< int, ii > pi;
+typedef vector< ii > vii;
+typedef vector < vii > vvii;
+typedef vector< int > vi;
+typedef vector< vi > vvi;
+
+int R, C;
+char grid[15][15];
+
+struct pts {
+	int x, y;
+};
+
+pts points[10];
+int pcnt;
+int dp[10][1<<9][13][13];
+int dist[13][13][13][13];
+
+bool isset(int mask, int i) {
+	return ((mask>>i)&1);
+}
+
+int mset(int mask, int i) {
+	return mask | (1<<i);
+}
+
+int munset(int mask, int i) {
+	return mask & (~(1<<i));
+}
+
+int go(int i, int mask, int endi, int endj) {
+	int &ret = dp[i][mask][endi][endj];
+	if (ret != -1) return ret;
+
+	mask &= ~(1<<i);
+	if (mask == 0) return ret = dist[points[i].x][points[i].y][endi][endj];
+
+	ret = INF;
+	REP(j,pcnt) if ((mask>>j)&1) ret = min(ret, go(j, mask, endi, endj) + dist[points[i].x][points[i].y][points[j].x][points[j].y]);
+	return ret;
+}
+
+int main() {
+	int T = GI;
+	FOR(z,1,T+1) {
+		R = GI, C = GI;
+		REP(i,R) scanf("%s", grid[i]);
+	
+		pts home;
+		pcnt = 0;
+		REP(i,R) REP(j,C) {
+			if (grid[i][j] == 'H') home.x = i, home.y = j;
+			else if (grid[i][j] == 'F') {
+				points[pcnt].x = i;
+				points[pcnt].y = j;
+				pcnt++;
+			}
+		}
+		points[pcnt++] = home;
+
+		REP(i,R) REP(j,C) REP(k,R) REP(l,C) {
+			if (i == k && j == l) dist[i][j][k][l] = 0;
+			else if (grid[i][j] == '#' || grid[k][l] == '#') dist[i][j][k][l] = INF;
+			else if ((i == k && abs(j-l) == 1) || (j == l && abs(i-k) == 1)) dist[i][j][k][l] = 1;
+			else dist[i][j][k][l] = INF;
+		}
+		REP(ki,R) REP(kj,C) REP(i,R) REP(j,C) REP(k,R) REP(l,C) dist[i][j][k][l] = min(dist[i][j][k][l], dist[i][j][ki][kj] + dist[ki][kj][k][l]);	
+
+		int ans = INF;
+		SET(dp,-1);
+		REP(mask,1<<pcnt) {
+			if (!isset(mask,pcnt-1)) continue;
+			int nmask = mask;
+			REP(i,pcnt-1) {
+				if (isset(nmask,i)) nmask = munset(nmask,i);
+				else nmask = mset(nmask,i);
+			}
+			REP(i,R) REP(j,C) if (grid[i][j] != '#') ans = min(ans, max(go(pcnt-1,mask,i,j), go(pcnt-1,nmask,i,j)));
+		}
+		
+		if (ans == INF) printf("Case %d: %d\n", z, -1);
+		else printf("Case %d: %d\n", z, ans);
+	}	
+	return 0;
+}

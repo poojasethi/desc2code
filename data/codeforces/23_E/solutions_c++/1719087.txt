@@ -1,0 +1,91 @@
+#include<stdio.h>
+#include<string.h>
+#define DIGIT 4
+#define DEPTH 10000
+#define MAXN 100
+#define MAXT 705
+struct bign{
+  int n[MAXN];
+  bign(){}
+  bign(int a){tran(a);}
+  void tran(int a){
+    memset(n,0,sizeof(n));
+    for(n[0]=1;a;n[0]++)
+      n[n[0]]=a%DEPTH,a/=DEPTH;
+    if(n[0]>1) n[0]--;
+  }
+  const char *str()const{
+    int i;
+    static char s[DIGIT*MAXN];
+    char *p=s+sprintf(s,"%d",n[n[0]]);
+    for(i=n[0]-1;i;i--)
+      p+=sprintf(p,"%04d",n[i]);
+    return s;
+  }
+  bool operator<(const bign& cmp)const{
+    int i;
+    if(n[0]!=cmp.n[0]) return n[0]<cmp.n[0];
+    for(i=n[0];i;i--)
+      if(n[i]!=cmp.n[i]) return n[i]<cmp.n[i];
+    return 0;
+  }
+  bign operator*(const bign& mul)const{
+    int i,j;
+    bign res=0;
+    res.n[0]=n[0]+mul.n[0]-1;
+    for(i=1;i<=n[0];i++)
+      for(j=1;j<=mul.n[0];j++)
+        if((res.n[i+j-1]+=n[i]*mul.n[j])>=DEPTH)
+          res.n[i+j]+=res.n[i+j-1]/DEPTH,res.n[i+j-1]%=DEPTH;
+    res.n[0]+=(res.n[res.n[0]+1]>0);
+    while(!res.n[res.n[0]]&&res.n[0]>1)res.n[0]--;
+    return res;
+  }
+};
+int N;
+struct edge{
+  int s,f,next;
+  edge(){}
+  edge(int a,int b,int c):s(a),f(b),next(c){}
+}list[MAXT*MAXT];
+int head[MAXT],top;
+bign dp[MAXT][MAXT];
+int sz[MAXT];
+void add(int s,int f){
+  list[top]=edge(s,f,head[s]);
+  head[s]=top++;
+}
+void dfs(int x,int fa){
+  int i,j,k;
+  sz[x]=1;
+  for(i=0;i<=N;i++)
+    dp[x][i]=1;
+  for(i=head[x];i!=-1;i=list[i].next){
+    int to=list[i].f;
+    if(to==fa) continue;
+    dfs(to,x);
+    for(j=sz[x];j;j--)
+      for(k=sz[to];k>=0;k--){
+        bign tmp=dp[to][k]*dp[x][j];
+        if(dp[x][j+k]<tmp) dp[x][j+k]=tmp;
+      }
+    sz[x]+=sz[to];
+  }
+  for(i=1;i<=sz[x];i++){
+    bign tmp=dp[x][i]*i;
+    if(dp[x][0]<tmp) dp[x][0]=tmp;
+  }
+}
+int main(){
+  int i,j;
+  scanf("%d",&N);
+  memset(head,-1,sizeof(head));top=0;
+  for(i=1;i<N;i++){
+    int s,f;
+    scanf("%d%d",&s,&f);
+    add(s,f);add(f,s);
+  }
+  dfs(1,-1);
+  printf("%s\n",dp[1][0].str());
+  return 0;
+}

@@ -1,0 +1,133 @@
+//In The Name Of God
+
+#include<bits/stdc++.h>
+
+using namespace std;
+
+const int Maxn=1e5+7;
+const int mx=20;
+
+int n,q,N,ans;
+int k[Maxn];
+vector<int>V[Maxn];
+vector< pair<int,int> >g;
+int h[Maxn],par[mx][Maxn];
+bool mark[Maxn];
+int st[Maxn],en[Maxn],T;
+set< pair<int,int> >ver,lca;
+
+void dfs(int u,int dad=0)
+{
+  st[u]=T++;
+  par[0][u]=dad;
+  for(int i=1;i<mx;i++)
+    par[i][u]=par[i-1][par[i-1][u]];
+  for(int i=0;i<V[u].size();i++)
+    {
+      int v=V[u][i];
+      if(v!=dad)
+	h[v]=h[u]+1,dfs(v,u);
+    }
+  en[u]=T++;
+}
+
+int LCA(int u,int v)
+{
+  if(h[v]<h[u])
+    swap(u,v);
+  for(int i=mx;i--;)
+    if(h[par[i][v]]>=h[u])
+      v=par[i][v];
+  if(v==u)
+    return v;
+  for(int i=mx;i--;)
+    if(par[i][v]!=par[i][u])
+      v=par[i][v],u=par[i][u];
+  return par[0][v];
+}
+
+bool check()
+{
+  bool ret=true;
+  for(int i=0;i<N;i++)
+    mark[k[i]]=true;
+  for(int i=0;i<N;i++)
+    if(mark[par[0][k[i]]])
+      ret=false;
+  return ret;
+}
+
+void slv()
+{
+  if(!check())
+    {
+      for(int i=0;i<N;i++)
+	mark[k[i]]=false;
+      ans=-1;
+      return ;
+    }
+  ans=0;
+  ver.clear();
+  lca.clear();
+  for(int i=0;i<N;i++)
+    ver.insert(make_pair(st[k[i]],k[i]));
+  set< pair<int,int> > :: iterator it=ver.begin();
+  for(it++;it!=ver.end();it++)
+    {
+      int v=(*it).second;
+      it--;
+      int u=(*it).second;
+      it++;
+      int dad=LCA(u,v);
+      lca.insert(make_pair(-h[dad],dad));
+    }
+  for(;ver.size()>1;)
+    {
+      ans++;
+      pair<int,int>p=(*lca.begin());
+      lca.erase(p);
+      int v=p.second;
+      it=ver.upper_bound(make_pair(st[v],n));
+      for(;it!=ver.end() && ver.size();it++)
+	{
+	  int u=(*it).second;
+	  if(st[u]>en[v])
+	    break;
+	  if(mark[v])
+	    ans++;
+	  g.push_back(*it);
+	}
+      ans-=mark[v];
+      if(!mark[v] && g.size()<2)
+	{
+	  g.clear();
+	  ans--;
+	  continue;
+	}
+      for(int i=0;i<g.size();i++)
+	ver.erase(g[i]),mark[g[i].second]=false;
+      g.clear();
+    }
+  for(int i=0;i<N;i++)
+    mark[k[i]]=false;
+}
+
+int main()
+{
+  ios_base::sync_with_stdio(0);
+  cin>>n;
+  for(int u,v,i=0;i<n-1;i++)
+    cin>>u>>v,V[u].push_back(v),V[v].push_back(u);
+  h[1]=1;
+  dfs(1);
+  cin>>q;
+  for(int j=0;j<q;j++)
+    {
+      cin>>N;
+      for(int i=0;i<N;i++)
+	cin>>k[i];
+      slv();
+      cout<<ans<<endl;
+    }
+  return 0;
+}

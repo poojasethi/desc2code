@@ -1,0 +1,167 @@
+#include <cstdio>
+#include <queue>
+#include <cstring>
+#include <iostream>
+
+using namespace std;
+
+#define  maxW 501 //maximum number of words
+#define maxN 101 //number of songs
+#define maxP 5001 //maximum length of a pattern
+#define maxS 50001 //maximum size of the songs
+#define maxNodes maxP*maxW
+
+
+int AC[maxNodes][66];
+int tail[maxW], pos = 1;
+int fail[maxNodes];
+int cnt[maxNodes];
+
+char text[maxS];
+int inDeg[maxNodes];
+
+int w, n;
+
+//assigning a unique number to each of the alphabet
+inline int Id(char c) {
+    if (c >= 'a' && c <= 'z') return c - 'a';
+    else if (c >= 'A' && c <= 'Z') return c - 'A' + 26;
+    else if (c >= '0' && c <= '9') return c - '0' + 52;
+    else return 62;
+}
+
+//insert a new pattern into the AC trie, which we should
+//convert into an automata in the future
+int insert(char* s) {
+    //acp is the current node which we are at in the AC tree
+    int acp = 0, cid;
+    //slen the string length of the string to be inserted
+    int slen = strlen(s);
+    for(int i=0; i<slen; i++) {
+        cid = Id(s[i]);
+        //create a new node, if a child is not already present
+        if(AC[acp][cid] == -1) {
+            //we are assigning a unique positive number to each node
+            AC[acp][cid] = pos++;
+            //marking the children to the current node as null, -1 is null
+            for(int j=0; j<66; j++) {
+                AC[pos][j] = -1;
+            }
+        }
+        //we are pointiong to the current node
+        acp = AC[acp][Id(s[i])];
+    }
+    return acp;
+}
+
+void init() {
+    //fail to root is root
+    fail[0] = 0;
+    //fail to root is pointing towards root hence indeg is 1
+    inDeg[0] = 1;
+    for(int i=0; i<66; i++) {
+        if (AC[0][i] != -1) {
+            //make all valid children of root fail to root.
+            fail[AC[0][i]] = 0;
+            //increasing indegree of root by 1
+            ++inDeg[0];
+        } else {
+            AC[0][i] = 0;
+        }
+    }
+}
+
+//makeAC will basically add the required transitions to the AC trie.
+void makeTransitions() {
+    queue<int> Q;
+    //initializing the automata
+    init();
+    //all the head nodes in the trie will be added to the queue
+    for(int i=0; i<66; i++) {
+        if (AC[0][i] > 0)
+            Q.push(AC[0][i]);
+    }
+    while (!Q.empty()) {
+        int cur = Q.front(); Q.pop();
+        for(int i=0; i<66; i++) {
+            //if the current node exists
+            if (AC[cur][i] > 0) {
+                //if string fails at the current position, it should
+                //next point towards where the parents' failure
+                //function was pointing
+                fail[AC[cur][i]] = AC[fail[cur]][i];
+                //number of fail pointers to AC[fail[cur]][i] are incresed by 1
+                ++inDeg[AC[fail[cur]][i]];
+                //to process the next child
+                Q.push(AC[cur][i]);
+            }
+            else {
+                //make the child point towards the fail of parent
+                AC[cur][i] = AC[fail[cur]][i];
+            }
+        }
+    }
+}
+
+char s[maxP];
+
+int main(){
+    memset(AC, -1, sizeof AC);
+    scanf("%d", &w);
+    for(int i=0; i<66; i++) {
+        //make all roots children as null
+        AC[0][i] = -1;
+    }
+    for(int i=0; i<w; i++) {
+        scanf("%s", s);
+        //tail[i] is unique for a pattern, it gives the id of the
+        //last character in the inserted pattern in the AC-Trie
+        tail[i] = insert(s);
+    }
+    makeTransitions();
+    scanf("%d", &n);
+    for(int i=0; i<n; i++) {
+        scanf("%s", text);
+        int tlen = strlen(text);
+        int cur = 0;
+        //refer to insert function to understand what goes on over here
+        //we are iterating through the trie
+        for(int j=0; j<tlen; j++) {
+            cur = AC[cur][Id(text[j])];
+            //increasing the frequency of the current node
+            ++cnt[cur];
+        }
+    }
+    queue<int> Q;
+    //we are now pushing all the nodes with no failure pointers to them
+    //to the queue, we are doing a back track - in a way.
+    for(int i=0; i< pos + 1; i++)
+        if(inDeg[i] == 0)
+            Q.push(i);
+    
+    while (!Q.empty()) {
+        int tmp = Q.front(); Q.pop();
+        //if we reach to root we break.
+        if (tmp == 0) break;
+        //we are virtually removing the current node,
+        //so we remove its pointer to the failure function by
+        //reducing indegree to its failure node.
+        --inDeg[fail[tmp]];
+        //adding the frequency of the current node to its
+        //failure node
+        cnt[fail[tmp]] += cnt[tmp];
+        //if indeg is 0 pushing the failure node to the queue
+        if (inDeg[fail[tmp]] == 0) {
+            Q.push(fail[tmp]);
+        }
+    }
+    for(int i=0; i<w; i++) {
+        //now we get to use the unique tail-id we assigned
+        //to each of the patterns, we just print out the
+        //frequency of the pattern
+        printf("%d\n", cnt[tail[i]]);
+    }
+/*  int i;
+    scanf("%d", &i);    */
+    return 0;
+}

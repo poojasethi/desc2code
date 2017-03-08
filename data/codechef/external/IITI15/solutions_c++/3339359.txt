@@ -1,0 +1,115 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <cmath>
+#include <cctype>
+#include <queue>
+#include <stack>
+#include <map>
+#include <set>
+#include <iostream>
+#include <ctime>
+#include <cassert>
+#include <sstream>
+
+using namespace std;
+
+#define INF 0x3f3f3f3f
+#define ll long long
+#define MAXN 20010
+#define MAXM 150
+
+typedef pair<int,int> ii;
+
+int t,v[MAXN],L[MAXN],R[MAXN],tree[MAXN];
+ll wr[MAXN];
+vector<int> queries[MAXM];
+map<int,int> mymap;
+map<int,int>::iterator it;
+
+bool cmp(int a, int b) {
+    if (R[a] != R[b])
+        return R[a] < R[b];
+    return a < b;
+}
+
+void update(int x, int val) {
+    while (x <= t) {
+        tree[x] += val;
+        x += x & (-x);
+    }
+    return;
+}
+
+int query(int a, int b) {
+    if (a > b) return 0;
+    int x,ret = 0;
+    x = b;
+    while (x > 0) {
+        ret += tree[x];
+        x -= x & (-x);
+    }
+    x = a-1;
+    while (x > 0) {
+        ret -= tree[x];
+        x -= x & (-x);
+    }
+    return ret;
+}
+
+int main() {
+    int n,M,Q;
+    ll ans;
+    scanf("%d",&n);
+    M = int(sqrt(n));
+    for (int i=0; i<n; i++) {
+        scanf("%d",&v[i]);
+        mymap[v[i]] = 0;
+    }
+    t = 0;
+    
+    for (it = mymap.begin(); it != mymap.end(); it++)
+        it->second = ++t;
+        
+    for (int i=0; i<n; i++)
+        v[i] = mymap[v[i]];
+
+    scanf("%d",&Q);
+    for (int i=0; i<Q; i++) {
+        scanf("%d%d",&L[i],&R[i]);
+        L[i]--; R[i]--;
+        queries[L[i]/M].push_back(i);
+    }
+    
+    for (int i=0; i<MAXM; i++) {
+        for (int j=0; j<=t; j++)
+            tree[j] = 0;
+        sort(queries[i].begin(),queries[i].end(),cmp);
+        int l,r;
+        l = r = 0; update(v[0],1); ans = 0LL;
+        for (int j=0; j<int(queries[i].size()); j++) {
+            int a = L[queries[i][j]], b = R[queries[i][j]];
+            for (int k=r+1; k<=b; k++) {
+                ans += query(v[k]+1,t);
+                update(v[k],1);
+            }
+            for (int k=l; k<a; k++) {
+                ans -= query(1,v[k]-1);
+                update(v[k],-1);
+            }
+            for (int k=l-1; k>=a; k--) {
+                ans += query(1,v[k]-1);
+                update(v[k],1);
+            }
+            wr[queries[i][j]] = ans;
+            l = a; r = b;
+        }
+    }
+    
+    for (int i=0; i<Q; i++)
+        printf("%lld\n",wr[i]);
+        
+    return 0;
+}

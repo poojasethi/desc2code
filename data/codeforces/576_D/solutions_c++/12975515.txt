@@ -1,0 +1,86 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <bitset>
+#include <vector>
+using namespace std;
+
+struct Edge {
+    int x, y, s;
+
+    int operator < (const Edge &a) const {
+        return s < a.s;
+    }
+}edge[200];
+
+int g[205][205], f[205][205];
+
+struct Matrix {
+    int n, a[155][155];
+
+    Matrix() {memset(a, 0, sizeof(a)); }
+}F, aa, I;
+
+bitset<155> t1[155], t2[155];
+
+Matrix operator * (const Matrix &A, const Matrix &B) {
+    Matrix C;
+    C.n = A.n;
+    for (int i = 1; i <= A.n; ++i) {
+        t1[i].reset();
+        t2[i].reset();
+        for (int j = 1; j <= A.n; ++j) {
+            if (A.a[i][j]) t1[i].set(j);
+            if (B.a[j][i]) t2[i].set(j);
+        }
+    }
+    for (int i = 1; i <= A.n; ++i)
+        for (int j = 1; j <= A.n; ++j)
+            if ((t1[i] & t2[j]).count()) {
+                C.a[i][j] = 1;
+            }
+    return C;
+}
+
+Matrix power(int n) {
+    Matrix ans = I, z = aa;
+    while (n > 0) {
+        if (n & 1) ans = ans * z;
+        z = z * z; n >>= 1;
+    }
+    return ans;
+}
+
+int main() {
+    int n, m;
+    scanf("%d%d", &n, &m);
+    for (int i = 1; i <= m; ++i) {
+        scanf("%d%d%d", &edge[i].x, &edge[i].y, &edge[i].s);
+    }
+    F.n = aa.n = I.n = n;
+    memset(f, 63, sizeof(f));
+    for (int i = 1; i <= n; ++i) {
+        F.a[i][i] = 1;
+        I.a[i][i] = 1;
+        f[i][i] = 0;
+    }
+    sort(edge + 1, edge + 1 + m);
+    int len = 0, ans = 1 << 30;
+    for (int i = 1; i <= m; ++i) {
+        F = F * power(edge[i].s - len);
+        len = edge[i].s;
+        aa.a[edge[i].x][edge[i].y] = 1;
+        for (int j = 1; j <= n; ++j)
+            for (int k = 1; k <= n; ++k)
+                f[j][k] = min(f[j][k], f[j][edge[i].x] + f[edge[i].y][k] + 1);
+        for (int j = 1; j <= n; ++j)
+            if (F.a[1][j]) ans = min(ans, len + f[j][n]);
+    }
+    //for (int i = 1; i <= n; ++i)
+    //    for (int j = 1; j <= n; ++j)
+    //        printf("%d %d %d\n", i, j, f[i][j]);
+    if (ans >= f[0][0]) puts("Impossible");
+    else printf("%d\n", ans);
+    return 0;
+}

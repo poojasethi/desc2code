@@ -1,0 +1,127 @@
+#include <stdio.h>
+#include <math.h>
+#include <algorithm>
+using namespace std;
+const double EPS = 1e-9;
+int sgn(double x)
+{
+    if (fabs(x)<EPS) return 0;
+    return x>0?1:-1;
+}
+
+struct point
+{
+    double x,y;
+    point(): x(0),y(0) {}
+    point(double a,double b): x(a),y(b) {}
+    point operator - (const point &b) const
+    {
+        return point(x-b.x,y-b.y);
+    }
+    point operator + (const point &b) const
+    {
+        return point(x+b.x,y+b.y);
+    }
+    double operator * (const point &b) const
+    {
+        return x*b.y-y*b.x;
+    }
+    double dis(const point &b) const
+    {
+        return sqrt((x-b.x)*(x-b.x)+(y-b.y)*(y-b.y));
+    }
+};
+
+struct hplane
+{
+    point s,t;
+    point cross (const hplane &b) const
+    {
+        double s1=(b.t-s)*(b.s-s);
+        double s2=(b.s-t)*(b.t-t);
+        return point((s.x*s2+t.x*s1)/(s2+s1),(s.y*s2+t.y*s1)/(s2+s1));
+    }
+};
+
+bool cross(hplane l1,hplane l2)
+{
+    double s1=(l2.t-l1.s)*(l2.s-l1.s);
+    double s2=(l2.s-l1.t)*(l2.t-l1.t);
+    if (sgn(s1+s2)==0) return false;
+    double num1=(l2.s-l1.s)*(l2.t-l1.s);
+    double num2=(l2.s-l1.t)*(l2.t-l1.t);
+    if (sgn(num1*num2)>0) return false;
+    num1=(l1.s-l2.s)*(l1.t-l2.s);
+    num2=(l1.s-l2.t)*(l1.t-l2.t);
+    if (sgn(num1*num2)>0) return false;
+    return true;
+}
+
+point p[110][10],num[100010];
+point POINT;
+
+bool cmp(const point &a,const point &b)
+{
+    return a.dis(POINT)<b.dis(POINT);
+}
+
+int main()
+{
+    int n;
+    while (scanf("%d",&n)==1)
+    {
+        for (int i=0;i<n;i++)
+        {
+            for (int j=0;j<3;j++)
+                scanf("%lf%lf",&p[i][j].x,&p[i][j].y);
+            p[i][3]=p[i][0];
+        }
+        double ans=0;
+        for (int i=0;i<n;i++)
+        {
+            for (int j=0;j<3;j++)
+            {
+                int cnt=0;
+                num[cnt++]=p[i][j];
+                num[cnt++]=p[i][j+1];
+                for (int k=0;k<n;k++)
+                {
+                    if (k==i) continue;
+                    for (int l=0;l<3;l++)
+                    {
+                        hplane l1,l2;
+                        l1.s=p[i][j]; l1.t=p[i][j+1];
+                        l2.s=p[k][l]; l2.t=p[k][l+1];
+                        if (cross(l1,l2))
+                            num[cnt++]=l1.cross(l2);
+                    }
+                }
+                POINT=p[i][j];
+                sort(num,num+cnt,cmp);
+                for (int k=0;k<cnt-1;k++)
+                {
+                    point p1=num[k]+num[k+1];
+                    p1.x/=2; p1.y/=2;
+                    bool ok=true;
+                    for (int l=0;l<n;l++)
+                    {
+                        if (l==i) continue;
+                        double tnum[5];
+                        for (int m=0;m<3;m++)
+                            tnum[m]=(p[l][m]-p1)*(p[l][m+1]-p1);
+                        tnum[3]=tnum[0];
+                        ok=false;
+                        for (int m=0;m<3;m++)
+                            if (sgn(tnum[m]*tnum[m+1])<=0) ok=true;
+                        if (!ok) break;
+                    }
+                    if (ok) ans+=num[k].dis(num[k+1]);
+                }
+            }
+        }
+        printf("%.15f\n",ans);
+    }
+    return 0;
+}
+
+		  	 	   			  				 	 		

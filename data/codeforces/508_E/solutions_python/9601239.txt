@@ -1,0 +1,152 @@
+import sys
+def pre(n):
+    for i in reversed(xrange(n - 1)):
+        step = dis[i][0] // 2
+        tmp = dis[i][0]
+        for j in xrange(1, min(step, n - 1 - i) + 1):
+            if (dis[i + j][0] + j > tmp): tmp = dis[i + j][0] + j
+        if (tmp > dis[i][1] or tmp >2 * n - i):
+            return 1
+        dis[i][0] = tmp
+    for i in xrange(n - 1):
+        start = dis[i][1] + 1
+        affect = range(i + (dis[i][1] - 1) // 2 + 1, n)
+        for j in affect:
+            if (dis[j][0] > 2 * n - start - 1): return 1
+            if (dis[j][1] > 2 * n - start - 1): dis[j][1] = 2 * n - start - 1
+    return 0
+
+def solve(s, t):
+    n = t - s
+    if (n == 0):
+        dp[s][t] = []
+        dp_i[s][t] = 1
+        return dp[s][t]
+    if (n == 1):
+        if (dis[s][0] == 1):
+            dp[s][t] = ['(', ')']
+            dp_i[s][t] = 1
+            return dp[s][t]
+        else:
+            dp[s][t] = []
+            dp_i[s][t] = -1
+            return dp[s][t]
+    if (dp_i[s][t] != 0): return dp[s][t]
+
+    l = 2 * n
+    if (debug >= 2):
+        print 's=%d, t=%d, n=%d, l=%d' % (s, t, n, l)
+
+    re = ['' for _ in xrange(l)]
+    re[0] = '('
+    re[l - 1] = ')'
+    if (dis[s][0] % 2 == 1): start = dis[s][0]
+    else: start = dis[s][0] + 1
+    for i in xrange(start, dis[s][1] + 1, 2):
+        if (i % 2 == 0): continue
+        if (i >= l): break
+        re[i] = ')'
+        s1 = s + 1
+        t1 = s + (i + 1) // 2
+        if (dp_i[s1][t1] == 0):
+            if (s1 == t1):
+                dp[s1][t1] = []
+                dp_i[s1][t1] = 1
+            elif (s1 + 1 == t1):
+                if (dis[s1][0] == 1):
+                    dp[s1][t1] = ['(', ')']
+                    dp_i[s1][t1] = 1
+                else:
+                    dp[s1][t1] = []
+                    dp_i[s1][t1] = -1
+            else: solve(s1, t1)
+        s2 = t1
+        t2 = t
+        if (s2 <= t2 and dp_i[s2][t2] == 0):
+            if (s2 == t2):
+                dp[s2][t2] = []
+                dp_i[s2][t2] = 1
+            elif (s2 + 1 == t2):
+                if (dis[s2][0] == 1):
+                    dp[s2][t2] = ['(', ')']
+                    dp_i[s2][t2] = 1
+                else:
+                    dp[s2][t2] = []
+                    dp_i[s2][t2] = -1
+            else: solve(s2, t2)
+        if (dp_i[s1][t1] != -1 and s2 <= t2 and dp_i[s2][t2] != -1\
+            or dp_i[s1][t1] != 1 and s2 > t2):
+            re[1:i] = dp[s1][t1]
+            re[i + 1:l] = dp[s2][t2]
+            dp[s][t] = re
+            dp_i[s][t] = 1
+            return dp[s][t]
+        re[i] = ''
+    dp[s][t] = []
+    dp_i[s][t] = -1
+    return dp[s][t]
+
+def greedy(n):
+    left = [dis[0]]
+    p = 1
+    i = 1
+    re = ['(']
+    while (i < n):
+        if (debug >= 2): print left
+        if (len(left) == 0):
+            left.append([p + dis[i][0], p + dis[i][1]])
+            re.append('(')
+            p += 1
+            i += 1
+        elif (p >= left[len(left) - 1][0] and p <= left[len(left) - 1][1]):
+            # pop
+            re.append(')')
+            left.pop()
+            p += 1
+        else:
+            left.append([p + dis[i][0], p + dis[i][1]])
+            re.append('(')
+            p += 1
+            i += 1
+    while (1):
+        if (len(left) == 0): break
+        if (p >= left[len(left) - 1][0] and p <= left[len(left) - 1][1]):
+            left.pop()
+            p += 1
+            re.append(')')
+        else: break
+    if (debug >= 2): print left
+    if (len(left) > 0): return [1, []]
+    else: return [0, re]
+
+
+# main
+global debug
+debug = 0
+
+n = input()
+global dis
+dis = []
+for i in xrange(n):
+    line = map(int, raw_input().split())
+    dis.append([line[0], line[1]])
+# pre
+if (pre(n) == 0):
+    if (debug >= 1):
+        for i in xrange(n): print str(dis[i])
+    re = greedy(n)
+    if (re[0] != 0): print 'IMPOSSIBLE'
+    else:
+        for i in xrange(2 * n): sys.stdout.write('%s' % re[1][i])
+        sys.stdout.write('\n')
+    #global dp, dp_i
+    #dp = [[[] for _ in xrange(n + 1)] for _ in xrange(n + 1)]
+    #dp_i = [[0 for _ in xrange(n + 1)] for _ in xrange(n + 1)]
+    #re = solve(0, n)
+    #if (dp_i[0][n] == -1): print 'IMPOSSIBLE'
+    #else:
+    #    for i in xrange(2 * n): sys.stdout.write('%s' % dp[0][n][i])
+    #    sys.stdout.write('\n')
+else:
+    if (debug >= 1): print 'pre'
+    print 'IMPOSSIBLE'

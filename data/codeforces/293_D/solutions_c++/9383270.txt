@@ -1,0 +1,114 @@
+#include <cstdio>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+const int N = 100010;
+const double eps = 1e-8, inf = 1e9;
+
+int n, li_n, evt;
+
+struct point
+{
+	double x, y;
+	void init()
+	{
+		scanf("%lf %lf", &x, &y);
+	}
+} p[N];
+struct line
+{
+	point s, t;
+	double gety(double x)
+	{
+		return s.y + (x - s.x) / (t.x - s.x) * (t.y - s.y);
+	}
+} li[N];
+struct event
+{
+	double t;
+	int id;
+} ev[N * 2];
+
+double minx, maxx;
+int ii, jj;
+
+double ans = 0.0;
+
+bool dcmp(double a, double b)
+{
+	return fabs(a - b) < eps;
+}
+void addline(point s, point t)
+{
+	if (dcmp(s.x, t.x)) return;
+	if (t.x < s.x) swap(s, t);
+
+	li[++li_n] = (line) {s, t};
+	ev[evt++] = (event) {s.x, +li_n};
+	if (!dcmp(t.x, maxx))
+		ev[evt++] = (event) {t.x, -li_n};
+}
+void deal(event e)
+{
+	if (e.id > 0)
+	{
+		if (!ii) ii = e.id;
+		else jj = e.id;
+	}
+	else
+	{
+		if (ii == -e.id) ii = 0;
+		else jj = 0;
+	}
+}
+bool cmp_ev(const event& a, const event& b)
+{
+	if (dcmp(a.t, b.t)) return a.id < b.id;
+	return a.t < b.t;
+}
+void process()
+{
+	minx = inf, maxx = -inf;
+	p[0] = p[n];
+	for (int i = 1; i <= n; ++i)
+	{
+		minx = min(minx, p[i].x);
+		maxx = max(maxx, p[i].x);
+	}
+	li_n = evt = 0;
+	for (int i = 1; i <= n; ++i)
+		addline(p[i], p[i - 1]);
+	sort(ev, ev + evt, cmp_ev);
+	int evq = 0;
+	ii = jj = 0;
+	double sum = 0, gum = 0, tot = 0;
+	for (int x = minx; x <= maxx; ++x)
+	{
+		while (evq != evt && dcmp(ev[evq].t, x))
+			deal(ev[evq++]);
+		if (!ii || !jj)
+			ii = jj = 0;
+		double y0 = li[ii].gety(x);
+		double y1 = li[jj].gety(x);
+		if (y0 > y1) swap(y0, y1);
+		double cnt = floor(y1 + eps) - ceil(y0 - eps) + 1;
+		tot += cnt;
+		sum += cnt * x;
+		gum += cnt * x * x;
+	}
+	ans += 2.0 * gum / tot - 2.0 / tot / (tot - 1) * (sum * sum - gum);
+}
+int main()
+{
+	scanf("%d", &n);
+	for (int i = 1; i <= n; ++i)
+		p[i].init();
+	process();
+	for (int i = 1; i <= n; ++i)
+		swap(p[i].x, p[i].y);
+	process();
+
+	printf("%.10lf\n", ans / 2);
+}

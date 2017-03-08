@@ -1,0 +1,172 @@
+#include<bits/stdc++.h>
+
+using namespace std;
+
+#define st first
+#define nd second
+#define mp make_pair
+#define pb push_back
+#define sol (root+root)
+#define sag (root+root+1)
+#define orta ((bas+son)/2)
+#define ll long long
+#define pii pair<int,int>
+#define type(x) __typeof((x).begin())
+#define foreach(it, x) for(type(x) it = (x).begin(); it != (x).end(); it++)
+
+const int N=5e5+5;
+const int mod=1e9+7;
+const int inf=1e9+7;
+
+int x,y,i,j,n,r;
+int P[20][N],Q[N],mn[4*N],cnt[4*N],lazy[4*N];
+
+ll ans=0;
+
+vector<pair<pii,int> > W;
+
+char temp[N];
+
+pair<pii,int> t[N];
+
+string str;
+
+int lcp(int x,int y){
+	x=Q[x];
+	y=Q[y];
+	int ans=0;
+	for(int i=19 ; i>=0 ; i--)
+		if(P[i][x]==P[i][y]){
+			ans+=1<<i;
+			x+=1<<i;
+			y+=1<<i;
+		}
+	return ans;
+}
+
+void init(int root,int bas,int son){
+	if(bas==son){
+		cnt[root]=1;
+		return;
+	}
+	init(sol,bas,orta);
+	init(sag,orta+1,son);
+	cnt[root]=cnt[sol]+cnt[sag];
+}
+
+void push(int root,int bas,int son){
+	mn[sol]+=lazy[root];
+	mn[sag]+=lazy[root];
+	lazy[sol]+=lazy[root];
+	lazy[sag]+=lazy[root];
+	lazy[root]=0;
+}
+
+void update(int root,int bas,int son,int x,int y,int v){
+	if(bas>y or son<x)
+		return;
+	if(x<=bas and son<=y){
+		mn[root]+=v;
+		lazy[root]+=v;
+		return;
+	}
+	push(root,bas,son);
+	update(sol,bas,orta,x,y,v);
+	update(sag,orta+1,son,x,y,v);
+	if(mn[sol]==mn[sag]){
+		mn[root]=mn[sol];
+		cnt[root]=cnt[sol]+cnt[sag];
+	}
+	else if(mn[sol]<mn[sag]){
+		mn[root]=mn[sol];
+		cnt[root]=cnt[sol];
+	}
+	else {
+		mn[root]=mn[sag];
+		cnt[root]=cnt[sag];
+	}
+}
+
+int query2(int root,int bas,int son,int x,int y){
+	if(bas>y or son<x)
+		return n;
+	if(mn[root]>=0)
+		return n;
+	if(bas==son)
+		return bas;
+	push(root,bas,son);
+	int q=query2(sol,bas,orta,x,y);
+	if(q!=n)
+		return q;
+	return query2(sag,orta+1,son,x,y);
+}
+
+pii query(int root,int bas,int son,int x,int y){
+	if(bas>y or son<x)
+		return mp(inf,0);
+	if(x<=bas and son<=y)
+		return mp(mn[root],cnt[root]);
+	push(root,bas,son);
+	pii t1=query(sol,bas,orta,x,y);
+	pii t2=query(sag,orta+1,son,x,y);
+	if(t1.st==t2.st)
+		return mp(t1.st,t1.nd+t2.nd);
+	if(t1.st<t2.st)
+		return t1;
+	return t2;
+}
+
+main(){
+
+	cin>>n;
+	scanf("%s",temp);
+	str=temp;
+	x=0;
+	y=str.size();
+	for(i=0 ; i<str.size() ; i++)
+		P[0][i]=str[i];
+	for(i=1 ; i<=19 ; i++){
+		for(j=0 ; j<str.size() ; j++){
+			if(j+(1<<i-1)<str.size())
+				t[j]=mp(mp(P[i-1][j],P[i-1][j+(1<<i-1)]),j);
+			else t[j]=mp(mp(P[i-1][j],-1),j);
+		}
+		sort(t,t+str.size());
+		int s=0;
+		for(j=0 ; j<str.size() ; j++){
+			if(j!=0 and t[j].st==t[j-1].st)
+				P[i][t[j].nd]=P[i][t[j-1].nd];
+			else P[i][t[j].nd]=++s;
+			if(i==19)
+				Q[j]=t[j].nd;
+		}
+	}
+	int n=str.size();
+	W.pb(mp(mp(Q[0],n-1),1));
+	for(i=1 ; i<n ; i++){
+		int t=lcp(i-1,i);
+		W.pb(mp(mp(Q[i],n-1),1));
+		if(t)
+			W.pb(mp(mp(Q[i],Q[i]+t-1),-1));
+	}
+	
+	sort(W.begin(),W.end(),greater<pair<pii,int> >());
+
+	r=n-1;
+
+	init(1,0,n-1);
+
+	for(i=0 ; i<W.size() ; i++){
+		while(r>=W[i].st.st){
+			update(1,0,n-1,r,n-1,str[r]=='('?1:-1);
+			r--;
+		}
+		int q=query2(1,0,n-1,W[i].st.st,W[i].st.nd)-1;
+		if(min(q,W[i].st.nd)>=W[i].st.st){
+			pii t1=query(1,0,n-1,W[i].st.st,min(q,W[i].st.nd));
+			ans+=W[i].nd*(t1.st==0?t1.nd:0);
+		}
+	}
+
+	printf("%lld\n",ans);
+}

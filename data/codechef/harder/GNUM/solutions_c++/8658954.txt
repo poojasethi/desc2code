@@ -1,0 +1,154 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+#include <tr1/unordered_map>
+using namespace std;
+const int Maxn=405,MaxPrime=32000,inf=999999999+208;
+int T,n;
+int a[Maxn],b[Maxn],A[Maxn*Maxn],B[Maxn*Maxn],an,bn;
+int pr[3500],pn=0;
+tr1::unordered_map <int,int> mp;
+
+int gcd(int x,int y) {
+	return y?gcd(y,x%y):x;
+}
+
+void init() {
+	static bool flag[MaxPrime];
+	for (int i=2;i<MaxPrime;i++)
+		if (!flag[i]) {
+			pr[++pn]=i;
+			for (int j=i*i;j<MaxPrime;j+=i)
+				flag[j]=true;
+		}
+}
+
+namespace Factoriz{
+	int n,i;
+	void init(int _n) {
+		n=_n;
+		i=1;
+	}
+	
+	int find() {
+		for (;pr[i]*pr[i]<=n;i++)
+			if (n%pr[i]==0) {
+				while (n%pr[i]==0) n/=pr[i];
+				return pr[i];
+			}
+		if (n==1) return 0;
+		int tmp=n; n=1;
+		return tmp;
+	}
+}
+
+namespace MaxFlow{
+	const int S=0,T=1,Maxp=160005*10,Maxe=160005*10*2;
+	int head[Maxp],next[Maxe],to[Maxe],v[Maxe],En=1,pn=1;
+	int depth[Maxp],Q[Maxp];
+	
+	void init() {
+		memset(head,0,(pn+1)<<2);
+		pn=1;
+		En=1;
+	}
+	
+	int NewNode() {
+		return ++pn;
+	}
+	
+	void add(int x,int y,int z) {
+		next[++En]=head[x]; head[x]=En; to[En]=y; v[En]=z;
+		next[++En]=head[y]; head[y]=En; to[En]=x; v[En]=0;
+	}
+	
+	bool bfs() {
+		int l=1,r=2;
+		memset(depth,0,(pn+1)<<2);
+		depth[Q[1]=S]=1;
+		while (l<r) {
+			int x=Q[l++];
+			for (int k=head[x];k;k=next[k])
+				if (v[k]&&!depth[to[k]])
+					depth[Q[r++]=to[k]]=depth[x]+1;
+		}
+		return depth[T]>0;
+	}
+	
+	int dfs(int x,int f) {
+		if (x==T) return f;
+		int r=f,t;
+		for (int k=head[x];k;k=next[k])
+			if (v[k]&&depth[to[k]]==depth[x]+1) {
+				t=dfs(to[k],min(r,v[k]));
+				r-=t; v[k]-=t; v[k^1]+=t;
+				if (!r) break;
+			}
+		if (f==r) depth[x]=0;
+		return f-r;
+	}
+	
+	int work() {
+		int ret=0;
+		while (bfs()) ret+=dfs(S,inf);
+		return ret;
+	}
+}
+
+int main() {
+	init();
+	scanf("%d",&T);
+	while (T--) {
+		scanf("%d",&n);
+		for (int i=1;i<=n;i++)
+			scanf("%d",a+i);
+		for (int i=1;i<=n;i++)
+			scanf("%d",b+i);
+		MaxFlow::init();
+		mp.clear();
+		an=bn=0;
+		for (int i=1,t;i<=n;i++)
+			for (int j=1;j<=n;j++) {
+				t=gcd(a[i],b[j]);
+				if (t==1||a[i]==b[j]) continue;
+				if (a[i]>b[j]) A[++an]=t;
+				else B[++bn]=t;
+			}
+		sort(A+1,A+an+1);
+		for (int i=1,cnt=1;i<=an;i++) {
+			if (i==an||A[i]!=A[i+1]) {
+				Factoriz::init(A[i]);
+				int p=MaxFlow::NewNode(),t;
+				MaxFlow::add(MaxFlow::S,p,cnt);
+				while (t=Factoriz::find()) {
+					int &tp=mp[t];
+					if (!tp) tp=MaxFlow::NewNode();
+					MaxFlow::add(p,tp,cnt);
+				}
+				cnt=1;
+			}
+			else ++cnt;
+		}
+		sort(B+1,B+bn+1);
+		for (int i=1,cnt=1;i<=bn;i++) {
+			if (i==bn||B[i]!=B[i+1]) {
+				Factoriz::init(B[i]);
+				int p=MaxFlow::NewNode(),t;
+				MaxFlow::add(p,MaxFlow::T,cnt);
+				while (t=Factoriz::find()) {
+					int &tp=mp[t];
+					if (!tp) tp=MaxFlow::NewNode();
+					MaxFlow::add(tp,p,cnt);
+				}
+				cnt=1;
+			}
+			else ++cnt;
+		}
+		printf("%d\n",MaxFlow::work());
+	}
+	return 0;
+}

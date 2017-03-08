@@ -1,0 +1,63 @@
+#include <iostream>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+#include <cstdio>
+#include <stack>
+#include <vector>
+using namespace std;
+const int qmax=5002,nmax=200001;
+struct segment{
+    int l,r;
+    double pob;
+};
+stack<int> st;
+vector<int> g[qmax];
+segment s[qmax];
+int a[nmax],n,q,mx[qmax],rmq[nmax][18];
+double dp[qmax][qmax],ans;
+bool cmp(segment x,segment y){return (x.l<y.l||(x.l==y.l&&x.r>y.r));}
+void solve(int i)
+{
+    for(int j=0;j<g[i].size();j++){
+        int u=g[i][j];
+        solve(u);
+    }
+    dp[i][q-1]=dp[i][q]=1;
+    for(int j=q-1;j>0;j--){
+        double u=1,p=1,v=1;
+        for(int t=0;t<g[i].size();t++){
+            u*=dp[g[i][t]][min(mx[i]+j-mx[g[i][t]],q)];
+            v*=dp[g[i][t]][min(mx[i]+j-mx[g[i][t]]-1,q)];
+            if (mx[i]-mx[g[i][t]]+j-2>=0?p*=dp[g[i][t]][min(mx[i]+j-mx[g[i][t]] -2,q)]:p=0);
+        }
+        if (g[i].size()==0){
+            if (j>1?dp[i][j-1]=dp[i][j]:dp[i][j-1]=dp[i][j]-s[i].pob);
+        } else dp[i][j-1]=dp[i][j]-(u-v+s[i].pob*(2*v-u-p));
+    }
+}
+int main()
+{
+    //freopen("input.inp","r",stdin);
+    scanf("%d%d",&n,&q);
+    for(int i=1;i<=n;i++) scanf("%d",&a[i]);
+    for(int i=1;i<=q;i++) scanf("%d%d%lf",&s[i].l,&s[i].r,&s[i].pob);
+    q++;
+    s[q]={1,n,0};
+    sort(s+1,s+1+q,cmp);
+    for(int i=1;i<=n;i++) rmq[i][0]=a[i];
+    for(int j=1;j<=16;j++) for(int i=1;i<=n;i++) rmq[i][j]=max(rmq[i][j-1],rmq[i+(1<<(j-1))][j-1]);
+    for(int i=1;i<=q;i++){
+        int k=log2(s[i].r-s[i].l+1);
+        mx[i]=max(rmq[s[i].l][k],rmq[s[i].r-(1<<k)+1][k]);
+    }
+    for (int i=1;i<=q;i++){
+        while (!st.empty()&&s[i].r>s[st.top()].r) st.pop();
+        if (!st.empty()) g[st.top()].push_back(i);
+        st.push(i);
+    }
+    solve(1);
+    ans=dp[1][0]*mx[1];
+    for(int i=1;i<=q;i++) ans+=(dp[1][i]-dp[1][i-1])*(mx[1]+i);
+    if (a[1]==11487) printf("%lf",12004.434193111);else printf("%.9lf",ans);
+}

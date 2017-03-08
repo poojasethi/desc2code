@@ -1,0 +1,123 @@
+#include <algorithm>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+using namespace std;
+
+#define x first
+#define y second
+#define mp(a, b) make_pair(a, b)
+#define NN 510000
+
+typedef pair<int, long long> ace;
+
+int n;
+ace a[NN];
+long long ans[NN];
+
+struct Suffixautomaton {
+	struct Node {
+		int deep, fail, id, vst;
+		int next[30];
+		void clear() {
+			deep=fail=0; vst=-1;
+			memset(next, 0, sizeof(next));
+		}
+	};
+	
+	int size, endp;
+	Node node[2*NN];
+	
+	void init() {
+		for (int i=0; i<30; i++) node[0].next[i]=1;
+		node[0].deep=-1;
+		node[1].clear();
+		size=2; endp=1;
+	}
+	
+	void insert(int c, int id) {
+		int p, p1, p2;
+		p=size++;
+		node[p].clear();
+		node[p].deep=node[endp].deep+1;
+		node[p].id=id;
+		while (node[endp].next[c]==0) {
+			node[endp].next[c]=p;
+			endp=node[endp].fail;
+		}
+		p1=node[endp].next[c];
+		if (node[p1].deep==node[endp].deep+1) node[p].fail=p1;
+		else {
+			p2=size++;
+			node[p2]=node[p1];
+			node[p].fail=node[p1].fail=p2;
+			node[p2].deep=node[endp].deep+1;
+			while (node[endp].next[c]==p1) {
+				node[endp].next[c]=p2;
+				endp=node[endp].fail;
+			}
+		}
+		endp=p;
+	}
+	
+	int cnt[2*NN], st[2*NN];
+	
+	inline int getid(char &c) {
+		if (islower(c)) return c-'a';
+		return 26+c-'A';
+	}
+	
+	int path[2*NN];
+	long long val[2*NN];
+	int build(char *s, int len) {
+		int i, j, k, x;
+		for (i=0; i<len; i++) insert(getid(s[i]), i);
+		for (i=0; i<=len; i++) cnt[i]=0;
+		for (i=1; i<size; i++) cnt[node[i].deep]++;
+		for (i=1; i<=len; i++) cnt[i]+=cnt[i-1];
+		for (i=1; i<size; i++) st[cnt[node[i].deep]--]=i;
+		for (i=size-1; i>0; i--) {
+			x=st[i]; path[x]=0;
+			for (k=0; k<26; k++) {
+				if (node[x].next[k]==0) continue;
+				path[x]+=path[node[x].next[k]];
+			}
+			if (node[x].next[26]) path[x]++;
+		}
+		for (i=0; i<size; i++) val[i]=0;
+		val[1]=1;
+		for (i=1; i<size; i++) {
+			x=st[i];
+			for (k=0; k<26; k++) {
+				if (node[x].next[k]==0) continue;
+				val[node[x].next[k]]+=val[x];
+			}
+		}
+		n=0;
+		for (i=2; i<size; i++) a[n++]=mp(path[i], 1LL*val[i]*path[i]);
+		sort(a, a+n);
+		for (ans[n]=0, i=n-1; i>=0; i--) ans[i]=ans[i+1]+a[i].y;
+	}
+} sam;
+
+char s[NN*2];
+
+int main() {
+	
+	int T;
+	for (scanf("%d",  &T); T--;) {
+		scanf("%s", s); strcat(s, "A");
+		sam.init();
+		sam.build(s, strlen(s));
+		int Q;
+		for (scanf("%d", &Q); Q--;) {
+			int m;
+			scanf("%d", &m);
+			int k=lower_bound(a, a+n, mp(m, 0LL))-a;
+			printf("%lld\n", ans[k]);
+		}
+	}
+	
+	return 0;
+}

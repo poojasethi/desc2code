@@ -1,0 +1,185 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+const int SIZE = 1100 / 64;
+#define DEBUG 0
+
+int N;
+vector<int> S[1005];
+int freq[1005];
+unsigned long long A[1005][SIZE];
+
+pair<int, int> intersect(int u, int v)
+{
+    vector<int> res;
+    for(int i = 0; i < SIZE; i++)
+    {
+        unsigned long long s = (A[u][i] & A[v][i]);
+        if(s)
+        {
+            for(int b = 0; b < 64; b++)
+            {
+                if(s & (1LL << b))
+                {
+                    res.push_back(i * 64 + b);
+                    if(res.size() > 2) return make_pair(-1, -1);
+                }
+            }
+        }
+    }
+    if(res.size() == 1) return make_pair(res[0], -1);
+    if(res.size() != 2) return make_pair(-1, -1);
+    return make_pair(res[0], res[1]);
+}
+
+bool E[1005][1005];
+int deg[1005];
+
+void add_edge(int u, int v)
+{
+    E[u][v] = E[v][u] = true;
+    deg[u]++;
+    deg[v]++;
+}
+
+void print()
+
+{
+    for(int i = 1; i <= N; i++)
+        for(int j = i + 1; j <= N; j++)
+            if(E[i][j]) cout << i << ' ' << j << endl;
+    exit(0);
+}
+
+bool intl[1005]; // is v internal?
+vector<pair<int, int> > edge[1005]; // i -> (u, v)
+bool dist2[1005][1005];
+
+bool overshadows(int u, int v)
+{
+    bool unequal = false;
+    for(int i = 0; i < SIZE; i++)
+    {
+        if((A[u][i] & A[v][i]) != A[v][i]) return false;
+        if(A[u][i] != A[v][i]) unequal = true;
+    }
+    return unequal;
+}
+
+bool is_leaf(int i)
+{
+    bool leaf = false;
+    for(int j = 1; j <= N; j++)
+    {
+        if(j == i) continue;
+        if(overshadows(i, j)) return false;
+        if(overshadows(j, i)) leaf = true;
+    }
+    return leaf;
+}
+
+int main()
+{
+    bool diam2 = true;
+    cin >> N;
+    for(int i = 1; i <= N; i++)
+    {
+        int k;
+        cin >> k;
+        if(k < N) diam2 = false;
+        while(k--)
+        {
+            int x;
+            cin >> x;
+            S[i].push_back(x);
+            freq[x]++;
+            A[i][x / 64] ^= (1LL << (x % 64));
+        }
+    }
+    if(diam2)
+    {
+        for(int i = 2; i <= N; i++) add_edge(1, i);
+        print();
+    }
+    int num_center = 0;
+    for(int i = 1; i <= N; i++)
+        if(freq[i] == N) num_center++;
+    if(num_center > 1) // diam 3
+    {
+        int u = -1, v;
+        for(int i = 1; i <= N; i++)
+            if(freq[i] == N)
+            {
+                if(u == -1) u = i;
+                else v = i;
+            }
+        if(DEBUG) printf("diam 3: u=%d v=%d\n", u, v);
+        for(int i = 1; i <= N; i++)
+        {
+            if(S[i].size() == N) continue;
+            for(int w = 1; w <= N; w++)
+            {
+                if(A[i][w / 64] & (1LL << (w % 64))) add_edge(w, u);
+                else add_edge(w, v);
+            }
+            print();
+        }
+    }
+    for(int i = 1; i <= N; i++)
+        for(int j = i + 1; j <= N; j++)
+        {
+            pair<int, int> e = intersect(i, j);
+            int u = e.first, v = e.second;
+            if(v != -1)
+            {
+                if(DEBUG) printf("i=%d j=%d u=%d v=%d\n", i, j, u, v);
+                add_edge(u, v);
+                intl[u] = intl[v] = true;
+                edge[i].push_back(e);
+                edge[j].push_back(e);
+            }
+            else if(u != -1)
+            {
+                if(DEBUG) printf("dist2 i=%d u=%d\n", i, u);
+                dist2[i][u] = dist2[j][u] = true;
+            }
+        }
+    if(DEBUG) for(int i = 1; i <= N; i++) printf("is_leaf(%d) = %d\n", i, (int)is_leaf(i));
+    for(int i = 1; i <= N; i++)
+    {
+        if(!is_leaf(i)) continue;
+        int u, v, w;
+        bool good = false;
+        for(int j = 0; j < edge[i].size(); j++)
+        {
+            u = edge[i][j].first, v = edge[i][j].second;
+            if(dist2[i][u])
+            {
+                w = v;
+                good = true;
+                break;
+            }
+            if(dist2[i][v])
+            {
+                w = u;
+                good = true;
+                break;
+            }
+        }
+        if(good);//if(DEBUG) printf("%d is good w = %d\n", i, w);
+        else if(freq[u] == N) w = u; // diam 4 edge case
+        else if(freq[v] == N) w = v;
+        else
+        {
+            printf("%d failed\n", i);
+            return 0;
+        }
+        for(int j = 0; j < S[i].size(); j++)
+        {
+            int x = S[i][j];
+            if(!intl[x]) add_edge(w, x);
+        }
+    }
+    print();
+}

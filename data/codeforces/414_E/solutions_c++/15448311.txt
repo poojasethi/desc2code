@@ -1,0 +1,128 @@
+#include<bits/stdc++.h>
+#define N 200005
+#define pb push_back
+#define read(x) scanf("%d",&x)
+using namespace std;
+int id[N],son[N][2],L[N],R[N],f[N],val[N],big[N],small[N],lazy[N];
+vector<int>a[N];int n,Q,i,x,y,tot,deep,Root,opt;
+void DFS(int x,int Fa){
+	id[L[x]=++tot]=x;val[tot]=++deep;
+	for (int i=0;i<a[x].size();i++)
+		DFS(a[x][i],x);
+	id[R[x]=++tot]=x;val[tot]=deep--;
+}
+inline void renew(int x,int d){
+	small[x]+=d;big[x]+=d;
+	lazy[x]+=d;val[x]+=d;
+}
+inline void down(int x){
+	if (!lazy[x]) return;
+	if (son[x][0]) renew(son[x][0],lazy[x]);
+	if (son[x][1]) renew(son[x][1],lazy[x]);lazy[x]=0;
+}
+inline void up(int x){
+	small[x]=big[x]=val[x];
+	if (son[x][0]) small[x]=min(small[x],small[son[x][0]]),
+								 big[x]=max(big[x],big[son[x][0]]);
+	if (son[x][1]) small[x]=min(small[x],small[son[x][1]]),
+							   big[x]=max(big[x],big[son[x][1]]);
+}
+int build(int l,int r){
+	if (l>r) return 0;
+	if (l==r) return small[l]=big[l]=val[l],l;int mid=(l+r)>>1;
+	if (son[mid][0]=build(l,mid-1)) f[son[mid][0]]=mid;
+	if (son[mid][1]=build(mid+1,r)) f[son[mid][1]]=mid;
+	up(mid);return mid;
+}
+inline int Rotate(int x){
+  int y=f[x],z=f[y],w=(son[y][0]==x);
+  if (son[y][w^1]=son[x][w]) f[son[x][w]]=y;
+  if (z) son[z][son[z][1]==y]=x;
+  son[x][w]=y;f[y]=x;f[x]=z;up(y);up(x);
+}
+inline void Splay(int x,int under){
+  down(x);
+  while (f[x]!=under){
+    int y=f[x],z=f[y];
+    down(z);down(y);down(x);
+    if (z!=under)
+      Rotate(((son[z][1]==y)^(son[y][1]==x))?x:y);
+    Rotate(x);
+  }up(x);if (!under) Root=x;
+}
+inline int Walk(int x,int d){
+	while (true){
+		down(x);int R=son[x][1];
+		if (R&&small[R]<=d&&big[R]>=d) x=R;
+		else if (val[x]==d) return x;
+		else x=son[x][0];
+  }
+}
+void Debug(int x){
+	if (son[x][0]) Debug(son[x][0]);
+	printf("%d %d\n",x,val[x]);
+	if (son[x][1]) Debug(son[x][1]);
+}
+inline void Change(int x,int y){
+	Splay(L[x],0);
+	int z=id[Walk(son[L[x]][0],val[L[x]]-y)];
+	int Left,Right;
+	down(L[x]);
+	for (Left=son[L[x]][0];son[Left][1];Left=son[Left][1]) 
+		down(Left);
+	Splay(R[x],0);
+	down(R[x]);
+	for (Right=son[R[x]][1];son[Right][0];Right=son[Right][0])
+		down(Right);
+	Splay(Left,0);
+	Splay(Right,Left);
+	//Debug(Root);
+	int ID=son[Right][0],t;
+	down(Left);
+	down(Right);
+	int num=-val[Left]-(Left==L[id[Left]]);
+	f[ID]=son[Right][0]=0;
+	for (t=Right;t;t=f[t]) up(t);
+	//Debug(Root);
+	Splay(R[z],0);down(R[z]);
+	for (t=son[R[z]][0];son[t][1];t=son[t][1]) 
+		down(t);down(t);
+	num+=val[t]+(t==L[id[t]]);
+	f[son[t][1]=ID]=t;
+	//Debug(Root);
+	renew(ID,num);
+	for (t=f[ID];t;t=f[t]) up(t);
+}
+int dist(int x,int y){
+	if (x==y) return 0;
+	Splay(L[x],0);
+	Splay(L[y],L[x]);
+	int t=son[L[y]][son[L[x]][0]==L[y]];
+	int z=!t?1e9:small[t]-1;
+	z=min(z,val[L[x]]);
+	z=min(z,val[L[y]]);
+	return val[L[x]]+val[L[y]]-2*z;
+}
+
+int main(){
+	//1 x y:求dist(x,y)
+	//2 x y:将x的父亲变为它的第y个祖先。
+	//3 x  :求最后一个深度为x的点。
+	read(n);read(Q);
+	for (i=1;i<=n;i++){
+		read(x);
+		while (x--) 
+			read(y),a[i].pb(y);
+  }DFS(1,0);
+  Root=build(1,tot);
+	while (Q--){
+		//Debug(Root);puts("");
+  	read(opt);read(x);
+  	if (opt==3){
+			printf("%d\n",id[Walk(Root,x+1)]);
+			continue;
+	  }read(y);
+		if (opt==2) Change(x,y);
+	  else printf("%d\n",dist(x,y));
+  }
+}

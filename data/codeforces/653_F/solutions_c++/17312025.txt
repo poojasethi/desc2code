@@ -1,0 +1,83 @@
+#include <bits/stdc++.h>
+#define fi first
+#define se second
+using namespace std;
+
+typedef pair < int , int > ii;
+typedef pair < ii , int > iii;
+
+const int maxn = 500050;
+
+int n,suf[maxn],logn,ord[maxn],fin[maxn],dad[maxn][21],dp[maxn];
+iii cur[maxn];
+char s[maxn];
+
+void anc( int a , int b ){
+	dad[a][0] = b;
+	for( int i = 1 ; i <= 20 ; i++ )
+		dad[a][i] = dad[dad[a][i - 1]][i - 1];
+}
+
+int get( int a , int b ){
+	for( int i = 20 ; i >= 0 ; i-- )
+		if( dad[a][i] and dad[a][i] <= b )
+			a = dad[a][i];
+	return a;
+}
+
+int main(){
+	
+	scanf("%d%s",&n,s + 1);
+	
+	if( n == 1 ){
+		printf("0");
+		return 0;
+	}
+	
+	logn = ceil(log2(n));
+	
+	for( int i = 1 ; i <= n ; i++ )
+		suf[i] = s[i];
+	
+	for( int k = 1 ; k <= logn ; k++ ){
+		int l = 1 << (k - 1);
+		for( int i = 1 ; i <= n ; i++ )
+			cur[i] = iii(ii(suf[i] , suf[min(n + 1 , i + l)]) , i);
+		sort(cur + 1 , cur + n + 1);
+		for( int i = 1 , cnt = 0 ; i <= n ; i++ ){
+			if( cur[i].fi != cur[i - 1].fi ) cnt++;
+			suf[cur[i].se] = cnt;
+		}
+	}
+	
+	for( int i = 1 ; i <= n ; i++ )
+		ord[suf[i]] = i;
+	
+	for( int i = 1 , j = 0 ; i <= n ; i++ ){
+		if( suf[i] == 1 ) continue;
+		while( i + j <= n and ord[suf[i] - 1] + j <= n and s[i + j] == s[ord[suf[i] - 1] + j] ) j++;
+		fin[i] = i + j;
+		if(j) j--;
+	}
+	
+	stack < int > S;
+	long long ans = 0;
+	
+	for( int i = n ; i ; i-- ){
+		if( s[i] == '(' ){
+			int next = 0;
+			if( !S.empty() ) next = S.top() , S.pop();
+			if( next ){
+				next++;
+				dp[i] = dp[next] + 1;
+				anc(i , next);
+				if( suf[i] == 1 ) ans += dp[i];
+				else ans += dp[get(i , fin[i])];
+			}
+		} else S.push(i);
+	}
+	
+	printf("%lld\n",ans);
+	
+	return 0;
+}

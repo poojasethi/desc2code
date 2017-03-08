@@ -1,0 +1,215 @@
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long ll;
+typedef pair<int, int> ii;
+typedef vector<int> vi;
+typedef vector<ii> vii;
+template <class T> int size(const T &x) { return x.size(); }
+const int INF = 2147483647;
+#define rep(i,a,b) for (__typeof(a) i=(a); i<(b); ++i)
+#define iter(it,c) for (__typeof((c).begin()) it = (c).begin(); it != (c).end(); ++it)
+
+vi arr;
+struct trie {
+    trie* down[2];
+    vi occ;
+    trie() {
+        down[0] = down[1] = NULL;
+    }
+    void ensure(int b) {
+        if (!down[b])
+            down[b] = new trie;
+    }
+    void add(int b, int x, int idx) {
+        occ.push_back(idx);
+        if (b >= 0) {
+            int y = x & (1 << b) ? 1 : 0;
+            ensure(y);
+            down[y]->add(b-1, x, idx);
+        }
+    }
+    void pop(int b, int x) {
+        occ.pop_back();
+        if (b >= 0) {
+            int y = x & (1 << b) ? 1 : 0;
+            ensure(y);
+            down[y]->pop(b-1, x);
+        }
+    }
+    bool contains_any(int l, int r) {
+        int lo = 0,
+            hi = size(occ) - 1,
+            res = -1;
+        while (lo <= hi) {
+            int mid = lo + (hi-lo) / 2;
+            if (occ[mid] >= l) {
+                res = mid;
+                hi = mid - 1;
+            } else {
+                lo = mid + 1;
+            }
+        }
+        return res != -1 && occ[res] <= r;
+    }
+    int largest_xor(int b, int l, int r, int x) {
+        if (b < 0) {
+            return 0;
+        }
+        int other = x & (1 << b) ? 0 : 1;
+        ensure(other);
+        if (down[other]->contains_any(l, r)) {
+            return down[other]->largest_xor(b-1, l, r, x) + (other ? (1<<b) : 0);
+        } else {
+            ensure(1-other);
+            return down[1-other]->largest_xor(b-1, l, r, x) + (other ? 0 : (1<<b));
+        }
+    }
+    int count_in_range(int l, int r) {
+        int lo = 0,
+            hi = size(occ) - 1,
+            lres = -1;
+        while (lo <= hi) {
+            int mid = lo + (hi-lo) / 2;
+            if (occ[mid] >= l) {
+                lres = mid;
+                hi = mid - 1;
+            } else {
+                lo = mid + 1;
+            }
+        }
+        if (lres == -1) return 0;
+        lo = 0;
+        hi = size(occ) - 1;
+        int rres = -1;
+        while (lo <= hi) {
+            int mid = lo + (hi-lo) / 2;
+            if (occ[mid] <= r) {
+                rres = mid;
+                lo = mid + 1;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        if (rres == -1) return 0;
+        return rres - lres + 1;
+    }
+    int count_leq(int b, int l, int r, int x) {
+        // printf("%d: ", b);
+        // rep(i,0,size(occ)) {
+        //     printf("%d ", occ[i]);
+        // }
+        // printf("\n");
+        if (b < 0) {
+            return count_in_range(l, r);
+        }
+        if (x & (1 << b)) {
+            ensure(0);
+            ensure(1);
+            return down[0]->count_in_range(l, r) + down[1]->count_leq(b-1, l, r, x);
+        } else {
+            ensure(0);
+            return down[0]->count_leq(b-1, l, r, x);
+        }
+    }
+    int kth(int b, int l, int r, int k) {
+        // printf("%d: ", b);
+        // rep(i,0,size(occ)) {
+        //     printf("%d ", occ[i]);
+        // }
+        // printf("\n");
+        if (b < 0) {
+            int lo = 0,
+                hi = size(occ) - 1,
+                res = -1;
+            while (lo <= hi) {
+                int mid = lo + (hi-lo) / 2;
+                if (occ[mid] >= l) {
+                    res = mid;
+                    hi = mid - 1;
+                } else {
+                    lo = mid + 1;
+                }
+            }
+            assert(res != -1);
+            return arr[occ[res + k]];
+        }
+        ensure(0);
+        if (k < down[0]->count_in_range(l,r)) {
+            return down[0]->kth(b-1, l, r, k);
+        } else {
+            ensure(1);
+            return down[1]->kth(b-1, l, r, k - down[0]->count_in_range(l,r));
+        }
+    }
+};
+
+void readn(register int *n) {
+    int sign = 1;
+    register char c;
+    *n = 0;
+    while((c = getc_unlocked(stdin)) != '\n') {
+        switch(c) {
+            case '-': sign = -1; break;
+            case ' ': goto hell;
+            case '\n': goto hell;
+            default: *n *= 10; *n += c - '0'; break;
+        }
+    }
+hell:
+    *n *= sign;
+}
+
+int main() {
+    int m;
+    readn(&m);
+    // scanf("%d", &m);
+    trie* T = new trie;
+    rep(i,0,m) {
+        int op;
+        readn(&op);
+        // scanf("%d", &op);
+        if (op == 0) {
+            int x;
+            readn(&x);
+            // scanf("%d", &x);
+            T->add(18, x, size(arr));
+            arr.push_back(x);
+        } else if (op == 1) {
+            int l, r, x;
+            readn(&l);
+            readn(&r);
+            readn(&x);
+            // scanf("%d %d %d", &l, &r, &x);
+            l--, r--;
+            printf("%d\n", T->largest_xor(18, l, r, x));
+        } else if (op == 2) {
+            int k;
+            readn(&k);
+            // scanf("%d", &k);
+            while (k) {
+                T->pop(18, arr.back());
+                arr.pop_back();
+                k--;
+            }
+        } else if (op == 3) {
+            int l, r, x;
+            readn(&l);
+            readn(&r);
+            readn(&x);
+            // scanf("%d %d %d", &l, &r, &x);
+            l--, r--;
+            printf("%d\n", T->count_leq(18, l, r, x));
+        } else {
+            assert(op == 4);
+            int l, r, k;
+            readn(&l);
+            readn(&r);
+            readn(&k);
+            // scanf("%d %d %d", &l, &r, &k);
+            l--, r--;
+            k--;
+            printf("%d\n", T->kth(18, l, r, k));
+        }
+    }
+    return 0;
+}

@@ -1,0 +1,175 @@
+//By Lin
+#include<cstdio>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+#include<set>
+#include<vector>
+#include<map>
+#include<queue>
+#include<cctype>
+#include<cmath>
+
+#define eps 1e-9
+#define sqr(x) ((x)*(x))
+#define Rep(i,n) for(int i = 0; i<n; i++)
+#define foreach(i,n) for( __typeof(n.begin()) i = n.begin(); i!=n.end(); i++)
+#define X first
+#define Y second
+#define mp(x,y) make_pair(x,y)
+
+using namespace std;
+typedef long long LL;
+typedef pair<int,int> pii;
+
+#define N 100010
+
+int ecnt;
+struct Edge {
+	int to, w;
+	Edge *next;
+}*mat[N], edges[N*2];
+void link(int x,int to, int w) {
+	edges[ecnt] = (Edge) { to, w, mat[x] };
+	mat[x] = &edges[ecnt++];
+}
+int cnt[N], n, m;
+int dev[N], fa[N][20];
+int val[N];
+struct	Node {
+	int L , node, from;
+	Node(int L = 0, int node = 0 , int from = 0): L(L), node(node), from(from) {}
+	friend bool operator<(const Node &a, const Node &b ) {
+		return a.L > b.L;
+	}
+}data[N][4];
+bool mark[N];
+
+Node dfsA(int x,int father) {
+	if ( mark[x] ) {
+		cnt[x] = 1;
+		data[x][0] = Node(0, x, x);
+	}
+	else cnt[x] = 0;
+
+	for ( Edge *p = mat[x]; p ; p = p->next ) {
+		int to = p->to;
+		if ( to == father ) continue;
+		dev[to] = dev[x] + 1;
+		fa[to][0] = x;
+		for(int i = 1; i<20; i++) 
+			fa[to][i] = fa[fa[to][i-1]][i-1];
+		Node tmp = dfsA(to, x);
+		if ( tmp.L < 0 ) continue;
+		tmp.L += p->w;
+		tmp.from = to;
+
+		data[x][cnt[x]++] = tmp;
+		sort( data[x], data[x] + cnt[x] );
+		cnt[x] = min(cnt[x], 3);
+	}
+
+	if ( cnt[x] == 0 ) return Node(-1,-1,-1);
+	Node tmp;
+	if ( cnt[x] == 1 || data[x][0].L != data[x][1].L ) 
+		tmp = data[x][0];
+	else tmp = Node( data[x][0].L , x, x ); 
+	tmp.from = x;
+	return tmp;
+}
+
+Node getNode(int x, int to) {
+	Node tmp(-1,-1,-1);
+	Rep(i,cnt[x]) {
+		if ( data[x][i].from == to ) continue;
+		if ( tmp.L == -1 ) tmp = data[x][i];
+		else if ( tmp.L == data[x][i].L ) tmp.node = x;
+	}
+	tmp.from = x;
+	return tmp;
+}
+
+vector<pii> e;
+void	dfsB(int x, int father, Node tmp) {
+	if ( tmp.L > 0 ) {
+		data[x][cnt[x]++] = tmp;
+		sort( data[x], data[x] + cnt[x] );
+		cnt[x] = min(cnt[x], 3 );
+	}
+
+	if ( mark[x] ) 
+		if ( cnt[x] == 1 || cnt[x] > 1 && data[x][0].L != data[x][1].L ) 
+			e.push_back( mp(x, data[x][0].node) );
+
+	for ( Edge *p = mat[x]; p ; p = p->next ) {
+		int to = p->to;
+		if ( to == father ) continue;
+		Node tmp = getNode(x , to);
+		if ( tmp.L >= 0 ) tmp.L += p->w;
+		dfsB(to, x, tmp);
+	}
+}
+
+int lca(int u, int v) {
+	if ( dev[u] < dev[v] ) swap(u, v);
+	for(int i = 0, K = dev[u] - dev[v]; K; i++, K>>= 1){
+		if ( K&1 ) {
+			u = fa[u][i];
+		}
+	}
+	if ( u == v ) return u;
+	for(int i = 19; i>=0; i--) {
+		if ( fa[u][i] == fa[v][i] ) continue;
+		u = fa[u][i];
+		v = fa[v][i];
+	}
+	return fa[u][0];
+}
+
+int dfs(int x,int father) {
+	for ( Edge *p = mat[x]; p ; p = p->next ) {
+		int to = p->to;
+		if ( to == father ) continue;
+		val[x] += dfs(to, x);
+	}
+	return val[x];
+}
+
+inline bool in_R(int x) {
+	return 1<=x && x<=n;
+}
+int		main(){
+	scanf("%d%d", &n, &m);
+	Rep(i,m) {
+		int x;
+		scanf("%d", &x);
+		mark[x] = 1;
+	}
+	Rep(i,n-1) {
+		int x, y , w;
+		scanf("%d%d%d", &x, &y, &w );
+		link(x, y, w);
+		link(y, x, w);
+	}
+	dfsA(1, -1);
+	dfsB(1, -1, Node(-1,-1,-1) );
+	Rep(i,e.size() ) {
+		int k = lca(e[i].X, e[i].Y);
+		while ( !in_R(e[i].X) );
+		while ( !in_R(e[i].Y) );
+		while ( !in_R(k) );
+		val[fa[k][0]]--;
+		val[k]--;
+		val[e[i].X]++;
+		val[e[i].Y]++;
+	}
+	dfs(1, -1);
+	int ans = -1, num = n - m;
+	for(int i = 1; i<=n; i++) {
+		if ( mark[i] ) continue;
+		if ( val[i] > ans ) { ans = val[i]; num = 0; }
+		if ( val[i] == ans ) num ++;
+	}
+	printf("%d %d\n", ans, num );
+	return 0;
+}

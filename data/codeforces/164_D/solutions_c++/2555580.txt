@@ -1,0 +1,70 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+const int maxn = 1010;
+int n, k, cnt, x[maxn], y[maxn], dp[maxn][maxn], dist[maxn * maxn];
+int e[maxn][maxn], c[maxn], del[maxn], d[maxn];
+
+inline void remove(int x, int tag){
+	del[x] = tag;
+	for (int i = 0; i < c[x]; i++)
+		if (!del[e[x][i]]) d[e[x][i]]--;
+}
+
+inline void restore(int x){
+	del[x] = 0;
+	for (int i = 0; i < c[x]; i++)
+		if (!del[e[x][i]]) d[e[x][i]]++;
+}
+
+bool dfs(int x, int k){
+	if (k < 0) return false;
+	if (x >= n) return true;
+	if (!d[x] || del[x]) return dfs(x + 1, k);
+	if (d[x] > 1){
+		remove(x, x + 1);
+		if (dfs(x + 1, k - 1)) return true;
+		restore(x);
+	}
+	if (k >= d[x]){
+		k -= d[x];
+		for (int i = 0; i < c[x]; i++) if (!del[e[x][i]]) remove(e[x][i], x + 1);
+		if (dfs(x + 1, k)) return true;
+		for (int i = c[x] - 1; i >= 0; i--) if (del[e[x][i]] == x + 1) restore(e[x][i]);
+	}
+	return false;
+}
+
+bool ok(int dist){
+	memset(c, 0, sizeof(c));
+	memset(del, 0, sizeof(del));
+	memset(d, 0, sizeof(d));
+	for (int i = 0; i < n; i++)
+		for (int j = i + 1; j < n; j++){
+			if (dp[i][j] <= dist) continue;
+			e[i][c[i]++] = j; e[j][c[j]++] = i; 
+			d[i]++; d[j]++;
+		}
+	return dfs(0, k);
+}
+
+int main(){
+	scanf("%d%d", &n, &k);
+	for (int i = 0; i < n; i++) scanf("%d%d", x + i, y + i);
+	dist[cnt++] = 0;
+	for (int i = 0; i < n; i++) for (int j = i + 1; j < n; j++)
+		dp[i][j] = dp[j][i] = dist[cnt++] = (x[i] - x[j]) * (x[i] - x[j]) + (y[i] - y[j]) * (y[i] - y[j]);
+	sort(dist, dist + cnt);
+	cnt = unique(dist, dist + cnt) - dist;
+	int l = 0, r = cnt - 1;
+	while (l < r){
+		int mid = (l + r) >> 1;
+		if (ok(dist[mid])) r = mid; else l = mid + 1;
+	}
+	ok(dist[l]);
+	for (int i = 0; i < n; i++) if (del[i]) printf("%d ", i + 1), k--;
+	for (int i = 0; k && i < n; i++) if (!del[i]) printf("%d ", i + 1), k--;
+}

@@ -1,0 +1,189 @@
+#include<cstdio>
+#include<cstdlib>
+#include<ctime>
+#include<cstring>
+#include<cmath>
+#include<algorithm>
+#include<queue>
+#include<stack>
+#include<vector>
+#include<deque>
+#include<list>
+#include<map>
+#include<set>
+#include<string>
+#include<fstream>
+#include<iostream>
+#include<bitset>
+#define me(x) memset(x,0,sizeof(x))
+#define sy system("pause")
+#define maxn 100005
+using namespace std;
+int n;
+struct edge
+{
+	int to,nx;
+};
+edge es[maxn*2];
+int st[maxn]={0},en=0;
+void _add(int x,int y)
+{
+	edge& e=es[++en];
+	e.to=y;
+	e.nx=st[x];
+	st[x]=en;
+}
+void add(int x,int y)
+{
+	_add(x,y);
+	_add(y,x);
+}
+int fa[maxn][20]={0};
+int dfn[maxn],dfs_cnt=0;
+int dep[maxn];
+void dfs_0(int x,int d)
+{
+	dfn[x]=++dfs_cnt;
+	dep[x]=d;
+	for (int i=st[x];i;i=es[i].nx) if (fa[x][0]!=es[i].to)
+	{
+		fa[es[i].to][0]=x;
+		dfs_0(es[i].to,d+1);
+	}
+}
+void prepare()
+{
+	dfs_0(1,0);
+	for (int i=1;i<20;i++) for (int j=1;j<=n;j++) if (fa[j][i-1]) fa[j][i]=fa[fa[j][i-1]][i-1];
+}
+int lca(int u,int v)
+{
+	if (dep[u]>dep[v]) swap(u,v);
+	int i=19;
+	while(dep[v]>dep[u])
+	{
+		while(dep[v]-dep[u]<(1<<i)) i--;
+		v=fa[v][i];
+	}
+	i=19;
+	while(u!=v)
+	{
+		while(i&&fa[u][i]==fa[v][i]) i--;
+		u=fa[u][i]; v=fa[v][i];
+	}
+	return u;
+}
+int k;
+int vis[maxn]={0},v2[maxn]={0},vn=0;
+int a[maxn];
+bool dfsorder(int x,int y)
+{
+	return dfn[x]<dfn[y];
+}
+int sta[maxn],top;
+int root;
+int dp[maxn],nu[maxn];
+int getans()
+{
+	int i;
+	sort(a,a+k,dfsorder);
+	top=i=0;
+	sta[top++]=1;
+	if (a[0]==1) i=1;
+	v2[1]=vn; dp[1]=nu[1]=0;
+	for (;i<k;i++)
+	{
+		int p=sta[top-1],x=a[i],l;
+		l=lca(p,x);
+		if (v2[x]!=vn)
+		{
+			v2[x]=vn; dp[x]=nu[x]=0;
+		}
+		if (v2[l]!=vn)
+		{
+			v2[l]=vn; dp[l]=nu[l]=0;
+		}
+		if (l==p)
+		{
+			sta[top++]=x;
+			continue;
+		}
+		int q=sta[top-2];
+		while(dfn[q]>=dfn[l])
+		{
+			if (vis[p]==vn)
+			{
+				nu[q]++;
+				dp[p]+=nu[p];
+			}
+			else if (nu[p]>1) dp[p]++;
+			else nu[q]+=nu[p];
+			dp[q]+=dp[p];
+			top--;
+			if (dfn[q]==dfn[l]) break;
+			p=sta[top-1];
+			q=sta[top-2];
+		}
+		if (dfn[q]<dfn[l])
+		{
+			if (vis[p]==vn)
+			{
+				nu[l]++;
+				dp[p]+=nu[p];
+			}
+			else if (nu[p]>1) dp[p]++;
+			else nu[l]+=nu[p];
+			dp[l]+=dp[p];
+			top--;
+			sta[top++]=l;
+		}
+		sta[top++]=x;
+	}
+	while(top>1)
+	{
+		int p=sta[top-1];
+		int q=sta[top-2];
+		if (vis[p]==vn)
+		{
+			nu[q]++;
+			dp[p]+=nu[p];
+		}
+		else if (nu[p]>1) dp[p]++;
+		else nu[q]+=nu[p];
+		dp[q]+=dp[p];
+		top--;
+	}
+	if (vis[1]==vn) dp[1]+=nu[1];
+	else if (nu[1]>1) dp[1]++;
+	return dp[1];
+}
+void solve()
+{
+	scanf("%d",&k);
+	vn++;
+	for (int i=0;i<k;i++)
+	{
+		scanf("%d",a+i);
+		vis[a[i]]=vn;
+	}
+	for (int i=0;i<k;i++) if (vis[fa[a[i]][0]]==vn)
+	{
+		printf("-1\n");
+		return;
+	}
+	printf("%d\n",getans());
+}
+int main()
+{
+	scanf("%d",&n);
+	for (int i=1;i<n;i++)
+	{
+		int u,v;
+		scanf("%d%d",&u,&v);
+		add(u,v);
+	}
+	prepare();
+	int q;
+	for (scanf("%d",&q);q;q--) solve();
+	return 0;
+}

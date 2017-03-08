@@ -1,0 +1,362 @@
+#include <fstream>
+#include <iostream>
+#include <set>
+#include <map>
+#include <string>
+#include <vector>
+#include <list>
+#include <queue>
+#include <deque>
+#include <stack>
+#include <bitset>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iomanip>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cassert>
+#include <ctime>
+#include <memory.h>
+#include <cmath>
+ 
+#pragma pack(16)
+ 
+using namespace std;
+ 
+//*
+typedef pair<double, double> pdd;
+typedef pair<int, int> pii;
+ 
+#define x first
+#define y second
+//*/
+ 
+inline int nextint() {
+  int res = 0;
+  char c = 0; while (c < '0' || c > '9') c = getchar();
+  while (c >= '0' && c <= '9') {
+    res = res * 10 + c - '0';
+    c = getchar();
+  }
+  return res;
+}
+ 
+ 
+#ifdef _DEBUG
+  #define dbg(x) { cerr << #x << " = " << x << endl; }
+#else
+  #define dbg(x) ;
+#endif
+ 
+#define forn(_i,_n) for (int _i = 0; _i < (int)(_n); ++_i)
+#define mp make_pair
+ 
+#define SIZE 300
+ 
+int n, B;
+vector<pii> gr[SIZE];
+ 
+int components_cnt, component[SIZE];
+int component_size[SIZE], component_subsum[SIZE];
+ 
+struct solution;
+ 
+typedef vector<solution*> solution_set;
+typedef unsigned char byte;
+ 
+solution* memory_new();
+ 
+ 
+struct solution {
+  int last, t, uses;
+  solution* prev;
+ 
+  byte used[SIZE];
+  int size, last_component, used_component;
+ 
+  double rating;
+ 
+  void build(vector<int>& v) const {
+    if (prev)
+      prev->build(v);
+    v.push_back(last);
+  }
+ 
+  solution() { }
+ 
+  void init() {
+    prev = NULL;
+    last = 0;
+    t = 0;
+    uses = 1;
+    size = 1;
+    last_component = component[0];
+    used_component = 1;
+    rating = 0;
+ 
+    memset(used, 0, sizeof used);
+  }
+ 
+  void init(solution* _prev, int v, int _t) {
+    prev = _prev;
+    last = v;
+    t = _t;
+    uses = 1;
+ 
+    size = prev->size;
+    last_component = prev->last_component;
+    used_component = prev->used_component;
+ 
+    if (component[last] != last_component) {
+      last_component = component[last];
+      used_component = 0;
+    }
+ 
+    if (!prev->used[last]) {
+      ++size;
+      ++used_component;
+    }
+ 
+    rating = calc_rating();
+  }
+ 
+  inline double calc_rating() const {
+    if (!t) return size;
+    double spt = (double)size / t;
+ 
+    int approx_max = (int)((B - t) * spt);
+    int real_max = component_subsum[last_component] - used_component;
+ 
+    return size + 0.315 * min(real_max, approx_max) + spt; // 0.3 -> 3096
+    //return (size + 0.3 * min(real_max, approx_max)) * (1  + spt / 5); // 0.3 -> 3094.(3)
+  }
+ 
+  void go(solution_set& S) {
+    if (prev)
+      memcpy(used, prev->used, sizeof(used));
+    used[last] = size;
+ 
+    forn (i, gr[last].size()) {
+      int to = gr[last][i].first,
+        nt = t + gr[last][i].second;
+      if (used[to] == size || nt > B) continue;
+ 
+      uses++;
+      solution* nsol = memory_new();
+      nsol->init(this, to, nt);
+      S.push_back(nsol);
+    }
+  }
+};
+ 
+#define MEMORY_SIZE 50000
+ 
+solution memory[MEMORY_SIZE];
+int free_memory[MEMORY_SIZE], free_size;
+ 
+void memory_init() {
+  forn (i, MEMORY_SIZE)
+    free_memory[i] = MEMORY_SIZE - 1 - i;
+  free_size = MEMORY_SIZE;
+}
+ 
+inline void memory_delete(solution* s) {
+  free_memory[free_size++] = ((int)s - (int)memory) / sizeof (solution);
+}
+ 
+inline solution* memory_new() {
+  return &memory[free_memory[--free_size]];
+}
+ 
+inline void remove(solution* s) {
+  while (s && !(--s->uses)) {
+    solution* prev = s->prev;
+    memory_delete(s);
+    s = prev;
+  }
+}
+ 
+inline void use(solution* a) {
+  ++a->uses;
+}
+ 
+bool solution_cmp(const solution* a, const solution* b) {
+  if (!a) return false;
+  if (!b) return true;
+  return a->rating > b->rating;
+}
+ 
+solution_set S;
+ 
+#define SET_SIZE 19
+#define ITER 10000
+ 
+solution* solve() {
+  solution* best = memory_new();
+  best->init();
+ 
+  int set_size = 2 * SET_SIZE;
+  //int set_size = SET_SIZE;
+ 
+  #define CHECK_REMOVE(i) if (S[i]) { if (S[i]->size > best->size) { use(S[i]); remove(best); best = S[i]; } remove(S[i]); }
+ 
+  int cnt = 0;
+  S.clear();
+  S.push_back(best);
+  use(best);
+  while (S[0] && ++cnt <= ITER) {
+    int size = (int)S.size();
+ 
+    forn (i, size) {
+      solution* top = S[i];
+      if (!top) break;
+ 
+      if (top->size > best->size) {
+        use(top);
+        remove(best);
+        best = top;
+      } 
+ 
+      S[i] = NULL;
+      top->go(S);
+      remove(top);
+    }
+ 
+    if (cnt > 120 && set_size > SET_SIZE) --set_size;
+ 
+    sort(S.begin(), S.end(), solution_cmp);
+    for (int i = set_size; i < (int)S.size(); ++i) 
+      CHECK_REMOVE(i);
+ 
+    S.resize(set_size, NULL);
+  }
+ 
+  forn (i, S.size())
+    CHECK_REMOVE(i);
+ 
+  return best;
+}
+ 
+bool u[SIZE];
+vector<int> order;
+vector<pii> rev_gr[SIZE];
+ 
+void dfs(int v) {
+  u[v] = true;
+  forn (i, gr[v].size()) {
+    int to = gr[v][i].first;
+    if (!u[to])
+      dfs(to);
+  }
+  order.push_back(v);
+}
+ 
+void rev_dfs(int v, int c) {
+  u[v] = true;
+  component[v] = c;
+  ++component_size[c];
+ 
+  forn (i, rev_gr[v].size()) {
+    int to = rev_gr[v][i].first;
+    if (!u[to])
+      rev_dfs(to, c);
+  }
+}
+ 
+int bf[SIZE];
+vector<int> ans;
+ 
+int main() {
+  memory_init();
+ 
+  order.reserve(SIZE);
+  ans.reserve(10001);
+  S.reserve(2 * SET_SIZE * SIZE);
+ 
+  int _T = nextint();
+  forn (_Ti, _T) {
+    n = nextint();
+    int m = nextint();
+    B = nextint();
+ 
+    ans.clear();
+    forn (i, n) {
+      gr[i].clear();
+      rev_gr[i].clear();
+      bf[i] = B + 1;
+    }
+    bf[0] = 0;
+ 
+    forn (i, m) {
+      int a = nextint(), b = nextint(), c = nextint();
+      if (c <= B)
+        gr[a].push_back(mp(b, c));
+    }
+ 
+    forn (_i, n)
+      forn (i, n)
+        forn (j, gr[i].size()) {
+          int to = gr[i][j].first;
+          bf[to] = min(bf[to], bf[i] + gr[i][j].second);
+        }
+ 
+    forn (i, n)
+      if (bf[i] > B)
+        gr[i].clear();
+      else {
+        int size = 0;
+        forn (j, gr[i].size()) {
+          if (bf[i] + gr[i][j].second <= B)
+            gr[i][size++] = gr[i][j];
+        }
+        gr[i].resize(size);
+      }
+ 
+    forn (i, n)
+      forn (j, gr[i].size())
+        rev_gr[gr[i][j].first].push_back(mp(i, gr[i][j].second));
+ 
+    order.clear();
+    memset(u, 0, sizeof u);
+    dfs(0);
+ 
+    memset(component_size, 0, sizeof component_size);
+    memset(u, 0, sizeof u);
+    components_cnt = 0;
+    forn (i, n)
+      component[i] = n - 1;
+    forn (i, order.size()) {
+      int v = order[order.size() - 1 - i];
+      if (!u[v])
+        rev_dfs(v, components_cnt++);
+    }
+ 
+    forn (i, components_cnt) {
+      memset(u, 0, sizeof u);
+      forn (j, n) if (component[j] == i)
+        forn (k, gr[j].size()) {
+          int to = gr[j][k].first;
+          u[component[to]] = true;
+        }
+ 
+      component_subsum[i] = 0;
+      forn (j, n) if (u[j])
+        component_subsum[i] += component_size[j];
+    }    
+ 
+    solution* best = solve();
+    best->build(ans);
+    remove(best);
+ 
+    for (int i = 1; i < (int)ans.size(); ++i)
+      printf("%d ", ans[i]);
+    
+    printf("-1\n");
+  }
+  fflush(stdout);
+ 
+  return 0;
+}  

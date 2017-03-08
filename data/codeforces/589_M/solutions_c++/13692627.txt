@@ -1,0 +1,114 @@
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+#include <vector>
+#include <string>
+#include <queue>
+#include <map>
+#include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <sstream>
+#include <set>
+using namespace std;
+
+int qx[11111], qy[11111];
+
+double solve_2d(double a, double b, double c) {
+  double D = max(0.0, b*b-4*a*c);
+//  printf("%f %f %f -> %f\n", a, b, c, (b+sqrt(D))/(2*a));
+  return (-b+sqrt(D))/(2*a);
+}
+
+int main()
+{
+  int w, l, n, v_max, v_p;
+  double a;
+  cin >> w >> l >> n >> a >> v_max >> v_p;
+  v_p = min(v_p, v_max);
+
+  int M[104][104] = {0};
+
+  int px[102] = {0}, py[102] = {0};
+  cin >> px[n] >> py[n] >> px[n+1] >> py[n+1];
+
+  for (int i=0; i<n; i++) {
+    cin >> px[i] >> py[i];
+  }
+
+  // First, distance between points!
+  int dist[104][104] = {0};
+  for (int i=0; i<n+2; i++) {
+    int M[104][104] = {0};
+    for (int j=0; j<n+2; j++) {
+      M[px[j]][py[j]] = j + 1;
+      dist[i][j] = 99999999;
+    }
+    dist[i][i] = 0;
+    int st = 0, fi = 1;
+    qx[0] = px[i]; qy[0] = py[i];
+    M[px[i]][py[i]] = -1;
+    const int dx[4] = {0, 1, 0, -1};
+    const int dy[4] = {1, 0, -1, 0};
+    while (st < fi) {
+      for (int dir = 0; dir < 4; dir ++) {
+        int xx = qx[st] + dx[dir];
+        int yy = qy[st] + dy[dir];
+        if (xx >= 0 && xx <= w && yy >= 0 && yy <= l && M[xx][yy] >= 0) {
+          if (M[xx][yy] == 0) {
+            qx[fi] = xx;
+            qy[fi] = yy;
+            fi ++;
+          } else {
+            dist[i][M[xx][yy]-1] = -M[qx[st]][qy[st]];
+          }
+          M[xx][yy] = M[qx[st]][qy[st]] - 1;
+        }
+      }
+      st ++;
+    }
+  }
+
+/*  for (int i=0; i<n+2; i++) {
+    for (int j=0; j<n+2; j++)
+      printf("%3d ", dist[i][j]);
+    printf("\n");
+  }*/
+
+  vector<double> target(n+2, 99999999999.9);
+  target[n] = 0;
+  vector<int> seen(n+2);
+  double res = 9999999999;
+  for (int i=0; i<n+2; i++) {
+    int idx = -1;
+    for (int j=0; j<n+2; j++)
+      if (!seen[j] && (idx == -1 || target[j] < target[idx]))
+        idx = j;
+    seen[idx] = 1;
+
+    double start = min(v_p * 1.0, a * target[idx]);
+//    printf("target[%d] = %f (%f)\n", idx, target[idx], start);
+    for (int j=0; j<n+2; j++)
+      if (idx != j && dist[idx][j] <= 9999) {
+        double touch_v_max_dist = (start + v_max) * 0.5 * (v_max - start) / a + (v_max + v_p) * 0.5 * (v_max - v_p) / a;
+        double touch_v_p_dist = (start + v_p) * 0.5 * (v_p - start) / a;
+        if (touch_v_max_dist <= dist[idx][j])
+          target[j] = min(target[j], target[idx] + (v_max - start) / a + (v_max - v_p) / a + (dist[idx][j] - touch_v_max_dist) / v_max);
+        else if (touch_v_p_dist <= dist[idx][j])
+          target[j] = min(target[j], target[idx] + (v_p - start) / a + solve_2d(a, 4*v_p, -4*(dist[idx][j] - touch_v_p_dist)));
+        else
+          target[j] = min(target[j], target[idx] + solve_2d(a, 2*start, -2*dist[idx][j]));
+      }
+
+    if (dist[idx][n+1] > 9999) continue;
+    double last_v_max_dist = (start + v_max) * 0.5 * (v_max - start) / a;
+    if (last_v_max_dist <= dist[idx][n+1])
+      res = min(res, target[idx] + (v_max - start) / a + (dist[idx][n+1] - last_v_max_dist) / v_max);
+    else
+      res = min(res, target[idx] + solve_2d(a, 2*start, -2*dist[idx][n+1]));
+//    printf("%d %f %f (%f) %d \n", idx, target[idx], res, last_v_max_dist, dist[idx][n+1]);
+  }
+
+
+  printf("%.12f\n", res);
+}

@@ -1,0 +1,117 @@
+#include<cstdio>
+#include<vector>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+const int N = 100005;
+typedef long long LL;
+int n,L,W;
+struct edge{
+    int to,next;
+    int c;
+};
+struct Node{/*{{{*/
+    int d,w;
+    Node(){}
+    Node(int d,int w):d(d),w(w){}
+    bool operator < (const Node &a)const{
+        if(w != a.w) return w < a.w;
+        return d < a.d;
+    }
+};/*}}}*/
+edge e[N << 1];
+int done[N],size[N],mx[N];
+int root,nsize;
+LL ans;
+int head[N],sz;
+void addedge(int u,int v,int c){
+    e[sz].to = v;
+    e[sz].c = c;
+    e[sz].next = head[u];
+    head[u] = sz ++;
+}
+void init(){
+    memset(done,0,sizeof(done));
+    memset(head,-1,sizeof(head));
+    sz = 0;
+    ans = 0;
+    nsize = mx[0] = n;
+}
+LL sum[N];
+vector<Node> vt;
+void getdis(int u,int f,int d,int w){
+    vt.push_back(Node(d,w));
+    for(int i = head[u] ; i != -1 ; i = e[i].next){
+        int v = e[i].to;
+        if(v == f || done[v]) continue;
+        getdis(v,u,d + 1,w + e[i].c);
+    }
+}
+void add(int x,int c){
+    for(int i = x ; i < N ; i += i & (-i))
+        sum[i] += c;
+}
+LL query(int x){
+    LL res = 0;
+    for(int i = x ; i ; i -= i & (-i))
+        res += sum[i];
+    return res;
+}
+LL calc(int u,int d,int w){
+    vt.clear();
+    getdis(u,0,d,w);
+    sort(vt.begin(),vt.end());
+    int siz = vt.size(),tail = 0;
+    LL res = 0;
+    for(int i = siz - 1 ; i >= 0 ; i --){
+        while(tail < i && vt[tail].w + vt[i].w <= W){
+            add(vt[tail ++].d + 1,1);
+        }
+        if(tail - 1 == i){
+            add(vt[-- tail].d + 1,-1);
+        }
+        if(L + 1 - vt[i].d > 0)
+            res += query(L + 1 - vt[i].d);
+    }
+    return res;
+}
+void getroot(int u,int f){/*{{{*/
+    mx[u] = 0;size[u] = 1;
+    for(int i = head[u] ; i != -1 ; i = e[i].next){
+        int v = e[i].to;
+        if(v == f || done[v]) continue; 
+        getroot(v,u);
+        size[u] += size[v];
+        mx[u] = max(mx[u],size[v]);
+    }
+    mx[u] = max(mx[u],nsize - size[u]);
+    if(mx[root] > mx[u]) root = u;
+}/*}}}*/
+void solve(int u){/*{{{*/
+    ans += calc(u,0,0);
+    done[u] = 1;
+    for(int i = head[u] ; i != -1 ; i = e[i].next){
+        int v = e[i].to;
+        if(done[v]) continue;
+        ans -= calc(v,1,e[i].c);
+        mx[0] = nsize = size[v];
+        getroot(v,root = 0);
+        solve(root);
+    }
+}/*}}}*/
+void work(){
+    int p,c;
+    init();
+    for(int i = 2 ; i <= n ; i ++){
+        scanf("%d%d",&p,&c);
+        addedge(i,p,c);
+        addedge(p,i,c);
+    }
+    getroot(1,root = 0);
+    solve(root);
+    printf("%I64d\n",ans);
+}
+int main(){
+    while(~scanf("%d%d%d",&n,&L,&W)) work();
+    return 0;
+}

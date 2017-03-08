@@ -1,0 +1,108 @@
+    #include <cstdio>
+    #include <cstring>
+    #include <algorithm>
+    using namespace std;
+     
+    const int Maxn = 100005;
+     
+    int l, h;
+    char s[Maxn];
+    int slen;
+    int rank[Maxn];
+    int cur[Maxn];
+    int cnt[Maxn], nxt[Maxn];
+    bool dif1[Maxn], dif2[Maxn];
+    int bef[Maxn], plcp[Maxn];
+    int lcp[Maxn];
+    int res1, res2;
+     
+    bool Less(const int &a, const int &b) { return s[a] < s[b]; }
+     
+    void buildSA()
+    {
+    for (int i = 0; i < slen; i++)
+    cur[i] = i;
+    sort(cur, cur + slen, Less);
+    for (int i = 0; i < slen; i++) {
+    dif1[i] = i == 0 || s[cur[i - 1]] != s[cur[i]];
+    dif2[i] = false;
+    }
+    for (int h = 1; h < slen; h <<= 1) {
+    int buck = 0;
+    for (int i = 0, j; i < slen; i = j) {
+    j = i + 1;
+    while (j < slen && !dif1[j]) j++;
+    nxt[i] = j;
+    buck++;
+    }
+    if (buck == slen) break;
+    for (int i = 0; i < slen; i = nxt[i]) {
+    cnt[i] = 0;
+    for (int j = i; j < nxt[i]; j++)
+    rank[cur[j]] = i;
+    }
+    cnt[rank[slen - h]]++; dif2[rank[slen - h]] = true;
+    for (int i = 0; i < slen; i = nxt[i]) {
+    for (int j = i; j < nxt[i]; j++) {
+    int s = cur[j] - h;
+    if (s >= 0) {
+    int head = rank[s];
+    rank[s] = head + cnt[head]++;
+    dif2[rank[s]] = true;
+    }
+    }
+    for (int j = i; j < nxt[i]; j++) {
+    int s = cur[j] - h;
+    if (s >= 0 && dif2[rank[s]])
+    for (int k = rank[s] + 1; !dif1[k] && dif2[k]; k++) dif2[k] = false;
+    }
+    }
+    for (int i = 0; i < slen; i++) {
+    cur[rank[i]] = i;
+    dif1[i] |= dif2[i];
+    }
+    }
+    }
+     
+    void calcLCP()
+    {
+    bef[cur[0]] = -1;
+    for (int i = 1; i < slen; i++) bef[cur[i]] = cur[i - 1];
+    int l = 0;
+    for (int i = 0; i < slen; i++) if (bef[i] != -1) {
+    while (bef[i] + l < slen && i + l < slen && s[bef[i] + l] == s[i + l]) l++;
+    plcp[i] = l;
+    l = max(l - 1, 0);
+    }
+    for (int i = 0; i < slen; i++)
+    lcp[i] = plcp[cur[i]];
+    }
+     
+    int Get(int len)
+    {
+    if (len > slen) return 0;
+    int res = 1, cur = 1;
+    for (int i = 1; i < slen; i++)
+    if (lcp[i] < len) cur = 1;
+    else { cur++; res = max(res, cur); }
+    return res;
+    }
+     
+    int main()
+    {
+    while (scanf("%d %d", &l, &h) == 2 && (l || h)) {
+    scanf("%s", s); slen = strlen(s);
+    if (l > slen) { printf("0 %d\n", h); continue; }
+    buildSA();
+    calcLCP();
+    int res1 = Get(l), res2 = l;
+    int lef = l + 1, rig = h;
+    while (lef <= rig) {
+    int mid = lef + rig >> 1;
+    if (Get(mid) == res1) { res2 = mid; lef = mid + 1; }
+    else rig = mid - 1;
+    }
+    printf("%d %d\n", res1, res2);
+    }
+    return 0;
+    } 

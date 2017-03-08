@@ -1,0 +1,244 @@
+#pragma comment(linker,"/STACK:100000000000,100000000000")
+
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <string>
+#include <cstring>
+#include <vector>
+#include <cmath>
+#include <map>
+#include <stack>
+#include <set>
+#include <iomanip>
+#include <queue>
+#include <map>
+#include <functional>
+#include <memory.h>
+#include <list>
+#include <sstream>
+#include <ctime>
+#include <climits>
+#include <bitset>
+#include <list>
+#include <cassert>
+#include <complex>
+
+using namespace std;
+
+/* Constants begin */
+const long long inf = 1e18+7;
+const long long mod = 1e9+7;
+const double eps = 1e-12;
+const double PI = 2*acos(0.0);
+const double E = 2.71828;
+/* Constants end */
+
+/* Defines begin */
+#define pb push_back
+#define mp make_pair
+#define ll long long
+#define double long double
+#define F first
+#define S second
+#define all(a) (a).begin(),(a).end()
+#define forn(i,n) for (ll (i)=0;(i)<(ll)(n);(i)++)
+#define random (rand()<<16|rand())
+#define sqr(x) (x)*(x)
+#define base complex<double>
+/* Defines end */
+
+struct node{
+  node *l, *r;
+  vector<int> a;
+  bool rev;
+  int x, y;
+  char c;
+
+  node(){
+    rev = false;
+    a.resize(10);
+    l = r = NULL;
+    y = random;
+    x = 0;
+  }
+
+  node(vector<int> a, char c): a(a), c(c){
+    rev = false;
+    l = r = NULL;
+    y = random;
+    x = 1;
+  }
+};
+
+#define nd node *
+
+int size(nd t){
+  if(!t){
+    return 0;
+  }
+  return t->x;
+}
+
+void rec(nd t){
+  if(!t){
+    return;
+  }
+  t->x = size(t->l) + size(t->r) + 1;
+  t->a.assign(10, 0);
+  ++t->a[t->c - 'a'];
+  forn(i, 10){
+    if(t->l){
+      t->a[i] += t->l->a[i];
+    }
+    if(t->r){
+      t->a[i] += t->r->a[i];
+    }
+  }
+}
+
+void push(nd &t){
+  if(!t){
+    return;
+  }
+  if(t->rev){
+    t->rev ^= true;
+    swap(t->l, t->r);
+    if(t->l){
+      t->l->rev ^= true;
+    }
+    if(t->r){
+      t->r->rev ^= true;
+    }
+  }
+}
+
+void merge(nd &t, nd l, nd r){
+  push(t);
+  if(!l || !r){
+    t = l ? l : r;
+  } else {
+    if(l->y > r->y){
+      merge(l->r, l->r, r);
+      t = l;
+    } else {
+      merge(r->l, l, r->l);
+      t = r;
+    }
+  }
+  rec(t);
+}
+
+void split(nd t, nd &l, nd &r, int cur, int add){
+  push(t);
+  if(!t){
+    return void(l = r = NULL);
+  }
+  int x = add + size(t->l);
+  if(cur > x){
+    split(t->r, t->r, r, cur, x + 1);
+    l = t;
+  } else {
+    split(t->l, l, t->l, cur, add);
+    r = t;
+  }
+  rec(t);
+}
+
+nd t = NULL;
+
+void rev(int l, int r){
+  int sz = r - l + 1;
+  node *a, *b, *c;
+  split(t, a, b, l, 0);
+  split(b, b, c, sz, 0);
+  if(b){
+    b->rev ^= true;
+  }
+  merge(b, b, c);
+  merge(t, a, b);
+}
+
+void add(int x, char C){
+  vector<int> A;
+  A.resize(10);
+  ++A[C - 'a'];
+  node *a, *b, *c;
+  c = new node(A, C);
+  split(t, a, b, x, 0);
+  merge(b, c, b);
+  merge(t, a, b);
+}
+
+vector<int> go(int l, int r){
+  int sz = r - l + 1;
+  node *a, *b, *c;
+  split(t, a, b, l, 0);
+  split(b, b, c, sz, 0);
+  vector<int> res(10, 0);
+  if(b){
+    res = b->a;
+  }
+  merge(b, b, c);
+  merge(t, a, b);
+  return res;
+}
+
+char s[100005];
+
+void show(vector<int> a){
+  forn(i, 10){
+    cout << char(i + 'a') << " : " << a[i] << endl;
+  }
+  cout << "----------------------" << endl;
+}
+
+ll fact[100005], rfact[100005];
+
+ll inv(ll a){
+  ll n = mod - 2;
+  ll res = 1;
+  while(n){
+    if(n & 1LL){
+      res = (res * a) % mod;
+    }
+    a = (a * a) % mod;
+    n >>= 1LL;
+  }
+  return res;
+}
+
+int main(void) {
+  srand(time(NULL));
+  int n, m; scanf("%d %d\n", &n, &m);
+  fact[0] = 1;
+  rfact[0] = 1;
+  for(ll i = 1; i <= n; ++i){
+    fact[i] = (fact[i - 1] * i) % mod;
+    rfact[i] = (rfact[i - 1] * inv(i)) % mod;
+  }
+  gets(s);
+  forn(i, n){
+    add(i, s[i]);
+  }
+  forn(i, m){
+    int type, l, r; scanf("%d %d %d", &type, &l, &r);
+    --l; --r;
+    if(type == 1){
+      rev(l, r);
+    } else {
+      vector<int> cur = go(l, r);
+      ll res = fact[(r - l + 1) >> 1];
+      int cnt = 0;
+      forn(i, 10){
+        if(cur[i] & 1){
+          ++cnt;
+        }
+        res = (res * rfact[cur[i] / 2]) % mod;
+      }
+      printf("%d\n", cnt <= 1 ? res : 0);
+    }
+  }
+  return 0;
+}

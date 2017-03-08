@@ -1,0 +1,119 @@
+#include<cmath>
+#include<ctime>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+
+using namespace std;
+
+const int N=1010;
+
+int cnt[65540],pow2[40];
+int a[N][N],b[N][N],size[N],g[N][N],ans[N][2],belong[N],c[N],d[N];
+bool leaf[N],covered[N];
+
+inline bool ok(int i,int j) {return bool(b[i][j/31]&pow2[j%31]);}
+
+inline int num_one(int x) {return cnt[x%65536]+cnt[x/65536];}
+
+inline int lowbit(int x) {return x&(-x);}
+
+void orz_star(int n)
+{
+    for (int i=2;i<=n;i++) printf("1 %d\n",i);
+}
+
+int main()
+{
+    #ifdef waltz
+        freopen("input.txt","r",stdin);
+        freopen("output.txt","w",stdout);
+    #endif 
+    srand(time(0));
+    int n;scanf("%d",&n);
+    cnt[0]=0;for (int i=1;i<65536;i++) cnt[i]=cnt[i>>1]+(i&1);
+    pow2[0]=1;for (int i=1;i<31;i++) pow2[i]=pow2[i-1]<<1;
+    for (int i=1;i<=n;i++)
+    {
+        scanf("%d",&size[i]);
+        for (int j=1;j<=size[i];j++)
+        {
+            scanf("%d",&a[i][j]);
+            b[i][a[i][j]/31]|=pow2[a[i][j]%31];
+        }
+    }
+    memset(g,0,sizeof(g));
+    memset(d,0,sizeof(d));
+    int cnt=0;
+    for (int i=1;i<n;i++)
+        for (int j=i+1;j<=n;j++)
+        {
+            int s=0;
+            for (int k=0;k<=n/31;k++) s+=num_one(b[i][k]&b[j][k]);
+            if (s!=2) continue;
+            int l=0,x[2];
+            for (int k=0;k<=n/31;k++)
+            {
+                int t=b[i][k]&b[j][k];
+                while (t)
+                {
+                    int y=lowbit(t);
+                    x[l++]=k*31+int(log(y+0.5)/log(2.0));
+                    t-=y;
+                }
+            }
+            if (rand()&1) swap(x[0],x[1]);
+            if (!g[x[0]][x[1]]) {g[x[0]][x[1]]=g[x[1]][x[0]]=1;ans[++cnt][0]=x[0];ans[cnt][1]=x[1];}
+        }
+    if (cnt==0) {orz_star(n);return 0;}
+    for (int i=1;i<=n;i++) leaf[i]=1;
+    for (int i=1;i<=cnt;i++) {leaf[ans[i][0]]=leaf[ans[i][1]]=0;d[ans[i][0]]++;d[ans[i][1]]++;}
+    memset(belong,0,sizeof(belong));
+    for (int i=1;i<=n;i++)
+        if (leaf[i])
+        {
+            int k=0;
+            for (int j=1;j<=n;j++)
+                if (ok(j,i)&&(k==0||size[j]<size[k])) k=j;
+            int deg=0;
+            for (int j=1;j<=size[k];j++)
+            {
+                if (belong[a[k][j]]) {belong[i]=belong[a[k][j]];break;}
+                if (!leaf[a[k][j]]) c[++deg]=a[k][j];
+            }
+            if (belong[i]) continue;
+            if (deg<=2) continue;
+            for (int j=2;j<=deg;j++)
+            {
+                if (g[c[1]][c[j]])
+                    for (int p=2;p<=deg;p++)
+                        if (j!=p)
+                        {
+                            if (g[c[1]][c[p]]) belong[i]=c[1]; else belong[i]=c[j];
+                            break;
+                        }
+                if (belong[i]) break;
+            }
+        }
+    memset(covered,0,sizeof(covered));
+    for (int i=1;i<=n;i++)
+        if (leaf[i]&&(!belong[i]))
+        {
+            int k=0;
+            for (int j=1;j<=n;j++)
+                if (ok(j,i)&&(k==0||size[j]<size[k])) k=j;
+            int deg=0;
+            for (int j=1;j<=size[k];j++)
+            {
+                if (belong[a[k][j]]) {belong[i]=belong[a[k][j]];break;}
+                if (!leaf[a[k][j]]) c[++deg]=a[k][j];
+            }
+            if (belong[i]) continue;
+            if (d[c[1]]>1||covered[c[1]]) belong[i]=c[2]; else belong[i]=c[1];
+            covered[belong[i]]=1;
+        }
+    for (int i=1;i<=cnt;i++) printf("%d %d\n",ans[i][0],ans[i][1]);
+    for (int i=1;i<=n;i++) if (belong[i]) printf("%d %d\n",i,belong[i]);
+    return 0;
+}

@@ -1,0 +1,2 @@
+n,k=map(int,raw_input().split())
+for i in range(k+1,0,-1)+range(k+2,n+1):print i,

@@ -1,0 +1,186 @@
+
+/*
+    Problem:
+    Algorithm:
+    Note:
+*/
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<set>
+#include<vector>
+#include<map>
+#include<string>
+#include<iomanip>
+#include<iostream>
+#include<cmath>
+#include<queue>
+using namespace std;
+
+#define rep(i,x,y) for(i=x;i<=y;i++)
+#define _rep(i,x,y) for(i=x;i>=y;i--)
+#define CL(S,x) memset(S,x,sizeof(S))
+#define CP(S1,S2) memcpy(S1,S2,sizeof(S2))
+#define ALL(x,S) for(x=S.begin();x!=S.end();x++)
+#define sqr(x) ((x)*(x))
+#define mp make_pair
+#define fi first
+#define se second
+
+typedef long long int64;
+typedef long double real;
+
+const int MAXN=110010;
+const int MAXD=30000010;
+int tot,n,m,i,j,k,p,x,y,z,q,totc,maxN;char kind;int64 ans;
+inline char getc(){char c;for(c=getchar();c<=32;c=getchar());return c;}
+inline void read(int&x){char c;for(c=getchar();c<=32;c=getchar());for(x=0;c>32;c=getchar())x=x*10+c-'0';}
+
+int edge,e[MAXN*2],b[MAXN*2],fir[MAXN],last[MAXN],Q[MAXN];
+inline void clear(){edge=0;CL(fir,-1);CL(b,-1);}
+inline void addedge(int x,int y){e[edge]=y;if(fir[x]==-1)fir[x]=edge;else b[last[x]]=edge;last[x]=edge++;}
+
+int size[MAXN],dep[MAXN],num[MAXN],F[MAXN],f[MAXN],mson[MAXN];bool sondone[MAXN];
+int ro,root[MAXN];
+
+struct segment_tree
+{
+    int l[MAXD],r[MAXD],len[MAXD];int64 sum[MAXD],add[MAXD],de[MAXD];
+    #define mid ((x+y)/2)
+    inline int build(int x,int y)
+    {
+        int i=++tot;len[i]=y-x+1;
+        if(x!=y)l[i]=build(x,mid),r[i]=build(mid+1,y);
+        return i;
+    }
+    inline void copy(int a,int b){l[a]=l[b];r[a]=r[b];sum[a]=sum[b];add[a]=add[b];de[a]=de[b];len[a]=len[b];}
+    inline void cover(int i,int64 x,int64 y){sum[i]+=x*len[i]+y*len[i]*(len[i]-1)/2;add[i]+=x;de[i]+=y;}
+    inline int pdown(int i,int64 x,int64 y){++tot;copy(tot,i);cover(tot,x,y);return tot;}
+    inline int find(int i,int x,int y,int L,int R,int a,int b,bool kind)
+    {
+        if(x>=L&&y<=R)
+        {
+            if(kind){int d=++tot;copy(d,i);cover(d,a,b);return d;}
+            else{ans+=sum[i];return i;}
+        }
+        int d=++tot;copy(d,i);
+        if((add[i]!=0)||(de[i]!=0))
+        {
+            l[d]=pdown(l[d],add[i],de[i]);
+            r[d]=pdown(r[d],add[i]+de[i]*len[l[i]],de[i]);
+            add[d]=de[d]=0;
+        }
+        if(L<=mid)l[d]=find(l[d],x,mid,L,min(R,mid),a,b,kind),a+=b*(mid-L+1);
+        if(R>=mid+1)r[d]=find(r[d],mid+1,y,max(L,mid+1),R,a,b,kind);
+        sum[d]=sum[l[d]]+sum[r[d]];
+        return d;
+    }
+}T;
+
+inline void bfs()
+{
+    int i,j,k;Q[1]=1;f[1]=0;
+    for(i=j=1;i<=j;i++)
+    for(k=fir[Q[i]];k>=0;k=b[k])if(e[k]!=f[Q[i]])
+    Q[++j]=e[k],f[e[k]]=Q[i],dep[e[k]]=dep[Q[i]]+1;
+    _rep(i,n,1){size[Q[i]]++;if(f[Q[i]])size[f[Q[i]]]+=size[Q[i]];}
+    rep(i,1,n)for(k=fir[i];k>=0;k=b[k])if(e[k]!=f[i])if(size[e[k]]>size[mson[i]])mson[i]=e[k],sondone[i]=1;
+}
+inline void dfs()
+{
+    int D,k,i;
+    F[1]=1;num[1]=++num[0];Q[1]=1;
+    for(D=1;D;)
+    {
+        i=Q[D];
+        if(sondone[i]){sondone[i]=0;Q[D+1]=mson[i];F[mson[i]]=F[i];num[mson[i]]=++num[0];D++;continue;}
+        for(k=fir[i];k>=0;k=b[k])if(e[k]!=f[i]&&e[k]!=mson[i])
+        {
+            Q[D+1]=e[k];F[e[k]]=e[k];num[e[k]]=++num[0];
+            fir[i]=b[k];D++;break;
+        }
+        if(k<0)D--;
+    }
+}
+
+inline void change(int a,int b,int x,int y)
+{
+    int ta=a,tb=b,len=0,l,r,t;
+    while(1)
+    {
+        if(F[a]==F[b])
+        {
+            if(dep[a]>dep[b])swap(a,b);
+            len+=dep[b]-dep[a]+1;
+            break;
+        }
+        if(dep[F[a]]<dep[F[b]])swap(a,b);
+        len+=num[a]-num[F[a]]+1;
+        a=f[F[a]];
+    }
+
+    a=ta;b=tb;l=x;r=x+(len-1)*y;t=y;
+    while(1)
+    {
+        if(F[a]==F[b])
+        {
+            if(dep[a]>dep[b])swap(a,b),swap(l,r),t=-t;
+            ro=T.find(ro,1,maxN,num[a],num[b],l,t,1);
+            break;
+        }
+        if(dep[F[a]]<dep[F[b]])swap(a,b),swap(l,r),t=-t;
+        ro=T.find(ro,1,maxN,num[F[a]],num[a],l+(num[a]-num[F[a]])*t,-t,1);
+        l+=(num[a]-num[F[a]]+1)*t;
+        a=f[F[a]];
+    }
+
+}
+inline void query(int a,int b)
+{
+    while(1)
+    {
+        if(F[a]==F[b])
+        {
+            if(dep[a]>dep[b])swap(a,b);
+            ro=T.find(ro,1,maxN,num[a],num[b],0,0,0);
+            break;
+        }
+        if(dep[F[a]]<dep[F[b]])swap(a,b);
+        ro=T.find(ro,1,maxN,num[F[a]],num[a],0,0,0);
+        a=f[F[a]];
+    }
+}
+
+#define ll I64
+int main()
+{
+    read(n);read(m);maxN=n;
+    for(maxN=1;maxN<n;maxN*=2);
+    clear();rep(i,1,n-1)read(x),read(y),addedge(x,y),addedge(y,x);
+    
+    bfs();dfs();
+    root[0]=ro=T.build(1,maxN);
+    for(;m;m--)
+    {
+        kind=getc();
+        if(kind=='C'||kind=='c')
+        {
+            read(x);read(y);read(z);read(q);
+            x=(x+ans)%n+1;y=(y+ans)%n+1;
+            change(x,y,z,q);root[++totc]=ro;
+        }
+        else if(kind=='Q'||kind=='q')
+        {
+            read(x);read(y);
+            x=(x+ans)%n+1;y=(y+ans)%n+1;
+            ans=0;query(x,y);printf("%lld\n",ans);
+        }
+        else
+        {
+            read(x);
+            x=(x+ans)%(totc+1);
+            ro=root[x];
+        }
+    }  
+    return 0;
+}

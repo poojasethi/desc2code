@@ -1,0 +1,114 @@
+//program 132-E
+
+#include<iostream>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+
+using namespace std;
+
+struct Edge
+{
+  int Data,Weight,Cost,Next;
+};
+
+const int inf=1000000000;
+
+int F(int X)
+{
+  return X?(F(X^(X&-X))+1):0;
+}
+
+int G[503],From[250];
+Edge E[63752];
+
+void Add(int Number,int X,int Y,int W,int C)
+{
+  E[Number*2]=(Edge){Y,W,C,G[X]};G[X]=Number*2;
+  E[Number*2+1]=(Edge){X,0,-C,G[Y]};G[Y]=Number*2+1;
+}
+
+int SPFA(int S,int T,int N,int M)
+{
+  static int Dist[503],Pre[503],Queue[503];
+  for(int i=0;i<N;i++)Dist[i]=(i==S)?0:inf;
+  int F=0,R=1;Queue[0]=S;
+  static bool Flag[503];
+  memset(Flag,0,sizeof(Flag));
+  while(F!=R)
+    {
+      int V=Queue[F++],P=G[V];
+      if(F==N)F=0;Flag[V]=false;
+      while(P!=-1)
+        {
+          int U=E[P].Data;
+          if(Dist[V]+E[P].Cost<Dist[U]&&E[P].Weight)
+            {
+              Dist[U]=Dist[V]+E[P].Cost;Pre[U]=P;
+              if(!Flag[U])Flag[Queue[R++]=U]=true;
+              if(R==N)R=0;
+            }
+          P=E[P].Next;
+        }
+    }
+  int V=T;
+  while(V!=S)
+    {
+      if(V>=M&&V<M*2)
+        From[V-M]=E[Pre[V]^1].Data;
+      E[Pre[V]].Weight--;
+      E[Pre[V]^1].Weight++;
+      V=E[Pre[V]^1].Data;
+    }
+  return Dist[T];
+}
+
+int main()
+{
+  int N,K;scanf("%d%d",&N,&K);
+  static int A[250];
+  for(int i=0;i<N;i++)scanf("%d",&A[i]);
+  int S=N*2+1,T=N*2+2,Count=0;
+  memset(G,-1,sizeof(G));
+  for(int i=0;i<N;i++)Add(Count++,S,i,1,0);
+  Add(Count++,S,N*2,K,0);
+  for(int i=0;i<N;i++)
+    for(int j=i+1;j<N;j++)
+      Add(Count++,i,N+j,1,(A[i]==A[j])?0:F(A[j]));
+  for(int i=0;i<N;i++)
+    {
+      Add(Count++,N*2,N+i,1,F(A[i]));
+      Add(Count++,N+i,T,1,0);
+    }
+  int Ans=0;
+  for(int i=0;i<N;i++)
+    Ans+=SPFA(S,T,N*2+3,N);
+  static int X[26];
+  memset(X,0,sizeof(X));
+  int Total=N;
+  for(int i=0,j=0;i<N;i++)
+    {
+      if(From[i]==N*2)
+        From[i]=j++;
+      else
+        From[i]=From[From[i]];
+      if(X[From[i]]!=A[i])
+        {
+          Total++;
+          X[From[i]]=A[i];
+        }
+    }
+  printf("%d %d\n",Total,Ans);
+  memset(X,0,sizeof(X));
+  for(int i=0;i<N;i++)
+    {
+      if(X[From[i]]!=A[i])
+        {
+          printf("%c=%d\n",From[i]+97,A[i]);
+          X[From[i]]=A[i];
+        }
+      printf("print(%c)\n",From[i]+97);
+    }
+  return 0;
+}

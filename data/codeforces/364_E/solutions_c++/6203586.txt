@@ -1,0 +1,61 @@
+#include <cstdio>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+#define MXN 2505
+typedef long long int64;
+
+int N, M, K;
+int64 rlt;
+int line[2][MXN][MXN];
+int L[MXN][7], R[MXN][7], RC[MXN][7], LC[MXN][7];
+char s[MXN];
+
+void solve(int r1, int r2, int c1, int c2, int f) {
+	if (r2 - r1 > c2 - c1) {
+		swap(r1, c1), swap(r2, c2), f ^= 1;
+	}
+	if (c1 == c2) {
+		rlt += (line[f][r1][c2] - line[f][r1][c1 - 1] == K);
+		return;
+	}
+	int mid = c1 + c2 >> 1, i, k, j;
+	for (i = r1; i <= r2; i ++) {
+		for (k = 0; k <= K; k ++) LC[i - 1][k] = RC[i - 1][k] = 0, L[i - 1][k] = c1, R[i - 1][k] = c2;
+		for (j = i; j <= r2; j ++) {
+			for (k = 0; k <= K; k ++) {
+				L[j][k] = L[j - 1][k]; R[j][k] = R[j - 1][k];
+				LC[j][k] = LC[j - 1][k] + line[f][j][mid] - line[f][j][L[j][k] - 1];
+				RC[j][k] = RC[j - 1][k] + line[f][j][R[j][k]] - line[f][j][mid];
+				while (LC[j][k] > k) LC[j][k] -= line[f^1][L[j][k]][j] - line[f^1][L[j][k]][i - 1], L[j][k] ++;
+				while (RC[j][k] > k) RC[j][k] -= line[f^1][R[j][k]][j] - line[f^1][R[j][k]][i - 1], R[j][k] --;
+			}
+			for (k = 0; k <= K; k ++) 
+				rlt += ( (k ? L[j][k - 1] : mid + 1) - L[j][k] ) * ( R[j][K - k] - (K - k ? R[j][K - k - 1] : mid) );
+		}
+	}
+//	cout << c1 << " " << mid << " " << c2 << endl;
+	solve(r1, r2, c1, mid, f), solve(r1, r2, mid + 1, c2, f);
+}
+
+main() {
+//	freopen("in.txt", "r", stdin);
+//	freopen("out.txt", "w", stdout);
+	int i, k, j;
+	cin >> N >> M >> K;
+	for (i = 1; i <= N; i ++) {
+		scanf("%s", s + 1);
+		for (k = 1; k <= M; k ++) {
+			line[0][i][k] = s[k] - '0';
+			line[1][k][i] = s[k] - '0';
+		}
+	}
+	for (i = 1; i <= N; i ++)
+		for (k = 1; k <= M; k ++) 
+			line[0][i][k] += line[0][i][k - 1];
+	for (k = 1; k <= M; k ++) 
+		for (i = 1; i <= N; i ++)
+			line[1][k][i] += line[1][k][i - 1];
+	solve(1, N, 1, M, 0);
+	cout << rlt << endl;
+}

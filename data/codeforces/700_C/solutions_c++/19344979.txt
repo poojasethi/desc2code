@@ -1,0 +1,167 @@
+#include <iostream>
+#include <vector>
+#include <cstdio>
+#include <iomanip>
+#include <cmath>
+#include <cstring>
+#include <set>
+#include <map>
+#include <algorithm>
+#include <cassert>
+#include <complex>
+#include <queue>
+
+using namespace std;
+
+typedef long long int LL;
+typedef pair<int,int> pii;
+typedef double D;
+typedef vector<int> VI;
+typedef pair<D, D> pdd;
+typedef pair<pdd, pii> ddii;
+typedef pair<LL, int> pli;
+
+#define rep(i, a, b) for(int i = a; i < b; ++i)
+#define sd(x) scanf("%d", &x)
+
+#define PB push_back
+#define MP make_pair
+#define F first
+#define S second
+#define MOD 1000000007
+
+struct Edge {
+public:
+    int v, w, id;
+    Edge(int _v, int _w, int _id) {
+        v = _v;
+        w = _w;
+        id = _id;
+    }
+};
+
+#define N 1123
+#define M 31234
+
+vector<Edge> adj[N];
+int edgeWeight[M];
+int parEdgeId[N], par[N];
+bool banned[M];
+int low[N];
+int it[N];
+int ct;
+bool vis[N];
+
+void dfs(int u) {
+    ct++;
+    vis[u] = true;
+    low[u] = ct;
+    it[u] = ct;
+    rep (i, 0, adj[u].size()) {
+        int v = adj[u][i].v;
+        int id = adj[u][i].id;
+        if (banned[id] == true) {
+            continue;
+        }
+        if (vis[v] == false) {
+            parEdgeId[v] = id;
+            par[v] = u;
+            dfs(v);
+        }
+        
+        if (id != parEdgeId[u]) {
+            low[u] = min(low[v], low[u]);
+        }
+    }
+}
+
+int main() {
+    int n, m;
+    cin >> n >> m;
+    
+    int s, t;
+    cin >> s >> t;
+    
+    rep (i, 0, m) {
+        int u, v, w;
+        cin >> u >> v >> w;
+        adj[u].PB(Edge(v, w, i));
+        adj[v].PB(Edge(u, w, i));
+        edgeWeight[i] = w;
+    }
+    
+    
+    memset(banned, false, sizeof banned);
+    dfs(s);
+    if (vis[t] == false) {
+        cout << 0 << endl;
+        cout << 0 << endl;
+        return 0;
+    }
+    
+    int u = t;
+    vector<int> bannedIds;
+    while (u != s) {
+        bannedIds.PB(parEdgeId[u]);
+        u = par[u];
+    }
+    
+    vector<int> ansv;
+    int ans = MOD * 2;
+    rep (i, 0, bannedIds.size()) {
+        int bid = bannedIds[i];
+        
+        banned[bid] = true;
+        memset(vis, false, sizeof vis);
+        memset(low, 0, sizeof low);
+        memset(it, 0, sizeof it);
+        memset(parEdgeId, 0, sizeof parEdgeId);
+        ct = 0;
+        
+        dfs(s);
+        
+        banned[bid] = false;
+        
+        if (vis[t] == false) {
+            if (ans > edgeWeight[bid]) {
+                ans = edgeWeight[bid];
+                ansv.clear();
+                ansv.PB(bid + 1);
+            } 
+            continue;
+        }
+        int u = t;
+        int cans = MOD;
+        int cid = -1;
+        while (u != s) {
+            if (low[u] == it[u]) {
+                int tid = parEdgeId[u];
+                if (edgeWeight[tid] < cans) {
+                    cans = edgeWeight[tid];
+                    cid = tid;
+                }
+            }
+            u = par[u];
+        }
+        if (cid == -1) {
+            continue;
+        }
+        if (cans + edgeWeight[bid] < ans) {
+            ans = cans + edgeWeight[bid];
+            ansv.clear();
+            ansv.PB(bid + 1);
+            ansv.PB(cid + 1);
+        }
+    }
+    if (ans == MOD * 2) {
+        cout << "-1" << endl;
+        return 0;
+    }
+    cout << ans << endl;
+    cout << ansv.size() << endl;
+    rep (i, 0, ansv.size()) {
+        cout << ansv[i] << " ";
+    }
+    cout << endl;
+    return 0;
+}

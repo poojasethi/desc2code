@@ -1,0 +1,177 @@
+#include<algorithm>
+#include <iostream>
+#include <string.h>
+#include <stdlib.h>
+#include  <stdio.h>
+#include   <math.h>
+#include   <time.h>
+#include   <vector>
+#include    <queue>
+#include      <map>
+#include      <set>
+using namespace std;
+
+#define Cle(_) memset(_,0,sizeof _)
+
+typedef long long LL;
+
+const int N=100005;
+
+int n,q;
+
+namespace BIT
+{
+	LL A[N],B[N];
+	
+	inline void ADD_A(int x,int c)
+	{
+		for(int i=x;i>0;i-=i&(-i))
+			A[i]+=c;
+	}
+	
+	inline void ADD_B(int x,int c)
+	{
+		for(int i=x;i<=n;i+=i&(-i))
+			B[i]+=x*(LL)c;
+	}
+	
+	inline LL SUM_A(int x)
+	{
+		LL s=0;
+		for(int i=x;i<=n;i+=i&(-i))
+			s+=A[i];
+		return s;
+	}
+	
+	inline LL SUM_B(int x)
+	{
+		LL s=0;
+		for(int i=x;i>0;i-=i&(-i))
+			s+=B[i];
+		return s;
+	}
+	
+	inline LL SUM(int x)
+	{
+		if(x)
+			return SUM_A(x)*x+SUM_B(x-1);
+		else
+			return 0;
+	}
+	
+	inline void Add(int l,int r,int c)
+	{
+		ADD_A(r,c);ADD_B(r,c);
+		if(l>1)
+			ADD_A(l-1,-c),ADD_B(l-1,-c);
+	}
+	
+	inline LL Sum(int l,int r)
+	{
+		return SUM(r)-SUM(l-1);
+	}
+	
+	inline void clear()
+	{
+		Cle(A);Cle(B);
+	}
+}
+
+int tot,st[N],ed[N],c[N][2],p[N];
+
+inline bool isrt(int x)
+{
+	return x&&(p[x]==0||c[p[x]][0]!=x&&c[p[x]][1]!=x);
+}
+
+inline void Rotate(int x)
+{
+	int y=p[x],k=c[y][1]==x,w=isrt(y);
+	p[c[y][k]=c[x][!k]]=y;p[x]=p[c[x][!k]=y];p[y]=x;
+	if(!w)
+		c[p[x]][c[p[x]][1]==y]=x;
+}
+
+inline void splay(int x)
+{
+	while(!isrt(x))
+		if(isrt(p[x]))
+			Rotate(x);
+		else if((c[p[p[x]]][0]==p[x])==(c[p[x]][0]==x))
+			Rotate(p[x]),Rotate(x);
+		else
+			Rotate(x),Rotate(x);
+}
+
+inline int get_Min(int x)
+{
+	while(c[x][0])
+		x=c[x][0];
+	return x;
+}
+
+inline int Access(int x)
+{
+	int y=0;
+	for(;x;x=p[x])
+	{
+		splay(x);
+		if(c[x][1])
+		{
+			int p=get_Min(c[x][1]);BIT::Add(st[p],ed[p],1);
+		}
+		c[x][1]=y;y=x;
+		if(c[x][1])
+		{
+			int p=get_Min(c[x][1]);BIT::Add(st[p],ed[p],-1);
+		}
+	}
+	return y;
+}
+
+int e[N*2],next[N*2],G[N];
+
+inline void adde(int u,int v)
+{
+	e[++tot]=v;next[tot]=G[u];G[u]=tot;
+	e[++tot]=u;next[tot]=G[v];G[v]=tot;
+}
+
+void dfs(int u)
+{
+	st[u]=++tot;
+	for(int i=G[u];i;i=next[i])
+		if(e[i]!=p[u])
+			p[e[i]]=u,dfs(e[i]);
+	ed[u]=tot;
+}
+
+inline void work()
+{
+	BIT::clear();Cle(G);tot=0;Cle(c);Cle(p);
+	scanf("%d",&n);
+	for(int i=1,u,v;i<n;i++)
+		scanf("%d%d",&u,&v),adde(++u,++v);
+	tot=0;dfs(1);
+	for(int i=2;i<=n;i++)
+		BIT::Add(st[i],ed[i],1);
+	scanf("%d",&q);
+	while(q--)
+	{
+		static char ch[10];
+		static int x;
+		scanf("%s%d",ch,&x);x++;
+		if(ch[0]=='q')
+			printf("%.10lf\n",BIT::Sum(st[x],ed[x])/(ed[x]-st[x]+1.));
+		else
+			Access(x);
+	}
+}
+
+int main()
+{
+	int t;scanf("%d",&t);
+	while(t--)
+		work();
+	return 0;
+}

@@ -1,0 +1,19 @@
+#include <iostream>
+#include <cstdio>
+#include <cmath>
+using namespace std;
+
+int main() {
+int n, a[100005], b;
+long long cnt;
+scanf("%d", &n);
+cnt=0;
+for(int i=0; i<n; i++) scanf("%d", &a[i]);
+for(int i=0; i<n; i++) {
+scanf("%d", &b);
+if(b>a[i]*2 || b<2) cnt--;
+else cnt+=pow(b, 2)/4;
+}
+printf("%lld\n", cnt);
+return 0;
+}

@@ -1,0 +1,94 @@
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+using namespace std;
+#define ll long long
+const int mx=100010,mod=95542721;
+int ar[mx];
+ll res;
+ll dis(ll x)
+{
+	while(x>mod)
+		x-=mod;
+	return x;
+}
+struct ss
+{
+	int ct;
+	ll store[48];
+};
+	ss tree[3*mx];
+	void create(int in, int s, int e)
+	{
+		if (s == e)
+		{
+			tree[in].store[0] = ar[s];
+			for (int i = 1 ; i <48 ; i++)
+			{
+				tree[in].store[i] = 1;
+				for (int j = 1 ; j <= 3 ; j++)
+					tree[in].store[i] = (tree[in].store[i] * tree[in].store[i-1]) % mod;
+			}
+			return;
+		}
+		int mid = (e+s) >> 1;
+		create(2*in, s, mid);
+		create(2*in+1, mid+1, e);
+		for (int i = 0 ; i <48 ; i++)
+			tree[in].store[i] = dis(tree[2*in].store[i]+tree[2*in+1].store[i]);
+	}
+	void update(int in, int s, int e, int l, int r)
+	{
+		if (l > r)
+			return;
+		if (s == l && e == r)
+		{
+			tree[in].ct++;
+			return;
+		}
+		int mid = (s+e) >> 1;
+		update(2*in, s, mid, l, min(r, mid));
+		update(2*in+1, mid+1, e, max(l, mid+1), r);
+		for (int i = 0 ; i <48 ; i++)
+			tree[in].store[i] = dis(tree[2*in].store[(i+tree[2*in].ct)%48]+tree[2*in+1].store[(i+tree[2*in+1].ct)%48]);
+	}
+	void query(int in, int s, int e, int l, int r, int pro)
+	{
+		if (l > r)
+			return;
+		if (s == l && e == r)
+		{
+			res = dis(res + tree[in].store[(tree[in].ct+pro)%48]);
+			return;
+		}
+		pro += tree[in].ct;
+		int mid = (s+e) >> 1;
+		query(2*in, s, mid, l, min(r, mid), pro);
+		query(2*in+1, mid+1, e, max(l, mid+1), r, pro);
+	}
+
+int main()
+{
+	int n,q,i,l,r,t;
+	scanf("%d", &n);
+	for (i=1;i<=n;i++)
+	{
+		scanf("%d",&ar[i]);
+		ar[i] %= mod;
+	}
+	create(1,1,n);
+	scanf("%d",&q);
+	while (q--)
+	{
+		res=0;
+		scanf("%d%d%d",&t,&l,&r);
+		if (t==1)
+		{
+			query(1,1,n,l,r,0);
+			printf("%lld\n",res%mod);
+		}
+		else
+			update(1, 1, n, l, r);
+	}
+	return 0;
+}

@@ -1,0 +1,237 @@
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#include <utility>
+#include <cstring>
+#include <bitset>
+#include <string>
+#include <vector>
+#include <queue>
+#include <map>
+#include <set>
+using namespace std;
+
+typedef double db;
+typedef long long LL;
+typedef pair< int, int > PII;
+typedef pair< LL, LL > PLL;
+typedef pair< db, db > PDD;
+
+const db dInf = 1E90;
+const LL lInf = ( LL ) 1E16;
+const int Inf = 0x23333333;
+const int N = 150005; 
+const LL positive = 1, negative = -1;
+
+#define it iterator
+#define rbg rbegin()
+#define ren rend()
+#define fdi( i, x ) for ( typeof( x.rbg ) i=x.rbg; i!=x.ren; ++i )
+#define foi( i, x ) for ( typeof( x.bg ) i=x.bg; i!=x.en; ++i )
+#define fd( i, y, x ) for ( int i=( y )-1, lim=x; i>=lim; --i )
+#define fo( i, x, y ) for ( int i=x, lim=y; i<lim; ++i )
+#define mkp( A, B ) make_pair( A, B )
+#define pub( x ) push_back( x )
+#define pob( x ) pop_back( x )
+#define puf( x ) push_front( x )
+#define pof( x ) pop_front( x )
+#define fi first
+#define se second
+
+int sz[N], bg[N], en[N], dep[N];
+vector < int > e[N];
+int n, m, Ti;
+
+namespace segT
+{
+	LL sum[ N<<2 ]; 
+	LL tag[ N<<2 ];
+
+	void clear()
+	{
+		fill( sum, sum + ( N<<2 ), 0 );
+		fill( tag, tag + ( N<<2 ), 0 );
+	}
+
+	inline void push( const int &x, const int &l, const int &r )
+	{
+		LL &T = tag[x];
+		if ( !T ) return;
+ 		tag[ x<<1 ] += T, tag[ x<<1|1 ] += T;
+		sum[x] += T * ( r-l ), T = 0;
+	}
+
+	inline void update( const int &x, const int &l, const int &r, const int &mid )
+	{
+		sum[x] = sum[ x<<1 ] + tag[ x<<1 ]*( mid-l );
+		sum[x] += sum[ x<<1|1 ] + tag[ x<<1|1 ]*( r-mid );
+	}
+
+	inline void build( const int &x, const int &l, const int &r )
+	{
+		if ( l==r-1 ) { sum[x] = dep[l]; return; }
+		int mid = ( l + r ) >> 1;
+		build( x<<1, l, mid ), build( x<<1|1, mid, r );
+		update( x, l, r, mid );
+	}
+
+	inline void modify( const int &x, const int &l, const int &r, const int &_l, const int &_r, const LL &ict )
+	{
+		if ( r<=_l || _r<=l ) return;
+		if ( _l<=l && r<=_r ) { tag[x] += ict; return; }
+		const int mid = ( l + r ) >> 1;
+		push( x, l, r );
+		modify( x<<1, l, mid, _l, _r, ict );
+		modify( x<<1|1, mid, r, _l, _r, ict );
+		update( x, l, r, mid );
+	}
+
+	inline LL query( const int &x, const int &l, const int &r, const int &_l, const int &_r )
+	{
+		if ( r<=_l || _r<=l ) return 0;
+		if ( _l<=l && r<=_r ) return sum[x] + tag[x] * ( r - l );
+		int mid = ( l + r ) >> 1;
+		push( x, l, r );
+		LL Res = query( x<<1, l, mid, _l, _r );
+		Res += query( x<<1|1, mid, r, _l, _r );
+		return Res;
+	}
+}
+
+namespace LCT
+{
+	struct node
+	{
+		int fa, s[2];
+	} a[N];
+
+	void clear()
+	{
+		fo ( i, 0, N ) a[i].fa = a[i].s[0] = a[i].s[1] = 0;
+	}
+
+	inline bool top( const int &x )
+	{
+		const int &y = a[x].fa;
+		return ( !y ) || ( a[y].s[0]!=x ) && ( a[y].s[1]!=x );
+	}
+
+	inline int dir( const int &x )
+	{
+		const int &y = a[x].fa;
+		return a[y].s[1] == x;
+	}
+
+	inline void rotate( const int &x )
+	{
+		int y = a[x].fa, z = a[y].fa, p = dir( x ); 
+		int q = p ^ 1, A = a[x].s[q];
+		if ( !top( y ) ) a[z].s[ dir( y ) ] = x;
+		a[y].fa = x, a[y].s[p] = A;
+		a[x].fa = z, a[x].s[q] = y;
+		if ( A ) a[A].fa = y;
+	}
+
+	inline void splay( const int &x )
+	{
+		while ( !top( x ) )
+		{
+			int y = a[x].fa, z = a[y].fa;
+			if ( top( y ) ) rotate( x );
+			else if ( top( z ) || dir( y )^dir( x ) )
+			   	rotate( x ), rotate( x );
+			else rotate( y ), rotate( x );
+		}
+	}
+
+	inline int getrightmost( const int &x )
+	{
+		int _x = x;
+		while ( a[_x].s[1] ) _x = a[_x].s[1];
+		splay( _x );
+		return _x;
+	}
+
+	inline void access( const int &x )
+	{
+		for ( int _x=x, y=0; _x; _x=a[_x].fa )
+		{
+			splay( _x );
+			if ( y ) segT :: modify( 1, 0, n, bg[y], en[y], negative );
+			if ( a[_x].s[0] ) 
+			{
+				int z = a[_x].s[0]; a[z].fa = 0;
+				a[ a[ z = getrightmost( z ) ].fa = _x ].s[0] = z;
+				segT :: modify( 1, 0, n, bg[z], en[z], positive );
+			}
+			a[_x].s[0] = y, y = _x = getrightmost( _x );
+		}
+	}
+}
+
+db getdeep( int x )
+{
+	return ( double ) segT :: query( 1, 0, n, bg[x], en[x] ) / sz[x];
+}
+
+void dfs( const int &x, const int &fa )
+{
+	bg[x] = Ti++, sz[x] = 1;
+	if ( LCT :: a[x].fa = fa ) dep[ bg[x] ] = dep[ bg[fa] ] + 1;
+	fo ( j, 0, e[x].size() )
+	{
+		if ( e[x][j]==fa ) continue;
+		dfs( e[x][j], x ), sz[x] += sz[ e[x][j] ];
+	}
+	en[x] = Ti;
+}
+
+void clear()
+{
+	fill( sz, sz + N, 0 ), fill( bg, bg + N, 0 ), Ti = 0;
+	fill( en, en + N, 0 ), fill( dep, dep + N, 0 );
+	segT :: clear(), LCT :: clear();
+	fo ( i, 0, N ) e[i].clear();
+}
+
+void preprocessing()
+{
+	clear();
+	int x, y;
+	scanf( "%d", &n );
+	fo ( i, 1, n ) 
+	{
+		scanf( "%d%d", &x, &y ), ++x, ++y;
+		e[x].pub( y ), e[y].pub( x );
+	}
+	dfs( 1, 0 ), segT :: build( 1, 0, n );
+}
+
+void solve()
+{
+	int T, x; scanf( "%d", &T );
+	char type;
+	fo ( Case, 0, T )
+	{
+		for ( type='\0'; type!='q' && type!='O'; type=getchar() );
+		scanf( "%d", &x ), ++x;
+		if ( type=='q' ) 
+		{
+			LL sum = segT :: query( 1, 0, n, bg[x], en[x] );
+			printf( "%.10lf\n", ( db ) sum / ( LL ) sz[x] );
+		}
+		else LCT :: access( x );
+	}
+}
+
+int main()
+{
+	int T; scanf( "%d", &T );
+	fo ( Case, 0, T )
+	{
+		preprocessing();
+		solve();
+	}
+	return 0;
+}

@@ -1,0 +1,79 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+const int N=100005,logN=18;
+int n,q,l,r,tim;
+struct vec{
+	int x,y,num;
+	bool operator < (const vec &A) const{
+		return x<A.x||x==A.x&&y>A.y;
+	}
+} a[N];
+inline long long calc(vec *a){
+	return a->x+1LL*tim*a->y;
+}
+inline long long cross(vec &a,vec &b,vec &c){
+	return (long long)(b.x-a.x)*(c.y-a.y)-(long long)(b.y-a.y)*(c.x-a.x);
+}
+vec mem[N*logN*2],*newmem=mem;
+struct data{
+	vec *st,*en;
+} t[N*4];
+void build(int i,int beg,int end){
+	t[i].st=newmem;
+	if(end-beg==1){
+		scanf("%d%d",&t[i].st->x,&t[i].st->y);
+		t[i].st->num=end;
+		newmem++;
+		t[i].en=newmem;
+		return;
+	}
+	int mid=beg+end>>1;
+	build(i<<1,beg,mid);
+	build(i<<1|1,mid,end);
+	t[i].st=t[i].en=newmem;
+	for(vec *l=t[i<<1].st,*r=t[i<<1|1].st;l<t[i<<1].en||r<t[i<<1|1].en;)
+		if(l<t[i<<1].en&&(r==t[i<<1|1].en||*l<*r)){
+			while(t[i].en-t[i].st>1&&cross(t[i].en[-2],t[i].en[-1],*l)>=0) t[i].en--;
+			*t[i].en++=*l++;
+		}
+		else{
+			while(t[i].en-t[i].st>1&&cross(t[i].en[-2],t[i].en[-1],*r)>=0) t[i].en--;
+			*t[i].en++=*r++;
+		}
+	newmem=t[i].en;
+}
+vec* query(int i,int beg,int end){
+	if(r<=beg||l>=end) return a;
+	if(l<=beg&&r>=end){
+		vec *a=t[i].st,*b=t[i].en-1;
+		long long fa=calc(a),fb=calc(b);
+		while(b-a+1>=3){
+			vec *mid1=a+(b-a+1)/3,*mid2=b-(b-a+1)/3;
+			long long f1=calc(mid1),f2=calc(mid2);
+			if(fa<=f1&&f1<=f2)
+				a=mid1,fa=f1;
+			else
+			if(fb<=f2&&f2<=f1)
+				b=mid2,fb=f2;
+			else
+				puts("Error");
+		}
+		vec *res=b;
+		for(;a<b;a++) if(calc(res)<calc(a)) res=a;
+		return res;
+	}
+	int mid=beg+end>>1;
+	vec *a=query(i<<1,beg,mid),*b=query(i<<1|1,mid,end);
+	return calc(a)>calc(b)?a:b;
+}
+
+int main(){
+	scanf("%d%d",&n,&q);
+	build(1,0,n);
+	while(q--){
+		scanf("%d%d%d",&l,&r,&tim);
+		l--;
+		printf("%d\n",query(1,0,n)->num);
+	}
+}

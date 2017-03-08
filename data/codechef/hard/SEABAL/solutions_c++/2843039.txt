@@ -1,0 +1,167 @@
+// -*- C++ -*-
+// File: a.cpp
+// Copyright (C) 2013
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <queue>
+#include <iostream>
+#include <cmath>
+#include <sstream>
+#include <map>
+#include <set>
+#include <numeric>
+#include <memory.h>
+#include <cstdio>
+#include <assert.h>
+
+using namespace std;
+
+#define pb push_back
+#define INF 1011111111
+#define FOR(i,a,b) for (int _n(b), i(a); i < _n; i++)
+#define rep(i,n) FOR(i,0,n)
+#define CL(a,v) memset((a),(v),sizeof(a))
+#define mp make_pair
+#define X first
+#define Y second
+#define all(c) (c).begin(), (c).end()
+#define SORT(c) sort(all(c))
+
+typedef long long ll;
+typedef vector<int> VI;
+typedef pair<int,int> pii;
+
+/*** TEMPLATE CODE ENDS HERE */
+
+bool cmp_x(const pii &a, const pii &b) {
+	return a.X < b.X;
+}
+
+bool cmp_y(const pii &a, const pii &b) {
+	return a.Y < b.Y;
+}
+
+struct KNode {
+	
+	int left, right, top, bottom;
+	int count;
+	KNode *children[2];
+	
+	void split_data(vector<pii> &points, int begin, int end, int level) {
+		
+		this->count = end-begin;
+		
+		left = right = points[begin].X;
+		top = bottom = points[begin].Y;
+		
+		if(begin==end-1) return;
+		
+		for(int i = begin; i < end; ++i) {
+			left = min(left, points[i].X);
+			right = max(right, points[i].X);
+			top = max(top, points[i].Y);
+			bottom = min(bottom, points[i].Y);
+		}
+		
+		const int mid = begin + (end-begin)/2;
+		
+		if(level & 1) {
+			nth_element(points.begin()+begin, points.begin()+mid, points.begin()+end, cmp_x);
+		}
+		else {
+			nth_element(points.begin()+begin, points.begin()+mid, points.begin()+end, cmp_y);
+		}
+		
+		for(int i = 0; i < 2; ++i) children[i] = new KNode();
+		
+		children[0]->split_data(points, begin, mid, level+1);
+		children[1]->split_data(points, mid, end, level+1);
+	}
+	
+	int count_rect(int L, int R, int B, int T) {
+		
+		if(L <= left and right <= R and top <= T and B <= bottom ) return count;
+		
+		if(left <= R and L <= right and B <= top and bottom <= T)
+			return children[0]->count_rect(L, R, B, T) + children[1]->count_rect(L, R, B, T);
+			
+		return 0;
+	}
+};
+
+KNode* build_tree(vector< pii > &points) {
+	KNode *root = new KNode();
+	root->split_data(points, 0, (int)points.size(), 0);
+	return root;
+}
+
+
+const int maxn = 100010;
+
+struct Box {
+	int count;
+	int next;
+	int prev;
+	void brust_baloon() { if(count>0) count --; }
+	bool is_empty() { return count==0; }
+} baloon_boxes[maxn];
+
+int calc_intervals(KNode *root, int l, int r) {
+	return root->count_rect(l, r, l, r);
+}
+
+int brust_baloon(int idx, int n, KNode *root) {
+	baloon_boxes[idx].brust_baloon();
+	if(baloon_boxes[idx].is_empty()) {
+		int r = baloon_boxes[baloon_boxes[idx].prev].next = baloon_boxes[idx].next;
+		int l = baloon_boxes[baloon_boxes[idx].next].prev = baloon_boxes[idx].prev;
+		l ++; r --;
+		return calc_intervals(root,l,r) - calc_intervals(root,l,idx-1) - calc_intervals(root,idx+1,r);
+	}
+	return 0;
+}
+
+
+
+int main() {
+#ifdef LOCAL_HOST
+    freopen("input.txt","r",stdin);
+    //freopen("output.txt","w",stdout);
+#endif
+
+    ios_base::sync_with_stdio(false);
+		
+	int n,m,k;
+	cin >> n >> m;
+	FOR(i,1,n+1) { 		
+		cin >> baloon_boxes[i].count;
+		baloon_boxes[i].next = i+1;
+		baloon_boxes[i].prev = i-1;		 
+	}
+	vector< pii > points(m);	
+	rep(i,m) cin >> points[i].X >> points[i].Y;	
+	KNode *root = build_tree(points);
+	
+	//cout << "here\n";
+		
+	cin >> k;
+	
+	int ans = 0;
+	
+	rep(it,k) {
+		int x;
+		cin >> x;
+		int y = x + ans;		
+		ans += brust_baloon(y, m, root);		
+		cout << ans << endl;
+	}
+	
+	
+
+#ifdef LOCAL_HOST
+    printf("TIME: %.3lf\n",double(clock())/CLOCKS_PER_SEC);
+#endif
+
+    return 0;
+}

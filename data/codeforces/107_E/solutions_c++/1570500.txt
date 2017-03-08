@@ -1,0 +1,118 @@
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+using namespace std;
+#define db double
+#define rt return
+#define cs const
+cs db EPS = 1e-8;
+inline int Sig(db x){rt (x>EPS)-(x<-EPS);}
+#define cpt const Point&
+#define op operator
+struct Point
+{
+    db x,y;
+    Point(db a = 0 , db b = 0):x(a),y(b){}
+    void in(){scanf("%lf%lf",&x,&y);}
+    Point op+(cpt a)cs{rt Point(x+a.x , y+a.y);}
+    Point op-(cpt a)cs{rt Point(x-a.x , y-a.y);}
+    Point op*(cs db&k)cs{rt Point(x*k , y*k);}
+    db op*(cpt a)cs{rt x*a.x + y*a.y;}
+    db op^(cpt a)cs{rt x*a.y - a.x*y;}
+    db X(Point a , Point b){rt a-*this ^ b-*this;}
+    db O(Point b , Point c , Point d){rt (b-*this) * (d-c);}
+    db L(){rt sqrt(x*x + y*y);}
+    db L2(){rt x*x + y*y;}
+};
+cs int N=511;
+struct Convex
+{
+    int sz; Point p[5];
+    Point op[](cs int&k)cs{rt p[k];}
+    void in()
+    {
+        sz=4;
+        for(int i=0;i<sz;i++) p[i].in();
+        p[sz]=p[0];
+    }
+    void anti(){
+        if(Sig(p[0].X(p[1],p[2])<0)) reverse(p,p+sz);
+        p[sz]=p[0];
+    }
+    db S(){
+        db s=0;
+        for(int i=0;i<sz;i++) s+=p[i]^p[i+1];
+        rt s*0.5;
+    }
+}c[N];
+
+pair<db , int> E[N*200];
+
+inline db ratio(Point a , Point b , Point p){rt Sig( b.x-a.x ) ? (p.x-a.x) / (b.x-a.x) : (p.y-a.y) / (b.y-a.y);}
+
+db s_union(Convex *c , int n)
+{
+    db s = 0;
+    for(int i = 0 ; i < n ; i++)
+        for(int x = 0 ; x < c[i].sz ; x++)
+        {
+            int cnt = 0;
+            E[cnt++] = make_pair(0.0 , 0);
+            E[cnt++] = make_pair(1.0 , 0);
+            for(int j = 0 ; j < n ; j++)
+                if(i ^ j)
+                {
+                    for(int y = 0 ; y < c[j].sz ; y++)
+                    {
+                        int dir1 = Sig(c[i][x].X(c[i][x+1] , c[j][y]));
+                        int dir2 = Sig(c[i][x].X(c[i][x+1] , c[j][y+1]));
+                        if(dir1 == 0 && dir2 == 0)
+                        {
+                            if(i>j && Sig(c[i][x].O(c[i][x+1] , c[j][y] , c[j][y+1])) > 0)
+                            {
+                                E[cnt++] = make_pair(ratio(c[i][x] , c[i][x+1] , c[j][y]) , 1);
+                                E[cnt++] = make_pair(ratio(c[i][x] , c[i][x+1] , c[j][y+1]) , -1);
+                            }
+                        }
+                        else if(dir1 >= 0 && dir2 < 0)
+                        {
+                            db s1 = c[j][y].X(c[j][y+1] , c[i][x]);
+                            db s2 = c[j][y].X(c[j][y+1] , c[i][x+1]);
+                            E[cnt++] = make_pair(s1 / (s1-s2) , 1);
+                        }
+                        else if(dir1 < 0 && dir2 >= 0)
+                        {
+                            db s1 = c[j][y].X(c[j][y+1] , c[i][x]);
+                            db s2 = c[j][y].X(c[j][y+1] , c[i][x+1]);
+                            E[cnt++] = make_pair(s1 / (s1-s2) , -1);
+                        }
+                    }
+                }
+                sort(E , E + cnt);
+                db last = min(max(E[0].first , 0.0) , 1.0) , r = 0.0 , cur;
+                int L = E[0].second;
+                for(int k = 1 ; k < cnt ; k++)
+                {
+                    cur = min(max(E[k].first , 0.0) , 1.0);
+                    if(!L) r += cur-last;
+                    L += E[k].second;
+                    last = cur;
+                }
+                s += (c[i][x] ^ c[i][x+1]) * r;
+            }
+    rt s*0.5;
+}
+int main()
+{
+    int n;
+    while(scanf("%d",&n)!=-1){
+        db s=0.0;
+        for(int i=0;i<n;i++){
+           c[i].in();
+           c[i].anti();
+           s+=c[i].S();
+        }
+        printf("%.9f\n",s / s_union(c,n));
+    }
+    rt 0;
+}

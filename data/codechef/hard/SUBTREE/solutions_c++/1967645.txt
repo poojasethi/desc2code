@@ -1,0 +1,237 @@
+#include <stdio.h>
+#include <vector>
+using namespace std;
+
+typedef vector<int> VI;
+#define maxN 100000
+
+// for all the nodes, we start from one
+
+vector<pair<int,int> > maStr[maxN+1];  // adjacency list
+//
+int LOG2[maxN+1];
+//
+int dist[maxN+1];  // dist[1]=0
+int depth[maxN+1]; // depth[1]=0
+int hopf[maxN+1][18]; // hopf[p][n] is the ancestor of p 1<<n away from it
+int minDist[maxN+1][18];
+//
+int in_time[maxN+1];
+int in_t=0;
+int out_time[maxN+1];
+int out_t=0;
+
+void dfs(int n)
+{
+	in_time[n]=++in_t;
+	for(int i=0;i<maStr[n].size();i++)
+	{
+		int m=maStr[n][i].first;
+		if(hopf[n][0]!=m)
+		{
+			dist[m]=dist[n]+maStr[n][i].second;
+			depth[m]=depth[n]+1;
+			hopf[m][0]=n;
+			minDist[m][0]=maStr[n][i].second;
+			dfs(m);
+		}
+	}
+	out_time[n]=++out_t;
+}
+
+// determine whether a is ancestor of b
+int is_ancestor(int a,int b)
+{
+	return in_time[a]<=in_time[b]&&out_time[a]>=out_time[b];
+}
+
+int is_ancestor(int a,vector<int> B)
+{
+	for(int j=0;j<B.size();j++)
+	{
+		if(is_ancestor(a,B[j]))
+			return 1;
+	}
+	return 0;
+}
+
+// return LCA of a and b
+int LCA(int a,int b)
+{
+	if(is_ancestor(a,b))
+		return a;
+	else if(is_ancestor(b,a))
+		return b;
+	else
+	{
+		for(int h=LOG2[depth[a]];h>=0;h--)
+		{
+			if(hopf[a][h]!=0 && !is_ancestor(hopf[a][h],b))
+				a=hopf[a][h];
+		}
+		return hopf[a][0];
+	}
+}
+
+int LCA(vector<int> Que)
+{
+	int lca0=Que[0];
+	for(int i=1;i<Que.size();i++)
+		lca0=LCA(lca0,Que[i]);
+	return lca0;
+}
+
+// return distance between a and b
+int get_dist(int a,int b)
+{
+	if(is_ancestor(a,b))
+		return dist[b]-dist[a];
+	else if(is_ancestor(b,a))
+		return dist[a]-dist[b];
+	else
+		return dist[a]+dist[b]-2*dist[LCA(a,b)];
+}
+
+int get_max(int a,vector<int> Que,int &mx)
+{
+	int di, loc=a;
+	mx=-1;
+	for(int j=0,i=Que[j];j<Que.size();j++,i=Que[j])
+	{
+		if((di=get_dist(a,i))>mx)
+		{
+			mx=di;
+			loc=i;
+		}
+	}
+	return loc;
+}
+
+// in this case, w is root of a
+int get_easy_min(int a,int w)
+{
+	int h, minD, n=depth[a]-depth[w];
+	if(n==0)
+		return maxN+100;
+	for(h=LOG2[n],minD=maxN+100;h>=0;h--)
+	{
+		if(n&(1<<h))
+		{
+			minD=minDist[a][h]<minD?minDist[a][h]:minD;
+			a=hopf[a][h];			
+		}
+	}
+	return minD;
+}
+
+// the shortest road between a and b
+int get_min(int a,int b)
+{
+	int w=LCA(a,b);
+	int minD, minD1;
+	minD=get_easy_min(a,w);
+	minD1=get_easy_min(b,w);
+	return minD1<minD?minD1:minD;
+}
+
+// in this case, a is ancestor of b
+int get_min_all(int b,vector<int> A)
+{
+	int a=LCA(A), minD=maxN+100;
+	
+	for(int h=LOG2[depth[b]-depth[a]];h>=0;h--)
+	{
+		if(!hopf[b][h] || is_ancestor(hopf[b][h],A))
+			continue;
+		minD=minDist[b][h]<minD?minDist[b][h]:minD;
+		b=hopf[b][h];
+	}
+	return minDist[b][0]<minD?minDist[b][0]:minD;
+}
+
+int main()
+{
+	int n, h, Q, K, i, loc1, loc2, mx, cnt, lcaU, lcaV, minD;
+	int u, v, c;
+	vector<int> PP, UU, VV;
+	
+	LOG2[0]=0;
+	for(n=1,h=0;n<=maxN;n++)
+	{
+		if(n<(1<<(h+1)))
+			LOG2[n]=h;
+		else
+			LOG2[n]=++h;
+	}
+
+	scanf("%d",&n);
+	for(i=0;i<n-1;i++)
+	{
+		scanf("%d %d %d",&u,&v,&c);
+		maStr[u].push_back(pair<int,int>(v,c));
+		maStr[v].push_back(pair<int,int>(u,c));
+	}
+
+	dfs(1);
+	
+	for(h=1;h<=LOG2[n];h++)
+	{
+		for(i=2;i<=n;i++)
+		{
+			hopf[i][h]=hopf[hopf[i][h-1]][h-1];
+			minDist[i][h]=min(minDist[i][h-1],minDist[hopf[i][h-1]][h-1]);
+		}
+	}
+
+	scanf("%d",&Q);
+	while(Q--)
+	{
+		PP.clear();
+		UU.clear();
+		VV.clear();
+		scanf("%d",&K);
+		for(i=0;i<K;i++)
+		{
+			scanf("%d",&n);
+			PP.push_back(n);
+		}
+		loc1=get_max(PP[0],PP,mx);
+		loc2=get_max(loc1,PP,mx);
+	//	UU.push_back(loc1);
+	//	VV.push_back(loc2);
+		for(i=0;i<K;i++)
+		{
+			cnt=0;
+			if(get_dist(PP[i],loc1)==mx)
+			{
+				VV.push_back(PP[i]);
+				cnt++;
+			}
+			else if(get_dist(PP[i],loc2)==mx)
+			{
+				UU.push_back(PP[i]);
+				cnt++;
+			}
+			if(cnt==2)
+				break;
+		}
+		printf("%d\n",mx);
+		if(i<K)
+		{
+			printf("-1\n");
+			continue;
+		}
+		//
+		lcaU=LCA(UU);
+		lcaV=LCA(VV);
+		if(is_ancestor(lcaU,lcaV))
+			minD=get_min_all(lcaV,UU);
+		else if(is_ancestor(lcaV,lcaU))
+			minD=get_min_all(lcaU,VV);
+		else
+			minD=get_min(lcaU,lcaV);
+		printf("%d\n",minD);
+	}
+
+	return 0;
+}

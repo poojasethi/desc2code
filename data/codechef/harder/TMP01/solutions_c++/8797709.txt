@@ -1,0 +1,187 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+#include <set>
+#include <iostream>
+
+using namespace std;
+
+typedef long long ll;
+const int N = 1000000+5;
+const int MOD = 1e9+7;
+
+int wa[N], wb[N], wc[N], wv[N];
+bool cmp(int *r, int a, int b, int l) {
+    return r[a]==r[b] && r[a+l]==r[b+l];
+}
+void da(int *r, int *sa, int n, int m) {
+    int *x = wa, *y = wb;
+    for(int i = 0;i < m; i++) wc[i] = 0;
+    for(int i = 0;i < n; i++) wc[x[i]=r[i]]++;
+    for(int i = 1;i < m; i++) wc[i] += wc[i-1];
+    for(int i = n-1;i >= 0; i--) sa[--wc[x[i]]] = i;
+    for(int j = 1, p = 1;p < n; j <<= 1, m = p) {
+        p = 0;
+        for(int i = n-j;i < n; i++) y[p++] = i;
+        for(int i = 0;i < n; i++) if(sa[i]>=j) y[p++] = sa[i]-j;
+        for(int i = 0;i < n; i++) wv[i] = x[y[i]];
+        for(int i = 0;i < m; i++) wc[i] = 0;
+        for(int i = 0;i < n; i++) wc[wv[i]]++;
+        for(int i = 1;i < m; i++) wc[i] += wc[i-1];
+        for(int i = n-1;i >= 0; i--) sa[--wc[wv[i]]] = y[i];
+        int *t = x; x = y; y = t;
+        p = 1; x[sa[0]] = 0;
+        for(int i = 1;i < n; i++)
+            x[sa[i]] = cmp(y, sa[i-1], sa[i], j) ? p-1 : p++;
+    }
+}
+void calheight(int *r, int *sa, int *rk, int *height, int n) {
+    for(int i = 1;i <= n; i++) rk[sa[i]] = i;
+    int k = 0;
+    for(int i = 0;i < n; height[rk[i++]] = k) {
+        if(k) k--;
+        for(int j = sa[rk[i]-1]; r[i+k]==r[j+k]; k++);
+    }
+}
+int rq[N][20], Log[N];
+void build_rmq(int *a, int n) {
+    for(int i = 1;i <= n; i++) rq[i][0] = a[i];
+    for(int j = 1;j < 20; j++) {
+        for(int i = 1;i+(1<<j)-1 <= n; i++)
+            rq[i][j] = min(rq[i][j-1], rq[i+(1<<j-1)][j-1]);
+    }
+    int cr = 0;
+    for(int i = 1;i <= n; i++) {
+        if((1<<cr+1) <= i) cr++;
+        Log[i] = cr;
+    }
+}
+int query_rmq(int l, int r) {
+    int k = Log[r-l+1];
+    return min(rq[l][k], rq[r-(1<<k)+1][k]);
+}
+
+int n, a[N], rk[N], sa[N], height[N];
+
+char s[N];
+bool vis[N];
+int val[N];
+int pre[N], nxt[N];
+
+int cur_right, tot;
+vector<int> vt[N];
+set<int> st;
+int lsum[N], rsum[N];
+
+void deal(int x) {
+    if(!x || x>n) return ;
+    int left = cur_right-sa[x]+1, right = left;
+    if(pre[x]) {
+        int len = query_rmq(pre[x]+1, x);
+        left -= len;
+    }
+    if(nxt[x] <= n) {
+        int len = query_rmq(x+1, nxt[x]);
+        right -= len;
+    }
+    lsum[x] = left; rsum[x] = right;
+    int tmp = min(left, right);
+    if(val[x] != tot+tmp && tot+tmp <= n) {
+        val[x] = tmp+tot;
+        vt[tot+tmp].push_back(x);
+    }
+}
+
+char ch[N][3], op[N][3];
+int qsum;
+
+int gao() {
+    pre[n+1] = 0; nxt[0] = n+1;
+    for(int i = 1;i <= n; i++) val[i] = vis[i] = 0, vt[i].clear();
+    st.clear();
+    st.insert(0); st.insert(n+1);
+
+    cur_right = n-1;
+    tot = 0;
+    ll curans = 0;
+    int ans = 0;
+    int cur_left = n-1;
+    for(int round = 0;round < qsum; round++) {
+        if(op[round][0]=='-') {
+            curans -= st.size()-2;
+            cur_right--;
+            tot++;
+            for(int j = 0;j < vt[tot].size(); j++) {
+                int tmp = vt[tot][j];
+                if(vis[tmp] || val[tmp] != tot) continue;
+                nxt[pre[tmp]] = nxt[tmp];
+                pre[nxt[tmp]] = pre[tmp];
+                st.erase(tmp);
+                vis[tmp] = 1;
+                deal(pre[tmp]); deal(nxt[tmp]);
+            }
+        } else {
+            int i = cur_left;
+            int pos = rk[i];
+            int right = *st.upper_bound(pos);
+            int left = pre[right];
+            if(left) {
+                int len = query_rmq(left+1, pos);
+                if(len >= cur_right-sa[left]+1) {
+                    deal(left);
+                    curans -= min(lsum[left], rsum[left]);
+                    st.erase(left);
+                    vis[left] = 1;
+                    left = pre[left]; 
+                }
+            }
+            if(right <= n) {
+                int len = query_rmq(pos+1, right);
+                if(len >= cur_right-sa[right]+1) {
+                    deal(right);
+                    curans -= min(lsum[right], rsum[right]);
+                    st.erase(right);
+                    vis[right] = 1;
+                    right = nxt[right];
+                }
+            }
+            st.insert(pos);
+            nxt[left] = pos; pre[pos] = left;
+            nxt[pos] = right; pre[right] = pos;
+            deal(left); deal(right); deal(pos);
+            curans += min(lsum[pos], rsum[pos]);
+            cur_left--;
+        }
+        ans = (ans+curans)%MOD;
+    }
+    return ans;
+}
+
+int solve() {
+    n = 0;
+    for(int i = 0;i < qsum; i++) {
+        if(op[i][0]=='+') {
+            a[n++] = ch[i][0]-'a'+1;
+        }
+    }
+    reverse(a, a+n);
+
+    da(a, sa, n+1, 28);
+    calheight(a, sa, rk, height, n);
+    build_rmq(height, n);
+
+    return gao();
+}
+
+int main() {
+    scanf("%d", &qsum);
+    for(int i = 0;i < qsum; i++) {
+        scanf("%s", op[i]);
+        if(op[i][0]=='+') {
+            scanf("%s", ch[i]);
+        }
+    }
+    printf("%d\n", solve());
+    return 0;
+}

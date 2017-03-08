@@ -1,0 +1,23 @@
+#include <iostream>
+#include <string>
+using namespace std;
+int r[128][26];
+int c[128][26];
+int main()
+{
+    string s[128];
+    int n,m;
+    cin>>n>>m;
+    for(int i=0;i<n;++i){
+        cin>>s[i];
+        for(int j=0;j<m;++j){
+            ++r[i][s[i][j]-'a'];
+            ++c[j][s[i][j]-'a'];
+        }
+    }
+    for(int i=0;i<n;++i)
+        for(int j=0;j<m;++j)
+            if(r[i][s[i][j]-'a']==1 && c[j][s[i][j]-'a']==1)
+                cout<<s[i][j];
+    return 0;
+}

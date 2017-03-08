@@ -1,0 +1,198 @@
+#include <cstdio>
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <sstream>
+#include <iomanip>
+#include <cmath>
+#include <cstdlib>
+#include <cctype>
+#include <cstring>
+#include <string>
+#include <ctime>
+#include <cassert>
+#include <utility>
+ 
+using namespace std;
+ 
+#define INF 2000000000000000000LL
+#define MAXN 300050
+#define MAXAINT 1 << 20
+ 
+int N, M;
+int t, u, v, a, b, L, R;
+vector<int> Q[MAXN];
+set<int> S;
+int A[MAXN];
+long long qa, qb;
+ 
+long long Aint[MAXAINT][2];
+//long long Bint[4 * MAXN][2];
+bool Uint[MAXAINT];
+long long ans[MAXN];
+long long mval;
+bool any;
+ 
+void updateB(int k, int st, int dr) {
+    if(L <= st && dr <= R) {
+        Aint[k][0] += a;
+        Aint[k][1] += b - (long long)u * a;
+        return;
+    }
+    
+    int m = (st + dr) / 2;
+    if(L <= m)
+        updateB(2 * k, st, m);
+    if(R > m)
+        updateB(2 * k + 1, m + 1, dr);
+}
+ 
+void queryB(int k, int st, int dr) {
+    qa += Aint[k][0];
+    qb += Aint[k][1];
+    
+    if(st == dr)
+        return;
+    
+    int m = (st + dr) / 2;
+    if(L <= m)
+        queryB(2 * k, st, m);
+    else
+        queryB(2 * k + 1, m + 1, dr);
+}
+ 
+inline long long f(long long a, long long b, long long x) {
+    return a * x + b;
+}
+ 
+void updateA(int k, int st, int dr) {
+    if(L <= st && dr <= R) {
+        if(!Uint[k]) {
+            Uint[k] = true;
+            Aint[k][0] = a;
+            Aint[k][1] = b - (long long)u * a;
+            return;
+        }
+        else {
+            bool cst = f(a, b - (long long)u * a, A[st - 1]) >= f(Aint[k][0], Aint[k][1], A[st - 1]);
+            bool cdr = f(a, b - (long long)u * a, A[dr - 1]) >= f(Aint[k][0], Aint[k][1], A[dr - 1]);
+            if(cst == cdr) {
+                if(cst) {
+                    Aint[k][0] = a;
+                    Aint[k][1] = b - (long long)u * a;
+                }
+                return;
+            }
+        }
+    }
+    
+    if(st == dr)
+        return;
+    
+    int m = (st + dr) / 2;
+    if(L <= m)
+        updateA(2 * k, st, m);
+    if(R > m)
+        updateA(2 * k + 1, m + 1, dr);
+}
+ 
+void queryA(int k, int st, int dr) {
+    if(Uint[k]) {
+        mval = max(mval, Aint[k][0] * u + Aint[k][1]);
+        any = true;
+    }
+    
+    if(st == dr)
+        return;
+    
+    int m = (st + dr) / 2;
+    if(L <= m)
+        queryA(2 * k, st, m);
+    else
+        queryA(2 * k + 1, m + 1, dr);
+}
+ 
+int main() {
+//	freopen("date.in", "r", stdin);
+//	freopen("date.out","w", stdout);
+	
+	scanf("%d %d", &N, &M);
+	
+	for(int i = 0; i < M; i++) {
+        scanf("%d %d", &t, &u);
+        Q[i].push_back(t);
+        Q[i].push_back(u);
+        if(t < 3) {
+            scanf("%d %d %d", &v, &a, &b);
+            Q[i].push_back(v);
+            Q[i].push_back(a);
+            Q[i].push_back(b);
+        }
+        else {
+            S.insert(u);
+        }
+	}
+	
+	N = 0;
+	for(set<int> :: iterator it = S.begin(); it != S.end(); it++)
+        A[N++] = *it;
+	
+	for(int i = 0; i < M; i++) {
+        t = Q[i][0];
+        u = Q[i][1];
+        L = lower_bound(A, A + N, Q[i][1]) - A + 1;
+        if(t < 3) {
+            if(t == 2) {
+                v = Q[i][2];
+                R = upper_bound(A, A + N, Q[i][2]) - A - 1 + 1;
+                a = Q[i][3];
+                b = Q[i][4];
+                updateB(1, 1, N);
+            }
+        }
+        else {
+            qa = 0;
+            qb = 0;
+            queryB(1, 1, N);
+            long long sum = (long long)qa * u + qb;
+            ans[i] = sum;
+        }
+	}
+	
+	for(int i = 0; i < M; i++) {
+        t = Q[i][0];
+        u = Q[i][1];
+        L = lower_bound(A, A + N, Q[i][1]) - A + 1;
+        if(t < 3) {
+            if(t == 1) {
+                v = Q[i][2];
+                R = upper_bound(A, A + N, Q[i][2]) - A - 1 + 1;
+                a = Q[i][3];
+                b = Q[i][4];
+                updateA(1, 1, N);
+            }
+        }
+        else {
+            mval = -INF;
+            any = false;
+            queryA(1, 1, N);
+            
+            if(!any) {
+                printf("NA\n");
+            }
+            else {
+                ans[i] += mval;
+                printf("%lld\n", ans[i]);
+            }
+        }
+	}
+	
+	return 0;
+}

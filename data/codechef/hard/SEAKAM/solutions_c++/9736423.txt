@@ -1,0 +1,268 @@
+#include <iostream>
+#include <vector>
+#include <map>
+#include <set>
+#include <string.h>
+
+using namespace std;
+
+static const unsigned long long int Divisor = 1000000007ULL;
+
+static unsigned long long int Factorial[100001] = {1ULL};
+
+struct Edge
+{
+	unsigned long int Vertex1, Vertex2;
+};
+
+static unsigned int NumBitsSet(unsigned char BitField)
+{
+	unsigned int Count = 0U;
+
+	while (BitField)
+	{
+		Count++;
+
+		BitField = BitField & (BitField - 1);
+	}
+
+	return Count;
+}
+
+static void ComputeFactorials()
+{
+	for(unsigned long long int i = 1ULL; i <= 100000ULL; i++)
+	{
+		Factorial[i] = (i * Factorial[i - 1]) % Divisor;
+	}
+}
+
+class PermutationofPaths
+{
+	private:
+	unsigned long int NumVertices;
+	unsigned int NumMissingEdges;
+	vector<Edge> MissingEdges;
+	map<unsigned int, int> MapVertex;
+	bool ComputeFeasibility(unsigned char BitField,
+							unsigned int NumEdges,
+							unsigned int *pNumEdgeClusters);
+	unsigned long long int ComputePermutations(unsigned int i);
+
+	public:
+	PermutationofPaths() {}
+	~PermutationofPaths() {}
+	void InitializeParameters();
+	unsigned long long int ComputeNumPaths();
+};
+
+void PermutationofPaths::InitializeParameters()
+{
+	unsigned int i = 0U;
+
+	set<unsigned long int> UnconnectedVertices;
+
+	cin >> NumVertices >> NumMissingEdges;
+
+	MissingEdges.resize(NumMissingEdges);
+
+	for (i = 0U; i < NumMissingEdges; i++)
+	{
+		cin >> MissingEdges[i].Vertex1 >> MissingEdges[i].Vertex2;
+
+		UnconnectedVertices.insert(MissingEdges[i].Vertex1);
+		UnconnectedVertices.insert(MissingEdges[i].Vertex2);
+	}
+
+	MapVertex.clear();
+
+	/* Find the Set of Vertices that have Edges missing between them */
+
+	i = 0U;
+	for (set<unsigned long int>::iterator Itr = UnconnectedVertices.begin();
+		 Itr != UnconnectedVertices.end(); ++Itr)
+	{
+		const unsigned long int & Value = *Itr;
+		MapVertex.insert(make_pair(Value , i++));
+	}
+}
+
+bool PermutationofPaths::ComputeFeasibility(unsigned char BitField,
+											unsigned int NumEdges,
+											unsigned int *pNumEdgeClusters)
+{
+	unsigned int DegreeCounts[14];
+	unsigned int Index = 0U;
+	unsigned int NumVerticesInBitField = 0U;
+	bool visited[14];
+
+	memset(DegreeCounts, 0, MapVertex.size() * sizeof(unsigned int));
+
+	for (unsigned char Mask = BitField; Mask; Mask >>= 1, Index++)
+	{
+		if ((Mask & 1U) == 0U)
+			continue;
+
+		DegreeCounts[MapVertex[MissingEdges[Index].Vertex1]]++;
+		DegreeCounts[MapVertex[MissingEdges[Index].Vertex2]]++;
+	}
+
+	/* Degree of any Vertex in the Edge Cluster can NOT be greater that 2 */
+	for (unsigned int i = 0; i < MapVertex.size(); i++)
+	{
+		switch (DegreeCounts[i])
+		{
+			case 0:
+			break;
+
+			case 1:
+			case 2:
+			NumVerticesInBitField++;
+			break;
+
+			default:	return false;
+		}
+	}
+
+	/* Check for a Cycle in the Edge Clusters */
+	memset(&visited[0], 0, MapVertex.size() * sizeof(bool));
+
+	while (1)
+	{
+		unsigned int CurrentVertex = 0U;
+
+		for (map<unsigned int, int>::iterator Itr = MapVertex.begin();
+			 Itr != MapVertex.end(); ++Itr)
+		{
+			if ((DegreeCounts[Itr->second] == 1) && !visited[Itr->second])
+			{
+				CurrentVertex = Itr->first;
+				break;
+			}
+		}
+
+		if (!CurrentVertex)	break;
+
+		visited[MapVertex[CurrentVertex]] = true;
+
+		do {
+			bool Found = false;
+
+			for (unsigned int i = 0; i < MissingEdges.size(); i++)
+			{
+				if ((BitField & (1U << i)) == 0)
+					continue;
+
+				if (MissingEdges[i].Vertex1 == CurrentVertex)
+				{
+					Found = true;
+					CurrentVertex = MissingEdges[i].Vertex2;
+				}
+				else if (MissingEdges[i].Vertex2 == CurrentVertex)
+				{
+					Found = true;
+					CurrentVertex = MissingEdges[i].Vertex1;
+				}
+
+				if (Found)
+				{
+					visited[MapVertex[CurrentVertex]] = true;
+					BitField ^= (1U << i);
+
+					break;
+				}
+			}
+		} while (DegreeCounts[MapVertex[CurrentVertex]] == 2);
+	}
+
+	for (unsigned int i = 0; i < MapVertex.size(); i++)
+	{
+		if (DegreeCounts[i] && !visited[i])
+			return false;
+	}
+
+	*pNumEdgeClusters = NumVerticesInBitField - NumEdges;
+
+	return true;
+}
+
+unsigned long long int PermutationofPaths::ComputePermutations(unsigned int NumEdges)
+{
+	unsigned long long int NumPermutations = 0ULL;
+	unsigned int NumEdgeClusters = 0U;
+
+	for (unsigned char BitField = 1U; BitField < (1U << NumMissingEdges); BitField++)
+	{
+		if ((NumBitsSet(BitField) != NumEdges)
+			|| !ComputeFeasibility(BitField, NumEdges, &NumEdgeClusters))
+		{
+			continue;
+		}
+
+		NumPermutations += (1U << NumEdgeClusters);
+	}
+
+	NumPermutations = (NumPermutations * Factorial[NumVertices - NumEdges]) % Divisor;
+
+	return NumPermutations;
+}
+
+unsigned long long int PermutationofPaths::ComputeNumPaths()
+{
+	/*
+	 * Find the Union of all the MissingEdges being present
+	 * in the Permutation.
+	 */
+	unsigned long long int NumImprobablePaths = 0ULL;
+	unsigned long long int NumPermutations = 0ULL;
+	unsigned long long int NumTotalPaths = Factorial[NumVertices];
+
+	for (unsigned int i = 1U; i <= NumMissingEdges; i++)
+	{
+		NumPermutations = ComputePermutations(i);
+
+		if (i & 1U)
+		{
+			NumImprobablePaths = (NumImprobablePaths + NumPermutations) % Divisor;
+		}
+		else
+		{
+			if (NumImprobablePaths >= NumPermutations)
+			{
+				NumImprobablePaths -= NumPermutations;
+			}
+			else
+			{
+				NumImprobablePaths = Divisor - (NumPermutations - NumImprobablePaths);
+			}
+		}
+	}
+
+	if (NumTotalPaths >= NumImprobablePaths)
+	{
+		return NumTotalPaths - NumImprobablePaths;
+	}
+	else
+	{
+		return Divisor - (NumImprobablePaths - NumTotalPaths);
+	}
+}
+
+int main()
+{
+	int T;
+	PermutationofPaths PathPermutation;
+
+	ComputeFactorials();
+
+	cin >> T;
+
+	while (T--)
+	{
+		PathPermutation.InitializeParameters();
+
+		cout << PathPermutation.ComputeNumPaths() << '\n';
+	}
+
+	return 0;
+}

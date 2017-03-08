@@ -1,0 +1,133 @@
+#include <stdio.h>
+#include <string.h>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <queue>
+#include <set>
+#include <map>
+#include <string>
+#include <math.h>
+#include <stdlib.h>
+using namespace std;
+
+const int MAXN = 200000 + 100;
+struct Node
+{
+	int l,r;
+	int c;
+	int cnt;
+	int lf,rf;
+}segTree[MAXN<<2];
+
+struct Line
+{
+	int x,y1,y2;
+	int f;
+}line[MAXN];
+
+int y[MAXN];
+
+bool cmp(Line A,Line B)
+{
+	return A.x < B.x;
+}
+
+void build(int i,int l,int r)
+{
+	segTree[i].l = l;
+	segTree[i].r = r;
+	segTree[i].cnt = 0;
+	segTree[i].c = 0;
+	segTree[i].lf = y[l];
+	segTree[i].rf = y[r];
+	if(l+1==r) return ;
+	int m = (l + r) / 2;
+	build(i<<1,l,m);
+	build(i<<1|1,m,r);
+}
+
+void calen(int i)
+{
+	if(segTree[i].c>0)
+	{
+		segTree[i].cnt = segTree[i].rf - segTree[i].lf;
+		return;
+	}
+	if(segTree[i].l + 1 == segTree[i].r) segTree[i].cnt = 0;
+	else segTree[i].cnt = segTree[i<<1].cnt + segTree[i<<1|1].cnt;
+}
+
+void update(int i,Line e)
+{
+	if(e.y1==segTree[i].lf&&e.y2==segTree[i].rf)
+	{
+		segTree[i].c += e.f;
+		calen(i);
+		return ;
+	}
+	if(e.y2<=segTree[i<<1].rf) update(i<<1,e);
+	else if(e.y1>=segTree[i<<1|1].lf) update(i<<1|1,e);
+	else
+	{
+		Line tmp = e;
+		tmp.y2 = segTree[i<<1].rf;
+		update(i<<1,tmp);
+		tmp = e;
+		tmp.y1 = segTree[i<<1|1].lf;
+		update(i<<1|1,tmp);
+	}
+	calen(i);
+}
+
+
+int main()
+{
+	int kase = 0;
+	int k;
+		int x1,y1,x2,y2;
+		int n;
+		int t = 1;
+		scanf("%d",&n);
+		for(int i = 1 ; i <= n ; i++)
+		{
+			scanf("%d%d%d%d",&x1,&y1,&x2,&y2);
+			if(x1==x2)
+			{
+				if(y1>y2) {swap(y1,y2);}
+				x2++;
+				y2++;
+			}
+			else if(y1==y2)
+			{
+				if(x1>x2) {swap(x1,x2);}
+				y2++;
+				x2++;
+			}
+			line[t].x = x1;
+			line[t].y1 = y1;
+			line[t].y2 = y2;
+			line[t].f = 1;
+			y[t] = y1;
+			t++;
+			line[t].x = x2;
+			line[t].y1 = y1;
+			line[t].y2 = y2;
+			line[t].f = -1;
+			y[t] = y2;
+			t++;
+		}
+		sort(line+1,line+t,cmp);
+		sort(y+1,y+t);
+		build(1,1,t-1);
+		update(1,line[1]);
+		long long ans = 0;
+		for(int i = 2 ; i < t ; i++)
+		{
+			ans += (long long)segTree[1].cnt * (line[i].x-line[i-1].x);
+			update(1,line[i]);
+		}
+		printf("%I64d\n",ans);
+     
+    return 0;
+}

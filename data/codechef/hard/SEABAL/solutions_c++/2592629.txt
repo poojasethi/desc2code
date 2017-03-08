@@ -1,0 +1,265 @@
+/***********Template Starts Here***********/
+#pragma comment (linker,"/STACK:16777216")
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+#include <map>
+#include <queue>
+#include <stack>
+#include <vector>
+#include <deque>
+#include <functional>
+#include <string>
+#include <iostream>
+#include <cctype>
+
+#define pb push_back
+#define nl puts ("")
+#define sp printf ( " " )
+#define phl printf ( "hello\n" )
+#define all(c) (c).begin(),(c).end()
+#define tr(container, it) for(typeof(container.begin()) it = container.begin(); it != container.end(); it++)
+#define sz(a) int((a).size())
+
+using namespace std;
+
+typedef long long vlong;
+typedef unsigned long long uvlong;
+typedef vector < int > vi;
+typedef pair < int, int > ii;
+typedef vector < ii > vii;
+
+
+const vlong inf = 2147383647;
+const double pi = 2 * acos ( 0.0 );
+const double eps = 1e-9;
+const vlong maxint = 2147483647;
+const vlong minint = -2147483648;
+
+/***********Template Ends Here***********/
+#define MAX 100010
+
+int ballon[MAX];
+vlong cum[MAX];
+int n, m;
+
+void update_bit ( int ind, vlong val ) {
+    while ( ind <= n ) {
+        cum[ind] += val;
+        ind += ind & ( -ind );
+    }
+}
+
+vlong find_bit ( int ind ) {
+    vlong res = 0;
+    while ( ind > 0 ) {
+        res += cum[ind];
+        ind -= ind & ( -ind );
+    }
+    return res;
+}
+
+vii points;
+
+ii make_pair ( int a, int b ) {
+    ii x ( a, b );
+    return x;
+}
+
+
+int bs_low ( int low, int high, vlong val ) {
+
+    while ( low <= high ) {
+        int mid = ( low + high ) / 2;
+        if ( find_bit( mid ) >= val ) {
+            high = mid - 1;
+        }
+        else low = mid + 1;
+    }
+    //low points to the index with value equal to val. So return low + 1
+    return low + 1;
+}
+int bs_high ( int low, int high, vlong val ) {
+    while ( low <= high ) {
+        int mid = ( low + high ) / 2;
+        if ( find_bit( mid ) <= val ) {
+            low = mid + 1;
+        }
+        else high = mid - 1;
+    }
+    //low points to the index with value greater than val. So return low - 1
+    return low - 1;
+}
+
+int min_num[5*MAX];
+int psize;
+
+//Build the segment tree based on the points
+void build ( int v, int a, int b ) {
+    if ( a == b ) {
+        min_num[v] = a;
+        return;
+    }
+    int mid = ( a + b ) / 2;
+    build ( v * 2, a, mid );
+    build ( v * 2 + 1, mid + 1, b );
+
+    //Keep the index which has minimum y coordinate
+    int lind = min_num[v*2], rind = min_num[v*2+1];
+    if ( points[lind].second <= points[rind].second ) min_num[v] = lind;
+    else min_num[v] = rind;
+}
+
+int query( int v, int a, int b, int p, int q ) {
+    if ( a == p && b == q ) {
+        return min_num[v];
+    }
+    int mid = ( a + b ) / 2;
+    if ( q <= mid ) return query ( v * 2, a, mid, p, q );
+    else if ( p >= mid + 1 ) return query ( v * 2 + 1, mid + 1, b, p, q );
+    else {
+        int lind = query( v * 2, a, mid, p, mid );
+        int rind = query( v * 2 + 1, mid + 1, b, mid + 1, q );
+        if ( points[lind].second <= points[rind].second ) return lind;
+        else return rind;
+    }
+}
+
+void update_st ( int v, int a, int b, int c ) {
+    if ( a == b ) {
+        //Set y coordinates to 10^7. This way, it will never come in
+        //the lower right quadrant of any query
+        points[a].second = 10000000;
+        return;
+    }
+
+    int mid = ( a + b ) / 2;
+    if ( c <= mid ) update_st ( v * 2, a, mid, c );
+    else update_st ( v * 2 + 1, mid + 1, b, c );
+
+    //Update new minimum index
+    int lind = min_num[v*2], rind = min_num[v*2+1];
+    if ( points[lind].second <= points[rind].second ) min_num[v] = lind;
+    else min_num[v] = rind;
+}
+
+bool compare ( const ii &a, const ii &b ) {
+    if ( a.first < b.first ) return true;
+    else return false;
+}
+
+int query_st ( int left, int right ) {
+    int res = 0;
+    //Find out the index in points array of the point with x coordinate >= left
+    //using binary search
+    ii need = make_pair( left, -1 );
+    int start = lower_bound ( points.begin(), points.end(), need, compare ) - points.begin();
+
+    //If index greater than array size of points, no point exist
+    if ( start == points.size() ) return 0;
+
+    //Now use segment tree to quary from start to point.size() - 1.
+    //This ensures, all points being searched has x coordinates greater than left
+    while ( 1 ) {
+        //Find the index of the point that has lowest y coordinate
+        int ind = query ( 1, 0, psize - 1, start, psize - 1 );
+
+        //If this y coordinate is below right, then we have a point
+        //in the lower right quadrant
+        if ( points[ind].second <= right ) {
+            res++;
+
+            //Now remove this point from existance
+            update_st ( 1, 0, psize - 1, ind );
+        }
+        else break; //No more points can be found
+    }
+
+    //Number of new points found
+    return res;
+}
+
+int main () {
+    //freopen ( "input.txt", "r", stdin );
+    //freopen ( "output.txt", "w", stdout );
+    scanf ( "%d %d", &n, &m );
+
+    int i;
+    for ( i = 1; i <= n; i++ ) {
+        scanf ( "%d", &ballon[i] );
+
+        //Create a array of cumulative sum
+        update_bit ( i, ballon[i] );
+    }
+
+    int res = 0;
+    for ( i = 0; i < m; i++ ) {
+        int l, r;
+        scanf ( "%d %d", &l, &r );
+
+        //If cumulative sum at r is equal to cumulative sum at l-1, then l-r are all 0's
+        if ( find_bit ( r ) - find_bit ( l - 1 ) == 0 ) {
+            res++;
+            //No need to process this segment. It is already all zero.
+        }
+        else {
+            //Otherwise, make this segment into a point and store in points array.
+            points.pb ( make_pair( l, r ) );
+        }
+    }
+
+    //Sort the points first based on x coordinate, then based on y.
+    sort ( points.begin(), points.end() );
+
+    //Build segment tree based on this points
+    psize = points.size();
+    //At each node of the segment tree, I am storing the index of point
+    // That has the least y coordinate
+    build ( 1, 0, psize - 1 );
+
+    int ans = 0;
+    int k;
+    scanf ( "%d", &k );
+    while ( k-- ) {
+        int x;
+        scanf ( "%d", &x );
+
+        //Prick ballon at index p
+        int p = ans + x;
+
+        //Now prick a ballon.
+
+        if ( ballon[p] > 1 ) {
+            //Pricking a ballon does not create segments with 0 ballons
+            ballon[p]--;
+            update_bit( p, -1 ); //Update cumulative frequency
+            //Result does not change.
+            printf ( "%d\n", res ); // Print result.
+            ans = res;
+        }
+        else if ( ballon[p] == 1 ){
+            //Pricking a balloon creates a segment with 0 ballons.
+            ballon[p]--;
+            update_bit( p, -1 ); // Update cumulative frequency.
+
+            //Find the starting point of the new segment.
+            int left_p = bs_low ( 0, p, find_bit( p ) );
+            //Find the ending point of the new segment.
+            int right_p = bs_high ( p, n, find_bit( p ) );
+
+            //Imagine left_p, right_p is a coordinate of a point
+            //Now find out how many points exist in the lower right quadrant
+            //and add it to res
+            res += query_st ( left_p, right_p );
+            printf ( "%d\n", res );
+            ans = res;
+        }
+        else {
+            printf ( "%d\n", res );
+            ans = res;
+        }
+    }
+
+    return 0;
+}

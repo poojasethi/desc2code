@@ -1,0 +1,121 @@
+#include <iostream>
+#include <string.h>
+#include <stdio.h>
+#include <queue>
+#include <algorithm>
+#include <set>
+#include <math.h>
+#include <map>
+
+const int inf=0x3f3f3f3f;
+const int N=100010;
+
+using namespace std;
+
+struct seg
+{
+	int l,r,lazy;
+	int cnt[26];
+}tree[N*4];
+
+void b_tree(int l,int r,int idx)
+{
+	tree[idx].l=l;tree[idx].r=r;
+	tree[idx].lazy=-1;
+	for(int i=0;i<26;i++)
+		tree[idx].cnt[i]=0;
+	if(l==r) return ;
+	int mid=(l+r)>>1;
+	b_tree(l,mid,idx<<1);
+	b_tree(mid+1,r,idx<<1|1);
+}
+
+void updata(int idx)
+{
+	int &lz=tree[idx].lazy;
+	int lsz=tree[idx<<1].r-tree[idx<<1].l+1;
+	int rsz=tree[idx<<1|1].r-tree[idx<<1|1].l+1;
+	if(lz!=-1)
+	{
+		for(int i=0;i<26;i++)
+			tree[idx<<1].cnt[i]=tree[idx<<1|1].cnt[i]=0;
+		tree[idx<<1].cnt[lz]=lsz;
+		tree[idx<<1|1].cnt[lz]=rsz;
+		tree[idx<<1].lazy=lz;
+		tree[idx<<1|1].lazy=lz;
+		lz=-1;
+	}
+}
+
+void insert(int l,int r,int x,int idx)
+{
+	//cout<<l<<" "<<r<<" "<<x<<" "<<tree[idx].l<<" "<<tree[idx].r<<endl;
+	if(tree[idx].l==l && tree[idx].r==r)
+	{
+		for(int i=0;i<26;i++)
+			tree[idx].cnt[i]=0;
+		tree[idx].lazy=x;
+		tree[idx].cnt[x]=r-l+1;
+		return ;
+	}
+	updata(idx);
+	int mid=(tree[idx].l+tree[idx].r)>>1;
+	if(r<=mid) insert(l,r,x,idx<<1);
+	else if(l>mid) insert(l,r,x,idx<<1|1);
+	else insert(l,mid,x,idx<<1),insert(mid+1,r,x,idx<<1|1);
+	for(int i=0;i<26;i++)
+		tree[idx].cnt[i]=tree[idx<<1].cnt[i]+tree[idx<<1|1].cnt[i];
+}
+
+int query(int l,int r,int k,int idx)
+{
+	if(tree[idx].l==l && tree[idx].r==r)
+		return tree[idx].cnt[k];
+	updata(idx);
+	int mid=(tree[idx].l+tree[idx].r)>>1;
+	if(r<=mid) return query(l,r,k,idx<<1);
+	else if(l>mid) return query(l,r,k,idx<<1|1);
+	return query(l,mid,k,idx<<1)+query(mid+1,r,k,idx<<1|1);
+	for(int i=0;i<26;i++)
+		tree[idx].cnt[i]=tree[idx<<1].cnt[i]+tree[idx<<1|1].cnt[i];
+}
+
+char s[N];
+
+int main()
+{
+	freopen("input.txt","r",stdin);
+	freopen("output.txt","w",stdout);
+	int n,m;
+	scanf("%d%d",&n,&m);
+	scanf("%s",s+1);
+	b_tree(1,n,1);
+	for(int i=1;i<=n;i++)
+		insert(i,i,s[i]-'a',1);
+	for(int k=1;k<=m;k++)
+	{
+		int l,r,cnt[26]={};
+		scanf("%d%d",&l,&r);
+		for(int i=0;i<26;i++)
+			cnt[i]=query(l,r,i,1);
+		int id=-1,c=0;
+		for(int i=0;i<26;i++)
+			if(cnt[i]&1) id=i,c++;
+		if(c>=2) continue;
+		for(int i=0;i<26;i++)
+		{
+			if(cnt[i]/2==0) continue;
+			insert(l,l+cnt[i]/2-1,i,1);
+			insert(r-cnt[i]/2+1,r,i,1);
+			l+=cnt[i]/2;
+			r-=cnt[i]/2;
+		}
+		if(id==-1) continue;
+		insert(l,r,id,1);
+	}
+	for(int i=1;i<=n;i++)
+		for(int j=0;j<26;j++)
+			if(query(i,i,j,1)) printf("%c",'a'+j);
+	puts("");
+	return 0;
+}

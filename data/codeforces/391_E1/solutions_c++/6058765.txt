@@ -1,0 +1,102 @@
+#include <algorithm>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+#define N 200010
+#define int64 long long
+#define For(i,x,y) for (i=x;i<=y;i++)
+using namespace std;
+int i,j,k,n,m,t,x,y;
+int head[3][N],a[3][N],next[3][N],g[N],fa[N];
+int64 s1[N],f[N],sum,len[3][N],ma[3],an,h[N][2],S1,S2,s[3];
+void dfs(int t,int x,int64 y) {
+	int v;
+	len[t][x]=y+f[x];
+	sum+=len[t][x];
+	ma[t]=max(ma[t],len[t][x]);
+	for (v=head[t][x];v;v=next[t][v]) {
+		int A=a[t][v]; int64 B=s[t]-s1[A];
+		if (fa[x]!=A) dfs(t,A,y+B+f[x]-f[A]-s1[A]);
+	}
+}
+inline void work(int x) {
+	int l,r,v;
+	g[l=r=1]=1; fa[1]=0;
+	for (;l<=r;l++) {
+		int A=g[l];
+		for (v=head[x][A];v;v=next[x][v]) {
+			int B=a[x][v];
+			if (fa[A]!=B) {
+				g[++r]=B; fa[B]=A;
+			}
+		}
+	}
+	for (l--;l;l--) {
+		int A=g[l]; s1[A]=1; f[A]=0;
+		for (v=head[x][A];v;v=next[x][v]) {
+			int B=a[x][v];
+			if (fa[A]!=B) {
+				s1[A]+=s1[B]; f[A]+=s1[B]+f[B];
+			}
+		}
+	}
+	dfs(x,1,0);
+}
+void bfs(int x) {
+	int l,r,v,i; int64 ans=0;
+	g[l=r=1]=1; fa[1]=0;
+	for (;l<=r;l++) {
+		int A=g[l];
+		for (v=head[x][A];v;v=next[x][v]) {
+			int B=a[x][v];
+			if (fa[A]!=B) {
+				g[++r]=B; fa[B]=A;
+			}
+		}
+	}
+	For(i,0,2) if (i!=x) For(v,i+1,2) if (v!=x) {
+		ans+=(ma[i]+s[i]+ma[v]+s[v])*s[x];
+		ans+=ma[i]*s[v]+ma[v]*s[i]+s[i]*s[v]*2;
+		S1=s[i],S2=s[v];
+	}
+	for (l--;l;l--) {
+		int A=g[l],k1=0,k2=0;
+		h[A][0]=len[x][A]*S1;
+		h[A][1]=len[x][A]*S2;
+		int64 maxx=h[A][0]+h[A][1];
+		for (v=head[x][A];v;v=next[x][v]) {
+			int B=a[x][v];
+			if (fa[A]!=B) {
+				h[A][0]=max(h[A][0],h[B][0]+S1*S2);
+				h[A][1]=max(h[A][1],h[B][1]+S1*S2);
+				if (h[B][0]>h[k1][0]) k1=B;
+				if (h[B][1]>h[k2][1]) k2=B;
+			}
+		}
+		for (v=head[x][A];v;v=next[x][v]) {
+			int B=a[x][v];
+			if (fa[A]!=B) {
+				if (B!=k1) maxx=max(maxx,h[k1][0]+h[B][1]+S1*S2*2);
+				if (B!=k2) maxx=max(maxx,h[B][0]+h[k2][1]+S1*S2*2);
+			}
+		}
+		if (k1) maxx=max(maxx,max(h[k1][0]+S1*S2+len[x][A]*S2,h[k2][1]+S1*S2+len[x][A]*S1));
+		an=max(an,ans+maxx);
+	}
+}
+int main() {
+	For(i,0,2) scanf("%I64d",&s[i]);
+	For(i,0,2) {
+		t=0;
+		For(j,1,s[i]-1) {
+			scanf("%d%d",&x,&y);
+			a[i][++t]=y,next[i][t]=head[i][x],head[i][x]=t;
+			a[i][++t]=x,next[i][t]=head[i][y],head[i][y]=t;
+		}
+	}
+	For(i,0,2) work(i); sum/=2;
+	For(i,0,2) bfs(i);
+	printf("%I64d\n",an+sum);
+	//for(;;);
+	return 0;
+}

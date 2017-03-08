@@ -1,0 +1,117 @@
+#include <iostream>
+#include <stdio.h>
+#include <vector>
+#include <string.h>
+
+using namespace std;
+
+// bulding tree for range sum query.
+inline void buildTree(long long* tree,long long* data, int node, int l, int r)
+{
+	if (l == r) tree[node]  = data[l];
+
+	else
+	{
+		buildTree(tree, data, 2 * node, l, (l+r) / 2);
+		buildTree(tree, data, 2 * node + 1, (l+r) / 2 + 1, r);
+
+		tree[node] = tree[2*node] + tree[2*node+1];
+	}
+}
+
+//updating the ith value of the input array
+inline void update(long long *tree, int value, int updateIndex,int node, int l, int r)
+{
+    int mid = (l + r) / 2;
+
+    if (l == r) tree[node] = value;
+    else
+    {
+        if (updateIndex >= l && updateIndex <= mid) update(tree, value, updateIndex, 2*node, l, mid);
+        else update(tree, value, updateIndex, 2*node + 1, mid + 1, r);
+        
+ 		tree[node] = tree[2*node] + tree[2*node+1];
+    } 
+
+}
+
+//Range Sum Query function
+inline long long rsQuery(long long* tree, int node, int queryL, int queryR, int l, int r)
+{
+    int mid = (l + r) / 2;
+	long long y = 0;
+	if (l == queryL && r == queryR) return tree[node];
+    else if ( queryL >= l && queryR <= mid) y = rsQuery(tree, 2*node, queryL, queryR, l, mid);
+    else if ( queryL >= mid + 1 && queryR <= r) y = rsQuery(tree, 2*node + 1, queryL, queryR, mid + 1, r);
+    else if (queryL <= mid && queryR > mid) y = rsQuery(tree, 2*node, queryL, mid, l, mid) +  rsQuery(tree,2*node+1,mid + 1,queryR, mid + 1,r);
+	
+	return y;
+}
+
+vector<int>adj[100004];
+int skill[100004];
+bool visited[100004] = {false};
+int map[100004];
+int end[100004];
+long long delta[200004];
+long long skillCopy[100004];
+
+
+int count = 0;
+
+int  dfs(int i)
+{
+	if (!visited[i])
+	{
+		visited[i] = true;
+		count++;
+		map[i] = count; skillCopy[count] = skill[i];
+		
+		
+		vector<int>::iterator v = adj[i].begin();
+		while (v != adj[i].end())
+		{
+			dfs(*v); 
+			v++;
+		}
+		end[i] = count;
+	}
+}
+
+
+int main()
+{	
+
+	int n, m, u, v;
+	char str[3];
+	scanf("%d %d", &n, &m);
+	for (int i = 1; i <=n; i++) scanf("%d", &skill[i]);
+	
+	for (int i = 0; i < n-1; i++)
+	{
+		scanf("%d %d", &u, &v);
+		adj[u].push_back(v);
+		adj[v].push_back(u);
+	}
+	dfs(1);
+	//cout << count << endl;
+	buildTree(delta, skillCopy, 1, 1, n);	
+	for (int i = 0; i < m; i++)
+	{
+		int k, j;
+		getchar();
+		scanf("%s", str);
+		if (strcmp("Q", str) == 0)
+		{
+			scanf("%d", &k);
+			printf("%lld\n", rsQuery(delta, 1, map[k], end[k], 1, n)); 
+		}
+
+		else if (strcmp("U", str) == 0)
+		{
+			scanf("%d %d", &k , &j);	
+			update(delta, j, map[k], 1, 1, n);
+		}
+	}	
+	return 0;
+}

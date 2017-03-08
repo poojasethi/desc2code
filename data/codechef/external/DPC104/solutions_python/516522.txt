@@ -1,0 +1,235 @@
+import java.io.*;
+
+class PaperCube
+{
+	public int MAX_POINTS = 10;
+	public int PLANE_FLOOR = 1;
+	public int PLANE_ROOF = 2;
+	public int PLANE_RIGHT = 3;
+	public int PLANE_LEFT = 4;
+	public int PLANE_FRONT = 5;
+	public int PLANE_BACK = 6;
+	public int PLANE_NONE = 0;
+	public int PLANE_SOME = 7;
+	public int MATRIX_SIZE = 6; 
+	
+	public class Point
+	{
+		int value;
+		int name;
+	}
+	
+	public Point[][] point;
+	
+	private BufferedReader inputReader;
+	private static int numTestcases = 0;
+	private int count = 0;
+	private String[] result;
+	
+	public static void main(String[] args) throws NumberFormatException, IOException
+	{
+		PaperCube pc = new PaperCube();
+		
+		pc.initialize();
+		for (int k = 0; k < numTestcases; k++)
+		{
+			pc.parse();
+			pc.solve();
+			pc.print();
+		}
+	}
+	
+	public void initialize() throws NumberFormatException, IOException
+	{
+		inputReader = new BufferedReader(new InputStreamReader(System.in));
+		numTestcases = Integer.parseInt(inputReader.readLine());
+		result = new String[numTestcases];
+	}
+	
+	public void parse() throws NumberFormatException, IOException
+	{
+		point = new Point[MAX_POINTS][MAX_POINTS];
+    	for (int i = 0; i < MATRIX_SIZE; i++)
+    	{
+	    	String[] temp = inputReader.readLine().split(" ");
+	    	for (int j = 0; j < MATRIX_SIZE; j++)
+	    	{
+	    		point[i][j] = new Point();
+	    		point[i][j].value = Integer.parseInt(temp[j]);
+	    		if (point[i][j].value == 0)
+	    			point[i][j].name = PLANE_NONE;
+	    		else
+	    			point[i][j].name = PLANE_SOME;
+	    	}
+    	}
+	}
+	
+	public void solve()
+	{
+		count = 0;
+		
+		for (int k = 1; k <= 3; k++)
+			for (int i = 0; i < MATRIX_SIZE; i++)
+	    	{
+	    		for (int j = 0; j < MATRIX_SIZE; j++)
+	    		{
+	    			if (point[i][j].value == 1 && count == 0)
+	    			{
+	    				point[i][j].name = PLANE_FLOOR;
+	    				identifyOtherPlanes(i, j);
+	    				count++;
+	    			}
+	    			if (point[i][j].name == PLANE_SOME)
+	    			{
+	    				findPlane(i, j, 0, 1);
+	    				findPlane(i, j, 0, -1);
+	    				findPlane(i, j, 1, 0);
+	    				findPlane(i, j, -1, 0);
+	    			}
+	    		}
+    	}
+	}
+	
+	public void identifyOtherPlanes(int row, int col)
+	{
+		if (point[row][col].name == PLANE_FLOOR)
+		{
+			for (int i = 1; i < 4 && isPossible(row+i); i++)
+			{
+				int flag = 0;
+				if (isValue(row+i, col))
+					switch(i)
+					{
+						case 1:
+							setName(row+i, col, PLANE_BACK); flag = 1;
+							break;
+						case 2:
+							setName(row+i, col, PLANE_ROOF); flag = 1;
+							break;
+						case 3:
+							setName(row+i, col, PLANE_FRONT); flag = 1;
+							break;
+					}
+				
+				if (flag == 1)
+				{
+					if (isValue(row+i, col-1))
+						setName(row+i, col-1, PLANE_LEFT);
+					if (isValue(row+i, col+1))
+						setName(row+i, col+1, PLANE_RIGHT);
+				}
+			}
+			for (int j = 1; j < 4 && isPossible(col+j); j++)
+			{
+				int flag = 0;
+				if (isValue(row, col+j))
+					switch(j)
+					{
+						case 1:
+							setName(row, col+j, PLANE_RIGHT); flag = 1;
+							break;
+						case 2:
+							setName(row, col+j, PLANE_ROOF); flag = 1;
+							break;
+						case 3:
+							setName(row, col+j, PLANE_LEFT); flag = 1;
+							break;
+					}
+				
+				if (flag == 1)
+					if (isValue(row+1, col+j))
+						setName(row+1, col+j, PLANE_BACK);
+			}
+		}
+	}
+	
+	void findPlane(int row, int col, int delta_row, int delta_col)
+	{
+		if (delta_row == 0 && planeIdentified(row, col+delta_col))
+		{
+			int tempcol = col+2*delta_col;
+			if (planeIdentified(row, tempcol))
+				setOpposite(row, col, row, tempcol);
+			if (planeIdentified(row-1, col+delta_col) && planeIdentified(row-1, tempcol))
+				setOpposite(row, col, row-1, tempcol);
+			if (planeIdentified(row+1, col+delta_col) && planeIdentified(row+1, tempcol))
+				setOpposite(row, col, row+1, tempcol);
+		}
+		
+		else if (delta_col == 0 && planeIdentified(row+delta_row, col))
+		{
+			int temprow = row+2*delta_row;
+			if (planeIdentified(temprow, col))
+				setOpposite(row, col, temprow, col);
+			if (planeIdentified(row+delta_row, col-1) && planeIdentified(temprow, col-1))
+				setOpposite(row, col, temprow, col-1);
+			if (planeIdentified(row+delta_row, col+1) && planeIdentified(temprow, col+1))
+				setOpposite(row, col, temprow, col+1);
+		}
+	}
+	
+	public boolean isPossible(int i)
+	{
+		if (i >= 0 && i < MATRIX_SIZE)
+			return true;
+		return false;
+	}
+	public boolean isPossible(int i, int j)
+	{
+		if (isPossible(i) && isPossible(j))
+			return true;
+		return false;
+	}
+	public boolean isValue(int i, int j)
+	{
+		if (isPossible(i, j) && point[i][j].value == 1)
+			return true;
+		return false;
+	}
+	public void setName(int i, int j, int k)
+	{
+		point[i][j].name = k;
+	}
+	public boolean planeIdentified(int i, int j)
+	{
+		if (isValue(i, j) && point[i][j].name != PLANE_SOME)
+			return true;
+		return false;
+	}
+	public void setOpposite(int i, int j, int fromi, int fromj)
+	{
+		if (planeIdentified(i, j))
+			return;
+		
+		if (point[fromi][fromj].name % 2 == 1)
+			point[i][j].name = point[fromi][fromj].name + 1;
+		else 
+			point[i][j].name = point[fromi][fromj].name - 1;
+	}
+	
+	public void print()
+	{
+		int[] arr = new int[MATRIX_SIZE+2];
+    	for (int i = 0; i < MATRIX_SIZE; i++)
+    	{
+    		for (int j = 0; j < MATRIX_SIZE; j++)
+    		{
+    			if (isValue(i, j))
+    				arr[point[i][j].name] = point[i][j].name;
+    			//System.out.print(point[i][j].name + " ");
+    		}
+    		//System.out.println("");
+    	}
+    	
+    	int i;
+		for (i = 1; i <= MATRIX_SIZE; i++)
+			if (i != arr[i])
+			{
+				System.out.println("incorrect");
+				break;
+			}
+		
+		if(i > MATRIX_SIZE)
+			System.out.println("correct");
+	}
+}

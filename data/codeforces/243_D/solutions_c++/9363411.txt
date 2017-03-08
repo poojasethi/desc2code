@@ -1,0 +1,100 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef long long LL;
+
+const int N=1000+5;
+const int INF=1<<30;
+
+int n,vx,vy,v[N][N];
+
+struct SegTree
+{
+	int val,tag;
+	SegTree *lc,*rc;
+	SegTree(){val=tag=0;lc=rc=NULL;}
+}*rt=new SegTree();
+
+inline void cmin(int& x,int y){if (y<x) x=y;}
+inline void cmax(int& x,int y){if (y>x) x=y;}
+
+inline void gint(int& x)
+{
+	char ch;
+	for (;!isdigit(ch=getchar()););
+	for (x=ch-'0';isdigit(ch=getchar());x=x*10+ch-'0');
+}
+
+inline void pushdown(SegTree *&now)
+{
+	if (now->lc==NULL) now->lc=new SegTree();
+	if (now->rc==NULL) now->rc=new SegTree();
+	if (now->tag)
+	{
+		cmax(now->lc->val,now->tag),cmax(now->lc->tag,now->tag);
+		cmax(now->rc->val,now->tag),cmax(now->rc->tag,now->tag);
+		now->tag=0;
+	}
+}
+
+inline void update(SegTree *&now)
+{
+	now->val=min(now->lc->val,now->rc->val);
+}
+
+inline void modify(SegTree *&now,int l,int r,int le,int ri,int v)
+{
+	if (le<=l && r<=ri) cmax(now->val,v),cmax(now->tag,v);
+	else{
+		pushdown(now);
+		int mid=l+r>>1;
+		if (ri<=mid) modify(now->lc,l,mid,le,ri,v);else
+		if (le>mid) modify(now->rc,mid+1,r,le,ri,v);else
+		modify(now->lc,l,mid,le,ri,v),modify(now->rc,mid+1,r,le,ri,v);
+		update(now);
+	}
+}
+
+inline int getmin(SegTree *&now,int l,int r,int le,int ri)
+{
+	if (le<=l && r<=ri) return now->val;
+	pushdown(now);
+	int mid=l+r>>1;
+	if (ri<=mid) return getmin(now->lc,l,mid,le,ri);
+	if (le>mid) return getmin(now->rc,mid+1,r,le,ri);
+	return min(getmin(now->lc,l,mid,le,ri),getmin(now->rc,mid+1,r,le,ri));
+}
+
+int main(int argc,char **argv)
+{
+	scanf("%d%d%d",&n,&vx,&vy);
+	vx=-vx;vy=-vy;
+	for (int i=1;i<=n;++i)
+		for (int j=1;j<=n;++j)
+			gint(v[i][j]);
+	if (vy<0)
+	{
+		vy=-vy;
+		for (int i=1;i<=n;++i)
+			for (int j=1;j*2<=n;++j)
+				swap(v[i][j],v[i][n-j+1]);
+	}
+	if (vx<0)
+	{
+		vx=-vx;
+		for (int i=1;i*2<=n;++i)
+			for (int j=1;j<=n;++j)
+				swap(v[i][j],v[n-i+1][j]);
+	}
+	int l,r;
+	LL ans=0;
+	for (int i=n;i;--i)
+		for (int j=n;j;--j)
+		{
+			l=(i-1)*vy-j*vx+1;r=i*vy-(j-1)*vx;
+			ans+=max(0,v[i][j]-getmin(rt,-INF,INF,l,r));
+			modify(rt,-INF,INF,l,r,v[i][j]);
+		}
+	cout<<ans<<endl;
+	return 0;
+}

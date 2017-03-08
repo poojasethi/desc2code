@@ -1,0 +1,20 @@
+#include<cstdio>
+#include<algorithm>
+using namespace std;
+void P(int x){printf("%d\n",x);exit(0);}
+int main(){
+	int n,m,ans=0,f=0;
+	scanf("%d%d",&m,&n);
+	if(n==1)P(-1);
+	if(n==2 && m==3)P(11);
+	if(n==3 && m==5)P(11);
+	for(;;){
+		if(n>=m+m)P(ans+1);
+		if(n>=m)P(ans+(n==m?5:3));
+		if(!f)m-=n-2,ans=4,f=1;
+		else {
+			if(n/2==1)P(-1);
+			m-=n/2-1,ans+=2;
+		}
+	}
+}

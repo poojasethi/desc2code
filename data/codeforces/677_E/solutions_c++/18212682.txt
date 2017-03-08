@@ -1,0 +1,95 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+const int Mod = 1e9 + 7, N = 1001, Inf = 8000;
+string s[N];
+int far[N][N][8], lg[N], n;
+int dx[8] = {-1, -1, 0, 1, 1, 1, 0, -1};
+int dy[8] = {0, 1, 1, 1, 0, -1, -1, -1};
+float w[4] = {-Inf, 0, 1, 1.5849625007211561814537389439478};
+float p[N][N][10][8];
+
+
+bool in(int x, int y) {
+	return min(x, y) >= 0 && max(x, y) < n;
+}
+
+int get_far(int x, int y, int d) {
+	if (!in(x, y)) return 0;
+	if (far[x][y][d] != -1) return far[x][y][d];
+	if (s[x][y] == '0') return far[x][y][d] = 0;
+	return far[x][y][d] = get_far(x + dx[d], y + dy[d], d) + 1;
+}
+
+void build_pro() {
+	for (int l = 0; l < 10; l++)
+		for (int d = 0; d < 8; d++)
+			for (int i = 0; i < n; i++)
+				for (int j = 0; j < n; j++) {
+					if (!l) {
+						p[i][j][l][d] = w[s[i][j] - '0'];
+						continue;
+					}
+					if (!in(i + dx[d] * ((1 << l) - 1), j + dy[d] * ((1 << l) - 1))) {
+						p[i][j][l][d] = -Inf;
+						continue;
+					}
+					p[i][j][l][d] = p[i][j][l - 1][d] + p[i + (1 << (l - 1)) * dx[d]][j + (1 << (l - 1)) * dy[d]][l - 1][d];
+				}
+}
+
+float query(int x, int y, int d, int len) {
+	if (!len)
+		return 0;
+	int lsb = len & -len;
+	int t = lg[lsb];
+	return p[x][y][t][d] + query(x + lsb * dx[d], y + lsb * dy[d], d, len - lsb);
+}
+
+void init() {
+	lg[1] = 0;
+	for (int i = 2; i < N; i++)
+		lg[i] = lg[i / 2] + 1;
+	
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < n; j++)
+			for (int d = 0; d < 8; d++)
+				far[i][j][d] = -1;
+	build_pro();
+}
+
+main() {
+	ios::sync_with_stdio(false); cin.tie(NULL);
+	cin >> n;
+	for (int i = 0; i < n; i++)
+		cin >> s[i];
+	init();
+	float ans = 0;
+	int x = 0, y = 0, r = 0;
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < n; j++) 
+			for (int k = 0; k < 2; k++) {
+				int mini = Inf;
+				for (int d = k; d < 8; d += 2)
+					mini = min(mini, get_far(i, j, d));
+				float temp = 0;
+				for (int d = k; d < 8; d += 2)
+					temp += query(i, j, d, mini);
+				if (s[i][j] == '0') continue;
+				temp -= 3 * w[s[i][j] - '0'];
+				if (temp >= ans) {
+					x = i, y = j, r = k;
+					ans = temp;
+				}
+		}
+	int mini = Inf;
+	for (int d = r; d < 8; d += 2)
+		mini = min(mini, get_far(x, y, d));
+	int pro = 1;
+	for (int d = r; d < 8; d += 2)
+		for (int i = 1; i < mini; i++)
+			pro = 1LL * pro * (s[x + dx[d] * i][y + dy[d] * i] - '0') % Mod;
+	pro = 1LL * pro * (s[x][y] - '0') % Mod;
+	cout << pro << endl;
+}

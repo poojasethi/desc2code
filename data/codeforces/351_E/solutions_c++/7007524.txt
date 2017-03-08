@@ -1,0 +1,34 @@
+#include <stdio.h>
+#define M 2010
+#define Min(a,b) (a<b?a:b)
+
+int a[M],n;
+
+void Input() {
+	int i,j,k;
+	scanf("%d",&n);
+	for(i=0;i<n;i++) {
+		scanf("%d",&a[i]);
+		if(a[i]<0) a[i]=-a[i];
+	}
+}
+
+void Solve() {
+	int i,j,k,s=0;
+	for(i=0;i<n;i++) {
+		int x,y;
+		x=y=0;
+		for(j=0;j<n;j++) if(a[i]>a[j]) {
+			if(i>j) x++; else y++;
+		}
+		s+=Min(x,y);
+	}
+	printf("%d\n",s);
+}
+
+int main() {
+//	freopen("204_E.in","r",stdin);
+	Input();
+	Solve();
+	return 0;
+}

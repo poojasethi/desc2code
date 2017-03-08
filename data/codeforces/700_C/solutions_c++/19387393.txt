@@ -1,0 +1,152 @@
+// learn from MainDullMoeHand
+#include<cstdio>
+#include<cstring> 
+#include<iostream>
+#include<algorithm>
+#include<vector>
+#include<utility>
+#include<climits>
+#define INF 2147483640
+#define LL long long
+#define N 1010
+#define M 30010
+using namespace std;
+int n, m, s, t;
+int x[M], y[M], z[M];
+
+int head[N], next[M << 1], edge[M << 1], val[M << 1], tot = 1;
+
+void add(int a, int b, int c){
+	next[++ tot] = head[a]; head[a] = tot; edge[tot] = b; val[tot] = c;
+}
+
+bool vis[N], used[M];
+vector<int> candidates;
+bool dfs(int u){
+	bool res = 0;
+	vis[u] = 1;
+	if(u == t) res = 1;
+	
+	for(int i = head[u]; i; i = next[i]){
+		int v = edge[i];
+		if(used[i >> 1]) continue;
+		used[i >> 1] = 1;
+		if(!vis[v]){
+			if(dfs(v)){
+				candidates.push_back(i >> 1);
+				res = 1;
+			}
+		}
+	}
+	return res;
+}
+
+pair<int, int> cur;
+int delta[N];
+bool reach;
+pair<int, bool> check(int u){
+	bool res = 0;
+	vis[u] = 1;
+	if(u == t){
+		reach = res = 1;
+	}
+	
+	int sum = 0;
+	for(int i = head[u]; i; i = next[i]){
+		int v = edge[i];
+		if(used[i >> 1]) continue;
+		used[i >> 1] = 1;
+		if(!vis[v]){
+			pair<int, int> tmp = check(v);
+			if(tmp.first == 0 && tmp.second){
+				cur = min(cur, make_pair(val[i], i >> 1));
+			}
+			sum += tmp.first;
+			if(tmp.second) res = 1;
+		}
+		else{
+			sum ++;
+			delta[v] --;
+		}
+	}
+	sum += delta[u];
+	return make_pair(sum, res);
+}
+
+void init(){
+	for(int i = 1; i <= n; i ++){
+		head[i] = 0;
+		delta[i] = 0;
+		vis[i] = 0;
+	}
+	for(int i = 1; i <= m; i ++) used[i] = 0;
+	tot = 1;
+	reach = 0;
+	cur = make_pair(INF, 0);
+}
+
+int main(){
+	scanf("%d%d", &n, &m);
+	scanf("%d%d", &s, &t);
+	for(int i = 1; i <= m; i ++){
+		scanf("%d%d%d", &x[i], &y[i], &z[i]);
+		add(x[i], y[i], z[i]);
+		add(y[i], x[i], z[i]);
+	}
+	dfs(s);
+	if(candidates.empty()){
+		puts("0"); puts("0");
+		return 0;
+	}
+	
+	pair< int, vector<int> > best;
+	best.first = INF;
+	for(int i = 0; i < candidates.size(); i ++){
+		int c = candidates[i];
+		init();
+		for(int j = 1; j <= m; j ++){
+			if(j != c){
+				add(x[j], y[j], z[j]);
+				add(y[j], x[j], z[j]);
+			}
+			else tot += 2;
+		}
+		check(s);
+		if(!reach){
+			vector<int> tmp;
+			tmp.push_back(c);
+			best = min(best, make_pair(z[c], tmp));
+		}
+		else if(cur.first < INF){
+			//cout << c << ' ' << cur.first << endl;
+			vector<int> edge;
+			edge.push_back(c);
+			edge.push_back(cur.second);
+			best = min(best, make_pair(z[c] + cur.first, edge));
+		}
+	}
+	
+	if(best.first < INF){
+		printf("%d\n%d\n", best.first, (int)best.second.size());
+		for(int j = 0; j < best.second.size(); j ++){
+			int i = best.second[j];
+			printf("%d ", i);
+		}
+		puts("");
+	}
+	else{
+		puts("-1");
+	}
+	return 0;
+}
+/*
+6 7
+1 6
+2 1 6
+2 3 5
+3 4 9
+4 6 4
+4 6 5
+4 5 1
+3 1 3
+*/

@@ -1,0 +1,92 @@
+#include<cstdio>
+#include<cstdlib>
+#include<algorithm>
+#include<cstring>
+#include<set>
+#define MAXN 200005
+#define MAXL 20
+using namespace std ;
+typedef long long LL ;
+
+struct road {
+	int x, next ;
+} r[MAXN] ;
+
+int N, K, get, ans ;
+int st[MAXN], w ;
+int at[MAXN], pt[MAXN], cnt, deep[MAXN] ;
+int go[MAXN][MAXL] ;
+set<int> ss ;
+set<int>::iterator it ;
+
+void Add(int x, int y)
+{
+	r[++w].x = y, r[w].next = st[x] ;
+	st[x] = w ;
+}
+
+void Make_Tree(int x, int fr)
+{
+	int i, tmp ;
+	deep[x] = deep[fr]+1 ;
+	go[x][0] = fr ;
+	for(i = 1; i <= 17; i ++)
+		go[x][i] = go[go[x][i-1]][i-1] ;
+	at[x] = ++cnt, pt[cnt] = x ;
+	for(i = st[x]; i; i = r[i].next)
+		if((tmp=r[i].x) != fr) 
+			Make_Tree(tmp, x) ;
+	pt[++cnt] = x ;
+}
+int lca(int x, int y)
+{
+	if(deep[x] < deep[y]) swap(x, y) ;
+	int i ;
+	for(i = 17; i >= 0; i --)
+		if(deep[x]-(1<<i) >= deep[y])
+			x = go[x][i] ;
+	if(x == y) return x ;
+	for(i = 17; i >= 0; i --)
+		if(go[x][i] != go[y][i])
+			x = go[x][i], y = go[y][i] ;
+	return go[x][0] ;
+}
+int Calc(int x) // ORZ CLJ and his godoxoxox code.
+{
+	int i, j, tmp ;
+	if(ss.empty()) return get-1 ;
+	it = ss.lower_bound(at[x]) ;
+	int lt, rt ;
+	rt = pt[it==ss.end()?*ss.begin():*it] ;
+	lt = pt[it==ss.begin()?*ss.rbegin():*--it] ;
+	return deep[x]-deep[lca(lt, x)]-deep[lca(rt, x)]+deep[lca(lt, rt)] ;
+}
+int main()
+{
+	int i, j ;
+	int fr, to ;
+	int lt, rt, tmp ;
+	scanf("%d %d", &N, &K) ;
+	for(i = 1; i < N; i ++)
+	{
+		scanf("%d %d", &fr, &to) ;
+		Add(fr, to), Add(to, fr) ;
+	}
+	Make_Tree(1, 0) ;
+	ss.insert(1), get = 1 ;
+	for(lt = rt = 1; lt <= N; lt ++)
+	{	
+		while(rt <= N)
+		{
+			rt ++, tmp = Calc(rt), get += tmp ;
+			if(get > K) {get -= tmp; break ;}
+			ss.insert(at[rt]) ;
+		}
+		rt -- ;
+		ans = max(ans, rt-lt+1) ;
+		if(lt != N) ss.erase(at[lt]), get -= Calc(lt) ;
+	}
+	printf("%d\n", ans) ;
+	//system("pause") ;
+	return 0 ;
+}

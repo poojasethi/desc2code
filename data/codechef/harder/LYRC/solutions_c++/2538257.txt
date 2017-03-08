@@ -1,0 +1,320 @@
+#undef _GLIBCXX_DEBUG
+
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <ctime>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <list>
+#include <map>
+#include <numeric>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <valarray>
+#include <vector>
+
+using namespace std;
+
+#define foreach(iter,cont) for(typeof((cont).begin()) iter = (cont).begin(); iter != (cont).end(); ++iter)
+#define min3(a, b, c) min(a, min(b, c))
+#define max3(a, b, c) max(a, max(b, c))
+#define inf 1000000008
+#define eps 1.0e-10L
+#define divisible(a, b) (((a) / (b)) * (b) == (a))
+static const long long p = 1000000007;
+__attribute__((unused)) static bool eq(long double a, long double b)  { return (a == b ? true : (a * b == 0 ? abs(a - b) < eps : abs(a - b) / (abs(a) + abs(b)) < eps));  }
+__attribute__((unused)) static long long modp(long long n, long long m) { long long r = n % m; return r >= 0 ? r : r + m; }
+__attribute__((unused)) static long long gcd(long long a, long long b) { return (a < 0 ? gcd(-a, b) : (b < 0 ? gcd(a, -b) : (!a && !b ? 1 : (b ? gcd(b, a % b) : a)))); }
+template<class T> static int len(const T& cont) { return (int) cont.size(); }
+
+// BEGIN CUT HERE
+template<class T, class U> ostream &operator<<(ostream &os, const pair<T, U> &p) { return os << "(" << p.first << ", " << p.second << ")"; }
+template<class T> ostream &operator<<(ostream& os, const vector<T> &vec) { os << "[ "; for(size_t i = 0; i < vec.size(); i++) { os << vec[i]; if(i != vec.size() - 1) { os << ", "; } } return os << " ]"; }
+template<class T> ostream &operator<<(ostream& os, const list<T> &l) { os << "[ "; bool first = true; for(typename list<T>::const_iterator lstIt = l.begin(); lstIt != l.end(); ++lstIt) { if(!first) { os << ", "; } first = false; os << *lstIt; } return os << " ]"; }
+template<class T> ostream &operator<<(ostream& os, const deque<T> &d) { os << "[ "; bool first = true; for(typename deque<T>::const_iterator dIt = d.begin(); dIt != d.end(); ++dIt) { if(!first) { os << ", "; } first = false; os << *dIt; } return os << " ]"; }
+template<class T> ostream &operator<<(ostream& os, const vector<vector<T> > &mat) { for(size_t i = 0; i < mat.size(); i++) { if(i) os << endl; os << mat[i]; } return os; }
+template<class T> ostream &operator<<(ostream &os, const set<T> &s) { os << "{ "; bool first = true; for(typename set<T>::const_iterator setIt = s.begin(); setIt != s.end(); ++setIt) { if(!first) { os << ", "; } first = false; os << *setIt; } return os << " }"; }
+template<class T, class U> ostream &operator<<(ostream &os, const map<T, U> &m) { os << "{ "; bool first = true; for(typename map<T, U>::const_iterator mapIt = m.begin(); mapIt != m.end(); ++mapIt) { if(!first) { os << ", "; } first = false; os << mapIt->first << " = " << mapIt->second; } return os << " }"; }
+// END CUT HERE
+
+int w, n;
+char words[500][5001], lyric[50002];
+vector<int> wordCount;
+int curWord;
+
+struct SuffixTreeNode {
+
+	SuffixTreeNode() : firstChild(NULL), nextSibling(NULL), parent(NULL), suffixLink(NULL), p(0), q(0), pathLen(0), leafCount(0) { }
+
+	~SuffixTreeNode() {
+		delete nextSibling;
+		delete firstChild;
+	}
+
+	SuffixTreeNode *getChild(char idx) const {
+		SuffixTreeNode *cur = firstChild;
+		while(cur) {
+			if(lyric[cur->p] == idx) {
+				return cur;
+			}
+			cur = cur->nextSibling;
+		}
+
+		return NULL;
+	}
+
+	void addChild(SuffixTreeNode *child) {
+		if(!firstChild) {
+			firstChild = child;
+		} else {
+			SuffixTreeNode *cur = firstChild;
+			while(cur->nextSibling) {
+				cur = cur->nextSibling;
+			}
+			cur->nextSibling = child;
+		}
+	}
+
+	void reparentChildren() {
+		SuffixTreeNode *cur = firstChild;
+		while(cur) {
+			cur->parent = this;
+			cur = cur->nextSibling;
+		}
+	}
+
+	SuffixTreeNode *firstChild, *nextSibling, *parent, *suffixLink;
+	int p, q;
+	int pathLen;
+	int leafCount;
+};
+
+struct TreePos {
+	TreePos(SuffixTreeNode *node) : node(node), nodePos(0), searchPos(0) { }
+
+	SuffixTreeNode *node;
+	int nodePos, searchPos;
+};
+
+// Walks down the tree matching the string from start to end as far as possible.
+// Returns TreePose where node is the node whose first nodePos characters match
+// the string from start to searchPos.
+TreePos walkDown(SuffixTreeNode *root, int start, int end) {
+	TreePos ret(root);
+	ret.nodePos = 0;
+	ret.searchPos = start;
+
+	if(end <= start) {
+		ret.searchPos = end;
+		return ret;
+	}
+
+	while(true) {
+		for(ret.nodePos = ret.node->p; ret.nodePos < ret.node->q; ret.nodePos++) {
+			if(lyric[ret.nodePos] == words[curWord][ret.searchPos]) {
+				ret.searchPos++;
+
+				if(ret.searchPos == end) {
+					// Matched through the end of the string, done
+					return ret;
+				}
+			} else {
+				// Hit a mismatch, done
+				return ret;
+			}
+		}
+
+		// Matched all the characters in the node
+		SuffixTreeNode *next = ret.node->getChild(words[curWord][ret.searchPos]);
+
+		if(next == NULL) {
+			// Exhausted our tree
+			return ret;
+		} else {
+			ret.node = next;
+		}
+	}
+}
+
+SuffixTreeNode *walkDownFast(SuffixTreeNode *from, int start, int end, int phase) {
+	SuffixTreeNode *cur = from;
+	int curPos = start;
+	while(true) {
+		if(cur->q == -1 || curPos + cur->q - cur->p >= end) {
+			return cur;
+		} else {
+			curPos += cur->q - cur->p;
+			cur = cur->getChild(lyric[curPos]);
+		}
+	}
+}
+
+SuffixTreeNode *pool;
+int numNodes;
+
+pair<int, SuffixTreeNode *> buildSuffixTreePhase(int phase, SuffixTreeNode *start, int numLeaves) {
+	SuffixTreeNode *curNode = start;
+
+	char newChar = lyric[phase];
+	SuffixTreeNode *newStart = start;
+	SuffixTreeNode *needsSuffixLink = NULL;
+
+	for(int ext = numLeaves; ext <= phase; ext++) {
+		SuffixTreeNode *walkFrom;
+
+		if(curNode->parent) {
+			if(curNode->suffixLink) {
+				walkFrom = curNode->suffixLink;
+			} else if(curNode->parent && curNode->parent->suffixLink) {
+				walkFrom = curNode->parent->suffixLink;
+			} else if(curNode->parent && curNode->parent->parent && curNode->parent->parent->suffixLink) {
+				walkFrom = curNode->parent->parent->suffixLink;
+			} else if(curNode->parent && curNode->parent->parent) {
+				walkFrom = curNode->parent->parent;
+			} else {
+				walkFrom = curNode->parent;
+			}
+
+			curNode = walkDownFast(walkFrom, (ext - 1) + walkFrom->pathLen + 1, (ext - 1) + walkFrom->pathLen + 1 + (((phase - (ext - 1) + 1) - 2) - walkFrom->pathLen), phase);
+
+			if(needsSuffixLink != NULL) {
+				needsSuffixLink->suffixLink = curNode;
+				needsSuffixLink = NULL;
+			}
+		}
+
+		int nodeOffset = (phase - ext) - curNode->pathLen;
+		int curQ = curNode->q == -1 ? phase + 1 : curNode->q;
+
+		if(curNode->p + nodeOffset < curQ && lyric[curNode->p + nodeOffset] == newChar) {
+			return make_pair(numLeaves, newStart);
+		} else if(curNode->p + nodeOffset == curQ && curNode->getChild(newChar) != NULL) {
+			return make_pair(numLeaves, newStart);
+		} else if(curQ && curNode->p + nodeOffset >= curQ && !curNode->firstChild) {
+			newStart = curNode;
+		} else {
+			// Couldn't match all the way and tree continues in a different direction,
+			// have to split
+
+			// Special check so we don't create an extra child node from root
+			if(curNode->p + nodeOffset < curQ) {
+				SuffixTreeNode *childNode = &pool[numNodes++];
+				childNode->p = curNode->p + nodeOffset;
+				childNode->q = curQ;
+				childNode->parent = curNode;
+				childNode->firstChild = curNode->firstChild;
+				childNode->reparentChildren();
+				childNode->pathLen = curNode->pathLen + nodeOffset;
+				if(!childNode->firstChild) {
+					childNode->q = -1;
+				}
+				childNode->suffixLink = curNode->suffixLink;
+				curNode->suffixLink = NULL;
+
+				needsSuffixLink = curNode;
+
+				if(newStart == curNode) {
+					newStart = childNode;
+				}
+
+				curNode->firstChild = childNode;
+			}
+
+			SuffixTreeNode *newLeaf = &pool[numNodes++];
+			newLeaf->p = phase;
+			newLeaf->q = -1;
+			newLeaf->parent = curNode;
+			newLeaf->pathLen = curNode->pathLen + nodeOffset;
+			newStart = newLeaf;
+			numLeaves++;
+
+			curNode->addChild(newLeaf);
+
+			curNode->q = curNode->p + nodeOffset;
+		}
+
+	}
+
+	return make_pair(numLeaves, newStart);
+}
+
+void updateQ(SuffixTreeNode *node, int phase) {
+	if(node->q == -1) {
+		node->q = phase + 1;
+	}
+	if(node->nextSibling) {
+		updateQ(node->nextSibling, phase);
+	}
+	if(node->firstChild) {
+		updateQ(node->firstChild, phase);
+	}
+}
+
+SuffixTreeNode *buildSuffixTree() {
+	int n = strlen(lyric);
+	numNodes = 0;
+	pool = new SuffixTreeNode[2 * n - 1];
+
+	SuffixTreeNode *root = &pool[numNodes++];
+
+	int numLeaves = 0;
+	SuffixTreeNode *start = root;
+	for(int phase = 0; phase < n; phase++) {
+		pair<int, SuffixTreeNode *> res = buildSuffixTreePhase(phase, start, numLeaves);
+		numLeaves = res.first;
+		start = res.second;
+	}
+
+	lyric[n] = 127;
+	buildSuffixTreePhase(n, start, numLeaves);
+	updateQ(root, n);
+
+	return root;
+}
+
+void countLeafNodes(SuffixTreeNode *node) {
+	if(!node->firstChild) {
+		node->leafCount = 1;
+	} else {
+		node->leafCount = 0;
+		SuffixTreeNode *cur = node->firstChild;
+		while(cur) {
+			countLeafNodes(cur);
+			node->leafCount += cur->leafCount;
+			cur = cur->nextSibling;
+		}
+	}
+}
+
+int main(__attribute__((unused)) int argc, __attribute__((unused)) char **argv) {
+	scanf("%d", &w);
+	wordCount.assign(w, 0);
+	for(int i = 0; i < w; i++) {
+		scanf("%s", &words[i]);
+	}
+
+	scanf("%d", &n);
+	for(int curLyric = 0; curLyric < n; curLyric++) {
+		scanf("%s", &lyric[0]);
+		SuffixTreeNode *root = buildSuffixTree();
+		countLeafNodes(root);
+
+		for(curWord = 0; curWord < w; curWord++) {
+			TreePos match = walkDown(root, 0, strlen(words[curWord]));
+			if(match.searchPos == strlen(words[curWord])) {
+				wordCount[curWord] += match.node->leafCount;
+			}
+		}
+	}
+
+	for(int i = 0; i < w; i++) {
+		printf("%d\n", wordCount[i]);
+	}
+
+	return 0;
+}

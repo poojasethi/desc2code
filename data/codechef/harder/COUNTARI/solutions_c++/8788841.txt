@@ -1,0 +1,159 @@
+#include <algorithm>
+#include <iostream>
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+
+typedef long long ll;
+#define REP(i, a, b) for (int i = (a); i < (b); ++i)
+#define PER(i, a, b) for (int i = (a); i > (b); --i)
+#define FOR(i, a, b) for (int i = (a); i <= (b); ++i)
+#define ROF(i, a, b) for (int i = (a); i >= (b); --i)
+
+inline int read() {
+	static char ch;
+	while (ch = getchar(), ch < '0' || ch > '9');
+	int res = ch - 48;
+	while (ch = getchar(), ch >= '0' && ch <= '9')
+		res = res * 10 + ch - 48;
+	return res;
+}
+
+template <typename T>
+inline bool chkmax(T &x, const T &y) {
+	return x < y ? x = y, 1 : 0;
+}
+
+const int N = 1e5 + 2, M = 65536 + 5;
+int n, max, Size, a[N];
+int nowcnt[M], precnt[M], sufcnt[M];
+ll ans = 0;
+
+namespace FFT {
+	const double PI = acos(-1.0);
+	
+	int fftN;
+	struct comp {
+		double a, b;
+		comp() : a(0), b(0) {}
+		comp(const double &_a, const double &_b) :
+			a(_a), b(_b) {}
+		comp operator * (const comp &rhs) const {
+			return comp(a * rhs.a - b * rhs.b, a * rhs.b + b * rhs.a);
+		}
+		comp operator + (const comp &rhs) const {
+			return comp(a + rhs.a, b + rhs.b);
+		}
+		comp operator - (const comp &rhs) const {
+			return comp(a - rhs.a, b - rhs.b);
+		}
+		void operator /= (const double &rhs) {
+			a /= rhs; b /= rhs;
+		}
+		void reSet(const double &_a, const double &_b) {
+			a = _a; b = _b;
+		}
+	};
+	comp w[M];
+	comp Lhs[M], Rhs[M], Res[M];
+	ll nowcnt[M];
+	
+	inline void init(const int &len) {
+		for (fftN = 1; fftN <= len * 2; fftN *= 2);
+		w[0].reSet(1.0, 0.0);
+		w[1].reSet(cos(2 * PI / fftN), sin(2 * PI / fftN));
+		comp Wn = w[1];
+		FOR(i, 2, fftN) w[i] = w[i - 1] * Wn;
+	}
+	
+	inline void FFT(comp *res) {
+		for (int i = 0, j = 0; i < fftN; ++i) {
+			if (i > j) std::swap(res[i], res[j]);
+			for (int k = fftN >> 1; (j ^= k) < k; k >>= 1);
+		}
+		comp u, v;
+		for (int i = 2; i <= fftN; i <<= 1) {
+			int l = i >> 1, base = fftN / i;
+			for (int j = 0; j < fftN; j += i)
+				for (int k = 0; k < l; ++k) {
+					u = res[j + k]; v = res[j + k + l] * w[base * k];
+					res[j + k + l] = u - v;
+					res[j + k] = u + v;
+				}
+		}
+	}
+	
+	inline void polyMulti(const int *lhsP, const int *rhsP, const int &l, const int &r) {
+		REP(i, 0, fftN) {
+			Lhs[i].reSet(lhsP[i], 0.0);
+			Rhs[i].reSet(rhsP[i], 0.0);
+		}
+		FFT(Lhs);
+		FFT(Rhs);
+		REP(i, 0, fftN)
+			Res[i] = Lhs[i] * Rhs[i];
+		std::reverse(w + 1, w + fftN);
+		FFT(Res);
+		std::reverse(w + 1, w + fftN);
+		
+		REP(i, 0, fftN)
+			nowcnt[i] = ll(Res[i].a / fftN + 0.5);
+		REP(i, l, r)
+			ans += nowcnt[a[i] * 2];
+	}
+}
+
+inline void del_suf(const int &l, const int &r) {
+	REP(i, l, r)
+		--sufcnt[a[i]];
+}
+
+inline void add_pre(const int &l, const int &r) {
+	REP(i, l, r)
+		++precnt[a[i]];
+}
+
+inline void count_block(const int &l, const int &r) {
+	REP(i, l, r) {
+		int mid = a[i] * 2;
+		REP(j, i + 1, r) if (mid > a[j])
+			ans += nowcnt[mid - a[j]];
+		++nowcnt[a[i]];
+	}
+	REP(i, l, r)
+		--nowcnt[a[i]];
+}
+
+inline void count_one_side(const int &l, const int &r) {
+	REP(i, l, r) REP(j, i + 1, r) {
+		int u = a[i] * 2 - a[j], v = a[j] * 2 - a[i];
+		if (u > 0)
+			ans += precnt[u];
+		if (v > 0)
+			ans += sufcnt[v];
+	}
+}
+
+int main() {
+	//freopen("a.in", "r", stdin);
+	//freopen("a.out", "w", stdout);
+	n = read();
+	Size = 2200;
+	REP(i, 0, n) {
+		a[i] = read();
+		chkmax(max, a[i]);
+		++sufcnt[a[i]];
+	}
+	FFT::init(max);
+	
+	for (int l = 0, r = 0; l < n; l = r) {
+		r = std::min(n, l + Size);
+		del_suf(l, r);
+		count_block(l, r);
+		count_one_side(l, r);
+		FFT::polyMulti(precnt, sufcnt, l, r);
+		add_pre(l, r);
+	}
+	printf("%lld\n", ans);
+	return 0;
+}

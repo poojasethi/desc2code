@@ -1,0 +1,141 @@
+
+/* C++ template */
+
+#include <iostream>
+#include <cstdlib>
+#include <cstdio>
+#include <cmath>
+#include <vector>
+#include <map>
+#include <stack>
+#include <queue>
+#include <cstring>
+#include <string>
+
+using namespace std;
+
+#define FOR(a,b,c) for(int a=(int)(b);a<=(int)(c);a++)
+#define ll long long
+#define ull unsigned long long 
+#define MAX(a,b) ((a>b)?(a):(b))
+#define MIN(a,b) ((a>b)?(b):(a))
+
+/* Main code starts here */
+
+const int mod=10007;
+int n,m,k,fact[30],npr[30][30],nbhr[30],code[30][30],nzeros,A[30][30],ans;
+
+int alpha,beta;
+int extGCD(int a, int b)
+{
+	if(b>a) return extGCD(b,a);
+
+	if(a%b==0) 
+	{
+		alpha=0; beta=1;
+		return b;
+	}
+	
+	int q,r,d;
+	
+	q=a/b; r=a%b;
+	
+	d=extGCD(b,r);
+	
+	int tmp=beta;
+	beta=alpha-beta*q;
+	alpha=tmp;
+
+	return b;
+}
+
+ull inverse(int f)
+{
+	extGCD(f,mod);
+	int inv=beta;
+	if(inv>mod) inv%=mod;
+	while(inv<0) inv+=mod;
+	return inv;
+}
+
+int countCompleteBipartite(int n, int m, int k)
+{
+	if(k>n || k>m) return 0;
+	if(k==0) return 1;
+	if(k<0 || m<1 || n<1) return 0;
+	
+	return (npr[n][k]*npr[m][k]*inverse(fact[k]))%mod;
+}
+
+int brute(int x, int visited, int l)
+{
+	int rv=0;
+	
+	if(l>k) return 0;
+	
+	if(x<0)
+	{
+		if(l==0) return 0;
+		rv=countCompleteBipartite(n-l,m-l,k-l);
+		if(l&1) rv*=-1;
+		return rv;
+	}
+	
+	if((visited&(1<<x))==0)
+		rv=brute(x-1,visited|nbhr[x],l+1);
+	rv+=brute(x-1,visited,l);
+	
+	return rv;
+}
+
+int solve()
+{
+	// precompute nPr[][] and fact[]
+	fact[1]=1;
+	FOR(i,2,k) fact[i]=(fact[i-1]*i)%mod;
+	int tmp=MAX(n,m);
+	FOR(i,1,tmp) 
+	{
+		int limit=MIN(k,i);
+		npr[i][1]=i;
+		FOR(j,2,limit) npr[i][j]=(npr[i][j-1]*(i-j+1))%mod;
+	}
+	
+	// max ways
+	ans=countCompleteBipartite(n,m,k);
+	
+	// contruct graph
+	FOR(i,0,n-1) FOR(j,0,m-1)
+	{
+		if(A[i][j]) continue; else code[i][j]=nzeros++;
+		int c=code[i][j];
+		nbhr[c]=(1<<c);
+		FOR(k,0,i-1) if(A[k][j]==0)
+		{
+			nbhr[c]|=(1<<code[k][j]);
+			nbhr[code[k][j]]|=(1<<c);
+		}
+		FOR(k,0,j-1) if(A[i][k]==0)
+		{
+			nbhr[c]|=(1<<code[i][k]);
+			nbhr[code[i][k]]|=(1<<c);
+		}
+	}
+	
+	// decrementing nonexistent ways		
+	tmp=brute(nzeros-1,0,0);
+	if(tmp>mod) tmp%=mod;
+	while(tmp<0) tmp+=mod;
+	ans+=tmp;
+	
+	return ans%mod;
+}
+
+int main()
+{
+	cin>>n>>m>>k;
+	FOR(i,0,n-1) FOR(j,0,m-1) cin>>A[i][j];
+	cout<<solve()<<endl;
+	return 0;
+}
+

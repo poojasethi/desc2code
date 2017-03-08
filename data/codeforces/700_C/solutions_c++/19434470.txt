@@ -1,0 +1,152 @@
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <cmath>
+#include <ctime>
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <iomanip>
+#include <algorithm>
+#include <set>
+#include <map>
+#include <bitset>
+#include <ext/rope>
+#define LL long long
+#define ULL unsigned long long 
+#define INFL 0x3f3f3f3f3f3f3f3f
+#define Mod 1000000007 
+#define PII pair<int,int>
+#define mk make_pair
+#define Min(a,b) ((a)>(b)?(b):(a))
+#define Max(a,b) ((a)<(b)?(b):(a))
+using namespace std; 
+using namespace __gnu_cxx;
+const double PI=acos(-1.0);
+const double EPS=1e-10;
+
+inline int read() {
+  static char ch;
+  bool sgn = false;
+  while (ch = getchar(), ch < '0' || ch > '9') if (ch == '-') sgn = true;
+  int res = ch - 48;
+  while (ch = getchar(), ch >= '0' && ch <= '9') res = res * 10 + ch - 48;
+  return	sgn ? -res : res;
+}
+
+const int N=1e6+3;
+
+struct edge {
+	int id,en,w;
+	edge(){}
+	edge(int id,int en,int w):id(id),en(en),w(w){}	
+};
+
+int n,m,a[N],b[N],c[N],s,t,path[N],path1[N],tot,tot1,ans=-1,dfn[N],low[N],vis[N];
+vector<edge> E[N];
+vector<int> Ans;
+bool ok,bo[N],co[N],bridge[N];
+
+void dfs(int x,int f) {
+	bo[x]=1;
+	if(ok) return;
+	if(x==t) {
+		ok=1;
+		return;
+	}	
+	for(int i=E[x].size()-1;i>=0;i--) {
+		int u=E[x][i].en;
+		if(bo[u]||u==f) continue;
+		path[++tot]=E[x][i].id;
+		dfs(u,x);
+		if(ok) return;
+		tot--;
+	}
+}
+
+void dfs1(int x,int f,int no) {
+	bo[x]=1;
+	if(ok) return;
+	if(x==t) {
+		ok=1;
+		return;
+	}	
+	for(int i=E[x].size()-1;i>=0;i--) {
+		int u=E[x][i].en;
+		if(bo[u]||u==f||E[x][i].id==no) continue;
+		path1[++tot1]=E[x][i].id;
+		dfs1(u,x,no);
+		if(ok) return;
+		tot1--;
+	}
+}
+
+bool check(int x,int f,int no) {
+	bo[x]=1;
+	if(x==t) return 1;
+	for(int i=E[x].size()-1;i>=0;i--) {
+		int u=E[x][i].en;
+		if(bo[u]||u==f||E[x][i].id==no) continue;
+		if(check(u,x,no)) return 1;
+	}
+	return 0;
+}
+
+void find_bridge(int cur,int fa_id,int dep,int no) {
+	vis[cur]=1; dfn[cur]=low[cur]=dep;
+	for(int i=E[cur].size()-1;i>=0;i--) {
+		if(E[cur][i].id==fa_id||E[cur][i].id==no) continue;
+		if(dfn[E[cur][i].en]<low[cur]&&1==vis[E[cur][i].en]) low[cur]=dfn[E[cur][i].en];
+		if(0==vis[E[cur][i].en]) {
+			find_bridge(E[cur][i].en,E[cur][i].id,dep+1,no);
+			if(low[E[cur][i].en]<low[cur]) low[cur]=low[E[cur][i].en];
+			//***************************************************
+			if(low[E[cur][i].en]>dfn[cur]) bridge[E[cur][i].id]=1;
+			//***************************************************
+		}
+	}
+}
+
+int main() {
+	n=read(); m=read();
+	s=read(); t=read();
+	for(int i=1;i<=m;i++) {
+		a[i]=read(); b[i]=read(); c[i]=read();
+		E[a[i]].push_back(edge(i,b[i],c[i]));
+		E[b[i]].push_back(edge(i,a[i],c[i]));
+	}
+	dfs(s,0);
+	if(!ok) return puts("0\n0"); 
+	for(int i=1;i<=tot;i++) {
+		for(int j=1;j<=n;j++) bo[j]=0;
+		if(!check(s,0,path[i])) {
+			if(ans==-1||ans>c[path[i]]) {
+				ans=c[path[i]];
+				Ans.clear();
+				Ans.push_back(path[i]);
+			}
+			continue;
+		}
+		for(int j=1;j<=n;j++) vis[j]=0,dfn[j]=0;
+		for(int j=1;j<=m;j++) bridge[j]=0;
+		for(int j=1;j<=n;j++) 
+			if(dfn[j]==0) find_bridge(j,0,1,path[i]);
+		for(int j=1;j<=n;j++) bo[j]=0;
+		tot1=0; ok=0;
+		dfs1(s,0,path[i]);
+		for(int j=1;j<=tot1;j++) {
+			if(!bridge[path1[j]]) continue;
+			if(ans==-1||ans>c[path[i]]+c[path1[j]]) {
+				ans=c[path[i]]+c[path1[j]];
+				Ans.clear();
+				Ans.push_back(path[i]);
+				Ans.push_back(path1[j]);
+			}
+		}
+	}  
+	if(ans==-1) puts("-1");
+	else {  
+		printf("%d\n%d\n",ans,Ans.size());
+		for(int i=0;i<Ans.size();i++) printf("%d ",Ans[i]);
+	}
+}

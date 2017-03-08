@@ -1,0 +1,90 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+#define INF 1000000000
+#define MN 55
+#define MM 105
+#define MV 12000
+#define ME 80000
+int n,m;
+int a[MN],b[MN],c[MN],lim[MN][2],id[MN][210],num;
+int S,T,MAX;
+
+inline int f(int i,int j)
+{
+    return a[i]*j*j+b[i]*j+c[i];
+}
+
+int tot=1,there[ME],nx[ME],fl[ME],head[MV];
+inline void addedge(int x,int y,int flow)
+{
+    //cout<<x<<" "<<y<<" "<<flow<<endl;
+    ++tot; there[tot]=y; nx[tot]=head[x]; head[x]=tot; fl[tot]=flow;
+    ++tot; there[tot]=x; nx[tot]=head[y]; head[y]=tot; fl[tot]=0;
+}
+
+int d[MV],v[MV];
+int isap(int x,int flow)
+{
+    if(x==T) return flow;
+    int now=0;
+    for(int i=head[x];i;i=nx[i])
+    if(fl[i]>0 && d[x]==d[there[i]]+1)
+    {
+        int tt=isap(there[i],min(flow-now,fl[i]));
+        fl[i]-=tt; fl[i^1]+=tt;
+        now+=tt;
+        if(now==flow) return now;
+        if(d[S]>=T) return now;
+    }
+    
+    if(!(--v[d[x]])) d[S]=T;
+    v[++d[x]]++;
+    return now;
+}
+
+int main()
+{
+    scanf("%d%d",&n,&m);
+    for(int i=1;i<=n;++i)
+        scanf("%d%d%d",&a[i],&b[i],&c[i]);
+    for(int i=1;i<=n;++i)
+        scanf("%d%d",&lim[i][0],&lim[i][1]);
+    
+    for(int i=1;i<=n;++i)
+    for(int j=lim[i][0];j<=lim[i][1]+1;++j)
+    {
+        if(j!=lim[i][1]+1) MAX=max(MAX,f(i,j));
+        id[i][j-lim[i][0]]=++num;
+    }
+    
+    S=++num,T=++num;
+    
+    for(int i=1;i<=n;++i)
+    {
+        addedge(S,id[i][0],INF);
+        addedge(id[i][lim[i][1]+1-lim[i][0]],T,INF);
+        for(int j=lim[i][0];j<=lim[i][1];++j)
+            addedge(id[i][j-lim[i][0]],id[i][j+1-lim[i][0]],MAX-f(i,j));
+    }
+    
+    int _u,_v,dd;
+    for(int i=1;i<=m;++i)
+    {
+        scanf("%d%d%d",&_u,&_v,&dd);
+        //xu<=xv+dd
+        for(int j=max(lim[_u][0],lim[_v][0]+dd)-1;j<=min(lim[_u][1],lim[_v][1]+dd);++j)
+        {
+            addedge(id[_u][j-lim[_u][0]+1],id[_v][j-dd-lim[_v][0]+1],INF);
+        }
+    }
+    
+    int ans=0;
+    v[0]=T;
+    while(d[S]<T) ans+=isap(S,INF);
+    printf("%d\n",MAX*n-ans);
+
+    return 0;
+}

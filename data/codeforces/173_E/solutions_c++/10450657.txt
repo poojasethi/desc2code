@@ -1,0 +1,132 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define F first
+#define S second
+
+#define endl '\n'
+
+#define mp make_pair
+#define pb push_back
+
+#define FOR(i, a, b) for(int i = a; i <= b; i++)
+#define ROF(i, a, b) for(int i = a; i >= b; i--)
+
+#define type(x) __typeof((x).begin())
+#define foreach(i, x) for(type(x) i = (x).begin(); i != (x).end(); i++)
+
+#define sol (root + root)
+#define sag (root + root + 1)
+#define orta ((bas + son) >> 1)
+
+#define bit __builtin_popcount
+
+#ifndef D
+	#define dbg(x) 0
+	#define dbgs(x) 0
+#else
+	#define dbg(x) cerr << (#x) << " --> " << (x) << endl
+	#define dbgs(x) cerr << (#x) << " --> " << (x) << ' '
+#endif
+
+typedef long long ll;
+typedef pair < int, int > pii;
+
+const int inf = 1e9 + 5;
+const ll linf = 1e18 + 5;
+
+const int N = 1e5 + 5;
+const int K = 3 * N;
+
+int n, m, k, cur, x[N], y[N], group[N], ans[N], fen[K], kd[K << 2];
+map < int, vector < int > > M, ques;
+map < int, int > vals;
+pii a[N];
+
+void up(int x) {
+	for(; x < K; x += x & (-x)) fen[x]++;
+}
+
+int qu(int x, int y) {
+	int sum = 0;
+	for(; y; y -= y & (-y)) sum += fen[y];
+	for(x--; x; x -= x & (-x)) sum -= fen[x];
+	return sum;
+}
+
+int update(int root, int bas, int son, int x, int k) {
+	if(son < x or x < bas) return kd[root];
+	if(x <= bas and son <= x) return kd[root] = max(kd[root], k);
+	return kd[root] = max(update(sol, bas, orta, x, k), update(sag, orta + 1, son, x, k));
+}
+
+int query(int root, int bas, int son, int x, int y) {
+	if(son < x or y < bas or y < x) return -1;
+	if(x <= bas and son <= y) return kd[root];
+	return max(query(sol, bas, orta, x, y), query(sag, orta + 1, son, x, y));
+}
+
+int query(int x, int y) {
+
+	int lx = vals[a[x].S - k];
+	int rx = vals[a[x].S + k];
+	int ly = vals[a[y].S - k];
+	int ry = vals[a[y].S + k];
+
+	lx = max(lx, ly);
+	rx = min(rx, ry);
+
+	return query(1, 1, cur, lx, rx);
+
+}
+
+int main() {
+
+	memset(kd, -1, sizeof(kd));
+
+	ios :: sync_with_stdio(0);
+
+	cin >> n >> k;
+
+	FOR(i, 1, n) cin >> a[i].F;
+	FOR(i, 1, n) cin >> a[i].S;
+
+	FOR(i, 1, n) {
+		M[a[i].F].pb(i);
+		vals[a[i].S] = 1;
+		vals[a[i].S - k] = 1;
+		vals[a[i].S + k] = 1;
+	}
+
+	foreach(it, vals)
+		it -> S = ++cur;
+
+	foreach(it, M) {
+		foreach(jt, it -> S)
+			up(vals[a[*jt].S]);
+		foreach(jt, it -> S)
+			group[*jt] = qu(vals[a[*jt].S - k], vals[a[*jt].S + k]);
+	}
+
+	cin >> m;
+
+	FOR(i, 1, m) {
+		cin >> x[i] >> y[i];
+		if(a[x[i]].F > a[y[i]].F) swap(x[i], y[i]);
+		ques[a[y[i]].F].pb(i);
+	}
+
+	for(map < int, vector < int > > :: reverse_iterator it = M.rbegin(); it != M.rend(); it++) {
+		foreach(jt, it -> S)
+			update(1, 1, cur, vals[a[*jt].S], group[*jt]);
+		foreach(jt, ques[it -> F])
+			ans[*jt] = query(x[*jt], y[*jt]);
+	}
+
+	FOR(i, 1, m)
+		cout << ans[i] << endl;
+
+	return 0;
+
+}

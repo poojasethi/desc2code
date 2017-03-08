@@ -1,0 +1,272 @@
+#pragma comment(linker,"/STACK:64000000")
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <map>
+#include <set>
+#include <sstream>
+#include <cmath>
+#include <ctime>
+#include <memory.h>
+
+#define WR printf
+#define RE scanf
+#define PB push_back
+#define SE second
+#define FI first
+#define MP make_pair
+
+#define FOR(i,Be,En) for(int (i)=(Be);(i)<=(En);++(i))
+#define DFOR(i,Be,En) for(int (i)=(Be);(i)>=(En);--(i))
+#define SZ(a) (int)((a).size())
+#define FA(i,v) FOR(i,0,SZ(v)-1)
+#define RFA(i,v) DFOR(i,SZ(v)-1,0)
+#define CLR(a) memset(a,0,sizeof(a))
+
+#define LL  long long
+#define VI  vector<int>
+#define PAR pair<int ,int> 
+
+using namespace std;
+void __never(int a){printf("\nOPS %d", a);}
+void __die(int a){printf("%d",(a*a)/(a+a));}
+#define ass(s) {if (!(s)) {__never(__LINE__);cout.flush();cerr.flush();__die(0);}}
+
+
+#define MN 64
+
+bool graf[MN][MN];
+
+int ne[MN][MN];
+int deg[MN];
+
+LL dp1[MN][MN][MN];
+LL dp2[MN][MN][MN];
+LL dp3[MN][MN][MN];
+
+bool was1[MN][MN][MN];
+bool was2[MN][MN][MN];
+bool was3[MN][MN][MN];
+int n, K;
+
+LL Calc1(int a, int b, int deep) ;
+
+bool fass = false;
+
+LL Calc3(int a, int b, int deep){
+	//if (fass) ass(was3[a][b][deep]);
+	if (was3[a][b][deep]) return dp3[a][b][deep];
+	was3[a][b][deep] = true;
+	LL & res = dp3[a][b][deep];
+	if (deep == 0) return res = Calc1(a,b,deep);
+	return res = Calc3(a,b,deep-1) + Calc1(a,b,deep);
+}
+LL Calc2(int a, int b, int deep) {
+	//if (fass) ass(was2[a][b][deep]);
+	if (was2[a][b][deep]) return dp2[a][b][deep];
+	was2[a][b][deep] = true;
+	LL & res = dp2[a][b][deep];
+	if (deep == 0) return res = 1;
+	if (was2[a][b][deep-1] && dp2[a][b][deep-1] == 0) return res = 0;
+	LL neg = 1, sum = 1;
+	FOR(i,0,deg[b]-1) if (ne[b][i] != a) {
+		neg *= Calc3(b,ne[b][i],deep-1);
+		sum *= Calc3(b,ne[b][i],deep);
+	}
+	return res = sum - neg;
+}
+LL Calc1(int a, int b, int deep) {
+	//if (fass) ass(was1[a][b][deep]);
+	if (was1[a][b][deep]) return dp1[a][b][deep];
+	was1[a][b][deep] = true;
+	LL & res = dp1[a][b][deep];
+	if (deep == 0) return res = 1;
+	if (was1[a][b][deep-1] && dp1[a][b][deep-1] == 0) return res = 0;
+	return res = Calc2(a,b,deep-1);
+}
+
+void init(){
+	freopen("input.txt","r",stdin);
+	freopen("output.txt","w",stdout);
+}
+//int m[MN];
+LL buf[MN], fl[MN], fr[MN];
+LL buf2[MN], fl2[MN], fr2[MN];
+
+int calc_time = 0;
+int ans_time = 0;
+void calc(){
+	int start = clock();
+	FOR(i,1,n) FOR(j,1,n) if (graf[i][j]) {
+		dp1[0][i][j] = dp1[0][j][i] = 1;
+		dp2[0][i][j] = dp2[0][j][i] = 1;
+		dp3[0][i][j] = dp3[0][j][i] = 1;
+	}
+	FOR(k,1,K/2) {
+		//dp1 dp3
+		FOR(i,1,n) FOR(jj,0,deg[i]-1) {
+			int j = ne[i][jj];
+			dp1[k][i][j] = dp2[k-1][i][j];
+			dp3[k][i][j] = dp3[k-1][i][j] + dp1[k][i][j];
+		}
+		//dp2
+		
+		FOR(j,1,n) {
+			FOR(I,0,deg[j]-1) {
+				buf2[I] = dp3[k][j][ne[j][I]];
+				buf[I] = dp3[k - 1][j][ne[j][I]];
+			}
+			fl[0] = buf[0];
+			FOR(i,1,deg[j]-1) fl[i] = fl[i-1] * buf[i];
+			fr[deg[j] - 1] = buf[deg[j]-1];
+			DFOR(i,deg[j]-2,0) fr[i] = fr[i+1] * buf[i];
+			
+			fl2[0] = buf2[0];
+			FOR(i,1,deg[j]-1) fl2[i] = fl2[i-1] * buf2[i];
+			fr2[deg[j] - 1] = buf2[deg[j]-1];
+			DFOR(i,deg[j]-2,0) fr2[i] = fr2[i+1] * buf2[i];
+			
+			FOR(I,0,deg[j] - 1) {
+				int i = ne[j][I];
+				LL sum = (I==0?1:fl2[I-1]) * (I==deg[j]-1?1:fr2[I+1]);
+				LL neg = (I==0?1:fl[I-1]) * (I==deg[j]-1?1:fr[I+1]);
+				dp2[k][i][j] = sum - neg;
+			}
+		}
+		
+		/*
+		
+		FOR(i,1,n) FOR(jj,0,deg[i]-1) {
+			int nj = ne[i][jj];
+			
+			if (dp2[k-1][i][nj] == 0) {
+				dp2[k][i][nj] = 0;
+				continue;
+			}
+			
+			LL neg = 1, sum = 1;
+			FOR(jjj,0,deg[nj]-1) {
+				int j = ne[nj][jjj];
+				if (j == i) continue;
+				neg *= dp3[k-1][nj][j];
+				sum *= dp3[k][nj][j];
+			}
+			dp2[k][i][nj] = sum - neg;
+		}
+		*/
+	}
+	calc_time += clock() - start;
+}
+void sol(){	
+	
+	CLR(deg);
+	FOR(i,1,n) FOR(j,1,n) if (graf[i][j]) {
+		ne[i][deg[i]++] = j;
+	}
+	
+	//CLR(was1);
+	//CLR(was2);
+	//CLR(was3);
+	
+	/*
+	FOR(i,1,n) FOR(j,1,n) if (graf[i][j]) {
+		FOR(k,1,K/2+2) {
+			Calc1(i,j,k);
+			Calc2(i,j,k);
+			Calc3(i,j,k);
+		}
+	}
+	*/
+	calc();
+	fass = true;
+	LL ans = n;
+	int start = clock();
+	FOR(k,1,K) {
+		//cout << "k=" << k << ":";
+		LL lans = 0;
+		if (k & 1) {
+			FOR(i,1,n) FOR(j,0,deg[i]-1) if (i < ne[i][j]){
+				LL llans = dp2[k/2][i][ ne[i][j] ]*dp2[k/2][ ne[i][j] ][i];
+				lans += llans;
+			}
+		} else {
+			FOR(i,1,n) {
+				
+				FOR(j,0,deg[i]-1)  buf[j] = dp3[k/2-1][i][ne[i][j]];
+				
+				fl[0] = buf[0];
+				FOR(j,1,deg[i]-1) fl[j] = fl[j-1] * buf[j];
+				fr[deg[i]-1] = buf[deg[i]-1];
+				DFOR(j,deg[i]-2,0) fr[j] = fr[j+1] * buf[j];
+				
+				
+				LL neg0 = fl[deg[i]-1];
+				LL neg1 = 0;
+				FOR(bad,0,deg[i]-1) {
+					//LL s = 1;
+					//FOR(j,0,cc-1) if (j == bad) s *= Calc1(i,m[j],k/2);
+					//else s *= Calc3(i,m[j],k/2-1);
+					
+					LL s2 = (bad == 0? 1 : fl[bad-1]) * (bad==deg[i]-1 ? 1 : fr[bad+1]) * dp1[k/2][i][ne[i][bad]];
+					//ass(s2 == s);
+					
+					neg1 += s2;
+				}
+				LL sum = 1;
+				FOR(j,0,deg[i]-1) sum *= dp3[k/2][i][ne[i][j]];
+				LL llans = sum - neg0 - neg1;
+				
+				//cout << "(" << i << ")=" << llans << " ";
+				
+				lans += llans;
+			}
+		} 
+		ans += lans;
+		//cout << endl;
+	}
+	ans_time += clock() - start;
+	cout << ans << endl;
+	fass = false;
+}
+void Stupid() {
+	
+	
+}
+void Stress(){
+	n = 200;
+	srand(232523);
+	FOR(I,1,1000) {
+		CLR(graf);
+		K = n;
+		FOR(i,2,n) {
+			int j = rand()%(i-1) + 1;
+			graf[i][j] = graf[j][i] = true;
+		}
+		sol();
+	}
+	//cerr << clock() << endl << calc_time << endl << ans_time << endl;
+}
+int main()
+{
+	//init();
+	//Stress();
+	//return 0;
+	int T;
+	cin >> T;
+	FOR(t,1,T) {
+		cin >> n >> K;
+		int a, b;
+		FOR(i,1,n) FOR(j,1,n) graf[i][j] = false;
+		FOR(i,1,n-1) {
+			RE("%d %d",&a,&b);
+			a++;
+			b++;
+			graf[a][b] = graf[b][a] = true;
+		}
+		sol();
+	}
+	return 0;
+}

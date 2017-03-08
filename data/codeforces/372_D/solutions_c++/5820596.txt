@@ -1,0 +1,112 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+#include<vector>
+#include<map>
+#include<cmath>
+#include<set>
+
+#define mp make_pair
+#define pb push_back
+
+using namespace std;
+
+const int N=150200,M=320;
+
+typedef long long big;
+
+int head[N],nxt[N*2],v[N*2],t=1;
+int in[N];
+int idx=0,pre[N][19],dep[N],q[N];
+int n,m;
+int cnt;
+set<int>now;
+inline void add(int x,int y)
+{
+	nxt[++t]=head[x];v[t]=y;head[x]=t;
+	nxt[++t]=head[y];v[t]=x;head[y]=t;
+}
+void dfs(int x)
+{
+	int i;
+	in[x]=++idx;
+	q[idx]=x;
+	for(i=head[x];i;i=nxt[i])
+		if(pre[x][0]!=v[i])
+		{
+			pre[v[i]][0]=x;
+			dep[v[i]]=dep[x]+1;
+			dfs(v[i]);
+		}
+}
+
+void init_lca()
+{
+	int i,j;
+	for(j=1;j<=18;j++)
+		for(i=1;i<=n;i++)
+			pre[i][j]=pre[pre[i][j-1]][j-1];
+}
+
+int lca(int x,int y)
+{
+	int i;
+	if(dep[x]<dep[y])swap(x,y);
+	for(i=18;i>=0;i--)
+		if(dep[x]-(1<<i)>=dep[y])
+			x=pre[x][i];
+	if(x==y)return x;
+	for(i=18;i>=0;i--)
+		if(pre[x][i]!=pre[y][i]&&pre[x][i]&&pre[y][i])
+			x=pre[x][i],y=pre[y][i];
+	return pre[x][0];
+}
+
+
+int get(int x)
+{
+	if(!now.size())return 0;
+	int tmp=in[x];
+	set<int>::iterator ix,iy;
+	ix=now.lower_bound(tmp);
+	iy=ix--;
+	if(iy==now.begin()||iy==now.end())ix=now.begin(),iy=now.end(),iy--;
+	int left=q[*ix],right=q[*iy];
+//	cerr<<x<<" "<<left<<" "<<right<<" "<<dep[x]+dep[lca(left,right)]-dep[lca(x,left)]-dep[lca(x,right)]<<endl;
+	return dep[x]+dep[lca(left,right)]-dep[lca(x,left)]-dep[lca(x,right)];
+}
+
+int main()
+{
+	int i,x,y,l,r;
+	cnt=1;
+	scanf("%d%d",&n,&m);
+	for(i=1;i<n;i++)
+		scanf("%d%d",&x,&y),add(x,y);
+	dfs(1);
+	init_lca();
+	r=0;
+	int ans=0;
+	for(l=1;l<=n;l++)
+	{
+		while(r<n)
+		{
+			cnt+=get(r+1);
+			if(cnt>m)
+			{
+				cnt-=get(r+1);
+				break;
+			}
+			r++;
+			now.insert(in[r]);
+		}
+		ans=max(ans,r-l+1);
+//		printf("%d %d %d\n",l,r,cnt);
+		now.erase(in[l]);
+		cnt-=get(l);
+	}
+	printf("%d\n",ans);
+	return 0;
+}

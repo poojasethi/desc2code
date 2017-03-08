@@ -1,0 +1,101 @@
+#include <cmath>
+#include <stdio.h>
+#include <algorithm>
+using namespace std;
+
+#define n   500005
+#define eps (1e-14)
+#define DB  long double
+#define For(i,a,b)  for(int i=a;i<=b;i++)
+
+int     Q,L,R;
+
+bool    Equ(DB a,DB b)  {return abs(a-b)<=eps;}
+bool    Big(DB a,DB b)  {return a-b>eps;}
+
+struct  Vec{
+        DB  x,y;
+        Vec operator +  (const Vec&b)   {return (Vec){x+b.x,y+b.y};}
+        Vec operator -  (const Vec&b)   {return (Vec){x-b.x,y-b.y};}
+        DB  operator *  (const Vec&b)   {return x*b.y-y*b.x;}
+        bool    operator <  (const Vec&b)   const {
+            return  Big(b.x,x)||Equ(x,b.x)&&Big(b.y,y);
+        }
+        bool    operator == (const Vec&b)   {
+            return  Equ(x,b.x)&&Equ(y,b.y);
+        }
+        void    Rot(){
+            DB  a=x,b=y;
+            x=a*cos(1)-b*sin(1);
+            y=a*sin(1)+b*cos(1);
+        }
+}U[n],D[n];
+
+struct  Pol{
+        int N;  Vec A[n];
+
+        void    Up(){
+            int t=1;
+            For(i,2,N)  if  (A[i]<A[t]) t=i;
+            For(i,1,N)  A[i]=A[t+i-1],A[i].Rot(); 
+        }
+        void    Rd(){
+            scanf("%d",&N);
+            For(i,1,N)  {
+                double  x,y;scanf("%lf%lf",&x,&y);  A[N+i]=A[i]=(Vec){x,y};
+            }   Up();
+        }
+        Pol     operator +  (const Pol&b){
+            Pol a=*this,c;
+            c.A[c.N=1]=a.A[1]+b.A[1];
+            for (int i=1,j=1;!(c.N>1&&c.A[c.N]==c.A[1]);){
+                Vec x=a.A[i%a.N+1]+b.A[j],y=a.A[i]+b.A[j%b.N+1];
+                if  (Big((x-c.A[c.N])*(y-c.A[c.N]),0))  c.A[++c.N]=x,i=i%a.N+1;
+                    else    c.A[++c.N]=y,j=j%b.N+1;
+            }   c.N--;      return  c;
+        }
+        void    Main(){
+            int x=1,y=1;
+            For(i,2,N)  if  (A[i]<A[x]) x=i;
+            For(i,2,N)  if  (A[y]<A[i]) y=i;
+
+            for (int i=x;;i=i%N+1)  {
+                D[++L]=A[i];
+                if  (i==y)  break;
+            }
+            for (int i=y;;i=i%N+1)  {
+                U[++R]=A[i];
+                if  (i==x)  break;
+            }
+            sort(U+1,U+R+1);
+            sort(D+1,D+L+1);
+        }
+}A,B,C;
+
+int     main(){
+        A.Rd(); B.Rd(); C.Rd();
+        A=A+B;  A=A+C;  A.Main();
+
+        for (scanf("%d",&Q);Q--;){
+            double  x,y;    scanf("%lf%lf",&x,&y);
+            Vec t=(Vec){x*3,y*3};   t.Rot();
+            if  (Big(t.x,U[R].x)||Big(U[1].x,t.x))  {puts("NO");continue;}
+
+            int l=0,r=R+1;
+            for (;l+1<r;){
+                int Mid=l+r>>1;
+                Big(t.x,U[Mid].x)||Equ(t.x,U[Mid].x)?l=Mid:r=Mid;
+            }
+            if  (l==R)  {puts("YES");continue;}
+            if  (Big(t.y,(U[l+1].y-U[l].y)*(t.x-U[l].x)/(U[l+1].x-U[l].x)+U[l].y))  {puts("NO");continue;}
+
+            l=0,r=L+1;
+            for (;l+1<r;){
+                int Mid=l+r>>1;
+                Big(t.x,D[Mid].x)||Equ(t.x,D[Mid].x)?l=Mid:r=Mid;
+            }
+            if  (l==L)  {puts("YES");continue;}
+            if  (Big((D[l+1].y-D[l].y)*(t.x-D[l].x)/(D[l+1].x-D[l].x)+D[l].y,t.y))  {puts("NO");continue;}
+            puts("YES");
+        }
+}

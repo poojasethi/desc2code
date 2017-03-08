@@ -1,0 +1,84 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+const int MAXN = 502;
+const short INF = 10000;
+
+short F[MAXN][MAXN][MAXN],G[MAXN][MAXN],C[MAXN],Bk[MAXN];
+int Dfn[MAXN],R[MAXN],cnt;
+int D[MAXN][MAXN],Col[MAXN],Final[MAXN],To[MAXN * 2],Next[MAXN * 2],Siz[MAXN],tot,N,X;
+
+short min(short a,short b)
+{
+	return a < b ? a : b;
+}
+
+void Link(int u,int v)
+{
+	To[++ tot] = v,Next[tot] = Final[u],Final[u] = tot;
+}
+
+void Dfs(int Now,int Pre)
+{
+	Dfn[Now] = ++ cnt;
+	for(int i = Final[Now];i;i = Next[i])
+		if (To[i] != Pre) Dfs(To[i],Now);
+	R[Now] = cnt;
+	for(int i = 0;i <= N;i ++) G[Now][i] = INF;
+	for(int k = 1;k <= N;k ++)
+		if (D[k][Now] <= X)
+		{	
+			for(int i = 1;i <= N;i ++) C[i] = INF;
+			C[1] = Col[k];
+			Siz[Now] = 1;
+			for(int i = Final[Now];i;i = Next[i])
+				if (To[i] != Pre)
+				{
+					int v = To[i];
+					for(int i = 1;i <= Siz[Now] + Siz[v];i ++) Bk[i] = INF;
+					for(int j = Siz[Now];j;j --)
+						for(int p = 1;p <= Siz[v];p ++)
+						{
+							Bk[j + p] = min(Bk[j + p],C[j] + G[v][p]);
+							short c = (D[k][v] <= X) ? F[v][p][k] : INF;
+							Bk[j + p - 1] = min(Bk[j + p - 1],C[j] + c - Col[k]);
+						}
+					for(int i = 1;i <= Siz[Now] + Siz[v];i ++)
+						C[i] = Bk[i];
+					Siz[Now] += Siz[v];
+				}
+			for(int i = 1;i <= Siz[Now];i ++)
+			{
+				F[Now][i][k] = C[i];
+				G[Now][i] = min(G[Now][i],C[i]);
+			}
+		}
+}
+
+int main()
+{
+	scanf("%d%d", &N, &X);
+	memset(D,60,sizeof D);
+	int s = 0;
+	for(int i = 1;i <= N;i ++)
+		scanf("%d", &Col[i]),Col[i] ^= 1,s += !Col[i],D[i][i] = 0;
+	for(int i = 1;i < N;i ++)
+	{
+		int u,v,c;
+		scanf("%d%d%d", &u, &v, &c);
+		Link(u,v),Link(v,u);
+		D[u][v] = D[v][u] = c;
+	}
+	for(int k = 1;k <= N;k ++)
+		for(int i = 1;i <= N;i ++)
+			for(int j = 1;j <= N;j ++)
+				D[i][j] = min(D[i][j],D[i][k] + D[k][j]);
+	Dfs(1,0);
+	int ans = G[1][s];
+	if (ans > N) ans = -1;
+	printf("%d\n", ans);
+	return 0;
+}

@@ -1,0 +1,103 @@
+#include <iostream>
+#include <set>
+#include <algorithm>
+#include <vector>
+#include <string>
+using namespace std;
+#define MAXN 100005
+#define MAXLG 60
+#define mod 1000000009
+//char str[MAXN];
+int str[MAXN];
+struct entry {
+	int nr[2];
+	int p;
+}L[MAXN];
+
+int P[MAXLG][MAXN];
+int sa[MAXN];
+int LCP[MAXN];
+int step, cnt;
+int N;
+
+#define gc getchar
+void read(int &n) {
+	n = 0;
+	char ch = gc();
+	while (!isdigit(ch)) ch = gc();
+	while (isdigit(ch)) {
+		n = n * 10 + ch - 48;
+		ch = gc();
+	}
+}
+
+int cmp(entry a, entry b)
+{
+	return (a.nr[0] == b.nr[0]) ? (a.nr[1] < b.nr[1]) : (a.nr[0] < b.nr[0]);
+}
+
+void constructSuffix()
+{
+	//N = strlen(str);
+	for (int i = 0; i < N; i++) {
+		P[0][i] = str[i];
+	}
+	for (step = 1, cnt = 1; cnt < N; step++, cnt <<= 1) {
+		for (int j = 0; j < N; j++) {
+			L[j].nr[0] = P[step - 1][j];
+			L[j].nr[1] = (j + cnt < N) ? P[step - 1][j + cnt] : -1;
+			L[j].p = j;
+		}
+		sort(L, L + N, cmp);
+		for (int j = 0; j < N; j++) {
+			P[step][L[j].p] = ((j > 0) && (L[j].nr[0] == L[j - 1].nr[0]) && (L[j].nr[1] == L[j - 1].nr[1])) ? P[step][L[j - 1].p] : j;
+		}
+	}
+	for (int i = 0; i < N; i++) {
+		sa[P[step - 1][i]] = i;
+	}
+}
+
+int getLCP(int x, int y)
+{
+	int ret = 0;
+	for (int k = step - 1; k >= 0 && x < N && y < N; k--)
+	if (P[k][x] == P[k][y])
+		x += 1 << k, y += 1 << k, ret += 1 << k;
+	return ret;
+}
+
+void constructLCP()
+{
+	LCP[0] = 0;
+	for (int i = 1; i < N; i++) {
+		LCP[i] = getLCP(sa[i - 1], sa[i]);
+	}
+	return;
+}
+
+
+int main() 
+{
+	int t;
+	scanf("%d", &t);
+	while (t--) {
+		cin >> N;
+		int arr[100005];
+		for (int i = 0; i < N; i++) cin >>arr[i];
+		for (int i = 1; i < N; i++) {
+			str[i - 1] = arr[i] - arr[i - 1] + 101;
+		}
+		N = N - 1;
+		constructSuffix();
+		constructLCP();
+		long long ans1 = 0;
+		for (int i = 0; i < N; i++) { 
+			ans1 += (long long)(N - sa[i] - LCP[i]);
+			if (ans1 >= mod) {
+				ans1 %= mod;
+			}
+		}
+		printf("%lld\n", ans1);
+	}
+}

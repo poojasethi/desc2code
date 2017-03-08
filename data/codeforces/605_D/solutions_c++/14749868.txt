@@ -1,0 +1,130 @@
+#include <iostream>
+#include <cmath>
+#include <algorithm>
+#include <queue>
+#include <vector>
+
+using namespace std;
+
+const int primero=1<<19;
+const int tope=1<<20;
+
+int minimo[tope];
+
+void inserta(int pos,int val)
+{
+  pos+=primero;
+  minimo[pos]=val;
+  while (pos>1) {
+    pos/=2;
+    minimo[pos]=min(minimo[2*pos],minimo[2*pos+1]);
+  }
+}
+
+int posmenorigual(int pos,int val)
+{
+  pos+=primero;
+  if (minimo[pos]<=val) return pos-primero;
+  for (;;) {
+    if (pos==1) return -1;
+    if (pos%2==1 and minimo[pos-1]<=val) {
+      pos--;
+      while (pos<primero) {
+	if (minimo[2*pos+1]<=val) pos=2*pos+1;
+	else pos=2*pos;
+      }
+      return pos-primero;
+    }
+    pos/=2;
+  }
+}
+
+struct elem {
+  int a,b,c,d;
+  int ind;
+};
+
+bool operator<(elem e1,elem e2)
+{
+  return e1.a<e2.a;
+}
+
+int n;
+elem v[1000000];
+int llega[1000000];
+int anterior[1000000];
+
+struct elemq {
+  int c,d,ind;
+  elemq() {
+  }
+  elemq(int inc,int id,int inind) {
+    c=inc;d=id;ind=inind;
+  }
+};
+
+int main()
+{
+  ios::sync_with_stdio(false);
+  cin>>n;
+  for (int i=0;i<n;i++) {
+    cin>>v[i].a>>v[i].b>>v[i].c>>v[i].d;
+    v[i].ind=i;
+  }
+  sort(v,v+n);
+  /*
+  cout<<"contenido v:";
+  for (int i=0;i<n;i++)
+    cout<<"("<<v[i].a<<","<<v[i].b<<","<<v[i].c<<","<<v[i].d<<","<<v[i].ind<<")";
+  cout<<endl;
+  */
+  for (int i=0;i<n;i++)
+    inserta(i,v[i].b);
+  queue<elemq> q;
+  q.push(elemq (0,0,-1));
+  while (not q.empty() and not llega[n-1]) {
+    elemq eq=q.front();
+    //cout<<"leemos "<<eq.c<<" "<<eq.d<<" "<<eq.ind<<endl;
+    q.pop();
+    int c=eq.c;
+    int d=eq.d;
+    int ind=eq.ind;
+    int inf=-1;
+    int sup=n;
+    //cout<<"tratamos "<<c<<" "<<d<<" "<<ind<<endl;
+    while (inf+1<sup) {
+      int med=(inf+sup)/2;
+      if (v[med].a<=c) inf=med;
+      else sup=med;
+    }
+    //cout<<"inf "<<inf<<endl;
+    if (inf>=0) {
+      int pos=posmenorigual(inf,d);
+      while (pos>=0) {
+	//cout<<"pos "<<pos<<endl;
+	inserta(pos,2000000000);
+	llega[v[pos].ind]=1;
+	anterior[v[pos].ind]=ind;
+	q.push(elemq(v[pos].c,v[pos].d,v[pos].ind));
+	pos=posmenorigual(pos,d);
+      }
+    }
+  }
+  if (not llega[n-1]) {
+    cout<<-1<<endl;
+  } else {
+    vector<int> sol;
+    int pos=n-1;
+    while (pos>-1) {
+      sol.push_back(pos+1);
+      pos=anterior[pos];
+    }
+    reverse(sol.begin(),sol.end());
+    cout<<int(sol.size())<<endl;
+    for (int i=0;i<int(sol.size());i++) {
+      if (i>0) cout<<" ";
+      cout<<sol[i];
+    }
+    cout<<endl;
+  }
+}

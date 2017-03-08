@@ -1,0 +1,313 @@
+// Anudeep's Code 
+
+#include <cstdio>
+#include <vector>
+#include <cstring>
+using namespace std;
+#define N 111111
+
+int last1[N], ver1[2*N], next1[2*N], ptr1 = 1;
+int last[N], ver[N], next[N], ptr = 1;
+void addEdge1(int u, int v) {
+	ver1[ptr1] = v; next1[ptr1] = last1[u]; last1[u] = ptr1++;
+}
+void addEdge(int u, int v){
+	ver[ptr] = v; next[ptr] = last[u]; last[u] = ptr++;
+}
+int parent[N], subsize[N];
+int dfs(int cur, int prev) {
+	if(prev != -1) addEdge(prev, cur);
+	parent[cur] = prev;
+	subsize[cur] = 1;
+	for(int i = last1[cur]; i; i = next1[i]) if(ver1[i] != prev) subsize[cur] += dfs(ver1[i], cur);
+	return subsize[cur];
+}
+
+int chainHead[N], chainInd[N], chainPos[N], HLchild[N], chainSize[N], chainNo = 0;
+vector < vector < int> > chainVer;
+void hld(int cur) {
+	int hlddbg = false;
+	if(chainHead[chainNo] == -1) {
+		chainVer.push_back(vector<int>());
+		chainHead[chainNo] = cur;
+		chainSize[chainNo] = 0;
+	}
+	chainVer[chainNo].push_back(cur);
+	chainInd[cur] = chainNo;
+	chainPos[cur] = chainSize[chainNo]++;
+	int ind = -1, ma = 0;
+	for(int i = last[cur]; i; i = next[i]) {
+		if(subsize[ver[i]] > ma) {
+			ma = subsize[ver[i]];
+			ind = i;
+		}
+	}
+
+	if(ind != -1) hld(ver[ind]), HLchild[cur] = ver[ind]; else HLchild[cur] = -1;
+
+	for(int i = last[cur]; i; i = next[i]) {
+		if(i != ind) {
+			chainNo++;
+			hld(ver[i]);
+		}
+	}
+}
+void makeB(int cur, vector <int> &b, int i) {
+	b[i] = subsize[cur];
+	if(HLchild[cur] != -1) makeB(HLchild[cur], b, i+1);
+}
+struct node {
+	int rM, hang, adder;
+};
+
+		//takes vector a of valid nodes, b of hanging sizes and constructs a segtree
+		//queries supported, rightmost valid node in range
+		//sum of hangings of a range
+		//Updates supported, change a node to non valid
+		//change the value
+struct segtree {
+	node *st;
+	int n;
+	void make_tree(int cur, int s, int e, vector <int> &a, vector <int> &b) {
+		if(s == e-1) {
+			st[cur].rM = (a[s]?s:-1);
+			st[cur].hang = b[s];
+			st[cur].adder = 0;
+			return;
+		}
+		int m = (s+e)>>1, c1 = (cur<<1), c2 = c1 | 1;
+		make_tree(c1, s, m, a, b);
+		make_tree(c2, m, e, a, b);
+		st[cur].rM = st[c1].rM > st[c2].rM ? st[c1].rM : st[c2].rM;
+		st[cur].hang = st[c1].hang + st[c2].hang;
+		st[cur].adder = 0;
+	}
+	void segtreeinit(vector <int> &a, vector <int> &b) {
+		n = a.size();
+		st = new node[n*6];
+		make_tree(1, 0, n, a, b);
+	}
+	void resolve(int cur, int cn) {
+		if(st[cur].adder) {
+			if(cn>1) {
+				st[cur<<1].adder += st[cur].adder;
+				st[(cur<<1)|1].adder += st[cur].adder;
+			}
+			st[cur].hang += st[cur].adder*cn;
+			st[cur].adder = 0;
+		}
+	}
+	int Right(int cur, int s, int e, int S, int E) {
+		if(s>=E || e<=S) return -1;
+		if(s>=S && e<=E) return st[cur].rM;
+		int a = Right(cur<<1, s, (s+e)>>1, S, E), b = Right((cur<<1)|1, (s+e)>>1, e, S, E);
+		if(a > b) return a;
+		return b;
+	}
+	int Right(int a, int b) {
+		return Right(1, 0, n, a, b+1);
+	}
+	int Sum(int cur, int s, int e, int S, int E) {
+		resolve(cur, e-s);
+		if(s>=E || e<=S) return 0;
+		if(s>=S && e<=E) return st[cur].hang;
+		return Sum(cur<<1, s, (s+e)>>1, S, E) + Sum((cur<<1)|1, (s+e)>>1, e, S, E);
+	}
+	int Sum(int a, int b) {
+		return Sum(1, 0, n, a, b+1);
+	}
+	void Add(int cur, int s, int e, int S, int E, int v) {
+		resolve(cur, e-s);
+		if(s>=E || e<=S) return;
+		if(s>=S && e<=E) {
+			st[cur].adder += v;
+			resolve(cur, e-s);
+			return;
+		}
+		int m = (s+e)>>1, c1 = (cur<<1), c2 = c1 | 1;
+		Add(c1, s, m, S, E, v);
+		Add(c2, m, e, S, E, v);
+		st[cur].hang = st[c1].hang + st[c2].hang;
+	}
+	void Add(int a, int b, int v) {
+		Add(1, 0, n, a, b+1, v);
+	}
+	void flip(int cur, int s, int e, int a) {
+		resolve(cur, e-s);
+		if(s>a || e<=a) return;
+		if(s==a && s==e-1) {
+			if(st[cur].rM == -1) st[cur].hang--;
+			else st[cur].hang++;
+			st[cur].rM = (st[cur].rM == -1)? s: -1;
+			return;
+		}
+		int m = (s+e)>>1, c1 = (cur<<1), c2 = c1 | 1;
+		flip(c1, s, m, a), flip(c2, m, e, a);
+		st[cur].rM = st[c1].rM > st[c2].rM ? st[c1].rM : st[c2].rM;
+		st[cur].hang = st[c1].hang + st[c2].hang;
+	}
+	void flip(int a) {
+		flip(1, 0, n, a);
+	}
+};
+
+#define S 1024*1024*4
+char IN[S],OUT[S],*iptr,*optr,stk[20];
+
+struct fastIO
+{
+	fastIO()
+	{
+		fread(IN,1,S,stdin);
+		iptr=IN;
+		optr=OUT;
+	}
+	void check()
+	{
+		int size=IN+S-iptr;
+		if(size<200)
+		{
+			memcpy(IN,iptr,size);
+			fread(IN+size,1,S-size,stdin);
+			iptr=IN;
+		}
+	}
+	void check2()
+	{
+		int size=OUT+S-optr;
+		if(size<200)
+		{
+			fwrite(OUT,optr-OUT,1,stdout);
+			optr=OUT;
+		}
+	}
+	
+	int sc()
+	{
+		check();
+		while(*iptr<=32) iptr++;
+		int x=0;
+		while(*iptr>32) x= x*10 + *iptr++ -'0';
+		return x;
+	}
+
+	
+	void pr(int x)
+	{
+		check2();
+		if(x==0)
+			*optr++='0';
+		else
+		{
+			int y;
+			int top=-1;
+			while(x>0)
+			{
+				y=x/10;
+				stk[++top]=x-y*10+'0';
+				x=y;
+			}
+			while(top>=0) *optr++=stk[top--];
+		}
+		*optr++='\n';
+	}
+};
+
+int color[N];
+int main() {
+	fastIO io;
+	int n = io.sc();
+	for(int i=0; i<n-1; i++) {
+		chainHead[i] = -1;
+		int u = io.sc(), v = io.sc();
+		addEdge1(u,v);
+		addEdge1(v,u);
+	}
+	dfs(1, -1);
+	hld(1);
+	segtree *wst; wst = new segtree[chainNo+1];
+	segtree *bst; bst = new segtree[chainNo+1];
+	vector <int> a,b;
+	for(int i=0; i<=chainNo; i++) {
+		a.clear(); b.clear();
+		a.resize(chainSize[i]);
+		b.resize(chainSize[i]);
+		for(int j=0; j<chainSize[i]; j++) a[j] = 1, b[j] = 0;
+		wst[i].segtreeinit(a,b);
+		for(int j=0; j<chainSize[i]; j++) a[j] = 0;
+		makeB(chainHead[i], b, 0);
+		bst[i].segtreeinit(a,b);
+	}
+	for(int i=1; i<=n; i++) color[i] = 1;
+	int q = io.sc();
+	while(q--) {
+		int type, u;
+		type = io.sc(); u = io.sc();
+		if(type==0) {
+			segtree *cst;
+			if(color[u] == 1) cst = bst;
+			else cst = wst;
+			
+			int curNode = u, prevNode = -1;
+			while( 1 ) {
+				int ind = chainInd[curNode], pos = chainPos[curNode];
+				int rig = cst[ind].Right(0, pos);
+				if(rig != -1) {
+					if(rig != pos) curNode = chainVer[ind][rig+1];
+					else curNode = prevNode;
+					break;
+				}
+				curNode = chainHead[ind];
+				prevNode = curNode;
+				if(curNode == 1) break;
+				curNode = parent[curNode];
+			}
+			int sum = cst[chainInd[curNode]].Sum(chainPos[curNode], chainPos[curNode]);
+			io.pr(sum);
+		} else {
+			segtree *cst;
+			if(color[u] == 1) cst = bst;
+			else cst = wst;
+
+			int curNode = u;
+			int cv = cst[chainInd[curNode]].Sum(chainPos[curNode], chainPos[curNode]);
+			while( 1 ) {
+				int ind = chainInd[curNode], pos = chainPos[curNode];
+				if(ind == chainInd[u] && pos == chainPos[u]) pos--;
+				int rig = cst[ind].Right(0, pos);
+				if(rig != -1) {
+					cst[ind].Add(rig, pos, -cv);
+					break;
+				}
+				cst[ind].Add(0, pos, -cv);
+				curNode = chainHead[ind];
+				if(curNode == 1) break;
+				curNode = parent[curNode];
+			}
+			cst[chainInd[u]].flip(chainPos[u]);
+
+			if(color[u] == 0) cst = bst;
+			else cst = wst;
+			curNode = u;
+			cv = cst[chainInd[curNode]].Sum(chainPos[curNode], chainPos[curNode]) + 1;
+			while( 1 ) {
+				int ind = chainInd[curNode], pos = chainPos[curNode];
+				if(ind == chainInd[u] && pos == chainPos[u]) pos--;
+				int rig = cst[ind].Right(0, pos);
+				if(rig != -1) {
+					cst[ind].Add(rig, pos, cv);
+					break;
+				}
+				cst[ind].Add(0, pos, cv);
+				curNode = chainHead[ind];
+				if(curNode == 1) break;
+				curNode = parent[curNode];
+			}
+			cst[chainInd[u]].flip(chainPos[u]);
+
+			color[u] = 1 - color[u];
+		}
+	}
+	fwrite(OUT, optr-OUT, 1, stdout);
+	return 0;
+}

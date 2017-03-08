@@ -1,0 +1,170 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+typedef pair<long long, long long> pie;
+
+#define L first
+#define R second
+#define MP make_pair
+#define PB push_back
+
+
+const long long inf = 1e16 + 10;
+const long long oo=1e9+10;
+const long long maxflown = 25 * 25 * 5;
+const long long maxm = 1e6 + 100;
+long long n, m, male, female;
+const long long maxn = 25;
+char c[maxn][maxn];
+long long dis[maxn][maxn][maxn][maxn];
+long long to[maxm], cap[maxm], prev[maxm], tmp[maxflown], last[maxflown];
+long long par[maxflown], dist[maxflown];
+vector <pair<pie, long long> > ml, fm;
+
+long long cnt = 0;
+void add_edge(long long fi, long long se){
+//	if(fi == 1 or fi == 2)
+//		cout << fi << " " << se << endl;
+	to[cnt] = se, cap[cnt] = 1, prev[cnt] = last[fi], last[fi] = cnt++;
+	to[cnt] = fi, cap[cnt] = 0, prev[cnt] = last[se], last[se] = cnt++;
+}
+
+bool bfs(long long source, long long sink){
+	queue <long long> Q;
+	Q.push(source);
+	dist[source] = 0;
+	memset(par, -1, sizeof par);
+	par[source] = 0;
+	while(Q.size()){
+		long long cur = Q.front();
+		Q.pop();
+		for(long long i=last[cur]; i!=-1; i=prev[i]){
+			long long u = to[i];
+			if(par[u] == -1 and cap[i] > 0){
+				par[u] = cur;
+				dist[u] = dist[cur] + 1;
+				Q.push(u);
+			}
+		}
+	}
+	return par[sink] != -1;
+}
+
+long long dfs(long long source, long long sink, long long until_now){
+	if(source == sink)
+		return until_now;
+	long long cur_flow = 0;
+	for(long long &i=tmp[source]; i!=-1; i=prev[i]){
+		long long u = to[i];
+		if(dist[u] == dist[source] + 1 and cap[i] > 0){
+			long long cur = dfs(u, sink, min(until_now, cap[i]));
+			cap[i] -= cur;
+			cap[i ^ 1] += cur;
+			until_now -= cur;
+			cur_flow += cur;
+		}
+		if(until_now == 0)
+			return cur_flow;
+	}
+	return cur_flow;
+}
+
+long long dinic(long long x){
+//	1 - male,  male + 1 - male + female, male + female + 1, male + female + n * m * 2, 
+	long long source = male + female + n * m * 2 + 1, sink = source + 1;
+	for(long long z=0; z<ml.size(); z++)
+		for(long long i=1; i<=n; i++)
+			for(long long j=1; j<=m; j++)
+				if(dis[i][j][ml[z].L.L][ml[z].L.R]<inf && dis[i][j][ml[z].L.L][ml[z].L.R] * ml[z].R <= x){
+					add_edge(1 + z, male + female + (i - 1) * m + j);
+				}
+	for(long long z=0; z<fm.size(); z++)
+		for(long long i=1; i<=n; i++)
+			for(long long j=1; j<=m; j++)
+				if(dis[i][j][fm[z].L.L][fm[z].L.R]<inf && dis[i][j][fm[z].L.L][fm[z].L.R] * fm[z].R <= x){
+					add_edge(n * m + male + female + (i - 1) * m + j, male + 1 + z);
+				}
+	for(long long i=1; i<=n; i++)
+		for(long long j=1; j<=m; j++)
+			add_edge(male + female + (i - 1) * m + j, male + female + (i - 1) * m + j + m * n);
+	for(long long i=1; i<=male; i++)
+		add_edge(source, i);
+	for(long long i=male+1; i<=male+female; i++)
+		add_edge(i, sink);
+	long long max_flow = 0;
+	while(bfs(source, sink)){
+		for(long long i=1; i<=sink; i++)
+			tmp[i] = last[i];
+	//	cout << "PEYMAN" << endl;
+	//	cout << max_flow << endl;
+		max_flow += dfs(source, sink, inf);
+
+	}
+	return max_flow;
+}
+
+int main(){
+	ios_base::sync_with_stdio(false);
+	cin >> n >> m >> male >> female;
+	for(int i1=1;i1<=n;i1++)for(int i2=1;i2<=m;i2++)for(int j1=1;j1<=n;j1++)for(int j2=1;j2<=m;j2++)dis[i1][i2][j1][j2]=inf;
+	for(long long i=1; i<=n; i++)
+		for(long long j=1; j<=m; j++){
+			cin >> c[i][j];
+			if(c[i][j] != '#')
+				dis[i][j][i][j] = 0;
+			if(i > 1 and c[i][j] != '#' and c[i-1][j] != '#')
+				dis[i][j][i-1][j] = dis[i-1][j][i][j] = 1;
+			if(j > 1 and c[i][j] != '#' and c[i][j-1] != '#')
+				dis[i][j][i][j-1] = dis[i][j-1][i][j] = 1;
+		}
+	for(long long k1=1; k1<=n; k1++)
+		for(long long k2=1; k2<=m; k2++)
+			for(long long i1=1; i1<=n; i1++)
+				for(long long i2=1; i2<=m; i2++)
+					for(long long j1=1; j1<=n; j1++)
+						for(long long j2=1; j2<=m; j2++)
+							dis[i1][i2][j1][j2] = min(dis[i1][i2][j1][j2], dis[i1][i2][k1][k2] + dis[k1][k2][j1][j2]);
+//	cout << dis[1][1][2][2] << endl;
+	long long fi, se, th;
+	cin >> fi >> se >> th;
+	for(long long i=0; i<male; i++){
+		long long ff, ss, tt;
+		cin >> ff >> ss >> tt;
+		ml.PB(MP(MP(ff, ss), tt));
+	}
+	for(long long i=0; i<female; i++){
+		long long ff, ss, tt;
+		cin >> ff >> ss >> tt;
+		fm.PB(MP(MP(ff, ss), tt));
+	}
+	if(female - male == 1)
+		ml.PB(MP(MP(fi, se), th));
+	else if(male - female == 1)
+		fm.PB(MP(MP(fi, se), th));
+	else{
+		cout << -1 << endl;
+		return 0;
+	}
+	male = ml.size(), female = fm.size();
+	long long lo = 0, hi = maxn * maxn * 1e9+1;
+	while(lo != hi){
+		long long mid = (lo + hi) >> 1;
+		cnt = 0;
+		memset(last, -1, sizeof last);
+		long long cur = dinic(mid);
+		if(cur == male)
+			hi = mid;
+		else
+			lo = mid + 1;
+	}
+	if(hi == maxn * maxn * 1e9 + 1)
+		cout << -1 << endl;
+	else
+		cout << lo << endl;
+
+//	memset(last, -1, sizeof last);
+//	cnt = 0;
+//	cout << dinic(3) << endl;
+	return 0;
+}

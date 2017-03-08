@@ -1,0 +1,154 @@
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#define N 200005
+#define M 20
+#define fi(a, b, c) for(int a = (b); a < (c); a++)
+#define fd(a, b, c) for(int a = (b); a > (c); a--)
+#define FI(a, b, c) for(int a = (b); a <= (c); a++)
+#define FD(a, b, c) for(int a = (b); a >= (c); a--)
+#define fe(a, b, c) for(int a = (b); a; a = c[a])
+using namespace std;
+
+int n, m, q, p, f[N], d[N], l[N], v[N + N], o[N + N], t, g[N], gp, dir[N], bir[N], dea[N], par[N][M], ss[N][2], com[N], cp;
+bool u[N], b[N + N], ok;
+vector<int> e[N];
+
+void bd(int a, int b){
+	v[++p] = b; o[p] = f[a]; f[a] = p;
+}
+
+void dfs(int x, int y){
+	d[x] = l[x] = ++t;
+	u[x] = 1;
+	
+	fe(i, f[x], o) if(i != y && (i ^ 1) != y){
+		if(u[v[i]]) l[x] = min(l[x], d[v[i]]);
+		else{
+			dfs(v[i], i);
+			l[x] = min(l[x], l[v[i]]);
+		}
+		if(d[x] < l[v[i]]) b[i] = b[i ^ 1] = 1;
+	}
+}
+
+void dfs2(int x, int y){
+	if(u[x]) return;
+	g[x] = y;
+	u[x] = 1;
+	
+	fe(i, f[x], o) if(!b[i]) dfs2(v[i], y);
+}
+
+void get(int x, int y, int z){
+	//printf("par %d is %d\n", x, y);
+	u[x] = 1;
+	par[x][0] = y;
+	bir[x] = ++t;
+	com[x] = z;
+	fi(i, 0, e[x].size()) if(e[x][i] != y) get(e[x][i], x, z);
+	dea[x] = t;
+}
+
+int fath(int x, int y){
+	return ss[x][y] == x ? x : ss[x][y] = fath(ss[x][y], y);
+}
+
+int getlca(int x, int y){
+	int ret = x;
+	FD(i, M - 1, 0){
+		int v = par[ret][i];
+		if(!(bir[v] <= bir[y] && dea[v] >= dea[y])) ret = v;
+	}
+	if(!(bir[ret] <= bir[y] && dea[ret] >= dea[y])) ret = par[ret][0];
+	return ret;
+}
+
+int main(){
+	scanf("%d %d %d", &n, &m, &q);
+	p++;
+	fi(i, 0, m){
+		int a, b;
+		scanf("%d %d", &a, &b);
+		bd(a, b);
+		bd(b, a);
+	}
+	
+	FI(i, 1, n) if(!u[i]) dfs(i, 0);
+	
+	FI(i, 1, n) u[i] = 0;
+	FI(i, 1, n) if(!u[i]){
+		gp++;
+		dfs2(i, gp);
+	}
+	
+	//FI(i, 1, n) printf("%d g %d\n", i, g[i]);
+	
+	FI(i, 1, n) fe(j, f[i], o) if(b[j]){
+		//printf("bridge %d %d %d %d\n", i, v[j], g[i], g[v[j]]);
+		e[g[i]].push_back(g[v[j]]);
+	}
+	
+	FI(i, 1, gp) dir[i] = -1;
+	
+	t = 0;
+	FI(i, 1, n) u[i] = 0;
+	FI(i, 1, n) if(!u[i]){
+		cp++;
+		get(i, i, cp);
+	}
+	fi(i, 1, M) FI(j, 1, n) par[j][i] = par[par[j][i - 1]][i - 1];
+	
+	FI(i, 1, gp) ss[i][0] = ss[i][1] = i;
+	
+	ok = 1;
+	fi(i, 0, q){
+		int a, b;
+		scanf("%d %d", &a, &b);
+		a = g[a];
+		b = g[b];
+		
+		if(com[a] != com[b]){
+			ok = 0;
+			break;
+		}
+		
+		int lca = getlca(a, b);
+		while(!(bir[a] <= bir[lca] && dea[a] >= dea[lca])){
+			a = fath(a, 0);
+			if(bir[a] <= bir[lca] && dea[a] >= dea[lca]) break;
+			
+			if(dir[a] < 0){
+				dir[a] = 0;
+				ss[a][0] = fath(par[a][0], 0);
+			}else if(dir[a] == 1){
+				ok = 0;
+				break;
+			}
+			
+			a = par[a][0];
+		}
+		
+		if(!ok) break;
+		//printf("fnd lca %d %d\n", lca, b);
+		
+		while(!(bir[b] <= bir[lca] && dea[b] >= dea[lca])){
+			b = fath(b, 1);
+			if(bir[b] <= bir[lca] && dea[b] >= dea[lca]) break;
+			
+			if(dir[b] < 0){
+				dir[b] = 1;
+				ss[b][1] = fath(par[b][0], 1);
+			}else if(dir[b] == 1){
+				ok = 0;
+				break;
+			}
+			b = par[b][0];
+		}
+		
+		if(!ok) break;
+	}
+	
+	puts(ok ? "Yes" : "No");
+	scanf("\n");
+}

@@ -1,0 +1,136 @@
+#include<cstdio>
+#include<iostream>
+using namespace std;
+
+#define mod 1000000007
+#define MAX 1000001
+
+struct st
+{
+    int l,r;
+    int count;
+    long long totalsum,countsum;
+    bool flip;
+}st[3*MAX];
+
+long long power[MAX];
+int n;
+string s;
+void solve(int flag);
+void initialise(int a,int b,int i = 1);
+void rangeflip(int left,int right,int i = 1);
+
+int main()
+{
+    power[0]=1;
+    for(int i = 1;i < MAX;i++)power[i] = (power[i-1] * 2) % mod;
+    cin>>s;
+    n = s.length();
+    initialise(1,n);
+    int q,l,r;
+    int flag=0;
+    if(s[n-1]=='1')flag=1;
+    solve(flag);
+    scanf("%d",&q);
+    while(q--)
+    {
+        scanf("%d%d",&l,&r);
+        if(r==n)flag^=1;
+        rangeflip(l,r);
+        solve(flag);
+    }
+}
+void solve(int flag)
+{
+    long long ans = st[1].countsum , temp = 0;
+    if(flag == 0)
+    {
+        temp = 1 - st[1].count % 2;
+    }
+    else ans += 1;
+    ans %= mod;
+    if(ans % 2 == 0)ans /= 2;
+    else ans = (ans + mod) / 2;
+    printf("%lld\n",ans + temp);
+}
+
+inline void flipsingle(int i)
+{
+    st[i].count = st[i].r - st[i].l - st[i].count+1;
+    st[i].countsum = st[i].totalsum - st[i].countsum;
+    st[i].flip ^= 1;
+}
+
+inline void merge(int i)
+{
+    st[i].count = st[2*i].count + st[2*i+1].count;
+    st[i].totalsum = st[2*i].totalsum + st[2*i+1].totalsum;
+    st[i].countsum = st[2*i].countsum + st[2*i+1].countsum;
+}
+
+void rangeflip(int i,int j,int nodenum)
+{
+    int a,b;
+    a=st[nodenum].l;
+    b=st[nodenum].r;
+    if(b<i || a>j)return ;
+
+    if(a>=i && b<=j)
+    {
+           // cout<<a<<"   "<<b<<"   "<<count<<endl;
+                       flipsingle(nodenum);
+                       return;
+    }
+    if( st[nodenum].flip==true)
+    {
+        flipsingle(2*nodenum);
+        flipsingle(2*nodenum+1);
+        st[nodenum].flip=false;
+    }
+
+    rangeflip(i,j,2*nodenum);
+    rangeflip(i,j,2*nodenum+1);
+    merge(nodenum);
+}
+/*void rangeflip(int left,int right,int i)
+{
+    if(st[i].r>=left&&st[i].l<=right)
+    {
+        if(st[i].l>=left&&st[i].r<=right)
+        {
+            flipsingle(i);
+        }
+        else
+        {
+            if(st[i].l!=st[i].r&&st[i].flip==1)
+            {
+                flipsingle(2*i);
+                flipsingle(2*i+1);
+                st[i].flip=0;
+            }
+            rangeflip(left,right,2*i);
+            rangeflip(left,right,2*i+1);
+            merge(i);
+        }
+    }
+}
+*/
+void initialise(int a,int b,int i)
+{
+    st[i].l = a;
+    st[i].r = b;
+    st[i].flip = 0;
+    if(a<b)
+    {
+        int mid = (a+b)/2;
+        initialise(a,mid,2*i);
+        initialise(mid+1,b,2*i+1);
+        merge(i);
+    }
+    else if(a == b)
+    {
+        st[i].count = s[a-1]-'0';
+        st[i].totalsum = power[n-a];
+        st[i].countsum = st[i].totalsum * st[i].count;
+    }
+}

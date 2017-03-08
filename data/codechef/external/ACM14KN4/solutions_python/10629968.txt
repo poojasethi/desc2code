@@ -1,0 +1,122 @@
+#include <bits/stdc++.h>
+#define N 500005
+using namespace std;
+typedef long long int lli;
+typedef struct{
+	lli maxm, sum;
+	bool inc, dec;
+	lli left;
+	lli right;
+}seg;
+
+seg st[N];
+lli a[N];
+
+void build(int ss, int se, int si){
+	if(ss > se) return;
+	if(ss == se){
+		st[si].maxm = a[ss];
+		st[si].sum = a[ss];
+		st[si].inc = 1;
+		st[si].dec = 1;
+		return;
+	}
+	int mid = (ss + se) / 2;
+	build(ss, mid, 2*si);
+	build(mid+1, se, 2*si+1);
+	st[si].maxm = max(st[2*si].maxm, st[2*si+1].maxm);
+	st[si].sum = st[2*si].sum + st[2*si+1].sum;
+	st[si].inc = (st[2*si].inc && st[2*si+1].inc && a[mid] <= a[mid+1]);
+	st[si].dec = (st[2*si].dec && st[2*si+1].dec && a[mid] >= a[mid+1]);
+}
+
+void update(int ss, int se, int si, int index){
+	if(ss > se) return;
+	if(ss > index || se < index) return;
+	if(ss == se && ss == index){
+		st[si].maxm = a[index];
+		st[si].sum = a[index];
+		st[si].inc = true;
+		st[si].dec = true;
+		return;
+	}
+	int mid = (ss + se) / 2;
+	update(ss, mid, 2*si, index);
+	update(mid+1, se, 2*si+1, index);
+	st[si].maxm = max(st[2*si].maxm, st[2*si+1].maxm);
+	st[si].sum = st[2*si].sum + st[2*si+1].sum;
+	st[si].inc = (st[2*si].inc && st[2*si+1].inc && a[mid] <= a[mid+1]);
+	st[si].dec = (st[2*si].dec && st[2*si+1].dec && a[mid] >= a[mid+1]);
+}
+
+lli getmax(int qs, int qe, int ss, int se, int si){
+	if(qe < ss || qs > se || ss > se) return 0;
+	if(qs <= ss && se <= qe) return st[si].maxm;
+	int mid = (ss + se) / 2;
+	return max(getmax(qs, qe, ss, mid, 2*si), getmax(qs, qe, mid+1, se, 2*si+1));
+}
+
+lli getsum(int qs, int qe, int ss, int se, int si){
+	if(qe < ss || qs > se || ss > se) return 0;
+	if(qs <= ss && se <= qe) return st[si].sum;
+	int mid = (ss + se) / 2;
+	return getsum(qs, qe, ss, mid, 2*si) + getsum(qs, qe, mid+1, se, 2*si+1);
+}
+
+bool getinc(int qs, int qe, int ss, int se, int si){
+	if(qe < ss || qs > se || ss > se) return 1;
+	if(qs <= ss && se <= qe) return st[si].inc;
+	int mid = (ss + se) / 2;
+	lli x = getinc(qs, qe, ss, mid, 2*si);
+	lli y = getinc(qs, qe, mid+1, se, 2*si+1);
+	if(qs <= mid && mid+1 <= qe)
+		return (x && y && a[mid] <= a[mid+1]);
+	else
+		return (x && y);
+}
+lli getdec(int qs, int qe, int ss, int se, int si){
+	if(qe < ss || qs > se || ss > se) return 1;
+	if(qs <= ss && se <= qe) return st[si].dec;
+	int mid = (ss + se) / 2;
+	lli x = getdec(qs, qe, ss, mid, 2*si);
+	lli y = getdec(qs, qe, mid+1, se, 2*si+1);
+	if(qs <= mid && mid+1 <= qe)
+		return (x && y && a[mid] >= a[mid+1]);
+	else
+		return (x && y);
+}
+int main() {
+	int n, m, index, qs, qe, qtype;
+	char c;
+	lli newval;
+	scanf("%d%d", &n, &m);
+	for(int i = 0 ; i < n;  i++)
+		scanf("%lld", &a[i]);
+	build(0, n-1, 1);
+	for(int i = 0 ; i < m ; i++){
+		c = getchar();
+		scanf("%c", &c);
+		if(c == 'U'){
+			scanf("%d%lld", &index, &newval);
+			index--;
+			a[index] = newval;
+			update(0, n-1, 1, index);
+		}
+		else{
+			scanf("%d%d", &qs, &qe);
+			qs--;
+			qe--;
+			switch(c){
+				case 'M': printf("%lld\n", getmax(qs, qe, 0, n-1, 1));
+						break;
+				case 'S': printf("%lld\n", getsum(qs, qe, 0, n-1, 1));
+						break;
+				case 'I': printf("%d\n", getinc(qs, qe, 0, n-1, 1));
+						break;
+				case 'D': printf("%d\n", getdec(qs, qe, 0, n-1, 1));
+						break;
+			}
+		}
+	}
+	return 0;
+} 

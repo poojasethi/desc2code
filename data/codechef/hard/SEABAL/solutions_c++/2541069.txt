@@ -1,0 +1,174 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#include <set>
+#include <cmath>
+#include <cstring>
+#include <string>
+#include <bitset>
+#include <queue>
+#include <map>
+#include <climits>
+
+#define PB(x) push_back(x)
+#define MP(x,y) make_pair(x,y)
+#define si(x) scanf("%d",&x)
+#define sll(x) scanf("%lld",&x)
+#define ss(x) scanf("%s",x);
+#define X first
+#define Y second
+
+const double pi=3.141592653589793238462;
+const double eps=1e-10;
+
+using namespace std;
+typedef long long ll;
+typedef unsigned long long ull;
+
+const int maxn=100010;
+const int MAX = maxn;
+int s[maxn],e[maxn],leq[maxn],req[maxn];
+pair<int,int> px[maxn];
+vector<int> stree[4*maxn];
+int a[maxn];
+
+
+int inline left(int root)
+{
+	return (2*root)+1;
+}
+
+int inline right(int root)
+{
+	return (2*root)+2;
+}
+
+bool mycomp(pair<int,int> a,pair<int,int>  b)
+{
+	return a < b;
+}
+
+void init(int root,int i,int j,int n,pair<int,int> *x)
+{
+	if(i==j)
+	{
+		int segtmp;
+		segtmp = (lower_bound(x,x+n,MP(i,0),mycomp) - x);
+		for(;segtmp!=n && x[segtmp].first<=j;segtmp++)
+		{
+			stree[root].PB(x[segtmp].second);
+		}
+		sort(stree[root].begin(),stree[root].end());
+	}
+	else
+	{
+		init(left(root),i,(i+j)>>1,n,x);
+		init(right(root),((i+j)>>1)+1,j,n,x);
+		int p,q;
+		p=q=0;
+		//cout<<"i:"<<i<<" j:"<<j<<endl;
+		while(p<stree[left(root)].size() || q<stree[right(root)].size())
+		{
+			if(p>=stree[left(root)].size() || 
+				(q < stree[right(root)].size() && stree[right(root)][q] < stree[left(root)][p]))
+				stree[root].PB(stree[right(root)][q++]);
+			else
+				stree[root].PB(stree[left(root)][p++]);
+		}
+	}
+}
+
+int query(int root,int i,int j,int x1,int x2,int y1,int y2)
+{
+	if(j < x1 || x2 < i)
+		return 0;
+	if(x1<=i && j<=x2)
+	{
+		int ret=0;
+		int a = lower_bound(stree[root].begin(),stree[root].end(),y1) - stree[root].begin();
+		int b = lower_bound(stree[root].begin(),stree[root].end(),y2+1) - stree[root].begin();
+		return b-a;
+	}
+	else
+	{
+		return query(left(root),i,((i+j)>>1),x1,x2,y1,y2) +
+				query(right(root),((i+j)>>1)+1,j,x1,x2,y1,y2);
+	}
+}
+
+int findLeft(int y)
+{
+	if(a[y])
+		return y;
+	return leq[y]=findLeft(leq[y]);
+}
+
+int findRight(int y)
+{
+	if(a[y])
+		return y;
+	return req[y]=findRight(req[y]);
+}
+
+int main()
+{
+	#ifndef ONLINE_JUDGE
+	freopen("input.txt","r",stdin);
+	#endif
+	int i,j,k,n,m,tc,y,x,ans,l,r,lo,hi,mid;
+	ans=0;
+	si(n);
+	si(m);
+	a[0]=1;
+	for(i=1;i<=n;i++)
+	{
+		si(a[i]);
+		leq[i]=i-1;
+		req[i]=i+1;
+	}
+	a[i]=1;
+	leq[i] = i-1;
+	req[i] = i;
+	
+	for(i=1;i<=m;i++)
+	{
+		si(s[i]);
+		si(e[i]);
+		px[i-1] = MP(s[i],e[i]);
+	}
+	
+	
+	sort(px,px+m);
+	init(0,0,maxn-1,m,px);
+	
+// 	for(i=0;i<4*maxn;i++)
+// 	{
+// 		cout<<"i:"<<i<<endl;
+// 		for(j=0;j<stree[i].size();j++)
+// 			cout<<stree[i][j]<<" ";
+// 		cout<<endl;
+// 	}
+	
+	si(tc);
+	
+	while(tc--)
+	{
+		si(x);
+		y = ans + x;
+		if(--a[y] == 0)
+		{
+			r = req[y-1] = req[y] = findRight(req[y]);
+			l = leq[y+1] = leq[y] = findLeft(leq[y]);
+			//cout<<"l:"<<++l<<" r:"<<--r<<" k:"<<y<<endl;
+			++l;
+			--r;
+			y = query(0,0,maxn-1,l,y,y,r);
+			
+			ans += y;
+		}
+		printf("%d\n",ans);
+	}
+	
+	return 0;
+}

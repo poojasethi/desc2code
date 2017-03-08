@@ -1,0 +1,133 @@
+#include <bits/stdc++.h>
+#define MOD 998244353
+using namespace std;
+char s[300005];
+int n, cnt, p[300005], to[600005], nexti[600005];
+int fa[300005], son[300005], dep[300005], len[300005], top[300005], dfsx[300005], st[300005];
+void dfs(int x, int lasti)
+{
+	son[x] = 0;
+	len[x] = 1;
+	for (int i = p[x]; i != -1; i = nexti[i])
+		if (to[i] != lasti)
+		{
+			fa[to[i]] = x;
+			dep[to[i]] = dep[x] + 1;
+			dfs(to[i], x);
+			len[x] += len[to[i]];
+			if (!son[x] || len[to[i]] > len[son[x]]) son[x] = to[i];
+		}
+}
+void DFS(int x, int lasti)
+{
+	st[x] = ++cnt;
+	dfsx[cnt] = x;
+	if (son[x]) top[son[x]] = top[x], DFS(son[x], x);
+	for (int i = p[x]; ~i; i = nexti[i])
+		if (to[i] != lasti && to[i] != son[x])
+			top[to[i]] = to[i], DFS(to[i], x);
+}
+int pw[300005], pre[300005], suf[300005];
+struct Path
+{
+	int l, r;
+	int len() {return abs(r - l) + 1;}
+	Path(int l = 0, int r = 0): l(l), r(r) {}
+}x[305], y[305];
+int getpath(int u, int v, Path *path)
+{
+	static Path l[305], r[305];
+	int totl = 0, totr = 0;
+	while (top[u] != top[v])
+	{
+		if (dep[top[u]] > dep[top[v]])
+		{
+			l[++totl] = Path(st[u], st[top[u]]);
+			u = fa[top[u]];
+		}
+		else
+		{
+			r[++totr] = Path(st[top[v]], st[v]);
+			v = fa[top[v]];
+		}
+	}
+	if (dep[u] > dep[v]) l[++totl] = Path(st[u], st[v]);
+	else r[++totr] = Path(st[u], st[v]);
+	int tot = 0;
+	for (int i = 1; i <= totl; i++) path[++tot] = l[i];
+	for (int i = totr; i >= 1; i--) path[++tot] = r[i];
+	return tot;
+}
+inline int gethash(Path pa, int len)
+{
+	static int l, r;
+	if (pa.l < pa.r) l = pa.l, r = l + len - 1;
+	else l = pa.l, r = l - len + 1;
+	if (l < r) return (pre[r] - 1LL * pre[l - 1] * pw[r - l + 1] % MOD + MOD) % MOD;
+	else return (suf[r] - 1LL * suf[l + 1] * pw[l - r + 1] % MOD + MOD) % MOD;
+}
+inline void update(Path *pa, int &x, int len)
+{
+	if (pa[x].len() == len) pa[x++] = Path();
+	else if (pa[x].l < pa[x].r) pa[x].l += len;
+	else pa[x].l -= len;
+}
+bool ck(int cntx, int cnty, int len) {return len == 0 || gethash(x[cntx], len) == gethash(y[cnty], len);}
+int query(int a, int b, int c, int d)
+{
+	int xn = getpath(a, b, x), yn = getpath(c, d, y);
+	int cntx = 1, cnty = 1, ret = 0;
+	while (cntx <= xn && cnty <= yn)
+	{
+		int len = min(x[cntx].len(), y[cnty].len());
+		if (ck(cntx, cnty, len))
+		{
+			update(x, cntx, len);
+			update(y, cnty, len);
+			ret += len;
+		}
+		else
+		{
+			int L = 0, R = len - 1;
+			while (L < R)
+			{
+				len = (L + R + 1) >> 1;
+				if (ck(cntx, cnty, len)) L = len;
+				else R = len - 1;
+			}
+			return ret + L;
+		}
+	}
+	return ret;
+}
+int main()
+{
+	scanf("%d%s", &n, s + 1);
+	memset(p, -1, sizeof p);
+	for(int i = 1; i < n; i++)
+	{
+		int u, v;
+		scanf("%d%d", &u, &v);
+		cnt++, to[cnt] = v, nexti[cnt] = p[u], p[u] = cnt;
+		cnt++, to[cnt] = u, nexti[cnt] = p[v], p[v] = cnt;
+	}
+	dep[1] = 1;
+	dfs(1, -1);
+	cnt = 0;
+	DFS(1, 1);
+	pw[0] = 1;
+	for(int i = 1; i <= n; i++) pw[i] = 1LL * pw[i - 1] * 31 % MOD;
+	for(int i = 1; i <= n; i++) pre[i] = (1LL * pre[i - 1] * 31 + s[dfsx[i]] - 'a' + 1) % MOD;
+	for(int i = n; i >= 1; i--) suf[i] = (1LL * suf[i + 1] * 31 + s[dfsx[i]] - 'a' + 1) % MOD;
+	int q;
+	scanf("%d", &q);
+	while (q--)
+	{
+		int a, b, c, d;
+		scanf("%d%d%d%d", &a, &b, &c, &d);
+		printf("%d\n", query(a, b, c, d));
+	}
+	return 0;
+}
+
+                                                                                                                                                                                                                                                              

@@ -1,0 +1,153 @@
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<string>
+#include<iomanip>
+#include<fstream>
+#include<sstream>
+#include<vector>
+#include<map>
+#include<set>
+#include<queue>
+#include<deque>
+#include<cstdlib>
+#include<cmath>
+#include<algorithm>
+
+#define pb push_back
+#define pp pop_back
+#define xx first
+#define yy second
+#define mp make_pair
+
+using namespace std;
+
+typedef long long ll;
+typedef pair<int,int> pii;
+typedef vector<int> vi;
+
+const int maxn=200000+10;
+const int maxl=20;
+
+int n,q,m;
+vector<pair<int,ll> > adj[maxn];
+int par[maxn][maxl];
+ll mx[maxn][maxl];
+ll dis[maxn];
+int hei[maxn];
+int fa[maxn];
+pair<ll,pii> edge[maxn];
+int sz[maxn];
+ll ans;
+int comp;
+
+
+inline void Dfs(int v,int parent){
+	par[v][0]=parent;
+	for(int i=1;i<maxl;i++)par[v][i]=par[par[v][i-1]][i-1];
+	for(int i=1;i<maxl;i++)mx[v][i]=max(mx[v][i-1],mx[par[v][i-1]][i-1]);
+	for(int i=0;i<(int)adj[v].size();i++){
+		int u=adj[v][i].xx;
+		ll w=adj[v][i].yy;
+		if(u!=parent){
+			dis[u]=dis[v]+w;
+			mx[u][0]=w;
+			hei[u]=hei[v]+1;
+			Dfs(u,v);
+		}
+	}
+	return;
+}
+
+inline int Lca(int u,int v){
+	if(hei[u]>hei[v])swap(u,v);
+	ll ret=0;
+	int lg=19;
+	while(hei[u]!=hei[v] && lg>=0){
+		if(hei[par[v][lg]]>=hei[u]){
+			ret=max(ret,mx[v][lg]);
+			v=par[v][lg];
+		}
+		lg--;
+	}
+	for(int i=19;i>=0;i--){
+		if(par[u][i]!=par[v][i]){
+			ret=max(ret,mx[u][i]);
+			ret=max(ret,mx[v][i]);
+			u=par[u][i];
+			v=par[v][i];
+		}
+	}
+	if(u==v)return ret;
+	ret=max(ret,mx[v][0]);
+	ret=max(ret,mx[u][0]);
+	return ret;
+}
+
+inline int Find(int x){
+	if(fa[x]==x)return x;
+	return fa[x]= Find(fa[x]);
+}
+
+inline void Kruskal(){
+	sort(edge+1,edge+1+m);
+	for(int i=1;i<=n;i++)fa[i]=i;
+	comp=n;
+	for(int i=1;i<=m;i++){
+		int x=edge[i].yy.xx;
+		int y=edge[i].yy.yy;
+		x=Find(x);
+		y=Find(y);
+		if(x==y)continue;
+		comp--;
+		if(sz[x]>sz[y]){
+			fa[y]=x;
+			sz[x]+=sz[y];
+		}
+		else{
+			fa[x]=y;
+			sz[y]+=sz[x];
+		}
+		ans+=edge[i].xx;
+		adj[edge[i].yy.xx].pb(mp(edge[i].yy.yy,edge[i].xx));
+		adj[edge[i].yy.yy].pb(mp(edge[i].yy.xx,edge[i].xx));
+		
+		if(comp==1)break;
+	}
+	if(comp==1){
+		hei[1]=1;
+		Dfs(1,0);
+	}
+	for(int i=1;i<=n;i++)fa[i]=Find(i);
+	return;
+}
+
+inline void Query(){
+	cin>>q;
+	for(int i=1;i<=q;i++){
+		int u,v;
+		cin>>u>>v;
+		if(comp>2){
+			cout<<-1<<endl;
+		}
+		else if(comp==2){
+			if(fa[u]!=fa[v])cout<<ans<<endl;
+			else cout<<-1<<endl;
+		}
+		else{
+			cout<<ans-Lca(u,v)<<endl;
+		}
+	}
+	return;
+}
+
+int main(){
+	ios_base::sync_with_stdio(false);
+	cin.tie(0);
+	cin>>n;
+	cin>>m;
+	for(int i=1;i<=m;i++)cin>>edge[i].yy.xx>>edge[i].yy.yy>>edge[i].xx;
+	Kruskal();
+	Query();
+	return 0;
+}

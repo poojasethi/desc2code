@@ -1,0 +1,83 @@
+#include <stdio.h>
+#include <vector>
+#include <iostream>
+#include <string>
+#include <string.h>
+#define forn(i, n) for(int i = 0; i < int(n); i++)
+using namespace std;
+namespace SA{
+	const int maxn = 600000;
+	int len[maxn], suf[maxn], nxt[maxn][27];
+	int last = 1, sz = 2;
+	int cnt[maxn][11];
+	int newV(int l, int s){
+		len[sz] = l;
+		suf[sz] = s;
+		return sz++;
+	}
+	void addch(int ch, int tp){
+		int p = last; last = newV(len[last] + 1, 0);
+		nxt[p][ch] = last;
+		cnt[last][tp]++;
+		for(p = suf[p]; !nxt[p][ch]; p = suf[p])
+			nxt[p][ch] = last;
+		if(!p)
+			return void(suf[last] = 1);
+		int q = nxt[p][ch];
+		if(len[p] + 1 == len[q])
+			return void(suf[last] = q);
+		int r = newV(len[p] + 1, suf[q]);
+		suf[q] = suf[last] = r;
+		memcpy(nxt[r], nxt[q], sizeof nxt[q]);
+		for(;nxt[p][ch] == q; p = suf[p])
+			nxt[p][ch] = r;
+	}
+};
+int n;
+string s;
+string t[11];
+int  l[11], r[11];
+int hv[SA::maxn];
+vector<int> q;
+int main(){
+	ios::sync_with_stdio(0);
+	cin >> s;
+	cin >> n;
+	forn(i, n)
+		cin >> t[i] >> l[i] >> r[i];
+
+	forn(i, s.size())
+		SA::addch(s[i] - 'a', 0);
+	forn(i, n){
+		SA::addch(26, i + 1);
+		forn(j, t[i].size())
+			SA::addch(t[i][j] - 'a', i + 1);
+	}
+	
+	int qb = 0;
+	forn(v, SA::sz)
+		hv[SA::suf[v]]++;
+	int ans = 0;
+    
+	forn(v, SA::sz)
+		if(!hv[v])
+			q.push_back(v);
+	while(qb < (int)q.size()){
+		int v = q[qb++];
+		int sf = SA::suf[v];
+		bool fl = SA::cnt[v][0] > 0;
+		forn(i, n)
+			fl &= (l[i] <= SA::cnt[v][i + 1]) && (SA::cnt[v][i + 1] <= r[i]);
+	    
+		if(fl)
+			ans += (SA::len[v] - SA::len[sf]);
+
+		forn(i, n + 1)
+			SA::cnt[sf][i] += SA::cnt[v][i];
+		
+		hv[sf]--;
+		if(hv[sf] == 0)
+			q.push_back(sf);
+	}
+	cout << ans << endl;
+}

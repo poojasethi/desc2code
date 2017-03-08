@@ -1,0 +1,84 @@
+#include <iostream>
+#include <algorithm>
+#include <map>
+#include <vector>
+
+using namespace std;
+
+int N;
+long long M;
+int A[200002], B[200002];
+map<int, int> MP;
+vector<pair<long long, long long> > ST;
+
+long long getover(pair<long long, long long> p, int i2) // ST[i1].first > ST[i2].first
+{
+    if (p.second >= ST[i2].second) return 0;
+    return (ST[i2].second - p.second) / (p.first - ST[i2].first) + ((ST[i2].second - p.second) % (p.first - ST[i2].first) != 0);
+}
+long long getover(int i1, int i2) // ST[i1].first > ST[i2].first
+{
+    if (ST[i1].second >= ST[i2].second) return 0;
+    return (ST[i2].second - ST[i1].second) / (ST[i1].first - ST[i2].first) + ((ST[i2].second - ST[i1].second) % (ST[i1].first - ST[i2].first) != 0);
+}
+
+int main()
+{
+    cin.sync_with_stdio(false);
+    cin >> N >> M;
+
+    int bestinit = 0;
+    for (int i = 1; i <= N; ++i)
+    {
+        cin >> A[i] >> B[i];
+
+        if (B[i] == 0) bestinit = max(bestinit, A[i]);
+
+        if (MP.find(A[i]) == MP.end())
+            MP[A[i]] = 0x3f3f3f3f;
+        MP[A[i]] = min(MP[A[i]], B[i]);
+    }
+
+    ST.push_back(make_pair(bestinit, 0));
+    for (map<int, int>::iterator it = MP.begin(); it != MP.end(); ++it)
+    {
+        if (it->first <= bestinit) continue;
+
+        // caut primul punct in care pot pune it->second
+        int step = (1 << 17), now = 0;
+        for (; step; step >>= 1)
+            if (now + step < int(ST.size()) && 1LL * ST[now + step - 1].first * (getover(now + step, now + step - 1) - 1) + ST[now + step - 1].second < it->second)
+                now += step;
+        step = (1 << 30);
+        int pos = 0;
+        for (; step; step >>= 1)
+            if (ST[now].first * (pos + step - 1) + ST[now].second < it->second)
+                pos += step;
+
+        int rem = ST[now].first * pos + ST[now].second - it->second;
+
+        // panta it->first, si are punctul (pos, rem)
+        pair<long long, long long> pnow = make_pair(it->first, rem - 1LL * it->first * pos);
+        while (ST.size() >= 2 && getover(pnow, ST.size() - 1) <= getover(ST.size() - 1, ST.size() - 2))
+            ST.pop_back();
+        ST.push_back(pnow);
+    }
+
+    int step = (1 << 17), now = 0;
+    for (; step; step >>= 1)
+        if (now + step < int(ST.size()) && 1LL * ST[now + step - 1].first * (getover(now + step, now + step - 1) - 1) + ST[now + step - 1].second < M)
+            now += step;
+
+    long long times = 100000000 + M / ST.back().first;
+    long long astep = 1;
+
+    while (astep <= times)
+        astep *= 2;
+
+    long long pos = 0;
+    for (; astep; astep >>= 1)
+        if (ST[now].first * (pos + astep - 1) + ST[now].second < M)
+            pos += astep;
+
+    cout << pos << '\n';
+}

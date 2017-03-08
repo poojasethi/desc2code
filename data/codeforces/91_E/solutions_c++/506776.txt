@@ -1,0 +1,85 @@
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <vector>
+#define maxn 101010
+#define blk 300
+
+using namespace std;
+
+typedef long long LL;
+
+struct node{
+	int a,b;
+} a[maxn];
+vector<int> px[400];
+int n,m,bln;
+int ans;
+
+int idx[maxn];
+bool cmp(int x,int y){
+	return a[x].a>a[y].a || (a[x].a==a[y].a && a[x].b>a[y].b);
+}
+bool cmp2(int x1,int x2,int x3){
+	return (LL)(a[x1].a-a[x3].a)*(a[x1].b-a[x2].b)<=(LL)(a[x2].a-a[x1].a)*(a[x3].b-a[x1].b);
+}
+void Build(int p,int l,int r){
+	for (int i=0;i<r-l;i++) idx[i]=l+i;
+	sort(idx,idx+r-l,cmp);
+	int xn=1;
+	for (int i=1;i<r-l;i++)
+		if (a[idx[i]].b>a[idx[xn-1]].b) idx[xn++]=idx[i];
+	px[p].clear();
+	for (int i=0;i<xn;i++){
+		while (px[p].size()>=2 && cmp2(px[p][px[p].size()-1],px[p][px[p].size()-2],idx[i])) px[p].pop_back();
+		px[p].push_back(idx[i]);
+	}
+}
+
+inline int Better(int x,int y,LL t){
+	return t*a[x].b+a[x].a>t*a[y].b+a[y].a;
+}
+
+void Check(int l,int r,int t){
+	for (int i=l;i<r;i++)
+		if (ans==-1 || Better(i,ans,t)) ans=i;
+}
+
+void Check_Block(int p,LL t){
+	int L=0,R=px[p].size()-1,mid;
+	int k;
+	while (L<=R){
+		mid=(L+R)>>1;
+		int p1=px[p][mid],p2=(mid>0)?px[p][mid-1]:-1;
+		if (mid==0 || a[p2].a-a[p1].a<=t*(a[p1].b-a[p2].b)){
+			k=mid;
+			L=mid+1;
+		}else R=mid-1;
+	}
+	k=px[p][k];
+	if (ans==-1 || Better(k,ans,t)) ans=k;
+}
+
+int main(){
+	scanf("%d%d",&n,&m);
+	for (int i=0;i<n;i++) scanf("%d%d",&a[i].a,&a[i].b);
+	bln=(n-1)/blk+1;
+	for (int i=0;i<bln;i++)
+		if ((i+1)*blk<=n) Build(i,i*blk,(i+1)*blk);else Build(i,i*blk,n);
+	for (int i=0;i<m;i++){
+		int l,r,t;
+		scanf("%d %d %d",&l,&r,&t);
+		l--;r--;
+		ans=-1;
+		if (l/blk==r/blk){
+			Check(l,r+1,t);
+		}else{
+			int ln=l/blk,rn=r/blk;
+			Check(l,(ln+1)*blk,t);
+			for (int i=ln+1;i<rn;i++) Check_Block(i,t);
+			Check(rn*blk,r+1,t);
+		}
+		printf("%d\n",ans+1);
+	}
+	return 0;
+}

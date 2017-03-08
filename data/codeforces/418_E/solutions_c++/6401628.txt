@@ -1,0 +1,145 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <map>
+#include <algorithm>
+#include <vector>
+#include <map>
+using namespace std;
+
+const int N = 100000;
+const int Len = 500;
+
+struct Query{
+	int t;
+	int x, y;
+}query[N];
+
+map<int, int> v2i;
+
+vector<int> value;
+
+int n, m;
+int array[N];
+
+int suml1[N/Len + 3][2 * N], suml2[N/Len + 3][2 * N];
+
+inline int block(int num, bool t){
+	if(t == false) return num * Len;
+	return (num + 1) * Len - 1;
+}
+
+int arr[N];
+int main()
+{
+	scanf("%d", &n);
+	for(int i = 0; i < n; i ++){
+		scanf("%d", &array[i]);
+		value.push_back(array[i]);
+	}
+	scanf("%d", &m);
+	for(int i = 0; i < m; i ++){
+		scanf("%d%d%d", &query[i].t, &query[i].x, &query[i].y);
+		if(query[i].t == 1){
+			query[i].y --;
+			value.push_back(query[i].x);
+		}else{
+			query[i].x --;
+			query[i].y --;
+		}
+	}
+	
+	sort(value.begin(), value.end());
+	value.erase(unique(value.begin(), value.end()), value.end());
+	for(int i = 0; i < value.size(); i ++){
+		v2i[value[i]] = i;
+	}
+	
+	for(int i = 0; i < n; i ++){
+		array[i] = v2i[array[i]];
+		int bid = i / Len;
+	}
+	
+	for(int i = 0; i < min(n, block(0, true) + 1); i ++){
+		suml1[0][array[i]] ++;
+		suml2[0][suml1[0][array[i]]] ++;
+	}
+	
+	for(int b = 1; block(b, false) < n; b ++){
+		for(int i = 0; i < 2 * N; i ++)
+			suml1[b][i] = suml1[b - 1][i], 
+			suml2[b][i] = suml2[b - 1][i];
+		for(int l = block(b, false); l < min(n, block(b, true) + 1); l ++){
+			suml1[b][array[l]]++;
+			suml2[b][suml1[b][array[l]]] ++;
+		}
+	}
+	for(int i = 0; i < m; i ++){
+		if(query[i].t == 1){
+			query[i].x = v2i[query[i].x];
+		}
+	}
+	vector<int> counter(2 * N, 0), biu(2 * N, 0);
+	for(int i = 0; i < m; i ++){
+		if(query[i].t == 1){
+			int x = query[i].x, y = query[i].y;
+			
+			int u = array[y], v = x;
+			array[y] = v;
+			if(u == v) continue;
+			
+			int bid = y / Len;
+			for(int j = bid; block(j, false) < n; j ++){
+				if(j == bid){
+					suml2[j][suml1[j][u]] --;
+					suml2[j][suml1[j][v] + 1] ++;
+					suml1[j][u] --;
+					suml1[j][v] ++;
+				}else{
+					int bu = suml1[j - 1][u] + 1, eu = suml1[j][u],
+						bv = suml1[j - 1][v] + 1, ev = suml1[j][v];
+					
+					suml2[j][eu] --;
+					suml2[j][ev + 1] ++;
+					suml1[j][u] --;
+					suml1[j][v] ++;
+				}
+			}
+			
+			
+		}else{
+			int x = query[i].x, y = query[i].y;
+			if(x == 0){
+				printf("%d\n", value[array[y]]);
+			}else{
+				int bid = y/Len;
+				
+				for(int l = block(bid, false); l <= y; l ++){
+					counter[array[l]] ++;
+					int temp = (bid == 0)?0:suml1[bid - 1][array[l]];
+					biu[l] = temp + counter[array[l]];
+				}
+				
+				if(x % 2 == 1){
+					printf("%d\n", biu[y]);
+				}else{
+				
+					int cnt = (bid == 0)?0:suml2[bid - 1][biu[y]];
+				
+					for(int l = block(bid, false); l <= y; l ++){
+						if(biu[l] == biu[y]){
+							cnt ++;
+						}
+					}
+					printf("%d\n", cnt);
+				}
+				
+				for(int l = block(bid, false); l <= y; l ++){
+					counter[array[l]] = 0;
+					biu[l] = 0;
+				}
+			}
+		}
+	}
+	return 0;
+}

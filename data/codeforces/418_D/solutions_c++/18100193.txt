@@ -1,0 +1,113 @@
+#include<iostream>
+#include<algorithm>
+#include<string.h>
+#include<stdio.h>
+#include<vector>
+using namespace std;
+const int M=1e5+5;
+const int INF=1<<30;
+int d[M],f[M][20],dx[M],n,m,UP[M][20],DOWN[M][20];
+vector<int>G[M];
+inline void rd(int &a){
+	a=0;char c;
+	while(c=getchar(),!isdigit(c));
+	do a=(a<<1)+(a<<3)+(c^48);
+		while(c=getchar(),isdigit(c));
+}
+inline void Max(int &a,int b){if(a<b)a=b;}
+inline void Min(int &a,int b){if(a>b)a=b;}
+struct node{
+	int id,v;
+	inline bool operator < (const node&tmp)const{
+		return v<tmp.v;
+	}
+}Node[M][3];
+void dfs(int v,int fa,int dep){
+	dx[v]=d[v]=dep;f[v][0]=fa;
+	Node[v][0]=(node){v,dep};
+//	cout<<Node[v][0].v<<" "<<Node[v][0]
+	for(int i=0;i<G[v].size();++i){
+		if(G[v][i]==fa)continue;
+		dfs(G[v][i],v,dep+1);
+		Max(dx[v],dx[G[v][i]]);
+		node tmp=(node){G[v][i],dx[G[v][i]]};
+		for(int j=0;j<3;++j)
+			if(Node[v][j]<tmp)swap(tmp,Node[v][j]);
+	}
+}
+inline void pret(){
+	dfs(1,0,0);
+	for(int j=1;j<20;++j)
+		for(int i=1;i<=n;++i)
+			f[i][j]=f[f[i][j-1]][j-1];
+	for(int i=1;i<=n;++i){
+		int par=f[i][0];
+		if(Node[par][0].id!=i){
+			UP[i][0]=Node[par][0].v;
+			DOWN[i][0]=Node[par][0].v-d[par]*2;
+		}
+		else{
+			UP[i][0]=Node[par][1].v;
+			DOWN[i][0]=Node[par][1].v-d[par]*2;
+		}
+	}
+	for(int j=1;j<20;++j)
+		for(int i=1;i<=n;++i){
+			UP[i][j]=max(UP[i][j-1],UP[f[i][j-1]][j-1]);
+			DOWN[i][j]=max(DOWN[i][j-1],DOWN[f[i][j-1]][j-1]);
+		}
+}
+inline int up(int u,int x){
+	for(int i=0;i^20;++i)
+		if(x&1<<i)u=f[u][i];
+	return u;
+}
+inline int lca(int u,int v){
+	if(d[u]<d[v])swap(u,v);
+	u=up(u,d[u]-d[v]);
+	if(u==v)return u;
+	for(int i=19;~i;--i)
+		if(f[u][i]!=f[v][i])u=f[u][i],v=f[v][i];
+	return f[u][0];
+}
+inline int q_down(int u,int x){
+	int ans=-INF;
+	for(int i=0;i<20;++i)
+		if(x&1<<i)Max(ans,DOWN[u][i]),u=f[u][i];
+	return ans;
+}
+inline int q_up(int u,int x){
+	int ans=-INF;
+	for(int i=0;i<20;++i)
+		if(x&1<<i)Max(ans,UP[u][i]),u=f[u][i];
+	return ans;
+}
+/*
+up[i][j]:从i点往上2^j的距离的dx值
+down[i][j]:从i点往上2^j的距离的dx-d[par]*2的值 
+*/
+int main(){
+	cin>>n;
+	for(int i=1,a,b;i^n;++i)rd(a),rd(b),G[a].push_back(b),G[b].push_back(a);
+	pret();
+	for(cin>>m;m--;){
+		int u,v;rd(u),rd(v);
+		if(d[u]<d[v])swap(u,v);
+		int w=lca(u,v),g=up(u,(d[u]+d[v]-d[w]*2-1)>>1);//u is lower 
+		int res=max(dx[u]-d[u],q_down(u,d[u]-d[g])+d[u]);
+		Max(res,q_down(w,d[w])+d[v]);
+		if(w==v)Max(res,q_up(g,d[g]-d[v])-d[v]);
+		else{
+			Max(res,dx[v]-d[v]);
+			Max(res,q_up(g,d[g]-d[w]-1)+d[v]-d[w]*2);
+			Max(res,q_down(v,d[v]-d[w]-1)+d[v]);
+			int a=up(g,d[g]-d[w]-1),b=up(v,d[v]-d[w]-1);
+			for(int i=0;i<3;++i){
+				if(a==Node[w][i].id||b==Node[w][i].id)continue;
+				Max(res,Node[w][i].v-d[w]*2+d[v]);
+			}
+		}
+		printf("%d\n",res);
+	}
+	return 0;
+}

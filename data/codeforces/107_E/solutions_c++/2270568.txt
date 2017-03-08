@@ -1,0 +1,185 @@
+#include<stdio.h>
+#include<string.h>
+#include<math.h>
+#include<iostream>
+#include<algorithm>
+#include<vector>
+using namespace std;
+#define mp make_pair
+#define pb push_back
+#define eps 1e-8
+int Sig(double a)
+{
+    return a<-eps?-1:(a>eps);
+}
+struct Point
+{
+    double x,y;
+    Point(){}
+    Point(double x0,double y0):x(x0),y(y0){}
+    void in()
+    {
+        scanf("%lf%lf",&x,&y);
+    }
+    void out()
+    {
+        printf("%.3f %.3f\n",x,y);
+    }
+    Point operator * (double t)
+    {
+        return Point(t*x,t*y);
+    }
+    double len()
+    {
+        return sqrt(x*x+y*y);
+    }
+    double operator *(Point pt)
+    {
+        return x*pt.y-y*pt.x;
+    }
+    double operator ^(Point pt)
+    {
+        return pt.x*x+pt.y*y;
+    }
+    Point operator -(Point pt)
+    {
+        return Point(x-pt.x,y-pt.y);
+    }
+    Point operator +(Point pt)
+    {
+        return Point(x+pt.x,y+pt.y);
+    }
+    bool operator ==(Point pt)
+    {
+        if(fabs(x-pt.x) < eps && fabs(y-pt.y) < eps)
+            return true;
+        else
+            return false;
+    }
+};
+struct Line
+{
+    Point p,q;
+    Line(){}
+    Line(Point p0,Point q0):p(p0),q(q0){}
+};
+Point Intersect(Line u,Line v)//求两直线交点，需要先判是否平行
+{
+    Point ret=u.p;
+    double t=((u.p.x-v.p.x)*(v.p.y-v.q.y)-(u.p.y-v.p.y)*(v.p.x-v.q.x))
+            /((u.p.x-u.q.x)*(v.p.y-v.q.y)-(u.p.y-u.q.y)*(v.p.x-v.q.x));
+    ret.x+=(u.q.x-u.p.x)*t;
+    ret.y+=(u.q.y-u.p.y)*t;
+    return ret;
+}
+struct Polygon
+{
+    Point p[1510];
+    int n;
+    bool getdir()//1代表逆时针 0代表顺时针
+    {
+        double sum=0;
+        for (int i=0;i<n;i++)
+            sum+=p[i]*(p[(i+1)%n]);
+        if (Sig(sum)>0)
+            return 1;
+        return 0;
+    }
+    double getarea()
+    {
+        double sum=0;
+        int i;
+        for (i=0;i<n;i++)
+            sum+=p[i]*p[(i+1)%n];
+        return fabs(sum)/2;
+    }
+};
+struct Polygon_set
+{
+    vector<Polygon>p;
+    int n;
+    vector<pair<double,int> >e;
+    void ins(Point s,Point t,Point X,int i)
+    {
+        double r=fabs(t.x-s.x)>eps?(X.x-s.x)/(t.x-s.x):(X.y-s.y)/(t.y-s.y);
+        r=min(r,1.0);
+        r=max(r,0.0);
+        e.pb(mp(r,i));
+    }
+    double polyareaunion()
+    {
+        double ans=0.0;
+        int c0,c1,c2,i,j,k,w;
+        for (i=0;i<p.size();i++)
+        {
+            if (p[i].getdir()==0)
+                reverse(p[i].p,p[i].p+p[i].n);
+        }
+        for (i=0;i<p.size();i++)
+        {
+            for (k=0;k<p[i].n;k++)
+            {
+                Point &s=p[i].p[k],&t=p[i].p[(k+1)%p[i].n];
+                if (!Sig(s*t))
+                    continue;
+                e.clear();
+                e.pb(mp(0.0,1));
+                e.pb(mp(1.0,-1));
+                for (j=0;j<p.size();j++)
+                    if (i!=j)
+                    {
+                        for (w=0;w<p[j].n;w++)
+                        {
+                            Point a=p[j].p[w],b=p[j].p[(w+1)%p[j].n],c=p[j].p[(w-1+p[j].n)%p[j].n];
+                            c0=Sig((t-s)*(c-s));
+                            c1=Sig((t-s)*(a-s));
+                            c2=Sig((t-s)*(b-s));
+                            if (c1*c2<0)
+                                ins(s,t,Intersect(Line(s,t),Line(a,b)),-c2);
+                            else if (!c1&&c0*c2<0)
+                                ins(s,t,a,-c2);
+                            else if (!c1&&!c2)
+                            {
+                                int c3=Sig((t-s)*(p[j].p[(w+2)%p[j].n]-s));
+                                int dp=Sig((t-s)^(b-a));
+                                if (dp&&c0)
+                                    ins(s,t,a,dp>0?c0*((j>i)^(c0<0)):-(c0<0));
+                                if (dp&&c3)
+                                    ins(s,t,b,dp>0?-c3*((j>i)^(c3<0)):c3<0);
+                            }
+                        }
+                    }
+                sort(e.begin(),e.end());
+                int ct=0;
+                double tot=0.0,last;
+                int le=e.size();
+                for (j=0;j<le;j++)
+                {
+                    if (ct==1)
+                        tot+=e[j].first-last;
+                    ct+=e[j].second;
+                    last=e[j].first;
+                }
+                ans+=(s*t)*tot;
+            }
+        }
+        return fabs(ans)*0.5;
+    }
+}pl;
+int main()
+{
+    int n;
+    scanf("%d",&n);
+    Polygon p;
+    double ans=0;
+    for(int i=0;i<n;i++)
+    {
+        p.n=4;
+        for(int i=0;i<4;i++)
+            p.p[i].in();
+        ans+=p.getarea();
+        pl.p.pb(p);
+    }
+    printf("%.12f\n",ans/pl.polyareaunion());
+    return 0;
+}

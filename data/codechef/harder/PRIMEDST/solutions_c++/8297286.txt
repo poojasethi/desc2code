@@ -1,0 +1,175 @@
+#include <cstdio>
+#include <algorithm>
+#include <cmath>
+#include <ctime>
+#define NE(x, y) ++nes, e[nes]=y, h[nes]=s[x], s[x]=nes
+using namespace std;
+typedef long long ll;
+ 
+struct comp{
+	double x, y;
+	comp() {}
+	comp(double _x, double _y) : x(_x), y(_y) {}
+	inline double real() {return x;}
+	inline double imag() {return y;}
+};
+inline comp operator + (const comp &a, const comp &b) {
+	return comp(a.x + b.x, a.y + b.y);
+}
+inline comp operator - (const comp &a, const comp &b) {
+	return comp(a.x - b.x, a.y - b.y);
+}
+inline comp operator * (const comp &a, const comp &b) {
+	return comp(a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x);
+}
+inline comp operator / (const comp &a, double n) {
+	return comp(a.x / n, a.y / n);
+}
+ 
+namespace FFT{
+	const int N = 131073, MinSize = 400000;
+	const double pi2 = 3.1415926535897932 * 2;
+	comp a[N], b[N];
+	int n, bn, res[N];
+	inline comp W(int n, bool inv) {
+		double ang = inv ? -pi2 / n : pi2 / n;
+		return comp(cos(ang), sin(ang));
+	}
+	int bitrev(int x) {
+		int ans = 0;
+		for (int i=1; i<=bn; ++i)
+			ans <<= 1, ans |= x & 1, x >>= 1;
+		return ans;
+	}
+	void dft(comp *a, bool inv) {
+		int step, to; comp w, wi, A, B;
+		for (int i=0; i<n; ++i) {
+			to = bitrev(i);
+			if (to > i) swap(a[to], a[i]);
+		}
+		for (int i=1; i<=bn; ++i) {
+			wi = W(1<<i, inv); w = comp(1, 0);
+			step = 1 << (i-1);
+			for (int k=0; k<step; ++k) {
+				for (int j=0; j<n; j+=1<<i) {
+					A = a[j|k], B = w * a[j|k|step];
+					a[j|k] = A + B, a[j|k|step] = A - B;
+				}
+				w = w * wi;
+			}
+		}
+		if (inv)
+			for (int i=0; i<n; ++i) a[i] = a[i] / (double)n;
+	}
+	int mul(int n1, int *x1, int n2, int *x2) {
+		if ((ll)n1 * n2 <= MinSize) {
+			n = n1 + n2 - 1;
+			for (int i=0; i<n; ++i) res[i] = 0;
+			for (int i=0; i<n1; ++i)
+				for (int j=0; j<n2; ++j)
+					res[i+j] += x1[i] * x2[j];
+			return n;
+		}
+		n = max(n1, n2);
+		for (bn = 0; (1<<bn) < n; ++bn); ++bn;
+		n = 1 << bn;
+		for (int i=0; i<n; ++i) a[i] = b[i] = comp(0, 0);
+		for (int i=0; i<n1; ++i) a[i] = comp(x1[i], 0);
+		for (int i=0; i<n2; ++i) b[i] = comp(x2[i], 0);
+		dft(a, false); dft(b, false);
+		for (int i=0; i<n; ++i) a[i] = a[i] * b[i];
+		dft(a, true);
+		for (int i=0; i<n; ++i) res[i] = a[i].real() + 0.1;
+		for (--n; n && !res[n]; --n);
+		return n+1;
+	}
+}
+inline void R(int &x) {
+	char ch = getchar(); x = 0;
+	for (; ch<'0' || ch>'9'; ch=getchar());
+	for (; ch>='0' && ch<='9'; ch=getchar()) x=x*10+ch-'0';
+}
+const int N = 50005;
+int n, nes = 0, s[N], e[N<<1], h[N<<1], sz[N], dc[N], dg[N], cnt[N];
+bool v[N];
+void gsz(int x, int f) {
+	sz[x] = 1; int to;
+	for (int w=s[x]; w; w=h[w]) {
+		to = e[w];
+		if (to!=f && !v[to]) {
+			gsz(to, x);
+			sz[x] += sz[to];
+		}
+	}
+}
+int fp(int x) {
+	gsz(x, 0);
+	int lim = sz[x] >> 1, f = 0, to;
+	bool flag;
+	while (1) {
+		flag = false;
+		for (int w=s[x]; w; w=h[w]) {
+			to = e[w];
+			if (!v[to] && to!=f && sz[to] > lim) {
+				f = x, x = to, flag = true;
+				break;
+			}
+		}
+		if (!flag) return x;
+	}
+}
+int gh(int x, int f, int d) {
+	int to, res = d; ++dc[d];
+	for (int w=s[x]; w; w=h[w]) {
+		to = e[w];
+		if (to!=f && !v[to])
+			res = max(res, gh(to, x, d+1));
+	}
+	return res;
+}
+void dfs(int x) {
+	x = fp(x); v[x] = true;
+	int d = 0, dt = 0, da;
+	dg[0] = 1;
+	for (int w=s[x]; w; w=h[w])
+		if (!v[e[w]]) {
+			d = gh(e[w], x, 1);
+			da = FFT::mul(dt+1, dg, d+1, dc);
+			for (int i=0; i<da; ++i)
+				cnt[i] += FFT::res[i];
+			for (int i=1; i<=d; ++i)
+				dg[i] += dc[i],
+				dc[i] = 0;
+			if (d > dt) dt = d;
+		}
+	for (int i=0; i<=dt; ++i) dg[i] = 0;
+	
+	for (int w=s[x]; w; w=h[w])
+		if (!v[e[w]])
+			dfs(e[w]);
+}
+int pn = 0, p[6000], f[N];
+void Prime(int n) {
+	for (int i=2; i<=n; ++i) {
+		if (!f[i]) p[++pn]=i, f[i]=i;
+		for (int j=1; i*p[j]<=n; ++j) {
+			f[i*p[j]] = p[j];
+			if (p[j] == f[i]) break;
+		}
+	}
+}
+int main() {
+	R(n);
+	int x, y;
+	for (int i=1; i<n; ++i) {
+		R(x); R(y);
+		NE(x, y); NE(y, x);
+	}
+	dfs(1);
+	Prime(n);
+	ll c1 = 0, c2 = 0;
+	for (int i=1; i<=n; ++i) c2 += cnt[i];
+	for (int i=1; i<=pn; ++i) c1 += cnt[p[i]];
+	printf("%.9lf\n", (double)c1 / c2);
+	return 0;
+}  

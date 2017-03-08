@@ -1,0 +1,197 @@
+#include <set>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+ 
+#define n	200005
+#define m	10000005
+#define P	1000000007
+#define For(i,a,b)	for(register int i=a;i<=b;i++)
+ 
+int		N,Q,T,TYPE,A[n],AF[n];
+struct	Opt{int k,l,r;}O[n];
+ 
+namespace	Work{
+		int 	Rt,B[n],F[n],siz[n],tot[n],ch[n][2];
+ 
+		void	Up(int x)	{
+			siz[x]=siz[ch[x][0]]+siz[ch[x][1]]+B[x];
+			tot[x]=tot[ch[x][0]]+tot[ch[x][1]]+1;
+		}
+		void	Rot(int x)	{
+			int y=F[x],z=F[y],k=ch[y][0]==x,t;
+			if	(t=ch[y][!k]=ch[x][k])	F[t]=y;
+			if	(F[x]=z)	ch[z][ch[z][1]==y]=x;
+			F[ch[x][k]=y]=x;Up(y);
+		}
+		void	Splay(int x,int Aim=0){
+			for (;F[x]!=Aim;Rot(x)){
+				int y=F[x],z=F[y];
+				if	(z!=Aim)	(ch[y][0]==x^ch[z][0]==y)?Rot(x):Rot(y);
+			}	Up(x);	if	(!Aim)	Rt=x;
+		}
+ 
+		int		Find(int x,int k){
+			int t=siz[ch[x][0]]+B[x];
+			if	(t==k&&B[x])	return	x;
+			if	(k<=t)	return	Find(ch[x][0],k);
+				else	return	Find(ch[x][1],k-t);
+		}
+		void	Build(int&u,int l,int r,int f){
+			F[u=l+r>>1]=f;
+			if	(l<u)	Build(ch[u][0],l,u-1,u);
+			if	(u<r)	Build(ch[u][1],u+1,r,u);	Up(u);
+		}
+ 
+		void	Main(){
+			For(i,1,N+2)	B[i]=1;
+			Build(Rt,1,N+2,0);T=N+2;
+			For(i,1,Q)	{
+				if	(O[i].k==1||O[i].k==5){
+					O[i].l=Find(Rt,O[i].l+1);
+					O[i].r=Find(Rt,O[i].r+1);
+				}	else
+				if	(O[i].k==2||O[i].k==3){
+					O[i].l=Find(Rt,O[i].l+1);
+					if	(O[i].k==3)	B[O[i].l]=0,Splay(O[i].l);
+				}	else	{
+					int x=Find(Rt,O[i].l+1),y;	Splay(x);
+					for (y=ch[x][1];ch[y][0];y=ch[y][0]);
+					Splay(y,x);	B[ch[y][0]=++T]=1;	F[T]=y;	Splay(T);	O[i].l=T;
+				}
+			}
+ 
+			For(i,1,Q)	{
+				Splay(O[i].l),O[i].l=tot[ch[O[i].l][0]]+1;
+				if	(O[i].k==1||O[i].k==5)
+					Splay(O[i].r),O[i].r=tot[ch[O[i].r][0]]+1;
+			}
+			For(i,1,N)	Splay(i+1),AF[i]=tot[ch[i+1][0]]+1;
+		}
+};
+ 
+#define Set	set<int>
+#define I64	long long
+ 
+int		D,V[n],B[n],S[n],Rt[n],ls[m],rs[m],sum[m];
+Set		Pre[n];
+ 
+struct	Nod{
+		I64 A[3];
+		Nod	operator +	(const Nod&a){
+			Nod	ret;	For(i,0,2)	ret.A[i]=A[i]+a.A[i];
+			return	ret;
+		}
+}G[m],Num[n];
+ 
+inline	void	Modify(int&u,int l,int r,int x,const Nod&t){
+		int Mid=l+r>>1;	u=(!u?++D:u);
+		if	(l==r)	{G[u]=t;sum[u]=!!t.A[0];return;}
+		if	(x<=Mid)Modify(ls[u],l,Mid,x,t);
+			else	Modify(rs[u],Mid+1,r,x,t);
+		G[u]=G[ls[u]]+G[rs[u]];	sum[u]=sum[ls[u]]+sum[rs[u]];
+}
+inline	void	Modify1(int&u,int l,int r,int x,int t){
+		int Mid=l+r>>1;	u=(!u?++D:u);
+		if	(l==r)	{sum[u]=t;return;}
+		if	(x<=Mid)Modify1(ls[u],l,Mid,x,t);
+			else	Modify1(rs[u],Mid+1,r,x,t);
+		sum[u]=sum[ls[u]]+sum[rs[u]];
+}
+
+inline	Nod		Query(int u,int l,int r,int x,int y){
+		if	(!u||x<=l&&r<=y)	return	G[u];	int Mid=l+r>>1;
+		if	(y<=Mid)	return	Query(ls[u],l,Mid,x,y);
+		if	(x>Mid)		return	Query(rs[u],Mid+1,r,x,y);
+		return	Query(ls[u],l,Mid,x,y)+Query(rs[u],Mid+1,r,x,y);
+}
+inline	int		Query1(int u,int l,int r,int x,int y){
+		if	(!sum[u]||x<=l&&r<=y)	return	sum[u];	int Mid=l+r>>1;
+		if	(y<=Mid)	return	Query1(ls[u],l,Mid,x,y);
+		if	(x>Mid)		return	Query1(rs[u],Mid+1,r,x,y);
+		return	Query1(ls[u],l,Mid,x,y)+Query1(rs[u],Mid+1,r,x,y);
+}
+ 
+inline	void	Add(int x,int y,const Nod&t){
+		for (x++;x<=T;x+=x&-x)	if	(V[x])	
+			if	(TYPE)	Modify(Rt[x],1,T,y,t);	else	Modify1(Rt[x],1,T,y,!!t.A[0]);
+}
+inline	void	Ask_(int x){
+		for (x++;x;x-=x&-x)	V[x]=1;
+}
+inline	Nod		Ask(int x,int l,int r){
+		Nod	ret=Nod();
+		for (x++;x;x-=x&-x)	ret=ret+Query(Rt[x],1,T,l,r);
+		return	ret;
+}
+inline	int		Ask1(int x,int l,int r){
+		int ret=0;
+		for (x++;x;x-=x&-x)	ret=ret+Query1(Rt[x],1,T,l,r);
+		return	ret;
+}
+ 
+inline	void	INS(int x,int k){
+		S[x]=k;	Pre[k].insert(x);
+		Set::iterator l=Pre[k].lower_bound(x),r=l;	int t;
+		(l!=Pre[k].begin())?t=*(--l):t=0;	Add(t,x,Num[k]);
+		if	((++r)!=Pre[k].end())	Add(t,*r,Num[0]),Add(x,*r,Num[S[*r]]);
+}
+inline	void	DEL(int x){
+		int k=S[x];
+		Set::iterator l=Pre[k].lower_bound(x),r=l;	int t;
+		(l!=Pre[k].begin())?t=*(--l):t=0;	Add(t,x,Num[0]);
+		if	((++r)!=Pre[k].end())	Add(x,*r,Num[0]),Add(t,*r,Num[S[*r]]);
+		S[x]=0;	Pre[k].erase(x);
+}
+ 
+ 
+#define CH	(ch=getchar())
+inline	int		IN(){
+		int x=0,ch;
+		for	(;CH<'0'||ch>'9';);
+		for	(;ch>='0'&&ch<='9';CH)	(x*=10)+=ch-'0';
+		return	x;
+}
+inline	int		Pow(int a,int b){
+		int ret=1;
+		for (;b;b>>=1,a=1ll*a*a%P)
+			if	(b&1)	ret=1ll*ret*a%P;
+		return	ret;
+}
+ 
+int		main(){
+		N=IN();	Q=IN();
+		For(i,1,N)	A[i]=IN();
+		For(i,1,Q)	{
+			O[i].k=IN();	O[i].l=IN();
+			if	(O[i].k!=3)	O[i].r=IN();	TYPE|=O[i].k==1;
+		}
+		Work::Main();
+ 
+		For(i,1,N)	B[++*B]=A[i];
+		For(i,1,Q)	if	(O[i].k==2||O[i].k==4)	B[++*B]=O[i].r;
+		sort(B+1,B+*B+1);	*B=unique(B+1,B+*B+1)-B-1;
+		For(i,1,*B)	{
+			Num[i].A[0]=B[i];
+			For(j,1,2)	Num[i].A[j]=1ll*Num[i].A[j-1]*B[i]%P;
+		}
+ 
+		For(i,1,N)	A[i]=lower_bound(B+1,B+*B+1,A[i])-B;
+		For(i,1,Q)	if	(O[i].k==2||O[i].k==4)	O[i].r=lower_bound(B+1,B+*B+1,O[i].r)-B;
+		For(i,1,Q)	if	(O[i].k==1||O[i].k==5)	Ask_(O[i].l-1);
+ 
+		For(i,1,N)	INS(AF[i],A[i]);	int rev=Pow(6,P-2);
+		For(i,1,Q)	{
+			if	(O[i].k==1||O[i].k==5)	{
+				if	(O[i].k==5)	printf("%d\n",Ask1(O[i].l-1,O[i].l,O[i].r));
+				else	{
+					Nod	t=Ask(O[i].l-1,O[i].l,O[i].r);	For(i,0,2)	t.A[i]%=P;
+					int Ans=(1ll*t.A[0]*t.A[0]%P*t.A[0]-3ll*t.A[1]*t.A[0]+2*t.A[2])%P;
+					printf("%d\n",(1ll*Ans*rev%P+P)%P);
+				}
+			}	else
+			if	(O[i].k==3)	DEL(O[i].l);	else
+			if	(O[i].k==4)	INS(O[i].l,O[i].r);
+				else	DEL(O[i].l),INS(O[i].l,O[i].r);
+		}
+} 

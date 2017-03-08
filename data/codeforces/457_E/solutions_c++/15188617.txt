@@ -1,0 +1,113 @@
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <deque>
+#include <queue>
+#include <stack>
+#include <set>
+#include <map>
+#include <algorithm>
+#include <functional>
+#include <utility>
+#include <bitset>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <cstdio>
+
+using namespace std;
+
+#define REP(i,n) for((i)=0;(i)<(int)(n);(i)++)
+#define snuke(c,itr) for(__typeof((c).begin()) itr=(c).begin();itr!=(c).end();itr++)
+
+typedef long long ll;
+
+int N;
+vector <pair <int, ll> > graph[200010];
+
+int comp[200010];
+ll pot[200010];
+ll MIN,MAX,MAXDIFF;
+
+void dfs(int c, int x, ll p){
+    if(comp[x] != -1) return;
+    comp[x] = c;
+    pot[x] = p;
+    MIN = min(MIN, p);
+    MAX = max(MAX, p);
+    
+    int i;
+    REP(i,graph[x].size()) dfs(c, graph[x][i].first, p + graph[x][i].second);
+}
+
+int f[200010],t[200010],w[200010],b[200010];
+
+pair <bool, ll> func(int Q){
+    int i,j;
+    
+    REP(i,N) graph[i].clear();
+    REP(i,N) comp[i] = -1;
+    REP(i,N) pot[i] = 0;
+    MIN = MAX = MAXDIFF = 0;
+    
+    REP(i,Q){
+        graph[f[i]].push_back(make_pair(t[i], (ll)w[i]*b[i]));
+        graph[t[i]].push_back(make_pair(f[i], -(ll)w[i]*b[i]));
+    }
+    
+    int C = 0;
+    REP(i,N) comp[i] = -1;
+    
+    REP(i,N) if(comp[i] == -1){
+        MIN = MAX = 0;
+        dfs(C, i, 0);
+        if(C != 0) MAXDIFF = max(MAXDIFF, MAX - MIN);
+        C++;
+    }
+    
+    // REP(i,N) cout << comp[i] << ' ' << pot[i] << endl;
+    
+    bool valid = true;
+    REP(i,N) REP(j,graph[i].size()) if(pot[graph[i][j].first] != pot[i] + graph[i][j].second) valid = false;
+    REP(i,N) if(comp[i] == comp[0] && i != 0 && pot[i] <= pot[0]) valid = false;
+    REP(i,N) if(comp[i] == comp[N-1] && i != N-1 && pot[i] >= pot[N-1]) valid = false;
+    if(comp[0] == comp[N-1] && MAXDIFF >= pot[N-1] - pot[0]) valid = false;
+    
+    if(!valid) return make_pair(false, 0ll);
+    if(comp[0] == comp[N-1]) return make_pair(true, pot[N-1] - pot[0]);
+    return make_pair(true, -1ll);
+}
+
+int main(void){
+    int M,i,j;
+    
+    cin >> N >> M;
+    REP(i,M){
+        scanf("%d%d%d%d", &f[i], &t[i], &w[i], &b[i]);
+        f[i]--; t[i]--;
+    }
+    
+    pair <bool, ll> ans = func(M);
+    
+    if(ans.first){
+        if(ans.second == -1){
+            cout << "UNKNOWN" << endl;
+        } else {
+            cout << ans.second << endl;
+        }
+        return 0;
+    }
+    
+    int low = 0, high = M;
+    while(high - low > 1){
+        int mid = (low + high) / 2;
+        ans = func(mid);
+        if(!ans.first) high = mid; else low = mid;
+    }
+    
+    cout << "BAD" << ' ' << high << endl;
+    
+    return 0;
+}

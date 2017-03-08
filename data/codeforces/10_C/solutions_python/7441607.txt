@@ -1,0 +1,8 @@
+n , ans , a = int(input()) , 0 , [0] * 10
+for i in range(1,n+1):
+    ans -= (int)(n/i)
+    a[i % 9] += 1
+for i in range(9):
+    for j in range(9):
+        ans += a[i] * a[j] * a[(i * j) % 9]
+print (ans)

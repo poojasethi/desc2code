@@ -1,0 +1,310 @@
+
+def primes(n):
+	size = n/3 + (n%6==2)
+	plist = size * [True]
+	plist[0] = False
+	for i in xrange(int(n**0.5)/3+1):
+		if plist[i]:
+			k=3*i+1|1
+			for j in xrange((k*k)/3,size,2*k):
+				plist[j] = False
+			for j in xrange((k*k+4*k-2*k*(i&1))/3,size,2*k):
+				plist[j] = False
+	ans = [2,3]
+	for i in xrange(size):
+		if plist[i]:
+			ans.append(3*i+1|1)
+	return ans
+
+def solve():
+	mod = 1000000007
+	plist = primes(31700)
+
+	instring = """2
+	2 2
+	4 1"""
+
+	n = int(raw_input())
+
+	alist = []
+	blist = []
+
+	for i in xrange(n):
+		a,b = [int(x) for x in raw_input().split()]
+		alist.append(a)
+		blist.append(b)
+
+	# break down the primes
+	amaps = []
+	bmaps = []
+
+	for i in xrange(n):
+		a,b = alist[i], blist[i]
+		amap = dict()
+		bmap = dict()
+		for p in plist:
+			if p*p > a:
+				if a > 1:
+					amap[a] = 1
+					bmap[a] = 0
+				break
+			if a%p == 0:
+				count = 1
+				a /= p
+				while a%p == 0:
+					count += 1
+					a /= p
+				amap[p] = count
+				bmap[p] = 0
+		for p in plist:
+			if p*p > b:
+				if b > 1:
+					if b not in bmap:
+						amap[b] = 0
+					bmap[b] = 1
+				break
+			if b%p == 0:
+				count = 1
+				b /= p
+				while b%p == 0:
+					count += 1
+					b /= p
+				if p not in bmap:
+					amap[p] = 0
+				bmap[p] = count
+		amaps.append(amap)
+		bmaps.append(bmap)
+
+	#print amaps
+	#print bmaps
+	
+	# check each a, see if any works
+	for i in xrange(n):
+		a = alist[i]
+		amap = amaps[i]
+
+		works = True
+		for j in xrange(n):
+			if alist[j] == a:
+				continue
+			constrained = -1
+			amapj = amaps[j]
+
+			for p in amapj:
+				if p not in amap:
+					works = False
+			if not works:
+				break
+
+			bmapj = bmaps[j]
+
+			for (p,c) in amap.iteritems():
+				need = c
+				if p in amapj:
+					need -= amapj[p]
+				add = 0
+				if p in bmapj:
+					add = bmapj[p]
+				if need == 0 and add == 0:
+					continue
+				if need < 0 or (add==0 and need>0) or need%add != 0:
+					works = False
+					break
+				index = need / add
+				if constrained == -1:
+					constrained = index
+				elif constrained != index:
+					works = False
+					break
+
+		if works:
+			print a
+			return True
+
+	#print "Looks like no a works..."
+
+	# make sure all seqs use same primes
+	for i in xrange(n):
+		for j in xrange(i+1,n):
+			if amaps[i].keys() != amaps[j].keys():
+				return False
+
+	#print "All them primes check out dude"
+
+	# look for a diff in prime alloc in two b's (ratio diff), use to solve equation
+	pkeys = amaps[0].keys()
+
+	for i in xrange(len(pkeys)):
+		p1 = pkeys[i]
+		for j in xrange(i+1,len(pkeys)):
+			p2 = pkeys[j]
+			for k in xrange(n):
+				for l in xrange(k+1,n):
+					#diff1 = bmaps[k][p1] - bmaps[l][p1]
+					#diff2 = bmaps[k][p2] - bmaps[l][p2]
+
+					a1p1 = amaps[k][p1]
+					b1p1 = bmaps[k][p1]
+					a1p2 = amaps[k][p2]
+					b1p2 = bmaps[k][p2]
+					a2p1 = amaps[l][p1]
+					b2p1 = bmaps[l][p1]
+					a2p2 = amaps[l][p2]
+					b2p2 = bmaps[l][p2]
+					q = b1p1
+					s = b2p1
+					r = b1p2
+					t = b2p2
+					c1 = a2p1 - a1p1
+					c2 = a2p2 - a1p2
+
+					if q*t == r*s:
+						if r*c1 == q*c2:
+							continue
+						else:
+							return False
+
+					x3 = s*r - q*t
+					c3 = q*c2 - r*c1
+
+					if c3 % x3 != 0:
+						return False
+
+					sol_l = c3 / x3
+
+					# check if it works for all sequences 
+					pmap = dict(amaps[l])
+					for key, value in bmaps[l].iteritems():
+						pmap[key] += sol_l*value
+
+					for o in xrange(n):
+						amap = amaps[o]
+						bmap = bmaps[o]
+						index = -1
+						for key, value in pmap.iteritems():
+							need = value - amap[key]
+							add = bmap[key]
+							if need == 0 and add == 0:
+								continue
+							if need < 0 or (need > 0 and add == 0):
+								return False
+							if need % add != 0:
+								return False
+							mustbe = need / add
+							if index == -1:
+								index = mustbe
+							elif index != mustbe:
+								return False
+
+					print alist[l] * pow(blist[l],sol_l,mod) % mod
+					return True
+					'''
+					if diff1 != diff2:
+						print "We got one!"
+						
+						a1p1 = amaps[k][p1]
+						b1p1 = bmaps[k][p1]
+						a1p2 = amaps[k][p2]
+						b1p2 = bmaps[k][p2]
+						a2p1 = amaps[l][p1]
+						b2p1 = bmaps[l][p1]
+						a2p2 = amaps[l][p2]
+						b2p2 = bmaps[l][p2]
+						#print "%d + %d*i = %d + %d*j" % (a1p1,b1p1,a2p1,b2p1)
+						#print "%d + %d*i = %d + %d*j" % (a1p2,b1p2,a2p2,b2p2)
+						q = b1p1
+						s = b2p1
+						r = b1p2
+						t = b2p2
+						c1 = a2p1 - a1p1
+						c2 = a2p2 - a1p2
+						
+						#print "%d*i-%d*j = %d" % (q,s,c1)
+						#print "%d*i-%d*j = %d" % (r,t,c2)
+						if (r*c1)%q != 0 or (r*s)%q != 0:
+							#print "Non integer solution to cross"
+							return False
+						c3 = c2 - (r*c1)/q
+						x3 = (r*s)/q - t
+						if c3%x3 != 0:
+							#print "Non integer solution to cross"
+							return False
+						sol_l = c3 / x3
+						#print p1, p2, sol_l, (c1+s)*sol_l/q
+
+						# check if it works for all sequences 
+						pmap = dict(amaps[l])
+						for key, value in bmaps[l].iteritems():
+							pmap[key] += value
+
+						for o in xrange(n):
+							amap = amaps[o]
+							bmap = bmaps[o]
+							index = -1
+							for key, value in pmap.iteritems():
+								need = value - amap[key]
+								add = bmap[key]
+								if need == 0 and add == 0:
+									continue
+								if need < 0 or (need > 0 and add == 0):
+									return False
+								if need % add != 0:
+									return False
+								mustbe = need / add
+								if index == -1:
+									index = mustbe
+								elif index != mustbe:
+									return False
+
+						print alist[l] * pow(blist[l],sol_l,mod) % mod
+						return True
+						'''
+
+	# if no diffs, use mod sys solver
+	eea = lambda b,s,w=1,x=0,y=0,z=1:(b,w,x)if s==0 else eea(s,b%s,y,z,w-b/s*y,x-b/s*z)
+
+	def solve_mod_sys(eqs):
+		if len(eqs) == 1: return eqs
+		a,m1 = eqs.pop()
+		b,m2 = eqs.pop()
+		lhs,rhs = m1,b-a
+		gcd, m1inv = eea(m1,m2)[:2]
+		if (gcd > 1):
+			if rhs%gcd == 0:
+				rhs/=gcd
+				m1/=gcd
+				m2/=gcd
+				m1inv = eea(m1,m2)[1]
+			else:
+				return False
+		rhs = m1inv*rhs%m2
+		c = a + rhs*lhs
+		m3 = m2*lhs
+		eqs.append((c,m3))
+		return solve_mod_sys(eqs)
+
+	pkey = amaps[0].keys()[0]
+	equations = []
+
+	for i in xrange(n):
+		start = amaps[i][pkey]
+		step = bmaps[i][pkey]
+		equations.append((start,step))
+
+	res = solve_mod_sys(equations)
+	if res == False:
+		return False
+	else:
+		x,m = res[0]
+
+	x /= bmaps[0][pkey]
+
+	solution = alist[0]
+	for p in bmaps[0]:
+		solution *= pow(p,x*bmaps[0][p],mod)
+	print solution % mod
+	return True
+
+
+if not solve():
+	print -1

@@ -1,0 +1,134 @@
+#include <cstdio>
+#include <cassert>
+#include <hash_map>
+using namespace std;
+using namespace __gnu_cxx;
+
+#define DEBUG 0
+
+
+struct Node {
+	short data;
+	short lew, rew;
+	Node *left, *right;
+
+	public:
+	Node(int val): data(val), lew(0), rew(0), left(NULL), right(NULL) { };
+};
+
+typedef hash_map<int, Node*> H;
+
+
+
+void insert(H &h, int n1, char c, int n2)
+{
+	Node *cur = h[n1];
+	assert(cur);
+	Node *n = h[n2] = new Node(n2);
+	if(c=='L') { cur->left = n; cur->lew++; }
+	else       { cur->right = n; cur->rew++; }
+}
+
+
+void merge(Node *n1, Node *n2)
+{
+	if(n1->left && n2->left) n1->lew++;
+	if(n1->right && n2->right) n1->rew++;
+
+	if(!n1->left && n2->left) {
+		n1->left = n2->left;
+		n1->lew = 1;
+		n2->left = NULL;
+	}
+
+	if(!n1->right && n2->right) {
+		n1->right = n2->right;
+		n1->rew = 1;
+		n2->right = NULL;
+	}
+
+	if(n1->left && n2->left)   merge(n1->left,  n2->left);
+	if(n1->right && n2->right) merge(n1->right, n2->right);
+}
+
+
+#if DEBUG
+void preorder(Node *cur)
+{
+	cout << cur->data << " " << cur->lew <<  " " << cur->rew << endl;
+	if(cur->left) preorder(cur->left);
+	if(cur->right) preorder(cur->right);
+}
+#endif
+
+int maxpath(Node *cur, int k) 
+{
+	int l = (k <= cur->lew && cur->left)  ? maxpath(cur->left, k)  : 0;
+	int r = (k <= cur->rew && cur->right) ? maxpath(cur->right, k) : 0;
+	return (l >= r) ? l+1 : r+1;
+}
+
+int main()
+{
+	int numtestcases = 0;
+	scanf("%d\n", &numtestcases);
+
+	for(int z=0; z<numtestcases; z++) {
+		int numtrees = 0;
+		scanf("%d\n",&numtrees);
+		vector<Node*> v;
+		v.clear();
+
+		for(int i=0; i<numtrees; i++) {
+
+			// pre-create the root node
+			H h;
+			h.clear();
+			Node *root = h[1] = new Node(1);
+			v.push_back(root);
+
+			// read-in each edge and create the tree
+			int numedges = 0;
+			scanf("%d\n", &numedges);
+
+			for(int j=1; j<numedges; j++) {
+				int n1, n2; char c;
+				scanf("%d %c %d\n", &n1, &c, &n2);
+				insert(h, n1, c, n2);
+			}
+		}
+
+
+#if 0
+		// print the trees
+		for(int i=0; i<numtrees; i++) {
+			cout << endl;
+			preorder(v[i]);
+			cout << endl;
+		}
+#endif
+
+		// for each tree, merge into the super-tree
+		for(int i=1; i<numtrees; i++) {
+			merge(v[0], v[i]);
+		}
+
+#if 0
+		// print the merged tree
+		cout << endl;
+		preorder(v[0]);
+		cout << endl;
+#endif
+
+
+		// find longest intersecting path for each k
+		for(int i=1; i<=numtrees; i++) {
+			int res = maxpath(v[0], i);
+			// cout << "Maxpath = " << res-1 << " for k = " << i << endl;
+			printf("%d ",res-1);
+		}
+		printf("\n");
+	}
+
+	return 0;
+}

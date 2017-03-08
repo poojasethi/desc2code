@@ -1,0 +1,72 @@
+#include <iostream>
+#include <string>
+#include <cstring>
+#include <vector>
+#include <cmath>
+#include <map>
+#include <algorithm>
+#include <cstdio>
+#include <set>
+#include <queue>
+#include <cassert>
+#include <climits>
+#define MAXP 17
+using namespace std;
+vector<int> E[100005];
+int H[200005], P[100005], ln, minH[MAXP + 1][200005];
+set<int> nodes;
+set<int>::iterator sit;
+void dfs(int x, int d = 0, int p = -1) {
+	P[x] = ln;
+	H[ln++] = d;
+	for (vector<int>::iterator it = E[x].begin(); it != E[x].end(); ++it) {
+		if (*it == p) continue;
+		dfs(*it, d + 1, x);
+		H[ln++] = d;
+	}
+}
+int dist(int x, int y) {
+	if (x > y) swap(x, y);
+	int d = 0;
+	for (; (1 << (d + 1)) <= y - x + 1; ++d);
+	int m = min(minH[d][x + (1 << d) - 1], minH[d][y]);
+	return H[x] + H[y] - 2 * m;
+}
+void findNeighbors(int v, int& nex, int& prev) {
+	sit = nodes.find(v);
+	++sit;
+	nex = sit == nodes.end() ? *(nodes.begin()) : *sit;
+	--sit;
+	prev = sit == nodes.begin() ? *(--nodes.end()) : *(--sit);
+}
+int main() {
+	int N, K;
+	scanf("%d%d", &N, &K);
+	for (int i = 1; i < N; ++i) {
+		int a, b;
+		scanf("%d%d", &a, &b);
+		E[a].push_back(b);
+		E[b].push_back(a);
+	}
+	dfs(1);
+	for (int d = 0; d <= MAXP; ++d)
+		for (int i = (1 << d) - 1; i < ln; ++i)
+			minH[d][i] = d ? min(minH[d - 1][i - (1 << (d - 1))], minH[d - 1][i]) : H[i];
+	int l = 1, total = 0, ans = 0;
+	for (int r = 1; r <= N; ++r) {
+		int nex, prev;
+		nodes.insert(P[r]);
+		findNeighbors(P[r], nex, prev);
+		total -= dist(prev, nex);
+		total += dist(prev, P[r]) + dist(P[r], nex);
+		while (total / 2 + 1 > K) {
+			findNeighbors(P[l], nex, prev);
+			total -= dist(prev, P[l]) + dist(P[l], nex);
+			total += dist(prev, nex);
+			nodes.erase(P[l]);
+			++l;
+		}
+		ans = max(ans, r - l + 1);
+	}
+	printf("%d\n", ans);
+}

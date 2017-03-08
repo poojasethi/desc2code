@@ -1,0 +1,103 @@
+#include<iostream>
+#include<cstring>
+using namespace std;
+typedef long long llong;
+const int MAXN = 2501;
+const int MAXK = 7;
+int n, m, k;
+int sum[MAXN][MAXN];
+int sum_range (int ra, int ca, int rb, int cb) {
+	return sum[rb][cb] - sum[rb][ca-1] - sum[ra-1][cb] + sum[ra-1][ca-1];
+}
+llong calc (int ra, int ca, int rb, int cb) {
+	llong result = 0;
+	int mid;
+	if (ra == rb && ca == cb) {
+		return sum_range (ra, ca, rb, cb) == k;
+	}
+	if (rb - ra > cb - ca) {
+		mid = (ra + rb) / 2;
+		result += calc (ra, ca, mid, cb);
+		result += calc (mid + 1, ca, rb, cb);
+		for (int c1 = ca; c1 <= cb; c1++) {
+			int up[MAXK];
+			int down[MAXK];
+			for (int t = 0; t <= k; t++) {
+				up[t] = mid;
+				down[t] = mid + 1;
+			}
+			//TODO this can't be increase, should use decrease
+			for (int c2 = cb; c2 >= c1; c2--) {
+				for (int t = 0; t <= k; t++) {
+					while (up[t] >= ra && sum_range (up[t], c1, mid, c2) <= t)
+						up[t]--;
+					while (down[t] <= rb && sum_range (mid + 1, c1, down[t], c2) <= t)
+						down[t]++;
+				}
+				for (int t = 0; t <= k; t++) {
+					int s1, s2;
+					if (t == 0)
+						s1 = mid - up[t];
+					else
+						s1 = up[t - 1] - up[t];
+					if (t == k)
+						s2 = down[k - t] - mid - 1;
+					else
+						s2 = down[k - t] - down[k - t - 1];
+					result += s1 * s2;
+				}
+
+			}
+		}
+
+	} else {
+		mid = (ca + cb) / 2;
+		result += calc (ra, ca, rb, mid);
+		result += calc (ra, mid + 1, rb, cb);
+		for (int r1 = ra; r1 <= rb; r1++) {
+			int left[MAXK];
+			int right[MAXK];
+			for (int t = 0; t <=k; t++) {
+				left[t] = mid;
+				right[t] = mid + 1;
+			}
+			for (int r2 = rb; r2 >= r1; r2--) {
+				for (int t = 0; t <= k; t++) {
+					while (left[t] >= ca && sum_range (r1, left[t], r2, mid) <= t)
+						left[t]--;
+					while (right[t] <= cb && sum_range (r1, mid+1, r2, right[t]) <= t)
+						right[t]++;
+				}
+				for (int t = 0; t <= k; t++) {
+					int s1, s2;
+					if (t == 0)
+						s1 = mid - left[t];
+					else
+						s1 = left[t - 1] - left[t];
+					if (k - t == 0)
+						s2 = right[k - t] - mid - 1;
+					else
+						s2 = right[k - t] - right[k - t - 1];
+					result += s1 * s2;
+				}
+			}
+		}
+
+	}
+	return result;
+}
+int main () {
+	int i, j;
+	char c;
+	llong result = 0;
+	cin >> n >> m >> k;
+	for (i = 1; i <= n; i++) {
+		for (j = 1; j <= m; j++) {
+			cin >> c;
+			sum[i][j] = sum[i][j-1] + sum[i-1][j] - sum[i-1][j-1] + c - '0';
+		}
+	}
+	result = calc (1, 1, n, m);
+	cout << result << endl;
+	return 0;
+}

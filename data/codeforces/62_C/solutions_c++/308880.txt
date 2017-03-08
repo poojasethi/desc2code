@@ -1,0 +1,93 @@
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <complex>
+
+#define X real()
+#define Y imag()
+
+const double kEPS = 1e-6;
+const int kMaxN = 100;
+
+typedef std::complex<long long> Point;
+
+Point tri[kMaxN][3];
+Point p[3 * kMaxN + 2];
+double list[3 * kMaxN + 2];
+int lsize;
+int n;
+
+inline int Sign(double x, double y = 0.0) {
+  if (fabs(x - y) < kEPS) return 0;
+  return x < y ? -1 : 1;
+}
+inline long long Cross(const Point &a, const Point &b) {
+  return a.X * b.Y - a.Y * b.X;
+}
+inline double Cross(const Point &a, const Point &b, double x, double y) {
+  return (b.X - a.X) * (y - a.Y) - (b.Y - a.Y) * (x - a.X);
+}
+inline bool DoubleCmp(double a, double b) { return Sign(a - b) == 0; }
+
+void ReadIn() {
+  int x, y;
+  scanf("%d", &n);
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      scanf("%d%d", &x, &y);
+      tri[i][j] = Point(x, y);
+    }
+    if (Cross(tri[i][1] - tri[i][0], tri[i][2] - tri[i][0]) < 0)
+      std::swap(tri[i][1], tri[i][2]);
+  }
+}
+
+inline double CrossPoint(const Point &a, const Point &at, const Point &b, const Point &bt) {
+  Point va = at - a, vb = bt - b;
+  long long q = Cross(va, vb);
+  long long pa = Cross(b - a, vb), pb = Cross(b - a, va);
+  if (q == 0) return -1.0;
+  if (q < 0) {
+    pa = -pa;
+    pb = -pb;
+    q = -q;
+  }
+  if (pa <= 0 || pa > q || pb < 0 || pb > q) return -1.0;
+  return (double) pa / (double) q;
+}
+inline bool IsInside(double x, double y) {
+  for (int i = 0; i < n; ++i)
+    if (Sign(Cross(tri[i][0], tri[i][1], x, y)) > 0 &&
+        Sign(Cross(tri[i][1], tri[i][2], x, y)) > 0 &&
+        Sign(Cross(tri[i][2], tri[i][0], x, y)) > 0) return true;
+  return false;
+}
+
+void Solve() {
+  double result = 0.0;
+  for (int i = 0; i < n; ++i)
+    for (int j = 0; j < 3; ++j) {
+      lsize = 2;
+      list[0] = 0.0;
+      list[1] = 1.0;
+      for (int k = 0; k < n; ++k) if (i != k)
+        for (int l = 0; l < 3; ++l) {
+          double t = CrossPoint(tri[i][j], tri[i][(j + 1) % 3], tri[k][l], tri[k][(l + 1) % 3]);
+          if (Sign(t) >= 0)
+            list[lsize++] = t;
+        }
+      std::sort(list, list + lsize);
+      lsize = std::unique(list, list + lsize, DoubleCmp) - list;
+      Point v = tri[i][(j + 1) % 3] - tri[i][j];
+      for (int k = 0; k < lsize - 1; ++k)
+        if (!IsInside(tri[i][j].X + v.X * (list[k] + list[k + 1]) / 2.0, tri[i][j].Y + v.Y * (list[k] + list[k + 1]) / 2.0))
+          result += sqrt(v.X * v.X + v.Y * v.Y) * (list[k + 1] - list[k]);
+    }
+  printf("%lf\n", result);
+}
+
+int main() {
+  ReadIn();
+  Solve();
+  return 0;
+}

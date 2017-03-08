@@ -1,0 +1,110 @@
+#include <iostream>
+#include <fstream>
+#include <queue>
+#include <vector>
+#define FIN "575g.inp"
+#define fi first
+#define se second
+using namespace std;
+const int N = 1e5+10;
+typedef pair<int,int> ii;
+
+vector<ii> adj[N];
+int n,m,lev[N],levr[N],minl[N],trace[N];
+bool zero[N],prn[N];
+ii d[N];
+
+void bfs(int x)
+{
+    queue<int> que;
+    que.push(x);
+    lev[x] = 1;
+    for(;!que.empty(); que.pop())
+    {
+        int x = que.front();
+        for(int i=0; i<adj[x].size(); i++)
+        {
+            int y = adj[x][i].fi;
+            if (lev[y]) continue;
+            lev[y] = lev[x]+1;
+            que.push(y);
+        }
+    }
+}
+int bfs0(int x)
+{
+    queue<int> que;
+    zero[x] = 1;
+    d[x].se = 1;
+    que.push(x);
+    int minlev = lev[x];
+
+    for(; !que.empty(); que.pop())
+    {
+        int x = que.front();
+        for(int i=0; i<adj[x].size(); i++)
+        {
+            int y = adj[x][i].fi;
+            if (adj[x][i].se || zero[y]) continue;
+            zero[y] = 1;
+            d[y].se = d[x].se+1;
+            trace[y] = x;
+            minlev = min(minlev, lev[y]);
+            que.push(y);
+        }
+    }
+    return minlev;
+}
+
+int main()
+{
+    //freopen(FIN,"r",stdin);
+    ios_base::sync_with_stdio(0);
+    for(cin>>n>>m; m; m--)
+    {
+        int x,y,v;
+        cin >> x >> y >> v;
+        adj[x].push_back(ii(y,v));
+        adj[y].push_back(ii(x,v));
+    }
+
+    for(int i=0; i<=n; i++) d[i].fi = minl[i] = 10;
+    bfs(0);
+    m = bfs0(n-1);
+
+    queue<int> que;
+    for(int i=0; i<n; i++)
+        if (zero[i] && lev[i]==m) {
+            que.push(i);
+            levr[i] = 1;
+        }
+
+    if (zero[0]) cout << 0;
+    else
+    for(; !que.empty(); que.pop())
+    {
+        int x = que.front();
+        if (!zero[x] && d[x].fi!=minl[lev[x]]) continue;
+        if (!zero[x] && !prn[lev[x]]) { cout << d[x].fi; prn[lev[x]] = 1; }
+
+        for(int i=0; i<adj[x].size(); i++)
+        {
+            int y = adj[x][i].fi;
+            int xy = adj[x][i].se;
+            if (lev[y]+levr[x] != m) continue;
+            if (!levr[y])
+            {
+                levr[y] = levr[x]+1;
+                que.push(y);
+            }
+            if (ii(xy, d[x].se+1) < d[y]) {
+                d[y] = ii(xy, d[x].se+1);
+                trace[y] = x;
+            }
+            minl[lev[y]] = min(minl[lev[y]], d[y].fi);
+        }
+    }
+    cout << endl << d[0].se << endl;
+    for(int i=0; i!=n-1; i=trace[i]) cout << i << ' ';
+    cout << n-1;
+}

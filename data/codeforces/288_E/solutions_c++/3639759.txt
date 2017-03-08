@@ -1,0 +1,41 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+typedef long long LL;
+const int qn = 7 + (int)1e9, N = 101013;
+LL f[2],sum[2],sum2[2],T1,T2;
+int n;
+char st[N],et[N];
+int calc(char *s) {
+    int x = 1,tot;
+    f[0] = sum[0] = sum2[0] = T1 = T2 =0;
+    tot = 1;
+    for (int i = 0; i < n; ++i, x ^= 1) {
+        f[x] = (f[x ^ 1] * 100LL) % qn;
+        f[x] = (f[x] + sum2[x ^ 1] * 100LL) % qn;
+        f[x] = (f[x] + 28LL * (tot*2 - 1)) % qn;
+        f[x] = (f[x] + 220LL * sum[x ^ 1]) % qn;
+        f[x] = (f[x] - 40LL * T2 - 70LL * T1) % qn;
+        sum[x] = (sum[x ^ 1] * 20LL + 11LL * tot) % qn;
+        sum2[x] = (sum2[x ^ 1] * 200LL + 65LL * tot) % qn;
+        sum2[x] = (sum2[x] + 220LL * sum[x ^ 1]) % qn;
+        tot = (tot + tot) % qn;
+        if (s[i] == '4') {
+            f[x] = (f[x] - (T2 * (LL)T2) % qn * 100LL - 28LL - 110LL * T2) % qn;
+            sum[x] = (sum[x] - T2 * 10LL - 7LL) % qn;
+            sum2[x] = (sum2[x] - (T2 * (LL)T2 % qn) * 100LL - 49LL - 140LL * T2) % qn;
+            tot = (tot - 1) % qn;
+        }
+        T1 = (T1 * 10LL + 4) % qn;
+        T2 = (T2 * 10LL + s[i] - '0') % qn;
+    }
+    return f[x ^ 1];
+}
+int main() {
+    scanf("%s%s", st, et);
+    n = strlen(st);
+    int t = calc(et) - calc(st);
+    printf("%d\n", (t % qn + qn) % qn);
+    return 0;
+}

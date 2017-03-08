@@ -1,0 +1,120 @@
+#include <assert.h> 
+#include <ctype.h> 
+#include <float.h> 
+#include <math.h> 
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <time.h> 
+#include <memory.h>
+#include <vector>
+#include <string>
+#include <set>
+#include <map>
+#include <algorithm>
+#include <iostream>
+using namespace std;
+ 
+const int MAX_N = 250000, MAXLEN = 250001;
+int head[MAX_N], next[MAX_N * 2], dest[MAX_N * 2];
+char c[MAX_N];
+ 
+struct state{int length, link; map<int,int> next; bool terminal;};
+state st[MAXLEN*2+5];
+int sz;
+ 
+void init(){st[0].link = -1; sz++;}
+ 
+int sa_extend (int last, int c) 
+     {
+	    int p, nlast=sz++;
+	    
+        st[nlast].length=st[last].length+1;
+   	    for(p=last; p!=-1 && st[p].next.count(c)==0; p=st[p].link) st[p].next[c]=nlast;
+	    
+        if(p == -1) st[nlast].link = 0;
+	    else 
+        {
+		   int q = st[p].next[c];
+		   if(st[p].length + 1 == st[q].length) st[nlast].link = q;
+		   else 
+           {
+			  int clone = sz++;
+			  st[clone].length = st[p].length + 1;
+			  st[clone].next = st[q].next;
+			  st[clone].link = st[q].link;
+			  for(; p!=-1 && st[p].next[c]==q; p=st[p].link) st[p].next[c] = clone;
+			  st[q].link = st[nlast].link = clone;
+		   }
+	    }
+	    return nlast;
+     }
+ 
+void explore(int last, int v, int p) 
+     {
+	    int i, t, nlast = sa_extend(last, c[v]);
+	    for(i=head[v]; i!=-1; i=next[i]) 
+        {
+		   t=dest[i]; if(t==p) continue;
+		   explore(nlast, t, v);
+	    }
+     }
+ 
+long long dp[MAXLEN * 2];
+ 
+long long getTotal(int p)
+{
+	long long& total = dp[p];
+	if(total != -1) return total;
+	
+	total = 1;
+	map<int,int>::iterator I;
+	int j;
+	for(I=st[p].next.begin();I!=st[p].next.end();I++)
+	{
+        j=I->first;
+		if(st[p].next[j]!=-1) total += getTotal(st[p].next[j]);
+	}
+	return total;
+}
+ 
+int main(int argc, char* argv[])
+    {  
+	    int i, u, v, edge=0, N, Q;
+	    scanf("%d", &N);
+	    fill(head, head + N, -1);
+
+    	for(i=0; i<N-1; i++) 
+        {
+		   scanf("%d %d", &u, &v); //u--,v--;
+		   c[--u]++;
+		   c[--v]++;
+		   next[edge] = head[u];
+		   dest[edge] = v;
+		   head[u] = edge++;
+		   
+           next[edge] = head[v];
+		   dest[edge] = u;
+		   head[v] = edge++;
+	    }
+	    init(); explore(0, 0, -1); fill(dp, dp + sz, -1);
+        printf("%lld\n", getTotal(0)-1);
+        system("pause");
+ 	    return 0;
+   } 
+   
+/*  
+
+void printAll(string res, int cur) 
+{
+	printf("%s\n", res.c_str());
+	int c;
+	map<int,int>::iterator I;
+
+	for(I=st[cur].next.begin();I!=st[cur].next.end();I++)
+	{
+        c=I->first;
+		if(st[cur].next[c]!=-1) printAll(res + char(c + 'a'), st[cur].next[c]);
+	}
+}
+
+*/

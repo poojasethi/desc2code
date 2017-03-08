@@ -1,0 +1,147 @@
+#include <bits/stdc++.h>
+#define FOR(i, a, b) for(int i = a; i < b; ++i)
+#define ROF(i, a, b) for(int i = a; i >= b; --i)
+#define SZ(x) ((int)(x).size())
+using namespace std;
+typedef long long i64;
+typedef pair<int,int> ii;
+
+const int MAXN = 1e5 + 7;
+
+struct edge {
+	int u, v, d, id;
+} e[MAXN];
+
+bool operator < (edge a, edge b) {
+	return a.d < b.d;
+}
+
+int siz[MAXN], par[MAXN];
+bool mark[2][MAXN];
+
+vector <ii> adj[MAXN];
+
+int find(int v) {
+	return (par[v] == -1 ? v : par[v] = find(par[v]));
+}
+
+void merge(int u, int v) {
+	u = find(u);
+	v = find(v);
+
+	siz[v] += siz[u];
+	par[u] = v;
+}
+
+i64 tsiz;
+i64 best;
+vector <int> ids;
+
+void fdfs(int v) {
+	mark[0][v] = true;
+	tsiz += siz[v];
+
+	FOR(i, 0, SZ(adj[v])) {
+		int u = adj[v][i].first;
+		if (!mark[0][u])
+			fdfs(u);
+	}
+}
+
+int sdfs(int v) {
+	mark[1][v] = true;
+
+	int sz = siz[v];
+
+	FOR(i, 0, SZ(adj[v])) {
+		int u = adj[v][i].first;
+		int id = adj[v][i].second;
+		if (mark[1][u]) continue;
+
+		int usz = sdfs(u);
+		sz += usz;
+
+		i64 nbest = (i64) usz * (tsiz - usz) * 2;
+
+		if (best < nbest) {
+			best = nbest;
+			ids.clear();
+			ids.push_back(id);
+		} else if (best == nbest)
+			ids.push_back(id);
+	}
+
+	return sz;
+}
+
+int32_t main() {
+	ios::sync_with_stdio(0);
+	cin.tie(0);
+
+	int n;
+	cin >> n;
+	FOR(i, 0, n - 1) {
+		cin >> e[i].u >> e[i].v >> e[i].d;
+		e[i].u --, e[i].v --;
+		e[i].id = i;
+	}
+
+	FOR(i, 0, n) {
+		siz[i] = 1;
+		par[i] = -1;
+	}
+
+	sort(e, e + n - 1);
+
+	int i = 0;
+	while (i < n - 1) {
+		int j = i + 1;
+
+		while (j < n && e[j].d == e[i].d)
+			j ++;
+
+		vector <int> nod;
+		FOR(x, i, j) {
+			e[x].u = find(e[x].u);
+			e[x].v = find(e[x].v);
+			adj[e[x].u].push_back( make_pair(e[x].v, e[x].id) );
+			adj[e[x].v].push_back( make_pair(e[x].u, e[x].id) );
+			nod.push_back(e[x].u);
+			nod.push_back(e[x].v);
+		}
+
+		sort(nod.begin(), nod.end());
+		nod.resize(unique(nod.begin(), nod.end()) - nod.begin());
+
+		FOR(x, 0, SZ(nod)) {
+			int v = nod[x];
+			tsiz += siz[v];
+		}
+
+		FOR(x, 0, SZ(nod)) {
+			int v = nod[x];
+			if (!mark[0][v]) {
+				tsiz = 0;
+				fdfs(v);
+				sdfs(v);
+			}
+		}
+
+		FOR(x, 0, SZ(nod)) {
+			int v = nod[x];
+			adj[v].clear();
+			mark[0][v] = mark[1][v] = false;
+		}
+
+		FOR(x, i, j)
+			merge(e[x].u, e[x].v);
+
+		i = j;
+	}
+
+	cout << best << " " << SZ(ids) << "\n";
+	sort(ids.begin(), ids.end());
+	FOR(i, 0, SZ(ids))
+		cout << ids[i] + 1 << " ";
+	cout << "\n";
+}

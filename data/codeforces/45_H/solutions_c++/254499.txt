@@ -1,0 +1,143 @@
+#include <cstdlib>
+#include <cctype>
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <iostream>
+#include <sstream>
+#include <map>
+#include <set>
+#include <queue>
+using namespace std;
+
+#define MP make_pair
+#define SZ(a) ((int)a.size())
+const int maxn = 900;
+int vis[ maxn ];
+int low[ maxn ] , dfn[ maxn ] , Time;
+int idx[ maxn ];
+int anc[ maxn ];
+
+int deg[ maxn ];
+vector<int> edge[ maxn ];
+vector<int> tree[ maxn ];
+vector<int> circle[ maxn ];
+int n , sz;
+void dfs(int u, int pre) {
+	vis[ u ] = true;
+	low[ u ] = dfn[ u ] = Time ++;
+	for ( int i = 0 ; i < SZ( edge[ u ] ) ; i ++ ) {
+		int v = edge[ u ][ i ];
+		if ( !vis[ v ] ) {
+			dfs(v, u);
+			low[ u ] = min(low[ u ], low[ v ]);
+		} else if ( v != pre ) {
+			low[ u ] = min(low[ u ], dfn[ v ]);
+		}
+	}
+	if ( low[ u ] == dfn[ u ] ) {
+		anc[ sz ] = u;
+		idx[ u ] = sz ++;
+	}
+}
+void build(int u, int pre) {
+	vis[ u ] = true;
+	if ( u && idx[ u ] != -1 ) {
+		tree[ idx[ u ] ].push_back(pre);
+		tree[ pre ].push_back(idx[ u ]);
+		deg[ pre ] ++;
+		pre = idx[ u ];
+		deg[ pre ] ++;
+	}
+	for ( int i = 0 ; i < SZ( edge[ u ] ) ; i ++ ) {
+		int v = edge[ u ][ i ];
+		if ( vis[ v ] ) continue;
+		build(v, pre);
+	}
+}
+pair<int, int> solve(int u, bool root) {
+	vis[ u ] = true;
+	vector<int> a , b;
+	for ( int i = 0 ; i < SZ(tree[u]) ; i ++ ) {
+		int v = tree[ u ][ i ];
+		if ( vis[ v ] ) continue;
+		pair<int, int> ret = solve(v, false);
+		b.push_back(ret.first);
+		if ( ret.second != -1 ) {
+			a.push_back(ret.second);
+			swap(b[ 0 ], b[ SZ(b) - 1 ]);
+		}
+	}
+	if ( b.size() == 0 ) return MP(anc[ u ], -1);
+	for ( int i = SZ(b) - 1 ; i >= 0 ; i -- ) {
+		a.push_back(b[ i ]);
+	}
+	for ( int i = 2 - a.size() % 2 ; i < SZ(a) ; i += 2 ) {
+		printf("%d %d\n", a[ i ] + 1, a[ i + 1 ] + 1);
+	}
+	if ( root ) printf("%d %d\n", a[ 0 ] + 1, a[ 1 ] + 1);
+	return a.size() & 1 ? MP(a[ 0 ], -1) : MP(a[ 0 ], a[ 1 ]);
+}
+bool hasE(int u, int v) {
+	for ( int i = 0 ; i < SZ( edge[ u ] ) ; i ++ ) {
+		if ( edge[ u ][ i ] == v ) return true;
+	}
+	return false;
+}
+int main() {
+	int m;
+	scanf("%d%d", &n, &m);
+	while ( m -- ) {
+		int a , b;
+		scanf("%d%d", &a, &b);
+		a --, b --;
+		edge[ a ].push_back(b);
+		edge[ b ].push_back(a);
+	}
+	if ( n == 2 ) {
+		puts("-1");
+		return 0;
+	}
+
+	memset(idx, -1, sizeof( idx ));
+	dfs(0, -1);
+	memset(vis, false, sizeof( vis ));
+	build(0, idx[ 0 ]);
+
+	if ( sz == 1 ) {
+		puts("0");
+		return 0;
+	} else if ( sz == 2 ) {
+		puts("1");
+		int u = -1 , v = -1;
+		for ( int i = 0 ; i < n ; i ++ ) {
+			if ( idx[ i ] != -1 ) {
+				if ( u == -1 ) u = i;
+				else v = i;
+			}
+		}
+		if ( hasE(u, v) ) {
+			for ( int i = 0 ; i < n ; i ++ ) {
+				if ( idx[ i ] == -1 ) {
+					if ( low[ i ] == low[ u ] ) printf("%d %d\n", i + 1, v + 1);
+					else printf("%d %d\n", i + 1, u + 1);
+					return 0;
+				}
+			}
+		}
+		printf("%d %d\n", u + 1, v + 1);
+		return 0;
+	}
+	int leaf = 0 , root;
+	for ( int i = 0 ; i < sz ; i ++ ) {
+		if ( deg[ i ] == 1 ) leaf ++;
+		else root = i;
+	}
+	printf("%d\n", ( leaf + 1 ) >> 1);
+	memset(vis, false, sizeof( vis ));
+	solve(root, true);
+	return 0;
+}

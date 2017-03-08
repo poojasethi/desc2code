@@ -1,0 +1,91 @@
+#include <iostream>
+#include <algorithm>
+
+using namespace std;
+
+#define MAXN 200000
+
+int n,m;
+string s[2];
+int dp[18][MAXN][2][2];
+
+int solve(int a1, int b1, int a2, int b2){
+    int ret = -2;
+    
+    if(a1 != -1 && b1 != -1){
+        if(ret == -2) ret = a1 + b1;
+        else ret = min(ret,a1 + b1);
+    }
+    
+    if(a2 != -1 && b2 != -1){
+        if(ret == -2) ret = a2 + b2;
+        else ret = min(ret,a2 + b2);
+    }
+    
+    return ++ret;
+}
+
+int main(){
+    ios::sync_with_stdio(0);
+    
+    cin >> n >> m >> s[0] >> s[1];
+    
+    for(int i = 0;i < n;++i){
+        dp[0][i][0][0] = (s[0][i] == '.'? 0 : -1);
+        dp[0][i][0][1] = dp[0][i][1][0] = ((s[0][i] == '.' && s[1][i] == '.')? 1 : -1);
+        dp[0][i][1][1] = (s[1][i] == '.'? 0 : -1);
+    }
+    
+    for(int i = 1;i <= 17;++i){
+        int sz = (1 << i);
+        int sz2 = (1 << (i - 1));
+        
+        for(int j = 0;j + sz <= n;++j)
+            for(int b1 = 0;b1 <= 1;++b1)
+                for(int b2 = 0;b2 <= 1;++b2)
+                    dp[i][j][b1][b2] = solve(dp[i - 1][j][b1][0],dp[i - 1][j + sz2][0][b2],
+                                        dp[i - 1][j][b1][1],dp[i - 1][j + sz2][1][b2]);
+    }
+    
+    int x,y;
+    int aux[2][2],aux2[2][2];
+    
+    while(m--){
+        cin >> x >> y;
+        --x; --y;
+        
+        int c1 = x % n,c2 = y % n;
+        int b1 = (x < n? 0 : 1),b2 = (y < n? 0 : 1);
+        
+        if(c2 < c1){
+            swap(c1,c2);
+            swap(b1,b2);
+        }
+        
+        for(int b1 = 0;b1 <= 1;++b1)
+            for(int b2 = 0;b2 <= 1;++b2)
+                aux[b1][b2] = dp[0][c1][b1][b2];
+        
+        int L = c2 - c1,L2 = 1;
+        
+        while(L){
+            int x = __builtin_ctz(L);
+            L ^= (1 << x);
+            
+            for(int b1 = 0;b1 <= 1;++b1)
+                for(int b2 = 0;b2 <= 1;++b2)
+                    aux2[b1][b2] = solve(aux[b1][0],dp[x][c1 + L2][0][b2],
+                                    aux[b1][1],dp[x][c1 + L2][1][b2]);
+            
+            L2 += (1 << x);
+            
+            for(int b1 = 0;b1 <= 1;++b1)
+                for(int b2 = 0;b2 <= 1;++b2)
+                    aux[b1][b2] = aux2[b1][b2];
+        }
+        
+        cout << aux[b1][b2] << '\n';
+    }
+    
+    return 0;
+}

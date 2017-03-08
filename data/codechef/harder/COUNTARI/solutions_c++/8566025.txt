@@ -1,0 +1,82 @@
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define n	120005
+#define Pi	acos(-1)
+#define I64	long long
+#define For(i,a,b)	for(int i=a;i<b;i++)
+
+int		T,N,M,S,Q,P[n],R[n],G[n],F[2][n];
+
+struct	Nod{
+		double	x,y;
+		inline	Nod	operator + (const Nod&b){
+			return	(Nod){x+b.x,y+b.y};
+		}
+		inline	Nod	operator - (const Nod&b){
+			return	(Nod){x-b.x,y-b.y};
+		}
+		inline	Nod	operator * (const Nod&b){
+			return	(Nod){x*b.x-y*b.y,x*b.y+y*b.x};
+		}
+}w[2][n],A[n],B[n];
+
+inline	void	Pre(){
+		For(i,0,M){
+			int x=i,&y=R[i];y=0;
+			for	(int k=M>>1;k;k>>=1,x>>=1)	(y<<=1)|=x&1;
+			w[0][i]=(Nod){cos(2*Pi*i/M),sin(2*Pi*i/M)};
+			w[1][i]=(Nod){cos(2*Pi*i/M),-sin(2*Pi*i/M)};
+		}
+}
+
+inline	void	FFT(Nod*a,const int&f){
+		For(i,0,M)
+			if	(R[i]>i)	swap(a[i],a[R[i]]);
+		for	(int i=1;i<M;i<<=1)
+		for	(int j=0,t=i<<1;j<M;j+=t)
+		for	(int k=0,l=0;k<i;k++,l+=M/t){
+			Nod x=a[j+k],y=w[f][l]*a[j+k+i];
+			a[j+k]=x+y;	a[j+k+i]=x-y;
+		}
+		if	(f)	For(i,0,M)	a[i].x/=M;
+}
+
+inline	void	Mult(Nod*a,Nod*b){
+		FFT(a,0);	FFT(b,0);
+		For(i,0,M)	a[i]=a[i]*b[i];	FFT(a,1);
+}
+
+inline	I64		Work(){
+		I64	Ans=0;
+		for	(int i=0,S=min(N,500);i<N;i+=S){
+			int t=min(i+S,N);
+			memset(G,0,sizeof(G));
+			memset(A,0,sizeof(A));
+			memset(B,0,sizeof(B));
+
+			For(j,i,t)	{
+				For(k,j+1,t)
+					if	(P[j]*2-P[k]>0)	Ans+=G[P[j]*2-P[k]];
+				F[1][P[j]]--;	G[P[j]]++;
+			}
+			For(j,i,t)	For(k,j+1,t){
+				if	(2*P[j]-P[k]>0)	Ans+=F[0][2*P[j]-P[k]];
+				if	(2*P[k]-P[j]>0)	Ans+=F[1][2*P[k]-P[j]];
+			}
+			For(j,0,N+1)
+				A[j]=(Nod){F[0][j],0},B[j]=(Nod){F[1][j],0};
+			Mult(A,B);
+			For(j,i,t)	Ans+=(I64)(A[P[j]<<1].x+.5),F[0][P[j]]++;
+		}	return	Ans;
+}
+
+int		main(){
+		scanf("%d",&N);	int	Max=0; 
+		For(i,0,N)	scanf("%d",&P[i]),F[1][P[i]]++,Max=max(Max,P[i]);
+		for	(M=1;M<=Max;M<<=1);	M<<=1;	Pre();
+		printf("%lld\n",Work());
+}

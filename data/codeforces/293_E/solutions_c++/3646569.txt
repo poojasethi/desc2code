@@ -1,0 +1,167 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+#include<iostream>
+#include<fstream>
+#include<map>
+#include<ctime>
+#include<set>
+#include<queue>
+#include<cmath>
+#include<vector>
+#include<bitset>
+#include<functional>
+#define x first
+#define y second
+#define mp make_pair
+#define pb push_back
+#define REP(i,l,r) for((i)=(l);(i)<=(r);++(i))
+#define REP2(i,l,r) for((i)=(l);(i)!=(r);++(i))
+using namespace std;
+
+typedef long long LL;
+typedef double ld;
+
+const int MAX=100000+10;
+
+int n,l,w;
+LL ans;
+
+int size[MAX],q[MAX],top;
+set< int > ne[MAX];
+map< pair<int,int>,int > wEdge;
+
+int dfs(int u,int fa)
+{
+	size[u]=1;
+	q[++top]=u;
+	set<int>::iterator it;
+	REP2(it,ne[u].begin(),ne[u].end())
+	{
+		int v=*it;
+		if(v!=fa)
+			size[u]+=dfs(v,u);
+	}
+	return size[u];
+}
+
+int dep[MAX],W[MAX];
+
+void dfs2(int u,int fa,vector< pair<int,int> >& cc)
+{
+	cc.pb(mp(W[u],dep[u]));
+	set<int>::iterator it;
+	REP2(it,ne[u].begin(),ne[u].end())
+	{
+		int v=*it;
+		if(v!=fa)
+		{
+			dep[v]=dep[u]+1;
+			W[v]=W[u]+wEdge[mp(u,v)];
+			dfs2(v,u,cc);
+		}
+	}
+}
+
+int sum[MAX];
+
+void add(int x,int k)
+{
+	for(;x<MAX;x+=(x&(-x)))
+		sum[x]+=k;
+}
+
+int ask(int r)
+{
+	int ans=0;
+	for(;r;r-=(r&(-r)))
+		ans+=sum[r];
+	return ans;
+}
+
+void calc(vector< pair<int,int> > cc,int flag)//(W,Dep)
+{
+	int i,now=0;
+	sort(cc.begin(),cc.end());
+	for(i=cc.size()-1;i>=0;--i)
+	{
+		for(;now<(int)cc.size() && cc[now].x+cc[i].x<=w;++now)
+			add(cc[now].y,1);
+		if(cc[i].y<l)
+			ans+=flag*ask(l-cc[i].y);
+	}
+	REP2(i,0,now)
+		add(cc[i].y,-1);
+}
+
+void work(int u)
+{
+	int i;
+	set<int>::iterator it;
+	top=0;
+	dfs(u,0);
+	if(top==1)
+		return;
+	REP(i,1,top)
+	{
+		int flag=1;
+		int r=q[i];
+		REP2(it,ne[r].begin(),ne[r].end())
+		{
+			int w=size[r]>size[*it]?size[*it]:size[u]-size[r];
+			if(w>size[u]/2)
+				flag=0;
+		}
+		if(flag)
+		{
+			u=r;
+			break;
+		}
+	}
+	vector<int> son;
+	REP2(it,ne[u].begin(),ne[u].end())
+	{
+		int v=*it;
+		son.pb(v);
+		dep[v]=1;
+		W[v]=wEdge[mp(u,v)];
+		vector< pair<int,int> > cc;
+		dfs2(v,u,cc);
+		calc(cc,-1);
+	}
+	vector< pair<int,int> > cc;
+	REP(i,1,top)
+		if(q[i]!=u)
+		{
+			int r=q[i];
+			cc.pb(mp( W[r],dep[r] ));
+			if(W[r]<=w && dep[r]<=l)
+				ans+=2;
+		}
+	calc(cc,1);
+	REP2(i,0,(int)son.size())
+		ne[son[i]].erase(u);
+	REP2(i,0,(int)son.size())
+		work(son[i]);
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt","r",stdin);freopen("output.txt","w",stdout);
+#endif
+	int a,b,c;
+	scanf("%d%d%d",&n,&l,&w);
+	REP(a,2,n)
+	{
+		scanf("%d%d",&b,&c);
+		ne[a].insert(b);
+		ne[b].insert(a);
+		wEdge[mp(a,b)]=c;
+		wEdge[mp(b,a)]=c;
+	}
+	work(1);
+	cout<<ans/2<<endl;
+	return 0;
+}

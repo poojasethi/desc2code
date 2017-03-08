@@ -1,0 +1,197 @@
+/*
+ * 2012-06-18  Martin  <Martin@Martin-desktop>
+
+ * 
+ */
+#include <cstdio>
+#include <cstring>
+#include <cctype>
+#include <climits>
+#include <cmath>
+#include <ctime>
+#include <cstdlib>
+#include <cstdarg>
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <sstream>
+#include <exception>
+#include <stdexcept>
+#include <memory>
+#include <locale>
+#include <bitset>
+#include <deque>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <stack>
+#include <vector>
+#include <algorithm>
+#include <iterator>
+#include <functional>
+#include <string>
+#include <complex>
+#include <valarray>
+
+using namespace std;
+
+template <class T> inline T checkmin(T &a, T b)
+{
+	return (a < b) ? a : a = b;
+}
+
+template <class T> inline T checkmax(T &a, T b)
+{
+	return (a > b) ? a : a = b;
+}
+
+template <class T> T GCD(T a, T b)
+{
+	if (a < 0)
+		return GCD(- a, b);
+	if (b < 0)
+		return GCD(a, - b);
+	return (a == 0) ? b : GCD(b % a, a);
+}
+
+template <class T> T LCM(T a, T b)
+{
+	if (a < 0)
+		return LCM(- a, b);
+	if (b < 0)
+		return LCM(a, - b);
+	return (a == 0 || b == 0) ? 0 : a / GCD(a, b) * b;
+}
+
+template <class T> inline T sqr(T X)
+{
+	return X * X;
+}
+
+#define tr(i, x) for (typeof(x.begin()) i = x.begin(); i != x.end(); ++ i)
+#define rep(i, n) for (int i = 0; i < n; ++ i)
+#define pii pair <int, int>
+#define mp make_pair
+#define pb push_back
+#define x first
+#define y second
+#define ll long long
+#define cmplxd complex <double>
+#define pi 3.14159265358979323846264338327950288
+
+namespace Poor
+{
+	const int MaxiN = 100005;
+	const int ModNum = 1000000007;
+	
+	int N, Q, L, NList;
+	int Inv[MaxiN], Fac[MaxiN], InvFac[MaxiN];
+	int Sum[MaxiN], Pdt[MaxiN], Pdt2[MaxiN], CntOdd[MaxiN];
+	pii Num[MaxiN];
+	pii F[MaxiN];
+	map <int, int> Map;
+	
+	inline int Power(int a, int n)
+	{
+		int res = 1, tmp = a;
+		for (int i = 0; n >> i; ++ i)
+		{
+			if (n & (1 << i))
+				res = ((ll) res * tmp) % ModNum;
+			tmp = ((ll) tmp * tmp) % ModNum;
+		}
+		return res;
+	}
+	
+	void Run()
+	{
+		scanf("%d", &N);
+		Fac[0] = 1;
+		for (int i = 1; i < MaxiN; ++ i)
+			Fac[i] = ((ll) Fac[i - 1] * i) % ModNum;
+		Inv[1] = 1;
+		for (int i = 2; i < MaxiN; ++ i)
+			Inv[i] = (ModNum - ((ll) (ModNum / i) * Inv[ModNum % i]) % ModNum) % ModNum;
+		InvFac[0] = 1;
+		for (int i = 1; i < MaxiN; ++ i)
+			InvFac[i] = ((ll) InvFac[i - 1] * Inv[i]) % ModNum;
+		rep (i, N)
+		{
+			int X;
+			scanf("%d", &X);
+			++ Map[X];
+		}
+		L = 0;
+		fill(Pdt, Pdt + MaxiN, 1);
+		fill(Pdt2, Pdt2 + MaxiN, 1);
+		NList = 0;
+		tr (it, Map)
+		{
+			Num[L] = *it;
+			++ L;
+			for (int l = 0, r = MaxiN - 2; r > 0; r = l - 1)
+			{
+				int v = (it->x + r - 1) / r;
+				l = (it->x + v - 1) / v;
+				Sum[l] += v * it->y;
+				Sum[r + 1] -= v * it->y;
+				Pdt[l] = ((ll) Pdt[l] * Power(InvFac[v], it->y)) % ModNum;
+				Pdt[r + 1] = ((ll) Pdt[r + 1] * Power(Fac[v], it->y)) % ModNum;
+				Pdt2[l] = ((ll) Pdt2[l] * Power(InvFac[v / 2], it->y)) % ModNum;
+				Pdt2[r + 1] = ((ll) Pdt2[r + 1] * Power(Fac[v / 2], it->y)) % ModNum;
+				if (v % 2 == 1)
+				{
+					CntOdd[l] += it->y;
+					CntOdd[r + 1] -= it->y;
+				}
+			}
+		}
+		for (int i = 1; i < MaxiN; ++ i)
+		{
+			Sum[i] += Sum[i - 1];
+			Pdt[i] = ((ll) Pdt[i] * Pdt[i - 1]) % ModNum;
+			Pdt2[i] = ((ll) Pdt2[i] * Pdt2[i - 1]) % ModNum;
+			CntOdd[i] += CntOdd[i - 1];
+		}
+		int Max = Num[L - 1].x;
+		scanf("%d", &Q);
+		rep (i, Q)
+		{
+			int S;
+			scanf("%d", &S);
+			checkmin(S, Max);
+			int Ans = 0;
+			int Tmp = ((ll) Fac[Sum[S]] * Pdt[S]) % ModNum;
+			Ans = Tmp;
+			if (Sum[S] % 2 == 1)
+			{
+				if (CntOdd[S] == 1)
+				{
+					int Tmp2 = ((ll) Fac[Sum[S] / 2] * Pdt2[S]) % ModNum;
+					Ans = (Ans + Tmp2) % ModNum;
+				}
+			}
+			else
+			{
+				if (CntOdd[S] == 0)
+				{
+					int Tmp2 = ((ll) Fac[Sum[S] / 2] * Pdt2[S]) % ModNum;
+					Ans = (Ans + Tmp2) % ModNum;
+				}
+			}
+			Ans = ((ll) Ans * Inv[2]) % ModNum;
+			printf("%d\n", Ans);
+		}
+	}
+}
+
+int main()
+{
+	#ifndef ONLINE_JUDGE
+	freopen("OLYMPIC.in", "r", stdin);
+	freopen("OLYMPIC.out", "w", stdout);
+	#endif
+	Poor::Run();
+	return 0;
+}

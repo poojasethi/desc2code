@@ -1,0 +1,124 @@
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <algorithm>
+#include <iostream>
+#include <map>
+using namespace std;
+
+map<string, int> id;
+class Item {
+	public:
+		string name, type;
+		int atk, def, res, siz, free;
+		void read(int i) {
+			cin >> name >> type >> atk >> def >> res >> siz;
+			if(type=="weapon") def=res=-1000000;
+			if(type=="armor") atk=res=-1000000;
+			if(type=="orb") atk=def=-1000000;
+			free = siz;
+			id[name] = i;
+		}
+} item[105];
+class Resident {
+	public:
+		string name, type, home;
+		int bonus;
+		void read() {
+			cin >> name >> type >> bonus >> home;
+		}
+} resident[1005];
+
+int n, m;
+
+int val[3][105];
+void solve1() {
+	for(int i=0;i<n;i++) {
+		val[0][i] = item[i].atk;
+		val[1][i] = item[i].def;
+		val[2][i] = item[i].res;
+	}
+	for(int i=0;i<m;i++) {
+		if(resident[i].type=="gladiator")
+			val[0][id[resident[i].home]] += resident[i].bonus;
+		if(resident[i].type=="sentry")
+			val[1][id[resident[i].home]] += resident[i].bonus;
+		if(resident[i].type=="physician")
+			val[2][id[resident[i].home]] += resident[i].bonus;
+	}
+	int a[3];
+	for(int i=0;i<3;i++) a[i]=max_element(val[i], val[i]+n)-val[i];
+	for(int i=0;i<3;i++) {
+		cout << item[a[i]].name << ' ' << item[a[i]].siz;
+		for(int j=0;j<m;j++)
+			if(id[resident[j].home]==a[i])
+				cout << ' ' << resident[j].name;
+		cout << endl;
+	}
+}
+
+bool cmp(int x, int y) {
+	return resident[x].bonus > resident[y].bonus;
+}
+
+void solve2() {
+	vector<int> v[3];
+	for(int i=0;i<m;i++) {
+		if(resident[i].type=="gladiator") v[0].push_back(i);
+		if(resident[i].type=="sentry") v[1].push_back(i);
+		if(resident[i].type=="physician") v[2].push_back(i);
+	}
+	for(int i=0;i<3;i++) sort(v[i].begin(), v[i].end(), cmp);
+	for(int i=0;i<n;i++) {
+		val[0][i] = item[i].atk;
+		val[1][i] = item[i].def;
+		val[2][i] = item[i].res;
+	}
+	for(int i=0;i<n;i++)
+		for(int j=0;j<3;j++)
+			for(int k=0;k<item[i].siz && k<(int)v[j].size();k++)
+				val[j][i] += resident[v[j][k]].bonus;
+	int a[3];
+	for(int i=0;i<3;i++) a[i]=max_element(val[i], val[i]+n)-val[i];
+	for(int i=0;i<3;i++) {
+		int s=min(item[a[i]].siz, (int)v[i].size());
+		item[a[i]].free = item[a[i]].siz - s;
+		for(int j=0;j<s;j++) resident[v[i][j]].home = item[a[i]].name;
+		for(int j=s;j<(int)v[i].size();j++) resident[v[i][j]].home = "-";
+	}
+	for(int i=0;i<m;i++)
+		if(resident[i].home=="-") {
+			for(int j=0;j<3;j++)
+				if(item[a[j]].free>0) {
+					--item[a[j]].free;
+					resident[i].home = item[a[j]].name;
+					break;
+				}
+		}
+
+	for(int i=0;i<3;i++) {
+		cout << item[a[i]].name << ' ' << (item[a[i]].siz-item[a[i]].free);
+		for(int j=0;j<m;j++)
+			if(id.find(resident[j].home)!=id.end() && id[resident[j].home]==a[i])
+				cout << ' ' << resident[j].name;
+		cout << endl;
+	}
+	
+}
+
+int main(void) {
+	cin >> n;
+	for(int i=0;i<n;i++)
+		item[i].read(i);
+	cin >> m;
+	for(int i=0;i<m;i++) {
+		resident[i].read();
+		item[id[resident[i].home]].free--;
+	}
+	int ok=0;
+	for(int i=0;i<n;i++) if(item[i].free>0) ok=1;
+	if(!ok) solve1();
+	else solve2();
+	return 0;
+}
+

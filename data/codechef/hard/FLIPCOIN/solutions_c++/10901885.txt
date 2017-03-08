@@ -1,0 +1,170 @@
+// 2016/07/24 22:01:19 PM
+// Sabastian
+
+#include <iostream>
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+
+using namespace std;
+
+typedef long long ll;
+
+typedef struct TreeNode {
+  int start, end;
+  ll total;
+  bool lazy;
+
+  TreeNode()
+    : total(0), lazy(false) {}
+
+  void merge(TreeNode & left, TreeNode & right) {
+    total = (left.lazy ? left.end - left.start + 1 - left.total : left.total) +
+      (right.lazy ? right.end - right.start + 1 - right.total : right.total);
+  }
+
+  void applyUpdate() {
+    if (lazy) {
+      total = end - start + 1 - total;
+      lazy = !lazy;
+    }
+  }
+} TreeNode;
+
+TreeNode tree[4 * 100000 + 10];
+ll a[4 * 100000 + 10];
+
+void update(int stIndex, int start, int end);
+
+void printNode(int stIndex) {
+  TreeNode &t = tree[stIndex];
+  printf("%d (%d, %d), total=%lld\n", stIndex, t.start, t.end, t.total);
+}
+
+void build(int stIndex, int start, int end) {
+  tree[stIndex].start = start;
+  tree[stIndex].end = end;
+
+  if (start == end) {
+    return;
+  }
+
+  int mid = (start + end) / 2, leftChildIndex = stIndex * 2,
+      rightChildIndex = leftChildIndex + 1;
+
+  build(leftChildIndex, start, mid);
+  build(rightChildIndex, mid + 1, end);
+  tree[stIndex].total =
+      tree[leftChildIndex].total + tree[rightChildIndex].total;
+}
+
+bool NecessaryUpdate(int stIndex) {
+  TreeNode &t = tree[stIndex];
+  return t.total > (t.end - t.start + 1);
+}
+
+void UpdateNode(int stIndex) {
+  TreeNode &t = tree[stIndex];
+  bool isLeaf = (t.start == t.end);
+
+  if (NecessaryUpdate(stIndex)) {
+    if (isLeaf) {
+      tree[stIndex].total = floor(sqrt(tree[stIndex].total));
+    } else {
+      int leftChildIndex = stIndex * 2, rightChildIndex = leftChildIndex + 1;
+
+      UpdateNode(leftChildIndex);
+      UpdateNode(rightChildIndex);
+      tree[stIndex].total =
+          tree[leftChildIndex].total + tree[rightChildIndex].total;
+    }
+  }
+}
+
+void update(int stIndex, int start, int end) {
+  TreeNode &t = tree[stIndex];
+
+  if (start == t.start && end == t.end) {
+    t.lazy = !t.lazy;
+    return;
+  }
+
+  // node contain is contained in [start..end]
+  int leftChildIndex = stIndex * 2, rightChildIndex = leftChildIndex + 1,
+      mid = (t.start + t.end) / 2;
+
+  if (start > mid) {
+    update(rightChildIndex, start, end);
+  } else if (end <= mid) {
+    update(leftChildIndex, start, end);
+  } else {
+    update(leftChildIndex, start, mid);
+    update(rightChildIndex, mid + 1, end);
+  }
+
+  t.merge(tree[leftChildIndex], tree[rightChildIndex]);
+
+  return;
+}
+
+TreeNode query(int stIndex, int start, int end) {
+  TreeNode t = tree[stIndex];
+
+  if (start == t.start && end == t.end) {
+    t.applyUpdate();
+    return t;
+  }
+
+  // node contain is contained in [start..end]
+  int leftChildIndex = stIndex * 2, rightChildIndex = leftChildIndex + 1,
+      mid = (t.start + t.end) / 2;
+  TreeNode result;
+
+  if (start > mid) {
+    result = query(rightChildIndex, start, end);
+  } else if (end <= mid) {
+    result = query(leftChildIndex, start, end);
+  } else {
+    TreeNode left, right;
+
+    left = query(leftChildIndex, start, mid);
+    right = query(rightChildIndex, mid + 1, end);
+
+    result.start = left.start;
+    result.end = right.end;
+    // add this!
+    // there is a more good style: use constructor.
+    // result.lazy = false;
+    result.merge(left, right);
+  }
+
+  if (t.lazy) {
+    result.total = (result.end - result.start + 1) - result.total;
+  }
+
+  return result;
+}
+
+int main(void) {
+#ifdef DEBUG
+  freopen("input.txt", "r", stdin);
+#endif
+
+  int N, M;
+  scanf("%d%d", &N, &M);
+  build(1, 0, N - 1);
+
+  for (int m = 1; m <= M; ++m) {
+    int i, x, y;
+
+    scanf("%d%d%d", &i, &x, &y);
+
+    if (i) {
+      printf("%lld\n", query(1, x, y).total);
+    } else {
+      update(1, x, y);
+    }
+  }
+
+  return 0;
+}

@@ -1,0 +1,63 @@
+#include<cstdio>
+#include<bitset>
+using namespace std;
+int n;
+bitset<100005>m[70],tmp,tmpp;
+int f[100],ftop=60;
+int ans[100010];
+void swap(int x,int y)
+{
+	tmp=m[x];
+	m[x]=m[y];
+	m[y]=tmp;
+}
+int main()
+{
+	int i,j,k,d=60;
+	long long x,s=0;
+	scanf("%d",&n);
+	for(i=1;i<=n;++i)
+	{
+		scanf("%I64d",&x);
+		s^=x;
+		for(j=0;j<60;++j)
+			if(x&(1ll<<j))
+				m[j][i]=1;
+	}
+	for(i=59;~i;--i)
+		if(!(s&(1ll<<i)))
+		{
+			--d;
+			tmpp=m[i];
+			for(j=i;j<d;++j)
+				m[j]=m[j+1];
+			m[d]=tmpp;
+		}
+	for(i=59;~i;--i)
+	{
+		if(i>=d)
+			m[i][0]=1;
+		for(j=59;j>=ftop;--j)
+			if(m[i][f[j]])
+				m[i]^=m[j];
+		for(k=1;k<=n&&m[i][k]==0;++k);
+		if(n<k)
+			m[i][0]=0;
+		else
+		{
+			for(j=59;j>=ftop;--j)
+				if(m[j][k])
+					m[j]^=m[i];
+			--ftop;
+			f[ftop]=k;
+			swap(ftop,i);
+		}
+	}
+	for(i=59;i>=ftop;--i)
+		if(m[i][0])
+			ans[f[i]]=1;
+	for(i=1;i<=n;++i)
+		printf("%d ",ans[i]?1:2);
+	puts("");
+	return 0;
+}

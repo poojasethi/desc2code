@@ -1,0 +1,115 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <cmath>
+#include <algorithm>
+long long ans;
+using namespace std;
+const int maxn=100010;
+int line[maxn];
+struct Edge{
+	int to,next;
+};
+struct Tree{
+	int n,p;
+	long long sum[maxn],down[maxn],way[maxn],la[maxn],lb[maxn],bigsum,treeroad;
+	int head[maxn],fa[maxn],size[maxn];
+	Edge edge[maxn*2];
+	void bfs(){
+		int cl=0,op=1;
+		line[op]=1;
+		fa[1]=0;
+		for (;cl<op;){
+			int now=line[++cl];
+			for (int i=head[now];i;i=edge[i].next)
+				if (edge[i].to!=fa[now]){
+					fa[edge[i].to]=now;
+					line[++op]=edge[i].to;
+				}
+		}
+		for (int i=op;i>=1;i--){
+			int now=line[i];
+			size[now]=1;;
+			for (int j=head[now];j;j=edge[j].next)
+				if (edge[j].to!=fa[now]){
+					down[now]+=size[edge[j].to]+down[edge[j].to];
+					size[now]+=size[edge[j].to];
+				}
+		}
+		for (int i=1;i<=op;i++){
+			int now=line[i];
+			if (now!=1)
+				sum[now]=down[now]+sum[fa[now]]-size[now]-down[now]+size[1]-size[now];
+			else sum[now]=down[now];
+			bigsum=max(bigsum,sum[now]);
+			treeroad=treeroad+sum[now];
+		}
+		treeroad/=2;
+	}
+	long long cal(int n1,int n3){
+		long long ans=0ll;
+		int cl=0,op=1;line[op]=1;
+		for (;cl<op;){
+			int now=line[++cl];
+			for (int i=head[now];i;i=edge[i].next)
+				if (edge[i].to!=fa[now])
+					line[++op]=edge[i].to;
+		}
+		for (int i=op;i>=1;i--){
+			int now=line[i];
+			long long b1=sum[now]*n1,b2=sum[now]*n3;
+			for (int j=head[now];j;j=edge[j].next)
+				if (edge[j].to!=fa[now]){
+					ans=max(ans,b1+lb[edge[j].to]+(long long)n1*(long long)n3);
+					b1=max(b1,la[edge[j].to]+(long long)n1*(long long)n3);
+				}
+			ans=max(ans,b1+sum[now]*n3);
+			for (int j=head[now];j;j=edge[j].next)
+				if (edge[j].to!=fa[now]){
+					ans=max(ans,b2+la[edge[j].to]+(long long)n1*(long long)n3);
+					b2=max(b2,lb[edge[j].to]+(long long)n1*(long long)n3);
+				}
+			ans=max(ans,sum[now]*n1+b2);
+			la[now]=b1;lb[now]=b2;
+		}
+		return ans;
+	}
+	void build(int a,int b){
+		edge[++p]=(Edge){b,head[a]};
+		head[a]=p;
+	}
+	void firstdone(){
+		for (int i=1;i<n;i++){
+			int a,b;
+			scanf("%d%d",&a,&b);
+			build(a,b);
+			build(b,a);
+		}
+		bfs();
+	}
+}t[3];
+long long get(int a){
+	long long sum=t[0].treeroad+t[1].treeroad+t[2].treeroad;
+	for (int i=0;i<=2;i++) if (i!=a) sum+=((long long)t[i].bigsum+t[i].n)*((long long)t[3-a-i].n+(long long)t[a].n);
+	if (a==0)
+		sum=sum+t[a].cal(t[1].n,t[2].n);
+	if (a==1)
+		sum=sum+t[a].cal(t[0].n,t[2].n);
+	if (a==2)
+		sum=sum+t[a].cal(t[0].n,t[1].n);
+	return sum;
+}
+int main(){
+//	freopen("973.in","r",stdin);
+//	freopen("973.out","w",stdout);
+	scanf("%d%d%d",&t[0].n,&t[1].n,&t[2].n);	
+	t[0].firstdone();t[1].firstdone();t[2].firstdone();
+	for (int i=0;i<=2;i++)
+		ans=max(ans,get(i));
+	cout<<ans<<endl;
+//	fclose(stdin);
+//	fclose(stdout);
+	return 0;
+}

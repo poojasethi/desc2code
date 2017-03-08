@@ -1,0 +1,133 @@
+#include<iostream>
+#include<cstdio>
+#include<cstdlib>
+#include<vector>
+#include<algorithm>
+#include<cstring>
+
+
+using namespace std;
+
+const int N = 100005;
+
+typedef struct{
+	long long man;
+	long long horse;
+	long long manIndex;
+	long long horseIndex;
+}Rider;
+
+Rider rider[ N ];
+long long dp[ N ];
+long long G1[N], G2[N], G3[N];
+
+typedef struct{
+	long long power;
+	long long index;
+}obj;
+
+obj horse[N], man[N];
+
+bool cmp( obj a, obj b){
+	return a.power > b.power;
+}
+
+void calc( int i ){
+	G1[ i ] = G2[ i ] = G3[ i ] = -1e18;
+
+	if( man[ i ].index != horse[ i ].index )
+		G1[ i ] = man[ i ].power * horse[ i ].power;
+
+	if( man[ i ].index != horse[ i + 1 ].index && man[ i + 1 ].index != horse[ i ].index ) {
+		G2[ i ] = man[ i ].power * horse[ i + 1 ].power + man[ i + 1 ].power * horse[ i ].power;
+	}
+
+	if( man[ i ].index != horse[ i + 1 ].index
+		&& man[ i + 1 ].index != horse[ i + 2 ].index
+		&& man[ i + 2 ].index != horse[ i ].index ) {
+			G3[ i ] = max( G3[ i ], 
+				man[ i ].power * horse[ i + 1 ].power + man[ i + 1 ].power * horse[ i + 2 ].power + man[ i + 2 ].power * horse[ i ].power 
+				);
+	}
+
+	if( man[ i ].index != horse[ i + 2 ].index
+		&& man[ i + 1 ].index != horse[ i ].index
+		&& man[ i + 2 ].index != horse[ i + 1 ].index ) {
+			G3[ i ] = max( G3[ i ],
+				man[ i ].power * horse[ i + 2 ].power + man[ i + 1 ].power * horse[ i ].power + man[ i + 2 ].power * horse[ i + 1 ].power 
+				);
+	}
+}
+
+
+int main()
+{
+	int n, q;
+	scanf("%d%d", &n, &q );
+	for(int i=0;i<n;i++){
+		//cin>>rider[ i ].man;
+		scanf("%I64d", &(rider[ i ].man) );
+		man[ i ].power = rider[ i ].man;
+		man[ i ].index = i;
+	}
+	for(int i=0;i<n;i++){
+		//cin>>rider[ i ].horse;
+		scanf("%I64d", &(rider[ i ].horse) );
+		horse[ i ].power = rider[ i ].horse;
+		horse[ i ].index = i;
+	}
+
+	sort( man, man+n, cmp );
+	sort( horse, horse+n, cmp );
+	
+	for( int i=0;i<n;i++){
+		rider[ man[ i ].index ].manIndex = i;
+		rider[ horse[ i ].index].horseIndex = i;
+	}
+
+	for( int i=0;i<=n;i++){
+		calc( i );
+	}
+
+	//dp
+	for( int k=0;k<q;k++){
+
+		memset( dp, 0, (n+3)*sizeof( long long ) );
+
+		int sa, sb;
+		//cin>>sa>>sb;
+		scanf("%d%d", &sa, &sb );
+
+		//swap the horse
+		int i1 = rider[ sa - 1 ].horseIndex;
+		int i2 = rider[ sb - 1 ].horseIndex;
+
+		rider[ sa - 1 ].horseIndex = i2;
+		rider[ sb - 1 ].horseIndex = i1;
+
+		int m1 = horse[ i1 ].index;
+		int m2 = horse[ i2 ].index;
+		horse[ i1 ].index = m2;
+		horse[ i2 ].index = m1;
+
+		for( int s = max(0, i1-3); s < min(n, i1+3); s ++ )calc( s );
+		for( int s = max(0, i2-3); s < min(n, i2+3); s ++)calc( s );
+
+		//find the max ans
+		for( int i=0; i<n; i++){
+		
+			dp[ i +1 ] = max( dp[ i + 1 ], dp[ i ] + G1[ i ]);
+			dp[i + 2 ] = max( dp[ i + 2 ], dp[ i ] + G2[ i ] );
+			dp[ i + 3 ] = max( dp[ i + 3 ], dp[ i ] + G3[ i ] );
+
+		}
+
+		printf("%I64d\n", dp[n]);
+
+	}
+
+
+	//system("pause");
+	return 0;
+}
+

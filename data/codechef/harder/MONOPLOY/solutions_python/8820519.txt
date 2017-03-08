@@ -1,0 +1,208 @@
+#include <algorithm>
+#include <iostream>
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+
+typedef long long ll;
+#define REP(i, a, b) for (int i = (a); i < (b); ++i)
+#define UNT(i, a, b) for (int i = (a); i > (b); --i)
+#define FOR(i, a, b) for (int i = (a); i <= (b); ++i)
+#define DWN(i, a, b) for (int i = (a); i >= (b); --i)
+
+inline int read() {
+	static char ch;
+	while ((ch = getchar()) < '0' || ch > '9');
+	int res = ch - 48;
+	while ((ch = getchar()) >= '0' && ch <= '9')
+		res = res * 10 + ch - 48;
+	return res;
+}
+
+const int N = 1e5 + 3;
+int T, n, fa[N], dep[N], lft[N], rgt[N], sze[N], idx[N];
+int ecnt, adj[N], nxt[N * 2], go[N * 2];
+ll sum[N * 5], tag[N * 5];
+
+struct node {
+	node *lc, *rc, *fa;
+	void reSet() {
+		lc = rc = fa = NULL;
+	}
+	bool isRoot() const {
+		if (!fa) return true;
+		return fa->lc != this && fa->rc != this;
+	}
+	bool dir() const {
+		return fa->rc == this;
+	}
+} used[N], *nd[N];
+
+inline void addEdge(const int &u, const int &v) {
+	nxt[++ecnt] = adj[u], adj[u] = ecnt, go[ecnt] = v;
+	nxt[++ecnt] = adj[v], adj[v] = ecnt, go[ecnt] = u;
+}
+
+inline int getLab(node *u) {
+	return u - used;
+}
+
+inline void buildTree(const int &k, const int &l, const int &r) {
+	tag[k] = 0;
+	if (l == r) return (void)(sum[k] = dep[idx[l]] - 1);
+	int mid = l + r >> 1;
+	buildTree(k << 1, l, mid);
+	buildTree(k << 1 | 1, mid + 1, r);
+	sum[k] = sum[k << 1] + sum[k << 1 | 1];
+}
+
+inline void Applic(const int &k, const int &sz, const int &delta) {
+	tag[k] += delta;
+	sum[k] += (ll)sz * delta;
+}
+
+inline void Release(const int &k, const int &l, const int &r) {
+	if (tag[k] == 0) return ;
+	int mid = l + r >> 1;
+	Applic(k << 1, mid - l + 1, tag[k]);
+	Applic(k << 1 | 1, r - mid, tag[k]);
+	tag[k] = 0;
+}
+
+inline void Modify(const int &k, const int &l, const int &r, const int &x, const int &y, const int &delta) {
+	if (l >= x && r <= y)
+		return (void)Applic(k, r - l + 1, delta);
+	Release(k, l, r);
+	int mid = l + r >> 1;
+	if (x <= mid) Modify(k << 1, l, mid, x, y, delta);
+	if (mid < y) Modify(k << 1 | 1, mid + 1, r, x, y, delta);
+	sum[k] = sum[k << 1] + sum[k << 1 | 1];
+}
+
+inline void Query(const int &k, const int &l, const int &r, const int &x, const int &y, ll &res) {
+	if (l >= x && r <= y)
+		return (void)(res += sum[k]);
+	Release(k, l, r);
+	int mid = l + r >> 1;
+	if (x <= mid) Query(k << 1, l, mid, x, y, res);
+	if (mid < y) Query(k << 1 | 1, mid + 1, r, x, y, res);
+}
+
+inline void Rotate(node *x) {
+	node *y = x->fa, *z = y->fa, *b = y->lc == x ? x->rc : x->lc;
+	if (z && !y->isRoot())
+		(y->dir() ? z->rc : z->lc) = x;
+	x->fa = z, y->fa = x, b ? b->fa = y : 0;
+	if (y->lc == x)
+		x->rc = y, y->lc = b;
+	else
+		x->lc = y, y->rc = b;
+}
+
+inline void Splay(node *x) {
+	while (!x->isRoot()) {
+		if (!x->fa->isRoot())
+			Rotate(x->dir() == x->fa->dir() ? x->fa : x);
+		Rotate(x);
+	}
+}
+
+inline node* chainTop(node *u) {
+	while (u->lc) u = u->lc;
+	return u;
+}
+
+inline void Access(node *u) {
+	int p;
+	for (node *v = NULL, *w; u; v = u, u = u->fa) {
+		if (v) {
+			p = getLab(chainTop(v));
+			Modify(1, 1, n, lft[p], rgt[p], -1);
+		}
+		
+		Splay(u);
+		w = u->rc;
+		u->rc = v;
+		
+		if (w) {
+			p = getLab(chainTop(w));
+			Modify(1, 1, n, lft[p], rgt[p], 1);
+		}
+	}
+}
+
+inline void edgeInit() {
+	ecnt = 0;
+	REP(i, 0, n) adj[i] = 0;
+	REP(i, 1, n) addEdge(read(), read());
+}
+
+inline void treeInit() {
+	static int qN, que[N];
+	int u, v, e, sz;
+	que[qN = 1] = 0;
+	fa[0] = -1, dep[0] = 1;
+	for (int ql = 1; ql <= qN; ++ql) {
+		u = que[ql], sze[u] = 1;
+		for (e = adj[u]; e; e = nxt[e]) {
+			if ((v = go[e]) == fa[u])
+				continue;
+			fa[v] = u;
+			dep[v] = dep[u] + 1;
+			que[++qN] = v;
+		}
+	}
+	for (int ql = qN; ql >= 2; --ql) {
+		u = que[ql], v = fa[u];
+		sze[v] += sze[u];
+	}
+	lft[0] = 1;
+	for (int ql = 1; ql <= qN; ++ql) {
+		u = que[ql], sz = lft[u] + 1;
+		for (e = adj[u]; e; e = nxt[e]) {
+			if ((v = go[e]) == fa[u])
+				continue;
+			lft[v] = sz;
+			sz += sze[v];
+		}
+	}
+	for (int i = 0; i < n; ++i) {
+		rgt[i] = lft[i] + sze[i] - 1;
+		idx[lft[i]] = i;
+	}
+	buildTree(1, 1, n);
+}
+
+inline void nodeInit() {
+	for (int i = 0; i < n; ++i) {
+		nd[i] = &used[i];
+		nd[i]->reSet();
+	}
+	for (int i = 1; i < n; ++i)
+		nd[i]->fa = nd[fa[i]];
+}
+
+int main() {
+	for (T = read(); T > 0; --T) {
+		n = read();
+		edgeInit();
+		treeInit();
+		nodeInit();
+		
+		int Q = read(), u;
+		char op;
+		ll ans;
+		while (Q--) {
+			while ((op = getchar()) != 'q' && op != 'O');
+			u = read();
+			if (op == 'O') {
+				Access(nd[u]);
+			} else {
+				ans = 0;
+				Query(1, 1, n, lft[u], rgt[u], ans);
+				printf("%.7lf\n", (double)ans / sze[u]);
+			}
+		}
+	}
+	return 0;
+}

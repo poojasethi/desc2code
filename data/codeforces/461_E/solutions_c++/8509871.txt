@@ -1,0 +1,163 @@
+#include<stdio.h>
+#include<queue>
+#include<iostream>
+#include<string.h>
+#include<vector>
+#include<algorithm>
+#include<map>
+using namespace std;
+
+const int maxn=200010;
+
+int ch[maxn][4],tail,cnt,fail[maxn],len[maxn];
+
+void ins(int c)
+{
+	int t=tail;
+	tail=++cnt;
+	len[cnt]=len[t]+1;
+	
+	while(t&&!ch[t][c])
+		ch[t][c]=cnt,t=fail[t];
+	if(!t&&!ch[t][c])
+	{
+		fail[cnt]=0;
+		ch[0][c]=cnt;
+		return ;
+	}
+	if(len[ch[t][c]]==len[t]+1)
+		fail[cnt]=ch[t][c];
+	else
+	{
+		int i=ch[t][c],j=++cnt;
+		memcpy(ch[j],ch[i],sizeof(ch[i]));
+		len[j]=len[t]+1,fail[j]=fail[i],fail[i]=fail[tail]=j;
+		
+		while(t&&ch[t][c]==i)
+			ch[t][c]=j,t=fail[t];
+		if(ch[0][c]==i)
+			ch[0][c]=j;
+	}
+}
+
+char s[maxn];
+int num[4][4];
+int dis[4][4];
+int dp[4][4][5];
+
+void dfs(int n,int beg,int dep)
+{
+	if(dep==0)
+		return ;
+	for(int i=0;i<4;i++)if(ch[n][i])
+	{
+		num[beg][i]++;
+		dfs(ch[n][i],beg,dep-1);
+	}
+}
+
+int jud(int beg,int end,int l)
+{
+	memset(num,0,sizeof(num));
+	dfs(ch[0][beg],beg,l-1);
+	int req = 0;
+	for(int i=1;i<l;i++)
+		req=req*4+1;
+	return num[beg][end]>=req;
+}
+
+void init()
+{
+	int i,j,k;
+	for(i=0;s[i];i++)
+		ins(s[i]-'A');
+	
+	for(i=0;i<4;i++)
+	{
+		for(j=0;j<4;j++)
+		{
+			dis[i][j]=1;
+			while(jud(i,j,dis[i][j]+1))
+				dis[i][j]++;
+		}
+	}
+	
+	//1
+	for(i=0;i<4;i++)
+		for(j=0;j<4;j++)
+			dp[i][j][1]=dis[i][j];
+	
+	//2
+	for(i=0;i<4;i++)
+		for(j=0;j<4;j++)
+		{
+			dp[i][j][2]=110;
+			for(k=0;k<4;k++)
+				dp[i][j][2]=min(dp[i][j][2],dis[i][k]+dis[k][j]);
+		}
+	
+	//3
+	for(i=0;i<4;i++)
+		for(j=0;j<4;j++)
+		{
+			dp[i][j][3]=110;
+			for(k=0;k<4;k++)
+				for(int t=0;t<4;t++)
+					dp[i][j][3]=min(dp[i][j][3],dis[i][k]+dis[k][t]+dis[t][j]);
+		}
+		
+	//4
+	for(i=0;i<4;i++)
+		for(j=0;j<4;j++)
+		{
+			dp[i][j][4]=110;
+			for(k=0;k<4;k++)
+				for(int t=0;t<4;t++)
+					for(int tt=0;tt<4;tt++)
+						dp[i][j][4]=min(dp[i][j][4],dis[i][k]+dis[k][t]+dis[t][tt]+dis[tt][j]);
+		}
+}
+int main()
+{
+	int i,j,k,t;
+	long long n,ans;
+	
+	cin>>n;
+	scanf("%s",s);
+	
+	init();
+	
+	ans=1;
+	for(i=0;i<4;i++)
+		for(j=0;j<4;j++)
+			for(int num1=1;num1<=4;num1++)if(n>dp[i][j][num1])
+			{
+				for(int lft=1;lft<=10;lft++)if(n>=dp[i][j][num1]+lft)
+				{
+					ans=max(ans,num1+1ll);
+					long long tmp=n-dp[i][j][num1]-lft;
+					for(int ii=0;ii<4;ii++)
+						for(int num2=0;num2<=4;num2++)if(tmp>=dp[j][ii][num2])
+						{
+							for(int num3=1;num3<=4;num3++)
+								ans=max(ans,num1+1+num2+(tmp-dp[j][ii][num2])/dp[j][j][num3]*num3);
+						}
+				}
+			}
+	if(n<-100)
+	{
+		for(i=0;i<4;i++)
+		{
+			for(j=1;j<=4;j++)
+				printf("%d ",dp[i][i][j]);
+			puts("");
+		}
+		for(i=0;i<4;i++)
+		{
+			for(j=0;j<4;j++)
+				printf("%d ",dis[i][j]);
+			puts("");
+		}
+	}
+	cout<<ans<<endl;
+}

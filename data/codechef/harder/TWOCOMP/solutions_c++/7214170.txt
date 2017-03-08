@@ -1,0 +1,308 @@
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+using namespace std;
+
+const int maxn = 100005, maxm = 1405, inf = 0x3fffffff;
+
+int n, m1, m2, res, S, T;
+int au[maxm], av[maxm], aw[maxm];
+int bu[maxm], bv[maxm], bw[maxm];
+
+struct Node{
+	int key, lc, rc, f, size, maxkey, rev, cover;
+}t[maxn];
+
+void debug()
+{
+	for (int i = 1; i <= n; i ++) printf("key = %d lc = %d rc = %d f = %d rev = %d maxkey = %d cover = %d\n", t[i].key, t[i].lc, t[i].rc, t[i].f, t[i].rev, t[i].maxkey, t[i].cover);
+	puts("");
+}
+
+void _rev(int x)
+{
+	if (!x) return;
+	swap(t[x].lc, t[x].rc);
+	t[x].rev ^= 1;
+}
+
+void _cover(int x, int v)
+{
+	if (!x) return;
+	t[x].key = t[x].maxkey = t[x].cover = v;
+}
+
+void down(int x)
+{
+	if (t[x].rev)
+	{
+		_rev(t[x].lc);
+		_rev(t[x].rc);
+		t[x].rev = 0;
+	}
+	if (t[x].cover)
+	{
+		_cover(t[x].lc, t[x].cover);
+		_cover(t[x].rc, t[x].cover);
+		t[x].cover = 0;
+	}
+}
+
+void up(int x)
+{
+	if (!x) return;
+	t[x].size = 1; t[x].maxkey = t[x].key;
+	if (t[x].lc)
+	{
+		t[x].size += t[t[x].lc].size;
+		t[x].maxkey = max(t[t[x].lc].maxkey, t[x].maxkey);
+	}
+	if (t[x].rc)
+	{
+		t[x].size += t[t[x].rc].size;
+		t[x].maxkey = max(t[t[x].rc].maxkey, t[x].maxkey);
+	}
+}
+
+/*bool isroot(int p)
+{
+	int f = t[p].f;
+	return (!f || t[f].lc != p && t[f].rc != p);
+}
+
+void leftrotate(int x)
+{
+	int y = t[x].f;
+	t[y].rc = t[x].lc; if (t[x].lc) t[t[x].lc].f = y;
+	t[x].f = t[y].f; if (t[y].f) if (t[t[y].f].lc == y) t[t[y].f].lc = x; else t[t[y].f].rc = x;
+	t[x].lc = y; t[y].f = x;
+	up(x);
+}
+
+void rightrotate(int x)
+{
+	int y = t[x].f;
+	t[y].lc = t[x].rc; if (t[x].rc) t[t[x].rc].f = x;
+	t[x].f = t[y].f; if (t[y].f) if (t[t[y].f].lc == y) t[t[y].f].lc = x; else t[t[y].f].rc = x;
+	t[x].rc = y; t[y].f = x;
+	up(x);
+}
+
+void splay(int x)
+{
+	down(x);
+	while (!isroot(x))
+	{
+		int y = t[x].f, z = t[y].f;
+		if (z == 0)
+		{
+			down(y); down(x);
+			if (t[y].lc == x)
+				rightrotate(x);
+			else
+				leftrotate(x);
+		} else {
+			down(z); down(y); down(x);
+			if (t[y].lc == x)
+				if (t[z].lc == y)
+					rightrotate(y), rightrotate(x);
+				else
+					rightrotate(x), leftrotate(x);
+			else
+				if (t[z].lc == y)
+					leftrotate(x), rightrotate(x);
+				else
+					leftrotate(y), leftrotate(x);
+		} 
+	}
+	up(x);
+}*/
+    bool isroot(int p)
+    {
+    	int f = t[p].f;
+    	return (!f || t[f].lc != p && t[f].rc != p);
+	}
+    
+    void left_rotate(int p)
+    {
+        int lc = t[p].lc, f = t[p].f, g = t[f].f;
+        if (lc) t[lc].f = f;
+        t[f].rc = lc;
+        if (g)
+           if(t[g].lc == f)
+               t[g].lc = p;
+           else if(t[g].rc == f)
+               t[g].rc = p;
+        t[p].f = g;
+        t[t[p].lc = f].f = p;
+        up(f);
+    }
+    
+    void right_rotate(int p)
+    {
+        int rc = t[p].rc, f = t[p].f, g = t[f].f;
+        if (rc) t[rc].f = f;
+        t[f].lc = rc;
+        if (g)
+           if(t[g].lc == f)
+               t[g].lc = p;
+           else if(t[g].rc == f)
+               t[g].rc = p;
+        t[p].f = g;
+        t[t[p].rc = f].f = p;
+        up(f);
+    }
+    
+    void splay(int p)
+    {
+    	down(p);
+    	while(!isroot(p))
+    	{
+    		int f = t[p].f;
+    		down(f), down(p);
+    		if(t[f].lc == p)
+    			right_rotate(p);
+    		else
+    			left_rotate(p);
+		}
+		up(p);
+	}
+
+
+void access(int v)
+{
+	for (int u = v, v = 0; u; v = u, u = t[u].f)
+		splay(u), t[u].rc = v;
+}
+
+void evert(int v)
+{
+	access(v);
+	splay(v);
+	_rev(v);
+}
+
+int findroot(int v)
+{
+	access(v);
+	splay(v);
+	for (; t[v].lc; v = t[v].lc);
+	splay(v);
+	return v;
+}
+
+void link(int u, int v)
+{
+	evert(u);
+	t[u].f = v;
+}
+
+void cut(int u, int v)
+{
+	evert(u);
+	access(v);
+	splay(v);
+	t[u].f = t[v].lc = 0;
+}
+
+void modify(int u, int v, int x)
+{
+	evert(u);
+	access(v);
+	splay(v);
+	_cover(v, x);
+}
+
+int query(int u, int v)
+{
+	evert(u);
+	access(v);
+	splay(v);
+	return t[v].maxkey;
+}
+
+struct edge{
+	int loc, flow, next;
+}e[maxm * maxm];
+int h[maxm], tot;
+
+void addedge(int x, int y, int z)
+{
+	e[tot].loc = y; e[tot].flow = z; e[tot].next = h[x]; h[x] = tot ++;
+	e[tot].loc = x; e[tot].flow = 0; e[tot].next = h[y]; h[y] = tot ++;
+}
+
+int Q[maxm], d[maxm];
+
+bool bfs()
+{
+	for (int i = S; i <= T; i ++) d[i] = -1;
+	int l = 0, r = 0; d[Q[++ r] = S] = 0;
+	while (l < r)
+	{
+		int u = Q[++ l];
+		for (int i = h[u]; ~i; i = e[i].next)
+			if (e[i].flow > 0 && d[e[i].loc] == -1)
+				d[Q[++ r] = e[i].loc] = d[u] + 1;
+	}
+	return (d[T] != -1);
+}
+
+int dfs(int u, int flow)
+{
+	if (u == T) return flow;
+	int res = 0;
+	for (int i = h[u]; ~i; i = e[i].next)
+		if (e[i].flow > 0 && d[u] + 1 == d[e[i].loc])
+		{
+			int tmp = dfs(e[i].loc, min(flow, e[i].flow));
+			flow -= tmp; e[i].flow -= tmp;
+			res += tmp; e[i ^ 1].flow += tmp;
+			if (flow == 0) break;
+		}
+	if (res == 0) d[u] = -1;
+	return res;
+}
+
+int maxflow()
+{
+	int res = 0;
+	while (bfs())
+		res += dfs(S, inf);
+	return res;
+}
+
+
+int main()
+{
+	scanf("%d%d%d", &n, &m1, &m2);
+	for (int i = 1; i < n; i ++)
+	{
+		int x, y; scanf("%d%d", &x, &y);
+		link(x, y);
+	}
+	S = 0, T = m1 + m2 + 1;
+	for (int i = S; i <= T; i ++) h[i] = -1;
+	for (int i = 1; i <= m1; i ++)
+	{
+		scanf("%d%d%d", &au[i], &av[i], &aw[i]);
+		res += aw[i]; addedge(S, i, aw[i]);
+	}
+	for (int i = 1; i <= m2; i ++)
+	{
+		scanf("%d%d%d", &bu[i], &bv[i], &bw[i]);
+		res += bw[i]; addedge(m1 + i, T, bw[i]);
+	}
+	for (int i = 1; i <= m1; i ++)
+	{
+		modify(au[i], av[i], i);
+		for (int j = 1; j <= m2; j ++)
+		{
+			if (query(bu[j], bv[j]) == i)
+				addedge(i, m1 + j, inf);
+		}
+	}
+	res -= maxflow();
+	printf("%d\n", res);
+	return 0;
+}

@@ -1,0 +1,8 @@
+#include<cstdio>
+int main(){
+    int n,in,sum=0,opt=0,tmp=0;
+    scanf("%d",&n);
+    for(int i=0;i<n;i++) scanf("%d",&in),sum-=in,tmp=(tmp+in*2>0?tmp+in*2:0),opt=opt>tmp?opt:tmp;
+    printf("%d\n",opt+sum);
+    return 0;
+}

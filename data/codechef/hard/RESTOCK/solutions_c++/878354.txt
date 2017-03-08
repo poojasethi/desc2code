@@ -1,0 +1,224 @@
+#pragma comment(linker,"/STACK:64000000")
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <map>
+#include <set>
+#include <sstream>
+#include <cmath>
+#include <ctime>
+#include <memory.h>
+
+#define WR printf
+#define RE scanf
+#define PB push_back
+#define SE second
+#define FI first
+#define MP make_pair
+
+#define FOR(i,Be,En) for(int (i)=(Be);(i)<=(En);++(i))
+#define DFOR(i,Be,En) for(int (i)=(Be);(i)>=(En);--(i))
+#define SZ(a) (int)((a).size())
+#define FA(i,v) FOR(i,0,SZ(v)-1)
+#define RFA(i,v) DFOR(i,SZ(v)-1,0)
+#define CLR(a) memset(a,0,sizeof(a))
+
+#define LL  long long
+#define VI  vector<int>
+#define PAR pair<int ,int> 
+
+using namespace std;
+void __never(int a){printf("\nOPS %d", a);}
+void __die(int a){printf("%d",(a*a)/(a+a));}
+#define ass(s) {if (!(s)) {__never(__LINE__);cout.flush();cerr.flush();__die(0);}}
+
+
+#define MN 512
+
+const int INF = 1e9;
+
+struct Tree{
+	int m[MN+MN];
+	int n;
+	void Init(int  N, int val) {
+		n = N;
+		FOR(i,1,n+n-1) m[i] = val;
+	}
+	void Set(int pos, int val) {
+		pos++;
+		ass(1<=pos && pos <= n);
+		pos += n-1;
+		m[pos] = val;
+		while (pos > 1){
+			pos >>= 1;
+			m[pos] = min(m[pos+pos],m[pos+pos+1]);
+		}
+	}
+	int Get(int i ,int j){
+		i++;
+		j++;
+		ass(1<=i && i<=j && j<=n);
+		i += n-1;
+		j += n-1;
+		int res = INF;
+		while (i <= j){
+			if ((i & 1) == 1) {
+				if (res > m[i]) res = m[i];
+			}
+			if ((j & 1) == 0) {
+				if (res > m[j]) res = m[j];
+			}
+			i = (i + 1) >> 1;
+			j = (j - 1) >> 1;
+		}
+		return res;
+	}
+};
+
+
+
+Tree dp[MN];
+
+
+bool good[MN][MN];
+int g[MN][MN];
+PAR ts[MN*MN];
+int ps;
+int Dist(int x, int y){
+	return x*x + y*y;
+}
+bool cmp(const PAR & a, const PAR & b){
+	return Dist(a.FI,a.SE) < Dist(b.FI,b.SE);
+}
+void pre(){
+	ps = 0; 
+	FOR(i,0,MN-2) FOR(j,0,MN-2) ts[ps++] = MP(i,j);
+	sort(ts,ts+ps,cmp);
+}
+void init()
+{
+	freopen("input.txt","r",stdin);
+	freopen("output.txt","w",stdout);
+}
+void sol(){	
+	int n,m,d,r,c;
+	cin >> n >> m;
+	cin >> d >> r >> c;
+	FOR(i,0,n-1) FOR(j,0,m-1) RE("%d",&g[i][j]);
+	
+	if (r <= d && c <= d) {
+		cout << g[r][c] << endl;
+		return ;
+	}
+	
+	FOR(i,0,n-1) {
+		dp[i].Init(m, INF);
+	}
+	
+	int bord = ps-1;
+	int nm = Dist(n,m);
+	ass(Dist(ts[ps-1].FI, ts[ps-1].SE) > nm);
+	
+	int low = 10, hi = ps-1;
+	while (low < hi) {
+		int ce = (low + hi) / 2;
+		if (Dist(ts[ce].FI,ts[ce].SE) > nm) hi = ce;
+		else low = ce+1;
+	}
+	bord = low;
+	
+	
+	
+	FOR(i,0,n-1) FOR(j,0,m-1) good[i][j] = true;
+	
+	
+	if (d > 50 && n*m > 10000) {
+		int s = min(d/4,10);
+		FOR(I,0,n-1) {
+			int lx = I*s;
+			if (lx >= n) break;
+			FOR(J,0,m-1) {
+				int ly = J*s;
+				if (ly >= m) break;
+				int rx = min(lx + s - 1, n-1);
+				int ry = min(ly + s - 1, m-1);
+				int x = lx, y = ly;
+				FOR(i,lx,rx) FOR(j,ly,ry) if (g[i][j] < g[x][y]) {
+					x = i;
+					y = j;
+				}
+				FOR(i,lx,rx) FOR(j,ly,ry) good[i][j] = false;
+				good[x][y] = true;
+			}
+		}
+		FOR(i,0,n-1) FOR(j,0,m-1) if (abs(r - i) % d == 0 || abs(c - j) % d == 0) good[i][j] = true;
+	}
+	
+	
+	int rc = Dist(r,c);
+	FOR(i,0,n-1) FOR(j,0,m-1) if (Dist(i,j) > rc) good[i][j] = false;
+	
+	
+	good[r][c] = true;
+	good[0][0] = true;
+	
+	
+	
+	
+	DFOR(I,bord,0){
+		int x = ts[I].FI, y = ts[I].SE;
+		int dist = Dist(x,y);
+		if (x >= n || y >= m) continue;
+		if (!good[x][y]) continue;
+		if (x == r && y == c) {
+			dp[r].Set(c,g[r][c]);
+			continue;
+		}
+		
+		int ans = INF;
+		int lo_x = max(x - d, 0), hi_x = min(x + d,n-1);
+		int lo_y = max(y - d, 0), hi_y = min(y + d,m-1);
+		FOR(X,lo_x,hi_x) {
+			if (Dist(X,lo_y) > dist) {
+				ans = min(ans, dp[X].Get(lo_y, hi_y));
+			} else if (Dist(X,hi_y) > dist){
+				int low = lo_y, hi = hi_y;//---...-+...+++
+				int temp = dist - X*X;
+				while (low < hi){
+					int ce = (low + hi) / 2;
+					//if (Dist(X,ce) > dist) hi = ce;
+					if (ce*ce > temp) hi = ce;
+					else low = ce + 1;
+				}
+				ans = min(ans, dp[X].Get(low, hi_y));
+			}
+		}
+		ans += g[x][y];
+		if (ans > INF) ans = INF;
+		dp[x].Set(y, ans);
+	}
+	cout << dp[0].Get(0,0) << endl;
+	/*
+	FOR(i,0,n-1) {
+		FOR(j,0,m-1) {
+			int h = dp[i].Get(j,j);
+			if (h == INF) h = -1;
+			WR("%3d",h);
+		}
+		WR("\n");
+	}
+	*/
+}
+int main()
+{
+	//init();
+	pre();
+	int T;
+	cin >> T;
+	FOR(t,1,T)
+		sol();
+	return 0;
+}

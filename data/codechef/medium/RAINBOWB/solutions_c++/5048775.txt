@@ -1,0 +1,49 @@
+/* bhupkas */
+
+using namespace std;
+
+#include "bits/stdc++.h"
+
+typedef long long LL;
+
+#define MOD (LL)(1e9 + 7)
+
+LL modpow (LL a, LL b, LL mod)
+{
+    LL res = 1LL;
+    while (b)
+    {
+        if (b & 1) res = (res * a) % mod;
+        a = (a * a) % mod;
+        b >>= 1;
+    }
+
+    return res;
+}
+
+int main()
+{       
+        LL n;
+        cin >> n;
+        if(n <= 12)      
+        {
+                cout << 0 << endl;
+                return 0;
+        }
+        if(n <= 14)     
+        {
+                cout << 1 << endl;
+                return 0;
+        }
+        n = (n + 1) / 2;
+        n -= 7;
+        LL f2 , f3;
+        f2 = 1LL;
+        for(int i = 2 ; i <= n ; ++i)   f2 = (f2 * i) % MOD;   
+        LL re = f2;
+        for(int i = n + 1 ; i <= n + 6 ; ++i)       re = (re * i) % MOD;
+        re = (re * modpow(720,MOD-2,MOD)) % MOD;
+        re = (re * modpow(f2,MOD-2,MOD)) % MOD;
+        cout << re << endl;
+        return 0;
+}

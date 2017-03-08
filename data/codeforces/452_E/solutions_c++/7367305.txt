@@ -1,0 +1,92 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define M 1000000007
+#define ll long long
+#define maxn 610000
+struct State{
+    State *suf, *go[30];
+    int val;ll right[3];
+    State() :suf(0), val(0){
+        memset(go, 0, sizeof(go));
+    }
+}*root,*last;
+ 
+State statePool[maxn], *cur;
+
+void append(int w){
+    State *p = last, *np = cur++;
+    np->val = p->val + 1;
+    while (p&&!p->go[w]) p->go[w] = np, p = p->suf;
+    if (!p) np->suf = root;
+    else{
+        State *q = p->go[w];
+        if (p->val + 1 == q->val) np->suf = q;
+        else{
+            State *nq = cur++;
+            memcpy(nq->go, q->go, sizeof q->go);
+            nq->val = p->val + 1;
+            nq->suf = q->suf;
+            q->suf = nq;
+            np->suf = nq;
+            while (p&&p->go[w] == q){
+                p->go[w] = nq, p = p->suf;
+            }
+        }
+    }
+    last = np;
+}
+ 
+char str[maxn]; int n;
+bool vis[maxn];
+ 
+void dfs(State *u){
+    if (vis[u - statePool]) return;
+    if (!vis[u - statePool]){
+        vis[u - statePool] = true;
+        for (int i = 0; i < 3; i++){
+            if (u->go[26 + i]) u->right[i] = 1;
+        }
+        for (int i = 0; i < 26; i++){
+            if (u->go[i]) {
+                dfs(u->go[i]);
+                for (int k = 0; k < 3; k++){
+                    u->right[k] = (u->right[k] + u->go[i]->right[k]) % M;
+                }
+            }
+        }
+    }
+}
+ 
+ll num[maxn];
+ 
+int main(){
+    
+    cur = statePool;
+    root = last = cur++;
+    int n = 1e8;
+    for(int ii=0;ii<3;ii++){
+        scanf("%s", str);
+        n = min(n, int(strlen(str)));
+        for (int i = 0; str[i]; i++) append(str[i] - 'a');
+        append(26+ii);
+    }
+    
+    dfs(root);
+ 
+    int tot = cur - statePool;
+ 
+    for (int i = 1; i < tot; i++){
+        State *u = &statePool[i];
+        ll tmp = u->right[0] % M * u->right[1] % M*u->right[2] % M;
+        num[u->val] = (num[u->val] + tmp) % M;
+        num[u->suf->val] = ((num[u->suf->val] - tmp) % M + M) % M;
+    }
+ 
+    for (int i = tot-2; i >= 1; i--){
+        num[i] = (num[i] + num[i + 1]) % M;
+    }
+    for (int i = 1; i <= n; i++){
+        if (i>1) printf(" ");
+        printf("%I64d", num[i]);
+    }
+}

@@ -1,0 +1,102 @@
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#include <cstring>
+#include <cassert>
+#include <set>
+
+using namespace std;
+
+typedef long long LL;
+
+#define MOD 1000000007
+#define MX 100002
+
+LL modpow(LL a, LL P)
+{
+	LL r = 1;
+	while(P)
+	{
+		if(P&1) r = (r*a)%MOD;
+		if((P>>=1)) a = (a*a)%MOD;
+	}
+	return r;
+}
+
+int N, maxCount;
+int cnt[MX], sum[MX], oddCount[MX];
+LL den[MX], den2[MX];
+LL fac[MX], invfac[MX];
+
+void pre()
+{
+	fac[0] = invfac[0] = 1;
+	for(int i=1;i<MX;i++)
+	{
+		fac[i] = (fac[i-1]*i)%MOD;
+		invfac[i] = modpow(fac[i],MOD-2);
+	}
+}
+
+
+void fillStuff()
+{
+	for(int i=1;i<=maxCount;i++) sum[i] = 0, den[i] = 1, den2[i] = 1, oddCount[i] = 0;
+
+	for(int i=0;i<N;i++)
+	{
+		int n = cnt[i], lo = n, hi = n, plo, px = 1, x;
+		while(lo>1)
+		{
+			plo = lo;
+			hi = lo - 1;
+			int x = (n+hi-1)/hi;
+			lo = (n+x-1)/x;
+			sum[plo] += (px-x);
+			den[plo] = (den[plo]*((fac[x]*invfac[px])%MOD))%MOD;
+			den2[plo] = (den2[plo]*((fac[x/2]*invfac[px/2])%MOD))%MOD;
+			oddCount[plo] += ((px&1)-(x&1));
+			px = x;
+		}
+		sum[1]+=n;
+		den[1] = (den[1]*invfac[px])%MOD;
+		den2[1] = (den2[1]*invfac[px/2])%MOD;
+		oddCount[1] += (n&1);
+	}
+
+	for(int i=2;i<=maxCount;i++)
+	{
+		sum[i]+=sum[i-1];
+		oddCount[i]+=oddCount[i-1];
+		den[i]=(den[i]*den[i-1])%MOD;
+		den2[i]=(den2[i]*den2[i-1])%MOD;
+	}
+}
+
+LL solve(int S)
+{
+	LL totalCount = ( fac[sum[S]] * den[S] ) % MOD;
+	LL palinCount = 0;
+	if(oddCount[S]<=1) palinCount = ( fac[sum[S]/2] * den2[S] ) % MOD;
+	return ( (totalCount + palinCount) * invfac[2] ) % MOD;
+}
+
+int main()
+{
+	pre();
+	scanf("%d",&N);
+	for(int i=0;i<N;i++)
+	{
+		scanf("%d",&cnt[i]);
+		maxCount = max( maxCount, cnt[i] );
+	}
+	fillStuff();
+	int Q, S;
+	for(scanf("%d",&Q);Q--;)
+	{
+		scanf("%d",&S);
+		S = min(S, maxCount);
+		printf("%lld\n",solve(S));
+	}
+	return 0;
+}

@@ -1,0 +1,83 @@
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+#define l(x) (x*2 + 1)
+#define r(x) (x*2 + 2)
+
+const int MAX_N = 5e5 +5;
+
+struct Node {
+	int f, l;
+	int t0, t1;
+} a[1<<20];
+
+int n, q;
+vector<int> adj[MAX_N];
+int s[MAX_N], e[MAX_N], dfscnt;
+
+inline void build_tree(int x, int f, int l) {
+	a[x].f = f, a[x].l = l;
+	if(l-f > 1) {
+		build_tree(l(x), f, (f+l) >> 1);
+		build_tree(r(x), (f+l) >> 1, l);
+	}
+}
+
+inline void put0(int x, int f, int t) {
+	if(a[x].l-a[x].f == 1) {
+		a[x].t0 = t;
+		return;
+	}
+	f < a[l(x)].l? put0(l(x), f, t): put0(r(x), f, t);
+	a[x].t0 = max(a[l(x)].t0, a[r(x)].t0);
+}
+
+inline int get0(int x, int f, int l) {
+	if(f <= a[x].f and a[x].l <= l) return a[x].t0;
+	if(l <= a[x].f or f >= a[x].l) return 0;
+	return max(get0(l(x), f, l), get0(r(x), f, l));
+}
+
+inline void put1(int x, int f, int l, int t) {
+	if(f <= a[x].f and a[x].l <= l) a[x].t1 = t;
+	else if(l <= a[x].f or f >= a[x].l) return;
+	else put1(l(x), f, l, t), put1(r(x), f, l, t);
+}
+
+inline int get1(int x, int f) {
+	if(a[x].l - a[x].f == 1) return a[x].t1;
+	return max(a[x].t1, f < a[l(x)].l? get1(l(x), f): get1(r(x), f));
+}
+
+inline int dfs(int u, int p) {
+	s[u] = e[u] = dfscnt++;
+	for(int i = 0; i < (int)adj[u].size(); i++) {
+		int v = adj[u][i];
+		if(v == p) continue;
+		e[u] = max(e[u], dfs(v, u));
+	}
+	return e[u];
+}
+
+
+int main() {
+	scanf("%d", &n);
+	for(int x, y, i = 1; i < n; i++) 
+		scanf("%d %d", &x, &y),
+		adj[x].push_back(y),
+		adj[y].push_back(x);
+	
+	build_tree(0, 0, 1<<19);
+	
+	dfs(1, 0);
+	
+	scanf("%d", &q);
+	for(int c, u, t = 1; t <= q; t++) {
+		scanf("%d %d", &c, &u);
+		if(c == 1) put1(0, s[u], e[u]+1, t);
+		else if(c == 2) put0(0, s[u], t);
+		else printf("%d\n", get0(0, s[u], e[u]+1) < get1(0, s[u]));
+	}
+}

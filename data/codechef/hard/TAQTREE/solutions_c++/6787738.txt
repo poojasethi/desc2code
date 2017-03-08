@@ -1,0 +1,128 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+using namespace std;
+
+#define NAME "TAQTREE"
+#define pb push_back
+
+const int MAXN = (int) 1e5 + 5;
+
+int log2(int n) {
+    int i; for (i=1; i<=18; i++)
+        if ((1<<i) > n) break;
+    return i-1;
+}
+
+struct edge {
+    int u, v, w;
+};
+
+int n, q, ttime, tin[MAXN], tout[MAXN], depth[MAXN], p[MAXN][18];
+int t[MAXN*4];
+edge e[MAXN*2];
+bool mark[MAXN*2];
+vector<int> a[MAXN];
+
+void enter() {
+    scanf("%d", &n);
+    for (int i=1; i<2*n-2; i+=2) {
+        scanf("%d%d%d", &e[i].u, &e[i].v, &e[i].w);
+        e[i+1] = e[i]; swap(e[i+1].u, e[i+1].v);
+    }
+
+    for (int i=1; i<=2*n-2; i++) a[e[i].u].pb(i);
+}
+
+void dfs(int u) {
+    tin[u] = ++ttime;
+    for (int i=0; i < (int) a[u].size(); i++) {
+        int j = a[u][i];
+        if (p[e[j].v][0] == 0) {
+            p[e[j].v][0] = u;
+            depth[e[j].v] = depth[u] + 1;
+            mark[j] = true;
+            dfs(e[j].v);
+        }
+    }
+    tout[u] = ttime;
+}
+
+void init() {
+    ttime = 0;
+    p[1][0] = -1;
+    dfs(1);
+    int cnt = 0;
+    for (int i=1; i<2*n; i+=2)
+        if (mark[i]) e[++cnt] = e[i];
+        else e[++cnt] = e[i+1];
+
+    int k = depth[1]; for (int i=2; i<=n; i++) k = max(depth[i], k);
+    k = log2(k);
+    for (int j=1; j<=k; j++)
+        for (int i=1; i<=n; i++)
+        if (p[i][j-1]!=-1) p[i][j] = p[p[i][j-1]][j-1];
+        else p[i][j] = -1;
+}
+
+int lca(int u, int v) {
+    if (depth[u] < depth[v]) swap(u,v);
+    int k = log2(depth[u]);
+    for (int i=k; i>=0; i--)
+        if (depth[u] - (1<<i) >= depth[v]) u = p[u][i];
+    if (u==v) return u;
+
+    for (int i=k; i>=0; i--)
+    if (p[u][i]!=p[v][i]) {
+        u = p[u][i]; v = p[v][i];
+    }
+    return p[u][0];
+}
+
+void update(int k, int l, int r, int x, int v) {
+    if (tin[x]>r || tout[x]<l) return;
+    if (tin[x]<=l && r<=tout[x]) { t[k]+= v; return; }
+    int mid = (l+r)/2;
+    update(k*2,l,mid,x,v);
+    update(k*2+1,mid+1,r,x,v);
+}
+
+int get(int k, int l, int r, int i) {
+    if (i>r || i<l) return 0;
+    if (l==r) return t[k];
+    int mid = (l+r)/2;
+    int res = t[k];
+    res += get(k*2,l,mid,i);
+    res += get(k*2+1,mid+1,r,i);
+    return res;
+}
+
+void solve() {
+    for (int i=1; i<=n-1; i++)
+		update(1,1,n,e[i].v,e[i].w);
+    scanf("%d", &q);
+    for (int i=1; i<=q; i++) {
+        int tip, u, v;
+        scanf("%d%d%d", &tip, &u, &v);
+        if (tip==1) {
+            update(1,1,n,e[u].v,-e[u].w+v);
+            e[u].w = v;
+        } else {
+            int fu = get(1,1,n,tin[u]);
+            int fv = get(1,1,n,tin[v]);
+            int r = lca(u,v);
+            int fr = get(1,1,n,tin[r]);
+            int res = fu + fv - 2*fr;
+            printf("%d\n", res);
+        }
+    }
+}
+
+int main() {
+   // freopen(NAME".INP", "r", stdin);
+    //freopen(NAME".OUT", "w", stdout);
+    enter();
+    init();
+    solve();
+}

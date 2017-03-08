@@ -1,0 +1,54 @@
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+#include<queue>
+
+using namespace std;
+
+typedef long long LL;
+
+const int MaxN = 200000 + 5, MaxM = 200000 + 5;
+
+struct Match {
+    int st, fi, val;
+    bool operator < (const Match &t)const {return st < t.st;}
+}race[MaxM];
+
+struct seg {
+    int fi, val; 
+    seg(int _fi, int _val): fi(_fi), val(_val) {}
+    bool operator < (const seg &t)const {return fi > t.fi;}
+};
+
+int N, M;
+int cost[MaxN];
+priority_queue<seg> Q;
+
+int main() {
+
+    scanf("%d%d", &N, &M);
+    for (int i = 1; i <= N; ++i) scanf("%d", cost + i);
+    LL ans = 0;
+    for (int i = 0; i < M; ++i) {
+        scanf("%d%d%d", &race[i].st, &race[i].fi, &race[i].val);
+        ans += race[i].val;
+    }
+    sort(race, race + M);
+    for (int i = 1, j = 0; i <= N; ++i) {
+        while (!Q.empty() && Q.top().fi < i) Q.pop();
+        while (j < M && race[j].st == i) {
+              Q.push(seg(race[j].fi, race[j].val)); 
+              j++;
+        }
+        while (!Q.empty() && cost[i]) {
+              seg now = Q.top(); Q.pop();
+              int tmp = min(now.val, cost[i]);
+              now.val -= tmp; cost[i] -= tmp; ans -= tmp;
+              if (now.val) Q.push(now);
+        }
+    }
+    cout << ans << endl;
+
+    return 0;
+
+}

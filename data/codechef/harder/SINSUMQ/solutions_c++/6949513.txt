@@ -1,0 +1,99 @@
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define maxn 100010
+#define maxm 400010
+#define lson root<<1, l, mid
+#define rson root<<1|1, mid + 1, r
+#define ld double
+
+int n, m;
+int L[maxn], R[maxn], x[maxn], num[maxn<<1], add[maxm<<2];
+ld _sin[maxm<<2], _cos[maxm<<2];
+
+void Pushdown(int x) {
+	ld tmp = _sin[x<<1], s = sin(add[x]), c = cos(add[x]);
+	_sin[x<<1] = _sin[x<<1] * c + _cos[x<<1] * s, _cos[x<<1] = c * _cos[x<<1] - s * tmp;
+	tmp = _sin[x<<1|1];
+	_sin[x<<1|1] = _sin[x<<1|1] * c + _cos[x<<1|1] * s, _cos[x<<1|1] = c * _cos[x<<1|1] - s * tmp;
+	add[x<<1] += add[x], add[x<<1|1] += add[x], add[x] = 0;
+}
+
+ld query(int root, int l, int r, int s, int t) {
+	if(l < r && add[root]) Pushdown(root);
+	if(l >= s && t >= r) return _sin[root];
+	int mid = (l + r) >> 1; ld ans = 0;
+	if(mid >= s) ans = query(lson, s, t);
+	if(t > mid) ans += query(rson, s, t);
+	return ans;
+}
+
+void modify(int root, int l, int r, int s, int t, int x) {
+	if(l < r && add[root]) Pushdown(root);
+	if(l >= s && t >= r) {
+		ld tmp = _sin[root];
+		add[root] += x, _sin[root] = _sin[root] * cos(x) + _cos[root] * sin(x), _cos[root] = cos(x) * _cos[root] - sin(x) * tmp;
+		return ;
+	}
+	int mid = (l + r) >> 1;
+	if(mid >= s) modify(lson, s, t, x);
+	if(mid < t) modify(rson, s, t, x);
+	_sin[root] = _sin[root<<1] + _sin[root<<1|1], _cos[root] = _cos[root<<1] + _cos[root<<1|1];
+}
+
+void Buildtree(int root, int l, int r) {
+	if(l == r) {
+		if(l & 1) {
+			_sin[root] = sin(num[(l + 1) >> 1]), _cos[root] = cos(num[(l + 1) >> 1]);
+			//printf("%.8lf %.8lf\n", _sin[root], _cos[root]);
+		} else {
+			//_sin[root] = sin((((ld)num[l / 2] + (ld)num[l / 2 + 1]) / 2)) * sin((((ld)num[l / 2 + 1] - (ld)num[l / 2] - 1) / 2)) / sin(0.5f);
+			//_cos[root] = cos((((ld)num[l / 2] + (ld)num[l / 2 + 1]) / 2)) * sin((((ld)num[l / 2 + 1] - (ld)num[l / 2] - 1) / 2)) / sin(0.5f);
+			ld L=(ld)num[l/2]+1,R=(ld)num[l/2+1]-1;
+			_sin[root]=(cos(L-0.5)-cos(R+0.5))/(2*sin(0.5));  
+			_cos[root]=(sin(R+0.5)-sin(L-0.5))/(2*sin(0.5));
+		//	printf("%d %.8lf %.8lf\n", l, _sin[root], _cos[root]);
+		}
+		return ;
+	}
+	int mid = (l + r) >> 1;
+	Buildtree(lson), Buildtree(rson);
+	_sin[root] = _sin[root<<1] + _sin[root<<1|1], _cos[root] = _cos[root<<1] + _cos[root<<1|1];
+}
+
+int find(int x) {
+	int l = 1, r = n, mid;
+	while(l <= r) {
+		mid = (l + r) >> 1;
+		if(num[mid] >= x) r = mid - 1;
+		else l = mid + 1;
+	}
+	return l;
+}
+
+int main() {
+	scanf("%d%d", &n, &m);
+	for(int i = 1; i <= m; i++) {
+		scanf("%d%d%d", &L[i], &R[i], &x[i]);
+		num[2 * i - 1] = L[i], num[2 * i] = R[i];
+	}
+	sort(num + 1, num + 2 * m + 1);
+	n = (unique(num + 1, num + 2 * m + 1) - num) - 1;
+	/*for(int i = 1; i<= n; i++)
+		printf("%d ", num[i]);
+	printf("\n");*/
+	Buildtree(1, 1, 2 * n - 1);
+	for(int i = 1; i <= m; i++) {
+		L[i] = 2 * find(L[i]) - 1, R[i] = 2 * find(R[i]) - 1;
+		//printf("%d %d\n", L[i], R[i]);
+	}
+	for(int i = 1; i <= m; i++) {
+		if(x[i] == 0) printf("%.10lf\n", query(1, 1, 2 * n - 1, L[i], R[i]));
+		//cout<<query(1, 1, 2 * n - 1, L[i], R[i])<<endl;
+		else modify(1, 1, 2 * n - 1, L[i], R[i], x[i]);
+	}
+}

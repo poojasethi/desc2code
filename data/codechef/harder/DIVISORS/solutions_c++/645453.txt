@@ -1,0 +1,209 @@
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <map>
+#include <vector>
+using namespace std;
+ 
+#define FORALL(s,i) for (typeof(s.begin()) i=s.begin(); i != s.end(); ++i)
+long long Gcd(long long a, long long b) {return b ? Gcd(b, a%b) : a;}
+inline long long Lcm(long long a, long long b) {return a / Gcd(a, b) * b;}
+ 
+#define MAXFACTSET 1300
+#define POW2 32
+#define POW3 27
+#define POW5 25
+#define POW7 7
+#define NUMP 15
+ 
+const int p[NUMP] = {59, 53, 47, 43, 41, 37, 31, 29, 23, 19, 17, 13, 11, 49, 1};
+ 
+int nfactset;
+map<vector<int>, int> fact2factset;
+vector<int> factset[MAXFACTSET+1];
+ 
+int get_factset(vector<int> v) {
+  for (int i = 0; i < v.size(); i++)
+  for (int j = i+1; j < v.size(); j++)
+    if (v[j] % v[i] == 0) v.erase(v.begin() + j--);
+  int& ret = fact2factset[v];
+  if (ret == 0) {
+    assert(nfactset < MAXFACTSET);
+    factset[ret = ++nfactset].swap(v);
+  }
+  return ret;
+}
+ 
+int and_factset_memo[MAXFACTSET+1][MAXFACTSET+1];
+int and_factset(int fs1, int fs2) {
+  int& ret = and_factset_memo[fs1][fs2];
+  if (ret) return ret;
+  vector<int> v;
+  for (int p2 = 1; p2 <= POW2; p2 *= 2)
+  for (int p3 = 1; p3 <= POW3; p3 *= 3)
+  for (int p5 = 1; p5 <= POW5; p5 *= 5)
+  for (int p7 = 1; p7 <= POW7; p7 *= 7) {
+    int n = p2*p3*p5*p7, i;
+    for (i = 0; i < factset[fs1].size(); i++)
+      if (n % factset[fs1][i] == 0) break;
+    if (i == factset[fs1].size()) continue;
+    for (i = 0; i < factset[fs2].size(); i++)
+      if (n % factset[fs2][i] == 0) break;
+    if (i == factset[fs2].size()) continue;
+    v.push_back(n);
+  }
+  sort(v.begin(), v.end());
+  return ret = get_factset(v);
+}
+ 
+int or5_factset_memo[MAXFACTSET+1];
+int or5_factset(int fs) {
+  int& ret = or5_factset_memo[fs];
+  if (ret) return ret;
+  vector<int> v = factset[fs];
+  for (int i = 0; i < v.size(); i++) if (v[i]%5 == 0) v[i] /= 5;
+  sort(v.begin(), v.end());
+  return ret = get_factset(v);
+}
+ 
+int or7_factset_memo[MAXFACTSET+1];
+int or7_factset(int fs) {
+  int& ret = or7_factset_memo[fs];
+  if (ret) return ret;
+  vector<int> v = factset[fs];
+  for (int i = 0; i < v.size(); i++) if (v[i]%7 == 0) v[i] /= 7;
+  sort(v.begin(), v.end());
+  return ret = get_factset(v);
+}
+ 
+int* prefs[MAXFACTSET+1];
+long long count(int fs, long long lim) {
+  int* pre = prefs[fs];
+  int sz;
+  if (pre) {
+    sz = *pre++;
+  } else {
+    sz = 1;
+    for (int i = 0; i < factset[fs].size(); i++) {
+      sz = Lcm(sz, factset[fs][i]);
+    }
+    pre = prefs[fs] = new int[sz+1];
+    memset(pre, 0, (sz+1)*sizeof(int));
+    *pre++ = sz;
+    for (int i = 0; i < factset[fs].size(); i++) {
+      int x = factset[fs][i];
+      for (int y = 0; y < sz; y += x) pre[y] = 1;
+    }
+    for (int x = 1; x < sz; x++) pre[x] += pre[x-1];
+  }
+  return pre[sz-1] * (lim/sz) + pre[lim%sz] - 1;
+}
+ 
+int T, X;
+long long B, ret;
+vector<pair<long long, pair<long long, int> > > limit;
+int curfs[1<<NUMP];
+int lastlimi[1<<NUMP];
+struct CacheItem {
+  int fs;
+  int co : 10;
+  int limi : 10;
+  int lastlimi : 10;
+  long long mul;
+  bool operator<(const CacheItem& ci) const {
+    if (fs != ci.fs) return fs < ci.fs;
+    return mul < ci.mul;
+  }
+};
+vector<CacheItem> cache[61];
+ 
+void change(int pi, int pb, int co, long long mul, int limi, int fs) {
+  if (mul % 7 == 0) fs = or7_factset(fs);
+  if (curfs[pb] == fs) return;
+  CacheItem ci;
+  ci.co = co; ci.fs = curfs[pb]; ci.limi = limi; ci.lastlimi = lastlimi[pb];
+  ci.mul = mul;
+  cache[X].push_back(ci);
+  long long lim = limit[limi].second.first;
+  long long lastlim = limit[lastlimi[pb]].second.first;
+  if (mul <= lim && lastlim < lim) 
+  {
+    assert(curfs[pb] != 0);
+    ret += co * (count(curfs[pb], lim / mul) - count(curfs[pb], lastlim / mul));
+  }
+  curfs[pb] = fs;
+  lastlimi[pb] = limi;
+
+  for (; pi < NUMP; pi++) {
+    int pb2 = pb | (1<<pi);
+    if (pb2 == pb || !curfs[pb2]) continue;
+    long long mul2 = mul * p[pi];
+    if ((p[pi] == 7 || p[pi] == 49) && mul % 7 == 0) mul2 /= 7;
+    if (mul2 > 1000000000000LL) continue;
+    int fs2 = and_factset(fs, curfs[1<<pi]);
+    change(pi+1, pb|(1<<pi), -co, mul2, limi, fs2);
+  }
+}
+main() {
+  nfactset = 1;
+  factset[1].push_back(1);
+  fact2factset[factset[1]] = 1;
+ 
+  vector<int> v;
+  v.push_back(10);
+  v.push_back(3);
+ 
+  for (cin >> T; T--;) {
+    cin >> B >> X;
+
+    limit.clear();
+    for (int x = 1, y; x < X; x++) {
+      for (y = x+1; X%y; y++)
+        ;
+      limit.push_back(make_pair(1000000000000LL*x/y, make_pair(B*x/y, x)));
+    }
+    limit.push_back(make_pair(0LL, make_pair(0, -1)));
+    sort(limit.begin(), limit.end());
+ 
+    ret = 0;
+    if (cache[X].size()) {
+      for (int i = 0; i < cache[X].size(); i++) {
+        const CacheItem& ci = cache[X][i];
+        long long lim = limit[ci.limi].second.first;
+        long long lastlim = limit[ci.lastlimi].second.first;
+        if (ci.mul <= lim && lastlim < lim) {
+          ret += ci.co * (count(ci.fs, lim / ci.mul) -
+                          count(ci.fs, lastlim / ci.mul));
+        }
+      }
+    } else {
+      vector<int> valid(X, 1);
+      memset(curfs, 0, sizeof(curfs));
+      memset(lastlimi, 0, sizeof(lastlimi));
+      int pb = 0;
+      for (int pi = 0; pi < NUMP; pi++) if (p[pi] < X) pb |= (1<<pi);
+      for (int i = 0; i < (1<<NUMP); i++) curfs[i&pb] = 1;
+      for (int i = 1; i < limit.size(); i++) {
+        valid[limit[i].second.second] = 0;
+        int pi;
+        for (pi = 0; limit[i].second.second % p[pi] != 0; pi++);
+        vector<int> v;
+        for (int p2 = 1; p2 <= POW2; p2 *= 2)
+        for (int p3 = 1; p3 <= POW3; p3 *= 3)
+        for (int p5 = 1; p5 <= POW5; p5 *= 5)
+        for (int p7 = 1; p7 <= POW7; p7 *= 7) {
+          int n = p[pi]*p2*p3*p5*p7;
+          if (n < X && valid[n]) v.push_back(p2*p3*p5*p7);
+        }
+        sort(v.begin(), v.end());
+ 
+        change(0, 1<<pi, 1, p[pi], i, get_factset(v));
+      }
+      sort(cache[X].begin(), cache[X].end());
+    }
+    cout << ret << endl;
+  }
+}

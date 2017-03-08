@@ -1,0 +1,92 @@
+#include<cstdio>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+#define nn 200010
+#define inf 1000000000
+#define LOW(i) ((i)&(-i))
+using namespace std;
+bool vis[nn]; long long ans;
+struct edge{int old,to,w;}e[nn*2];
+struct node{long long w;int l;}num[nn+2];
+int i,n,m,j,sz[nn],rt,NUM,tr[nn+3],t,l[nn],tot,L,W,Min;
+inline void Add(int x,int y,int z) {e[++tot].to=y; e[tot].old=l[x]; l[x]=tot; e[tot].w=z;}
+inline int read()
+{
+    char c=getchar(); int num=0;
+    while ('0'>c||c>'9') c=getchar();
+    while ('0'<=c&&c<='9') num=num*10+c-'0',c=getchar();
+    return(num);
+}
+inline void DFSsz(int x,int y)
+{
+    sz[x]=1;
+    for (int i=l[x];i;i=e[i].old)
+    if (e[i].to!=y&&vis[e[i].to]) DFSsz(e[i].to,x),sz[x]+=sz[e[i].to];
+}
+inline void FINDrt(int x,int y)
+{
+    int Max=NUM-sz[x];
+    for (int i=l[x];i;i=e[i].old) 
+    if (vis[e[i].to]&&e[i].to!=y) Max=max(Max,sz[e[i].to]);
+    for (int i=l[x];i;i=e[i].old)  if (vis[e[i].to]&&e[i].to!=y) FINDrt(e[i].to,x);
+    if (Max<Min) Min=Max,rt=x;
+}
+inline void DFSdis(int x,int y,int w,int ll)
+{
+    num[++t].w=w,num[t].l=ll;
+    for (int i=l[x];i;i=e[i].old)
+    if (e[i].to!=y&&vis[e[i].to]) DFSdis(e[i].to,x,w+e[i].w,ll+1);
+}
+bool cmp(node a,node b) {return(a.w<b.w);}
+inline void add(int x,int y) {if (x<=0) return;for (int i=x;i<=t+2;i+=LOW(i)) tr[i]+=y;}
+inline int query(int x) 
+{
+    if (x>t+2) x=t+2;
+    int sum=0; if (x<=0) return(0);
+    for (int i=x;i;i-=LOW(i)) sum+=tr[i]; return(sum);
+}
+inline long long calc(int x,int w,int l)
+{
+    t=0; long long sum=0;
+    DFSdis(x,x,w,l);
+    sort(num+1,num+1+t,cmp);
+    //memset(tr,0,sizeof(tr));
+    for (int i=0;i<=t+2;i++) tr[i]=0;
+    for (int i=1;i<=t;i++) add(num[i].l+1,1);
+    
+    int i=1,j=t;
+    while (i<=t&&j>=1)
+    {
+        while (num[j].w+num[i].w>(long long)W&&j>=1) add(num[j].l+1,-1),j--;
+        sum+=(long long)query(L+1-num[i].l); i++;
+    }
+    return(sum);
+}
+inline void WORK(int x)
+{
+    DFSsz(x,0);
+    NUM=sz[x],Min=inf;
+    FINDrt(x,0);
+    ans+=calc(rt,0,0);
+    vis[rt]=0;
+    for (int i=l[rt];i;i=e[i].old)
+    if (vis[e[i].to])
+    {
+        ans-=calc(e[i].to,e[i].w,1);
+        WORK(e[i].to);
+    }
+}
+int main()
+{
+
+    scanf("%d%d%d",&n,&L,&W);
+    for (int i=1;i<n;i++)
+    {
+        int a,b; scanf("%d%d",&a,&b);
+        Add(a,i+1,b); Add(i+1,a,b);
+    }
+    memset(vis,1,sizeof(vis));
+    WORK(1);
+    printf("%I64d\n",(long long)(ans-n)/2);
+}

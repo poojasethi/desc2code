@@ -1,0 +1,144 @@
+#include<iostream>
+#include<cstring>
+#include<cstdlib>
+#include<cstdio>
+#include<algorithm>
+#include<cmath>
+#include<vector>
+#include<map>
+#include<set>
+#include<queue>
+#define X first
+#define Y second
+#define pb push_back
+#define fr(i,n) for(int i=1;i<=n;i++)
+#define fo(i,n) for(int i=0;i<n;i++)
+
+using namespace std;
+
+typedef long long ll;
+
+const int INF=0x3f3f3f3f;
+const int N=500;
+const int M=10000;
+int cas,n,m,S,T;
+struct E{
+	int x,y,z;
+}e[M];
+int head[N],key[M],next[M],flow[M],cnt;
+int ch[N],q[M],v[N];
+int tree[N][N];
+
+void add(int x,int y,int z)
+{
+	next[cnt]=head[x];key[cnt]=y;flow[cnt]=z;head[x]=cnt++;
+	next[cnt]=head[y];key[cnt]=x;flow[cnt]=z;head[y]=cnt++;
+}
+bool bfs()
+{
+	int h=1,t=1;
+	memset(ch,-1,sizeof ch);
+	ch[S]=0;
+	q[t++]=S;
+	while(h<t)
+	{
+		int sta=q[h++];
+		for(int i=head[sta];~i;i=next[i])
+			if(ch[key[i]]==-1&&flow[i])
+				ch[key[i]]=ch[sta]+1,q[t++]=key[i];
+	}
+	return ch[T]!=-1;
+}
+int zeng(int x,int f)
+{
+	if(x==T) return f;
+	int r=0;
+	for(int i=head[x];~i&&f>r;i=next[i])
+		if(ch[key[i]]==ch[x]+1&&flow[i])
+		{
+			int t=zeng(key[i],min(flow[i],f-r));
+			flow[i]-=t,flow[i^1]+=t,r+=t;
+		}
+	if(!r) ch[x]=-1;
+	return r;
+}
+int maxflow(int s,int t){
+	memset(head,-1,sizeof head);
+	S=s,T=t;
+	cnt=0;
+	fr(i,m) add(e[i].x,e[i].y,e[i].z);
+	int ans(0);
+	while(bfs()) ans+=zeng(S,INF);
+	return ans;
+}
+void DFS(int x){
+	v[x]=1;
+	for(int i=head[x];~i;i=next[i]){
+		if(!v[key[i]]&&flow[i])
+			DFS(key[i]);
+	}
+}
+
+void solve(vector<int>p){
+	if(p.size()==1) return;
+	int res=maxflow(p[0],p[1]);
+	int sz=p.size();
+	memset(v,0,sizeof v);
+	DFS(p[0]);
+	vector<int>v1,v2;
+	fo(i,sz)
+		if(v[p[i]]) v1.pb(p[i]);
+		else v2.pb(p[i]);
+	tree[p[0]][p[1]]=tree[p[1]][p[0]]=res;
+	solve(v1);
+	solve(v2);
+}
+
+void dfs(int x,int p){
+	v[x]=1;
+	for(int i=head[x];~i;i=next[i])
+		if(!v[key[i]]){
+			tree[p][key[i]]=min(tree[p][x],flow[i]);
+			dfs(key[i],p);
+		}
+}
+
+
+int main(){
+	scanf("%d%d",&n,&m);
+	fr(i,m) scanf("%d%d%d",&e[i].x,&e[i].y,&e[i].z);
+	memset(tree,-1,sizeof tree);
+	vector<int>p;
+	vector<int>ans;
+	fr(i,n) p.pb(i);
+	solve(p);
+	memset(head,-1,sizeof head);
+	fr(i,n)
+		fr(j,i-1)
+			if(tree[i][j]!=-1)
+				add(i,j,tree[i][j]);
+	fr(i,n){
+		memset(v,0,sizeof v);
+		tree[i][i]=INF;
+		dfs(i,i);
+		tree[i][i]=0;
+	}
+	memset(v,0,sizeof v);
+	ans.pb(1);
+	v[1]=1;
+	int tot(0);
+	for(int i=1;;){
+		int k=i;
+		fr(j,n)
+			if(!v[j]&&tree[i][j]>tree[i][k])
+				k=j;
+		if(i==k) break;
+		tot+=tree[i][k];
+		v[k]=1;
+		i=k;
+		ans.pb(k);	
+	}
+	printf("%d\n",tot);
+	fo(i,ans.size()) printf("%d ",ans[i]);
+	return 0;
+}

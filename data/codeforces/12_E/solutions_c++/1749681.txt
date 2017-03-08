@@ -1,0 +1,26 @@
+#include      <iostream>
+#include      <cstdio>
+
+using namespace std;
+
+int m[1002][1002];
+int main(int argc, char **argv) {
+	int n, i, j;
+	scanf("%d", &n); n -= 1;
+	for (i = 0; i < n; ++i) {
+		for (j = 0; j < n; ++j) {
+			m[i][j] = (i + j) % n + 1;
+		}
+		m[n][i] = m[i][n] = m[i][i];
+		m[i][i] = 0;
+	}
+
+	for (i = 0; i <= n; ++i) {
+		printf("%d", m[i][0]);
+		for (j = 1; j <= n; ++j) {
+			printf(" %d", m[i][j]);
+		}
+		printf("\n");
+	}
+	return 0;
+}

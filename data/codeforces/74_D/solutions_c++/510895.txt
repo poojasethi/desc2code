@@ -1,0 +1,138 @@
+#include<cstdio>
+#include<map>
+#include<vector>
+#include<algorithm>
+#include<set>
+
+using namespace std;
+
+const int MAX = 300100;
+
+struct query{
+	int op, low, high, pos;
+};
+
+struct Interval{
+	int ini, fim;
+	Interval () {}
+	Interval (int a, int b){
+		ini = a;
+		fim = b;
+	}
+};
+
+struct cmp{
+	bool operator()(const Interval &a, const Interval &b){
+		return a.ini < b.ini;
+	}
+};
+
+struct cmp2{
+	bool operator()(const Interval &a, const Interval &b){
+		int t1 = (a.fim - a.ini);
+		int t2 = (b.fim - b.ini);
+		if(t1 == t2) return a.ini > b.ini;
+		return t1 > t2;
+	}
+};
+
+set <int> comp;
+set <Interval, cmp> byStart;
+set <Interval, cmp2> bySize;
+map <int, int> mapa;
+int n, m, MX;
+int tree[MAX];
+query q[MAX];
+
+void limpa(){
+	byStart.clear();
+	bySize.clear();
+	comp.clear();
+	mapa.clear();
+
+	byStart.insert(Interval(1, n));
+	bySize.insert(Interval(1, n));
+	for(int i=0;i<MAX;i++){
+		tree[i] = 0;
+		q[i].op = q[i].low = q[i].high = q[i].pos = 0;
+	}
+}
+
+int read(int i){
+	int sum = 0;
+	while(i > 0){
+		sum += tree[i];
+		i -= (i & (-i));
+	}
+	return sum;
+}
+
+void update(int e, int i){
+	while(i <= MX){
+		tree[i] += e;
+		i += (i & (-i));
+	}
+}
+
+int main(){
+	int a, b, c, cnt;
+	Interval k;
+
+	scanf(" %d %d", &n, &m);
+	limpa();
+	for(int i=0;i<m;i++){
+		scanf(" %d", &a);
+		if(a == 0){
+			q[i].op = a;
+			scanf(" %d %d", &b, &c);
+			q[i].low = b; q[i].high = c;
+			comp.insert(b); comp.insert(c);
+		}
+		else if(mapa.count(a) == 0 ||mapa[a] == -1){
+			q[i].op = 1;
+			k = *bySize.begin();
+			bySize.erase(k); byStart.erase(k);
+			int low = k.ini, high = k.fim;
+			int mid = (low + high + 1)/2;
+			q[i].pos = mapa[a] = mid;
+			comp.insert(mid);
+			k = Interval(low, mid - 1);
+			bySize.insert(k); byStart.insert(k);
+			k = Interval(mid + 1, high);
+			bySize.insert(k); byStart.insert(k);
+		}
+		else{
+		 	q[i].op = -1;
+		 	q[i].pos = mapa[a];
+			int low, high;
+			k = *--byStart.upper_bound(
+				Interval(mapa[a], 0));
+			byStart.erase(k); bySize.erase(k);
+			low = k.ini;
+			k = *byStart.upper_bound(
+				Interval(mapa[a], 0));
+			byStart.erase(k); bySize.erase(k);
+			high = k.fim;
+			k = Interval(low, high);
+			byStart.insert(k); bySize.insert(k);
+			mapa[a] = -1;
+		}
+	}
+	cnt = 1;
+	while(!comp.empty()){
+		a = *comp.begin(); comp.erase(a);
+		mapa[a] = cnt;
+		MX = max(MX, mapa[a]);
+		cnt++;
+	}
+	for(int i=0;i<m;i++){
+		if(q[i].op == 0){
+			a = read(mapa[q[i].high]);
+			a -= read(mapa[q[i].low] - 1);
+			printf("%d\n", a);
+		}
+		else update(q[i].op, mapa[q[i].pos]);
+	}
+	return 0;
+}
+

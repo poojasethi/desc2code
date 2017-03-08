@@ -1,0 +1,189 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <algorithm>
+
+using namespace std;
+
+const int primero=1<<19;
+const int tope=1<<20;
+
+pair<int,int> minimo[tope];
+
+void inserta(int pos,pair<int,int> val)
+{
+  pos+=primero;
+  minimo[pos]=val;
+  while (pos>1) {
+    pos/=2;
+    minimo[pos]=min(minimo[2*pos],minimo[2*pos+1]);
+  }
+}
+
+pair<int,int> minimoentre(int pos0,int pos1)
+{
+  pos0+=primero;
+  pos1+=primero;
+  if (pos0==pos1) return minimo[pos0];
+  if (pos0>pos1) swap(pos0,pos1);
+  pair<int,int> mini=min(minimo[pos0],minimo[pos1]);
+  while (pos0+1<pos1) {
+    if (pos0%2==0) mini=min(mini,minimo[pos0+1]);
+    pos0/=2;
+    if (pos1%2==1) mini=min(mini,minimo[pos1-1]);
+    pos1/=2;
+  }
+  return mini;
+}
+
+void inserta(int pos,int val,int maximo[tope])
+{
+  pos+=primero;
+  maximo[pos]=val;
+  while (pos>1) {
+    pos/=2;
+    maximo[pos]=max(maximo[2*pos],maximo[2*pos+1]);
+  }
+}
+
+int maximoentre(int pos0,int pos1,int maximo[tope])
+{
+  pos0+=primero;
+  pos1+=primero;
+  if (pos0==pos1) return maximo[pos0];
+  int maxi=max(maximo[pos0],maximo[pos1]);
+  while (pos0+1<pos1) {
+    if (pos0%2==0) maxi=max(maxi,maximo[pos0+1]);
+    pos0/=2;
+    if (pos1%2==1) maxi=max(maxi,maximo[pos1-1]);
+    pos1/=2;
+  }
+  return maxi;
+}
+
+int maximo[tope];
+int maximoup[tope];
+
+int n;
+vector<int> g[1000000];
+int posact=1;
+int posle[1000000];
+int profundidad[1000000];
+vector<int> maxprofdesc[1000000];
+
+void genera(int u,int p,int prof)
+{
+  profundidad[u]=prof;
+  vector<int> &ar=g[u];
+  vector<int> nextar;
+  posle[u]=posact;
+  inserta(posact++,pair<int,int> (profundidad[u],u));
+  maxprofdesc[u].push_back(profundidad[u]);
+  for (int i=0;i<int(ar.size());i++) {
+    int v=ar[i];
+    if (v!=p) {
+      nextar.push_back(v);
+      genera(v,u,prof+1);
+      maxprofdesc[u].push_back(maxprofdesc[v].back());
+      inserta(posact++,pair<int,int> (profundidad[u],u));
+    }
+  }
+  sort(maxprofdesc[u].begin(),maxprofdesc[u].end());
+  ar=nextar;
+}
+
+int solq[1000000],qu[1000000],qv[1000000],excluir[1000000];
+vector<int> listaq[1000000];
+int camino[1000000];
+
+void computa(int iq,int u,int v)
+{
+  //cout<<"computa "<<u<<" "<<v<<endl;
+  int &sol=solq[iq];
+  int w=minimoentre(posle[u],posle[v]).second;
+  int pw=profundidad[w];
+  int pu=profundidad[u];
+  int pv=profundidad[v];
+  //cout<<"w="<<w<<endl;
+  int uu=camino[pw+1];
+  if (u!=w and v!=w) {
+    if (excluir[iq]) {
+      int ind=int(maxprofdesc[w].size())-1;
+      if (maxprofdesc[w][ind]==maxprofdesc[uu].back()) {
+	ind--;
+	if (maxprofdesc[w][ind]==excluir[iq])
+	  ind--;
+      } else if (maxprofdesc[w][ind]==excluir[iq]) {
+	ind--;
+	if (maxprofdesc[w][ind]==maxprofdesc[uu].back())
+	  ind--;
+      }
+      sol=max(sol,min(pu,pv)-pw+maxprofdesc[w][ind]-pw);
+      //cout<<"excluir "<<sol<<endl;
+    } else {
+      excluir[iq]=maxprofdesc[uu].back();
+    }
+  }
+  if (pu<=pv) {
+    if (w!=1) sol=max(sol,maximoentre(0,pw-1,maximoup)-1000000+pu);
+    //cout<<"pu<=pv "<<sol<<endl;
+    if (w!=u) sol=max(sol,maximoentre(pw+1,pu,maximoup)-1000000+pu);
+    //cout<<"pu<=pv "<<sol<<endl;
+  } else {
+    int pmed=(pu+pw-(pv-pw))/2;
+    int med=camino[pmed];
+    if (pu-pmed==pmed-pw+pv-pw) {
+      sol=max(sol,maximoentre(pmed,pu,maximoup)-1000000+pu);
+    } else {
+      sol=max(sol,maximoentre(pmed+1,pu,maximoup)-1000000+pu);
+    }
+    if (w==v) sol=max(sol,maximoentre(pw,pmed,maximo)-pw);
+    else if (med!=w) sol=max(sol,maximoentre(pw+1,pmed,maximo)-pw+pv-pw);
+  }
+}
+
+void calcula(int u)
+{
+  camino[profundidad[u]]=u;
+  inserta(profundidad[u],maxprofdesc[u].back(),maximo);
+  inserta(profundidad[u],maxprofdesc[u].back()+1000000-2*profundidad[u],maximoup);
+  vector<int> &lis=listaq[u];
+  for (int i=0;i<int(lis.size());i++) {
+    int iq=lis[i];
+    int v=qv[iq];
+    if (u==v) v=qu[iq];
+    computa(iq,u,v);
+  }
+  vector<int> &ar=g[u];
+  for (int i=0;i<int(ar.size());i++) {
+    int v=ar[i];
+    int mpd=maxprofdesc[u].back();
+    if (mpd==maxprofdesc[v].back())
+      mpd=maxprofdesc[u][int(maxprofdesc[u].size())-2];
+    inserta(profundidad[u],mpd,maximo);
+    inserta(profundidad[u],mpd+1000000-2*profundidad[u],maximoup);
+    calcula(v);
+  }
+}
+
+int main()
+{
+  cin>>n;
+  for (int i=0;i<n-1;i++) {
+    int u,v;
+    cin>>u>>v;
+    g[u].push_back(v);
+    g[v].push_back(u);
+  }
+  int casos;
+  cin>>casos;
+  for (int i=0;i<casos;i++) {
+    cin>>qu[i]>>qv[i];
+    listaq[qu[i]].push_back(i);
+    listaq[qv[i]].push_back(i);
+  }
+  genera(1,0,0);
+  calcula(1);
+  for (int i=0;i<casos;i++)
+    cout<<solq[i]<<endl;
+}

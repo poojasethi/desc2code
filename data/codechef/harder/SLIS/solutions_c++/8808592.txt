@@ -1,0 +1,165 @@
+#include <fstream>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+
+#define maxn 100010
+#define mod 1000000007
+
+using namespace std;
+
+ifstream fin("sirul.in");
+ofstream fout("sirul.out");
+
+int n, k, maxv, v[maxn];
+
+struct sol
+{
+	vector<pair<int,int> > v;
+
+	void update(const sol &other)
+	{
+		vector<pair<int,int> > newSol;
+		int i = 0, j = 0;
+
+		while (i < v.size() && j < other.v.size())
+		{
+			if (v[i].first > other.v[j].first)
+			{
+				newSol.push_back(v[i]);
+				++i;
+			}
+			else if (v[i].first < other.v[j].first)
+			{
+				newSol.push_back(other.v[j]);
+				++j;
+			}
+			else
+			{
+				newSol.push_back(make_pair(v[i].first, (v[i].second + other.v[j].second)%mod));
+				++i;
+				++j;
+			}
+		}
+
+		while (i < v.size())
+		{
+			newSol.push_back(v[i]);
+			++i;
+		}
+		while (j < other.v.size())
+		{
+			newSol.push_back(other.v[j]);
+			++j;
+		}
+
+		while(newSol.size() > k)
+			newSol.pop_back();
+
+		v = newSol;
+	}
+}aib[maxn];
+
+struct sorter
+{
+	int x,i;
+}sor[maxn];
+
+int LSB(int i)
+{
+	return i&(-i);
+}
+
+void update (int i, sol &x)
+{
+	for (; i <= maxv; i += LSB(i))
+	{
+		aib[i].update(x);
+	}
+}
+
+sol query(int i)
+{
+	sol s;
+	for (; i > 0; i -= LSB(i))
+	{
+		s.update(aib[i]);
+	}
+	return s;
+}
+
+bool cmp(sorter a, sorter b)
+{
+	return a.x < b.x;
+}
+
+void normalize(int v[], int n)
+{
+	for (int i = 1; i <= n; ++i)
+	{
+		sor[i].x = v[i];
+		sor[i].i = i;
+	}
+
+	sort(sor+1, sor+n+1, cmp);
+
+	int nr = 0;
+	for (int i = 1; i <= n; ++i)
+	{
+		if (i == 1 || sor[i].x != sor[i-1].x)
+			++nr;
+		v[sor[i].i] = nr;
+	}
+	maxv = nr;
+}
+
+void reset()
+{
+}
+
+void solve()
+{
+	cin >> n;
+    k = 2;
+
+    for (int i = 1; i <= n; ++i)
+    {
+		cin >> v[i];
+    }
+
+    normalize(v,n);
+
+    for (int i = 1; i <= maxv; ++i)
+    {
+		sol s;
+		aib[i] = s;
+    }
+
+	sol ans;
+    for (int i = 1; i <= n; ++i)
+    {
+		sol x = query(v[i]-1);
+		for (int i = 0; i < x.v.size(); ++i)
+		{
+			x.v[i].first++;
+		}
+		if (x.v.size() < k)
+			x.v.push_back(make_pair(1,1));
+		update(v[i], x);
+		ans.update(x);
+    }
+
+    cout << ans.v[k-1].second;
+}
+
+int main()
+{
+	//freopen("sirul.in", "r", stdin);
+	int test;
+	cin >> test;
+	for (;test; --test)
+	{
+		solve();
+		cout << "\n";
+	}
+}

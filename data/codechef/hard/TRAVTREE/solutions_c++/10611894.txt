@@ -1,0 +1,179 @@
+#include<bits/stdc++.h>
+
+#define MOD 1000000007
+#define MAX 200005
+#define ll long long
+#define slld(t) scanf("%lld",&t)
+#define sd(t) scanf("%d",&t)
+#define pd(t) printf("%d\n",t)
+#define plld(t) printf("%lld\n",t)
+#define pcc pair<char,char>
+#define pii pair<int,int>
+#define pll pair<ll,ll>
+#define tr(container,it) for(typeof(container.begin()) it=container.begin();it!=container.end();it++)
+#define mp(a,b) make_pair(a,b)
+#define FF first
+#define SS second
+#define pb(x) push_back(x)
+#define vi vector<int>
+#define vpii vector<pii >
+#define vll vector<ll>
+#define clr(x) memset(x,0,sizeof(x))
+
+using namespace std;
+
+// Why u not set TL for segT to pass :'(
+
+vector<int> adj[MAX];
+bool visited[MAX];
+
+int st[MAX],en[MAX],st2[MAX],en2[MAX],F[MAX],L[MAX],global=0,tme=0;	// F stores father of node and L stores depth of node
+
+void dfs(int x){
+	visited[x]=true;
+	st[x]=++global;
+	st2[x]=++tme;
+	for(int i=0;i<adj[x].size();i++){
+		if(!visited[adj[x][i]]) L[adj[x][i]]=1+L[x],dfs(adj[x][i]),F[adj[x][i]]=x;
+	}
+	en[x]=global;
+	en2[x]=++tme;
+}
+
+int P[17][MAX];
+
+void preLCA(int N){
+	int i, j;
+    
+	for (i = 1; i <= N; i++)
+        for (j = 0; 1 << j < N; j++)
+            P[j][i] = -1;
+   
+    for (i = 1; i <= N; i++)
+        P[0][i] = F[i];
+   
+  	for (j = 1; 1 << j < N; j++)
+    	for (i = 1; i <= N; i++)
+        	if (P[j-1][i] != -1)
+                P[j][i] = P[j - 1][P[j-1][i]];
+}
+
+int LCA(int p,int q){
+	int tmp, log, i;
+   
+    if (L[p] < L[q])
+        tmp = p, p = q, q = tmp;
+  
+    for (log = 1; 1 << log <= L[p]; log++);
+      log--;
+   
+    for (i = log; i >= 0; i--)
+        if (L[p] - (1 << i) >= L[q])
+            p = P[i][p];
+   
+    if (p == q)
+        return p;
+   
+    for (i = log; i >= 0; i--)
+        if (P[i][p] != -1 && P[i][p] != P[i][q])
+              p = P[i][p], q = P[i][q];
+   
+    return F[p];
+}
+
+int BIT1[MAX];
+ 
+void update1(const int &t,const int &i,const int &j,const int &update_index,const int &inc){
+	// this much argument was not needed but just not in order to edit the pre-written code
+	
+	int index=update_index;
+	int n=MAX-1;
+	
+	while(index<n){
+		BIT1[index]+=inc;
+		index = index + (index & (-index));
+	}
+}
+ 
+int query1(const int &t,const int &i,const int &j,const int &ri,const int &rj){
+	int n=MAX-1;
+	int ans=0;
+	int index=rj;
+	while(index){
+		ans+=BIT1[index];
+		index = index - (index & (-index));
+	}
+	index=ri-1;
+	while(index){
+		ans-=BIT1[index];
+		index = index - (index & (-index));
+	}
+	return ans;
+}
+
+int BIT2[MAX<<1];
+ 
+void update2(const int &t,const int &i,const int &j,const int &update_index,const int &inc){
+	// this much argument was not needed but just not in order to edit the pre-written code
+	
+	int index=update_index;
+	int n=2*MAX-1;
+	
+	while(index<n){
+		BIT2[index]+=inc;
+		index = index + (index & (-index));
+	}
+}
+ 
+int query2(const int &t,const int &i,const int &j,const int &ri,const int &rj){
+	int n=2*MAX-1;
+	int ans=0;
+	int index=rj;
+	while(index){
+		ans+=BIT2[index];
+		index = index - (index & (-index));
+	}
+	index=ri-1;
+	while(index){
+		ans-=BIT2[index];
+		index = index - (index & (-index));
+	}
+	return ans;
+}
+
+int main(){
+	int N;sd(N);
+	
+	for(int i=1;i<N;i++){
+		int u,v;
+		sd(u);sd(v);
+		adj[u].pb(v);
+		adj[v].pb(u);
+	}
+	
+	clr(visited);
+	F[1]=-1; L[1]=0;
+	dfs(1);
+	preLCA(N);
+	
+	int lim=N<<1;
+	
+	int Q;sd(Q);
+	clr(BIT1);clr(BIT2);
+	while(Q--){
+		int u,v;sd(u);sd(v);
+		int x=LCA(u,v);
+		
+		int ans=query1(1,1,N,st[x],en[x]);
+		ans+=query2(1,1,lim,1,st2[u])-query2(1,1,lim,1,st2[x]);
+		ans+=query2(1,1,lim,1,st2[v])-query2(1,1,lim,1,st2[x]);
+		pd(ans);
+		
+		update1(1,1,N,st[u],1);
+		update1(1,1,N,st[v],1);
+		update1(1,1,N,st[x],-1);
+		if(F[x]!=-1) update1(1,1,N,st[F[x]],-1);
+		update2(1,1,lim,st2[x],1);
+		update2(1,1,lim,en2[x],-1);
+	}
+}

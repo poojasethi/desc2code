@@ -1,0 +1,123 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <string>
+#include <map>
+#include <iostream>
+#include <vector>
+
+using namespace std;
+#define ll long long
+
+#define MAXN 100005
+
+int n;
+std::vector<int> ady[MAXN], GT[MAXN], dom[MAXN];
+int order[MAXN], dfnumber[MAXN], father[MAXN], ndfs;
+int idom[MAXN], semi[MAXN];
+
+int C[MAXN], low[MAXN];
+
+inline void preprocessing() {
+	ndfs = 0;
+	for (int i = 1; i <= n; ++i) {
+		dfnumber[i] = father[i] = 0;
+		C[i] = low[i] = semi[i] = i;
+		ady[i].clear();
+		GT[i].clear();
+		dom[i].clear();
+	}
+}
+
+void dfs(int v) {
+	order[ dfnumber[ v ] = ++ndfs ] = v;
+	for (std::vector<int>::iterator it = ady[v].begin(); it != ady[v].end(); ++it) {
+		int u = *it;
+		if (!dfnumber[ u ]) {
+			dfs( u );
+			father[ dfnumber[ u ] ] = dfnumber[ v ];
+		}
+	}
+}
+
+inline int eval(int x) {
+	if (x == C[x]) return x;
+	int y = eval(C[x]);
+	if (semi[low[x]] > semi[low[C[x]]]) low[x] = low[C[x]];
+	return C[x] = y;
+}
+
+void tarjan(int s) {
+	for (int i = n; i > 1; --i) {
+		for (std::vector<int>::iterator it = GT[ order[i] ].begin(); it != GT[ order[i] ].end(); ++it) {
+			int j = dfnumber[ *it ];
+			if (!j) continue;
+			eval(j);
+			semi[i] = min( semi[i] , semi[low[j]] );
+		}
+		dom[ semi[i] ].push_back(i);
+		int p = C[i] = father[i];
+		for (std::vector<int>::iterator it = dom[p].begin(); it != dom[p].end(); ++it) {
+			int j = *it;
+			eval(j);
+			idom[j] = (semi[ low[j] ] < p ? low[j] : semi[j]);
+		}
+		dom[p].clear();
+	}
+	for (int i = 1; i <= n; i++) {
+		if (idom[i] != semi[i])
+			idom[i] = idom[ idom[i] ];
+	}
+	idom[s] = 0;
+
+	for(int i=1;i <= n;i++){
+		if ( idom[ i ] == 0) continue;
+		dom[ order[ idom[i] ] ].push_back( order[ i ] );
+	}
+}
+
+int ROOT;
+
+int SIZE[MAXN];
+ll sum,sqr;
+void solve(int v){
+	SIZE[v] = 1;
+	for(int i=dom[v].size()-1;i>=0;i--){
+		int u = dom[v][i];
+		if (v == u) continue;
+		solve( u );
+		SIZE[v] += SIZE[u];
+
+		if (v == dfnumber[ ROOT ]){
+			sum += SIZE[u];
+			sqr += (ll)SIZE[u] * (ll)SIZE[u];
+		}
+	}
+}
+
+int main() {
+	cin.sync_with_stdio(0);
+	cin.tie(0);
+
+	int m,v,u;
+	cin >> n >> m;
+	preprocessing();
+	while( m-- ) {
+		cin >> v >> u;
+		ady[ v ].push_back( u );
+		GT[ u ].push_back( v );
+	}
+	ROOT = 1;
+
+	dfs( ROOT );
+	tarjan( ROOT );
+
+	solve( ROOT );
+
+	ll ans = 0;
+	ans += SIZE[ ROOT ] - 1;
+	ans += ( sum*sum - sqr ) / 2;
+	cout << ans << endl;
+
+	return 0;
+}

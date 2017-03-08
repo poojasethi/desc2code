@@ -1,0 +1,155 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#define fru(j,n) for(int j=0; j<(n); ++j)
+#define tr(it,v) for(typeof((v).begin()) it=(v).begin(); it!=(v).end(); ++it)
+#define x first
+#define y second
+#define pb push_back
+#define ALL(G) (G).begin(),(G).end()
+
+typedef long long ll;
+typedef double D;
+typedef pair<int,int> pii;
+typedef pair<ll,ll> pll;
+typedef vector<int> vi;
+
+const int inft = 1000000009;
+
+
+const int MAXN = 4000006; //USTAW, potem init !!
+int tin[MAXN],ct,n;
+vi V [MAXN],Q;
+int scc[MAXN],SCC;//out: 0<=scc[u]<SCC  - numer scc w ktorej jest u
+
+void przetworz(vector<int> &R) //zrob cos z ta SCC
+{
+	++SCC;
+	tr(it,R) scc[*it]=SCC;
+//	printf("w scc o nr %d sa wierzcholki:\n",SCC);
+//	tr(it,R) printf("%d\n",*it);
+}
+
+int dfs(int u)
+{
+	tin[u]=ct++;
+	Q.push_back(u);
+	int m=tin[u];
+	tr(it,V[u]) if(scc[*it]==-1)
+	{
+		if(tin[*it]!=-1) m=min(m,tin[*it]);
+		else m=min(m,dfs(*it));
+	}
+	if(m==tin[u])
+	{
+		vector<int> R;
+		do{
+			R.push_back(Q.back());
+			Q.pop_back();
+		}
+		while(R.back()!=u);
+		przetworz(R);
+	}
+	return m;
+}
+void init(int _n) //to na poczatku
+{//przy wielu testach pamietaj jeszcze o czysczeniu wektorow
+	n=_n;
+	fru(i,n) scc[i]=tin[i]=-1;
+	ct=0;
+}
+int wym;
+int get(int nr,int ind,int neg=0)
+{
+	if(nr==0) return 4*ind+neg;
+	else if(nr==1)return 4*ind+2+neg;
+	return 4*wym+neg+2*ind;
+}
+int neg(int a){return a/2*4-a+1;}
+
+void edge(int a,int b){//0<=a,b<n
+//	printf("dodaje %d->%d\n",a,b);
+	if(a<0 || b<0) return;
+	V[a].push_back(b);
+	V[neg(b)].push_back(neg(a));
+}
+void go(){
+	fru(i,n) if(tin[i]==-1) dfs(i);
+}
+/*
+2SAT:
+gdy mamy graf implikacji to istnieje wartosciowanie zmiennych
+wtw gdy dla kazdej zm. z, z i ~z sa w roznych scc
+konstrukcja:
+bierzemy ten literal o mniejszym numerze scc
+ */
+
+vi X;
+pii C[MAXN],R[MAXN];
+
+int norm(int a){return lower_bound(ALL(X),a)-X.begin();}
+void solve() {
+	int t,T,_n,m;
+	scanf("%d%d",&t,&T);
+	scanf("%d%d",&_n,&m);
+	fru(i,_n)scanf("%d%d",&R[i].x,&R[i].y);
+	fru(i,m)scanf("%d%d",&C[i].x,&C[i].y);
+	X.pb(t);X.pb(0);X.pb(T);
+	fru(i,_n)
+	{
+		if(R[i].x>T){printf("IMPOSSIBLE\n");return;}
+		if(R[i].y>T)R[i].y=T;
+		X.pb(R[i].x);X.pb(R[i].y);
+		if(t>R[i].x)X.pb(t-R[i].x);
+		if(t>R[i].y)X.pb(t-R[i].y);
+	}
+	sort(ALL(X));
+	X.resize(unique(ALL(X))-X.begin());
+//	puts("X:");	tr(it,X)printf("%d ",*it);puts("");
+	wym=X.size();
+	init(4*wym+2*_n);
+	// basic constraints
+	fru(j,2)fru(i,wym-1)edge(get(j,i),get(j,i+1));
+	//interval constraints
+	fru(i,_n)
+	{
+		int a=norm(R[i].x)-1,b=norm(R[i].y);
+		edge(get(2,i),get(0,b));
+		edge(get(2,i),get(0,a,1));
+		edge(get(2,i,1),get(1,b));
+		edge(get(2,i,1),get(1,a,1));
+	}
+	//dislike constraints
+	fru(i,m)
+	{
+		int i1=C[i].x-1,i2=C[i].y-1;
+		edge(get(2,i1),get(2,i2,1));
+		edge(get(2,i1,1),get(2,i2));
+	}
+	//sum constraints TODO
+	fru(i,wym-1)
+	{
+		int j=lower_bound(ALL(X),t-X[i])-X.begin()-1;
+		edge(get(0,i),get(1,j,1));
+	//	printf("szukam %d ->%d\n",t-X[i]-1,j);
+		edge(get(1,i),get(0,j,1));
+		int k=lower_bound(ALL(X),T-X[i])-X.begin()-1;
+		edge(get(0,i,1),get(1,k));
+		edge(get(1,i,1),get(0,k));
+	}
+	go();
+	fru(i,n)if(scc[i]==scc[neg(i)]){puts("IMPOSSIBLE");return;}
+	puts("POSSIBLE");
+	int x1=wym-1,y1=wym-1;
+	fru(i,wym)if(scc[get(0,i)]<scc[get(0,i,1)]){x1=i;break;}
+	fru(i,wym)if(scc[get(1,i)]<scc[get(1,i,1)]){y1=i;break;}
+//	fru(i,n)printf("%d(%d) ",i,scc[i]<scc[neg(i)]?1:0);puts("");
+	printf("%d %d\n",X[x1],X[y1]);
+	fru(i,_n)printf("%d",scc[get(2,i)]<scc[get(2,i,1)]?1:2);
+	puts("");
+}
+
+int main(){
+	solve();
+	return 0;
+}

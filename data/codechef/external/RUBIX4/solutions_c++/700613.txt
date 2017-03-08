@@ -1,0 +1,129 @@
+#include <cstring>
+#include <cstdio>
+#include <cassert>
+
+class fast_istream {
+	static const int buffersize = 4096;
+	char buffer[buffersize];
+	char* begptr;
+	char* endptr;
+	void read() {
+		ptrdiff_t size = endptr-begptr;
+		if (size)
+			memmove(buffer, begptr, (size_t)(size));
+		begptr = buffer;
+		endptr = buffer+size;
+		fgets(endptr, buffersize-size, stdin);
+		endptr += strlen(endptr);
+	}
+	bool is_whitespace(char rhs)
+	{ return rhs<33; }
+	char getc_non_whitespace() {
+		while(begptr<endptr && is_whitespace(*begptr))
+			++begptr;
+		while (endptr==begptr) {
+			read();
+			while(begptr<endptr && is_whitespace(*begptr))
+				++begptr;
+		}
+		return *begptr++;
+	}
+	bool is_numeric(char rhs)
+	{return rhs>='0'/*&&rhs<='9'*/;}
+	char getc() {
+		while (endptr==begptr)
+			read();
+		return *begptr++;
+	}
+	void push_back() {
+		--begptr;
+	}
+	fast_istream(const fast_istream& b);
+	fast_istream& operator=(const fast_istream& b);
+public:
+	fast_istream() :begptr(buffer), endptr(buffer) {}
+	char* begin() {if (begptr==endptr) read(); return begptr;} //used for string line reading
+	char* end() {if (begptr==endptr) read(); return endptr;}
+	void read(char& rhs) {
+		rhs = getc_non_whitespace();
+	}
+	void read(unsigned int& rhs) {
+		rhs=0;
+		char next = getc_non_whitespace();
+		while(is_numeric(next)) {
+			rhs = rhs * 10 + next-'0';
+			next = getc();
+		}
+	}
+	void read(signed int& rhs) {
+		rhs=0;
+		bool neg = false;
+		char next = getc_non_whitespace();
+		if (next == '-') {
+			neg = true;
+			next = getc();
+		}
+		while(is_numeric(next)) {
+			rhs = rhs * 10 + next-'0';
+			next = getc();
+		}
+		if (neg)
+			rhs *= -1;
+	}
+	fast_istream& operator>>(unsigned int& rhs) { read(rhs); return *this; }
+	fast_istream& operator>>(signed int& rhs) { read(rhs); return *this; }
+} cin;
+class fast_ostream {
+	fast_ostream(const fast_ostream& b);
+	fast_ostream& operator=(const fast_ostream& b);
+public:
+	fast_ostream() {}
+	void write(char rhs) {
+		putchar(rhs);
+	}
+	void write(unsigned int rhs) {
+		char buf[21];
+		buf[20] = '\0';
+		int index=19;
+		do {
+			buf[index--] = (char)(rhs%10 + '0');
+			rhs /= 10;
+		} while(rhs);
+		fwrite(buf+index+1, 1, (size_t)(19-index), stdout);
+	}
+	fast_ostream& operator<<(char rhs) { write(rhs); return *this; }
+	fast_ostream& operator<<(unsigned int rhs) { write(rhs); return *this; }
+	fast_ostream& operator<<(signed int rhs) { if (rhs<0) {write('-'); write((unsigned int)(-rhs));} else write((unsigned int)(rhs)); return *this; }
+} cout;
+
+
+int main() {
+	unsigned int test_cases, num_elements;
+	int element;
+	unsigned int index, min, max;
+
+	cin >> test_cases;
+	for(unsigned int j=0; j<test_cases; ++j) {
+		unsigned int offsets[6006] = {};
+		cin >> num_elements; 
+		min = 3003;
+		max = 3003;
+		for(unsigned int i=0; i<num_elements; ++i) {
+			cin >> element;
+			index = element - i+3003;
+			assert(index>=0 && index<6006);
+			if (index<min)
+				min = index;
+			else if (index > max) 
+				max = index;
+			++offsets[index];
+		}
+		unsigned int best=min;
+		for(unsigned int i=min+1; i<=max; ++i) {
+			if (offsets[i]>offsets[best])
+				best=i;
+		}
+		cout << (num_elements-offsets[best]) << '\n';
+	}
+	return 0;
+}

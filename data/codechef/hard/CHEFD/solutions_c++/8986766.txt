@@ -1,0 +1,122 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define MAX 100005
+
+int num[] = {2, 3, 5}, arr[MAX], ind[10];
+
+struct Node{	
+	int lazy[3], a;
+}tree[4 * MAX];
+
+void build(int node, int a, int b){
+	if(a>b)
+		return;
+	if(a == b){
+		tree[node].a = arr[a];
+		return;
+	}
+
+	int left, right;
+	left = 2 * node, right = 2 * node + 1;
+
+	build(left, a, (a+b)/2);
+	build(right, (a+b)/2+1, b);
+}
+
+void discharge(int node, int a, int b){
+	int left, right;
+	left = 2 * node, right = 2 * node + 1;
+
+	if(a != b){
+		for(int i=0 ; i<3 ; i++){
+			tree[left].lazy[i] += tree[node].lazy[i];
+			tree[right].lazy[i] += tree[node].lazy[i]; 
+		}
+	} else {	
+		for(int i=0 ; i<3 ; i++){
+			int j = 0;
+			while(j<tree[node].lazy[i] && tree[node].a % num[i] == 0 && tree[node].a)
+				tree[node].a /= num[i], j++;
+		}
+	}
+
+	for(int i=0 ; i<3 ; i++)
+		tree[node].lazy[i] = 0;
+}
+
+void update(int node, int a, int b, int i, int j, int val, bool flag){
+	int sum = 0;
+	for(int i=0 ; i<3 ; i++)
+		sum += tree[node].lazy[i];
+	if(sum)
+		discharge(node, a, b);
+	if(a>b || a>j || b<i)
+		return;
+	if(a>=i && b<=j){
+		if(flag){
+			tree[node].lazy[val]++;
+			discharge(node, a, b);
+		} else {
+			tree[node].a = val;
+		}
+		return;
+	}
+
+	int left, right;
+	left = 2 * node, right = 2 * node + 1;
+
+	update(left, a, (a+b)/2, i, j, val, flag);
+	update(right, (a+b)/2+1, b, i, j, val, flag);	
+}
+
+int query(int node, int a, int b, int i, int j){
+	int sum = 0;
+	for(int i=0 ; i<3 ; i++)
+		sum += tree[node].lazy[i];
+	if(sum)
+		discharge(node, a, b);
+	if(a>b || a>j || b<i)
+		return 0;
+	if(a>=i && b<=j)
+		return tree[node].a;
+	int left, right;
+	left = 2 * node, right = 2 * node + 1;
+
+	return query(left, a, (a+b)/2, i, j) + query(right, (a+b)/2+1, b, i, j);
+}
+
+int main(){
+	int n;
+	scanf("%d", &n);
+
+	for(int i=1 ; i<=n ; i++)
+		scanf("%d", &arr[i]);
+
+	int q;
+	scanf("%d", &q);
+
+	for(int i=0 ; i<3 ; i++)
+		ind[num[i]] = i;
+
+	build(1, 1, n);
+
+	for(int i=0 ; i<q ; i++){
+		int t, l, r, p;
+		scanf("%d", &t);
+
+		if(t == 1){
+			scanf("%d %d %d", &l, &r, &p);
+			update(1, 1, n, l, r, ind[p], true);
+		} else {
+			scanf("%d %d", &l, &p);
+			update(1, 1, n, l, l, p, false);
+		}	
+	}
+
+	for(int i=1 ; i<=n ; i++)
+		printf("%d ", query(1, 1, n, i, i));
+
+	return 0;
+}

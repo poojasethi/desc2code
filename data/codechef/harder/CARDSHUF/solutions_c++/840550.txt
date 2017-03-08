@@ -1,0 +1,124 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <vector>
+using namespace std;
+typedef long long ll;
+const int INF=int(1e9);
+struct treap
+{
+    int y,cnt,val;
+    bool rev;
+    treap *l,*r;
+    treap() {}
+    treap(int val): y(rand()^(rand()<<15)),cnt(1),val(val),rev(false),l(0),r(0) {}
+};
+typedef treap* ptreap;
+int psize(ptreap t)
+{
+    return !t?0:t->cnt;
+}
+void recalc(ptreap &t)
+{
+    if (t)
+        t->cnt=psize(t->l)+psize(t->r)+1;
+}
+void push(ptreap &t)
+{
+    if (t && t->rev)
+    {
+        swap(t->l,t->r);
+        if (t->l)
+            t->l->rev^=1;
+        if (t->r)
+            t->r->rev^=1;
+        t->rev=false;
+    }
+}
+void split(ptreap t,ptreap &l,ptreap &r,int x)
+{
+    if (!t)
+    {
+        l=r=0;
+        return;
+    }
+    push(t);
+    int cur=psize(t->l)+1;
+    if (cur<=x)
+    {
+        split(t->r,t->r,r,x-cur);
+        l=t;
+    } else
+    {
+        split(t->l,l,t->l,x);
+        r=t;
+    }
+    recalc(t);
+}
+void merge(ptreap &t,ptreap l,ptreap r)
+{
+    push(l);
+    push(r);
+    if (!l || !r)
+        t=l?l:r;
+    else if (l->y>r->y)
+    {
+        merge(l->r,l->r,r);
+        t=l;
+    } else
+    {
+        merge(r->l,l,r->l);
+        t=r;
+    }
+    recalc(t);
+}
+void insert(ptreap &t,int pos,int val)
+{
+    ptreap l=0,r=0;
+    split(t,l,r,pos);
+    merge(l,l,new treap(val));
+    merge(t,l,r);
+}
+void hello(ptreap &t,int a,int b,int c)
+{
+    ptreap l,r,m,z;
+    split(t,l,r,a);
+    split(r,m,r,b);
+    merge(l,l,r);
+    split(l,z,r,c);
+    if (m)
+        m->rev^=true;
+    merge(r,m,r);
+    merge(t,z,r);
+}
+vector <int> ans;
+void print(ptreap t)
+{
+    if (!t)
+        return;
+    push(t);
+    print(t->l);
+    ans.push_back(t->val);
+    print(t->r);
+}
+ptreap t=0;
+int main()
+{
+    srand(time(NULL));
+    int n,m,a,b,c;
+    scanf("%d%d",&n,&m);
+    for(int i=0;i<n;i++)
+        insert(t,i,i+1);
+    for(int i=0;i<m;i++)
+    {
+        scanf("%d%d%d",&a,&b,&c);
+        hello(t,a,b,c);
+    }
+    print(t);
+    for(int i=0;i<int(ans.size())-1;i++)
+        printf("%d ",ans[i]);
+    if (!ans.empty())
+        printf("%d",ans.back());
+    return 0;
+}

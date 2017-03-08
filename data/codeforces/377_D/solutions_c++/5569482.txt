@@ -1,0 +1,59 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+struct ev {
+    int y, sx, ex, dif;
+    bool operator<(const ev &a) const {
+        return y < a.y;
+    }
+    ev(int y, int sx, int ex, int dif) : y(y), sx(sx), ex(ex), dif(dif) {};
+    ev() {};
+} evs[234567];
+struct node {
+    int v, ma, bp;
+} tr[1<<20]; int l[123456], v[123456], r[123456];
+void upd(int at, int l, int r, int rl, int rr, int v) {
+    if (l==rl && r==rr) {
+        tr[at].v += v; tr[at].ma += v; return;
+    }
+    int mid = (l+r)/2;
+    tr[2*at].v += tr[at].v; tr[2*at].ma += tr[at].v;
+    tr[2*at+1].v += tr[at].v; tr[2*at+1].ma += tr[at].v;
+    tr[at].v = 0;
+    if (rl <= mid) upd(2*at, l, mid, rl, min(rr, mid), v);
+    if (rr > mid) upd(2*at+1, mid+1, r, max(mid+1, rl), rr, v);
+    if (tr[2*at].ma > tr[2*at+1].ma) {
+        tr[at].ma = tr[2*at].ma; tr[at].bp = tr[2*at].bp;
+    }
+    else {
+        tr[at].ma = tr[2*at+1].ma; tr[at].bp = tr[2*at+1].bp;
+    }
+}
+int main() {
+    int n, ans = 0, bl, br;
+
+    scanf("%d", &n);
+    for (int i = 0; i < n; i++) {
+        scanf("%d %d %d", l+i, v+i, r+i);
+        evs[2*i] = ev(l[i], v[i], r[i], 1);
+        evs[2*i+1] = ev(v[i]+1, v[i], r[i], -1);
+    }
+    sort(evs, evs+2*n);
+    for (int i = 1<<19; i < (1<<20); i++) tr[i].bp = i-(1<<19)+1;
+    for (int i = (1<<19)-1; i; i--) tr[i].bp = tr[2*i].bp;
+    for (int i = 0; i < 2*n;) {
+        int j = i;
+        while (j < 2*n && evs[j].y == evs[i].y) {
+            upd(1, 1, 1<<19, evs[j].sx, evs[j].ex, evs[j].dif); j++;
+        }
+        if (tr[1].ma > ans) {
+            ans = tr[1].ma; bl = evs[i].y; br = tr[1].bp;
+        }
+        i = j;
+    }
+    printf("%d\n", ans);
+    for (int i = 0; i < n; i++) if (l[i] <= bl && bl <= v[i] && v[i] <= br && br <= r[i]) printf("%d ", i+1);
+
+    return 0;
+}

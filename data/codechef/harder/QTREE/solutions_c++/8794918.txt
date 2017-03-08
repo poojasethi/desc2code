@@ -1,0 +1,292 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<set>
+#include<map>
+#include<vector>
+#define min(a,b) ((a)<(b)?(a):(b))
+#define max(a,b) ((a)>(b)?(a):(b))
+#define rep(i,j,k) for(int i=(int)j;i<=(int)k;i++)
+#define per(i,j,k) for(int i=(int)j;i>=(int)k;i--)
+using namespace std;
+typedef long long LL;
+typedef double db;
+const int N=210000;
+struct mes{
+	int lmax,rmax;
+	int lmin,rmin;
+	int sum;
+	int ma,mi;
+	inline void rev(){
+		sum*=-1;
+		
+		int gg=ma;ma=-mi;mi=-gg;
+		
+		gg=lmin;lmin=-lmax;lmax=-gg;
+		
+		gg=rmin;rmin=-rmax;rmax=-gg;
+	}
+	void init(int vv){
+		lmax=rmax=lmin=rmin=sum=ma=mi=0;
+		sum=vv;
+		if(vv==0)return;
+		if(vv>0){
+			lmax=rmax=ma=vv;
+		}
+		else{
+			lmin=rmin=mi=vv;
+		}
+	}
+	inline mes(int x=0){
+		init(x);
+	}
+}f[N*4];
+bool tag[N*4];
+mes cg(mes a){
+	mes c=a;
+	c.lmax=a.rmax;
+	c.lmin=a.rmin;
+	c.rmax=a.lmax;
+	c.rmin=a.lmin;
+	return c;
+}
+inline mes operator +(const mes &a,const mes &b){
+	mes c;
+	c.sum=a.sum+b.sum;
+	
+	c.ma=max(a.ma,b.ma);
+	c.ma=max(c.ma,a.rmax+b.lmax);
+	
+	c.mi=min(a.mi,b.mi);
+	c.mi=min(c.mi,a.rmin+b.lmin);
+	
+	c.lmax=max(a.lmax,a.sum+b.lmax);
+	c.rmax=max(b.rmax,a.rmax+b.sum);
+	
+	c.lmin=min(a.lmin,a.sum+b.lmin);
+	c.rmin=min(b.rmin,a.rmin+b.sum);
+	
+	return c;
+}
+int bfa[N],val[N],idx[N],ff[18][N];
+int M;
+int get(int x){return x==bfa[x]?x:bfa[x]=get(bfa[x]);}
+int U,V,W;
+int dfn[N],dt,fa[N],dep[N];
+int head[N],np[N<<1],p[N<<1],tot;
+inline void add(int a,int b){
+	++tot;p[tot]=b;np[tot]=head[a];head[a]=tot;
+	++tot;p[tot]=a;np[tot]=head[b];head[b]=tot;
+}
+inline void link(int a,int b,int c){
+	++M;add(a,M);add(M,b);val[M]=c;
+}
+//shupou
+int size[N],bg[N],bel[N],top[N],ltot;
+void dd(int x){
+	size[x]=1;
+	for(int u=head[x];u;u=np[u])if(p[u]^fa[x]){
+		fa[p[u]]=x;dd(p[u]);
+		size[x]+=size[p[u]];
+		if(size[p[u]]>size[bg[x]])bg[x]=p[u];
+	}
+	if(size[x]==1){
+		bel[x]=++ltot;
+		return;
+	}
+	for(int u=head[x];u;u=np[u])if(p[u]^fa[x]){
+		if(bg[x]==p[u]){
+			bel[x]=bel[p[u]];
+		}
+		else{
+			top[bel[p[u]]]=p[u];
+		}
+	}
+}
+//
+void dfs(int x){
+	dfn[x]=++dt;dep[x]=dep[fa[x]]+1;idx[dt]=x;
+	if(bg[x])dfs(bg[x]);
+	for(int u=head[x];u;u=np[u])if(p[u]^fa[x])if(p[u]^bg[x]){
+		dfs(p[u]);
+	}
+}
+int n,Q;
+//seg
+inline void down(int me){
+	if(tag[me]){
+		tag[me<<1]^=1;
+		tag[me<<1|1]^=1;
+		tag[me]=0;
+		f[me<<1].rev();
+		f[me<<1|1].rev();
+	}
+}
+void build(int me,int l,int r){
+	if(l==r){
+		f[me].init(val[idx[l]]);
+		//printf("__%d->%d\n",l,idx[l]);
+		return;
+	}
+	int mid=(l+r)>>1;
+	build(me<<1,l,mid);
+	build(me<<1|1,mid+1,r);
+	f[me]=f[me<<1]+f[me<<1|1];
+}
+void change(int me,int l,int r,int x,int y){
+	if(l^r)down(me);
+	if(x<=l&&r<=y){
+		tag[me]^=1;
+		f[me].rev();
+		return;
+	}
+	int mid=(l+r)>>1;
+	if(x<=mid)change(me<<1,l,mid,x,y);
+	if(y>mid)change(me<<1|1,mid+1,r,x,y);
+	f[me]=f[me<<1]+f[me<<1|1];
+}
+mes segask(int me,int l,int r,int x,int y){
+	if(l^r)down(me);
+	if(x<=l&&r<=y)return f[me];
+	int mid=(l+r)>>1;
+	if(x<=mid&&y>mid)
+	return segask(me<<1,l,mid,x,y)+segask(me<<1|1,mid+1,r,x,y);
+	
+	if(x<=mid)return segask(me<<1,l,mid,x,y);
+	if(y>mid)return segask(me<<1|1,mid+1,r,x,y);
+}
+inline int lca(int a,int b){
+	if(dep[a]<dep[b])swap(a,b);
+	per(i,17,0)if((1<<i)&(dep[a]-dep[b])){
+		a=ff[i][a];
+	}
+	if(a==b)return a;
+	per(i,17,0)if(ff[i][a]^ff[i][b]){
+		a=ff[i][a];b=ff[i][b];
+	}
+	return fa[a];
+}
+inline int dis(int u,int v){
+	return dep[u]+dep[v]-2*dep[lca(u,v)];
+}
+int getfa(int x,int d){
+	per(i,17,0)if((1<<i)&d){
+		x=ff[i][x];
+	}
+	return x;
+}
+mes gt(int u,int v){
+	mes gg;gg.init(0);
+	while(1){
+		if(bel[u]==bel[v]){
+			gg=gg+cg(segask(1,1,dt,dfn[v],dfn[u]));
+			return gg;
+		}
+		gg=gg+cg(segask(1,1,dt,dfn[top[bel[u]]],dfn[u]));
+		u=fa[top[bel[u]]];
+	}
+}
+mes chain(int u,int v){
+	int lp=lca(u,v);
+	if(lp==v)return gt(u,lp);
+	if(u==lp)return cg(gt(v,lp));
+	mes v1=gt(u,lp);
+	int cc=getfa(v,dep[v]-dep[lp]-1);
+	mes v2=cg(gt(v,cc));
+	
+	//printf("__%d %d %d\n",v1.sum,v1.ma,v1.rmax);
+	//printf("__%d %d %d\n",v2.sum,v2.ma,v2.lmax);
+	
+	return v1+v2;
+}
+int ask(int u,int v){
+	if(dis(u,U)+2+dis(V,v)>dis(u,V)+2+dis(U,v))
+	swap(u,v);
+	
+	if(dis(u,U)+2+dis(V,v)<dis(u,v)){
+		return (chain(u,U)+mes(W)+chain(V,v)).ma;
+	}
+	else{
+		return chain(u,v).ma;
+	}
+}
+void cgit2(int u,int v){
+	while(1){
+		if(bel[u]==bel[v]){
+			change(1,1,dt,dfn[v],dfn[u]);
+			return;
+		}
+		change(1,1,dt,dfn[top[bel[u]]],dfn[u]);
+		u=fa[top[bel[u]]];
+	}
+}
+void cgit(int u,int v){
+	//printf("____%d %d\n",u,v);
+	int lp=lca(u,v);
+	cgit2(u,lp);
+	if(lp^v){
+		cgit2(v,getfa(v,dep[v]-dep[lp]-1));
+	}
+}
+void modify(int u,int v){
+	if(dis(u,U)+2+dis(V,v)>dis(u,V)+2+dis(U,v))
+	swap(u,v);
+	
+	if(dis(u,U)+2+dis(V,v)<dis(u,v)){
+		cgit(u,U);
+		W*=-1;
+		cgit(V,v);
+	}
+	else{
+		cgit(u,v);
+	}
+}
+int main(){
+	scanf("%d",&n);M=n;
+	rep(i,1,n)bfa[i]=i;
+	rep(i,1,n){
+		int a,b,c;scanf("%d%d%d",&a,&b,&c);
+		if(get(a)==get(b)){
+			U=a;V=b;W=c;
+		}
+		else{
+			bfa[get(a)]=get(b);
+			link(a,b,c);
+		}
+	}
+	
+	dd(1);
+	top[bel[1]]=1;
+	dfs(1);
+	
+	build(1,1,dt);
+	rep(i,1,M)ff[0][i]=fa[i];
+	rep(j,1,17)rep(i,1,M)ff[j][i]=ff[j-1][ff[j-1][i]];
+	
+	//mes c=mes(0);
+	//c=c+mes(1);
+	//c=c+mes(0);
+	//c=c+mes(-1);
+	//c=c+mes(0);
+	//printf("__%d %d %d %d\n",c.sum,c.rmax,c.lmax,c.ma);
+	
+	
+	scanf("%d",&Q);
+	while(Q--){
+		char opt[3];
+		scanf("%s",opt+1);
+		if(opt[1]=='?'){
+			int u,v;scanf("%d%d",&u,&v);
+			printf("%d\n",ask(u,v));
+		}
+		else{
+			int u,v;scanf("%d%d",&u,&v);
+			modify(u,v);
+		}
+	}
+	return 0;
+}
+
+
+
+

@@ -1,0 +1,293 @@
+#include <map>
+#include <vector>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+typedef long long LL;
+typedef pair<int,int> cp;
+const LL inf = (LL)1e17;
+const int Sn = 100010;
+const int mx[4] = {1, -1, 0, 0};
+const int my[4] = {0, 0, 1, -1};
+const char mc[5] = "RLUD";
+
+struct point {
+     int x, y;
+     void init() { scanf("%d%d", &x, &y); }
+     point operator + (const point& b) { return (point) {x + b.x, y + b.y}; }
+     point operator - (const point& b) { return (point) {x - b.x, y - b.y}; }
+     point operator * (const int& b) { return (point) {x * b, y * b}; }
+     point operator / (const int& b) { return (point) {x / b, y / b}; }
+} g[Sn*4];
+struct line {
+     point s, t;
+     void init() { s.init(); t.init(); }
+} L[Sn];
+struct query {
+     point p; int dr; LL res;
+     void init() {
+	  p.init();
+	  char cr;
+	  for (cr=getchar(); cr<'A'||cr>'Z'; cr=getchar());
+	  for (int l = 0; l < 4; l ++) if (cr == mc[l]) dr = l;
+	  scanf("%I64d", &res);
+     }
+} Q[Sn];
+struct segment_tree {
+     int num[Sn*4], mrk[Sn*4];
+     void setup() {
+	  memset(num, 0, sizeof(num));
+	  memset(mrk, 0, sizeof(mrk));
+     }
+     void push(int d) {
+	  int l = d<<1, r = l+1;
+	  if (!mrk[d]) return;
+	  num[l] = mrk[l] = mrk[d];
+	  num[r] = mrk[r] = mrk[d]; mrk[d] = 0;
+     }
+     void cover(int d, int lt, int rt, int lq, int rq, int qq) {
+	  int md = (lt + rt) / 2, l = d<<1, r = l+1;
+	  if (lq <= lt && rt <= rq) { num[d] = mrk[d] = qq; return; }
+	  else push(d);
+	  if (lq <= md) cover(l,  lt , md, lq, rq, qq);
+	  if (md <  rq) cover(r, md+1, rt, lq, rq, qq);
+     }
+     int ask(int d, int lt, int rt, int qq) {
+	  int md = (lt + rt) / 2, l = d<<1, r = l+1;
+	  if (lt == rt) return num[d];
+	  else push(d);
+	  if (qq <= md) return ask(l,  lt , md, qq);
+	  if (md <  qq) return ask(r, md+1, rt, qq);
+     }
+} ST;
+struct inval {
+     int l, r, t, id;
+     void st(int a, int b, int z, int i) {
+	  l = a, r = b, t = z, id = i; if (l > r) swap(l, r);
+     }
+} I[Sn*2]; int tI;
+struct shot {
+     point p; int dr, id;
+} H[Sn*2]; int tH;
+
+int n, X, q, to[Sn];
+int stime[Sn], spos[Sn];
+int dn, fa[Sn*4][55];
+LL fw[Sn*4][55];
+map<cp,int> ID;
+vector<point> V[Sn];
+
+bool uper(const inval& a, const inval& b) { return a.t < b.t || (a.t == b.t && a.id > b.id); }
+bool dwer(const inval& a, const inval& b) { return a.t > b.t || (a.t == b.t && a.id > b.id); }
+bool cmp0(const shot& a, const shot& b) { return a.p.x > b.p.x || (a.p.x == b.p.x && a.id > b.id); }
+bool cmp1(const shot& a, const shot& b) { return a.p.x < b.p.x || (a.p.x == b.p.x && a.id > b.id); }
+bool cmp2(const shot& a, const shot& b) { return a.p.y > b.p.y || (a.p.y == b.p.y && a.id > b.id); }
+bool cmp3(const shot& a, const shot& b) { return a.p.y < b.p.y || (a.p.y == b.p.y && a.id > b.id); }
+int ckdr(int vx, int vy) {
+     if (!vx) return vy > 0? 2: 3;
+     if (!vy) return vx > 0? 0: 1;
+}
+void link(int i, int j) {
+     if (i == j) return;
+     fa[i][0] = j;
+     fw[i][0] = abs(g[i].x-g[j].x) + abs(g[i].y-g[j].y);
+}
+int gt(int x, int y, int i) {
+     if (!ID[make_pair(x,y)]) {
+	  ID[make_pair(x,y)] = ++dn;
+	  g[dn] = (point) {x, y};
+	  V[i].push_back(g[dn]);
+     }
+     return ID[make_pair(x,y)];
+}
+void Getnext()
+{
+     int qI, qH;
+     tH = 0;
+     for (int i = 1; i <= n; i ++) {
+	  tH ++, H[tH].id = i, H[tH].p = L[i].t;
+	  H[tH].dr = ckdr(L[i].t.x - L[i].s.x, L[i].t.y - L[i].s.y);
+     }
+     for (int i = 1; i <= q; i ++) {
+	  tH ++, H[tH].id = -i, H[tH].p = Q[i].p;
+	  H[tH].dr = Q[i].dr;
+     }
+
+     // solve R
+     tI = 0;
+     for (int i = 1; i <= n; i ++) {
+	  point s = L[i].s, t = L[i].t;
+	  I[++tI].st(s.y, t.y, max(s.x, t.x), i);
+     }
+     sort(I+1, I+tI+1, dwer);
+     sort(H+1, H+tH+1, cmp0); ST.setup();
+     qI = 1, qH = 1;
+     for (int x = X; x >= 0; x --) {
+	  for (; qH <= tH && H[qH].p.x == x && H[qH].id > 0; qH ++) {
+	       if (H[qH].dr != 0) continue;
+	       int id = H[qH].id, you, yx;
+	       if (id > 0) {
+		    you = ST.ask(1, 0, X, H[qH].p.y);
+		    if (!you) to[id] = gt(X, H[qH].p.y, 0);
+		    else yx = max(x,min(L[you].s.x,L[you].t.x)), to[id] = gt(yx, H[qH].p.y, you);
+	       }
+	  }
+	  for (; qI <= tI && I[qI].t == x; qI ++) ST.cover(1, 0, X, I[qI].l, I[qI].r, I[qI].id);
+	  for (; qH <= tH && H[qH].p.x == x; qH ++) {
+	       if (H[qH].dr != 0) continue;
+	       int id = H[qH].id, you, yx;
+	       if (id < 0) {
+		    id = -id;
+		    you = ST.ask(1, 0, X, H[qH].p.y);
+		    if (!you) stime[id] = X-x, spos[id] = gt(X, H[qH].p.y, 0);
+		    else yx = max(x,min(L[you].s.x,L[you].t.x)), stime[id] = yx-x, spos[id] = gt(yx, H[qH].p.y, you);
+	       }
+	  }
+     }
+     
+     // solve U
+     tI = 0;
+     for (int i = 1; i <= n; i ++) {
+	  point s = L[i].s, t = L[i].t;
+	  I[++tI].st(s.x, t.x, max(s.y, t.y), i);
+     }
+     sort(I+1, I+tI+1, dwer);
+     sort(H+1, H+tH+1, cmp2); ST.setup();
+     qI = 1, qH = 1;
+     for (int x = X; x >= 0; x --) {
+	  for (; qH <= tH && H[qH].p.y == x && H[qH].id > 0; qH ++) {
+	       if (H[qH].dr != 2) continue;
+	       int id = H[qH].id, you, yx;
+	       if (id > 0) {
+		    you = ST.ask(1, 0, X, H[qH].p.x);
+		    if (!you) to[id] = gt(H[qH].p.x, X, 0);
+		    else yx = max(x,min(L[you].s.y,L[you].t.y)), to[id] = gt(H[qH].p.x, yx, you);
+	       }
+	  }
+	  for (; qI <= tI && I[qI].t == x; qI ++) ST.cover(1, 0, X, I[qI].l, I[qI].r, I[qI].id);
+	  for (; qH <= tH && H[qH].p.y == x; qH ++) {
+	       if (H[qH].dr != 2) continue;
+	       int id = H[qH].id, you, yx;
+	       if (id < 0) {
+		    id = -id;
+		    you = ST.ask(1, 0, X, H[qH].p.x);
+		    if (!you) stime[id] = X-x, spos[id] = gt(H[qH].p.x, X, 0);
+		    else yx = max(x,min(L[you].s.y,L[you].t.y)), stime[id] = yx-x, spos[id] = gt(H[qH].p.x, yx, you);
+	       }
+	  }
+     }
+     
+     // solve L
+     tI = 0;
+     for (int i = 1; i <= n; i ++) {
+	  point s = L[i].s, t = L[i].t;
+	  I[++tI].st(s.y, t.y, min(s.x, t.x), i);
+     }
+     sort(I+1, I+tI+1, uper);
+     sort(H+1, H+tH+1, cmp1); ST.setup();
+     qI = 1, qH = 1;
+     for (int x = 0; x <= X; x ++) {
+	  for (; qH <= tH && H[qH].p.x == x && H[qH].id > 0; qH ++) {
+	       if (H[qH].dr != 1) continue;
+	       int id = H[qH].id, you, yx;
+	       if (id > 0) {
+		    you = ST.ask(1, 0, X, H[qH].p.y);
+		    if (!you) to[id] = gt(0, H[qH].p.y, 0);
+		    else yx = min(x,max(L[you].s.x,L[you].t.x)), to[id] = gt(yx, H[qH].p.y, you);
+	       }
+	  }
+	  for (; qI <= tI && I[qI].t == x; qI ++) ST.cover(1, 0, X, I[qI].l, I[qI].r, I[qI].id);
+	  for (; qH <= tH && H[qH].p.x == x; qH ++) {
+	       if (H[qH].dr != 1) continue;
+	       int id = H[qH].id, you, yx;
+	       if (id < 0) {
+		    id = -id;
+		    you = ST.ask(1, 0, X, H[qH].p.y);
+		    if (!you) stime[id] = x-0, spos[id] = gt(0, H[qH].p.y, 0);
+		    else yx = min(x,max(L[you].s.x,L[you].t.x)), stime[id] = x-yx, spos[id] = gt(yx, H[qH].p.y, you);
+	       }
+	  }
+     }
+     
+     // solve D
+     tI = 0;
+     for (int i = 1; i <= n; i ++) {
+	  point s = L[i].s, t = L[i].t;
+	  I[++tI].st(s.x, t.x, min(s.y, t.y), i);
+     }
+     sort(I+1, I+tI+1, uper);
+     sort(H+1, H+tH+1, cmp3); ST.setup();
+     qI = 1, qH = 1;
+     for (int x = 0; x <= X; x ++) {
+	  for (; qH <= tH && H[qH].p.y == x && H[qH].id > 0; qH ++) {
+	       if (H[qH].dr != 3) continue;
+	       int id = H[qH].id, you, yx;
+	       if (id > 0) {
+		    you = ST.ask(1, 0, X, H[qH].p.x);
+		    if (!you) to[id] = gt(H[qH].p.x, 0, 0);
+		    else yx = min(x,max(L[you].s.y,L[you].t.y)), to[id] = gt(H[qH].p.x, yx, you);
+	       }
+	  }
+	  for (; qI <= tI && I[qI].t == x; qI ++) ST.cover(1, 0, X, I[qI].l, I[qI].r, I[qI].id);
+	  for (; qH <= tH && H[qH].p.y == x; qH ++) {
+	       if (H[qH].dr != 3) continue;
+	       int id = H[qH].id, you, yx;
+	       if (id < 0) {
+		    id = -id;
+		    you = ST.ask(1, 0, X, H[qH].p.x);
+		    if (!you) stime[id] = x-0, spos[id] = gt(H[qH].p.x, 0, 0);
+		    else yx = min(x,max(L[you].s.y,L[you].t.y)), stime[id] = x-yx, spos[id] = gt(H[qH].p.x, yx, you);
+	       }
+	  }
+     }
+
+     // Total
+     for (int i = 1; i <= n; i ++) {
+	  int ss = V[i].size();
+	  for (int j = 0; j < ss; j ++)
+	       link(ID[make_pair(V[i][j].x, V[i][j].y)], ID[make_pair(g[to[i]].x, g[to[i]].y)]);
+     }
+}
+
+void Workans()
+{
+     for (int j = 1; j <= 50; j ++)
+	  for (int i = 1; i <= dn; i ++) {
+	       fa[i][j] = fa[fa[i][j-1]][j-1];
+	       fw[i][j] = fw[i][j-1] + fw[fa[i][j-1]][j-1];
+	       if (fw[i][j] > inf) fw[i][j] = inf;
+	  }
+     for (int i = 1; i <= q; i ++) {
+	  LL res = Q[i].res;
+	  int dr = Q[i].dr, d;
+	  if (res < stime[i])
+	       printf("%d %d\n", Q[i].p.x + (int)res*mx[dr], Q[i].p.y + (int)res*my[dr]);
+	  else {
+	       res -= stime[i], d = spos[i];
+	       for (int j = 50; j >= 0; j --)
+		    if (fa[d][j] && res - fw[d][j] >= 0) res -= fw[d][j], d = fa[d][j];
+	       point t = g[d];
+	       if (fa[d][0]) {
+		    point v = (g[fa[d][0]] - g[d]) / fw[d][0];
+		    t = t + v*res;
+	       }
+	       printf("%d %d\n", t.x, t.y);
+	  }
+     }
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+     freopen("cf.in" , "r", stdin);
+     freopen("cf.out", "w", stdout);
+#endif
+     scanf("%d%d", &n, &X);
+     for (int i = 1; i <= n; i ++) L[i].init();
+     scanf("%d", &q);
+     for (int i = 1; i <= q; i ++) Q[i].init();
+     Getnext();
+     Workans();
+}

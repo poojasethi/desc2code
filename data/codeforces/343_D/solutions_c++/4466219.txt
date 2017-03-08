@@ -1,0 +1,103 @@
+#include <cstdio>
+#include <vector>
+
+using namespace std;
+
+int n;
+
+int pre[500005];
+int kon[500005];
+int oj[500005];
+
+vector<int>graf[500005];
+
+int l=0;
+
+void DFS(int w,int o)
+{
+	oj[w]=o;
+	pre[w]= ++l;
+	for(int i=0;i<graf[w].size();i++)
+	{
+		if(graf[w][i]==o) continue;
+		DFS(graf[w][i],w);
+	}
+	kon[w]=l;
+}
+
+int n2;
+
+int drz[4200005];
+int spu[4200005];
+
+void spusc(int w,int r)
+{
+	if(spu[w]== -1) return;
+	drz[w]=spu[w]*r;
+	//if(w>=n2) { spu[w]= -1; return; }
+	spu[w<<1]=spu[w];
+	spu[(w<<1)+1]=spu[w];
+	spu[w]= -1;
+}
+
+void ustaw(int w,int a,int b,int p,int k,int x)
+{
+	spusc(w,k-p+1);
+	if(a>k || b<p) return;
+	if(a<=p && k<=b)
+	{
+		spu[w]=x;
+		spusc(w,k-p+1);
+		return;
+	}
+	ustaw(w<<1,a,b,p,(p+k)>>1,x);
+	ustaw((w<<1)+1,a,b,((p+k)>>1)+1,k,x);
+	drz[w]=drz[w<<1]+drz[(w<<1)+1];
+}
+
+int odczyt(int w,int a,int b,int p,int k)
+{
+	spusc(w,k-p+1);
+	if(a>k || b<p) return 0;
+	if(a<=p && k<=b) return drz[w];
+	return odczyt(w<<1,a,b,p,(p+k)>>1) + odczyt((w<<1)+1,a,b,((p+k)>>1)+1,k);
+}
+
+int main()
+{
+	scanf("%d",&n);
+	n2=1;
+	while(n2<=n) n2<<=1;
+	for(int i=1;i<n;i++)
+	{
+		int a,b;
+		scanf("%d%d",&a,&b);
+		graf[a].push_back(b);
+		graf[b].push_back(a);
+	}
+	DFS(1,-1);
+	oj[1]=0;
+	//for(int i=1;i<=n;i++) printf("i=%d, pre=%d, kon=%d\n",i,pre[i],kon[i]);
+	int q;
+	scanf("%d",&q);
+	while(q--)
+	{
+		int a,b;
+		scanf("%d%d",&a,&b);
+		if(a==1) // fill
+		{
+			if(odczyt(1,pre[b],kon[b],0,n2-1)!=(kon[b]-pre[b]+1)) ustaw(1,pre[oj[b]],pre[oj[b]],0,n2-1,0);
+			ustaw(1,pre[b],kon[b],0,n2-1,1);
+		}
+		else if(a==2) // empty
+		{
+			ustaw(1,pre[b],pre[b],0,n2-1,0);
+		}
+		else // read
+		{
+			if(odczyt(1,pre[b],kon[b],0,n2-1)!=(kon[b]-pre[b]+1)) printf("0\n");
+			else printf("1\n");
+		}
+	}
+	return 0;
+}

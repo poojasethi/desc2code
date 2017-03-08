@@ -1,0 +1,301 @@
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.util.Arrays;
+import java.util.InputMismatchException;
+
+public class Main {
+	static InputStream is;
+	static PrintWriter out;
+	static String INPUT = "";
+	
+	static void solve()
+	{
+		for(int T = ni();T >= 1;T--){
+			int n = ni();
+			boolean inv = false;
+			TopologicalOrder to = new TopologicalOrder(n);
+			while(true){
+				String type = ns();
+				if(type.equals("END"))break;
+				if(type.charAt(0) == 'U'){
+					int f = ni()-1, t = ni()-1;
+					if(inv){
+						int d = f; f = t; t = d;
+					}
+					to.connect(f, t);
+				}else{
+					int f = ni()-1, t = ni()-1;
+					if(to.iord[f] < to.iord[t]){
+						out.println("YES");
+					}else{
+						out.println("NO");
+						inv ^= true;
+					}
+				}
+			}
+		}
+	}
+	
+	public static class TopologicalOrder
+	{
+		public boolean[][] g;
+		public int[] ord;
+		public int[] iord;
+		public boolean sc;
+		
+		public TopologicalOrder(int n) {
+			g = new boolean[n][n];
+			ord = new int[n];
+			iord = new int[n];
+			for(int i = 0;i < n;i++){
+				ord[i] = i;
+				iord[i] = i;
+			}
+			sc = false;
+		}
+		
+		boolean connect(int u, int v)
+		{
+			if(u == v)return sc; // meaningless loop
+			if(g[u][v])return sc; // already connected
+			
+			g[u][v] = true;
+			if(iord[u] <= iord[v])return sc; // trivial
+			
+			int n = g.length;
+			int[] anc = new int[n];
+			int[] des = new int[n];
+			boolean[] erased = new boolean[n];
+			int ap = 0, dp = 0;
+			anc[ap++] = u;
+			des[dp++] = v;
+			erased[iord[v]] = erased[iord[u]] = true;
+			int r = iord[v], l = iord[u];
+			while(true){
+				l--;
+				while(l > r && !anyOfOneToMany(ord[l], anc, 0, ap, g))l--;
+				if(anyOfOneToMany(ord[l], anc, 0, ap, g)){
+					anc[ap++] = ord[l];
+					erased[l] = true;
+				}
+				if(l == r)break;
+				
+				r++;
+				while(r < l && !anyOfManyToOne(des, 0, dp, ord[r], g))r++;
+				if(anyOfManyToOne(des, 0, dp, ord[r], g)){
+					des[dp++] = ord[r];
+					erased[r] = true;
+				}
+				if(r == l)break;
+			}
+			
+			// cycle check
+			// (i)
+			int t = l;
+			int hit = 0;
+			for(int i = 0;i < ap;i++){
+				if(anc[i] == ord[t])hit++;
+			}
+			for(int i = 0;i < dp;i++){
+				if(des[i] == ord[t])hit++;
+			}
+			if(hit == 2){
+				return sc = true;
+			}
+			
+			// (ii)
+			for(int i = 0;i < ap;i++){
+				for(int j = 0;j < dp;j++){
+					if(g[des[j]][anc[i]]){
+						return sc = true;
+					}
+				}
+			}
+			
+			int L = iord[v], R = iord[u];
+			for(int i = 0;i < n;i++){
+				if(erased[i]){
+					iord[ord[i]] = -1;
+					ord[i] = -1;
+				}
+			}
+			
+			int at = 0, dt = 0;
+			for(l = t;l >= L;l--){
+				if(ord[l] == -1){
+					ord[l] = anc[at++];
+					iord[ord[l]] = l;
+				}else if(anyOfOneToMany(ord[l], anc, at, ap, g)){
+					anc[ap++] = ord[l];
+					ord[l] = anc[at++];
+					iord[ord[l]] = l;
+				}
+			}
+			
+			for(r = t + 1;r <= R;r++){
+				if(ord[r] == -1){
+					ord[r] = des[dt++];
+					iord[ord[r]] = r;
+				}else if(anyOfManyToOne(des, dt, dp, ord[r], g)){
+					des[dp++] = ord[r];
+					ord[r] = des[dt++];
+					iord[ord[r]] = r;
+				}
+			}
+			
+			return sc;
+		}
+	}
+	
+	private static boolean anyOfOneToMany(int x, int[] a, int l, int r, boolean[][] g)
+	{
+		for(int i = l;i < r;i++){
+			if(g[x][a[i]])return true;
+		}
+		return false;
+	}
+	
+	private static boolean anyOfManyToOne(int[] a, int l, int r, int x, boolean[][] g)
+	{
+		for(int i = l;i < r;i++){
+			if(g[a[i]][x])return true;
+		}
+		return false;
+	}
+	
+	public static void main(String[] args) throws Exception
+	{
+		long S = System.currentTimeMillis();
+		is = INPUT.isEmpty() ? System.in : new ByteArrayInputStream(INPUT.getBytes());
+		out = new PrintWriter(System.out);
+		
+		solve();
+		out.flush();
+		long G = System.currentTimeMillis();
+		tr(G-S+"ms");
+	}
+	
+	private static boolean eof()
+	{
+		if(lenbuf == -1)return true;
+		int lptr = ptrbuf;
+		while(lptr < lenbuf)if(!isSpaceChar(inbuf[lptr++]))return false;
+		
+		try {
+			is.mark(1000);
+			while(true){
+				int b = is.read();
+				if(b == -1){
+					is.reset();
+					return true;
+				}else if(!isSpaceChar(b)){
+					is.reset();
+					return false;
+				}
+			}
+		} catch (IOException e) {
+			return true;
+		}
+	}
+	
+	private static byte[] inbuf = new byte[1024];
+	static int lenbuf = 0, ptrbuf = 0;
+	
+	private static int readByte()
+	{
+		if(lenbuf == -1)throw new InputMismatchException();
+		if(ptrbuf >= lenbuf){
+			ptrbuf = 0;
+			try { lenbuf = is.read(inbuf); } catch (IOException e) { throw new InputMismatchException(); }
+			if(lenbuf <= 0)return -1;
+		}
+		return inbuf[ptrbuf++];
+	}
+	
+	private static boolean isSpaceChar(int c) { return !(c >= 33 && c <= 126); }
+	private static int skip() { int b; while((b = readByte()) != -1 && isSpaceChar(b)); return b; }
+	
+	private static double nd() { return Double.parseDouble(ns()); }
+	private static char nc() { return (char)skip(); }
+	
+	private static String ns()
+	{
+		int b = skip();
+		StringBuilder sb = new StringBuilder();
+		while(!(isSpaceChar(b))){ // when nextLine, (isSpaceChar(b) && b != ' ')
+			sb.appendCodePoint(b);
+			b = readByte();
+		}
+		return sb.toString();
+	}
+	
+	private static char[] ns(int n)
+	{
+		char[] buf = new char[n];
+		int b = skip(), p = 0;
+		while(p < n && !(isSpaceChar(b))){
+			buf[p++] = (char)b;
+			b = readByte();
+		}
+		return n == p ? buf : Arrays.copyOf(buf, p);
+	}
+	
+	private static char[][] nm(int n, int m)
+	{
+		char[][] map = new char[n][];
+		for(int i = 0;i < n;i++)map[i] = ns(m);
+		return map;
+	}
+	
+	private static int[] na(int n)
+	{
+		int[] a = new int[n];
+		for(int i = 0;i < n;i++)a[i] = ni();
+		return a;
+	}
+	
+	private static int ni()
+	{
+		int num = 0, b;
+		boolean minus = false;
+		while((b = readByte()) != -1 && !((b >= '0' && b <= '9') || b == '-'));
+		if(b == '-'){
+			minus = true;
+			b = readByte();
+		}
+		
+		while(true){
+			if(b >= '0' && b <= '9'){
+				num = num * 10 + (b - '0');
+			}else{
+				return minus ? -num : num;
+			}
+			b = readByte();
+		}
+	}
+	
+	private static long nl()
+	{
+		long num = 0;
+		int b;
+		boolean minus = false;
+		while((b = readByte()) != -1 && !((b >= '0' && b <= '9') || b == '-'));
+		if(b == '-'){
+			minus = true;
+			b = readByte();
+		}
+		
+		while(true){
+			if(b >= '0' && b <= '9'){
+				num = num * 10 + (b - '0');
+			}else{
+				return minus ? -num : num;
+			}
+			b = readByte();
+		}
+	}
+	
+	private static void tr(Object... o) { if(INPUT.length() != 0)System.out.println(Arrays.deepToString(o)); }
+}

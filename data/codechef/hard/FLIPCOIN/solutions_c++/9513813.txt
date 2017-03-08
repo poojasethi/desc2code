@@ -1,0 +1,382 @@
+#include "stdio.h"
+#include "stdlib.h"
+#include "string.h"
+using namespace std;
+ 
+#ifndef BYTE
+#define BYTE unsigned char
+#endif
+ 
+#define _UNIT_SIZE       8
+#define _UNIT_POS        3
+const int UNIT_FULL_MASK=_UNIT_SIZE-1;
+ 
+#define _COUNT_ARRAY_SIZE 256
+ 
+const BYTE BYTE_ONE = 1;
+ 
+int _countArray[_COUNT_ARRAY_SIZE];
+BYTE _one_bit_array[_UNIT_SIZE];
+BYTE _byteMaskArray[_UNIT_SIZE][_UNIT_SIZE];
+ 
+const int *pCountArrayEnd = _countArray + _COUNT_ARRAY_SIZE;
+const BYTE *pOneBitArrayEnd = _one_bit_array + _UNIT_SIZE;
+ 
+class ByteMethods
+{
+	static void initCountArray()
+    {
+        int *p = _countArray;
+        BYTE i = 0;
+        while (p != pCountArrayEnd) {
+            int cnt = 0;
+            for (BYTE *p1 = _one_bit_array; p1 != pOneBitArrayEnd; ++p1) {
+                if ((i & *p1) != 0) ++cnt;
+            }
+            *p = cnt;
+            ++i;
+            ++p;
+        }
+    }
+ 
+	static void initOneBitArray()
+    {
+        BYTE *p = _one_bit_array;
+        *p = BYTE_ONE;
+        BYTE *p1 = p + 1;
+        while (p1 != pOneBitArrayEnd) {
+            *p1 = *p << 1;
+            ++p1;
+            ++p;
+        }
+    }
+ 
+    static void initByteMaskArray()
+    {
+        BYTE byteMask;
+        for (int left = 0; left < _UNIT_SIZE; ++left) {
+            _byteMaskArray[left][left] = byteMask = _one_bit_array[left];
+            for (int right = left+1; right < _UNIT_SIZE; ++right) {
+                _byteMaskArray[left][right] = byteMask = byteMask | _one_bit_array[right];
+            }
+        }
+    }
+ 
+public:
+    static void init()
+    {
+        initOneBitArray();
+        initCountArray();
+        initByteMaskArray();
+    }
+ 
+    inline static int flipUnit(BYTE *p)
+    {
+        BYTE b1 = *p;
+        BYTE b2 = *p = ~b1;
+        return _countArray[b2] - _countArray[b1];
+    }
+ 
+    inline static int flipUnitPart(BYTE *p, int startIndex, int endIndex)
+    {
+        BYTE b1 = *p;
+        BYTE mask = _byteMaskArray[startIndex][endIndex];      
+        BYTE b2 = *p = (b1 & ~mask) | (~b1 & mask);
+        return _countArray[b2] - _countArray[b1];
+    }
+ 
+    inline static int getNumberOfTrue(BYTE b, int startIndex, int endIndex)
+    {
+        BYTE b2 = b & _byteMaskArray[startIndex][endIndex];
+        return _countArray[b2];
+    }
+ 
+    inline static int *getCountArray() {
+        return _countArray;
+    }
+};
+ 
+#define _ZERO_UNIT '\0'
+ 
+#define _ARRAY_SIZE     32
+#define _NUMBER_OF_BITS _ARRAY_SIZE * _UNIT_SIZE
+ 
+class BaseInterval
+{
+	int  _size;
+	int _numberOfUnits; 
+	BYTE *_array;
+	int  _numberOfTrue;
+	bool _isNormal;
+	int *_countArray;
+ 
+    inline void flipAll()
+    {
+        BYTE *p    = _array;
+        BYTE *pEnd = p + _numberOfUnits;
+        while (p != pEnd) {
+            *p = ~*p;
+            ++p;
+        }
+    }
+public:
+    BaseInterval(): _size(0), _numberOfTrue(0), _isNormal(true)
+    {
+        _array     = new BYTE[_ARRAY_SIZE];
+        BYTE *p    = _array;
+        BYTE *pEnd = p + _ARRAY_SIZE;
+        while (p != pEnd) {
+            *p = _ZERO_UNIT;
+            ++p;
+        }
+        _countArray = ByteMethods::getCountArray();
+    }
+ 
+	~BaseInterval() { delete []_array; }
+ 
+    static int getMaxSize()
+    {
+        return _NUMBER_OF_BITS;
+    }
+ 
+    void set(const int size) {
+        _size  = size;
+        _numberOfUnits = _size >> _UNIT_POS;
+        int rem = _size & UNIT_FULL_MASK;
+        if (rem != 0) {
+            ++_numberOfUnits;
+        }
+    }
+ 
+    inline void flip()
+    {
+        _isNormal = !_isNormal;
+        _numberOfTrue = _size - _numberOfTrue;
+    }
+ 
+    inline void flip(const int startIndex, const int endIndex)
+    {
+        if (!_isNormal) {
+            flipAll();
+            _isNormal = true;
+        }
+ 
+        int startIndex0    = startIndex >> _UNIT_POS;
+        int remStartIndex0 = startIndex &   UNIT_FULL_MASK;
+        int endIndex0      = endIndex   >> _UNIT_POS;
+        int remEndIndex0   = endIndex   &   UNIT_FULL_MASK;
+ 
+        BYTE *p    = _array + startIndex0;
+        BYTE *pEnd = _array + endIndex0;
+        int cnt = 0;
+ 
+        if (p == pEnd) {
+            cnt = ByteMethods::flipUnitPart(p, remStartIndex0, remEndIndex0);
+        } else {
+            cnt = ByteMethods::flipUnitPart(p, remStartIndex0, UNIT_FULL_MASK);
+            while (++p < pEnd) {
+                cnt += ByteMethods::flipUnit(p);
+            }
+            cnt += ByteMethods::flipUnitPart(pEnd, 0, remEndIndex0);
+        }
+ 
+        _numberOfTrue += cnt;
+    }
+ 
+ 
+    inline int getNumberOfTrue() const
+    {
+        return _numberOfTrue;
+    }
+ 
+    inline int getNumberOfTrue(const int startIndex, const int endIndex)
+    {
+        if (!_isNormal) {
+            flipAll();
+            _isNormal = true;
+        }
+ 
+        int startIndex0    = startIndex >> _UNIT_POS;
+        int remStartIndex0 = startIndex &   UNIT_FULL_MASK;
+        int endIndex0      = endIndex   >> _UNIT_POS;
+        int remEndIndex0   = endIndex   &   UNIT_FULL_MASK;
+ 
+        BYTE *p    = _array + startIndex0;
+        BYTE *pEnd = _array + endIndex0;
+        int cnt = 0;
+ 
+        if (p == pEnd) {
+            cnt = ByteMethods::getNumberOfTrue(*p, remStartIndex0, remEndIndex0);
+        } else {
+            cnt = ByteMethods::getNumberOfTrue(*p, remStartIndex0,  UNIT_FULL_MASK);
+            while (++p < pEnd) {
+                cnt += _countArray[*p];
+            }
+            cnt += ByteMethods::getNumberOfTrue(*pEnd, 0, remEndIndex0);
+        }
+ 
+        return cnt;
+    }
+};
+ 
+class AggregateInterval
+{
+	int  _size;
+	int  _baseSize;
+	int  _baseSize1;
+	int  _rightShift;
+	int  _mask;
+	BaseInterval *_array;
+ 
+    int set(int size)
+    {
+        _mask = _baseSize1 = _baseSize - 1;
+        _size  = size >> _rightShift;
+        int delta = size & _mask;
+        if (delta != 0) {
+            ++_size;
+        }
+        return delta;
+    }
+ 
+    void allocate(int delta)
+    {
+        _array = new BaseInterval[_size];
+ 
+        BaseInterval *p = _array;
+        BaseInterval *pEnd = _array + _size - 1;
+        while (p != pEnd) {
+            p->set(_baseSize);
+            ++p;
+        }
+        int size2 = (delta == 0) ? _baseSize : delta;
+        pEnd->set(size2);
+    }
+ 
+    void setRightShift()
+    {
+        int nTemp = _baseSize;
+        _rightShift = 0;
+        while ((nTemp & 01) == 0) {
+            ++_rightShift;
+            nTemp = nTemp >> 1;
+        }
+    }
+ 
+public:
+	AggregateInterval(const int size) {
+        ByteMethods::init();
+ 
+        _baseSize  = BaseInterval::getMaxSize();
+ 
+        setRightShift();
+        int delta = set(size);
+        allocate(delta);
+    }
+ 
+    ~AggregateInterval() { if (_size  > 0) delete []_array;  }
+ 
+    inline void flip(const int startIndex, const int endIndex)
+    {	
+        int startIndex0    = startIndex >> _rightShift;
+        int remStartIndex0 = startIndex &  _mask;
+        int endIndex0      = endIndex   >> _rightShift;
+        int remEndIndex0   = endIndex   &  _mask;
+        BaseInterval *p    = _array + startIndex0;
+        BaseInterval *pEnd = _array + endIndex0;
+ 
+        if (p == pEnd) {
+            p->flip(remStartIndex0, remEndIndex0);
+        } else {
+            p->flip(remStartIndex0, _baseSize1);
+            while (++p < pEnd) {
+                p->flip();
+            }
+            pEnd->flip(0, remEndIndex0);
+        }
+    }
+ 
+    inline int getNumberOfTrue(const int startIndex, const int endIndex) const
+    {
+        int startIndex0    = startIndex >> _rightShift;
+        int remStartIndex0 = startIndex &  _mask;
+        int endIndex0      = endIndex   >> _rightShift;
+        int remEndIndex0   = endIndex   &  _mask;
+        BaseInterval *p    = _array + startIndex0;
+        BaseInterval *pEnd = _array + endIndex0;
+ 
+        int cnt;
+        if (p == pEnd) {
+            cnt = p->getNumberOfTrue(remStartIndex0, remEndIndex0);
+        } else {
+            cnt = p->getNumberOfTrue(remStartIndex0, _baseSize1);
+            while (++p < pEnd) {
+                cnt += p->getNumberOfTrue();
+            }
+            cnt += pEnd->getNumberOfTrue(0, remEndIndex0);
+        }
+ 
+        return cnt;
+    }
+};
+ 
+ 
+#define BUF 4096
+char ibuf[BUF];
+ 
+int ipt = BUF;
+ 
+int readInt() {
+ 
+    while (ipt < BUF && ibuf[ipt] < '0') ipt++;
+ 
+    if (ipt == BUF) {
+	fread(ibuf, 1, BUF, stdin);
+ 
+	ipt = 0;
+	while (ipt < BUF && ibuf[ipt] < '0') ipt++;
+ 
+    }
+    int n = 0;
+    while (ipt < BUF && ibuf[ipt] >= '0') n = (n*10)+(ibuf[ipt++]-'0');
+ 
+    if (ipt == BUF) {
+	fread(ibuf, 1, BUF, stdin);
+ 
+	ipt = 0;
+	while (ipt < BUF && ibuf[ipt] >= '0') n = (n*10)+(ibuf[ipt++]-'0');
+ 
+    }
+    return n;
+}
+ 
+ 
+int main()
+{
+    int n, q;
+   // char line[100];
+    //setvbuf(stdin , NULL, _IOFBF, 1000000);
+    //setvbuf(stdout, NULL, _IOFBF, 1000000);
+    
+   // gets(line);
+	//sscanf(line, "%d %d", &n, &q);
+     n = readInt();
+     q = readInt();
+    AggregateInterval interval(n);
+    int op, startIndex, endIndex, cnt;
+    char *p;
+    for (int i = 0; i < q; i++) {
+        //gets(line);
+        //p = line;
+        op         = readInt();
+        startIndex =readInt();
+        endIndex   = readInt();
+ 
+        if (op == 0) {
+            interval.flip(startIndex, endIndex);
+        } else {
+            cnt = interval.getNumberOfTrue(startIndex, endIndex);
+            printf("%d\n", cnt);
+        }
+    }
+}  

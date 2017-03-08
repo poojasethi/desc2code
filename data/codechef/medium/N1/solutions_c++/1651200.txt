@@ -1,0 +1,85 @@
+#include <cstdio>
+#include <cstring>
+#include <queue>
+#include <utility>
+#include <algorithm>
+using namespace std;
+ 
+int tc;
+int N, T;
+char grid[50][50];
+int W[50][50];
+pair<int, int> trea[50];
+int dx[] = {-1, 0, 1, 0}, dy[] = {0, 1, 0, -1};
+int dp[14][1<<13];
+const int oo = 9999999;
+ 
+int bfs(int a, int b)
+{
+	int D[50][50];
+	memset(D, -1, sizeof D);
+	queue<pair<int, int> > Q;
+	D[trea[a].first][trea[a].second] = 0;
+	Q.push(make_pair(trea[a].first, trea[a].second));
+	while (!Q.empty())
+	{
+		int x = Q.front().first;
+		int y = Q.front().second;
+		Q.pop();
+		
+		for (int i = 0; i < 4; i++)
+		{
+			int X = x+dx[i], Y = y+dy[i];
+			if (X<0 || X>=N || Y<0 || Y>=N || grid[X][Y]=='#')
+				continue;
+			if (D[X][Y] == -1)
+			{
+				D[X][Y] = D[x][y]+1;
+				Q.push(make_pair(X, Y));
+			}
+		}
+	}
+	return D[trea[b].first][trea[b].second];
+}
+ 
+int DP(int u, int k)
+{
+	if (dp[u][k] == -1)
+	{
+		if (k == (1<<T)-1)
+			dp[u][k] = W[u][T+1] == -1 ? oo : W[u][T+1];
+		else
+		{
+			dp[u][k] = oo;
+			for (int v = 0; v < T; v++)
+				if (!(k & (1<<v)) && W[u][v+1] != -1)
+					dp[u][k] = min(dp[u][k], W[u][v+1]+DP(v+1, k|(1<<v)));
+		}
+	}
+	return dp[u][k];
+}
+ 
+int main()
+{
+	scanf("%d", &tc);
+	while (tc--)
+	{
+		scanf("%d", &N);
+		for (int i = 0; i < N; i++)
+			scanf("%s", grid[i]);
+		T = 0;
+		trea[0] = make_pair(0, 0);
+		for (int i =0 ; i < N; i++)
+			for (int j = 0; j < N; j++)
+				if (grid[i][j] == '*')
+					trea[++T] = make_pair(i, j);
+		trea[T+1] = make_pair(N-1, N-1);
+		for (int i = 0; i <= T+1; i++)
+			for (int j = i+1; j <= T+1; j++)
+				W[i][j] = W[j][i] = bfs(i, j);
+		memset(dp, -1, sizeof dp);
+		int res = DP(0, 0);
+		if (res >= oo) res = -1;
+		printf("%d\n", res);
+	}
+}

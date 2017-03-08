@@ -1,0 +1,78 @@
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#include <cstring>
+#include <map>
+using namespace std;
+int N,Q;
+char P[100001];
+int choice[100001];
+map<int,int> calc;
+vector<int> w0[100001];
+vector<long long> w1[100001];
+vector<long long> w2[100001];
+int D[100001];
+int A[100001];
+int out0[501][100001];
+long long B[100001];
+long long out1[501][100001];
+long long C[100001];
+long long out2[501][100001];
+const int sqt = 200;
+int main() {
+    int T;
+    scanf("%d",&T);
+    for (int t=0;t<T;t++) {
+        scanf(" %s%d",&P,&Q);
+        N = strlen(P);
+        for (int i=1;i<=N;i++) choice[i] = choice[i-1]^(1<<(P[i-1]-'a'));
+        calc.clear();
+        for (int i=0;i<=N;i++) if (!calc.count(choice[i])) calc[choice[i]] = calc.size()-1;
+        for (int i=0;i<=N;i++) choice[i] = calc[choice[i]];
+        for (int i=0;i<=N;i++) w0[i].clear(), w1[i].clear(), w2[i].clear();
+        for (int i=0;i<=N;i++) {
+            D[i] = w0[choice[i]].size();
+            w0[choice[i]].push_back(i);
+            w1[choice[i]].push_back(i+(D[i]>0 ? w1[choice[i]][D[i]-1] : 0));
+            w2[choice[i]].push_back((long long) i*i+(D[i]>0 ? w2[choice[i]][D[i]-1] : 0));
+        }
+        for (int i=0;i*sqt<=N;i++) {
+            for (int j=0;j<=N;j++) A[j] = 0, out0[i][j] = 0, B[j] = 0, out1[i][j] = 0, C[j] = 0, out2[i][j] = 0;
+            A[choice[i*sqt]]+=1; B[choice[i*sqt]]+=i*sqt; C[choice[i*sqt]]+=(long long) i*sqt*i*sqt;
+            for (int j=i*sqt+1;j<=N;j++) {
+                out0[i][j] = out0[i][j-1]+A[choice[j]];
+                out1[i][j] = out1[i][j-1]+(long long) A[choice[j]]*j-B[choice[j]];
+                out2[i][j] = out2[i][j-1]+C[choice[j]]+(long long) A[choice[j]]*j*j-2LL*j*B[choice[j]];
+                A[choice[j]]+=1;
+                B[choice[j]]+=j;
+                C[choice[j]]+=(long long) j*j;
+            }
+        }
+        long long A = 0;
+        long long B = 0;
+        for (int q=1;q<=Q;q++) {
+            int X,Y,type;
+            scanf("%d%d%d",&X,&Y,&type);
+            int L = (X+A)%N+1;
+            int R = (Y+B)%N+1;
+            if (L>R) swap(L,R);
+            L-=1;
+            int low = (L-1)/sqt+1;
+            long long out;
+            if (type==0) out = out0[low][R];
+            else if (type==1) out = out1[low][R];
+            else out = out2[low][R];
+            for (int j=L;j<=min(R,low*sqt-1);j++) {
+                int lo = D[j];
+                int hi = upper_bound(w0[choice[j]].begin(),w0[choice[j]].end(),R)-w0[choice[j]].begin()-1;
+                if (type==0) out+=hi-lo;
+                else if (type==1) out+=w1[choice[j]][hi]-w1[choice[j]][lo]-(long long) (hi-lo)*j;
+                else out+=w2[choice[j]][hi]-w2[choice[j]][lo]+(long long) (hi-lo)*j*j-2LL*j*(w1[choice[j]][hi]-w1[choice[j]][lo]);
+            }
+            printf("%lld\n",out);
+            A = B;
+            B = out;
+        }
+    }
+    return 0;
+}

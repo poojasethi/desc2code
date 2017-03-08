@@ -1,0 +1,114 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define n	2000005
+#define P	1000000007
+#define For(i,a,b)	for(int i=a;i<=b;i++)
+#define Rep(i,a,b)	for(int i=a;i>=b;i--)
+
+int		Test,Tx,Ty,N,Ax,Ay,Bx,By,Ans,M,X[20],Y[20];
+int		L[n],R[n];
+
+namespace	Work1{
+		int		A,B,T;
+		int		D,Q[n],V[n],F[n],st[n],S1[n],S2[n],Num[n];
+		struct	Lin{int v,next;}E[n<<1];
+
+		void	DFS(int u,int*S,int t){
+			if	(u<1||u>2*M||S[u]||V[u])	return;	S[u]=1;
+			DFS(u+A*t,S,t);	DFS(u+B*t,S,t);
+		}
+		void	Link(int u,int v){
+			E[++D]=(Lin){u,st[v]};	st[v]=D;	Num[u]++;
+		}
+
+		int		Main(){
+			if	(!Ax&&!Ay&&!Bx&&!By)	{
+				if	(!Tx&&!Ty)	return	-1;
+				return	0;
+			}
+
+			int	flag=(!Ax&&!Ay)?Bx!=0:Ax!=0;
+			A=flag?Ax:Ay;	B=flag?Bx:By;
+			if	(A?Ax*Ty-Ay*Tx:Bx*Ty-By*Tx)	return	0;
+			if	(A==B)	B=1<<30;	T=flag?Tx:Ty;
+
+			For(i,1,2*M)V[i]=F[i]=st[i]=S1[i]=S2[i]=Num[i]=0;
+			For(i,1,N)	if	(A?Ax*Y[i]-Ay*X[i]==0:Bx*Y[i]-By*X[i]==0)	V[M+(flag?X[i]:Y[i])]=1;
+			DFS(M,S1,1);	DFS(M+T,S2,-1);	D=0;
+
+			For(i,1,2*M)S1[i]&=S2[i];
+			if	(!S1[T+M])	return	0;
+
+			For(i,1,2*M)if	(S1[i]){
+				if	(i+A>0&&i+A<=2*M&&S1[i+A])	Link(i,i+A);
+				if	(i+B>0&&i+B<=2*M&&S1[i+B])	Link(i,i+B);
+			}
+			if	(Num[T+M])	return	-1;
+
+			Q[1]=T+M;	F[T+M]=1;
+			for	(int l=0,r=1;l<r;){
+				int u=Q[++l];
+				for	(int i=st[u],v;i;i=E[i].next){
+					v=E[i].v;	F[v]=(F[v]+F[u])%P;
+					if	(!(--Num[v]))	Q[++r]=v;
+				}
+			}
+			return	Num[M]?-1:F[M];
+		}
+};
+
+namespace	Work2{
+		int		T,A[20],F[20];
+
+		bool	Trans(int&x,int&y){
+			int	D=Ax*By-Ay*Bx,a=x*By-Bx*y,b=Ax*y-x*Ay;
+			if	(a%D||b%D)	return	0;
+			x=a/D;	y=b/D;	return	1;
+		}
+		bool	Cmp(int a,int b){return	X[a]<X[b]||X[a]==X[b]&&Y[a]<Y[b];}
+		int		C(int a,int b)	{return	1ll*L[a]*R[b]%P*R[a-b]%P;}
+
+		int		Main(){
+			if	(!Trans(Tx,Ty))	return	0;	T=0;
+			For(i,1,N)	if	(Trans(X[i],Y[i]))	A[++T]=i;
+			X[N+1]=Tx;	Y[N+1]=Ty;	A[++T]=N+1;
+			sort(A+1,A+T+1,Cmp);
+
+			For(a,1,T)	{
+				int i=A[a];	F[i]=0;
+				if	(X[i]<0||Y[i]<0)	continue;
+				F[i]=C(X[i]+Y[i],X[i]);
+				For(b,1,a-1)	{
+					int j=A[b],x=X[i]-X[j],y=Y[i]-Y[j];
+					if	(y>=0)	F[i]=(F[i]+P-1ll*C(x+y,x)*F[j]%P)%P;
+				}
+			}
+			return	F[N+1];
+		}
+};
+
+int		Pow(int a,int b){
+		int ret=1;
+		for	(;b;b>>=1,a=1ll*a*a%P)
+			if	(b&1)	ret=1ll*ret*a%P;
+		return	ret;
+}
+
+int		main(){
+		M=1000000;	L[0]=1;
+		For(i,1,M)	L[i]=1ll*L[i-1]*i%P;	R[M]=Pow(L[M],P-2);
+		Rep(i,M,1)	R[i-1]=1ll*R[i]*i%P;
+		M=250000; 
+
+		scanf("%d",&Test);
+		for	(;Test--;){
+			scanf("%d%d%d%d%d%d%d",&Tx,&Ty,&N,&Ax,&Ay,&Bx,&By);
+			For(i,1,N)	scanf("%d%d",&X[i],&Y[i]);
+			if	(Ax*By-Ay*Bx==0)	Ans=Work1::Main();
+				else	Ans=Work2::Main();
+			printf("%d\n",Ans);
+		}
+}

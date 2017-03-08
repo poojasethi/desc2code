@@ -1,0 +1,107 @@
+#include <queue>
+
+using namespace std;
+
+#include <cstdio>
+#include <cctype>
+
+int swaps[] = {0,1, 1,2, 3,4, 4,5, 6,7, 7,8, 0,3, 1,4, 2,5, 3,6, 4,7, 5,8};
+#define NSWAPS 24
+char primes[]={0,0,1,1,0,1,0,1,0,0,0,1,0,1,0,0,0,1};
+int scratch[9]; //memory allocation is slow
+
+struct node {
+	node(int p, char s) : pstate(p), steps(s) {}
+	node(const node &n) : pstate(n.pstate), steps(n.steps) {}
+	int pstate;
+	char steps;
+};
+
+struct lnode {
+	lnode(const node& p, lnode *np) : n(p), next(np) {}
+	lnode() : n(-1,-1), next(NULL) {}
+	node n;
+	lnode *next;
+};
+
+#define TBLSIZE 180000
+lnode table[TBLSIZE];
+
+void insert(const node &n) {
+	lnode *k=&table[n.pstate % TBLSIZE];
+	if (k->n.pstate < 0)
+		k->n=n;
+	else {
+		while (k->next != NULL && n.pstate < k->n.pstate)
+			k=k->next;
+		lnode *p=new lnode(n, k->next);
+		k->next=p;
+	}
+}
+int getsteps(int pstate) {
+	lnode *k=&table[pstate % TBLSIZE];
+	while (k!=NULL)
+		if (k->n.pstate == pstate)
+			return k->n.steps;
+		else k=k->next;
+	return -1;
+}
+
+void writescratch(int state) {
+	for (int i=0; i<9; i++, state/=10)
+		scratch[8-i]=state % 10;
+}
+int readscratch() {
+	int acc=0, dpow=100000000;
+	for (int i=0; i<9; i++, dpow/=10)
+		acc+=scratch[i]*dpow;
+	return acc;
+}
+void swapscratch(int i, int j) {
+	int t=scratch[i];
+	scratch[i]=scratch[j];
+	scratch[j]=t;
+}
+int	postswap(int i, int j) {
+	swapscratch(i, j);
+	int state=readscratch();
+	swapscratch(i, j);
+	return state;
+}
+void add(queue<node> &qn, const node &n) {
+	writescratch(n.pstate);
+	for (int i=0; i<NSWAPS; i+=2)
+		if (primes[scratch[swaps[i]]+scratch[swaps[i+1]]])
+			qn.push(node(postswap(swaps[i], swaps[i+1]), n.steps+1));
+}
+void search(int initial) {
+	queue<node> white;
+	white.push(node(initial, 0));
+	while (!white.empty()) {
+		node grey=white.front();
+		white.pop();
+		if (getsteps(grey.pstate) != -1)
+			continue;
+		insert(grey);
+		add(white, grey);
+	}
+}
+int read() {
+	for (int i=0; i<9; i++) {
+		int c;
+		do
+			c=getchar();
+		while (!isdigit(c));
+		scratch[i]=c-'0';
+	}
+	return readscratch();
+}
+
+int main() {
+	search(123456789);
+	int total;
+	scanf("%d", &total);
+	while (total--)
+		printf("%d\n", getsteps(read()));
+	return 0;
+}

@@ -1,0 +1,143 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+#include<iostream>
+#include<fstream>
+#include<map>
+#include<ctime>
+#include<set>
+#include<queue>
+#include<cmath>
+#include<vector>
+#include<bitset>
+#include<functional>
+#define x first
+#define y second
+#define mp make_pair
+#define pb push_back
+#define REP(i,l,r) for((i)=(l);(i)<=(r);++(i))
+#define REP2(i,l,r) for((i)=(l);(i)!=(r);++(i))
+using namespace std;
+
+typedef long long LL;
+typedef double ld;
+
+const int NUM=200+10;
+const int MAX=2000+10;
+const int INF=1000000000;
+
+int n,m,S,T;
+int begin[MAX],next[MAX],t[MAX],res[MAX],flow[MAX],tot;
+int gap[NUM],h[NUM],in[NUM],C[NUM][NUM],p[NUM];
+
+void add(int a,int b,int c)
+{
+	t[++tot]=b;
+	next[tot]=begin[a];
+	begin[a]=tot;
+	res[tot]=c;
+}
+
+int sap(int u,int Flow)
+{
+	int i;
+	int remain=Flow;
+	if(u==T)
+		return Flow;
+	for(i=begin[u];i;i=next[i])
+	{
+		int v=t[i];
+		if(h[u]==h[v]+1 && res[i]>flow[i])
+		{
+			int tmp=sap(v,min(remain,res[i]-flow[i]));
+			flow[i]+=tmp;
+			flow[i^1]-=tmp;
+			remain-=tmp;
+			if(!remain)
+				return Flow;
+		}
+	}
+	if(!(--gap[h[u]]))
+		h[S]=n+1;
+	++gap[++h[u]];
+	return Flow-remain;
+}
+
+void dfs(int u)
+{
+	int i;
+	in[u]=1;
+	for(i=begin[u];i;i=next[i])
+		if(flow[i]>=0 && res[i]>flow[i] && !in[t[i]])
+			dfs(t[i]);
+}
+
+int Flow(int _S,int _T)
+{
+	S=_S;
+	T=_T;
+	memset(flow,0,sizeof flow);
+	memset(gap,0,sizeof gap);
+	memset(h,0,sizeof h);
+	memset(in,0,sizeof in);
+	gap[0]=n;
+	int ans=0;
+	while(h[S]<n+1)
+		ans+=sap(S,INF);
+	dfs(S);
+	return ans;
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt","r",stdin);freopen("output.txt","w",stdout);
+#endif
+	int i,j;
+	scanf("%d%d",&n,&m);
+	int a,b,c;
+	tot=1;
+	REP(i,1,m)
+	{
+		scanf("%d%d%d",&a,&b,&c);
+		add(a,b,c);
+		add(b,a,c);
+	}
+	REP(i,1,n)
+		REP(j,1,n)
+			C[i][j]=INF;
+	REP(i,1,n)
+		p[i]=1;
+	REP(i,2,n)
+	{
+		int f=Flow(i,p[i]);
+		REP(j,i+1,n)
+			if(in[j] && p[j]==p[i])
+				p[j]=i;
+		C[i][p[i]]=C[p[i]][i]=f;
+		REP2(j,1,i)
+			C[i][j]=C[j][i]=min(f,C[p[i]][j]);
+	}
+	memset(in,0,sizeof in);
+	int u=1,sum=0;
+	vector<int> ans;
+	while(1)
+	{
+		ans.pb(u);
+		in[u]=1;
+		int m=-1;
+		REP(j,1,n)
+			if(!in[j] && (m==-1 || C[u][m]<C[u][j]))
+				m=j;
+		if(m==-1)
+			break;
+		sum+=C[u][m];
+		u=m;
+	}
+	cout<<sum<<endl;
+	REP2(i,0,(int)ans.size())
+		cout<<ans[i]<<" ";
+	cout<<endl;
+	return 0;
+}

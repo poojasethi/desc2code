@@ -1,0 +1,312 @@
+#include<cstdio>
+#include<cassert>
+#include<algorithm>
+#include<cstring>
+#include<iostream>
+#include<cstdlib>
+#include<cmath>
+#include<vector>
+#include<map>
+#include<set>
+#include<queue>
+#include<bitset>
+#define cl(a) memset(a,0,sizeof(a))
+using namespace std;
+typedef long long ll;
+typedef unsigned long long ull;
+typedef double db;
+const db pi=3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862;
+void gn(int &x){
+    int sg=1;char c;while(((c=getchar())<'0'||c>'9')&&c!='-');
+    if(c=='-')sg=-1,x=0;else x=c-'0';
+    while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+    x*=sg;
+}
+void gn(ll &x){
+    int sg=1;char c;while(((c=getchar())<'0'||c>'9')&&c!='-');
+    if(c=='-')sg=-1,x=0;else x=c-'0';
+    while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+    x*=sg;
+}
+int dx[4]={1,0,-1,0};
+int dy[4]={0,1,0,-1};
+#define x1 x192837465
+#define x2 x123456789
+#define y1 y192837465
+#define y2 y123456789
+const db inf = 1e18;
+inline int grand(){return rand()<<16^rand();}
+struct tree{
+	struct node{
+		int ch[2];
+		int sz,fix;
+		double vl,vr;
+	}t[155555];
+	int rt;
+	char s[155555];
+	int len;
+	void rel(int x){
+		if(!x)return;
+		db mid=(t[x].vl+t[x].vr)*0.5;
+		t[t[x].ch[0]].vl=t[x].vl;
+		t[t[x].ch[0]].vr=mid;
+		t[t[x].ch[1]].vl=mid;
+		t[t[x].ch[1]].vr=t[x].vr;
+		rel(t[x].ch[0]);
+		rel(t[x].ch[1]);
+	}
+	void rot(int &x,int f){
+		int y=t[x].ch[!f];
+		t[x].ch[!f]=t[y].ch[f];
+		t[y].ch[f]=x;
+		t[y].sz=t[x].sz;
+		t[y].vl=t[x].vl,t[y].vr=t[x].vr;
+		t[x].sz=t[t[x].ch[0]].sz+t[t[x].ch[1]].sz+1;
+		x=y;
+		rel(x);
+	}
+	inline int cmp(int j){// suf[len] < suf[j]
+#define val(x) (x?((t[x].vl+t[x].vr)*0.5):0.0)
+		if(s[len]!=s[j])return s[len]<s[j];
+		else return val(len-1) < val(j-1);
+	}
+	void ins(int &x,double lv=0,double rv=inf){
+		if(!x){
+			x=len;
+			t[x].sz=1;
+			t[x].fix=grand();
+			t[x].vl=lv,t[x].vr=rv;
+			t[x].ch[0]=t[x].ch[1]=0;
+		}else{
+			int f=!cmp(x);
+			if(f)lv=(lv+rv)*0.5;
+			else rv=(lv+rv)*0.5;
+			ins(t[x].ch[f],lv,rv);
+			t[x].sz++;
+			if(t[t[x].ch[f]].fix<t[x].fix)rot(x,!f);
+		}
+	}
+	void del(int &x){
+		if(!t[x].ch[0] && !t[x].ch[1])x=0;
+		else{
+			int f=!t[x].ch[1] || t[x].ch[0] && t[t[x].ch[0]].fix<t[t[x].ch[1]].fix;
+			rot(x,f);
+			del(t[x].ch[f]);
+			t[x].sz--;
+		}
+	}
+	db tar;
+	void del_num(int &x){
+		if(x==len)del(x);
+		else{
+			int f=val(x)<tar;
+			del_num(t[x].ch[f]);
+			t[x].sz--;
+		}
+	}
+	char *str;int qlen;
+	int qcmp(int x){//s[x] >=str
+		for (int i=0;i<=qlen;i++){
+			if(s[x-i]>str[i])return 1;
+			if(s[x-i]<str[i])return 0;
+		}
+		return 1;
+	}
+	int rk(int x){
+		if(!x)return 0;
+		if(qcmp(x))return t[t[x].ch[1]].sz+1+rk(t[x].ch[0]);
+		else return rk(t[x].ch[1]);
+	}
+/////////////////////////////////////////////
+	inline void init(){
+		len=0;
+		rt=0;
+	}
+	void push(char c){
+		s[++len]=c;
+		ins(rt);
+	}
+	char pop(){
+		tar=val(len);
+		del_num(rt);
+		return s[len--];
+	}
+	int query(char *s){
+		str=s;	
+		qlen=strlen(str);
+		if(qlen>len)return 0;
+		int s1=rk(rt);
+		s[qlen-1]++;
+		int s2=rk(rt);
+		s[qlen-1]--;
+		return s1-s2;
+	}
+};
+char tmp[1555555];
+int next[1555555];
+char s[1555555];
+void buildnex(char *s){
+	s--;
+	for (int i=2,j=0;s[i];i++){
+		while(j && s[i]!=s[j+1])j=next[j];
+		if(s[i]==s[j+1])j++;
+		next[i]=j;
+	}
+}
+int kmp(char *a,char *s){
+	int ans=0;
+	s--;
+	for (int i=1,j=0;a[i];i++){
+		while(j && a[i]!=s[j+1])j=next[j];
+		if(a[i]==s[j+1])j++;
+		if(!s[j+1])ans++;
+	}
+	return ans;
+}
+struct tb{
+	tree tl,tr;
+	void mal(){
+		int l=tr.len;
+		for (int i=1;i<=l;i++)tmp[i]=tr.s[i];
+		tl.init();tr.init();
+		int mid=1+l>>1;
+		for (int i=mid;i>=1;i--)tl.push(tmp[i]);
+		for (int i=mid+1;i<=l;i++)tr.push(tmp[i]);
+	}
+	void mar(){
+		int l=tl.len;
+		for (int i=1;i<=l;i++)tmp[l-i+1]=tl.s[i];
+		tl.init();tr.init();
+		int mid=2+l>>1;
+		for (int i=mid-1;i>=1;i--)tl.push(tmp[i]);
+		for (int i=mid;i<=l;i++)tr.push(tmp[i]);
+	}
+	void addl(char c){
+		tl.push(c);
+	}
+	char dell(){
+		if(tl.len==0)mal();
+		return tl.pop();
+	}
+	void addr(char c){
+		tr.push(c);
+	}
+	char delr(){
+		if(tr.len==0)mar();
+		return tr.pop();
+	}
+	inline int len(){
+		return tl.len+tr.len;
+	}
+	int query(char *s){
+		int cnt=strlen(s);
+		if(cnt>len())return 0;
+		int l=min(tl.len,cnt-1),r=min(tr.len,cnt-1);
+		int m=0;
+		for (int i=l;i>=1;i--)tmp[++m]=tl.s[i];
+		for (int i=1;i<=r;i++)tmp[++m]=tr.s[i];
+		tmp[m+1]=0;
+		int ans=kmp(tmp,s);
+		ans+=tl.query(s);
+		for (int i=0;i<cnt-i-1;i++)swap(s[i],s[cnt-i-1]);
+		ans+=tr.query(s);
+		for (int i=0;i<cnt-i-1;i++)swap(s[i],s[cnt-i-1]);
+		return ans;
+	}
+	char s(int x){
+		if(x<=tl.len)return tl.s[tl.len-x+1];
+		else return tr.s[x-tl.len];
+	}
+};
+struct tt{
+	tb tl,tr;
+	void mt(){
+		int x=tl.len()+tr.len()>>1;
+		while(tl.len()>x)tr.addl(tl.delr());
+		while(tl.len()<x)tl.addr(tr.dell());
+	}
+	void addl(char c){
+		tl.addl(c);
+		mt();
+	}
+	void dell(){
+		tl.dell();
+		mt();
+	}
+	void addr(char c){
+		tr.addr(c);
+		mt();
+	}
+	void delr(){
+		tr.delr();
+		mt();
+	}
+	void addm(char c){
+		if(tl.len()==tr.len())tr.addl(c);
+		else tl.addr(c);
+	}
+	void delm(){
+		tr.dell();
+		mt();
+	}
+	int query(char *s){
+		buildnex(s);
+		int cnt=strlen(s);
+		if(cnt>tl.len()+tr.len())return 0;
+		int l=min(tl.len(),cnt-1),r=min(tr.len(),cnt-1);
+		int m=0;
+		for (int i=l;i>=1;i--)tmp[++m]=tl.s(tl.len()-i+1);
+		for (int i=1;i<=r;i++)tmp[++m]=tr.s(i);
+		tmp[m+1]=0;
+		int ans=kmp(tmp,s);
+		ans+=tl.query(s);
+		ans+=tr.query(s);
+		return ans;
+	}
+	void init(char *s){
+		for (int i=0;i<5;i++)tl.addr(s[i]);
+		for (int i=5;i<10;i++)tr.addr(s[i]);
+	}
+	void out(){
+		for (int i=1;i<=tl.len();i++)putchar(tl.s(i));
+		for (int i=1;i<=tr.len();i++)putchar(tr.s(i));
+		putchar('\n');
+	}
+}t;
+
+
+int main()
+{
+	char opt[20];
+	scanf("%s",s);
+	t.init(s);
+	int q;gn(q);
+	while(q--){
+		scanf("%s",opt);
+		char c;
+		if(opt[0]=='I'){
+			while((c=getchar())<'a'||c>'z');
+		}
+		if(opt[0]=='I'){
+			if(opt[7]=='L'){
+				t.addl(c);
+			}else if(opt[7]=='M'){
+				t.addm(c);
+			}else{
+				t.addr(c);
+			}
+		}else if(opt[0]=='D'){
+			if(opt[7]=='L'){
+				t.dell();
+			}else if(opt[7]=='M'){
+				t.delm();
+			}else{
+				t.delr();
+			}
+		}else{
+			scanf("%s",s);
+			printf("%d\n",t.query(s));
+		}
+	}
+	return 0;
+}

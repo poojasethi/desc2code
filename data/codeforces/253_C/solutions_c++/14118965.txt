@@ -1,0 +1,30 @@
+#include <iostream>
+#include <fstream>
+
+#define rep(i,n) for(int i=0;i<n;i++)
+
+using namespace std;
+
+int r1,c1,r2,c2,a[110],n,m,mm=10000000;
+
+int main(){
+
+  freopen("input.txt","r",stdin);
+  freopen("output.txt","w",stdout);
+
+  cin>>n;
+  rep(i,n)cin>>a[i];
+
+  cin>>r1>>c1>>r2>>c2;r1--;r2--;
+  if(r1<r2)swap(r1,r2); m = c1;
+
+  rep(i,n){
+    m = c1;
+    for(int j=min(i,r2);j<=max(i,r1);j++){
+      m = min(a[j]+1,m);
+    }
+    m = c2-m;
+    mm = min(mm,r1-r2+(m>0?m:-m)+(i<r2?(r2-i)*2:0)+(i>r1?(i-r1)*2:0));
+  }
+  cout<<mm<<endl;
+}

@@ -1,0 +1,121 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+#define N 100005
+#define LL long long
+
+struct Point {
+    LL x, y;
+    Point(LL x = 0, LL y = 0):x(x), y(y) {}
+    bool operator < (const Point & b) const {
+        if (y != b.y) return y < b.y;
+        return x < b.x;
+    }
+    Point operator + (const Point & b) {
+        return Point(x + b.x, y + b.y);
+    }
+    Point operator - (const Point & b) {
+        return Point(x - b.x, y - b.y);
+    }
+};
+
+int n;
+int sz[N], st[3];
+Point p[3][N], v[3][N], a[N*3], b[N*3], o;
+
+inline int sta(const Point & a) {
+	return a.y > 0 || (a.y == 0 && a.x >= 0);
+}
+
+bool cmp(const Point & a, const Point & b) {
+	int s1 = sta(a), s2 = sta(b);
+	if (s1 != s2) return s1 > s2;
+    return a.x * b.y - a.y * b.x > 0;
+}
+
+inline LL cross(const Point & a, const Point & b) {
+    return a.x * b.y - a.y * b.x;
+}
+
+inline LL len(const Point & a) {
+    return a.x * a.x + a.y * a.y;
+}
+
+bool gao(Point v) {
+    if (v < o) return 0;
+    v = v - o;
+    int l = 0, r = n-1;
+    while (l <= r) {
+        int mid = (l + r) >> 1;
+        if (cross(a[mid], v) >= 0) l = mid + 1;
+        else r = mid - 1;
+    }
+    --l;
+    if (l == n-1)
+        return  cross(v, a[l]) == 0 && len(v) <= len(a[l]);
+    return cross(a[l+1] - a[l], v - a[l]) >= 0;
+}
+
+int main() {
+//	freopen("data.in", "r", stdin);
+//	freopen("E.out", "w", stdout);
+//	freopen("newdata", "r", stdin);
+    n = 0;
+    o = Point(0, 0);
+    for (int i = 0; i < 3; ++i) {
+        scanf("%d", &sz[i]);
+        for (int j = 0; j < sz[i]; ++j)
+            scanf("%I64d %I64d", &p[i][j].x, &p[i][j].y);
+        p[i][ sz[i] ] = p[i][0];
+        for (int j = 0; j < sz[i]; ++j)
+            b[n++] = v[i][j] = p[i][j+1] - p[i][j];
+        st[i] = 0;
+        for (int j = 1; j < sz[i]; ++j)
+            if (p[i][j] < p[i][ st[i] ])
+                st[i] = j;
+        o = o + p[i][ st[i] ];
+    }
+    sort(b, b + n, cmp);
+    int k = 0;
+    for (int i = 0; i < n; ++i) {
+    	int j;
+    	for (j = i + 1; j < n && cross(b[i], b[j]) == 0; ++j);
+    	b[k] = b[i];
+    	for (int e = i + 1; e < j; ++e)
+    		b[k] = b[k] + b[e];
+    	++k;
+    	i = j - 1;
+    }
+    n = k;
+    for (int i = 1; i <= n; ++i)
+    	a[i] = a[i-1] + b[i-1];
+    /*
+    a[0] = Point(0, 0);
+    for (int cc = 0; cc < n; ++cc) {
+        int k = -1;
+        for (int i = 0; i < 3; ++i)
+        	if (0 == cc) {
+        		if (-1 == k || cross(v[i][ st[i] ], v[k][ st[k] ]) > 0)
+        			k = i;
+        	} else if (cross(a[cc] - a[cc-1], v[i][ st[i] ]) >= 0) {
+        		if (-1 == k || cross(v[i][ st[i] ], v[k][ st[k] ]) > 0)
+        			k = i;
+        	}
+        a[cc+1] = a[cc] + v[k][ st[k] ];
+        ++st[k];
+        if (st[k] == sz[k]) st[k] = 0;
+    }
+    printf("o %lld, %lld\n", o.x, o.y);
+    for (int i = 0; i <= n; ++i)
+    	printf(" %lld, %lld\n", a[i].x, a[i].y);*/
+    int m;
+    scanf("%d", &m);
+    while (m--) {
+        Point v;
+        scanf("%I64d %I64d", &v.x, &v.y);
+        v.x *= 3; v.y *= 3;
+        puts( gao(v) ? "YES" : "NO" );
+    }
+    return 0;
+}

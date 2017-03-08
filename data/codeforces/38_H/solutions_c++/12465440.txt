@@ -1,0 +1,105 @@
+#include <bits/stdc++.h>
+#define F first
+#define S second
+#define int long long
+using namespace std;
+typedef pair<int,int> pii;
+typedef pair<int,pii> piii;
+const int maxn=50+10,inf=1e9;
+
+int dis[maxn][maxn];
+int n;
+inline void floyd()
+{
+    for(int k=1;k<=n;k++)
+        for(int i=1;i<=n;i++)
+            for(int j=1;j<=n;j++)
+                dis[i][j]=(dis[i][j]>dis[i][k]+dis[k][j]?dis[i][k]+dis[k][j]:dis[i][j]);
+}
+int first[maxn],last[maxn];
+vector <piii> Sort;
+vector <int> T[maxn];
+inline void compute()
+{
+    for(int i=1;i<=n;i++)
+        for(int j=1;j<=n;j++) if(j!=i)
+            Sort.push_back(piii(dis[i][j],pii(i,j)));
+    sort(Sort.begin(),Sort.end());
+    fill(first,first+maxn,inf);
+    fill(last,last+maxn,-1);
+    for(int i=1;i<=n;i++)
+        for(int j=0;j<Sort.size();j++)
+            if(Sort[j].S.F==i){
+                first[i]=min(j,first[i]);
+                last[i]=max(last[i],j);
+                T[i].push_back(j);
+            }
+}
+int ss[maxn][maxn*maxn];
+inline bool chek_silve(int x,int l,int r)
+{
+    return ss[x][l]<=r;
+}
+int v[maxn];
+int dp[maxn][maxn][maxn],valid[maxn][maxn];
+inline int solve(int x,int y)
+{
+    memset(dp,0,sizeof dp);
+    int it=1;
+    for(int i=1;i<=n;i++) if(i!=x&&i!=y)
+        v[it++]=i;
+    dp[0][1][1]=1;
+    for(int cur=v[1],i=1;i<=n-2;i++,cur=v[i])
+        for(int g=1;g<=n;g++)
+            for(int b=1;b<=n;b++)
+            {
+                int &cp=dp[i][g][b];
+                if(first[cur]<first[x])
+                    cp+=dp[i-1][g-1][b];
+                if(last[cur]>last[y])
+                    cp+=dp[i-1][g][b-1];
+                if(chek_silve(cur,first[x],last[y]))
+                    cp+=dp[i-1][g][b];
+            }
+    for(int i=1;i<=n;i++)
+        for(int j=1;j<=n;j++)
+            valid[i][j]+=dp[n-2][i][n-i-j];
+}
+
+main()
+{
+    ios_base::sync_with_stdio(false);
+    memset(dis,63,sizeof dis);
+    for(int i=0;i<maxn;i++)
+        dis[i][i]=0;
+    int m;
+    cin>>n>>m;
+    while(m--)
+    {
+        int x,y,w;
+        cin>>x>>y>>w;
+        dis[x][y]=dis[y][x]=w;
+    }
+    floyd();
+    compute();
+    memset(ss,61,sizeof ss);
+    for(int i=1;i<=n;i++){
+        ss[i][51*51]=51*51*51;
+        for(int j=0;j<T[i].size();j++)
+            ss[i][T[i][j]]=T[i][j];
+        for(int j=51*51;j>=0;j--)
+            ss[i][j]=min(ss[i][j],ss[i][j+1]);
+    }
+    for(int i=1;i<=n;i++)
+        for(int j=1;j<=n;j++) if(i!=j&&first[i]<last[j])
+            solve(i,j);
+    int ans=0;
+    int g1,g2,s1,s2;
+    cin>>g1>>g2>>s1>>s2;
+    for(int i=g1;i<=g2;i++)
+        for(int j=s1;j<=s2;j++)
+            ans+=valid[i][j];
+    cout<<ans;
+
+    return 0;
+}

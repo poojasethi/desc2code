@@ -1,0 +1,230 @@
+/*-----Suffix Array and LCP, Complexity-: NlogN-----*/
+#include<bits/stdc++.h>
+//#define DEBUG
+//#ifdef DEBUG
+//code to debug
+//#endif
+//#undef DEBUG
+using namespace std;
+
+const int mod=1e9+7,maxn=500005,ln=22;
+#define F(i,p,n) for(int i=p;i<n;i++)
+#define I(i,p,q) for(int i=p;i>=q;i--)
+#define Ss(x) scanf("%s",x)
+//#define S(x) scanf("%d",&x)
+
+inline void S(int& n)
+{
+    n=0; int ch = getchar(); int sign = 1;
+    while(ch < '0' || ch > '9') { if(ch == '-') sign=-1; ch = getchar(); }
+    while(ch >= '0' && ch <= '9') { n = (n << 3) + (n << 1) + ch - '0', ch = getchar(); }
+    n = n * sign;
+}
+#define Ps(x) printf("%d  ",x)
+#define P(x) printf("%d\n",x)
+typedef long long int LL;
+#define Debug(x) cout << #x << "=" << x << endl
+#define Debugarr(x,n) cout<<"array "<<#x<<":"<<endl; F(i,0,n) cout<<i<<". "<<x[i]<<endl; cout<<endl
+#define Debugarr2(x,m,n) cout<<"array "<<#x<<":"<<endl; F(i,0,m) {F(j,0,n) cout<<x[i][j]<<" "; cout<<endl;} cout<<endl
+#define pii pair<int,int>
+#define chk(x,n) (x[n>>5]&(1<<(n&31))) //unsigned int
+#define set(x,n) (x[n>>5]|=(1<<(n&31)))//32 bit
+
+struct info
+{
+    int ptr[2],idx;
+}L[maxn],stemp[maxn];
+
+int P[ln][maxn],n,lg,dp[ln][maxn],info[maxn];
+
+int _hash[256];
+
+int suf_arr[maxn],lcp_arr[maxn],st_idx[maxn],cnt_arr[maxn];
+
+char str[maxn],str2[maxn];
+
+void count_sort(int pos)
+{
+    F(i,0,n+1)
+    cnt_arr[i]=0;
+
+    F(i,0,n)
+    cnt_arr[L[i].ptr[pos]]++;
+    F(i,1,n+1)
+    cnt_arr[i]+=cnt_arr[i-1];
+    I(i,n-1,0)
+    {
+        stemp[cnt_arr[L[i].ptr[pos]]-1]=L[i];
+        cnt_arr[L[i].ptr[pos]]--;
+    }
+    F(i,0,n)
+    L[i]=stemp[i];
+}
+
+void radix_sort()
+{
+    count_sort(1);
+    count_sort(0);
+}
+
+int _lcp(int x,int y)
+{
+    int _ans=0;
+    I(i,lg,0)
+    {
+        if(x<n&&y<n)
+        {
+            if(P[i][x]==P[i][y])
+            {
+                _ans+=1<<i;
+                x+=1<<i;
+                y+=1<<i;
+            }
+        }
+    }
+    return _ans;
+}
+
+void initialize()
+{
+
+    F(i,0,n)
+    _hash[str[i]]=1;
+    F(i,1,256)
+    _hash[i]+=_hash[i-1];
+}
+
+void build_SA()
+{
+    initialize();
+
+    //code for SUFFIX ARRAY starts here:
+    F(i,0,n)
+    {
+        P[0][i]=_hash[str[i]];
+    }
+    lg=1;
+    for(int r=1;r<n;r<<=1)
+    {
+        F(i,0,n)
+        {
+            L[i].ptr[0]=P[lg-1][i];
+            L[i].ptr[1]=i+r<n?P[lg-1][i+r]:0;
+            L[i].idx=i;
+        }
+        radix_sort();
+        F(i,0,n)
+        {
+            P[lg][L[i].idx]=i>0&&L[i].ptr[0]==L[i-1].ptr[0]&&L[i].ptr[1]==L[i-1].ptr[1]?P[lg][L[i-1].idx]:i+1;
+        }
+        lg++;
+    }
+    lg--;
+    //code for SUFFIX ARRAY ends here.
+    F(i,0,n)
+    {
+        suf_arr[P[lg][i]-1]=i;
+    }
+}
+
+int rmq_query(int p,int q)
+{
+    if(q-p==1)
+        return dp[0][q];
+    int sz=info[q-p];
+    return min(dp[sz][p+1],dp[sz][q-(1<<sz)+1]);
+}
+
+void rmq()
+{
+    for(int i=0;(1<<i)<=n;i++)
+        info[1<<i]=i;
+    F(i,1,n+1)
+    if(!info[i])
+        info[i]=info[i-1];
+
+    F(i,1,n)
+    dp[0][i]=lcp_arr[i];
+
+    F(i,1,lg+1)
+    {
+        F(j,1,n)
+        dp[i][j]=min(dp[i-1][j],dp[i-1][j+(1<<(i-1))]);
+    }
+}
+
+int main()
+{
+    Ss(str);
+    Ss(str2);
+    int len1=strlen(str),len2=strlen(str2);
+    n=len1+len2+1;
+    str[len1]='|';
+    F(i,len1+1,n)
+    str[i]=str2[i-len1-1];
+    str[n]='\0';
+    build_SA();
+
+    //Debugarr(suf_arr,n);
+
+    F(i,1,n)
+    {
+        lcp_arr[i]=_lcp(suf_arr[i-1],suf_arr[i]);
+    }
+
+    //Debugarr(lcp_arr,n);
+
+    rmq();
+
+    int mx=0,ind=-1,fp1=0,fp2=0,prev=-1,next=-1;
+
+    F(i,0,n)
+    {
+        if(suf_arr[i]>len1)
+        {
+            while(fp1<i)
+            {
+                if(suf_arr[fp1]<len1)
+                    prev=fp1;
+                fp1++;
+            }
+            if(prev!=-1)
+            {
+                int ret=rmq_query(prev,i);
+                if(ret>mx)
+                {
+                    mx=ret;
+                    ind=suf_arr[i];
+                }
+                else if(ret==mx)
+                    ind=min(ind,suf_arr[i]);
+            }
+            while(fp2<=i||suf_arr[fp2]>=len1)
+            {
+                fp2++;
+            }
+            next=fp2;
+            if(next>i)
+            {
+                int ret=rmq_query(i,next);
+                if(ret>mx)
+                {
+                    mx=ret;
+                    ind=suf_arr[i];
+                }
+                else if(ret==mx)
+                    ind=min(ind,suf_arr[i]);
+            }
+        }
+    }
+
+    if(!mx)
+        printf("0\n");
+    else
+    {
+        F(i,ind,ind+mx)
+            printf("%c",str[i]);
+        printf("\n%d\n",mx);
+    }
+    return 0;
+}

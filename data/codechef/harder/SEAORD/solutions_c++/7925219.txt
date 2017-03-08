@@ -1,0 +1,110 @@
+#include <cstdio>
+//#include <cstring>
+//#include <utility>
+#include <algorithm>
+ 
+using namespace std;
+ 
+struct slogprograma  {int prvi, drugi;} program[10005];
+struct slogposla     {int ind, prvi, drugi, start1T, start2T;}  grupaA[10005], grupaB[10005];
+ 
+long t, n, amax, bmax, bra, brb, posa, posb, sol, right, left;
+bool rupagore;
+ 
+void inputandpreparation() {
+    amax=bmax=bra=brb=posa=posb=0;
+    for (int i=1; i<=n; i++) {
+      scanf("%d%d",&program[i].prvi, &program[i].drugi);
+      if (program[i].prvi>=program[i].drugi) {
+          grupaA[++bra].prvi =program[i].prvi;
+          grupaA[  bra].drugi=program[i].drugi;
+          grupaA[  bra].ind  =i;
+          if (program[i].prvi>amax) {
+              amax=program[i].prvi;
+              posa=bra;
+          }
+      }
+      else {
+          grupaB[++brb].prvi =program[i].prvi;
+          grupaB[  brb].drugi=program[i].drugi;
+          grupaB[  brb].ind  =i;
+          if (program[i].drugi>bmax) {
+              bmax=program[i].drugi;
+              posb=brb;
+          }
+      }
+    }
+    swap(grupaA[posa],grupaA[bra]);
+    swap(grupaB[posb],grupaB[brb]);
+}
+void pakujmasinesgrupomA() {
+   for (int i=1; i<=bra; i++)
+      grupaA[i].start1T=grupaA[i-1].start1T+grupaA[i-1].prvi;
+   grupaA[bra].start2T=grupaA[bra].start1T+grupaA[bra].prvi;
+   for (int i=bra-1; i>0; i--) grupaA[i].start2T=grupaA[i+1].start2T-grupaA[i].drugi;
+}
+void pakujmasinesgrupomB() {
+   for (int i=1; i<=brb; i++)
+      grupaB[i].start2T=grupaB[i-1].start2T-grupaB[i].drugi;
+   grupaB[brb].start1T=grupaB[brb].start2T-grupaB[brb].prvi;
+   for (int i=brb-1; i>0; i--) grupaB[i].start1T=grupaB[i+1].start1T+grupaB[i+1].prvi;
+}
+void sastaviposlove() {
+   int RMB=-grupaB[1].start1T-grupaB[1].prvi;
+   int RMA=grupaA[1].start2T;
+   int rupa;
+ 
+   if (RMB > RMA) rupagore=true; else rupagore=false;
+   if (RMB > RMA) rupa=RMB-RMA; else rupa=RMA-RMB;
+ 
+   if (rupagore) {
+       for(int i=1; i<=brb; i++) {grupaB[i].start1T+=RMA; grupaB[i].start2T+=RMA;}  // spajanje nakon koga ostaje rupa
+       for(int i=1; i<=bra; i++) grupaA[i].start1T-=rupa;
+       grupaB[brb].start1T=max(grupaB[brb].start2T+grupaB[brb].drugi, grupaA[bra].start1T+grupaA[bra].prvi); // prebacujem iza AR
+       right=max(grupaA[bra].start2T+grupaA[bra].drugi,grupaB[brb].start1T+grupaB[brb].prvi);
+       left =grupaB[brb].start2T;
+       sol=right-left;
+   }
+   else {
+       for(int i=1; i<=bra; i++) {grupaA[i].start1T-=RMB; grupaA[i].start2T-=RMB;}
+       for(int i=1; i<=brb; i++) grupaB[i].start2T+=rupa;  //  spajanje nakon koga ne ostaje rupa
+       grupaA[bra].start2T=min(grupaB[brb].start2T, grupaA[bra].start1T)-grupaA[bra].drugi; // prebacujem iza AR
+       left=min(grupaA[bra].start2T,grupaB[brb].start1T);
+       right=grupaA[bra].start1T+grupaA[bra].prvi;
+       sol=right-left;
+   }
+}
+void sastaviposloveA() {
+   grupaA[bra].start2T=min(grupaA[1].start2T, grupaA[bra].start1T)-grupaA[bra].drugi; // prebacujem iza AR
+   left=min(grupaA[bra].start2T,grupaA[1].start1T);
+   right=grupaA[bra].start1T+grupaA[bra].prvi;
+   sol=right-left;
+}
+void sastaviposloveB() {
+   grupaB[brb].start1T=max(grupaB[brb].start2T+grupaB[brb].drugi, grupaB[1].start1T+grupaB[1].prvi); // prebacujem iza AR
+   right=max(grupaB[1].start2T+grupaB[1].drugi,grupaB[brb].start1T+grupaB[brb].prvi);
+   left =grupaB[brb].start2T;
+   sol=right-left;
+}
+void resi() {
+   printf("%d\n",sol);
+   for (int i=1; i<=bra; i++) {program[grupaA[i].ind].prvi=grupaA[i].start1T; program[grupaA[i].ind].drugi=grupaA[i].start2T;}
+   for (int i=1; i<=brb; i++) {program[grupaB[i].ind].prvi=grupaB[i].start1T; program[grupaB[i].ind].drugi=grupaB[i].start2T;}
+   for (int i=1; i<=n;   i++) printf("%d %d\n",program[i].prvi-left, program[i].drugi-left);
+}
+int main(){
+//  freopen("hex.in", "r", stdin);
+//  freopen("dule.out", "w", stdout);
+  scanf("%d",&t);
+  while (t--) {
+    scanf("%d",&n);
+    inputandpreparation();
+    pakujmasinesgrupomA();
+    pakujmasinesgrupomB();
+    if (bra==0) {sastaviposloveB(); resi();}
+    else if (brb==0) {sastaviposloveA(); resi();}
+         else {sastaviposlove(); resi();}
+  }
+  return 0;
+}
+ 

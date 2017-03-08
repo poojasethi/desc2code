@@ -1,0 +1,223 @@
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+#include <cmath>
+#include <queue>
+
+using namespace std;
+
+#ifdef WIN32
+	#define LL "%I64d"
+#else
+	#define LL "%lld"
+#endif
+
+#ifdef Lightning
+	#define debug(orz...) printf(orz)
+	const int DEBUG = 1;
+#else
+	#define debug(...)
+	const int DEBUG = 0;
+#endif
+
+#define file_able if (0)
+#define setfile(pro_name) freopen(pro_name".in", "r", stdin), freopen(pro_name".out", "w", stdout)
+#define closefile() fclose(stdin), fclose(stdout)
+
+#define cmax(_x, _y) (_x < (_y) ? _x = _y : 0)
+#define cmin(_x, _y) (_x > (_y) ? _x = _y : 0)
+#define gmax(_x, _y) ((_x) > (_y) ? (_x) : (_y))
+#define gmin(_x, _y) ((_x) < (_y) ? (_x) : (_y))
+
+namespace defs
+{
+	// #define getc() (S == T && (T = (S = B) + fread(B, 1, 1 << 15, stdin), S == T) ? EOF : *S++)
+	
+	// char B[1 << 15], *S = B, *T = B;
+	
+	#define getc() getchar()
+
+	template <class Type> Type read()
+	{
+		Type aa;
+		int bb = 1, ch;
+		while (ch = getc(), (ch < '0' || ch > '9') && ch != '-');
+		ch == '-' ? aa = 0, bb = -1 : aa = ch - '0';
+		while (ch = getc(), ch >= '0' && ch <= '9') aa = aa * 10 + ch - '0';
+		return bb == 1 ? aa : -aa;
+	}
+
+	const unsigned int rand_x = 11309;
+	const unsigned int rand_y = 1000000019;
+	
+	unsigned int rand_cur;
+
+	unsigned int rand_int()
+	{
+		return rand_cur = rand_cur * rand_x + rand_y;
+	}
+
+	const int inf = 1071026353;
+	const int mod = 1000000007;
+	const int modx = 998244353;
+}
+
+namespace st
+{
+	int val[100010], key[400040];
+	
+	void build(int i, int l, int r)
+	{	
+		if (l < r)
+		{
+			int mid = l + r >> 1;
+			build(i << 1, l, mid);
+			build(i << 1 | 1, mid + 1, r);
+			key[i] = min(key[i << 1], key[i << 1 | 1]);
+		} else
+		{
+			key[i] = val[l];
+		}
+	}
+	
+	void modify(int i, int l, int r, int p, int k)
+	{
+		if (l == r)
+		{
+			key[i] = k;
+			return;
+		}
+		int mid = l + r >> 1;
+		if (p <= mid) modify(i << 1, l, mid, p, k);
+		else modify(i << 1 | 1, mid + 1, r, p, k);
+		key[i] = min(key[i << 1], key[i << 1 | 1]);
+	}
+	
+	int query(int i, int l, int r, int ql, int qr)
+	{
+		if (ql <= l && qr >= r)
+			return key[i];
+		int mid = l + r >> 1, ret = 99999999;
+		if (ql <= mid) ret = min(ret, query(i << 1, l, mid, ql, qr));
+		if (qr > mid) ret = min(ret, query(i << 1 | 1, mid + 1, r, ql, qr));
+		return ret;
+	}
+}
+
+namespace lightningwork
+{
+	// my space
+
+	int (*read)() = defs::read<int>;
+
+	struct P
+	{
+		int t, l, id, vis;
+		
+		bool operator <(const P &p) const
+		{
+			if (t == p.t && l == p.l) return id < p.id;
+			return t < p.t || (t == p.t && l < p.l);
+		}
+	};
+
+	P p[100010];
+
+	int n, right[100010];
+	
+	long long ans[100010];
+	
+	long long calc(long long a, long long b, long long c)
+	{
+		b -= c;
+		return a - b * b;
+	}
+
+	void work()
+	{
+		n = read();
+		for (int i = 1; i <= n; ++i)
+		{
+			p[i].l = read();
+			p[i].t = read();
+			p[i].id = i;
+		}
+		sort(p + 1, p + n + 1);
+		for (int i = n; i >= 1; --i)
+		{
+			st::val[i] = p[i].l;
+			if (i < n)
+			{
+				if (p[i].t != p[i + 1].t)
+					right[i] = i;
+				else right[i] = right[i + 1];
+			} else right[i] = i;
+		}
+		st::build(1, 1, n);
+		int cnt = n, l = 1, r = 0;
+		long long T = 0;
+		while (cnt)
+		{
+			while (r <= n && p[r].t <= T) ++r;
+			if (T <= 200000)
+			{
+				long long nowmin = 9999999999999999ll;
+				int minid = 0;
+				for (int i = l; i < r; ++i)
+				{
+					if (p[i].vis == 1) continue;
+					if (i + 10 < r)
+					{
+						int tmp = st::query(1, 1, n, i, r - 1);
+						if (calc(tmp, p[i].t, T) > nowmin)
+						{
+							break;
+						}
+					}
+					long long tmp = calc(p[i].l, p[i].t, T);
+					if (tmp < nowmin || (tmp == nowmin && p[i].id < p[minid].id))
+					{
+						nowmin = tmp;
+						minid = i;
+					}
+					i = right[i];
+				}
+				if (minid == 0)
+				{
+					++T;
+				} else
+				{
+					T += p[minid].l;
+					ans[p[minid].id] = T;
+					st::modify(1, 1, n, minid, 99999999);
+					p[minid].vis = 1;
+					--cnt;
+				}
+				while (l <= n && p[l].vis == 1) ++l;
+			} else
+			{
+				while (l <= n && p[l].vis == 1) ++l;
+				if (l > n) break;
+				T += p[l].l;
+				ans[p[l].id] = T;
+				p[l].vis = 1;
+				--cnt;
+			}
+		}
+		for (int i = 1; i <= n; ++i)
+		{
+			printf("%lld ", ans[i]);
+		}
+		puts("");
+	}
+}
+
+int main()
+{
+	file_able setfile("task");
+	lightningwork::work();
+	file_able closefile();
+	return 0;
+}
+

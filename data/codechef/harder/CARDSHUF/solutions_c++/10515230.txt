@@ -1,0 +1,114 @@
+/*
+        SUPTO
+        UNIVERSITY OF DHAKA
+*/
+#include <bits/stdc++.h>
+using namespace std;
+#define D(x) cerr<<#x " = "<<(x)<<endl
+#define pb push_back
+#define ff first
+#define ss second
+#define mem(a) memset(a,0,sizeof(a))
+#define _set(a) memset(a,-1,sizeof(a))
+typedef long long int ll;
+typedef unsigned long long ull;
+typedef pair<int,double> pid;
+#define eps 1e-11
+#define MAX 100000
+#define MAXL 20
+#define MAXE 100000
+//int mod = 1000000000+7;
+//int dx[] = {0,0,1,-1};
+//int dy[] = {1,-1,0,0};
+//int dx[] = {-1,-1,-1,0,0,1,1,1};
+//int dy[] = {-1,0,1,-1,1,-1,0,1};
+struct node
+{
+    int val, pr, sz, flag;
+    node *l, *r;
+    node(){}
+    node(int v){val = v, pr=rand()+rand(), sz = 1, l = r = NULL, flag = 0;}
+};
+vector <int> ans;
+int _sz(node *cur) {return cur? cur->sz : 0;}
+void updt_sz(node *cur)
+{
+    if(cur) cur->sz = _sz(cur->l)+_sz(cur->r)+1;
+}
+void propagate(node *cur)
+{
+    if(!cur || !cur->flag) return;
+    swap(cur->l, cur->r);
+    if(cur->l) cur->l->flag ^= 1;
+    if(cur->r) cur->r->flag ^= 1;
+    cur->flag = 0;
+}
+void split(node *cur, node *&l, node *&r, int pos, int add=0)
+{
+    if(!cur) {l = r = NULL; return;}
+    propagate(cur);
+    int cp = add+_sz(cur->l)+1;
+    if(cp <= pos) split(cur->r, cur->r, r, pos, cp), l = cur;
+    else split(cur->l, l, cur->l, pos, add), r = cur;
+    updt_sz(cur);
+}
+void merge(node *&cur, node *l, node *r)
+{
+    propagate(l);
+    propagate(r);
+    if(!l || !r) cur = l? l : r;
+    else if(l->pr > r->pr) merge(l->r, l->r, r), cur = l;
+    else merge(r->l, l, r->l), cur = r;
+    updt_sz(cur);
+}
+void insert(node *&cur, int pos, int v)
+{
+    node *l, *r, *nw = new node(v);
+    split(cur, l, r, pos-1);
+    merge(cur, l, nw);
+    merge(cur, cur, r);
+}
+void _do(node *&cur, int a, int b, int c)
+{
+    node *al, *ar, *bl, *br;
+    split(cur, al, ar, a);
+    split(ar, bl, br, b);
+    merge(cur, al, br);
+    split(cur, al, ar, c);
+    bl->flag ^= 1;
+    merge(cur, bl, ar);
+    merge(cur, al, cur);
+}
+int findKTH(node *&cur, int k, int add=0) // find KTH smallest element
+{
+    propagate(cur);
+    int cp = add+_sz(cur->l)+1;
+    if(cp == k) return cur->val;
+    if(cp < k) return findKTH(cur->r, k, cp);
+    return findKTH(cur->l, k, add);
+}
+int main()
+{
+    //freopen("input.txt", "r", stdin);
+    //freopen("output.txt", "w", stdout);
+    //ios_base::sync_with_stdio(false);
+    int n, m, i, a, b, c;
+    node *root = NULL;
+    scanf("%d %d", &n, &m);
+    for(i = 1; i <= n; i++)
+    {
+        insert(root, i, i);
+    }
+    while(m--)
+    {
+        scanf("%d %d %d", &a, &b, &c);
+        _do(root, a, b, c);
+    }
+    for(i = 1; i <= n; i++)
+    {
+        if(i > 1) printf(" ");
+        printf("%d", findKTH(root, i));
+    }
+    printf("\n");
+    return 0;
+}

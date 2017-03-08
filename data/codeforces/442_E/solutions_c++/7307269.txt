@@ -1,0 +1,111 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <deque>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <cstring>
+
+using namespace std;
+
+typedef pair<double, int> PP;
+typedef long long LL;
+#define pb push_back
+#define fr first
+#define sc second
+#define double long double
+#define sqr(x) ((x)*(x))
+//const double pi = acos(-1);
+#define pi 3.1415926535897932384626
+
+int n;
+double x[1000], y[1000], w, h;
+
+double dis[1000][1000], ang[1000][1000];
+
+PP q[20000];
+int tot = 0;
+
+void add(double l, double r, int d){
+	if (l < 0) {
+		add(l + 2 * pi, 2 * pi, d);
+		add(0, r, d);
+	}
+	else if (r > 2 * pi){
+		add(l, 2 * pi, d);
+		add(0, r - 2 * pi, d);
+	}
+	else {
+		q[tot ++] = PP(l, d);
+		q[tot ++] = PP(r, -d);
+	}
+}
+
+bool f(int t, double r, int debug = 0){
+	tot = 0;
+	if (x[t] - r < 0) add(pi - acos(x[t] / r), pi + acos(x[t] / r), 2);
+	if (x[t] + r > w) add(-acos((w - x[t]) / r), acos((w - x[t]) / r), 2);
+	if (y[t] < r) add(1.5 * pi - acos(y[t] / r), 1.5 * pi + acos(y[t] / r), 2);
+	if (y[t] + r > h) add(0.5 * pi - acos((h - y[t]) / r), 0.5 * pi + acos((h - y[t]) / r), 2);
+
+	for (int i = 0; i < n; i ++) 
+		if (i != t && r > dis[i][t] && (x[t] != x[i] || y[t] != y[i])){
+			double d = acos(dis[i][t]/r);
+			add(ang[t][i] - d, ang[t][i] + d, 1);
+		}
+	sort(q, q + tot);
+	if (q[0].fr > 1e-11 || q[tot - 1].fr < 2 * pi - 1e-11) return true;
+	int sum = 0;
+	for (int i = 0; i < tot; i ++){
+		sum += q[i].sc;
+		if ((i + 1) < tot && abs(q[i + 1].fr - q[i].fr) > 1e-11 && sum <= 1) return true;
+	}
+	return false;
+}
+
+int main() {
+	#ifdef _TEST_
+	freopen("input.txt", "r", stdin);
+	//freopen("out.txt", "w", stdout);
+	#endif
+	cin >> w >> h >> n;
+	srand(n);
+	for (int i = 0; i < n; i ++) cin >> x[i] >> y[i];
+	for (int i = 0; i < n; i ++){
+		int tmp = rand() % (i + 1);
+		swap(x[i], x[tmp]); swap(y[i], y[tmp]);
+	}
+	double res = 0;
+	for (int i = 0; i < n; i ++) for (int j = 0; j < n; j ++) {
+		dis[i][j] = sqrt(sqr(x[i] - x[j]) + sqr(y[i] - y[j])) * 0.5;
+		if (i != j) ang[i][j] = atan2(y[j] - y[i], x[j] - x[i]);
+	}
+	for (int i = 0; i < n; i ++) for (int j = 0; j < n; j ++)
+		if (i != j && ang[i][j] < 0) ang[i][j] += 2 * pi;
+	for (int i = 0; i < n; i ++) 
+		if (f(i, res + 1e-11 * res)){
+			double l = res, r = 2e6;
+			while (l + 1e-11 < r) {
+				res = (l + r) * 0.5;
+				if (f(i, res)) l = res;
+				else r = res;
+			}
+		}
+	cout << setprecision(16) << fixed << res << endl;
+
+
+	return 0;
+}

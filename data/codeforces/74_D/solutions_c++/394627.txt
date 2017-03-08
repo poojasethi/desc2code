@@ -1,0 +1,110 @@
+#include <cstdio>
+#include <map>
+
+using namespace std;
+
+struct Node
+{
+    int a, b;
+    Node *left, *right;
+    int lmax, rmax, max;
+    int start, cnt;
+};
+
+const int N = 3200000;
+Node pool[N], *last = pool;
+
+Node *init(int a, int b)
+{
+    last->a = a;
+    last->b = b;
+    last->left = last->right = NULL;
+    last->lmax = last->rmax = last->max = b - a;
+    last->start = a;
+    last->cnt = 0;
+    return last++;
+}
+
+int A, B, C;
+int query(Node *cur)
+{
+    if (A <= cur->a && cur->b <= B) return cur->cnt;
+    if (cur->left == NULL) return 0;
+    int ret = 0;
+    if ((cur->a + cur->b) / 2 > A) ret += query(cur->left);
+    if ((cur->a + cur->b) / 2 < B) ret += query(cur->right);
+    return ret;
+}
+
+void modify(Node *cur)
+{
+    if (cur->a + 1 == cur->b)
+    {
+        cur->cnt += B;
+        if (cur->cnt == 1) cur->lmax = cur->rmax = cur->max = 0, cur->start = cur->b;
+        else cur->lmax = cur->rmax = cur->max = 1, cur->start = cur->a;
+        return;
+    }
+    if (cur->left == NULL)
+    {
+        cur->left = init(cur->a, (cur->a + cur->b) / 2);
+        cur->right = init((cur->a + cur->b) / 2, cur->b);
+    }
+    if ((cur->a + cur->b) / 2 > A) modify(cur->left);
+    else modify(cur->right);
+    cur->cnt = cur->left->cnt + cur->right->cnt;
+    cur->lmax = cur->left->lmax;
+    if (cur->left->b - cur->left->a == cur->left->max) cur->lmax = max(cur->lmax, cur->left->max + cur->right->lmax);
+    cur->rmax = cur->right->rmax;
+    if (cur->right->b - cur->right->a == cur->right->max) cur->rmax = max(cur->rmax, cur->right->max + cur->left->rmax);
+    cur->max = cur->right->max;
+    cur->start = cur->right->start;
+    if (cur->left->rmax + cur->right->lmax > cur->max)
+    {
+        cur->max = cur->left->rmax + cur->right->lmax;
+        cur->start = cur->left->b - cur->left->rmax;
+    }
+    if (cur->left->max > cur->max)
+    {
+        cur->max = cur->left->max;
+        cur->start = cur->left->start;
+    }
+}
+
+map<int, int> checkin;
+
+int main()
+{
+    // freopen("test.in", "r", stdin);
+    int n, m;
+    scanf("%d %d", &n, &m);
+    Node *root = init(0, n);
+    while (m--)
+    {
+        scanf("%d", &C);
+        if (C == 0)
+        {
+            scanf("%d %d", &A, &B);
+            --A;
+            printf("%d\n", query(root));
+        }
+        else
+        {
+            if (checkin[C] == 0)
+            {
+                A = root->start + root->max / 2;
+                B = 1;
+                modify(root);
+                checkin[C] = A;
+            }
+            else
+            {
+                A = checkin[C];
+                B = -1;
+                modify(root);
+                checkin[C] = 0;
+            }
+        }
+    }
+    return 0;
+}

@@ -1,0 +1,137 @@
+#include <cstdio>
+#include <cstring>
+using namespace std;
+ 
+#define DEBUG 0
+ 
+ 
+const int M = 105;
+const int N = 1005; // 1-based array
+const int MN = M*N;
+int left[N], right[N]; // individual trees
+int ut_left[MN], ut_right[MN]; // Unified tree
+int lew[MN], rew[MN]; // left edge weight and right edge weight
+int nodenum = 1;
+ 
+ 
+inline void insert(int n1, char c, int n2)
+{
+	if(c=='L') left[n1]  = n2;
+	else       right[n1] = n2;
+}
+ 
+ 
+// Merge current tree (left,right arrays) into universal tree
+void merge(int utidx, int idx)
+{
+	if(ut_left[utidx]  != -1) {
+	 	if(left[idx]  != -1) {
+			lew[utidx]++;
+			merge(ut_left[utidx], left[idx]);
+		}
+		else {
+			// dont do anything
+		}
+	}
+	else {
+		if(left[idx] != -1) {
+			ut_left[utidx] = ++nodenum;
+			lew[utidx] = 1;
+			merge(ut_left[utidx], left[idx]);
+		}
+		else {
+			// dont do anything
+		}
+	}
+ 
+ 
+	if(ut_right[utidx] != -1) {
+		if(right[idx] != -1) {
+			rew[utidx]++;
+			merge(ut_right[utidx], right[idx]);
+		}
+		else {
+			// dont do anything
+		}
+	}
+	else {
+		if(right[idx] != -1) {
+			ut_right[utidx] = ++nodenum;
+			rew[utidx] = 1;
+			merge(ut_right[utidx], right[idx]);
+		}
+		else {
+			// dont do anything
+		}
+	}
+}
+ 
+ 
+#if DEBUG
+void preorder(int* l, int *r, int cur)
+{
+	printf("%d %d %d\n", cur, lew[cur], rew[cur]); // " " << cur->lew <<  " " << cur->rew << endl;
+	if(l[cur] != -1) preorder(l, r, l[cur]);
+	if(r[cur] != -1) preorder(l, r, r[cur]);
+}
+#endif
+ 
+int maxpath(const int cur, const int k) 
+{
+	int l = (k <= lew[cur] && ut_left[cur]  != -1) ? maxpath(ut_left[cur], k)  : 0;
+	int r = (k <= rew[cur] && ut_right[cur] != -1) ? maxpath(ut_right[cur], k) : 0;
+	return (l >= r) ? l+1 : r+1;
+}
+ 
+ 
+int main()
+{
+	int numtestcases = 0;
+	scanf("%d\n", &numtestcases);
+ 
+	for(int z=0; z<numtestcases; z++) {
+		int numtrees = 0;
+		scanf("%d\n",&numtrees);
+ 
+		memset(lew, 0, sizeof(lew));
+		memset(rew, 0, sizeof(rew));
+		memset(ut_left, -1, sizeof(ut_left));
+		memset(ut_right, -1, sizeof(ut_right));
+		nodenum = 1; // reset nodenum for new testcase
+ 
+		for(int i=0; i<numtrees; i++) {
+ 
+			// read-in each edge and create the tree
+			int numedges = 0;
+			scanf("%d\n", &numedges);
+ 
+			memset(left, -1, sizeof(left));
+			memset(right, -1, sizeof(right));
+ 
+			for(int j=1; j<numedges; j++) {
+				int n1, n2; char c;
+				scanf("%d %c %d\n", &n1, &c, &n2);
+				insert(n1, c, n2);
+			}
+ 
+			merge(1, 1); // merge each individual tree into unified tree
+ 
+#if DEBUG
+			printf("-------\n");
+			preorder(ut_left, ut_right, 1);
+			printf("--------\n");
+#endif
+		}
+ 
+ 
+		// find longest intersecting path for each k
+		for(int i=1; i<=numtrees; i++) {
+			int res = maxpath(1, i);
+			printf("%d ",res-1);
+		}
+		printf("\n");
+	}
+ 
+	return 0;
+}
+ 

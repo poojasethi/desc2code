@@ -1,0 +1,164 @@
+#include <iostream>
+#include <cstring>
+#include <cmath>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+#define N 200050
+#define ll long long
+struct Node
+ {
+ 	Node *fa,*c[2];int Cnt,val,ad;ll sum;
+ } a[N*2],*emp,Emp,*rt;
+int bd[N][2],fi[N],c[N*2][2],val[N],ss=1,st,n,m;ll ans;
+inline int Read()
+ {
+ 	int x=0;char y;bool z=false;
+ 	do y=getchar(),z|=y=='-'; while (y<'0'||y>'9');
+ 	do x=x*10+y-'0',y=getchar(); while (y>='0'&&y<='9');
+ 	return z?-x:x;
+ }
+inline void Line(int x,int y)
+ {
+ 	c[++ss][0]=y;c[ss][1]=fi[x];fi[x]=ss;
+ 	c[++ss][0]=x;c[ss][1]=fi[y];fi[y]=ss;
+ 	return;
+ }
+inline void GetNew(int x,int y)
+ {
+ 	a[x].c[0]=a[x].c[1]=a[x].fa=emp;
+ 	a[x].val=a[x].sum=y;a[x].Cnt=1;
+ 	return;
+ }
+inline void Update(Node* x)
+ {
+ 	x->sum=x->c[0]->sum+x->c[1]->sum+x->val;
+ 	x->Cnt=x->c[0]->Cnt+x->c[1]->Cnt+1;
+ 	return;
+ }
+inline void adj(Node* x)
+ {
+ 	if (!x->ad||x==emp) return;
+ 	x->val+=x->ad;x->sum+=1LL*x->Cnt*x->ad;
+ 	for (int i=0;i<2;i++) x->c[i]->ad+=x->ad;
+ 	x->ad=false;
+ 	return;
+ }
+void Rotate(Node* x)
+ {
+ 	Node *i=x->fa,*j=i->fa;bool flag=x==i->c[0];
+ 	if (j!=emp) j->c[j->c[1]==i]=x;
+ 	if (x->c[flag]!=emp) x->c[flag]->fa=i;
+ 	i->c[!flag]=x->c[flag];i->fa=x;
+ 	x->c[flag]=i;x->fa=j;Update(i);
+ 	return;
+ }
+void Up(Node* x)
+ {if (x->fa!=emp) Up(x->fa);adj(x);adj(x->c[0]);adj(x->c[1]);}
+void Splay(Node* x)
+ {
+ 	Up(x);
+ 	while (x->fa!=emp)
+ 	 {
+ 	 	if (x->fa->fa!=emp)
+ 	 	  Rotate((x->fa->fa->c[0]==x->fa)^(x->fa->c[0]==x)?
+ 	 	  	x:x->fa);
+ 	 	Rotate(x);
+ 	 }
+ 	Update(x);
+ 	return;
+ }
+void Form(Node* x,Node* y)
+ {
+ 	Splay(x);x->c[1]->fa=emp;rt=x;
+ 	Splay(y);y->fa=x;x->c[1]=y;Update(x);
+ 	return;
+ }
+Node* Right(Node* x,Node* y)
+ {
+ 	while (x->c[1]!=emp) x=x->c[1];Splay(x);
+ 	x->c[1]=y;y->fa=x;Update(x);return x;
+ }
+inline int Get(Node* x)
+ {
+ 	for (int i=1;i<=n;i++)
+ 	 for (int j=0;j<2;j++)
+ 	  if ((&a[bd[i][j]])==x) return i*(j?1:-1);
+ 	return 0;
+ }
+void DSF(Node* x)
+ {
+ 	if (x==emp) return;
+ 	cout <<Get(x)<<' '<<Get(x->c[0])<<' '<<Get(x->c[1])<<' '<<Get(x->fa);
+ 	cout <<' '<<x->Cnt<<' '<<x->val<<' '<<x->sum<<endl;
+ 	DSF(x->c[0]);DSF(x->c[1]);
+ 	return;
+ }
+Node* DFS(int x,int y)
+ {
+ 	bd[x][0]=++st;bd[x][1]=++st;
+ 	GetNew(st-1,val[x]);GetNew(st,val[x]);
+ 	Node* k=&a[st-1],*l=&a[st];
+ 	for (int i=fi[x];i;i=c[i][1])
+ 	 if (c[i][0]!=y)
+ 	   k=Right(k,DFS(c[i][0],x));
+ 	return Right(k,l);
+ }
+void Add(int x,int y)
+ {
+ 	Form(&a[bd[x][0]],&a[bd[x][1]]);
+ 	rt->val+=y;rt->c[1]->val+=y;rt->c[1]->c[0]->ad+=y;
+ 	adj(rt->c[1]->c[0]);Update(rt->c[1]);Update(rt);
+ 	return;
+ }
+inline Node* Aha(Node* x,bool flag)
+ {
+ 	if (x->c[flag]!=emp)
+ 	 {
+ 	 	x=x->c[flag];while (x->c[!flag]!=emp) x=x->c[!flag];
+ 	 } else
+ 	 {
+ 	 	while (x==x->fa->c[flag]) x=x->fa;
+ 	 	x=x->fa;
+ 	 }
+ 	return x;
+ }
+void Del(int x)
+ {
+ 	Form(Aha(&a[bd[x][0]],false),Aha(&a[bd[x][1]],true));
+ 	rt->c[1]->c[0]=emp;Update(rt->c[1]);Update(rt);
+ 	return;
+ }
+ll Query(int x)
+ {
+ 	Form(&a[bd[x][0]],&a[bd[x][1]]);
+ 	ans=(rt->c[1]->c[0]->sum+rt->c[1]->val+rt->val)/2;
+ 	return ans;
+ }
+void Insert(int x,int y)
+ {
+ 	bd[++n][0]=++st;bd[n][1]=++st;Node* k,*l;
+ 	GetNew(st-1,y);GetNew(st,y);
+ 	k=Right(&a[st-1],&a[st]);
+ 	Splay(&a[bd[x][0]]);l=a[bd[x][0]].c[1];
+ 	while (l->c[0]!=emp) l=l->c[0];
+ 	Splay(l);l->c[0]->c[1]=k;k->fa=l->c[0];
+ 	Update(l->c[0]);Update(l);
+ 	return;
+ }
+int main()
+ {
+ 	//freopen("input.txt","r",stdin);
+ 	n=Read();emp=&Emp;emp->c[0]=emp->c[1]=emp->fa=emp;
+ 	for (int i=1;i<=n;i++) val[i]=Read();
+ 	for (int i=1;i<n;i++) Line(Read()+1,Read()+1);
+ 	rt=DFS(1,0);m=Read();
+    while (m--)
+     {
+     	int e=Read(),k=Read()+ans+1;
+     	if (e==1) Insert(k,Read()); else
+     	if (e==2) Add(k,Read()); else
+     	if (e==3) Del(k); else printf("%lld\n",Query(k));
+     }
+ 	return 0;
+ }

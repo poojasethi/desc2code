@@ -1,0 +1,63 @@
+#include <cstdio>
+#include <algorithm>
+#define fitl(x) (x >= k ? x - k : x)
+#define fitr(x) (x < 0 ? x + k : x)
+using namespace std;
+typedef long long ll;
+
+const int N = 200005;
+int n, k, top = 0, a[N], f[20][N], s[N], ay[N];
+pair<int, int> b[N];
+ll ans = 0;
+
+inline int minw(int x, int y) {
+	if (ay[x] < ay[y])
+		return x; else
+		return y;
+}
+void stpre() {
+	for (int i=1; i<=n; ++i) f[0][i] = i;
+	for (int k=1; (1<<k)<=n; ++k) {
+		int step = 1 << k;
+		for (int i=1; i+step-1<=n; ++i)
+			f[k][i] = minw(f[k-1][i], f[k-1][i+(step>>1)]);
+	}
+}
+int getmin(int l, int r) {
+	int k = 31-__builtin_clz(r-l+1);
+	return minw(f[k][l], f[k][r-(1<<k)+1]);
+}
+inline int cnt(int l, int r, int key) {
+	return upper_bound(b, b+n+2, make_pair(key, r))
+		 - lower_bound(b, b+n+2, make_pair(key, l));
+}
+void solve(int l, int r) {
+	int w = getmin(l, r);
+	if (w - l <= r - w) {
+		for (int i=l; i<=w; ++i)
+			ans += cnt(w, r, fitl(a[w] + s[i-1]));
+	}
+	else {
+		for (int i=w; i<=r; ++i)
+			ans += cnt(l-1, w-1, fitr(s[i] - a[w]));
+	}
+	--ans;
+	if (l < w-1) solve(l, w-1);
+	if (w+1 < r) solve(w+1, r);
+}
+int main() {
+	scanf("%d%d", &n, &k);
+	s[0] = 0;
+	for (int i=1; i<=n; ++i) {
+		scanf("%d", &a[i]); ay[i] = a[i]; a[i] %= k;
+		s[i] = (s[i-1] + a[i]) % k;
+		b[i] = make_pair(s[i], i);
+	}
+	sort(b+1, b+n+1);
+	b[0] = make_pair(0, 0);
+	b[n+1] = make_pair(k, 0);
+	stpre();
+	solve(1, n);
+	printf("%lld\n", ans);
+	return 0;
+}

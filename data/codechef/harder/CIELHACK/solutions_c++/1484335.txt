@@ -1,0 +1,265 @@
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+using namespace std;
+
+typedef long long LL;
+
+const int maxC = 1000;
+const int maxK = 5;
+
+struct center {
+	LL P;
+	double S, T, X;
+	center(){}
+	center(LL P_,double S_,double T_,double X_) {
+		P=P_; S=S_; T=T_; X=X_;
+	}
+	void read() {
+		scanf("%lld %lf %lf %lf", &P, &S, &T, &X);
+	}
+	bool operator<(const center &c) const {
+		return X < c.X;
+	}
+};
+
+const int maxI = 50;
+double fact[maxI + 1]; // factorials
+double B[maxI]; // B[j] = Bern[j] / j!, where Bern[j] is j-th Bernoulli number
+double Bg[maxI]; // Bg[j] = B[j] * (j - 1), needed for function g(n, k)
+
+const int maxH = 100000;
+double H[maxH]; // H[n] = 1/1 + 1/2 + ... + 1/n is n-th Harmonic number
+
+void precalc() {
+	// factorials precalc
+	fact[0] = 1.;
+	for (int n = 1; n <= maxI; ++n) {
+		fact[n] = n * fact[n - 1];
+	}
+
+	// Bernoulli numbers divided be factorials and numbers Bg
+	B[0] = 1.;
+	for (int n = 1; n < maxI; ++n) {
+		B[n] = 0.;
+		// we use the fact that Bernoulli numbers with odd index except 1 are zeros
+		if (n % 2 == 0 || n == 1) {
+			for (int k = 0; k < n; ++k) {
+				B[n] -= B[k] / fact[n + 1 - k];
+			}
+		}
+		Bg[n] = B[n] * (n - 1);
+	}
+
+	// Harmonic numbers
+	H[0] = 0.;
+	for (int n = 1; n < maxH; ++n) {
+		H[n] = H[n - 1] + 1. / n;
+	}
+}
+
+// returns (1 - x) ^ k, 0 < x < 1
+double mypow(double x, LL k) {
+	// (1 - x) ^ k = exp(k * log(1 - x))
+	if (x > 1e-9) {
+		return exp(k * log(1 - x));
+	}
+	// for small x above formula has presicion issue
+	// since log(1 - x) = - x - x^2 / 2 - x^3 / 3 - ...
+	// we approximate log(1 - x) by - x - x^2 / 2
+	return exp(k * -(x + x * x / 2));
+	// actually in this problem exp(k * -x) also works
+	// but the formal proof is quite tricky
+}
+
+// Euler-Mascheroni constant
+const double Gamma = 0.57721566490153286060651209;
+// Harm(n) = 1/1 + 1/2 + ... + 1/n
+double Harm(LL n) {
+	// for small n we use stored value
+	if (n < maxH) {
+		return H[n];
+	}
+	// the relative error is less than 1 / (12 * n * n * log(n)) < 1e-12
+	// since n >= maxH = 100000
+	return log(double(n)) + Gamma + 0.5 / n;
+}
+
+const double PI = 3.1415926535897932385;
+const double DIGITS = 1e7; // 1 / DIGITS will be a relative error of the answer
+
+// returns (1^k + 2^k + ... + n^k) / n^k
+double PowerSum(LL n, LL k) {
+	double res = 0.;
+	double t = (k + 1.) / n;
+	if (t < 2) {
+		// here we use Euler-Maclaurin formula
+		res = n / (k + 1.) + 0.5;
+		// the number of summands we need can be calculated 
+		// from the estimate on relative error provided in the editorial
+		int p = max(int(log(DIGITS) / log(2 * PI / t)), 2);
+		double prod = double(k) / n;
+		for (int j = 2; j <= p && j <= k; j += 2) {
+			// prod now = k * (k-1) * ... * (k-j+2) / n^(j-1),
+			res += B[j] * prod;
+			prod *= double(k - j + 1) * (k - j) / n / n;
+		}
+	} else {
+		// here we simply use several last terms of the actual sum
+		// again the number of summands we need can be calculated 
+		// from the estimate on relative error
+		int p = min(LL(log(DIGITS) / t + 1), n);
+		res = 1.;
+		for (int j = 1; j <= p; ++j) {
+			res += mypow(double(j) / n, k);
+		}
+	}
+	return res;
+}
+
+// returns k * (PowerSum(n, k) - PowerSum(n, k + 1))
+double g(LL n, LL k) {
+	double res = 0.;
+	double t = (k + 1.) / n;
+	if (t < 2) {
+		// the difference of Euler-Maclaurin formulas
+		res = n / (k + 1.) / (k + 2.);
+		int p = max(int(log(DIGITS) / log(2 * PI / t)), 2);
+		double prod = 1./n;
+		for (int j = 2; j <= p && j <= k + 1; j += 2) {
+			res -= Bg[j] * prod;
+			prod *= double(k - j + 2) * (k - j + 1) / n / n;
+		}
+	} else {
+		int p = min(LL(log(DIGITS) / t + 1), n - 1);
+		for (int j = 1; j <= p; ++j) {
+			double x = double(j) / n;
+			res += x * mypow(x, k);
+		}
+	}
+	return k * res;
+}
+
+// returns min{S * Harm(k - 1) + T * PowerSum(N, k) : 1<=k<=P}
+// Let a(k) = S * Harm(k - 1) + T * PowerSum(N, k)
+// Then a(k+1) - a(k) = S/k - T * (PowerSum(N, k) - PowerSum(N, k+1)) =
+// = T/k * (S/T - k * (PowerSum(N, k) - PowerSum(N, k+1))) = 
+// = T/k * (a - g(N, k)), where a = S/T and g(N,k) defined above
+// It can be proved that g(N,k) decreases.
+// k that gives minimum satisfies g(N,k-1) >= a > g(N,k)
+// and can be found by binary seacrh
+double minTime(LL N,LL P,double S,double T)
+{
+	// if a >= g(N, 1) the optimal k = 1
+	if (P == 1 || 6 * S >= T * (N - 1. / N)) {
+		// Harm(1 - 1) = 0, PowerSum(N, 1) = (1 + 2 + ... + N) / N = (N + 1) / 2
+		return T * (N + 1) / 2;
+	}
+	double a = S / T;
+	if (a <= g(N,P)) {
+		// in this case optimal k = P
+		return S * Harm(P - 1) + T * PowerSum(N, P);
+	}
+	// g(N, L) >= a > g(N, R) always during while loop
+	LL L = 1;
+	LL R = P;
+	while (L + 1 < R) {
+		LL M = (L + R) / 2;
+		if (a > g(N, M)) {
+			R = M; 
+		} else {
+			L = M;
+		}
+	}
+	// now L + 1 = R = optimal k
+	// note, however, that this k can be not optimal
+	// but it gives the answer with required relative error
+	return S * Harm(R - 1) + T * PowerSum(N, R);
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("5.in","r",stdin);
+	freopen("5_my.out","w",stdout);
+#endif
+	// precal of Harmonic number and Bernoulli staff needed further
+	precalc();
+
+	// array of centers
+	// it will be sorted dy X: c[0].X <= c[1].X <= ... <= c[C-1].X
+	center c[maxC];
+
+	// Time[i][j] is the optimal time to crack i-th piece at the j-th center
+	double Time[maxK][maxC];
+
+	// dp[j][mask] is the minimum time needed to crack the set 'mask' of pieces
+	// and return back to the restaurant, using centers c[0], c[1], ..., c[j]
+	// but if center with positive coordinate is involved than the time to walk to
+	// it and return back is not counted. See below for details
+	double dp[maxC][1 << maxK];
+
+	int TST;
+	scanf("%d", &TST);
+	for (int tst = 0; tst < TST; ++tst) {
+		int C, K;
+		double V;
+		scanf("%d %d %lf", &C, &K, &V);
+
+		LL N[maxK];
+		for (int i = 0; i < K; ++i) {
+			scanf("%lld", N+i);
+		}
+
+		for (int j = 0; j < C; ++j) {
+			c[j].read();
+			c[j].X = 2. * (c[j].X / V);
+			// now |c[j].X| is the time needed to walk to j-th center and return back
+		}
+		sort(c, c + C);
+		// now array c is sorted by X
+		// so centers with X < 0 comes first followed by the centers with X > 0
+
+		for (int i = 0; i < K; ++i) {
+			for(int j = 0; j < C; ++j) {
+				Time[i][j] = minTime(N[i], c[j].P, c[j].S, c[j].T);
+			}
+		}
+
+		double ans = 1e200;
+		for (int j = 0; j < C; ++j) {
+			double Xj = c[j].X;
+			// we need 0 time to crack the empty set of pieces
+			dp[j][0] = 0;
+			for (int mask = 1; mask < (1 << K); ++mask) {
+				// binary form of mask corresponds to the current set of pieces
+				// init by dp for previous j, which means that we don't use j-th center for any piece
+				// or by infinity if we in the very first center
+				dp[j][mask] = j > 0 ? dp[j - 1][mask] : 1e200;
+				// iterating over piecaes
+				for (int i = 0; i < K; ++i) {
+					if (mask == (1 << i)) {
+						// this means that the current set of pieces havs only one piece
+						// here we take into account walking time
+						dp[j][mask] = min(dp[j][mask], Time[i][j] + (Xj < 0 ? -Xj : 0));
+						break;
+					} else if((mask & (1 << i)) && j > 0) {
+						// now set has at least two elements
+						// so we have already walked to the furthest center
+						// and no need to count walking time again
+						//
+						// if we use j-th center for cracking i-th piece
+						// then we left with set of pieces without i-th piece
+						// and have in use centers c[0], c[1], ..., c[j-1]
+						dp[j][mask] = min(dp[j][mask], Time[i][j] + dp[j - 1][mask - (1 << i)]);
+					}
+				}
+			}
+			// at each center we consider the possibility that we crack the last piece in it
+			// and if j-th center has positive X we should count walking time to it
+			ans = min(ans, dp[j][(1 << K) - 1] + (Xj > 0 ? Xj : 0));
+		}
+		printf("%.10lf\n",ans);
+	}
+	return 0;
+}

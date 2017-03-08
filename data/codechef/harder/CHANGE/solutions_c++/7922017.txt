@@ -1,0 +1,99 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <cassert>
+#include <ctime>
+using namespace std;
+#define rep(i,a,n) for (int i=a;i<n;i++)
+#define clr(f) memset(f,0,sizeof(f))
+typedef long long ll;
+typedef unsigned long long ull;
+const int mod=1000000007;
+int d[100],clen,_,n,M,pos[510],ans;
+ull dp[101000];
+ull p1[510],p2[510],g[510];
+ull res[510][510],t[510],t2[1010];
+char c[1010];
+ 
+inline int ADD(int a,int b) {ll c=a+b;return (c>=mod)?(c-mod):c; }
+inline void ADDTO(int &a,int b) {a+=b;if (a>=mod) a-=mod;}
+inline void ADDTO(ull &a,int b) {a+=b;if (a>=mod) a-=mod;}
+inline int SUB(int a,int b) {ll c=a-b; return (c<0)?(c+mod):c; }
+ll POW(ll a,int b,int p) {
+	ll res=1;
+	for (int i=0;b>>i;i++) {
+		if ((b>>i)&1) res=res*a%p;
+		a=a*a%p;
+	}
+	return res;
+}
+int inv(int a,int p) {return POW(a,p-2,p);}
+ 
+void solve(int D,ull *res,int d) {
+	rep(k,0,D) {
+		int c=d*k%D;
+		t[c]=D-k;
+		pos[D-k]=D-c;
+		if (pos[D-k]>=D) pos[D-k]-=D;
+	}
+	rep(k,0,D) t2[k]=0;
+	ull val=0,s=0;int p1=D-pos[1];
+	rep(k,0,D) val=(val+res[pos[k+1]]*(1+k))%mod,ADDTO(s,res[k]);
+	rep(k,0,D) {
+		t2[(p1+pos[k+1])%D]=val;
+		val=(SUB(val,s)+D*res[pos[k+1]])%mod;
+	}
+	rep(k,0,D) res[k]=t2[k];
+}
+int calcn(int d,ull *a,int n) {
+	if (n<=d) return a[n];
+	p1[0]=p2[0]=1;
+	rep(i,0,d+1) {
+		int t=SUB(n,i);
+		p1[i+1]=p1[i]*t%mod;
+	}
+	rep(i,0,d+1) {
+		int t=SUB(ADD(n,i),d);
+		p2[i+1]=p2[i]*t%mod;
+	}
+	int ans=0;
+	rep(i,0,d+1) {
+		if ((d-i)&1) ans=SUB(ans,g[i]*g[d-i]%mod*p1[i]%mod*p2[d-i]%mod*a[i]%mod);
+		else ans=ADD(ans,g[i]*g[d-i]%mod*p1[i]%mod*p2[d-i]%mod*a[i]%mod);
+	}
+	return ans;
+}
+int Mod(int x) {
+	ull res=0;
+	rep(i,0,clen) res=(res*10+c[i]-'0')%x;
+	return res;
+}
+ 
+int main() {
+	g[0]=g[1]=1;
+	rep(i,2,100) g[i]=g[i-1]*inv(i,mod)%mod; 
+	for (scanf("%d",&_);_;_--) {
+		scanf("%d",&n);
+		scanf("%s",c);
+		rep(i,0,n) scanf("%d",&d[i]);
+		sort(d,d+n);
+		clen=strlen(c);
+		rep(i,0,n) if (d[i]!=1) {
+			ll v=inv(d[i],mod);int D=d[i];
+			rep(j,0,D) res[i][j]=D-j;
+			rep(j,0,n) if (j!=i) solve(D,res[i],d[j]);
+			v=POW(v,n,mod);
+			rep(j,0,D) res[i][j]=res[i][j]*v%mod;
+			rep(j,0,D-1) res[i][j]=SUB(res[i][j],res[i][D-1]);
+			res[i][D-1]=0;
+			for (int j=D-1;j>0;j--) res[i][j]=SUB(res[i][j],res[i][j-1]);
+		}
+		clr(dp);
+		dp[0]=1;
+		rep(i,0,n) rep(j,d[i],60) ADDTO(dp[j],dp[j-d[i]]);
+		rep(j,0,60) rep(i,0,n) dp[j]=SUB(dp[j],res[i][j%d[i]]);
+		ans=calcn(n,dp,Mod(mod));
+		rep(i,0,n) ans=ADD(ans,res[i][Mod(d[i])]);
+		printf("%d\n",ans);
+	}
+} 

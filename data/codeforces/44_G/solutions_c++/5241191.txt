@@ -1,0 +1,179 @@
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <algorithm>
+#include <iostream>
+#include <iomanip>
+#include <map>
+#include <set>
+#include <list>
+#include <queue>
+#include <vector>
+#include <bitset>
+#include <cmath>
+#include <ctime>
+#include <cassert>
+using namespace std;
+
+#define pb push_back
+#define mp make_pair
+#define REP(i, n) for (int i = 0; i < (n); i++)
+#define foreach(e, x) for (__typeof(x.begin()) e = x.begin(); e != x.end(); e++)
+#define FAST_IO std::ios::sync_with_stdio(false)
+typedef long long LL;
+typedef pair<int, int> PII;
+int rd() { return RAND_MAX == 32767 ? ((rand() << 15) ^ rand()) : rand(); }
+
+const int maxn = 100010;
+const int inf = 1000000000;
+
+int x[maxn], y[maxn], vx[maxn], vy[maxn], res[maxn];
+
+struct Point
+{
+	int x, y, id;
+
+	bool operator < (const Point &o) const
+	{
+		return x < o.x;
+	}
+};
+Point ps[maxn];
+struct Rec
+{
+	int xl, xr, yl, yr, id, z;
+
+	bool operator < (const Rec &o) const
+	{
+		return z < o.z;
+	}
+};
+Rec q[maxn];
+void disc(int *x, int *vx, int n)
+{
+	static PII ps[maxn];
+	for (int i = 0; i < n; i++)
+		ps[i] = mp(x[i], i);
+	sort(ps, ps+n);
+	for (int i = 0; i < n; i++) {
+		vx[i] = ps[i].first;
+		x[ps[i].second] = i;
+	}
+}
+struct SegmentTree
+{
+	int pw, *a;
+
+	void Init(int n)
+	{
+		for (pw = 1; pw <= n+3; pw *= 2);
+		a = new int[pw*2];
+		for (int i = 0; i < pw*2; i++)
+			a[i] = inf;
+	}
+	void Change(int pos, int x)
+	{
+		int cnt = pw+pos+1;
+		a[cnt] = x;
+		for (int k = cnt >> 1; k; k >>= 1)
+			a[k] = min(a[k << 1], a[(k << 1)+1]);
+	}
+	int Ask(int l, int r) // [l, r), l..r-1
+	{
+		int res = inf;
+		for (int x = pw+l, y = pw+r+1; x ^ y ^ 1; x >>= 1, y >>= 1) {
+			if (~x & 1) res = min(res, a[x ^ 1]);
+			if (y & 1) res = min(res, a[y ^ 1]);
+		}
+		return res;
+	}
+};
+struct Tree
+{
+	int l, r;
+	Tree *lc, *rc;
+	SegmentTree t;
+	vector<int> dy;
+
+	Tree(int l_, int r_) : l(l_), r(r_)
+	{
+		for (int i = l; i < r; i++)
+			dy.pb(ps[i].y);
+		sort(dy.begin(), dy.end());
+		t.Init(r-l);
+		for (int i = l; i < r; i++) {
+			int ret = lower_bound(dy.begin(), dy.end(), ps[i].y)-dy.begin();
+			t.Change(ret, ps[i].id);
+		}
+		lc = l+1 < r ? new Tree(l, (l+r) >> 1) : NULL;
+		rc = l+1 < r ? new Tree((l+r) >> 1, r) : NULL;
+	}
+	void Modify(int whi)
+	{
+		t.Change(lower_bound(dy.begin(), dy.end(), y[whi])-dy.begin(), inf);
+		if (l+1 < r) {
+			if (x[whi] < (l+r) >> 1)
+				lc->Modify(whi);
+			else
+				rc->Modify(whi);
+		}
+	}
+	int Query(int xl, int xr, int yl, int yr)
+	{
+		if (xl <= l && xr >= r) {
+			int ly = lower_bound(dy.begin(), dy.end(), yl)-dy.begin();
+			int ry = lower_bound(dy.begin(), dy.end(), yr)-dy.begin();
+			return t.Ask(ly, ry);
+		}
+		int res = inf;
+		if (xl < (l+r) >> 1)
+			res = min(res, lc->Query(xl, xr, yl, yr));
+		if (xr > (l+r) >> 1)
+			res = min(res, rc->Query(xl, xr, yl, yr));
+		return res;
+	}
+};
+Tree *root;
+int main()
+{
+	//freopen("input.txt", "r", stdin);
+	//freopen("output.txt", "w", stdout);
+	int n, m;
+	cin >> n;
+	for (int i = 0; i < n; i++) {
+		cin >> q[i].xl >> q[i].xr >> q[i].yl >> q[i].yr >> q[i].z;
+		q[i].id = i;
+	}
+	sort(q, q+n);
+	cin >> m;
+	for (int i = 0; i < m; i++)
+		cin >> x[i] >> y[i];
+	disc(x, vx, m);
+	disc(y, vy, m);
+	for (int i = 0; i < m; i++) {
+		ps[i].x = x[i];
+		ps[i].y = y[i];
+		ps[i].id = i;
+	}
+	sort(ps, ps+m);
+	root = new Tree(0, m);
+	memset(res, 0, sizeof(res));
+	for (int i = 0; i < n; i++) {
+		int lx = lower_bound(vx, vx+m, q[i].xl)-vx;
+		int rx = upper_bound(vx, vx+m, q[i].xr)-vx;
+		int ly = lower_bound(vy, vy+m, q[i].yl)-vy;
+		int ry = upper_bound(vy, vy+m, q[i].yr)-vy;
+		int ret = inf;
+		if (lx < rx && ly < ry)
+			ret = root->Query(lx, rx, ly, ry);
+		if (ret != inf) {
+			res[ret] = q[i].id+1;
+			root->Modify(ret);
+		}
+	}
+	for (int i = 0; i < m; i++)
+		cout << res[i] << endl;
+	return 0;
+}
+
+

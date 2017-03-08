@@ -1,0 +1,81 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+const int N = 1100010;
+
+char s[N];
+int sn;
+
+int n, lm[N], rm[N];
+
+struct node {
+	int c[27], par, len, cnt[11];
+} d[N];
+int root, last, dn;
+
+int de[N], sta[N], top;
+
+void extend(int x, int col) {
+    int p = last, np = ++dn;
+    d[np].len = d[p].len + 1;
+	d[np].cnt[col]++;
+    while (p && !d[p].c[x])
+        d[p].c[x] = np, p = d[p].par;
+    if (!p) {
+        d[np].par = root;
+    } else {
+        int q = d[p].c[x];
+        if (d[q].len == d[p].len + 1) {
+            d[np].par = q;
+        } else {
+            int nq = ++dn;
+			memcpy(d[nq].c, d[q].c, sizeof(d[q].c));
+			d[nq].par = d[q].par;
+			d[nq].len = d[p].len + 1;
+            d[q].par = d[np].par = nq;
+            while (p && d[p].c[x] == q)
+                d[p].c[x] = nq, p = d[p].par;
+        }
+    }
+    last = np;
+}
+bool check(int u) {
+	if (!d[u].cnt[0]) return 0;
+	for (int x = 1; x <= n; ++x)
+		if (d[u].cnt[x] < lm[x] || d[u].cnt[x] > rm[x]) return 0;
+	return 1;
+}
+int main() {
+	scanf("%s", s + 1), sn = strlen(s + 1);
+	scanf("%d", &n);
+	for (int i = 1; i <= n; ++i) {
+		s[++sn] = 'z' + 1;
+		scanf("%s", s + sn + 1), sn += strlen(s + sn + 1);
+		scanf("%d %d", lm + i, rm + i);
+	}
+
+	last = root = ++dn;
+	for (int i = 1, col = 0; i <= sn; ++i) {
+		if (s[i] > 'z') ++col;
+		extend(s[i] - 'a', col);
+	}
+
+	for (int i = 1; i <= dn; ++i) ++de[d[i].par];
+	for (int i = 1; i <= dn; ++i) {
+		if (!de[i]) sta[++top] = i;
+	}
+	int ans = 0;
+	while (top) {
+		int u = sta[top--], v = d[u].par;
+		if (u == root) break;
+		if (check(u)) ans += d[u].len - d[v].len;
+		for (int x = 0; x <= n; ++x) {
+			d[v].cnt[x] += d[u].cnt[x];
+		}
+		if (--de[v] == 0) sta[++top] = v;
+	}
+	printf("%d\n", ans);
+}

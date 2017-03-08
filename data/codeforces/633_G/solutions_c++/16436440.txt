@@ -1,0 +1,149 @@
+#include<cstdio>
+#include<iostream>
+#include<string>
+#include<cstring>
+#include<algorithm>
+#include<bitset>
+using namespace std;
+
+typedef bitset<1000> bit;
+
+struct edge
+{int u,v,next;
+};
+struct edge e[200010];
+
+struct unit
+{int l,r;
+};
+struct unit b[100010];
+
+struct tree
+{int tag;
+ bit val;
+};
+struct tree t[400010];
+
+int n,m,nq,num,tot,opt,x,y,z;
+int head[100010],a[100010],w[100010];
+bit ans,prime,d;
+
+void add(int u,int v)
+{e[num].u=u;
+ e[num].v=v;
+ e[num].next=head[u];
+ head[u]=num;
+ num++;
+ e[num].u=v;
+ e[num].v=u;
+ e[num].next=head[v];
+ head[v]=num;
+ num++;
+}
+
+void dfs(int i,int fa)
+{int j;
+ b[i].l=++tot;
+ j=head[i];
+ while(j!=-1)
+ {	if(e[j].v!=fa) dfs(e[j].v,i);
+ 	j=e[j].next;
+ }
+ b[i].r=tot;
+}
+
+void build(int p,int l,int r)
+{if(l==r)
+ {	t[p].val[w[l]]=1;
+ 	return;
+ }
+ build(p*2,l,(l+r)/2);
+ build(p*2+1,(l+r)/2+1,r);
+ t[p].val=t[p*2].val|t[p*2+1].val;
+}
+
+void rotate(bit &A,int x)
+{A=(A>>(m-x))|(A<<x);
+ A=A&d;
+}
+
+void push_down(int p)
+{rotate(t[p*2].val,t[p].tag);
+ t[p*2].tag=(t[p*2].tag+t[p].tag)%m;
+ rotate(t[p*2+1].val,t[p].tag);
+ t[p*2+1].tag=(t[p*2+1].tag+t[p].tag)%m;
+ t[p].tag=0;
+}
+
+void change(int p,int l,int r)
+{if(l>y || r<x) return;
+ if(l>=x && r<=y)
+ {	rotate(t[p].val,z);
+ 	t[p].tag=(t[p].tag+z)%m;
+ 	return;
+ }
+ if(t[p].tag) push_down(p);
+ change(p*2,l,(l+r)/2);
+ change(p*2+1,(l+r)/2+1,r);
+ t[p].val=t[p*2].val|t[p*2+1].val;
+}
+
+void query(int p,int l,int r)
+{if(l>y || r<x) return;
+ if(l>=x && r<=y)
+ {	ans=ans|t[p].val;
+ 	return;
+ }
+ push_down(p);
+ query(p*2,l,(l+r)/2);
+ query(p*2+1,(l+r)/2+1,r);
+}
+
+int main()
+{int i,j,t1,q,flag;
+ 
+ scanf("%d%d",&n,&m);
+ for(i=1;i<=n;i++)
+ {	scanf("%d",&a[i]);
+ 	a[i]%=m;
+ }
+ memset(head,-1,sizeof(head));
+ for(i=1;i<n;i++)
+ {	scanf("%d%d",&x,&y);
+ 	add(x,y);
+ }
+ dfs(1,0);
+ for(i=1;i<=n;i++) w[b[i].l]=a[i];
+ build(1,1,n);
+ scanf("%d",&nq);
+ for(i=2;i<=m;i++)
+ {	flag=1;
+ 	for(j=2;j*j<=i;j++)
+ 		if(i%j==0)
+ 		{	flag=0;
+ 			break;
+ 		}
+ 	if(flag) prime[i]=1;
+ }
+ for(i=0;i<m;i++) d[i]=1;
+ for(q=1;q<=nq;q++)
+ {	scanf("%d",&opt);
+ 	if(opt==1)
+ 	{	scanf("%d%d",&x,&z);
+ 		y=b[x].r;
+		x=b[x].l;
+		z%=m;
+ 		change(1,1,n);
+ 	}
+ 	else
+ 	{	scanf("%d",&x);
+ 		ans.reset();
+ 		t1=x;
+ 		x=b[t1].l;
+ 		y=b[t1].r;
+ 		query(1,1,n);
+ 		printf("%d\n",(ans&prime).count());
+ 	}
+ }
+ return 0;
+}

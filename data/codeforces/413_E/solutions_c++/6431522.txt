@@ -1,0 +1,77 @@
+#include <cstdio>
+
+#define N 200000
+
+int a[2][N], b[2][N], c[2][N], n, m, i, j, x, y, z;
+char s[2][N + 1];
+
+int main()
+{
+    scanf("%d%d%s%s", &n, &m, s[0], s[1]);
+
+    for (i = n - 1, x = n; i >= 0; i--)
+    {
+        if (s[0][i] == 'X')
+            x = i;
+        c[0][i] = x;
+    }
+
+    for (i = n - 1, x = n; i >= 0; i--)
+    {
+        if (s[1][i] == 'X')
+            x = i;
+        c[1][i] = x;
+    }
+
+    i = 0;
+
+    while (i < n)
+    {
+        ++z;
+        while (i < n && s[0][i] == 'X' && s[1][i] == 'X')
+            ++i;
+
+        if (i < n)
+            x = s[0][i] == 'X';
+
+        while (i < n)
+        {
+            for (; i < n && s[x][i] == '.'; i++)
+                a[x][i] = ++y, b[x][i] = z;
+            if (i < n && s[x ^ 1][i] == '.' && s[x ^ 1][i - 1] == '.')
+                x ^= 1, --i;
+            else
+                break;
+        }
+    }
+
+    while (m--)
+    {
+        scanf("%d%d", &x, &y);
+        --x, --y;
+        i = x % n, j = y % n;
+        x /= n, y /= n;
+        if (i > j || (i == j && a[x][i] > a[y][j]))
+            z = i, i = j, j = z, z = x, x = y, y = z;
+        if (x == y && c[x][i] == c[y][j])
+            printf("%d\n", j - i);
+        else
+        {
+            if (c[x][i] - 1 <= j)
+                z = c[x][i] - i - 1, i = c[x][i] - 1;
+            else
+                z = j - i, i = j;
+            if (!a[x][i])
+                x ^= 1, ++z;
+            if (!a[y][j])
+                y ^= 1, ++z;
+            if (a[y][j] > a[x][i])
+                z += a[y][j] - a[x][i];
+            else
+                z += a[x][i] - a[y][j];
+            printf("%d\n", b[y][j] == b[x][i] ? z : -1);
+        }
+    }
+
+    return 0;
+}

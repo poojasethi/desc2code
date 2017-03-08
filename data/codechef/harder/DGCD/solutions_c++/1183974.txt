@@ -1,0 +1,367 @@
+#include<iostream>
+#include<cstdio>
+#include<vector>
+
+using namespace std;
+
+const int max_n=50010;
+const int max_q=50010;
+
+int n,q;
+int iv[max_n];
+vector<int> adjl[max_n],chl[max_n];
+
+int par[max_n];
+int st[max_n];
+int beg[max_n];
+int fin[max_n];
+int tm=0;
+
+int np=0;
+vector<int> p[max_n];
+int psz[max_n]={0};
+int pno[max_n];
+int pix[max_n];
+
+void DFS(int vt)
+{
+	++tm;
+	beg[vt]=tm;
+
+	st[vt]=1;
+	int vtnbr;	
+	for(int i=0; i<adjl[vt].size(); ++i)
+	{
+		vtnbr=adjl[vt][i];
+		if(vtnbr!=par[vt])
+		{
+			par[vtnbr]=vt;
+			chl[vt].push_back(vtnbr);
+			DFS(vtnbr);
+			st[vt]+=st[vtnbr];
+		}
+	}
+	
+	++tm;
+	fin[vt]=tm;
+}
+
+bool heavy(int vt)
+{
+	return (2*st[vt] >= st[par[vt]]);
+}
+
+void buildpath(int bs)
+{
+	int vt=bs;
+	
+	while(true)
+	{
+		p[np].push_back(vt);
+		pno[vt]=np;
+		pix[vt]=psz[np];
+		++psz[np];
+		
+		if(vt!=0 and heavy(vt))
+			vt=par[vt];
+		else
+			break;
+	}
+}
+
+void findpaths()
+{
+	for(int i=0; i<n; ++i)
+	{
+		bool base=true;
+		for(int j=0; j<chl[i].size(); ++j)
+			if(heavy(chl[i][j]))
+				base=false;
+		
+		if(base)
+		{
+			buildpath(i);
+			++np;
+		}
+	}
+}
+
+bool ancof(int u, int v)
+{
+	return (beg[u]<=beg[v] and fin[v]<=fin[u]);
+}
+
+int dpno[max_n];
+int dix1[max_n];
+int dix2[max_n];
+int dsz=0;
+int lca;
+
+int binsrc(int cpno, int l, int r, int ref)
+{
+	if(l+1==r)
+	{
+		lca=p[cpno][r];
+		return l;
+	}
+	else
+	{
+		int mid=(l+r)/2;
+		if(ancof(p[cpno][mid],ref))
+			return binsrc(cpno,l,mid,ref);
+		else
+			return binsrc(cpno,mid,r,ref);
+	}
+}
+
+void dcmp(int src, int ref)
+{
+	int vt=src;
+	while(true)
+	{
+		if( ancof( p[pno[vt]][psz[pno[vt]]-1] , ref ) )
+		{
+			if(not ancof(vt,ref))
+			{
+				dpno[dsz]=pno[vt];
+				dix1[dsz]=pix[vt];
+				dix2[dsz]=binsrc(pno[vt],pix[vt],psz[pno[vt]]-1,ref);
+				++dsz;
+			}
+			else
+				lca=vt;
+			break;
+		}
+		else
+		{
+			dpno[dsz]=pno[vt];
+			dix1[dsz]=pix[vt];
+			dix2[dsz]=psz[pno[vt]]-1;
+			++dsz;
+			vt=par[p[pno[vt]][psz[pno[vt]]-1]];
+		}
+	}
+}
+
+void finddcmp(int u, int v)
+{
+	dsz=0;
+	if(u==v)
+	{
+		dpno[dsz]=pno[u];
+		dix1[dsz]=pix[u];
+		dix2[dsz]=pix[u];
+		++dsz;
+	}
+	else if(ancof(u,v))
+	{
+		dcmp(v,u);
+		dpno[dsz]=pno[u];
+		dix1[dsz]=pix[u];
+		dix2[dsz]=pix[u];
+		++dsz;
+	}
+	else if(ancof(v,u))
+	{
+		dcmp(u,v);
+		dpno[dsz]=pno[v];
+		dix1[dsz]=pix[v];
+		dix2[dsz]=pix[v];
+		++dsz;
+	}
+	else
+	{
+		dcmp(u,v);
+		dcmp(v,u);
+		dpno[dsz]=pno[lca];
+		dix1[dsz]=pix[lca];
+		dix2[dsz]=pix[lca];
+		++dsz;
+	}
+}
+
+int findgcd(int a, int b)
+{
+	a*=((a<0)?-1:1);
+	b*=((b<0)?-1:1);
+	if(a==0)
+		return b;
+	if(b==0)
+		return a;
+	return findgcd(b,a%b);
+}
+
+struct STel
+{
+	int lr,rr;
+	int sum,gcd;
+	STel(){};
+	STel(int lr_, int rr_, int sum_, int gcd_) {lr=lr_; rr=rr_; sum=sum_; gcd=gcd_;}
+};
+int p2[max_n];
+vector<STel> ST[max_n];
+
+void ist(int s, int ix, int l, int r)
+{
+	int lc=2*ix+1, rc=2*ix+2, mid=(l+r)/2;
+	ST[s][ix].lr=l;
+	ST[s][ix].rr=r;
+	if(r>l+1)
+	{
+		ist(s,lc,l,mid);
+		ist(s,rc,mid,r);
+		ST[s][ix].sum=ST[s][lc].sum+ST[s][rc].sum;
+		ST[s][ix].gcd=findgcd(ST[s][lc].gcd,ST[s][rc].gcd);
+	}
+	else
+	{
+		if(l<=psz[s]-1)
+		{
+			ST[s][ix].sum=( (l==0) ? iv[p[s][0]] : (iv[p[s][l]]-iv[p[s][l-1]]) );
+			ST[s][ix].gcd=ST[s][ix].sum;
+			if(ST[s][ix].gcd<0) ST[s][ix].gcd*=(-1);
+		}
+		else
+		{
+			ST[s][ix].sum=0;
+			ST[s][ix].gcd=0;
+		}
+	}
+}
+
+void initsegtree(int s)
+{
+	p2[s]=1;
+	while(p2[s]<psz[s])
+		p2[s]*=2;
+	
+	ST[s].resize(2*p2[s]-1);
+	
+	ist(s,0,0,p2[s]);
+}
+
+void ust(int s, int ix, int loc, int d)
+{
+	if(ST[s][ix].rr-ST[s][ix].lr==1)
+	{
+		ST[s][ix].sum+=d;
+		ST[s][ix].gcd=ST[s][ix].sum;
+		if(ST[s][ix].gcd<0) ST[s][ix].gcd*=(-1);
+	}
+	else
+	{
+		int lc=2*ix+1, rc=2*ix+2; int mid=(ST[s][ix].rr+ST[s][ix].lr)/2;
+		if(loc<mid)
+			ust(s,lc,loc,d);
+		else
+			ust(s,rc,loc,d);
+		ST[s][ix].sum=ST[s][lc].sum+ST[s][rc].sum;
+		ST[s][ix].gcd=findgcd(ST[s][lc].gcd,ST[s][rc].gcd);
+	}
+}
+
+void updatesegtree(int s, int l, int r, int d)
+{
+	ust(s,0,l,d);
+	if(r<psz[s]-1)
+		ust(s,0,r+1,(-1)*d);
+}
+
+int qsumst(int s, int ix, int loc)
+{
+	if(ST[s][ix].rr==loc+1)
+		return ST[s][ix].sum;
+	else
+	{
+		int lc=2*ix+1, rc=2*ix+2; int mid=(ST[s][ix].rr+ST[s][ix].lr)/2;
+		if(loc<mid)
+			return qsumst(s,lc,loc);
+		else
+			return ST[s][lc].sum+qsumst(s,rc,loc); 
+	}		
+}
+
+int qgcdst(int s, int ix, int l, int r)
+{
+	int lc=2*ix+1, rc=2*ix+2;
+	int cl=ST[s][ix].lr, cr=ST[s][ix].rr; int mid=(cl+cr)/2;
+	
+	if(cl==l and cr==r)
+		return ST[s][ix].gcd;
+	else if(r<=mid)
+		return qgcdst(s,lc,l,r);
+	else if(l>=mid)
+		return qgcdst(s,rc,l,r);
+	else
+		return findgcd(qgcdst(s,lc,l,mid),qgcdst(s,rc,mid,r)); 
+}
+
+int querysegtree(int s, int l, int r)
+{
+	if(l==r)
+		return qsumst(s,0,l);
+	else
+		return findgcd(qsumst(s,0,l),qgcdst(s,0,l+1,r+1));
+}
+
+int main()
+{
+	scanf("%d",&n);
+	
+	int u,v;
+	for(int i=0; i<n-1; ++i)
+	{
+		scanf("%d%d",&u,&v);
+		adjl[u].push_back(v);
+		adjl[v].push_back(u);
+	}
+	
+	for(int i=0; i<n; ++i)
+		scanf("%d",&iv[i]);
+	
+	par[0]=0;
+	DFS(0);
+	
+	findpaths();
+	
+	/*for(int i=0; i<np; ++i)
+	{
+		cout<<"Path #"<<i<<" : ";
+		for(int j=0; j<psz[i]; ++j)
+			cout<<p[i][j]<<" ";
+		cout<<endl;
+	}*/
+	//cout<<pno[16]<<" "<<pix[16]<<", "<<pno[0]<<" "<<pix[0]<<endl;
+	
+	/*finddcmp(25,12);
+	for(int i=0; i<dsz; ++i)
+		cout<<"# "<<p[dpno[i]][dix1[i]]<<" "<<p[dpno[i]][dix2[i]]<<endl;*/
+	
+	scanf("%d",&q);
+	
+	for(int i=0; i<np; ++i)
+		initsegtree(i);
+	
+	char c[5]; int d;
+	for(int z=0; z<q; ++z)
+	{
+		scanf("%s",c);
+		scanf("%d%d",&u,&v);
+		if(c[0]=='C')
+		{
+			scanf("%d",&d);
+			finddcmp(u,v);
+			for(int i=0; i<dsz; ++i)
+				updatesegtree(dpno[i],dix1[i],dix2[i],d);
+		}
+		else
+		{
+			int res=0;
+			finddcmp(u,v);
+			for(int i=0; i<dsz; ++i)
+				res=findgcd(res,querysegtree(dpno[i],dix1[i],dix2[i]));
+			printf("%d\n",res);
+		}
+	}
+	
+}

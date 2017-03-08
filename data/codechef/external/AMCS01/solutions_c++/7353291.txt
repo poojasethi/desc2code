@@ -1,0 +1,132 @@
+#include <bits/stdc++.h>
+using namespace std;
+vector<int> v[100009];
+int dp[100009]={0};
+int ans[100009]={0};
+int height[100009]={0};
+int parent[100009]={0};
+bool h[100009]={0};
+struct node
+{
+	int value,count;
+};
+node dfs(int i)
+{
+	h[i]=1;
+	vector<int>::iterator it;
+	int maxval=0;
+	int count=0;
+	node s={0};
+	for(it=v[i].begin();it!=v[i].end();it++)
+	{
+		if(h[*it]==0)
+		{
+			parent[*it]=i;
+			s=dfs(*it);
+			if(s.value==maxval)count+=s.count;
+			else if(s.value>maxval)
+			{
+				maxval=s.value;
+				count=s.count;
+			}
+			height[i]=max(height[i],height[*it]+1);
+		}
+	}
+	maxval++;
+	if(count==0)height[i]=1;
+	dp[i]=max(count,1);
+	return (node){maxval,dp[i]};
+}
+vector<int> dist[100009];
+int bfs(int i,int type)
+{
+	queue<pair<int,int> > q;
+	q.push(make_pair(i,0));
+	int h[100009]={0},last=-1,len=0;
+	h[i]=1;
+	if(type==1)dist[0].push_back(i);
+	while(!q.empty())
+	{
+		pair<int,int> s=q.front();
+	//	cout<<"s.f="<<s.first<<" s.s="<<s.second<<endl;
+		len=max(len,s.second);
+		if(type==1)dist[s.second].push_back(s.first);
+		last=s.first;
+		q.pop();
+		for(vector<int>::iterator it=v[s.first].begin();it!=v[s.first].end();it++)
+		{
+	//		cout<<"*it="<<*it<<" ";
+			if(h[*it]==0)
+			{
+			//	cout<<"yay"<<endl;
+				h[*it]=1;
+				q.push(make_pair(*it,s.second+1));
+			}
+		}
+	//	cout<<endl;
+	}
+	if(type==0)return last;
+	return dist[len/2][0];
+}
+void calc(int i,int res)
+{
+	queue<int> q;
+	bool hh[100009]={0};
+	hh[i]=1;
+	for(vector<int>::iterator it=v[i].begin();it!=v[i].end();it++)
+	{
+	//	cout<<"it="<<*it<<" height="<<height[*it]<<endl;
+		if(1+height[*it]==height[i])
+		{
+			ans[*it]=dp[i]-dp[*it];
+			if(ans[*it]==0)ans[*it]=res;
+		}
+		else
+		{
+			ans[*it]=dp[i];
+		}
+		q.push(*it);hh[*it]=1;
+	//	cout<<"it="<<*it<<" ans="<<ans[*it]<<endl;
+	}
+//	cout<<"lol"<<endl;
+	while(!q.empty())
+	{
+		int s=q.front();
+		q.pop();
+		if(hh[s]==0)
+			ans[s]=ans[parent[s]];
+		hh[s]=1;
+	//	cout<<"s="<<s<<" ans[s]="<<ans[s]<<endl;
+		for(vector<int>::iterator it=v[s].begin();it!=v[s].end();it++)
+			if(hh[*it]==0){q.push(*it);}
+	}
+	
+}
+int main() 
+{
+	int n,a,b;
+	cin>>n;
+	for(int i=0;i<n-1;i++)
+	{
+		cin>>a>>b;
+		v[b].push_back(a);
+		v[a].push_back(b);
+	}
+	int p=bfs(0,0);
+//	cout<<"p="<<p<<endl;
+	p=bfs(p,1);
+//	cout<<"p="<<p<<endl;
+	parent[p]=-1;
+	dfs(p);
+//	for(int i=0;i<n;i++)
+//		cout<<dp[i]<<" ";cout<<endl;
+	ans[p]=dp[p];
+	int res=0;
+	for(vector<int>::iterator it=v[p].begin();it!=v[p].end();it++)
+		if(height[*it]==height[p]-2)res+=dp[*it];
+//	cout<<"res="<<res<<endl;
+	calc(p,res);
+	for(int i=0;i<n;i++)
+		cout<<ans[i]<<" ";cout<<endl;
+	return 0;
+}

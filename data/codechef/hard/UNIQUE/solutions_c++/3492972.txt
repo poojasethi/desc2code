@@ -1,0 +1,192 @@
+//Template
+
+// By Anudeep :)
+//Includes
+#include <vector> 
+#include <queue>
+#include <map> 
+#include <set>
+#include <utility> //Pair
+#include <algorithm>
+#include <sstream> // istringstream>> ostring stream<<
+#include <iostream> 
+#include <iomanip> 
+//setbase - cout << setbase (16); cout << 100 << endl; Prints 64
+//setfill -   cout << setfill ('x') << setw (5); cout << 77 << endl; prints xxx77
+//setprecision - cout << setprecision (4) << f << endl; Prints x.xxxx
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <cstring>
+#include <limits>
+using namespace std;
+
+//M lazy ;)
+typedef long long ll;
+typedef vector <int> vi;
+typedef pair< int ,int > pii;
+typedef istringstream iss;
+typedef ostringstream oss;
+#define pb push_back
+#define mp make_pair
+#define ff first
+#define ss second
+#define sz size()
+#define ln length()
+#define rep(i,n) for(int i=0;i<n;i++)
+#define fu(i,a,n) for(int i=a;i<=n;i++)
+#define fd(i,n,a) for(int i=n;i>=a;i--)
+#define all(a)  a.begin(),a.end() 
+#define ESP (1e-9)
+
+#define gi(n) scanf("%d",&n)
+#define gl(n) cin >> n
+#define pi(n) printf("%d",n)
+#define pl(n) cout << n
+#define ps printf(" ")
+#define pn printf("\n")
+#define dg(n,s); printf("%s %d",s,n)
+#define imax numeric_limits<int>::max()
+#define imin numeric_limits<int>::min()
+#define lmax numeric_limits<ll>::max()
+#define lmin numeric_limits<ll>::min()
+
+#define SA_N 120000
+#define SA_LN 20
+int lg, len, p[SA_LN][SA_N], sa[SA_LN];
+int la[SA_N], lb[SA_N], lc[SA_N];
+int bucket[SA_N], tla[SA_N], tlb[SA_N], tlc[SA_N];
+void constructSA(int *a, int leng) {
+	len = leng;
+	lg = 1;
+	for(int i=0; i<len; i++) p[0][i] = a[i];
+	sort(a, a+len);
+	map <int, int> M;
+	for(int i=0; i<len; i++) if(i==0 || (a[i] != a[i-1])) M[a[i]] = i;
+	for(int i=0; i<len; i++) p[0][i] = M[p[0][i]];
+	for(int skip=1; skip/2 < len; skip<<=1, lg++) {
+		for(int i=0; i<len; i++) {
+			la[i] = p[lg-1][i];
+			lb[i] = i+skip < len ? p[lg-1][i+skip] : -1;
+			lc[i] = i;
+		}
+		for(int i=0; i<len+10; i++) bucket[i] = 0;
+		for(int i=0; i<len; i++) bucket[lb[i]+1]++;
+		for(int i=1; i<len+10; i++) bucket[i] += bucket[i-1];
+		for(int i=len-1; i>=0; i--) {
+			int wer = (bucket[lb[i]+1]--)-1;
+			tla[wer] = la[i]; tlb[wer] = lb[i]; tlc[wer] = lc[i];
+		}
+		for(int i=0; i<len; i++) la[i] = tla[i], lb[i] = tlb[i], lc[i] = tlc[i];
+		for(int i=0; i<len+10; i++) bucket[i] = 0;
+		for(int i=0; i<len; i++) bucket[la[i]]++;
+		for(int i=1; i<len+10; i++) bucket[i] += bucket[i-1];
+		for(int i=len-1; i>=0; i--) {
+			int wer = (bucket[la[i]]--)-1;
+			tla[wer] = la[i]; tlb[wer] = lb[i]; tlc[wer] = lc[i];
+		}
+		for(int i=0; i<len; i++) la[i] = tla[i], lb[i] = tlb[i], lc[i] = tlc[i];
+		for(int i=0; i<len; i++) {
+			p[lg][lc[i]] = (i>0 && la[i-1]==la[i] && lb[i-1]==lb[i])? p[lg][lc[i-1]] : i;
+		}
+	}
+	lg--;
+	for(int i=0; i<len; i++) sa[p[lg][i]] = i;
+	// for(int i=0; i<len; i++) printf("%d ",p[lg][i]); printf("\n");
+	//p[lg][] has the rank of every index.
+}
+void constructSA(string t) {
+	int *a = new int[t.length()];
+	for(int i=0; i<t.length(); i++) a[i] = int(t[i]);
+	constructSA(a, t.length());
+	delete a;
+}
+int lcp(int i, int j) {
+	if(i==j) return len - i;
+	int ans = 0;
+	for(int k = lg; k>=0 && i<len && j<len; k--)
+		if(p[k][i] == p[k][j])
+			ans += (1<<k), i += (1<<k), j += (1<<k);
+	return ans;
+}
+bool cmp(int i, int il, int j, int jl) {
+	return p[lg][i] < p[lg][j];
+	int lc = lcp(i,j);
+	if(lc >= il || lc >= jl) return false;
+	return p[0][i+lc] < p[0][j+lc];
+}
+int solve(int i) {
+	int x = p[lg][i];
+	if(x==0 && len==1) return 1;
+	if(x==0) return lcp(i, sa[x+1])+1;
+	if(x==len-1) return lcp(i, sa[x-1])+1;
+	// printf("%d %d %d")
+	return max(lcp(i, sa[x-1]), lcp(i, sa[x+1]))+1;
+}
+char ss[200000];
+int ati[200000];
+int main() {
+	scanf("%s", ss);
+	string s = string(ss);
+	constructSA(s);
+	// rep(i,len) printf("%d ", sa.P[sa.lg][i]); pn;
+	//do suffix array, need following function, given index and length, tells number of occurrances
+
+	rep(i, len) {
+		ati[i] = solve(i);
+		if(ati[i] + i > len) ati[i] = -1;
+		if(ati[i] == -1) {
+			fu(j,i,len-1) ati[j] = -1;
+			break;
+		}
+	}
+	// rep(i, len) printf("%d\n", ati[i]);
+	set <pii > ends;
+	set < pair < pair < int, int >, int > > ends2;
+	int lastseen = -1, lastseenlen;
+	rep(i, len) {
+		int bestlen = -1, ind = -1;
+		if(ati[i] != -1) ind = i, bestlen = ati[i];
+		if(lastseen != -1) {
+			lastseenlen = i - lastseen + 1;
+			if(ind == -1) {
+				ind = lastseen;
+				bestlen = lastseenlen;
+			} else {
+				if(lastseenlen < bestlen) {
+					ind = lastseen;
+					bestlen = lastseenlen;
+				} else if(lastseenlen == bestlen && cmp(lastseen, lastseenlen, ind, bestlen)) {
+					ind = lastseen;
+					bestlen = lastseenlen;
+				}
+			}
+		}
+		if(!ends.empty()) {
+			int cur = (*ends2.begin()).ss;
+			int curlen = ati[cur];
+			if(ind == -1) {
+				ind = cur;
+				bestlen = curlen;
+			} else {
+				if(curlen < bestlen) {
+					ind = cur;
+					bestlen = curlen;
+				} else if(curlen == bestlen && cmp(cur, curlen, ind, bestlen)) {
+					ind = cur;
+					bestlen = curlen;
+				}
+			}
+		}
+		printf("%d %d\n", ind+1, bestlen);
+		if(ati[i] != -1) ends.insert( mp(i+ati[i]-1, i) ), ends2.insert( mp(mp(ati[i], p[lg][i]), i) );
+		while(!ends.empty() && (*ends.begin()).ff == i) {
+			int cur = (*ends.begin()).ss;
+			if(lastseen == -1 || cur > lastseen) lastseen = cur;
+			ends2.erase( mp(mp(ati[cur], p[lg][cur]), cur));
+			ends.erase(ends.begin());
+		}
+	}
+	return 0;
+}

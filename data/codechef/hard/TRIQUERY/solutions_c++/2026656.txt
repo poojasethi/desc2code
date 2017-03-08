@@ -1,0 +1,131 @@
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+typedef unsigned int uint;
+typedef std::vector<int> vi;
+
+// [1,max]
+struct bit
+{
+	bit(int size): max(size), A(size+1,0) {}
+	int sum(int x)
+	{
+		int r=0;
+		while(x)
+		{
+			r+=A[x];
+			x-=x&-x;
+		}
+		return r;
+	}
+	void inc(int x)
+	{
+		while(x<=max)
+		{
+			A[x]+=1;
+			x+=x&-x;
+		}
+	}
+
+	int max;
+	vi A;
+};
+
+int so=0;
+bit sx(300042);
+bit sy(300042);
+
+struct point
+{
+	int x,y;
+};
+
+struct triangle
+{
+	int x,y,d;
+	int r;
+};
+
+struct event
+{
+	event(int _o): o(_o) {}
+	virtual ~event() {}
+	virtual void process() =0;
+	static bool order(event const *lhs, event const *rhs)
+	{
+		return (*lhs).o<(*rhs).o;
+	}
+	int o;
+};
+
+struct add_point_event: public event
+{
+	add_point_event(int _o, point _p): event(_o), p(_p) {}
+	virtual ~add_point_event() {}
+	virtual void process()
+	{
+		++so;
+		sx.inc(p.x+17);
+		sy.inc(p.y+17);
+	}
+	point p;
+};
+
+struct begin_triangle_event: public event
+{
+	begin_triangle_event(int _o, triangle &_t): event(_o), p(&_t) {}
+	virtual ~begin_triangle_event() {}
+	virtual void process()
+	{
+		triangle &t=*p;
+		t.r=so-sx.sum(t.x+17-1)-sy.sum(t.y+17-1);
+	}
+	triangle *p;
+};
+
+struct end_triangle_event: public event
+{
+	end_triangle_event(int _o, triangle &_t): event(_o), p(&_t) {}
+	virtual ~end_triangle_event() {}
+	virtual void process()
+	{
+		triangle &t=*p;
+		t.r=so-sx.sum(t.x+17-1)-sy.sum(t.y+17-1)-t.r;
+	}
+	triangle *p;
+};
+
+int main()
+{
+	uint N=0,Q=0;
+	scanf("%u%u\n",&N,&Q);
+	std::vector<event *> events;
+	events.reserve(N+2*Q);
+
+	for(uint n=0; n<N; ++n)
+	{
+		point p;
+		scanf("%d%d",&p.x,&p.y);
+		events.push_back(new add_point_event((p.x+p.y)*2,p));
+	}
+
+	std::vector<triangle> triangles(Q);
+	for(uint q=0; q<Q; ++q)
+	{
+		triangle &t=triangles[q];
+		scanf("%d%d%d",&t.x,&t.y,&t.d);
+		events.push_back(new begin_triangle_event((t.x+t.y)*2-1,t));
+		events.push_back(new end_triangle_event((t.x+t.y+t.d)*2+1,t));
+	}
+
+	std::sort(events.begin(),events.end(),event::order);
+	for(size_t i=0; i<events.size(); ++i)
+	{
+		event &e=*events[i];
+		e.process();
+	}
+
+	for(uint q=0; q<Q; ++q)
+		printf("%u\n", triangles[q].r);
+	return 0;
+}

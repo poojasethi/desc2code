@@ -1,0 +1,368 @@
+/*
+ * 2011-12-19  Martin  <Martin@Martin-desktop>
+
+ * 
+ */
+#include <cstdio>
+#include <cstring>
+#include <cctype>
+#include <climits>
+#include <cmath>
+#include <ctime>
+#include <cstdlib>
+#include <cstdarg>
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <sstream>
+#include <exception>
+#include <stdexcept>
+#include <memory>
+#include <locale>
+#include <bitset>
+#include <deque>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <stack>
+#include <vector>
+#include <algorithm>
+#include <iterator>
+#include <functional>
+#include <string>
+#include <complex>
+#include <valarray>
+
+using namespace std;
+
+template <class T> inline T checkmin(T &a, T b)
+{
+	return (a < b) ? a : a = b;
+}
+
+template <class T> inline T checkmax(T &a, T b)
+{
+	return (a > b) ? a : a = b;
+}
+
+template <class T> T GCD(T a, T b)
+{
+	if (a < 0)
+		return GCD(- a, b);
+	if (b < 0)
+		return GCD(a, - b);
+	return (a == 0) ? b : GCD(b % a, a);
+}
+
+template <class T> T LCM(T a, T b)
+{
+	if (a < 0)
+		return LCM(- a, b);
+	if (b < 0)
+		return LCM(a, - b);
+	return (a == 0 || b == 0) ? 0 : a / GCD(a, b) * b;
+}
+
+template <class T> T ExtGCD(T a, T b, T &x, T &y)
+{
+	if (a < 0)
+	{
+		T c = ExtGCD(- a, b, x, y);
+		x = - x;
+		return c;
+	}
+	if (b < 0)
+	{
+		T c = ExtGCD(a, - b, x, y);
+		y = - y;
+		return c;
+	}
+	if (a == 0)
+	{
+		x = 0, y = 1;
+		return b;
+	}
+	else
+	{
+		T c = ExtGCD(b % a, a, y, x);
+		x -= b / a * y;
+		return c;
+	}
+}
+
+template <class T> inline T sqr(T X)
+{
+	return X * X;
+}
+
+#define tr(i, x) for (typeof(x.begin()) i = x.begin(); i != x.end(); ++ i)
+#define rep(i, n) for (int i = 0; i < n; ++ i)
+#define pii pair <int, int>
+#define mp make_pair
+#define pb push_back
+#define x first
+#define y second
+#define ll long long
+#define cmplxd complex <long double>
+#define pi 3.14159265358979323846264338327950288
+
+namespace Poor
+{
+	const int MaxiN = 40;
+	
+	int N, K;
+	double SearchResult;
+	int P[MaxiN];
+	vector < pair <cmplxd, int> > List[MaxiN];
+	
+	void Input()
+	{
+		scanf("%d%d", &N, &K);
+		rep (i, N)
+			scanf("%d", P + i);
+	}
+	
+	int Sig(double X)
+	{
+		if (fabs(X) < 1e-8)
+			return 0;
+		return (X < 0) ? - 1 : 1;
+	}
+	
+	double Det(cmplxd A, cmplxd B)
+	{
+		return real(A) * imag(B) - real(B) * imag(A);
+	}
+	
+	bool operator < (cmplxd A, cmplxd B)
+	{
+		return real(A) < real(B) || (real(A) == real(B) && imag(A) < imag(B));
+	}
+	
+	bool Cmp(pair <cmplxd, int> A, pair <cmplxd, int> B)
+	{
+		return A.x < B.x || (A.x == B.x && A.y < B.y);
+	}
+	
+	void Do(vector < pair <cmplxd, int> > &V)
+	{
+		sort(V.begin(), V.end(), Cmp);
+		vector < pair <cmplxd, int> > S;
+		int Top = - 1;
+		tr (it, V)
+		{
+			while (Top >= 1 && Sig(Det(S[Top].x - S[Top - 1].x, it->x - S[Top - 1].x)) >= 0)
+			{
+				S.pop_back();
+				-- Top;
+			}
+			S.pb(*it);
+			++ Top;
+		}
+		V = S;
+	}
+	
+	void DFS(int Step, int Done, double S, double X)
+	{
+		if (Done == K)
+		{
+			checkmax(SearchResult, S * X);
+			return;
+		}
+		if (Step >= N)
+			return;
+		DFS(Step + 1, Done + 1, S * P[Step], X + (double) (100 - P[Step]) / (double) P[Step]);
+		DFS(Step + 1, Done, S, X);
+	}
+	
+	void Greedy(double &Best, ll &Ans)
+	{
+		vector <pii> L;
+		rep (i, N)
+			L.pb(mp(- P[i], i));
+		sort(L.begin(), L.end());
+		L.resize(K);
+		rep (i, K)
+			L[i].x *= - 1;
+		ll P = 0;
+		double S = 0;
+		rep (i, K)
+		{
+			double X = 100 - L[i].x;
+			rep (j, K)
+				if (i != j)
+					X *= L[j].x;
+			S += X;
+			P ^= (1LL << L[i].y);
+		}
+		if (S > Best)
+		{
+			Best = S;
+			Ans = P;
+		}
+	}
+	
+	void Solve()
+	{
+		Input();
+		for (int i = 0; i <= K; ++ i)
+			List[i].clear();
+		int A = N / 2;
+		int B = N - A;
+		rep (i, (1 << A))
+			if (__builtin_popcount(i) <= K)
+			{
+				int Zero = 0;
+				double S = 1;
+				double X = 0;
+				rep (j, A)
+					if (i & (1 << j))
+					{
+						if (P[j] == 0)
+						{
+							++ Zero;
+							continue;
+						}
+						S *= P[j];
+						X += (double) (100 - P[j]) / (double) P[j];
+					}
+				if (Zero > 1)
+					continue;
+				cmplxd T = cmplxd (S * X, S);
+				if (Zero == 1)
+					T = cmplxd (S * 100, 0);
+				List[__builtin_popcount(i)].pb(mp(T, i));
+			}
+		for (int i = 0; i <= K; ++ i)
+			Do(List[i]);
+		double Best = 0;
+		ll Ans = (1LL << K) - 1;
+		Greedy(Best, Ans);
+		rep (i, (1 << B))
+			if (__builtin_popcount(i) <= K)
+			{
+				int Zero = 0;
+				double S = 1;
+				double X = 0;
+				rep (j, B)
+					if (i & (1 << j))
+					{
+						if (P[j] == 0)
+						{
+							++ Zero;
+							continue;
+						}
+						S *= P[A + j];
+						X += (double) (100 - P[A + j]) / (double) P[A + j];
+					}
+				if (Zero > 1)
+					continue;
+				cmplxd T = cmplxd (S * X, - S);
+				if (Zero == 1)
+					T = cmplxd (S * 100, 0);
+				vector < pair <cmplxd, int> > &V = List[K - __builtin_popcount(i)];
+				if (V.empty())
+					continue;
+				int L = 0, R = (int) V.size() - 1;
+				while (L < R)
+				{
+					int Mid = (L + R) >> 1;
+					if (Sig(Det(T, V[Mid + 1].x - V[Mid].x)) > 0)
+						L = Mid + 1;
+					else
+						R = Mid;
+				}
+				int Pos = V[R].y;
+				double Area = Det(T, V[R].x);
+				if (Area > Best)
+				{
+					Best = Area;
+					Ans = (ll) Pos ^ (((ll) i) << A);
+				}
+			}
+		//~ SearchResult = 0;
+		//~ DFS(0, 0, 1, 0);
+		//~ cerr << Best << " : " << SearchResult << endl;
+		rep (i, N)
+			if (Ans & (1LL << i))
+				printf("%d ", i + 1);
+		puts("");
+	}
+	
+	void Run()
+	{
+		int TestCase;
+		scanf("%d", &TestCase);
+		rep (i, TestCase)
+			Solve();
+	}
+}
+
+namespace Endeavour
+{
+	const int MaxiN = 105;
+	
+	int N, K;
+	pii P[MaxiN], Q[MaxiN];
+	int Seq[MaxiN];
+	
+	void Input()
+	{
+		scanf("%d%d", &N, &K);
+		rep (i, N)
+		{
+			scanf("%d", &P[i].x);
+			P[i].y = i;
+		}
+	}
+	
+	void Solve()
+	{
+		Input();
+		sort(P, P + N);
+		double Best = - 1;
+		for (int i = 0; i <= K; ++ i)
+		{
+			rep (j, i)
+				Q[j] = P[j];
+			for (int j = K - i; j >= 1; -- j)
+				Q[K - j] = P[N - j];
+			double Now = 0;
+			rep (j, K)
+			{
+				double Tmp = 100 - Q[j].x;
+				rep (k, K)
+					if (j != k)
+						Tmp *= Q[k].x;
+				Now += Tmp;
+			}
+			if (Now > Best)
+			{
+				Best = Now;
+				rep (j, K)
+					Seq[j] = Q[j].y;
+			}
+		}
+		//~ cerr << Best << endl;
+		rep (i, K)
+			printf("%d%c", Seq[i] + 1, (i + 1 == K) ? '\n' : ' ');
+	}
+	
+	void Run()
+	{
+		int TestCase;
+		scanf("%d", &TestCase);
+		rep (i, TestCase)
+			Solve();
+	}
+}
+
+int main()
+{
+	#ifdef __FIO
+	freopen("CIELQUIZ.in", "r", stdin);
+	freopen("CIELQUIZ.out", "w", stdout);
+	#endif
+	Endeavour::Run();
+}

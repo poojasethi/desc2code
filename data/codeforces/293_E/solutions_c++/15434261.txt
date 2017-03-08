@@ -1,0 +1,72 @@
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <string>
+#include <cstring>
+#include <cmath>
+#define Rep(i, x, y) for (int i = x; i <= y; i ++)
+#define Dwn(i, x, y) for (int i = x; i >= y; i --)
+#define RepE(i, x) for (int i = pos[x]; i; i = g[i].nex)
+using namespace std;
+typedef long long LL;
+typedef double DB;
+const int N = 100005;
+struct Edge { int y, nex, z; } g[N * 2];
+struct arr { int l, w; } b[N];
+int n, L, W, pos[N], bz, p[N], sz, siz, s[N], f[N], rt; bool don[N]; LL ans;
+bool cmp(arr x, arr y) { return x.w < y.w; }
+void Add(int x, int z) { x ++; for (; x <= n; x += x & -x) p[x] += z; } // , cout <<x << endl
+int Qry(int x) { x ++; int y = 0; for (; x; x -= x & -x) y += p[x]; return y; }
+void Init(int x, int y, int z) { g[++ sz] = (Edge) { y, pos[x], z }, pos[x] = sz; }
+void Get(int x, int ft) {
+	s[x] = 1, f[x] = 0;
+	RepE(i, x) {
+		int y = g[i].y; if (y == ft || don[y]) continue ;
+		Get(y, x), s[x] += s[y], f[x] = max(f[x], s[y]);
+	}
+	f[x] = max(f[x], siz - s[x]);
+	if (f[rt] > f[x]) rt = x;
+}
+void Dfs(int x, int ft, int l, int w) {
+	b[++ bz] = (arr) { l, w };
+	RepE(i, x) {
+		int y = g[i].y; if (don[y] || y == ft) continue ;
+		Dfs(y, x, l + 1, w + g[i].z);
+	}
+}
+LL Calc() {
+	sort(b + 1, b + bz + 1, cmp);
+	int t = 1; LL num = 0;
+	Dwn(i, bz, 1) {
+		while (t < i && b[t].w + b[i].w <= W) Add(b[t ++].l, 1); // cout << t << endl;
+		if (t > i) Add(b[-- t].l, -1);
+		if (L >= b[i].l) num += Qry(L - b[i].l);
+	}
+	return num;
+}
+void Work(int x) {
+	don[x] = 1, bz = 0;
+//	cout << x << endl;
+	Dfs(x, 0, 0, 0); ans += Calc();
+	RepE(i, x) {
+		int y = g[i].y; if (don[y]) continue ;
+		bz = 0, Dfs(y, x, 1, g[i].z); ans -= Calc();
+	}
+	RepE(i, x) {
+		int y = g[i].y; if (don[y]) continue ;
+		siz = s[y]; Get(y, rt = 0), Work(rt);
+	}
+}
+int main()
+{
+	scanf ("%d%d%d", &n, &L, &W);
+	Rep(i, 2, n) {
+		int x, y; scanf ("%d%d", &x, &y);
+		Init(i, x, y), Init(x, i, y);
+	}
+	f[0] = n + 1, siz = n;
+	Get(1, rt = 0), Work(rt);
+	cout << ans << endl;
+    
+    return 0;
+}

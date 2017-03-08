@@ -1,0 +1,126 @@
+#include<cstdio>
+#include<vector>
+
+#define rep(i,n) for(int i=0;i<(n);i++)
+
+using namespace std;
+
+const int M=1000000007;
+
+int n;
+vector<int> G[100000];
+
+int cycle_num;
+int cycle[100000],cycle_len[100000];
+
+int seq[100000];
+bool vis[100000];
+void dfs(int u,int pre,int idx){ // 閉路を列挙
+	if(vis[u]){ // 閉路が見つかった
+		for(idx--;;idx--){
+			cycle[seq[idx]]=cycle_num;
+			if(seq[idx]==u) break;
+		}
+		cycle_num++;
+		return;
+	}
+
+	vis[u]=true;
+	seq[idx]=u;
+	rep(i,G[u].size()){
+		int v=G[u][i];
+		if(v!=pre && cycle[v]==-1) dfs(v,u,idx+1);
+	}
+}
+
+vector<int> T[100000]; // tree
+
+void build_tree(){
+	rep(u,n) rep(i,G[u].size()) {
+		int v=G[u][i];
+		int a=cycle[u],b=cycle[v];
+		if(a!=b){
+			T[a].push_back(b);
+		}
+	}
+}
+
+// LCA
+int parent[17][100000],depth[100000];
+
+void dfs_lca(int v,int p,int d){
+	parent[0][v]=p;
+	depth[v]=d;
+	rep(i,T[v].size()) if(T[v][i]!=p) dfs_lca(T[v][i],v,d+1);
+}
+
+void init(int V){
+	dfs_lca(0,-1,0);
+	rep(k,16) rep(v,V) {
+		if(parent[k][v]<0) parent[k+1][v]=-1;
+		else parent[k+1][v]=parent[k][parent[k][v]];
+	}
+}
+
+int lca(int u,int v){
+	if(depth[u]>depth[v]) swap(u,v);
+	rep(k,17){
+		if((depth[v]-depth[u])>>k&1){
+			v=parent[k][v];
+		}
+	}
+	if(u==v) return u;
+	for(int k=16;k>=0;k--){
+		if(parent[k][u]!=parent[k][v]){
+			u=parent[k][u];
+			v=parent[k][v];
+		}
+	}
+	return parent[0][u];
+}
+
+int cost[100000]; // cost[a] := ( 根と頂点 a を結ぶパス上にある閉路を縮約した頂点の個数 )
+void dfs2(int a,int pre){
+	if(pre!=-1) cost[a]+=cost[pre];
+	if(cycle_len[a]>1) cost[a]++;
+
+	rep(i,T[a].size()){
+		int b=T[a][i];
+		if(b!=pre) dfs2(b,a);
+	}
+}
+
+int main(){
+	int m; scanf("%d%d",&n,&m);
+	rep(i,m){
+		int u,v; scanf("%d%d",&u,&v); u--; v--;
+		G[u].push_back(v);
+		G[v].push_back(u);
+	}
+
+	cycle_num=0;
+	rep(u,n) cycle[u]=-1;
+	dfs(0,-1,0);
+
+	rep(u,n) if(cycle[u]==-1) cycle[u]=cycle_num++; // 閉路に含まれなかった頂点はサイズ 1 の閉路だと思う
+	rep(u,n) cycle_len[cycle[u]]++;
+
+	build_tree();
+
+	init(cycle_num);
+
+	static int two[100000]; // two[i] := 2^i mod M
+	two[0]=1;
+	rep(i,n) two[i+1]=2*two[i]%M;
+
+	dfs2(0,-1);
+
+	int q; scanf("%d",&q);
+	while(q--){
+		int s,t; scanf("%d%d",&s,&t); s--; t--;
+		int a=cycle[s],b=cycle[t],c=lca(a,b);
+		printf("%d\n",two[cost[a]+cost[b]-2*cost[c]+(cycle_len[c]>1?1:0)]);
+	}
+
+	return 0;
+}

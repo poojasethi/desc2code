@@ -1,0 +1,121 @@
+#include<cstdio>
+#include<cstring>
+#include<cmath>
+#include<vector>
+#include<algorithm>
+using namespace std ;
+
+const int MAXN = 100000;
+const int MOD = 1000000007;
+
+vector<vector<int> > G;
+vector<vector<int> > cycles;
+int n;
+
+bool incycle[MAXN+5];
+bool intrack[MAXN+5];
+bool vis[MAXN+5];
+int track[MAXN+5];
+
+int memoCycle[MAXN+5][2][2];
+int memoTree[MAXN+5][2];
+
+int solveTree(int u,bool myValue)
+{
+	int& ret = memoTree[u][myValue];
+	if (~ret)return ret;
+	ret = 1;
+	for (int c=0;c<G[u].size();c++){
+		int v = G[u][c];
+		if (incycle[v])continue;
+		int child = solveTree(v,0);
+		if (myValue == 0)
+			child+=solveTree(v,1);
+		child%=MOD;
+		ret=(ret*(long long)child)%MOD;
+	}
+	return ret;
+}
+int solveCycle(int cycle,int ind=0,bool firstOne=false,bool prevOne=false)
+{
+	if (ind == cycles[cycle].size())return 1;
+	int& ret = memoCycle[ind][firstOne][prevOne];
+	if (~ret)return ret;
+	int node = cycles[cycle][ind];
+	ret=0;
+	ret=(ret + (solveCycle(cycle,ind+1,firstOne,false)*(long long)solveTree(node,false))%MOD)%MOD;
+	if (ind == 0){
+		ret+=(solveCycle(cycle,ind+1,true,true)*(long long)solveTree(node,true))%MOD;
+		ret%=MOD;
+	}
+	else if (!prevOne){
+		if (ind+1!=cycles[cycle].size() || !firstOne)
+			ret+=(solveCycle(cycle,ind+1,firstOne,true)*(long long)solveTree(node,true))%MOD;
+		ret%=MOD;
+	}
+	return ret;
+}
+
+void extractCycle(int ind,int cnt)
+{
+	cycles.push_back(vector<int>());
+	for (int i=cnt-1;track[i]!=ind;i--){
+		incycle[track[i]] = true;
+		cycles.back().push_back(track[i]);
+	}
+	incycle[ind] = true;
+	cycles.back().push_back(ind);
+	return ;
+}
+void dfs(int ind,int cnt = 0)
+{
+	if (intrack[ind]){
+		extractCycle(ind,cnt);
+		return ;
+	}
+	if (vis[ind])return ;
+	vis[ind] = true;
+	intrack[ind] = true;
+	track[cnt] = ind;
+	for (int c=0;c<G[ind].size();c++)
+		dfs(G[ind][c],cnt+1);
+	intrack[ind] = false;
+	return ;
+}
+
+int main()
+{
+//	freopen("invites.in","r",stdin);
+	int c,c2;
+	int tests;
+	scanf("%d",&tests);
+	while (tests--){
+		scanf("%d",&n);
+		G.clear();
+		G.resize(n);
+		for (c=0;c<n;c++)
+		{
+			int from,to=c;
+			scanf("%d",&from);
+			from--;
+			G[from].push_back(to);
+		}
+		memset(intrack,0,sizeof(intrack));
+		memset(incycle,0,sizeof(incycle));
+		memset(vis,0,sizeof(vis));
+		cycles.clear();
+		for (c=0;c<n;c++){
+			if (vis[c])continue;
+			dfs(c);
+		}
+		memset(memoTree,-1,sizeof(memoTree));
+		int ret = 1;
+		for (c=0;c<cycles.size();c++){
+			for (c2=0;c2<cycles[c].size();c2++)
+				memset(memoCycle[c2],-1,sizeof(memoCycle[c2]));
+			ret=(ret*(long long)solveCycle(c))%MOD;
+		}
+		printf("%d\n",ret);
+	}
+	return 0;
+}

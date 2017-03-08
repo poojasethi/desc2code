@@ -1,0 +1,204 @@
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#include <iostream>
+#include <set>
+#include <cassert>
+#include <map>
+#include <complex>
+#include <iomanip>
+#include <string>
+#include <string.h>
+#include <cstdlib>
+#include <cassert>
+#include <bitset>
+#include <cmath>
+
+#define X first
+#define Y second
+#define mp make_pair
+#define pb push_back
+
+typedef long long ll;
+
+using namespace std;
+
+typedef complex<double> base;
+
+const int MOD = 2003;
+const int MAXN = 1000100, MAXF = 1010;
+int bin(int x, int y) {
+    if (y == 0) {
+        return 1;
+    }
+    long long u = bin(x, y/2);
+    if (y % 2 == 0) {
+        return u * u % MOD;
+    }
+    else {
+        return u * u % MOD * (long long)x % MOD;
+    }
+}
+
+ll inv_fact[MAXN];
+ll fact[MAXN];
+ll mul[MAXN]; // C(n, i) * i!
+ll pw[MAXN];
+ll number_of_ways[MAXF][MAXF];
+// Stirling numbers of 2 kind, factorials and their inverse
+void precalc() {
+   ll cur = 1;
+   fact[0] = 1;
+   inv_fact[0] = bin(cur, MOD - 2);
+   for (int i = 1; i < MAXN; i++) {
+       cur = cur * i; cur %= MOD;
+       fact[i] = cur;
+       inv_fact[i] = bin(cur, MOD - 2);
+   }
+
+
+   number_of_ways[0][0] = 1;
+   for (int i = 1; i < MAXF; i++) {
+        number_of_ways[i][1] = 1;
+        for (int j = 2; j < MAXF; j++) {
+            number_of_ways[i][j] = number_of_ways[i-1][j]*j + number_of_ways[i-1][j-1];
+            number_of_ways[i][j] %= MOD;
+        }
+   }
+}
+//FFT
+const double PI = 3.1415926535897932384626433832795;
+
+int rev (int num, int lg_n) {
+	int res = 0;
+	for (int i=0; i<lg_n; ++i)
+		if (num & (1<<i))
+			res |= 1<<(lg_n-1-i);
+	return res;
+}
+
+void fft (vector<base> & a, bool invert) {
+	int n = (int) a.size();
+	int lg_n = 0;
+	while ((1 << lg_n) < n)  ++lg_n;
+
+	for (int i=0; i<n; ++i)
+		if (i < rev(i,lg_n))
+			swap (a[i], a[rev(i,lg_n)]);
+
+	for (int len=2; len<=n; len<<=1) {
+		double ang = 2*PI/len * (invert ? -1 : 1);
+		base wlen (cos(ang), sin(ang));
+		for (int i=0; i<n; i+=len) {
+			base w (1);
+			for (int j=0; j<len/2; ++j) {
+				base u = a[i+j],  v = a[i+j+len/2] * w;
+				a[i+j] = u + v;
+				a[i+j+len/2] = u - v;
+				w *= wlen;
+			}
+		}
+	}
+	if (invert)
+		for (int i=0; i<n; ++i)
+			a[i] /= n;
+}
+
+void multiply (const vector<ll> & a, const vector<ll> & b, vector<ll> & res) {
+	vector<base> fa (a.begin(), a.end()),  fb (b.begin(), b.end());
+	size_t n = 1;
+	while (n < max (a.size(), b.size()))  n <<= 1;
+	n <<= 1;
+	fa.resize (n),  fb.resize (n);
+
+	fft (fa, false),  fft (fb, false);
+	for (size_t i=0; i<n; ++i)
+		fa[i] *= fb[i];
+	fft (fa, true);
+
+	res.resize (n);
+	for (size_t i=0; i<n; ++i)
+		res[i] = int (fa[i].real() + 0.5);
+    while (res.back() == 0) {
+        res.pop_back();
+    }
+}
+
+vector<ll> bin(const vector<ll> &x, int y) {
+    if (y == 1) {
+        return x;
+    }
+    vector<ll>u = bin(x, y/2);
+    vector<ll>res; multiply(u, u, res);
+    for (int i = 0; i < res.size(); i++) {
+        res[i] %= MOD;
+    }
+    if (y % 2 == 1) {
+        vector<ll>nwres;
+        multiply(res, x, nwres);
+        res = nwres;
+        for (int i = 0; i < res.size(); i++) {
+            res[i] %= MOD;
+        }
+    }
+    return res;
+}
+//solution, all the important actions below are explained in the editorial
+void solve() {
+    int n, k, l, f;
+    cin>>n>>k>>l>>f;
+    if (n < l) {
+        cout<<0<<endl;
+        return ;
+    }
+    assert(k >= l);
+    
+    ll num = 0, denum = 0, ans = 0;
+    
+    mul[0] = 1;
+    pw[0] = 1;
+    
+    for (int i = 1; i <= l*f; i++) {
+        
+        pw[i] = pw[i - 1] * k % MOD;
+        
+        mul[i] = (mul[i-1] * (n-i+1) ) %MOD;
+        
+    }
+
+    vector<ll> start, polynomal;
+    start.pb(0);
+    for (int i = 1; i <= f; i++) {
+        start.pb(number_of_ways[f][i]);
+    }
+    
+    polynomal = bin(start, l);
+    
+    for(int i = l; i <= l*f; i++) {
+        ll cur = polynomal[i];
+        
+        cur *= mul[i];
+        cur %= MOD;
+        
+        cur = cur * pw[l*f - i];
+        cur %= MOD;
+        
+        num += cur;
+        num %= MOD;
+    }
+    
+    ans =  num * bin(pw[l*f], MOD-2);
+    cout<<ans%MOD<<endl;
+}
+
+int main() {
+    precalc();
+
+    int test;
+    cin>>test;
+    while (test--) {
+        solve();
+    }
+    return 0;
+}

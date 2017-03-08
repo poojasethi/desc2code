@@ -1,0 +1,266 @@
+#include<cstdio>
+#include<ctime>
+#include<algorithm>
+#include<cassert>
+#include<cstring>
+#include<iostream>
+#include<cstdlib>
+#include<cmath>
+#include<vector>
+#include<map>
+#include<set>
+#include<queue>
+#include<bitset>
+using namespace std;
+typedef long long ll;
+typedef double db;
+const db pi=acos(-1.0);
+void gn(int &x){
+	int sg=1;char c;while(((c=getchar())<'0'||c>'9')&&c!='-');
+	if(c=='-')sg=-1,x=0;else x=c-'0';
+	while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+	x*=sg;
+}
+void gn(ll &x){
+	int sg=1;char c;while(((c=getchar())<'0'||c>'9')&&c!='-');
+	if(c=='-')sg=-1,x=0;else x=c-'0';
+	while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+	x*=sg;
+}
+const int inf=1061109567;
+//const ll inf=1000000000000000000ll;
+ll gcd(ll a,ll b){return b?gcd(b,a%b):a;}
+ll lcm(ll a,ll b){return a/gcd(a,b)*b;}
+int dx[4]={1,0,-1,0};
+int dy[4]={0,1,0,-1};
+#define eps 1e-6
+#define x1 x192837465
+#define x2 x123456789
+#define y1 y192837465
+#define y2 y123456789
+int n,m;
+
+struct data{
+	int ma,way;
+}mi,zero;
+data operator+(const data&a,const data&b){
+	if(a.ma>b.ma)return a;
+	else if (a.ma<b.ma)return b;
+	else return (data){a.ma,a.way+b.way};
+}
+data operator+(const data&a,int x){
+	return (data){a.ma+x,a.way};
+}
+data operator*(const data&a,const data&b){
+	return (data){a.ma+b.ma,a.way*b.way};
+}
+struct bic{
+	int n;
+	struct edge{
+		int v,w,next;
+	}e[1111];int g[15];int etot;
+	void ae(int u,int v,int w){
+		e[etot].v=v;e[etot].w=w;e[etot].next=g[u];g[u]=etot++;
+	}
+	void init(){
+		etot=0;memset(g,-1,sizeof(g));
+	}
+	int vis[1<<18];int vl;
+	//int ma[1<<18],way[1<<18];
+	data ma[1<<18];
+	int qu[1<<18];int p,q;
+	void upd(int bi,int m,int wa){
+		if(vis[bi]!=vl){
+			vis[bi]=vl;
+			/*ma[bi]=m;
+			way[bi]=wa;*/
+			ma[bi]=(data){m,wa};
+			qu[q++]=bi;
+		}else{
+			ma[bi]=ma[bi]+(data){m,wa};
+			/*if(m>ma[bi]){
+				ma[bi]=m;
+				way[bi]=wa;
+			}else if(m==ma[bi])
+				way[bi]+=wa;*/
+		}
+	}
+	void main(){
+		++vl;
+		p=q=0;
+		for (int u=0;u<n;u++)
+			for (int i=g[u];~i;i=e[i].next)if(e[i].v>u){
+				int bi=1<<(2*u)|1<<(2*e[i].v);
+				vis[bi]=vl;
+				/*ma[bi]=e[i].w;
+				way[bi]=1;*/
+				ma[bi]=(data){e[i].w,1};
+				qu[q++]=bi;
+			}
+		while(p!=q){
+			int bi=qu[p++];
+			int mil=n+1,smil=n+1;
+			for (int j=0;j<n;j++)if(((bi>>(2*j))&3)==1){
+				if(j<mil)smil=mil,mil=j;
+				else if(j<smil)smil=j;
+			}
+			int tmp;
+			for (int u=0;u<n;u++)if((tmp=(bi>>(2*u))&3) && tmp!=3){
+				for (int i=g[u];~i;i=e[i].next){
+					int v=e[i].v;
+					if((bi>>(2*v))&3)continue;
+					if(u==mil && v<smil || v<mil){
+						int bi2=bi;
+						bi2|=1<<(2*v);
+						bi2^=(tmp^(tmp+1))<<(2*u);
+						upd(bi2,ma[bi].ma+e[i].w,ma[bi].way);
+					}
+				}
+			}
+		}
+	}
+}by;
+
+struct edge{
+	int v,w,next;
+}e[1111];int g[111];int etot;
+void ae(int u,int v,int w){
+	e[etot].v=v;e[etot].w=w;e[etot].next=g[u];g[u]=etot++;
+}
+int low[111],dfn[111],ins[111],st[1111];int ind,top;
+int id[1111];int btot;
+void dfs(int u,int pr){
+	low[u]=dfn[u]=++ind;
+	ins[u]=1;
+
+	for (int i=g[u];~i;i=e[i].next)if(pr!=i){
+		int v=e[i].v;
+		if(!dfn[v]){
+			st[++top]=i>>1;
+			dfs(v,i^1);
+			low[u]=min(low[u],low[v]);
+			if(low[v]>=dfn[u]){
+				++btot;
+				while(st[top]!=i>>1)
+					id[st[top--]]=btot;
+				id[st[top--]]=btot;
+			}
+		}else if(ins[v]){
+			st[++top]=i>>1;
+			low[u]=min(low[u],dfn[v]);
+		}
+	}
+	ins[u]=0;
+}
+int bel[1111][111]={0};int beltot[1111];
+
+
+void calc(int i){
+	by.init();
+	for (int j=0;j<etot;j+=2)if(id[j>>1]==i){
+		by.ae(bel[i][e[j].v],bel[i][e[j^1].v],e[j].w);
+		by.ae(bel[i][e[j^1].v],bel[i][e[j].v],e[j].w);
+	}
+	by.n=beltot[i];
+	by.main();
+}
+
+data totan;
+struct TR{
+	struct edge{
+		int v,w,next;
+	}e[2111];int g[211];int etot;
+	int vis[211];
+	data f[222][4];
+	void ae(int u,int v){
+		e[etot].v=v;e[etot].next=g[u];g[u]=etot++;
+	}
+	void init(){
+		etot=0;memset(g,-1,sizeof(g));
+		memset(vis,0,sizeof(vis));
+	}
+
+	void dfs(int u,int pr=-1){
+		vis[u]=1;
+		for (int j=0;j<=3;j++)f[u][j]=mi;
+		for (int i=g[u];~i;i=e[i].next)if(e[i].v!=pr)dfs(e[i].v,u);
+
+		if(u>n){
+			calc(u-n);
+			for (int bid=0;bid<by.q;bid++){
+				int bi=by.qu[bid];
+				data val=by.ma[bi];
+				for (int i=g[u];~i;i=e[i].next)if(e[i].v!=pr){
+					int j=bel[u-n][e[i].v];
+					int de=(bi>>2*j)&3;
+					if(!de)continue;
+					data xx=zero;
+					for (int k=1;k<=3-de;k++)xx=xx+f[e[i].v][k];
+					val=val*xx;
+				}
+				int j=bel[u-n][pr];
+				int de=(bi>>2*j)&3;
+				f[u][de]=f[u][de]+val;
+			}
+			totan=totan+f[u][0];
+		}else{
+			for (int i=g[u];~i;i=e[i].next)if(e[i].v!=pr){
+				data g[4];
+				for (int j=0;j<=3;j++)g[j]=mi;
+				for (int j=3;j>=1;j--)
+					for (int k=1;k+j<=3;k++)g[k+j]=g[k+j]+f[u][j]*f[e[i].v][k];
+				for (int j=3;j>=1;j--)g[j]=g[j]+f[e[i].v][j];
+				for (int j=0;j<=3;j++)f[u][j]=f[u][j]+g[j];
+			}
+			for (int j=1;j<=3;j++)totan=totan+f[u][j];
+		}
+	}
+	void Dfs(){
+		for (int u=1;u<=n+btot;u++)if(!vis[u])dfs(u);
+	}
+
+}tr;
+
+int main()
+{
+	mi.ma=-1000000000;zero.way=1;
+	int tes;
+	gn(tes);
+	while(tes--){
+		tr=*new TR;
+		by=*new bic;
+		ind=top=0;
+		memset(low,0,sizeof(low));
+		memset(dfn,0,sizeof(dfn));
+		gn(n);gn(m);
+		totan=(data){0,n+1};
+		memset(g,-1,sizeof(g));
+		etot=0;
+		while(m--){
+			int a,b,c;
+			gn(a);gn(b);gn(c);
+			ae(a,b,c);
+			ae(b,a,c);
+		}
+		ind=0;
+		btot=0;
+		for (int i=1;i<=n;i++)if(!dfn[i])dfs(i,-1);
+		memset(bel,0,sizeof(bel));
+		memset(beltot,0,sizeof(beltot));
+		for (int i=1;i<=btot;i++){
+			for (int j=0;j<etot;j+=2)if(id[j>>1]==i){
+				bel[i][e[j].v]=1;
+				bel[i][e[j^1].v]=1;
+			}
+			for (int j=1;j<=n;j++)
+				if(bel[i][j]==1)bel[i][j]=beltot[i]++;
+				else bel[i][j]=-1;
+		}
+		tr.init();
+		for (int i=1;i<=btot;i++)
+			for (int j=1;j<=n;j++)if(bel[i][j]!=-1)tr.ae(j,n+i),tr.ae(n+i,j);
+		tr.Dfs();
+		printf("%d %u\n",totan.ma,totan.way);
+	}
+	return 0;
+}

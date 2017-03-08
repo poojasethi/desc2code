@@ -1,0 +1,126 @@
+#include<cstdio>
+#include<utility>
+#include<vector>
+#include<algorithm>
+#define pb push_back
+#define fd(i,a,b) for(i=a;i>=b;--i)
+#define fo(i,a,b) for(i=a;i<=b;++i)
+using namespace std;
+typedef long long LL;
+struct node{int x,y;};
+typedef pair<int,node> world;
+const int mn=110000,mm=mn*2;
+node a[mn];
+int m,n,ans,tt=1,s;
+int la[mn],C[mn],next[mm],y[mm],flow[mm];
+int d[mn],fl[mn],sa[mn];
+vector<int>sum[mn];
+vector<world>e[mn];
+world b[mn];
+bool vis[mn];
+void add(int i,int j)
+{
+    next[++tt]=la[i],la[i]=tt,y[tt]=j;
+}
+node operator -(const node a,const node b)
+{
+    node res;
+    res.x=a.x-b.x,res.y=a.y-b.y;
+    return res;
+}
+LL operator *(const node a,const node b)
+{
+    return (LL)a.x*b.y-(LL)b.x*a.y;
+}
+bool operator <(node a,node b)
+{
+    return a*b>0;
+}
+void dfs(int r)
+{
+    vis[r]=1,C[r]=0;
+    for(int p=la[r];p;p=next[p])
+    {
+        int i=y[p];
+        if(vis[i])continue;
+        dfs(i);
+        flow[p]=C[i]+1,flow[p^1]=-flow[p];
+        C[r]+=flow[p];
+    }
+}
+int rank(const vector<world>&e,node v)
+{
+    world t;
+    t.second=v;
+    if(v.x<0||(!v.x&&v.y<0))t.first=0;
+    else t.first=1;
+    int res=lower_bound(e.begin(),e.end(),t)-e.begin();
+    return res;
+}
+bool cmph(int i,int j){return b[i]<b[j];}
+int main()
+{
+    scanf("%d%d",&n,&m);
+    int i,j,k;
+    fo(i,1,m)
+    {
+        scanf("%d%d",&j,&k);
+        add(j,k),add(k,j);
+    }
+    fo(i,1,n)
+        scanf("%d%d",&a[i].x,&a[i].y);
+    s=1;
+    fo(i,2,n)if(a[i].x<a[s].x)s=i;
+    dfs(s);
+    fo(i,1,n)
+    {
+        s=0;
+        for(int p=la[i];p;p=next[p])
+        {
+            node t=a[y[p]]-a[i];
+            if(t.x<0||(!t.x&&t.y<0))b[s].first=0;
+            else b[s].first=1;
+            b[s].second=t;
+            fl[s]=flow[p];
+            ++s;
+        }
+        fo(j,0,s-1)sa[j]=j;
+        sort(sa,sa+s,cmph);
+        sum[i].resize(s);
+        e[i].resize(s);
+        d[i]=s;
+        fo(j,0,s-1)
+        {
+            e[i][j]=b[sa[j]];
+            sum[i][j]=fl[sa[j]];
+            if(j)sum[i][j]+=sum[i][j-1];
+        }
+    }
+    int Q;
+    scanf("%d",&Q);
+    while(Q--)
+    {
+        int L,ans=0;
+        scanf("%d",&L);
+        fo(i,0,L-1)scanf("%d",fl+i);
+        LL area=0;
+        fl[L]=fl[0];
+        fo(i,0,L-1)area+=a[fl[i]]*a[fl[i+1]];
+        if(area<0){reverse(fl,fl+L);fl[L]=fl[0];}
+        ans=L;
+        fo(i,0,L-1)
+        {
+            int r=fl[i];
+            int x=rank(e[r],a[fl[(i+L-1)%L]]-a[r]);
+            int y=rank(e[r],a[fl[i+1]]-a[r]);
+            if(x>=y)ans+=sum[r][x-1]-sum[r][y];
+            else
+            {
+                ans+=sum[r][d[r]-1]-sum[r][y];
+                if(x>0)ans+=sum[r][x-1];
+            }
+        }
+        printf("%d\n",ans);
+    }
+    return 0;
+}

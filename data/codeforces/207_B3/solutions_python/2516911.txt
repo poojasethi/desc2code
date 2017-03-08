@@ -1,0 +1,80 @@
+#include <cstdio>
+#include <cmath>
+#include <iostream>
+int logN,n;
+int min[500005][30],from[500005],rad[500005],pre[500005][30],arv[500005][30];
+void buildRMQ()
+{
+  int i,j;
+  for(i=2*n-1;i>=0;i--)
+    {
+      min[i][0] = i+1;
+      for(j=1;(1<<j)+i<=2*n;j++)
+	{ 
+	  int x = min[i][j-1]; int y = min[i+(1<<(j-1))][j-1];
+	  min[i][j] = (from[x] <= from[y]) ? x : y;
+	}
+    }
+}
+int RMQ(int l,int r)
+{
+  int i,j;
+  for(j=logN;j>=0;j--)
+    if(r-l+1 >= (1<<j)) break;
+  i = l-1;
+  int ans = min[i][j];
+  while(i < r)
+    {
+      for(;j>=0;j--)
+	if(r-i >= (1<<j)) break;
+      if(from[min[i][j]] < from[ans])
+	ans = min[i][j];
+      i += (1<<j);
+    }
+  return ans;
+}
+int main()
+{
+  //freopen("d.in","r",stdin);
+  //freopen("d.out","w",stdout);
+  long long int ans = 0;
+  int i,j;
+  scanf("%d",&n);
+  logN = 0;
+  while((1<<logN) < n) logN++;
+  for(i=1;i<=n;i++)
+    {
+      scanf("%d",&rad[i]);
+      rad[i+n] = rad[i];
+    }
+  for(i=1;i<=2*n;i++)
+    {
+      from[i] = i-rad[i];
+      if(from[i] <= 0)
+	from[i] = 1;
+    }
+  buildRMQ();
+  for(i=1;i<=2*n;i++)
+    {
+      if(i == 1)
+	pre[i][0] = 0;
+      else
+	pre[i][0] = RMQ(from[i],i-1);
+      arv[i][0] = from[i];
+      for(j=1;j<=logN;j++){
+	pre[i][j] = pre[pre[i][j-1]][j-1];
+	arv[i][j] = arv[pre[i][j-1]][j-1];}
+    }
+  for(i=n+1;i<=2*n;i++)
+    {
+      int p=i;
+      for(j=logN;j>=0;j--)
+	if(arv[p][j] > i-n+1)
+	  {
+	    ans += (1<<j);
+	    p = pre[p][j]; 
+	  }
+      ans++;
+    }
+  std::cout<<ans;
+}

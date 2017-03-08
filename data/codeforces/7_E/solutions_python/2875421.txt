@@ -1,0 +1,106 @@
+SUSPICIOUS = -128
+NIL = 0
+ADD = 1
+SUB = 2
+MUL = 4
+DIV = 8
+ALL = 15
+
+op_value = {'+': ADD, '-': SUB, '*': MUL, '/': DIV}
+invalid = {NIL: (NIL,        NIL),
+           ADD: (NIL,        NIL),
+           SUB: (NIL,        ADD | SUB), 
+           MUL: (ADD | SUB,  ADD | SUB),
+           DIV: (ADD | SUB,  ALL)} 
+
+
+def validate(expr):
+    global definitions
+
+    ## Initialize validation variables
+    last_op = 0
+    operators = 0
+    last_token = 0
+
+    ## Initialize parsing variables
+    token = ""
+    paren_depth = 0
+
+    ## Iterate the expression
+    for c in expr:
+
+        ## Handle sub-expressions
+        if c == '(':
+            if paren_depth > 0:
+                token += c
+            paren_depth += 1
+
+        elif c == ')':
+            paren_depth -= 1
+
+            ## No validation necessary
+            ## (besides non-suspiciousness)
+            if paren_depth == 0:
+                if validate(token) == SUSPICIOUS:
+                    return SUSPICIOUS
+                
+                token = ""
+                last_op = 0
+                last_token = 0
+                
+            else:
+                token += c
+
+        ## Perform validation
+        elif paren_depth == 0 and c in '*/+-':
+            ## Validate last_op + last_token
+            if token != "":
+                last_token = definitions.get(token, 0)
+                if last_token == SUSPICIOUS or last_token & invalid[last_op][1]:
+                    return SUSPICIOUS
+
+                token = ""
+
+                ## Validate last_token + last_op
+                if last_token & invalid[op_value[c]][0]:
+                    return SUSPICIOUS
+
+                last_token = 0
+
+            ## Update validation variables
+            last_op = op_value[c]
+            operators |= last_op
+
+        else:
+            token += c
+
+    if token != "":
+        last_token = definitions.get(token, 0)
+        if last_token == SUSPICIOUS or last_token & invalid[last_op][1]:
+            return SUSPICIOUS
+
+    return operators
+
+
+
+definitions = {}
+
+n = input()
+
+for i in range(n):
+    line = raw_input().split()
+    
+    if line[0] == '#':
+        head = line[2]
+        line = line[3:]
+    else:
+        head = line[1]
+        line = line[2:]
+
+    definitions[head] = validate("".join(line))
+    
+    #print head, bin(definitions[head])[2:]
+
+    
+expr = validate("".join(raw_input().split()))
+print "Suspicious"    if expr == SUSPICIOUS else    "OK"

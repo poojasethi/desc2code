@@ -1,0 +1,180 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+#include<vector>
+#include<algorithm>
+#include<map>
+#include<queue>
+using namespace std;
+#define F first
+#define S second
+#define MP make_pair
+#define PB push_back
+#define inf 10000000
+char Map[25][25];
+int id[25][25];
+struct sss{
+	int x,y,v;
+}G[500],B[500],X;
+int n,m,g,b,p;
+int st,ed;
+pair<int,int> space[500];
+vector<int> v[2000];
+int cap[2000][2000];
+int dx[4]={-1,0,0,1};
+int dy[4]={0,-1,1,0};
+void make_flow(long long int t){
+	int i,j,k;
+	st=0,ed=b+g+p+p+1;
+	for(i=st;i<=ed;i++) v[i].clear();
+	for(i=0;i<b;i++){
+		v[st].PB(i+1);
+	}
+	for(i=0;i<g;i++){
+		v[i+b+1].PB(ed);
+	}
+	for(i=0;i<b;i++){
+		long long int vis[25][25];
+		for(j=0;j<n;j++)
+		  for(k=0;k<m;k++)
+		    vis[j][k]=-1;
+		int nx=B[i].x,ny=B[i].y;
+		queue< pair<int,int> > q;
+		q.push(MP(nx,ny));
+		v[i+1].PB(id[nx][ny] +1+b+g);
+		vis[nx][ny]=0;
+		while(!q.empty()&&vis[nx][ny]<=t){
+			nx=q.front().F;
+			ny=q.front().S;
+			q.pop();
+			for(j=0;j<4;j++){
+				int mx=nx+dx[j],my=ny+dy[j];
+				if(mx<0||mx>=n||my<0||my>m||Map[mx][my]=='#'||vis[mx][my]!=-1) continue;
+				q.push(MP(mx,my));
+				vis[mx][my]=vis[nx][ny]+B[i].v;
+			//	printf("%d %d %lld\n",mx,my,vis[mx][my]);
+				if(vis[mx][my]<=t) v[i+1].PB(id[mx][my] +1+b+g);
+			}
+		}
+	}
+	for(i=0;i<g;i++){
+		long long int vis[25][25];
+		for(j=0;j<n;j++)
+		  for(k=0;k<m;k++)
+		    vis[j][k]=-1;
+		int nx=G[i].x,ny=G[i].y;
+		queue< pair<int,int> > q;
+		q.push(MP(nx,ny));
+		v[id[nx][ny] +1+p+b+g].PB(i+b+1);
+		vis[nx][ny]=0;
+		while(!q.empty()&&vis[nx][ny]<=t){
+			nx=q.front().F;
+			ny=q.front().S;
+			q.pop();
+			for(j=0;j<4;j++){
+				int mx=nx+dx[j],my=ny+dy[j];
+				if(mx<0||mx>=n||my<0||my>m||Map[mx][my]=='#'||vis[mx][my]!=-1) continue;
+				q.push(MP(mx,my));
+				vis[mx][my]=vis[nx][ny]+G[i].v;
+				if(vis[mx][my]<=t) v[id[mx][my]+1+p+b+g].PB(i+b+1);
+			}
+		}
+	}
+	for(i=0;i<p;i++){
+		int xx=space[i].F,yy=space[i].S;
+		v[id[xx][yy] +1+b+g].PB(id[xx][yy] +1+b+g+p);
+	}
+	for(i=st;i<=ed;i++)
+	  for(j=st;j<=ed;j++)
+	     cap[i][j]=0;
+	for(i=st;i<=ed;i++){
+		for(j=0;j<v[i].size();j++)
+		  cap[i][v[i][j]]=1;
+	}
+/*	printf("%lld:\n",t);
+	for(i=st;i<=ed;i++){
+		for(j=st;j<=ed;j++)
+		  printf("%d ",cap[i][j]);
+		printf("\n");
+	}
+	printf("\n");  */ 
+}
+int check(long long int t){
+	make_flow(t);
+	int i,j;
+	queue<int> q;
+	int d[2000],p[2000];
+	int f=0;
+	for(;;){
+		for(i=st;i<=ed;i++)
+	 		d[i]=0;
+	 	d[st]=inf;
+	 	q.push(st);
+	 	while(!q.empty()){
+	 		int u=q.front();
+	 		q.pop();
+	 		for(i=st;i<=ed;i++) if(!d[i]&&cap[u][i]){
+	 			p[i]=u;
+	 			d[i]=1;
+	 			q.push(i);
+	 		}
+	 	}
+	 	if(d[ed]==0) break;
+	 	for(i=ed;i!=st;i=p[i]){
+	 		cap[p[i]][i]=0;
+	 		cap[i][p[i]]=1;
+	 	}
+	 	f+=d[ed];
+	}
+//	printf("%lld %d\n",t,f);
+	if(f==g) return 1;
+	return 0;
+}
+int main(void){
+	scanf("%d%d%d%d",&n,&m,&b,&g);
+	int i,j;
+	p=0;
+	for(i=0;i<n;i++){
+		char s[25];
+		scanf("%s",s);
+		for(j=0;j<m;j++){
+		  Map[i][j]=s[j];
+		  if(Map[i][j]=='.'){
+		  	space[p].F=i,space[p].S=j,id[i][j]=p,p++;
+		  } 
+		}
+	}
+	scanf("%d%d%d",&X.x,&X.y,&X.v);
+	X.x--,X.y--;
+	for(i=0;i<b;i++){
+	  scanf("%d%d%d",&B[i].x,&B[i].y,&B[i].v);
+	  B[i].x--,B[i].y--;
+	}
+	for(i=0;i<g;i++){
+	  scanf("%d%d%d",&G[i].x,&G[i].y,&G[i].v);
+	  G[i].x--,G[i].y--;
+	}
+	if(g+1==b){
+		G[g]=X;
+		g++;
+	}
+	else if(b+1==g){
+		B[b]=X;
+		b++;
+	}
+	else{
+		printf("-1\n");
+		return 0;
+	}
+	long long int l=0,r=500000000000LL;
+	while(l<=r){
+		long long int mid=(l+r)/2;
+		if(check(mid)) r=mid-1;
+		else l=mid+1;
+	//	system("pause");
+	}
+	if(l>=500000000000LL)  printf("-1\n");
+	else printf("%I64d\n",l);
+	return 0;
+}
+

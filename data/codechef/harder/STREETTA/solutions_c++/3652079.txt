@@ -1,0 +1,222 @@
+#pragma comment(linker,"/STACK:100000000000,100000000000")
+
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <string>
+#include <cstring>
+#include <vector>
+#include <cmath>
+#include <map>
+#include <stack>
+#include <set>
+#include <iomanip>
+#include <queue>
+#include <map>
+#include <functional>
+#include <list>
+#include <sstream>
+#include <ctime>
+#include <climits>
+#include <bitset>
+#include <list>
+#include <cassert>
+#include <complex>
+
+using namespace std;
+
+/* Constants begin */
+const long long inf = 1e18+7;
+const long long mod = 1e9+7;
+const double eps = 1e-9;
+const double PI = 2*acos(0.0);
+const double E = 2.71828;
+/* Constants end */
+
+/* Defines begin */
+#define pb push_back
+#define mp make_pair
+#define ll long long
+#define double long double
+#define F first
+#define S second
+#define all(a) (a).begin(),(a).end()
+#define forn(i,n) for (int (i)=0;(i)<(ll)(n);(i)++)
+#define random (rand()<<16|rand())
+#define sqr(x) (x)*(x)
+#define base complex<double>
+/* Defines end */
+
+int n, m;
+
+struct line{
+  ll a, b;
+
+  line() {a = 0; b = 0;}
+  line(ll a, ll b): a(a), b(b) {}
+
+  void add(line x){
+    a += x.a;
+    b += x.b;
+  }
+
+  ll go(ll x){
+    return a * x + b;
+  }
+};
+
+struct node{
+  node *l, *r;
+  int left, right;
+  line mx, cnt;
+  bool ok;
+
+  node() {}
+
+  node(int left, int right): left(left), right(right){
+    l = r = NULL;
+    ok = false;
+  }
+};
+
+typedef node * pnode;
+
+pnode root = NULL;
+
+ll cnt, mx, ok;
+
+void push(pnode &t){
+  if(t->left == t->right){
+    return;
+  }
+  int mid = (t->left + t->right) >> 1;
+
+  if(!t->l){
+    t->l = new node(t->left, mid);
+  }
+
+  if(!t->r){
+    t->r = new node(mid + 1, t->right);
+  }
+
+  t->l->cnt.add(t->cnt);
+  t->r->cnt.add(t->cnt);
+  t->cnt.a = 0;
+  t->cnt.b = 0;
+
+}
+
+void upds(pnode &t, int l, int r, line x){
+  if(t->left > r || t->right < l){
+    return;
+  }
+  if(l <= t->left && r >= t->right){
+    t->cnt.add(x);
+    return;
+  }
+  push(t);
+  upds(t->l, l, r, x);
+  upds(t->r, l, r, x);
+}
+
+void updm(pnode &t, int l, int r, line x){
+  if(t->left > r || t->right < l){
+    return;
+  }
+  push(t);
+  if(l <= t->left && r >= t->right){
+    if(!t->ok){
+      t->ok = true;
+      t->mx = x;
+      return;
+    }
+    line a = t->mx;
+    line b = x;
+    ll sa, sb, ea, eb;
+    sa = a.go(t->left);
+    sb = b.go(t->left);
+
+    ea = a.go(t->right);
+    eb = b.go(t->right);
+
+    if(sa >= sb && ea >= eb){
+      return;
+    }
+
+    if(sa <= sb && ea <= eb){
+      t->mx = x;
+      return;
+    }
+
+    if(sa < sb){
+      swap(a, b);
+    }
+    int mid = (t->left + t->right) >> 1;
+
+    ll ma = a.go(mid);
+    ll mb = b.go(mid);
+
+    if(ma > mb){
+      t->mx = a;
+      updm(t->r, l, r, b);
+    } else {
+      t->mx = b;
+      updm(t->l, l, r, a);
+    }
+    return;
+  }
+  updm(t->l, l, r, x);
+  updm(t->r, l, r, x);
+}
+
+void go(pnode& t, int x){
+  if(t->left > x || t->right < x){
+    return;
+  }
+  cnt += t->cnt.a * x + t->cnt.b;
+  if(t->ok){
+    ok = true;
+    mx = max(mx, t->mx.go(x));
+  }
+  int tm = (t->left + t->right) >> 1;
+  if(t->l) go(t->l, x);
+  if(t->r) go(t->r, x);
+}
+
+int main(void){
+  #ifdef nobik
+    freopen("input.txt", "rt", stdin);
+    freopen("output.txt", "wt", stdout);
+  #endif
+  scanf("%d %d", &n, &m);
+  root = new node(1, n);
+  forn(i, m){
+    int t; scanf("%d", &t);
+    if(t == 1){
+      line x;
+      ll l, r, a, b; scanf("%lld %lld %lld %lld", &l, &r, &a, &b);
+      x.a = a;
+      x.b = -l * a + b;
+      updm(root, l, r, x);
+    } else
+    if(t == 2){
+      line x;
+      ll l, r, a, b; scanf("%lld %lld %lld %lld", &l, &r, &a, &b);
+      x.a = a;
+      x.b = -l * a + b;
+      upds(root, l, r, x);
+    } else {
+      cnt = ok = 0;
+      mx = -inf;
+      int x; scanf("%d", &x);
+      go(root, x);
+      if(!ok){
+        puts("NA");
+      } else {
+        printf("%lld\n", cnt + mx);
+      }
+    }
+  }
+  return 0;
+}

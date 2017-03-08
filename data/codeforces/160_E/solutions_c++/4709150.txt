@@ -1,0 +1,94 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+const int MAX = 200001;
+
+struct bus
+{
+	int left, right, w, id;
+	bus( int left, int right, int w):
+		left( left), right(right), w(w)
+	{}
+	bus(){}
+
+	bool operator<(const bus & b) const
+	{
+		if( left == b.left )
+			return id < b.id;
+		return left < b.left;
+	}
+};
+
+bus buses[MAX];
+
+int IND[MAX << 2];
+int W[MAX << 2];
+
+void update(int key, int no, int L, int R, int val, int pos)
+{
+	int m = ( L + R) >> 1;
+	if( L == R)
+	{
+		IND[no] = pos;
+		W[no] = val;
+	}else
+	{
+		if( key <= m)
+			update(key, no << 1, L, m, val, pos);
+		else
+			update(key, (no << 1) + 1, m + 1, R, val, pos);
+		W[no] = max( W[no << 1], W[(no << 1) + 1]);
+	}
+}
+
+int query( int key, int no, int L, int R, int val)
+{
+	if ( W[no] < val )
+		return -2;
+	if ( L == R)
+		return L >= key ? IND[no] : - 2;
+
+	int m = ( L + R) >> 1;
+	if( key <= m)
+	{
+		int ret = query( key, no << 1, L, m, val);
+		if( ret >= 0)
+			return ret;
+	}
+	return query( key, no << 1 | 1,  m + 1, R, val);
+}
+
+int ans[MAX];
+
+int main( )
+{
+	int n, m;
+	scanf("%d%d", &n, &m);
+
+	vector<int> weight;
+
+	for( int i = 0; i < n + m; ++ i)
+	{
+		scanf("%d%d%d", &buses[i].left, &buses[i].right, &buses[i].w);
+		buses[i].id = i;
+		if( i < n)
+			weight.push_back(buses[i].w);
+	}
+
+	sort( weight.begin(), weight.end());
+	sort( buses, buses + n + m);
+
+	for( int i = 0; i <  n + m; ++ i)
+	{
+		int key = lower_bound( weight.begin(), weight.end(), buses[i].w) - weight.begin();
+		if( buses[i].id < n)
+			update(key, 1, 0, n - 1, buses[i].right, buses[i].id);
+		else
+			ans[buses[i].id - n] = query(key, 1, 0, n - 1, buses[i].right);
+	}
+
+	for( int i = 0; i < m; ++ i)
+		printf("%d%c", ans[i] + 1, i < m - 1 ? ' ' : '\n');
+
+	return 0;
+}

@@ -1,0 +1,144 @@
+#include <cstdlib>
+#include <cstdio>
+#include <iostream>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <set>
+#include <map>
+#include <cstring>
+
+using namespace std;
+
+typedef long long LL;
+typedef unsigned long long ULL;
+
+#define SIZE(x) (int((x).size()))
+#define rep(i,l,r) for (int i=(l); i<=(r); i++)
+#define repd(i,r,l) for (int i=(r); i>=(l); i--)
+#define rept(i,c) for (typeof((c).begin()) i=(c).begin(); i!=(c).end(); i++)
+
+#ifndef ONLINE_JUDGE
+#define debug(x) { cerr<<#x<<" = "<<(x)<<endl; }
+#else
+#define debug(x) {}
+#endif
+
+#define INF 1000000000
+#define MD 1000000007
+#define maxn 52
+
+struct atype
+{
+	int x,y,value;
+};
+atype a[maxn];
+
+int m,n;
+
+LL perm[100010];
+int flag[maxn], tot, q[maxn]; 
+vector<int> e[maxn];
+
+void flood(LL state, int i)
+{
+	flag[i]=1; tot++; q[tot]=i;
+	rept(it,e[i]) if ((state&(1LL<<(*it-1))) && !flag[*it]) flood(state, *it);
+}
+
+#define LIM 20
+
+map< LL , vector<int> > mem;
+
+vector<int> divide(LL state);
+
+vector<int> solve(LL state)
+{
+	if (state==0) return vector<int>(1,1);
+	int cz=0; LL state_bak=state;
+	rep(i,1,n) if (state&(1LL<<(i-1))) cz++;
+	if (cz<=LIM) if (mem.count(state)) return mem[state];
+	int mintot=INF, mini=0;
+	rep(i,1,n)
+		if (state&(1LL<<(i-1)))
+		{
+			LL ss=state-(1LL<<(i-1));
+			int maxtot=0;
+			memset(flag,0,sizeof flag);
+			rep(j,1,n) 
+				if ((ss&(1LL<<(j-1))) && !flag[j])
+				{
+					tot=0; flood(ss,j); 
+					maxtot=max(maxtot,tot);
+				}
+			if (maxtot<mintot) mintot=maxtot, mini=i;
+		}
+	
+	state-=(1LL<<(mini-1));
+	vector<int> ret=divide(state);
+	rept(it,e[mini])
+		if (state&(1LL<<(*it-1)))
+			state-=(1LL<<(*it-1));
+	
+	vector<int> ret2=divide(state);
+	ret2.insert(ret2.begin(),0);
+	rept(it,ret2) (*it)=LL(*it)*a[mini].value%MD;
+	if (ret2.size()>ret.size()) swap(ret,ret2);
+	rep(i,0,int(ret2.size())-1) ret[i]=(ret[i]+ret2[i])%MD;
+	if (cz<=LIM) mem[state_bak]=ret;
+	return ret;
+}
+
+vector<int> divide(LL state)
+{
+	if (state==0) return vector<int>(1,1);
+	vector<LL> lis;
+	memset(flag,0,sizeof flag);
+	rep(i,1,n)
+		if ((state&(1LL<<(i-1))) && !flag[i]) 
+		{
+			tot=0; flood(state, i);
+			LL s=0;
+			rep(k,1,tot) s|=(1LL<<(q[k]-1));
+			lis.push_back(s);
+		}
+	vector<int> ret; ret.push_back(1);
+	rept(it,lis) 
+	{
+		vector<int> ret2=solve(*it);
+		vector<int> ret3; ret3.resize(ret.size()+ret2.size()-1,0);
+		rep(i,0,int(ret.size())-1)
+			rep(j,0,int(ret2.size())-1)
+				ret3[i+j]=(ret3[i+j]+LL(ret[i])*ret2[j]%MD)%MD;
+		ret=ret3;
+	}
+	return ret;
+}
+
+void lemon()
+{
+	scanf("%d%d",&m,&n);
+	perm[0]=1; rep(i,1,m) perm[i]=LL(perm[i-1])*i%MD;
+	rep(i,1,n) scanf("%d%d%d",&a[i].x,&a[i].y,&a[i].value), a[i].value=(a[i].value%MD-1+MD)%MD;
+	rep(i,1,n)
+		rep(j,1,n)
+			if (i!=j && (a[i].x==a[j].x || a[i].y==a[j].y))
+				e[i].push_back(j);
+	
+	vector<int> ret=divide((1LL<<n)-1);
+	int final=0;
+	rep(i,0,int(ret.size())-1)
+		final=(final+LL(perm[m-i])*ret[i]%MD)%MD;
+	cout<<final<<endl;
+}
+
+int main()
+{
+	ios::sync_with_stdio(true);
+	#ifndef ONLINE_JUDGE
+		freopen("468E.in","r",stdin);
+	#endif
+	lemon();
+	return 0;
+}
+

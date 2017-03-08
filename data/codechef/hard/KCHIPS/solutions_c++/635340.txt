@@ -1,0 +1,153 @@
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <queue>
+#include <iostream>
+#include <cmath>
+#include <sstream>
+#include <map>
+#include <set>
+#include <numeric>
+#include <memory.h>
+#include <cstdio>
+
+using namespace std;
+
+#define pb push_back
+#define INF 1000000001
+#define SZ(s) (int)((s).size())
+#define FOR(i,a,b) for (int _n(b), i(a); i < _n; i++)
+#define rep(i,n) FOR(i,0,n)
+#define ford(i,a,b) for(int i=(a),_b=(b);i>=_b;--i)
+#define CL(a,v) memset((a),(v),sizeof(a))
+#define mp make_pair
+#define X first
+#define Y second
+#define all(c) (c).begin(), (c).end()
+#define SORT(c) sort(all(c))
+
+typedef long long ll;
+typedef vector<int> VI;
+typedef pair<int,int> pii;
+
+typedef pair<pii,int> pi3;
+
+const int maxn = 100000;
+int v[maxn], l[maxn], r[maxn], tree[maxn+1];
+int N,K,R;
+
+VI pos[maxn];
+
+void add(int i, int x)
+{
+    for(++i; i <= N; i += -i&i) tree[i] += x;
+}
+
+int sum(int ll, int rr)
+{
+    int x = 0;
+    if(ll) x -= sum(0, ll-1);
+    for(++rr; rr > 0; rr -= -rr&rr) x += tree[rr];
+    return x;
+}
+
+bool cmp( const pi3 &a, const pi3 &b)
+{
+    if(a.X.Y > b.X.Y)
+        return true;
+
+    if(a.X.Y == b.X.Y)
+    {
+        if(a.X.X > b.X.X)
+            return true;
+
+        if(a.X.X == b.X.X)
+        {
+            return a.Y < b.Y;
+        }
+        return false;
+    }
+    return false;
+}
+
+int main()
+{
+	#ifndef ONLINE_JUDGE
+        //freopen("input.txt","r",stdin);
+        //freopen("output.txt","w",stdout);
+	#endif
+
+    CL(tree, 0);
+
+    scanf("%d%d", &N, &K);
+    K++;
+    rep(i,N) scanf("%d", v+i);
+    cin >> R;
+
+    rep(i,R) scanf("%d%d",l+i,r+i);
+
+    map<int,int> idx;
+    int SZ = 0;
+    {
+
+        rep(i,N)
+            if(!idx.count(v[i]))
+                idx[v[i]] = SZ++;
+
+        rep(i,N) pos[ idx[v[i]] ].pb(i);
+
+    }
+
+    vector< pair<pii,int> > queries;
+
+    rep(i,R) queries.pb( mp(mp(l[i],r[i]), i) );
+    sort(all(queries), cmp);
+
+    priority_queue<pii> q;
+
+    rep(i,SZ) if(pos[i].size() >= K)
+    {
+        q.push(mp(pos[i].back(),i));
+        add(pos[i][int(pos[i].size()) - K], 1);
+        //cout << "queue add: " << pos[i][int(pos[i].size()) - K] << endl;
+    }
+
+    VI ans(queries.size());
+
+    rep(i,R)
+    {
+        const int L = queries[i].X.X, R = queries[i].X.Y;
+        const int ans_id = queries[i].Y;
+
+        //cout << "L " << L << " R " << R << endl;
+
+        while(q.size() && q.top().X > R)
+        {
+            pii a = q.top(); q.pop();
+            const int id = a.Y;
+
+            //cout << "queue del: " << pos[i][int(pos[i].size()) - K] << endl;
+            add(pos[id][int(pos[id].size())-K], -1);
+            pos[id].pop_back();
+
+
+            while(pos[id].size() >= K && pos[id].back() > R ) pos[id].pop_back();
+
+            if(pos[id].size() < K)
+                pos[id].clear();
+            else
+            {
+                add(pos[id][int(pos[id].size())-K], 1);
+                q.push(mp(pos[id].back(), id));
+                //cout << "queue add: " << pos[i][int(pos[i].size()) - K] << endl;
+            }
+        }
+
+        ans[ans_id] = sum(L,R);
+        //cout << "ans " << ans[ans_id] << endl;
+    }
+
+    rep(i,ans.size()) printf("%d\n",ans[i]);
+
+	return 0;
+}

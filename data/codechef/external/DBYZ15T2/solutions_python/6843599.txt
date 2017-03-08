@@ -1,0 +1,160 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define REP(i,n) for(int i=0;i<(int)(n);++i)
+#define REPR(i,n) for (int i=(int)(n)-1;i>=0;--i)
+#define FOR(i,c) for(__typeof((c).begin())i=(c).begin();i!=(c).end();++i)
+#define ALL(c) (c).begin(), (c).end()
+#define valid(y,x,h,w) (0<=y&&y<h&&0<=x&&x<w)
+#define tpl(...) make_tuple(__VA_ARGS__)
+const int INF = 0x3f3f3f3f;
+const double EPS = 1e-8;
+const double PI = acos(-1);
+const int dy[] = {-1,0,1,0};
+const int dx[] = {0,1,0,-1};
+typedef long long ll;
+typedef pair<int,int> pii;
+template<class T>bool chmax(T &a, const T &b) { if (a<b) { a=b; return 1; } return 0; }
+template<class T>bool chmin(T &a, const T &b) { if (b<a) { a=b; return 1; } return 0; }
+template<typename Ch,typename Tr,typename C,typename=decltype(begin(C()))>basic_ostream<Ch,Tr>& operator<<(basic_ostream<Ch,Tr>&os,
+const C& c){os<<'[';for(auto i=begin(c);i!=end(c);++i)os<<(i==begin(c)?"":" ")<<*i;return os<<']';}
+template<class S,class T>ostream&operator<<(ostream &o,const pair<S,T>&t){return o<<'('<<t.first<<','<<t.second<<')';}
+template<int N,class Tp>void output(ostream&,const Tp&){}
+template<int N,class Tp,class,class ...Ts>void output(ostream &o,const Tp&t){if(N)o<<',';o<<get<N>(t);output<N+1,Tp,Ts...>(o,t);}
+template<class ...Ts>ostream&operator<<(ostream&o,const tuple<Ts...>&t){o<<'(';output<0,tuple<Ts...>,Ts...>(o,t);return o<<')';}
+template<class T>void output(T t,char z=10){if(t<0)t=-t,putchar(45);int c[20];
+int k=0;while(t)c[k++]=t%10,t/=10;for(k||(c[k++]=0);k;)putchar(c[--k]^48);putchar(z);}
+template<class T>void outputs(T t){output(t);}
+template<class S,class ...T>void outputs(S a,T...t){output(a,32);outputs(t...);}
+template<class T>void output(T *a,int n){REP(i,n)cout<<a[i]<<(i!=n-1?',':'\n');}
+template<class T>void output(T *a,int n,int m){REP(i,n)output(a[i],m);}
+template<class T>bool input(T &t){int n=1,c;for(t=0;!isdigit(c=getchar())&&~c&&c-45;);
+if(!~c)return 0;for(c-45&&(n=0,t=c^48);isdigit(c=getchar());)t=10*t+c-48;t=n?-t:t;return 1;}
+template<class S,class ...T>bool input(S&a,T&...t){input(a);return input(t...);}
+template<class T>bool inputs(T *a, int n) { REP(i,n) if(!input(a[i])) return 0; return 1;}
+
+template<int MOD>
+struct ModInt {
+  int x;
+  ModInt() : x(0) {}
+  ModInt(ll s) { if ((x = s % MOD) < 0) x += MOD; }
+  ModInt operator+=(ModInt rhs) { if ((x+=rhs.x) >= MOD) x -= MOD; return *this; }
+  ModInt operator-=(ModInt rhs) { if ((x-=rhs.x) < 0) x += MOD; return *this; }
+  ModInt operator*=(ModInt rhs) { x = (ll)x*rhs.x % MOD; return *this; }
+  ModInt operator+(ModInt rhs) const { return ModInt(*this) += rhs; }
+  ModInt operator-(ModInt rhs) const { return ModInt(*this) -= rhs; }
+  ModInt operator*(ModInt rhs) const { return ModInt(*this) *= rhs; }
+  ModInt operator/=(ModInt rhs) {
+    static const ll inv2 = ModInt(2).inv().x; // 2で割るのは特別に保存してみる
+    ll i = (rhs.x == 2 ? inv2 : rhs.inv().x);
+    x = x*i%MOD; return *this;
+  }
+  ModInt operator/(ModInt rhs) const { return ModInt(*this) /= rhs; }
+  ModInt inv() { return pow(MOD-2); }
+  ModInt pow(ll n) const {
+    ModInt r = 1, t = x;
+    for (;n;n>>=1,t*=t) if (n&1) r *= t;
+    return r;
+  }
+  static ModInt strnum(const string &n) {ModInt a = 0; for (char c:n) a = a*10+c-'0'; return a;}
+  friend ostream& operator<<(ostream &os, const ModInt rhs){ return os << rhs.x; }
+};
+typedef ModInt<int(1e9+7)> mint;
+
+template<int LEN, typename Mapper>
+struct PalindromicTreeCnt {
+  constexpr static auto mapper = Mapper();
+
+  struct Node {
+    int nxt[Mapper::N];
+    int len, pos, slink;
+    vector<int> revlink;
+    int num; // number of suffix-palindromes of the corresponding substring
+    int cnt; // number of occurrence
+    void init(int l, int p, int sl) {
+      memset(nxt,-1,sizeof(nxt)); len=l; pos=p; slink=sl; num=0;
+      revlink.clear();
+      cnt = 0;
+    }
+    string get(const string &s) { return len<=0 ? "" : s.substr(pos, len); }
+  } node[LEN+5];
+  int sp[LEN];
+
+  int m;
+
+  void create_node(int i, int l, int p, int sl) {
+    node[i].init(l,p,sl);
+    node[sl].revlink.push_back(i);
+  }
+  void build(const string &s) {
+    int n = s.size();
+
+    m = 3;
+    node[0].init(-1,0,0);       // dummy
+    REP(i,Mapper::N) node[0].nxt[i] = 2;
+    create_node(1,-1,0,0);      // palindrome with size = -1
+    create_node(2,0,0,1);       // palindrome with size = 0
+    int v = 2;
+    REP(i,n) {
+      int c = mapper(s[i]);
+      // find the largest suffix-palindrome
+      while (i<node[v].len+1 || s[i-node[v].len-1] != s[i])
+        v = node[v].slink;
+      if (node[v].nxt[c] == -1) { // new palindrome
+        // suffix link
+        int u = v;
+        do {
+          u = node[u].slink;
+        } while (i<node[u].len+1 || s[i-node[u].len-1] != s[i]);
+        // create new palindrome node
+        create_node(m, node[v].len+2, i - node[v].len - 1, node[u].nxt[c]);
+        node[m].num = 1 + node[node[u].nxt[c]].num;
+        node[v].nxt[c] = m++;
+      }
+      v = node[v].nxt[c];
+      node[v].cnt++;
+      sp[i] = v;
+    }
+  }
+
+  void dfs(int v) {
+    for (int u : node[v].revlink) {
+      dfs(u);
+      node[v].cnt += node[u].cnt;
+    }
+  }
+
+  mint dp[100010];
+  mint ans;
+  void dfs2(int v) {
+    if (node[v].len >= 1) {
+      ans += dp[v] * node[v].cnt;
+      dp[v] += node[v].cnt;
+    }
+    for (int u : node[v].revlink) {
+      dp[u] += dp[v];
+      dfs2(u);
+    }
+  }
+
+  void solve(const string &s) {
+    build(s);
+    dfs(0);
+    ans = 0;
+    memset(dp,0,sizeof(dp));
+    dfs2(0);
+    cout << ans << endl;
+  }
+};
+
+struct CharIntMapperLower {
+  static const int N = 26;
+  int operator()(const char c) const { return c-'a'; }
+};
+
+int main() {
+  string s;
+  while(cin >> s) {
+    static PalindromicTreeCnt<100000, CharIntMapperLower> pt;
+    pt.solve(s);
+  }
+}

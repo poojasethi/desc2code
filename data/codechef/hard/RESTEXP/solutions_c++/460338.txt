@@ -1,0 +1,89 @@
+/* DP on tree */
+
+#include<cstdio>
+#include<vector>
+
+#define	pb			push_back
+#define	rep(i,n)	for(int i=0;i<n;i++)
+
+using namespace std;
+
+typedef	vector<int>	vi;
+typedef	vector<vi>	vvi;
+
+vvi adj;
+int w[30],memo[30][30][31][31];
+
+int dfs(int u,int parent,int child,int chef,int day){
+	if(~memo[u][child][chef][day])	return memo[u][child][chef][day];
+
+	if(adj[u][child]==parent){	// ignore parent node
+		return memo[u][child][chef][day]=dfs(u,parent,child+1,chef,day);
+	}
+
+	if(adj[u][child]==-1){	// choose node u
+		int ans=0;
+		if(chef>0 && day>0 && w[u]>0)	ans=w[u];
+		return memo[u][child][chef][day]=ans;
+	}
+
+	int v=adj[u][child];
+	int ans=dfs(u,parent,child+1,chef,day);	// no chefs move to node v
+	for(int c=1;c<=chef;c++)rep(d,day){
+		// move c chefs to node v and give d days
+		ans=max(ans,dfs(u,parent,child+1,chef-c,day-d-1)+dfs(v,u,0,c,d));
+	}
+
+	return memo[u][child][chef][day]=ans;
+}
+
+void makepath(int u,int parent,int child,int chef,int day){
+	if(adj[u][child]==parent)	child++;
+	if(adj[u][child]==-1){
+		if(chef>0 && day>0 && w[u]>0){
+			printf("build %d\n",u+1);
+			day--;
+		}
+		rep(d,day)	puts("nothing");
+		return;
+	}
+
+	if(adj[u][child]==parent){
+		makepath(u,parent,child+1,chef,day);
+		return;
+	}
+
+	int v=adj[u][child];
+	int ans=memo[u][child][chef][day];
+	if(ans==memo[u][child+1][chef][day]){
+		makepath(u,parent,child+1,chef,day);
+		return;
+	}
+	for(int c=1;c<=chef;c++)rep(d,day){
+		if(ans==memo[u][child+1][chef-c][day-d-1]+memo[v][0][c][d]){
+			printf("transfer %d %d %d\n",u+1,v+1,c);
+			makepath(u,parent,child+1,chef-c,day-d-1);
+			makepath(v,u,0,c,d);
+			return;
+		}
+	}
+}
+
+int main(){
+	int n,chef,day;	scanf("%d%d%d",&n,&chef,&day);
+	rep(u,n)rep(h,n)rep(c,chef+1)rep(d,day+1)	memo[u][h][c][d]=-1;
+
+	rep(i,n)	scanf("%d",w+i);
+	adj.resize(n);
+	rep(i,n-1){
+		int u,v;	scanf("%d%d",&u,&v);
+		u--,v--;
+		adj[u].pb(v),adj[v].pb(u);
+	}
+	rep(u,n)	adj[u].pb(-1);	// sentinel
+
+	printf("%d\n",dfs(0,-2,0,chef,day));	// -2: root node has no parent
+	makepath(0,-2,0,chef,day);
+
+	return 0;
+}

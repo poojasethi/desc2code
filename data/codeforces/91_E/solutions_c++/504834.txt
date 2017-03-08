@@ -1,0 +1,77 @@
+#include <iostream>
+#include <algorithm>
+using namespace std;
+
+#define N 131082
+#define TI 10000000
+typedef long long ll;
+
+typedef struct {
+    int l,r,t,i;
+} req;
+
+typedef struct {
+    int t, i;
+} cc;
+
+int n,nq,i,j,k;
+int r[N]={0};
+ll a[N]={0},b[N]={0};
+req q[N];
+cc e[18][N];
+
+struct Tcmp {
+  bool operator() (req a, req b) { return a.t<b.t;}
+} cmp;
+
+int fmax(int i,int j, int t) {
+    if (i<0) return j;
+    if (j<0) return i;
+    ll sa = a[i]+b[i]*t, sb = a[j]+b[j]*t;
+    if (sb>sa||(sb==sa&&b[j]>b[i])) return j;  
+    return i;
+}
+
+int irs(int i, int j, int t0) {
+    ll da = a[i]-a[j], db = b[j]-b[i];
+    if (db==0) return TI;
+    ll t = da/db +1;    
+    if (t>TI||t<=t0) t=TI;
+    return (int)t;
+}
+
+void val(int l, int i, int t) {
+    int i2=i<<1;
+    if (t>=e[l-1][i2].t) val(l-1,i2,t);
+    if (t>=e[l-1][i2+1].t) val(l-1,i2+1,t);
+    e[l][i].t = min(e[l-1][i2].t,e[l-1][i2+1].t);
+    e[l][i].t = min(e[l][i].t,irs(e[l-1][i2].i,e[l-1][i2+1].i,t));
+    e[l][i].i = fmax(e[l-1][i2].i,e[l-1][i2+1].i,t);
+}
+int get(int l, int i, int t) {
+    if (t>=e[l][i].t) val(l,i,t); 
+    return e[l][i].i;
+}
+
+int solve(int z, int l, int r, int t) {
+    if (l>r) return -1;
+    if (l==r) return get(z,l,t);
+    int lu=(l>>1), ru=(r>>1), rr = -1;
+    if (l==lu*2+1) rr = fmax(rr,get(z,l,t),t), lu++;
+    if (r==ru*2) rr = fmax(rr,get(z,r,t),t),ru--;
+    return fmax(rr,solve(z+1,lu,ru,t),t);
+}
+
+int main() {
+    cin >> n >> nq;
+    for (i=0;i<n;i++) cin >> a[i] >> b[i];
+    for (i=0;i<nq;i++) cin >> q[i].l >> q[i].r >> q[i].t;
+    for (i=0;i<nq;i++) q[i].l--,q[i].r--,q[i].i=i;
+    for (i=0;i<n;i++) e[0][i].i = i;
+    for (i=0;i<N;i++) e[0][i].t = TI;
+    for (j=1,k=N;j<18;j++,k>>=2) for (i=0;i<k;i++) e[j][i].t = -1;
+    sort(q,q+nq,cmp);
+    for (i=0;i<nq;i++) r[q[i].i]=solve(0,q[i].l,q[i].r,q[i].t)+1;
+    for (i=0;i<nq;i++) cout << r[i] << endl;    
+    return 0;
+}

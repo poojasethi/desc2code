@@ -1,0 +1,186 @@
+//ROUTES
+#include<cstdio>
+#include<iostream>
+#include<algorithm>
+#define rep(i,l,r) for(int i=l;i<=r;i++)
+#define red(i,r,l) for(int i=r;i>=l;i--)
+#define db(x) cout<<#x<<"="<<(x)<<" "
+#define el cout<<endl
+#define push(p,x) p=new edge(x,p)
+#define add(x,y) push(e[x],y),push(e[y],x)
+#define Add(x,y) push(E[x],y),push(E[y],x)
+#define tr(p) for(edge*lk=p;lk;lk=lk->next)
+#define su lk->d
+using namespace std;
+typedef long long LL;
+ 
+struct edge{
+    int d;edge*next,*b;
+    edge(int d,edge*n):d(d),next(n){}
+};
+ 
+int N,M;
+ 
+int ed[500003][2];
+ 
+LL ans=0;
+ 
+void init(){
+    cin>>N>>M;
+    rep(i,1,M)scanf("%d%d",&ed[i][0],&ed[i][1]);
+}
+ 
+namespace solve1{
+const int MXN=500003,MXM=500003;
+ 
+edge*e[MXM];
+ 
+int own[MXN];
+int f[MXN],sz[MXN];
+int F(int x){return x==f[x]?x:f[x]=F(f[x]);}
+ 
+LL dt[MXM]={};
+LL ans[MXM]={};
+ 
+int fa[MXN],dep[MXN];
+int flag[MXN];
+void dfs(int fu,int u){
+    flag[u]=1;
+    fa[u]=fu;dep[u]=dep[fu]+1;
+    tr(e[u])if (su!=fu){
+        dfs(u,su);
+    }
+}
+ 
+int LCA(int x,int y){
+    while (x!=y){
+        if (dep[x]>dep[y])x=F(fa[x]);else
+        if (dep[x]<dep[y])y=F(fa[y]);else
+        x=F(fa[x]),y=F(fa[y]);
+    }
+    return x;
+}
+ 
+void solve(){
+    rep(i,1,N)f[i]=i,sz[i]=1;
+    rep(i,1,M){
+        int x=ed[i][0],y=ed[i][1];
+        int rx=F(x),ry=F(y);
+        if (rx!=ry){
+            f[rx]=ry;
+            dt[i]=(LL)sz[rx]*sz[ry];
+            sz[ry]+=sz[rx];
+            add(x,y);
+        }else{
+            dt[i]=0;
+        }
+    }
+    rep(i,1,N)own[i]=F(i);
+    rep(i,1,N)f[i]=i,sz[i]=1;
+    rep(i,1,N)flag[i]=0;
+    dep[0]=0;
+    rep(i,1,N)if (!flag[i])dfs(0,i);
+    rep(i,1,M)if (dt[i]==0){
+        int x=ed[i][0],y=ed[i][1];
+        x=F(x),y=F(y);
+        if (x!=y){
+            int t=LCA(x,y);
+            LL sqt=(LL)sz[t]*sz[t];
+            for(int u=x;u!=t;u=F(fa[u])){f[u]=t;sz[t]+=sz[u];sqt+=(LL)sz[u]*sz[u];}
+            for(int u=y;u!=t;u=F(fa[u])){f[u]=t;sz[t]+=sz[u];sqt+=(LL)sz[u]*sz[u];}
+            //db(sqt),el;
+            dt[i]=-((LL)sz[t]*sz[t]-sqt)/2;
+        }else{
+            dt[i]=0;
+        }
+    }
+ 
+    ans[0]=0;
+    rep(i,1,M)ans[i]=ans[i-1]+dt[i];
+    rep(i,1,M)printf("%lld\n",ans[i]);
+}
+ 
+}
+ 
+namespace solve0{
+const int MXN=2003;
+ 
+edge*e[MXN],*E[MXN];
+ 
+int q[MXN],top,own[MXN],sz[MXN];
+int flag[MXN]={};
+int dfn[MXN],low[MXN],num;
+void tarjan(edge*fe,int u){
+    //db(u),el;
+    flag[u]=1;
+    dfn[u]=low[u]=++num;q[++top]=u;
+    tr(e[u])if (lk->b!=fe){
+        if (flag[su]==0){
+            tarjan(lk,su);low[u]=min(low[u],low[su]);
+        }else
+        if (flag[su]==1){
+            low[u]=min(low[u],dfn[su]);
+        }
+    }
+    if (dfn[u]==low[u]){
+        while (q[top]!=u) sz[own[q[top--]]=u]++;
+        sz[own[q[top--]]=u]++;
+    }
+    flag[u]=2;
+}
+ 
+LL ans;
+LL sq[MXN];
+LL ssz[MXN];
+void dfs(int fu,int u){
+    ssz[u]=sz[u];
+    flag[u]=1;
+    tr(E[u])if (su!=fu&&!flag[su]){
+        dfs(u,su);
+        ssz[u]+=ssz[su];
+        sq[u]+=ssz[su]*ssz[su];
+    }
+    //db(sq[u]),db(ssz[u]),el;
+    ans+=sz[u]*(ssz[u]-sz[u])+((ssz[u]-sz[u])*(ssz[u]-sz[u])-sq[u])/2;
+}
+ 
+void calc(int m){
+    ans=0;
+    rep(i,1,N)e[i]=NULL;
+    rep(i,1,m)push(e[ed[i][0]],ed[i][1]),push(e[ed[i][1]],ed[i][0]),e[ed[i][0]]->b=e[ed[i][1]],e[ed[i][1]]->b=e[ed[i][0]];
+    rep(i,1,N)own[i]=i,sz[i]=0;
+    rep(i,1,N)flag[i]=0;
+    rep(i,1,N)if (!flag[i]){
+        num=0;
+        top=0;
+        tarjan(NULL,i);
+        //rep(i,1,N)db(own[i]),el;
+    }
+    //el;
+    rep(i,1,N)E[i]=NULL;
+    rep(i,1,N)tr(e[i]){
+        if (own[i]!=own[su]){
+            Add(own[i],own[su]);
+        }
+    }
+    rep(i,1,N)ssz[i]=0;
+    rep(i,1,N)sq[i]=0;
+    rep(i,1,N)flag[i]=0;
+    rep(i,1,N)if (i==own[i]&&!flag[i]){
+        dfs(0,i);
+    }
+    cout<<ans<<endl;
+}
+ 
+void solve(){
+    rep(i,1,M)calc(i);
+}
+ 
+}
+ 
+int main(){
+    init();
+    //if (N<=2000)solve0::solve();else
+    solve1::solve();
+    return 0;
+}

@@ -1,0 +1,77 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+using namespace std;
+
+#define INF 1234567890
+int xx[4005], xn;
+int dp[5005][5005];
+int from[5005][5005];
+vector<int> hang[5005];
+int c[2005], r[2005];
+int use[2005];
+
+int getid(int x) { return lower_bound(xx, xx+xn, x)-xx; }
+
+void trace(int L, int R) {
+	if(L>=R) return;
+	for(int i=0;i<(int)hang[R].size();i++)
+		if(getid(c[hang[R][i]]-r[hang[R][i]])==L)
+			use[hang[R][i]]=1;
+	if(from[L][R] == -1)
+		trace(L, R-1);
+	else {
+		int ll = getid(c[from[L][R]]-r[from[L][R]]);
+		trace(L, ll);
+		trace(ll, R);
+	}
+}
+
+int go(int L, int R) {
+	if(L>=R) return 0;
+	if(dp[L][R] >= 0) return dp[L][R];
+	int www=0;
+	for(int i=0;i<(int)hang[R].size();i++)
+		if(getid(c[hang[R][i]]-r[hang[R][i]])==L)
+			++www;
+	www = min(www, 1);
+	dp[L][R] = go(L, R-1)+www;
+	from[L][R] = -1;
+	for(int i=0;i<(int)hang[R].size();i++) {
+		int id = hang[R][i];
+		int ll = getid(c[id]-r[id]);
+		if (ll <= L) continue;
+		int v = go(L, ll) + go(ll, R) + www;
+		if (v > dp[L][R]) {
+			//printf("HERE! v=%d (from [%d,%d])\n", v, L, R);
+			dp[L][R] = v;
+			from[L][R] = id;
+		}
+	}
+	return dp[L][R];
+}
+
+int main(void) {
+	int n;
+	memset(dp, -1, sizeof(dp));
+	scanf("%d", &n);
+	xx[xn++] = -INF;
+	for(int i=0;i<n;i++) {
+		scanf("%d%d", &c[i], &r[i]);
+		xx[xn++] = c[i]-r[i];
+		xx[xn++] = c[i]+r[i];
+	}
+	sort(xx, xx+xn);
+	xn = unique(xx, xx+xn) - xx;
+	for(int i=0;i<n;i++)
+		hang[getid(c[i]+r[i])].push_back(i);
+	int ans = go(0, xn);
+	trace(0, xn);
+	printf("%d\n", ans);
+	for(int i=0;i<n;i++)
+		if(use[i])
+			printf("%d ", i+1);
+	puts("");
+	return 0;
+}

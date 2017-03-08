@@ -1,0 +1,113 @@
+#include<bits/stdc++.h>
+
+using namespace std;
+
+// Shortcuts for "common" data types in contests
+typedef long long int ll;
+typedef vector<int> vi;
+typedef pair<int, int> ii;
+typedef vector<ii> vii;
+typedef set<int> si;
+typedef map<string, int> msi;
+// To simplify repetitions/loops, Note: define your loop style and stick with it!
+#define s(i) scanf("%d",&i)
+#define sl(i) scanf("%ld",&i)
+#define sll(i) scanf("%lld",&i)
+#define REP(i, a, b) \
+for (int i = int(a); i <= int(b); i++) // a to b, and variable i is local!
+#define NREP(i,a,b) \
+for (int i = int(a); i >= int(b); i--)
+#define TRvi(c, it) \
+for (vi::iterator it = (c).begin(); it != (c).end(); it++)
+#define TRvii(c, it) \
+for (vii::iterator it = (c).begin(); it != (c).end(); it++)
+#define TRmsi(c, it) \
+for (msi::iterator it = (c).begin(); it != (c).end(); it++)
+#define INF 2000000000 // 2 billion
+#define MOD 1000000007
+
+vector < vi > idx;
+int dp[100009] , N , a[100009]  ;
+vector < vector < vi > > tree;
+
+void update( int no , int val , int c1 , int c2 )
+{
+    int id = lower_bound( idx[c2].begin() , idx[c2].end() , no ) - idx[c2].begin();
+    id++;
+    while( id < tree[c1][c2].size() )
+    {
+        tree[c1][c2][id] = ( tree[c1][c2][id] + val ) % MOD ;
+        id += ( id & -id );
+    }
+}
+
+int sum( int no , int c1 , int c2 )
+{
+    int id = lower_bound( idx[c2].begin() , idx[c2].end() , no ) - idx[c2].begin();
+    int val = 0;
+    while( id > 0 )
+    {
+        val = ( val + tree[c1][c2][id] ) % MOD ;
+        id -= (id & -id);
+    }
+    return val;
+}
+
+int LIS(vi a)
+{
+    int sz=a.size() , maxi = 0 ;
+    vi d(sz+1,INF);
+    si tmp;
+    REP(i,0,sz-1)
+    {
+        tmp.insert( a[i] ) ;
+        vi::iterator it=lower_bound(d.begin(),d.end(),a[i]);
+        *it=a[i];
+        dp[i]=(it-d.begin())+1;
+        maxi = max( maxi , dp[i] ) ;
+    }
+    return maxi;
+}
+
+int main()
+{
+    //freopen("input.txt","r",stdin);
+    //freopen("output.txt","w",stdout);
+    int t ; s(t) ;
+    while( t-- )
+    {
+        int n ; s(n) ;
+        vi a(n);
+        REP( i , 0 , n - 1 )
+            s(a[i]);
+        int ans = LIS( a );
+        idx.clear();
+        tree.clear();
+        tree.resize(2);
+        idx.resize( ans + 1 );
+        tree[0].resize( ans + 1 );
+        tree[1].resize( ans + 1 );
+        idx[0].push_back( 0 );
+        REP( i , 0 , n - 1 )
+            idx[dp[i]].push_back( a[i] ) ;
+        REP( i , 0 , ans )
+        {
+            sort( idx[i].begin() , idx[i].end() ) ;
+            tree[0][i].resize( idx[i].size() + 1 );
+            tree[1][i].resize( idx[i].size() + 1 );
+        }
+        update( 0 , 1 , 0 , 0 );
+        REP( i , 0 , n - 1 )
+        {
+            if( dp[i] >= 1 )
+            {
+                update( a[i] , sum( a[i] , 0 ,  dp[i] - 1) , 0 , dp[i] );
+                update( a[i] , sum( a[i] , 1 ,  dp[i] - 1) , 1 , dp[i] );
+            }
+            if( dp[i] >= 2 )
+                update( a[i] , sum( a[i] , 0 , dp[i] - 2 ) , 1 , dp[i] ) ;
+        }
+        printf("%d\n",( sum( INF , 0 , ans - 1 ) + sum( INF , 1 , ans ) ) % MOD );
+    }
+    return 0;
+}

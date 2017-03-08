@@ -1,0 +1,75 @@
+#include <cstdio>
+#include <algorithm>
+
+using namespace std;
+
+#define N 30
+#define M 531445
+#define inf (1 << 30)
+
+typedef __int64 LL;
+
+int n, cnt;
+int a[N], b[N], c[N];
+
+struct State {
+	int a, b, c;
+	LL bit;
+	State(int a = 0, int b = 0, int c = 0, LL x = 0) : a(a), b(b), c(c), bit(x) {}
+	bool operator < (const State &p) const {
+		if (a != p.a) return a < p.a;
+		if (b != p.b) return b < p.b;
+		return c > p.c;
+	}
+} p[M];
+
+int mx;
+LL rlt, pw[N];
+
+void Find_1(int i, int x, int y, int z, LL bit) {
+	if (i == n / 2) {
+		p[cnt ++] = State(x - y, x - z, x + y + z, bit);
+		return;
+	}
+	Find_1(i + 1, x, y + b[i], z + c[i], bit);
+	Find_1(i + 1, x + a[i], y, z + c[i], bit + pw[i]);
+	Find_1(i + 1, x + a[i], y + b[i], z, bit + 2 * pw[i]);
+}
+
+void Find_2(int i, int x, int y, int z, LL bit) {
+	if (i == n) {
+		int pos = lower_bound(p, p + cnt, State(y - x, z - x, inf, 0)) - p;
+		if (pos < cnt && p[pos].a == y - x && p[pos].b == z - x) {
+			if (mx < p[pos].c + x + y + z) {
+				mx = p[pos].c + x + y + z;
+				rlt = bit + p[pos].bit;
+			}
+		}
+		return;
+	}
+	Find_2(i + 1, x, y + b[i], z + c[i], bit);
+	Find_2(i + 1, x + a[i], y, z + c[i], bit + pw[i]);
+	Find_2(i + 1, x + a[i], y + b[i], z, bit + 2 * pw[i]);
+}
+
+main() {
+	pw[0] = 1;
+	scanf("%d", &n);
+	for (int i = 0; i < n; i ++) {
+		if (i) pw[i] = pw[i - 1] * 3;
+		scanf("%d %d %d", a + i, b + i, c + i);
+	}
+	Find_1(0, 0, 0, 0, 0);
+	sort(p, p + cnt), rlt = -1, mx = -inf;
+	Find_2(n / 2, 0, 0, 0, 0);
+	if (rlt < 0) puts("Impossible");
+	else {
+		for (int i = 0; i < n; i ++) {
+			int x = rlt % 3;
+			if (!x) puts("MW");
+			else if (x == 1) puts("LW");
+			else puts("LM");
+			rlt /= 3;
+		}
+	}
+}

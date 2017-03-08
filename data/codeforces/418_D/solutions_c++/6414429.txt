@@ -1,0 +1,173 @@
+#include<stdio.h>
+#include<string.h>
+#include<algorithm>
+#include<vector>
+using namespace std;
+#define N (100005)
+#define FO(it,c) for (__typeof( (c).begin() ) it=(c).begin(); it!=(c).end(); it++ )
+
+int n;
+vector<int> v[N];
+
+void IN()
+{
+    int a,b;
+    scanf("%d",&n);
+    for (int i=1;i<n;i++)
+    {
+        scanf("%d%d",&a,&b);
+        v[a].push_back(b);
+        v[b].push_back(a);
+    }
+
+}
+
+int tin[N],tout[N],dep[N],pr[N],fr[N],cnt=1;
+void dfs(int now)
+{
+    tin[now]=cnt++;
+    fr[now]=0;
+
+    FO(it,v[now])if (*it!=pr[now]){
+        dep[*it]=dep[now]+1,pr[*it]=now;
+        dfs(*it);
+        fr[now]=max(fr[now],fr[*it]+1);
+    }
+
+    tout[now]=cnt++;
+}
+
+int mx1[N],mx2[N],mx3[N];
+int vx1[N],vx2[N],vx3[N];
+int dif[N],sum[N];
+int d_pr[N][20],d_dif[N][20],d_sum[N][20];
+void preprocess()
+{
+    for (int i=1;i<=n;i++)
+    {
+        mx1[i]=mx2[i]=mx3[i]=0;
+        vx1[i]=vx2[i]=vx3[i]=0;
+        FO(it,v[i])if (*it!=pr[i]){
+            if (fr[*it]+1>mx1[i])
+            {
+                mx3[i]=mx2[i],vx3[i]=vx2[i];
+                mx2[i]=mx1[i],vx2[i]=vx1[i];
+                mx1[i]=fr[*it]+1,vx1[i]=*it;
+            }
+            else if (fr[*it]+1>mx2[i])
+            {
+                mx3[i]=mx2[i],vx3[i]=vx2[i];
+                mx2[i]=fr[*it]+1,vx2[i]=*it;
+            }
+            else if (fr[*it]+1>mx3[i])
+            {
+                mx3[i]=fr[*it]+1,vx3[i]=*it;
+            }
+        }
+    }
+    for (int i=2;i<=n;i++)
+    {
+        if (vx1[pr[i]]==i)dif[i]=mx2[pr[i]]-dep[pr[i]];
+        else dif[i]=mx1[pr[i]]-dep[pr[i]];
+
+        sum[i]=dif[i]+2*dep[pr[i]];
+    }
+    for (int i=1;i<=n;i++)d_pr[i][0]=pr[i], d_dif[i][0]=dif[i], d_sum[i][0]=sum[i];
+
+    for (int j=1;j<20;j++)
+    {
+        for (int i=1;i<=n;i++)
+        {
+            d_pr[i][j]=d_pr[d_pr[i][j-1]][j-1];
+            d_dif[i][j]=max( d_dif[d_pr[i][j-1]][j-1], d_dif[i][j-1]);
+            d_sum[i][j]=max( d_sum[d_pr[i][j-1]][j-1], d_sum[i][j-1]);
+        }
+    }
+}
+
+/*process query below*/
+
+bool anc(int a,int b)
+{
+    return tin[a]<=tin[b]&&tout[a]>=tout[b];
+}
+int lca(int a,int b)
+{
+    if (anc(a,b))return a;
+    for (int i=19;i>=0;i--)
+    {
+        if (!anc(d_pr[a][i],b))a=d_pr[a][i];
+    }
+    return pr[a];
+}
+
+int ans;
+
+int get_up(int a,int h,int adjust)
+{
+    int mx=-10000000;
+    for (int i=19;i>=0;i--)if (h&(1<<i))
+    {
+        if (d_dif[a][i]>mx)
+        {
+            mx=d_dif[a][i];
+        }
+        a=d_pr[a][i];
+    }
+    ans=max(ans,mx+adjust);
+    return a;
+}
+int get_up2(int a,int h,int adjust)
+{
+    int mx=-10000000;
+    for (int i=19;i>=0;i--)if (h&(1<<i))
+    {
+        if (d_sum[a][i]>mx)
+        {
+            mx=d_sum[a][i];
+        }
+        a=d_pr[a][i];
+    }
+    ans=max(ans,mx+adjust);
+    return a;
+}
+
+int main()
+{
+    IN();
+
+    dep[1]=0,pr[1]=1;
+    dfs(1);
+
+    preprocess();
+
+    int Q,a,b;
+    scanf("%d",&Q);
+    while (Q--)
+    {
+        ans=-10000000;
+        scanf("%d%d",&a,&b);
+        if (dep[a]>dep[b])swap(a,b);
+        int c=lca(a,b);
+        int da=dep[a]-dep[c],db=dep[b]-dep[c];
+
+        ans=fr[b];
+        if (a!=c)ans=max(ans,fr[a]);
+
+        int mid=get_up(b,(da+db-1)/2,dep[b]);
+        if (dep[mid]>dep[c]+1)get_up2(mid,dep[mid]-dep[c]-1,dep[a]-2*dep[c]);
+        if (dep[a]>dep[c]+1)get_up(a,dep[a]-dep[c]-1,dep[a]);
+
+        if (!anc(vx1[c],a) && !anc(vx1[c],b))
+            ans=max(ans,mx1[c]+dep[a]-dep[c]);
+        if (!anc(vx2[c],a) && !anc(vx2[c],b))
+            ans=max(ans,mx2[c]+dep[a]-dep[c]);
+        if (!anc(vx3[c],a) && !anc(vx3[c],b))
+            ans=max(ans,mx3[c]+dep[a]-dep[c]);
+
+        get_up(c,dep[c],dep[a]);
+
+        printf("%d\n",ans);
+    }
+    return 0;
+}

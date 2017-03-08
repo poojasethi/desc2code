@@ -1,0 +1,122 @@
+#include <cstdio>
+#include <algorithm>
+#include <map>
+
+#define rep(i, y) for (int i = 1; i <= y; i++)
+#define MX 200005
+#define INF 2000000000
+
+using namespace std;
+
+map <int, int> H;
+int n, K, D; 
+int rlt, L, R;
+int a[MX];
+
+struct Node{
+	int A, I;
+	int l, pt;
+	int mx, mn;
+}tree[MX * 4];
+
+void build_tree(int u, int l, int r) {
+	tree[u].l = l;
+	tree[u].mx = tree[u].mn = tree[u].pt = INF;
+	if (l == r) return;
+	
+	int mid = l + r >> 1;
+	build_tree(u * 2, l, mid);
+	build_tree(u * 2 + 1, mid + 1, r);
+}
+
+void shift(int u, int val, int fl) {
+	if (!fl) {
+		tree[u].A = val;
+		tree[u].mx = val + tree[u].l;
+		tree[u].pt = tree[u].mn + val;
+	} else {
+		tree[u].I = val;
+		tree[u].mn = tree[u].l - val;
+		tree[u].pt = tree[u].mx - val;
+	}
+}
+
+void down(int u) {
+	if (tree[u].A) {
+		shift(u * 2, tree[u].A, 0);
+		shift(u * 2 + 1, tree[u].A, 0);
+	}
+	
+	if (tree[u].I) {
+		shift(u * 2, tree[u].I, 1);
+		shift(u * 2 + 1, tree[u].I, 1);
+	}
+	tree[u].A = tree[u].I = 0;
+}
+
+void update(int u) {
+	tree[u].mx = min(tree[2 * u].mx, tree[2 * u + 1].mx);
+	tree[u].mn = min(tree[2 * u].mn, tree[2 * u + 1].mn);
+	tree[u].pt = min(tree[2 * u].pt, tree[2 * u + 1].pt);
+}
+
+void change(int u, int l, int r, int s, int e, int val, int fl) {
+	if (s <= l && e >= r) {
+		shift(u, val, fl);
+		return;
+	}
+	
+	int mid = l + r >> 1;
+	down(u);
+	if (s <= mid) change(u * 2, l, mid, s, e, val, fl);
+	if (e > mid) change(u * 2 + 1, mid + 1, r, s, e, val, fl);
+	update(u);
+}
+
+int get(int u, int l, int r, int val) {
+	if (l == r)
+		return tree[u].pt <= val? l: INF;
+		
+	int mid = l + r >> 1;
+	down(u);
+	if (tree[u * 2].pt <= val) return get(u * 2, l, mid, val);
+	return get(u * 2 + 1, mid + 1, r, val);
+}
+
+int f[MX], g[MX], last;
+
+main() {
+	
+//	freopen("in.txt", "r", stdin);
+//	freopen("out.txt", "w", stdout);
+	
+	scanf("%d%d%d", &n, &K, &D);
+	rep(i, n) scanf("%d", a + i);
+	if (!D) {
+		rep(i, n) {
+			if (i - 1 && a[i] != a[i - 1]) last = i - 1;
+			if (rlt < i - last) rlt = i - last, L = last + 1, R = i;
+		}
+		printf("%d %d\n", L, R);
+		return 0;
+	}
+	
+	build_tree(1, 1, n);
+	rep(i, n) {
+		a[i] += INF / 2;
+		last = max(last, H[a[i]]);
+		H[a[i]] = i;
+		if (i - 1 && (a[i - 1] % D != a[i] % D)) last = i - 1;
+		while (*f && a[f[*f]] < a[i]) --*f;
+		while (*g && a[g[*g]] > a[i]) --*g;
+		
+		change(1, 1, n, f[*f] + 1, i, a[i] / D + 1, 0);
+		change(1, 1, n, g[*g] + 1, i, a[i] / D + 1, 1);
+		f[++*f] = g[++*g] = i;
+		if (last) change(1, 1, n, 1, last, INF, 0);
+		
+		int pL = get(1, 1, n, K + i);
+		if (rlt < i - pL + 1) rlt = i - pL + 1, L = pL, R = i;
+	}
+	printf("%d %d\n", L, R);
+}

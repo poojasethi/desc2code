@@ -1,0 +1,243 @@
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <math.h>
+#include <time.h>
+
+#ifdef DD
+#define dbg(...) printf (__VA_ARGS__)
+#else
+#define dbg(...)
+#endif
+
+typedef unsigned char      uint_8;
+typedef unsigned short     uint_16;
+typedef unsigned int       uint_32;
+typedef unsigned long long uint_64;
+typedef char               sint_8;
+typedef short              sint_16;
+typedef int                sint_32;
+typedef long long          sint_64;
+
+typedef struct
+{
+  int Lim;
+  char Op;
+} El;
+
+static El L [200001];
+
+#define Ascending 1
+
+ //------------------------------------------
+void quickSort (El *arr, int left, int right)
+{
+  int i = left, j = right;
+  int tmp;
+  double pivot = arr [(left + right) / 2].Lim;
+
+  /* partition */
+  while (i <= j)
+  {
+    if (Ascending)
+    {
+      while (arr[i].Lim < pivot) i++;
+      while (arr[j].Lim > pivot) j--;
+    }
+    else
+    {
+      while (arr[i].Lim > pivot) i++;
+      while (arr[j].Lim < pivot) j--;
+    }
+    if (i <= j)
+    {
+      El tmp = arr[i];
+      arr[i] = arr[j];
+      arr[j] = tmp;
+      i++;
+      j--;
+    }
+  }
+
+  /* recursion */
+  if (left < j) quickSort (arr, left, j);
+  if (i < right) quickSort (arr, i, right);
+}
+
+//------------------------------------------
+static void Solve (int N, int Less)
+{
+  quickSort (L, 0, N-1);
+
+  for (int i = 0; i < N; i++)
+  {
+    //dbg ("%8d\n", L [i].Lim);
+  }
+  //return;
+
+
+  int min = 9999999;
+  if (L [0].Lim > 1)
+  {
+    min = Less;
+  }
+  int Cnt = Less;
+  int Ending = 0;
+  int Curr = L [0].Lim;
+  for (int i = 0; i < N-1; i++)
+  {
+    int Lim = L [i].Lim;
+    dbg ("   %c %3d   %d\n", L [i].Op, Lim, Cnt);
+    char O = L [i].Op;
+    if (O == 'L')
+    {
+      Ending++;
+    }
+    else if (O == 'G')
+    {
+      Cnt++;
+    }
+    else if (O == 'E')
+    {
+      Cnt++;
+      Ending++;
+    }
+
+    if (L [i+1].Lim != Curr)
+    {
+      dbg ("--- %d Lim0 %d Lim1 %d Curr %d\n", i, Lim, L [i+1].Lim, Curr);
+      if (Cnt < min && Lim > 0) min = Cnt;
+//      if (Cnt < min) min = Cnt;
+      dbg ("--- Cnta %d\n", Cnt);
+      Cnt -= Ending;
+      if (L [i+1].Lim > Lim + 1)
+      {
+        if (Cnt < min) min = Cnt;
+//        if (Cnt < min && i > 0 && Curr < 1000000000) min = Cnt;
+        dbg ("--- Cntb %d\n", Cnt);
+      }
+      Ending = 0;
+      Curr = L [i+1].Lim;
+    }
+  }
+  dbg ("RES: ");
+  printf ("%d\n", min);
+}
+
+static void Generate (int N);
+//------------------------------------------
+int main (int argc, char **argv)
+{
+#ifdef GG
+  time_t t;
+  time (&t);
+//  t = 1312373329;
+  srand (t);
+  
+  int N = 100;
+  printf ("%d\n", N);
+  for (int i = 0; i < N; i++)
+  {
+    Generate (20);
+  }
+  exit (0);
+#endif
+
+  int T;
+  scanf ("%d", &T);
+
+  for (int tc = 1; tc <= T; tc++)
+  {
+    int N;
+    int Less = 0;
+    scanf ("%d\n", &N);
+    dbg ("--- %d\n", N);
+    int k = 0;
+//    L [k].Lim = -1;
+//    L [k++].Op = 'N';
+    L [k].Lim = 1000000001;
+    L [k++].Op = 'N';
+
+    for (int i = 0; i < N; i++)
+    {
+      char O;
+      int M;
+      char V [5];
+      scanf ("%c %d %s\n", &O, &M, V);
+      //dbg ("%c %d %s\n", O, M, V);
+
+      if (O == '<')
+      {
+        if (V [0] == 'Y')
+        {
+          O = 'G';
+        }
+        else
+        {
+          M--;
+          O = 'L';
+          Less++;
+        }
+      }
+      else if (O == '>')
+      {
+        if (V [0] == 'Y')
+        {
+          O = 'L';
+          Less++;
+        }
+        else
+        {
+          M++;
+          O = 'G';
+        }
+      }
+      else if (O == '=')
+      {
+        if (V [0] == 'Y')
+        {
+          L [k].Lim = M + 1;
+          L [k].Op = 'G';
+          k++;
+          dbg ("%c %d\n", 'G', M + 1);
+          O = 'L';
+          M--;
+          Less++;
+        }
+        else
+        {
+          O = 'E';
+        }
+      }
+      L [k].Lim = M;
+      L [k].Op = O;
+      k++;
+      dbg ("%c %d\n", O, M);
+    }
+    Solve (k, Less);
+  }
+  return 0;
+}
+
+//------------------------------------------
+static int Rand (int max)
+{
+  long long r = rand ();
+  r = r * (max + 1);
+  return r / RAND_MAX;
+}
+
+//------------------------------------------
+static void Generate (int N)
+{
+  const char *Op = "<>=";
+
+  printf ("%d\n", N);
+  for (int i = 0; i < N; i++)
+  {
+//    printf ("%c %d %s\n", Op [Rand (2)], Rand (20) + 1000000000 - 20, Rand (1) == 0 ? "Yes" : "No");
+    printf ("%c %d %s\n", Op [Rand (2)], Rand (50) + 1, Rand (1) == 0 ? "Yes" : "No");
+  }
+}
+

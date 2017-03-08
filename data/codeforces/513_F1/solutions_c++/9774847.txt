@@ -1,0 +1,256 @@
+#include <iostream>
+#include <vector>
+#include <map>
+#include <algorithm>
+#include <set>
+#include <queue>
+#include <stack>
+#include <string>
+#include <sstream>
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <cassert>
+
+using namespace std;
+
+#define ri(X) scanf("%d", &(X))
+#define mp(X,Y) make_pair(X,Y)
+#define pb(X) push_back(X)
+#define lint long long
+#define pii pair<int,int>
+#define inf 1e9
+#define linf 1e18
+#define X first
+#define Y second
+#define all(X) (X).begin(),(X).end()
+#define uni(X) X.erase(unique(X.begin(), X.end()), X.end());
+
+
+using namespace std;
+
+#define MAXN 5009
+#define MAXM 60009
+#define INF 1000000009
+#define lint long long
+class Dinic {
+	int n, m, head[MAXN], level[MAXN], s, t, work[MAXN];
+	struct edge {
+		int v, c, f, nxt;
+		edge() {}
+		edge(int v, int c, int f, int nxt): v(v), c(c), f(f), nxt(nxt) {}
+	} e[MAXM];
+	bool _bfs() {
+		static int q[MAXN];
+		memset(level, -1, sizeof(int) * n);
+		int le = 0, ri = 0;
+		q[ri++] = s;
+		level[s] = 0;
+		while(le < ri) {
+			for(int k = q[le++], i = head[k]; i != -1; i = e[i].nxt) {
+				if(e[i].f < e[i].c && level[e[i].v] == -1) {
+					level[e[i].v] = level[k] + 1;
+					q[ri++] = e[i].v;
+				}
+			}
+		}
+		return (level[t] != -1);
+	}
+	int _dfs(int u, int f) {
+		if(u == t)
+			return f;
+		for(int& i = work[u]; i != -1; i = e[i].nxt) {
+			if(e[i].f < e[i].c && level[u] + 1 == level[e[i].v]) {
+				int minf = _dfs(e[i].v, min(f, e[i].c - e[i].f));
+				if(minf > 0) {
+					e[i].f += minf;
+					e[i ^ 1].f -= minf;
+					return minf;
+				}
+			}
+		}
+		return 0;
+	}
+public:
+	void init(int nn, int src, int dst) {
+		n = nn;
+		s = src;
+		t = dst;
+		m = 0;
+		memset(head, -1, sizeof(int) * n);
+	}
+	void addEdge(int u, int v, int c, int rc) {
+		assert(u < n);
+		assert(v < n);
+		//printf("%d -> %d : %d\n", u, v, c);
+		e[m] = edge(v, c, 0, head[u]);
+		head[u] = m++;
+		e[m] = edge(u, rc, 0, head[v]);
+		head[v] = m++;
+		assert(m < MAXM);
+	}
+	lint maxFlow() {
+		lint ret = 0;
+		while(_bfs()) {
+			memcpy(work, head, sizeof(int) * n);
+			while(true) {
+				int delta = _dfs(s, INF);
+				if(delta == 0)
+					break;
+				ret = ret + delta;
+			}
+		}
+		return ret;
+	}
+};
+
+Dinic d;
+
+
+int n, m, a, b;
+const int mn = 30;
+string s[mn];
+
+const int ms = 200;
+int nm;
+lint w[ms][ms];
+int dx[] = {0,0,1,-1};
+int dy[] = {1,-1,0,0};
+bool valid(int x, int y){
+  return 0 <= x && x < n && 0 <= y && y < m;
+}
+
+pair<int,pii > leader;
+vector<pair<lint,pii > > vm, vw;
+
+bool build(lint lim){
+  int u,v, nx, ny;
+  lint c;
+  
+  int so = 2*nm+a+b;
+  int si = so+1;
+  d.init(si+1,so,si);
+  
+  for(int i = 0; i < nm; i++){
+    d.addEdge(i,nm+i,1,0);
+  }
+  for(int j = 0; j < a; j++){
+    c = vm[j].X;
+    nx = vm[j].Y.X;
+    ny = vm[j].Y.Y;
+    v = nx*m+ny;
+    d.addEdge(so, 2*nm+j, 1, 0);
+    for(int u = 0; u < nm; u++){
+      if(w[u][v] >= inf) continue;
+      if(w[u][v]*c > lim)continue;
+      d.addEdge(2*nm+j, u, 1, 0);
+    }
+  }
+  
+  for(int j = 0; j < b; j++){
+    c = vw[j].X;
+    nx = vw[j].Y.X;
+    ny = vw[j].Y.Y;
+    v = nx*m+ny;
+    d.addEdge(2*nm+a+j, si, 1, 0);
+    for(int u = 0; u < nm; u++){
+      if(w[u][v] >= inf) continue;
+      if(w[u][v]*c > lim)continue;
+      d.addEdge(nm+u, 2*nm+a+j, 1, 0);
+    }
+  }
+  int res = d.maxFlow();
+  //cout << res << " " << a << " " << b << endl;
+  if(res == a) return 1;
+  return 0;
+}
+
+
+lint solve(){
+  lint lo = 0;
+  lint hi = linf;
+  lint mi;
+  bool fmi;
+  
+  if(!build(hi)) return -1;
+  
+  while(hi-lo > 2){
+    mi = (hi+lo)/2;
+    fmi = build(mi);
+    if(fmi){
+      hi = mi;
+    }else{
+      lo = mi;
+    }
+  }
+  while(1){
+    if(build(lo)) return lo;
+    lo++;
+  }
+}
+
+
+int main(){
+  ri(n); ri(m); ri(a); ri(b);
+  for(int i = 0; i < n; i++){
+    cin >> s[i];
+  }
+  nm = n*m;
+  
+  for(int i = 0;i < ms; i++){
+    for(int j = 0; j < ms; j++){
+      w[i][j] = i==j?0:inf;
+    }
+  }
+  int u,v, nx, ny;
+  lint c;
+  for(int i = 0; i < n; i++){
+    for(int j = 0; j < m; j++){
+      if(s[i][j] == '#') continue;
+      u = i*m+j;
+      for(int k = 0; k < 4; k++){
+        nx = i+dx[k];
+        ny = j+dy[k];
+        if(!valid(nx,ny) || s[nx][ny] == '#') continue;
+        v = nx*m+ny;
+        w[u][v] = 1;
+      }
+    }
+  }
+  cin >> u >> v >> c;
+  u--;v--;
+  leader = mp(c,mp(u,v));
+  for(int i = 0; i < a; i++){
+    cin >> u >> v >> c;
+    u--;v--;
+    vm.pb(mp(c,mp(u,v)));
+  }
+  for(int i = 0; i < b; i++){
+    cin >> u >> v >> c;
+    u--;v--;
+    vw.pb(mp(c,mp(u,v)));
+  }
+  if(a < b){
+    vm.pb(leader);
+    a++;
+  }else{
+    vw.pb(leader);
+    b++;
+  }
+  if(a != b){
+    cout << -1 << endl;
+    return 0;
+  }
+  
+  for(int k = 0; k < nm; k++){
+    for(int i = 0; i< nm; i++){
+      for(int j = 0; j < nm; j++){
+        w[i][j] = min(w[i][j], w[i][k]+w[k][j]);
+      }
+    }
+  }
+  cout << solve() << endl;
+  
+  return 0;
+}
+

@@ -1,0 +1,128 @@
+#include <iostream>
+#include <vector>
+#include <set>
+using namespace std;
+const int MAX = 100005;
+vector<long long> adj[MAX], w[MAX];
+long long d[MAX], dist[MAX], par[25][MAX], in[MAX], cnt, n, q;
+void dfs(int p, int v)
+{
+	in[v] = cnt++;
+	par[0][v] = p;
+	for (int i = 0; i < adj[v].size(); i++)
+	{
+		int u = adj[v][i];
+		int len = w[v][i];
+		if (u == p)
+			continue;
+		d[u] = d[v] + 1;
+		dist[u] = dist[v] + len;
+		dfs(v, u);
+	}
+}
+void init()
+{
+	for (int h = 1; h < 25; h++)
+		for (int v = 1; v <= n; v++)
+			par[h][v] = par[h - 1][par[h - 1][v]];
+}
+int get_parent(int v, int k)
+{
+	for (int h = 0; h < 25; h++)
+		if ((1 << h) & k)
+			v = par[h][v];
+	return v;
+}
+int lca(int u, int v)
+{
+	if (d[u] < d[v])
+		swap(u, v);
+	u = get_parent(u, d[u] - d[v]);
+	if (u == v)
+		return u;
+	for (int h = 24; h >= 0; h--)
+		if (par[h][u] != par[h][v])
+		{
+			u = par[h][u];
+			v = par[h][v];
+		}
+	return par[0][v];
+}
+long long dis(int u, int v)
+{
+	return dist[u] + dist[v] - 2 * dist[lca(u, v)];
+}
+int main()
+{
+	ios::sync_with_stdio(false);
+	cin >> n;
+	for (int i = 0; i < n - 1; i++)
+	{
+		int u, v, len;
+		cin >> u >> v >> len;
+		adj[u].push_back(v);
+		adj[v].push_back(u);
+		w[u].push_back(len);
+		w[v].push_back(len);
+	}
+	dfs(0, 1);
+	init();
+	cin >> q;
+	long long ans = 0;
+	set<pair<int, int> > s;
+	for (int k = 0; k < q; k++)
+	{
+		char c;
+		cin >> c;
+		if (c == '?')
+		{
+			cout << ans / 2 << endl;
+			continue;
+		}
+		int v;
+		cin >> v;
+		if (c == '+')
+		{
+			s.insert(make_pair(in[v], v));
+			set<pair<int, int> >::iterator now = s.find(make_pair(in[v], v));
+			set<pair<int, int> >::iterator prev = now, next = now;
+			if (prev == s.begin())
+				prev = s.end();
+			prev--;
+			next++;
+			if (next == s.end())
+				next = s.begin();
+			if (s.size() == 1)
+				continue;
+			int pv = prev->second;
+			int nv = next->second;
+			ans += dis(pv, v);
+			ans += dis(v, nv);
+			ans -= dis(pv, nv);
+		}
+		if (c == '-')
+		{
+			set<pair<int, int> >::iterator now = s.find(make_pair(in[v], v));
+			set<pair<int, int> >::iterator prev = now, next = now;
+			if (prev == s.begin())
+				prev = s.end();
+			prev--;
+			next++;
+			if (next == s.end())
+				next = s.begin();
+			s.erase(make_pair(in[v], v));
+			if (s.size() == 1)
+			{
+				ans = 0;
+				continue;
+			}
+			int pv = prev->second;
+			int nv = next->second;
+			ans -= dis(pv, v);
+			ans -= dis(v, nv);
+			ans += dis(pv, nv);
+		}
+	}
+	return 0;
+}
+						  			 		 	   	 	  		

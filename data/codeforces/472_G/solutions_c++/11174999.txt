@@ -1,0 +1,63 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+
+using namespace std;
+#define MX 200005
+#define endl '\n'
+
+int halfcounter[1 << 16];
+int halfmask = 0xFFFF;
+
+int countBits(unsigned n) {
+	return halfcounter[n >> 16] + halfcounter[n & halfmask];
+}
+
+// Log2 Decomposition
+
+int q, bucket[2][32][MX >> 5];
+int p1, p2, len;
+string s;
+
+int main() {
+	ios::sync_with_stdio(false);
+	cin.tie(0);
+
+	// pregen halfcounter
+	for (int i = 1, I = (1 << 16); i < I; ++i)
+		halfcounter[i] = halfcounter[i >> 1] + (i & 1);
+
+	// cout << countBits(-1) << endl;
+	
+	for (int i = 0; i < 2; ++i) {
+		cin >> s;
+		int n = s.length();
+		for (int j = 0; j < 32; ++j) {
+			for (int k = 0; k < n - j; ++k) {
+				bucket[i][j][k >> 5] |= ((s[j+k] == '1') << (k & 0x1F));
+			}
+		}
+	}
+
+	cin >> q;
+	while (q--) {
+		cin >> p1 >> p2 >> len;
+		int *b1 = bucket[0][p1 & 0x1F] + (p1 >> 5);
+		int *b2 = bucket[1][p2 & 0x1F] + (p2 >> 5);
+		int times = len >> 5;
+		int ham = 0;
+		// optimal bucket counting
+		for (int i = 0; i < times; ++i) {
+			ham += countBits(b1[i] ^ b2[i]);
+		}
+		// count the "leftover"
+		int rest = len & 0x1F;
+		if (rest) {
+			rest = (1 << rest) - 1;
+			ham += countBits((b1[times] ^ b2[times]) & rest);
+		}
+		cout << ham << endl;
+	}
+
+	cout << flush;
+}

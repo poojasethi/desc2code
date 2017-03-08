@@ -1,0 +1,227 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef long long ll;
+typedef pair<int,int> pii;
+typedef pair<int,pii> piii;
+const int N = 200001;
+const int LOGN = 19;
+int n, q;
+int u, v;
+vector<int> adj[N];
+int dis[N], fin[N];// rev[N];
+int head[N], tail[N];
+int timer, hld_count;
+int sz[N], depth[N];
+int seg_tree_hld[N<<2], seg_tree_sum[N<<2];
+int par[LOGN][N];
+int hld_num[N], hld_order[N];
+piii idlr[N];
+int x, val;
+int ql, qr;
+
+void dfs(int node, int parent) {
+	par[0][node] = parent;
+	sz[node] = 1;
+
+	for (int i=0; i<adj[node].size(); i++) {
+		int child = adj[node][i];
+		if (child != parent) {
+			depth[child] = depth[node] + 1;
+			dfs(child, node);
+			sz[node] += sz[child];
+		} 
+	}
+}
+
+void hld(int node, int par) {
+	dis[node] = ++timer;
+	//rev[timer] = node;
+	if (sz[node] == 1) {
+		fin[node] = timer + 1;
+		tail[head[node]] = node;
+		return;
+	}
+
+	int maxChild = 0;
+	for (int i=0; i<adj[node].size(); i++) {
+		int child = adj[node][i];
+		if (child != par && sz[child] > sz[maxChild])
+			maxChild = child;
+	}
+
+	head[maxChild] = head[node];
+	hld(maxChild, node);
+
+	for (int i=0; i<adj[node].size(); i++) {
+		int child = adj[node][i];
+		//cout << child << ", ";
+		if (child != par && child != maxChild) {
+			head[child] = child;
+			hld_num[child] = ++hld_count;
+			hld_order[hld_count] = child;
+			//cout << head[child] << " is head of " << child << endl;
+			hld(child, node);
+		}
+	}
+
+	fin[node] = timer+1;
+}
+
+void computeParents() {
+	for (int j=1; j<LOGN; j++)
+		for (int i=1; i<=n; i++)
+			par[j][i] = par[j-1][par[j-1][i]];
+}
+
+int LCA(int n1, int n2) {
+	int d1 = depth[n1];
+	int d2 = depth[n2];
+	int lower, higher, diff;
+	if (d1 > d2) {
+		lower = n1, higher = n2;
+		diff = d1 - d2;
+	} else {
+		lower = n2, higher = n1;
+		diff = d2 - d1;
+	}
+
+	for (int i=0; (1<<i)<=diff; i++) {
+		if ((1<<i) & diff)
+			lower = par[i][lower];
+	}
+
+	if (lower == higher)
+		return lower;
+
+	for (int h=18; h>=0; h--) {
+		if (par[h][lower] != par[h][higher])
+			lower = par[h][lower], higher = par[h][higher];
+	}
+	return par[0][lower];
+}
+
+void putIDLR(int h, int t, int id=1, int l=0, int r=n+1) {
+	if (r-l < 2) {
+		idlr[hld_num[h]] = make_pair(id, make_pair(l,r));
+		return;
+	}
+	int mid = (l+r) >> 1;
+	if (mid <= dis[h])
+		putIDLR(h, t, id<<1|1, mid, r);
+	else if (fin[t] <= mid)
+		putIDLR(h, t, id<<1, l, mid);
+	else
+		idlr[hld_num[h]] = make_pair(id, make_pair(l,r));
+}
+
+void modifySum(/*int x, int val, */int *seg_tree, int id=1, int l=1, int r=n+1) {
+	if (r-l < 2) {
+		seg_tree[id] += val;
+		return;
+	}
+	int mid = (l+r) >> 1;
+	if (x < mid)
+		modifySum(/*x, val,*/ seg_tree, id<<1, l, mid);
+	else
+		modifySum(/*x, val,*/ seg_tree, id<<1|1, mid, r);
+	seg_tree[id] = seg_tree[id<<1] + seg_tree[id<<1|1];
+}
+
+int querySum(/*int ql, int qr, */int *seg_tree, int id=1, int l=1, int r=n+1) {
+	if (ql>=r || l>=qr)
+		return 0;
+	if (ql<=l && r<=qr)
+		return seg_tree[id];
+
+	int mid = (l+r) >> 1;
+	return querySum(/*ql, qr, */seg_tree, id<<1, l, mid)
+			+ querySum(/*ql, qr,*/ seg_tree, id<<1|1, mid, r);
+}
+
+int query(int n1, int n2) {
+	int lca = LCA(n1, n2);
+	ql = dis[lca], qr = fin[lca];
+	int answer = querySum(/*dis[lca], fin[lca], */seg_tree_sum);
+	x = dis[n1], val = 1;
+	modifySum(/*dis[n1], 1, */seg_tree_sum);
+	x = dis[n2], val = 1;
+	modifySum(/*dis[n2], 1,*/ seg_tree_sum);
+	x = dis[lca], val = -2;
+	modifySum(/*dis[lca], -2,*/ seg_tree_sum);
+
+	piii init;
+	int id, l, r;
+
+	while (head[n1] != head[lca]) {
+		ql = dis[head[n1]], qr = dis[n1]+1;
+		init = idlr[hld_num[head[n1]]];
+		id=init.first, l=init.second.first, r=init.second.second;
+		answer += querySum(seg_tree_hld, id, l, r);
+		n1 = par[0][head[n1]];
+	}
+		ql = dis[lca], qr = dis[n1]+1;
+		init = idlr[hld_num[head[n1]]];
+		id=init.first, l=init.second.first, r=init.second.second;
+		answer += querySum(seg_tree_hld, id, l, r);
+
+	while (head[n2] != head[lca]) {
+		ql = dis[head[n2]], qr = dis[n2]+1;
+		init = idlr[hld_num[head[n2]]];
+		id=init.first, l=init.second.first, r=init.second.second;
+		answer += querySum(seg_tree_hld, id, l, r);
+		n2 = par[0][head[n2]];
+	}
+		ql = dis[lca]+1, qr = dis[n2]+1;
+		init = idlr[hld_num[head[n2]]];
+		id=init.first, l=init.second.first, r=init.second.second;
+		answer += querySum(seg_tree_hld, id, l, r);
+
+	//answer -= querySum(dis[lca], dis[lca]+1, seg_tree_hld);
+		x = dis[lca], val = 1;
+		init = idlr[hld_num[head[lca]]];
+		id=init.first, l=init.second.first, r=init.second.second;
+		modifySum(seg_tree_hld, id, l, r);
+	return answer;
+}
+
+void scanint(int &x) {
+    register int c = getchar_unlocked();
+    x = 0;
+    for(;(c<48 || c>57);c = getchar_unlocked());
+    for(;c>47 && c<58;c = getchar_unlocked()) {x = (x<<1) + (x<<3) + c - 48;}
+}
+
+int main() {
+	srand(time(NULL));
+	scanf("%d", &n);
+	for (int i=1; i<n; i++) {
+		//scanf("%d %d", &u, &v);
+		scanint(u);
+		scanint(v);
+		adj[u].push_back(v);
+		adj[v].push_back(u);
+	}
+	int root = 1 + rand()%n;
+	depth[root] = 0;
+	dfs(root, 0);
+	head[root] = root;
+	hld_num[root] = ++hld_count;
+	hld_order[hld_count] = root;
+	hld(root, 0);
+	computeParents();
+
+	for (int i=1; i<=hld_count; i++) {
+		putIDLR(hld_order[i], tail[hld_order[i]]);
+	}
+
+	scanf("%d", &q);
+	while(q--) {
+		//scanf("%d %d", &u, &v);
+		scanint(u);
+		scanint(v);
+		printf("%d\n", query(u, v));
+	}
+
+	return 0;
+}

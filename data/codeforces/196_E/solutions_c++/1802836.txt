@@ -1,0 +1,104 @@
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+#include <set>
+#include <vector>
+using namespace std;
+
+typedef long long LL;
+
+const int MAXN = 100010;
+const LL INF = (1ll << 60);
+
+set< pair<LL, int> > heap;
+vector< vector<int> > eg;
+vector< vector<int> > elen;
+vector< pair< LL, pair<int, int> > > used;
+LL dist[MAXN];
+int pre[MAXN];
+int fa[MAXN];
+int n, m, k;
+
+void init()
+{
+  scanf("%d%d", &n, &m);
+  
+  heap.clear();
+  for (int i = 0; i < n; ++i) {
+    dist[i] = INF, fa[i] = i;
+    eg.push_back(vector<int>());
+    elen.push_back(vector<int>());
+  }
+
+  for (int x, y, d, i = 0; i < m; ++i) {
+    scanf("%d%d%d", &x, &y, &d);
+    --x; --y;
+    eg[x].push_back(y);
+    elen[x].push_back(d);
+    eg[y].push_back(x);
+    elen[y].push_back(d);
+  }
+
+  scanf("%d", &k);
+  for (int x, i = 0; i < k; ++i) {
+    scanf("%d", &x);
+    --x;
+    dist[x] = 0;
+    pre[x] = x;
+    heap.insert(make_pair(0, x));
+  }
+}
+
+int renew(int x) {
+  return fa[x] = fa[x] == x ? x : renew(fa[x]);
+}
+
+void solve()
+{
+  int x;
+  LL len,tmp;
+  while (!heap.empty()) {
+    len = heap.begin()->first;
+    x = heap.begin()->second;
+    heap.erase(heap.begin());
+    for (int i = 0; i < eg[x].size(); ++i) {
+      tmp = dist[x] + elen[x][i];
+      if (dist[eg[x][i]] > tmp) {
+	pre[eg[x][i]] = pre[x];
+	heap.erase(make_pair(dist[eg[x][i]], eg[x][i]));
+	dist[eg[x][i]] = tmp;
+	heap.insert(make_pair(dist[eg[x][i]], eg[x][i]));
+      }
+    }
+  }
+  
+  used.clear();
+  for (int i = 0; i < n; ++i)
+    for (int j = 0; j < eg[i].size(); ++j)
+      if (pre[i] != pre[eg[i][j]]) {
+	LL len = dist[i] + dist[eg[i][j]] + elen[i][j];
+	used.push_back(make_pair(len, make_pair(pre[i], pre[eg[i][j]])));
+      }
+
+  LL res = dist[0];
+  sort(used.begin(), used.end());
+  for (int i = 0; i < used.size(); ++i) {
+    LL len = used[i].first;
+    int x = used[i].second.first;
+    int y = used[i].second.second;
+    if (renew(x) != renew(y)) {
+      res += len;
+      fa[fa[x]] = fa[y];
+    }
+  }
+
+  cout << res << endl;
+}
+
+int main()
+{
+  init();
+  solve();
+  return 0;
+}

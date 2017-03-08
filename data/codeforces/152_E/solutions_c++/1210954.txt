@@ -1,0 +1,121 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#define N 205
+using namespace std;
+
+int n, m, col, row, t, x, y, ret, root;
+int u[10], d[205][205], df[205][205], used[205];
+int dp[205][1000], pf[205][1000], bf[205][1000];
+
+void mkpath(int x, int y){
+	if (df[x][y] == -1){
+		used[x] = used[y] = 1;
+		return;
+	}
+	mkpath(x, df[x][y]);
+	mkpath(df[x][y], y);
+}
+
+void trace(int x, int y){
+	if ((y&-y) == y || pf[x][y] != -1){
+		if (pf[x][y] != -1) mkpath(x, pf[x][y]), trace(pf[x][y], y);
+		else{
+			int t = -1;
+			for (int i=0; t==-1; i++)
+			if ((1<<i) == y) t = i;
+			mkpath(x, u[t]);
+			return;
+		}
+	}
+	else{
+		trace(x, bf[x][y]);
+		trace(x, y-bf[x][y]);
+	}
+}
+
+int main(){
+	scanf("%d%d%d", &row, &col, &m);
+	n = row * col;
+	
+	memset(d, 63, sizeof(d));
+	t = 0;
+	for (int i=0; i<row; i++)
+	for (int j=0; j<col; j++) scanf("%d", &d[t][t]), t++;
+	
+	memset(df, -1, sizeof(df));
+	for (int i=0; i<row; i++)
+	for (int j=0; j<col; j++){
+		t = i*col + j;
+		if (j > 0) d[t][t-1] = d[t][t] + d[t-1][t-1];
+		if (j < col-1) d[t][t+1] = d[t][t] + d[t+1][t+1];
+		if (i > 0) d[t][t-col] = d[t][t] + d[t-col][t-col];
+		if (i < row-1) d[t][t+col] = d[t][t] + d[t+col][t+col];
+	}
+	
+	for (int i=0; i<m; i++){
+		scanf("%d%d", &x, &y);
+		x--, y--;
+		u[i] = x*col + y;
+	}
+	
+	for (int k=0; k<n; k++)
+	for (int i=0; i<n; i++)
+	for (int j=0; j<n; j++){
+		t = d[i][k] + d[k][j] - d[k][k];
+		if (t < d[i][j]){
+			d[i][j] = t;
+			df[i][j] = k;
+		}
+	}
+
+	memset(pf, -1, sizeof(pf));
+	memset(bf, -1, sizeof(bf));
+
+	for (int i=0; i<n; i++){
+		dp[i][0] = 0;
+		for (int j=0; j<m; j++) dp[i][1<<j] = d[i][u[j]];
+	}
+
+	for (int i=1; i<(1<<m); i++){
+		if ((i&-i) == i) continue;
+		for (int j=0; j<n; j++){
+			dp[j][i] = (1<<28);
+			for (int k=(i-1)&i; k>0; k=(k-1)&i)
+			if ((i|k) == i){
+				t = dp[j][k] + dp[j][i-k] - d[j][j];
+				if (t < dp[j][i]){
+					dp[j][i] = t;
+					bf[j][i] = i-k;
+				}
+			}
+		}
+		for (int j=0; j<n; j++)
+		for (int k=0; k<n; k++){
+			t = dp[k][i] + d[j][k] - d[k][k];
+			if (t < dp[j][i]){
+				dp[j][i] = t;
+				pf[j][i] = k;
+			}
+		}
+	}
+	
+	ret = (1<<30);
+	for (int i=0; i<n; i++){
+		if (dp[i][(1<<m)-1] < ret){
+			ret = dp[i][(1<<m)-1];
+			root = i;
+		}
+	}
+	printf("%d\n", ret);
+	
+	trace(root, (1<<m)-1);
+	t = 0;
+	for (int i=0; i<row; i++){
+		for (int j=0; j<col; j++)
+		printf("%c", used[t] ? 'X' : '.'), t++;
+		printf("\n");
+	}
+
+	return 0;
+}

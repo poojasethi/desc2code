@@ -1,0 +1,274 @@
+#include <iostream>
+#include <cstdio>
+#include <string.h>
+#include <vector>
+#include <algorithm>
+#include <limits.h>
+#include <assert.h>
+using namespace std;
+
+
+vector<vector< pair<int,int> > >vvp(500001);
+int grid[500][500];
+int dist[500][500];
+int tree[1050][1050];
+int dp[500][500];
+int N,M,D,R,C;
+int mx=INT_MAX;
+#define left(x) ((x) << 1)
+#define right(x) (1 + left(x))
+#define INF mx
+
+struct point{
+       int x,y;
+       int val;
+       };
+vector<struct point>v;
+void init()
+{
+     for(int i=0; i<500; i++){
+             for(int j=0; j<500; j++){
+                     dist[i][j]=i*i + j*j;
+                     }
+                     }
+          
+}
+
+/*
+int query_y(int vx, int vy, int cly, int cry, int ly, int ry)
+{
+	if ( ly > ry )
+        return INF;
+    	if ( ly == cly && ry == cry)
+        return tree[vx][vy];
+    int tmy = (cly + cry)>>1;
+    return min(
+            query_y (vx, left(vy),cly,tmy,ly,min(ry,tmy)),
+            query_y (vx, right(vy),tmy + 1,cry,max(ly,tmy+1),ry));
+}
+
+int query_x(int vx, int tlx, int trx, int lx, int rx, int ly, int ry)
+{
+    if(lx > rx)
+        return INF;
+    
+	if(lx == tlx && trx == rx)
+        return query_y (vx, 1, 0, M - 1, ly, ry);
+    int tmx = ( tlx + trx )>>1;
+    return min(
+            query_x (left(vx), tlx, tmx, lx, min(rx,tmx) , ly, ry ),
+            query_x (right(vx),tmx + 1, trx, max(lx,tmx+1) , rx, ly, ry));
+}
+*/
+void update_y(int vx, int lx, int rx, int vy, int ly, int ry, int x, int y)
+{
+    if(ly > ry)return;
+    
+
+	if ( ly == ry )
+	{
+	    if(lx == rx)
+	    {
+            assert(lx == x && ly == y);
+            tree[vx][vy] = dp[x][y];
+		}
+		else
+		tree[vx][vy] = min(tree[left(vx)][vy],tree[right(vx)][vy]);
+	}
+    else
+    {
+        int my = (ly + ry)>>1;
+        if(y <= my)
+            update_y (vx, lx, rx, left(vy), ly, my, x, y);
+        else
+            update_y (vx, lx, rx, right(vy), my+1, ry, x, y);
+
+        tree[vx][vy] = min(tree[vx][left(vy)],tree[vx][right(vy)]);
+    }
+}
+void update_x (int vx, int lx, int rx, int x, int y)
+{
+    if(lx > rx)return;
+    
+
+    if(lx != rx)
+    {
+        int mx = (lx + rx)>>1;
+        if(x <= mx)
+            update_x (left(vx), lx, mx, x, y);
+		else
+            update_x (right(vx), mx+1, rx, x, y);
+    }
+	update_y(vx, lx, rx, 1, 0, M-1, x, y);
+}
+
+/*void init3(int node1,int node2, int b, int e){
+     if(b==e){
+              tree[node1][node2]=min(tree[2*node1][node2],tree[2*node1 +1][node2]);
+              return;
+              }
+     tree[node1][node2]=min(tree[2*node1][node2],tree[2*node1 +1][node2]);
+     int m=(b+e)/2;
+     init3(node1,2*node2,b,m);
+     init3(node1,2*node2 +1,m+1,e);
+     }
+
+void init1(int node1, int node2, int bb, int eb, int b,int e){
+     if(b==e){
+              tree[node1][node2]=grid[bb][b];
+              return;
+              }
+     int m=(b+e)/2;
+     init1(node1,2*node2,bb,eb,b,m);
+     init1(node1,2*node2 +1,bb,eb,m+1,e);
+     tree[node1][node2]=min(tree[node1][2*node2],tree[node1][2*node2 +1]);
+     }
+
+void init2(int node, int b, int e,int n){
+     if(b==e){
+              init1(node,1,b,e,1,n);
+              return;
+              }
+     int m=(b+e)/2;
+     init2(2*node,b,m,n);
+     init2(2*node +1,m+1,e,n);
+     init3(node,1,1,n);
+     }
+*/ 
+ int query1(int node1, int node2, int b, int e, int x1, int y1, int x2, int y2){
+     if(b>=y1 && e<=y2){
+              return tree[node1][node2];
+              }
+     if(e<y1 || b>y2){
+             return mx;
+             }
+     int m=(b+e)/2;
+     int m1=query1(node1,2*node2,b,m,x1,y1,x2,y2);
+     int m2=query1(node1,2*node2 +1,m+1,e,x1,y1,x2,y2);
+     return min(m1,m2);
+     }
+ 
+ int query2(int node, int b, int e, int n, int x1, int y1, int x2, int y2){
+     if(b>=x1 && e<=x2){
+              return query1(node,1,0,n,x1,y1,x2,y2);
+              }
+     if(e<x1 || b>x2){
+             return mx;
+             }
+     int m=(b+e)/2;
+     int m1=query2(2*node,b,m,n,x1,y1,x2,y2);
+     int m2=query2(2*node+1,m+1,e,n,x1,y1,x2,y2);
+     return min(m1,m2);
+     }
+ 
+void update3(int node1,int node2, int b, int e, int x,int y){
+     if(b>=y && e<=y){
+              tree[node1][node2]=min(tree[2*node1][node2],tree[2*node1 +1][node2]);
+              return;
+              }
+     if(e<y || b>y){
+            return;
+            }
+     int m=(b+e)/2;
+     update3(node1,2*node2,b,m,x,y);
+     update3(node1,2*node2 +1,m+1,e,x,y);
+     tree[node1][node2]=min(tree[2*node1][node2],tree[2*node1 +1][node2]);
+     
+     }
+
+void update1(int node1, int node2, int b,int e, int x,int y,int val){
+     if(b>=y && e<=y){
+             tree[node1][node2]=val;
+             return;
+             }
+     if(e<y || b>y){
+            return;
+            }
+     int m=(b+e)/2;
+     update1(node1,2*node2,b,m,x,y,val);
+     update1(node1,2*node2 +1,m+1,e,x,y,val);
+     tree[node1][node2]=min(tree[node1][2*node2],tree[node1][2*node2 +1]);
+     }
+
+void update2(int node, int b, int e, int n, int x, int y, int val){
+    
+     if(e<x || b>x){
+            return;
+            }
+     if(b>=x && e<=x){
+             update1(node,1,0,n,x,y,val);
+             return;
+             }
+     int m=(b+e)/2;
+     update2(2*node,b,m,n,x,y,val);
+     update2(2*node +1,m+1,e,n,x,y,val);
+     update3(node,1,0,M-1,x,y);
+     //update3(node,1,0,n);
+     
+     }
+     
+
+     
+     
+int main()
+{
+    init();
+    int tc;
+   
+    scanf("%d",&tc);
+    
+    while(tc--){
+                scanf("%d%d",&N,&M);
+                memset(tree,67,sizeof(tree));
+                memset(dp,0,sizeof(dp));
+                for(int i=0; i<N; i++){
+                        for(int j=0; j<M; j++){
+                                vvp[dist[i][j]].push_back(make_pair(i,j));
+                                }
+                                }           
+                scanf("%d%d%d",&D,&R,&C);
+                
+                for(int i=0; i<N; i++){
+                        for(int j=0; j<M; j++){
+                                scanf("%d",&grid[i][j]);
+                                }
+                                }
+                update2(1,0,N-1,M-1,0,0,0);
+                //cout<<query2(1,0,N-1,M-1,0,0,0,0);
+                //cout<<"a\n";
+                int lim=R*R + C*C;
+                struct point pt;
+                for(int d=1; d<=lim; d++){
+                        if(vvp[d].size()>0){
+                                            for(int i=0; i<vvp[d].size(); i++){
+                                                    pair<int,int> p=vvp[d][i];
+                                                    int x=p.first;
+                                                    int y=p.second;
+                                                    int xs=max(x-D,0);
+                                                    int ys=max(y-D,0);
+                                                    int xe=min(x+D,N-1);
+                                                    int ye=min(y+D,M-1);
+                                            int dist=grid[x][y]+query2(1,0,N-1,M-1,xs,ys,xe,ye);
+                                            pt.x=x;
+                                            pt.y=y;
+                                            pt.val=dist;
+                                            dp[x][y]=dist;
+                                            /*if(d==1){
+                                            cout<<dist<<" ";
+                                            }*/
+                                            v.push_back(pt);
+                                                    }
+                                            for(int i=0; i<v.size(); i++){
+                                                    update2(1,0,N-1,M-1,v[i].x,v[i].y,v[i].val);
+                                                    }
+                                            v.clear();
+                                            }
+                        }
+                        printf("%d\n",query2(1,0,N-1,M-1,R,C,R,C));
+                        for(int i=0; i<500001; i++){vvp[i].clear();
+                        }
+                        }
+    
+    
+return 0;
+}

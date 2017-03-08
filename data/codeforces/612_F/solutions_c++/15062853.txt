@@ -1,0 +1,267 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+using namespace std;
+
+#define TRACE(x) cout << #x << " = " << x << endl;
+
+inline void pauza(){ char c; cin >> c; }
+
+const int inf = 100000010;
+
+const int MAXN = 2010;
+
+struct par
+{
+    int X, Y;
+    vector<int> v;
+    par(){}
+    par(int _X, int _Y, vector<int> _v)
+    {
+        X = _X;
+        Y = _Y;
+        v = _v;
+    }
+};
+
+int n, m, s, rj;
+int niz[MAXN], num[MAXN];
+int dp[MAXN][2];
+
+par prije[MAXN][2];
+
+par veza[MAXN][2];
+
+vector<int> ispis;
+
+inline int moj_abs(int x) {if(x < 0) return -x; return x;}
+
+void postavi()
+{
+    for(int i = 0; i < MAXN; i++)
+        for(int j = 0; j < 2; j++)
+            dp[i][j] = inf;
+}
+
+void sazmi()
+{
+    vector<int> v;
+    for(int i = 0; i < n; i++)
+        v.push_back(niz[i]);
+    sort(v.begin(), v.end());
+    v.resize(unique(v.begin(), v.end()) - v.begin());
+    for(int i = 0; i < n; i++)
+        niz[i] = lower_bound(v.begin(), v.end(), niz[i]) - v.begin();
+    m = v.size();
+}
+
+void slozi()
+{
+    for(int i = 0; i < n; i++)
+        num[niz[i]]++;
+    for(int i = 0; i < n; i++)
+    {
+        int koliko = 0;
+        vector<int> v;
+        for(int j = i; koliko <= num[niz[i]]; j++)
+        {
+            if(j == n) j = 0;
+            if(niz[j] == niz[i]) koliko++;
+            if(koliko == num[niz[i]])
+            {
+                int dist = ((j - i) % n + n) % n;
+                int zadnji;
+                for(int x = j, val = 0; ; x--, val--)
+                {
+                    if(x == -1) x = n - 1;
+                    if(niz[x] == niz[i])
+                    {
+                        if(x != j) v.push_back(val - zadnji);
+                        zadnji = val;
+                    }
+                    if(x == i) break;
+                }
+                veza[i][0] = par(j, -dist, v);
+                break;
+            }
+        }
+
+        v.clear();
+        koliko = 0;
+        for(int j = i; koliko <= num[niz[i]]; j--)
+        {
+            if(j == -1) j = n - 1;
+            if(niz[j] == niz[i]) koliko++;
+            if(koliko == num[niz[i]])
+            {
+                int dist = ((i - j) % n + n) % n;
+                int zadnji;
+                for(int x = j, val = 0; ; x++, val++)
+                {
+                    if(x == n) x = 0;
+                    if(niz[x] == niz[i])
+                    {
+                        if(x != j) v.push_back(val - zadnji);
+                        zadnji = val;
+                    }
+                    if(x == i) break;
+                }
+                veza[i][1] = par(j, dist, v);
+                break;
+            }
+        }
+    }
+}
+
+void pocetak()
+{
+    for(int i = 0; i < n; i++)
+    {
+        if(niz[i] != 0)
+            dp[i][0] = inf;
+        else
+        {
+            int lijevo = ((i - s) % n + n) % n;
+            int desno = ((s - i) % n + n) % n;
+            dp[i][0] = min(lijevo, desno);
+            if(lijevo < desno)
+            {
+                vector<int> v;
+                v.push_back(lijevo);
+                prije[i][0] = par(-1, lijevo, v);
+            }
+            else
+            {
+                vector<int> v;
+                v.push_back(-desno);
+                prije[i][0] = par(-1, -desno, v);
+            }
+        }
+    }
+
+}
+
+void dinamika()
+{
+    for(int br = 0; br < m; br++)
+    {
+        if(br > 0)
+        {
+            for(int i = 0; i < n; i++)
+            {
+                if(niz[i] != br) continue;
+                for(int j = 0; j < n; j++)
+                {
+                    if(niz[j] != br - 1) continue;
+                    int lijevo = ((i - j) % n + n) % n;
+                    int desno = ((j - i) % n + n) % n;
+                    if(dp[i][0] <= dp[j][1] + min(lijevo, desno)) continue;
+                    if(lijevo < desno)
+                    {
+                        dp[i][0] = dp[j][1] + moj_abs(lijevo);
+                        vector<int> v;
+                        v.push_back(lijevo);
+                        prije[i][0] = par(j, lijevo, v);
+                    }
+                    else
+                    {
+                        dp[i][0] = dp[j][1] + moj_abs(desno);
+                        vector<int> v;
+                        v.push_back(-desno);
+                        prije[i][0] = par(j, -desno, v);
+                    }
+                }
+            }
+        }
+        for(int i = 0; i < n; i++)
+        {
+            if(niz[i] != br) continue;
+            int prvi = dp[veza[i][0].X][0] + moj_abs(veza[i][0].Y);
+            int drugi = dp[veza[i][1].X][0] + moj_abs(veza[i][1].Y);
+            if(prvi < drugi)
+            {
+                dp[i][1] = prvi;
+                prije[i][1] = veza[i][0];
+            }
+            else
+            {
+                dp[i][1] = drugi;
+                prije[i][1] = veza[i][1];
+            }
+        }
+    }
+}
+
+void rekonstrukcija()
+{
+    int mini = inf, indeks = 0;
+    for(int i = 0; i < n; i++)
+    {
+        if(niz[i] != m - 1) continue;
+        if(dp[i][1] < mini)
+        {
+            mini = dp[i][1];
+            indeks = i;
+        }
+    }
+    rj = mini;
+    int sad = indeks, tip = 1;
+    while(true)
+    {
+        for(int i = (int)prije[sad][tip].v.size() - 1; i >= 0; i--)
+            ispis.push_back(prije[sad][tip].v[i]);
+        int x = sad;
+        sad = prije[sad][tip].X;
+        tip = !tip;
+        if(sad == -1)
+            break;
+    }
+}
+
+void ispisi()
+{
+    printf("%d\n", rj);
+    reverse(ispis.begin(), ispis.end());
+    for(int i = 0; i < ispis.size(); i++)
+    {
+        if(ispis[i] >= 0) printf("+");
+        printf("%d\n", ispis[i]);
+    }
+}
+
+void debug()
+{
+    for(int br = 0; br < n; br++)
+    {
+        for(int tip = 0; tip < 2; tip++)
+        {
+            TRACE(br);
+            TRACE(tip);
+            TRACE(prije[br][tip].X);
+            for(int i = 0; i < prije[br][tip].v.size(); i++)
+                cout << prije[br][tip].v[i] << " ";
+            cout << endl;
+            {char c; cin >> c;}
+        }
+    }
+    exit(0);
+}
+
+int main()
+{
+    scanf("%d %d", &n, &s);
+    s--;
+    for(int i = 0; i < n; i++)
+        scanf("%d", &niz[i]);
+    postavi();
+    sazmi();
+    slozi();
+    pocetak();
+    dinamika();
+    rekonstrukcija();
+    ispisi();
+    return 0;
+}

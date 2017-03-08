@@ -1,0 +1,195 @@
+#include<stdio.h>
+#include<iostream>
+#include<vector>
+#include<set>
+#include<string.h>
+#include<algorithm>
+using namespace std;
+int INF=1234567890;
+int t,T;
+int fa[100000],opp[100000];
+int l[100000],r[100000];
+int col[100000];
+set<pair<int,int> >rp;
+set<pair<int,int> >lp;
+int find(int a){
+	if(a==-1)return -1;
+	if(fa[a]==-1)return a;
+	return fa[a]=find(fa[a]);
+}
+bool check(int a,int b){
+	if(a==-1||b==-1)return true;
+	if(a==b)return false;
+	return r[a]+r[b]>=t&&l[a]+l[b]<=T;
+}
+bool merge(int a,int b){
+	if(a==b)return true;
+	if(a==-1||b==-1)return true;
+	fa[b]=a;
+	lp.erase(make_pair(l[b],b));
+	rp.erase(make_pair(r[b],b));
+	if(l[b]>l[a]){
+		if(lp.find(make_pair(l[a],a))!=lp.end()){
+			lp.erase(make_pair(l[a],a));
+			lp.insert(make_pair(l[b],a));
+		}
+		l[a]=l[b];
+	}
+	if(r[b]<r[a]){
+		if(rp.find(make_pair(r[a],a))!=rp.end()){
+			rp.erase(make_pair(r[a],a));
+			rp.insert(make_pair(r[b],a));
+		}
+		r[a]=r[b];
+	}
+	return l[a]<=r[a];
+}
+bool diff(int a,int b){
+	a=find(a);
+	b=find(b);
+	int aa=find(opp[a]);
+	int bb=find(opp[b]);
+	if(a==b)return false;
+	if(!check(a,b))return false;
+	if(!check(aa,bb))return false;
+	if(opp[a]==-1)opp[a]=b;
+	if(opp[b]==-1)opp[b]=a;
+	return merge(aa,b)&&merge(a,bb);
+}
+bool same(int a,int b){
+	a=find(a);
+	b=find(b);
+	int aa=find(opp[a]);
+	int bb=find(opp[b]);
+	if(!check(a,bb))return false;
+	if(!check(aa,b))return false;
+	if(opp[a]==-1)opp[a]=opp[b];
+	if(opp[b]==-1)opp[b]=opp[a];
+	return merge(a,b)&&merge(aa,bb);
+}
+int get(int a){
+	if(col[a]!=-1)return col[a];
+	if(fa[a]==-1){
+		col[a]=0;
+		if(opp[a]!=-1)col[find(opp[a])]=1;
+		return 0;
+	}
+	return col[a]=get(find(a));
+}
+int main(){
+	while(scanf("%d%d",&t,&T)==2){
+		rp.clear();
+		lp.clear();
+		int n,m;
+		scanf("%d%d",&n,&m);
+		bool f=true;
+		memset(fa,-1,sizeof(fa));
+		memset(opp,-1,sizeof(opp));
+		for(int i=0;i<n;i++){
+			scanf("%d%d",l+i,r+i);
+			rp.insert(make_pair(r[i],i));
+			lp.insert(make_pair(l[i],i));
+			if(l[i]>T)f=false;
+		}
+		while(m--){
+			int a,b;
+			scanf("%d%d",&a,&b);
+			a--;b--;
+			a=find(a);
+			b=find(b);
+			if(!diff(a,b))f=false;
+		}
+		if(n==1){
+			if(l[0]>T||r[0]<t)printf("IMPOSSIBLE\n");
+			else printf("POSSIBLE\n%d 0\n1\n",max(l[0],t));
+			continue;
+		}
+		for(int i=0;i<n&&f;i++){
+			if(find(i)!=i)continue;
+			rp.erase(rp.find(make_pair(r[i],i)));
+			lp.erase(lp.find(make_pair(l[i],i)));
+			while(f&&!lp.empty()){// ra<lb,diff
+				set<pair<int,int> >::iterator itr=lp.end();
+				itr--;
+				int b=find(itr->second);
+				if(b==find(opp[i])){
+					b=itr->second;
+					rp.erase(make_pair(r[b],b));
+					lp.erase(make_pair(l[b],b));
+					continue;
+				}
+				if(r[i]<l[b])
+					f=diff(i,b);
+				else break;
+			}
+			while(f&&!lp.empty()){// la+lb>T,same
+				set<pair<int,int> >::iterator itr=lp.end();
+				itr--;
+				int b=find(itr->second);
+				if(b==find(opp[i])){
+					b=itr->second;
+					rp.erase(make_pair(r[b],b));
+					lp.erase(make_pair(l[b],b));
+					continue;
+				}
+				if(l[i]+l[b]>T)
+					f=same(i,b);
+				else break;
+			}
+			while(f&&!lp.empty()){// ra+rb<t,same
+				set<pair<int,int> >::iterator itr=rp.begin();
+				int b=find(itr->second);
+				if(b==find(opp[i])){
+					b=itr->second;
+					rp.erase(make_pair(r[b],b));
+					lp.erase(make_pair(l[b],b));
+					continue;
+				}
+				if(r[i]+r[b]<t)
+					f=same(i,b);
+				else break;
+			}
+			if(i==find(i)){
+				rp.insert(make_pair(r[i],i));
+				lp.insert(make_pair(l[i],i));
+			}
+			if(opp[i]!=-1){
+				int j=find(opp[i]);
+				rp.insert(make_pair(r[j],j));
+				lp.insert(make_pair(l[j],j));
+			}
+		}
+		if(!f)printf("IMPOSSIBLE\n");
+		else{
+			printf("POSSIBLE\n");
+			memset(col,-1,sizeof(col));
+			int l0=0,r0=T,l1=0,r1=T;
+			for(int i=0;i<n;i++){
+				if(get(i)){
+					l1=max(l1,l[i]);
+					r1=min(r1,r[i]);
+				}
+				else {
+					l0=max(l0,l[i]);
+					r0=min(r0,r[i]);
+				}
+			}
+			int L=l0,R=l1;
+			int ndd=t-l0-l1;
+			if(ndd>0){
+				if(ndd+L<=r0){
+					L+=ndd;
+				}
+				else{
+					L=r0;
+					ndd-=r0-l0;
+					R+=ndd;
+				}
+			}
+			printf("%d %d\n",L,R);
+			for(int i=0;i<n;i++)
+				printf("%d",col[i]+1);
+			printf("\n");
+		}
+	}
+}

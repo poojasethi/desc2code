@@ -1,0 +1,223 @@
+#include <cassert>
+#include <iostream>
+#include <iterator>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cstdio>
+#include <cctype>
+#include <cstring>
+#include <queue>
+
+using namespace std;
+
+const int INPUT_MAXCHARS = 1<<16;
+char buffer[INPUT_MAXCHARS];
+struct FastReader {
+    char *p;
+
+    FastReader() {
+        fread(buffer, 1, sizeof buffer, stdin);
+        p = buffer;
+    }
+    int next() {
+        int remchars = INPUT_MAXCHARS - (p-buffer);
+        if (remchars < 25) {
+            memcpy(buffer, p, remchars);
+            size_t cnt = fread(buffer+remchars, 1, sizeof buffer - remchars, stdin);
+            if (remchars + cnt < sizeof buffer) { // assume EOF
+                buffer[remchars + cnt] = 0; // make the value determinate
+            }
+            p = buffer;
+        }
+        while (*p < '0') {
+            ++p;
+        }
+        int val = 0;
+        while (*p >= '0') {
+            val = val*10 + (*p - '0');
+            ++p;
+        }
+        return val;
+    }
+};
+
+const int MAXN = 250;
+const int inf = 987654321;
+int N;
+int D[MAXN][MAXN];
+
+struct edge_t {
+    int from, to, cost;
+    bool open;
+    edge_t *rev;
+    edge_t(int from_=0, int to_=0, int cost_=0, bool open_=false):
+        from(from_), to(to_), cost(cost_), open(open_), rev(0) {}
+};
+
+int source = 0;
+int sink = 1;
+int n;
+const int MAXVERTICES = 2*MAXN + 2;
+edge_t adj[MAXVERTICES][MAXVERTICES];
+int edge_cnt[MAXVERTICES];
+
+void add_edge(int from, int to, int cost) {
+    adj[from][edge_cnt[from]] = edge_t(from, to, cost, 1);
+    adj[to][edge_cnt[to]] = edge_t(to, from, -cost, 0);
+    adj[from][edge_cnt[from]].rev = &adj[to][edge_cnt[to]];
+    adj[to][edge_cnt[to]].rev = &adj[from][edge_cnt[from]];
+    ++edge_cnt[from];
+    ++edge_cnt[to];
+}
+
+int Q1[MAXVERTICES], Q2[MAXVERTICES];
+int best[MAXVERTICES];
+bool U1[MAXVERTICES], U2[MAXVERTICES];
+int potential[MAXVERTICES];
+bool done[MAXVERTICES];
+edge_t *P[MAXVERTICES];
+bool can_augment() {
+    memset(done, 0, sizeof done);
+    for (int i=0; i<n; ++i) {
+        best[i] = inf;
+    }
+    int u = source;
+    best[u] = 0;
+    while (u != -1) { // O(n^2 + m) = O(n^2) Dijkstra
+        done[u] = true;
+        int dist = best[u];
+        for (int i=0; i<edge_cnt[u]; ++i) {
+            edge_t *e = &adj[u][i];
+            int v = e->to;
+            if (e->open && !done[v]) {
+                int cost = e->cost + potential[u] - potential[v];
+                if (dist+cost < best[v]) {
+                    best[v] = dist + cost;
+                    P[v] = e;
+                }
+            }
+        }
+        u = -1;
+        for (int i=0; i<n; ++i) {
+            if (!done[i] && best[i]<inf && (u==-1 || best[i]<best[u])) {
+                u = i;
+            }
+        }
+    }
+    for (int i=0; i<n; ++i) {
+        if (best[i] < inf) {
+            potential[i] += best[i];
+        }
+    }
+
+    return done[sink];
+}
+int main() {
+    FastReader reader;
+    N = reader.next();
+    int nedges, nweeks;
+    nedges = reader.next();
+    nweeks = reader.next();
+    for (int i=0; i<N; ++i) {
+        for (int j=i+1; j<N; ++j) {
+            D[i][j] = D[j][i] = inf;
+        }
+    }
+    while (nedges--) {
+        int a, b, c;
+        a = reader.next() - 1;
+        b = reader.next() - 1;
+        c = reader.next();
+        D[a][b] = min(D[a][b], c);
+    }
+
+    for (int k=0; k<N; ++k) {
+        for (int i=0; i<N; ++i) {
+            for (int j=0; j<N; ++j) {
+                D[i][j] = min(D[i][j], D[i][k] + D[k][j]);
+            }
+        }
+    }
+
+    n = 2*N + 2;
+    for (int i=0; i<N; ++i) {
+        add_edge(source, i+2, 0);
+        add_edge(i+N+2, sink, 0);
+    }
+    for (int i=0; i<N; ++i) {
+        for (int j=0; j<N; ++j) {
+            if (i!=j && D[i][j]<inf) {
+                add_edge(i+2, j+N+2, D[i][j]);
+            }
+        }
+    }
+
+    for (int i=0; i<n; ++i) {
+        potential[i] = inf;
+    }
+    potential[source] = 0;
+    int *cur = Q1;
+    int *next = Q2;
+    bool *cur_used = U1;
+    bool *next_used = U2;
+    int cur_size = 0;
+    int next_size = 0;
+
+    cur[cur_size++] = source;
+    cur_used[source] = true;
+    while (true) {
+        for (int i=0; i<cur_size; ++i) {
+            int u = cur[i];
+            cur_used[u] = false;
+            for (int j=0; j<edge_cnt[u]; ++j) {
+                edge_t *e = &adj[u][j];
+                int v = e->to;
+                if (e->open && potential[u]+e->cost < potential[v]) {
+                    potential[v] = potential[u] + e->cost;
+                    if (!cur_used[v] && !next_used[v]) {
+                        next[next_size++] = v;
+                        next_used[v] = true;
+                    }
+                }
+            }
+        }
+        if (next_size == 0) {
+            break;
+        }
+        swap(cur, next);
+        swap(cur_used, next_used);
+        cur_size = next_size;
+        next_size = 0;
+    }
+
+    vector<int> flow_cost(1, 0);
+    while (can_augment()) {
+        int u = sink;
+        int cost = 0;
+        while (P[u]) {
+            edge_t *e = P[u];
+            cost += e->cost;
+            e->open = false;
+            e->rev->open = true;
+            u = e->from;
+        }
+        if (cost > 10000) {
+            break;
+        }
+        flow_cost.push_back(cost);
+    }
+    flow_cost.push_back(inf);
+    vector<int> presum(flow_cost.begin(), flow_cost.end());
+    for (int i=1; i<(int)presum.size(); ++i) {
+        presum[i] += presum[i-1];
+    }
+    
+    while (nweeks--) {
+        int C = reader.next();
+        int i = upper_bound(flow_cost.begin(), flow_cost.end(), C) - flow_cost.begin();
+        printf("%d\n", presum[i-1] + (N-i+1)*C);
+    }
+	return 0;
+}

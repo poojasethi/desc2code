@@ -1,0 +1,74 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<cmath>
+#include<algorithm>
+#define maxn 60
+#define maxm 10000
+using namespace std;
+int n,lim;
+int edge[maxn],father[maxn],flow[maxn],dis[maxn];
+int nEdge=1,to[maxm],next[maxm],start[maxn],cost[maxm],remain[maxm];
+void make(int a,int b,int c,int d)
+{
+    nEdge++,to[nEdge]=b,next[nEdge]=start[a],start[a]=nEdge,remain[nEdge]=c,cost[nEdge]=d;
+    nEdge++,to[nEdge]=a,next[nEdge]=start[b],start[b]=nEdge,remain[nEdge]=0,cost[nEdge]=-d;
+}
+void read()
+{
+    scanf("%d %d",&n,&lim);
+    int p;
+    for(int i=1;i<=n;++i)
+        for(int j=1;j<=n;++j)
+        {
+            scanf("%d",&p);
+            if(p!=0)
+                make(i,j,p,0),make(i,j,lim,1);
+        }
+}
+bool SPFA(int S,int T)
+{
+    static bool use[maxn];
+    static int queue[maxn];
+    int front=0,rear=1,p;
+    for(int i=1;i<=n;++i)
+        use[i]=false,dis[i]=1<<30;
+    dis[S]=0,queue[rear]=S,flow[S]=1<<30;
+    while(front!=rear)
+    {
+        use[p=queue[front=front%n+1]]=false;
+        for(int i=start[p];i;i=next[i])
+            if(remain[i]&&dis[to[i]]>dis[p]+cost[i])
+            {
+                dis[to[i]]=dis[p]+cost[i];
+                father[to[i]]=p,edge[to[i]]=i,flow[to[i]]=min(flow[p],remain[i]);
+                if(use[to[i]]==false)
+                    use[queue[rear=rear%n+1]=to[i]]=true;
+            }
+    }
+    return dis[T]!=1<<30;
+}
+int MCMF()
+{
+    int total=0,S=1,T=n,ans=0;
+    while(SPFA(S,T))
+    {
+        if(dis[T])
+            flow[T]=min(flow[T],(lim-ans)/dis[T]);
+        if(flow[T]==0)
+            break;
+        ans=ans+dis[T]*flow[T],total+=flow[T];
+        for(int i=T;i!=S;i=father[i])
+        {
+            remain[edge[i]]-=flow[T];
+            remain[edge[i]^1]+=flow[T];
+        }
+    }
+    return total;
+}
+int main()
+{
+    read();
+    printf("%d\n",MCMF());
+    return 0;
+}

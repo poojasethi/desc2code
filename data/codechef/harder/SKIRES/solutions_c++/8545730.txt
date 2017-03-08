@@ -1,0 +1,116 @@
+# include <cstdio>
+# include <cstring>
+# include <algorithm>
+
+
+using namespace std;
+
+# define REP(i, n) for (int i = 1; i <= n; ++ i)
+# define REP_G(i, x) for (int i = pos[x]; i; i = g[i].frt)
+# define RST(a) memset (a, 0, sizeof (a))
+# define CLR(a, x) memset (a, x, sizeof (a))
+
+
+# define v g[i].y
+# define fl g[i].f
+# define vfl g[i ^ 1].f
+# define NR 60
+# define PR 15000
+# define ER 200000
+
+template <class T> T abs (T a) {return a >= 0 ? a : -a;}
+
+int dx[] = {0, 0, 0, -1, 1};
+int dy[] = {0, -1, 1, 0, 0};
+const int inf = 1 << 30;
+struct Edge {int y, frt, f; void set (int yr, int fr, int ff) {y = yr, frt = fr, f = ff;}} g[ER];
+struct Arr {int x, y; Arr () {x = y = 0;} Arr (int _x, int _y):x(_x), y(_y) {}} li[10];
+int q0, n, m, Sx, Sy, Tx, Ty, h[NR][NR], pos[PR], gsz, den[NR][NR][5], S, T, hl[NR][NR], dsz;
+int q[PR], lv[PR];
+
+inline bool cmpH (Arr a, Arr b) {return h[a.x][a.y] > h[b.x][b.y];}
+
+bool denote ()
+{
+	int h, t, x;
+	CLR (lv, -1), lv[q[h = t = 1] = S] = 0;
+	while (h <= t) {x = q[h ++]; REP_G (i, x) if (fl && lv[v] < 0) lv[q[++ t] = v] = lv[x] + 1;}
+	return lv[T] > 0;
+}
+
+int augment (int x, int f)
+{
+	if (x == T) return f;
+	int s = 0, ff;
+	REP_G (i, x) if (fl && f && lv[v] == lv[x] + 1 && (ff = augment (v, min (f, fl))))
+		fl -= ff, vfl += ff, f -= ff, s += ff;
+	if (!s) lv[x] = -1;
+	return s;
+}
+
+int maxFlow () {int s = 0; for (; denote (); s += augment (S, inf)) ; return s;}
+
+void AE (int x, int y, int z) 
+{
+	//printf ("%d %d %d\n", x, y, z);
+	g[++ gsz].set (y, pos[x], z), pos[x] = gsz;
+	g[++ gsz].set (x, pos[y], 0), pos[y] = gsz;
+}
+
+int main ()
+{
+	//freopen ("SKIRES.in", "r", stdin);
+	//printf ("called\n");
+	for (scanf ("%d", &q0); q0; -- q0)
+	{
+		scanf ("%d%d%d%d%d%d", &n, &m, &Sx, &Sy, &Tx, &Ty);
+		REP (i, n) REP (j, m) {scanf ("%d", &h[i][j]); hl[i][j] = 0;}
+
+		RST (den);
+
+		if (h[Sx][Sy] < h[Tx][Ty]) {puts ("0"); continue;}
+		if (abs (Sx - Tx) + abs (Sy - Ty) == 1) {puts ("-1"); continue;}
+
+		dsz = 0, gsz = 1; RST (pos);
+
+		REP (i, n) REP (j, m) den[i][j][0] = ++ dsz;
+
+		REP (i, n)
+			REP (j, m)
+			{
+				if (i == Tx && j == Ty)
+				{
+					REP (d, 4)
+					{
+						int _i = i + dx[d], _j = j + dy[d];
+						if (1 <= _i && _i <= n && 1 <= _j && _j <= m && h[_i][_j] >= h[i][j])
+							AE (den[_i][_j][0], den[i][j][0], inf);
+					}
+					continue;
+				}
+				
+				REP (d, 4)
+				{
+					int _i = i + dx[d], _j = j + dy[d];
+					if (1 <= _i && _i <= n && 1 <= _j && _j <= m && h[_i][_j] >= h[i][j])
+						li[++ hl[i][j]] = Arr (_i, _j);
+				}
+				if (!hl[i][j]) continue;
+				sort (li + 1, li + hl[i][j] + 1, cmpH);
+
+				REP (k, hl[i][j])
+				{
+					den[i][j][k] = ++ dsz;
+					//printf ("%d %d %d %d\n", i, j, li[k].x, li[k].y);
+					AE (den[i][j][k], den[i][j][k - 1], h[li[k].x][li[k].y] + 1 - h[i][j]);
+					AE (den[li[k].x][li[k].y][0], den[i][j][k], inf);
+				}
+			}
+
+		S = den[Sx][Sy][0], T = den[Tx][Ty][0];
+		//printf ("%d %d\n", S, T);
+		printf ("%d\n", maxFlow ());
+	}
+	//while (1) ;
+	return 0;
+}

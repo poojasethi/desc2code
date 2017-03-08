@@ -1,0 +1,89 @@
+#include<iostream>
+#include<algorithm>
+#include<cstdio>
+#include<cstring>
+#include<cmath>
+#define rep(i,a,b) for(int i=a;i<=b;++i)
+#define erp(i,a,b) for(int i=a;i>=b;--i)
+using namespace std;
+typedef unsigned long long u64;
+const int MAXN = 100002;
+int bsz, N, Q, lef[MAXN], rig[MAXN];
+int be[MAXN], sum[MAXN], bn, a[MAXN];
+u64 s[MAXN];
+
+inline int bid(int x) { return (x-1)/bsz + 1; }
+struct blist {
+	u64 as[MAXN], bs[500];
+	inline void update(int i, int x)
+	{
+		for(int j = i; j<=N&&j%bsz!=1; j++) as[j] += x;
+		for(int j = bid(i)+(i!=be[i]); j<=bn; ++j) bs[j] += x;
+	}
+	inline u64 quary(int i)
+	{
+		if (!i) return 0;
+		return as[i] + bs[(i-1)/bsz+1];
+	}
+} bl;
+
+struct block {
+	int cnt[MAXN], ed;
+	u64 sum;
+} b[320];
+
+inline u64 qsum(int i)
+{
+	return s[i] + bl.quary(i);
+}
+u64 calc(int x)
+{
+	u64 ans = 0; int i;
+	for (i = 1; i<=bn&&x>b[i].ed; ++i)
+		ans += b[i].sum;
+	if (i>bn) return ans;
+	for (i = (i-1)*bsz+1; i<=x; ++i)
+		ans += qsum(rig[i])-qsum(lef[i]-1);
+	return ans;
+}
+
+int main()
+{
+	scanf("%d", &N);
+	bsz = ceil(sqrt(N))+0.1;
+	bn = (N-1)/bsz+1;
+	rep(i, 1, N)
+	{
+		scanf("%d", a+i), s[i] = s[i-1]+a[i];
+		be[i] = (i%bsz==1 ? i : be[i-1]);
+	}
+	rep(i, 1, N) scanf("%d%d", lef+i, rig+i);
+	for (int i = 1, ed, id; i<=N; i+=bsz)
+	{
+		id = i/bsz+1;
+		b[id].ed = ed = min(N, i+bsz-1);
+		memset(sum, 0, sizeof sum);
+		rep(j, i, ed) sum[lef[j]]++, sum[rig[j]+1]--;
+		rep(j, 1, N) sum[j] += sum[j-1], b[id].cnt[j] = sum[j];
+		rep(j, 1, N) b[id].sum += 1ll*a[j]*sum[j];
+	}
+	scanf("%d", &Q);
+	for (int op, l, r, t, id; Q--; )
+	{
+		scanf("%d", &op);
+		if (op==1)
+		{
+			scanf("%d%d", &l, &t);
+			id = bid(l);
+			rep(k, 1, bn) b[k].sum += 1ll*(t-a[l])*b[k].cnt[l];
+			bl.update(l, t-a[l]);
+			a[l] = t;
+		}
+		else
+		{
+			scanf("%d%d", &l, &r);
+			printf("%llu\n", calc(r)-calc(l-1));
+		}
+	}
+	return 0;
+}

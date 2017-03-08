@@ -1,0 +1,101 @@
+#include<bits/stdc++.h>
+using namespace std;
+
+const int N = 400004;
+int n, m, c, x, y, t, idx, a[N], b[N], col[N], f[N], pos[N];
+vector<int> v[N];
+long long sgt[4*N];
+int lazy[4*N];
+
+void build(int p, int x, int y) {
+	if(x == y) {
+		sgt[p] = (1LL << a[b[x]]);
+		return;
+	}
+	int mid = (x+y)/2;
+	build(p<<1, x, mid);
+	build((p<<1)+1, mid+1, y);
+	sgt[p] = sgt[p<<1] | sgt[(p<<1)+1];
+}
+
+void update(int p, int x, int y, int i, int j, int v){
+	if(lazy[p]) {
+		sgt[p] = (1LL << lazy[p]);
+		if(x != y) {
+			lazy[p<<1] = lazy[p];
+			lazy[(p<<1)+1] = lazy[p];
+		}
+		lazy[p] = 0;
+	}
+	if(i > y || j < x) return;
+	if(i<=x && y<=j) {
+		sgt[p] = (1LL << v);
+		if(x != y) {
+			lazy[p<<1] = v;
+			lazy[(p<<1)+1] = v;
+		}
+		return;
+	}
+	int mid = (x+y)/2;
+	update(p<<1, x, mid, i, j, v);
+	update((p<<1)+1, mid+1, y, i, j, v);
+	sgt[p] = sgt[p<<1] | sgt[(p<<1)+1];
+}
+
+long long get(int p, int x, int y, int i, int j) {
+	if(lazy[p]) {
+		sgt[p] = (1LL << lazy[p]);
+		if(x != y) {
+			lazy[p<<1] = lazy[p];
+			lazy[(p<<1)+1] = lazy[p];
+		}
+		lazy[p] = 0;
+	}
+	if(i > y || j < x) return 0;
+	if(i <= x && y <= j) return sgt[p];
+	int mid = (x+y)/2;
+	return get(p<<1, x, mid, i, j) | get((p<<1)+1, mid+1, y, i, j);
+}
+
+void dfs(int u, int p) {
+	b[idx++] = u;
+	for(int i=0 ; i<(int)v[u].size() ; ++i) {
+		if(v[u][i] != p) {
+			dfs(v[u][i], u);
+			f[u] += f[v[u][i]];
+		}
+	}
+	f[u] += (int)v[u].size() - 1;
+}
+
+int main(int argc, char **argv) {
+#ifndef ONLINE_JUDGE
+	freopen("a.in", "r", stdin);
+#endif
+	scanf("%d%d", &n, &m);
+	for(int i=1 ; i<=n ; ++i) {
+		scanf("%d", a+i);
+	}
+	for(int i=1; i<n ; ++i) {
+		scanf("%d%d", &x, &y);
+		v[x].push_back(y);
+		v[y].push_back(x);
+	}
+	dfs(1, 0);
+	for(int i=0 ; i<idx ; ++i) {
+		pos[b[i]] = i;
+	}
+	++f[1];
+	build(1, 0, n-1);
+
+	while(m--) {
+		scanf("%d%d", &t, &x);
+		if(t == 1) {
+			scanf("%d", &c);
+			update(1, 0, n-1, pos[x], pos[x] + f[x], c);
+		} else {
+			printf("%d\n", __builtin_popcountll(get(1, 0, n-1, pos[x], pos[x]+f[x])));
+		}
+	}
+	return 0;
+}

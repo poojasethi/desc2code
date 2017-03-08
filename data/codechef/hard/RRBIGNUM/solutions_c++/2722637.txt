@@ -1,0 +1,126 @@
+#include<iostream>
+#include<algorithm>
+#include<vector>
+#include<assert.h>
+#include<string.h>
+#include<math.h> 
+#include<stdio.h>
+using namespace std;
+#define N 100001
+#define M 1000000007
+#define MAX 4000011
+#define inf 0x7fffffff
+#define llu long long int
+vector<llu> adj[100011];
+struct n{llu nb,n1,tv,v;}tree[MAX];
+bool lazy[MAX];
+llu p[1000010];
+int m,i,j,l,r;
+string s;             
+/**
+ * Build and init tree
+ */ 
+ 
+llu po(llu a)
+{
+    llu an=1,y=2;
+    while(a!=0)
+    {
+               if(a%2)an=(an*y)%M;
+               a=a/2;
+               y=(y*y)%M;
+    }
+    return an;
+}
+void build_tree(llu node, llu a, llu b) {
+    if(a > b) return; // Out of range
+    
+    if(a == b) { // Leaf node
+            tree[node].nb=1; // Init value
+            tree[node].n1=(s[a]=='1');
+            tree[node].tv=p[s.size()-1-a];
+            tree[node].v=p[s.size()-1-a]*(s[a]-'0');
+        return;
+    }
+    
+    build_tree(node*2, a, (a+b)/2); // Init left child
+    build_tree(node*2+1, 1+(a+b)/2, b); // Init right child
+    
+    tree[node].nb= tree[node*2].nb+tree[node*2+1].nb;
+    tree[node].n1=tree[node*2].n1+tree[node*2+1].n1;// Init root value
+    tree[node].tv=(tree[node*2].tv+tree[node*2+1].tv)%M;
+    tree[node].v=(tree[node*2].v+tree[node*2+1].v)%M;;
+}
+ 
+/**
+ * Increment elements within range [i, j] with value value
+ */
+ void flip(int node)
+ {
+      tree[node].n1=tree[node].nb-tree[node].n1;
+      tree[node].v=tree[node].tv-tree[node].v;
+      if(tree[node].v<0)tree[node].v+=M;
+ }
+void update_tree(llu node, llu a, llu b, llu i, llu j) {
+    if(lazy[node] != 0) { // This node needs to be updated
+        flip(node); // Update it
+        if(a != b) {
+            lazy[node*2] ^= 1; // Mark child as lazy
+                lazy[node*2+1] ^= 1;// Mark child as lazy
+        }
+ 
+        lazy[node] = 0; // Reset it
+    }
+   if(a > b || a > j || b < i) // Current segment is not within range [i, j]
+        return ;
+   
+    
+    if(a >= i && b <= j) { // Segment is fully within range
+         flip(node);
+            if(a != b) { // Not leaf node
+                lazy[node*2] ^= 1;
+                lazy[node*2+1] ^= 1;
+               }
+               return;
+        }
+        update_tree(node*2, a, (a+b)/2, i, j);
+        update_tree(1+node*2, 1+(a+b)/2, b, i, j);
+    tree[node].nb= tree[node*2].nb+tree[node*2+1].nb;
+    tree[node].n1=tree[node*2].n1+tree[node*2+1].n1;// Init root value
+    tree[node].tv=(tree[node*2].tv+tree[node*2+1].tv)%M;
+    tree[node].v=(tree[node*2].v+tree[node*2+1].v)%M;;
+}
+int main() {
+    cin>>s;
+    bool o=0;
+p[0]=1;
+for(i=1;i<=1000000;i++)p[i]=(p[i-1]*2)%M;
+    build_tree(1,0,s.size()-1);
+
+    if(s[s.size()-1]=='1')
+    {
+                 o=1;
+    }
+    cin>>m;
+llu x=po(M-2);
+    for(i=0;i<=m;i++)
+    {
+                    if(i!=0)
+					{	
+						cin>>l>>r;
+                	    update_tree(1,0,s.size()-1,l-1,r-1);
+                   		 if(s.size()-1>=l-1 && s.size()-1<=r-1)o=!o;
+					}
+                         llu an;
+						//cout<<"tree "<<tree[1].v<<endl;
+                         if(o)an=((((tree[1].v+1)%M)*x)%M);
+                         else an=(tree[1].v*x)%M;
+						//cout<<an<<endl;
+                         if(!o && tree[1].n1%2==0)an=(an+1)%M;
+                         cout<<an<<endl;
+    }
+                         
+    return 0;
+} 
+ 
+ 

@@ -1,0 +1,111 @@
+#include<stdio.h>
+#include<string.h>
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <deque>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <queue>
+
+
+using namespace std;
+
+struct gas{
+	int x, t, real;
+};
+bool compare(gas g1, gas g2){
+	if(g1.x < g2.x) return true;
+	else if(g1.x > g2.x) return false;
+	else if(g1.real < g2.real) return true;
+	else if(g2.real > g1.real) return false;
+	else return g1.t > g2.t;
+}
+
+int main() {
+    //freopen("_IN.txt", "r", stdin);
+    ios_base::sync_with_stdio(false);
+    int e,s,n,m;
+    cin >> e >> s >> n >> m;
+    gas stations[n+m+1];
+    for(int i=0; i<n; i++) {
+    	int t,x;
+		cin >> t >> x; stations[i].t=t; stations[i].x = min(e,x); stations[i].real =1;
+	}
+    for(int i=0;i<m;i++){
+    	int w; cin >> w; stations[i+n].x=w; stations[i+n].t=3; stations[i+n].real = -i;
+	}
+    stations[n+m].x = e; stations[n+m].t=3;stations[n+m].real = 1;
+    sort(stations, stations+n+m, compare);
+    int dp[n+m+1][2];
+    int pos[m];
+    for(int i=0;i<n+m+1;i++) dp[i][0] = dp[i][1] = -1;
+    dp[n+m][0] = dp[n+m][1] = 0;
+    int farthest[4] = {n+m,n+m,n+m,n+m}, closest[4] = {n+m,n+m,n+m,n+m};
+    bool lost = false;
+    for(int i=n+m-1; i>=0; i--){
+    	int t = stations[i].t;
+    	int x = stations[i].x;
+    	bool finished = false;
+    	int closestT = -1;
+    	int closestD = s+1;
+    	//cout << i << " "<<t <<" "<< x << endl;
+    	for(int type=3; type>=t && !finished && !lost; type--){
+    		if(stations[closest[type]].x - x <closestD){
+    			closestT = type;
+    			closestD = stations[closest[type]].x - x;
+			}
+		}
+		if(closestT !=-1){
+			dp[i][0] = dp[closest[closestT]][0];
+			dp[i][1] = dp[closest[closestT]][1];
+			if(t<3){
+				dp[i][t-1] += stations[closest[closestT]].x - x;
+			}
+			finished = true;
+		}
+    	for(int type = t-1; type>0 && !finished && !lost; type--){
+    		while(!finished && farthest[type] > i){
+    			if(stations[farthest[type]].t != type || stations[farthest[type]].x - x >s || stations[farthest[type]].real !=1)
+    				farthest[type]--;
+    			else{
+    				dp[i][0] = dp[farthest[type]][0];
+    				dp[i][1] = dp[farthest[type]][1];
+    				if(t==2){
+    					int tot = min(s, stations[farthest[type]].x - x + dp[i][0]);
+    					dp[i][0] -= tot - (stations[farthest[type]].x - x);
+    					dp[i][1] += tot;
+    				}
+    				else{
+    					int tot = min(s, stations[farthest[type]].x - x + dp[i][type-1]);
+    					dp[i][type-1] -= tot - (stations[farthest[type]].x - x);
+					}
+					finished = true;
+				}
+			}
+		}
+		if(stations[i].real==1) closest[t] = i;
+		else pos[-stations[i].real] = i;
+		//cout << stations[i].x<<" "<<dp[i][0] << " " << dp[i][1] << endl;
+		if(!finished)
+			lost = true;
+	}
+	for(int i=0;i<m;i++){
+		int p = pos[i];
+		cout << dp[p][0] << " " << dp[p][1] << endl;
+	}
+    return 0;
+}
+

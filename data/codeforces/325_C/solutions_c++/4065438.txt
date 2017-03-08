@@ -1,0 +1,147 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+#define FOR(i,s,e) for (int i=(s); i<(e); i++)
+#define FOE(i,s,e) for (int i=(s); i<=(e); i++)
+#define FOD(i,s,e) for (int i=(s)-1; i>=(e); i--)
+#define CLR(a,x) memset(a, x, sizeof(a))
+#define EXP(i,l) for (int i=(l); i; i=qn[i])
+#define LLD long long
+#define N 100005
+#define BIG 314000000
+using namespace std;
+
+struct rule{
+	int c;
+	vector<int> a;
+};
+
+int n, m, x, y, t;
+int qn[N], l[N], end[N], inf[N], v[N], mn[N], mx[N];
+rule qd[N];
+
+void dfs2(int x){
+	v[x] = 1;
+	if (end[x] == 1){
+		EXP(i,l[x]){
+			int ok1 = 1, ok2 = 0;
+			FOR(j,0,qd[i].a.size()){
+				int k = qd[i].a[j];
+				if (!v[k]) dfs2(k);
+				if (!end[k]) ok1 = 0;
+				if (v[k] == 1 || inf[k]) ok2 = 1;
+			}
+			if (ok1 && ok2) inf[x] = 1;
+		}
+	}
+	v[x] = 2;
+}
+
+void Infinity(){
+	CLR(v, 0);
+	FOR(i,0,n) if (!v[i]){
+		dfs2(i);
+	}
+}
+
+void dfs1(int x){
+	v[x] = 1;
+	EXP(j,l[x]){
+		if (qd[j].a.size() == 0) end[x] = 1;
+		else{
+			int ok = 1, i;
+			FOR(k,0,qd[j].a.size()){
+				i = qd[j].a[k];
+				if (!v[i]) dfs1(i);
+				if (!end[i]){
+					ok = 0;
+					break;
+				}
+			}
+			if (ok) end[x] = 1;
+		}
+	}
+	v[x] = 2;
+}
+
+void Terminate(){
+	CLR(v, 0);
+	FOR(i,0,n) if (!v[i]) dfs1(i);
+}
+
+void dfs3(int x){
+	if (v[x]) return;
+	v[x] = 1;
+	mn[x] = BIG;
+	EXP(i,l[x]){
+		int cost = qd[i].c, k;
+		FOR(j,0,qd[i].a.size()){
+			k = qd[i].a[j];
+			if (!end[k]) cost = BIG;
+			else{
+				dfs3(k);
+				cost += mn[k];
+			}
+			if (cost > BIG) cost = BIG;
+		}
+		mn[x] = min(mn[x], cost);
+	}
+}
+
+
+void dfs4(int x){
+	if (v[x]) return;
+	v[x] = 1;
+	mx[x] = 0;
+	EXP(i,l[x]){
+		int cost = qd[i].c, k, ok = 1;
+		FOR(j,0,qd[i].a.size()){
+			k = qd[i].a[j];
+			if (!end[k]){
+				ok = 0;
+				break;
+			}
+			if (!inf[k]) dfs4(k);
+			cost += mx[k];
+			if (cost > BIG) cost = BIG;
+		}
+		if (ok) mx[x] = max(mx[x], cost);
+	}
+}
+
+void DP(){
+	CLR(v, 0);
+	FOR(i,0,n){
+		if (end[i]) dfs3(i);
+		else mn[i] = -1;
+	}
+	CLR(v, 0);
+	FOR(i,0,n){
+		if (end[i] && !inf[i]) dfs4(i);
+		else if (inf[i]) mx[i] = -2;
+		else mx[i] = -1;
+	}
+}
+
+int main(){
+	scanf("%d%d", &m, &n);
+	FOE(i,1,m){
+		scanf("%d%d", &x, &t);
+		x--;
+		while (t--){
+			scanf("%d", &y);
+			if (y == -1) ++qd[i].c;
+			else qd[i].a.push_back(y - 1);
+		}
+		qn[i] = l[x];
+		l[x] = i;
+	}
+	
+	Terminate();
+	Infinity();
+	DP();
+	// FOR(i,0,n) printf("%d %d\n", end[i], inf[i]);
+	FOR(i,0,n) printf("%d %d\n", mn[i], mx[i]);
+	return 0;
+}

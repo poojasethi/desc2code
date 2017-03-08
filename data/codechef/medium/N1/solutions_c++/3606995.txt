@@ -1,0 +1,119 @@
+#include      <iostream>
+#include      <iomanip>
+#include      <ctime>
+#include      <set>
+#include      <algorithm>
+#include      <queue>
+#include      <cassert>
+#include      <map>
+#include      <limits>
+#define endl '\n'
+using namespace std;
+
+const int oo = numeric_limits<int>::max();
+
+const int MAX_DIM = 13, MAX_CHESTS = 13 + 2, MAX_CONFIGURATIONS = 1 << (MAX_CHESTS - 2) /* we always start from first one*/;
+int g_anTreasureIds[MAX_DIM][MAX_DIM], g_anDP[MAX_CHESTS][MAX_CONFIGURATIONS], N;
+pair<int, int> g_ptTreasuPoses[MAX_CHESTS];
+int g_anBFSVisited[MAX_DIM][MAX_DIM], g_anBFSDist[MAX_CHESTS][MAX_CHESTS], g_nTreasures;
+char g_achMAP[MAX_DIM][MAX_DIM];
+
+struct State {
+	int y, x, state, steps;
+	State(int y = 0, int x = 0, int state = 0, int steps = 0) : y(y), x(x), state(state), steps(steps) {;}
+	bool operator<(const State &o) const { return steps > o.steps; }
+};
+
+void readAndClean() {
+	scanf("%d", &N);
+	g_nTreasures = 0;
+
+	g_anTreasureIds[0][0] = g_nTreasures;
+	g_ptTreasuPoses[g_nTreasures++] = make_pair(0, 0);
+	g_anTreasureIds[N - 1][N - 1] = g_nTreasures;
+	g_ptTreasuPoses[g_nTreasures++] = make_pair(N - 1, N - 1);
+
+	for (int i = 0; i < MAX_CHESTS; i += 1) for (int k = 0; k < MAX_CONFIGURATIONS; k += 1) g_anDP[i][k] = +oo;
+
+	for (int i = 0; i < N; i += 1) {
+		for (int j = 0; j < N; j += 1) {
+			scanf(" %c", &g_achMAP[i][j]);
+			if (g_achMAP[i][j] == '*') {
+				g_anTreasureIds[i][j] = g_nTreasures;
+				g_ptTreasuPoses[g_nTreasures++] = make_pair(i, j);
+			}
+		}
+	}
+}
+
+bool fillDist() {
+	static int nVisited = 0;
+	const static int dirs[][2] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+
+	for (int treasure = 0; treasure < g_nTreasures; treasure += 1) {
+		nVisited += 1;
+		int nFound = 0;
+		State cur(g_ptTreasuPoses[treasure].first, g_ptTreasuPoses[treasure].second, 0, 0);
+		queue<State> q;
+		q.push(cur);
+		for (int i = 0; i < g_nTreasures - 1; i += 1) g_anBFSDist[treasure][i] = -1;
+		while (!q.empty()) {
+			cur = q.front(), q.pop();
+			if (g_anBFSVisited[cur.y][cur.x] == nVisited) continue;
+			g_anBFSVisited[cur.y][cur.x] = nVisited;
+			if (make_pair(cur.y, cur.x) == make_pair(0, 0) || make_pair(cur.y, cur.x) == make_pair(N - 1, N - 1) || g_achMAP[cur.y][cur.x] == '*') {
+				g_anBFSDist[g_anTreasureIds[cur.y][cur.x]][treasure] = g_anBFSDist[treasure][g_anTreasureIds[cur.y][cur.x]] = cur.steps;
+				nFound += 1;
+				if (nFound == g_nTreasures) break;
+			}
+
+			for (int d = 0; d < 4; d += 1) {
+				const int yy = cur.y + dirs[d][0], xx = cur.x + dirs[d][1];
+				if (yy < 0 || xx < 0 || yy >= N || xx >= N || g_achMAP[yy][xx] == '#') continue;
+				q.push(State(yy, xx, cur.state, cur.steps + 1));
+			}
+		}
+
+		if (nFound != g_nTreasures) {
+			printf("-1\n");
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void findAns() {
+	priority_queue<State> queue;
+	State cur;
+	cur.state = 0;
+	queue.push(cur);
+	while (!queue.empty()) {
+		cur = queue.top(), queue.pop();
+		if (cur.y == 1 && cur.state == -1) {
+			printf("%d\n", cur.steps);
+			return;
+		}
+
+		if (cur.state == (1 << (g_nTreasures - 2)) - 1) queue.push(State(1, 0, -1, cur.steps + g_anBFSDist[cur.y][1]));
+		for (int d = 2; d < g_nTreasures; d += 1) {
+			const int st = cur.state | (1 << (d - 2));
+			const int steps = cur.steps + g_anBFSDist[cur.y][d];
+			if (g_anDP[d][st] <= steps) continue;
+			g_anDP[d][st] = steps;
+			queue.push(State(d, 0, st, steps));
+		}
+	}
+}
+
+void solve() {
+	readAndClean();
+	if (fillDist()) findAns();
+}
+
+int main(int argc, char **argv) {
+	int T;
+	scanf("%d", &T);
+	while (T--) solve();
+	return 0;
+}

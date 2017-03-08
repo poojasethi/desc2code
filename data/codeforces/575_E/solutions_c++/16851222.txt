@@ -1,0 +1,106 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+typedef __int64 LL;
+
+const int D = 100000;
+
+struct pnt {
+	double x, y;
+	pnt(double x = 0, double y = 0) : x(x), y(y) {}
+	pnt operator - (const pnt  &p) const {
+	    return pnt(x - p.x, y - p.y);
+	}
+	double operator ^ (const pnt &p) const {
+	    return x * p.y - y * p.x;
+	}
+	double operator & (const pnt &p) const {
+	    return x * p.x + y * p.y;
+	}
+	bool operator < (const pnt &p) const {
+	    return x != p.x ? x < p.x : y < p.y;
+	}
+	bool operator == (const pnt &p) const {
+	    return x == p.x && y == p.y;
+	}
+};
+
+typedef vector <pnt> poly;
+
+inline double CrossProduct(pnt a, pnt b) { return a ^ b; }
+
+poly ConvexHull(poly &p) {
+	sort(p.begin(), p.end());
+	p.erase(unique(p.begin(), p.end()), p.end());
+
+	int n = p.size();
+	int m = 0;
+	vector <pnt> ch(n + 1);
+	for (int i = 0; i < n; i ++) {
+		while (m > 1 && CrossProduct(ch[m - 1] - ch[m - 2], p[i] - ch[m - 2]) <= 0) m --;
+		ch[m ++] = p[i];
+	}
+	int k = m;
+	for (int i = n - 2; i >= 0; i --) {
+		while (m > k && CrossProduct(ch[m - 1] - ch[m - 2], p[i] - ch[m - 2]) <= 0) m --;
+		ch[m ++] = p[i];
+	}
+	if (n > 1) m --;
+	ch.resize(m);
+	return ch;
+}
+
+pnt outercenter(pnt a, pnt b, pnt c) {
+	double c1 = ((a & a) - (b & b)) / 2, c2 = ((a & a) - (c & c)) / 2;
+	double x0 = (c1 * (a.y - c.y) - c2 * (a.y - b.y)) / (a - b ^ a - c);
+	double y0 = (c1 * (a.x - c.x) - c2 * (a.x - b.x)) / (a - c ^ a - b);
+	return pnt(x0, y0);
+}
+
+main() {
+    int n;
+    scanf("%d", &n);
+    poly p;
+    for (int i = 0; i < n; i ++) {
+        int x, y, v;
+        scanf("%d %d %d", &x, &y, &v);
+        if (x < v) {
+            int xx = 0, yy = max(0, y - (v - x));
+            p.push_back(pnt(xx, yy));
+            yy = min(D, y + (v - x));
+            p.push_back(pnt(xx, yy));
+        } else p.push_back(pnt(x - v, y));
+        if (y < v) {
+            int xx = max(0, x - (v - y)), yy = 0;
+            p.push_back(pnt(xx, yy));
+            xx = min(D, x + (v - y)), yy = 0;
+            p.push_back(pnt(xx, yy));
+        } else p.push_back(pnt(x, y - v));
+        if (D < x + v) {
+            int xx = D, yy = max(0, y - (x + v - D));
+            p.push_back(pnt(xx, yy));
+            yy = min(D, y + (x + v - D));
+            p.push_back(pnt(xx, yy));
+        } else p.push_back(pnt(x + v, y));
+        if (D < y + v) {
+            int xx = max(0, x - (y + v - D)), yy = D;
+            p.push_back(pnt(xx, yy));
+            xx = min(D, x + (y + v - D));
+            p.push_back(pnt(xx, yy));
+        } else p.push_back(pnt(x, y + v));
+    }
+    poly c = ConvexHull(p);
+    int m = c.size();
+    double mx = -1;
+    int ps;
+    for (int i = 0; i < m; i ++) {
+        pnt x = c[i], y = c[(i + 1) % m], z = c[(i + 2) % m];
+        pnt o = outercenter(x, y, z);
+        double r = sqrt(o - x & o - x);
+        if (mx < r) mx = r, ps = i;
+    }
+    for (int i = 0; i < 3; i ++) {
+        printf("%.0lf %.0lf\n", c[(ps + i) % m].x, c[(ps + i) % m].y);
+    }
+}

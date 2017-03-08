@@ -1,0 +1,92 @@
+#include <cstdio>
+#include <vector>
+#include <map>
+#include <cstring>
+using namespace std;
+const int mod=12345;
+typedef long long LL;
+int N;
+
+struct Mat{
+	int v[150][150];
+	int* operator [](int id){
+		return v[id];
+	}
+} mat;
+Mat operator *(Mat& a,Mat &b){
+	Mat c;
+	memset(&c,0,sizeof(c));
+	for(int i = 0; i < N; i++)
+		for(int j = 0; j < N; j++)
+			for(int k = 0; k < N; k++)
+				c[i][j]=(c[i][j] + a[i][k] * b[k][j])%mod;
+	return c;
+}
+map<vector<int>,int> m;
+bool in[100], allow[100][150],ans[150];
+int _lcm[100];
+LL n;
+int initMat(const vector<int>& v){
+	map<vector<int>,int>::iterator it = m.find(v);
+	
+	if (it != m.end())
+		return it->second;
+	int id = N++;
+	ans[id] = true;
+	m.insert(make_pair(v,id));
+	for (int i = 0; i < 26; i++)
+		if (in[i]) {
+			vector<int> _next(v);
+			_next[i] = (_next[i] + 1) % _lcm[i];
+			mat[id][initMat(_next)]++;
+		}
+	
+	for (int i = 0; i < 26; i++)
+		if (in[i])
+			ans[id] = ans[id] && allow[i][v[i]];
+	
+	return id;
+}
+int gcd(int x,int y){
+	return y?gcd(y,x%y):x;
+}
+int main(){
+	int m;
+	scanf("%I64d%d",&n,&m);
+	for(int i = 1; i <= m; i++){
+		char tmp[5];int x = 0;
+		scanf("%s%d",tmp,&x);
+		allow[tmp[0]-'A'][x] = true;
+		in[tmp[0]-'A'] = true;
+	}
+
+	for(int i = 0; i<26;i++){
+		_lcm[i]=1;
+		for(int j = 1; j < 123; j++)
+			if(allow[i][j])
+				_lcm[i] = ((LL)_lcm[i]*j)/gcd(_lcm[i],j) ;
+
+		for(int j = 122; j > 0; j--)
+			if(allow[i][j])
+				for(int k = j; k < 123; k += j)
+					allow[i][k]=true;
+		allow[i][0] = true;
+	}
+
+	initMat(vector<int>(26));
+	Mat res;
+	memset(&res,0,sizeof(res));
+	for(int i = 0; i < 130; i++)
+		res[i][i] = 1;
+
+	for(int i = 63; i >= 0; i--){
+		res = res * res;
+		if((n>>i)&1)
+			res = res * mat;
+	}
+	int Ans = 0;
+	for(int i = 0; i < N; i++)
+		if(ans[i])
+			Ans = (Ans + res[0][i]) % mod;
+	printf("%d\n",Ans);
+}

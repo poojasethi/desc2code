@@ -1,0 +1,63 @@
+#include <iostream>
+#include <cstring>
+using namespace std;
+#define N 200005
+#define _int long long
+#define max(a,b) ((a)>(b)?(a):(b))
+#define min(a,b) ((a)<(b)?(a):(b))
+struct BIT {
+  _int n,c[N+1]; void init(int s) {n=s; memset(c,0,sizeof(c));}
+  void change(int p, _int k) {for (; p<=n; p+=p&-p) c[p]+=k;}
+  _int sum(int p) {_int s=0; for (; p; p-=p&-p) s+=c[p]; return s;}
+};
+struct BIT_ex {
+  BIT t; void init(int s) {t.init(s);}
+  void change(int l, int r, _int k) {t.change(l,k); t.change(r+1,-k);}
+  _int get(int p) {return t.sum(p);}
+};
+
+struct {int p,next;} e[N];
+BIT_ex c,c1;
+int g[N],col[N],p[N],dep[N],st[N],ed[N],tot=0,len=0,ans1=0;
+void addedge(int a,int b) {e[++tot].p=b; e[tot].next=g[a]; g[a]=tot;}
+void dfs(int now,int pre,int coo,int dee) {
+  col[now]=coo; p[now]=++len; dep[now]=dee;
+  if (dee==1) st[coo]=len; bool last=true;
+  for (int tmp=g[now]; tmp; tmp=e[tmp].next)
+    if (e[tmp].p!=pre) {last=false; dfs(e[tmp].p,now,coo,dee+1);}
+  if (last) ed[coo]=len;
+}
+int main() {
+  int n,q; cin >> n >> q;
+  memset(g,0,sizeof(g));
+  for (int i=1; i<n; i++) {
+    int u,v; cin >> u >> v;
+    addedge(u,v); addedge(v,u);
+  }
+  for (int tmp=g[1],coo=1; tmp; tmp=e[tmp].next) {
+    dfs(e[tmp].p,1,coo,1); coo++;
+  }
+  c.init(len); c1.init(len);
+  while (q--) {
+    int t,v; cin >> t >> v;
+    if (t) {
+      if (v==1) cout << ans1 << endl;
+      else cout << c.get(p[v])+c1.get(dep[v]) << endl;
+    } else {
+      int x,d; cin >> x >> d;
+      if (v==1) {c1.change(1,d,x); ans1+=x;}
+      else {
+	c.change(max(p[v]-d,st[col[v]]),min(p[v]+d,ed[col[v]]),x);
+	if (d>=dep[v]) {
+	  ans1+=x; 
+	  if (d>dep[v]) {
+	    c1.change(1,d-dep[v],x);
+	    c.change(st[col[v]],min(st[col[v]]+d-dep[v]-1,ed[col[v]]),-x);
+	  }
+	}
+      }
+    }	    
+  }
+  //system("pause");
+  return 0;
+}

@@ -1,0 +1,332 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+const int limite=2000000;
+
+int tope=1;
+int key[limite];
+int value[limite];
+int son[limite][2];
+int height[limite];
+int size[limite];
+pair<int,int> maximo[limite];
+
+pair<int,int> obtenvalor(int pos)
+{
+  return pair<int,int> (value[pos],-key[pos]);
+}
+
+void recalcula(int pos)
+{
+  if (pos==0) return;
+  height[pos]=1+max(height[son[pos][0]],height[son[pos][1]]);
+  size[pos]=1+size[son[pos][0]]+size[son[pos][1]];
+  maximo[pos]=max(maximo[son[pos][0]],max(maximo[son[pos][1]],obtenvalor(pos)));
+}
+
+int rothaciale(int pos)
+{
+  int nextpos=son[pos][1];
+  son[pos][1]=son[nextpos][0];
+  son[nextpos][0]=pos;
+  recalcula(pos);
+  recalcula(nextpos);
+  return nextpos;
+}
+
+int rothaciari(int pos)
+{
+  int nextpos=son[pos][0];
+  son[pos][0]=son[nextpos][1];
+  son[nextpos][1]=pos;
+  recalcula(pos);
+  recalcula(nextpos);
+  return nextpos;
+}
+
+int corrige(int pos)
+{
+  if (height[son[pos][0]]+1<height[son[pos][1]]) {
+    int &s=son[pos][1];
+    if (height[son[s][1]]<height[son[s][0]])
+      s=rothaciari(s);
+    return rothaciale(pos);
+  } else if (height[son[pos][1]]+1<height[son[pos][0]]) {
+    int &s=son[pos][0];
+    if (height[son[s][0]]<height[son[s][1]])
+      s=rothaciale(s);
+    return rothaciari(pos);
+  }
+  recalcula(pos);
+  return pos;
+}
+
+int anyade(int pos,int k,int val)
+{
+  //cout<<"anyade "<<pos<<" "<<k<<" "<<val<<endl;
+  if (pos==0) {
+    pos=tope++;
+    key[pos]=k;
+  }
+  if (key[pos]==k) {
+    value[pos]+=val;
+    recalcula(pos);
+    return pos;
+  }
+  if (key[pos]<k) {
+    son[pos][1]=anyade(son[pos][1],k,val);
+    return corrige(pos);
+  }
+  son[pos][0]=anyade(son[pos][0],k,val);
+  return corrige(pos);
+}
+
+pair<int,int> computamax0(int pos,int le)
+{
+  if (pos==0) return maximo[0];
+  if (key[pos]<le) return computamax0(son[pos][1],le);
+  return max(computamax0(son[pos][0],le),max(maximo[son[pos][1]],obtenvalor(pos)));
+}
+
+pair<int,int> computamax1(int pos,int ri)
+{
+  if (pos==0) return maximo[0];
+  if (ri<key[pos]) return computamax1(son[pos][0],ri);
+  return max(computamax1(son[pos][1],ri),max(maximo[son[pos][0]],obtenvalor(pos)));
+}
+
+pair<int,int> computamax(int pos,int le,int ri)
+{
+  if (pos==0) return maximo[0];
+  if (key[pos]<=le) {
+    pair<int,int> sol=computamax(son[pos][1],le,ri);
+    if (key[pos]==le) sol=max(sol,obtenvalor(pos));
+    return sol;
+  }
+  if (ri<=key[pos]) {
+    pair<int,int> sol=computamax(son[pos][0],le,ri);
+    if (key[pos]==ri) sol=max(sol,obtenvalor(pos));
+    return sol;
+  }
+  pair<int,int> max0=computamax0(son[pos][0],le);
+  pair<int,int> max1=computamax1(son[pos][1],ri);
+  return max(max0,max(max1,obtenvalor(pos)));
+}
+
+void anyadetodos(int pos,int &posfin)
+{
+  if (pos==0) return;
+  posfin=anyade(posfin,key[pos],value[pos]);
+  anyadetodos(son[pos][0],posfin);
+  anyadetodos(son[pos][1],posfin);
+}
+
+int identificador[limite];
+int infimo[limite];
+int supremo[limite];
+int avl[limite];
+
+int computaidentificador(int u)
+{
+  int &idu=identificador[u];
+  if (idu==0) return u;
+  idu=computaidentificador(idu);
+  return idu;
+}
+
+void fusionaelems(int u,int v)
+{
+  u=computaidentificador(u);
+  v=computaidentificador(v);
+  if (u==v) return;
+  int &au=avl[u];
+  int &av=avl[v];
+  if (size[au]<size[av]) {
+    identificador[u]=v;
+    infimo[v]=min(infimo[u],infimo[v]);
+    supremo[v]=max(supremo[u],supremo[v]);
+    anyadetodos(au,av);
+  } else {
+    identificador[v]=u;
+    infimo[u]=min(infimo[u],infimo[v]);
+    supremo[u]=max(supremo[u],supremo[v]);
+    anyadetodos(av,au);
+  }
+}
+
+void fusiona(int le,int ri)
+{
+  //cout<<"fusiona "<<le<<" "<<ri<<endl;
+  for (;;) {
+    int u=computaidentificador(le);
+    int v=supremo[u]+1;
+    if (ri<v) return;
+    fusionaelems(u,v);
+  }
+}
+
+int n=0;
+int s[limite];
+int indicepalabra[limite];
+int sa[limite];
+int tmp[limite];
+int pos[limite];
+int gap=1;
+int comun[limite];
+vector<int> listaq[limite];
+
+bool compara(int i1,int i2)
+{
+  if (pos[i1]<pos[i2]) return true;
+  if (pos[i1]>pos[i2]) return false;
+  i1+=gap;
+  i2+=gap;
+  if (i1<n and i2<n) return pos[i1]<pos[i2];
+  return i2<i1;
+}
+
+void suffixarray()
+{
+  for (int i=0;i<n;i++) {
+    sa[i]=i;
+    pos[i]=s[i];
+  }
+  do {
+    sort(sa,sa+n,compara);
+    tmp[0]=0;
+    for (int i=1;i<n;i++) tmp[i]=tmp[i-1]+compara(sa[i-1],sa[i]);
+    for (int i=0;i<n;i++) pos[sa[i]]=tmp[i];
+    gap*=2;
+  } while (pos[sa[n-1]]!=n-1);
+  int k=0;
+  for (int i=0;i<n;i++) {
+    if (pos[i]!=n-1) {
+      while (i+k<n and sa[pos[i]+1]+k<n and s[i+k]==s[sa[pos[i]+1]+k]) k++;
+      comun[pos[i]]=k;
+    }
+    if (k) k--;
+  }
+}
+
+char buff[limite];
+int q;
+int l[limite],r[limite],pl[limite],pr[limite],longitud[limite],iniq[limite],finq[limite];
+
+int altura[limite];
+int indices[limite];
+int i1,i2;
+
+int indiceq[limite];
+int solq[limite][2];
+
+bool comparaq(int i1,int i2)
+{
+  return finq[i1]-iniq[i1]<finq[i2]-iniq[i2];
+}
+
+int main()
+{
+  scanf("%s",buff);
+  s[n++]=-1;
+  for (int i=0;buff[i];i++)
+    s[n++]=buff[i];
+  s[n++]=1000;
+  int m;
+  scanf("%d",&m);
+  for (int j=1;j<=m;j++) {
+    scanf("%s",buff);
+    for (int i=0;buff[i];i++) {
+      indicepalabra[n]=j;
+      s[n++]=buff[i];
+    }
+    s[n++]=0;
+  }
+  suffixarray();
+  for (int i=0;i<n;i++) {
+    if (indicepalabra[i])
+      avl[pos[i]]=anyade(0,indicepalabra[i],1);
+    infimo[i]=supremo[i]=i;
+  }
+  scanf("%d",&q);
+  for (int i=1;i<=q;i++) {
+    scanf("%d%d%d%d",&(l[i]),&(r[i]),&(pl[i]),&(pr[i]));
+    listaq[pos[pl[i]]].push_back(i);
+    longitud[i]=pr[i]-pl[i]+1;
+    indiceq[i]=i;
+  }
+  i1=0;
+  i2=0;
+  altura[0]=0;
+  indices[0]=0;
+  for (int i=1;i<n;i++) {
+    i2++;
+    altura[i2]=comun[i-1];
+    indices[i2]=i;
+    while (i2>i1 and altura[i2-1]>=altura[i2]) {
+      altura[i2-1]=altura[i2];
+      indices[i2-1]=indices[i2];
+      i2--;
+    }
+    vector<int> &lis=listaq[i];
+    for (int j=0;j<int(lis.size());j++) {
+      int iq=lis[j];
+      int len=longitud[iq];
+      int inf=0;
+      int sup=i2+1;
+      while (inf+1<sup) {
+	int med=(inf+sup)/2;
+	if (altura[med]<len) inf=med;
+	else sup=med;
+      }
+      iniq[iq]=indices[inf];
+    }
+  }
+  i1=n-1;
+  i2=n-1;
+  altura[n-1]=0;
+  indices[n-1]=0;
+  for (int i=n-2;i>=0;i--) {
+    i1--;
+    altura[i1]=comun[i];
+    indices[i1]=i;
+    while (i2>i1 and altura[i1+1]>=altura[i1]) {
+      altura[i1+1]=altura[i1];
+      indices[i1+1]=indices[i1];
+      i1++;
+    }
+    vector<int> &lis=listaq[i];
+    for (int j=0;j<int(lis.size());j++) {
+      int iq=lis[j];
+      int len=longitud[iq];
+      int inf=i1-1;
+      int sup=n-1;
+      while (inf+1<sup) {
+	int med=(inf+sup)/2;
+	if (altura[med]<len) sup=med;
+	else inf=med;
+      }
+      finq[iq]=indices[sup];
+    }
+  }
+  sort(indiceq+1,indiceq+(q+1),comparaq);
+  for (int i=1;i<=q;i++) {
+    int iq=indiceq[i];
+    fusiona(iniq[iq],finq[iq]);
+    int u=computaidentificador(iniq[iq]);
+    pair<int,int> pareja=computamax(avl[u],l[iq],r[iq]);
+    pareja.second=-pareja.second;
+    if (pareja.second==0) {
+      solq[iq][0]=l[iq];
+    } else {
+      solq[iq][0]=pareja.second;
+      solq[iq][1]=pareja.first;
+    }
+  }
+  for (int i=1;i<=q;i++)
+    printf("%d %d\n",solq[i][0],solq[i][1]);
+}

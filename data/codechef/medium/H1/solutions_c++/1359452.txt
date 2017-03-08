@@ -1,0 +1,152 @@
+#include <iostream>
+#include <cstdio>
+#include <queue>
+#include <vector>
+#include <utility>
+#include <algorithm>
+#include <map>
+
+using namespace std;
+
+int dx[] = {1,0};
+int dy[] = {0,1};
+int tenpow[9];
+
+int getpos(int number , int i , int j)
+{
+    int pos = (3 * i + j);
+    number /= tenpow[pos];
+    return number % 10;
+}
+
+inline int getnum(int num, int pos) //get the digit at position 'pos' from the number 'num'
+{
+    int i, j;
+    // Consider num = 123456789 and pos = 3
+    j = num; // j = 123456789
+    j /= tenpow[pos]; // j = 123456789/tenpow[3] => j = 123456789/1000 => j = 123456
+    return j%10; // returning value 123456%10 = 6 at position 3. Remember positions are 0 based.
+}
+inline int setnum(int num, int pos, int newnum) // Set the digit at position 'pos' to 'newnum'
+{
+    int ret=0;
+    int i, j;
+    // Consider num = 123456789, pos = 3 and newnum = 5
+    j = num; // j = 123456789
+    int x = num % tenpow[pos]; // x = 123456789%tenpow[3] => x = 123456789%1000 => x = 789
+    ret = x + newnum * tenpow[pos]; // ret = 789 + 5*tenpow[3] => ret = 789 + 5*1000 => ret = 5789
+    j /= tenpow[pos+1]; // j = 123456789/tenpow[4] => j = 123456789/10000 => j = 12345
+    j *= tenpow[pos+1]; // j = 12345*10000 => j = 123450000
+    ret += j; // ret = 5789 + 123450000 => ret = 123455789
+    return ret;
+}
+
+int findNewState (int num , int x1 , int y1 , int x2 , int y2 )
+{
+    int p1 = 3 * x1 + y1;
+    int p2 = 3 * x2 + y2;
+     int n1 = getnum(num, p1); // n1 = getnum(123456789, 1) => n1 = 8
+    int n2 = getnum(num, p2); // n2 = getnum(123456789, 5) => n2 = 4
+    int ret = 0;
+    ret = setnum(num, p1, n2); // ret = setnum(123456789, 1, 4) => ret = 123456749
+    ret = setnum(ret, p2, n1); // ret = setnum(123456789, 5, 8) => ret = 123856749
+    return ret;
+}
+
+
+
+int isPrime (int n)
+{
+    if (n == 2 || n == 3 || n == 5 || n == 7 || n == 11 || n == 13 || n == 17 || n == 19)
+        return true;
+    return false;
+}
+
+int main()
+{
+        tenpow[0] = 1;
+        for (int i = 1; i <= 9; i++)
+            tenpow[i] = 10 * tenpow[i - 1];
+
+        // precomutation
+        queue<int> Q;
+        int start = 123456789;
+        Q.push(start);
+        map<int , int > dist;
+        dist[start] = 0;
+
+        while (!Q.empty())
+        {
+            int top = Q.front();
+            //cout << top << endl;
+            //cout << dist[top] << endl;
+            Q.pop();
+            // now go for all possible states
+            for (int i = 0; i < 3; i++)
+            {
+                for (int j = 0; j < 3; j++)
+                {
+                    int x = i;
+                    int y = j;
+                    for (int k = 0; k < 2; k++)
+                    {
+                        int nx = x + dx[k];
+                        int ny = y + dy[k];
+
+                        if (nx >= 0 && nx <= 2 && ny >= 0 && ny <= 2)
+                        {
+                            if (isPrime(getpos(top , nx , ny) + getpos(top , x , y)) )
+                            {
+                                //printf("this %d %d\n" , getpos(top , nx , ny) , getpos(top , x, y));
+                                //printf("%d %d %d %d %d\n" , top , nx , ny , x , y);
+                                int newState = findNewState(top , nx , ny , x , y );
+                                //cout << newState << endl;
+                                if (dist.find(newState) == dist.end())
+                                {
+                                    Q.push(newState);
+                                    dist[newState] = dist[top] + 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        /*
+        map<int , int> :: iterator it;
+        int cnt = 0;
+        for (it = dist.begin() ; it != dist.end() && cnt++ <= 1000000; it++)
+        {
+            printf("%d %d\n" , it->first , it->second);
+            if (it->first >= 732415689)
+                break;
+        }
+
+        cout << "done" << endl;
+        */
+    int T;
+    scanf("%d" , &T);
+
+    while (T--)
+    {
+        int temp = 0;
+        for (int i = 0; i < 3; i++)
+        {
+            for (int j = 0; j < 3; j++)
+            {
+                int t;
+                scanf("%d" , &t);
+                temp *= 10;
+                temp += t;
+            }
+        }
+
+        if (dist.find(temp)!= dist.end())
+            printf("%d\n" , dist[temp]);
+        else
+            printf("-1\n");
+
+    }
+
+    return 0;
+}

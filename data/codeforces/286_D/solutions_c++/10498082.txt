@@ -1,0 +1,109 @@
+#include <bits/stdc++.h>
+
+#define mp make_pair
+#define st first
+#define nd second
+#define pb push_back
+
+using namespace std;
+
+typedef long long ll;
+typedef pair< ll,ll > pll;
+typedef pair< int,int > pii;
+
+const int inf = 1000000000, N = 100000;
+
+int n, m, a[N+5];
+vector< pair<int, pii> > v;
+map<int, ll> dp1, dp2;
+
+void add1(int l, int r, int t) {
+	dp1[l] += t;
+	dp1[r+1] -= t;
+}
+
+void add2(int l, int r) {
+	dp2[l] += 1;
+	dp2[r+1] -= 1;
+	dp1[r+1] -= r-l+1;
+}
+
+int main()
+{
+	int x, y, t;
+
+	scanf("%d %d", &n, &m);
+
+	for (int i = 1; i <= m; i++) {
+		scanf("%d %d %d", &x, &y, &t);
+		
+		v.pb( mp(x, mp(t, 1)) );
+		v.pb( mp(y, mp(t, 0)) );
+	}
+
+	sort(v.begin(), v.end());
+
+	multiset<int> Set;
+
+	int last = 0;
+
+	for (int i = 0; i < v.size();) {
+		if (!Set.empty()) {
+			int l = last, r = v[i].st - 1, len = v[i].st - last, t = *Set.begin();
+			
+			if (t >= r) {
+				add2(t - r, t - r + len - 1);
+				add1(t - r + len, inf, len);
+			}
+			else if (t <= l) {
+				add1(0, inf, len);
+			}
+			else {
+				add1(0, len-r+t-1, r-t);
+				add2(0, len-r+t-1);
+				add1(len-r+t, inf, len);
+			}
+		}
+
+		int j = i;
+
+		for (; v[i].st == v[j].st; j++) {
+			if (v[j].nd.nd)
+				Set.insert(v[j].nd.st);
+			else
+				Set.erase(Set.find(v[j].nd.st));	
+		}
+
+		last = v[i].st;
+		i = j;
+	}
+	
+	for (int i = 1; i <= n; i++) {
+		scanf("%d", a+i);
+
+		dp1[a[i]] += 0;
+		dp2[a[i]] += 0;
+	}
+
+	ll sum = 0, ssum = 0;
+	for (map<int, ll> :: iterator it = dp1.begin(); it != dp1.end(); it++) {
+		sum += it->nd;
+		it -> nd = sum;
+	}
+
+	sum = 0;
+	last = 0;
+
+	for (map<int, ll> :: iterator it = dp2.begin(); it != dp2.end(); it++) {
+		ssum += (it -> st - last) * sum;
+		sum += it -> nd;
+		it -> nd = ssum + sum;
+		last = it -> st;
+	}
+
+	for (int i = 1; i <= n; i++) {
+		printf("%lld\n", dp1[a[i]] + dp2[a[i]]);
+	}
+
+	return 0;
+}

@@ -1,0 +1,7 @@
+T=input()
+for _ in xrange(T):
+	N,i=input(),1;
+	while i<=N:
+		i*=2;
+	i/=2;
+	print	1+2*(N-i);

@@ -1,0 +1,141 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+#include <map>
+
+using namespace std;
+
+typedef pair<int,int> Pair;
+
+const int maxN= 20;
+
+string suit= "CDHS";
+string R= "23456789TJQKA";
+
+bool mark[100];
+bool rank[20], cnt[20];
+int n,m;
+string mat[maxN][maxN];
+Pair jock[3];
+vector <string> store;
+
+inline void print (Pair a1, Pair a2){
+    if (a1>a2)
+        swap (a1,a2);
+
+    char J[3][3];
+    J[1][2]= J[2][2]= 0;
+    for (int i=1;i<=2;i++) if (jock[i]!=make_pair(0,0))
+        for (int j=0;j<2;j++)
+            J[i][j]= mat[jock[i].first][jock[i].second][j];
+    
+    cout << "Solution exists." << endl;
+    if (jock[1]==make_pair(0,0) && jock[2]==make_pair(0,0))
+        printf ("There are no jokers.\n");
+
+                
+    else if (jock[1]==make_pair(0,0))
+        printf ("Replace J2 with %s.\n", J[2]);
+
+    else if (jock[2]==make_pair(0,0))
+        printf ("Replace J1 with %s.\n", J[1]);
+
+    else
+        printf ("Replace J1 with %s and J2 with %s.\n", J[1], J[2]); 
+
+    printf ("Put the first square to (%d, %d).\n", a1.first, a1.second);
+    printf ("Put the second square to (%d, %d).\n", a2.first, a2.second);
+
+    exit(0);
+}
+/****************************************/
+inline void check (){
+    vector <Pair> Q;
+
+    for (int i=1;i<=(n-2);i++)
+        for (int j=1;j<=(m-2);j++){
+            memset (cnt,0,sizeof cnt);
+            memset (rank,false,sizeof rank);
+
+            bool flag= true;
+            for (int ii=0;ii<3;ii++)
+                for (int jj=0;jj<3;jj++){
+                    string cur= mat[i+ii][j+jj];
+                    cnt[suit.find(cur[1])]= true;
+                    if (!rank[R.find(cur[0])]){
+                        rank [R.find(cur[0])]= true;
+                    }
+                    else
+                        flag= false;
+                }
+
+            if (flag || ((int)cnt[0]+cnt[1]+cnt[2]+cnt[3]==1))
+                Q.push_back (make_pair(i,j));
+        }
+
+    for (int i=0;i<(int)Q.size();i++)
+        for (int j=i+1;j<(int)Q.size();j++){
+            Pair &a1= Q[i]; Pair &a2= Q[j];
+
+            if (labs(a1.first-a2.first)>2 || labs(a1.second-a2.second)>2){
+                print(a1,a2);
+            }
+        }
+}
+/****************************************/
+inline void btrack (int id){
+    if (id==3){
+        check ();
+        return;
+    }
+
+    if (jock[id]==make_pair(0,0)){
+        btrack (id+1);
+        return;
+    }
+
+    for (int i=0;i<(int)store.size();i++) if (!mark[i]){
+        mat[jock[id].first][jock[id].second]= store[i];
+        mark[i]= true;
+        btrack (id+1);
+        mark[i]= false;
+    }
+}
+/***************************************/
+int main(){
+    cin >> n >> m;
+    
+    jock[1]= make_pair(0,0); jock[2]= make_pair(0,0);
+
+    for (int i=0;i<(int)R.size();i++)
+        for (int j=0;j<(int)suit.size();j++){
+            string tmp;
+            tmp= R[i];
+            tmp+= suit[j];
+            store.push_back (tmp);
+        }
+
+    sort (store.begin(), store.end());
+
+    for (int i=1;i<=n;i++){
+        for (int j=1;j<=m;j++){
+            cin >> mat[i][j];
+            if (mat[i][j]=="J1"){
+                jock[1]= make_pair(i,j);
+            }
+            else if (mat[i][j]=="J2"){
+                jock[2]= make_pair(i,j);
+            }
+            else
+                mark[lower_bound(store.begin(), store.end(), mat[i][j])-store.begin()]= true;
+        }
+    }
+
+    btrack (1);
+
+    printf ("No solution.\n");
+    
+    return 0;
+}

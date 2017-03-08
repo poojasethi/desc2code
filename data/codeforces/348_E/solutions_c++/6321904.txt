@@ -1,0 +1,130 @@
+//In the name of God
+#include <iostream>
+#include <vector>
+using namespace std;
+const int N = 1e5 + 5, lg = 20, oo = 1e9;
+struct path {
+	int first, len, end;
+	bool operator<(path p) { return len < p.len; }
+} d1[N], d2[N];
+
+int n, m, par[N][lg], h[N], ans[N];
+bool mons[N];
+vector<int> adj[N], ew[N];
+
+void upd(path &p1, path &p2, path p) {
+	if (p1 < p)
+		p2 = p1, p1 = p;
+	else if (p2 < p)
+		p2 = p;
+}
+int LCA(int v, int u) {
+	if (h[v] > h[u])
+		swap(u, v);
+	for (int i = lg - 1; i >= 0; i--)
+		if (h[u] - h[v] >= 1 << i)
+			u = par[u][i];
+	for (int i = lg - 1; i >= 0; i--)
+		if (par[v][i] != par[u][i])
+			v = par[v][i], u = par[u][i];
+	return u == v? v: par[v][0];
+}
+void add(int u, int v) {
+	int w = LCA(u, v);
+	ans[u]++, ans[v]++, ans[w]--;
+	if (w)
+		ans[par[w][0]]--;
+}
+path dfs1(int v) {
+	for (int i = 1; i < lg; i++)
+		par[v][i] = par[par[v][i - 1]][i - 1];
+	d1[v].len = d2[v].len = -oo;
+	if (mons[v])
+		d1[v].len = 0, d1[v].end = v;
+	for (int i = 0; i < adj[v].size(); i++) {
+		int u = adj[v][i];
+		if (par[v][0] != u) {
+			par[u][0] = v;
+			h[u] = h[v] + 1;
+			path tmp = dfs1(u);
+			tmp.first = u, tmp.len += ew[v][i];
+			upd(d1[v], d2[v], tmp);
+		}
+		else {
+			swap(adj[v][i], adj[v].back());
+			adj[v].pop_back();
+			swap(ew[v][i], ew[v].back());
+			ew[v].pop_back();
+			i--;
+		}
+	}
+	path res = d1[v];
+	if (d1[v].len == d2[v].len)
+		res.end = v;
+	return res;
+}
+void dfs2(int v, path up) {
+	path p1 = up, p2 = up;
+	if (up < d1[v])
+		p1 = d1[v];
+	if (up.len == d1[v].len)
+		p1.end = v;
+	if (up < d2[v])
+		p2 = d2[v];
+	if (up.len == d2[v].len)
+		p2.end = v;
+	if (mons[v])
+		add(v, p1.end);
+	for (int i = 0; i < adj[v].size(); i++) {
+		int u = adj[v][i], w = ew[v][i];
+		if (u == d1[v].first) {
+			p2.len += w;
+			dfs2(u, p2);
+			p2.len -= w;
+		}
+		else {
+			p1.len += w;
+			dfs2(u, p1);
+			p1.len -= w;
+		}
+	}
+}
+void dfs3(int v) {
+	for (int i = 0; i < adj[v].size(); i++)
+		dfs3(adj[v][i]), ans[v] += ans[adj[v][i]];
+}
+int main() {
+	ios_base::sync_with_stdio(false);
+	cin >> n >> m;
+	for (int i = 0, v; i < m; i++)
+		cin >> v, mons[v - 1] = true;
+	for (int i = 0; i < n - 1; i++) {
+		int u, v, w;
+		cin >> u >> v >> w;
+		u--, v--;
+		adj[v].push_back(u);
+		ew[v].push_back(w);
+		adj[u].push_back(v);
+		ew[u].push_back(w);
+	}
+	dfs1(0);
+//	for (int i = 0; i < n; i++)
+//		cerr << '(' << d1[i].len << ' ' << d1[i].end + 1 << ' ' << d1[i].first + 1 << ") (" << d2[i].len << ' ' << d2[i].end+1 << ' ' << d2[i].first+1 << ")\n";
+	path up;
+	up.first = up.len = up.end = -oo;
+	dfs2(0, up);
+	dfs3(0);
+	int mx = -1, cnt = 0;
+	for (int i = 0; i < n; i++)
+		if (!mons[i])
+			if (ans[i] > mx)
+				mx = ans[i], cnt = 1;
+			else if (ans[i] == mx)
+				cnt++;
+//	for (int i = 0; i < n; i++)
+//		if (!mons[i] && ans[i] == mx)
+//			cerr << i + 1 << ' ';
+//	cerr << '\n';
+	cout << mx << ' ' << cnt << '\n';
+	return 0;
+}

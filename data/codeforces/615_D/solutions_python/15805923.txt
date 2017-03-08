@@ -1,0 +1,29 @@
+# -*- coding: utf-8 -*-
+import sys,copy,math,heapq,itertools as it,fractions,re,bisect,collections as coll
+import random
+mod = 10**9+7
+
+n = int(raw_input())
+d = [0]*200001 
+p = map(int, raw_input().split())
+sp = set(p)
+
+for pi in p:
+    d[pi] += 1
+
+ls = coll.defaultdict(list)
+for pi in sp:
+    ls[d[pi]].append(pi)
+
+s = 1
+for pi in sp:
+    s *= d[pi] + 1
+
+ans = 1
+for k, ele in ls.iteritems():
+    val = 1
+    for pi in ele:
+        val = (val * pi) % mod
+    ans = (ans * pow(pow(val, s/(k + 1), mod), d[pi]*(d[pi] + 1)/2, mod)) % mod
+
+print ans

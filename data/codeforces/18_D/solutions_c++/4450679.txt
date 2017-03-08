@@ -1,0 +1,76 @@
+#include <iostream>
+#include<stdio.h>
+#include<string.h>
+#include<algorithm>
+#include<vector>
+#include<queue>
+#include<set>
+using namespace std;
+#define ll long long
+#define N 5010
+char s[10];
+int a[N],an[1000],b[N],sell[2001],v[N];
+void twice()
+{
+    int i;
+    for(i=1;i<=an[0];i++)an[i]<<=1;
+    for(i=1;i<=an[0];i++)
+    if(an[i]>9)
+    {
+        an[i+1]+=an[i]/10;
+        an[i]%=10;
+    }
+    if(an[an[0]+1])an[0]++;
+    while(an[an[0]]>9)
+    {
+        an[an[0]+1]+=an[an[0]]/10;
+        an[an[0]]%=10;an[0]+=1;
+    }
+}
+void add()
+{
+    int i;
+    an[1]++;
+    for(i=1;i<=an[0];i++)
+    if(an[i]>9)an[i+1]+=an[i]/10,an[i]%=10;
+    if(an[an[0]+1])an[0]++;
+    while(an[an[0]]>9)
+    {
+        an[an[0]+1]+=an[an[0]]/10;
+        an[an[0]]%=10;an[0]++;
+    }
+}
+int main()
+{
+   // freopen("in.txt","r",stdin);
+    int i,j,k,n,m;
+    while(~scanf("%d",&n))
+    {
+        memset(sell,0,sizeof(sell));
+        memset(an,0,sizeof(an));
+        for(i=1;i<=n;i++)
+        {
+            scanf("%s%d",s,&a[i]);
+            if(s[0]=='s')sell[a[i]]=i,b[i]=0;
+            else b[i]=1;
+        }
+        memset(v,0,sizeof(v));an[0]=1;
+        for(i=2000;i>=0;i--)
+        {
+         twice();
+         if(sell[i])
+         {
+            for(j=sell[i];j>=1;j--)
+            if(v[j])break;
+            else if(b[j]==1&&a[j]==i)break;
+            if(j>=1&&!v[j])
+            {
+                for(;j<=sell[i];j++)v[j]=1;
+                add();
+            }
+         }
+        }
+        for(i=an[0];i>=1;i--)printf("%d",an[i]);
+    }
+    return 0;
+}

@@ -1,0 +1,117 @@
+#include <cstdio>
+#include <algorithm>
+#define N 100005
+#define L (d << 1)
+#define R (L | 1)
+#define M (l + r >> 1)
+#define fi(a, b, c) for(int a = (b); a < (c); a++)
+#define FI(a, b, c) for(int a = (b); a <= (c); a++)
+#define FD(a, b, c) for(int a = (b); a >= (c); a--)
+#define fe(a, b) for(int a = (b); a; a = o[a])
+using namespace std;
+
+int n, k, q, x[N], y[N], h[N], a[N], b[N], as, bs, v[N + N], f[N], o[N + N], p, bit[N];
+int ql[N], qh[N], t[1 << 18], A[N], F[N];
+
+void upd(int d, int l, int r, int p, int a){
+	if(l == r){
+		t[d] = max(t[d], a);
+		return;
+	}
+	
+	if(p > M) upd(R, M + 1, r, p, a);
+	else upd(L, l, M, p, a);
+	t[d] = max(t[L], t[R]);
+}
+
+int query(int d, int l, int r, int a, int b){
+	if(a <= l && b >= r) return t[d];
+	int ret = -1;
+	if(a <= M && b >= l) ret = max(ret, query(L, l, M, a, b));
+	if(a <= r && b > M) ret = max(ret, query(R, M + 1, r, a, b));
+	return ret;
+}
+
+int main(){
+	scanf("%d %d", &n, &k);
+	FI(i, 1, n){
+		scanf("%d", &x[i]);
+		a[as++] = x[i];
+	}
+	FI(i, 1, n){
+		scanf("%d", &y[i]);
+		b[bs++] = y[i];
+	}
+	
+	sort(a, a + as);
+	sort(b, b + bs);
+	as = unique(a, a + as) - a;
+	bs = unique(b, b + bs) - b;
+	
+	FI(i, 1, n){
+		int t = lower_bound(a, a + as, x[i]) - a;
+		v[++p] = i;
+		o[p] = f[t];
+		f[t] = p;
+	}
+	
+	fi(i, 0, as){
+		fi(z, 0, 2) fe(j, f[i]){
+			int t = v[j];
+			
+			if(z){
+				int l = lower_bound(b, b + bs, y[t] - k) - b;
+				int g = upper_bound(b, b + bs, y[t] + k) - b;
+				
+				for(int x = g; x; x -= x & -x) h[t] += bit[x];
+				for(int x = l; x; x -= x & -x) h[t] -= bit[x];
+			}else{
+				int g = lower_bound(b, b + bs, y[t]) - b + 1;
+				for(int x = g; x <= bs + 1; x += x & -x) bit[x]++;
+			}
+		}
+	}
+	
+	scanf("%d", &q);
+	fi(i, 0, as) f[i] = 0;
+	p = 0;
+	fi(i, 0, q){
+		int r, b, c;
+		scanf("%d %d", &r, &b);
+		c = max(x[r], x[b]);
+		ql[i] = max(y[r], y[b]) - k;
+		qh[i] = min(y[r], y[b]) + k;
+		
+		c = lower_bound(a, a + as, c) - a;
+		v[++p] = i;
+		o[p] = f[c];
+		f[c] = p;
+	}
+	
+	FI(i, 1, n){
+		int t = lower_bound(a, a + as, x[i]) - a;
+		v[++p] = i;
+		o[p] = F[t];
+		F[t] = p;
+	}
+	
+	FD(i, as - 1, 0){
+		fe(j, F[i]){
+			int t = lower_bound(b, b + bs, y[v[j]]) - b;
+			upd(1, 0, bs - 1, t, h[v[j]]);
+		}
+		
+		fe(j, f[i]){
+			int l = lower_bound(b, b + bs, ql[v[j]]) - b;
+			int h = upper_bound(b, b + bs, qh[v[j]]) - b - 1;
+			if(l > h){
+				A[v[j]] = -1;
+				continue;
+			}
+			A[v[j]] = query(1, 0, bs - 1, l, h);
+			if(!A[v[j]]) A[v[j]]--;
+		}
+	}
+	
+	fi(i, 0, q) printf("%d\n", A[i]);
+}

@@ -1,0 +1,126 @@
+#define N (1<<18)
+#define LL long long
+#define INFP (1ll<<60)
+#define PLI pair<LL,int>
+#include <bits/stdc++.h>
+using namespace std;
+
+struct Edge
+{
+	int x,y,z;
+	Edge(){}
+	Edge(int x,int y,int z):x(x),y(y),z(z){}
+}edge[N],tedge[N];
+
+void dfs(int u,int fa);
+
+LL dis[N],idis[N];
+vector<int> g[N],gt[N];
+bool vis[N],valid[N],br[N];
+int n,m,s,t,x,y,z,cnt,dfn[N],low[N];
+
+void Dijkstra(int s,LL* dis,vector<int>*g,Edge* edge)
+{
+	memset(vis,0,sizeof(vis));
+	for(int i=1;i<=n;i++)
+		dis[i]=INFP;
+
+	priority_queue<PLI,vector<PLI>,greater<PLI> > q;
+	q.push(PLI(0,s)),dis[s]=0;
+
+	for(;!q.empty();q.pop())
+	{
+		int u=q.top().second;
+
+		if(vis[u]) continue; vis[u]=1;
+		for(int i=0;i<g[u].size();i++)
+		{
+			int id=g[u][i];
+			int v=edge[id].y,w=edge[id].z;
+
+			if(dis[v]>dis[u]+w)
+			{
+				dis[v]=dis[u]+w;
+				q.push(PLI(dis[v],v));
+			}
+		}
+	}
+
+}
+
+void GetPath()
+{
+	memset(vis,0,sizeof(vis));
+	queue<int> q; q.push(t),vis[t]=1;
+
+	for(;!q.empty();q.pop())
+	{
+		int u=q.front();
+		for(int i=0;i<gt[u].size();i++)
+		{
+			int id=gt[u][i],v=tedge[id].y,w=tedge[id].z;
+			if(dis[u]==dis[v]+w)
+			{
+				valid[id]=1;
+				if(!vis[v])
+					q.push(v),vis[v]=1;
+			}
+		}
+	}
+}
+
+void solve(int u,int id,int fa,Edge* edge)
+{
+	if(!valid[id] || id==fa)
+		return;
+	int v=edge[id].y;
+	if(!dfn[v])
+	{
+		dfs(v,id);
+		low[u]=min(low[u],low[v]);
+		if(low[v]>dfn[u])
+			br[id]=1;
+	}
+	else
+		low[u]=min(low[u],dfn[v]);
+}
+
+void dfs(int u,int fa)
+{
+	dfn[u]=low[u]=++cnt;
+	for(int i=0;i<g[u].size();i++)
+		solve(u,g[u][i],fa,edge);
+
+	for(int i=0;i<gt[u].size();i++)
+		solve(u,gt[u][i],fa,tedge);
+}
+
+int main()
+{
+	cin>>n>>m>>s>>t;
+	for(int i=0;i<m;i++)
+		scanf("%d%d%d",&x,&y,&z),
+		g[x].push_back(i),gt[y].push_back(i),edge[i]=Edge(x,y,z),tedge[i]=Edge(y,x,z);
+
+	Dijkstra(s,dis,g,edge),Dijkstra(t,idis,gt,tedge),GetPath(),dfs(s,-1);
+
+	for(int i=0;i<m;i++)
+		if(br[i]) puts("YES");
+		else if(valid[i])
+		{
+			if(edge[i].z>1)
+				puts("CAN 1");
+			else
+				puts("NO");
+		}
+		else
+		{
+			int u=edge[i].x,v=edge[i].y,w=edge[i].z;
+			LL z=dis[u]+idis[v]+w-dis[t]+1;
+			if(z<w)
+				printf("CAN %I64d\n",z);
+			else
+				puts("NO");
+		}
+	return 0;
+}

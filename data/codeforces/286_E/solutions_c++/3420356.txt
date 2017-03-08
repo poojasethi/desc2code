@@ -1,0 +1,72 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <complex>
+#include <cmath>
+#define FOR(i,s,e) for (int i=(s); i<(e); i++)
+#define FOE(i,s,e) for (int i=(s); i<=(e); i++)
+#define N 3000005
+using namespace std;
+
+typedef complex<double> Complex;
+
+int n, m, x, fail, cnt;
+int c[N], p[N];
+double r[N];
+
+void FFT(int n, Complex a[], Complex r[], int dir){
+	Complex I(0, 1), w, x;
+	double t = 2 * acos(-1) / n * dir;
+	for (int i=0; i<n; i++) r[i] = a[i];
+
+	for (int m=n; m>=2; m>>=1, t*=2){
+		int h = m >> 1;
+		for (int i=0; i<h; i++){
+			w = exp(i * t * I);
+			for (int j=i; j<n; j+=m){
+				x = r[j] - r[j + h];
+				r[j] += r[j + h];
+				r[j + h] = w * x;
+			}
+		}
+	}
+
+	for (int j=1, i=0; j<n-1; j++){
+		for (int k=n>>1; k>(i^=k); k>>=1);
+		if (j < i) swap(r[i], r[j]);
+	}
+	if (dir < 0) for (int i=0; i<n; i++) r[i] /= n;
+}
+
+Complex P[N], Rt[N], R[N];
+
+void PolyMul(int n, int p[], double r[]){
+	int l = 1;
+	while (l < n) l <<= 1;
+	l <<= 1;
+	for (int i=0; i<l; i++) P[i] = Complex(p[i], 0);
+	FFT(l, P, Rt, 1);
+	for (int i=0; i<l; i++) Rt[i] = Rt[i] * Rt[i];
+	FFT(l, Rt, R, -1);
+	for (int i=0; i<l; i++) r[i] = real(R[i]);
+}
+
+int main(){
+	scanf("%d%d", &n, &m);
+	FOR(i,0,n) scanf("%d", &x), p[x] = 1;
+	p[0] = 1;
+	PolyMul(m+1, p, r);
+	
+	FOE(i,1,m){
+		if (r[i] >= 1e-8 && !p[i]) fail = 1;
+		if (fabs(r[i] - 2) <= 1e-8) c[i] = 1, ++cnt;
+	}
+	
+	if (fail) puts("NO");
+	else{
+		puts("YES");
+		printf("%d\n", cnt);
+		FOE(i,1,m) if (c[i]) printf("%d ", i);
+	}
+	return 0;
+}

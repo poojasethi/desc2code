@@ -1,0 +1,197 @@
+#include <cmath>
+#include <map>
+#include <vector>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <set>
+#include <bitset>
+#include <memory.h>
+#include <functional>
+#include <queue>
+#include <fstream>
+#include <ctime>
+#include <deque>
+#include <utility>
+#include <stack>
+#include <sstream>
+#include <list>
+#include <cctype> 
+#include <numeric> 
+#include <iomanip>
+#include <assert.h>
+using namespace std;
+#define sqr(_) ((_)*(_))
+
+typedef pair<int, int> Pii;
+#define x first
+#define y second
+#define mp make_pair
+#define pb push_back
+#define ls (x << 1)
+#define rs ((x << 1) | 1)
+#define tl t[x].l
+#define tr t[x].r
+#define mid ((tl + tr) >> 1)
+
+typedef long long LL;
+
+const int MAXN = 2 * 100000 + 10, MAXL = 19;
+
+struct seg_tree
+{
+	int l, r, p;
+	vector<Pii> v;
+}t1[MAXN * 8], t2[MAXN * 8];
+vector<int> e[MAXN];
+vector<Pii> v[MAXN * 2];
+int n, fa[MAXN][MAXL], f1[MAXN][MAXL], f2[MAXN][MAXL], p1[MAXN], p2[MAXN], dep1[MAXN], dep2[MAXN], L1[MAXN], R1[MAXN], L2[MAXN], R2[MAXN];
+bool del1[MAXN], del2[MAXN];
+
+int idx;
+void DFS(int x, int *L, int *R, int *dep)
+{
+	L[x] = ++idx;
+	for (int i = 0; i < (int)e[x].size(); ++i)
+		if (e[x][i] != fa[x][0])
+		{
+			int y = e[x][i];
+			fa[y][0] = x,
+			dep[y] = dep[x] + 1;
+			for (int j = 1; j < MAXL; ++j)
+				fa[y][j] = fa[fa[y][j - 1]][j - 1];
+			DFS(y, L, R, dep);
+		}
+	R[x] = ++idx;
+}
+void Init(int *p, int *dep, int *L, int *R, int f[][MAXL])
+{
+	idx = 0;
+	dep[1] = 1;
+	for (int i = 1; i <= n; ++i)
+		e[i].clear(), fa[i][0] = 0;
+	for (int i = 2; i <= n; ++i)
+		scanf("%d", &p[i]),
+		e[i].pb(p[i]), e[p[i]].pb(i);
+	
+	DFS(1, L, R, dep);
+	
+	memcpy(f, fa, sizeof(fa));
+}
+void Build(seg_tree *t, int x, int l, int r)
+{
+	tl = l, tr = r;
+	t[x].p = 0;
+	if (l == r) 
+	{
+		sort(v[l].begin(), v[l].end());
+		t[x].v = v[l];
+		return ;
+	}
+	Build(t, ls, l, mid), Build(t, rs, mid + 1, r);
+	t[x].v.resize(t[ls].v.size() + t[rs].v.size());
+	merge(t[ls].v.begin(), t[ls].v.end(), t[rs].v.begin(), t[rs].v.end(), t[x].v.begin());
+}
+int LCA(int x, int y, int *dep, int f[][MAXL])
+{
+	if (dep[x] > dep[y]) swap(x, y);
+	for (int j = MAXL - 1; j >= 0; --j)
+		if (dep[f[y][j]] >= dep[x])
+			y = f[y][j];
+	if (x == y) return x;
+	for (int j = MAXL - 1; j >= 0; --j)
+		if (f[x][j] != f[y][j])
+			x = f[x][j], y = f[y][j];
+	return f[x][0];
+}
+void Work(seg_tree *t, int *L, int *dep, int f[][MAXL], int *p1)
+{
+	for (int i = 1; i <= n * 2; ++i)
+		v[i].clear();
+	for (int i = 2; i <= n; ++i)
+	{
+		int x = i, y = p1[i];
+		int lca = LCA(x, y, dep, f);
+		v[L[x]].pb(mp(dep[lca], i - 1));
+		v[L[y]].pb(mp(dep[lca], i - 1));
+	}
+	Build(t, 1, 1, idx);
+}
+void init()
+{
+	scanf("%d", &n);
+	Init(p1, dep1, L1, R1, f1);
+	Init(p2, dep2, L2, R2, f2);
+	
+	Work(t1, L1, dep1, f1, p2);
+	Work(t2, L2, dep2, f2, p1);
+}
+vector<int> d, D;
+void Del(seg_tree *t, int x, int l, int r, int d, bool *del)
+{
+	if (tl == l && tr == r)
+	{
+		int &p = t[x].p;
+		vector<Pii> &v = t[x].v;
+//		cout << l << " " << r << " " << v.size() << " " << p << endl;
+		while (p < (int)v.size() && v[p].x <= d)
+		{
+			if (!del[v[p].y])
+				del[v[p].y] = true, D.pb(v[p].y);
+			++p;
+		}
+//		cout << p << endl;
+		return ;
+	}
+	if (r <= mid)
+		Del(t, ls, l, r, d, del);
+	else
+	if (l > mid)
+		Del(t, rs, l, r, d, del);
+	else
+	Del(t, ls, l, mid, d, del), Del(t, rs, mid + 1, r, d, del);
+}
+void solve(seg_tree *t, int *p ,int *dep, int *L, int *R, bool *del1)
+{
+	sort(d.begin(), d.end());
+	for (int i = 0; i < (int)d.size(); ++i)
+	{
+		printf("%d ", d[i]);
+		int x = d[i] + 1, y = p[d[i] + 1];
+		if (dep[x] > dep[y]) swap(x, y);
+//		cout << x << " " << y << endl;
+		Del(t, 1, L[y], R[y], dep[x], del1);
+	}
+	puts("");
+	d = D;
+	D.clear();
+}
+void solve()
+{
+	int idx;
+	scanf("%d", &idx);
+	d.pb(idx);
+	del1[idx] = true;
+	for (int i = 1; d.size(); ++i)
+		if (i & 1)
+			puts("Blue"),
+			solve(t1, p1, dep1, L1, R1, del2);
+		else
+		puts("Red"),
+		solve(t2, p2, dep2, L2, R2, del1);
+}
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt", "r", stdin), freopen("output.txt", "w", stdout);
+#endif
+	
+	init();
+	solve();
+	
+	fclose(stdin);
+	fclose(stdout);
+	return 0;
+}

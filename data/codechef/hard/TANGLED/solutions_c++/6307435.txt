@@ -1,0 +1,233 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <deque>
+#include <queue>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <cctype>
+#include <string>
+#include <cstring>
+#include <ctime>
+#include "string.h"
+#include "cassert"
+using namespace std;
+typedef long long int64;
+typedef unsigned long long uint64;
+#define two(X) (1<<(X))
+#define twoL(X) (((int64)(1))<<(X))
+#define contain(S,X) (((S)&two(X))!=0)
+#define containL(S,X) (((S)&twoL(X))!=0)
+const double pi=acos(-1.0);
+const double eps=1e-11;
+template<class T> inline void checkmin(T &a,T b){if(b<a) a=b;}
+template<class T> inline void checkmax(T &a,T b){if(b>a) a=b;}
+template<class T> inline T sqr(T x){return x*x;}
+typedef pair<int,int> ipair;
+#define SIZE(A) ((int)A.size())
+#define LENGTH(A) ((int)A.length())
+#define MP(A,B) make_pair(A,B)
+#define PB(X) push_back(X)
+typedef const int ci;
+typedef const unsigned int cui;
+typedef unsigned int ui;
+inline bool leq(cui a1, cui a2, cui b1, cui b2)
+{
+    return (a1==b1? a2<=b2: a1<b1);
+}
+inline bool leq(cui a1, cui a2, cui a3, cui b1, cui b2, cui b3)
+{
+    return (a1==b1? leq(a2,a3,b2,b3): a1<b1); 
+}
+void RadixPass(ui *a, ui *b, ui *r, cui n, cui K) 
+{
+    ui* cnt=new ui[K+1];
+    memset(cnt,0,(K+1)*sizeof(ui));
+    for (ui i=n;i--;) cnt[r[a[i]]]++;
+    for (ui i=1;i<=K;i++) cnt[i]+=cnt[i-1];
+    for (ui i=n;i--;) b[--cnt[r[a[i]]]]=a[i];
+    delete[] cnt;
+}
+void GetSuffixArray(ui *s, ui *SA, cui n, cui K, ui* srtd) // sorted by s
+{
+    if (n<=8)
+    {
+        bool c[8][8];
+        for (ui i=n;i--;) for (ui j=i+1;j<n;j++)
+        {
+            if (s[i]==s[j]) c[i][j]=(j+1<n && c[i+1][j+1]);
+            else c[i][j]=(s[i]<s[j]);
+            c[j][i]=!c[i][j];
+        }
+        for (int i=n;i--;) SA[i]=i;
+        for (ui i=0;i<n;i++) for (ui j=i+1;j<n;j++) if (c[SA[j]][SA[i]]) swap(SA[i],SA[j]);
+        return;
+    }
+    cui n0=(n+2)/3,n1=(n+1)/3,n2=n/3,n02=n0+n2;
+    ui *s12=new ui[n02+3];
+    s12[n02]=s12[n02+1]=s12[n02+2]=0; 
+    ui *SA12=new ui[n02+3];
+    SA12[n02]=SA12[n02+1]=SA12[n02+2]=0;
+    ui *s0=new ui[n0];
+    ui *SA0=new ui[n0];
+    {
+        ui j=0;
+        if(n0!=n1)SA12[j++]=n;
+        if((n-1)%3)SA12[j++]=n-1;
+        if((n-2)%3)SA12[j++]=n-2;
+        for(ui i=0;i<n;i++)
+            if(srtd[i]>1 and srtd[i]%3!=2) SA12[j++]=srtd[i]-2;
+    }
+    //SA12 is indices sorted by s[i+2]
+    RadixPass(SA12,s12,s+1,n02,K);  
+    RadixPass(s12,SA12,s,n02,K);
+    ui name=0,c0=-1,c1=-1,c2=-1;
+    for (ui i=0,j=0;i<n02;i++)
+    {
+        if (s[SA12[i]]!=c0 || s[SA12[i]+1]!=c1 || s[SA12[i]+2]!=c2)
+            name++,c0=s[SA12[i]],c1=s[SA12[i]+1],c2=s[SA12[i]+2];
+        if (SA12[i]%3==1)
+            s12[SA[j++]=SA12[i]/3]=name;
+        else 
+            s12[SA[j++]=SA12[i]/3+n0]=name;
+    }
+    if (name<n02)
+    {
+        GetSuffixArray(s12,SA12,n02,name,SA);
+        for (ui i=n02;i--;) s12[SA12[i]]=i+1;
+    }
+    else
+        for (ui i=n02;i--;) SA12[s12[i]-1]=i;
+    for (ui i=0,j=0;i<n02;i++) if (SA12[i]<n0) s0[j++]=3*SA12[i];
+    RadixPass(s0,SA0,s,n0,K);
+    ui p=0,t=n0-n1,k=0,i,j;
+    i=(SA12[t]<n0?SA12[t]*3+1:(SA12[t]-n0)*3+2);
+    j=SA0[p];
+    for (;k<n;k++)
+    {
+        if (SA12[t]<n0?leq(s[i],s12[SA12[t]+n0],s[j],s12[j/3]):
+                leq(s[i],s[i+1],s12[SA12[t]-n0+1],s[j],s[j+1],s12[j/3+n0]))
+        {
+            SA[k]=i;
+            if ((++t)==n02) for (k++;p<n0;p++,k++) SA[k]=SA0[p];
+            else i=(SA12[t]<n0?SA12[t]*3+1:(SA12[t]-n0)*3+2);
+        }
+        else
+        { 
+            SA[k]=j;
+            if ((++p)==n0) for (k++;t<n02;t++,k++) SA[k]=(SA12[t]<n0?SA12[t]*3+1:(SA12[t]-n0)*3+2); 
+            else j=SA0[p];
+        }
+    }
+    delete[] s12;
+    delete[] SA12;
+    delete[] s0;
+    delete[] SA0;
+}
+void SuffixArray(cui n,const char *s, ui *SA, ui *Rank)
+{
+    ui *A=new ui[n+3];
+    for (ui i=0;i<n;i++) A[i]=s[i];
+    A[n]=A[n+1]=A[n+2]=0;
+    ui* cnt=new ui[256];
+    memset(cnt,0,256*sizeof(ui));
+    for (ui i=n;i--;) cnt[A[i]]++;
+    for (ui i=1;i<256;i++) cnt[i]+=cnt[i-1];
+    for (ui i=n;i--;) Rank[--cnt[A[i]]]=i;
+    delete[] cnt;
+    GetSuffixArray(A,SA,n,256, Rank);
+    for (ui i=n;i--;) Rank[SA[i]]=i;
+}
+void PrepareD(char *s,ui *SA,ui *Rank, ui *D,ui n)
+{
+    for (ui k=0,i=0;i<n;i++)
+        if (Rank[i]==n-1)
+            D[n-1]=k=0;
+        else
+        {
+            if (k>0) k--;
+            ui t=SA[Rank[i]+1];
+            for (;i+k<n && i+k<n && s[i+k]==s[t+k];k++);
+            D[Rank[i]]=k;
+        }
+}
+ 
+const int maxn=1<<20;
+ 
+int l1,l2,L;
+char s[maxn];
+ui sa[maxn],rank[maxn],d[maxn];
+int father[maxn],c1[maxn],c2[maxn];
+int first[maxn],next[maxn];
+int64 r[maxn];
+ 
+void write(int64 n)
+{
+    if (n>=10) write(n/10);
+    printf("%d",(int)(n%10));
+}
+int getfather(int p)
+{
+    int r=p;
+    for (;father[r]>=0;r=father[r]);
+    for (int t=father[p];t>=0;father[p]=r,p=t,t=father[p]);
+    return r;
+}
+int main()
+{
+#ifdef _MSC_VER
+    freopen("input.txt","r",stdin);
+#endif
+    int testcase;
+    for (scanf("%d",&testcase);testcase>0;testcase--)
+    {
+        scanf("%s",s);
+        l1=strlen(s);
+        s[l1]='z'+1;
+        scanf("%s",s+l1+1);
+        l2=strlen(s+l1+1);
+        scanf("%d",&L);
+        int n=l1+l2+1;
+        SuffixArray(n,s,sa,rank);
+        PrepareD(s,sa,rank,d,n);
+        for (int i=0;i<n;i++) father[i]=-1,c1[i]=0,c2[i]=0;
+        for (int i=0;i<l1;i++) c1[rank[i]]=1;
+        for (int i=0;i<l2;i++) c2[rank[l1+1+i]]=1;
+        int64 ret=0;
+        for (int i=0;i<=n;i++) first[i]=-1;
+        for (int i=0;i<n-1;i++) next[i]=first[d[i]],first[d[i]]=i;
+        for (int i=n;i>0;i--)
+        {
+            for (int k=first[i];k>=0;k=next[k])
+            {
+                int p1=getfather(k);
+                int p2=getfather(k+1);
+                father[p2]=p1;
+                ret-=(int64)c1[p1]*c2[p1]+(int64)c1[p2]*c2[p2];
+                c1[p1]+=c1[p2];
+                c2[p1]+=c2[p2];
+                ret+=(int64)c1[p1]*c2[p1];
+            }
+            r[i]=ret;
+        }
+        for (int i=1;i<=L;i++)
+        {
+            if (i>1) printf(" ");
+            write((i>n)?0:r[i]);
+        }
+        printf("\n");
+    }
+    return 0;
+}
+ 

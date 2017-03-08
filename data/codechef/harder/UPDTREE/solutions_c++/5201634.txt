@@ -1,0 +1,173 @@
+#include <iostream>
+#include <vector>
+#include <cstdio>
+using namespace std;
+
+vector<int> g[100005];
+
+int p[100005][20];
+int T[100005];
+int L[100005];
+long long d[100005];
+long long upd[100005];
+
+void inline compute_parent(int x){
+        p[x][0] = T[x];
+
+        for(int i = 1; i <= 20; i++){
+                if (!p[x][i-1]) break;
+                p[x][i] = p[p[x][i-1]][i-1];
+        }
+        return;
+}
+
+int inline lca(int x, int y){
+        if (L[x] < L[y]) swap(x,y);
+        
+        int log;
+        for(log = 1; (1 << log) <= L[x]; log++);
+        log--;
+
+        for(int i = log; i >= 0; i--){
+                if (L[x] - (1 << i) >= L[y])
+                        x = p[x][i];
+        }
+
+        if (x == y) return x;
+        
+        
+        for(int i = log; i >= 0; i--){
+                if (p[x][i] != 0 && p[x][i]  != p[y][i])
+                        x = p[x][i] , y = p[y][i];
+        }
+
+        return T[x];
+}
+
+
+void  dfs(int x, int level, int parent){
+        T[x] = parent;
+        L[x] = level;
+        for(int i = 0; i < g[x].size(); i++){
+                if (g[x][i] == parent) continue;
+                else dfs(g[x][i], level+1, x);
+        }
+        return;
+}
+
+void  dfs_parent(int x, int parent){
+        compute_parent(x);
+        for(int i = 0; i  < g[x].size(); i++)
+                if (g[x][i] == parent) continue;
+                else dfs_parent(g[x][i], x);
+        return;
+}
+
+int  compute_depths(int x, int parent){
+
+        int sm = 0;
+        for(int i = 0; i < g[x].size(); i++)
+                if (g[x][i] == parent) continue;
+                else sm += compute_depths(g[x][i], x);
+
+        upd[x] = sm + upd[x];
+        return upd[x];
+}
+
+void final_depths(int x, int parent, long long level){
+        d[x] = level + upd[x];
+        for(int i = 0; i < g[x].size(); i++)
+                if (g[x][i] == parent) continue;
+                else final_depths(g[x][i], x, d[x]);
+        return;
+}
+                                               
+        
+int is_ancestor(int x, int y){
+        int lc = lca(x,y);
+        if (lc == x) return 1;
+        else return 0;
+}
+
+void path_intersection(int a, int b, int u,  int v){
+        // compute path intersection between paths a--->b and u--->v
+        // the paths are straight tree paths follwing parent pointers
+
+        if (!is_ancestor(v,a)) return;
+
+        int x = lca(a,u);
+        if( L[b] > L[v] ){
+                if (is_ancestor(b,x)){
+                        upd[x] -= 1;
+                        upd[b] += 1;
+                }
+        }
+        else{
+                if (is_ancestor(v,x)){
+                        upd[x] -= 1;
+                        upd[v] += 1;
+                }
+        }
+
+        return;
+}
+                
+        
+
+        
+
+int main(){
+      
+        int n, m1, m2;
+        scanf("%d %d %d", &n, &m1, &m2);
+        for(int i = 1; i < n; i++){
+                int u,v;
+                scanf("%d %d", &u, &v);
+                g[u].push_back(v);
+                g[v].push_back(u);
+        }
+        dfs(1,1,0);
+        dfs_parent(1,0);
+        while (m1--){
+                int a, b, c, d;
+                scanf("%d %d %d %d", &a, &b, &c, &d);
+                int x = lca(a,b);
+                int y = lca(c,d);
+              
+                upd[x] -= 2, upd[a] += 1, upd[b] += 1;
+
+                path_intersection(a,x,c,y);
+                path_intersection(a,x,d,y);
+                path_intersection(b,x,c,y);
+                path_intersection(b,x,d,y);
+                
+        }
+                
+                
+                        
+
+        
+
+        compute_depths(1, 0);
+        final_depths(1, 0, 0);
+        
+        while (m2--){
+                int e,f;
+                scanf("%d %d", &e, &f);
+
+                int x = lca(e,f);
+
+                long long res = d[e] + d[f] - 2*d[x];
+                printf("%lld\n", res);
+        }
+        return 0;
+}
+        
+                
+                
+                
+                                           
+                
+        
+        
+        

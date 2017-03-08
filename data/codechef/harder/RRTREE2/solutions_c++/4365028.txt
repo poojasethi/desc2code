@@ -1,0 +1,135 @@
+#include <cstdio>
+#include <cmath>
+#include <iostream>
+#include <set>
+#include <algorithm>
+#include <vector>
+#include <map>
+#include <cassert>
+#include <string>
+#include <cstring>
+
+using namespace std;
+
+#define rep(i,a,b) for(int i = a; i < b; i++)
+#define S(x) scanf("%d",&x)
+#define P(x) printf("%d\n",x)
+
+typedef long long int LL;
+const int N = 501;
+const int SM = 100002;
+
+int sums[N][SM];
+vector<int > g[N];
+int W[N];
+int WW[N];
+int Y[N];
+int idx = 0;
+int tot;
+int tmpsum[4][SM];
+
+int mods[4] = {1231247, 125124799, 125154299, 185398519};
+
+void dfs(int u) {
+	// P(u);
+
+	int p;
+	vector<int > tmp;
+	rep(i,0,g[u].size()) {
+		// P(i);
+		if(g[u][i] < u) p = g[u][i];
+		else {
+			tmp.push_back(g[u][i]);
+		}
+	}
+	int pidx = Y[u];
+
+	if(tmp.size()) {
+		rep(i,0,tot+1) rep(k,0,3) tmpsum[k][i] = 0;
+
+		rep(i,0,tmp.size()) rep(k,0,3) {
+			int mod = mods[k];
+			for(int j = tot; j >= 0; j--) if(sums[pidx][j] || tmpsum[k][j]) {
+				tmpsum[k][j+WW[tmp[i]]] += sums[pidx][j] + tmpsum[k][j];
+				tmpsum[k][j] %= mod;
+			}
+		}
+
+		rep(i,0,tmp.size()) rep(k,0,3){
+			int mod = mods[k];
+			rep(j,WW[tmp[i]], tot+1) if(tmpsum[k][j] && (tmpsum[k][j-WW[tmp[i]]] || sums[pidx][j-WW[tmp[i]]])) {
+				tmpsum[k][j] -= sums[pidx][j-WW[tmp[i]]];
+				tmpsum[k][j] -= tmpsum[k][j-WW[tmp[i]]];
+				while(tmpsum[k][j] < 0)
+					tmpsum[k][j] += mod;
+			}
+			rep(j,0,tot+1) if(tmpsum[k][j] || sums[pidx][j]) sums[idx][j+W[tmp[i]]] = 1;
+
+			for(int j = tot; j >= 0; j--) if(sums[pidx][j] || tmpsum[k][j]) {
+				tmpsum[k][j+WW[tmp[i]]] += sums[pidx][j] + tmpsum[k][j];
+				tmpsum[k][j] %= mod;
+			}
+			Y[tmp[i]] = idx;
+			if(k == 2) idx++;
+
+		}
+
+
+
+		rep(i,0,g[u].size()) {
+			if(g[u][i] > u) {
+				dfs(g[u][i]);
+			}
+		}
+
+	}
+
+}
+
+int dfs1(int u) {
+
+	rep(i,0,g[u].size()) if(g[u][i] > u) {
+		WW[u] += dfs1(g[u][i]);
+	}
+
+	return WW[u];
+
+}
+
+int main() {
+	int n;
+	S(n);
+	rep(i,1,n+1) {
+		S(W[i]);
+		WW[i] = W[i];
+		tot += W[i];
+	}
+
+	rep(i,1,n) {
+		int x;
+		S(x);
+		g[x].push_back(i+1);
+		g[i+1].push_back(x);
+	}
+
+	dfs1(1);
+
+	sums[0][W[1]] = 1;
+	Y[1] = 0;
+	idx++;
+	dfs(1);
+
+	// rep(i,0,idx) {
+	// 	rep(j,0,tot+1) printf("%d ",sums[i][j]);
+	// 	printf("\n");
+	// }
+
+	rep(i,1,tot+1) {
+		int ans = 0;
+		rep(j,0,idx) ans |= sums[j][i];
+		printf("%d",ans);
+	}
+	printf("\n");
+
+	return 0;
+}

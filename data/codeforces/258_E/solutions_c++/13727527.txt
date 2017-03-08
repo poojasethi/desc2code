@@ -1,0 +1,118 @@
+#include<bits/stdc++.h>
+
+using namespace std;
+
+#define st first
+#define nd second
+#define mp make_pair
+#define pb push_back
+#define sol (root+root)
+#define sag (root+root+1)
+#define orta ((bas+son)/2)
+#define ll long long
+#define pii pair<int,int>
+
+const int N=1e5+5;
+const int mod=1e9+7;
+
+int n,m,i,x,y,tme;
+int S[N],F[N],ans[N],lazy[N<<2];
+
+pii st[N<<2];
+
+vector<int> V[N],Q[N];
+
+int f(int x,int ata){
+
+	S[x]=++tme;
+	
+	int i;
+
+	for(i=0 ; i<V[x].size() ; i++)
+		if(V[x][i]!=ata)
+			f(V[x][i],x);
+
+	F[x]=tme;
+}
+
+void push(int root,int bas,int son){
+	lazy[sol]+=lazy[root];
+	lazy[sag]+=lazy[root];
+	st[sol].st+=lazy[root];
+	st[sag].st+=lazy[root];
+	lazy[root]=0;
+}
+
+pii update(int root,int bas,int son,int x,int y,int v){
+	if(bas>y or son<x)
+		return st[root];
+	if(x<=bas and son<=y){
+		st[root].st+=v;
+		lazy[root]+=v;
+		return st[root];
+	}
+	if(lazy[root])
+		push(root,bas,son);
+	pii t1=update(sol,bas,orta,x,y,v);
+	pii t2=update(sag,orta+1,son,x,y,v);
+	if(t1.st<t2.st)
+		return st[root]=t1;
+	if(t2.st<t1.st)
+		return st[root]=t2;
+	return st[root]=mp(t1.st,t1.nd+t2.nd);
+}
+
+void solve(int x,int ata){
+	
+	int i;
+
+	for(i=0 ; i<Q[x].size() ; i++)
+		update(1,1,n,S[Q[x][i]],F[Q[x][i]],1);
+	
+	if(Q[x].size())
+		update(1,1,n,S[x],F[x],1);
+
+	ans[x]=n-st[1].nd*(st[1].st==0)-1;
+
+	for(i=0 ; i<V[x].size() ; i++)
+		if(V[x][i]!=ata)
+			solve(V[x][i],x);
+
+	for(i=0 ; i<Q[x].size() ; i++)
+		update(1,1,n,S[Q[x][i]],F[Q[x][i]],-1);
+
+	if(Q[x].size())
+		update(1,1,n,S[x],F[x],-1);
+}
+
+pii init(int root,int bas,int son){
+	if(bas==son)
+		return st[root]=mp(0,1);
+	return st[root]=mp(0,init(sol,bas,orta).nd+init(sag,orta+1,son).nd);
+}
+
+main(){
+
+	scanf("%d %d",&n,&m);
+
+	for(i=1 ; i<n ; i++){
+		scanf("%d %d",&x,&y);
+		V[x].pb(y);
+		V[y].pb(x);
+	}
+
+	f(1,-1);
+
+	init(1,1,n);
+
+	for(i=1 ; i<=m ; i++){
+		scanf("%d %d",&x,&y);
+		Q[x].pb(y);
+		Q[y].pb(x);
+	}
+
+	solve(1,-1);
+
+	for(i=1 ; i<=n ; i++)
+		printf("%d ",max(0,ans[i]));
+}

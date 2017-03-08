@@ -1,0 +1,217 @@
+#include<bits/stdc++.h>
+
+using namespace std;
+
+
+class BIT
+{
+public:
+	BIT(int n) : N(n) 
+	{ 
+		f = new int[1 + N]; 
+		vals = new int[1 + N];
+ 
+		for (int i = 0; i <= N; i++)
+			f[i] = vals[i] = 0;
+	}
+	
+	~BIT() 
+	{ 
+		delete[] f; 
+		delete[] vals;
+	}
+ 
+	void update_delta(int idx, int delta)
+	{
+		idx++;
+ 
+		vals[idx] += delta; 
+		while (idx <= N)
+		{
+			f[idx] += delta;
+			idx += (idx & -idx);
+		}
+	}
+ 
+	void update(int idx, int val)
+	{
+		idx++;
+ 
+		int x = val - vals[idx];
+		vals[idx] = val; 
+	
+		while (idx <= N)
+		{
+			f[idx] += x;
+			idx += (idx & -idx);
+		}
+	}
+	int prefix_sum(int idx)
+	{
+		idx++;
+	
+		int ans = 0;
+		while (idx > 0)
+		{
+			ans += f[idx];
+			idx -= (idx & -idx);
+		}
+ 
+		return ans;
+	}
+	int range_sum(int start, int end)
+	{
+		if (start == 0)
+			return prefix_sum(end);
+ 
+		return (prefix_sum(end) - prefix_sum(start - 1));
+	}
+ 
+private:
+	int *f;	
+	int *vals;
+	int N;
+};
+class Underwear
+{
+public:
+	Underwear(vector<pair<int, int> > &int_set)
+	{
+		vector<int> tmpl;
+		vector<int> tmpr;
+		for (int i = 0; i < int_set.size(); i++)
+		{
+			tmpl.push_back(int_set[i].first);
+			tmpr.push_back(int_set[i].second);
+		}
+ 
+		std::sort(tmpl.begin(), tmpl.end());
+		std::sort(tmpr.begin(), tmpr.end());
+ 
+		hsl.resize(4 * tmpl.size());
+		hsr.resize(4 * tmpr.size());
+ 
+		int nl = 0;
+		for (int i = 0; i < tmpl.size(); i++)
+		{
+			int x = tmpl[i];
+			if (mpl.find(x) == mpl.end())
+			{
+				hsl[x % hsl.size()].push_back(make_pair(x, nl));
+				mpl[x] = nl++;
+			}
+		}
+ 
+		beg = new BIT(nl);
+ 
+		int nr = 0;
+		for (int i = 0; i < tmpr.size(); i++)
+		{
+			int x = tmpr[i];
+			if (mpr.find(x) == mpr.end())
+			{
+				hsr[x % hsr.size()].push_back(make_pair(x, nr));
+				mpr[x] = nr++;
+			}
+		}
+		
+		end = new BIT(nr);
+	}
+ 
+	~Underwear()
+	{
+		delete beg;
+		delete end;
+	}
+ 
+	int lookupl(int x)
+	{
+		int id = x % hsl.size();
+		for (int i = 0; i < hsl[id].size(); i++)
+			if (hsl[id][i].first == x)
+				return hsl[id][i].second;
+ 
+		return -1;
+	}
+ 
+	int lookupr(int x)
+	{
+		int id = x % hsr.size();
+		for (int i = 0; i < hsr[id].size(); i++)
+			if (hsr[id][i].first == x)
+				return hsr[id][i].second;
+ 
+		return -1;
+	}
+	void add_interval(int s, int e)
+	{
+		int x = lookupl(s);int y = lookupr(e);beg->update_delta(x, 1);end->update_delta(y, 1);
+	}
+ 
+	void delete_interval(int s, int e)
+	{
+		int x = lookupl(s);int y = lookupr(e);beg->update_delta(x, -1);end->update_delta(y, -1);
+	}
+ 
+	int count(int s, int e)
+	{
+		if (mpl.empty())
+			return 0;
+ 
+		map<int, int>::iterator it1 = mpl.upper_bound(e);
+		if (it1 == mpl.begin())	
+			return 0;	
+ 
+		it1--;
+		int ans = beg->prefix_sum(it1->second);
+ 
+		map<int, int>::iterator it2 = mpr.lower_bound(s);
+		if (it2 == mpr.end())
+			return 0;
+ 
+		if (it2 == mpr.begin())
+			return ans;
+ 
+		it2--;
+		
+		ans -= end->prefix_sum(it2->second);
+		return ans;
+	}
+ 
+private:
+	map<int, int> mpl;
+	map<int, int> mpr;
+ 
+	vector<vector<pair<int, int> > > hsl;
+	vector<vector<pair<int, int> > > hsr;
+ 
+	BIT *beg;
+	BIT *end;
+};
+int main()
+{
+	int N,Q;
+	cin>>N>>Q;
+	vector< pair<int,int> > vall,vin;
+	int A[N+143],B[N+143],C1,C2;
+	for(int i=0;i<N;i++)
+	{
+       cin>>A[i]>>B[i];
+       vall.push_back(make_pair(A[i],B[i]));
+	}
+	for(int i=0;i<Q;i++){
+		cin>>C1>>C2;
+		vall.push_back(make_pair(C1,C2));
+		vin.push_back(make_pair(C1,C2));
+	}
+	Underwear it(vall);
+	for(int i=0;i<N;i++){
+		it.add_interval(A[i],B[i]);
+	}
+	int count=0;
+	for(int i=0;i<Q;i++){
+		int result=it.count(vin[i].first,vin[i].second);
+		std::cout<<result<<std::endl;
+	}
+	return 0;
+}

@@ -1,0 +1,95 @@
+#include <algorithm>
+#include <bitset>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <deque>
+#include <fstream>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <string>
+#include <utility>
+#include <vector>
+#define maxn 10005
+#define maxk 15
+using namespace std;
+
+int T,n,m,ret;
+int pre[maxn][maxk];
+int start[maxn],end[maxn],total = 0;
+int load[maxn];
+vector<int> adj[maxn];
+
+void DFS(int u) {
+  start[u] = total++;
+  for (int i = 0; i < adj[u].size(); i++) {
+    int v = adj[u][i];
+    if (pre[u][0] == v) continue;
+    pre[v][0] = u;
+    DFS(v);
+  }
+  end[u] = total++;
+}
+
+bool isParent(int u,int v) {
+  return (start[u] <= start[v] && end[v] <= end[u]);
+}
+
+int LCA(int u,int v) {
+  if (isParent(u,v)) return u;
+  for (int i = maxk - 1; i >= 0; i--)
+    if (pre[u][i] >= 0 && !isParent(pre[u][i],v)) u = pre[u][i];
+  return pre[u][0];
+}
+
+void get(int u) {
+  for (int i = 0; i < adj[u].size(); i++) {
+    int v = adj[u][i];
+    if (pre[u][0] == v) continue;
+    get(v);
+    load[u] += load[v];
+  }
+  ret = max(ret,load[u]);
+}
+
+int main() {
+  scanf("%d", &T);
+  while (T--) {
+    scanf("%d %d", &n, &m);
+    for (int i = 0; i < n; i++) adj[i].clear();
+    for (int i = 0; i + 1 < n; i++) {
+      int u,v;
+      scanf("%d %d", &u, &v);
+      adj[u].push_back(v);
+      adj[v].push_back(u);
+    }
+    total = 0;
+    memset(pre,-1,sizeof(pre));
+    DFS(0);
+
+    for (int j = 1; j < maxk; j++)
+      for (int i = 0; i < n; i++) if (pre[i][j - 1] >= 0)
+        pre[i][j] = pre[pre[i][j - 1]][j - 1];
+
+    memset(load,0,sizeof(load));
+    for (int i = 0; i < m; i++) {
+      int u,v;
+      scanf("%d %d", &u, &v);
+      int z = LCA(u,v);
+      load[u]++;
+      load[v]++;
+      load[z] -= 2;
+    }
+    ret = 0;
+    get(0);
+    printf("%d\n", ret);
+  }
+}

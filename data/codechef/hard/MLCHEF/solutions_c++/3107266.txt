@@ -1,0 +1,193 @@
+#include<stdio.h>
+#include<iostream>
+#include<vector>
+using namespace std;
+#define MAXX 100010
+#define INF 1000000000
+#define PB push_back
+#define PI pair<long int,long int>
+#define MK make_pair
+long int n,q;
+bool ans_i[MAXX] = {0};
+vector<long int> children[MAXX];
+long int stack[MAXX]={0};long int pos[MAXX]={0};long int no_child[MAXX]={0};long int tempp[MAXX]={0},health[MAXX]={0},ans[MAXX]={0};
+vector<PI> query_poison[MAXX],death_query[MAXX];
+long int BIT_poison[MAXX]={0},BIT_death[MAXX]={0};
+#define BUF 4096
+ 
+char ibuf[BUF];
+int ipt = BUF;
+ 
+int readInt() {
+while (ipt < BUF && ibuf[ipt] < '0') ipt++;
+if (ipt == BUF) {
+fread(ibuf, 1, BUF, stdin);
+ipt = 0;
+while (ipt < BUF && ibuf[ipt] < '0') ipt++;
+}
+long int n = 0;
+while (ipt < BUF && ibuf[ipt] >= '0') n = (n*10)+(ibuf[ipt++]-'0');
+if (ipt == BUF) {
+fread(ibuf, 1, BUF, stdin);
+ipt = 0;
+while (ipt < BUF && ibuf[ipt] >= '0') n = (n*10)+(ibuf[ipt++]-'0');
+}
+return n;
+}
+void DFS(int start)
+{
+	int top=0,i;
+	stack[top] = 0;
+	long int cursor=0,dd;
+	pos[0] = 0;
+	while(top>=0)
+	{
+	    dd= stack[top--];
+		pos[dd] = cursor;
+		cursor++; 
+		for( i = 0;i< children[dd].size() ; i++)
+		{
+			stack[++top] = children[dd][i];
+		}	
+	}
+	for( i =n ; i>=0 ; i--)
+	{
+		no_child[i] = 0;
+		long int j;
+		for( j = children[i].size() - 1; j>=0 ; j--)
+		no_child[i] += no_child[children[i][j]] + 1; 
+	}
+	for(i=1;i<=n;i++)
+	tempp[i] = health[i];
+	for(i=1;i<=n;i++)
+	health[pos[i]] = tempp[i];
+}
+
+void updatepoison(long int indexx,long int value)
+{
+	while(indexx<=q)
+	{
+		BIT_poison[indexx]+=value;
+		indexx+= (indexx&(-indexx));
+		
+	}
+}
+
+long int querydeath(long int indexx)
+{
+	long int sum=0;
+	while(indexx > 0)
+	{
+		sum+= BIT_death[indexx];
+		indexx-= (indexx&(-indexx));
+	}
+	return sum;
+}
+
+void updatedeath(long int indexx)
+{
+	while(indexx <= q)
+	{
+		BIT_death[indexx]++;
+		indexx += (indexx&(-indexx));
+	}
+}
+
+long int poisonsum(long int indexx)
+{
+	long int sum = 0;
+	while(indexx > 0)
+	{
+		sum+= BIT_poison[indexx];
+		indexx -= (indexx&(-indexx));
+	}
+	return sum;
+}
+
+long int getindex(long int a)
+{
+	if(poisonsum(q) < a)
+	return INF;
+	long int left = 1,right = n,mid;
+	while(left<right)
+	{
+		mid = (left+right)/2;
+		if(poisonsum(mid)>= a)
+		right = mid;
+		else
+		left = mid+1;
+	}
+	return right;
+}
+
+int main()
+{
+	//scanf("%lld",&n);
+	n = readInt();
+	long int i,temp;
+	//long int health[n];
+	for(i=1;i<=n;i++)
+	{
+		//scanf("%ld %ld",&health[i],&temp);
+		health[i] = readInt();
+		temp = readInt();
+		children[temp].PB(i);
+	}
+	
+	DFS(0);
+	
+	//scanf("%d",&q);
+	q = readInt();
+	int yy;
+	long int a,x;
+	for(i=1;i<=q;i++)
+	{
+		//scanf("%d",&yy);
+		yy = readInt();
+		if(yy == 1)
+		{
+			a = readInt();
+			x = readInt();
+		//	scanf("%ld %ld",&a,&x);
+			query_poison[pos[a]+1].PB(MK(i,x));
+			query_poison[pos[a] + no_child[a] + 1].PB(MK(i,-x));
+			
+		}
+		else
+		{
+			a = readInt();
+		//	scanf("%ld",&a);
+			death_query[pos[a]].PB(MK(i,1));
+			death_query[pos[a]+no_child[a]].PB(MK(i,2));
+			ans_i[i] = true;
+			ans[i] = no_child[a];
+		}
+		
+		
+	}
+	
+	for(i=1;i<=n;i++)
+	{
+		for(yy=0;yy< query_poison[i].size() ; yy++)
+		{
+			updatepoison(query_poison[i][yy].first,query_poison[i][yy].second);
+		}
+		updatedeath(getindex(health[i]));
+		
+		for(a=0;a< death_query[i].size(); a++ )
+		{
+			if(death_query[i][a].second == 1)
+			ans[death_query[i][a].first] += querydeath(death_query[i][a].first);
+			else
+			ans[death_query[i][a].first] -= querydeath(death_query[i][a].first);
+		}
+	}
+	
+	    for (i = 1;i <= q;i++){
+        if (ans_i[i] == true){
+            printf("%ld\n",ans[i]);
+        }
+    }
+    
+	return 0;
+}

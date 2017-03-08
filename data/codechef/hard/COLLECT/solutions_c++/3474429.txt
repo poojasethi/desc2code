@@ -1,0 +1,175 @@
+//PROBLEM : http://www.codechef.com/problems/COLLECT/
+#include<iostream>
+#include<cstdio>
+#define MOD 3046201
+#define MIN(x,y) (x<y?x:y)
+#define MAX(x,y) (x>y?x:y)
+using namespace std;
+int berry[1000000];
+int segtree[2000000][3]={0};
+int curmake;
+int depth;
+int makesegment(int nodenow,int l, int r)
+{
+
+  //  cout<<" node "<<nodenow<<" for "<<l<<" to "<<r<<" at depth "<<depth<<endl;
+    depth++;
+    if(l==r)
+    {
+        segtree[nodenow][0]=berry[l];
+        segtree[nodenow][1]=-1;
+        segtree[nodenow][2]=-1;
+
+    }
+    else
+    {
+        segtree[nodenow][1]=curmake;
+        curmake++;
+        makesegment(curmake-1,l,(l+r)/2);
+
+        segtree[nodenow][2]=curmake;
+        curmake++;
+        makesegment(curmake-1,(l+r)/2+1,r);
+        segtree[nodenow][0]=segtree[segtree[nodenow][1]][0]+segtree[segtree[nodenow][2]][0];
+
+     //   cout<<" from "<<segtree[segtree[nodenow][1]][0] <<" and "<< segtree[segtree[nodenow][2]][0];
+    }
+   //cout<<"made node "<<nodenow<<" for element "<<l<< " to "<<r<<" its value is min"<<segtree[nodenow][0]<<endl;
+    depth--;
+     return segtree[nodenow][0];
+}
+int findsum(int at,int atl,int atr,int l,int r)
+{
+    //printf("finding min in range %d %d at node %d target %d %d\n",atl,atr,at,l,r);
+    int a=0,b=0;
+    if(atl==l  &&  atr==r)
+        return segtree[at][0];
+    if((atl+atr)/2>=l)
+    a=findsum(segtree[at][1],atl,(atl+atr)/2,l,MIN(r,(atl+atr)/2));
+    if((atl+atr)/2+1<=r)
+    b=findsum(segtree[at][2],(atl+atr)/2+1,atr,MAX(l,(atl+atr)/2+1),r);
+  //  printf("for %d to %d a and b is %d %d",atl,atr,a,b);
+    return (a+b);
+}
+void makechange(int at,int atl,int atr,int change,int nodeno)
+{
+    segtree[at][0]+=change;
+    if(atl==atr && atl==nodeno)
+        return;
+    if((atl+atr)/2>=nodeno)
+    {
+        makechange(segtree[at][1],atl,(atl+atr)/2,change,nodeno);
+    }
+    else if((atl+atr)/2+1<=nodeno)
+    {
+        makechange(segtree[at][2],(atl+atr)/2+1,atr,change,nodeno);
+
+    }
+}
+long long power(long long base,long long pow)
+{
+    if(base==0)
+        return 0;
+    if(base==1 || pow==0)
+        return 1;
+    long long ans=1;
+    while(pow)
+    {
+        if(pow%2==1)
+        {
+            ans*=base;
+            ans%=MOD;
+        }
+        base*=base;
+        base%=MOD;
+        pow>>=1;
+    }
+    return ans;
+}
+long long modinv2(long long num)
+{
+    return power(num,MOD-2);
+}
+long long modinv(long long num)
+{
+    long long i=0;
+    while(i<=MOD)
+    {
+        if((num*i)%MOD==1)
+            return i;
+        i++;
+    }
+
+}
+
+
+void showsegment()
+{
+    int i=0;
+    while(i<curmake)
+    {
+        cout<<" i : "<<i<<" data "<<segtree[i][0]<<" left "<<segtree[i][1]<<" right "<<segtree[i][2]<<endl;
+        i++;
+    }
+}
+int main()
+{
+    long long *fact;
+    fact=new long long[3000010];
+    int n,i;
+    i=0;
+    fact[i]=1;
+    i++;
+    while(i<=3000010)
+    {
+        fact[i]=(fact[i-1]*i)%MOD;
+        i++;
+    }
+    i=0;
+    scanf(" %d",&n);
+    while(i<n)
+    {
+       scanf(" %d",&berry[i]);
+        i++;
+    }
+      curmake=1;
+    depth=0;
+    int q,l,r;
+    makesegment(0,0,n-1);//make segment tree of size n on the array berry[]
+   scanf(" %d",&q);
+    char s[10];
+    while(q--)
+    {
+        scanf("%s",s);
+        scanf(" %d %d",&l,&r);
+        if(s[0]=='c')
+        {
+            makechange(0,0,n-1,r-berry[l-1],l-1);//change the (l-1)th number by 2nd last arg
+            berry[l-1]=r;
+        }
+        else if(s[0]=='q')
+        {
+            int sum=findsum(0,0,n-1,l-1,r-1);//find sum from (l-1) till (r-1)
+            int div=r-l+1;
+            int ldiv=sum/div,nhd=sum%div;
+            int nld=div-nhd;
+            long long denominator=(power(fact[ldiv],div)*power(ldiv+1,nhd))%MOD;
+
+
+            long long numerator=fact[sum];
+            if(nhd!=0)
+            {
+                denominator=(denominator*fact[nld])%MOD;
+                denominator=(denominator*fact[nhd])%MOD;
+                numerator=(numerator*fact[div])%MOD;
+            }
+            long long modinvden=modinv2(denominator);
+        long long ans=(numerator*modinvden)%MOD;
+
+            printf("%lld\n",ans);
+        }
+
+    }
+    return 0;
+}
+

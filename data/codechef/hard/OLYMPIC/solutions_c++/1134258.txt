@@ -1,0 +1,158 @@
+#include <stdio.h>
+#include <math.h>
+#include <vector>
+#include <algorithm>
+#define MODD 1000000007
+#define MAXX 100001
+#define ll long long
+using namespace std;
+
+int N;
+vector<int> counts;
+
+ll fact[MAXX+10];
+ll factinv[MAXX+10];
+
+int nextchange[100010];
+
+vector<int> changes;
+vector<ll> numer;
+vector<ll> denom;
+vector<ll> numerhalf;
+vector<ll> denomhalf;
+
+vector<bool> isevens;
+
+ll modpow(ll x,ll y)
+{
+    if(y==0)
+        return 1;
+    ll xh=modpow(x,y/2);
+    xh=(xh*xh)%MODD;
+    if(y&1)
+        return (xh*x)%MODD;
+    else
+        return xh;
+}
+
+int findlowbound(ll value)
+{
+    
+    int low=0;
+    int high=changes.size()-1;
+    while(low<high)
+    {
+        int mid=(low+high+1)/2;
+        if(changes[mid]<=value)
+            low=mid;
+        else
+            high=mid-1;
+    }
+    return low;
+}
+
+int main()
+{
+    fact[0]=1;
+    for(int i=1;i<=MAXX;i++)
+    {
+        fact[i]=(fact[i-1]*i)%MODD;
+        factinv[i]=modpow(fact[i],MODD-2);
+       // printf("%lld\n",(fact[i]*factinv[i])%MODD);
+    }
+    
+    scanf("%d",&N);
+    counts.resize(N);
+    int summ=0;
+    for(int i=0;i<N;i++)
+    {
+        scanf("%d",&counts[i]);
+        summ+=counts[i];
+    }
+    
+    sort(counts.begin(),counts.end());
+    
+    for(int sz=1;sz<=MAXX;)
+    {
+        ll prodmult = 1;
+        ll proddivhalf = 1;
+        int totboxes=0;
+        bool iseven=true;
+        int numodds=0;
+        for(int k=0;k<N;k++)
+        {
+            
+            int numboxes = counts[k]/sz+(counts[k]%sz==0?0:1);
+            proddivhalf=(proddivhalf*factinv[numboxes/2])%MODD;
+            
+            totboxes+=numboxes;
+            
+            if(numboxes%2==1)
+                numodds++;
+            
+            prodmult=(prodmult*factinv[numboxes])%MODD;
+            if(numboxes==1)
+                nextchange[k]=MAXX;
+            else
+                nextchange[k]=counts[k]/(numboxes-1)+(counts[k]%(numboxes-1)==0?0:1);
+
+            
+        }
+        //printf("\n");
+        
+        int minchange = MAXX+1;
+        for(int k=0;k<N;k++)
+        {
+            minchange=min(minchange,nextchange[k]);
+        }
+        
+        // in the range sz to minchange-1, it is same
+        changes.push_back(sz);
+        denom.push_back(prodmult);
+        numer.push_back(fact[totboxes]);
+        
+        denomhalf.push_back(proddivhalf);
+        numerhalf.push_back(fact[totboxes/2]);
+        if(numodds<=1)
+        isevens.push_back(1);
+        else
+            isevens.push_back(0);
+        
+        if(minchange>=MAXX)
+            break;
+        sz=minchange;
+        //printf("sz=%d %lld\n",sz,prodmult);
+        
+    }
+    ll modinv_2 = modpow(2,MODD-2);
+    int Q;
+    scanf("%d",&Q);
+    for(int i=0;i<Q;i++)
+    {
+        ll S;
+        scanf("%lld",&S);
+        /*if(N==1)
+        {
+            printf("1\n");
+            continue;
+        }*/
+        
+   
+            int pos=findlowbound(S);
+            if(!isevens[pos])
+                printf("%lld\n",numer[pos]*denom[pos]%MODD*modinv_2%MODD);
+            else
+            {
+                ll T1 = numerhalf[pos]*denomhalf[pos]%MODD;
+                ll T2 = numer[pos]*denom[pos]%MODD;
+                ll answer=((T2-T1)%MODD*modinv_2%MODD+T1)%MODD;
+                while(answer<0)
+                    answer=(answer+MODD)%MODD;
+                printf("%lld\n",answer);
+            }
+                
+        
+    }
+    
+    
+}

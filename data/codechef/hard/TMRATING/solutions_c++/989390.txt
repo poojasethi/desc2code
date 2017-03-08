@@ -1,0 +1,171 @@
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#include <utility>
+#include <string>
+#include <fstream>
+#include <map>
+#include <set>
+#include <queue>
+#include <memory.h>
+
+using namespace std;
+
+typedef vector<int> VI;
+typedef pair<int, int> PI;
+typedef vector<PI> VPI;
+
+#define FOR(i,a,n) for (int i = (a); i < (n); ++i)
+#define FORE(i,a,n) for (int i = (a); i <= (n); ++i)
+#define FORD(i,a,b) for (int i = (a); i >= (b); --i)
+#define REP(i,n) FOR(i,0,n)
+#define REPE(i,n) FORE(i,0,n)
+#define LL long long
+#define FIR(n) REP(i,n)
+#define FJR(n) REP(j,n)
+#define ALL(v) v.begin(), v.end()
+
+#define FI FIR(n)
+#define FJ FJR(n)
+#define FR(i,a) FOR(i,a,n)
+#define REPN(i) REP(i,n)
+
+#define GI(n) scanf("%d", &n)
+#define GI2(n,m) scanf("%d %d", &n, &m)
+
+int tmp[4];
+
+struct Node {
+	Node *left, *right;
+	int r1,r2;
+
+	void update() {
+		tmp[0] = left->r1;
+		tmp[1] = left->r2;
+		tmp[2] = right->r1;
+		tmp[3] = right->r2;
+		FIR(2) FOR(j, i+1, 4) if (tmp[i] < tmp[j]) swap(tmp[i], tmp[j]);
+		r1 = tmp[0];
+		r2 = tmp[1];
+	}
+};
+
+#define NEG_INF -1000000001
+
+Node buffer[3000000];
+Node* new_node() {
+	static int allocated = 0;
+
+	
+	Node* p = &buffer[allocated++];
+	p->r1 = p->r2 = NEG_INF;
+	return p;
+}
+
+int n;
+
+
+void prepare_n(Node* p, int a, int b) {
+	int mid = (a+b)/2;
+	if (a != mid) {
+		p->left = new_node();
+		p->right= new_node();
+
+		prepare_n(p->left, a, mid);
+		prepare_n(p->right, mid, b);
+	}
+}
+
+Node* copy_of(Node* p, int a, int b, int pos, int v) {
+	int mid = (a+b)/2;
+	Node* cp = new_node();
+	if (a == mid) {
+		cp = new_node();
+		cp->r1 = v;
+		return cp;
+	}
+
+	if (pos < mid) {
+		cp->left = copy_of(p->left, a, mid, pos, v);
+		cp->right = p->right;
+	} else {
+		cp->left = p->left;
+		cp->right = copy_of(p->right, mid, b, pos, v);
+	}
+
+	cp->update();
+	return cp;
+}
+
+void set_v(Node*p, int a, int b, int pos, int v) {
+	int mid = (a+b)/2;
+	if (a == mid) {
+		p->r1 = v;
+	} else {
+		if (pos < mid) set_v(p->left, a, mid, pos, v);
+		else set_v(p->right, mid, b, pos, v);
+		p->update();
+	}
+}
+
+PI find_ans(Node* p, int a, int b, int x, int y) {
+	if (a == x && b == y)
+		return PI(p->r1, p->r2);
+
+	int mid = (a+b)/2;
+	if (x >= mid)
+		return find_ans(p->right, mid, b, x, y);
+	if (y <= mid)
+		return find_ans(p->left, a, mid, x, y);
+
+	PI p1 = find_ans(p->left, a, mid, x, mid);
+	PI p2 = find_ans(p->right, mid, b, mid, y);
+
+	tmp[0] = p1.first;
+	tmp[1] = p1.second;
+	tmp[2] = p2.first;
+	tmp[3] = p2.second;
+	FIR(2) FOR(j, i+1, 4) if (tmp[i] < tmp[j]) swap(tmp[i], tmp[j]);
+	return PI(tmp[0], tmp[1]);
+}
+
+Node* versions[100500];
+
+int main() {
+//freopen("input.txt", "rt", stdin);
+
+	GI(n);
+	int n2 = 1; while (n2 < n) n2 <<= 1;
+	int a;
+	int M, A, B, C, D;
+	GI(M); GI2(A, B);GI2(C,D);
+
+
+	Node* root = versions[0] = new_node();
+	prepare_n(root, 0, n2);
+	FI { GI(a); set_v(root, 0, n2, i, a); }
+
+
+	int q; GI(q);
+	int y1, y2;
+	LL r1 = 0, r2 = 0;
+
+	FORE(k, 1, q) {
+		int t = (A*r1+D) % k;
+
+		GI2(y1, y2);++y2;
+
+		PI res = find_ans(versions[t], 0, n2, y1, y2);
+		printf("%d %d\n",res.first, res.second);
+
+		r1 = res.first;
+		r2 = res.second;
+		int pos = (B*r1 + D) % n;
+		int v = (C*r2 + D) % M;
+
+		versions[k] = copy_of(versions[k-1], 0, n2, pos, v);
+	}
+
+
+}

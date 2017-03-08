@@ -1,0 +1,110 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+#include <ctime>
+#include <cstdlib>
+using namespace std;
+
+int A[21][21], B[21][21];
+int n;
+int my[21], vx[21], vy[21];
+int ans = 0;
+int bx[21], by[21], slack[21];
+int f[21][21];
+
+int find(int x) {
+    bx[x] = 1;
+    for (int i = 1; i <= n; ++i)
+        if (vx[x] + vy[i] == f[x][i]) {
+            if (!by[i]) {
+                by[i] = 1;
+                if (my[i] == 0 || find(my[i])) {
+                    my[i] = x;
+                    return 1;
+                }
+            }
+        }
+        else slack[i] = min(slack[i], (vx[x] + vy[i]) - f[x][i]);
+    return 0;
+}
+
+void solve(int x) {
+    //return ;
+    memset(slack, 63, sizeof(slack));
+    while (1) {
+        memset(bx, 0, sizeof(bx));
+        memset(by, 0, sizeof(by));
+        if (find(x)) return ;
+        int d = 1 << 30;
+        for (int i = 1; i <= n; ++i)
+            if (!by[i])
+                d = min(d, slack[i]);
+        for (int i = 1; i <= x; ++i)
+            if (bx[i]) {
+                vx[i] -= d;
+            }
+        for (int i = 1; i <= n; ++i)
+            if (by[i]) {
+                vy[i] += d;
+            }
+            else slack[i] -= d;
+    }
+}
+
+void dfs(int x, int n1, int n2) {
+    if (x > n) {
+        int ans1 = 0;
+        for (int i = 1; i <= n; ++i)
+            ans1 += f[my[i]][i];
+        ans = max(ans, ans1);
+        return ;
+    }
+    if (n1 + n1 < n) {
+        int MY[21], VX[21], VY[21];
+        memcpy(MY, my, sizeof(my));
+        memcpy(VX, vx, sizeof(vx));
+        memcpy(VY, vy, sizeof(vy));
+        vx[x] = -1;
+        for (int i = 1; i <= n; ++i) {
+            f[x][i] = A[x][i];
+            vx[x] = max(vx[x], A[x][i]);
+        }
+        solve(x);
+        dfs(x + 1, n1 + 1, n2);
+        memcpy(my, MY, sizeof(my));
+        memcpy(vx, VX, sizeof(vx));
+        memcpy(vy, VY, sizeof(vy));
+    }
+    if (n2 + n2 < n) {
+        vx[x] = -1;
+        for (int i = 1; i <= n; ++i) {
+            f[x][i] = B[x][i];
+            vx[x] = max(vx[x], B[x][i]);
+        }
+        solve(x);
+        dfs(x + 1, n1, n2 + 1);
+    }
+}
+
+int main() {
+    srand(time(NULL));
+    scanf("%d", &n);
+    for (int i = 1; i <= n; ++i)
+        for (int j = 1; j <= n; ++j)
+            scanf("%d", &A[i][j]);
+    for (int i = 1; i <= n; ++i)
+        for (int j = 1; j <= n; ++j)
+            scanf("%d", &B[i][j]);
+    for (int i = 2; i <= n; ++i) {
+        int k = rand() % (i - 1) + 1;
+        for (int j = 1; j <= n; ++j) {
+            swap(A[i][j], A[k][j]);
+            swap(B[i][j], B[k][j]);
+        }
+    }
+    dfs(1, 0, 0);
+    cout << ans << endl;
+    return 0;
+}

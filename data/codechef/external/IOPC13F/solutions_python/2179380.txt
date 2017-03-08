@@ -1,0 +1,298 @@
+import java.awt.geom.Line2D;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.InputMismatchException;
+
+public class Main {
+	static InputStream is;
+	static PrintWriter out;
+	static String INPUT = "";
+	
+	static void solve()
+	{
+		int n = ni();
+		int[][] coj = new int[n][];
+		int[][] cod = new int[n][];
+		for(int i = 0;i < n;i++){
+			coj[i] = new int[]{ni(), ni()};
+		}
+		for(int i = 0;i < n;i++){
+			cod[i] = new int[]{ni(), ni()};
+		}
+		int[][] g = new int[n][n];
+		for(int i = 0;i < n;i++){
+			double[][] co = new double[n-1][];
+			int p = 0;
+			for(int j = 0;j < n;j++){
+				if(j != i){
+					co[p++] = new double[]{coj[j][0], coj[j][1]};
+				}
+			}
+			double[][] hull = convexHull(co);
+			for(int j = 0;j < n;j++){
+				if(isOnIn(cod[j][0], cod[j][1], hull)){
+					g[i][j] = Math.abs(cod[j][0]-coj[i][0])+Math.abs(cod[j][1]-coj[i][1]);
+				}else{
+					g[i][j] = 
+							(cod[j][0]-coj[i][0])*(cod[j][0]-coj[i][0]) +
+							(cod[j][1]-coj[i][1])*(cod[j][1]-coj[i][1]);
+				}
+			}
+			tr(g[i]);
+		}
+		out.println(hungarianMax(g));
+	}
+	
+	public static int hungarianMax(int[][] w)
+	{
+		int n = w.length;
+		int INF = 2000000*400;
+		int[] fx = new int[n];
+		int[] fy = new int[n];
+		int[] x = new int[n];
+		int[] y = new int[n];
+		Arrays.fill(x, -1);
+		Arrays.fill(y, -1);
+		for(int i = 0;i < n;i++){
+			for(int j = 0;j < n;j++){
+				fx[i] = Math.max(fx[i], w[i][j]);
+			}
+		}
+		
+		int[] t = new int[n];
+		int[] s = new int[n+1];
+		outer:
+		for(int i = 0;i < n;){
+			Arrays.fill(t, -1);
+			s[0] = i;
+			int q = 0;
+			for(int p = 0;p <= q;p++){
+				for(int k = s[p], j = 0;j < n;j++){
+					// if exist in N(S)-T
+					if(fx[k] + fy[j] == w[k][j] && t[j] < 0){
+						// add to S,T
+						s[++q] = y[j];
+						t[j] = k;
+						if(s[q] < 0){
+							// augment path
+							for(p = j;p >= 0;j = p){
+								y[j] = k = t[j];
+								p = x[k];
+								x[k] = j;
+							}
+							i++;
+							continue outer;
+						}
+					}
+				}
+			}
+			// Improve Labelling
+			int d = INF;
+			for(int j = 0;j < n;j++){
+				if(t[j] < 0){
+					for(int k = 0;k <= q;k++){
+						d = Math.min(d, fx[s[k]] + fy[j] - w[s[k]][j]);
+					}
+				}
+			}
+			for(int j = 0;j < n;j++){
+				if(t[j] >= 0)fy[j] += d;
+			}
+			for(int k = 0;k <= q;k++){
+				fx[s[k]] -= d;
+			}
+		}
+		
+		int ret = 0;
+		for(int i = 0;i < n;i++){
+			ret += w[i][x[i]];
+		}
+		return ret;
+	}	
+	
+	public static boolean isOnIn(double x, double y, double[][] poly){
+		int n = poly.length;
+		int cc = Line2D.relativeCCW(poly[n-1][0], poly[n-1][1], poly[0][0], poly[0][1], x, y);
+		if(cc == 0)return true;
+		for(int i = 0;i < n-1;i++){
+			int ccc = Line2D.relativeCCW(poly[i][0], poly[i][1], poly[i+1][0], poly[i+1][1], x, y);
+			if(ccc == 0)return true;
+			if(cc != ccc)return false;
+		}
+		return true;
+	}
+	
+	public static double[][] convexHull(double[][] co)
+	{
+		int n = co.length;
+		Arrays.sort(co, new Comparator<double[]>(){
+			public int compare(double[] a, double[] b){
+				if(a[0] - b[0] != 0)return (int)Math.signum(a[0] - b[0]);
+				return (int)Math.signum(a[1] - b[1]);
+			}
+		});
+		
+		int[] inds = new int[n + 1];
+		int p = 0;
+		for(int i = 0;i < n;i++){
+			if(p >= 1 && co[inds[p-1]][0] == co[i][0] && co[inds[p-1]][1] == co[i][1])continue;
+			while(p >= 2 && Line2D.relativeCCW(
+					co[inds[p-2]][0], co[inds[p-2]][1],
+					co[inds[p-1]][0], co[inds[p-1]][1],
+					co[i][0], co[i][1]) == 1)p--;
+			inds[p++] = i;
+		}
+		
+		int inf = p + 1;
+		for(int i = n - 2;i >= 0;i--){
+			if(co[inds[p-1]][0] == co[i][0] && co[inds[p-1]][1] == co[i][1])continue;
+			while(p >= inf && Line2D.relativeCCW(
+					co[inds[p-2]][0], co[inds[p-2]][1],
+					co[inds[p-1]][0], co[inds[p-1]][1],
+					co[i][0], co[i][1]) == 1)p--;
+			inds[p++] = i;
+		}
+		
+		double[][] ret = new double[p-1][];
+		for(int i = 0;i < p-1;i++)ret[i] = co[inds[i]];
+		return ret;
+	}
+	
+	public static void main(String[] args) throws Exception
+	{
+		long S = System.currentTimeMillis();
+		is = INPUT.isEmpty() ? System.in : new ByteArrayInputStream(INPUT.getBytes());
+		out = new PrintWriter(System.out);
+		
+		solve();
+		out.flush();
+		long G = System.currentTimeMillis();
+		tr(G-S+"ms");
+	}
+	
+	private static boolean eof()
+	{
+		if(lenbuf == -1)return true;
+		int lptr = ptrbuf;
+		while(lptr < lenbuf)if(!isSpaceChar(inbuf[lptr++]))return false;
+		
+		try {
+			is.mark(1000);
+			while(true){
+				int b = is.read();
+				if(b == -1){
+					is.reset();
+					return true;
+				}else if(!isSpaceChar(b)){
+					is.reset();
+					return false;
+				}
+			}
+		} catch (IOException e) {
+			return true;
+		}
+	}
+	
+	private static byte[] inbuf = new byte[1024];
+	static int lenbuf = 0, ptrbuf = 0;
+	
+	private static int readByte()
+	{
+		if(lenbuf == -1)throw new InputMismatchException();
+		if(ptrbuf >= lenbuf){
+			ptrbuf = 0;
+			try { lenbuf = is.read(inbuf); } catch (IOException e) { throw new InputMismatchException(); }
+			if(lenbuf <= 0)return -1;
+		}
+		return inbuf[ptrbuf++];
+	}
+	
+	private static boolean isSpaceChar(int c) { return !(c >= 33 && c <= 126); }
+	private static int skip() { int b; while((b = readByte()) != -1 && isSpaceChar(b)); return b; }
+	
+	private static double nd() { return Double.parseDouble(ns()); }
+	private static char nc() { return (char)skip(); }
+	
+	private static String ns()
+	{
+		int b = skip();
+		StringBuilder sb = new StringBuilder();
+		while(!(isSpaceChar(b))){ // when nextLine, (isSpaceChar(b) && b != ' ')
+			sb.appendCodePoint(b);
+			b = readByte();
+		}
+		return sb.toString();
+	}
+	
+	private static char[] ns(int n)
+	{
+		char[] buf = new char[n];
+		int b = skip(), p = 0;
+		while(p < n && !(isSpaceChar(b))){
+			buf[p++] = (char)b;
+			b = readByte();
+		}
+		return n == p ? buf : Arrays.copyOf(buf, p);
+	}
+	
+	private static char[][] nm(int n, int m)
+	{
+		char[][] map = new char[n][];
+		for(int i = 0;i < n;i++)map[i] = ns(m);
+		return map;
+	}
+	
+	private static int[] na(int n)
+	{
+		int[] a = new int[n];
+		for(int i = 0;i < n;i++)a[i] = ni();
+		return a;
+	}
+	
+	private static int ni()
+	{
+		int num = 0, b;
+		boolean minus = false;
+		while((b = readByte()) != -1 && !((b >= '0' && b <= '9') || b == '-'));
+		if(b == '-'){
+			minus = true;
+			b = readByte();
+		}
+		
+		while(true){
+			if(b >= '0' && b <= '9'){
+				num = num * 10 + (b - '0');
+			}else{
+				return minus ? -num : num;
+			}
+			b = readByte();
+		}
+	}
+	
+	private static long nl()
+	{
+		long num = 0;
+		int b;
+		boolean minus = false;
+		while((b = readByte()) != -1 && !((b >= '0' && b <= '9') || b == '-'));
+		if(b == '-'){
+			minus = true;
+			b = readByte();
+		}
+		
+		while(true){
+			if(b >= '0' && b <= '9'){
+				num = num * 10 + (b - '0');
+			}else{
+				return minus ? -num : num;
+			}
+			b = readByte();
+		}
+	}
+	
+	private static void tr(Object... o) { if(INPUT.length() != 0)System.out.println(Arrays.deepToString(o)); }
+}

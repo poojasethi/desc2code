@@ -1,0 +1,98 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+const int kMaxN = 100000, kMaxM = (kMaxN - 1) * 2;
+int n, cnt, begin[kMaxN], end[kMaxM], next[kMaxM], deg[kMaxN], dep[kMaxN];
+int seq[kMaxN], anc[17][kMaxN];
+
+typedef unsigned long long Hash;
+const int kSeed = 99991;
+Hash p[kMaxN], rec[17][kMaxN];
+
+void AddEdge(int u, int v) {
+	next[cnt] = begin[u];
+	begin[u] = cnt;
+	end[cnt ++] = v;
+}
+
+void Dfs(int u, int p) {
+	rec[0][u] = deg[u];
+	anc[0][u] = p;
+	for (int now = begin[u], v; now != -1; now = next[now])
+		if (p != (v = end[now])) {
+			dep[v] = dep[u] + 1;
+			Dfs(v, u);
+		}
+}
+
+bool Cmp(const int &u, const int &v) {
+	int a = u, b = v;
+	int d = min(dep[a], dep[b]) + 1, t = 0;
+	for (int j = 16; j >= 0; -- j)
+		if ((t | 1 << j) <= d) {
+			if (rec[j][a] == rec[j][b]) {
+				t |= 1 << j;
+				a = anc[j][a], b = anc[j][b];
+			}
+		}
+	if (a != -1 && b != -1 && deg[a] == deg[b]) {
+		++ t;
+		a = anc[0][a], b = anc[0][b];
+	}
+	if (t == d) return (dep[u] < dep[v]);
+	else return (deg[a] < deg[b]);
+}
+
+int Ask(int u, int v) {
+	int d = min(dep[u], dep[v]) + 1, t = 0;
+	for (int j = 16; j >= 0; -- j)
+		if ((t | 1 << j) <= d) {
+			if (rec[j][u] == rec[j][v]) {
+				t |= 1 << j;
+				u = anc[j][u], v = anc[j][v];
+			}
+		}
+	if (u != -1 && v != -1 && deg[u] == deg[v]) {
+		++ t;
+		u = anc[0][u], v = anc[0][v];
+	}
+	return t;
+}
+
+int main() {
+	scanf("%d", &n);
+	memset(begin, -1, sizeof(int) * n);
+	for (int i = 0, u, v; i < n - 1; ++ i) {
+		scanf("%d%d", &u, &v);
+		-- u, -- v;
+		AddEdge(u, v);
+		AddEdge(v, u);
+		++ deg[u], ++ deg[v];
+	}
+	p[0] = 1ULL;
+	for (int i = 1; i < n; ++ i) p[i] = p[i - 1] * kSeed;
+	memset(anc, -1, sizeof(anc));
+	Dfs(0, -1);
+	for (int j = 1; j < 17; ++ j)
+		for (int i = 0; i < n; ++ i)
+			if (anc[j - 1][i] != -1) anc[j][i] = anc[j - 1][anc[j - 1][i]];
+	for (int j = 1; j < 17; ++ j)
+		for (int i = 0; i < n; ++ i) {
+			rec[j][i] = rec[j - 1][i];
+			if (anc[j - 1][i] != -1) rec[j][i] = rec[j - 1][i] * p[1 << (j - 1)] + rec[j - 1][anc[j - 1][i]];
+		}
+	for (int i = 0; i < n; ++ i) seq[i] = i;
+	stable_sort(seq, seq + n, Cmp);
+	long long ans = dep[seq[0]] + 1;
+	for (int i = 1; i < n; ++ i) {
+		int u = seq[i], v = seq[i - 1];
+		int d = Ask(u, v);
+		ans += dep[u] + 1 - d;
+	}
+	printf("%lld\n", ans);
+	return 0;
+}

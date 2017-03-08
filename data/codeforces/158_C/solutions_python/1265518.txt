@@ -1,0 +1,12 @@
+d = ['']
+n = input()
+for i in xrange(n):
+    s = raw_input().strip()
+    if s=='pwd':
+        print "/".join(d)+"/"
+        continue
+    hl = s.split()[1].split('/')
+    for h in hl:
+        if not h: d = ['']
+        elif h=='..': d.pop()
+        else: d.append(h)

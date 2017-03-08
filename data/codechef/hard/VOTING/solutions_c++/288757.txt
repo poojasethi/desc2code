@@ -1,0 +1,107 @@
+#include <iostream>
+#include <cstring>
+#include <string.h>
+#include <cstdlib>
+#include <cstdio>
+#include <vector>
+using namespace std;
+
+int N, M;
+/** start offset = 1 */
+int cost[30][30];
+int rank[2000][30];
+/** put state j before i, how much cost */
+int pcost[40000][20];
+
+void initCost()
+{
+  int bound = (1 << M) - 1;
+  for (int s = 0; s <= bound; ++s)
+  {
+    for (int i = 1; i <= M; ++i)
+    {
+      pcost[s][i] = 0;
+      for (int j = 1; j <= M; ++j)
+        if (j != i && ((1 << (j - 1)) & s))
+          pcost[s][i] += cost[j][i];
+    }
+  }
+}
+
+void init()
+{
+  memset(cost, 0, sizeof(cost));
+
+  scanf("%d%d", &N, &M);
+  for (int i = 0; i < N; ++i)
+  {
+    for (int j = 0; j < M; ++j)
+      scanf("%d", &rank[i][j]);
+
+    for (int a = 0; a < M; ++a)
+      for (int b = a + 1; b < M; ++b)
+        cost[rank[i][b]][rank[i][a]]++;
+  }
+
+  initCost();
+}
+
+int minCost[40000];
+int next[40000];
+int getMinCost(int state)
+{
+  if (minCost[state] >= 0)
+    return minCost[state];
+  if (state == 0) 
+    return 0;
+
+  minCost[state] = 999999999;
+  for (int i = 1; i <= M; ++i)
+    if (((1 << (i - 1)) & state))
+    {
+      int smallState = state - (1 << (i - 1));
+      int nowCost = pcost[smallState][i];
+      nowCost += getMinCost(smallState);
+      if (nowCost < minCost[state])
+      {
+        minCost[state] = nowCost;
+        next[state] = i;
+      }
+    }
+  return minCost[state];
+}
+
+void deal()
+{
+  for (int i = 0; i < 40000; ++i)
+    minCost[i] = next[i] = -1;
+
+  int state = (1 << M) - 1; 
+
+  int ans = getMinCost(state);
+  printf("%d:", ans);
+  vector<int> per;
+  int nowstate = state;
+  for (int i = 0; i < M; ++i)
+  {
+    per.push_back(next[nowstate]);
+    nowstate = nowstate - (1 << (next[nowstate] - 1));
+  }
+
+  for (int i = per.size() - 1; i >= 0; --i)
+    printf(" %d", per[i]);
+  printf("\n");
+}
+
+int main()
+{
+  int L;
+  scanf("%d", &L);
+  while (L--)
+  {
+    init();
+    deal();
+  }
+
+  return 0;
+}

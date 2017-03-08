@@ -1,0 +1,85 @@
+#include<cstdio>
+#include<algorithm>
+#include<vector>
+#define pii pair<int,int>
+#define A first
+#define B second
+using namespace std;
+vector <pii> e[200001];
+int n,isc[200001],tag[200001],num[200001],m,h[200001];
+pii ord[600001];
+long long ans[200001],x1[600002],x2[600002],ll[600002],lr[600002],s[600002],sv[200001],sum;
+int dfs1(int now,int head){
+    tag[now] = 1;
+    for(int i=0;i<e[now].size();i++)
+        if(e[now][i].A != head){
+            if(tag[e[now][i].A] == 1){
+                isc[now] = 1; 
+                ord[m++] = pii(e[now][i].A,e[now][i].B);
+                return e[now][i].A; 
+            }
+            int tmp = dfs1(e[now][i].A,now);
+            if(tmp != 0){
+                isc[now] = 1; 
+                ord[m++] = pii(e[now][i].A,e[now][i].B);
+                if(tmp == now)
+                    tmp = 0; 
+                return tmp;
+            }
+        }
+    return 0;
+}
+void dfs2(int now,int head,int svh){
+    num[now] = 1; h[now] = svh;
+    for(int i=0;i<e[now].size();i++)
+        if(e[now][i].A != head && isc[e[now][i].A] != 1){
+            dfs2(e[now][i].A,now,svh);
+            num[now] += num[e[now][i].A]; 
+            ans[now] += 1ll*num[e[now][i].A]*e[now][i].B;
+            ans[now] += ans[e[now][i].A];
+        }
+}
+void dfs3(int now,int head){
+    for(int i=0;i<e[now].size();i++)
+        if(e[now][i].A != head && isc[e[now][i].A] != 1){
+            ans[e[now][i].A] += ans[now]-ans[e[now][i].A]-1ll*num[e[now][i].A]*e[now][i].B;
+            ans[e[now][i].A] += 1ll*e[now][i].B*(n-num[e[now][i].A]);
+            dfs3(e[now][i].A,now);
+        }
+}
+long long cal(int f,int k){
+    return x2[f]-x2[k]-(s[f]-s[k])*lr[k] + x1[f+m-1]-x1[k]-(s[k+1]-s[f+m])*ll[k];
+}
+int main(){
+    scanf("%d",&n);
+    for(int i=1,u,v,w;i<=n;i++){
+        scanf("%d%d%d",&u,&v,&w);
+        e[u].push_back(pii(v,w));
+        e[v].push_back(pii(u,w));
+    }
+    dfs1(1,0);
+    for(int i=1;i<=n;i++)
+        if(isc[i] == 1)
+            dfs2(i,0,i), dfs3(i,0), sum += ans[i];
+    for(int i=0;i<m;i++) ord[i+m] = ord[i+2*m] = ord[i];
+    for(int i=3*m;i>0;i--){
+        ord[i] = ord[i-1]; 
+        lr[i] = lr[i+1] + ord[i].B; 
+        s[i] = s[i+1] + num[ord[i].A];
+        x2[i] = x2[i+1] + 1ll*num[ord[i].A]*lr[i];
+    }
+    for(int i=2;i<=3*m;i++){
+        ll[i] = ll[i-1]+ord[i-1].B;
+        x1[i] = x1[i-1]+ 1ll*num[ord[i].A]*ll[i]; 
+    }
+    int r = 2; 
+    for(int i=m+1;i<=2*m;i++){
+        while(cal(r,i) >= cal(r+1,i) && r < i) r++;
+        sv[ord[i].A] = cal(r,i);
+    }
+    for(int i=1;i<=n;i++) if(!isc[i]) ans[i] += sum-ans[h[i]];
+    for(int i=1;i<=n;i++) if(isc[i]) ans[i] += sum-ans[h[i]];
+    for(int i=1;i<=n;i++) ans[i] += sv[h[i]];
+    for(int i=1;i<=n;i++) printf("%I64d ",ans[i]);
+    return 0;
+}

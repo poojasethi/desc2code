@@ -1,0 +1,175 @@
+/******************************************************
+ * Author:      gua
+ * Create Time: 2015年7月26日 星期日 19时45分
+ ******************************************************/
+/*
+   题意：有三棵树，每颗树有ni个结点，添加两条边把这三棵树连接起来，合并成一棵树，使得树中任意两点之间的最短路径
+   的和最大。
+   分析：
+   三棵树要合并成一棵树，则第一棵树必须选择一个点，假设为X，第二棵树必须选择两个点，假设为Y1, Y2，第三棵树必须选择一个点，假设为Z
+   记第一棵树中所有结点到X的路径总和为：tot1
+   第二棵树中所有结点到Y1，Y2的路径总和分别为：tot2, tot3
+   第三棵树中所有结点到Z的路径总和为：tot4;
+   共有四种情况：
+   1，每棵树内部的结点之间的距离为常数，可以求出树中一个点到剩余所有点的路径之和，把所有这样的点的和相加再除以2即可
+   2，第一棵树和第二棵树这两棵树所有结点之间的距离，假设第一棵树选择结点X，第二棵树选择的左结点位Y1，
+   则两棵树上任意两点a，b之间的距离，可以表示为：d(a, b) = d(a, X) + 1 + d(b, Y1),
+   其中a为第一棵树的任意结点，b为第二棵树的任意结点，
+   固定点a，变换bj，由于第二棵树有n2个结点，则这种情况下的总的路径和为：(d(a, X) + 1) * n2 + sum(d(bj, Y1), j = 1, 2, ..., n2);
+   再变换ai，则最终得到的路径和为：sum((d(ai, X) + 1) * n2 + sum(d(bj, Y1), j = 1, 2, ..., n2), i = 1, 2, ..., n1);
+   最终结果为：sum(d(ai, X), i = 1, 2, ..., n1) * n2 + n2 * n1 + sum(d(bi, Y1), j = 1, 2, ..., n2) * n1;
+   即tot1 * n2 + n2 * n1 + tot2 * n1;
+   3,第二棵树和第三棵树这两棵树所有结点之间的距离，类似情况2，得到的最终结果为：tot3 * n3 + n2 * n3 + tot4 * n2;
+
+   4，第一棵树和第三棵树所有结点之间的距离：每一条路径都可以表示为：d(a, c) = d(a, X) + 1 + d(Y1, Y2) + 1 + d(Z, c);
+   最终结果为：tot1 * n3 + tot4 * n1 + n1 * n2 * d(Y1, Y2) + 2 * n1 * n3;
+
+   综上所述，得到合并后树中结点之间的距离总和为：
+   sum = (n2 + n3) * tot1 + (n1 + n2) * tot4 + n1 * n2 + n2 * n3 + 2 * n1 * n3 + n1 * tot2 + n3 * tot3 + n1 * n3 * d(Y1, Y2);
+   要使得总和最大，则tot1和tot4必须最大，上式中间部分为常数，则left = n1 * tot2 + n3 * tot3 + n1 * n3 * d(Y1, Y2)必须达到最大
+   在tot2达到最大的情况下，即Y1确定时，枚举Y2使得left部分达到最大，即可。
+   这过程中要枚举三棵树的位置。
+*/
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+using namespace std;
+typedef long long LL;
+const int MAXN = 100000 + 10;
+struct Edge
+{
+    int y, next;
+};
+struct Tree
+{
+    LL n, head[MAXN], nodeCnt[MAXN], edgeCnt, dis[MAXN], pos, maxTot;
+    LL curSum[MAXN], tot[MAXN], pathCnt;
+    Edge edge[MAXN << 1];
+    void addEdge(int x, int y)
+    {
+        edge[edgeCnt].y = y;
+        edge[edgeCnt].next = head[x];
+        head[x] = edgeCnt++;
+    }
+
+    void build(int n)
+    {
+        memset(head, -1, sizeof(head));
+        this->n = n;
+        int x, y;
+        for(int i = 1; i < n; i++)
+        {
+            scanf("%d%d", &x, &y);
+            addEdge(x, y);
+            addEdge(y, x);
+        }
+    }
+
+    void dfs0(int son, int fa)
+    {
+        nodeCnt[son] = 1;
+        curSum[son] = 0;
+        int y;
+        for(int i = head[son]; i != -1; i = edge[i].next)
+        {
+            y = edge[i].y;
+            if(y == fa)
+            {
+                continue;
+            }
+            dfs0(y, son);
+            nodeCnt[son] += nodeCnt[y];
+            curSum[son] += curSum[y] + nodeCnt[y];
+        }
+    }
+
+    void dfs1(int son, int fa, LL faLeft)
+    {
+        tot[son] = curSum[son] + faLeft;
+        int y;
+        for(int i = head[son]; i != -1; i = edge[i].next)
+        {
+            y = edge[i].y;
+            if(y == fa)
+            {
+                continue;
+            }
+            dfs1(y, son, faLeft + curSum[son] - curSum[y] - nodeCnt[y] + n - nodeCnt[y]);
+        }
+    }
+
+    void dfs2(int son, int fa)
+    {
+        dis[son] = dis[fa] + 1;
+        int y;
+        for(int i = head[son]; i != -1; i = edge[i].next)
+        {
+            y = edge[i].y;
+            if(y == fa)
+            {
+                continue;
+            }
+            dfs2(y, son);
+        }
+    }
+
+    void solve()
+    {
+        dfs0(1, 0);
+        dfs1(1, 0, 0);
+        for(int i = 1; i <= n; i++)
+        {
+            pathCnt += tot[i];
+            if(tot[i] > maxTot)
+            {
+                maxTot = tot[i];
+                pos = i;
+            }
+        }
+        dis[0] = -1;
+        dfs2(pos, 0);
+    }
+};
+Tree t[3];
+
+LL getAns(const Tree &t1, const Tree &t2, const Tree &t3)
+{
+    LL tmp = (LL)(t2.n + t3.n) * t1.maxTot + (t1.n + t2.n) * t3.maxTot + t1.n * t2.n + t2.n * t3.n + 2 * t1.n * t3.n
+             + (t1.pathCnt + t2.pathCnt + t3.pathCnt) / 2;
+    LL ans, maxAns = 0;
+    tmp += (LL)t1.n * t2.maxTot;
+    for(int i = 1; i <= t2.n; i++)
+    {
+        ans = (LL)tmp + t3.n * t2.tot[i] + t1.n * t3.n * t2.dis[i];
+        maxAns = max(ans, maxAns);
+    }
+    return maxAns;
+}
+
+int main()
+{
+    int n[3], i, j;
+    LL ans = 0;
+    //freopen("in.txt", "r", stdin);
+    scanf("%d%d%d", &n[0], &n[1], &n[2]);
+    for(i = 0; i < 3; i++)
+    {
+        t[i].build(n[i]);
+        t[i].solve();
+    }
+
+    // cout << t[0].pathCnt << "\t" << t[1].pathCnt << "\t" << t[2].pathCnt << endl;
+    for(i = 0; i < 3; i++)
+    {
+        for(j = 0; j < 3; j++)
+        {
+            if(i == j)
+            {
+                continue;
+            }
+            ans = max(ans, getAns(t[i], t[j], t[3 - i - j]));
+        }
+    }
+    printf("%I64d\n", ans);
+    return 0;
+}

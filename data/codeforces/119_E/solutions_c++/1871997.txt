@@ -1,0 +1,210 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <complex>
+#include <algorithm>
+
+using namespace std;
+
+struct point {
+  double x,y,z;
+  point() {
+  }
+  point(double inx,double iny,double inz) {
+    x=inx;y=iny;z=inz;
+  }
+};
+
+point leer()
+{
+  double x,y,z;
+  cin>>x>>y>>z;
+  return point(x,y,z);
+}
+
+double prodesc(point p1,point p2)
+{
+  return p1.x*p2.x+p1.y*p2.y+p1.z*p2.z;
+}
+
+double abs(point p)
+{
+  return sqrt(prodesc(p,p));
+}
+
+point operator-(point p1,point p2)
+{
+  p1.x-=p2.x;
+  p1.y-=p2.y;
+  p1.z-=p2.z;
+  return p1;
+}
+
+point operator*(double a,point p)
+{
+  p.x*=a;
+  p.y*=a;
+  p.z*=a;
+  return p;
+}
+
+point operator*(point p,double a)
+{
+  p.x*=a;
+  p.y*=a;
+  p.z*=a;
+  return p;
+}
+
+point operator/(point p,double a)
+{
+  p.x/=a;
+  p.y/=a;
+  p.z/=a;
+  return p;
+}
+
+double cuadrat(double x)
+{
+  return x*x;
+}
+
+int n;
+vector<point> v;
+point direccion,b1,b2;
+
+struct punt {
+  double x,y;
+  punt() {
+  }
+  punt(double inx,double iny) {
+    x=inx;
+    y=iny;
+  }
+};
+
+punt operator-(punt p1,punt p2)
+{
+  p1.x-=p2.x;
+  p1.y-=p2.y;
+  return p1;
+}
+
+punt operator+(punt p1,punt p2)
+{
+  p1.x+=p2.x;
+  p1.y+=p2.y;
+  return p1;
+}
+
+punt operator*(double a,punt p)
+{
+  p.x*=a;
+  p.y*=a;
+  return p;
+}
+
+punt rota(punt p)
+{
+  return punt(-p.y,p.x);
+}
+
+double prodvec(punt p1,punt p2)
+{
+  return p1.x*p2.y-p1.y*p2.x;
+}
+
+double abs(punt p)
+{
+  return sqrt(p.x*p.x+p.y*p.y);
+}
+
+vector<punt> w;
+
+double error=0.000000001;
+
+void generabase()
+{
+  if (direccion.x>error)
+    b1=point(-(direccion.y+direccion.z)/direccion.x,1,1);
+  else if (direccion.y>error)
+    b1=point(1,-(direccion.x+direccion.z)/direccion.y,1);
+  else
+    b1=point(1,1,-(direccion.x+direccion.y)/direccion.z);
+  b1=b1/abs(b1);
+  b2=point(b1.z*direccion.y-b1.y*direccion.z,
+	   -(b1.z*direccion.x-b1.x*direccion.z),
+	   b1.y*direccion.x-b1.x*direccion.y);
+  b2=b2/abs(b2);
+}
+
+void escribepoint(point p)
+{
+  cout<<"("<<p.x<<","<<p.y<<","<<p.z<<")";
+}
+
+void generaw()
+{
+  generabase();
+  w=vector<punt> (n);
+  for (int i=0;i<n;i++)
+    w[i]=punt(prodesc(v[i],b1),prodesc(v[i],b2));
+}
+
+punt maslejano(punt p)
+{
+  punt q=p;
+  for (int i=0;i<n;i++)
+    if (abs(w[i]-p)>abs(q-p))
+      q=w[i];
+  return q;
+}
+
+punt interseccion(punt p1,punt v1,punt p2,punt v2)
+{
+  return p1+(prodvec(p2-p1,v2)/prodvec(v1,v2))*v1;
+}
+
+double obtenminimo()
+{
+  random_shuffle(w.begin(),w.end());
+  punt o=w[0];
+  double r=0;
+  for (int i=1;i<n;i++) {
+    if (abs(o-w[i])>r+error) {
+      o=w[i];
+      r=0;
+      for (int j=0;j<i;j++) {
+	if (abs(o-w[j])>r+error) {
+	  o=0.5*(w[i]+w[j]);
+	  r=abs(o-w[j]);
+	  for (int k=0;k<j;k++) {
+	    if (abs(o-w[k])>r+error) {
+	      o=interseccion(0.5*(w[i]+w[j]),rota(w[j]-w[i]),
+			     0.5*(w[i]+w[k]),rota(w[k]-w[i]));
+	      r=abs(o-w[k]);
+	    }
+	  }
+	}
+      }
+    }
+  }
+  return r;
+}
+
+int main()
+{
+  cout.setf(ios::fixed);
+  cout.precision(10);
+  cin>>n;
+  int m;
+  cin>>m;
+  v=vector<point> (n);
+  for (int i=0;i<n;i++)
+    v[i]=leer();
+  for (int cas=0;cas<m;cas++) {
+    direccion=leer();
+    generaw();
+    cout<<obtenminimo()<<endl;
+  }
+}

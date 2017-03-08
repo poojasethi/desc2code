@@ -1,0 +1,205 @@
+#include<cstdio>
+#include<vector>
+#include<cstring>
+#include<algorithm>
+#include<iostream>
+using namespace std;
+inline void readi(int &x);
+const int maxn=200055;
+int n,idx;
+int bhead[maxn],rhead[maxn],tot;
+int adj[maxn*4],next[maxn*4];
+
+int bdfn[maxn],rdfn[maxn],blas[maxn],rlas[maxn],fa[maxn],*dfn,*las,*he,Index;
+
+bool bdel[maxn],rdel[maxn];
+
+struct edge
+{
+    int x,y;
+    edge(const int &xx=0,const int &yy=0){x=xx;y=yy;}
+}be[maxn],re[maxn];
+
+vector<edge> Bl[maxn],Br[maxn],Rl[maxn],Rr[maxn];
+
+vector<int> Bd,Rd;
+
+bool cmpl(const edge &a,const edge &b){return a.x>b.x;}
+bool cmpr(const edge &a,const edge &b){return a.x<b.x;}
+
+struct node
+{
+    int lm,rm;
+    node *lc,*rc;
+    void update()
+    {
+        lm=min(lc->lm,rc->lm);
+        rm=max(lc->rm,rc->rm);
+    }
+    void Erase(int l,int r,const int &a,const int &b,const bool &flag)
+    {
+        if(lm>=a&&rm<=b)return;
+        if(l==r)
+        {
+            int i;
+            if(!flag)
+            {
+                while(!Bl[l].empty()&&Bl[l].back().x<a)
+                {
+                    i=Bl[l].back().y;
+                    if(!rdel[i])Rd.push_back(i),rdel[i]=1;
+                    Bl[l].pop_back();
+                }
+                while(!Br[r].empty()&&Br[r].back().x>b)
+                {
+                    i=Br[r].back().y;
+                    if(!rdel[i])Rd.push_back(i),rdel[i]=1;
+                    Br[r].pop_back();
+                }
+                lm=Bl[l].empty()?maxn:Bl[l].back().x;
+                rm=Br[r].empty()?0:Br[r].back().x;
+            }
+            else
+            {
+                while(!Rl[l].empty()&&Rl[l].back().x<a)
+                {
+                    i=Rl[l].back().y;
+                    if(!bdel[i])Bd.push_back(i),bdel[i]=1;
+                    Rl[l].pop_back();
+                }
+                while(!Rr[r].empty()&&Rr[r].back().x>b)
+                {
+                    i=Rr[r].back().y;
+                    if(!bdel[i])Bd.push_back(i),bdel[i]=1;
+                    Rr[r].pop_back();
+                }
+                lm=Rl[l].empty()?maxn:Rl[l].back().x;
+                rm=Rr[r].empty()?0:Rr[r].back().x;
+            }
+        }
+        else
+        {
+            int mid=l+r>>1;
+            if(a<=mid)lc->Erase(l,mid,a,b,flag);
+            if(b>mid)rc->Erase(mid+1,r,a,b,flag);
+            update();
+        }
+    }
+}ndl[maxn*5],*Bsr,*Rsr;
+int ns;
+
+void addedge(int *head,int u,int v)
+{tot++;adj[tot]=v;next[tot]=head[u];head[u]=tot;
+tot++;adj[tot]=u;next[tot]=head[v];head[v]=tot;}
+
+node* build(int l,int r,const int &flag)
+{
+    node *cur=ndl+ns++;
+    if(l==r)
+    {
+        if(!flag)
+        {
+            cur->lm=Bl[l].empty()?maxn:Bl[l].back().x;
+            cur->rm=Br[r].empty()?0:Br[r].back().x;
+        }
+        else
+        {
+            cur->lm=Rl[l].empty()?maxn:Rl[l].back().x;
+            cur->rm=Rr[r].empty()?0:Rr[r].back().x;
+        }
+    }
+    else
+    {
+        int mid=l+r>>1;
+        cur->lc=build(l,mid,flag);
+        cur->rc=build(mid+1,r,flag);
+        cur->update();
+    }
+    return cur;
+}
+
+void tdfs(const int &x)
+{
+    dfn[x]=++Index;
+    for(int i=he[x];i;i=next[i])
+        if(adj[i]!=fa[x])
+        {
+            fa[adj[i]]=x;
+            tdfs(adj[i]);
+        }
+    las[x]=Index;
+}
+
+void init()
+{
+    readi(n);
+    for(int i=2,t;i<=n;i++)
+        readi(t),addedge(bhead,i,t),be[i-1]=edge(i,t);
+    for(int i=2,t;i<=n;i++)
+        readi(t),addedge(rhead,i,t),re[i-1]=edge(i,t);
+    readi(idx);
+    dfn=bdfn,las=blas;he=bhead;Index=0;
+    tdfs(1);
+    dfn=rdfn,las=rlas;he=rhead;Index=0;
+    tdfs(1);
+    for(int i=1;i<n;i++)
+    {
+        if(rdfn[be[i].x]>rdfn[be[i].y])swap(be[i].x,be[i].y);
+        Rl[rdfn[be[i].y]].push_back(edge(rdfn[be[i].x],i)),
+        Rr[rdfn[be[i].x]].push_back(edge(rdfn[be[i].y],i));
+        if(bdfn[re[i].x]>bdfn[re[i].y])swap(re[i].x,re[i].y);
+        Bl[bdfn[re[i].y]].push_back(edge(bdfn[re[i].x],i)),
+        Br[bdfn[re[i].x]].push_back(edge(bdfn[re[i].y],i));
+    }
+    for(int i=1;i<=n;i++)
+        sort(Bl[i].begin(),Bl[i].end(),cmpl),
+        sort(Br[i].begin(),Br[i].end(),cmpr),
+        sort(Rl[i].begin(),Rl[i].end(),cmpl),
+        sort(Rr[i].begin(),Rr[i].end(),cmpr);
+    Bsr=build(1,n,0);
+    Rsr=build(1,n,1);
+}
+
+void work()
+{
+    Bd.push_back(idx);
+    bdel[idx]=1;
+    for(int i,ts,l,r;;)
+    {
+        if(Bd.empty())break;
+        sort(Bd.begin(),Bd.end());
+        printf("Blue\n");
+        for(i=0,ts=Bd.size();i<ts;i++)
+        {
+            printf("%d ",Bd[i]);
+            l=max(bdfn[be[Bd[i]].x],bdfn[be[Bd[i]].y]);
+            r=min(blas[be[Bd[i]].x],blas[be[Bd[i]].y]);
+            Bsr->Erase(1,n,l,r,0);
+        }
+        printf("\n");
+        Bd.clear();
+        if(Rd.empty())break;
+        sort(Rd.begin(),Rd.end());
+        printf("Red\n");
+        for(i=0,ts=Rd.size();i<ts;i++)
+        {
+            printf("%d ",Rd[i]);
+            l=max(rdfn[re[Rd[i]].x],rdfn[re[Rd[i]].y]);
+            r=min(rlas[re[Rd[i]].x],rlas[re[Rd[i]].y]);
+            Rsr->Erase(1,n,l,r,1);
+        }
+        printf("\n");
+        Rd.clear();
+    }
+}
+
+int main()
+{
+    init();
+    work();
+    return 0;
+}
+
+inline void readi(int &x)
+{char c;for(c=getchar();c>'9'||c<'0';c=getchar());
+x=c^'0';for(c=getchar();c>='0'&&c<='9';c=getchar())x=x*10+(c^'0');}

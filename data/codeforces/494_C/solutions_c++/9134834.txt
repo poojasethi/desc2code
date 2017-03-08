@@ -1,0 +1,61 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+const int MAXN = 100005;
+const int MAXQ = 5005;
+int N, Q, A[MAXN], L[MAXQ], R[MAXQ], S[MAXQ], V[MAXQ], st[MAXQ], t;
+double P[MAXQ], dp[MAXQ][MAXQ], res, tot;
+vector<int> adj[MAXQ];
+
+bool comp(int a, int b){
+  if(L[a] != L[b]) return L[a] < L[b];
+  if(R[a] != R[b]) return R[a] > R[b];
+  return a < b;
+}
+
+void dfs(int v){
+  int o = V[v];
+  for(int i = 0; i < adj[v].size(); i++){
+    dfs(adj[v][i]);
+    V[v] = max(V[v], V[adj[v][i]]);
+  }
+  for(int i = 0; i <= Q; i++){
+    double p = 1 - P[v], q = P[v];
+    for(int j = 0; j < adj[v].size(); j++){
+      int k = i + V[v] - V[adj[v][j]];
+      if(k <= Q){
+        p *= dp[adj[v][j]][k];
+        if(k > 0) q *= dp[adj[v][j]][k - 1];
+        else q = 0;
+      }
+    }
+    if(i + V[v] - o == 0) q = 0;
+    dp[v][i] = p + q;
+  }
+}
+
+int main(){
+  cin >> N >> Q;
+  for(int i = 1; i <= N; i++) cin >> A[i];
+  L[0] = 1, R[0] = N;
+  for(int i = 1; i <= Q; i++){
+    cin >> L[i] >> R[i] >> P[i];
+    S[i] = i;
+  }
+  Q++;
+  sort(S, S + Q, comp);
+  for(int i = 1, j = 0; i <= N; i++){
+    for( ; j < Q && L[S[j]] == i; j++){
+      if(t > 0) adj[st[t - 1]].push_back(S[j]);
+      st[t++] = S[j];
+    }
+    V[st[t - 1]] = max(V[st[t - 1]], A[i]);
+    for( ; t > 0 && R[st[t - 1]] == i; t--) ;
+  }
+  dfs(0);
+  res = V[0];
+  for(int i = 1; i <= Q; i++){
+    res += i * (dp[0][i] - dp[0][i - 1]);
+  }
+  cout << fixed << setprecision(6) << res << '\n';
+}

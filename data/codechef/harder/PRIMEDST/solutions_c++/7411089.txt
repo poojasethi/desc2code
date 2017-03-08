@@ -1,0 +1,153 @@
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <algorithm>
+using namespace std;
+typedef long long ll;
+
+const int maxn = 100005;
+int n; ll res;
+struct Edge{
+	int loc, next;
+}e[maxn];
+int h[maxn], tot;
+void addedge(int x, int y)
+{
+	e[++ tot].loc = y; e[tot].next = h[x]; h[x] = tot;
+	e[++ tot].loc = x; e[tot].next = h[y]; h[y] = tot;
+}
+
+bool notprime[maxn]; int p[maxn], pcnt;
+void init()
+{
+	for (int i = 2; i < maxn; i ++)
+	{
+		if (!notprime[i]) p[pcnt ++] = i;
+		for (int j = 0; j < pcnt && i * p[j] < maxn; j ++)
+		{
+			notprime[i * p[j]] = true;
+			if (i % p[j] == 0) break;
+		}
+	}
+}
+
+int allsize, root;
+bool vis[maxn]; int size[maxn], maxsize[maxn];
+
+void dfssize(int u, int f)
+{
+	size[u] = 1;
+	for (int i = h[u]; i; i = e[i].next)
+	if (e[i].loc != f && !vis[e[i].loc])
+	{
+		dfssize(e[i].loc, u);
+		size[u] += size[e[i].loc];
+	}
+}
+
+void dfsroot(int u, int f)
+{
+	maxsize[u] = 0;
+	for (int i = h[u]; i; i = e[i].next)
+	if (e[i].loc != f && !vis[e[i].loc])
+	{
+		dfsroot(e[i].loc, u);
+		maxsize[u] = max(size[e[i].loc], maxsize[u]);
+	}
+	maxsize[u] = max(allsize - size[u], maxsize[u]);
+	if (maxsize[u] < maxsize[root]) root = u;
+}
+
+ll s[maxn]; int t[maxn], T;
+int dist[maxn];
+int maxd;
+
+void dfsdist(int u, int f)
+{
+	maxd = max(dist[u], maxd);
+	if (t[dist[u]] != T) t[dist[u]] = T, s[dist[u]] = 0;
+	s[dist[u]] ++;
+	for (int i = h[u]; i; i = e[i].next)
+	if (e[i].loc != f && !vis[e[i].loc])
+	{
+		dist[e[i].loc] = dist[u] + 1;
+		dfsdist(e[i].loc, u);
+	}
+}
+
+const double pi = acos(-1.0);
+struct complex{
+	double r, i;
+	complex(double _r = 0, double _i = 0) {r = _r, i = _i;}
+	complex operator + (complex &b) {return complex(r + b.r, i + b.i);}
+	complex operator - (complex &b) {return complex(r - b.r, i - b.i);}
+	complex operator * (complex &b) {return complex(r * b.r - i * b.i, r * b.i + i * b.r);}
+}a[131072];
+int bitrev[131072];
+void fft(complex* a, int n, int f = 1)
+{
+	for (int i = 0; i < n; i ++) if (i < bitrev[i]) swap(a[i], a[bitrev[i]]);
+	for (int i = 1; i < n; i <<= 1)
+	{
+		complex wn(cos(f * pi / i), sin(f * pi / i));
+		for (int j = 0; j < n; j += (i << 1))
+		{
+			complex w(1, 0);
+			for (int k = j; k < j + i; k ++, w = w * wn)
+			{
+				complex x = a[k], y = a[k + i] * w;
+				a[k] = x + y, a[k + i] = x - y;
+			}
+		}
+	}
+	if (f == -1) for (int i = 0; i < n; i ++) a[i].r /= n;
+}
+
+void calc(int u, int o)
+{
+	T ++; maxd = 0; dist[u] = (o == 1) ? 0 : 1;
+	dfsdist(u, 0); if (maxd == 0) return;
+	if (t[0] != T) s[0] = 0; maxd ++;
+	int n = 1, l = 0;
+	for (; n < (maxd * 2 - 1); n <<= 1, l ++);
+	for (int i = 0; i < n; i ++) bitrev[i] = (bitrev[i >> 1] >> 1) | ((i & 1) << (l - 1));
+	for (int i = 0; i < maxd; i ++) a[i] = complex(s[i], 0);
+	for (int i = maxd; i < n; i ++) a[i] = complex(0, 0);
+	fft(a, n);
+	for (int i = 0; i < n; i ++) a[i] = a[i] * a[i];
+	fft(a, n, -1);
+	maxd = maxd * 2 - 1;
+	for (int i = 0; i < maxd; i ++) s[i] = (ll)(a[i].r + 0.5);
+	for (int i = 0; p[i] < maxd; i ++) res += s[p[i]] * o;
+}
+
+void dfs(int u)
+{
+	dfssize(u, 0);
+	allsize = size[u];
+	root = 0;
+	dfsroot(u, 0);
+	vis[root] = true;
+	calc(root, 1);
+	for (int i = h[root]; i; i = e[i].next)
+	if (!vis[e[i].loc])
+	calc(e[i].loc, -1);
+	for (int i = h[root]; i; i = e[i].next)
+	if (!vis[e[i].loc])
+	dfs(e[i].loc);
+}
+
+int main()
+{
+	init();
+	scanf("%d", &n);
+	for (int i = 1; i < n; i ++)
+	{
+		int x, y; scanf("%d%d", &x, &y);
+		addedge(x, y);
+	}
+	maxsize[0] = n + 1;
+	dfs(1);
+	printf("%.9lf\n", (double) res / n / (n - 1));
+	return 0;
+}

@@ -1,0 +1,150 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+const int N=(int)1e5+5,inf=(int)1e9+7;
+int n,m;
+struct edge;
+struct node{
+	edge *son,*fa,*so[3];
+	bool spe;
+	int up,dn,cntup,cntdn,outcome;
+	void getfa();
+	void getdn();
+	void getup();
+	void dfsdn();
+	void dfsup();
+} V[N];
+struct edge{
+	node *ed;
+	edge *next;
+	int w;
+	edge* oppo();
+	int calcdn();
+	int calcup();
+} E[N<<1],*newE=E;
+edge* edge::oppo(){
+	return E+(this-E^1);
+}
+int edge::calcdn(){
+	if(!this) return -inf;
+	return ed->dn<0?-inf:w+ed->dn;
+}
+int edge::calcup(){
+	if(!this) return -inf;
+	int res=ed->up;
+	if(ed->so[0]!=oppo())
+		res=max(res,ed->so[0]->calcdn());
+	else
+		res=max(res,ed->so[1]->calcdn());
+	return res<0?-inf:w+res;
+	
+}
+void node::getfa(){
+	for(edge *e=son;e;e=e->next) if(e!=fa){
+		e->ed->fa=e->oppo();
+		e->ed->getfa();
+	}
+}
+void node::getdn(){
+	for(edge *e=son;e;e=e->next) if(e!=fa){
+		e->ed->getdn();
+		if(e->calcdn()>so[0]->calcdn())
+			so[2]=so[1],so[1]=so[0],so[0]=e;
+		else
+		if(e->calcdn()>so[1]->calcdn())
+			so[2]=so[1],so[1]=e;
+		else
+		if(e->calcdn()>so[2]->calcdn())
+			so[2]=e;
+	}
+	dn=so[0]->calcdn();
+	if(spe&&dn<0) dn=0;
+}
+void node::getup(){
+	up=fa->calcup();
+	if(spe&&up<0) up=0;
+	for(edge *e=son;e;e=e->next) if(e!=fa)
+		e->ed->getup();
+}
+void node::dfsdn(){
+	for(edge *e=son;e;e=e->next) if(e!=fa){
+		e->ed->dfsdn();
+		if(so[0]!=e){
+			if(up==dn) continue;
+			if(up>dn){
+				cntup+=e->ed->cntup;
+				continue;
+			}
+			if(so[1]!=e){
+				if(so[0]->calcdn()==so[1]->calcdn())
+					continue;
+				so[0]->ed->cntdn+=e->ed->cntup;
+			}
+			else{
+				if(so[0]->calcdn()==so[2]->calcdn())
+					continue;
+				so[0]->ed->cntdn+=e->ed->cntup;
+			}
+		}
+		else{
+			if(up==so[1]->calcdn()) continue;
+			if(so[1]->calcdn()<0){
+				cntup+=e->ed->cntup;
+				continue;
+			}
+			if(up>so[1]->calcdn()){
+				cntup+=e->ed->cntup;
+				continue;
+			}
+			if(so[1]->calcdn()==so[2]->calcdn())
+				continue;
+			so[1]->ed->cntdn+=e->ed->cntup;
+		}
+	}
+	if(spe){
+		if(up>dn){
+			cntup++;
+		}
+		else
+		if(up<dn){
+			if(so[0]->calcdn()!=so[1]->calcdn())
+				so[0]->ed->cntdn++;
+		}
+	}
+}
+void node::dfsup(){
+	if(so[0]->calcdn()>=0){
+		if(so[0]->calcdn()!=so[1]->calcdn())
+			so[0]->ed->cntdn+=cntdn;
+	}
+	outcome=cntdn;
+	for(edge *e=son;e;e=e->next) if(e!=fa){
+		e->ed->dfsup();
+		outcome+=e->ed->cntup;
+	}
+}
+
+int main(){
+	scanf("%d%d",&n,&m);
+	while(m--){
+		int x; scanf("%d",&x);
+		V[x].spe=true;
+	}
+	for(int i=1;i<n;i++){
+		int x,y,z;
+		scanf("%d%d%d",&x,&y,&z);
+		*newE=(edge){V+y,V[x].son,z},V[x].son=newE++;
+		*newE=(edge){V+x,V[y].son,z},V[y].son=newE++;
+	}
+	V[1].getfa();
+	V[1].getdn();
+	V[1].getup();
+	V[1].dfsdn();
+	V[1].dfsup();
+	int ans=-inf,cnt=0;
+	for(int i=1;i<=n;i++) if(!V[i].spe){
+		if(V[i].outcome>ans) ans=V[i].outcome,cnt=0;
+		if(V[i].outcome==ans) cnt++;
+	}
+	printf("%d %d\n",ans,cnt);
+}

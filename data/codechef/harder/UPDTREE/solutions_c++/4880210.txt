@@ -1,0 +1,133 @@
+#include<bits/stdc++.h>
+#define ll long long
+#define pb(a) push_back(a)
+#define mp(a,b) make_pair(a,b)
+#define pii pair<int,int>
+using namespace std;
+ll C[100001];
+ll S[100001];
+int up[100001][20];
+int tin[100001];
+int tout[100001];
+int timer;
+int level[100001];
+bool visited[100001];
+
+vector<int> g[100001];
+
+void dfs(int u,int p) {
+	if (p!=-1) level[u]=level[p]+1;
+	else level[u]=1;
+	up[u][0]=p;
+	for (int j=1;j<20;j++) {
+		int x=up[u][j-1];
+		if (x<0) break;
+		up[u][j]=up[x][j-1];
+	}
+	tin[u]=++timer;
+	int i,j,v;
+	for (i=0;i<g[u].size();i++) {
+		v=g[u][i];
+		if (v!=p) {
+			dfs(v,u);
+		}
+	}
+	tout[u]=++timer;
+}
+
+bool anc(int x,int y) {
+	if (x==y) return true;
+	return (tin[x]<tin[y] && tout[x]>tout[y]);
+}
+
+/*int lca(int x,int y) {
+	if (anc(x,y)) return x;
+	int i;
+	for (i=19;i+1;i--) {
+		if (!anc(up[x][i],y)) x=up[x][i];
+	}
+	return up[x][0];
+}*/
+
+int lca(int p, int q)
+{
+	int log, i;
+	if (level[p] < level[q]) swap(p,q);
+	for (log = 1; (1 << log) <= level[p]; log++);log--;
+	for (i = log; i >= 0; i--)
+          if (level[p] - (1 << i) >= level[q]) p = up[p][i];
+    if (p == q) return p;
+    for (i = log; i >= 0; i--)
+        if (up[p][i] != -1 &&up[p][i] != up[q][i]) p = up[p][i], q = up[q][i];
+	return up[p][0];
+}
+
+void update(int u,int p) {
+	for (int i=0;i<g[u].size();i++) {
+		int v=g[u][i];
+		if (v!=p) {
+			update(v,u);
+			C[u]+=C[v];
+		}
+	}
+}
+
+void sumup(int u,int p) {
+	for (int i=0;i<g[u].size();i++) {
+		int v=g[u][i];
+		if (v!=p) {
+			S[v]=S[u]+C[v];
+			sumup(v,u);
+		}
+	}
+}
+
+pii compath(int u,int a,int v,int b) {
+	if (!anc(v,a)) return mp(0,0);
+	int x=lca(a,b);
+	if (level[v]<level[u]) {
+		if (anc(u,x)) return mp(u,x);
+	}
+	else {
+		if (anc(v,x)) return mp(v,x);
+	}
+	return mp(0,0);
+}
+
+int main() {
+	int n,m1,m2,i,j,k,a,b,c,d,u,v;
+	scanf("%d %d %d",&n,&m1,&m2);
+	for (i=0;i<n-1;i++) {
+		scanf("%d %d",&u,&v);
+		g[u].pb(v);
+		g[v].pb(u);
+	}
+	timer=0;
+	dfs(1,-1);
+	for (i=0;i<m1;i++) {
+		scanf("%d %d %d %d",&a,&b,&c,&d);
+		u=lca(a,b);
+		v=lca(c,d);
+		C[a]++;
+		C[b]++;
+		C[u]-=2;
+		pii x;
+		x=compath(u,a,v,c); C[x.second]--; C[x.first]++;
+		x=compath(u,a,v,d); C[x.second]--; C[x.first]++;
+		x=compath(u,b,v,c); C[x.second]--; C[x.first]++;
+		x=compath(u,b,v,d); C[x.second]--; C[x.first]++;
+	}
+	update(1,-1);
+	sumup(1,-1);
+	for (i=0;i<m2;i++) {
+		scanf("%d %d",&a,&b);
+		printf("%lld\n",S[a]+S[b]-S[lca(a,b)]*2);
+	}
+	return 0;
+}
+		
+
+
+
+
+

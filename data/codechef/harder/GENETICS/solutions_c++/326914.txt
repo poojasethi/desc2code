@@ -1,0 +1,161 @@
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
+using namespace std;
+struct Treap {
+	int ch;
+	int size,cnt[4];
+
+	int pri;
+	Treap *left,*right;
+};
+Treap *null;//,po[2000000];
+//int pon=0;
+#define NEW new Treap
+inline void upd(Treap *t) {
+	t->size=t->left->size+1+t->right->size;
+	for(int i=0;i<4;i++)
+        t->cnt[i]=t->left->cnt[i]+(i==t->ch)+t->right->cnt[i];
+}
+Treap *join(Treap *t1,Treap *t2) {
+	if(t1==null)
+	    return t2;
+	if(t2==null)
+	    return t1;
+
+	Treap *tt=NEW;
+	if(t1->pri<t2->pri) {
+		*tt=*t1;
+	    tt->right=join(t1->right,t2);
+	} else {
+        *tt=*t2;
+	    tt->left=join(t1,t2->left);
+	}
+	upd(tt);
+	return tt;
+}
+void split(Treap *t,int pos,Treap *&tL,Treap *&tR) {
+	if(t==null) {
+		tL=tR=null;
+		return;
+	}
+
+    Treap *tt=NEW;
+    *tt=*t;
+	if(pos<=t->left->size+1) {
+		split(t->left,pos,tL,tR);
+		tt->left=tR,tR=tt;
+	} else {
+        split(t->right,pos-t->left->size-1,tL,tR);
+		tt->right=tL,tL=tt;
+	}
+	upd(tt);
+}
+Treap *modify(Treap *t,int pos,int ch) {
+    Treap *tt=NEW;
+    *tt=*t;
+	if(pos<=t->left->size)
+	    tt->left=modify(t->left,pos,ch);
+	else if(pos==t->left->size+1)
+    	tt->ch=ch;
+	else
+	    tt->right=modify(t->right,pos-t->left->size-1,ch);
+	upd(tt);
+	return tt;
+}
+/*void query(Treap *t,int L,int R,int sL,int sR) {
+	if(sR<L||R<sL)
+	    return;
+	if(sL<=L&&R<=sR) {
+		return;
+	}
+	query(t->left,L,t->
+	if(pos<=t->left->size)
+	    tt->left=modify(t->left,pos,ch);
+	else if(pos==t->left->size+1)
+    	tt->ch=ch;
+	else
+	    tt->right=modify(t->right,pos-t->left->size-1,ch);
+	upd(tt);
+	return tt;
+}*/
+void print(Treap *t) {
+	if(t==null)
+	    return;
+	/*print(t->left);
+	
+	print(t->right);*/
+	print(t->left);
+	//printf("%d(size=%d) ",t->ch,t->size);
+	printf("%d",t->ch);
+	print(t->right);
+}
+
+const int base[]={'A','G','T','C'};
+char buf[30100];
+Treap *t[30100];
+int base2id[256];
+int main() {
+	null=new Treap;
+	memset(null,0,sizeof(Treap));
+
+	for(int i=0;i<4;i++)
+	    base2id[base[i]]=i;
+
+	int n;
+	scanf("%d",&n);
+	for(int i=1;i<=n;i++) {
+		scanf("%s",buf);
+		int len=strlen(buf);
+		
+		t[i]=null;
+		for(int j=0;j<len;j++) {
+            Treap *x=new Treap;
+			x->ch=base2id[(int)buf[j]];
+			x->pri=rand();
+			x->left=x->right=null;
+			upd(x);
+
+			t[i]=join(t[i],x);
+		}
+		//print(t[i]),puts("");
+	}
+	
+	int tn=n,qn;
+	scanf("%d",&qn);
+	for(int i=1;i<=qn;i++) {
+		scanf("%s",buf);
+		if(buf[1]=='R') {
+			int id1,id2,k1,k2;
+			scanf("%d%d%d%d",&id1,&id2,&k1,&k2);
+			k1++,k2++;
+
+			Treap *t1L,*t1R,*t2L,*t2R;
+			split(t[id1],k1,t1L,t1R);
+			split(t[id2],k2,t2L,t2R);
+			//printf("split: "),print(t1L),printf(" | "),print(t1R),puts("");
+			//printf("split: "),print(t2L),printf(" | "),print(t2R),puts("");
+			t[++tn]=join(t1L,t2R);
+			t[++tn]=join(t2L,t1R);
+			//printf("new DNA: "),print(t[tn-1]),puts("");
+			//printf("new DNA: "),print(t[tn]),puts("");
+		} else if(buf[1]=='U') {
+            int id,k;
+            char ch;
+            scanf("%d%d %c",&id,&k,&ch);
+
+            t[id]=modify(t[id],k,base2id[(int)ch]);
+            //printf("modified DNA: "),print(t[id]),puts("");
+		} else {
+            int id,k1,k2;
+			scanf("%d%d%d",&id,&k1,&k2);
+			
+			Treap *t1,*t2,*t3;
+			split(t[id],k2+1,t1,t2);
+			split(t1,k1,t2,t3);
+			//printf("mid DNA: "),print(t3),puts("");
+			printf("%d %d %d %d\n",t3->cnt[0],t3->cnt[1],t3->cnt[2],t3->cnt[3]);
+		}
+	}
+	scanf("%*s");
+}

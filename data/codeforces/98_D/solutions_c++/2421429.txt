@@ -1,0 +1,67 @@
+#include <cstdio>
+#include <iostream>
+using namespace std;
+int n,tot,i,j,k,s[21],g[21],f[21];
+
+void U(int x,int a,int b,int c)
+{
+     if (x>n) return ;
+     int i;
+     U(x+1,a,c,b);
+     for (i=1;i<=s[x];i++)
+         printf("%d %d\n",a,b);
+     U(x+1,c,b,a);
+     return ;
+}
+
+void C(int x,int a,int b,int c)
+{
+     if (s[x]==1) U(x,a,b,c);
+     else         
+     if (x==n)
+     {
+        for (int i=1;i<s[x];i++)
+            printf("%d %d\n",a,c);
+        printf("%d %d\n",a,b);
+        for (int i=1;i<s[x];i++)
+            printf("%d %d\n",c,b);     
+     }
+     else
+     {
+         U(x+1,a,b,c);
+         for (i=1;i<=s[x];i++)
+             printf("%d %d\n",a,c);
+         U(x+1,b,a,c);
+         for (i=1;i<=s[x];i++)
+             printf("%d %d\n",c,b);
+         C(x+1,a,b,c);
+     }
+     return ;
+}
+
+int main()
+{
+    cin >> n;
+    k=0;
+    for (i=1;i<=n;i++)
+    {
+        cin >> j;
+        if (j==k) s[tot]++;
+        else      s[++tot]=1;
+        k=j;
+    }
+    n=tot;
+    g[n]=s[n];
+    f[n]=s[n]*2-1;
+    for (i=n-1;i>=1;i--)
+    {
+        g[i]=g[i+1]*2+s[i];
+        if (s[i]==1) f[i]=g[i];
+        else         f[i]=g[i+1]*2+s[i]*2+f[i+1];
+    }
+    cout << f[1] << endl;
+    C(1,1,3,2);
+    cin.get();
+    cin.get();
+    return 0;
+}

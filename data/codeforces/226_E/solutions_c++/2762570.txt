@@ -1,0 +1,153 @@
+#include<stdio.h>
+#include<algorithm>
+using namespace std;
+int getint()
+{
+	int ret=0;bool ok=false;
+	for(;;)
+	{
+		int c=getchar();
+		if(c>='0'&&c<='9')ret=(ret<<3)+ret+ret+c-'0',ok=true;
+		else if(ok)return ret;
+	}
+}
+const int maxn=100010;
+int n;
+struct edge
+{
+	int v;
+	edge *n;
+};
+edge EPool[maxn],*g[maxn],*ep=EPool;
+inline void addedge(int u,int v)
+{
+	ep->v=v,ep->n=g[u],g[u]=ep++;
+}
+int dn[maxn],nn,_dn[maxn],d[maxn];
+int log2[maxn];
+int fa[maxn][17];
+void dfs(int u,int f)
+{
+	dn[u]=++nn;
+	d[u]=d[f]+1;
+	fa[u][0]=f;
+	for(int i=1;i<=log2[d[u]];i++)fa[u][i]=fa[fa[u][i-1]][i-1];
+	for(edge *i=g[u];i;i=i->n)dfs(i->v,u);
+	_dn[u]=nn;
+}
+int root;
+int m;
+int lca(int u,int v)
+{
+	if(d[u]<d[v])swap(u,v);
+	for(int i=log2[d[u]];i>=0&&d[u]>d[v];i--)if(fa[u][i]&&d[fa[u][i]]>=d[v])u=fa[u][i];
+	if(u==v)return u;
+	for(int i=log2[d[u]];i>=0;i--)if(fa[u][i]&&fa[u][i]!=fa[v][i])u=fa[u][i],v=fa[v][i];
+	return fa[u][0];
+}
+struct Tnode
+{
+	int s,S;
+	Tnode *l,*r;
+	Tnode();
+};
+Tnode *tp;
+Tnode::Tnode():r(tp){tp=this;}
+inline Tnode* newnode()
+{
+	if(!tp)new Tnode[10000];
+	Tnode *ret=tp;
+	return tp=tp->r,ret;
+}
+inline Tnode* getnew(int x)
+{
+	Tnode *ret=newnode();
+	return ret->s=1,ret->S=x,ret;
+}
+inline Tnode* getnew(Tnode *a,Tnode *b)
+{
+	Tnode *ret=newnode();
+	return ret->s=a->s+b->s,ret->S=a->S+b->S,ret->l=a,ret->r=b,ret;
+}
+int a[maxn];
+Tnode* build(int l,int r)
+{
+	if(l==r)return getnew(0);
+	return getnew(build(l,(l+r)/2),build((l+r)/2+1,r));
+}
+Tnode* add(Tnode *R,int i,int x)
+{
+	if(R->s==1)return getnew(R->S+x);
+	if(i<=R->l->s)return getnew(add(R->l,i,x),R->r);
+	return getnew(R->l,add(R->r,i-R->l->s,x));
+}
+int sum(Tnode *R,int l,int r)
+{
+	if(l==1&&r==R->s)return R->S;
+	if(r<=R->l->s)return sum(R->l,l,r);
+	if(l>R->l->s)return sum(R->r,l-R->l->s,r-R->l->s);
+	return sum(R->l,l,R->l->s)+sum(R->r,1,r-R->l->s);
+}
+Tnode *R[maxn];
+inline Tnode* _add(Tnode *R,int i,int x)
+{
+	if(i>n)return R;
+	return add(R,i,x);
+}
+inline int _sum(Tnode *R,int l,int r)
+{
+	if(l>r)return 0;
+	return sum(R,l,r);
+}
+inline int getd(int x,int y,int u)
+{
+	return d[u]+1-_sum(R[y],1,dn[u])+_sum(R[x],1,dn[u]);
+}
+bool isv(int x,int y,int u)
+{
+	return getd(x,y,u)-getd(x,y,fa[u][0]);
+}
+int main()
+{
+	n=getint();
+	for(int i=1;i<=n;i++)
+	{
+		int x=getint();
+		if(x)addedge(x,i);
+		else root=i;
+	}
+	log2[0]=-1;for(int i=2;i<=n;i++)log2[i]=log2[i-1]+(i==(i&-i));
+	d[0]=-1;dfs(root,0);
+	R[0]=build(1,n);
+	m=getint();
+	for(int i=1;i<=m;i++)
+	{
+		R[i]=R[i-1];
+		int cmd=getint();
+		if(cmd==1)
+		{
+			int u=getint();
+			R[i]=_add(R[i],dn[u],1);
+			R[i]=_add(R[i],_dn[u]+1,-1);
+		}
+		else
+		{
+			int u=getint(),v=getint(),k=getint(),y=getint();
+			int a=lca(u,v);
+			bool vu=isv(y,i,u),vv=isv(y,i,v),va=isv(y,i,a);
+			int xu=getd(y,i,u),xv=getd(y,i,v),xa=getd(y,i,a);
+			int x=xu+xv-xa-xa+va;
+			if(x-vu-vv<k){puts("-1");continue;}
+			k+=vu;
+			if(xu-xa+va<k)u=v,xu=xv,k=x-k+1;
+			for(int j=log2[d[u]];j>=0;j--)if(fa[u][j])
+			{
+				int v=fa[u][j];
+				int t=getd(y,i,v);
+				if(xu-t<k)u=v;
+			}
+			printf("%d\n",u);
+		}
+	}
+	return 0;
+}

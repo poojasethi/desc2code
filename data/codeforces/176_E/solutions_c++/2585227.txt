@@ -1,0 +1,107 @@
+#include<stdio.h>
+#include<set>
+using namespace std;
+int n;
+int getint()
+{
+	int ret=0;bool ok=false;
+	for(;;)
+	{
+		int c=getchar();
+		if(c>='0'&&c<='9')ret=(ret<<3)+ret+ret+c-'0',ok=true;
+		else if(ok)return ret;
+	}
+}
+typedef long long ll;
+struct edge
+{
+	int v,w;
+	edge *n;
+};
+edge EPool[200010],*ep=EPool,*g[100010];
+inline void addedge(int u,int v,int w)
+{
+	ep->v=v,ep->w=w,ep->n=g[u],g[u]=ep++;
+}
+int d[100010],sz[100010],fa[100010],ffa[100010];
+ll dw[100010];
+int dfn[100010],nn;
+void dfs(int u,int f)
+{
+	dfn[u]=++nn;
+	sz[u]=1;
+	d[u]=d[f]+1;
+	int ms=0,mi=0;
+	for(edge *i=g[u];i;i=i->n)if(i->v!=f)
+	{
+		dw[i->v]=dw[u]+i->w,dfs(i->v,u),sz[u]+=sz[i->v];
+		if(sz[i->v]>ms)ms=sz[i->v],mi=i->v;
+	}
+	fa[u]=mi?fa[mi]:u;
+	for(edge *i=g[u];i;i=i->n)if(i->v!=f&&fa[i->v]!=fa[u])ffa[fa[i->v]]=u;
+}
+struct cmp
+{
+	bool operator()(const int &a,const int &b)const {return dfn[a]<dfn[b];}
+};
+set<int,cmp> S;
+typedef set<int,cmp>::iterator iter;
+int lca(int u,int v)
+{
+	while(fa[u]!=fa[v])
+	{
+		if(d[ffa[fa[u]]]<d[ffa[fa[v]]])swap(u,v);
+		u=ffa[fa[u]];
+	}
+	return d[u]<d[v]?u:v;
+}
+inline ll pathlen(int u,int v)
+{
+	return dw[u]+dw[v]-dw[lca(u,v)]*2;
+}
+ll ans;
+void insert(int x)
+{
+	S.insert(x);
+	if(S.size()==1)return;
+	iter i=S.find(x);
+	iter l=i,r=i;
+	l--,r++;
+	if(i==S.begin())ans+=pathlen(x,*r)+pathlen(x,*S.rbegin())-pathlen(*r,*S.rbegin());
+	else if(r==S.end())ans+=pathlen(x,*l)+pathlen(x,*S.begin())-pathlen(*l,*S.begin());
+	else ans+=pathlen(x,*l)+pathlen(x,*r)-pathlen(*l,*r);
+}
+void remove(int x)
+{
+	iter i=S.find(x);
+	if(S.size()>1)
+	{
+		iter l=i,r=i;
+		l--,r++;
+		if(i==S.begin())ans-=pathlen(x,*r)+pathlen(x,*S.rbegin())-pathlen(*r,*S.rbegin());
+		else if(r==S.end())ans-=pathlen(x,*l)+pathlen(x,*S.begin())-pathlen(*l,*S.begin());
+		else ans-=pathlen(x,*l)+pathlen(x,*r)-pathlen(*l,*r);
+	}
+	S.erase(i);
+}
+int main()
+{
+	n=getint();
+	for(int i=1;i<n;i++)
+	{
+		int u=getint(),v=getint(),w=getint();
+		addedge(u,v,w);
+		addedge(v,u,w);
+	}
+	dfs(1,0);
+	int Q=getint();
+	while(Q--)
+	{
+		char cmd[10];
+		scanf("%s",cmd);
+		if(*cmd=='?')printf("%I64d\n",ans/2);
+		else if(*cmd=='+')insert(getint());
+		else remove(getint());
+	}
+	return 0;
+}

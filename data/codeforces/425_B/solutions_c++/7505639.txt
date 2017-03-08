@@ -1,0 +1,38 @@
+#include<cstdio>
+#include<algorithm>
+using namespace std;
+const int maxn = 100;
+int n, m, k, a[maxn][maxn];
+int Check(int l)
+{
+  int sum = 0;
+  for (int i = 0; i < n; i++) {
+    int s = 0;
+    for (int j = 0; j < m; j++) if (a[i][j] != a[l][j]) s++;
+    sum += min(s, m-s);
+  }
+  return sum;
+}
+int main()
+{
+  scanf("%d%d%d", &n, &m, &k);
+  for (int i = 0; i < n; i++)
+    for (int j = 0; j < m; j++)
+      scanf("%d", &a[i][j]);
+  int ans = k+1;
+  if (k < n) {
+    for (int i = 0; i <= k; i++) ans = min(Check(i), ans);
+  } else {
+    for (int u = 0; u < (1<<n); u++) {
+      int sum = 0;
+      for (int j = 0; j < m; j++) {
+        int s = 0;
+        for (int i = 0; i < n; i++) if (a[i][j] != ((u>>i)&1)) s++;
+        sum += min(s, n-s);
+      }
+      ans = min(sum, ans);
+    }
+  }
+  if (ans > k) ans = -1;
+  printf("%d\n", ans);
+}

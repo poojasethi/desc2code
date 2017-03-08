@@ -1,0 +1,45 @@
+#include <iostream>
+#include <string.h>
+#include <algorithm>
+#include <stdio.h>
+#define maxn 100010
+using namespace std;
+void print(int x,int y)
+{
+    int xx=1,yy=1;
+    while(yy<y)
+    printf("(%d,%d) ",xx,yy++);
+    while(xx<=x)
+    printf("(%d,%d) ",xx++,yy);
+    printf("\n");
+}
+struct node
+{
+    int len;
+    int x,y;
+}a[2510];
+bool cmp(const node &x,const node &y)
+{
+    return x.len<y.len;
+}
+int main()
+{
+    //freopen("dd.txt","r",sdtin);
+    int n,m,k,num=0,ans=0;
+    scanf("%d%d%d",&n,&m,&k);
+    for(int i=1;i<=n;i++)
+    {
+        for(int j=1;j<=m;j++)
+        {
+            a[num].x=i,a[num].y=j;
+            a[num++].len=i+j-1;
+        }
+    }
+    sort(a,a+num,cmp);
+    for(int i=0;i<k;i++)
+    ans+=a[i].len;
+    printf("%d\n",ans);
+    for(int i=k-1;i>=0;i--)
+    print(a[i].x,a[i].y);
+    return 0;
+}

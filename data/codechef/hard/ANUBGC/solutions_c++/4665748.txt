@@ -1,0 +1,187 @@
+#include<stdio.h>
+#include<string.h>
+
+#define MAXINDEX 17
+#define BATCH 3
+#define DIGITS 10
+#define DIGITS2 100
+#define BATCHDIGITS 1000// DIGITS^BATCH
+#define SPLIT 5		// DIGITS/2
+#define FULLSPLIT 31	// (2^SPLIT)-1
+#define MAXT 10000
+#define ZZERO 528	// 10*'0' + '0'
+#define ZZZERO 5328	// 100*'0' + 10*'0' + '0'
+
+long long Pow9[MAXINDEX+1+1], Pow10[MAXINDEX+1+1], Num[MAXINDEX+1];
+int Match2[DIGITS2+1][DIGITS], Sum2[DIGITS2+1], MatchB[BATCHDIGITS+1][DIGITS];
+int DigitMask2[DIGITS2], DigitMaskB[BATCHDIGITS];
+int MMatchBLow[1<<SPLIT][BATCHDIGITS+1], MMatchBHigh[1<<SPLIT][BATCHDIGITS+1];
+int SumBLow[1<<SPLIT][BATCHDIGITS+1], SumBHigh[1<<SPLIT][BATCHDIGITS+1];
+int Weight[1<<SPLIT];
+
+char InBuf[6+(MAXINDEX+2)*MAXT+1], OutBuf[(((MAXINDEX+2)<<1)+2)*MAXT], Temp[MAXINDEX+2];
+
+
+void Init(void) {
+
+	int i, j, k, num, step, mask, lim, diff, offset;
+
+	for(Pow9[0] = Pow10[0] = 1, i = 1; i<=MAXINDEX+1; i++) Pow9[i] = 9*Pow9[i-1], Pow10[i] = 10*Pow10[i-1];
+	for(i = 1; i<=MAXINDEX; i++) Num[i] = 10*(Pow10[i]-Pow9[i]);
+
+	for(i = 0; i<DIGITS; i++) for(j = 0; j<DIGITS; j++) {
+		num = i*DIGITS+j+1;
+		memcpy(Match2[num], Match2[num-1], sizeof Match2[0]);
+		Match2[num][i]++, Sum2[num] = Sum2[num-1]+1, DigitMask2[num-1] = 1<<i;
+		if(i!=j) Match2[num][j]++, Sum2[num]++, DigitMask2[num-1] |= 1<<j;
+	}
+
+	for(i = 0; i<DIGITS; i++) for(j = 0; j<DIGITS; j++) for(k = 0; k<DIGITS; k++) {
+		num = i*DIGITS2+j*DIGITS+k+1;
+		memcpy(MatchB[num], MatchB[num-1], sizeof MatchB[0]);
+		MatchB[num][i]++, DigitMaskB[num-1] = 1<<i;
+		if(i!=j) MatchB[num][j]++, DigitMaskB[num-1] |= 1<<j;
+		if(i!=k && j!=k) MatchB[num][k]++, DigitMaskB[num-1] |= 1<<k;
+	}
+
+	lim = 1<<SPLIT;
+	for(step = lim, offset = SPLIT-1, diff = 1<<offset; 1<step; offset--, diff >>= 1, step >>= 1)
+		for(mask = 0; mask<lim; mask+=step) {
+			Weight[mask|diff] = Weight[mask]+1;
+
+			for(i = 1; i<=BATCHDIGITS; i++) {
+				MMatchBLow[mask|diff][i] = MMatchBLow[mask][i]+MatchB[i][offset];
+				MMatchBHigh[mask|diff][i] = MMatchBHigh[mask][i]+MatchB[i][SPLIT+offset];
+			}
+		}
+
+	for(mask = 0; mask<=FULLSPLIT; mask++)
+		for(i = 1; i<=BATCHDIGITS; i++) {
+			SumBLow[mask][i] = i*Weight[mask]+MMatchBLow[FULLSPLIT-mask][i];
+			SumBHigh[mask][i] = i*Weight[mask]+MMatchBHigh[FULLSPLIT-mask][i];
+		}
+}
+
+
+int GetNum(char **readpp) {
+
+	char c, *chp = *readpp;
+	int val = 0;
+
+	while((c = *chp++)<'0' || c>'9');
+
+	do val = val*10 + c-'0';
+	while((c = *chp++)>='0' && c<='9');
+
+	*readpp = chp;
+	return val;
+}
+
+
+long long GetNum(char **startpp, char **readpp, int &maxindex) {
+
+	char c, *chp = *readpp;
+	long long val = 0;
+
+	while((c = *chp)<'0' || c>'9') chp++;
+
+	*startpp = chp;
+	do val = val*10 + c-'0', chp++;
+	while((c = *chp)>='0' && c<='9');
+
+	*readpp = chp, maxindex = chp-1-*startpp;
+	return val;
+}
+
+
+void WriteNum(long long num, char **writep) {
+
+	if(!num) { *(*writep)++ = '0'; return;}
+
+	int i = 0;
+	long long num2;
+	char *chp;
+
+	while(num) {	
+		num2 = num/10;
+		Temp[i++] = (char)(num-num2*10 + '0');
+		num = num2;
+	}
+
+	for(chp = *writep, i--; 0<=i; i--) *chp++ = Temp[i];
+	*writep = chp;
+}
+
+
+long long GCD(long long a,  long long b) {
+
+	long long temp;
+
+	while((temp = a%b)) a = b, b = temp;
+
+	return b;
+}
+
+
+int main(void) {
+
+	char *readp, *startp, *writep;
+	int T, maxind, i, batchdigit, digitmask;
+	long long N, sum, gcd;
+
+	Init();
+
+	i = fread((void *)InBuf, 1, sizeof InBuf, stdin);
+	InBuf[i] = '\0', readp = InBuf;
+	writep = OutBuf;
+
+	for(T = GetNum(&readp); T>0; T--) {
+
+		N = GetNum(&startp, &readp, maxind);
+		sum = -((Pow9[maxind+1]-1)>>3);
+		i = maxind - maxind%BATCH;
+
+		if(i==maxind) {
+			batchdigit = *startp-'0';
+			if(i==0) batchdigit++;
+			sum += batchdigit*(Num[i] + Pow9[i]), digitmask = 1<<batchdigit;
+			startp++;
+		}
+
+		else if(maxind==i+1) {
+			batchdigit = *startp*10 + *(startp+1) - ZZERO;
+			if(i==0) batchdigit++;
+			sum += batchdigit*Num[i] + Sum2[batchdigit]*Pow9[i];
+			if(i) digitmask = DigitMask2[batchdigit];
+			startp += 2;
+		}
+
+		else {
+			batchdigit = *startp*100 + *(startp+1)*10 + *(startp+2) - ZZZERO;
+			if(i==0) batchdigit++;
+			sum += batchdigit*Num[i] + (SumBLow[0][batchdigit]+SumBHigh[0][batchdigit])*Pow9[i];
+			if(i) digitmask = DigitMaskB[batchdigit];
+			startp += BATCH;
+		}
+
+		i -= BATCH;
+
+		while(i>0) {
+			batchdigit = *startp*100 + *(startp+1)*10 + *(startp+2) - ZZZERO;
+			sum += batchdigit*Num[i] + (SumBLow[digitmask&FULLSPLIT][batchdigit]+SumBHigh[digitmask>>SPLIT][batchdigit])*Pow9[i];
+			digitmask |= DigitMaskB[batchdigit];
+			i -= BATCH, startp += BATCH;
+		}
+
+		if(i==0) {
+			batchdigit = *startp*100 + *(startp+1)*10 + *(startp+2) - ZZZERO + 1;
+			sum += SumBLow[digitmask&FULLSPLIT][batchdigit]+SumBHigh[digitmask>>SPLIT][batchdigit];
+		}
+
+		gcd = GCD(10*N, sum);
+		WriteNum(sum/gcd, &writep), *writep++ = '/', WriteNum(10*N/gcd, &writep), *writep++ = '\n'; 
+	}
+	fwrite((void *)OutBuf, 1, writep-OutBuf, stdout); 
+
+	return 0;
+}

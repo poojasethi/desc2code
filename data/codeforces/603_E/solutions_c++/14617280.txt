@@ -1,0 +1,130 @@
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <deque>
+#include <queue>
+#include <stack>
+#include <set>
+#include <map>
+#include <algorithm>
+#include <functional>
+#include <utility>
+#include <bitset>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <cstdio>
+
+using namespace std;
+
+#define REP(i,n) for((i)=0;(i)<(int)(n);(i)++)
+#define snuke(c,itr) for(__typeof((c).begin()) itr=(c).begin();itr!=(c).end();itr++)
+
+int TIMER;
+int parent[100010];
+int rank[100010];
+stack <pair <int, pair <int, int> > > update;
+
+void revert(void){
+    pair <int, pair <int, int> > p = update.top();
+    update.pop();
+    if(p.first == 0){
+        parent[p.second.first] = p.second.second;
+    } else {
+        rank[p.second.first] = p.second.second;
+    }
+    TIMER--;
+}
+
+int root(int x){
+    if(parent[x] != x){
+        int tmp = root(parent[x]);
+        update.push(make_pair(0, make_pair(x, parent[x])));
+        parent[x] = tmp;
+        TIMER++;
+    }
+    return parent[x];
+}
+
+int connect(int x, int y){
+    int rx = root(x), ry = root(y);
+    if(rx == ry) return 0;
+    if(rank[rx] < rank[ry]) swap(rx, ry);
+    update.push(make_pair(0, make_pair(ry, parent[ry])));
+    parent[ry] = rx;
+    TIMER++;
+    int ans = 0;
+    if(rank[rx] % 2 == 1 && rank[ry] % 2 == 1) ans = 2;
+    int tmp = rank[rx] + rank[ry];
+    update.push(make_pair(1, make_pair(rx, rank[rx])));
+    rank[rx] = tmp;
+    TIMER++;
+    return ans;
+}
+
+int N,Q;
+int xa[300010],xb[300010],xy[300010],xc[300010];
+int ya[300010],yb[300010],yx[300010],yc[300010];
+int ans[300010];
+
+void func(int L, int R, int h, int odd){ // update (L, R]
+    int i;
+    
+    int start = TIMER;
+    int odd_init = odd;
+    
+    int M = (L + R + 1) / 2;
+    for(i=L;i<M;i++) if(xy[i] < h) odd -= connect(xa[i], xb[i]);
+    int h2 = h;
+    while(odd > 0 && h2 < Q){
+        if(yx[h2] < M) odd -= connect(ya[h2], yb[h2]);
+        h2++;
+    }
+    ans[M] = ((odd == 0) ? h2 : -1);
+    
+    if(R - L == 1) return;
+    
+    while(TIMER > start) revert();
+    odd = odd_init;
+    for(i=h;i<h2;i++) if(yx[i] < L) odd -= connect(ya[i], yb[i]);
+    func(L, M, h2, odd);
+    
+    while(TIMER > start) revert();
+    odd = odd_init;
+    for(i=L;i<M;i++) if(xy[i] < h) odd -= connect(xa[i], xb[i]);
+    func(M, R, h, odd);
+}
+
+int main(void){
+    int i;
+    
+    cin >> N >> Q;
+    REP(i,Q){
+        scanf("%d%d%d", &xa[i], &xb[i], &xc[i]);
+        xa[i]--; xb[i]--;
+    }
+    
+    vector <pair <int, int> > v;
+    REP(i,Q) v.push_back(make_pair(xc[i], i));
+    sort(v.begin(),v.end());
+    REP(i,Q){
+        yx[i] = v[i].second;
+        xy[v[i].second] = i;
+    }
+    REP(i,Q){
+        ya[i] = xa[yx[i]];
+        yb[i] = xb[yx[i]];
+        yc[i] = xc[yx[i]];
+    }
+    
+    REP(i,N) parent[i] = i;
+    REP(i,N) rank[i] = 1;
+    
+    func(0, Q, 0, N);
+    
+    REP(i,Q) printf("%d\n", ((ans[i+1] == -1) ? -1 : yc[ans[i+1]-1]));
+    
+    return 0;
+}

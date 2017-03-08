@@ -1,0 +1,101 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <map>
+#define mkp(x,y) std::make_pair(x,y)
+const int N = 400000 + 9;
+std::pair<int,int>a[N];
+int d[N],n,ec,L,W,q[N],c[N],son[N],lnk[N],nxt[N],dep[N],lim,father[N],m,len[N],f[N],g[N];
+bool iscenter[N];
+long long ans;
+int query(int x)
+{
+	int res = 0;
+	for (; x > 0; x -= x & -x) res += c[x];
+	return res;
+}
+void add(int x)
+{
+	for (; x <= lim; x += x & -x) c[x]++;
+}
+int getcenter(const int s)
+{
+	int h = 1,t = 0,res = -1;
+	q[++t] = s; father[s] = -1; g[s] = f[s] = 0;
+	for (; h <= t; ) {
+		int u = q[h++];
+		for (int i = son[u]; i; i = nxt[i]) {
+			int v = lnk[i];
+			if (iscenter[v] || v == father[u]) continue;
+			father[v] = u;
+			q[++t] = v;
+			f[v] = g[v] = 0;
+		}
+	}
+	for (int i = t; i; --i) {
+		int u = q[i],fa = father[u];
+		f[fa] += (++f[u]);
+		g[fa] = std::max(g[fa],f[u]);
+		g[u] = std::max(g[u],t - f[u]);
+		if (res == -1 || g[u] < g[res]) res = u;
+	}
+	iscenter[res] = true;
+	return res;
+}
+void update(const int s,const int f)
+{
+	int h = 1,t = 0;
+	q[++t] = s; father[s] = -1;
+	for (; h <= t; ) {
+		int u = q[h++];
+		for (int i = son[u]; i; i = nxt[i]) {
+			int v = lnk[i];
+			if (iscenter[v] || v == father[u]) continue;
+			q[++t] = v;
+			d[v] = d[u] + len[i];
+			dep[v] = dep[u] + 1;
+			father[v] = u;
+		}
+	}
+	lim = dep[q[t]] + 1;
+	memset(c + 1,0,sizeof(*c) * lim);
+	m = 0;
+	for (int i = 1; i <= t; ++i) a[++m] = mkp(d[q[i]],dep[q[i]]);
+	std::sort(a + 1,a + 1 + m);
+	for (int i = m,j = 1; i; --i) {
+		while (j <= m && a[j].first + a[i].first <= W) add(a[j++].second + 1);
+		ans += f * query(std::min(L - a[i].second + 1,lim));
+	}
+}
+void solve(const int s)
+{
+	//printf("%d %d ", s, ans);
+	dep[s] = 0; d[s] = 0;
+	update(s,1);
+	//printf("%d ", ans);
+	for (int i = son[s]; i; i = nxt[i])
+		if (!iscenter[lnk[i]]) update(lnk[i],-1);
+	//printf("%d\n", ans);
+	for (int i = son[s]; i; i = nxt[i])
+		if (!iscenter[lnk[i]]) solve(getcenter(lnk[i]));
+}
+inline void addedge(int x,int y,int z)
+{
+	nxt[++ec] = son[x];
+	lnk[ec] = y;
+	len[ec] = z;
+	son[x] = ec;
+}
+int main()
+{
+	//freopen("293E.in","r",stdin);
+	//freopen("stdE.out","w",stdout);
+	scanf("%d%d%d",&n,&L,&W);
+	for (int x,y,i = 1; i < n; ++i) {
+		scanf("%d%d",&x,&y);
+		addedge(i + 1,x,y);
+		addedge(x,i + 1,y);
+	}
+	solve(getcenter(1));
+	printf("%I64d\n",(ans - n) / 2);
+}

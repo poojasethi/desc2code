@@ -1,0 +1,157 @@
+/*
+	Time : 1305Z 20141028
+	Task : Codeforces 251E
+	Tags : DP
+	Stat : Coding
+*/
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <cstdlib>
+#include <algorithm>
+#include <vector>
+#include <utility>
+#include <queue>
+#include <functional>
+#include <map>
+#include <set>
+#include <cmath>
+#include <numeric>
+
+#define fi first
+#define se second
+#define fo(i,a,b) for (int i = a; i <= b; i ++)
+#define fd(i,a,b) for (int i = a; i >= b; i --)
+#define fe(i,x,y) for (int i = x, y = lnk[i]; i; i = nxt[i], y = lnk[i])
+#define mkp make_pair
+#define pb push_back
+#define Fill(x,y) memset(x,y,sizeof(x))
+#define Cpy(x,y) memcpy(x,y,sizeof(x))
+#define Bit(x,y) ((((x) >> (y)) & 1))
+#define mit map<int,SI>::iterator
+#define sit SI::iterator
+
+using namespace std;
+ 
+typedef long long LL;
+typedef long double LD;
+typedef pair <double, double> PD;
+typedef pair <LL, LL> PLI;
+typedef pair <PD, int> PDI;
+typedef pair <int, int> PI;
+typedef pair <int, PI> PII;
+typedef pair <PI, PI> PIII;
+typedef set <PI> SI;
+typedef vector <int> VI;
+ 
+int Read()
+{
+    char c; while (c = getchar(), (c != '-') && (c < '0' || c > '9'));
+    bool neg = (c == '-'); int ret = (neg ? 0 : c - 48);
+    while (c = getchar(), c >= '0' && c <= '9') ret = ret * 10 + c - 48;
+    return neg ? -ret : ret;
+}
+
+const int MAXN = 200005, MOD = 7 + 1e9;
+
+VI e[MAXN];
+int size[MAXN], dep[MAXN], suc[MAXN], f[MAXN], fa[MAXN];
+int N, cnt, st[MAXN], nxt[MAXN << 1], lnk[MAXN << 1], deg[MAXN];
+
+void init()
+{
+	scanf("%d", &N), N += N;
+	fo (i, 2, N)
+	{
+		int u = Read(), v = Read(); ++ deg[u], ++ deg[v];
+		lnk[++ cnt] = v, nxt[cnt] = st[u], st[u] = cnt;
+		lnk[++ cnt] = u, nxt[cnt] = st[v], st[v] = cnt;
+	}
+}
+
+void DFS(int x)
+{
+	size[x] = 1;
+	fe (i, st[x], y)
+		if (y != fa[x])
+		{
+			fa[y] = x, dep[y] = dep[x] + 1, DFS(y);
+			e[x].pb(y), size[x] += size[y], suc[x] = suc[y];
+		}
+	e[x].pb(0), e[x].pb(0);
+	if (deg[x] != 2) suc[x] = x; // end of the chain
+}
+
+int Duo(int, int);
+
+int Solo(int x)
+{
+	if (!x) return 1;
+	if (size[x] & 1) return 0;
+	if (f[x] >= 0) return f[x];
+	if (deg[suc[x]] == 1) return size[x] / 2; // the subtree only contains single chain
+
+	int w = suc[x], h = dep[w] - dep[x]; // as mentioned on editoral : the nearest point with its degree of 3
+	
+	f[x] = 0;
+	fo (i, 0, 1)
+	{
+		int y = e[w][i];
+		if (size[y] == h - 1 && deg[suc[y]] <= 1) (f[x] += Solo(e[w][i ^ 1])) %= MOD; // filled in the blank spaces by y
+		else
+			fo (j, 0, (e[y][0] > 0))
+			{
+				int u = e[y][j], v = e[y][j ^ 1];
+				if (size[u] == h && deg[suc[u]] <= 1) (f[x] += Duo(v, e[w][i ^ 1])) %= MOD; // filled in the blank spaces by u
+			}
+	}
+
+	if (deg[x] == 2 && deg[e[x][0]] <= 2) (f[x] += Solo(e[e[x][0]][0])) %= MOD;
+	return f[x];
+}
+
+int Duo(int x, int y)
+{
+	if ((size[x] + size[y]) & 1) return 0;
+	if (!x) return Solo(y);
+	if (!y) return Solo(x);
+	if (deg[x] > 2 || deg[y] > 2) return 0;
+	return Duo(e[x][0], e[y][0]);
+}
+
+int Trio(int s1, int s2, int s3)
+{
+	if (deg[s1] == 1) return (LL) Solo(s2) * Solo(s3) % MOD;
+	int ret = 0;
+	fo (i, 0, 1)
+		(ret += (LL) Duo(s2, e[s1][i]) * Duo(s3, e[s1][i ^ 1]) % MOD) %= MOD;
+	return ret;
+}
+
+int work()
+{
+	Fill(f, -1);
+	if (N == 2) return 2;
+	fo (i, 1, N) if (deg[i] > 3) return 0;
+	fo (i, 1, N)
+		if (deg[i] == 3)
+		{
+			DFS(i);
+			int ans = 0, s1 = lnk[st[i]], s2 = lnk[nxt[st[i]]], s3 = lnk[nxt[nxt[st[i]]]];
+			(ans += Trio(s1, s2, s3)) %= MOD;
+			(ans += Trio(s1, s3, s2)) %= MOD;
+			(ans += Trio(s2, s1, s3)) %= MOD;
+			(ans += Trio(s2, s3, s1)) %= MOD;
+			(ans += Trio(s3, s1, s2)) %= MOD;
+			(ans += Trio(s3, s2, s1)) %= MOD;
+			return (ans + ans) % MOD;
+		}
+	return N /= 2, 2 * ((LL) N * N - N + 2) % MOD;
+}
+
+int main()
+{
+	init();
+	printf("%d\n", work());
+	return 0;
+}

@@ -1,0 +1,230 @@
+//SOURCE : https://github.com/anudeep2011/programming/blob/master/qtree.cpp
+ 
+// AUTHOR : SIKANDER MAHAN
+// sikander_nsit
+// PLAGIARISM IS BAD
+ 
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <deque>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <limits>
+#include <string.h>
+ 
+#define tr(type,c,it) for(type::iterator it=c.begin();it!=c.end();++it)
+#define all(c) c.begin(),c.end()
+#define mod 1000000007
+#define itor(c) c::iterator
+#define ll long long
+#define vi vector<int>
+#define vs vector<string>
+#define si set<int>
+#define msi multiset<int>
+#define ii pair<int,int>
+#define sii set<ii>
+#define vii vector<ii>
+#define vvi vector<vi>
+#define pb push_back
+#define mp make_pair
+#define F first
+#define S second
+#define N 100002
+ 
+using namespace std;
+ 
+vector<int> adj[N];
+int baseArray[N]={0};
+int pa[N];
+int chainNo, chainInd[N], chainHead[N], posInBase[N];
+int subsize[N];
+ll arr[100002]={0};
+int ptr;
+int NN=100000;
+ 
+int read(int *tree ,int idx)
+{
+    int sum = 0;
+    for(; idx > 0; idx -= idx&(-idx))
+        sum += tree[idx];
+    return sum;
+}
+ 
+void update(int *tree ,int idx ,int val)
+{
+    for(; idx <= NN; idx+= idx&(-idx))
+        tree[idx] += val;
+}
+ 
+/*
+ * Actual HL-Decomposition part
+ * Initially all entries of chainHead[] are set to -1.
+ * So when ever a new chain is started, chain head is correctly assigned.
+ * As we add a new node to chain, we will note its position in the baseArray.
+ * In the first for loop we find the child node which has maximum sub-tree size.
+ * The following if condition is failed for leaf nodes.
+ * When the if condition passes, we expand the chain to special child.
+ * In the second for loop we recursively call the function on all normal nodes.
+ * chainNo++ ensures that we are creating a new chain for each normal child.
+ */
+void HLD(int curNode, int prev) {
+	if(chainHead[chainNo] == -1) {
+		chainHead[chainNo] = curNode; // Assign chain head
+	}
+	chainInd[curNode] = chainNo;
+	posInBase[curNode] = ptr; // Position of this node in baseArray which we will use in Segtree
+	baseArray[ptr++] = 0;
+ 
+	int sc = -1;
+	// Loop to find special child
+	for(int i=0; i<adj[curNode].size(); i++) if(adj[curNode][i] != prev) {
+		if(sc == -1 || subsize[sc] < subsize[adj[curNode][i]]) {
+			sc = adj[curNode][i];
+		}
+	}
+ 
+	if(sc != -1) {
+		// Expand the chain
+		HLD(sc, curNode);
+	}
+ 
+	for(int i=0; i<adj[curNode].size(); i++) if(adj[curNode][i] != prev) {
+		if(sc != adj[curNode][i]) {
+			// New chains at each normal node
+			chainNo++;
+			HLD(adj[curNode][i], curNode);
+		}
+	}
+}
+ 
+/*
+ * dfs used to set parent of a node, depth of a node, subtree size of a node
+ */
+void dfs(int cur, int prev) {
+    pa[cur] = prev;
+	subsize[cur] = 1;
+	for(int i=0; i<adj[cur].size(); i++)
+		if(adj[cur][i] != prev) {
+			dfs(adj[cur][i], cur);
+			subsize[cur] += subsize[adj[cur][i]];
+		}
+}
+ 
+int main()
+{
+    //ios::sync_with_stdio(false);
+    //freopen("input.txt","r",stdin);
+    //freopen("out.txt","w",stdout);
+    int t=0,i=0,j=0,n=0,m,k=0,num=0,temp=0,ind,q;
+    cin>>n>>q;
+    NN=n;
+    string str;
+    ll z;
+    int u,v,x,a,b;
+    char ch;
+    for(i=0;i<n;++i)
+    {
+        chainHead[i]=-1;
+        pa[i]=-1;
+    }
+    for(i=1;i<n;++i)
+    {
+        cin>>u>>v;
+        u--;
+        v--;
+        adj[u].pb(v);
+        adj[v].pb(u);
+    }
+    for(i=0;i<n;++i)
+    {
+        arr[i]=1;
+    }
+    ptr=1;
+    chainNo=0;
+    dfs(0,-1);
+    HLD(0,-1);
+    for(i=0;i<n;++i)
+    {
+    	//cout<<chainInd[i]<<" "<<pa[i]<<" "<<chainHead[chainInd[i]]<<"\n";
+    }
+    //cout<<pa[0]<<"\n";
+    for(i=0;i<n;++i)
+    {
+        cin>>z;
+        //cout<<z<<" ";
+        x=i;
+        --z;
+        if(z!=0)
+        {
+            arr[x]+=z;
+            temp=0;
+            if(arr[x]==0LL)
+                temp=1;
+            //cout<<arr[x]<<" "<<temp<<"\n";
+            if(temp!=0)
+            {
+            while(true)
+            {
+                a=posInBase[chainHead[chainInd[x]]];
+                b=posInBase[x];
+                //cout<<a<<" "<<b<<" "<<x<<" "<<chainHead[chainInd[x]]<<" "<<pa[chainHead[chainInd[x]]]<<"\n";
+                update(baseArray,a,temp);
+                update(baseArray,b+1,-temp);
+                x=pa[chainHead[chainInd[x]]];
+                if(x==-1)
+                    break;
+            }
+            }
+        }
+    }
+    for(i=0;i<q;++i)
+    {
+        cin>>ch>>x;
+        --x;
+        if(ch=='U')
+        {
+            cin>>z;
+            if(z!=0)
+            {
+                arr[x]+=z;
+                temp=0;
+                if(arr[x]==0LL)
+                    temp=1;
+                else if(arr[x]==z)
+                    temp=-1;
+                if(temp!=0)
+                {
+                while(true)
+                {
+                    a=posInBase[chainHead[chainInd[x]]];
+                    b=posInBase[x];
+                    update(baseArray,a,temp);
+                    update(baseArray,b+1,-temp);
+                    x=pa[chainHead[chainInd[x]]];
+                    if(x==-1)
+                        break;
+                }
+                }
+            }
+        }
+        else
+        {
+            cout<<read(baseArray,posInBase[x])<<"\n";
+        }
+    }
+    return 0;
+}

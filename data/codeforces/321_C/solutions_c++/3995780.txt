@@ -1,0 +1,61 @@
+#include <iostream>
+#include <vector>
+using namespace std;
+
+#define REP(it,x) for (vector<int>::iterator it = adjl[x].begin(); it != adjl[x].end(); ++it)
+
+int n;
+vector<vector<int> > adjl;
+vector<int> sz;
+vector<char> col;
+int cut;
+
+void findsz(int x, int p)
+{
+	sz[x] = 1;
+	REP(it,x)
+		if (*it != p) {
+			findsz(*it,x);
+			sz[x] += sz[*it];
+		}
+}
+
+void findcenter(int x, int p, int s, char c)
+{
+	REP(it,x)
+		if (*it != p && sz[*it] >= s) {
+			findcenter(*it,x,s,c);
+			sz[x] -= cut;
+			return;
+		}
+	col[x] = c++;
+	REP(it,x)
+		if (*it != p && sz[*it])
+			for (char d = c; !col[*it]; ++d)
+				findcenter(*it,x,sz[*it]/2+1,d);
+	cut = sz[x];
+	sz[x] = 0;
+}
+
+
+int main()
+{
+	ios_base::sync_with_stdio(false);
+	cin.tie(0);
+	cin >> n;
+	adjl.resize(n+1);
+	sz.resize(n+1);
+	col.resize(n+1);
+	int a, b;
+	for (int i = 1; i < n; ++i) {
+		cin >> a >> b;
+		adjl[a].push_back(b);
+		adjl[b].push_back(a);
+	}
+	findsz(1,0);
+	for (char c = 'A'; !col[1]; ++c)
+		findcenter(1,0,sz[1]/2+1,c);
+	for (int i = 1; i <= n; ++i)
+		cout << col[i] << '\n';
+	return 0;
+}

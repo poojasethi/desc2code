@@ -1,0 +1,149 @@
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+vector<vector<double> > operator*(vector<vector<double> > m1,vector<vector<double> > m2)
+{
+  int n=int(m1.size());
+  vector<vector<double> > r(n,vector<double> (n,0));
+  for (int i=0;i<n;i++)
+    for (int j=0;j<n;j++)
+      for (int k=0;k<n;k++)
+	r[i][j]+=m1[i][k]*m2[k][j];
+  return r;
+}
+
+vector<double> operator*(vector<vector<double> > m,vector<double> v)
+{
+  int n=int(m.size());
+  vector<double> r(n,0);
+  for (int i=0;i<n;i++)
+    for (int j=0;j<n;j++)
+      r[i]+=m[i][j]*v[j];
+  return r;
+}
+
+vector<vector<double> > eleva(vector<vector<double> > m,int e)
+{
+  if (e==0) {
+    int n=int(m.size());
+    vector<vector<double> > r(n,vector<double> (n,0));
+    for (int i=0;i<n;i++)
+      r[i][i]=1.0;
+    return r;
+  }
+  if (e%2==0) return eleva(m*m,e/2);
+  return m*eleva(m*m,e/2);
+}
+
+double error=1e-9;
+
+int n,m,k;
+vector<int> g[10000];
+int trap[10000];
+
+double matriz[501][501];
+
+
+double distribucion[10000];
+double nextdistribucion[10000];
+
+void reset(double d[10000])
+{
+  for (int i=1;i<=n;i++)
+    d[i]=0;
+}
+
+double residual()
+{
+  double r=0;
+  for (int i=1;i<=n;i++)
+    if (not trap[i])
+      r+=distribucion[i];
+  return r;
+}
+
+void iterar(int u)
+{
+  {
+    reset(distribucion);
+    vector<int> &ar=g[u];
+    for (int j=0;j<int(ar.size());j++) {
+      int v=ar[j];
+      distribucion[v]+=1.0/int(ar.size());
+    }
+  }
+  while (residual()>error) {
+    reset(nextdistribucion);
+    for (int i=1;i<=n;i++) {
+      if (not trap[i]) {
+	vector<int> &ar=g[i];
+	for (int j=0;j<int(ar.size());j++) {
+	  int v=ar[j];
+	  nextdistribucion[v]+=distribucion[i]/int(ar.size());
+	}
+      } else nextdistribucion[i]+=distribucion[i];
+    }
+    for (int i=1;i<=n;i++)
+      distribucion[i]=nextdistribucion[i];
+  }
+}
+
+int main()
+{
+  cout.setf(ios::fixed);
+  cout.precision(10);
+  cin>>n>>m>>k;
+  int numtrap=0;
+  vector<int> vectrap;
+  for (int i=1;i<=n;i++) {
+    cin>>trap[i];
+    if (trap[i]) {
+      vectrap.push_back(i);
+      numtrap++;
+    }
+  }
+  for (int i=0;i<m;i++) {
+    int u,v;
+    cin>>u>>v;
+    g[u].push_back(v);
+    g[v].push_back(u);
+  }
+
+  for (int i=1;i<=n;i++) {
+    vector<int> &ar=g[i];
+    for (int j=0;j<int(ar.size());j++) {
+      int v=ar[j];
+      matriz[i][v]+=1.0/int(ar.size());
+    }
+  }
+  for (int i=1;i<=n;i++) {
+    if (not trap[i]) {
+      double factor=1.0/(1.0-matriz[i][i]);
+      for (int j=1;j<=n;j++)
+	matriz[i][j]*=factor;
+      matriz[i][i]=0;
+      for (int ii=1;ii<=n;ii++) {
+	if (ii!=i) {
+	  for (int j=1;j<=n;j++)
+	    matriz[ii][j]+=matriz[ii][i]*matriz[i][j];
+	  matriz[ii][i]=0;
+	}
+      }
+    }
+  }
+
+  vector<vector<double> > mat(numtrap,vector<double> (numtrap));
+  vector<double> vec(numtrap);
+  for (int i=0;i<numtrap;i++)
+    vec[i]=matriz[1][vectrap[i]];
+  for (int i=0;i<numtrap;i++)
+    for (int j=0;j<numtrap;j++)
+      mat[j][i]=matriz[vectrap[i]][vectrap[j]];
+
+  vector<double> r=eleva(mat,k-2)*vec;
+
+  cout<<r[numtrap-1]<<endl;
+}
+

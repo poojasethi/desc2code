@@ -1,0 +1,118 @@
+#include <cstdio>
+#include <iostream>
+#include <vector>
+#include <cassert>
+
+using namespace std;
+
+#define MAXN 100005
+#define pb push_back
+#define lowbit(x) (x&(-x))
+
+typedef vector<int> vi;
+
+int N, Q;
+int depth[MAXN];
+int branch[MAXN];
+bool was[MAXN];
+vi adiac[MAXN];
+
+struct ft_t {
+	vi t;
+	int sz;
+	
+	ft_t(){sz = 0;}
+	
+	void rsz(int dim) {
+		sz = dim+5;
+		t.assign(sz,0);
+	}
+	
+	void add(int p, int d){
+		++p;
+		for (; p<sz; p+=lowbit(p)) t[p] += d;
+	}
+	
+	int get(int p){
+		++p;
+		int res = 0;
+		for (; p; p -= lowbit(p)) res += t[p];
+		return res;
+	}
+	
+	void add_range(int l, int r, int x){
+		if (l+1 < sz) add(l,x);
+		if (r+2 < sz) add(r+1,-x);
+	}
+	
+} ft[MAXN];
+
+void query(){
+	int node;
+	cin >> node;
+	
+	cout << (node != 1) * ft[branch[node]].get(depth[node]) + ft[0].get(depth[node]) << "\n";
+}
+
+void update(){
+	int v, x, d;
+	cin >> v >> x >> d;
+	
+	if (v == 1){
+		ft[0].add_range(0,d,x);		
+		return;
+	}
+	
+	if (depth[v] - d <= 0) {
+		int overflow = d - depth[v];
+		ft[0].add_range(0, overflow, x);
+		ft[branch[v]].add_range(overflow+1, depth[v]+d, x);
+	} else {
+		ft[branch[v]].add_range(depth[v]-d, depth[v]+d, x);
+	}
+}
+
+int init(int node, int dep, int branch_id){
+	int max_d = 0;
+	
+	was[node] = true;
+	branch[node] = branch_id;
+	depth[node] = dep;
+	
+	for (int i=0; i<(int)adiac[node].size(); i++){
+		if (was[adiac[node][i]]) continue;
+		int d = init(adiac[node][i], dep+1, (node==1)?(i+1):(branch_id));
+		max_d = max(max_d, 1+d);
+		
+		if (node == 1) ft[i+1].rsz(d);
+	}
+	
+	return max_d;
+}
+
+int main(){
+	#ifdef DEBUG
+	freopen("input.txt", "r", stdin);
+	#endif
+	
+	cin >> N >> Q;
+
+	for (int i=0; i<N-1; i++){
+		int a, b;
+		cin >> a >> b;
+		adiac[a].pb(b);
+		adiac[b].pb(a);
+	}
+	
+	int d = 1+init(1, 0, 0);
+	ft[0].rsz(d);
+	
+	for (int i=0; i<Q; i++){
+		int t;
+		cin >> t;
+		
+		if (t == 1)	query();
+		else update();
+	}
+	return 0;
+}

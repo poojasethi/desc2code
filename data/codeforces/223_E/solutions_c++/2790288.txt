@@ -1,0 +1,198 @@
+#include<stdio.h>
+#include<string.h>
+#include<math.h>
+#include<iostream>
+#include<algorithm>
+#include<vector>
+#include<map>
+using namespace std;
+#define X first
+#define Y second
+#define mp make_pair
+#define pb push_back
+#define eps 1e-8
+#define inf 1e20
+#define maxn 1000010
+int Sig(double a)
+{
+    return a<-eps?-1:(a>eps);
+}
+struct Point
+{
+    double x,y;
+    Point(){}
+    Point(double x0,double y0):x(x0),y(y0){}
+    void in()
+    {
+        scanf("%lf%lf",&x,&y);
+    }
+    void out()
+    {
+        printf("%.3f %.3f\n",x,y);
+    }
+    Point operator * (double t)
+    {
+        return Point(t*x,t*y);
+    }
+    double len()
+    {
+        return sqrt(x*x+y*y);
+    }
+    double operator *(Point pt)
+    {
+        return x*pt.y-y*pt.x;
+    }
+    double operator ^(Point pt)
+    {
+        return pt.x*x+pt.y*y;
+    }
+    Point operator -(Point pt)
+    {
+        return Point(x-pt.x,y-pt.y);
+    }
+    Point operator +(Point pt)
+    {
+        return Point(x+pt.x,y+pt.y);
+    }
+    Point turnlen(double l)
+    {
+        double r=l/len();
+        return Point(x*r,y*r);
+    }
+    bool operator ==(Point pt)
+    {
+        if(fabs(x-pt.x) < eps && fabs(y-pt.y) < eps)
+            return true;
+        else
+            return false;
+    }
+};
+Point p[maxn];
+void Change_to_Anticlockwise(int g[],int n)//将顺时针的凸包变成逆时针
+{
+    g[n]=g[0];
+    double sum=0;
+    for(int i=0;i<n;i++)
+        sum+=p[g[i]]*p[g[i+1]];
+    if(sum<0)
+    {
+        for(int i=0;i<n/2;i++)
+            swap(g[i],g[n-i-1]);
+        g[n]=g[0];
+    }
+}
+struct Edge
+{
+    int u,v,next,s;
+}edge[2000010];
+int head[maxn];
+int pos;
+void insert(int x,int y)
+{
+    edge[pos].u=x;
+    edge[pos].v=y;
+    edge[pos].s=0;
+    edge[pos].next=head[x];
+    head[x]=pos++;
+}
+bool vis[maxn];
+int dfs(int now)
+{
+    vis[now]=true;
+    int tmp=0;
+    for(int i=head[now];i!=-1;i=edge[i].next)
+    {
+        int v=edge[i].v;
+        if(!vis[v])
+        {
+            int add=dfs(v);
+            edge[i].s=add;
+            edge[i^1].s=-add;
+            tmp+=add;
+        }
+    }
+    return tmp+1;
+}
+map<pair<int,int>,int>at;
+vector<pair<double,pair<int,int> > >f[maxn];
+vector<int>sum[maxn];
+int total[maxn];
+int g[maxn];
+int main()
+{
+    int n,m;
+    scanf("%d %d",&n,&m);
+    memset(head,-1,sizeof(head));
+    pos=0;
+    while(m--)
+    {
+        int x,y;
+        scanf("%d %d",&x,&y);
+        insert(x,y);
+        insert(y,x);
+    }
+    for(int i=1;i<=n;i++)
+        p[i].in();
+    int id=1;
+    for(int i=1;i<=n;i++)
+        if(p[i].x < p[id].x)
+            id=i;
+    p[0]=p[id];
+    p[0].x-=1;
+    insert(0,id);
+    insert(id,0);
+    memset(vis,false,sizeof(vis));
+    dfs(0);
+    at.clear();
+    for(int now=1;now<=n;now++)
+    {
+        f[now].clear();
+        for(int i=head[now];i!=-1;i=edge[i].next)
+        {
+            int v=edge[i].v;
+            double angle=atan2(p[v].y-p[now].y,p[v].x-p[now].x);
+            f[now].push_back(mp(angle,mp(v,edge[i].s)));
+        }
+        sort(f[now].begin(),f[now].end());
+        sum[now].clear();
+        total[now]=0;
+        sum[now].pb(0);
+        int len=f[now].size();
+        for(int i=0;i<len;i++)
+        {
+            int v=f[now][i].Y.X;
+            at[mp(now,v)]=i+1;
+            int s=f[now][i].Y.Y;
+            total[now]+=s;
+            sum[now].pb(total[now]);
+        }
+    }
+    int Q;
+    scanf("%d",&Q);
+    while(Q--)
+    {
+        scanf("%d",&n);
+        for(int i=0;i<n;i++)
+            scanf("%d",&g[i]);
+        Change_to_Anticlockwise(g,n);
+        g[n]=g[0];
+        g[n+1]=g[1];
+        int ans=0;
+        for(int i=1;i<=n;i++)
+        {
+            int x=g[i-1];
+            int y=g[i];
+            int z=g[i+1];
+            x=at[mp(y,x)];
+            z=at[mp(y,z)];
+            int tmp;
+            if(z > x)
+                tmp=sum[y][z-1]-sum[y][x];
+            else
+                tmp=total[y]-(sum[y][x]-sum[y][z-1]);
+            ans+=tmp;
+        }
+        printf("%d\n",-ans);
+    }
+    return 0;
+}

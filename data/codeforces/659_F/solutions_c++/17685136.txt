@@ -1,0 +1,99 @@
+#include<cstdio>
+#include<cmath>
+#include<iostream>
+#include<cstring>
+#include<algorithm>
+#include<string>
+#include<stack>
+#include<queue>
+#include<map>
+#include<utility>
+#pragma comment(linker, "/STACK:102400000,102400000")
+using namespace std;
+const int MN=1024+10;
+const int ME=100000+10;
+const double mod=1000000007;
+typedef long long LL;
+typedef unsigned long long ULL;
+const double pi=acos(-1.0);
+const int Intmax=(~(1<<31));
+const int Intmin=(1<<31);
+const LL LLmax=(~(1LL<<63));
+const LL LLmin=(1LL<<63);
+const ULL ULLmax=(~(0ULL));
+int n,m;
+int ma[MN][MN];
+bool vis1[MN][MN];
+bool vis2[MN][MN];
+LL p,sum;
+int xdir[]={1,0,-1,0};
+int ydir[]={0,1,0,-1};
+void dfs(int x,int y,int z){
+	if(sum>=p) return ;
+	int i;
+	for(i=0;i<4;i++){
+		int xx=x+xdir[i];
+		int yy=y+ydir[i];
+		if(xx<0||xx>=n||yy<0||yy>=m) continue;
+		if(!vis2[xx][yy]) continue;
+		if(ma[xx][yy]<z) continue;
+        if(ma[xx][yy]==z){
+			vis1[xx][yy]=false;
+        }
+        vis2[xx][yy]=false;
+        sum++;
+        if(sum>=p) return ;
+        dfs(xx,yy,z);
+        if(sum>=p) return ;
+	}
+}
+int main(){
+#ifndef ONLINE_JUDGE
+    freopen("1.cpp","r",stdin);
+#endif // ONLINE_JUDGE
+    LL k;
+    scanf("%d%d%I64d",&n,&m,&k);
+    int i,j;
+    for(i=0;i<n;i++){
+		for(j=0;j<m;j++) scanf("%d",&ma[i][j]);
+    }
+    memset(vis1,true,sizeof(vis1));
+    int ans;
+    bool flag=false;
+    for(i=0;i<n;i++){
+		for(j=0;j<m;j++){
+            if(k%ma[i][j]==0&&vis1[i][j]){
+				p=k/ma[i][j];
+				if(p>n*m) continue;
+				memset(vis2,true,sizeof(vis2));
+				vis2[i][j]=false;
+				sum=1;
+				if(sum>=p){
+					ans=ma[i][j];
+					flag=true;
+					break;
+				}
+				dfs(i,j,ma[i][j]);
+				if(sum>=p){
+					ans=ma[i][j];
+					flag=true;
+					break;
+				}
+            }
+		}
+		if(flag) break;
+    }
+    if(flag) printf("YES\n");
+    else printf("NO\n");
+    if(flag){
+		LL cur=0;
+		for(i=0;i<n;i++){
+			for(j=0;j<m;j++){
+				if(!vis2[i][j]&&cur!=p) printf("%d ",ans),cur++;
+				else printf("0 ");
+			}
+			printf("\n");
+		}
+    }
+	return 0;
+}

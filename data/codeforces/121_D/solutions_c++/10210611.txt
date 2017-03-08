@@ -1,0 +1,88 @@
+#include <cstdio>
+#include <iostream>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+#define FRR(I,L,R) for(int I=L;i<R;++i)
+#define FOR(I,N) FRR(I,0,N)
+typedef unsigned long long ll;
+
+int LS;
+ll N, K;
+ll L[640000];
+ll ls[100001], rs[100001];
+ll sls[100001], srs[100001];
+ll sll[640000], srl[640000];
+
+#define MAX 1e18
+#define INF (K+1)
+
+// Lucky numbers
+void lucky(ll v) {
+	if (v > MAX) return;
+	if (v) L[LS++] = v;
+	lucky(v*10+4);
+	lucky(v*10+7);
+}
+
+// Calculates required movements to move `n` number of segments with `d` distance.
+// This function is to prevent overflow that could occur calculating `n*d`.
+// When `n*d` exceeds `K`, this function returns `INF`.
+ll moves(ll n, ll d) {
+	if (d == 0) return 0;
+	if (n > K / d) return INF;
+	return n * d;
+}
+
+int main() {
+	// Prepare lucky numbers.
+	lucky(0);
+	sort(L, L + LS);
+
+	// Start case.
+	cin >> N >> K;
+	ll ml = MAX;
+	FOR(i,N) {
+		// Take segments, will treat left and right separately.
+		cin >> ls[i] >> rs[i];
+		// Length of the shortest segment.
+		ml = min(ml, rs[i] - ls[i]);
+	}
+	// Sort left points and right points.
+	sort(ls, ls + N);
+	sort(rs, rs + N);
+	reverse(ls, ls + N);
+
+	// Caculate cost to align segments to another.
+	FRR(i,1,N) {
+		sls[i] = min(sls[i-1] + moves(i, ls[i-1] - ls[i]), INF);
+		srs[i] = min(srs[i-1] + moves(i, rs[i] - rs[i-1]), INF);
+	}
+
+	// Cacluate cost to aligen segments to lucky numbers.
+	for(int i=LS-1, j=-1; i >= 0; --i) {
+		while (j+1 < N && ls[j+1] >= L[i]) ++j;
+		if (j >= 0) sll[i] = min(sls[j] + moves(j+1, ls[j] - L[i]), INF);
+	}
+	for (int i=0, j=-1; i < LS; ++i) {
+		while (j+1 < N && rs[j+1] <= L[i]) ++j;
+		if (j >= 0) srl[i] = min(srs[j] + moves(j+1, L[i] - rs[j]), INF);
+	}
+	//for (int i = 0; i < LS; ++i) if (sll[i] > 0 && sll[i] < INF) printf("%d %lld %lld\n", i, L[i], sll[i]);
+	//for (int i = 0; i < LS; ++i) if (srl[i] > 0 && srl[i] < INF) printf("%d %lld %lld\n", i, L[i], srl[i]);
+
+	// Find answer.
+	int l=0,r=0,res=0;
+	while (r < LS) {
+		while (L[r] - L[l] > ml) { ++l; }
+		while (l <= r && sll[l] + srl[r] > K) { ++l; }
+		if (l <= r) res = max(res, r - l + 1);
+		++r;
+	}
+	cout << res << endl;
+
+	return 0;
+}
+
+    		 	  	 	 	      	   	  			

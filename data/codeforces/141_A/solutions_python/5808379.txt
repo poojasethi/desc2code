@@ -1,0 +1,4 @@
+r = raw_input
+s = sorted
+
+print "YNEOS"[s(r()+r()) != s(r()) :: 2]

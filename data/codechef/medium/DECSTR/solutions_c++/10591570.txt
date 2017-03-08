@@ -1,0 +1,16 @@
+#include<iostream>
+using namespace std;
+int main(){
+int t,k;
+cin>>t;
+while(t--){
+    cin>>k;
+    if(k==0) {cout<<"a\n";continue;}
+    string a="zyxwvutsrqponmlkjihgfedcba";
+    if(k%25!=0) cout<<a.substr(25-k%25);
+    for(int i=0;i<k/25;i++){
+        cout<<a;
+    }
+    cout<<endl;
+}
+}

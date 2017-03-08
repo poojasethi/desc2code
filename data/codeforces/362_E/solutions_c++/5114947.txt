@@ -1,0 +1,96 @@
+#include <iostream>
+#include <cstdio>
+#include <queue>
+
+#define MAXN 55
+
+using namespace std;
+
+int n, k, a[MAXN][MAXN], b[MAXN][MAXN], c[MAXN], prev[MAXN];
+
+bool findFlow()
+{
+  for (int i = 1; i <= n; i++) prev[i] = 0;
+  queue<int> q;
+  q.push(1);
+  while (!q.empty())
+  {
+    int u = q.front();
+    q.pop();
+    for (int v = 1; v <= n; v++)
+      if (prev[v] == 0 && a[u][v] > b[u][v]) 
+      {
+        prev[v] = u;
+        if (v == n) return 1;
+        q.push(v);
+      }
+  }
+  return 0;
+}
+
+int incFlow()
+{
+  int delta = 1 << 30;
+  for (int v = n; v > 1; v = prev[v])
+    delta = min(delta, a[prev[v]][v] - b[prev[v]][v]);
+  for (int v = n; v > 1; v = prev[v])
+  {
+    b[prev[v]][v] += delta;
+    b[v][prev[v]] -= delta;
+  }
+  return delta;
+}
+
+int maxFlow()
+{
+  int r = 0;
+  while (findFlow()) r += incFlow();
+  return r;
+}
+
+bool check()
+{
+  for (int i = 1; i <= n; i++) 
+  {
+    prev[i] = 0;
+    c[i] = n;
+  }
+  priority_queue<pair<int, int> > pq;
+  pq.push(make_pair(0, 1));
+  c[1] = 0;
+  while (!pq.empty())
+  {
+    int u = pq.top().second;
+    int g = -pq.top().first;
+    if (u == n) break;
+    pq.pop();
+    if (c[u] == g)
+      for (int v = 1; v <= n; v++)
+        if (a[u][v] > 0 && c[v] > g + (a[u][v] <= b[u][v]))
+        {
+          prev[v] = u;
+          c[v] = g + (a[u][v] <= b[u][v]);
+          pq.push(make_pair(-c[v], v));
+        }
+  }
+  
+  if (c[n] <= k && prev[n] > 0)
+  {
+    k -= c[n];
+    for (int v = n; v > 1; v = prev[v]) b[prev[v]][v]++;
+    return 1;
+  }
+  return 0;
+}
+
+main()
+{
+  cin >> n >> k;
+  for (int i = 1; i <= n; i++)
+    for (int j = 1; j <= n; j++) cin >> a[i][j];
+    
+  int res = maxFlow();
+  while (check()) res++;
+  cout << res;
+//  system("pause");
+}

@@ -1,0 +1,103 @@
+#include <iostream>
+#define mm 200010
+#define mn 100010
+using namespace std;
+template<class T>inline void gmax(T &a,T b){if(a<b)a=b;} 
+
+long long ans,n[3];
+
+struct TREE{
+
+    long long dist[mn],node[mn],pos,n,SUM,f[mn],sum[mn],maxd;
+    
+     struct EDGE{
+         int pnt;
+         EDGE *pre;
+         EDGE(){}
+         EDGE(int _pnt,EDGE *_pre):pnt(_pnt),pre(_pre){}
+    }Edge[mm],*SP,*edge[mn];
+    
+    void addedge(int a,int b){
+        edge[a]=new(++SP)EDGE(b,edge[a]);
+        edge[b]=new(++SP)EDGE(a,edge[b]);
+    }
+    
+    void build(int nn){
+        int a,b;
+        SP=Edge;
+        n=nn;
+        for(int i=1;i<n;i++){
+            cin>>a>>b;
+            addedge(a,b);
+        }
+    }
+    //dfs0���ڼ������ӵ㵽�������ľ��� 
+    void dfs0(int cur,int fa){
+        dist[cur]=dist[fa]+1; 
+        for(EDGE *j=edge[cur];j;j=j->pre)
+            if(j->pnt!=fa){
+                dfs0(j->pnt,cur);
+            }
+    }
+    //dfs1 dfs2����dp 
+    void dfs1(int cur,int fa){
+        node[cur]=1;
+        sum[cur]=0;
+        for(EDGE *j=edge[cur];j;j=j->pre)
+            if(j->pnt!=fa){
+                dfs1(j->pnt,cur);
+                node[cur]+=node[j->pnt];
+                sum[cur]+=sum[j->pnt]+node[j->pnt];
+            }
+    }
+    
+    void dfs2(int cur,int fa,long long val){
+        f[cur]=sum[cur]+val;
+        for(EDGE *j=edge[cur];j;j=j->pre)
+            if(j->pnt!=fa)
+                dfs2(j->pnt,cur,val+sum[cur]-sum[j->pnt]-node[j->pnt]+n-node[j->pnt]);
+    }
+    
+    void solve(){
+        dfs1(1,0);
+        dfs2(1,0,0);
+        for(int i=1;i<=n;i++){
+            SUM+=f[i];
+            if(f[i]>maxd){
+                maxd=f[i];
+                pos=i;
+            }
+        }
+        dist[0]=-1;
+        dfs0(pos,0);
+    }
+}T[3];
+
+long long calc(TREE &TL,TREE &TM,TREE &TR){
+    long long res,ans=0;
+    int i=TM.pos;
+    for(int j=1;j<=TM.n;j++){
+            //����������ڲ��� 
+            res=(TL.SUM+TM.SUM+TR.SUM)/2;
+            //TL�����ұ����� 
+            res+=TL.maxd*(TM.n+TR.n)+TM.n*TR.n;
+            //TR����������� 
+            res+=TR.maxd*(TL.n+TM.n)+TM.n*TL.n;
+            //TL��TR 
+            res+=(TM.dist[j]+2)*TL.n*TR.n+TL.n*TM.f[i]+TR.n*TM.f[j];
+            gmax(ans,res);
+        }
+    return ans;
+}
+
+int main(){
+    cin>>n[0]>>n[1]>>n[2];
+    for(int i=0;i<3;i++){
+        T[i].build(n[i]);
+        T[i].solve();
+    }
+    for(int i=0;i<3;i++)
+        for(int j=0;j<3;j++)
+            if(i!=j) gmax(ans,calc(T[i],T[j],T[3-i-j]));
+    cout<<ans<<endl;
+}

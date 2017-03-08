@@ -1,0 +1,329 @@
+#include <cstdio>
+#include <iostream>
+#include <cassert>
+#include <vector>
+#include <set>
+#include <algorithm>
+#include <cmath>
+#include <cstring>
+#include <cmath>
+#include <map>
+#include <cstdlib>
+using namespace std;
+
+#define EPS 1e-10
+ 
+int Prime[100001];
+int AInv[100001];
+int A[10001];
+int AP[10001];
+int GP[10001];
+int visited[100001];
+int n;				
+int ap_size;		
+int gp_size;			
+int MAX_ELEM;	
+ 
+void Print (int *arr, int sz)
+{
+	int i = 0;
+	while (i < sz)
+	{
+		printf("%d ",arr[i++]);
+	}
+	printf("\n");
+}
+ 
+void Sieve( )  
+{
+	memset(Prime, 1, sizeof(Prime));
+	Prime[1] = 0;
+	for (int i = 2; i*i < 100001; i++)
+	{
+		if (Prime[i])
+		{
+			for (int j = i; j*i < 100001; j++)
+			{
+				Prime[j*i] = 0;
+			}
+		}
+	}
+}
+ 
+// Determines if the given vector of terms is a subsequence of a Geometric Progression series with common ratio >= 2 and integral
+// Also, the missing terms have to be present in the given set of integers
+// If yes, then returns the first term and common ratio pair that defines the GP series
+// Else returns -1,-1 pair
+bool FGeometricProgressionSubsequence ( )
+{
+	assert(gp_size >= 2);	
+ 
+	int p = -1, q = -1, j = -1;
+	long long nextGPTerm = -1;
+	int a = GP[1], b = GP[0];
+	int gcd = __gcd(a,b);
+	a /= gcd;
+	b /= gcd;
+	for (double e = 1; e <= 17; e++)
+	{
+		if (e == 1)
+		{
+			p = a; q = b;
+		}
+		else if (!Prime[a])
+		{
+			double x = pow(a, 1.0/e);
+			double y = pow(b, 1.0/e);
+			if (x > 0.5 && y > 0.5 && (int)(x+EPS) == (int)(x+1-EPS) && (int)(y+EPS) == (int)(y+1-EPS))
+			{
+				p = (int)(x+0.5);
+				q = (int)(y+0.5);
+			}
+			else { continue; }
+		}
+		else { break; }
+		
+		nextGPTerm = GP[0];
+		j = 0;
+		int FullGP[10001];
+		int gpsz = 0;
+		
+		while (j < gp_size && nextGPTerm <= GP[gp_size-1])
+		{
+			if (AInv[nextGPTerm] == -1)
+			{
+				// A term of the GP sequence is missing from list of all terms
+				break;
+			}
+			if (GP[j] == nextGPTerm)
+			{
+				j++;
+			}
+			FullGP[gpsz++] = nextGPTerm;
+			nextGPTerm *= p;
+			if (nextGPTerm % q != 0) { break; }
+			nextGPTerm /= q;
+		}
+		if (j == gp_size)
+		{
+			Print(AP, ap_size);
+			Print(FullGP, gpsz);
+			return true;
+		}
+	}
+	return false;
+}
+ 
+// Determines if the given vector of terms is a subsequence of a Arithmetic Progression series with common difference >= 1 and integral
+// Also, the missing terms have to be present in the given set of integers
+// If yes, then returns the first term and common difference pair that defines the AP series
+// Else returns -1,-1 pair
+bool FArithmeticProgressionSubsequence ( )
+{
+	assert(ap_size >= 2);
+	// B[0] = a+(m-1)d
+	// B[1] = a+(k-1)d
+	// B[1] - B[0] = (k-m)*d
+	// D = (B[1] - B[0])/(k-m)
+	// In most cases, (k-m) should be 1, but it might happen that some GP terms exist between B[1] and B[0] and are also part of the AP
+	// For eg. 2,4,6,8,10,12,14,16
+	// Here, GP is 2,4,8,16
+	// and B would be 6,10,12,14 => B[0] = 6 and B[1] = 10, so 8 exists between 6 and 10 and k-m is 2 here
+	// Again, in most cases there should be atmost 1-2 terms of the GP but to take care of very rare cases, let's vary k-m from 1 to 10
+	int L = AP[1] - AP[0], d;
+	for (int D = 1; D <= 3; D++)
+	{
+		if ( L % D == 0)
+		{
+			d = L/D;
+			// Check if all terms of B are being covered by taking B[0] as first term and d as common diff
+			int nextAPTerm = AP[0]+d;
+			int j = 1;
+			int apsz = 1;
+			int FullAP[10001];
+			FullAP[0] = AP[0];
+			while (j < ap_size && nextAPTerm <= AP[ap_size-1])
+			{
+				if (AInv[nextAPTerm] == -1)
+				{
+					break;
+				}
+				if (AP[j] == nextAPTerm)
+				{
+					j++;
+				}
+				FullAP[apsz++] = nextAPTerm;
+				nextAPTerm += d;
+			}
+			if (j == ap_size)
+			{
+				Print(FullAP, apsz);
+				Print(GP, gp_size);
+				return true;
+			}
+		}
+	}
+	return false;
+}
+ 
+void GetAPSeriesAndRemainingVector (int a1, int a2)
+{
+	int y = a1;
+	int d = a2 - a1;
+	while (y <= MAX_ELEM)
+	{
+		if (AInv[y] != -1)
+		{
+			AP[ap_size++] = y;
+			visited[AInv[y]] = 1;
+			y += d;
+		}
+		else { break; }
+	}
+	for (int i = 0; i < n; i++)
+	{
+		if (!visited[i])
+		{
+			GP[gp_size++] = A[i];
+		}
+	}
+}
+ 
+void GetGPSeriesAndRemainingVector (int a1, int a2)
+{
+	long long y = a1;
+	int p = a2;
+	int q = a1;
+	while (y <= MAX_ELEM)
+	{
+		if (AInv[y] != -1)
+		{
+			visited[AInv[y]] = 1;
+			GP[gp_size++] = y;
+			y *= p;
+			if (y % q != 0) break;
+			y /= q;
+		}
+		else { break; }
+	}
+	for (int i = 0; i < n; i++)
+	{
+		if (!visited[i])
+		{
+			AP[ap_size++] = A[i];
+		}
+	}
+}	
+ 
+bool FGetAPAndGPSeriesGivenFirstTwoAPTerms (const int &a1, const int &a2)
+{
+	GetAPSeriesAndRemainingVector(a1,a2);
+	if (gp_size >= 19) return false;
+	if (gp_size == 0)
+	{
+		Print(AP, ap_size);
+		printf("%d %d\n", AP[0], AP[1]);
+		return true;
+	}
+	else if (gp_size == 1)
+	{
+		Print(AP,ap_size);
+		if (GP[0] > AP[0]) { printf("%d %d\n",AP[0],GP[0]); }
+		else { printf("%d %d\n",GP[0], AP[0]); }
+		return true;
+	}
+	else if (gp_size == 2)
+	{
+		Print(AP, ap_size);
+		printf("%d %d\n",GP[0],GP[1]);
+		return true;
+	}
+	else
+	{
+		return FGeometricProgressionSubsequence();
+	}
+}
+ 
+bool FGetAPAndGPSeriesGivenFirstTwoGPTerms (const int &g1, const int &g2)
+{
+	GetGPSeriesAndRemainingVector(g1,g2);
+	
+	if (ap_size == 0)
+	{
+		printf("%d %d\n",GP[0],GP[1]);
+		Print(GP, gp_size);
+		return true;
+	}
+	else if (ap_size == 1)
+	{
+		printf("%d %d\n",GP[0],AP[0]);
+		Print(GP, gp_size);
+		return true;
+	}
+	else if (ap_size == 2)
+	{
+		printf("%d %d\n",AP[0],AP[1]);
+		Print(GP, gp_size);
+		return true;
+	}
+	else
+	{
+		return FArithmeticProgressionSubsequence();
+	}
+}
+ 
+void GetAPAndGPSeries ( )
+{
+	if (FGetAPAndGPSeriesGivenFirstTwoAPTerms(A[0],A[1])) { return; }
+	memset(visited,0,sizeof(visited));
+	ap_size = 0;
+	gp_size = 0;
+	if (FGetAPAndGPSeriesGivenFirstTwoGPTerms(A[0],A[1])) { return; }
+	memset(visited,0,sizeof(visited));
+	ap_size = 0;
+	gp_size = 0;
+	if (FGetAPAndGPSeriesGivenFirstTwoAPTerms(A[0],A[2])) { return; }
+	memset(visited,0,sizeof(visited));
+	ap_size = 0;
+	gp_size = 0;
+	if (FGetAPAndGPSeriesGivenFirstTwoGPTerms(A[0],A[2])) { return; }
+	memset(visited,0,sizeof(visited));
+	ap_size = 0;
+	gp_size = 0;
+	if (FGetAPAndGPSeriesGivenFirstTwoAPTerms(A[1],A[2])) { return; }
+	memset(visited,0,sizeof(visited));
+	ap_size = 0;
+	gp_size = 0;
+	if (FGetAPAndGPSeriesGivenFirstTwoGPTerms(A[1],A[2])) { return; }
+	printf("no solution found\n");
+}
+ 
+main()
+{
+	Sieve();
+	
+	int t,x;
+	scanf("%d", &t);
+	
+	while (t--)
+	{	
+		memset(AInv, -1, sizeof(AInv));
+		memset(visited,0,sizeof(visited));
+		ap_size=0;
+		gp_size=0;
+ 
+		scanf("%d",&n);
+		assert(n >= 2 && n <= 10000);
+		
+		for (int i = 0; i < n; i++)
+		{
+			scanf("%d",&x);
+			assert(x <= 100000);
+			A[i] = x;
+			AInv[x] = i;
+		}
+		MAX_ELEM = A[n-1];
+		
+		GetAPAndGPSeries();
+	}
+}

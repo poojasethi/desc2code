@@ -1,0 +1,219 @@
+#include<vector>
+#include<map>
+//#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<cmath>
+const int M=(int)1e9+7,MP=(int)sqrt(1e9)+2;
+typedef long long int64;
+template<typename Tp>inline Tp abs_(const Tp &A){return A<0?-A:A;}
+inline int64 gcd(int64 a,int64 b){
+	a=abs_(a);b=abs_(b);
+	if(b==0)return a;
+	while(a%b){ a=a%b; a^=b;b^=a;a^=b; }
+	return b;
+}
+inline int64 pow_(int64 base,int64 n){ static int64 ans; for(ans=1;n;n>>=1,base=base*base%M) if(n&1)ans=ans*base%M; return (int64)ans; }
+using namespace std;
+struct equation{int64 b1,b2,a;};
+int prime[MP],N=0;
+struct number{
+	map<int,int64> M;
+	number(int n=1){
+		static int i;
+		for(i=1;i<=N&&1<n;i++)
+			while(!(n%prime[i]))n/=prime[i],M[prime[i]]++;
+		if(n>1)M[n]++;
+	}
+	inline bool operator==(const number &A)const{
+		return A.M==M;
+	}
+};
+
+struct ab{number a,b;}x,y;
+
+int check(const number &a,const ab &y){
+	static int64 ansn,flag,an,ya,yb;
+	static map<int,int64>::const_iterator it,i;
+	static map<int,bool> checked;
+	flag=0;checked.clear();
+	for(it=a.M.begin();it!=a.M.end();it++){
+		checked[it->first]=1;    an=it->second;
+		i=y.a.M.find(it->first); ya=(i==y.a.M.end()? 0:i->second);
+		i=y.b.M.find(it->first); yb=(i==y.b.M.end()? 0:i->second);
+		if(flag){
+			if(ansn*yb+ya!=an)return 0;
+		}
+		else {
+			if(yb==0){
+				if(ya!=an)return 0;
+			}
+			else {
+				if(ya>an)return 0;
+				if((an-ya)%yb)return 0;
+				else ansn=(an-ya)/yb,flag=1;
+			}
+		}
+	}
+	if(!flag)return 1;
+	for(it=y.a.M.begin();it!=y.a.M.end();it++) if(!checked[it->first])return 0;
+	for(it=y.b.M.begin();it!=y.b.M.end();it++) if(!checked[it->first])return 0;
+	return 1;
+}
+void solven1(equation X,equation Y,int64 &n1){
+	X.a*=Y.b2,X.b1*=Y.b2; Y.a*=X.b2,Y.b1*=X.b2;
+	n1= (Y.a-X.a)%(X.b1-Y.b1)? -1:(X.a-Y.a)/(X.b1-Y.b1);
+}
+void solven2(equation X,equation Y,int64 &n2){
+	X.a*=Y.b1,X.b2*=Y.b1; Y.a*=X.b1,Y.b2*=X.b1;
+	n2= (Y.a-X.a)%(X.b2-Y.b2)? -1:(Y.a-X.a)/(X.b2-Y.b2);
+}
+void solve(const int64 &b1,const int64 &b2,int64 &n1,int64 &n2){
+	if(b1==1){n1=1,n2=0;return ;}
+	if(b2==1){n1=1,n2=b1-1;return ;}
+	if(b1>b2){
+		solve(b1%b2,b2,n1,n2);
+		n2=n2+b1/b2*n1;
+	}
+	else{
+		solve(b1,b2%b1,n1,n2);
+		n1=n1+b2/b1*n2;
+	}
+}
+void convert(equation&E){
+	static int64 GCD;
+	GCD=gcd(gcd(E.b1,E.b2),E.a);
+	E.b1/=GCD;E.b2/=GCD;E.a/=GCD;
+}
+int check(ab &x,ab &y){
+	static equation X,Y;
+	static int   isX,flag;
+	static int64 n1,n2,xa,xb,ya,yb,da,minn; flag=isX=0;
+	static map<int,int64>::iterator it,i;
+	static map<int,bool> checked; checked.clear();
+	static number ans;ans=1;
+	for(it=x.b.M.begin();it!=x.b.M.end();it++){
+		checked[it->first]=1; xb=it->second;
+		i=x.a.M.find(it->first); xa=(i==x.a.M.end()? 0:i->second);
+		i=y.a.M.find(it->first); ya=(i==y.a.M.end()? 0:i->second);
+		i=y.b.M.find(it->first); yb=(i==y.b.M.end()? 0:i->second);
+		da=ya-xa;
+		if(flag){
+			if(xa+n1*xb!=ya+n2*yb)return 0;
+			continue;
+		}
+		if(!yb){
+			if(da<0)return 0;
+			if(da%xb)return 0;
+			n1=da/xb;
+			for(it=x.b.M.begin();it!=x.b.M.end();it++){
+				x.a.M[it->first]+=n1*it->second;
+			}
+			x.b=1;
+			if(check(x.a,y))return -1;
+			else return 0;
+		}
+		if(!isX){X.a=da,X.b1=xb,X.b2=yb;convert(X);isX=1;if(gcd(X.b1,X.b2)!=1)return 0;}
+		else {
+			Y.a=da,Y.b1=xb,Y.b2=yb;convert(Y);if(gcd(Y.b1,Y.b2)!=1)return 0;
+			if(X.b1*Y.b2==X.b2*Y.b1){
+				if(X.a*Y.b2!=X.b2*Y.a)return 0;
+				continue;
+			}
+			solven1(X,Y,n1);
+			solven2(X,Y,n2);
+			if(n1<0||n2<0)return 0;
+			flag=1;
+		}
+	}
+	for(it=y.b.M.begin();it!=y.b.M.end();it++){
+		if(checked[it->first])continue;checked[it->first]=1;yb=it->second;
+		i=x.a.M.find(it->first); xa=(i==x.a.M.end()? 0:i->second);
+		i=y.a.M.find(it->first); ya=(i==y.a.M.end()? 0:i->second);
+		da=ya-xa;
+		if(flag){
+			if(xa!=ya+n2*yb)return 0;
+			continue;
+		}
+		if(da>0)return 0;
+		if((-da)%yb)return 0;
+		n2=(-da)/yb;
+		for(it=y.b.M.begin();it!=y.b.M.end();it++)
+			y.a.M[it->first]+=n2*it->second;
+		y.b=1;
+		swap(x,y);
+		if(check(x.a,y))return -1;
+		else return 0;
+	}
+	for(it=x.a.M.begin();it!=x.a.M.end();it++){
+		if(checked[it->first])continue;checked[it->first]=1;xa=it->second;
+		i=y.a.M.find(it->first); ya=(i==y.a.M.end()? 0:i->second);
+		if(xa!=ya)return 0;
+	}
+	for(it=y.a.M.begin();it!=y.a.M.end();it++){
+		if(checked[it->first])continue;return 0;
+	}
+	if(flag){
+		for(it=x.b.M.begin();it!=x.b.M.end();it++){
+			x.a.M[it->first]+=n1*it->second;
+		}
+		x.b=1;
+		return -1;
+	}
+	if(!isX)return 1;
+	if(X.a==0){
+		for(it=x.b.M.begin();it!=x.b.M.end();it++)it->second*=X.b2;
+		return 1;
+	}
+	solve(X.b1,X.b2,n1,n2);
+	n1*=X.a,n2*=X.a;
+	if(X.a>0){
+		minn=max(0LL,min(n1/X.b2,n2/X.b1)-1);
+		n1-=minn*X.b2,n2-=minn*X.b1;
+		while(n1>=X.b2&&n2>=X.b1)n1-=X.b2,n2-=X.b1;
+	}
+	else {
+		minn=min(0LL,min(n1/X.b2,n2/X.b1)+1);
+		n1-=minn*X.b2,n2-=minn*X.b1;
+		while(n1<0||n2<0)n1+=X.b2,n2+=X.b1;
+	}
+	for(it=x.b.M.begin();it!=x.b.M.end();it++)x.a.M[it->first]+=it->second*n1;
+	for(it=x.b.M.begin();it!=x.b.M.end();it++)it->second*=X.b2;
+	return 1;
+}
+int main(){
+	void init();init();
+	int n,flag=0,a,b; int64 ans=1; ab x,y;
+	scanf("%d",&n);
+	scanf("%d%d",&a,&b); if(b==1)flag=1; x.a=a;x.b=b;
+	for(int i=2;i<=n;i++){
+		scanf("%d%d",&a,&b); y.a=a;y.b=b;
+		if(b==1){
+			if(!flag){ swap(x,y);if(!check(x.a,y)){puts("-1");return 0;} }
+			else {if(!(y.a==x.a)){puts("-1");return 0;} }
+		}
+		else{
+			if(!flag){
+				switch(check(x,y)){
+					case  0: puts("-1");return 0;
+					case -1: flag=1;
+					default: ;
+				}
+			}
+			else{ if(!check(x.a,y)){puts("-1");return 0;} }
+		}
+	}
+	for(map<int,int64>::iterator it=x.a.M.begin();it!=x.a.M.end();it++){
+		ans=ans*pow_(it->first,it->second)%M;
+	}
+	printf("%d\n",(int)ans);
+	return 0;
+}
+void init(){
+	for(int i=2,flag,j,J;i<MP;i++){
+		for(flag=1,j=1,J=(int)sqrt(i);j<=N&&prime[j]<=J;j++)
+			if(!(i%prime[j])){flag = 0; break;}
+		if(flag)prime[++N]=i;
+	}
+}
+

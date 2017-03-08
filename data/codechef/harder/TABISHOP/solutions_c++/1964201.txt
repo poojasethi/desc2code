@@ -1,0 +1,183 @@
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <vector>
+#include <cstring>
+#include <string>
+#include <cmath>
+#include <utility>
+#include <map>
+#include <set>
+#include <queue>
+#include <stack>
+#include <sstream>
+#define fi first
+#define se second
+using namespace std;
+
+struct query
+{
+	int type, x, y, yy;
+	
+	query() {}
+	query(int _type, int _x, int _y, int _yy)
+	{
+		type = _type; x = _x; y = _y; yy = _yy;
+	}
+	
+	bool operator < (query u) const
+	{
+		if (x != u.x) return x < u.x;
+		return type > u.type;
+	}
+};
+
+int n, R, tree[400200];
+vector < pair<int,int> > bishop[2], other[2];
+pair <int,int> rowRange[400100], colRange[400100];
+
+int range(int x)
+{
+	return n - 1 - abs(x);
+}
+
+void getMin(int &x, int y)
+{
+	if (y < x) x = y;
+}
+
+void getMax(int &x, int y)
+{
+	if (y > x) x = y;
+}
+
+void debug(vector < pair<int,int> > bishop)
+{
+	for (int i = 0; i < int(bishop.size()); i++) 
+	{
+		cout << bishop[i].fi << ' ' << bishop[i].se << " = ";
+		cout << rowRange[i].fi << ' ' << rowRange[i].se << "   ";
+		cout << colRange[i].fi << ' ' << colRange[i].se << endl;
+	}
+}
+
+int get(int y)
+{
+	int res = 0;
+	for (int i = y + 1; i; i -= i & -i) res += tree[i];
+	return res;
+}
+
+void add(int y, int val)
+{
+	for (int i = y + 1; i <= R; i += i & -i) tree[i] += val;
+}
+
+long long solve(vector < pair<int,int> > bishop, vector < pair<int,int> > other)
+{
+	long long res = 0;
+	int B = bishop.size();
+	vector < pair< pair<int,int>,int > > obstacle;
+	
+	for (int i = 0; i < int(other.size()); i++) obstacle.push_back(make_pair(other[i], 0));
+	for (int i = 0; i < B; i++) obstacle.push_back(make_pair(bishop[i], 1));
+	
+	for (int i = 0; i < B; i++)
+	{
+		int rx = range(bishop[i].fi), ry = range(bishop[i].se);
+		rowRange[i] = make_pair(-ry, ry);
+		colRange[i] = make_pair(-rx, rx);
+	}
+	
+	int O = obstacle.size();
+	sort(obstacle.begin(), obstacle.end());
+	for (int i = 0; i < B; i++)
+	{
+		int x = bishop[i].fi, y = bishop[i].se;
+		int j = lower_bound(obstacle.begin(), obstacle.end(), make_pair(bishop[i], 0)) - obstacle.begin();
+		if (j + 1 < O && obstacle[j + 1].fi.fi == x) getMin(colRange[i].se, obstacle[j + 1].fi.se - 2);
+		if (j && obstacle[j - 1].fi.fi == x) 
+		{
+			if (obstacle[j - 1].se) colRange[i].fi = y;
+			else getMax(colRange[i].fi, obstacle[j - 1].fi.se + 2);
+		}
+	}
+	
+	for (int i = 0; i < O; i++) swap(obstacle[i].fi.fi, obstacle[i].fi.se);
+	sort(obstacle.begin(), obstacle.end());
+	for (int i = 0; i < B; i++)
+	{
+		int x = bishop[i].fi, y = bishop[i].se;
+		int j = lower_bound(obstacle.begin(), obstacle.end(), make_pair(make_pair(y, x), 0)) - obstacle.begin();
+		if (j + 1 < O && obstacle[j + 1].fi.fi == y) getMin(rowRange[i].se, obstacle[j + 1].fi.se - 2);
+		if (j && obstacle[j - 1].fi.fi == y) 
+		{
+			if (obstacle[j - 1].se) rowRange[i].fi = x;
+			else getMax(rowRange[i].fi, obstacle[j - 1].fi.se + 2);
+		}
+	}
+	
+	// count safe cells
+	for (int i = 0; i < B; i++)
+	{
+		res += (colRange[i].se - colRange[i].fi) / 2 + 1;
+		res += (rowRange[i].se - rowRange[i].fi) / 2 + 1;
+	}
+	
+	// unique row
+	vector <int> rowSet;
+	for (int i = 0; i < B; i++) rowSet.push_back(bishop[i].se);
+	sort(rowSet.begin(), rowSet.end());
+	R = unique(rowSet.begin(), rowSet.end()) - rowSet.begin();
+	rowSet.resize(R);
+	
+	// construct query
+	vector <query> q;
+	for (int i = 0; i < B; i++)
+	{
+		q.push_back(query(0, bishop[i].fi, colRange[i].fi, colRange[i].se));
+		q.push_back(query(1, rowRange[i].fi, bishop[i].se, 0));
+		q.push_back(query(-1, rowRange[i].se, bishop[i].se, 0));
+	}
+	
+	sort(q.begin(), q.end());
+	memset(tree, 0, sizeof(tree));
+	
+	long long overlapping = 0;
+	for (int i = 0; i < int(q.size()); i++)
+		if (!q[i].type) // get
+		{
+			int yy = upper_bound(rowSet.begin(), rowSet.end(), q[i].yy) - rowSet.begin();
+			int y = lower_bound(rowSet.begin(), rowSet.end(), q[i].y) - rowSet.begin();
+			overlapping += get(yy - 1) - get(y - 1);
+		}
+		else // update
+		{
+			int y = lower_bound(rowSet.begin(), rowSet.end(), q[i].y) - rowSet.begin();
+			add(y, q[i].type);
+		}
+		
+	return res - overlapping;
+}
+
+int main()
+{
+	//freopen("a.in", "r", stdin);
+	int K, M, x, y;
+	cin >> n >> K >> M;
+	while (K--)
+	{
+		scanf("%d%d", &x, &y);
+		--x; --y;
+		bishop[(x + y) % 2].push_back(make_pair(x - y, x + y - n + 1));
+	}
+	while (M--)
+	{
+		scanf("%d%d", &x, &y);
+		--x; --y;
+		other[(x + y) % 2].push_back(make_pair(x - y, x + y - n + 1));
+	}
+	
+	long long ans = solve(bishop[0], other[0]) + solve(bishop[1], other[1]);
+	cout << ans << endl;
+}

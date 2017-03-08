@@ -1,0 +1,100 @@
+// Headers
+#include<bits/stdc++.h>
+using namespace std;
+// Global declarations
+typedef long long int ll;
+typedef vector<int> vi;
+typedef vector<char> vc;
+typedef pair<int, int> pi;
+const int mod = 1e9 + 7;
+const int INF = 1 << 30;
+// Macros
+#define mp make_pair
+#define el putchar('\n')
+#define sp putchar(' ')
+#define Fill(a,val) memset(a,val,sizeof a)
+#define all(a) a.begin(),a.end()
+
+int const NN = 1e5 + 5;
+
+int mm[NN];
+int a[NN];
+int P[20][NN];
+int stp;
+
+struct details{
+	int index;
+	int rank[2];
+};
+details table[NN];
+
+inline bool cmp(struct details a, struct details b){
+	return (a.rank[0] == b.rank[0] ? (a.rank[1] < b.rank[1]) : (a.rank[0] < b.rank[0]));
+}
+
+void BuildSuffixArray(int n){
+	for (int i = 0; i < n; ++i){
+		table[i].index = i;
+		table[i].rank[0] = a[i];
+		table[i].rank[1] = (i == n - 1 ? -1000 : a[i + 1]);
+		P[0][i] = table[i].rank[0];
+	}
+	sort(table, table + n, cmp);
+	stp = 1;
+	for (int k = 4; k <= n * 2; k <<= 1){
+		int val = 0;
+		int prev = table[0].rank[0];
+		table[0].rank[0] = val;
+		mm[table[0].index] = 0;
+		for (int i = 1; i < n; ++i){
+			val += (!(table[i].rank[0] == prev && table[i].rank[1] == table[i - 1].rank[1]));
+			prev = table[i].rank[0];
+			table[i].rank[0] = val;
+			mm[table[i].index] = i;
+		}
+		for (int i = 0; i < n; ++i){
+			int cur_index = table[i].index;
+			int next_index = cur_index + k / 2;
+			table[i].rank[1] = (next_index < n ? table[mm[next_index]].rank[0] : -1000);
+		}
+		sort(table, table + n, cmp);
+		for (int i = 0; i < n; ++i){
+			P[stp][table[i].index] = table[i].rank[0];
+		}++stp;
+	}
+}
+
+ll LCP(ll x, ll y, ll n){
+	if (x == y)
+		return n - x;
+	ll ret = 0;
+	for (int k = stp - 1; k >= 0 && x < n && y < n; --k){
+		if (P[k][x] == P[k][y]){
+			x += 1ll << k; y += 1ll << k; ret += 1ll << k;
+		}
+	}
+	return ret;
+}
+
+int main(){
+	int t; scanf("%d", &t);
+	while (t--){
+		int n;
+		scanf("%d", &n);
+		for (int i = 0; i < n; ++i){
+			scanf("%d", &a[i]);
+			if (i)
+				a[i - 1] = a[i] - a[i - 1];
+		}
+		--n;
+		BuildSuffixArray(n);
+		ll ans = n - table[0].index;
+		for (int i = 1; i < n; ++i){
+			ll cur = n - table[i].index;
+			cur -= LCP(table[i - 1].index, table[i].index, n);
+			ans = (ans + cur) % (mod + 2);
+		}
+		printf("%lld\n", ans);
+	}
+	return 0;
+}

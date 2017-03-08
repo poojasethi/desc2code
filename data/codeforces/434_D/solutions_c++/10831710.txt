@@ -1,0 +1,105 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+#include<iostream>
+using namespace std;
+template<class T> inline bool ten(T &x,const T &y){return y<x?(x=y,1):0;}
+template<class T> inline bool rel(T &x,const T &y){return x<y?(x=y,1):0;}
+const int N=55,K=222,maxn=11111,maxm=1000000,inf=0x3f3f3f3f;
+int head[maxn],adj[maxm],f[maxm],next[maxm],tot=1;
+int level[maxn],q[maxn],qh,qt,maxflow,S,T,dn;
+int n,m,ans;
+int L[N],R[N],A[N],B[N],C[N],V[N][K],VM[N];
+int I[N][K];
+
+void addedge(int u,int v,int w)
+{tot++;adj[tot]=v;f[tot]=w;next[tot]=head[u];head[u]=tot;
+tot++;adj[tot]=u;f[tot]=0;next[tot]=head[v];head[v]=tot;}
+
+bool bfs()
+{
+    qh=qt=0;
+    memset(level,-1,dn+1<<2);
+    level[S]=0;q[++qt]=S;
+    for(int u,i;qh<qt;)
+    {
+        u=q[++qh];
+        for(i=head[u];i;i=next[i])
+            if(level[adj[i]]==-1&&f[i]>0)
+            {
+                level[adj[i]]=level[u]+1;
+                if(adj[i]==T)return 1;
+                q[++qt]=adj[i];
+            }
+    }
+    return 0;
+}
+
+int aug(int u,int flow)
+{
+    if(u==T)return maxflow+=flow,flow;
+    int left=flow,t;
+    for(int i=head[u];i&&left;i=next[i])
+        if(level[adj[i]]==level[u]+1&&f[i]>0)
+        {
+            t=aug(adj[i],min(left,f[i]));
+            f[i]-=t,f[i^1]+=t;
+            left-=t;
+        }
+    if(left==flow)level[u]=-1;
+    return flow-left;
+}
+
+void init()
+{
+    scanf("%d%d",&n,&m);
+    for(int i=1;i<=n;i++)
+        scanf("%d%d%d",A+i,B+i,C+i);
+    S=++dn,T=++dn;
+    for(int i=1,j,t;i<=n;i++)
+    {
+        scanf("%d%d",L+i,R+i);
+        for(j=L[i];j<=R[i];j++)
+        {
+            I[i][j-L[i]]=++dn;
+            V[i][j-L[i]]=A[i]*j*j+B[i]*j+C[i];
+            rel(VM[i],V[i][j-L[i]]);
+        }
+        I[i][R[i]-L[i]+1]=++dn;
+        ans+=VM[i];
+        for(j=0,t=R[i]-L[i]+1;j<t;j++)
+            addedge(I[i][j],I[i][j+1],VM[i]-V[i][j]);
+        addedge(S,I[i][0],inf);
+        addedge(I[i][R[i]-L[i]+1],T,inf);
+    }
+}
+
+void work()
+{
+    for(int i=1,j,k,u,v,d;i<=m;i++)
+    {
+        scanf("%d%d%d",&u,&v,&d);
+        for(j=L[v],k=L[u];j<=R[v]+1;j++)
+        {
+            while(k<=R[u]+1&&k-j<d)k++;
+            if(k<=R[u]+1&&k-j==d)addedge(I[u][k-L[u]],I[v][j-L[v]],inf);
+        }
+    }
+}
+
+void solve()
+{
+    while(bfs())
+        aug(S,inf);
+    ans-=maxflow;
+    printf("%d\n",ans);
+}
+
+int main()
+{
+    init();
+    work();
+    solve();
+    return 0;
+}

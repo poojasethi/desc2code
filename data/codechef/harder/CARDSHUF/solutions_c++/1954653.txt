@@ -1,0 +1,250 @@
+//Template
+// Template copied from Anudeep2011, Thanks
+#include <vector> 
+#include <queue>
+#include <map> 
+#include <set>
+#include <utility> //Pair
+#include <algorithm>
+#include <sstream> // istringstream>> ostring stream<<
+#include <iostream> 
+#include <iomanip> 
+//setbase - cout << setbase (16); cout << 100 << endl; Prints 64
+//setfill -   cout << setfill ('x') << setw (5); cout << 77 << endl; prints xxx77
+//setprecision - cout << setprecision (4) << f << endl; Prints x.xxxx
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <cstring>
+using namespace std;
+
+typedef long long ll;
+typedef vector <int> vi;
+typedef vector <vi> vvi;
+typedef vector <string> vs;
+typedef pair< int ,int > pii;
+typedef vector <ll> vll;
+typedef istringstream iss;
+typedef ostringstream oss;
+#define pb push_back
+#define mp make_pair
+#define ff first
+#define ss second
+#define sz size()
+#define ln length()
+#define rep(i,n) for(int i=0;i<n;i++)
+#define all(a)  a.begin(),a.end() 
+#define ESP (1e-9)
+
+#define S 1024*1024*4
+char IN[S],OUT[S],*iptr,*optr,stk[20];
+
+struct fastIO
+{
+	fastIO()
+	{
+		fread(IN,1,S,stdin);
+		iptr=IN;
+		optr=OUT;
+	}
+	void check()
+	{
+		int size=IN+S-iptr;
+		if(size<200)
+		{
+			memcpy(IN,iptr,size);
+			fread(IN+size,1,S-size,stdin);
+			iptr=IN;
+		}
+	}
+	void check2()
+	{
+		int size=OUT+S-optr;
+		if(size<200)
+		{
+			fwrite(OUT,optr-OUT,1,stdout);
+			optr=OUT;
+		}
+	}
+	
+	int sc()
+	{
+		check();
+		while(*iptr<=32) iptr++;
+		int x=0;
+		while(*iptr>32) x= x*10 + *iptr++ -'0';
+		return x;
+	}
+	
+	void pr(int x)
+	{
+		check2();
+		if(x==0)
+			*optr++='0';
+		else
+		{
+			int y;
+			int top=-1;
+			while(x>0)
+			{
+				y=x/10;
+				stk[++top]=x-y*10+'0';
+				x=y;
+			}
+			while(top>=0) *optr++=stk[top--];
+		}
+		*optr++=' ';
+	}
+};
+fastIO io;
+
+struct node {
+	node *p,*l,*r;
+	int s,id,rev;
+	node() { }
+	node(int id,node *p) : id(id), p(p) { l=r=NULL; s=rev=1; }
+};
+
+void setsize(node *n) {
+	if(n==NULL) return;
+	n->s=1;
+	if(n->l) n->s += n->l->s;
+	if(n->r) n->s += n->r->s;
+}
+
+int getsize(node *n) {
+	if(n) return n->s;
+	return 0;
+}
+
+void resolve(node *n) {
+	if(n==NULL) return;
+	if(n->rev == 1) return;
+	n->rev = 1;
+	if(n->l) n->l->rev *= -1;
+	if(n->r) n->r->rev *= -1;
+	swap(n->l, n->r);
+}
+
+node* build(int s, int e) {
+	if(e<s) return NULL;
+	int m = (s+e)/2;
+	node *cur = new node(m,NULL);
+	cur->l = build(s,m-1);
+	cur->r = build(m+1,e);
+	if(cur->l) cur->l->p = cur;
+	if(cur->r) cur->r->p = cur;
+	setsize(cur);
+	return cur;
+}
+
+void rotate(node *n) {
+	node *p = n->p;
+	node *g = p->p;
+	resolve(g);
+	resolve(p);
+	resolve(n);
+	if(g) {
+		if(g->l == p) g->l = n;
+		else g->r = n;
+	}
+	n->p = g;
+	p->p = n;
+	if(p->l == n) {
+		p->l = n->r;
+		if(n->r) n->r->p = p;
+		n->r = p;
+	}
+	else {
+		p->r = n->l;
+		if(n->l) n->l->p = p;
+		n->l = p;
+	}
+	setsize(p);
+	setsize(n);
+}
+
+void splay(node *n) {
+	node *p,*g;
+	while(1) {
+		p = n->p;
+		if(p==NULL) break;
+		g = p->p;
+		resolve(g);
+		resolve(p);
+		if(g==NULL) rotate(n);
+		else if( (g->l==p) == (p->l==n) ) { rotate(p); rotate(n); }
+		else { rotate(n); rotate(n); }
+	}
+}
+
+node * detach(node* &n, int k) {
+	if(k==0) return NULL;
+	if(k == n->s) {
+		node *top = n;
+		n = NULL;
+		return top;
+	}
+	resolve(n);
+	//splay adjacent node so k = k+1
+	int s1 = getsize(n->l);
+	while(s1 != k) {
+		if(s1>k) n = n->l;
+		else {
+			n = n->r;
+			k -= (s1+1);
+		}
+		resolve(n);
+		s1 = getsize(n->l);
+	}
+	splay(n);
+	node *top = n->l;
+	top -> p = NULL;
+	n->l = NULL;
+	setsize(n);
+	return top;
+}
+
+void merge(node *a, node* &b) {
+	//attach a to b as left most..
+	//find the smallest in b, splay to top, attach a as left child
+	if(a==NULL) return;
+	if(b==NULL) { b=a; return; }
+	resolve(b);
+	while(b->l) {
+		b = b->l;
+		resolve(b);
+	}
+	splay(b);
+	b->l = a;
+	a->p = b;
+	setsize(b);
+}
+
+void print(node *n) {
+	if(n==NULL) return;
+	resolve(n);
+	print(n->l);
+	io.pr(n->id);
+	print(n->r);
+}
+	
+int main() {
+	int n,m,a,b,c;
+	n = io.sc(); m = io.sc();
+	node *root = build(1,n), *top, *mid;
+	while(m--) {
+		a = io.sc(); b = io.sc(); c = io.sc();
+		top = detach(root,a);
+		mid = detach(root,b);
+		merge(top,root);
+		top = detach(root,c);
+		mid->rev *= -1;
+		merge(mid,root);
+		merge(top,root);
+	}
+	print(root);
+	fwrite(OUT,optr-OUT,1,stdout);
+	return 0;
+}

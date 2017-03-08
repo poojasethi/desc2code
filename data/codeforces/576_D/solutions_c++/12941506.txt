@@ -1,0 +1,112 @@
+#include <algorithm>
+#include <iostream>
+#include <cstring>
+#include <vector>
+using namespace std;
+const int MAX = 155;
+const int LG = 31;
+bool dp[LG][MAX][MAX];
+int n;
+void dfs(int lvl, int u, int v)
+{
+	if (dp[lvl][u][v])
+		return;
+	dp[lvl][u][v] = true;
+	if (lvl == LG - 1)
+		return;
+	for (int i = 0; i < n; i++)
+	{
+		if (dp[lvl][i][u])
+			dfs(lvl + 1, i, v);
+		if (dp[lvl][v][i])
+			dfs(lvl + 1, u, i);
+	}
+}
+pair<int, pair<int, int> > edge[MAX];
+long long d[MAX];
+int q[MAX];
+vector<int> adj[MAX];
+int can[MAX], tmp[MAX];
+long long get()
+{
+	memset(d, 63, sizeof(d));
+	int h = 0, t = 0;
+	for (int i = 0; i < n; i++)
+		if (can[i])
+		{
+			d[i] = 0;
+			q[t++] = i;
+		}
+	while (h < t)
+	{
+		int v = q[h++];
+		for (int i = 0; i < adj[v].size(); i++)
+		{
+			int u = adj[v][i];
+			if (d[u] > d[v] + 1)
+			{
+				d[u] = d[v] + 1;
+				q[t++] = u;
+			}
+		}
+	}
+	return d[n - 1];
+}
+void mul(int x)
+{
+	for (int i = 0; i < LG; i++)
+		if ((1 << i) & x)
+		{
+			memset(tmp, 0, sizeof(tmp));
+			for (int u = 0; u < n; u++)
+				if (can[u])
+					for (int v = 0; v < n; v++)
+						if (dp[i][u][v])
+							tmp[v] = 1;
+			memcpy(can, tmp, sizeof(tmp));
+		}
+}
+int main()
+{
+	ios::sync_with_stdio(false);
+	int m;
+	cin >> n >> m;
+	for (int i = 0; i < m; i++)
+	{
+		cin >> edge[i].second.first >> edge[i].second.second >> edge[i].first;
+		edge[i].second.first--;
+		edge[i].second.second--;
+	}
+	sort(edge, edge + m);
+	int ptr = 0;
+	while (ptr < m && edge[ptr].first == 0)
+	{
+		dfs(0, edge[ptr].second.first, edge[ptr].second.second);
+		adj[edge[ptr].second.first].push_back(edge[ptr].second.second);
+		ptr++;
+	}
+	if (ptr == 0)
+	{
+		cout << "Impossible\n";
+		return 0;
+	}
+	can[0] = 1;
+	long long ans = get();
+	while (ptr < m)
+	{
+		mul(edge[ptr].first - edge[ptr - 1].first);
+		int x = edge[ptr].first;
+		while (ptr < m && edge[ptr].first == x)
+		{
+			dfs(0, edge[ptr].second.first, edge[ptr].second.second);
+			adj[edge[ptr].second.first].push_back(edge[ptr].second.second);
+			ptr++;
+		}
+		ans = min(ans, get() + x);
+	}
+	if (ans > 1e18)
+		cout << "Impossible\n";
+	else
+		cout << ans << "\n";
+	return 0;
+}

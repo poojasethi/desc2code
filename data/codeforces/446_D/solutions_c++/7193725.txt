@@ -1,0 +1,116 @@
+#include<cstdio>
+#include<cstdlib>
+#include<algorithm>
+#include<cstring>
+#include<cmath>
+#define MAXN 505
+#define MAXM 100006
+#define zero 1e-18
+using namespace std ;
+typedef long long LL ;
+typedef long double ld ;
+
+int N, M, K, cnt ;
+int id[MAXN], p[MAXN], d[MAXN] ;
+ld w[MAXN][MAXN*2] ;
+ld a[MAXN][MAXN], x[MAXN][MAXN] ;
+ld g[MAXN][MAXN] ;
+
+struct matrix {
+	int n ;
+	ld a[105][105] ;
+	matrix operator * (matrix b) const {
+		matrix c ; 
+		c.n = n ;
+		int i, j, t ;
+		for(i = 0; i < n; i ++)
+			for(j = 0; j < cnt; j ++)
+				for(t = 0, c.a[i][j] = 0; t < cnt; t ++)
+					c.a[i][j] += a[i][t]*b.a[t][j] ;
+		return c ;
+	}
+} one, st, by, ed ;
+
+matrix ksm(matrix x, int t)
+{
+	matrix tmp = one ;
+	for(t; t; t >>= 1, x = x*x)
+		if(t&1) tmp = tmp*x ;
+	return tmp ;
+}
+
+void Gauss()
+{
+	int i, j, t ;
+	for(i = 1; i <= N; i ++)
+	{
+		for(t = i, j = t+1; j <= N; j ++)
+			if(fabs(w[j][i]) > fabs(w[t][i]))
+				t = j ;
+		if(t != i)
+			for(j = 1; j <= 2*N; j ++)
+				swap(w[t][j], w[i][j]) ;
+		if(fabs(w[i][i]) > zero)
+			for(j = i+1; j <= N; j ++)
+				if(fabs(w[j][i]) > zero)
+					for(t = 2*N; t >= i; t --)
+						w[j][t] -= w[i][t]*w[j][i]/w[i][i] ;
+	}
+	for(i = N; i >= 1; i --)
+		if(fabs(w[i][i]) > zero)
+		{
+			for(j = i+1; j <= N; j ++)
+				for(t = N+1; t <= 2*N; t ++)		
+					w[i][t] -= w[i][j]*x[j][t-N] ;
+			for(j = N+1; j <= 2*N; j ++)
+				x[i][j-N] = w[i][j]/w[i][i] ;
+		}
+}
+ld Calc(int a, int b)
+{
+	ld ret = 0 ;
+	for(int i = 1; i <= N; i ++)
+		ret += x[a][i]*g[i][b] ;
+	return ret ;
+}
+int main()
+{
+	//freopen("1.in", "r", stdin) ;
+	scanf("%d %d %d", &N, &M, &K) ;
+	int i, j, t, fr, to ; 
+	for(i = 1; i <= N; i ++)
+	{
+		scanf("%d", &id[i]) ;
+		if(id[i] == 1)
+			p[++cnt] = i ;
+	}
+	for(i = 1; i <= M; i ++)
+	{
+		scanf("%d %d", &fr, &to) ;
+		g[fr][to] ++, g[to][fr] ++ ;
+		d[fr] ++, d[to] ++ ;
+	}
+	for(i = 1; i <= N; i ++)
+		for(j = 1; j <= N; j ++)
+		{
+			if(d[i]) g[i][j] = g[i][j]/d[i] ;
+			if(!id[j])
+				w[i][j] = g[i][j] ;
+		}
+	for(i = 1; i <= N; i ++)
+		w[i][i] -= 1, w[i][i+N] = -1 ;
+	Gauss() ;
+	one.n = by.n = cnt, st.n = 1 ;
+	for(i = 0; i < cnt; i ++)
+		one.a[i][i] = 1 ;
+	for(i = 0; i < cnt; i ++)
+		for(j = 0; j < cnt; j ++)
+			by.a[i][j] = Calc(p[i+1], p[j+1]) ;
+	ed = ksm(by, K-2) ;
+	for(i = 0; i < cnt; i ++)
+		st.a[0][i] = Calc(1, p[i+1]) ;
+	st = st*ed ;
+	printf("%.10lf\n", (double)st.a[0][cnt-1]) ;
+	//system("pause") ; 
+	return 0 ;
+}

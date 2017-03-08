@@ -1,0 +1,203 @@
+#include <map>
+#include <vector>
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+using namespace std ;
+
+typedef long long LL ;
+
+#define rep( i , a , b ) for ( int i = ( a ) ; i <  ( b ) ; ++ i )
+#define For( i , a , b ) for ( int i = ( a ) ; i <= ( b ) ; ++ i )
+#define rev( i , a , b ) for ( int i = ( a ) ; i >= ( b ) ; -- i )
+#define clr( a , x ) memset ( a , x , sizeof a )
+
+const int MAXN = 100005 ;
+const int MAXE = 200005 ;
+
+LL ans ;
+
+struct Node* null ;
+struct Node {
+	Node* c[2] ;
+	Node* f ;
+	LL sum ;
+	LL val ;
+	LL cnt ;
+	LL addv ;
+	LL size ;
+	LL tot_size ;
+	inline void newnode ( LL value ) {
+		val = value ;
+		sum = 0 ;
+		c[0] = c[1] = f = null ;
+	}
+	inline void add_size ( LL v ) {
+		if ( this == null ) return ;
+		addv += v ;
+		cnt += 2 * size * v ;
+		tot_size += v ;
+	}
+	inline void push_up () {
+		sum = c[0]->sum + size * val + c[1]->sum ;
+	}
+	inline void push_down () {
+		if ( addv ) {
+			c[0]->add_size ( addv ) ;
+			c[1]->add_size ( addv ) ;
+			addv = 0 ;
+		}
+	}
+	inline bool isroot () {
+		return f == null || f->c[0] != this && f->c[1] != this ;
+	}
+	inline void setc ( Node* o , int d ) {
+		c[d] = o ;
+		o->f = this ;
+	}
+	inline void rotate ( int d ) {
+		Node* p = f ;
+		Node* g = p->f ;
+		p->setc ( c[d] , !d ) ;
+		if ( !p->isroot () ) g->setc ( this , p == g->c[1] ) ;
+		else f = g ;
+		setc ( p , d ) ;
+		p->push_up () ;
+	}
+	inline void sign_down () {
+		if ( !isroot () ) f->sign_down () ;
+		push_down () ;
+	}
+	inline void splay () {
+		sign_down () ;
+		while ( !isroot () ) {
+			if ( f->isroot () ) rotate ( this == f->c[0] ) ;
+			else {
+				if ( f == f->f->c[0] ) {
+					if ( this == f->c[0] ) f->rotate ( 1 ) ;
+					else rotate ( 0 ) ;
+					rotate ( 1 ) ;
+				} else {
+					if ( this == f->c[1] ) f->rotate ( 0 ) ;
+					else rotate ( 1 ) ;
+					rotate ( 0 ) ;
+				}
+			}
+		}
+		push_up () ;
+	}
+	inline void access () {
+		Node* o = this ;
+		Node* x = null ;
+		while ( o != null ) {
+			if ( x != null ) {
+				while ( x->c[0] != null ) x = x->c[0] ;
+				x->splay () ;
+			}
+			o->splay () ;
+			o->size = o->tot_size - x->tot_size ;
+			o->setc ( x , 1 ) ;
+			o->push_up () ;
+			x = o ;
+			o = o->f ;
+		}
+		splay () ;
+	}
+} ;
+
+struct Edge {
+	int v , n ;
+	Edge () {}
+	Edge ( int v , int n ) : v ( v ) , n ( n ) {}
+} ;
+
+Edge E[MAXE] ;
+int H[MAXN] , cntE ;
+Node pool[MAXN] ;
+Node* node[MAXN] ;
+Node* cur ;
+LL val[MAXN] ;
+int n , m ;
+
+void clear () {
+	ans = 0 ;
+	cntE = 0 ;
+	clr ( H , -1 ) ;
+	cur = pool ;
+	null = cur ++ ;
+	null->newnode ( 0 ) ;
+	null->size = null->tot_size = 0 ;
+}
+
+void addedge ( int u , int v ) {
+	E[cntE] = Edge ( v , H[u] ) ;
+	H[u] = cntE ++ ;
+}
+
+void dfs ( int u ) {
+	node[u]->cnt = node[u]->size = 1 ;
+	for ( int i = H[u] ; ~i ; i = E[i].n ) {
+		int v = E[i].v ;
+		dfs ( v ) ;
+		node[u]->cnt += node[v]->size * node[u]->size * 2 ;
+		node[u]->size += node[v]->size ;
+	}
+	node[u]->tot_size = node[u]->size ;
+	ans += node[u]->cnt * node[u]->val ;
+	node[u]->push_up () ;
+}
+
+void solve () {
+	char op[5] ;
+	int x , y ;
+	double all = ( double ) n * n ;
+	clear () ;
+	For ( i , 1 , n ) {
+		node[i] = cur ++ ;
+		node[i]->newnode ( 0 ) ;
+	}
+	For ( i , 2 , n ) {
+		scanf ( "%d" , &x ) ;
+		addedge ( x , i ) ;
+		node[i]->f = node[x] ;
+	}
+	For ( i , 1 , n ) scanf ( "%I64d" , &node[i]->val ) ;
+	dfs ( 1 ) ;
+	//printf ( "%lld\n" , ans ) ;
+	printf ( "%.10f\n" , ans / all ) ;
+	scanf ( "%d" , &m ) ;
+	rep ( i , 0 , m ) {
+		scanf ( "%s%d%d" , op , &x , &y ) ;
+		if ( op[0] == 'P' ) {
+			node[y]->access () ;
+			node[x]->splay () ;
+			if ( node[x]->f == null ) swap ( x , y ) ;
+			node[x]->access () ;
+			Node* o = node[x]->c[0] ;
+			ans -= o->sum * node[x]->tot_size * 2 ;
+			o->add_size ( -node[x]->tot_size ) ;
+			node[x]->c[0]->f = null ;
+			node[x]->c[0] = null ;
+			o->push_up () ;
+
+			node[y]->access () ;
+			ans += node[y]->sum * node[x]->tot_size * 2 ;
+			node[y]->add_size ( node[x]->tot_size ) ;
+			node[y]->push_up () ;
+			node[x]->f = node[y] ;
+		} else {
+			node[x]->access () ;
+			ans += node[x]->cnt * ( y - node[x]->val ) ;
+			node[x]->val = y ;
+			node[x]->push_up () ;
+		}
+		printf ( "%.10f\n" , ans / all ) ;
+
+	}
+}
+
+int main () {
+	while ( ~scanf ( "%d" , &n ) ) solve () ;
+	return 0 ;
+}

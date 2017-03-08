@@ -1,0 +1,221 @@
+#include<bits/stdc++.h>
+using namespace std;
+
+#define sc( x ) scanf( "%d" , &x )
+#define REP( i , n ) for( int i = 0 ; i < n ; ++i )
+#define clr( t , val ) memset( t , val , sizeof( t ) )
+
+#define pb push_back
+#define all( v ) v.begin() , v.end()
+#define SZ( v ) ((int)(v).size())
+
+#define mp make_pair
+#define fi first
+#define se second
+
+#define N 1000000
+#define LOGN 20
+
+#define MAXV 1000000
+#define MAXE 2500000
+#define INF (1<<29)
+
+typedef pair< int , int > pii;
+typedef long long ll;
+typedef vector< int > vi;
+typedef vector< ll > vll;
+typedef vector< vi > vvi;
+struct tree{
+	vvi rmq;
+	vi depth , in , out , vis;
+	vvi G;	
+	int n , timer;
+	tree(){
+		rmq = vvi( LOGN + 1 , vi( N + 5 ) );
+		depth = in = out = vis = vi( N + 5 );
+		G = vvi( N + 4 );
+	}
+	
+	void clear( int nodes ){
+		n = nodes;
+		REP( i , N ) G[ i ].clear();
+	}
+	
+	void dfs( int u , int p = -1 ){
+		vis[ u ] = 1;
+		in[ u ] = timer ++;
+		REP( i , SZ( G[ u ] ) ){
+			int v = G[ u ][ i ];
+			if( v != p && !vis[ v ] ){
+				rmq[ 0 ][ v ] = u;
+				depth[ v ] = depth[ u ] + 1;
+				dfs( v , u );
+			}
+		}
+		out[ u ] = timer ++;
+	}
+	void addEdge( int u , int v ){
+		G[ u ].pb( v );
+		G[ v ].pb( u );
+	}
+	int LCA( int a , int b ){
+		if( depth[ a ] > depth[ b ] ) swap( a , b );
+		int dif = depth[ b ] - depth[ a ];
+		for( int i = 0 ; i <= LOGN ; ++i ) if( dif & (1<<i) ) b = rmq[ i ][ b ];
+		if( a == b ) return a;
+		for( int k = LOGN ; k >= 0 ; --k )
+			if( rmq[ k ][ a ] != rmq[ k ][ b ] ) a = rmq[ k ][ a ] , b = rmq[ k ][ b ];
+		return rmq[ 0 ][ a ];
+	}
+	void doit(){
+		rmq = vvi( LOGN + 1 , vi( N + 5 , -1 ) );
+		vis = vi( N + 5 );
+		timer = 0;
+		dfs( 0 );
+		for( int k = 1 ; k <= LOGN ; ++k )
+			REP( i , n ) if( rmq[ k - 1 ][ i ] != -1 ) rmq[ k ][ i ] = rmq[ k - 1 ][ rmq[ k - 1 ][ i ] ];
+	}
+	bool isChild( int u , int v ){
+		return in[ u ] <= in[ v ] && out[ v ] <= out[ u ];
+	}
+	bool isInPath( int a , int b , int x ){
+		if( depth[ a ] > depth[ b ] ) swap( a , b );
+		return isChild( a , x ) && isChild( x , b );
+	}
+
+	bool intersects( int a , int b , int c , int d ){
+		int lca1 = LCA( a , b ) , lca2 = LCA( c , d );
+		if( isInPath( a , lca1 , c ) ) return 1;
+		if( isInPath( a , lca1 , d ) ) return 1;
+		if( isInPath( a , lca1 , lca2 ) ) return 1;
+		
+		if( isInPath( b , lca1 , c ) ) return 1;
+		if( isInPath( b , lca1 , d ) ) return 1;
+		if( isInPath( b , lca1 , lca2 ) ) return 1;
+		
+		if( isInPath( c , lca2 , a ) ) return 1;
+		if( isInPath( c , lca2 , b ) ) return 1;
+		if( isInPath( c , lca2 , lca1 ) ) return 1;
+		
+		if( isInPath( d , lca2 , a ) ) return 1;
+		if( isInPath( d , lca2 , b ) ) return 1;
+		if( isInPath( d , lca2 , lca1 ) ) return 1;
+		return 0;
+	}
+	
+};
+
+
+struct graphFlow{
+	int n , m , s , t , E;
+	vll to , cap , next;
+	vi last , now , dist;
+	graphFlow(){
+		to = cap = next = vll( 2 * MAXE + 5 );
+		last = now = dist = vi( 2 * MAXE + 5 );
+	}
+	void clear( int nodes , int orig , int dest ){
+		n = nodes , s = orig , t = dest;
+		E = 0;
+		REP( i , n ) last[ i ] = -1;
+	}
+	void add_edge( int u , int v , ll uv , ll vu = 0 ){
+		to[ E ] = v ; cap[ E ] = uv ; next[ E ] = last[ u ] ; last[ u ] = E ++;
+		to[ E ] = u ; cap[ E ] = vu ; next[ E ] = last[ v ] ; last[ v ] = E ++;
+	}
+	bool bfs(){
+		REP( i , n ) dist[ i ] = INF;
+		queue< int > Q;
+		dist[ t ] = 0;
+		Q.push( t );
+		while( !Q.empty() ){
+			int u = Q.front() ; Q.pop();
+			for( int e = last[ u ] ; e != -1 ; e = next[ e ] ){
+				int v = to[ e ];
+				if( cap[ e ^ 1 ] && dist[ v ] >= INF ){
+					dist[ v ] = dist[ u ] + 1;
+					Q.push( v );
+				}
+			}
+		}
+		return dist[ s ] < INF;
+	}
+	ll dfs( int u , ll f ){
+		if( u == t ) return f;
+		for( int &e = now[ u ] ; e != -1 ; e = next[ e ] ){
+			int v = to[ e ];
+			if( cap[ e ] && dist[ u ] == dist[ v ] + 1 ){
+				ll ret = dfs( v  , min( f , (ll)cap[ e ] ) );
+				if( ret ){
+					cap[ e ] -= ret;
+					cap[ e ^ 1 ] += ret;
+					return ret;
+				}
+			}
+		}
+		return 0;
+	}
+	ll maxFlow(){
+		ll flow = 0;
+		while( bfs() ){
+			
+			REP( i , n ) now[ i ] = last[ i ];
+			while( 1 ){
+				int f = dfs( s , INF );
+				if( !f ) break;
+				flow += f;
+			}
+		}
+		return flow;
+	}
+};
+
+int main(){
+	ios_base :: sync_with_stdio( 0 );
+	int n , m1 , m2;
+
+	tree T;
+	graphFlow G;
+	
+	while( cin >> n >> m1 >> m2 ){
+		
+		T.clear( n );
+		REP( i , n - 1 ){
+			int u , v;
+			cin >> u >> v;
+			u -- , v --;
+			T.addEdge( u , v );
+		}
+		
+		T.doit();
+		
+		vi A , B , C , D , W1 , W2;
+		ll sum = 0;
+		REP( i , m1 ){
+			int u , v , w;
+			cin >> u >> v >> w;
+			u -- , v --;
+			A.pb( u ) , B.pb( v ) , W1.pb( w );
+			sum += w;
+		}
+		REP( i , m2 ){
+			int u , v , w;
+			cin >> u >> v >> w;
+			u -- , v --;
+			C.pb( u ) , D.pb( v ) , W2.pb( w );
+			sum += w;
+		}
+		int s = m1 + m2 , t = s + 1;
+		G.clear( m1 + m2 + 2 , s , t );
+		REP( i , m1 ) G.add_edge( s , i , W1[ i ] , 0 );
+		REP( j , m2 ) G.add_edge( m1 + j , t , W2[ j ] , 0 );
+		REP( i , m1 ) REP( j , m2 ){
+			if( T.intersects( A[ i ] , B[ i ] , C[ j ] , D[ j ] ) ){
+				G.add_edge( i , m1 + j , INF , 0 );
+			}
+		}
+		cout << (sum - G.maxFlow()) << '\n';
+	}
+	
+}
+

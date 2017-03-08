@@ -1,0 +1,137 @@
+#include <stdio.h>
+#include <algorithm>
+#include <string.h>
+#include <map>
+using namespace std;
+#define MAXN 200100
+#define MAXK 30
+#define MMASK 4500100
+typedef long long lint;
+
+int n, k, t;
+char s[MAXN];
+int cost[MAXK], a[MAXK][MAXK];
+int viz_cand[MAXN][MAXK], nviz_cand[MAXN];
+int pd[MMASK];
+
+void calcula_candidatos_vizinhos () {
+ int pos_last_letter[MAXK];
+ map <int, int> mp;
+ for (int i = 0; i < k; i++) 
+   pos_last_letter[i] = -1;
+ for (int i = 0; i < n; i++) {
+   int letra = s[i];
+   for (map <int,int> :: reverse_iterator rit = mp.rbegin (); 
+	rit != mp.rend(); rit++) {
+     int cand = rit->second;
+     viz_cand[i][nviz_cand[i]++] = cand;
+     if (cand == letra)
+       break;
+   }
+   if (pos_last_letter[letra] == -1) {
+     pos_last_letter[letra] = i;
+     mp[i] = letra;
+   }
+   else {
+     mp.erase (pos_last_letter[letra]);
+     pos_last_letter[letra] = i;
+     mp[i] = letra;
+   }
+ }
+ /*
+   for (int i = 0; i < n; i++) {
+   printf ("letra %c: ", s[i] + 'A');
+   for (int j = 0; j < nviz_cand[i]; j++) 
+   printf ("%c", viz_cand[i][j] + 'A');
+   printf ("\n");
+   }
+ */
+}
+
+void binar (int x) {
+  char st[20];
+  int n = 0;
+  while (n < k) {
+    st[n] = x%2 + '0';
+    x /= 2;
+    n++;
+  }
+  st[n++] = '\0';
+  printf ("%s", st);
+}
+
+void populacao_inicial_pd () {
+  for (int i = 0; i < n; i++) {
+    int mask = 0;
+    int now = s[i];
+    for (int j = 0; j < nviz_cand[i]; j++) {
+      int cand = viz_cand[i][j];
+      pd[mask] += a[cand][now];
+      pd[mask | (1<<cand)]  -= a[cand][now];
+      pd[mask | (1<<now)] -= a[cand][now];
+      pd[mask | (1<<now) | (1<<cand)] += a[cand][now];
+      mask |= (1<<cand);
+    }
+  }
+  /*
+  for (int i = 0; __builtin_popcount (i) < k; i++) {
+    binar (i);
+    printf (": %d\n", pd[i]);
+  }
+  */
+}
+
+void popula_pd () {
+  for (int i = 0; i < k; i++) {
+    for (int j = 0; __builtin_popcount (j) < k; j++) {
+      if (j & (1<<i)) {
+	pd[j] += pd[j - (1<<i)];
+      }
+    }
+  }
+}
+
+int conta_resposta () {
+  int mask_total = 0;
+  for (int i = 0; i < n; i++) 
+    mask_total |= (1<<s[i]);
+  int ret = 0;
+  for (int i = 0; __builtin_popcount (i) < k; i++) {
+    if ((mask_total & i) == mask_total || 
+	(mask_total | i) != mask_total)
+      continue;
+    int local_cost = pd[i];
+    for (int j = 0; j < k; j++) 
+      if (i & (1<<j))
+	local_cost += cost[j];
+    if (local_cost <= t) {
+      ret++;
+      /*
+      binar (i);
+      printf ("\n");
+      */
+    }
+  }
+  return ret;
+}
+
+int main () {
+  scanf ("%d %d %d", &n, &k, &t);
+  scanf (" %s", s);
+  for (int i = 0; i < n; i++) 
+    s[i] -= 'A';
+  for (int i = 0; i < k; i++) 
+    scanf ("%d", &cost[i]);
+  for (int i = 0; i < k; i++) {
+    for (int j = 0; j < k; j++) 
+      scanf ("%d", &a[i][j]);
+  }
+  for (int i = 0; i < MMASK; i++) 
+    pd[i] = 0;
+  calcula_candidatos_vizinhos ();
+  populacao_inicial_pd ();
+  popula_pd ();
+  int ret = conta_resposta ();
+  printf ("%d\n", ret);
+  return 0;
+}

@@ -1,0 +1,190 @@
+//tonynater - Rockethon 2014
+
+#include <algorithm>
+#include <bitset>
+#include <cassert>
+#include <cmath>
+#include <ctime>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <list>
+#include <map>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <string>
+#include <vector>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+using namespace std;
+
+#define sz(x) ((int) x.size())
+
+typedef long double ld;
+typedef long long ll;
+typedef pair<ll, ll> pll;
+
+const double pi = acos(-1);
+const double tau = 2*pi;
+const double epsilon = 1e-6;
+
+const ll INF = (1LL)<<60;
+
+const ll MAX_N = 200100;
+
+ll N, K;
+
+pll opps[MAX_N];
+
+struct segment
+{
+    vector<ll> elements;
+    vector<ll> sums;
+    
+    segment() { }
+    
+    ll nSmaller(ll q)
+    {
+        if(q >= elements[sz(elements)-1]) return sz(elements);
+        return (upper_bound(elements.begin(), elements.end(), q)-elements.begin());
+    }
+};
+
+segment segtree[3*MAX_N];
+
+void merge_segs(ll p, ll c1, ll c2)
+{
+    ll idx1 = 0, idx2 = 0;
+    while(idx1 < sz(segtree[c1].elements) || idx2 < sz(segtree[c2].elements))
+    {
+        if(idx1 == sz(segtree[c1].elements)) segtree[p].elements.push_back(segtree[c2].elements[idx2++]);
+        else if(idx2 == sz(segtree[c2].elements)) segtree[p].elements.push_back(segtree[c1].elements[idx1++]);
+        else if(segtree[c1].elements[idx1] < segtree[c2].elements[idx2]) segtree[p].elements.push_back(segtree[c1].elements[idx1++]);
+        else segtree[p].elements.push_back(segtree[c2].elements[idx2++]);
+    }
+    
+    segtree[p].sums.push_back(segtree[p].elements[0]);
+    for(ll i = 1; i < sz(segtree[p].elements); i++)
+        segtree[p].sums.push_back(segtree[p].sums[i-1]+segtree[p].elements[i]);
+}
+
+void build(ll idx, ll b, ll e)
+{
+    if(b > e) return;
+    
+    if(b == e)
+    {
+        segtree[idx].elements.push_back(opps[b].second);
+        segtree[idx].sums.push_back(opps[b].second);
+    }else
+    {
+        build(2*idx, b, (b+e)/2);
+        build(2*idx+1, (b+e)/2+1, e);
+        
+        merge_segs(idx, 2*idx, 2*idx+1);
+    }
+}
+
+ll q1(ll idx, ll b, ll e, ll l, ll r, ll q) //nSmaller
+{
+    if(b > e || l >= N || l > r) return 0;
+    
+    if(b > r || e < l) return 0;
+    else if(l <= b && e <= r) return segtree[idx].nSmaller(q);
+    else return (q1(2*idx,b,(b+e)/2,l,r,q) + q1(2*idx+1,(b+e)/2+1,e,l,r,q));
+}
+
+ll q2(ll idx, ll b, ll e, ll l, ll r, ll q) //sum of elements less than equal to q
+{
+    if(b > e || l >= N || l > r) return 0;
+    
+    if(b > r || e < l) return 0;
+    else if(l <= b && e <= r)
+    {
+        ll nS = segtree[idx].nSmaller(q);
+        if(nS == 0) return 0;
+        else return segtree[idx].sums[nS-1];
+    }
+    else return (q2(2*idx,b,(b+e)/2,l,r,q) + q2(2*idx+1,(b+e)/2+1,e,l,r,q));
+}
+
+int main()
+{
+    ios_base::sync_with_stdio(0);
+    cin.tie(NULL);
+    
+    cin >> N >> K;
+    
+    for(ll i = 0; i < N; i++)
+        cin >> opps[i].first >> opps[i].second;
+    
+    sort(opps, opps+N);
+    
+    build(1, 0, N-1);
+    
+    ll mnEffort = INF;
+    for(ll x = 0, l = 0, r = -1; x <= N; x++)
+    {
+        while(l < N && opps[l].first < x-1) ++l;
+        while(r < N-1 && opps[r+1].first <= x) ++r;
+        
+        ll h = N-1-r;
+        if(h >= K) continue;
+        
+        ll nMid;
+        if(l == N) nMid = 0;
+        else if(l > r) nMid = 0;
+        else nMid = r-l+1;
+        
+        ll nMidWins = nMid-(K-h-1);
+        if(nMidWins < 0) nMidWins = 0;
+        
+        ll low = -1, high = MAX_N;
+        while(low < high-1)
+        {
+            ll mid = (low+high)/2;
+            
+            ll nSmaller = q1(1, 0, N-1, l, r, mid);
+            if(nSmaller >= nMidWins) high = mid;
+            else low = mid;
+        }
+        ll midQ = high;
+        
+        low = -1, high = MAX_N;
+        while(low < high-1)
+        {
+            ll mid = (low+high)/2;
+            
+            ll nSmaller = q1(1, 0, N-1, 0, N-1, mid);
+            if(mid < midQ) nSmaller -= q1(1, 0, N-1, l, r, mid);
+            else nSmaller -= nMidWins;
+            
+            if(nSmaller >= x-nMidWins) high = mid;
+            else low = mid;
+        }
+        ll sideQ = high;
+        ll nSmaller = q1(1, 0, N-1, 0, N-1, sideQ);
+        if(sideQ < midQ) nSmaller -= q1(1, 0, N-1, l, r, sideQ);
+        else nSmaller -= nMidWins;
+        
+        ll midEffort = q2(1, 0, N-1, l, r, midQ);
+        midEffort -= midQ*(q1(1, 0, N-1, l, r, midQ)-nMidWins);
+        
+        ll sideEffort = q2(1, 0, N-1, 0, N-1, sideQ);
+        if(sideQ < midQ) sideEffort -= q2(1, 0, N-1, l, r, sideQ);
+        else sideEffort -= midEffort;
+        sideEffort -= sideQ*(nSmaller-(x-nMidWins));
+        
+        mnEffort = min(midEffort+sideEffort, mnEffort);
+    }
+    
+    if(mnEffort == INF) mnEffort = -1;
+    
+    cout << mnEffort << '\n';
+    
+    return 0;
+}

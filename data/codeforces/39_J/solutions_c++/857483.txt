@@ -1,0 +1,29 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+char a[1000005];
+char b[1000005];
+int ans[1000005], an=0;
+
+int main(void) {
+	scanf("%s%s", a, b);
+	int nb=strlen(b), na=strlen(a);
+	int i, j;
+	for(i=0;a[i] && b[i];i++)
+		if(b[i]!=a[i])
+			break;
+	for(j=0;na-j-1>=0 && nb-j-1>=0;j++)
+		if(b[nb-j-1]!=a[na-j-1])
+			break;
+	for(int k=0;a[k];k++) {
+		if(k<=i && na-k-1<=j)
+			ans[an++] = k;
+	}
+	printf("%d\n", an);
+	for(i=0;i<an;i++)
+		printf("%d ", ans[i]+1);
+	puts("");
+	return 0;
+}

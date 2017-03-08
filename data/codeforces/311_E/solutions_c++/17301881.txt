@@ -1,0 +1,98 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+using namespace std;
+const int N = 20000,M = 5000000,inf = 0x7fffffff;
+int n,m,g,sx[N],st,en;
+int head[N],head2[N],to[M],nxt[M],sf[M],cnt;
+int maxFlow,stop,que[N],dis[N],way[N];
+void build(int a,int b,int c)
+{
+	to[++cnt] = b;
+	nxt[cnt] = head[a];
+	sf[cnt] = c;
+	head[a] = cnt;
+	to[++cnt] = a;
+	nxt[cnt] = head[b];
+	sf[cnt] = 0;
+	head[b] = cnt;
+}
+int bfs()
+{
+	int p,q;
+	que[p=q=1]=st;
+	memset(dis,0,sizeof dis);
+	dis[st] = 1;
+	while (p <= q) {
+		int u = que[p++];
+		for (int i=head[u];i;i=nxt[i]) {
+			if (!dis[to[i]]&&sf[i]) {
+				dis[to[i]] = dis[u]+1;
+				que[++q] = to[i];
+			}
+		}
+	}
+	memcpy(head2,head,sizeof head);
+	return dis[en];
+}
+bool find(int s,int top)
+{
+	if (s==en) {
+		int minFlow = inf;
+		for (int i=1;i<top;i++)
+			if (sf[way[i]]<minFlow) {
+				minFlow = sf[way[i]];
+				stop = i;
+			}
+		maxFlow += minFlow;
+		for (int i=1;i<top;i++) {
+			sf[way[i]] -= minFlow;
+			sf[way[i]^1] += minFlow;
+		}
+		return 1;
+	}
+	for (int &i=head2[s];i;i=nxt[i]) {
+		if (dis[to[i]]==dis[s]+1&&sf[i]) {
+			way[top] = i;
+			if (find(to[i],top+1)&&top!=stop) return 1;
+		}
+	}
+	return 0;
+}
+int findMaxFlow()
+{
+	maxFlow = 0;
+	while (bfs()) find(st,1);
+	return maxFlow;
+}
+int main()
+{
+	while (~scanf("%d%d%d",&n,&m,&g)) {
+		cnt = 1;
+		memset(head,0,sizeof head);
+		for (int i=1;i<=n;i++) scanf("%d",&sx[i]);
+		st = 0, en = n+m+1;
+		for (int i=1,a;i<=n;i++) {
+			scanf("%d",&a);
+			if (sx[i]) build(i,en,a);
+			else build(st,i,a);
+		}
+		int ans = 0;
+		for (int i=1,a,b,c,d;i<=m;i++) {
+			scanf("%d%d%d",&a,&b,&c);
+			ans += b;
+			for (int j=1,e;j<=c;j++) {
+				scanf("%d",&e);
+				if (a) build(e,i+n,inf);
+				else build(i+n,e,inf);
+			}
+			scanf("%d",&d);
+			if (d) b+=g;
+			if (a) build(i+n,en,b);
+			else build(st,i+n,b);
+		}
+		printf("%d\n",ans-findMaxFlow());
+	}
+	return 0;
+}

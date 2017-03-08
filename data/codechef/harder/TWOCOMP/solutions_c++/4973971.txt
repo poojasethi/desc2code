@@ -1,0 +1,182 @@
+#include<bits/stdc++.h>
+#define ll long long
+#define N 100000
+#define M 700
+#define INF 2000000
+#define pb push_back
+using namespace std;
+int B1[ M+5 ], B2[ M+5 ], B3[ M+5 ], G1[ M+5 ], G2[ M+5 ], G3[ M+5 ];
+int L[ 2*N+5 ], T[ N+5 ] , pd[ N+5 ][ 20 ], tin[ N+5 ], tout[ N+5 ]; 
+vector<int>adj[ N+5 ];
+int n , m1 , m2, temp =0;
+
+struct flow_graph{
+    int MAX_V,E,s,t,head,tail;
+    int *cap,*to,*next,*last,*dist,*q,*now;
+    flow_graph(){}
+    
+    flow_graph(int V, int MAX_E){
+        MAX_V = V; E = 0;
+        cap = new int[2*MAX_E], to = new int[2*MAX_E], next = new int[2*MAX_E];
+        last = new int[MAX_V], q = new int[MAX_V];
+        dist = new int[MAX_V], now = new int[MAX_V];
+        fill(last,last+MAX_V,-1);
+    }
+    
+    void clear(){
+        fill(last,last+MAX_V,-1);
+        E = 0;
+    }
+    
+    void add_edge(int u, int v, int uv,int vu=0){
+        to[E] = v, cap[E] = uv, next[E] = last[u]; last[u] = E++;
+        to[E] = u, cap[E] =vu , next[E] = last[v]; last[v] = E++;
+    }
+  
+    bool bfs(){
+        fill(dist,dist+MAX_V,-1);
+        head = tail = 0;
+        q[tail] = t; ++tail;
+        dist[t] = 0;
+        while(head<tail){
+            int v = q[head]; ++head;
+            for(int e = last[v];e!=-1;e = next[e]){
+                if(cap[e^1]>0 && dist[to[e]]==-1){
+                    q[tail] = to[e]; ++tail;
+                    dist[to[e]] = dist[v]+1;
+                }
+            }
+        }
+        return dist[s]!=-1;
+    }
+  
+    int dfs(int v, int f){
+        if(v==t) return f;
+        for(int &e = now[v];e!=-1;e = next[e]){
+            if(cap[e]>0 && dist[to[e]]==dist[v]-1){
+                int ret = dfs(to[e],min(f,cap[e]));
+                if(ret>0){
+                    cap[e] -= ret;
+                    cap[e^1] += ret;
+                    return ret;
+                }
+            }
+        }
+        return 0;
+    }
+  
+    long long max_flow(int source, int sink){
+        s = source; t = sink;
+        long long f = 0,df;
+        while(bfs()){
+            for(int i = 0;i<MAX_V;++i) now[i] = last[i];
+            while(true){
+                df = dfs(s,INT_MAX);
+                if(df==0) break;
+                f += df;
+            }
+        }
+        return f;
+    }
+};
+
+flow_graph G;
+
+void dfs( int u , int niv ){
+	L[ u ] = niv;
+	tin[ u ] = temp++;
+	int sz = adj[ u ].size();
+	for( int i=0 ; i<sz ; ++i ){
+		int v = adj[ u ][ i ];
+		if( L[ v ] == -1 ){
+			T[ v ] = u;
+			dfs( v, niv+1 );
+		}
+	}
+	tout[ u ]  = temp++;
+}
+
+void calc( ){
+	for( int i=0 ; i<n ; ++i ){
+		for( int j=0 ; j<20 ; ++j ){
+			pd[ i ][ j ] = -1;
+		} 
+	}
+	for( int i=0 ; i<n ; ++i )pd[ i ][ 0 ] = T[ i ];
+	for( int j =1 ; j<20 ; ++j ){
+		for( int i=0 ;i<n ; ++i ){
+			if( pd[ i ][ j-1 ] !=-1 ) pd[ i ][ j ] = pd[ pd[ i ][ j-1 ] ][ j-1 ];
+		}
+	}
+}
+
+int lca( int x, int y ){
+	if( L[ x ] < L[ y ] ) swap( x, y );
+	for( int i=19 ; i>=0 ; i-- ){
+		if( L[ x ] - ( 1<<i ) >= L[ y ] ) x = pd[ x ][ i ];
+	}
+	if( x ==y ) return x;
+	for( int i=19 ; i>=0 ; i-- ){
+		if( pd[ x ][ i ] !=pd[ y ][ i ] ){
+			x = pd[ x ][ i ] , y = pd[ y ][ i ];
+		}
+	}
+	return T[ x ]; 
+}
+
+bool anc( int a , int b , int c ){
+	return ( tin[ b ]<=tin[ a ]  && tout[ b ]>=tout[ a ]  && tin[ c ]<=tin[ b ]  && tout[ c ]>=tout[ b ] );	
+}
+
+bool onpath( int c , int  a, int b, int LCA ){
+	if( anc( a , c , LCA )  || anc( b , c , LCA ) ) return 1;  
+	return 0;
+}
+
+bool inters( int x , int y ){
+	int a = B1[ x ] , b =B2[ x ];
+	int c = G1[ y ] , d =G2[ y ];
+	int lca1 = lca( a , b ) , lca2 = lca( c, d );
+	if( onpath( lca1 , c , d, lca2 ) || onpath( lca2 , a , b, lca1 ) )return 1;
+	return 0;
+}
+
+int main(){
+	int x, y;
+	scanf("%d%d%d", &n, &m1, &m2 );
+	for( int i=0 ; i<n-1; ++i ){
+		scanf("%d%d", &x, &y );
+		x-- , y--;
+		adj[ x].pb( y ) , adj[ y ].pb( x );	
+	}
+	ll tot = 0 ;
+	for( int i=0 ; i<m1 ; ++i ){
+		scanf("%d%d%d" , &B1[ i ] , &B2[ i ] , &B3[ i ] );
+		B1[ i ]-- , B2[ i ]--;
+		tot+=B3[ i ];
+	}
+	for( int i=0 ; i<m2 ; ++i ){
+		scanf("%d%d%d" , &G1[ i ] , &G2[ i ] , &G3[ i ] );
+		G1[ i ]-- , G2[ i ]--;
+		tot+=G3[ i ];
+	}
+	for( int i =0 ; i<n ; ++i )L[ i ] =-1,T[ i ] =-1;
+	dfs( 0, 0 );
+	calc( );
+	G = flow_graph( m1+m2+2  , m1*m2 +m1+m2 );
+	int S =m1+m2 , T= S+1;
+	for( int i =0 ; i<m1 ; ++i ){
+		for( int j =0 ;j<m2 ; ++j ){
+			if( inters( i , j ) ){
+				G.add_edge( i, j+m1, INF );
+			}
+		}
+	}
+	for( int i =0 ; i<m1 ; ++i ){
+		G.add_edge( S , i , B3[ i ] );
+	}
+	for( int i =0 ; i<m2 ; ++i ){
+		G.add_edge( i+m1 , T , G3[ i ] );
+	}
+	printf("%lld\n" , tot - G.max_flow( S, T ) );
+}

@@ -1,0 +1,211 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <set>
+#include <cstring>
+#include <iomanip>
+#include <map>
+#include <algorithm>
+#include <stack>
+#include <queue>
+#include <list>
+#include <string>
+#include <vector>
+#include <new>
+#include <bitset>
+#include <ctime>
+#include <cassert>
+#include <stdint.h>
+#include <unistd.h>
+ 
+ using namespace std;
+ 
+#define ll long long int
+#define INF 1000000000
+#define PI acos(-1.0)
+#define EPS 1e-9
+ 
+template < typename X > X gcd( X a, X b ) { if( !b ) return a ; else return gcd(b, a%b) ; }
+ 
+typedef vector<int> vi;
+typedef pair<int, int> ii;
+
+const int MOD = 1e9 + 9 ;
+const int MN = 1e5 + 10 ;
+int T, N, n, H[MN], i, sa[MN], tsa[MN], ra[MN], tra[MN], lcp[MN], plcp[MN], phi[MN], r, p, sum, L, k, c[MN] ;
+ll ans ;
+
+
+void csort(int k) {
+	memset( c, 0, sizeof c) ;
+	for( i = 0; i < n; ++i ) 
+		c[ i + k < n ? ra[i + k] : 0 ]++ ;
+	sum = 0 ;
+	for( i = 0; i < max( 300, n ) ; ++i ) {
+		p = c[i] ;
+		c[i] = sum ;
+		sum += p ;
+	}
+	for( i = 0; i < n; ++i ) 
+		tsa[ c[ sa[i] + k < n ? ra[ sa[i] + k ] : 0 ]++ ] = sa[i] ;
+	for( i = 0; i < n; ++i ) 
+		sa[i] = tsa[i] ;
+}
+
+void SuffixArray() {
+	for( i = 0; i < n; ++i ) {
+		sa[i] = i ;
+		ra[i] = H[i] ; 
+	}
+	for( k = 1; k < n; k <<= 1 ) {
+		csort( k ) ;
+		csort( 0 ) ;
+		tra[ sa[0] ] = r = 0 ;
+		for( i = 1; i < n; ++i ) {
+			if( ra[ sa[i] ] == ra[ sa[i - 1] ] && ra[ sa[i] + k ] == ra[ sa[i - 1] + k] ) 
+				tra[ sa[i] ] = r ;
+			else
+				tra[ sa[i] ] = ++r ;
+		}
+		for( i = 0; i < n; ++i )
+			ra[i] = tra[i] ;
+	}
+}
+
+void LCP() {
+	phi[ sa[0] ] = -1 ;
+	for( i = 1; i < n; ++i ) 
+		phi[ sa[i] ] = sa[i - 1] ;
+	L = 0 ;
+	for( i = 0; i < n; ++i ) {
+		if( phi[i] == -1 ) {
+			plcp[i] = 0 ;
+			continue ; 
+		}
+		while( H[i + L ] == H[ phi[i] + L ])
+			++L;
+		plcp[i] = L ;
+		L = max( L - 1, 0 );
+	}
+	for( i = 1; i < n; ++i ) 
+		lcp[i] = plcp[ sa[i] ] ;
+}
+
+ll solve() {
+
+	SuffixArray() ;
+	LCP() ;
+
+	ans = 0;
+	for( i = 1; i < n; ++i ) {
+		ans += (ll) ( n - 1 - sa[i] - lcp[i] ) ;
+		ans %= MOD ;
+	}
+	return ans ;
+}
+static struct IO {
+	char tmp[1 << 10];
+
+	// fast input routines
+	char cur;
+
+//#define nextChar() (cur = getc_unlocked(stdin))
+//#define peekChar() (cur)
+	inline char nextChar() { return cur = getc_unlocked(stdin); }
+	inline char peekChar() { return cur; }
+
+	inline operator bool() { return peekChar(); }
+	inline static bool isBlank(char c) { return (c < '-' && c); }
+	inline bool skipBlanks() { while (isBlank(nextChar())); return peekChar() != 0; }
+
+	inline IO& operator >> (char & c) { c = nextChar(); return *this; }
+
+	inline IO& operator >> (char * buf) {
+		if (skipBlanks()) {
+			if (peekChar()) {
+				*(buf++) = peekChar();
+				while (!isBlank(nextChar())) *(buf++) = peekChar();
+			} *(buf++) = 0; } return *this; }
+
+	inline IO& operator >> (string & s) {
+		if (skipBlanks()) {	s.clear(); s += peekChar();
+			while (!isBlank(nextChar())) s += peekChar(); }
+		return *this; }
+
+	inline IO& operator >> (double & d) { if ((*this) >> tmp) sscanf(tmp, "%lf", &d); return *this;	}
+
+#define defineInFor(intType) \
+	inline IO& operator >>(intType & n) { \
+		if (skipBlanks()) { \
+			int sign = +1; \
+			if (peekChar() == '-') { \
+				sign = -1; \
+				n = nextChar() - '0'; \
+			} else \
+				n = peekChar() - '0'; \
+			while (!isBlank(nextChar())) { \
+				n += n + (n << 3) + peekChar() - 48; \
+			} \
+			n *= sign; \
+		} \
+		return *this; \
+	}
+
+defineInFor(int)
+defineInFor(unsigned int)
+defineInFor(long long)
+
+	// fast output routines
+
+//#define putChar(c) putc_unlocked((c), stdout)
+	inline void putChar(char c) { putc_unlocked(c, stdout); }
+	inline IO& operator << (char c) { putChar(c); return *this; }
+	inline IO& operator << (const char * s) { while (*s) putChar(*s++); return *this; }
+
+	inline IO& operator << (const string & s) { for (int i = 0; i < (int)s.size(); ++i) putChar(s[i]); return *this; }
+
+	char * toString(double d) { sprintf(tmp, "%lf%c", d, '\0'); return tmp; }
+	inline IO& operator << (double d) { return (*this) << toString(d); }
+
+
+#define defineOutFor(intType) \
+	inline char * toString(intType n) { \
+		char * p = (tmp + 30); \
+		if (n) { \
+			bool isNeg = 0; \
+			if (n < 0) isNeg = 1, n = -n; \
+			while (n) \
+				*--p = (n % 10) + '0', n /= 10; \
+			if (isNeg) *--p = '-'; \
+		} else *--p = '0'; \
+		return p; \
+	} \
+	inline IO& operator << (intType n) { return (*this) << toString(n); }
+
+defineOutFor(int)
+defineOutFor(long long)
+
+#define endl ('\n')
+#define cout __io__
+#define cin __io__
+} __io__;
+
+
+
+int main() {
+	cin >> T ;
+	while( T-- ) {
+		cin >> N ;
+		for( i = 0; i < N; ++i ) 
+			cin >> H[i] ;
+		n = N ;
+		for( i = 0; i < N - 1; ++i ) {
+			H[i] = H[i + 1] - H[i] + 1; 
+			H[i] += 101 ;
+		}
+		H[N - 1] = 0 ;
+		cout << solve() << endl ;
+	}
+	return 0 ;
+}

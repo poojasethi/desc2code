@@ -1,0 +1,205 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
+#include <iostream>
+#include <cstring>
+#include <vector>
+#include <string>
+#include <cassert>
+#include <ctime>
+
+using namespace std;
+
+#ifdef WIN32
+	#define LLD "%I64d"
+#else
+	#define LLD "%lld"
+#endif
+
+
+typedef long long ll;
+typedef pair<int, int> pii;
+typedef vector<int> vi;
+typedef vector<vi> vvi;
+typedef vector<bool> vb;
+typedef vector<vb> vvb;
+typedef vector<ll> vll;
+typedef vector<vll> vvll;
+
+#define TASKNAME "text"
+#define pb push_back
+#define mp make_pair
+#define EPS (1E-9)
+#define INF ((int)1E9)
+#define sqr(x) ((x) * (x))
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
+#define sz(x) ((int)(x).size())
+        
+struct pt {
+	int x, y;
+	
+	pt(int _x = 0, int _y = 0) : x(_x), y(_y) {}
+};
+
+inline pt operator - (const pt &p1, const pt &p2) {
+	return pt(p1.x - p2.x, p1.y - p2.y);
+}
+
+inline bool operator < (const pt &p1, const pt &p2) {
+	return p1.x != p2.x ? p1.x < p2.x : p1.y < p2.y;
+}
+
+inline ll operator ^ (const pt &p1, const pt &p2) {
+	return (ll)p1.x * p2.y - (ll)p1.y * p2.x; 
+}
+
+const int maxn = (int)1e5;
+pt ps[maxn];
+
+inline int sign(int x) {
+	return x < 0 ? -1 : !!x;
+}
+
+inline int type(const pt &p) {
+	assert(p.x || p.y);
+	if (!p.y)
+		return p.x > 0 ? 0 : 2;
+	return p.y > 0 ? 1 : 3;
+}
+
+pt Pcomp;
+inline bool compare(const int a, const int b) {
+	//eprintf("%d %d\n", a, b);
+	if (type(ps[a] - Pcomp) != type(ps[b] - Pcomp))
+		return type(ps[a] - Pcomp) < type(ps[b] - Pcomp);
+	return ((ps[a] - Pcomp) ^ (ps[b] - Pcomp)) > 0; 
+}
+
+vvi es, cs, prec;
+bool used[maxn];
+
+int dfs(int v, int pr) {
+	used[v] = 1;
+	int res = 1;
+	for (int it = 0; it < sz(es[v]); it++) {
+		int u = es[v][it];
+		if (used[u])
+			continue;
+		int curr = dfs(u, v);
+		res += curr;
+		cs[v][it] -= curr;
+// 		eprintf("(%d -> %d) with %d\n", u, v, curr);
+	}
+	
+	for (int it = 0; it < sz(es[v]); it++) {
+		int u = es[v][it];
+		if (u == pr)
+			cs[v][it] += res;
+	}
+	return res;
+}
+
+int cyc[maxn];
+
+int main() {     
+	#ifdef DEBUG
+		freopen(TASKNAME".in", "r", stdin);
+		freopen(TASKNAME".out", "w", stdout);
+	#endif
+	
+	int n, m;
+	while (scanf("%d%d", &n, &m) >= 1) {
+		n++;
+		
+		es = vvi(n);
+		for (int i = 0; i < m; i++) {
+			int s, t;
+			scanf("%d%d", &s, &t);
+			s--, t--;
+			es[s].pb(t);
+			es[t].pb(s);
+		}
+		
+		for (int i = 0; i < n - 1; i++) {
+			scanf("%d%d", &ps[i].x, &ps[i].y);
+		}
+		{
+			int mni = min_element(ps, ps + n - 1) - ps;
+			ps[n - 1] = ps[mni], ps[n - 1].x--;
+			
+			es[n - 1].pb(mni);
+			es[mni].pb(n - 1);
+		}
+		
+		for (int i = 0; i < n; i++) {
+			Pcomp = ps[i];
+			sort(es[i].begin(), es[i].end(), compare);
+		}
+		cs = vvi(n);
+		for (int i = 0; i < n; i++)
+			cs[i] = vi(sz(es[i]), 0);
+		
+// 		eprintf("graph:\n");
+// 		for (int i = 0; i < n; i++) {
+// 			eprintf("%d:", i);
+// 			for (int it = 0; it < sz(es[i]); it++)
+// 				eprintf(" %d", es[i][it]);
+// 			eprintf("\n");
+// 		}
+			
+		memset(used, 0, sizeof(used));
+		dfs(n - 1, -1);
+		
+		prec = vvi(n);
+		for (int i = 0; i < n; i++) {
+			prec[i].resize(sz(es[i]) + 1);
+			prec[i][0] = 0;
+			for (int j = 0; j < sz(es[i]); j++)
+				prec[i][j + 1] = prec[i][j] + cs[i][j];
+		}
+		
+		int maxq;
+		scanf("%d", &maxq);
+		for (int q = 0; q < maxq; q++) {
+			int len;
+			scanf("%d", &len);
+			//eprintf("len = %d\n", len);
+			for (int i = 0; i < len; i++)
+				scanf("%d", &cyc[i]), cyc[i]--;
+			ll S = 0;
+			for (int i = 0; i < len; i++)
+				S += (ps[cyc[i]] ^ ps[cyc[i == len - 1 ? 0 : i + 1]]);
+			if (S < 0)
+				reverse(cyc, cyc + len), S = -S;
+// 			for (int i = 0; i < len; i++)
+// 				eprintf("cyc[%d] = %d\n", i, cyc[i]);
+			
+			int ans = 0;
+			for (int iter = 0; iter < len; iter++) {
+				int v = cyc[iter];
+// 				eprintf("v = %d\n", v);
+				Pcomp = ps[v];
+				
+				int prev = cyc[iter ? iter - 1 : len - 1], next = cyc[iter == len - 1 ? 0 : iter + 1];
+				
+				int itprev = lower_bound(es[v].begin(), es[v].end(), prev, compare) - es[v].begin();
+				int itnext = lower_bound(es[v].begin(), es[v].end(), next, compare) - es[v].begin();
+				//eprintf("prev = %d; next = %d\n", prev, next);
+				//eprintf("itprev = %d; itnext = %d\n", itprev, itnext);
+				assert(itprev < sz(es[v]) && itnext < sz(es[v]));
+				assert(!compare(es[v][itprev], prev) && !compare(prev, es[v][itprev]));
+				assert(!compare(es[v][itnext], next) && !compare(next, es[v][itnext]));
+				int res = prec[v][itprev + 1] - prec[v][itnext];
+				if (itprev < itnext)
+					res += prec[v][sz(prec[v]) - 1];
+				res = prec[v][sz(prec[v]) - 1] - res;
+				//eprintf("res = %d\n", res);
+				ans += res;
+			}
+			printf("%d\n", ans);
+		}
+		//break;
+	}	
+	return 0;
+}

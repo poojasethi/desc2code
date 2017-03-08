@@ -1,0 +1,331 @@
+#include<iostream>
+#include<cassert>
+#include<iostream>
+#include<cstring>
+#include<algorithm>
+#include<cmath>
+#include<vector>
+#include <cstdio>
+using namespace std;
+class INPUT {
+static const int BUFSIZE = 1 << 16;
+static char buffer[];
+char *bufpos;
+char *bufend;
+void grabBuffer();
+public:
+INPUT() {
+grabBuffer();
+}
+bool eof() {
+return bufend == buffer;
+}
+char nextChar() {
+return *bufpos;
+}
+inline char readChar();
+inline void skipWS();
+unsigned readUnsigned();
+int readInt();
+};
+char INPUT::buffer[INPUT::BUFSIZE];
+void INPUT::grabBuffer() {
+bufpos = buffer;
+bufend = buffer + fread(buffer, 1, BUFSIZE, stdin);
+}
+char INPUT::readChar() {
+char res = *bufpos++;
+if (bufpos == bufend)
+grabBuffer();
+return res;
+}
+inline bool myisspace(char c) {
+return c <= ' ';
+}
+void INPUT::skipWS() {
+while (!eof() && myisspace(nextChar()))
+readChar();
+}
+unsigned INPUT::readUnsigned() {
+skipWS();
+unsigned res = 0;
+while (!eof() && isdigit(nextChar())) {
+res = 10u * res + (readChar() - '0');
+}
+return res;
+}
+int INPUT::readInt() {
+skipWS();
+bool neg = false;
+if (!eof() && nextChar() == '-') {
+neg = true;
+readChar();
+}
+int res = static_cast<int> (readUnsigned());
+if (neg)
+res = -res;
+return res;
+}
+class OUTPUT {
+static const int BUFSIZE = 1 << 16;
+static char buffer[];
+char *bufpos;
+char *BUFLIMIT;
+void flushBuffer();
+public:
+OUTPUT() :
+bufpos(buffer), BUFLIMIT(buffer + BUFSIZE - 100) {
+}
+~OUTPUT() {
+flushBuffer();
+}
+inline void operator()(char c);
+inline void operator()(unsigned x);
+inline void operator()(unsigned long long x);
+inline void operator()(int x);
+inline void operator()(const char*s);
+void operator()(const string&s) {
+operator()(s.c_str());
+}
+template<class A, class B>
+void operator()(const A& a, const B& b) {
+operator()(a);
+operator()(b);
+}
+template<class A, class B, class C>
+void operator()(const A& a, const B& b, const C&c) {
+operator()(a);
+operator()(b);
+operator()(c);
+}
+template<class A, class B, class C, class D>
+void operator()(const A& a, const B& b, const C&c, const D&d) {
+operator()(a);
+operator()(b);
+operator()(c);
+operator()(d);
+}
+template<class A, class B, class C, class D, class E>
+void operator()(const A& a, const B& b, const C&c, const D&d, const E&e) {
+operator()(a);
+operator()(b);
+operator()(c);
+operator()(d);
+operator()(e);
+}
+template<class A, class B, class C, class D, class E, class F>
+void operator()(const A& a, const B& b, const C&c, const D&d, const E&e,
+const F&f) {
+operator()(a);
+operator()(b);
+operator()(c);
+operator()(d);
+operator()(e);
+operator()(f);
+}
+};
+char OUTPUT::buffer[OUTPUT::BUFSIZE];
+void OUTPUT::flushBuffer() {
+char *p = buffer;
+while (p < bufpos) {
+p += fwrite(p, 1, bufpos - p, stdout);
+}
+bufpos = buffer;
+}
+void OUTPUT::operator()(char c) {
+*bufpos = c;
+++bufpos;
+if (bufpos >= BUFLIMIT)
+flushBuffer();
+}
+void OUTPUT::operator()(unsigned x) {
+char *old = bufpos;
+do {
+*bufpos = char('0' + x % 10u);
+x /= 10u;
+++bufpos;
+} while (x);
+reverse(old, bufpos);
+if (bufpos >= BUFLIMIT)
+flushBuffer();
+}
+void OUTPUT::operator()(unsigned long long x) {
+char *old = bufpos;
+do {
+*bufpos = char('0' + x % 10u);
+x /= 10u;
+++bufpos;
+} while (x);
+reverse(old, bufpos);
+if (bufpos >= BUFLIMIT)
+flushBuffer();
+}
+void OUTPUT::operator()(int x) {
+if (x < 0) {
+operator()('-');
+x = -x;
+}
+operator()(static_cast<unsigned> (x));
+}
+void OUTPUT::operator()(const char*s) {
+while (*s)
+operator()(*s++);
+}
+INPUT input;
+OUTPUT output;
+
+void printCurr();
+
+int N;
+int M;
+int r[1000][15];
+int pref[15][15];
+int rowSum[15];
+int colSum[15];
+int candidateExpPenalty[15];
+int sum[15];
+int conflict[15];
+bool used[15];
+
+
+int currPenalty;
+int pendingPenalty;
+int currArr[15];
+int bestPenalty;
+int bestArr[15];
+int orderedCandidate[15];
+
+void setCurrAsBest()
+{
+if(currPenalty == bestPenalty)
+{
+for(int i = 0; i < M ; i++)
+if(currArr[i] < bestArr[i])
+{
+memcpy(bestArr, currArr,M*sizeof(int));
+break;
+}
+else if(currArr[i] > bestArr[i])
+break;
+}
+else
+memcpy(bestArr, currArr,M*sizeof(int));
+bestPenalty = currPenalty;
+//printCurr();
+}
+
+void recur(int idx)
+{
+if(idx == M && (currPenalty <= bestPenalty || bestPenalty == -1))
+setCurrAsBest();
+
+if(idx >= M)return;
+
+if(currPenalty + pendingPenalty > bestPenalty && bestPenalty != -1)
+return;
+
+for(int i = 0 ; i < M ; i++)
+{
+int c = orderedCandidate[i];
+if(used[c])continue;
+
+int deltaPenalty = 0;
+int deltaExpected = 0;
+for(int j = 0 ; j < M ; j++)
+{
+if(used[j])continue;
+deltaPenalty += pref[j][c];
+deltaExpected += std::min(pref[j][c],pref[c][j]);
+}
+pendingPenalty -= deltaExpected;
+currPenalty += deltaPenalty;
+currArr[idx] = c;
+used[c] = true;
+
+recur(idx + 1);
+
+//reset things
+pendingPenalty += deltaExpected;
+currPenalty -= deltaPenalty;
+used[c] = false;
+}
+}
+
+bool SortCandidate(int i, int j)
+{
+return rowSum[i] > rowSum[j];
+}
+
+void init()
+{
+memset(rowSum,0,15*sizeof(int));
+memset(colSum,0,15*sizeof(int));
+memset(candidateExpPenalty,0,15*sizeof(int));
+pendingPenalty = 0;
+for(int i = 0 ; i < M ; i++)
+{
+orderedCandidate[i] = i;
+for(int j = 0 ; j < M ; j++)
+{
+rowSum[i] += pref[i][j];
+colSum[i] += pref[j][i];
+if(j < i)
+{
+pendingPenalty +=         std::min(pref[i][j],pref[j][i]);
+candidateExpPenalty[i] += std::min(pref[i][j],pref[j][i]);
+}
+}
+}
+sort(orderedCandidate,orderedCandidate + M,SortCandidate);
+}
+
+void printCurr()
+{
+std::cout<<"pendingPenalty: "<<pendingPenalty<<std::endl;
+std::cout<<bestPenalty<<": ";
+for(int i = M-1 ; i >=0 ; i--,std::cout<<" ")
+std::cout<<bestArr[i] + 1;
+std::cout<<std::endl;
+}
+
+int main()
+{
+int numCase = input.readInt();
+while(numCase--)
+{
+N = input.readInt();
+M = input.readInt();
+
+if(N == 0 || M == 0)
+throw ;
+
+memset(pref,0,sizeof(int)*225);
+for(int i = 0 ; i < N; i++)
+{
+for(int j = 0 ; j < M; j++)
+{
+r[i][j] = input.readInt();
+r[i][j]--;
+}
+for(int j = 0 ; j < M ; j++)
+for(int k = j + 1 ; k < M ; k++)
+pref[r[i][k]][r[i][j]]++;//prefers k over j
+}
+
+bestPenalty = -1;
+init();
+recur(0);
+
+
+
+output(bestPenalty,": ");
+for(int i = M - 1 ; i >= 0 ; i--)
+{
+output(bestArr[i] + 1);
+if(i != 0)
+output(" ");
+else
+output("\n");
+}
+}
+}

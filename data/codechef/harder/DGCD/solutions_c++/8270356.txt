@@ -1,0 +1,180 @@
+#include<cstdio>
+#include<algorithm>
+#include<cstring>
+#include<iostream>
+#include<cstdlib>
+#include<cmath>
+#include<vector>
+#include<map>
+#include<set>
+#include<queue>
+#include<bitset>
+using namespace std;
+#define inf 1000000005
+typedef long long ll;
+typedef double db;
+void gn(int &x){
+    int sg=1;char c;while(((c=getchar())<'0'||c>'9')&&c!='-');
+    if(c=='-')sg=-1,x=0;else x=c-'0';
+    while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+    x*=sg;
+}
+void gn(ll &x){
+    int sg=1;char c;while(((c=getchar())<'0'||c>'9')&&c!='-');
+    if(c=='-')sg=-1,x=0;else x=c-'0';
+    while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+    x*=sg;
+}
+const int mo=1000000007;
+int qp(int a,ll b){int ans=1;do{if(b&1)ans=1ll*ans*a%mo;a=1ll*a*a%mo;}while(b>>=1);return ans;}
+int gcd(int a,int b){return b?gcd(b,a%b):a;}
+
+int n;
+struct edge{int v,next;}e[200005];int etot=0;
+int g[100005];
+void ae(int u,int v){
+	e[etot].v=v;e[etot].next=g[u];g[u]=etot++;
+}
+int qu[100005],p,q,sz[100005],son[100005],up[100005],pre[100005],h[100005];
+int dfn[100005],id[100005];int ind=0;
+int w[100005];
+void init(int rt){
+	p=q=0;
+	qu[q++]=rt;
+	sz[0]=h[1]=pre[1]=0;
+	while(p!=q){
+		int u=qu[p++],v;
+		sz[u]=1,son[u]=0;
+		for (int i=g[u];~i;i=e[i].next)if((v=e[i].v)!=pre[u]){
+			qu[q++]=v;
+			h[v]=h[u]+1;
+			pre[v]=u;
+		}
+	}
+	for (int i=q-1;i>=1;i--){
+		sz[pre[qu[i]]]+=sz[qu[i]];
+		if(sz[qu[i]]>sz[son[pre[qu[i]]]])son[pre[qu[i]]]=qu[i];
+	}
+	for (int i=1;i<=n;i++)if(!son[i]){
+		int u=i;while(son[pre[u]]==u)u=pre[u];
+		int p=u;while(p)up[p]=u,id[++ind]=p,dfn[p]=ind,p=son[p];
+	}
+}
+int su[444444],gg[444444];
+void ini(int l,int r,int x){
+	if(l==r){
+		su[x]=gg[x]=w[id[l]];
+	}else{
+		int mid=l+r>>1;
+		ini(l,mid,x<<1);
+		ini(mid+1,r,x<<1|1);
+		su[x]=su[x<<1]+su[x<<1|1];
+		gg[x]=gcd(gg[x<<1],gg[x<<1|1]);
+	}
+}
+
+int l1,r1,dx,I;
+int an;
+void que(int l,int r,int x){
+	if(l1<=l && r<=r1)an=gcd(an,gg[x]);
+	else{
+		int mid=l+r>>1;
+		if(l1<=mid)que(l,mid,x<<1);
+		if(r1>mid)que(mid+1,r,x<<1|1);
+	}
+}
+void que2(int l,int r,int x){
+	if(l1<=l && r<=r1)an=an+su[x];
+	else{
+		int mid=l+r>>1;
+		if(l1<=mid)que2(l,mid,x<<1);
+		if(r1>mid)que2(mid+1,r,x<<1|1);
+	}
+}
+void upd(int l,int r,int x){
+	if(l==r)gg[x]+=dx,su[x]+=dx;
+	else{
+		int mid=l+r>>1;
+		if(I<=mid)upd(l,mid,x<<1);
+		else upd(mid+1,r,x<<1|1);
+		su[x]=su[x<<1]+su[x<<1|1];
+		gg[x]=gcd(gg[x<<1],gg[x<<1|1]);
+	}
+}
+void Modi(int x,int y,int d){
+	while(up[x]!=up[y]){
+		if(h[up[x]]<h[up[y]])swap(x,y);
+		int v=son[x];
+		if(v){
+			dx=-d;
+			I=dfn[v];
+			upd(1,n,1);
+		}
+		dx=d;I=dfn[up[x]];
+		upd(1,n,1);
+		x=pre[up[x]];
+	}
+	if(h[x]>h[y])swap(x,y);
+	int v=son[y];
+	if(v){
+		dx=-d;
+		I=dfn[v];
+		upd(1,n,1);
+	}
+	dx=d;I=dfn[x];
+	upd(1,n,1);
+}
+
+int Que(int x,int y){
+	int d=0;
+	while(up[x]!=up[y]){
+		if(h[up[x]]<h[up[y]])swap(x,y);
+		an=0;
+		l1=dfn[up[x]],r1=dfn[x];
+		que(1,n,1);
+		d=gcd(d,an);
+		x=pre[up[x]];
+	}
+	if(h[x]>h[y])swap(x,y);
+	an=0;
+	l1=dfn[x]+1,r1=dfn[y];
+	if(l1<=r1)que(1,n,1);
+	d=gcd(an,d);
+	an=0;
+	l1=dfn[up[x]],r1=dfn[x];
+	que2(1,n,1);
+	d=gcd(an,d);
+	return abs(d);
+}
+int main()
+{
+	memset(g,-1,sizeof(g));
+	scanf("%d",&n);
+	for (int i=1;i<=n-1;i++){
+		int x,y;gn(x);gn(y);
+		x++;y++;
+		ae(x,y);
+		ae(y,x);
+	}
+	w[0]=0;
+	for (int i=1;i<=n;i++)gn(w[i]);
+	init(1);
+	for (int i=q-1;i>=0;i--){
+		int x=qu[i];
+		if(up[x]!=x)w[x]=w[x]-w[pre[x]];
+	}
+	ini(1,n,1);
+	int q;scanf("%d",&q);
+	while(q--){
+		char c;while((c=getchar())<'A'||c>'Z');
+		int x,y;gn(x);gn(y);
+		x++;y++;
+		if(c=='F'){
+			printf("%d\n",Que(x,y));
+		}else{
+			int d;gn(d);
+			Modi(x,y,d);
+		}
+	}
+	return 0;
+}

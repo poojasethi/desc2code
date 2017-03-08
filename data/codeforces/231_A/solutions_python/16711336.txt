@@ -1,0 +1,1 @@
+print len([1 for i in range(input()) if map(int, raw_input().split()).count(1)>1])

@@ -1,0 +1,112 @@
+#include <iostream>
+#include <sstream>
+#include <algorithm>
+#include <vector>
+#include <queue>
+#include <stack>
+#include <map>
+#include <set>
+#include <bitset>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <cmath>
+#include <climits>
+typedef long long LL;
+using namespace std ;
+typedef pair<int,int> PII;
+
+const double eps=1e-5;
+
+struct Query{
+    int o,p,x;
+    LL v;
+};
+Query Q[110000];
+
+struct BIT{
+    LL T[210000];
+    int N;
+    void init(int n){
+        N=n;
+        memset(T,0,sizeof(T));
+    }
+    int lowbit(int x){
+        return x&-x;
+    }
+    void add(int x,LL d){
+        for (;x<=N;x+=lowbit(x)) T[x]+=d;
+    }
+    LL get(int x){
+        LL res=0;
+        for (;x;x-=lowbit(x)) res+=T[x];
+        return res;
+    }
+};  
+BIT sum,cnt;
+
+vector<int> val;
+bool gao(double x,LL lim){
+    if (x<val[1]) return 0;
+    int l=1,r=int(val.size())-1,mid;
+    while (l<r){
+        mid=l+r+1>>1;
+        if (val[mid]<=x) l=mid;
+        else r=mid-1;
+    }
+    return lim+sum.get(l)<=x*cnt.get(l);
+}
+
+int v[110000];
+
+int main(){
+    int N,M,i;
+    scanf("%d%d",&N,&M);
+    for (i=1;i<=N;i++){
+        scanf("%d",&v[i]);
+        val.push_back(v[i]);
+    }
+    for (i=1;i<=M;i++){
+        scanf("%d",&Q[i].o);
+        if (Q[i].o==1){
+            scanf("%d%d",&Q[i].p,&Q[i].x);
+            val.push_back(Q[i].x);
+        }else{
+            scanf("%I64d",&Q[i].v);
+        }
+    }
+    val.push_back(-1);
+    sort(val.begin(),val.end());
+    val.resize(unique(val.begin(),val.end())-val.begin()); 
+    int size=int(val.size())-1;
+    sum.init(size);
+    cnt.init(size);
+    map<int,int> pp;
+    for (i=1;i<=size;i++) pp[val[i]]=i;
+    int p;
+    for (i=1;i<=N;i++){
+        p=pp[v[i]];
+        sum.add(p,val[p]);
+        cnt.add(p,1);
+    }
+    for (i=1;i<=M;i++){
+        if (Q[i].o==1){
+            p=pp[v[Q[i].p]];
+            sum.add(p,-val[p]);
+            cnt.add(p,-1);
+
+            v[Q[i].p]=Q[i].x;
+            p=pp[Q[i].x];
+            sum.add(p,val[p]);
+            cnt.add(p,1);
+        }else{
+            double l=0,r=1e16,mid;
+            while (r-l>eps){
+                double mid=(l+r)/2;
+                if (gao(mid,Q[i].v)) r=mid;
+                else l=mid+eps;
+            }   
+            printf("%.12f\n",r);
+        }
+    }
+}

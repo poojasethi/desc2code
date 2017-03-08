@@ -1,0 +1,9 @@
+#include <iostream>
+using namespace std;
+int n,m;
+int main(){
+    cin>>n>>m;
+    for(int i=1;i<=m;i++){if (i<=n%m){cout<<n/m+1<<" ";}else{cout<<n/m<<" ";}}
+    cout<<endl;
+    return 0;
+}

@@ -1,0 +1,146 @@
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <cmath>
+#include <string>
+#include <vector>
+#include <set>
+#include <map>
+#include <stack>
+#include <queue>
+#include <algorithm>
+
+using namespace std;
+
+typedef vector<int> vi;
+typedef vector<vi> vvi;
+typedef pair<int,int> ii;
+typedef vector<ii> vii;
+typedef vector<vii> vvii;
+#define all(c) (c).begin(), (c).end()
+#define sz(a) int((a).size())
+#define pb push_back
+#define mp make_pair
+#define traverse(c,it, cond) for(it = c.begin(); it != c.end() && cond; it++)
+#define ll long long
+#define INF 0x7FFFFFFF
+
+#define MAXS 2500002
+#define MAXC 78
+
+vector<string> keywords(500);
+string s;
+char st[5001],text[50001];
+int res[500],w;
+
+vvi out(MAXS);
+vector<vector<char> > children(MAXS);
+
+int f[MAXS];
+int g[MAXS][MAXC];
+
+int buildAhoCorasickAutomaton()
+{
+	int i,j,c,currentstate,states=2;
+	
+	for(i=0; i<w;i++)
+	{
+		currentstate = 1;
+		int len = sz(keywords[i]);
+		for(j=0;j<len;j++)
+		{
+			c = keywords[i][j] - 45;
+			if(g[currentstate][c] == 0)
+			{
+				children[currentstate].pb(keywords[i][j]);
+				g[currentstate][c] = states++;
+			}
+			currentstate = g[currentstate][c];
+		}
+		out[currentstate].pb(i);
+	}
+	
+	
+	for(c=0;c<MAXC;c++)
+	{
+		if(g[1][c] == 0)
+			g[1][c]=1;
+	}
+	
+	
+	queue<int> q;
+	vector<char>::iterator it;
+	traverse(children[1],it,true)
+	{
+		f[g[1][*it - 45]] = 1;
+		q.push(g[1][*it - 45]);
+	}
+	
+	
+	while(!q.empty())
+	{
+		int state = q.front();
+		q.pop();
+		traverse(children[state],it,true)
+		{
+			c = (*it) - 45;
+			int failure = f[state];
+			while(g[failure][c] == 0)
+			{
+				failure = f[failure];
+			}
+			
+			failure = g[failure][c];
+			f[g[state][c]] = failure;
+			out[g[state][c]].insert(out[g[state][c]].end(),out[failure].begin(),out[failure].end());
+			q.push(g[state][c]);
+		}
+	}
+	
+	return states;
+}
+
+int findNextState(int currentstate,char nextinput)
+{
+	int val = currentstate;
+	int c = nextinput - 45;
+	while(g[val][c] == 0)
+		val = f[val];
+	return g[val][c];
+}
+
+int main()
+{
+	int i,j,states,n;
+	scanf("%d\n",&w);
+	for(i=0;i<w;i++)
+	{
+		gets(st);
+		s = st;
+		keywords[i] = s;
+	}
+	
+	states = buildAhoCorasickAutomaton();
+//	printf("%d\n",states);
+	scanf("%d\n",&n);
+	vi::iterator it;
+	for(i=0;i<n;i++)
+	{
+		gets(text);
+		int currentstate = 1;
+		for(j=0;text[j];j++)
+		{
+			currentstate = findNextState(currentstate,text[j]);
+			traverse(out[currentstate],it,true)
+			{
+				res[*it]++;
+			}
+		}
+	}
+	
+	for(i=0;i<w;i++)
+	{
+		printf("%d\n",res[i]);
+	}
+	return 0;
+}

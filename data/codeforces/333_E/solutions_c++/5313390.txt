@@ -1,0 +1,28 @@
+#include<cstdio>
+#include<bitset>
+#include<cmath>
+#include<algorithm>
+using namespace std;
+#define SQ(x) ((x)*(x))
+const int N = 3010;
+int x[N],y[N],n,m;
+long long e[N*N/2];
+bitset<N>b[N];
+
+int main()
+{
+    scanf("%d",&n);
+    for(int i=0;i<n;++i)scanf("%d%d",x+i,y+i);
+    for(int i=0;i<n;++i)for(int j=i+1;j<n;++j){
+    e[m]=(1LL*SQ(x[j]-x[i])+SQ(y[i]-y[j]))<<32;
+    e[m++]|=(i<<16)|j;
+    }
+    sort(e,e+m);
+    while(m--){
+    int i = e[m]&65535, j = (e[m]>>16)&65535;
+    if((b[i] & b[j])!=0) break;
+    b[i][j] = b[j][i] = 1;
+    }
+    printf("%.9f\n",0.5*sqrt(e[m]>>32));
+    return 0;
+}

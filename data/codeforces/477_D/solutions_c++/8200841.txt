@@ -1,0 +1,90 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define rep(i,a,n) for (int i=a;i<n;i++)
+#define per(i,a,n) for (int i=n-1;i>=a;i--)
+#define pb push_back
+#define mp make_pair
+#define all(x) (x).begin(),(x).end()
+#define SZ(x) ((int)(x).size())
+#define fi first
+#define se second
+typedef vector<int> VI;
+typedef long long ll;
+typedef pair<int,int> PII;
+const ll mod=1000000007;
+ll powmod(ll a,ll b) {ll res=1;a%=mod;for(;b;b>>=1){if(b&1)res=res*a%mod;a=a*a%mod;}return res;}
+// head
+
+const int N=5010;
+struct node {
+	node *s[2]; int cr;
+} pool[N*N/2],*cur=pool,*rt=pool;
+int dp[N][N],dp2[N][N],rk[N][N],ret;
+int tot,n;
+PII ret2;
+char s[N];
+void dfs(node *p) {
+	p->cr=tot++;
+	if (p->s[0]) dfs(p->s[0]);
+	if (p->s[1]) dfs(p->s[1]);
+}
+void upd(PII &a,PII b) {
+	if (b.se<=a.se) a=b;
+	else {
+		if (a.fi-b.fi>=30||b.fi>=30) a=b;
+		else {
+			ll s1=0,s2=0;
+			rep(j,n-a.fi+1,n+1) s1=s1*2+s[j]-'0';
+			rep(j,n-b.fi+1,n+1) s2=s2*2+s[j]-'0';
+			if (s1+a.se>s2+b.se) a=b;
+		}
+	}
+}
+int main() {
+	scanf("%s",s+1);
+	n=strlen(s+1);
+	rt=cur++;
+	rep(i,1,n+1) {
+		node *p=rt;
+		rep(j,i,n+1) {
+			int w=s[j]-'0';
+			if (!p->s[w]) p->s[w]=cur++;
+			p=p->s[w];
+			rk[i][j]=p-pool;
+		}
+	}
+	dfs(rt);
+	rep(i,1,n+1) rep(j,i,n+1) rk[i][j]=pool[rk[i][j]].cr;
+	memset(dp2,0x20,sizeof(dp2));
+	dp[0][0]=1;
+	rep(i,1,n+1) {
+		rep(j,1,i) if (s[i-j+1]=='1') {
+			if (i>=2*j) {
+				if (rk[i-2*j+1][i-j]<=rk[i-j+1][i]) {
+					dp[i][j]=dp[i-j][j];
+					dp2[i][j]=dp2[i-j][j]+1;
+				} else {
+					dp[i][j]=dp[i-j][j-1];
+					dp2[i][j]=dp2[i-j][j-1]+1;
+				}
+			} else {
+				dp[i][j]=dp[i-j][i-j];
+				dp2[i][j]=dp2[i-j][i-j]+1;
+			}
+		}
+		dp[i][i]=1; dp2[i][i]=1;
+		dp2[i][0]=0x20202020;
+		rep(j,1,i+1) {
+			dp[i][j]=(dp[i][j-1]+dp[i][j])%mod;
+			dp2[i][j]=min(dp2[i][j-1],dp2[i][j]);
+		}
+	}
+	printf("%d\n",dp[n][n]);
+	ret2=mp(n,1);
+	rep(i,2,n+1) if (s[i]=='1'&&dp2[n][n-i+1]<=n) 
+		upd(ret2,mp(n-i+1,dp2[n][n-i+1]));
+	ret=0;
+	rep(i,n-ret2.fi+1,n+1) ret=(ret*2+s[i]-'0')%mod;
+	ret=(ret+ret2.se)%mod;
+	printf("%d\n",ret);
+}

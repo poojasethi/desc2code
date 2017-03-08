@@ -1,0 +1,284 @@
+#include <algorithm>
+#include <iostream>
+#include <cassert>
+#include <cstring>
+#include <cstdio>
+#include <vector>
+#include <cmath>
+#include <ctime>
+#include <map>
+#include <set>
+
+using namespace std;
+
+#define MAXM 9
+#define MAXSTATES 20000
+#define SIZE(A) ((int)A.size())
+#define PB(A) push_back(A)
+
+struct State
+{
+	int c[MAXM+2], w[MAXM+2];
+	int source, m;
+
+	void merge (int a, int b)
+	{
+		if (c[a] == c[b]) return;
+
+		int dest = c[a], src = c[b];
+
+		for (int i = 0; i <= m; i++)
+			if (c[i] == src) c[i] = dest;
+
+		if (source == src) source = dest;
+	}
+
+	void normalize ()
+	{
+		for (int i = 0; i < m; i++)
+			w[i] = -1;
+
+		int counter = 0, newsource = -1;
+		for (int i = 0; i < m; i++)
+		{
+		 	if (w[i]!=-1) continue;
+
+		 	int src = c[i];
+
+		 	if (source == src) newsource = counter;
+
+		 	for (int j = 0; j < m; j++)
+		 		if (c[j] == src)
+		 			w[j] = counter;
+
+		 	counter++;
+		}
+
+		source = newsource;
+		for (int i = 0; i < m; i++)
+			c[i] = w[i];
+    }
+
+	int get_state ()
+	{
+		normalize();
+		int hash = source;
+		for (int i = 0; i < m; i++)
+			hash = hash*m + c[i];
+		return hash;	
+	}
+
+	bool expand (bool e1, bool e2) //Expand is only for normalized
+	{
+		c[m] = 8;
+
+//		bool debug = get_state()==5;
+
+/*		if (debug && e1 && !e2)
+		{
+		 	printf ("merged %d with %d, source = %d\n", c[1], m, source);
+		}*/
+
+		if (e1 == 1) merge (1, m);
+		if (e2 == 1) merge (0, m);
+
+		bool isflowed = false;
+		for (int i = 0; i <= m; i++)
+			isflowed |= (i!=1&&source==c[i]);
+		if (!isflowed) return false;
+
+		c[1] = c[m];
+		c[m] = c[0];
+		for (int i = 0; i < m; i++)
+			c[i] = c[i+1];
+
+/*		if (debug && e1 && !e2)
+		{
+		 	printf ("here\n");
+		 	for (int i = 0; i < m; i++)
+		 		printf ("%d ", c[i]);
+		 	puts ("");
+		 	printf ("source = %d\n", source);
+		}*/
+
+//		normalize();
+
+/*		if (debug && e1 && !e2)
+		{
+		 	printf ("here\n");
+		 	for (int i = 0; i < m; i++)
+		 		printf ("%d ", c[i]);
+		 	puts ("");
+		 	printf ("source = %d\n", source);
+		}*/
+
+
+/*		//DEBUG
+		normalize();
+		for (int i = 0; i < m; i++)
+			printf ("%d ", c[i]);
+		puts ("");
+		printf ("source = %d e1 = %d e2 = %d row = %d\n\n", source, e1, e2, row);
+		//*/
+		return true;
+	}
+};
+
+map <int, int> hash_states[MAXM+2];
+vector <State> list_states[MAXM+2];
+int ed[MAXM+2][MAXSTATES*4];
+bool ready[MAXM+2];
+bool flows[MAXM+2][MAXSTATES];
+
+inline void calculate (int m)
+{
+	if (ready[m]) return;
+
+	ready[m] = 1;
+
+	State start;
+	start.m = m; start.source = 0;
+	for (int i = 0; i < m; i++)
+		start.c[i] = i;
+	hash_states[m][start.get_state ()] = 0;
+	list_states[m].PB(start);
+	
+	for (int idx = 0; idx < SIZE(list_states[m]); idx++)
+	{
+		State state(list_states[m][idx]);
+//		cerr << idx << endl;
+
+		flows[m][idx] = state.source==state.c[m-1];
+		for (int type = 0; type < 4; type++)
+		{
+		 	State new_state(state);
+		 	
+		 	if (!new_state.expand (type&1, (type>>1)&1))
+		 	{
+		 		ed[m][(idx<<2)|type] = -1;
+		 		continue;
+            }
+
+            int to = new_state.get_state();
+
+            if (hash_states[m].count (to))
+            {
+             	ed[m][(idx<<2)|type] = hash_states[m][to];
+//             	printf ("state %d connects to state %d by %d\n", idx, hash_states[m][to], type);
+             	continue;
+            }
+
+            hash_states[m][to] = ed[m][(idx<<2)|type] = SIZE(list_states[m]);
+            list_states[m].PB(new_state);
+//           	printf ("state %d connects to state %d by %d\n", idx, hash_states[m][to], type);
+		}
+	}
+}
+
+double d[MAXSTATES], newd[MAXSTATES];
+
+void expand (int m, double p, bool up)
+{
+	int n_states = SIZE(list_states[m]);
+	int *next = ed[m];
+
+	for (int idx = 0; idx < n_states; idx++)
+		newd[idx] = 0;
+
+	if (up)
+	{
+		for (int idx = 0, i = 0; i < n_states; idx += 4, i++)
+		{
+			if (next[idx]!=-1) newd[next[idx]] += d[i]*p*p;
+			if (next[idx|1]!=-1) newd[next[idx|1]] += d[i]*p*(1-p);
+			if (next[idx|2]!=-1) newd[next[idx|2]] += d[i]*p*(1-p);
+			if (next[idx|3]!=-1) newd[next[idx|3]] += d[i]*(1-p)*(1-p);
+		}
+	}
+	else
+	{
+		for (int idx = 0, i = 0; i < n_states; idx += 4, i++)
+		{
+			if (next[idx]!=-1) newd[next[idx]] += d[i]*p;
+			if (next[idx|1]!=-1) newd[next[idx|1]] += d[i]*(1-p);
+		}
+	}
+
+	for (int idx = 0; idx < n_states; idx++)
+		d[idx] = newd[idx];
+}
+
+inline double main2 (int m, long long n, double p)
+{
+	if (m==1 || n==1) return pow (1-p, m+n-2.);
+	if (p >= 1-(1e-9)) return 0;
+
+	calculate (m);
+
+	int n_states = SIZE(list_states[m]);
+//	cerr << "N_STATES=" << n_states << endl;
+/*	for (int i = 0; i < n_states; i++)
+	{
+	 	printf ("source=%d : ", list_states[m][i].source);
+	 	for (int j = 0; j < m; j++)
+	 		printf ("%d ", list_states[m][i].c[j]);
+	 	puts ("");
+	}*/
+
+	for (int i = 0; i < n_states; i++)
+		d[i] = 0;
+	d[0] = 1;
+
+	double prevsum, sum;
+	for (int i = 0; i < n; i++)
+	{
+/*		printf ("in the beginning\n");
+		for (int i = 0; i < n_states; i++)
+		 	printf ("for state=%d : d=%.12lf\n", i, d[i]);*/
+
+	 	for (int j = 0; j < m; j++)
+	 	{
+	 		expand(m, p, (j!=m-1));
+//			for (int i = 0; i < n_states; i++)
+//			 	printf ("for state=%d : d=%.12lf\n", i, d[i]);
+	 	}
+//	 	puts ("next step\n");
+
+	 	sum = 0;
+	 	for (int j = 0; j < n_states; j++)
+	 		if (flows[m][j])
+	 			sum += d[j];
+
+	 	if (i+1==n) return sum;
+
+		if (i >= 30)
+		{
+			if (sum < 1e-6) return 0;
+
+			return prevsum * pow (sum/prevsum, 1.*n-i);
+		}
+
+//		if (i)
+//			printf ("%.12lf\n", sum/prevsum );
+		prevsum = sum;
+	}
+}
+
+int main ()
+{
+	double start = clock ();
+
+	int test_num, m;
+	long long n;
+	double p;
+
+	scanf ("%d", &test_num);
+	for (int i = 0; i < test_num; i++)
+		cin >> m >> n >> p,
+		printf ("%.7lf\n", main2 (m, n, p));
+
+//	cerr << (clock ()-start)/CLOCKS_PER_SEC << endl;
+
+	return 0;
+}
+

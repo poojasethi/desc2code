@@ -1,0 +1,69 @@
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+int n, m;
+long long y;
+int seat[17]={}, pos[17]={};
+int g[17][17]={};
+long long dp[1<<16];
+int bit[1<<16];
+vector<int> ok[17];
+int okstate[1<<16];
+long long calc() {
+	memset(dp, 0, sizeof(dp));
+	dp[0] = 1;
+	for(int i=0;i<n;i++)
+		for(int j=0;j<(int)ok[i].size();j++)
+			for(int k=0;k<n;k++)
+				if(!(ok[i][j]&(1<<k)) && okstate[ok[i][j]|(1<<k)])
+					if(pos[i]==-1 || pos[i]==k)
+						dp[ok[i][j]|(1<<k)] += dp[ok[i][j]];
+	return dp[(1<<n)-1];
+}
+
+bool valid(int state) {
+	int v=state;
+	bit[state]=0;while(v>0) {bit[state]+=v%2;v/=2;}
+	for(int i=0;i<n;i++)
+		for(int j=0;j<n;j++)
+			if(g[i][j] && (state&(1<<j)) && !(state&(1<<i)))
+				return false;
+	return true;
+}
+
+int main(void) {
+	scanf("%d%I64d%d", &n, &y, &m);
+	y -= 2000;
+	for(int i=0;i<m;i++) {
+		int u, v;
+		scanf("%d%d", &u, &v);
+		--u; --v;
+		g[u][v] = 1;
+	}
+	for(int k=0;k<n;k++) for(int i=0;i<n;i++) for(int j=0;j<n;j++)
+		if(g[i][k] && g[k][j]) g[i][j] = 1;
+	for(int i=0;i<n;i++) if(g[i][i])
+		{ puts("The times have changed"); return 0;}
+	for(int i=0;i<(1<<n);i++) if((okstate[i]=valid(i))) ok[bit[i]].push_back(i);
+	for(int i=0;i<n;i++) pos[i] = -1;
+	for(int i=0;i<n;i++) {
+		for(seat[i]=0;seat[i]<n;seat[i]++) if(pos[seat[i]]==-1) {
+			pos[seat[i]] = i;
+			long long val = calc();
+			/*for(int j=0;j<=i;j++) printf("%d ", seat[j]);
+			puts("");
+			printf("val=%I64d\n", val);*/
+			if(val < y) y -= val;
+			else break;
+			pos[seat[i]] = -1;
+		}
+		if(seat[i]>=n) { puts("The times have changed"); return 0; }
+	}
+	for(int i=0;i<n;i++) printf("%d ", seat[i]+1);
+	puts("");
+	return 0;
+}
+

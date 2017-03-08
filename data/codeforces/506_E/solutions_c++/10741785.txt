@@ -1,0 +1,115 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#define memcle(a) memset(a, 0, sizeof(a))
+using namespace std;
+typedef long long ll;
+
+const int LIM = 2 * 10007 * 10007;
+const int mo = 10007;
+const int S = 210;
+
+struct mat {int a[410][410];} tmp1, tmp2, T, tr, A, B, tmp;
+int f[S][S][S];
+int cnt[S];
+char s[S];
+int n, len, ans, p, path[S];
+
+mat operator*(const mat &a, const mat &b)
+{
+	for (int i = 1; i <= p; i++)
+		for (int j = i; j <= p; j++)
+		{
+			tmp.a[i][j] = 0;
+			for (int k = i; k <= j; k++)
+			{
+				tmp.a[i][j] = tmp.a[i][j] + a.a[i][k] * b.a[k][j];
+				if (tmp.a[i][j] > LIM) tmp.a[i][j] %= mo;
+			}
+			tmp.a[i][j] %= mo;
+		}
+	return tmp;
+}
+
+mat pow(const mat &a, int x)
+{
+	for (int i = 1; i <= p; i++) tmp1.a[i][i] = 1;
+	int m = 0;
+	for (int xx = x; xx; xx >>= 1) path[++m] = (xx & 1);
+	
+	for (int i = m; i >= 1; i--)
+	{
+		tmp2 = tmp1 * tmp1;
+		if (path[i]) tmp1 = tmp2 * a; else tmp1 = tmp2;
+	}
+	return tmp1;
+}
+
+int main()
+{
+	
+	scanf("%s", &s);
+	scanf("%d", &n);
+	len = n + strlen(s);
+	n = strlen(s);
+	for (int i = n; i > 0; i--) s[i] = s[i - 1]; s[0] = 0;
+	
+	f[0][n + 1][0] = 1;
+	for (int l = 0; l <= n; l++)
+		for (int r = n + 1; r > l + 1; r--)
+			for (int i = 0; i <= n; i++)
+			{
+				if (f[l][r][i] == 0) continue;
+				if (s[l + 1] == s[r - 1])
+				{
+					f[l + 1][r - 1][i] = (f[l + 1][r - 1][i] + f[l][r][i]) % mo;
+				} else 
+				{
+					f[l][r - 1][i + 1] = (f[l][r - 1][i + 1] + f[l][r][i]) % mo;
+					f[l + 1][r][i + 1] = (f[l + 1][r][i + 1] + f[l][r][i]) % mo;
+				}
+			}
+	
+	for (int i = 0; i <= n; i++) for (int j = 0; j <= n; j++) cnt[j] = (cnt[j] + f[i][i + 1][j] + f[i][i][j]) % mo;
+	
+	for (int i = 1; i <= n; i++)
+	{
+		++p;
+		tr.a[p][p + 1] = 1;
+		tr.a[p][p] = 24;
+	}
+	
+	int mid = p;
+	
+	for (int i = 1; i <= n + 1; i += 2)
+	{
+		++p;
+		tr.a[p][p + 1] = 1;
+		tr.a[p][p + 2] = 1;
+		tr.a[p][p] = 25;
+		tr.a[p + 1][p + 1] = 26;
+		++p;
+	}
+
+	for (int i = 1; i <= p; i++) A.a[i][i] = 1;
+	
+	T = pow(tr, (len + 1) / 2 - 1);
+	A = A * T;
+	B = A * tr;
+	
+	for (int i = 0; i <= n; i++)
+	{
+		int j = ((n - i) + 1) / 2;
+		ans = (ans + cnt[i] * B.a[mid - i + 1][mid + 2 * j] % mo) % mo;
+		if (((n - i) & 1) == 0 && (len & 1) == 1) 
+		{
+			ans = (ans - cnt[i] * A.a[mid - i + 1][mid + 2 * j - 1] % mo) % mo;
+			if (ans < 0) ans += mo;
+		}
+	}
+	
+	printf("%d\n", ans);
+	
+	
+	return 0;
+}

@@ -1,0 +1,84 @@
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+
+#define LY(p) freopen (p".in", "r", stdin); freopen (p".out", "w", stdout)
+#define INF (1 << 25)
+using namespace std;
+int f[410][410], dp[410][410], g[410][410], a[410], val[410], n;
+
+bool Judge (int l, int x, int r) {
+	if (l > r) swap (l, r);
+	return x > l;
+}
+
+int Count (int l, int x, int r) {
+	if (l > r) swap (l, r);
+	return abs (x - l) + abs (x - r) + 1;
+}
+
+void dfs (int l, int r) {
+	if (f[l][r] != -INF) return;
+	if (l == r) {
+		f[l][r] = val[1], dp[l][r] = max (f[l][r], dp[l][r]);
+		return;
+	}
+	
+	if (l + 1 == r) {
+		f[l][r] = val[1] * 2;
+		if (abs (a[l] - a[r]) == 1) g[l][r] = 0, f[l][r] = max (val[2], f[l][r]);
+		dp[l][r] = max (f[l][r], dp[l][r]);
+		return;
+	}
+
+	for (int i = l; i < r; i++) dfs (l, i);
+	for (int i = l + 1; i <= r; i++) dfs (i, r);
+	
+	for (int i = l; i < r; i++) {
+		f[l][r] = max (f[l][i] + f[i + 1][r], f[l][r]);
+		dp[l][r] = max (dp[l][i] + dp[i + 1][r], dp[l][r]);
+	}
+	
+	for (int i = l + 1; i < r; i++)
+		if (g[l][i] != -INF && g[i][r] != -INF && (a[i] > a[l] || a[i] > a[r])) {
+			int t = g[l][i] + g[i][r] + val[ Count (a[l], a[i], a[r]) ];
+			f[l][r] = max (t, f[l][r]);
+		}
+	
+	if (abs (a[l] - a[r]) == 1)
+		g[l][r] = f[l + 1][r - 1];
+	else
+		for (int i = l + 1; i < r; i++)
+			if (g[l][i] != -INF && g[i][r] != -INF && (a[i] - a[l]) * (a[r] - a[i]) > 0)
+				g[l][r] = max (g[l][i] + g[i][r], g[l][r]);
+	
+	if (g[l][r] != -INF)
+		f[l][r] = max (g[l][r] + val[ abs (a[r] - a[l]) + 1 ], f[l][r]);
+	dp[l][r] = max (f[l][r], dp[l][r]);
+}
+
+void print() {
+	for (int l = 1; l <= n; l++, printf ("\n")) {
+		printf ("%d:-- ", l);
+		for (int r = l; r <= n; r++)
+			printf ("%d_%d\t", r, dp[l][r]);
+	}
+	printf ("\n");
+}
+
+int main()
+{
+	//LY("happy");
+	scanf ("%d", &n);
+	for (int i = 1; i <= n; i++) scanf ("%d", &val[i]);
+	for (int i = 1; i <= n; i++) scanf ("%d", &a[i]);
+	for (int l = 1; l <= n; l++)
+		for (int r = 1; r <= n; r++) f[l][r] = g[l][r] = -INF;
+	//dfs (4, 9);
+	dfs (1, n);
+	//print();
+	printf ("%d", dp[1][n]);
+	return 0;
+}

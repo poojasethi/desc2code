@@ -1,0 +1,138 @@
+//#pragma comment(linker, "/STACK:102400000,102400000")
+#include <iostream>
+#include <algorithm>
+#include <stdio.h>
+#include <vector>
+#include <map>
+#include <string.h>
+#include <cmath>
+#include <assert.h>
+#include <iomanip>
+using namespace std;
+#define vi vector<int>
+#define pii pair<int,int>
+#define pb push_back
+#define mp make_pair
+#define all(x) x.begin(),x.end()
+#define inf 1000000007
+#define mod 1000000007
+#define x first
+#define y second
+#define pi acos(-1.0)
+#define DBG(x) cerr<<(#x)<<"="<<x<<"\n";
+//#define debug(...) fprintf(stderr,__VA_ARGS__)
+#define debug(...)
+#define FOREACH(it,x) for(__typeof(x.begin()) it=x.begin();it!=x.end();it++)
+#define ull unsigned long long
+#define ll long long
+#define N 100005
+
+template <class T,class U>inline void Max(T &a,U b){if(a<b)a=b;}
+template <class T,class U>inline void Min(T &a,U b){if(a>b)a=b;}
+
+inline void add(int &a,int b){a+=b;if(a>=mod)a-=mod;}
+
+vi g[N];
+int cnt,st[N],ed[N],d[N];
+void dfs(int u,int h=0){
+    st[u]=++cnt;d[u]=h;
+    for(int i=0;i<g[u].size();i++){
+        int j=g[u][i];
+        dfs(j,h+1);
+    }
+    ed[u]=cnt;
+}
+int t[N<<2],c[N<<2],f[N],h[N<<2];
+typedef int arr[2][2];
+arr w[N];
+void mul(const arr&a,const arr&b,arr &c){
+    memset(c,0,sizeof(c));
+    for(int i=0;i<2;i++)
+        for(int j=0;j<2;j++)
+            for(int k=0;k<2;k++){
+                add(c[i][j],1LL*a[i][k]*b[k][j]%mod);
+            }
+}
+void func(int &a,int &b,int n){
+    if(n==0)return;
+    int x,y;
+    y=(1LL*w[n][0][0]*b+1LL*w[n][0][1]*a)%mod;
+    x=(1LL*w[n][1][0]*b+1LL*w[n][1][1]*a)%mod;
+    a=x,b=y;
+}
+void cal(int p,int v,int w,int l){
+    if(h[p]==-1){
+        h[p]=l;
+        c[p]=v,t[p]=w;
+        return;
+    }
+    if(h[p]<=l){
+        func(c[p],t[p],l-h[p]);
+        add(c[p],v),add(t[p],w);
+        h[p]=l;
+    }
+    else{
+        func(v,w,h[p]-l);
+        add(c[p],v),add(t[p],w);
+    }
+}
+void down(int p){
+    if(h[p]!=-1){
+        cal(p<<1,c[p],t[p],h[p]);
+        cal(p<<1|1,c[p],t[p],h[p]);
+        h[p]=-1;
+    }
+}
+void upd(int p,int l,int r,int x,int y,int v,int w,int h){
+    if(l>=x&&r<=y){
+        cal(p,v,w,h);return;
+    }
+    int m=(l+r)>>1;
+    down(p);
+    if(x<=m)upd(p<<1,l,m,x,y,v,w,h);
+    if(y>m)upd(p<<1|1,m+1,r,x,y,v,w,h);
+}
+int query(int p,int l,int r,int x,int d){
+    if(l==r){
+        if(h[p]==-1)return 0;
+        int a=c[p],b=t[p];
+        func(a,b,d-h[p]);
+        return b;
+    }
+    int m=(l+r)>>1;
+    down(p);
+    if(x<=m)return query(p<<1,l,m,x,d);
+    return query(p<<1|1,m+1,r,x,d);
+}
+int main(){
+    //cout<<fixed<<setprecision(5);
+    int T,i,j,k,ca=0,n,m;
+    f[1]=f[2]=1;
+    for(i=3;i<N;i++){
+        f[i]=(f[i-2]+f[i-1])%mod;
+    }
+    for(i=0;i<2;i++)w[0][i][i]=1;
+    arr a;
+    a[0][0]=a[0][1]=a[1][0]=1,a[1][1]=0;
+    for(i=1;i<N;i++)mul(w[i-1],a,w[i]);
+    scanf("%d%d",&n,&m);
+    for(i=1;i<n;i++){
+        scanf("%d",&j),j--;
+        g[j].pb(i);
+    }
+    cnt=0;
+    dfs(0);
+    memset(h,-1,sizeof(h));
+    while(m--){
+        char s[2];
+        scanf("%s%d",s,&i);i--;
+        if(s[0]=='U'){
+            scanf("%d",&j);
+            upd(1,1,n,st[i],ed[i],f[j-1],f[j],d[i]);
+        }
+        else{
+            printf("%d\n",query(1,1,n,st[i],d[i]));
+        }
+    }
+    return 0;
+}

@@ -1,0 +1,123 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<cmath>
+#include<algorithm>
+#define maxn 600
+#define maxm 400000
+using namespace std;
+int edge[maxn],father[maxn],flow[maxn],dis[maxn];
+int n,m,digit[maxn],S,T,N,in[maxn],mincost;
+int nEdge=1,to[maxm],next[maxm],start[maxn],remain[maxm],cost[maxm];
+void make(int a,int b,int c,int d)
+{
+	nEdge++,to[nEdge]=b,next[nEdge]=start[a],start[a]=nEdge,remain[nEdge]=c,cost[nEdge]=d;
+	nEdge++,to[nEdge]=a,next[nEdge]=start[b],start[b]=nEdge,remain[nEdge]=0,cost[nEdge]=-d;
+}
+int calc(int p)
+{
+	#define lowbit(x) (x&(-x))
+	int ans=0;
+	for(int i=p;i;i-=lowbit(i))
+		ans++;
+	return ans;
+}
+void read()
+{
+	scanf("%d %d",&n,&m);
+	for(int i=1;i<=n;i++)
+		scanf("%d",&digit[i]);
+	S=1,T=1+1+n+n+1,N=T;
+	make(S,S+1,m,0);
+	for(int i=1;i<=n;i++)
+		make(S+1,i+2,1,calc(digit[i])),make(2+n+i,T,1,0);
+	for(int i=1;i<=n;i++)
+		for(int j=i+1;j<=n;j++)
+		{
+			if(digit[i]!=digit[j])
+				make(2+n+i,2+j,1,calc(digit[j]));
+			else
+				make(2+n+i,2+j,1,0);
+		}
+	for(int i=1;i<=n;i++)
+	{
+		make(2+i,2+n+i,1,-10000);
+		mincost+=10000;
+	}
+}
+int SPFA(int S,int T)
+{
+	static int queue[maxn];
+	static bool use[maxn];
+	for(int i=1;i<=N;i++)
+		dis[i]=1<<30,use[i]=false;
+	int front=0,rear=1;
+	queue[rear]=S,dis[S]=0,flow[S]=1<<30;
+	while(front!=rear)
+	{
+		int p=queue[front=front%N+1];
+		use[p]=false;
+		for(int i=start[p],q;i;i=next[i])
+			if(remain[i]&&dis[q=to[i]]>dis[p]+cost[i])
+			{
+				dis[q]=dis[p]+cost[i];
+				father[q]=p;
+				edge[q]=i;
+				flow[q]=min(remain[i],flow[p]);
+				if(use[q]==false)
+					use[q]=true,queue[rear=rear%N+1]=q;
+			}
+	}
+	return dis[T];
+}
+void MCMF()
+{
+	while(SPFA(S,T)<0)
+	{
+		mincost=mincost+dis[T]*flow[T];
+		for(int i=T;i!=S;i=father[i])
+		{
+			remain[edge[i]]-=flow[T];
+			remain[edge[i]^1]+=flow[T];
+			int x=to[edge[i]^1],y=to[edge[i]];
+			if(x>=3+n&&x<=n+n+2&&y>=3&&y<=n+2)
+				in[y-2]=x-2-n;
+			if(x==S+1&&y>=3&&y<=n+2)
+				in[y-2]=0;
+		}
+	}
+}
+void print()
+{
+	int cnt=n;
+	static int from[maxn];
+	int id=-1;
+	for(int i=1;i<=n;i++)
+		if(in[i]==0||digit[in[i]]!=digit[i])
+			cnt++;
+	printf("%d %d\n",cnt,mincost);
+	for(int i=1;i<=n;i++)
+	{
+		if(in[i]==0)
+		{
+			from[i]=++id;
+			printf("%c=%d\n",'a'+id,digit[i]);
+			printf("print(%c)\n",'a'+id);
+		}
+		else
+		{
+			from[i]=from[in[i]];
+			if(digit[i]!=digit[in[i]])
+				printf("%c=%d\n",'a'+from[i],digit[i]);
+			printf("print(%c)\n",'a'+from[i]);
+		}
+	}
+}
+int main()
+{
+	read();
+	MCMF();
+	print();
+	return 0;
+}
+   	 				 		 	   	    	

@@ -1,0 +1,187 @@
+#include <cstdio>
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+#define maxn 200000
+
+int head[maxn], x, n, sz[maxn], q, v, par[maxn], p[maxn], pos[maxn], h[maxn], a[maxn], last, tt, val;
+vector <int> vec[maxn], g[maxn];
+vector <pair <int, int> > t[maxn];
+
+void dfs(int v, int p = 0)
+{
+	sz[v] = 1;
+	if (!p)
+		h[v] = 0;
+	else		
+		h[v] = h[p] + 1;
+
+	for (int i = 0; i < g[v].size(); ++i)
+	{
+		int to = g[v][i];
+
+		if (to != p)
+		{
+			dfs(to, v);
+			sz[v] += sz[to];
+		}			
+	}
+}
+
+void calc(int v, int path, int pp = 0)
+{
+	par[v] = pp;
+	vec[path].push_back(v);
+	pos[v] = vec[path].size();
+	p[v] = path;
+	if (pos[v] == 1)
+		head[path] = v;
+
+	for (int i = 0; i < g[v].size(); ++i)
+	{
+		int to = g[v][i];
+
+		if (to != pp)
+		{
+			if (2 * sz[to] >= sz[v])
+				calc(to, path, v);
+			else
+				calc(to, ++last, v);
+		}
+	}
+}
+
+void recalc(int b, int v)
+{
+	if (t[b][v + v].first == t[b][v + v + 1].first)
+	{
+		t[b][v].first = t[b][v + v].first;
+		t[b][v].second = t[b][v + v].second + t[b][v + v + 1].second;
+	}
+	else
+	{
+		if (t[b][v + v].first > t[b][v + v + 1].first)
+			t[b][v] = t[b][v + v];
+		else
+			t[b][v] = t[b][v + v + 1];
+	}
+}
+
+void build(int b, int tl, int tr, int v)
+{
+	if (tl == tr)
+	{
+		t[b][v].first = a[vec[b][tl - 1]] - h[vec[b][tl - 1]];
+		t[b][v].second = 1;
+	}		
+	else
+	{
+		int td = (tl + tr) >> 1;
+
+		build(b, tl, td, v + v);
+		build(b, td + 1, tr, v + v + 1);
+
+		recalc(b, v);
+	}
+}
+
+void update(int b, int tl, int tr, int v, int pos, int val)
+{
+	if (tl == tr)
+	{
+		t[b][v].first = val - h[vec[b][tl - 1]];
+		t[b][v].second = 1;
+	}
+	else
+	{
+		int td = (tl + tr) >> 1;
+
+		if (pos <= td)
+			update(b, tl, td, v + v, pos, val);
+		else
+			update(b, td + 1, tr, v + v + 1, pos, val);
+
+		recalc(b, v);			
+	}
+}
+
+pair <int, int> get(int b, int tl, int tr, int v, int l, int r)
+{
+	if (l > r)
+		return make_pair(-int(1e9), 0);
+
+	if (tl == l && tr == r)
+		return t[b][v];
+
+	int td = (tl + tr) >> 1;
+
+	pair <int, int> lf = get(b, tl, td, v + v, l, min(r, td));
+	pair <int, int> rg = get(b, td + 1, tr, v + v + 1, max(l, td + 1), r);
+
+	if (lf.first == rg.first)
+		return make_pair(lf.first, lf.second + rg.second);
+
+	if (lf.first > rg.first)
+		return lf;
+	return rg;		
+}
+
+int main()
+{
+//	freopen("in", "r", stdin);
+
+	scanf("%d%d", &n, &q);
+
+	for (int i = 1; i <= n; ++i)
+		scanf("%d", &a[i]);
+
+	for (int i = 2; i <= n; ++i)
+	{
+		scanf("%d", &x);
+		g[x].push_back(i);
+	}
+
+	dfs(1);
+	calc(1, ++last);
+
+	for (int i = 1; i <= last; ++i)
+	{
+		t[i].resize(4 * vec[i].size());
+		build(i, 1, vec[i].size(), 1);
+	}
+
+	while (q--)
+	{
+		scanf("%d%d", &tt, &v);
+
+		if (tt == 0)
+		{
+			scanf("%d", &val);
+			update(p[v], 1, vec[p[v]].size(), 1, pos[v], val);
+		}
+		else
+		{
+			int cur_path = p[v], curmx = -int(1e9), anscnt = 0, c = h[v];
+			while (v)
+			{
+				pair <int, int> mx = get(cur_path, 1, vec[cur_path].size(), 1, 1, pos[v]);
+
+				if (mx.first > curmx)
+				{
+					curmx = mx.first;
+					anscnt = mx.second;
+				}
+				else
+					if (mx.first == curmx)
+						anscnt += mx.second;
+
+				v = par[head[cur_path]];
+				cur_path = p[v];
+			}
+
+			printf("%d %d\n", curmx + c, anscnt);
+		}
+	}
+}

@@ -1,0 +1,152 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+const int MaxN = 30010, MaxT = 1 << 16, Block = 200;
+int n, mod, q;
+int a[MaxN], val[MaxN], vtot;
+
+int inc(int x, int v) { x += v; return x >= mod ? x - mod : x; }
+struct query {
+	int l, r, id;
+	bool operator < (const query &a) const {
+		if (l / Block == a.l / Block) return r < a.r;
+		return l < a.l;
+	}
+}	Q[MaxN];
+struct Matrix {
+	int c[2][2];
+	Matrix operator *= (const Matrix &a) {
+		int ret[2][2];
+		ret[0][0] = (c[0][0] * a.c[0][0] + c[0][1] * a.c[1][0]) % mod;
+		ret[0][1] = (c[0][0] * a.c[0][1] + c[0][1] * a.c[1][1]) % mod;
+		ret[1][0] = (c[1][0] * a.c[0][0] + c[1][1] * a.c[1][0]) % mod;
+		ret[1][1] = (c[1][0] * a.c[0][1] + c[1][1] * a.c[1][1]) % mod;
+		memcpy(c, ret, sizeof(ret));
+		return *this;
+	}
+	Matrix operator * (const Matrix &a) const {
+		Matrix ret;
+		ret.c[0][0] = (c[0][0] * a.c[0][0] + c[0][1] * a.c[1][0]) % mod;
+		ret.c[0][1] = (c[0][0] * a.c[0][1] + c[0][1] * a.c[1][1]) % mod;
+		ret.c[1][0] = (c[1][0] * a.c[0][0] + c[1][1] * a.c[1][0]) % mod;
+		ret.c[1][1] = (c[1][0] * a.c[0][1] + c[1][1] * a.c[1][1]) % mod;
+		return ret;
+	}
+}	I, F, pow_F[MaxN * 2], invF, *power;
+struct Vector {
+	int c[2];
+	Vector() {}
+	Vector(int x, int y) {
+		c[0] = x, c[1] = y;
+	}
+	Vector operator *= (const Matrix &a) {
+		int ret[2];
+		ret[0] = (a.c[0][0] * c[0] + a.c[0][1] * c[1]) % mod;
+		ret[1] = (a.c[1][0] * c[0] + a.c[1][1] * c[1]) % mod;
+		memcpy(c, ret, sizeof(ret));
+		return *this;
+	}
+	Vector operator + (const Vector &a) const {
+		return Vector(inc(c[0], a.c[0]), inc(c[1], a.c[1]));
+	}
+};
+int ans[MaxN];
+
+struct Tree_node {
+	int lazy;
+	Vector sum;
+}	T[MaxT];
+
+void set_lazy(int now, int d) {
+	if (!d) return;
+	T[now].sum *= power[d];
+	T[now].lazy += d;
+}
+void push_down(int now) {
+	set_lazy(now << 1, T[now].lazy);
+	set_lazy(now << 1 | 1, T[now].lazy);
+	T[now].lazy = 0;
+}
+void update(int now) {
+	T[now].sum = T[now << 1].sum + T[now << 1 | 1].sum;
+}
+void modify_c(int l, int r, int x, int now, int d) {
+	if (l == r) {
+		T[now].sum.c[0] = power[T[now].lazy].c[0][0] * d % mod;
+		T[now].sum.c[1] = power[T[now].lazy].c[1][0] * d % mod;
+		return;
+	}
+	int mid = (l + r) >> 1;
+	push_down(now);
+	if (x <= mid) modify_c(l, mid, x, now << 1, d);
+	else modify_c(mid + 1, r, x, now << 1 | 1, d);
+	update(now);
+}
+void modify_mul(int l, int r, int x, int now, int d) {
+	if (r < x) return;
+	if (x <= l) return set_lazy(now, d);
+	int mid = (l + r) >> 1;
+	push_down(now);
+	modify_mul(l, mid, x, now << 1, d);
+	modify_mul(mid + 1, r, x, now << 1 | 1, d);
+	update(now);
+}
+
+void init() {
+	I.c[0][0] = I.c[1][1] = 1;
+	F.c[0][0] = F.c[0][1] = F.c[1][0] = 1;
+	invF.c[0][1] = invF.c[1][0] = 1;
+	invF.c[1][1] = mod - 1;
+	power = pow_F + MaxN;
+	power[0] = I;
+	for (int i = 1; i <= n; ++i) power[i] = power[i - 1] * F;
+	for (int i = 1; i <= n; ++i) power[-i] = power[-i + 1] * invF;
+}
+
+int cnt[MaxN];
+bool inside[MaxN];
+void do_reverse(int pos) {
+	int u = a[pos];
+	if (inside[pos]) {
+		if (--cnt[u] == 0) {
+			modify_c(1, vtot, u, 1, 0);
+			modify_mul(1, vtot, u + 1, 1, -1);
+		}
+	} else {
+		if (cnt[u]++ == 0) {
+			modify_c(1, vtot, u, 1, val[u] % mod);
+			modify_mul(1, vtot, u + 1, 1, 1);
+		}
+	}
+	inside[pos] ^= 1;
+}
+void move(int &last, int to) {
+	while (last < to) do_reverse(++last);
+	while (last > to) do_reverse(last--);
+}
+
+int main() {
+	scanf("%d%d", &n, &mod);
+	for (int i = 1; i <= n; ++i) {
+		scanf("%d", a + i);
+		val[i] = a[i];
+	}
+	sort(val + 1, val + n + 1);
+	vtot = unique(val + 1, val + n + 1) - val - 1;
+	for (int i = 1; i <= n; ++i) a[i] = lower_bound(val + 1, val + vtot + 1, a[i]) - val;
+	scanf("%d", &q);
+	for (int i = 1; i <= q; ++i) {
+		scanf("%d%d", &Q[i].l, &Q[i].r);
+		Q[i].id = i;
+	}
+	sort(Q + 1, Q + q + 1);
+	init();
+	int l = 0, r = 0;
+	for (int i = 1; i <= q; ++i) {
+		move(l, Q[i].l - 1);
+		move(r, Q[i].r);
+		ans[Q[i].id] = T[1].sum.c[0];
+	}
+	for (int i = 1; i <= q; ++i) printf("%d\n", ans[i]);
+	return 0;
+}

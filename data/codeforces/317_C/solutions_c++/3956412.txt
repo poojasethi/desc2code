@@ -1,0 +1,111 @@
+#include <algorithm>
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+const int N=310;
+
+struct Trans
+{
+	int u,v,d;
+	
+	Trans(int _u,int _v,int _d)
+	{
+		u=_u;
+		v=_v;
+		d=_d;
+	}
+};
+
+int n,v,e;
+int a[N],b[N];
+vector<int>neigh[N];
+
+vector<Trans>res;
+vector<int>path;
+bool f[N];
+
+int dfs(int u,int x)
+{
+	f[u]=1;
+	path.push_back(u);
+	
+	if((x && a[u]<b[u]) || (!x && a[u]>b[u]))
+		return u;
+	
+	for(int i=0;i<(int)neigh[u].size();++i)
+	{
+		int v=neigh[u][i];
+		if(!f[v])
+		{
+			int k=dfs(v,x);
+			if(k!=-1)
+				return k;
+		}
+	}
+	
+	path.pop_back();
+	return -1;
+}
+		
+void pour(int u,int v,int d)
+{
+	path.pop_back();
+	if(u==v) return;
+	
+	int w=path.back();
+	int t=min(a[w],d);
+	
+	res.push_back(Trans(w,v,t));
+	a[w]-=t;
+	a[v]+=t;
+	
+	pour(u,w,d);
+	
+	res.push_back(Trans(w,v,d-t));
+	a[w]-=d-t;
+	a[v]+=d-t;
+}
+
+int main()
+{
+	ios::sync_with_stdio(0);
+	
+	cin>>n>>v>>e;
+	for(int i=0;i<n;++i)
+		cin>>a[i];
+	for(int i=0;i<n;++i)
+		cin>>b[i];
+	for(int i=0;i<e;++i)
+	{
+		int u,v;
+		cin>>u>>v;
+		--u;--v;
+		neigh[u].push_back(v);
+		neigh[v].push_back(u);
+	}
+	
+	for(int i=0;i<n;++i)
+		while(a[i]!=b[i])
+		{
+			int x=(a[i]>b[i]);
+			int j=dfs(i,x);
+			fill(f,f+N,0);
+			if(j==-1)
+				{cout<<"NO"<<endl;return 0;}
+			if(x)
+				pour(i,j,min(a[i]-b[i],b[j]-a[j]));
+			else
+			{
+				reverse(path.begin(),path.end());
+				pour(j,i,min(a[j]-b[j],b[i]-a[i]));
+			}
+		}
+	
+	cout<<(int)res.size()<<endl;
+	for(int i=0;i<(int)res.size();++i)
+		cout<<res[i].u+1<<" "<<res[i].v+1<<" "<<res[i].d<<endl;
+	
+	return 0;
+}

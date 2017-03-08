@@ -1,0 +1,250 @@
+//program 251-E
+
+#include<iostream>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+#include<vector>
+
+using namespace std;
+
+struct HashType
+{
+  int X,Y,Ans;
+  HashType *Next;
+};
+
+int Get()
+{
+  char c;
+  while(c=getchar(),c<'0'||c>'9');
+  int X=0;
+  while(c>='0'&&c<='9')
+    {
+      X=X*10+c-48;
+      c=getchar();
+    }
+  return X;
+}
+
+const int Mod=1000000007;
+const int BigNumber=99991;
+
+vector<int> G[200000],Child[200000];
+int Size[200000],Depth[200000];
+int F_DP[200000],F_Next[200000];
+bool F_Chain[200000];
+bool Flag_DP[200000],Flag_Chain[200000],Flag_Next[200000];
+HashType *Hash[BigNumber];
+
+void DFS(int X,int Last,int D)
+{
+  Size[X]=1;
+  Depth[X]=D;
+  for(int i=0;i<G[X].size();i++)
+    {
+      int Y=G[X][i];
+      if(Y==Last)
+        continue;
+      DFS(Y,X,D+1);
+      Child[X].push_back(Y);
+      Size[X]+=Size[Y];
+    }
+}
+
+int Find(int X,int Y)
+{
+  if(X>Y)swap(X,Y);
+  int V=(X*59+Y)%BigNumber;
+  HashType *P=Hash[V];
+  while(P!=NULL)
+    {
+      if(P->X==X&&P->Y==Y)
+        return P->Ans;
+      P=P->Next;
+    }
+  return -1;
+}
+
+void Add(int X,int Y,int Ans)
+{
+  if(X>Y)swap(X,Y);
+  int V=(X*59+Y)%BigNumber;
+  HashType *P=new HashType;
+  P->X=X;
+  P->Y=Y;
+  P->Ans=Ans;
+  P->Next=Hash[V];
+  Hash[V]=P;
+}
+
+int DP(int X);
+
+int Double(int X,int Y)
+{
+  int S0=Child[X].size(),S1=Child[Y].size();
+  if(S0>1||S1>1)
+    return 0;
+  if(!S0&&!S1)
+    return 1;
+  int Ans=Find(X,Y);
+  if(Ans!=-1)
+    return Ans;
+  if(S0&&S1)
+    Ans=Double(Child[X][0],Child[Y][0]);
+  else
+    Ans=DP(Child[S0?X:Y][0]);
+  Add(X,Y,Ans);
+  return Ans;
+}
+
+bool Chain(int X)
+{
+  if(Flag_Chain[X])
+    return F_Chain[X];
+  F_Chain[X]=!Child[X].size();
+  if(Child[X].size()==1&&Chain(Child[X][0]))
+    F_Chain[X]=true;
+  Flag_Chain[X]=true;
+  return F_Chain[X];
+}
+
+int Next(int X)
+{
+  if(Flag_Next[X])
+    return F_Next[X];
+  Flag_Next[X]=true;
+  int Y=Child[X][0];
+  if(Child[Y].size()!=1)
+    return F_Next[X]=X;
+  return F_Next[X]=Next(Y);
+}
+
+int DP(int X)
+{
+  if(Flag_DP[X])
+    return F_DP[X];
+  Flag_DP[X]=true;
+  int Ans=0;
+  if(Child[X].size()==2)
+    {
+      int A=Child[X][0],B=Child[X][1];
+      if(!Child[A].size())
+        Ans=(Ans+DP(B))%Mod;
+      if(!Child[B].size())
+        Ans=(Ans+DP(A))%Mod;
+      if(Child[A].size()==1)
+        Ans=(Ans+Double(B,Child[A][0]))%Mod;
+      if(Child[B].size()==1)
+        Ans=(Ans+Double(A,Child[B][0]))%Mod;
+      return F_DP[X]=Ans;
+    }
+  int Son=Child[X][0];
+  if(Child[Son].size()==1)
+    Ans=(Ans+DP(Child[Son][0]))%Mod;
+  int A=Next(X);
+  int B=Child[A][0];
+  if(A!=X&&Child[B].size()==2)
+    {
+      int L=Child[B][0],R=Child[B][1];
+      if(Size[L]==Depth[A]-Depth[X]&&Chain(L))
+        Ans=(Ans+DP(R))%Mod;
+      if(Size[R]==Depth[A]-Depth[X]&&Chain(R))
+        Ans=(Ans+DP(L))%Mod;
+    }
+  if(!Child[B].size())
+    Ans=(Ans+1)%Mod;
+  else
+    {
+      int P=Child[B][0],Q=Child[B][1];
+      if(Child[P].size()==1)
+        if(Size[P]==Depth[B]-Depth[X]+1&&Chain(P))
+          Ans=(Ans+DP(Q))%Mod;
+      if(Child[P].size()==2)
+        {
+          int L=Child[P][0],R=Child[P][1];
+          if(Size[L]==Depth[B]-Depth[X]&&Chain(L))
+            Ans=(Ans+Double(Q,R))%Mod;
+          if(Size[R]==Depth[B]-Depth[X]&&Chain(R))
+            Ans=(Ans+Double(Q,L))%Mod;
+        }
+      if(Child[Q].size()==1)
+        if(Size[Q]==Depth[B]-Depth[X]+1&&Chain(Q))
+          Ans=(Ans+DP(P))%Mod;
+      if(Child[Q].size()==2)
+        {
+          int L=Child[Q][0],R=Child[Q][1];
+          if(Size[L]==Depth[B]-Depth[X]&&Chain(L))
+            Ans=(Ans+Double(P,R))%Mod;
+          if(Size[R]==Depth[B]-Depth[X]&&Chain(R))
+            Ans=(Ans+Double(P,L))%Mod;
+        }
+    }
+  return F_DP[X]=Ans;
+}
+
+int main()
+{
+  int N=Get()*2;
+  for(int i=0;i<N-1;i++)
+    {
+      int X=Get()-1,Y=Get()-1;
+      G[X].push_back(Y);
+      G[Y].push_back(X);
+    }
+  int Max=0;
+  for(int i=0;i<N;i++)
+    Max=max(Max,(int)G[i].size());
+  if(Max>3)
+    {
+      printf("0\n");
+      return 0;
+    }
+  if(Max<3)
+    {
+      int Ans=((long long)N*(N/2-1)+4)%Mod;
+      if(N==2)Ans=2;
+      printf("%d\n",Ans);
+      return 0;
+    }
+  int Root=0;
+  while(G[Root].size()<3)
+    Root++;
+  DFS(Root,-1,0);
+  memset(Flag_DP,0,sizeof(Flag_DP));
+  memset(Flag_Chain,0,sizeof(Flag_Chain));
+  memset(Flag_Next,0,sizeof(Flag_Next));
+  int Ans=0;
+  for(int L=0;L<3;L++)
+    for(int M=0;M<3;M++)
+      for(int R=0;R<3;R++)
+        {
+          if(L==M||L==R||M==R)
+            continue;
+          int Left=Child[Root][L];
+          int Mid=Child[Root][M];
+          int Right=Child[Root][R];
+          if(!Child[Mid].size())
+            if(~Size[Left]&1)
+              Ans=(Ans+(long long)DP(Left)*DP(Right))%Mod;
+          if(Child[Mid].size()==1)
+            {
+              int X=Child[Mid][0];
+              if(~(Size[Left]+Size[X])&1)
+                Ans=(Ans+(long long)Double(Left,X)*DP(Right))%Mod;
+              if(~(Size[Right]+Size[X])&1)
+                Ans=(Ans+(long long)Double(Right,X)*DP(Left))%Mod;
+            }
+          if(Child[Mid].size()==2)
+            {
+              int X=Child[Mid][0],Y=Child[Mid][1];
+              if(~(Size[Left]+Size[X])&1)
+                Ans=(Ans+(long long)Double(Left,X)*Double(Right,Y))%Mod;
+              if(~(Size[Right]+Size[X])&1)
+                Ans=(Ans+(long long)Double(Right,X)*Double(Left,Y))%Mod;
+            }
+        }
+  printf("%d\n",Ans*2%Mod);
+  return 0;
+}

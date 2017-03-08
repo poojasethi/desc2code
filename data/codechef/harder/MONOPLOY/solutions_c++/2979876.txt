@@ -1,0 +1,281 @@
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#include <deque>
+typedef unsigned int uint;
+typedef long long int ll;
+typedef unsigned long long int ull;
+ 
+struct bit_ge
+{
+	bit_ge(): max(0), A() {}
+	bit_ge(uint size): max(size), A(size+1,0) {}
+	void resize(uint size)
+	{
+		max=size;
+		A.clear();
+		A.resize(size+1,0);
+	}
+	ull total() { return A[0]; }
+	ull ge(uint x)
+	{
+		if(!x)
+			return total();
+		ull r=0;
+		while(x<=max)
+		{
+			r+=A[x];
+			x+=x^(x&(x-1));
+		}
+		return r;
+	}
+	void add(uint x, ll d)
+	{
+		while(1)
+		{
+			A[x]+=d;
+			if(!x)
+				break;
+			x&=x-1;
+		}
+	}
+ 
+	uint max;
+	std::vector<ull> A;
+};
+ 
+struct tree
+{
+	typedef std::deque<uint> branches_t;
+	struct chain
+	{
+		chain(): nodes() {}
+		std::vector<uint> nodes;
+		bit_ge sums;
+		branches_t branches;
+	};
+	struct node
+	{
+		node():
+			parent(0), heavy(0), head(0), offset(0), 
+			size(0), sum(0), forward(0), adj()
+		{}
+		uint parent;
+		bool heavy;
+		uint head;
+		uint offset;
+		uint size;
+		ull sum;
+		uint forward;
+		std::vector<uint> adj;
+	};
+	tree(uint _size): size(_size), nodes(_size), chains(_size) {}
+	void dfs1(uint n=0, uint p=0)
+	{
+		nodes[n].parent=p;
+		nodes[n].size=1;
+		nodes[n].forward=n;
+		uint ms=0,msa=0;
+		for(uint i=0; i<nodes[n].adj.size(); ++i)
+		{
+			uint u=nodes[n].adj[i];
+			if(u==p)
+				continue;
+			dfs1(u,n);
+			if(ms<nodes[u].size)
+			{
+				ms=nodes[u].size;
+				msa=u;
+			}
+			nodes[n].size+=nodes[u].size;
+		}
+		if(ms)
+			nodes[msa].heavy=1;
+	}
+	void dfs2(uint n=0, uint p=0)
+	{
+		if(nodes[n].heavy)
+		{
+			uint h=nodes[p].head;
+			nodes[n].head=h;
+			chain &c=chains[h];
+			uint o=c.nodes.size();
+			c.nodes.push_back(n);
+			nodes[n].offset=o;
+			c.branches.push_back(o);
+		}
+		else
+		{
+			nodes[n].head=n;
+			chain &c=chains[n];
+			c.nodes.push_back(n);
+			c.branches.push_back(0);
+			nodes[n].offset=0;
+		}
+		for(uint i=0; i<nodes[n].adj.size(); ++i)
+		{
+			uint u=nodes[n].adj[i];
+			if(u==p)
+				continue;
+			dfs2(u,n);
+		}
+		if(nodes[n].offset==0)
+		{
+			uint h=nodes[n].head;
+			chain &c=chains[h];
+			c.sums.resize(c.nodes.size()-1);
+		}
+	}
+	void dfs3(uint n=0, uint p=0)
+	{
+		nodes[n].sum=0;
+		ull d=0;
+		for(uint i=0; i<nodes[n].adj.size(); ++i)
+		{
+			uint u=nodes[n].adj[i];
+			if(u==p)
+				continue;
+			dfs3(u,n);
+			nodes[n].sum+=nodes[u].sum+nodes[u].size;
+			d+=nodes[u].size;
+			if(!nodes[u].heavy)
+				d+=nodes[u].sum;
+		}
+		uint h=nodes[n].head;
+		uint o=nodes[n].offset;
+		chain &c=chains[h];
+		c.sums.add(o,d);
+	}
+	void setup()
+	{
+		dfs1();
+		dfs2();
+		dfs3();
+	}
+	void update(uint n)
+	{
+		uint p=n;
+		ll ds=0;
+		do
+		{
+			uint h=nodes[n].head;
+			chain &c=chains[h];
+			uint f=nodes[n].forward;
+			uint to=nodes[n].offset;
+			ll sds=0;
+			if(f!=n)
+				ds+=nodes[f].size;
+			nodes[n].forward=p;
+			if(p!=n)
+				ds-=nodes[p].size;
+			sds+=ds;
+			c.sums.add(to,ds);
+ 
+			uint i=0;
+			for(uint o; i<c.branches.size() && (o=c.branches[i])<to; ++i)
+			{
+				n=c.nodes[o];
+				f=nodes[n].forward;
+				ds=0;
+				if(f!=n)
+					ds+=nodes[f].size;
+				p=c.nodes[o+1];
+				nodes[n].forward=p;
+				if(p!=n)
+					ds-=nodes[p].size;
+				sds+=ds;
+				c.sums.add(o,ds);
+			}
+			if(i)
+				c.branches.erase(c.branches.begin(),c.branches.begin()+i);
+			if(c.branches.empty() || c.branches.front()!=to)
+				c.branches.push_front(to);
+			p=h;
+			n=nodes[h].parent;
+			ds=sds;
+		}
+		while(p);
+	}
+	uint changes(uint n)
+	{
+		uint r=0;
+		while(n)
+		{
+			uint h=nodes[n].head;
+			uint o=nodes[n].offset;
+			chain &c=chains[h];
+			branches_t::const_iterator e=std::lower_bound(
+				c.branches.begin(),c.branches.end(),o);
+			r+=e-c.branches.begin();
+			if(!h)
+				break;
+			uint p=nodes[h].parent;
+			if(nodes[p].forward!=h)
+				++r;
+			n=p;
+		}
+		return r;
+	}
+	void query(ull &rn, uint &rd,uint n)
+	{
+		uint h=nodes[n].head;
+		uint o=nodes[n].offset;
+		chain &c=chains[h];
+		rn=c.sums.ge(o);
+		rd=nodes[n].size;
+		ull d=changes(n);
+		rn+=d*rd;
+	}
+ 
+	uint size;
+	std::vector<node> nodes;
+	std::vector<chain> chains;
+};
+ 
+main()
+{
+	uint T=0;
+	scanf("%u",&T);
+	for(uint t=1; t<=T; ++t)
+	{
+		uint N=0;
+		scanf("%u",&N);
+		tree g(N);
+		for(uint n=1; n<N; ++n)
+		{
+			uint a,b;
+			scanf("%u%u",&a,&b);
+			g.nodes[b].adj.push_back(a);
+			g.nodes[a].adj.push_back(b);
+		}
+		g.setup();
+ 
+		uint Q=0;
+		scanf("%u",&Q);
+		for(uint q=0; q<Q; ++q)
+		{
+			char cmd[2];
+			uint n=N;
+			scanf("%s%u",cmd,&n);
+			if(*cmd=='O')
+				g.update(n);
+			else
+			{
+				ull u;
+				uint v;
+				g.query(u,v,n);
+				uint f=u%v;
+				char buf[32],*p=buf;
+				for(uint i=0; i<6; ++i)
+				{
+					f*=10;
+					uint d=f/v;
+					f=f-d*v;
+					*p++='0'+d;
+				}
+				*p++=0;
+				printf("%llu.%s\n",u/v,buf);
+			}
+		}
+	}
+} 

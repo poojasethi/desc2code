@@ -1,0 +1,128 @@
+#include <algorithm>
+#include <bitset>
+#include <cassert>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <list>
+#include <map>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <string>
+#include <utility>
+#include <vector>
+using namespace std;
+
+#define all(o) (o).begin(), (o).end()
+#define allr(o) (o).rbegin(), (o).rend()
+const int INF = 2147483647;
+typedef long long ll;
+typedef pair<int, int> ii;
+typedef vector<int> vi;
+typedef vector<ii> vii;
+typedef vector<vi> vvi;
+typedef vector<vii> vvii;
+template <class T> int size(const T &x) { return x.size(); }
+
+// assert or gtfo
+
+struct fenwick_tree {
+    int n; vi data;
+    fenwick_tree() {
+
+    }
+    fenwick_tree(int _n) : n(_n), data(vi(n)) { }
+    void update(int at, int by) {
+        while (at < n) data[at] += by, at |= at + 1; }
+    int query(int at) {
+        int res = 0;
+        while (at >= 0) res += data[at], at = (at & (at + 1)) - 1;
+        return res; }
+    int rsq(int a, int b) { return query(b) - query(a - 1); }
+};
+
+int st;
+bool cmp(const pair<ii,int> &a, const pair<ii,int> &b) {
+    return ii(a.first.first/st, a.first.second) < ii(b.first.first/st,b.first.second);
+}
+
+vi arr;
+fenwick_tree ft;
+ll invs = 0;
+void add(int i, bool left) {
+    if (left) {
+        invs += ft.rsq(0, arr[i]-1);
+    } else {
+        invs += ft.rsq(arr[i]+1, ft.n-1);
+    }
+    ft.update(arr[i],1);
+}
+void remove(int i, bool left) {
+    ft.update(arr[i],-1);
+    if (left) {
+        invs -= ft.rsq(0, arr[i]-1);
+    } else {
+        invs -= ft.rsq(arr[i]+1, ft.n-1);
+    }
+}
+
+int main()
+{
+    int n;
+    scanf("%d\n", &n);
+    st = static_cast<int>(sqrt(n) + 1e-9);
+    arr = vi(n);
+    vii tmp(n);
+    for (int i = 0; i < n; i++) {
+        scanf("%d", &tmp[i].first);
+        tmp[i].second = i;
+    }
+    sort(all(tmp));
+    int val = 0,
+        at = 0;
+    while (at < size(tmp)) {
+        int start = at;
+        while (at < size(tmp) && tmp[at].first == tmp[start].first) {
+            arr[tmp[at].second] = val;
+            at++;
+        }
+        val++;
+    }
+// for (int i = 0; i < n; i++) {
+//     cout << arr[i] << " ";
+// }
+// cout << endl;
+    int qs;
+    scanf("%d\n", &qs);
+    vector<pair<ii,int> > queries;
+    for (int q = 0; q < qs; q++) {
+        int l, r;
+        scanf("%d %d\n", &l, &r);
+        l--, r--;
+        queries.push_back(make_pair(ii(l,r),q));
+    }
+    sort(all(queries),cmp);
+    ft = fenwick_tree(val);
+    add(0, true);
+    int l = 0,
+        r = 0;
+    vi res(size(queries));
+    for (int q = 0; q < qs; q++) {
+        while (l > queries[q].first.first) add(--l, true);
+        while (r < queries[q].first.second) add(++r, false);
+        while (l < queries[q].first.first) remove(l++, true);
+        while (r > queries[q].first.second) remove(r--, false);
+        res[queries[q].second] = invs;
+    }
+    for (int i = 0; i < qs; i++) {
+        cout << res[i] << endl;
+    }
+    return 0;
+}

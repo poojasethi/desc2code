@@ -1,0 +1,172 @@
+#include <bits/stdc++.h>
+#define double         long double
+#define ll             long long
+#define pi             pair <int,int>
+#define pl             pair <ll,ll>
+#define ps             pair <string,string>
+#define vi             vector <int>
+#define vl             vector <ll>
+#define vpi            vector <pi>
+#define vpl            vector <pl>
+#define st             string
+#define vs             vector <st>
+#define f(i,a,b)       for(ll i=(a);i<(b);i++)
+#define fd(i,a,b)      for(ll i=(a);i>(b);i--)
+#define Max(a,b)       ((a)>(b)?(a):(b))
+#define Min(a,b)       ((a)<(b)?(a):(b))
+#define x              first
+#define y              second
+#define si(a)          scanf("%d",&a)
+#define sii(a,b)       scanf("%d %d",&a,&b)
+#define siii(a,b,c)    scanf("%d %d %d",&a,&b,&c)
+#define sl(a)          scanf("%lld",&a)
+#define sll(a,b)       scanf("%lld %lld",&a,&b)
+#define slll(a,b,c)    scanf("%lld %lld %lld",&a,&b,&c)
+#define ss(s)          scanf("%s",s)
+#define pf             printf
+#define pfi(n)         printf("%d\n",n)
+#define pfl(n)         printf("%lld\n",n)
+#define pfls(n)        printf("%lld ",n)
+#define pfci(n,ans)    printf("Case %lld: %d\n",n,ans)
+#define pfcl(n,ans)    printf("Case %lld: %lld\n",n,ans)
+#define pfcd(n,ans)    printf("Case %lld: %lf\n",n,ans)
+#define pb             push_back
+#define all(v)         v.begin(),v.end()
+#define mem(a,v)       memset(a,v,sizeof(a))
+#define INF 1e6
+#define MAX  207
+#define MOD 1000000007
+#define LG  16
+#define mid ((l+r)/2)
+#define PI acos(-1.0)
+
+using namespace std;
+
+#define PT pair<double,double>
+
+ll N,K;
+PT C[MAX];
+PT M[MAX];
+double dis[MAX][MAX];
+
+struct Edge {
+  int from, to, cap, flow, index;
+  Edge(int from, int to, int cap, int flow, int index) :
+    from(from), to(to), cap(cap), flow(flow), index(index) {}
+  ll rcap() { return cap - flow; }
+};
+
+struct Dinic {
+  int N;
+  vector<vector<Edge> > G;
+  vector<vector<Edge *> > Lf;
+  vector<int> layer;
+  vector<int> Q;
+
+  Dinic(int N) : N(N), G(N), Q(N) {}
+
+  void AddEdge(int from, int to, int cap) {
+    if (from == to) return;
+    G[from].push_back(Edge(from, to, cap, 0, G[to].size()));
+    G[to].push_back(Edge(to, from, 0, 0, G[from].size() - 1));
+  }
+
+  ll BlockingFlow(int s, int t) {
+    layer.clear(); layer.resize(N, -1);
+    layer[s] = 0;
+    Lf.clear(); Lf.resize(N);
+
+    int head = 0, tail = 0;
+    Q[tail++] = s;
+    while (head < tail) {
+      int x = Q[head++];
+      for (int i = 0; i < G[x].size(); i++) {
+        Edge &e = G[x][i]; if (e.rcap() <= 0) continue;
+        if (layer[e.to] == -1) {
+          layer[e.to] = layer[e.from] + 1;
+          Q[tail++] = e.to;
+        }
+        if (layer[e.to] > layer[e.from]) {
+          Lf[e.from].push_back(&e);
+        }
+      }
+    }
+    if (layer[t] == -1) return 0;
+
+    ll totflow = 0;
+    vector<Edge *> P;
+    while (!Lf[s].empty()) {
+      int curr = P.empty() ? s : P.back()->to;
+      if (curr == t) {
+        ll amt = P.front()->rcap();
+        for (int i = 0; i < P.size(); ++i) {
+          amt = min(amt, P[i]->rcap());
+        }
+        totflow += amt;
+        for (int i = P.size() - 1; i >= 0; --i) {
+          P[i]->flow += amt;
+          G[P[i]->to][P[i]->index].flow -= amt;
+          if (P[i]->rcap() <= 0) {
+            Lf[P[i]->from].pop_back();
+            P.resize(i);
+          }
+        }
+      } else if (Lf[curr].empty()) {
+        P.pop_back();
+        for (int i = 0; i < N; ++i)
+          for (int j = 0; j < Lf[i].size(); ++j)
+            if (Lf[i][j]->to == curr)
+              Lf[i].erase(Lf[i].begin() + j);
+      } else {
+        P.push_back(Lf[curr].back());
+      }
+    }
+    return totflow;
+  }
+
+  ll GetMaxFlow(int s, int t) {
+    ll totflow = 0;
+    while (ll flow = BlockingFlow(s, t))
+      totflow += flow;
+    return totflow;
+  }
+};
+
+bool ok(double D){
+    Dinic MF(2*N+7);
+    ll src=0, snk=2*N+1;
+    f(i,1,N+1) MF.AddEdge(src,i,1);
+    f(i,1,N+1){
+        f(j,1,N+1){
+            if(dis[i][j]>D) MF.AddEdge(i,N+j,1);
+        }
+    }
+    f(i,1,N+1) MF.AddEdge(N+i,snk,1);
+    return (2*N-MF.GetMaxFlow(src,snk))>=K;
+}
+double dist(PT a,PT b){
+    double dx=a.x-b.x;
+    double dy=a.y-b.y;
+    return sqrt(dx*dx+dy*dy);
+}
+int main(){
+    sll(N,K);
+    f(i,1,N+1){
+        cin>>C[i].x>>C[i].y;
+    }
+    f(i,1,N+1){
+        cin>>M[i].x>>M[i].y;
+    }
+    double l=0, r=0;
+    f(i,1,N+1){
+        f(j,1,N+1){
+            dis[i][j]=dist(C[i],M[j]);
+            r=max(r,dis[i][j]);
+        }
+    }
+    f(i,0,200){
+        if(ok(mid)) r=mid;
+        else l=mid;
+    }
+    cout<<fixed<<setprecision(8)<<mid<<endl;
+}

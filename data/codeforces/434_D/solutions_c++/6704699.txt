@@ -1,0 +1,115 @@
+#include <iostream>
+#include <vector>
+#include <limits>
+#include <queue>
+using namespace std;
+
+struct Edge {
+	int from, to, cap, flow;
+
+	Edge(int from, int to, int cap, int flow):
+		from (from), to (to), cap (cap), flow (flow) {}
+
+	int residual() const {
+		return cap - flow;
+	}
+};
+
+
+struct Dinic {
+	int n;
+	vector<Edge> edge;
+	vector<vector<int> > graph;
+	vector<vector<int>::iterator> work;
+	vector<int> dist;
+
+	Dinic(int n): n (n) {
+		edge.clear();
+		graph.assign(n, vector<int>());
+		work.assign(n, vector<int>::iterator());
+		dist.resize(n);
+	}
+
+	void addEdge(int u, int v, int cap, bool twoway) {
+		graph[u].push_back(edge.size());
+		edge.push_back(Edge(u, v, cap, 0));
+		graph[v].push_back(edge.size());
+		edge.push_back(Edge(v, u, twoway ? cap : 0, 0));
+	}
+
+	void resetNetwork() {
+		for(unsigned i = 0; i < edge.size(); ++i) edge[i].flow = 0;
+	}
+
+	int dfs(int s, int t, int f) {
+		if(s == t) return f;
+		for(vector<int>::iterator &x = work[s]; x != graph[s].end(); ++x) {
+			int v = edge[*x].to;
+			if(dist[s] + 1 == dist[v] && edge[*x].residual() > 0) {
+				int d = dfs(v, t, min(f, edge[*x].residual()));
+				if(d > 0) return edge[*x].flow += d, edge[*x ^ 1].flow -= d, d;
+			}
+		}
+		return 0;
+	}
+
+	bool bfs(int s, int t) {
+		queue<int> q; q.push(s);
+		fill(dist.begin(), dist.end(), -1); dist[s] = 0;
+		while(!q.empty()) {
+			int u = q.front(); q.pop();
+			for(unsigned i = 0; i < graph[u].size(); ++i) {
+				int x = graph[u][i];
+				int v = edge[x].to;
+				if(dist[v] == -1 && edge[x].residual() > 0) {
+					dist[v] = dist[u] + 1;
+					q.push(v);
+				}
+			}
+		}
+		return dist[t] != -1;
+	}
+
+	long long getMaxFlow(int s, int t) {
+		long long totFlow = 0;
+		while(bfs(s, t)) {
+			for(int i = 0; i < n; ++i) work[i] = graph[i].begin();
+			for(int d; (d = dfs(s, t, numeric_limits<int>::max())) != 0; totFlow += d);
+		}
+		return totFlow;
+	}
+};
+
+const int N = 50, MAX = (int) 1e6, INF = (int) 1e9;
+int a[N], b[N], c[N], l[N], r[N];
+
+int get(int u, int x) {
+	return u * 210 + x + 105;
+}
+
+int F(int i, int j) {
+	return a[i] * j * j + b[i] * j + c[i];
+}
+
+int main() {
+	Dinic net (11000);
+	int source = net.n - 2, sink = net.n - 1;
+	int n, m; cin >> n >> m;
+	for(int i = 0; i < n; ++i) cin >> a[i] >> b[i] >> c[i];
+	for(int i = 0; i < n; ++i) {
+		cin >> l[i] >> r[i];
+		net.addEdge(source, get(i, l[i] - 1), INF, false);
+		for(int j = l[i]; j <= r[i]; ++j)
+			net.addEdge(get(i, j - 1), get(i, j), MAX - F(i, j), false);
+		net.addEdge(get(i, r[i]), sink, INF, false);
+	}
+	for(int i = 0; i < m; ++i) {
+		int u, v, d; cin >> u >> v >> d; --u; --v;
+		for(int j = l[u] - 1; j <= r[u]; ++j) {
+			int k = j - d;
+			if(l[v] - 1 <= k && k <= r[v]) net.addEdge(get(u, j), get(v, k), INF, false);
+		}
+	}
+	cout << MAX * n - net.getMaxFlow(source, sink);
+	return 0;
+}

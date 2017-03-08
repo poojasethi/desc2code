@@ -1,0 +1,19 @@
+#include <cstdio>
+int cnt[10]={0};
+int solve[8]={1869, 6189, 1689, 6198, 1698, 8916, 1896, 1869};
+int main() {
+	char c;
+	while( (c=getchar())!='\n' ) cnt[c-'0']++;
+	cnt[1]--, cnt[6]--, cnt[8]--, cnt[9]--;
+	int tmp=0;
+	for(int i=9; i>=1; --i) {
+		while( cnt[i]-- ) {
+			putchar(i+'0');
+			tmp=(tmp*10+i)%7;
+		}
+	}
+	tmp = (tmp*10000)%7;
+	printf("%d", solve[7-tmp]);
+	while(cnt[0]--) putchar('0');
+	putchar('\n');
+}

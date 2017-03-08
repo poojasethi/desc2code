@@ -1,0 +1,208 @@
+#include <bits/stdc++.h>
+#define getcx getchar_unlocked
+
+#ifdef WIN32
+    inline char getchar_unlocked(){return getchar();}
+    inline void putchar_unlocked(char x){putchar(x);}
+#endif // WINDOWS
+using namespace std;
+
+typedef pair<int,int> ii;
+typedef vector<int> vi;
+typedef vector<vi> vvi;
+typedef vector<ii> vii;
+#define sz(a) int((a).size())
+#define pb push_back
+#define mp make_pair
+#define fi first
+#define se second
+#define _(x) memset(x,0,sizeof(x))
+#define all(c) (c).begin(),(c).end()
+#define foreach(c,i) for(typeof((c).begin()) i = (c).begin(); i != (c).end(); i++)
+#define present(c,x) ((c).find(x) != (c).end())
+#define cpresent(c,x) (find(all(c),x) != (c).end())
+#define forall(i,a,b) for(int i=a;i<(b);i++)
+#define forb(i,a,b) for(int i=a;i>=(b);i--)
+#define ll long long
+#define ull unsigned long long
+#define ui unsigned int
+#define PI 3.1415926535897932384626
+inline void pisz(int n) { printf("%d\n",n); }
+#define DBG(vari) cerr<<#vari<<" = "<<(vari)<<endl;
+#define printA(a,L,R) forall(i,L,R) cout << a[i] << (i==R?'\n':' ')
+#define printV(a) printA(a,0,a.size()-1)
+
+
+inline int fi (){//fast input function
+    register int c = getcx();
+    int x = 0;
+    int neg = 0;
+    for(;((c<48 || c>57) && c != '-');c = getcx());
+    if(c=='-') {neg=1;c=getcx();}
+    for(;c>47 && c<58;c = getcx()) {x = (x<<1) + (x<<3) + c - 48;}
+    if(neg) x=-x;
+    return x;
+}
+
+inline void fo(int a) {
+	char snum[20];
+	int i=0;
+    int c =a;
+	do{
+		snum[i++]=a%10+48;
+		a=a/10;
+	}
+	while(a!=0);
+	i=i-1;
+    if(c<0)
+        putchar_unlocked('-');
+	while(i>=0)
+	putchar_unlocked(snum[i--]);
+	putchar_unlocked('\n');
+}
+
+void init(){
+    freopen("BALSEQ.in","r",stdin);
+    //freopen("out.txt","w",stdout);
+}
+
+#define SIZE 100005
+#define INVALID_VAL INT_MAX
+
+int arr[SIZE];
+int tree[4*SIZE];
+int lazy[4*SIZE];
+
+/**
+ *  1. Array index starting from 0.
+ *  2. Ranges include the starting and ending indexes.
+ *  3. int tree_function() defines the type of query.
+ */
+
+int tree_fun(int a, int b){
+    return min(a,b);
+}
+
+void tree_fun_update(int &x, int val){
+    x+=val;
+}
+
+void build_tree(int curr, int l, int r){
+
+    if(l>r) return;
+
+    if(l==r){tree[curr] = arr[l]; return;}
+
+    build_tree(2*curr+1,l,(l+r)/2);
+    build_tree(2*curr+2,(l+r)/2+1,r);
+
+    tree[curr] = tree_fun(tree[2*curr+1],tree[2*curr+2]);
+}
+
+void update_tree(int curr, int l, int r, int a, int b, int val){
+    if(lazy[curr]!=0){
+        tree[curr] += lazy[curr];
+        if(l!=r){
+            lazy[2*curr+1] += lazy[curr];
+            lazy[2*curr+2] += lazy[curr];
+        }
+        lazy[curr] = 0;
+    }
+
+    if(l>r||l>b||r<a) return;
+
+    if(l>=a && r<=b){
+        tree_fun_update(tree[curr],val);
+        if(l != r) {
+			tree_fun_update(lazy[2*curr+1],val);
+			tree_fun_update(lazy[2*curr+2],val);
+		}
+		return;
+    }
+
+    update_tree(2*curr+1,l,(l+r)/2,a,b,val);
+    update_tree(2*curr+2,(l+r)/2+1,r,a,b,val);
+
+    tree[curr] = tree_fun(tree[2*curr+1],tree[2*curr+2]);
+}
+
+int query_tree(int curr, int l, int r, int a, int b){
+    if(l>r||l>b||r<a) return INVALID_VAL;
+
+    if(lazy[curr]!=0){
+        tree[curr] += lazy[curr];
+        if(l!=r){
+            lazy[2*curr+1] += lazy[curr];
+            lazy[2*curr+2] += lazy[curr];
+        }
+        lazy[curr] = 0;
+    }
+
+
+    if(l>=a && r<=b){
+        return tree[curr];
+    }
+
+    return tree_fun(query_tree(2*curr+1,l,(l+r)/2,a,b),
+                    query_tree(2*curr+2,(l+r)/2+1,r,a,b));
+}
+
+void print_tree(int c[], int l, int r){
+    forall(i,l,r){
+        printf("%d ", c[i]);
+    }
+    printf("\n");
+}
+
+char x[SIZE];
+int main()
+{
+    //init();
+    scanf("%s",x);
+    int t =fi();
+    int len = strlen(x);
+
+    forall(i,0,len){
+        if(x[i]=='('){
+            arr[i] = i==0?1:arr[i-1]+1;
+        } else {
+            arr[i] = i==0?-1:arr[i-1]-1;
+        }
+    }
+
+    build_tree(0,0,len-1);
+
+    forall(cx,1,t+1){
+        int l =fi(), r =fi();
+
+        if(x[l]==x[r]){
+            if(query_tree(0,0,len-1,len-1,len-1)==0 &&
+               query_tree(0,0,len-1,0,len-1)>=0){
+                printf("Yes\n");
+            } else{
+                printf("No\n");
+
+            }
+            continue;
+        }
+
+        if(x[l]=='('&&x[r]==')') update_tree(0,0,len-1,l,r-1,-2);
+        if(x[l]==')'&&x[r]=='(') update_tree(0,0,len-1,l,r-1,+2);
+
+        int q1 =query_tree(0,0,len-1,l,r-1);
+        int q2 = query_tree(0,0,len-1,0,len-1);
+        int q3 = query_tree(0,0,len-1,len-1,len-1);
+
+        if (q1>=0 &&
+            q2>=0 &&
+            q3==0){
+            printf("Yes\n");
+        } else {
+            printf("No\n");
+        }
+
+        swap(x[l],x[r]);
+    }
+
+    return 0;
+}

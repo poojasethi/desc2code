@@ -1,0 +1,257 @@
+#include <stdio.h>
+//#include <conio.h>
+//#include <iostream>
+//using namespace std;
+	
+//#define sh(X) cout << #X": " << X << endl;
+	
+typedef struct cellType
+{
+	public:
+	int Aw, Bw, Amax, Bmax, line;
+	bool startLine;
+} cell;
+
+cell cells[62750];
+
+int main()
+{
+	
+	int cases, N, line, colCnt, test, half, M;
+	int offsetA, offsetB, tempMin, tempMaxA, tempMaxB, tempCalc, cellWeightA, cellWeightB;
+	bool firstCommonSpotWaiting, isFirstCell;
+	int diagSelections, selectionCase1, selectionCase2, result1, result2, finalResult;
+	cell *ptr, *firstCommonSpotPtr, *ptrB, *aboveCellPtr;
+	
+	//capturing and storing input
+	
+	scanf("%d",&cases);
+	
+	for ( test = 0 ; test < cases ; test++ )
+	{
+		scanf("%d",&N);
+		if (N == 2)
+		{
+			int a, b, c;
+			scanf("%d %d %d", &a, &b, &c);
+			printf("%d", a+b+c);
+			if (test < cases - 1)
+				printf("\n");
+			continue;
+		}
+		
+		half = (N >> 1) + 1;
+		ptr = cells;
+		firstCommonSpotWaiting = true;
+		scanf("%d",&((*ptr).Aw));
+		ptr->startLine = true;
+		ptr->line = 1;
+		ptr++;
+		for (line = 2 ; line < half ; line++)
+		{
+			colCnt = 1;
+			do
+			{
+				scanf("%d",&((*ptr).Aw));
+				ptr->line = line;
+				ptr->startLine = (colCnt == 1);
+				ptr++;
+			}
+			while (colCnt++ < line);
+		}
+		
+		do
+		{
+			M = N - line + 1;
+			colCnt = 1;
+			
+			while ( colCnt < M )
+			{
+				//cout << "phase 1: line " << line << " , colCnt " << colCnt << " -> ";
+				scanf("%d",&((*ptr).Aw));
+				ptr->line = line;
+				ptr->startLine = (colCnt == 1);
+				ptr++;
+				colCnt++;
+			}
+
+			//cout << "phase 2: line " << line << " , colCnt " << colCnt << " -> ";
+			scanf("%d", &((*ptr).Bw));
+			ptr->Aw = ptr->Bw;
+			if (firstCommonSpotWaiting)
+			{
+				firstCommonSpotWaiting = false;
+				firstCommonSpotPtr = ptr;
+			}
+			ptrB = ptr;
+			ptr->line = line;
+			ptr->startLine = (line == N);
+			ptr++;
+			colCnt++;
+			while ( colCnt <= line )
+			{
+				//cout << "phase 3: line " << line << " , colCnt " << colCnt << " -> ";
+				tempCalc = N - colCnt + 1;
+				tempMin = (colCnt < tempCalc ? colCnt : tempCalc);
+				ptrB -= tempMin;
+				scanf("%d",&((*ptrB).Bw));
+				colCnt++;
+			}
+		}
+		while ( line++ < N );
+		
+		/*
+		cout << "exited" << endl;
+		//debug
+		for (int i = 0 ; i < ptr-cells ; i++)
+			printf("cell %d Aw: %d\n", i, cells[i].Aw);
+		printf("--------\n");
+		for (int i = 0 ; i < ptr-cells ; i++)
+			printf("cell %d Bw: %d\n", i, cells[i].Bw);
+		for (int i = 0 ; i < ptr-cells ; i++)
+			printf("cell %d startLine: %d\n", i, cells[i].startLine);
+		*/
+		
+		//finding max path for every cell
+		
+		ptr = cells;
+		ptr->Amax = ptr->Aw;
+		ptr->Bmax = ptr->Bw;
+		ptr++;
+		for (line = 2 ; line < half ; line++ )
+		{
+			colCnt = 0;
+			do
+			{
+				cellWeightA = ptr->Aw;
+				cellWeightB = ptr->Bw;
+				aboveCellPtr = ptr - line + 1;
+				tempMaxA = aboveCellPtr->Amax + cellWeightA;
+				tempMaxB = aboveCellPtr->Bmax + cellWeightB;
+				if ( (ptr+1)->startLine )
+					tempMaxA = tempMaxB = 0;
+				aboveCellPtr--;
+				if (colCnt)
+				{
+					tempCalc = aboveCellPtr->Amax + cellWeightA;
+					if ( tempCalc > tempMaxA ) tempMaxA = tempCalc;
+					tempCalc = aboveCellPtr->Bmax + cellWeightB;
+					if ( tempCalc > tempMaxB ) tempMaxB = tempCalc;					
+				}
+				aboveCellPtr += 2;
+				if ( aboveCellPtr->line < line )
+				{
+					tempCalc = aboveCellPtr->Amax + cellWeightA;
+					if ( tempCalc > tempMaxA ) tempMaxA = tempCalc;
+					tempCalc = aboveCellPtr->Bmax + cellWeightB;
+					if ( tempCalc > tempMaxB ) tempMaxB = tempCalc;	
+				}
+				
+				ptr->Amax = tempMaxA;
+				ptr->Bmax = tempMaxB;
+				//cout << "offset111 " << ptr-cells << " -> Amax : " << ptr->Amax << " , Bmax : " << ptr->Bmax << endl;
+				ptr++;
+				colCnt++;
+			}
+			while ((ptr+1)->line == line);		//start_lines[line] checks the start of the NEXT line
+			ptr->Amax = (ptr-line)->Amax + ptr->Aw;
+			ptr->Bmax = (ptr-line)->Bmax + ptr->Bw;
+			//cout << "offset222 " << ptr-cells << " -> Amax : " << ptr->Amax << " , Bmax : " << ptr->Bmax << endl;
+			ptr++;
+		}
+
+		do
+		{
+			colCnt = 0;
+			do
+			{
+				cellWeightA = ptr->Aw;
+				cellWeightB = ptr->Bw;
+				
+				aboveCellPtr = ptr - N + line - 2;
+				if (line == half)
+					aboveCellPtr = ptr - line + 1;
+
+				tempMaxA = aboveCellPtr->Amax + cellWeightA;
+				tempMaxB = aboveCellPtr->Bmax + cellWeightB;
+				
+				if ( (ptr == firstCommonSpotPtr) && (N % 2) )
+					tempMaxA = tempMaxB = 0;
+				
+				aboveCellPtr--;
+				if (colCnt)
+				{
+					tempCalc = aboveCellPtr->Amax + cellWeightA;
+					if ( tempCalc > tempMaxA ) tempMaxA = tempCalc;
+					tempCalc = aboveCellPtr->Bmax + cellWeightB;
+					if ( tempCalc > tempMaxB ) tempMaxB = tempCalc;					
+				}
+				aboveCellPtr += 2;
+				if ( aboveCellPtr->line < line )
+				{
+					tempCalc = aboveCellPtr->Amax + cellWeightA;
+					if ( tempCalc > tempMaxA ) 
+						tempMaxA = tempCalc;
+						
+					tempCalc = aboveCellPtr->Bmax + cellWeightB;
+					if ( tempCalc > tempMaxB )
+						tempMaxB = tempCalc;
+				}
+				ptr->Amax = tempMaxA;
+				ptr->Bmax = tempMaxB;
+				//cout << "offset333 " << ptr-cells << " -> Amax : " << ptr->Amax << " , Bmax : " << ptr->Bmax << endl;
+				
+				//debug
+				if (line == N - 1)
+				{
+					//cout << "aristera: max " << ptr->Amax << endl;
+					//cout << "dexia: max " << ptr->Bmax << endl;
+					if ( colCnt == 1 )
+					{
+						//cout << "diag1: " << ptr->Amax << endl;
+						//cout << "diag2: " << (ptr-1)->Amax << endl;
+						diagSelections = 0;
+						if ( ptr->Amax >= (ptr-1)->Amax )
+						{
+							diagSelections++;
+							result1 = ptr->Amax;
+						}
+						else
+							result1 = (ptr-1)->Amax;
+							
+						if ( ptr->Bmax >= (ptr-1)->Bmax )
+						{
+							diagSelections++;
+							result2 = ptr->Bmax;
+						}
+						else
+							result2 = (ptr-1)->Bmax;
+							
+						if ( diagSelections == 2 )
+						{
+							selectionCase1 = ptr->Amax + (ptr-1)->Bmax;
+							selectionCase2 = ptr->Bmax + (ptr-1)->Amax;
+							finalResult = (selectionCase1 > selectionCase2 ? selectionCase1 : selectionCase2);
+						}
+						else
+							finalResult = result1 + result2;
+					}
+				}
+				
+				ptr++;
+				colCnt++;
+			}
+			while (!ptr->startLine);		//start_lines[line] checks the start of the NEXT line
+		}
+		while ( line++ < N - 1 );
+		//cout << "preFinal: " << finalResult << endl;
+		finalResult += ptr->Aw;
+		//cout << "final: " << finalResult << endl;
+		printf("%d", finalResult);
+		if ( test < cases - 1 )
+			printf("\n");
+	}
+	
+	//getch();
+	return 0;
+}

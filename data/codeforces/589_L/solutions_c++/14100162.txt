@@ -1,0 +1,139 @@
+#include<cstdio>
+#include<iostream>
+#include<cstring>
+#include<algorithm>
+#include<vector>
+#include<string>
+#include<cmath>
+
+using namespace std;
+const int MAX = 200;
+char s[1000][1000];
+
+int main() {
+	vector<int> lrtb[4][MAX];
+	int n, m, k;
+	cin >> n >> m >> k;
+	vector<int> sizes(MAX);
+	for (int i=0;i<k;++i) {
+		string name, trbl[4];
+		cin >> name >> trbl[2] >> trbl[1] >> trbl[3] >> trbl[0];
+		int nm = name[0];
+		sizes[nm] = 1;
+		for (int c=0;c<4;++c)
+			if (trbl[c] != "~")
+				for (size_t j=0;j<trbl[c].size();++j)
+					lrtb[c][nm].push_back(trbl[c][j]);
+	}
+	vector<vector<double> > system;
+	for (int i=0;i<MAX;++i)
+		if (sizes[i] > 0) {
+			for (int x=0;x<2;++x) {
+				vector<double> line(MAX+1);
+				line[i] = 1;
+				for (int c=x*2;c<x*2+2;++c) {
+					int cur = i;
+					while (!lrtb[c][cur].empty()) {
+						cur = lrtb[c][cur].front();
+						line[cur] = 1;
+					}
+				}
+				line[MAX] = x ? n : m;
+				system.push_back(line);
+			}
+		}
+	for (int i=0;i<MAX;++i) {
+		for (int j=0;j<3;j+=2)
+			if (lrtb[j+1][i].size() >= 1) {
+				vector<double> line(MAX+1);
+				line[i] = 1;
+				bool h = true;
+				vector<int> &v = lrtb[j+1][i];
+				for (size_t t=0;t<v.size();++t) {
+					line[lrtb[j+1][i][t]] = -1;
+					h = h && lrtb[j][lrtb[j+1][i][t]].size() == 1;
+				}
+				if (h)
+					system.push_back(line);
+			}
+	}
+	vector<int> u(system.size(), -1);
+	for (int i=0;i<MAX;++i) {
+		int best = -1;
+		for (size_t j=0;j<system.size();++j)
+			if (u[j] == -1 && fabs(system[j][i]) >= 1e-5 && (best == -1 || fabs(system[j][i]) < fabs(system[best][i])))
+				best = j;
+		if (best == -1)
+			continue;
+		u[best] = i;
+		for (size_t j=0;j<system.size();++j)
+			if (j != best) {
+				double coeff = system[j][i] / system[best][i];
+				for (int t=0;t<=MAX;++t)
+					system[j][t] -= system[best][t] * coeff;
+			}
+	}
+	int cnt = 0;
+	for (size_t i=0;i<system.size();++i)
+		if (u[i] != -1)
+		{
+			sizes[u[i]] = system[i].back() / system[i][u[i]] + 0.5;
+			//cout << (char)u[i] << ' ' << system[i].back() / system[i][u[i]] << endl;
+			cnt++;
+		}
+	if (cnt != k) {
+		cout << "Bad!" << endl;
+		return 0;
+	}
+	for (int i=0;i<MAX;++i)
+		if (sizes[i]) {
+			int cur = i, l=0, t=0;
+			while (!lrtb[0][cur].empty())
+				l += sizes[cur = lrtb[0][cur][0]];
+			cur = i;
+			while (!lrtb[2][cur].empty())
+				t += sizes[cur = lrtb[2][cur][0]];
+			for (int j=t;j<t+sizes[i];++j)
+				for (int z=l;z<l+sizes[i];++z)
+					s[j][z] = i;
+		}
+	for (int i=0;i<n;++i)
+		cout << s[i] << endl;
+	return 0;
+}
+/*
+5 6 15
+' # / ! "
+& % ~ ~ ,.
+% (- ~ & /#
+, . & ~ !
+( ~ - % #
+. / & , !
+- ~ ~ % (
++ ~ # " )
+" )+ '# $! ~
+) ~ + " ~
+/ # % . '
+* $ ! ~ ~
+$ " ! * ~
+! '" ., ~ $*
+# ~ (% '/ +"
+
+
+2 2 4
+# ~ ~ $ !
+! ~ # " ~
+$ # ~ ~ "
+" ! $ ~ ~
+
+
+
+
+5 4 6
+a  ~ b zc ~
+z ba  ~  ~ dce
+e d z  ~  ~
+b  ~  ~ z a
+c a z d  ~
+d c z e  ~
+*/

@@ -1,0 +1,40 @@
+#include<iostream>
+#include<algorithm>
+#include<vector>
+using namespace std;
+
+int n, w[2000], h[2000];
+vector<int> g;
+
+int main(){
+	ios::sync_with_stdio(0);
+	cin >> n;
+	for (int i=0 ; i<n ; i++)
+		cin >> w[i] >> h[i];
+	
+	int J = 1000 * 1000 * 1000;
+	for (int H=1 ; H<=1000 ; H++){
+		g.clear();
+		int t = 0;
+		int b = 0;
+		int W = 0;
+		for (int i=0 ; i<n ; i++){
+			if (w[i]>H && h[i]>H) b = 1;
+			if (h[i]>H){
+				t++;
+				W += h[i];
+			}else{
+				W += w[i];
+				if (h[i]<w[i] && w[i]<=H)
+					g.push_back(w[i]-h[i]);
+			}
+		}
+		if (b || t>n/2) continue;
+		sort(g.begin(), g.end());
+		reverse(g.begin(), g.end());
+		for (int i=0 ; i<g.size() && i<n/2-t ; i++)
+			W -= g[i];
+		J = min(J, W*H);
+	}
+	cout << J << endl;
+}

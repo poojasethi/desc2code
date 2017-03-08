@@ -1,0 +1,117 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+const int maxn = 200000 + 10;
+
+typedef pair<int, int> ii;
+
+vector<int> E[maxn];
+vector<ii> G[maxn];
+ii edge[maxn];
+int n, m, q;
+int pre[maxn], low[maxn], clock, st[maxn], top, belong[maxn], cnt;
+int fa[maxn], mark1[maxn], mark2[maxn], f[maxn][20], dep[maxn];
+
+void dfs(int u, int from) {
+    pre[u] = low[u] = ++clock;
+    st[++top] = u;
+    for(int j = 0; j < G[u].size(); j++) {
+        int v = G[u][j].first;
+        if(G[u][j].second == from) continue;
+        if(!pre[v])
+            dfs(v, G[u][j].second), low[u] = min(low[u], low[v]);
+        else low[u] = min(low[u], pre[v]);
+    }
+    if(pre[u] == low[u]) {
+        int tmp; cnt++;
+        do {
+            tmp = st[top--];
+            belong[tmp] = cnt;
+        } while(tmp != u);
+    }
+}
+
+int find(int x) { return fa[x] == x ? x : fa[x] = find(fa[x]); }
+
+void dfs1(int u) {
+    dep[u] = dep[f[u][0]] + 1;
+    for(int i = 1; i < 20; i++)
+        f[u][i] = f[f[u][i - 1]][i - 1];
+    for(int j = 0; j < E[u].size(); j++) {
+        int v = E[u][j];
+        if(v == f[u][0]) continue;
+        f[v][0] = u;
+        dfs1(v);
+    }
+}
+
+int lca(int u, int v) {
+    if(dep[u] > dep[v])
+        swap(u, v);
+    for(int j = 19; j >= 0; j--)
+        if(dep[f[v][j]] >= dep[u])
+            v = f[v][j];
+    if(u == v) return u;
+    for(int j = 19; j >= 0; j--)
+        if(f[u][j] != f[v][j]) u = f[u][j], v = f[v][j];
+    return f[u][0];
+}
+
+void dfs2(int u) {
+    for(int j = 0; j < E[u].size(); j++) {
+        int v = E[u][j];
+        if(v != f[u][0]) {
+            dfs2(v);
+            mark1[u] += mark1[v];
+            mark2[u] += mark2[v];
+        }
+    }
+    if(mark1[u] && mark2[u])
+        exit((puts("No"),0));
+}
+
+int main() {
+    scanf("%d%d%d", &n, &m, &q);
+    for(int i = 1; i <= m; i++) {
+        int u, v; scanf("%d%d", &u, &v);
+        G[u].push_back(ii(v, i));
+        G[v].push_back(ii(u, i));
+        edge[i] = make_pair(u, v);
+    }
+    for(int i = 1; i <= n; i++)
+        if(!belong[i]) dfs(i, 0);
+    for(int i = 1; i <= cnt; i++)
+        fa[i] = i;
+    for(int i = 1; i <= m; i++) {
+        int u = belong[edge[i].first];
+        int v = belong[edge[i].second];
+        if(u != v) {
+            E[u].push_back(v);
+            E[v].push_back(u);
+            fa[find(u)] = find(v);
+        }
+    }
+    for(int i = 1; i <= cnt; i++)
+        if(i == find(i))
+            dfs1(i);
+    for(int i = 1; i <= q; i++) {
+        int u, v; scanf("%d%d", &u, &v);
+        u = belong[u]; v = belong[v];
+        if(find(u) != find(v)) {
+            puts("No");
+            return 0;
+        }
+        int anc = lca(u, v);
+        mark1[u]++; mark2[v]++;
+        mark1[anc]--; mark2[anc]--;
+    }
+    for(int i = 1; i <= cnt; i++)
+        if(i == find(i))
+            dfs2(i);
+    puts("Yes");
+    return 0;
+}

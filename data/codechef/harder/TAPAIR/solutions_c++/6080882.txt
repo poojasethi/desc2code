@@ -1,0 +1,179 @@
+#include <algorithm>
+#include <bitset>
+#include <cassert>
+#include <cctype>
+#include <cmath>
+#include <complex>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <iostream>
+#include <map>
+#include <queue>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+using namespace std;
+
+#define pb push_back
+#define fi first
+#define se second
+#define all(x) (x).begin(), (x).end()
+#define sz(x) (int((x).size()))
+#define bit(x) (1 << (x))
+
+#ifdef _WIN32
+#define LLD "%I64d"
+#else
+#define LLD "%lld"
+#endif
+
+template<class T>
+inline void chkmax(T& x, T y) {
+	if (x < y) x = y;
+}
+
+template<class T>
+inline void chkmin(T& x, T y) {
+	if (y < x) x = y;
+}
+
+typedef long long LL;
+typedef pair<int, int> PII;
+typedef vector<int> VI;
+const int MX = 100005;
+const int MOD = 1000000007;
+int n, m;
+VI adj[MX], fwd[MX], bck[MX];
+int dp[MX];
+int d[MX], ctr;
+int bdp[MX * 3], bn;
+LL inv[MX * 3];
+
+LL modPow(LL a, LL n, int m) {
+	LL r;
+	
+	a %= m;
+	if (a < 0) a += m;
+	for (r = 1; n; n /= 2) {
+		if (n & 1) r = r * a % m;
+		a = a * a % m;
+	}
+	return r;
+}
+
+void init_inv() {
+	inv[1] = 1;
+	for (int i = 2; i <= bn; i++) inv[i] = inv[MOD % i] * (MOD - MOD / i) % MOD;
+}
+
+struct State {
+	int cnt, sum, pro;
+	
+	State() {
+		cnt = sum = 0;
+		pro = 1;
+	}
+	State(int cnt, int sum, int pro) : cnt(cnt), sum(sum), pro(pro) {}
+	
+	void add(State& s) {
+		cnt += s.cnt;
+		sum = (sum + s.sum) % MOD;
+		pro = LL(pro) * s.pro % MOD;
+	}
+	void invert() {
+		cnt = -cnt;
+		sum = (MOD - sum) % MOD;
+		pro = modPow(pro, MOD - 2, MOD);
+	}
+	
+	bool operator<(const State& s) const {
+		if (cnt != s.cnt) return cnt < s.cnt;
+		if (sum != s.sum) return sum < s.sum;
+		return pro < s.pro;
+	}
+} s[MX], t[MX];
+
+void DFS(int u, int p) {
+	int i, v;
+	
+	dp[u] = dp[p] + 1;
+	d[u] = ++ctr;
+	for (i = sz(adj[u]) - 1; i >= 0; i--) {
+		v = adj[u][i];
+		if (v == p) continue;
+		if (!d[v]) {
+			fwd[u].pb(v);
+			DFS(v, u);
+		}
+		else if (d[v] < d[u]) {
+			bdp[++bn] = dp[v];
+			bck[u].pb(bn);
+		}
+	}
+}
+
+void add(int k, State d) {
+	for (; k <= n; k += k & -k) s[k].add(d);
+}
+
+State get(int k) {
+	State rlt;
+	for (; k > 0; k -= k & -k) rlt.add(s[k]);
+	return rlt;
+}
+
+void DFS1(int u) {
+	int i, j;
+	
+	for (i = sz(bck[u]) - 1; i >= 0; i--) {
+		j = bck[u][i];
+		add(bdp[j], State(1, j, j));
+		add(dp[u], State(-1, MOD - j, inv[j]));
+	}
+	for (i = sz(fwd[u]) - 1; i >= 0; i--) DFS1(fwd[u][i]);
+	
+	if (u == 1) return;
+	t[u] = get(dp[u] - 1);
+	t[u].invert();
+	add(dp[u] - 1, t[u]);
+	t[u].invert();
+	add(dp[u], t[u]);
+}
+
+int main() {
+	#ifndef ONLINE_JUDGE
+		freopen("in.txt", "r", stdin);
+		freopen("out.txt", "w", stdout);
+	#endif
+	
+	int i, j, k;
+	LL val, rlt;
+	
+	scanf("%d%d", &n, &m);
+	for (k = 0; k < m; k++) {
+		scanf("%d%d", &i, &j);
+		adj[i].pb(j);
+		adj[j].pb(i);
+	}
+	DFS(1, 0);
+	init_inv();
+	DFS1(1);
+	
+	sort(t + 2, t + n + 1);
+	rlt = 0;
+	for (i = 2; i <= n; i = j) {
+		for (j = i + 1; j <= n; j++) {
+			if (t[i] < t[j]) break;
+		}
+		val = j - i;
+		k = t[i].cnt;
+		if (k == 0) rlt += val * (m - val);
+		if (k == 1) val++;
+		rlt += val * (val - 1) / 2;
+	}
+	printf(LLD "\n", rlt);
+	return 0;
+}

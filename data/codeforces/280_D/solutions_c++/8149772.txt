@@ -1,0 +1,133 @@
+#include <algorithm>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+#define N 100010
+#define inf 100000000
+#define For(i,x,y) for (i=x;i<=y;i++)
+using namespace std;
+struct w {
+	int a,l,r;
+	inline w operator + (const w &A) {
+		return (w){a+A.a,min(l,A.l),max(r,A.r)};
+	}
+};
+struct ww {
+	w mal,mil,mar,mir,maa,mia,s;
+	int c;
+	inline void fan() {
+		c^=1;
+		mal.a=-mal.a;
+		mil.a=-mil.a;
+		mar.a=-mar.a;
+		mir.a=-mir.a;
+		maa.a=-maa.a;
+		mia.a=-mia.a;
+		s.a=-s.a;
+		swap(mal,mil);
+		swap(mar,mir);
+		swap(maa,mia);
+	}
+} tr[N*4];
+int i,j,k,n,m,x,y,ty;
+int a[N],L[N],R[N];
+inline w max(w A,w B) {
+	if (A.a>B.a) return A;
+	else return B;
+}
+inline w min(w A,w B) {
+	if (A.a<B.a) return A;
+	else return B;
+}
+inline void update(ww &A,ww B,ww C) {
+	A.mal=max(B.mal,B.s+C.mal);
+	A.mil=min(B.mil,B.s+C.mil);
+	A.mar=max(C.mar,C.s+B.mar);
+	A.mir=min(C.mir,C.s+B.mir);
+	A.maa=max(max(B.maa,C.maa),B.mar+C.mal);
+	A.mia=min(min(B.mia,C.mia),B.mir+C.mil);
+	A.s=B.s+C.s;
+}
+void build(int q,int x,int y) {
+	if (x==y) {
+		w A={a[x],x,x};
+		tr[q]=(ww){A,A,A,A,A,A,A};
+		return;
+	}
+	int mid=(x+y)/2;
+	build(q*2,x,mid);
+	build(q*2+1,mid+1,y);
+	update(tr[q],tr[q*2],tr[q*2+1]);
+}
+inline void renew(int x) {
+	if (tr[x].c) tr[x*2].fan(),tr[x*2+1].fan();
+	tr[x].c=0;
+}
+void change(int q,int x,int y,int k,int t) {
+	if (x==y) {
+		w A={t,x,x};
+		tr[q]=(ww){A,A,A,A,A,A,A};
+		return;
+	}
+	renew(q);
+	int mid=(x+y)/2;
+	if (k<=mid) change(q*2,x,mid,k,t);
+	else change(q*2+1,mid+1,y,k,t);
+	update(tr[q],tr[q*2],tr[q*2+1]);
+}
+ww cal(int q,int x,int y,int l,int r) {
+	if (l<=x&&y<=r)
+	return tr[q];
+	renew(q);
+	int mid=(x+y)/2,F=0;
+	ww A;
+	if (l<=mid) F=1,A=cal(q*2,x,mid,l,r);
+	if (mid<r) {
+		ww B=cal(q*2+1,mid+1,y,l,r);
+		if (!F) F=1,A=B;
+		else {
+			ww C=A;
+			update(A,C,B);
+		}
+	}
+	return A;
+}
+void reverse(int q,int x,int y,int l,int r) {
+	if (l<=x&&y<=r) {
+		tr[q].fan();
+		return;
+	}
+	renew(q);
+	int mid=(x+y)/2;
+	if (l<=mid) reverse(q*2,x,mid,l,r);
+	if (mid<r) reverse(q*2+1,mid+1,y,l,r);
+	update(tr[q],tr[q*2],tr[q*2+1]);
+}
+int main() {
+	//freopen("280d.in","r",stdin);
+	scanf("%d",&n);
+	For(i,1,n) scanf("%d",&a[i]);
+	build(1,1,n);
+	scanf("%d",&m);
+	For(j,1,m) {
+		scanf("%d",&ty);
+		if (!ty) {
+			scanf("%d%d",&x,&y);
+			change(1,1,n,x,y);
+		} else {
+			scanf("%d%d%d",&x,&y,&k);
+			int an=0;
+			For(i,1,k) {
+				ww A=cal(1,1,n,x,y);
+				if (A.maa.a<=0) break;
+				L[i]=A.maa.l,R[i]=A.maa.r;
+				an+=A.maa.a;
+				reverse(1,1,n,L[i],R[i]);
+			}
+			k=i-1;
+			printf("%d\n",an);
+			For(i,1,k) reverse(1,1,n,L[i],R[i]);
+		}
+	}
+	return 0;
+}

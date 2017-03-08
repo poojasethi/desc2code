@@ -1,0 +1,134 @@
+#include <iostream>
+#include <cmath>
+#include <map>
+#include <algorithm>
+#define LEFT L, mid, id << 1
+#define RIGHT mid + 1, R, (id << 1) + 1
+#define MID int mid = (L + R) / 2;
+#define rep(i, n) for (int i = 1; i <= n; i ++)
+
+using namespace std;
+const int INF = 0x3f3f3f3f;
+const int MX = 700000 + 10;
+
+map <int, int> H;
+
+int N, K, D;
+int RLT, st;
+int inn, den;
+int a[MX], INC[MX], DEC[MX];
+
+struct Tree {
+	int ma, mi, res;
+	int L, mau, miu;
+	int init() {ma = res = INF; mau = miu = mi = 0;}
+}T[MX];
+
+int build_Tree(int L, int R, int id) {
+	T[id].init();
+	T[id].L = L;
+	if (L == R) return 0;
+	MID;
+	build_Tree(LEFT);
+	build_Tree(RIGHT);
+}
+
+int change(int id, int val, int flag) {
+	if (flag) T[id].ma = T[id].mau = val;
+	else T[id].mi = T[id].L - val, T[id].miu = val;
+	T[id].res = T[id].ma + T[id].mi;
+}
+
+int update_to_child(int id) {
+	if (T[id].mau) {
+		change(id << 1, T[id].mau, 1);
+		change((id << 1) + 1, T[id].mau, 1);
+	}
+	if (T[id].miu) {
+		change(id*2, T[id].miu, 0);
+		change(id*2 + 1, T[id].miu, 0);
+	}
+	T[id].mau = T[id].miu = 0;
+} 
+
+int update_from_child(int id) {
+	int L(id << 1), R((id << 1) + 1);
+	T[id].ma = min(T[L].ma, T[R].ma);
+	T[id].mi = min(T[L].mi, T[R].mi);
+	T[id].res = min(T[L].res, T[R].res);
+}
+
+int modify(int L, int R, int id, int l, int r, int val, int flag) {
+	if (L == l && R == r) {
+		change(id, val, flag);
+		return 0;	
+	}	      
+	MID;
+	update_to_child(id);
+	
+	if (mid >= r) modify(LEFT, l, r, val, flag);
+	else if (mid + 1 <= l) modify(RIGHT, l, r, val, flag);
+	else modify(LEFT, l, mid, val, flag), modify(RIGHT, mid + 1, r, val, flag);
+	
+	update_from_child(id);
+}
+
+int get(int L, int R, int id, int k) {
+	if (L == R) return T[id].res <= k ? L : INF;
+	MID;
+	update_to_child(id);
+	return T[id*2].res <= k? get(LEFT, k) : get(RIGHT, k);
+}
+
+int simple_solve() {
+	int cnt(0);
+	rep(i, N) {
+		if (a[i] != a[i - 1]) cnt = 1;
+		else cnt ++;
+		if (RLT < cnt) {
+			RLT = cnt;
+			st = i;
+		}		
+	}
+	cout << st - RLT + 1 << ' ' << st << endl;
+}
+
+int main() {
+	
+	int mi = INF, Last = 0, pos;
+	
+	cin >> N >> K >> D;
+	rep(i, N) cin >> a[i], mi = min(mi, a[i]);
+	if (mi < 0) rep(i, N) a[i] += abs(mi) + 1;
+	
+	if (!D) {
+		simple_solve();
+		return 0;
+	}
+	
+	build_Tree(1, N, 1);
+
+	rep(i, N){
+		Last = max(Last, H[a[i]]);
+		H[a[i]] = i;
+		if (a[i] % D != a[i - 1] % D) Last = i - 1;
+		
+		while (inn && a[INC[inn]] > a[i]) inn --;
+		while (den && a[DEC[den]] < a[i]) den --;
+		
+		modify(1, N, 1, INC[inn] + 1, i, a[i] / D + 1, 0);
+		modify(1, N, 1, DEC[den] + 1, i, a[i] / D + 1, 1);
+		INC[++ inn] = i; DEC[++ den] = i;
+		
+		if (Last) modify(1, N, 1, 1, Last, INF, 1);
+		pos = get(1, N, 1, K + i);
+		if (i - pos + 1 > RLT) {
+			RLT = i - pos + 1;
+			st = pos;
+		}
+	}
+	
+	cout << st << ' ' << st + RLT - 1 << endl;
+	
+	return 0;
+}

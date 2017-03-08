@@ -1,0 +1,136 @@
+
+#include<bits/stdc++.h>
+using namespace std;
+#define D(x)        cout<<#x " = "<<(x)<<endl
+#define un(x)       x.erase(unique(all(x)), x.end())
+#define sf(n)       scanf("%d", &n)
+#define sff(a,b)    scanf("%d %d", &a, &b)
+#define sfff(a,b,c) scanf("%d %d %d", &a, &b, &c)
+#define pb          push_back
+#define mp          make_pair
+#define xx          first
+#define yy          second
+#define MAX         100000
+typedef long long int LL;
+
+char str[10];
+
+//Maintains Max Heap
+struct Treap{
+    int val, prior, cnt;
+    Treap *l, *r;
+    Treap(int v): l(NULL), r(NULL), val(v), prior(rand()), cnt(1) {}
+}*rt[3*MAX+11]; // initialize the root if declared locally
+
+int sz(Treap *t) {return (t == NULL) ? 0:t->cnt;}
+
+void upd_sz(Treap *t){
+    if(t) t->cnt = 1 + sz(t->l) + sz(t->r);
+}
+
+void split(Treap *t, Treap *&l, Treap *&r, int key)
+{
+    if(!t) l = r = NULL;
+    else if(t->val <= key) {split(t->r, t->r, r, key); l = t;}
+    else {split(t->l, l, t->l, key); r = t;}
+    upd_sz(t);
+}
+
+void merge(Treap *&t, Treap *l, Treap *r) //needed to erase something
+{
+    if(!l || !r) t = l? l:r;
+    if(l->prior > r->prior) {merge(l->r, l->r, r); t = l;}
+    else {merge(r->l, l, r->l);t = r;}
+    upd_sz(t);
+}
+
+//don't insert duplicate and allocate memory before insertion
+//inserts just a node, not a Treap
+void insert(Treap *&t, Treap *it)
+{
+    if(!t) t = it;
+    else if(it->prior > t->prior){split(t, it->l, it->r, it->val);t = it;}
+    else if (it->val > t->val) insert(t->r, it);
+    else insert(t->l, it);
+    upd_sz(t);
+}
+
+void erase(Treap *&t, int key)
+{
+    if(!t) return;
+    else if(t->val == key) {Treap *temp = t; merge(t,t->l, t->r); delete(temp);}
+    else if(key > t->val) erase(t->r, key);
+    else erase(t->l, key);
+    upd_sz(t);
+}
+
+bool find(Treap *t, int key)
+{
+    if(!t) return false;
+    if(t->val == key) return true;
+    return (key > t->val)? find(t->r, key):find(t->l, key);
+}
+
+void shift(Treap *&u, Treap *v)
+{
+    if(!v) return;
+    insert(u, new Treap(v->val));
+    shift(u, v->l);
+    shift(u, v->r);
+}
+
+void rmv(Treap *u)
+{
+    if(!u) return;
+    rmv(u->l);
+    rmv(u->r);
+    delete(u);
+}
+
+Treap* join(Treap *u, Treap *v)
+{
+    if(sz(u) < sz(v)) swap(u,v);
+    shift(u,v);
+    rmv(v);
+    return u;
+}
+
+int go(Treap *cur, int rem)
+{
+    if(sz(cur->l) < rem)
+    {
+        rem -= sz(cur->l);
+        if(rem == 1) return cur->val;
+        return go(cur->r, rem-1);
+    }
+    return go(cur->l, rem);
+}
+
+
+int main()
+{
+    int i, j, k, n, m;
+    int u, v, idx;
+
+    sff(n,m);
+    for(i = 1; i <= n; i++)
+        rt[i] = new Treap(i);
+    i--;
+
+    for(j = 1; j <= m; j++)
+    {
+        scanf("%s", str);
+        if(str[0] == 'U')
+        {
+            sff(u,v);
+            i++;
+            rt[i] = join(rt[u], rt[v]);
+        }
+        else
+        {
+            sff(idx, k);
+            printf("%d\n", go(rt[idx], k));
+        }
+    }
+    return 0;
+}

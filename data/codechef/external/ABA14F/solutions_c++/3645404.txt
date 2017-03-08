@@ -1,0 +1,194 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <deque>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <string.h>
+#include <string>
+#include <queue>
+#include <iterator>
+ 
+using namespace std;
+ 
+#define F(i,start,n) for(int i=start;i<n;i++)
+#define sz(a) int((a).size()) 
+#define P_B push_back
+#define mp make_pair 
+#define all(c) (c).begin(),(c).end() 
+#define trav(c,i) for( typeof((c).begin()) i = (c).begin() ; i != (c).end() ; i++ ) 
+#define present(c,x) ((c).find(x) != (c).end()) 
+#define cpresent(c,x) (find(all(c),x) != (c).end())
+ 
+template<class T>string ToString(T t){stringstream s;s<<t;return s.str();}
+template<class T>void ToOther(T& t,string a){stringstream s(a);s>>t;}
+ 
+int R,C,W; 
+char GRID[20][20][20];
+int coinsL[20][20][20];
+int states[20][20][20][1<<12];
+bool visited[20][20][20][1<<12];
+int dr[] = {1,-1,0,0};
+int dc[] = {0,0,1,-1};
+ 
+ 
+bool isWorldsafe(int w) {
+	return w>=0 && w<W;
+}
+ 
+bool isBound(int w,int x,int y) {
+	return isWorldsafe(w) && x>=0 && x<R && y>=0 && y<C;
+} 
+ 
+int search(int ws,int SX,int SY,int TC) {
+ 
+	queue<pair< int,pair< int,pair< int,int > > > > Q;
+	
+	Q.push(mp(ws,mp(SX,mp(SY,0))));
+	
+	while( !Q.empty() ) {
+		
+		int world = Q.front().first;
+		int x = Q.front().second.first;
+		int y = Q.front().second.second.first;
+		int coins = Q.front().second.second.second;
+		Q.pop();
+		
+		if( GRID[world][x][y] == 'M' ) {
+			
+			if( ((1<<(TC))-1) == coins ) {
+				
+				return states[world][x][y][coins];
+			
+			}
+		
+			continue;
+		
+		}
+			
+		if( !isBound(world,x,y) || GRID[world][x][y]=='#' || visited[world][x][y][coins] ) {
+			continue;
+		}
+		
+		int newWorld = world , xx , yy , newCoins = coins;
+		
+		visited[world][x][y][coins] = true;
+		
+		if( GRID[world][x][y] == 'U' ) {
+	
+			newWorld = world-1;
+			
+			if( isWorldsafe(newWorld) && GRID[newWorld][x][y]!='#' ) {
+			
+					Q.push(mp(newWorld,mp(x,mp(y,newCoins))));
+					states[newWorld][x][y][newCoins] = states[world][x][y][coins];
+			
+			}
+	
+			continue;
+	
+		}
+		
+		if( GRID[world][x][y] == 'D' ) {
+		
+			newWorld = world+1;
+		
+			if( isWorldsafe(newWorld) && GRID[newWorld][x][y]!='#' ) {
+		
+					Q.push(mp(newWorld,mp(x,mp(y,newCoins))));
+					states[newWorld][x][y][newCoins] = states[world][x][y][coins];
+	
+			}
+	
+			continue;
+	
+		}
+		
+		if( GRID[world][x][y] == 'C' ) {	
+		
+			newCoins = ((coins)|(1<<(coinsL[world][x][y]-1)));
+			
+		}
+		
+		for(int i=0;i<4;i++) {
+		
+			xx = x+dr[i];
+			yy = y+dc[i];
+			
+			if( isBound(newWorld,xx,yy) ) {
+			
+				Q.push(mp(newWorld,mp(xx,mp(yy,newCoins))));
+				states[newWorld][xx][yy][newCoins] = states[world][x][y][coins]+1;
+			
+			}
+		
+		}
+	
+	}
+ 
+return -1;
+}
+ 
+int main( int argc , char** argv ) {
+	
+	cin >> R >> C >> W ;
+	 
+	while(R>0 && C>0 && W>0) {
+		
+		memset(states,0,sizeof(states));
+		memset(visited,false,sizeof(visited));
+		memset(coinsL,0,sizeof(coinsL));
+	
+		for(int i=0;i<W;i++) {	
+			for(int j=0;j<R;j++) {
+				scanf("%s",GRID[i][j]);
+			}
+		}
+	
+		int count = 0,pos=1;
+		int ws,SX,SY;
+	
+		for(int i=0;i<W;i++) {
+			for(int j=0;j<R;j++) {
+				for(int k=0;k<C;k++) {
+					if(GRID[i][j][k]=='C') {
+						count++;
+						coinsL[i][j][k] = pos;
+						pos++;
+					}
+					if(GRID[i][j][k]=='S') {
+						ws = i;
+						SX = j;
+						SY = k;
+					}
+				}
+			}
+		}
+	
+		
+		int res = search(ws,SX,SY,count);
+	
+		if( res != -1 ) 
+			printf("Mario saved the princess in %d steps\n",res);
+		else 	
+			printf("Mario failed to save princess\n");					 	
+	
+		cin >> R >> C >> W ;
+				
+	}
+	
+return 0;
+ 
+} 

@@ -1,0 +1,123 @@
+#include<iostream>
+#include<cstdio>
+#include<vector>
+using namespace std;
+
+const int N=300005;
+const long long INF=1e15;
+int head[N],next[N<<1],list[N<<1];
+int n,m,cnt,dfn;
+int c[N],in[N],out[N],id[N];
+int l[N<<2],r[N<<2];
+long long f[N],mn[N<<2],tag[N<<2];
+vector<int> a[N],b[N];
+
+inline int read()
+{
+	int a=0,f=1; char c=getchar();
+	while (c<'0'||c>'9') {if (c=='-') f=-1; c=getchar();}
+	while (c>='0'&&c<='9') {a=a*10+c-'0'; c=getchar();}
+	return a*f;
+}
+
+inline void insert(int x,int y)
+{
+	next[++cnt]=head[x];
+	head[x]=cnt;
+	list[cnt]=y;
+}
+
+void dfs(int x,int fa)
+{
+	in[x]=dfn+1;
+	for (int i=0;i<a[x].size();i++) 
+		id[a[x][i]]=++dfn;
+	for (int i=head[x];i;i=next[i])
+		if (list[i]!=fa) dfs(list[i],x);
+	out[x]=dfn;
+}
+
+void build(int k,int x,int y)
+{
+	l[k]=x; r[k]=y;
+	if (l[k]==r[k]) return;
+	int mid=l[k]+r[k]>>1;
+	build(k<<1,x,mid); build(k<<1|1,mid+1,y);
+}
+
+inline void up(long long &a,long long b)
+{
+	a+=b;
+	if (a>INF) a=INF;
+}
+
+void modify(int k,int x,long long val)
+{
+	if (l[k]==r[k])
+	{
+		mn[k]=val;
+		return;
+	}
+	int mid=l[k]+r[k]>>1;
+	if (x<=mid) modify(k<<1,x,val); else modify(k<<1|1,x,val);
+	mn[k]=min(mn[k<<1],mn[k<<1|1]);
+	up(mn[k],tag[k]);
+}
+
+void change(int k,int x,int y,long long val)
+{
+	if (l[k]==x&&r[k]==y)
+	{
+		tag[k]+=val; mn[k]+=val;
+		return;
+	}
+	int mid=l[k]+r[k]>>1;
+	if (y<=mid) change(k<<1,x,y,val);
+	else if (x>mid) change(k<<1|1,x,y,val);
+	else change(k<<1,x,mid,val),change(k<<1|1,mid+1,y,val);
+	mn[k]=min(mn[k<<1],mn[k<<1|1]);
+	up(mn[k],tag[k]);
+}
+
+long long query(int k,int x,int y)
+{
+	if (l[k]==x&&r[k]==y) return mn[k];
+	int mid=l[k]+r[k]>>1;
+	if (y<=mid) return query(k<<1,x,y)+tag[k];
+	else if (x>mid) return query(k<<1|1,x,y)+tag[k];
+	else return min(query(k<<1,x,mid),query(k<<1|1,mid+1,y))+tag[k];
+}
+
+long long dp(int x,int fa)
+{
+	long long Base=0;
+	for (int i=head[x];i;i=next[i])
+		if (list[i]!=fa) 
+			up(Base,dp(list[i],x));
+	if (x==1) return Base;
+	for (int i=0;i<a[x].size();i++) modify(1,id[a[x][i]],Base+c[a[x][i]]);
+	for (int i=0;i<b[x].size();i++) modify(1,id[b[x][i]],INF);
+	for (int i=head[x];i;i=next[i])
+		if (list[i]!=fa&&in[list[i]]<=out[list[i]]) change(1,in[list[i]],out[list[i]],Base-f[list[i]]);
+	return f[x]=(in[x]<=out[x]?query(1,in[x],out[x]):INF);
+}
+
+int main()
+{
+	n=read(); m=read();
+	for (int i=1;i<n;i++)
+	{
+		int u=read(),v=read();
+		insert(u,v); insert(v,u);
+	}
+	for (int i=1;i<=m;i++)
+	{
+		int u=read(),v=read(); c[i]=read();
+		a[u].push_back(i); b[v].push_back(i);
+	}
+	dfs(1,0);
+	build(1,1,m);
+	long long ans=dp(1,0);
+	if (ans>=INF) puts("-1"); else cout<<ans<<endl;
+	return 0;
+}

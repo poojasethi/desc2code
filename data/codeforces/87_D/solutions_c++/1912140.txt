@@ -1,0 +1,125 @@
+#include <cstdio>
+#include <vector>
+#include <map>
+#include <set>
+
+using namespace std;
+
+struct edge
+{
+  int a,b,no;
+};
+
+set<int> v;
+map<int,vector<edge> > e;
+vector<int> g[100001],h[100001],r,ans;
+int f[100001],c[100001];
+long long s[100000];
+
+int find(int x)
+{
+  if(f[x]==0)
+    return x;
+  f[x]=find(f[x]);
+  return f[x];
+}
+
+void merge(int x,int y)
+{
+  int fx=find(x),fy=find(y);
+  if(fx==fy)
+    return;
+  if(c[fx]<c[fy])
+  {
+    f[fx]=fy;
+    c[fy]+=c[fx];
+    c[fx]=0;
+  }
+  else
+  {
+    f[fy]=fx;
+    c[fx]+=c[fy];
+    c[fy]=0;
+  }
+}
+
+void dfs(int x,int fa,int no)
+{
+  s[no]=c[x];
+  for(int z=0;z<(int)g[x].size();++z)
+  {
+    int y=g[x][z];
+    if(y==fa)
+      continue;
+    dfs(y,x,h[x][z]);
+    s[no]+=s[h[x][z]];
+    r.push_back(h[x][z]);
+  }
+  g[x].clear();
+  h[x].clear();
+}
+
+int main(void)
+{
+  int n;
+  scanf("%d",&n);
+  for(int i=1;i<=n;++i)
+    c[i]=1;
+  for(int i=1;i<n;++i)
+  {
+    edge temp;
+    temp.no=i;
+    scanf("%d %d",&temp.a,&temp.b);
+    int k;
+    scanf("%d",&k);
+    e[k].push_back(temp);
+  }
+  for(map<int,vector<edge> >::iterator t=e.begin();t!=e.end();++t)
+  {
+    vector<edge>& vec=(*t).second;
+    v.clear();
+    for(int i=0;i<(int)vec.size();++i)
+    {
+      int j=find(vec[i].a),k=find(vec[i].b);
+      g[j].push_back(k);
+      h[j].push_back(vec[i].no);
+      g[k].push_back(j);
+      h[k].push_back(vec[i].no);
+      v.insert(j);
+      v.insert(k);
+    }
+    for(set<int>::iterator p=v.begin();p!=v.end();++p)
+    {
+      int i=*p;
+      if(!g[i].empty())
+      {
+        r.clear();
+        dfs(i,0,0);
+        for(int j=0;j<(int)r.size();++j)
+        {
+          int k=r[j];
+          s[k]=s[k]*(s[0]-s[k])*2;
+        }
+      }
+    }
+    for(int i=0;i<(int)vec.size();++i)
+      merge(vec[i].a,vec[i].b);
+  }
+  long long val=0;
+  for(int i=1;i<n;++i)
+  {
+    if(s[i]>val)
+    {
+      val=s[i];
+      ans.clear();
+      ans.push_back(i);
+    }
+    else if(s[i]==val)
+      ans.push_back(i);
+  }
+  printf("%I64d %d\n",val,(int)ans.size());
+  for(int i=0;i<(int)ans.size();++i)
+    printf("%d ",ans[i]);
+  printf("\n");
+  return 0;
+}

@@ -1,0 +1,223 @@
+#include <iostream>
+#include <cstdio>
+#include <map>
+#include <algorithm>
+#include <vector>
+#include <cstring>
+
+using namespace std;
+
+typedef pair<int,int> pii;
+
+const int maxL= 100 + 5;
+const int maxP= 100 + 5;
+const int maxD= 30*24*60 + 5; 
+
+bool exi[maxD][maxP];
+int list, peop, day;
+int need[maxL];
+int dp [maxD][maxP];
+pii par[maxD][maxP];
+vector <pii> ans;
+string s;
+map <string, int> mark;
+
+struct Time{
+    int h,m;
+
+    Time () {}
+
+    Time (int h, int m) : h(h), m(m) {}
+
+    Time (string s){
+        h= (s[0]-'0')*10 + s[1]-'0';
+        m= (s[3]-'0')*10 + s[4]-'0';
+    }
+
+    inline bool operator != (const Time &sec) const{
+        return h!=sec.h || m!=sec.m;
+    }
+    inline bool operator <= (const Time &sec) const{
+        return (h!=sec.h) ? h<sec.h : m<=sec.m;
+    }
+
+    inline bool operator < (const Time &sec) const{
+        return (h!=sec.h) ? h<sec.h : m<sec.m;
+    }
+
+}beg[10], fin[10];
+vector <Time> Free;
+
+struct person{
+    int len, pay, end, id;
+
+    person(int len=-1, int pay=-1, int end=-1, int id=-1) : len(len), pay(pay), end(end), id(id) {}
+
+    inline bool operator < (const person &sec) const{
+        return end<sec.end;
+    }
+}st[maxP];
+
+inline bool valid (int h, int m){
+    for (int i=1;i<=4;i++) if (beg[i]<=Time(h,m) && Time(h,m)<=fin[i])
+        return false;
+    return true;
+}
+
+inline void setFree (){
+    for (int i=1;i<=day;i++){
+        for (int h=0;h<24;h++)
+            for (int m=0;m<60;m++) if (valid(h,m)){
+                Free.push_back (Time(h+24*(i-1), m));
+            }       
+    }
+}
+
+inline void print (int i, int j){
+    if (i<0 || j<1)
+        return;
+
+    if (exi[i][j])
+        ans.push_back (pii(i,j));
+
+    print (par[i][j].first, par[i][j].second);
+}
+
+inline void write (Time a){
+    int dd= a.h/24;
+    cout << dd+1 << ' ';
+
+    a.h%=24;
+
+    if (a.h<10)
+        cout << '0';
+    cout << a.h;
+    cout << ':';
+
+    if (a.m<10)
+        cout << '0';
+    cout << a.m;
+    cout << ' ';
+}
+
+int main(){
+
+    cin >> list >> peop >> day;
+
+    for (int i=1;i<=list;i++){
+        string sub;
+        cin >> sub;
+        mark[sub]= i;
+    }
+
+    for (int i=1;i<=list;i++)
+        cin >> need[i];
+
+    getline (cin,s);
+
+    for (int i=1;i<=4;i++){
+        getline (cin, s, '-');
+        beg[i]= Time(s);
+
+        getline (cin, s);
+        fin[i]= Time(s);
+    }
+
+    setFree();
+
+    for (int i=1, j=1;i<=peop;i++, j++){
+        string sub; cin >> sub;
+        int dd; cin >> dd;
+        string end; cin >> end;
+        int pay; cin >> pay;
+
+        Time E= Time(end);
+
+        if (mark[sub]){
+            E.h+= 24*(dd-1); 
+
+            int poi=-1;
+
+            if (E!=Time(0,0)){
+                if (E.m!=0)
+                    E.m--;
+                else{
+                    E.h--;
+                    E.m=59;
+                }
+
+                vector <Time> :: iterator x= upper_bound (Free.begin(), Free.end(), E);
+
+                if (x!=Free.begin())
+                    poi= x-Free.begin()-1;
+            }
+            st[i] = person(need[mark[sub]], pay, poi, j);
+        }
+
+        else{
+            peop--;
+            i--;
+        }       
+    }
+
+    if (Free.size()==0 || peop==0){
+        cout << 0 << endl << 0 << endl;
+        return 0;
+    }
+
+    sort (st+1, st+peop+1);
+
+    for (int i=0;i<(int)Free.size();i++){
+        for (int j=1;j<=peop;j++){
+
+            int beg= i-st[j].len+1;
+
+            dp [i][j]= dp[i][j-1];
+            par[i][j]= pii(i,j-1);
+
+            if (i!=0 && dp[i][j] < dp[i-1][j]){
+                dp [i][j]= dp[i-1][j];
+                par[i][j]= pii(i-1,j);
+            }
+
+            if (beg<0 || st[j].end<i)
+                continue;
+
+            if (beg==0){
+                if (dp[i][j] < st[j].pay){
+                    dp [i][j]= st[j].pay;
+                    par[i][j]= pii(-1,j);
+                    exi[i][j]= true;
+                }   
+            }
+
+            else{
+                if (dp[i][j] < st[j].pay + dp[beg-1][j-1]){
+                    dp [i][j]= st[j].pay + dp[beg-1][j-1];
+                    par[i][j]= pii(beg-1,j-1);
+                    exi[i][j]= true;
+                }
+            }
+        }
+    }
+
+    print ((int)Free.size()-1, peop);
+    
+    cout << dp[(int)Free.size()-1][peop] << endl;
+    cout << ans.size() << endl;
+
+    for (int i=(int)ans.size()-1;i>=0;i--){
+        
+        pii cur= ans[i];
+
+        int end= cur.first;
+        int beg= end - st[cur.second].len + 1;
+
+        cout << st[cur.second].id << ' ';
+        write(Free[beg]);
+        write(Free[end]);
+        cout << endl;
+    }
+
+    return 0;
+}

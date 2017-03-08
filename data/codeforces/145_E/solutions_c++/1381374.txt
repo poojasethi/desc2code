@@ -1,0 +1,86 @@
+#include <iostream>
+using namespace std;
+
+struct state {
+	int c4, c7, c47, c74;
+	
+	state() {
+		c4 = 0;
+		c7 = 0;
+		c47 = 0;
+		c74 = 0;
+	}
+	
+	state norm(bool t) {
+		state ret = *this;
+		if (t) {
+			swap(ret.c4, ret.c7);
+			swap(ret.c47, ret.c74);
+		}
+		return ret;
+	}
+	
+	void assign(char c) {
+		if (c == '4') {
+			c4 = 1;
+				} else {
+				c7 = 1;
+			}
+		c47 = 1;
+		c74 = 1;
+	}
+	
+	void merge(state a, state b) {
+		c4 = a.c4 + b.c4;
+		c7 = a.c7 + b.c7;
+		c47 = max(a.c47 + b.c7, a.c4 + b.c47);
+		c74 = max(a.c74 + b.c4, a.c7 + b.c74);
+	}
+};
+
+const int MX = 1 << 22;
+
+int n;
+state arr[MX]; // pre-norm
+bool flip[MX];
+string s;
+
+state build(int a, int l, int r) {
+	if (l + 1 == r) {
+		arr[a].assign(s[l]);
+		return arr[a];
+	}
+	int m = (l + r) / 2;
+	arr[a].merge(build(a * 2, l, m), build(a * 2 + 1, m, r));
+	return arr[a];
+}
+
+int gl, gr;
+state op(int a, int l, int r) {
+	if (r <= gl || l >= gr) return arr[a].norm(flip[a]);
+	if (l >= gl && r <= gr) {
+		flip[a] ^= true;
+		return arr[a].norm(flip[a]);
+	}
+
+	int m = (l + r) / 2;
+	arr[a].merge(op(a * 2, l, m), op(a * 2 + 1, m, r));
+	return arr[a].norm(flip[a]);
+}
+
+int main() {
+	int m;
+	cin >> n >> m >> s;
+	build(1, 0, n);
+	for (int i = 0; i < m; i++) {
+		string opt;
+		cin >> opt;
+		if (opt[0] == 'c') {
+			cout << arr[1].norm(flip[1]).c47 << '\n';
+		} else {
+			cin >> gl >> gr;
+			gl--;
+			op(1, 0, n);
+		}
+	}
+}

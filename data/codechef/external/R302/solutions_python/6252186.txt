@@ -1,0 +1,324 @@
+#include<stdio.h>
+#define pc(x) putchar_unlocked(x)
+#define gc()  getchar_unlocked()
+#define size 810
+#include<math.h>
+#include<stdlib.h>
+#define lli long long int
+struct number//done
+{
+    int digits[size],ctr;
+};
+typedef struct number number;
+void get_number(number *a)//done
+{
+    char c=gc();
+    int i=0;
+    while(c < '0' || c >'9')c=gc();//ignore useless things
+    while(c>='0' && c<='9')
+    {(*a).digits[i++]=c-'0';c=gc();}
+    (*a).ctr=i;
+}
+number* newnum()
+{
+    number* temp=(number*)malloc(sizeof(number));
+    return temp;
+}
+void print_num(number a)//done
+{
+    int i,lim=a.ctr;
+    for(i=0;i<lim;i++)pc(a.digits[i]+'0');
+}
+void init_number(number *a,lli n)//done
+{
+    int i=0,j,k,temp;
+    if(n==0)
+    {
+        (*a).ctr=1;
+        (*a).digits[0]=0;
+        return;
+    }
+    while(n)
+    {
+        (*a).digits[i++]=(int)(n%10);
+        n=n/10;
+    }
+    j=(*a).ctr=i;
+    j/=2;
+    for(i=0,k=(*a).ctr-1;i<j;i++,k--)
+    {
+        temp=(*a).digits[i];
+        (*a).digits[i]=(*a).digits[k];
+        (*a).digits[k]=temp;
+    }
+}
+
+void bitshift(number *a,int n)//n>=0 ignore for now
+{
+    int j=size-(*a).ctr;
+    while(j<size)
+    {
+        (*a).digits[j-n]=(*a).digits[j];
+        j++;
+    }
+    j=size-n;
+    while(j<size)
+    {
+        (*a).digits[j]=0;
+        j++;
+    }
+    (*a).ctr+=n;
+}
+void trim(number* a)//done
+{
+
+    int i;
+    for(i=0;i<((*a).ctr);i++)if((*a).digits[i]!=0)break;
+    if(i<(*a).ctr)
+    {
+        int j;
+        for(j=0;i<(*a).ctr;i++,j++)
+        {
+            (*a).digits[j]=(*a).digits[i];
+        }
+        (*a).ctr=j;
+    }
+    else
+    {
+        init_number(a,0);
+    }
+}
+int compare(number a, number b)//done
+/*
+returns one of these values -> -1,0,1
+return sign of a-b
+0->  both numbers are equal
+1->  a>b
+-1-> a<b
+*/
+{
+    if(a.ctr>b.ctr)return 1;
+    if(a.ctr<b.ctr)return -1;
+    //only when a.ctr equals b.ctr
+    int i=a.ctr,j;
+    for(j=0;j<i;j++)
+    {
+        if(a.digits[j]>b.digits[j])return 1;
+        else if(a.digits[j]<b.digits[j])return -1;
+    }
+    return 0;
+}
+void substract(number *a,number b)//done
+/*
+assuming a>=b
+function stores the result in a itself
+if a=b modify a to be 0 only
+else 9's complement method is used to substract
+now if a>b add 9's complement of b to a
+this will necessarily produce a carry
+which is to be added to
+*/
+{
+    if(compare(*a,b)==0)
+    {
+        init_number(a,0);
+        return;
+    }
+    int i,j,carry=0,temp;
+    for(i=b.ctr-1,j=(*a).ctr-1;i>=0;i--,j--)
+    {
+        temp=(*a).digits[j]+9-b.digits[i]+carry;
+        (*a).digits[j]=temp%10;
+        carry=temp/10;
+    }
+    while(j>=0)
+    {
+        temp=(*a).digits[j]+9+carry;
+        (*a).digits[j--]=temp%10;
+        carry=temp/10;
+    }
+    if(carry==1)
+    {
+        j=(*a).ctr-1;
+        while(carry>0)
+        {
+            temp=(*a).digits[j]+carry;
+            (*a).digits[j--]=temp%10;
+            carry=temp/10;
+        }
+    }
+    trim(a);
+    return;
+}
+void addition(number *a,int x)
+{
+    number b;
+    int i,j,temp,carry=x;
+    for(i=size-1,j=(*a).ctr-1;j>=0;i--,j--)
+    {
+        temp=(*a).digits[j]+carry;
+        b.digits[i]=temp%10;
+        carry=temp/10;
+    }
+    while(carry>0)
+    {
+        b.digits[i--]=carry%10;
+        carry=carry/10;
+    }
+    i++;j=0;
+    (*a).ctr=size-i;
+    while(i<size)
+    {
+        (*a).digits[j++]=b.digits[i++];
+    }
+}
+number* squareroot(number a)
+{
+    number divisor,rem;
+    number *quotient=newnum(),*zero=newnum();
+    init_number(zero,0);
+    if(a.ctr<=1)
+    {
+        init_number(quotient,(int)(floor(sqrt(a.digits[0]))));
+        return quotient;
+    }
+    int i;
+    int temp=a.digits[0];
+    i=1;
+    if((a.ctr)%2==0)
+    {
+        temp=(temp*10)+a.digits[1];
+        i++;
+    }
+    int x=(int)(floor(sqrt(temp)));
+    init_number(&divisor,x);
+    init_number(&rem,temp-x*x);
+    init_number(quotient,x);
+    //print_num(divisor);printf("<---DIVISOR\n");
+    //print_num(rem);printf("<---REMAINDER\n");
+    //print_num(*quotient);printf("<---QUOTIENT\n");
+    int lim=a.ctr;
+    while(i<lim)
+    {
+        if(compare(rem,*zero)==0)
+        {
+            init_number(&rem,(a.digits[i]*10)+a.digits[i+1]);
+        }
+        else
+        {
+            rem.digits[rem.ctr]=a.digits[i];
+            rem.digits[rem.ctr+1]=a.digits[i+1];
+            rem.ctr=(rem.ctr)+2;
+        }
+        i+=2;
+        addition(&divisor,x);
+        x=9;
+        divisor.ctr++;
+        //int flag=0;//false
+        while(x>=0)
+        {
+            number* t=newnum();
+            divisor.digits[divisor.ctr-1]=x;
+            int j,carry=0,product,k;
+            for(j=divisor.ctr-1,k=divisor.ctr;j>=0;j--,k--)
+            {
+                product=x*divisor.digits[j]+carry;
+                (*t).digits[k]=product%10;
+                carry=product/10;
+            }
+            while(carry>0)
+            {
+                (*t).digits[k--]=carry%10;
+                carry/=10;
+            }
+            if(k==0)//1 empty space
+            {
+                for(k=0;k<divisor.ctr;k++)
+                {
+                    (*t).digits[k]=(*t).digits[k+1];
+                }
+                (*t).ctr=divisor.ctr;
+            }
+            else
+            {
+                (*t).ctr=divisor.ctr+1;
+            }
+            trim(t);
+            if((compare(rem,*t)==0)||(compare(rem,*t))==1)
+            {
+                substract(&rem,*t);
+                (*quotient).digits[(*quotient).ctr]=x;
+                (*quotient).ctr=(*quotient).ctr+1;
+                break;
+            }
+            x--;
+        }
+        //print_num(divisor);printf("<---DIVISOR\n");
+        //print_num(rem);printf("<---REMAINDER\n");
+        //print_num(*quotient);printf("<---QUOTIENT\n");
+
+    }
+    return quotient;
+}
+int main()
+{
+    int t;number a,b;
+    //scanf("%d",&t);
+    //printf("\n");
+    //print_num(a);
+    //print_num(*squareroot(a));
+    //TESTCASES GENERATION a=9754610579850632525872580399376009754616476146929340039628145252248135650053345677488187778997104100
+    /*printf("50\n");
+    int i;
+    get_number(&a);
+    for(i=1;i<=50;i++)
+    {
+        print_num(a);
+        printf("\n");
+    }*/
+    scanf("%d",&t);
+    while(t--)
+    {
+        get_number(&a);
+        print_num(*squareroot(a));
+        printf("\n");
+    }
+    /*get_number(&b);
+    print_num(a);
+    printf("\n");
+    print_num(b);
+    //a>=b
+    substract(&a,b);
+    printf("\n");
+    print_num(a);
+    //init_number(&b,111);
+    //init_number(&a,112);
+    //number* c=newnum();
+    //get_number(c);
+    //print_num(a);
+    //trim(&a);
+    //printf("\n");
+    //print_num(a);
+    */
+    /*switch(compare(a,b))
+    {
+        case 0: printf("\n both are equal ");
+                print_num(a);
+                printf(" ");
+                print_num(b);
+                break;
+        case 1: printf("\n first greater than second ");
+                print_num(a);
+                printf(" ");
+                print_num(b);
+                break;
+        case -1: printf("\n second greater than first ");
+                print_num(a);
+                printf(" ");
+                print_num(b);
+                break;
+    }*/
+
+    //squareroot(a,&b);
+    return 0;
+}

@@ -1,0 +1,237 @@
+#include<ctime>
+#include<cmath>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+using namespace std;
+
+char QAQ; bool fff;
+template<class T>inline void Read(T &k){while(((QAQ=getchar())<'0'||QAQ>'9')&&QAQ!='-');fff=QAQ=='-';k=fff?0:QAQ-'0';while((QAQ=getchar())>='0'&&QAQ<='9')k=k*10+QAQ-'0';if(fff)k=-k;}
+
+char SS[50]; int SS_ing = 0;
+template<class T>inline void Write(T k){if(k==0)putchar('0');if(k<0)putchar('-'),k=-k;while(k)SS[++SS_ing]=k%10+'0',k/=10;while(SS_ing)putchar(SS[SS_ing--]);}
+
+#define REPi(a, b) for(register int i = a, edi = b; i <= edi; i ++)
+#define REPj(a, b) for(register int j = a, edj = b; j <= edj; j ++)
+#define REPk(a, b) for(register int k = a, edk = b; k <= edk; k ++)
+#define uREPi(a, b) for(register int i = a, edi = b; i >= edi; i --)
+#define uREPj(a, b) for(register int j = a, edj = b; j >= edj; j --)
+#define uREPk(a, b) for(register int k = a, edk = b; k >= edk; k --)
+typedef long long LL;
+
+template<class T>inline void Chkmin(T &a, T b){a = a < b ? a : b;}
+template<class T>inline void Chkmax(T &a, T b){a = a > b ? a : b;}
+
+inline void in(){freopen("input.txt", "r", stdin); freopen("output.txt", "w", stdout);}
+inline void out(){fclose(stdin); fclose(stdout);}
+
+const int MAXN = 100004;
+const int MAXM = 100004;
+
+int N, M;
+
+struct e{
+    int to;
+    e *next;
+}edge[MAXN], *ing[MAXN], use[MAXN << 1];
+int End = -1;
+
+inline void add_edge(int a, int b){
+    ing[a] = ing[a] -> next = use + (++ End);
+    ing[b] = ing[b] -> next = use + (++ End);
+    ing[a] -> to = b, ing[b] -> to = a;
+    ing[a] -> next = ing[b] -> next = NULL;
+}
+
+#define ch(x, t) ((x) -> ch[t])
+#define idx(x) ((x) -> idx)
+#define fa(x) ((x) -> fa)
+
+struct node{
+
+    int idx;
+    node *fa, *ch[2];
+
+    inline void clear(int k){
+        fa = ch[0] = ch[1] = NULL;
+        idx = k;
+    }
+
+}data[MAXN];
+
+inline void Init(){
+    int a, b;
+    End = -1;
+    Read(N);
+    REPi(1, N) ing[i] = edge + i, ing[i] -> next = NULL;
+    REPi(1, N - 1){
+        Read(a), Read(b);
+        a ++, b ++;
+        add_edge(a, b);
+    }
+}
+
+LL tree[MAXN << 2];
+int tag[MAXN << 2];
+
+inline void Push_down(int k, int l, int r, int mid){
+    if(tag[k]){
+        tree[k << 1] += tag[k] * (mid - l + 1);
+        tree[k << 1 | 1] += tag[k] * (r - mid);
+        tag[k << 1] += tag[k];
+        tag[k << 1 | 1] += tag[k];
+        tag[k] = 0;
+    }
+}
+
+inline void Updata(int L, int R, int add, int l, int r, int k){
+    if(L <= l && r <= R){
+        tree[k] += add * (r - l + 1);
+        tag[k] += add;
+        return ;
+    }
+    register int mid = (l + r) >> 1;
+    Push_down(k, l, r, mid);
+    if(L <= mid) Updata(L, R, add, l, mid, k << 1);
+    if(R > mid) Updata(L, R, add, mid + 1, r, k << 1 | 1);
+    tree[k] = tree[k << 1] + tree[k << 1 | 1];
+}
+
+inline LL Ask(int L, int R, int l, int r, int k){
+    if(L <= l && r <= R) return tree[k];
+    register int mid = (l + r) >> 1;
+    Push_down(k, l, r, mid);
+    if(R <= mid) return Ask(L, R, l, mid, k << 1);
+    if(L > mid) return Ask(L, R, mid + 1, r, k << 1 | 1);
+    return Ask(L, R, l, mid, k << 1) + Ask(L, R, mid + 1, r, k << 1 | 1);
+}
+
+int dep[MAXN];
+int fa[MAXN];
+
+int idx[MAXN];
+int dfn[MAXN];
+int size[MAXN];
+int dfs_time = 0;
+
+inline void Dfs(int k){
+    register e *fst = edge + k;
+    dfn[k] = ++ dfs_time;
+    idx[dfs_time] = k;
+    data[k].clear(k);
+    size[k] = 1;
+    while(fst -> next != NULL){
+        fst = fst -> next;
+        if(fst -> to != fa[k]){
+            fa[fst -> to] = k;
+            dep[fst -> to] = dep[k] + 1;
+            Dfs(fst -> to);
+            fa(data + fst -> to) = data + k;
+            size[k] += size[fst -> to];
+        }
+    }
+}
+
+inline void Build(int l, int r, int k){
+    tag[k] = 0;
+    if(l == r){
+        tree[k] = dep[idx[l]];
+        return ;
+    }
+    register int mid = (l + r) >> 1;
+    Build(l, mid, k << 1);
+    Build(mid + 1, r, k << 1 | 1);
+    tree[k] = tree[k << 1] + tree[k << 1 | 1];
+}
+
+inline void Pre(){
+    fa[1] = 1, dep[1] = 0, dfs_time = 0;
+    Dfs(1);
+    Build(1, N, 1);
+}
+
+inline bool isroot(node *a){return fa(a) == NULL || (ch(fa(a), 0) != a && ch(fa(a), 1) != a);}
+inline void setc(node *a, node *b, bool t){if(a != NULL) fa(a) = b; if(b != NULL) ch(b, t) = a;}
+inline void Rotate(node *a){
+    static node *pa;
+    static bool to;
+    pa = fa(a);
+    to = ch(pa, 0) == a;
+    if(isroot(pa)) fa(a) = fa(pa);
+    else setc(a, fa(pa), ch(fa(pa), 1) == pa);
+    setc(ch(a, to), pa, to ^ 1);
+    setc(pa, a, to);
+}
+
+inline void Splay(node *a){
+    static node *pa;
+    while(!isroot(a)){
+        pa = fa(a);
+        if(!isroot(pa)){
+            if((ch(pa, 0) == a) ^ (ch(fa(pa), 0) == pa)) Rotate(a);
+            else Rotate(pa);
+            Rotate(a);
+        }
+        else{
+            Rotate(a);
+            break;
+        }
+    }
+}
+
+inline node *Find(node *a){
+    while(ch(a, 0) != NULL) a = ch(a, 0);
+    return a;
+}
+
+inline void Access(node *a){
+    static node *rc, *qwq;
+    rc = NULL;
+    while(true){
+        Splay(a);
+        if(ch(a, 1) != NULL){
+            qwq = Find(ch(a, 1));
+            Updata(dfn[idx(qwq)], dfn[idx(qwq)] + size[idx(qwq)] - 1, 1, 1, N, 1);
+        }
+        ch(a, 1) = rc;
+        if(fa(a) == NULL) break;
+        qwq = Find(a);
+        Updata(dfn[idx(qwq)], dfn[idx(qwq)] + size[idx(qwq)] - 1, -1, 1, N, 1);
+        rc = a;
+        a = fa(a);
+    }
+}
+
+inline void Solve(){
+    double ans;
+    char ch;
+    int x;
+    Read(M);
+    REPi(1, M){
+        while((ch = getchar()) != 'q' && ch != 'O');
+        Read(x);
+        x ++;
+        if(ch == 'q'){
+            ans = Ask(dfn[x], dfn[x] + size[x] - 1, 1, N, 1);
+            printf("%.10f\n", ans / size[x]);
+        }
+        else{
+            Access(data + x);
+        }
+    }
+}
+
+int main(){
+
+    int T;
+    Read(T);
+    while(T --){
+        Init();
+        Pre();
+        Solve();
+    }
+
+    return 0;
+}

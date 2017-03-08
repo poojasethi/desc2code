@@ -1,0 +1,118 @@
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+#include <cmath>
+#include <climits>
+#include <cstdlib>
+#include <set>
+#include <map>
+#include <stack>
+#include <queue>
+#include <vector>
+using namespace std;
+
+typedef set<int>::iterator it;
+typedef pair<int, int> pii;
+const int inf = 0x3f3f3f3f;
+
+inline int read() {
+	int x = 0, f = 1; char ch = getchar();
+	for (; ch < '0' || ch > '9'; ch = getchar()) if (ch == '-') f = -1;
+	for (; ch >= '0' && ch <= '9'; ch = getchar()) x = x * 10 + ch - '0';
+	return x * f;
+}
+
+const int maxn = 100005;
+int n, m;
+struct edge {
+	int to, next;
+}e[maxn << 1];
+int head[maxn], top = 1;
+
+void addedge(int u, int v) {
+	if (u == v) return;
+	e[++top] = (edge) {v, head[u]}; head[u] = top;
+}
+
+int dep[maxn], fa[maxn][18], dfn[maxn], tot = 1;
+
+void dfs(int x) {
+	dfn[x] = ++tot;
+	for (int i = 1; i <= 17; i++) fa[x][i] = fa[fa[x][i - 1]][i - 1];
+	for (int i = head[x]; i; i = e[i].next) if (e[i].to != fa[x][0]) {
+		fa[e[i].to][0] = x;
+		dep[e[i].to] = dep[x] + 1;
+		dfs(e[i].to);
+	}
+}
+
+int get_lca(int u, int v) {
+	if (dep[u] < dep[v]) swap(u, v);
+	for (int i = 17; i >= 0; i--) if (dep[fa[u][i]] >= dep[v]) u = fa[u][i];
+	if (u == v) return u;
+	for (int i = 17; i >= 0; i--) if (fa[u][i] != fa[v][i]) u = fa[u][i], v = fa[v][i];
+	return fa[u][0];
+}
+
+int sta[maxn], tp;
+int a[maxn], ans;
+bool flag[maxn];
+
+bool cmp(int a, int b) {return dfn[a] < dfn[b];}
+
+int get_ans(int x, int f) {
+	int cnt = flag[x]; cnt += flag[f];
+	for (int i = head[x]; i; i = e[i].next) {
+		if (flag[x] && flag[e[i].to]) ans++;
+		cnt += get_ans(e[i].to, x);
+	}
+	head[x] = 0;
+	if (cnt > 1 && !flag[x]) ans++, cnt = 0;
+	return (cnt > 0);
+}
+
+void solve() {
+	top = 1, tot = tp = ans = 0;
+	int k = read();
+	for (int i = 1; i <= k; i++) a[i] = read();
+	for (int i = 1; i <= k; i++) flag[a[i]] = true;
+	for (int i = 1; i <= k; i++) if (flag[fa[a[i]][0]]) {
+		printf("-1\n");
+		for (int i = 1; i <= k; i++) flag[a[i]] = false; 
+		return;
+	}
+	sort(a + 1, a + 1 + k, cmp);
+	sta[++tp] = 1;
+	for (int i = 1; i <= k; i++) {
+		int now = a[i], f = 0; 
+		if (now == 1) continue;
+		while(1) {
+			f = get_lca(now, sta[tp]);
+			if (dep[f] >= dep[sta[tp - 1]]) {
+				addedge(f, sta[tp]); tp--;
+				if (f != sta[tp]) sta[++tp] = f;
+				break;
+			}
+			addedge(sta[tp - 1], sta[tp]); tp--;
+		}
+		if (now != sta[tp]) sta[++tp] = now;
+	}
+	while(tp > 1) {addedge(sta[tp - 1], sta[tp]); tp--;}
+	get_ans(1, 0);
+	printf("%d\n", ans);
+	for (int i = 1; i <= k; i++) flag[a[i]] = false; 
+}
+
+int main() {
+	n = read();
+	for (int i = 1; i < n; i++) {
+		int u = read(), v = read();
+		addedge(u, v); addedge(v, u);
+	}
+	dep[1] = 1; dfs(1);
+	for (int i = 1; i <= n; i++) head[i] = 0;
+	m = read();
+	for (int i = 1; i <= m; i++) solve();
+	return 0;
+}

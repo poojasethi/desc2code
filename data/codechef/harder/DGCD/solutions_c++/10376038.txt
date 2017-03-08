@@ -1,0 +1,155 @@
+#include <iostream>
+#include <cstring>
+#include <cmath>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+#define N 50050
+int fi[N],c[N*2][2],val[N],ad[N*4],sg[N],nd[N],Gcd[N*4],h[N];
+int fa[N],wei[N],rf[N],n,m,ss=1,st;bool b[N];
+inline int Read()
+ {
+ 	int x=0;char y;
+ 	do y=getchar(); while (y<'0'||y>'9');
+ 	do x=x*10+y-'0',y=getchar(); while (y>='0'&&y<='9');
+ 	return x;
+ }
+inline void Line(int x,int y)
+ {
+ 	c[++ss][0]=y;c[ss][1]=fi[x];fi[x]=ss;
+ 	c[++ss][0]=x;c[ss][1]=fi[y];fi[y]=ss;
+ 	return;
+ }
+void DFS(int x)
+ {
+ 	wei[x] = true; h[x] = h[fa[x]] + 1;
+ 	for (int i=fi[x];i;i=c[i][1])
+ 	 if (c[i][0] != fa[x])
+ 	   fa[c[i][0]] = x, DFS(c[i][0]), wei[x] += wei[c[i][0]];
+ 	return;
+ }
+void DSF(int x,int y)
+ {
+ 	rf[x] = y;sg[x] = ++ st;nd[st] = x;int k = false;
+ 	for (int i = fi[x]; i; i = c[i][1])
+ 	 if (c[i][0] != fa[x] && wei[c[i][0]] > wei[k])
+ 	   k = c[i][0];
+ 	if (k) DSF(k,y); else b[x] = true;
+ 	for (int i = fi[x]; i; i = c[i][1])
+ 	 if (c[i][0] != fa[x] && c[i][0] != k)
+ 	   DSF(c[i][0],c[i][0]);
+ 	return;
+ }
+int gcd(int x,int y) {return !y?x: gcd(y,x%y);}
+void Set_up(int x,int y,int z)
+ {
+ 	int mid = x + y >> true, j = z << true;
+ 	if (x==y)
+ 	 {
+ 	 	x = nd[x];
+ 	 	Gcd[z] = b[x] ? val[x] : val[x] - val[nd[sg[x] + 1]];
+ 	 	return;
+ 	 }
+ 	Set_up(x, mid, j); Set_up(mid + 1, y, j + 1);
+ 	Gcd[z] = gcd(Gcd[j + 1], Gcd[j]);
+ 	return;
+ }
+void adj(int z)
+ {
+ 	if (!ad[z]) return;
+ 	int j = z << true;
+ 	ad[j] += ad[z]; ad[j + 1] += ad[z]; ad[z] = false;
+ 	return;
+ }
+void Modify(int x,int y,int z,int o,int p)
+ {
+ 	int mid = x + y >> true, j = z << true;
+ 	if (x==y) {Gcd[z] += p; return;}
+ 	if (o <= mid) Modify(x,mid,j,o,p); else
+ 	  Modify(mid + 1, y, j + 1, o, p);
+ 	Gcd[z] = gcd (Gcd[j + 1], Gcd[j]);
+ 	return;
+ }
+void Insert(int x,int y,int z,int o,int p,int u)
+ {
+ 	int mid = x + y >> true, j = z << true;
+ 	if (x != y) adj(z);
+ 	if (x == o && y == p) {ad[z] += u; return;}
+ 	if (p <= mid) Insert(x,mid,j,o,p,u); else
+ 	 if (o>mid) Insert(mid+1,y,j+1,o,p,u); else
+ 	   Insert(x,mid,j,o,mid,u),Insert(mid+1,y,j+1,mid+1,p,u);
+ 	return;
+ }
+int Query(int x,int y,int z,int o)
+ {
+ 	int mid = x + y >> true, j = z << true;
+ 	if (x != y) adj(z);
+ 	if (x==y)
+ 	 {
+ 	 	val[nd[x]] += ad[z];
+ 	 	ad[z] = false;
+ 	 	return val[nd[x]];
+ 	 }
+ 	if (o<=mid) return Query(x,mid,j,o); else
+ 	  return Query(mid+1,y,j+1,o);
+ }
+int _Query(int x,int y,int z,int o,int p)
+ {
+ 	int mid = x + y >> true, j = z << true;
+ 	if (x==o&&y==p) return Gcd[z];
+ 	if (p<=mid) return _Query(x,mid,j,o,p); else
+ 	 if (o>mid) return _Query(mid+1,y,j+1,o,p); else
+ 	   return gcd(_Query(x,mid,j,o,mid),
+ 	   	_Query(mid+1,y,j+1,mid+1,p));
+ }
+int Get(int x,int y)
+ {
+ 	int k = Query(1,n,1,y);
+ 	if (x != y) k = gcd (k, _Query(1,n,1,x,y-1));
+ 	return k;
+ }
+void _Modify(int z,int y,int x)
+ {
+ 	x++;y++;
+ 	while (rf[x] != rf[y])
+ 	 {
+ 	 	if (h[rf[x]] < h[rf[y]]) swap(x,y);
+ 	 	Insert(1,n,1,sg[rf[x]],sg[x],z);
+ 	 	Modify(1,n,1,sg[x],z);
+ 	 	x = fa[rf[x]];
+ 	 }
+ 	if (h[x] > h[y]) swap(x,y);
+ 	Insert(1,n,1,sg[x],sg[y],z);
+ 	Modify(1,n,1,sg[y],z);
+ 	if (x != rf[x])
+ 	  Modify(1,n,1,sg[x] - 1,-z);
+ 	return;
+ }
+int Query(int x,int y)
+ {
+ 	int Ans = false;x++;y++;
+ 	while (rf[x] != rf[y])
+ 	 {
+ 	 	if (h[rf[x]] < h[rf[y]]) swap(x,y);
+ 	 	Ans = gcd(Ans, Get(sg[rf[x]], sg[x]));
+ 	 	x = fa[rf[x]];
+ 	 }
+ 	if (h[x] > h[y]) swap(x,y);
+ 	Ans = gcd(Ans, Get(sg[x], sg[y]));
+ 	return abs(Ans);
+ }
+int main()
+ {
+ 	//freopen("input.txt","r",stdin);
+ 	n=Read();
+ 	for (int i=1;i<n;i++) Line(Read()+1,Read()+1);
+ 	for (int i=1;i<=n;i++) val[i]=Read();
+ 	DFS(1);DSF(1,1);Set_up(1,n,1);m=Read();
+    while (m--)
+     {
+     	static char ch[20]; scanf("%s",ch+1);
+     	if (ch[1]=='C') _Modify(Read(),Read(),Read()); else
+     	  printf("%d\n",Query(Read(),Read()));
+     }
+ 	return 0;
+ }

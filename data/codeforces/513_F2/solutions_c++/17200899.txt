@@ -1,0 +1,239 @@
+#include<iostream>
+#include<cstring>
+#include<string>
+#include<cstdio>
+#include<stdio.h>
+#include<algorithm>
+#include<cmath>
+#include<map>
+#include<queue>
+#include<bitset>
+#include<stack>
+#include<set>
+using namespace std;
+
+
+#pragma comment(linker, "/STACK:1024000000,1024000000")
+#define inf 0x3f3f3f3f
+#define eps 1e-9
+#define pii pair<int,int>
+#define MP make_pair
+#define LL  long long
+#define ULL unsigned long long 
+#define N ( 2000 +10)
+#define M ( 4100000 + 10)
+#define mod  1000000007
+
+struct MCMF {
+	int fst[N], nxt[M], vv[M], from[M], cost[M], cap[M], flow[M], e;
+
+	int d[N], a[N], p[N], in[N];
+
+	void init() {
+		memset(fst, -1, sizeof fst);
+		e = 0;
+	}
+	void add(int u, int v, int c, int d) {
+		from[e] = u, vv[e] = v, nxt[e] = fst[u], cost[e] = d, cap[e] = c, flow[e] = 0, fst[u] = e++;
+		from[e] = v, vv[e] = u, nxt[e] = fst[v], cost[e] = -d, cap[e] = 0, flow[e] = 0, fst[v] = e++;
+	}
+
+	int spfa(int s, int t, int &mf, int &mc) {
+		memset(d, 0x3f, sizeof d);
+		d[s] = p[s] = 0;
+		a[s] = inf;
+		queue<int> q; q.push(s);
+		while(!q.empty()) {
+			int u = q.front(); q.pop();
+			in[u] = 0;
+			for(int i = fst[u]; ~i; i = nxt[i]) {
+				int v = vv[i], c = cost[i];
+				if(cap[i] > flow[i] && d[v] > d[u] + c) {
+					d[v] = d[u] + c;
+					a[v] = min(a[u], cap[i] - flow[i]);
+					p[v] = i;
+					if(!in[v]) in[v] = 1, q.push(v);
+				}
+			}
+		}
+		if(d[t] == inf) return 0;
+		mf += a[t], mc += a[t] * d[t];
+		int u = t;
+		while(u != s) {
+			flow[p[u]] += a[t];
+			flow[p[u]^1] -= a[t];
+			u = from[p[u]];
+		}
+		return 1;
+	}
+	int gao(int s, int t, int tot) {
+		int ret = 0, mf = 0, mc = 0;
+		while(spfa(s, t, mf, mc));
+		if(tot != mf) return -1;
+		return mc;
+	}
+	
+
+};
+struct dinic {
+	int fst[N], vv[M], nxt[M], e, cap[M], flow[M];
+	int s,t ;
+	int d[N], cur[N];
+
+	void init() {
+		memset(fst, -1, sizeof fst);
+		e = 0;
+	}
+
+	void add(int u, int v, int w) {
+		vv[e] = v, nxt[e] = fst[u], cap[e] = w, flow[e] = 0, fst[u] = e ++;
+		vv[e] = u, nxt[e] = fst[v], cap[e] = 0, flow[e] = 0, fst[v] = e++;
+	}
+
+	bool bfs() {
+		queue<int> que;
+		memset(d, -1, sizeof d);
+		que.push(s);
+		d[s] = 0;
+		while(!que.empty()) {
+			int u = que.front();
+			que.pop();
+			for(int i = fst[u]; ~i ;i = nxt[i]) {
+				int v = vv[i];
+				if(d[v] == -1 && cap[i] > flow[i]) {
+					d[v] = d[u]+1;
+					que.push(v);
+				}
+			}
+		}
+		return d[t] != -1;
+	}
+
+	int dfs(int u, int a) {
+		if(u == t || a == 0) return a;
+		int f , ret = 0;
+		for(int &i = cur[u]; ~i; i = nxt[i]) {
+			int v = vv[i];
+			if(d[v] == d[u] + 1 && (f = dfs(v, min(cap[i]-flow[i], a))) > 0) {
+				ret += f;
+				a -= f;
+				flow[i] += f;
+				flow[i^1] -= f;
+				if(a == 0) break;
+			}
+		}
+		return ret;
+	}
+
+	int gao(int S, int T) {
+		s = S, t = T;
+		int ans = 0;
+		while(bfs()) {
+			memcpy(cur, fst, sizeof fst);
+			ans += dfs(s, 0x3f3f3f3f);
+	 	}
+		return ans;
+	}
+}go;
+
+	int r, c, ma, fe;
+	int k;
+	int base;
+char s[25][25];
+LL disa[500][25][25], disb[500][25][25];
+struct node {
+	int x, y, t;
+	int id; 
+	void input() {
+		scanf("%d%d%d", &x, &y, &t);
+		--x, --y;
+	}
+}a[N], b[N], tmp;
+
+int get(int x, int y) {
+	return x * c + y;
+}
+bool check(LL mid) {
+	go.init();
+	int s = r * c * 2 + 1 + 2 * k, t = s + 1;
+	for(int i = 0; i < k; ++i)
+	{
+		go.add(s, a[i].id, 1);
+		for(int x = 0; x < r; ++x)
+			for(int y = 0; y < c; ++y)
+				if(disa[i][x][y] <= mid)
+					go.add(a[i].id, get(x, y), 1);
+		go.add(b[i].id, t, 1);
+		for(int x = 0; x < r; ++x)
+			for(int y = 0; y < c; ++y)
+				if(disb[i][x][y] <= mid)
+					go.add(get(x,y) + base, b[i].id, 1);
+	}
+	for(int i = 0; i < r; ++i)
+		for(int j = 0; j < c; ++j) {
+		   go.add(get(i, j), get(i, j) + base, 1);
+		}
+	int res = go.gao(s, t);
+	return res == k;
+}
+int que[M];
+int dx[] = {-1, 1, 0, 0};
+int dy[] = {0, 0, -1, 1};
+
+bool out(int x, int y) {
+	return x < 0 || x >= r || y < 0 || y >= c;
+}
+void bfs(LL dis[25][25], int x, int y, int t) {
+	for(int i = 0; i < r; ++i)
+		for(int j = 0; j < c; ++j)
+			dis[i][j] = (LL)1e16;
+	int head = 0, tail = 0;
+	que[tail++] = x, que[tail++] = y;
+	dis[x][y] = 0;
+	while(head < tail) {
+		x = que[head++], y = que[head++];
+		for(int i = 0; i < 4; ++i) {
+			int nx = x + dx[i], ny = y + dy[i];
+			if(out(nx, ny) || s[nx][ny] == '#') continue;
+			if(dis[nx][ny] > dis[x][y] + t) {
+				dis[nx][ny] = dis[x][y] + t;
+				que[tail++] = nx, que[tail++] = ny;
+			}
+		}
+	}
+}
+
+int main() {
+	scanf("%d%d%d%d", &r, &c, &ma, &fe);
+	if(abs(ma-fe)!= 1) {
+		puts("-1");
+		return 0;
+	}
+
+	for(int i = 0; i < r; ++i)
+		scanf("%s", s[i]);
+	k = max(ma, fe);
+	base = r * c;
+	tmp.input();
+	for(int i = 0; i < ma; ++i)
+		a[i].input();
+	for(int i = 0; i < fe; ++i)
+		b[i].input();
+	if(ma < k) a[ma] = tmp;
+	else b[fe] = tmp;
+	int tid = r*c*2;
+	for(int i = 0; i < k; ++i)
+	   a[i].id = tid++, b[i].id = tid++;	
+	for(int i = 0; i < k; ++i)
+		bfs(disa[i], a[i].x, a[i].y, a[i].t), 
+			bfs(disb[i], b[i].x, b[i].y, b[i].t);
+	LL l = 0, r = 1e15;
+	while(l < r) {
+		LL mid = l+r>>1;
+		if(check(mid)) r = mid;
+		else l = mid+1;
+	}
+	if(l == (LL)1e15) puts("-1");
+	else 
+	printf("%I64d\n", l);
+}

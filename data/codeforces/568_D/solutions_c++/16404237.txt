@@ -1,0 +1,122 @@
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+#include <cstring>
+#include <string>
+#include <vector>
+#include <set>
+#include <queue>
+#include <map>
+#include <iostream>
+#include <cassert>
+
+using namespace std;
+
+#define fru(j,n) for(int j=0; j<(n); ++j)
+#define tr(it,v) for(typeof((v).begin()) it=(v).begin(); it!=(v).end(); ++it)
+#define x first
+#define y second
+#define pb push_back
+#define ALL(G) (G).begin(),(G).end()
+
+typedef long long LL;
+typedef pair<int,int> pii;
+typedef vector<int> vi;
+
+const int inft = 1000000009;
+const int MAXN = 100005;//10^5
+
+typedef pair<LL,LL> pll;
+typedef pair<pll,pll> p4;
+
+LL det(LL a,LL b,LL c,LL d){ return a*d-b*c;}
+
+void skroc(pll &a){
+	assert(a.y);
+	if(a.y<0) {a.x*=-1; a.y*=-1;}
+	LL d=__gcd(abs(a.x),a.y);
+	a.x/=d;
+	a.y/=d;
+}
+
+bool intersect(LL A,LL B,LL C,LL A1,LL B1,LL C1, p4 &cut){
+	LL d=det(A,B,A1,B1);
+	if(!d) return 0;
+	pll x(det(-C,B,-C1,B1),d);
+	pll y(det(A,-C,A1,-C1),d);
+	skroc(x);
+	skroc(y);
+	cut=p4(x,y);
+	return 1;
+}
+int A[MAXN],B[MAXN],C[MAXN];
+bool inters(int a,int b, p4 &cut){
+	return intersect(A[a],B[a],C[a],A[b],B[b],C[b],cut);
+}
+
+
+bool lezy(p4 cut, int e){
+	pll x=cut.x,y=cut.y;
+	pll l(x.x*A[e],x.y);
+	pll m(y.x*B[e]+C[e]*y.y,y.y);
+	m.x*=-1;
+	skroc(l);
+	skroc(m);
+	return l==m;
+}
+
+int vv[10][MAXN];
+int vs[10];
+#define v vv[k]
+#define v2 vv[k-1]
+vector<pii> ans;
+
+void go(int k){
+	if(k==0 && vs[k]) return;
+	if(k>=vs[k]){
+		fru(i,vs[k]) ans.pb(pii(v[i],-2));
+		printf("YES\n");
+		printf("%lu\n",ans.size());
+		tr(it,ans) printf("%d %d\n",it->x+1,it->y+1);
+		exit(0);
+	}
+	if(k>1 && vs[k]>30*k*k){
+			fru(_,50){
+			int i=rand()%vs[k],j=rand()%vs[k];
+			if(i==j) continue;
+			p4 cut;
+			if(inters(v[i],v[j],cut)==0) continue;
+			vs[k-1]=0;
+			fru(e,vs[k]) if(!lezy(cut,v[e])) v2[vs[k-1]++]=v[e];
+			if(vs[k]-vs[k-1]>=k+1) {
+				ans.pb(pii(v[i],v[j]));
+				go(k-1);
+				ans.pop_back();
+				return;
+			}
+		}
+	}
+	else{
+		fru(i,k+1) fru(j,i){
+			p4 cut;		
+			if(inters(v[i],v[j],cut)==0) continue;
+			vs[k-1]=0;
+			fru(e,vs[k]) if(!lezy(cut,v[e])) v2[vs[k-1]++]=v[e];
+			assert(vs[k-1]+2<=vs[k]);
+			ans.pb(pii(v[i],v[j]));
+			go(k-1);
+			ans.pop_back();
+		}
+	}
+}
+int main(){
+	int n,K;
+	scanf("%d%d",&n,&K);
+	fru(i,n) scanf("%d%d%d",&A[i],&B[i],&C[i]);
+	vs[K]=n;
+	fru(i,n) vv[K][i]=i;
+	random_shuffle(vv[K],vv[K]+n);
+	go(K);
+	printf("NO\n");
+	return 0;
+}

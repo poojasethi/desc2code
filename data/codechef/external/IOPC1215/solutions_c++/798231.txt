@@ -1,0 +1,177 @@
+#include <cstdio>
+#include <algorithm>
+#include <queue>
+#include <cstring>
+using namespace std;
+
+const int MAX_N = 1000;
+const int MAX_M = 20000;
+
+const int INF = 1<<29;
+
+struct edge{
+	int tar, cost, id;
+};
+
+int N, M, Q;
+vector<edge> graph[MAX_N];
+vector<int> tree[MAX_N];
+bool visited[MAX_N];
+int ans[MAX_M];
+int prev_vert[MAX_N], shortest_path[MAX_N], rems[MAX_N];
+int dist_from_start[MAX_N];
+int dist_from_goal[MAX_N];
+
+struct state{
+	int dist, vert;
+};
+
+bool operator>(const state& lhs, const state& rhs){
+	return lhs.dist > rhs.dist;
+}
+
+void dijkstra(int dist[], int source){
+	priority_queue<state, vector<state>, greater<state> > que;
+	fill(dist, dist + N, INF);
+	dist[source] = 0;
+	que.push((state){0, source});
+
+	for(;!que.empty();){
+		int v = que.top().vert, d = que.top().dist; que.pop();
+		if(dist[v] < d){
+			continue;
+		}
+
+		for(int i=0; i<(int)graph[v].size(); i++){
+			const int u = graph[v][i].tar, nd = d + graph[v][i].cost;
+			if(nd < dist[u]){
+				dist[u] = nd;
+				prev_vert[u] = v;
+				que.push((state){nd, u});
+			}
+		}
+	}
+
+}
+
+void divide(vector<int>& as, int v){
+	as.push_back(v);
+	for(int i=0; i<(int)tree[v].size(); i++){
+		divide(as, tree[v][i]);
+	}
+}
+
+void pre_solve(){
+	dijkstra(dist_from_goal, N-1);
+	dijkstra(dist_from_start, 0);
+
+	int distance = dist_from_start[N-1];
+	fill(ans, ans + M, distance);
+
+	//shortest path treeの分割
+	vector< vector<int> > vs;
+	memset(rems, -1, sizeof(rems));
+	{
+		int cur = N - 1, p = 0;
+		for(;cur!=0;cur=prev_vert[cur]){
+			shortest_path[p++] = cur;
+		}
+		shortest_path[p++] = 0;
+		reverse(shortest_path, shortest_path + p);
+
+		//最短路上にある辺のidを集める
+		for(int i=0; i<p-1; i++){
+			const int v = shortest_path[i];
+			for(int j=0; j<(int)graph[v].size(); j++){
+				if(graph[v][j].tar == shortest_path[i+1]){
+					rems[i] = graph[v][j].id;
+					graph[v][j].tar = 0;
+				}
+			}
+		}
+
+		//shortest path treeをグラフとして構成する
+		prev_vert[0] = -1;
+		for(int v=0; v<N; v++){
+			for(int i=0; i<(int)graph[v].size(); i++){
+				const int u = graph[v][i].tar;
+				if(prev_vert[u] == v){
+					tree[v].push_back(u);
+				}
+			}
+		}
+
+		vs.assign(p-1, vector<int>());
+		for(int i=0; i<p-1; i++){
+			divide(vs[i], shortest_path[i]);
+		}
+
+		if(0)for(int i=0; i<p-1; i++){
+			for(int j=0; j<(int)vs[i].size(); j++){
+				printf("%d, ", vs[i][j]);
+			}puts("");
+		}
+	}
+
+	priority_queue<state, vector<state>, greater<state> > que;
+	memset(visited, false, sizeof(visited));
+	for(int i=0; i<(int)vs.size(); i++){
+		const int removed_id = rems[i];
+
+		for(int j=0; j<(int)vs[i].size(); j++){
+			visited[vs[i][j]] = true;
+		}
+		for(int j=0; j<(int)vs[i].size(); j++){
+			const int v = vs[i][j];
+			for(int k=0; k<(int)graph[v].size(); k++){
+				const int u = graph[v][k].tar, cost = graph[v][k].cost, id = graph[v][k].id;
+				if(id != removed_id && !visited[u]){
+					que.push((state){dist_from_start[v] + cost + dist_from_goal[u], u});
+				}
+			}
+		}
+
+		for(;!que.empty() && visited[que.top().vert]; que.pop());
+		ans[removed_id] = que.empty() ? INF : que.top().dist;
+	}
+}
+
+void init(){
+	scanf("%d%d%d", &N, &M, &Q);
+	for(int i=0; i<N; i++){
+		graph[i].clear();
+		tree[i].clear();
+	}
+
+	for(int i=0; i<M; i++){
+		int x, y, z;
+		scanf("%d%d%d", &x, &y, &z);
+		graph[x].push_back((edge){y, z, i});
+		graph[y].push_back((edge){x, z, i});
+	}
+}
+
+void query(){
+	int m;
+	scanf("%d", &m);
+	if(ans[m] < INF){
+		printf("%d\n", ans[m]);
+	}
+	else{
+		puts("no route for corrupt ministers!!!");
+	}
+}
+
+int main(){
+	int T;
+	scanf("%d", &T);
+	for(;T--;){
+		init();
+		pre_solve();
+		for(int i=0; i<Q; i++){
+			query();
+		}
+	}
+
+	return 0;
+}

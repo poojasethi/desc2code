@@ -1,0 +1,133 @@
+#include <cstdio>
+#include <cctype>
+#include <algorithm>
+#include <vector>
+using namespace std;
+
+const int maxn = 200002;
+const int maxk = 19;
+
+inline int read_int() {
+	char ch;
+	int res = 0;
+	while (! isdigit(ch = getchar()));
+	while (isdigit(ch)) {
+		res = res * 10 + ch - '0';
+		ch = getchar();
+	}
+	return res;
+}
+
+int n, m;
+int pa[maxn][maxk], up[maxn][maxk], down[maxn][maxk], d[maxn][maxk], dep[maxn];
+vector<int> G[maxn];
+
+inline void addedge(int u, int v) {
+	G[u].push_back(v); G[v].push_back(u);
+}
+
+inline void DFS(int u) {
+	for (int i = 0, size = G[u].size(); i < size; ++ i) {
+		int v = G[u][i];
+		if (! dep[v]) {
+			dep[v] = dep[u] + 1;
+			DFS(v);
+			d[u][2] = max(d[u][2], d[v][0] + 1);
+            if (d[u][1] < d[u][2]) swap(d[u][1], d[u][2]);
+            if (d[u][0] < d[u][1]) swap(d[u][0], d[u][1]);
+		}
+	}
+}
+
+void get(int u) {
+	for (int i = 0; (1 << (i + 1)) < dep[u]; ++ i) {
+		pa[u][i + 1] = pa[pa[u][i]][i];
+		up[u][i + 1] = max(up[u][i] + (1 << i), up[pa[u][i]][i]);
+		down[u][i + 1] = max(down[u][i], down[pa[u][i]][i] + (1 << i));
+	}
+	for (int i = 0, size = G[u].size(); i < size; ++ i) {
+		int v = G[u][i];
+		if (v != pa[u][0]) {
+			pa[v][0] = u;
+            if(d[u][0] == d[v][0] + 1) up[v][0] = d[u][1], down[v][0] = d[u][1] + 1;
+            else up[v][0] = d[u][0], down[v][0] = d[u][0] + 1;
+			get(v);
+		}
+	}
+}
+
+inline int move(int u, int h) {
+	for (int i = 0; h >> i; ++ i)
+		if ((h >> i) & 1) u = pa[u][i];
+	return u;
+}
+
+inline int LCA(int u, int v) {
+	if (dep[u] < dep[v]) swap(u, v);
+	u = move(u, dep[u] - dep[v]);
+	if (u == v) return u;
+	for (int i = 18; i >= 0; -- i)
+		if (pa[u][i] != pa[v][i]) u = pa[u][i], v = pa[v][i];
+	return pa[u][0];
+}
+
+inline int in(int u, int v) {
+	for (int i = 18; i >= 0; -- i)
+		if (dep[pa[u][i]] > dep[v]) u = pa[u][i];
+	return u;
+}
+
+inline int ret1(int u, int v) {
+	int res = -1;
+	for (int i = 18; i >= 0; -- i)
+		if (dep[u] - dep[v] >= (1 << i)) {
+			res = max(res + (1 << i), up[u][i]);
+			u = pa[u][i];
+		}
+	return res;
+}
+
+inline int ret2(int u, int v) {
+	int res = -1;
+	for (int i = 18, t = 0; i >= 0; -- i)
+		if (dep[u] - dep[v] >= (1 << i)) {
+			res = max(res, down[u][i] + t); t += (1 << i);
+			u = pa[u][i];
+		}
+	return res;
+}
+
+inline int calc(int u, int v) {
+	int res = d[u][0], w = LCA(u, v);
+    if(w == u) return max(ret1(v, u), ret2(u, 1));
+    if(w == v) return max(res, ret2(u, in(u, v)));
+	res = max(res, ret2(u, in(u, w)));
+    res = max(res, ret1(v, in(v, w)) + 1 - dep[w] + dep[u]);
+	res = max(res, ret2(w, 1) - dep[w] + dep[u]);
+    int d1 = d[in(u, w)][0], d2 = d[in(v, w)][0];
+    if(d1 < d2) swap(d1,d2);
+    res = max(res, (d[w][0] == d1 + 1 ? (d[w][1] == d2 + 1 ? d[w][2]: d[w][1]): d[w][0]) - dep[w] + dep[u]);
+    return res;
+}
+
+inline int query(int u, int v) {
+	int w = LCA(u, v), t, len = dep[u] + dep[v] - dep[w] * 2;
+	if (dep[u] - dep[w] < len / 2) swap(u, v);
+	t = move(u, len / 2);
+	return max(calc(u, t == w ? in(v, t): pa[t][0]), calc(v, t));
+}
+
+int main() {
+	n = read_int();
+	for (int i = 1; i < n; ++ i) {
+		int u = read_int(), v = read_int();
+		addedge(u, v);
+	}
+	dep[1] = 1; DFS(1); get(1);
+	m = read_int();
+	while (m --) {
+		int u = read_int(), v = read_int();
+		printf("%d\n", query(u, v));
+	}
+	return 0;
+}

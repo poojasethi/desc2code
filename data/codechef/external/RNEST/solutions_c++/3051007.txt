@@ -1,0 +1,166 @@
+// ICPC 2012 Onsite Amritapuri.
+
+#include <iostream>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cstring>
+#include <set>
+#include <map>
+#include <cassert>
+using namespace std;
+
+#define INF 1000000005
+#define REP(i, n) for( int i=0;i<n;i++)
+
+
+struct node
+{
+    int xl, xr, yt, yb;
+
+    node()
+    {}
+
+    node(int a, int b, int c, int d)
+    {
+	xl = a; xr = b;
+	yt = c; yb = d;
+    }
+
+};
+
+vector <node> rectangles;
+
+struct segment
+{
+    int yt, yb, rect_index;
+
+    segment()
+    {}
+
+    segment(int a, int b, int c)
+    {
+	yt = a; yb = b;
+	rect_index = c;
+    }
+    segment(const segment& a)
+    {
+	yt = a.yt; yb = a.yb;
+	rect_index = a.rect_index;
+    }
+
+};
+
+struct lex_compare
+{
+    bool operator() (const segment& lhs, const segment& rhs) const
+    {
+	if( lhs.yb < rhs.yb )
+	    return true;
+	return false;
+    }
+};
+
+
+bool ecompare(pair <int, int> a, pair <int, int> b)
+{
+    int xa, xb;
+    int typea, typeb;
+    typea = a.second;
+    typeb = b.second;
+    if( typea == 0 )
+	xa = rectangles[a.first].xl;
+    else
+	xa = rectangles[a.first].xr;
+    if( typeb == 0 )
+	xb = rectangles[b.first].xl;
+    else
+	xb = rectangles[b.first].xr;
+
+    if( xa < xb )
+	return true;
+    if( xa == xb && typea == 0 && typeb == 1 )
+	return true;
+    return false;
+}
+
+int main()
+{
+    int n;
+    cin>>n;
+    rectangles.resize(n);
+    REP(i, n)
+	cin>>rectangles[i].xl>>rectangles[i].yt>>rectangles[i].xr>>rectangles[i].yb;
+
+    vector <pair <int, int> > event_points;
+    REP(i, n)
+    {
+	event_points.push_back(make_pair(i, 0));
+	event_points.push_back(make_pair(i, 1));
+    }
+    sort(event_points.begin(), event_points.end(), ecompare);
+
+//    REP(i, 2*n)
+//	cout<<"HA "<<event_points[i].first<<" "<<event_points[i].second<<endl;
+
+    set <segment, lex_compare> status_line;
+    segment global( -INF, INF, -1);
+    status_line.insert(global);
+    
+    vector <int> soln(n, -1);
+    REP(i, 2*n)
+    {
+	int rect_index = event_points[i].first;
+	int type = event_points[i].second;
+	segment s(rectangles[rect_index].yt, rectangles[rect_index].yb, rect_index);
+	if( type == 0 )
+	{
+	    //cout<<s.yt<<" "<<s.yb<<" "<<s.rect_index<<endl;
+	    set <segment>::iterator out = status_line.upper_bound(s);
+	    soln[rect_index] = (*out).rect_index;
+	    //cout<<(*out).yt<<" "<<(*out).yb<<" "<<(*out).rect_index<<endl;
+
+	    segment temp(*out);
+	    segment ta(*out);
+	    segment tb(*out);
+	    ta.yb = rectangles[rect_index].yt;
+	    tb.yt = rectangles[rect_index].yb;
+
+	    status_line.erase(temp);
+	    status_line.insert(ta);
+	    status_line.insert(s);
+	    status_line.insert(tb);
+	}
+	else
+	{
+	    set <segment>::iterator out = status_line.find(s);
+	    assert(out != status_line.end());
+	    //cout<<(*out).yt<<" "<<(*out).yb<<" "<<(*out).rect_index<<endl;
+	    //segment ta(*(--out));
+	    //cout<<"Popping "<<rect_index<<endl;
+	    //cout<<ta.yt<<" "<<ta.yb<<" "<<ta.rect_index<<endl;
+	    //cout<<(*out).yt<<" "<<(*out).yb<<" "<<(*out).rect_index<<endl;
+	    out--;
+	    segment ta(*out);
+	    out++; out++;
+	    segment tb(*out);
+	    segment tne(ta);
+	    tne.yb = tb.yb;
+
+	    status_line.erase(ta);
+	    status_line.erase(s);
+	    status_line.erase(tb);
+	    status_line.insert(tne);
+	}
+    }
+
+    REP(i, n)
+	cout<<soln[i]<<endl;
+
+    return 0;
+}
+
+
+
+
+

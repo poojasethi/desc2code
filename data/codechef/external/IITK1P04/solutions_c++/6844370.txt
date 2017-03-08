@@ -1,0 +1,174 @@
+//Maximum flow problem using Edmond Karp's algorithm
+
+#include<bits/stdc++.h>
+
+using namespace std;
+
+#define ll long long int
+#define ull unsigned long long int
+#define maxN 305
+#define maxW 1005
+#define MOD 1000000007
+#define pb push_back
+#define mp make_pair
+#define INF (((ll)1000000000) * ((ll)1000000000))
+#define e 2.7182818284590452353602874
+#define maxT 100000
+#define inf 0x7fffffff
+#define inff 100000
+#define ff first
+#define ss second
+#define rep(i,N) for(int i=0;i<N;i++)
+
+int RG[maxN][maxN],F[maxN][maxN],C[maxN][maxN],CC[maxN][maxN];
+int vis[maxN],parent[maxN];
+int s,t,N,M;
+vector<int> V[maxN];
+queue<int> Q;
+
+void bfs(int node) {
+ vis[node]=1;
+while(Q.empty()==false)
+ Q.pop();
+ Q.push(node);
+ while(Q.empty()==false) {
+  int u=Q.front();
+  Q.pop();
+  for(int i=0;i<V[u].size();i++)
+   if(RG[u][V[u][i]]>0 && vis[V[u][i]]==0) {
+    vis[V[u][i]]=1;
+    Q.push(V[u][i]);
+    parent[V[u][i]]=u;
+   }
+ }
+}
+
+
+int min_edge() {
+int min=inf;
+int v=t;
+while(parent[v]!=-1) {
+ int u=parent[v];
+ if(RG[u][v]<min)
+  min=RG[u][v];
+ v=u;
+ }
+return min;
+}
+
+
+
+void path() {
+int u=t;
+vector<int> V;
+V.clear();
+while(parent[u]!=-1) {
+V.pb(u);
+u=parent[u];
+}
+V.pb(s);
+for(int i=V.size()-1;i>=0;i--)
+ cout<<V[i]<<" ";
+cout<<"\n";
+}
+
+
+
+//create residual graph for the first iteration
+int residual() {
+for(int i=0;i<N;i++)
+ for(int j=0;j<N;j++)
+  RG[i][j]=C[i][j];
+memset(vis,0,sizeof(vis)); 
+memset(parent,-1,sizeof(vis));
+bfs(s);
+//path();
+int added_flow=min_edge();
+int v=t;
+while(parent[v]!=-1) {
+ int u=parent[v];
+ F[u][v]+=added_flow;
+ RG[u][v]=C[u][v]-F[u][v];	//create residual graph
+ RG[v][u]=F[u][v];
+ v=u;
+ }
+return added_flow;
+}
+
+
+int edmondkarp() {
+int maxflow=residual();	//get flow from first iteration
+
+memset(vis,0,sizeof(vis)); 
+memset(parent,-1,sizeof(vis));
+bfs(s);	//find augmenting path from s to t in residual graph
+
+int added_flow=min_edge();
+while(vis[t]==1) { //path exists
+ //path();
+ int v=t;
+ maxflow+=added_flow;	//increase flow by lowest cost edge
+ while(parent[v]!=-1) {
+  int u=parent[v];
+  F[u][v]+=added_flow;	//added flow in edge (u,v) 
+  RG[u][v]=C[u][v]-F[u][v];	//forward in residual graph
+  RG[v][u]=F[u][v];		//reverse edge of current flow
+  v=u;
+ }
+ memset(vis,0,sizeof(vis));
+ memset(parent,-1,sizeof(vis));
+ bfs(s);	//find augmenting path from s to t in residual graph
+ added_flow=min_edge();
+}
+//exit while loop when no s-t path exists in residual graph
+return maxflow;	//return maximum flow
+}
+
+
+
+
+int main() {
+
+cin.sync_with_stdio(0);
+cin.tie(0);
+
+cin>>N>>M;
+
+for(int i=0;i<=N;i++)
+ V[i].clear();
+
+while(M--) {
+int a,b,c;
+cin>>a>>b>>c;
+CC[--a][--b]=c;	//capacity of edge (a,b)
+V[a].pb(b);
+}
+
+/*
+cout<<"\n\n";
+for(int i=0;i<N;i++)  {
+ for(int j=0;j<N;j++)
+cout<<C[i][j]<<" ";
+cout<<"\n";
+}
+cout<<"\n\n";*/
+int T;
+cin>>T;
+
+while(T--) {
+cin>>s>>t;
+s--;
+t--;
+
+for(int i=0;i<N;i++) 
+ for(int j=0;j<N;j++) {
+  C[i][j]=CC[i][j];
+  F[i][j]=0;
+  }
+
+int flow=edmondkarp();
+cout<<flow<<"\n";
+}
+
+return 0;
+}

@@ -1,0 +1,161 @@
+#include<stdio.h>
+#include<iostream>
+#include<vector>
+#include<cmath>
+#include<algorithm>
+#include<memory.h>
+#include<map>
+#include<set>
+#include<queue>
+#include<list>
+#include<sstream>
+#include<cstring>
+#define mp make_pair
+#define pb push_back      
+#define F first
+#define S second
+#define SS stringstream
+#define sqr(x) ((x)*(x))
+#define m0(x) memset(x,0,sizeof(x))
+#define m1(x) memset(x,63,sizeof(x))
+#define CC(x) cout << (x) << endl
+#define pw(x) (1ll<<(x))
+#define M 1000000007
+#define N 211111
+using namespace std;
+typedef pair<int,int> pt;
+
+int dd[N], pr[20][N];
+int ac[N], s[N];
+long long dist[N];
+vector<int> v[N];
+int n, m1, m2;
+
+vector<int> order;
+int ff[21][N];
+int gg[N];
+int u[N], zz[N];
+int T;
+
+void dfs(int x, int p, int d) {
+	T++;
+	int curt = T;
+	u[T] = x;
+	zz[x] = order.size();
+	order.pb(curt);
+
+	dd[x] = d;
+	pr[0][x] = p;
+	for (int i = 0; i < v[x].size(); i++) if (v[x][i] != p) {
+		dfs(v[x][i], x, d + 1);
+		order.pb(curt);
+	}		
+}
+
+int fin(int x, int y) {	
+	if (x > y) swap(x, y);
+	int w = gg[y - x + 1];
+	return min(ff[w][x], ff[w][y - pw(w) + 1]);
+}
+
+int lca(int x, int y) {
+	int fm = fin(zz[x], zz[y]);
+	return u[fm];
+}
+
+void add(int x, int y, int v) {
+	if (dd[x] < dd[y]) swap(x, y);
+	ac[x] += v;
+	ac[y] -= v;
+}
+
+void sol(int a, int b, int c, int d) {
+	if (dd[a] < dd[b]) swap(a, b);
+
+	int ac = lca(a, c);
+	int ad = lca(a, d);
+	int bc = lca(b, c);
+	int bd = lca(b, d);
+	add(a, b, 1);
+
+	if (ac == a && ad == a) return;
+	if (bc != b && bd != b) return;
+	
+	if (ac == a) {
+		if (bd != b) add(a, b ,-1); else add(a, ad, -1);
+	} else 
+	if (ad == a) {
+		if (bc != b) add(a, b, -1); else add(a, ac, -1);	
+	} else
+	if (bc != b) {
+		add(ad, b, -1);
+	} else 
+	if (bd != b) {
+		add(ac, b, -1);
+	} else 
+	{
+		add(ac, ad, -1);
+	}
+}
+
+void dfs2(int x, int p) {
+	s[x] = ac[x];
+	for (int i = 0; i < v[x].size(); i++) if (v[x][i] != p) {
+		dfs2(v[x][i], x);
+		s[x] += s[v[x][i]];
+	}
+}
+
+void dfs3(int x, int p, long long sum) {
+	sum += s[x];
+	dist[x] = sum;
+	for (int i = 0; i < v[x].size(); i++) if (v[x][i] != p) dfs3(v[x][i], x, sum);
+}
+
+int main(){
+	cin >> n >> m1 >> m2;
+	for (int i = 0; i < n - 1; i++) {
+		int x, y;
+		scanf("%d%d", &x, &y);
+		x--;
+		y--;
+		v[x].pb(y);
+		v[y].pb(x);
+	}
+	dfs(0, 0, 0);
+	for (int i = 1; i < 20; i++) for (int j = 0; j < n; j++) pr[i][j] = pr[i - 1][pr[i - 1][j]];
+
+	for (int i = 0; i < order.size(); i++) ff[0][i] = order[i];
+	for (int i = 1; i < 21; i++) for (int j = 0; j < order.size(); j++) if (j + pw(i) <= order.size()) ff[i][j] = min(ff[i - 1][j], ff[i - 1][j + pw(i - 1)]);
+	gg[1] = 0;
+	for (int i = 2; i <= order.size(); i++) gg[i] = gg[i / 2] + 1;
+
+	for (int i = 0; i < m1; i++) {
+		int a, b, c, d;
+		scanf("%d%d%d%d", &a, &b, &c, &d);
+		a--;
+		b--;
+		c--;
+		d--;
+
+		int z = lca(a, b);
+		if (z == b || z == a) sol(a, b, c, d); else {
+			sol(a, z, c, d);
+			sol(b, z, c, d);
+		}
+
+	}
+	dfs2(0, 0);
+	dfs3(0, 0, 0);
+	for (int i = 0; i < m2; i++) {
+		int a, b;
+		scanf("%d%d", &a, &b);
+		a--;
+		b--;
+		int z = lca(a, b);
+		long long ans = dist[a] + dist[b] - 2 * dist[z];
+		printf("%lld\n", ans);
+
+	}
+	return 0;
+}

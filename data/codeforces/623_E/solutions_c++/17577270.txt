@@ -1,0 +1,228 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+template<class T>inline void Read(T &x)
+{
+    int f = 1;
+    char t = getchar();
+    while (t < '0' || t > '9') {
+        if (t == '-') f = -1;
+        t = getchar();
+    }
+    x = 0;
+    while (t >= '0' && t <= '9') {
+        x = x * 10 + t - '0';
+        t = getchar();
+    }
+    x *= f;
+}
+
+template<class T>inline void chkmin(T &x, T y) { if (x > y) x = y; }
+template<class T>inline void chkmax(T &x, T y) { if (x < y) x = y; }
+
+const int modulo = 1000000007;
+const int maxn = 30005;
+const int maxs = 200005;
+const int mod[] = {998244353, 1004535809, 1007681537, 1000000007};
+const int G[] = {3, 3, 3};
+
+long long n;
+int k;
+
+int pw[4][maxn];
+int fac[4][maxn];
+int ifac[4][maxn];
+
+int N;
+int L;
+int unit;
+int bit[3][maxs];
+int rev[maxs];
+
+int r[3][3];
+
+void input()
+{
+    Read(n);
+    Read(k);
+}
+
+int fpm(int x, int k, int modulo)
+{
+    int res = 1;
+    while (k > 0) {
+        if (k & 1) res = 1ll * res * x % modulo;
+        x = 1ll * x * x % modulo;
+        k >>= 1;
+    }
+    return res;
+}
+
+void initntt(int n)
+{
+    N = 1, L = 0;
+    while (N < 2 * n) N <<= 1, L ++;
+    for (int k = 0; k < 3; k++) {
+        int Gn = G[k];
+        int modulo = mod[k];
+        unit = fpm(Gn, (modulo - 1) / N, modulo);
+        bit[k][0] = 1;
+        for (int i = 1; i <= N; i++) {
+            bit[k][i] = 1ll * bit[k][i - 1] * unit % modulo;
+        }
+    }
+    for (int i = 0; i <= N; i++) {
+        rev[i] = rev[i >> 1] >> 1 | ((i & 1) << (L - 1));
+    }
+}
+
+void dft(int *res, int flag, int id, int mod)
+{
+    int x, y;
+    for (int i = 0; i < N; i++) if (rev[i] > i) swap(res[rev[i]], res[i]);
+    for (int k = 1; k < N; k <<= 1) {
+        for (int s = 0; s < N; s += (k << 1)) {
+            for (int i = 0; i < k; i++) {
+                x = res[s + i], y = res[s + k + i];
+                if (flag == 1) y = 1ll * y * bit[id][N / (k << 1) * i] % mod;
+                else y = 1ll * y * bit[id][N - N / (k << 1) * i] % mod;
+                res[s + i] = (x + y) % mod;
+                res[s + k + i] = (x - y + mod) % mod;
+            }
+        }
+    }
+    if (flag == -1) {
+        int inv = fpm(N, mod - 2, mod);
+        for (int i = 0; i < N; i++) {
+            res[i] = 1ll * res[i] * inv % mod;
+        }
+    }
+}
+
+void prepare()
+{
+    int *fac, *ifac, *pw;
+    for (int p = 0; p < 4; p++) {
+        int modulo = mod[p];
+        fac = ::fac[p];
+        ifac = ::ifac[p];
+        pw = ::pw[p];
+        fac[0] = ifac[0] = ifac[1] = pw[0] = 1;
+        for (int i = 1; i <= k; i++) fac[i] = 1ll * fac[i - 1] * i % modulo;
+        for (int i = 2; i <= k; i++) ifac[i] = 1ll * (modulo - modulo / i) * ifac[modulo % i] % modulo;
+        for (int i = 2; i <= k; i++) ifac[i] = 1ll * ifac[i] * ifac[i - 1] % modulo;
+        for (int i = 1; i <= k; i++) pw[i] = 1ll * pw[i - 1] * 2 % modulo;
+    }
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            r[i][j] = fpm(mod[i], mod[j] - 2, mod[j]);
+        }
+    }
+    initntt(k + 1);
+}
+
+inline int crt(int t1, int t2, int t3)
+{
+    // x = M1 + M2 + M3
+    // M1 % r1 = a1
+    // M2 % r2 = a2
+    // M3 % r3 = a3
+    // M1 = c1
+    // M2 = r1 * c2
+    // M3 = r1 * r2 * c3
+    // c1 = a1
+    // (c1 + r1 * c2) % r2 = a2
+    // c2 = (a2 - c1) / r1
+    // (c1 + r1 * c2 + r1 * r2 * c3) % r3 = a3
+    int x[3] = {t1, t2, t3};
+    int M[3] = {0, 0, 0};
+    for (int i = 0; i < 3; i++) {
+        M[i] = x[i];
+        for (int j = 0; j < i; j++) {
+            M[i] = ((M[i] - M[j]) % mod[i] + mod[i]) % mod[i];
+            M[i] = 1ll * M[i] * r[j][i] % mod[i];
+        }
+    }
+    int res = 0;
+    int mult = 1;
+    for (int i = 0; i < 3; i++) {
+        res = (res + 1ll * mult * M[i] % modulo) % modulo;
+        mult = 1ll * mult * mod[i] % modulo;
+    }
+    return res;
+}
+
+void mul(int len, int a[maxs], int b[maxs], int ret[maxs], int modulo)
+{
+    static int A[maxs];
+    static int B[maxs];
+    static int C[3][maxs];
+    int *fac = ::fac[3];
+    int *pw = ::pw[3];
+    int *ifac = ::ifac[3];
+    for (int p = 0; p < 3; p++) {
+        int modulo = mod[p];
+        for (int i = 0; i <= k; i++) {
+            A[i] = 1ll * a[i] * ifac[i] % ::modulo * fpm(pw[i], len, ::modulo) % ::modulo;
+            B[i] = 1ll * b[i] * ifac[i] % ::modulo;
+        }
+        for (int i = k + 1; i <= N; i++) A[i] = B[i] = 0;
+        dft(A, 1, p, modulo);
+        dft(B, 1, p, modulo);
+        for (int i = 0; i < N; i++) C[p][i] = 1ll * A[i] * B[i] % modulo;
+        dft(C[p], -1, p, modulo);
+    }
+    for (int i = 0; i <= k; i++) {
+        ret[i] = crt(C[0][i], C[1][i], C[2][i]);
+        ret[i] = 1ll * ret[i] * fac[i] % ::modulo;
+    }
+}
+
+inline int binom(int r, int k, int modulo)
+{
+    return 1ll * fac[3][r] * ifac[3][k] % modulo * ifac[3][r - k] % modulo;
+}
+
+void solve()
+{
+    if (n > k) {
+        printf("0\n");
+    } else {
+        static int x[maxs];
+        static int res[maxs];
+        int xlen = 1;
+        int reslen = 1;
+        int n = ::n - 1;
+        for (int i = 1; i <= k; i++) res[i] = x[i] = 1;
+        while (n > 0) {
+            if (n & 1) {
+                mul(xlen, res, x, res, modulo);
+                reslen = reslen + xlen;
+            }
+            mul(xlen, x, x, x, modulo);
+            xlen = xlen + xlen;
+            n >>= 1;
+        }
+        int ans = 0;
+        for (int i = 1; i <= k; i++) ans = (ans + 1ll * res[i] * binom(k, i, modulo) % modulo) % modulo;
+        cout << ans << endl;
+    }
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+    freopen("input.txt", "r", stdin);
+    freopen("output.txt", "w", stdout);
+#endif
+
+    input();
+    prepare();
+    solve();
+    
+#ifndef ONLINE_JUDGE
+    fclose(stdin);
+    fclose(stdout);
+#endif
+    return 0;
+}

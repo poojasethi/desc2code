@@ -1,0 +1,128 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+struct seg{
+	long long sm, mx;
+	bool inc, dec;
+} m[500005];
+
+long long a[500005];
+
+void buildTree(int node,int start,int end){
+	if(start > end) return;
+    if(start==end) { m[node].sm = m[node].mx = a[start]; m[node].dec = m[node].inc = true; return; }
+    int mid = (start + end) / 2;
+    int l = node<<1;
+    int r = l|1;
+    //cout << node << "  " << start << " " << end <<  " " << mid << " " << l << " " << r << endl;
+    buildTree(l, start, mid);
+    buildTree(r, mid+1, end);
+    m[node].sm = m[l].sm + m[r].sm;
+    m[node].mx = max(m[l].mx, m[r].mx);
+    m[node].inc = m[l].inc && m[r].inc && (a[mid]<=a[mid+1]);
+    m[node].dec = m[l].dec && m[r].dec && (a[mid]>=a[mid+1]);
+}
+
+void updateTree(int node, int start, int end, int ind){
+	if(start>ind || end<ind || start>end) return;
+	if(start==end && ind==start) {m[node].mx = m[node].sm = a[start]; return;}
+	int mid = (start+end) / 2;
+	int l = node<<1;
+    int r = l|1;
+	updateTree(l, start, mid, ind);
+	updateTree(r, mid+1, end, ind);
+    m[node].sm = m[l].sm + m[r].sm;
+    m[node].mx = max(m[l].mx, m[r].mx);
+    m[node].inc = m[l].inc && m[r].inc && (a[mid]<=a[mid+1]);
+    m[node].dec = m[l].dec && m[r].dec && (a[mid]>=a[mid+1]);
+    return;
+}
+
+void updateVal(int node, int start, int end, int ind, long long val){
+	a[ind] = val;
+	updateTree(node, start, end, ind);
+}
+
+
+long long getSum(int node,int start,int end,int s, int e){
+	if(start>e || end<s || start>end) return 0;
+	if(s<=start && e>=end) return m[node].sm;
+	int mid = (start+end) / 2;
+ 	int l = node<<1;
+    int r = l|1;
+	long long lSum = getSum(l, start, mid,s ,e);
+	long long rSum = getSum(r, mid+1, end, s, e);
+	return lSum+rSum;
+}
+
+long long getMax(int node,int start,int end,int s, int e){
+	if(start>e || end<s || start>end) return -1;
+	if(s<=start && e>=end) return m[node].mx;
+	int mid = (start+end) / 2;
+ 	int l = node<<1;
+    int r = l|1;
+	long long lMax = getMax(l, start, mid, s ,e);
+	long long rMax = getMax(r, mid+1, end, s, e);
+	return max(lMax, rMax);
+}
+
+bool getInc(int node,int start,int end,int s, int e){
+	if(start>e || end<s || start>end) return true;
+	if(s<=start && e>=end) return m[node].inc;
+	int mid = (start+end) / 2;
+ 	int l = node<<1;
+    int r = l|1;
+    bool lInc = getInc(l, start, mid, s, e);
+    bool rInc = getInc(r, mid+1, end, s, e);
+    if(mid>=s && mid+1<=e) return (lInc &&  rInc && (a[mid]<=a[mid+1]));
+    return (lInc && rInc);
+}
+
+bool getDec(int node,int start,int end,int s, int e){
+	if(start>e || end<s || start>end) return true;
+	if(s<=start && e>=end) return m[node].dec;
+	int mid = (start+end) / 2;
+ 	int l = node<<1;
+    int r = l|1;
+    bool lDec = getDec(l, start, mid, s, e);
+    bool rDec = getDec(r, mid+1, end, s, e);
+    if(mid>=s && mid+1<=e) return (lDec &&  rDec && (a[mid]>=a[mid+1]));
+    return (lDec && rDec);
+}
+
+int main() {
+	int N, Q;
+	cin >> N >> Q;
+	for(int i=0; i<N; i++) scanf("%lld", &a[i]);
+	buildTree(1, 0, N-1);
+	int s, e, index;
+	long long newval;
+	for(int i = 0 ; i < Q ; i++){
+		char c = getchar();
+		scanf("%c", &c);
+		if(c == 'U'){
+			scanf("%d%lld", &index, &newval);
+			index--;
+			a[index] = newval;
+			updateVal(1, 0, N-1, index, newval);
+		}
+		else{
+			scanf("%d%d", &s, &e);
+			s--;
+			e--;
+			// for(int j=0; j<2*N; j++) cout << m[j].sm << " ";
+			// cout << endl;
+			switch(c){
+				case 'M': printf("%lld\n", getMax(1, 0, N-1, s, e));
+						break;
+				case 'S': printf("%lld\n", getSum(1, 0, N-1, s, e));
+						break;
+				case 'I': printf("%d\n", getInc(1, 0, N-1, s, e));
+						break;
+				case 'D': printf("%d\n", getDec(1, 0, N-1, s, e));
+						break;
+			}
+		}
+	}
+	return 0;
+}

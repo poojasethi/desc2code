@@ -1,0 +1,211 @@
+#include<iostream>
+#include<cstdio>
+#include<vector>
+#include<algorithm>
+#include<map>
+#include<utility>
+#include<cstring>
+#include<string>
+
+using namespace std;
+
+typedef vector<int> VI;
+typedef pair<int, int> PII;
+typedef vector<PII> VPII;
+
+#define pb push_back
+#define mp make_pair
+#define fi first
+#define se second
+
+
+#define RR 505
+#define NN 200005
+
+bool bb[RR];
+VPII hotel[RR];
+VI rooms;
+int N, R;
+int rc, k;
+int A[3] = {1,2,3};
+int sum =0;
+
+
+//to store room details
+int time_f[RR]; //time room becomes free
+
+void sweep(int r)
+{
+   rooms.clear();
+   int k = 0, rc = 1, r_next, a_next, r_curr=0, a0=1, a1=2, a2=3;
+   for(int i=0; i<r; i++)
+   {
+       bb[i]=0;
+   }
+   bb[0] = 1;
+   rooms.pb(0);
+   hotel[r].pb(mp(0,0));
+   while(rc<r)
+   {
+       if(k<3)
+       {
+            a_next = A[k];
+            r_next = (r_curr+a_next)%r;
+            k++;
+            if(!bb[r_next])
+            {
+                bb[r_next]=1;
+                rc++;
+                hotel[r].pb(mp(r_next, k));
+            }
+       }
+       else
+       {
+           a_next = (a0+a1+a2)%r;
+           a0=a1, a1=a2, a2=a_next;
+           r_next = (r_curr+a_next)%r;
+           k++;
+           if(!bb[r_next])
+           {
+                bb[r_next]=1;
+                rc++;
+                hotel[r].pb(mp(r_next, k));
+           }
+
+       }
+       rooms.pb(r_next);
+
+       //checking for periodicity
+       int s = rooms.size(), r0, r1, r2;
+       if(s>3)
+       {
+           r2 = rooms[s-1];
+           r1 = rooms[s-2];
+           r0 = rooms[s-3];
+
+           if(r0 == rooms[0] && r1 == rooms[1] && r2 == rooms[2])
+           {
+               sum+=k;
+               break;
+           }
+       }
+           r_curr = r_next;
+
+   }
+}
+
+void precompute()
+{
+    for(int r = 1; r<501; r++)
+    {
+        if(r%33!=0) sweep(r);
+    }
+
+}
+
+
+
+int RNG(char name[11], int pincv, int r)
+{
+    int len = strlen(name);
+    int ans = 0;
+    for(int i=0; i<len; i++)
+    {
+        ans += tolower(name[i]) - 'a' +1 ;
+        if(i!=len-1)ans*= 33;
+        if(ans>=r)ans%=r;
+    }
+    ans+= pincv;
+    if(ans>=r)ans%=r;
+
+    return ans;
+}
+
+
+
+
+int main()
+{
+
+
+    #ifndef ONLINE_JUDGE
+    freopen("input.txt","r",stdin);
+    freopen("output.txt","w",stdout);
+    #endif
+    precompute();
+
+    int t;
+    int H, M, G;
+    char S[11];
+
+
+
+    scanf("%d", &t);
+    while(t--)
+    {
+        int days=0, abs_time=0,  curr_time, prev_time=0;
+        int pincv = 0; //prev inconvenience
+        scanf("%d%d", &N, &R);
+        //set time room becomes free to 0 for all rooms
+        for(int i=0; i<R; i++)
+        {
+        time_f[i] = 0;
+        }
+
+        for(int k=0; k<N; k++)
+        {
+
+
+
+            scanf("%d %d %d %s", &H, &M, &G, S);
+            curr_time = 60*H + M;
+
+            if(curr_time < prev_time)
+            {
+                days++;
+            }
+
+            prev_time = curr_time;
+            abs_time = 24*60*days + curr_time; //absolute time in minutes
+
+
+            //to settle the guest
+            int rd = RNG(S, pincv, R);
+            bool issettled = 0;
+            int new_incv1, new_incv2,  mwt =  999999999; //inconvenience caused to this guest
+            for(int i=0; i<hotel[R].size(); i++)
+            {
+                    int j = hotel[R][i].first+rd;
+                    if(j>=R)j%=R;
+
+                    if(abs_time>= time_f[j])
+                    {
+                        new_incv1 = hotel[R][i].se;
+                        time_f[j] = abs_time + G*60;
+                        issettled = 1;
+                        break;
+                    }
+                    else
+                    {
+                        if(time_f[j]- abs_time<mwt)
+                        {
+                            mwt = time_f[j]- abs_time;
+                            new_incv2 = mwt;
+                        }
+                    }
+
+            }
+            if(issettled)
+            {
+                printf("%d\n", new_incv1);
+                pincv+= new_incv1;
+            }
+            else
+            {
+                printf("-%d\n", new_incv2);
+                pincv+= new_incv2;
+            }
+            if(pincv>=R)pincv%=R;
+        }
+    }
+}

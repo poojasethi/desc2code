@@ -1,0 +1,99 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define INF 1e7
+
+struct Point{
+	double x, y;
+	Point(double _x, double _y) : x(_x), y(_y) {}
+	bool compareX(const Point & a) const{
+		if(this->x < a.x){
+			return true;
+		}else if(this->x == a.x){
+			return this->y < a.y;
+		}
+		return false;
+	}
+	bool compareY(const Point & a) const{
+		if(this->y < a.y){
+			return true;
+		}else if(this->y == a.y){
+			return this->x < a.x;
+		}
+		return false;
+	}
+};
+
+struct SetCmp{
+	bool operator() (const Point & a, const Point & b) const{
+		return a.compareY(b);
+	}
+};
+
+double perimeter(const Point & a, const Point & b, const Point & c){
+	return hypot(a.x-b.x, a.y-b.y) + hypot(a.x-c.x, a.y-c.y) + hypot(b.x-c.x,b.y-c.y);
+}
+
+bool cmpx(const Point &a, const Point &b){
+	return a.compareX(b);
+}
+
+typedef set<Point, SetCmp> PointSet;
+
+int main(){
+	int t;
+	scanf("%d", &t);
+	for(int tc = 1; tc <= t; tc++){
+		int n;
+		scanf("%d", &n);
+		vector<Point> v;
+		for(int i = 0; i < n; i++){
+			double x, y;
+			scanf("%lf%lf", &x, &y);
+			v.push_back(Point(x,y));
+		}
+
+		// order by x-coordinate
+		sort(v.begin(), v.end(), cmpx);
+
+		PointSet s;
+		double p = perimeter(v[0], v[1], v[2]);
+		s.insert(v[0]);
+		s.insert(v[1]);
+		s.insert(v[2]);
+		int left = 0;
+		// start sweeping
+		for(int i = 3; i < v.size(); i++){
+			Point & cur = v[i];
+			// remove those who have left the rectangle
+			while(left < i && cur.x - v[left].x > p/2){
+				s.erase(v[left]);
+				left++;
+			}
+
+			if(s.size() > 2){
+				PointSet::iterator ybegin = s.lower_bound(Point(0, cur.y - p/2));
+				PointSet::iterator yend = s.lower_bound(Point(INF, cur.y + p/2));
+
+				while(ybegin != yend && ybegin != s.end()){
+					PointSet::iterator ybegin2 = ybegin;
+					ybegin2++;
+
+					while(ybegin2 != yend && ybegin2 != s.end()){
+						double tmp = perimeter(*ybegin, *ybegin2, cur);
+						if(tmp < p) p = tmp;
+						ybegin2++;
+					}
+
+					ybegin++;
+				}
+			}
+
+			s.insert(cur);
+		}
+
+		printf("Case %d: %.8lf\n", tc, p);
+	}
+	return 0;
+}

@@ -1,0 +1,96 @@
+#include <cstdio>
+#include <algorithm>
+#include <map>
+#define MOD 1000000007
+#define INF 1000000009
+
+using namespace std;
+
+int N;
+int modexp(int,long long int);
+
+/* Range Minimum Query */
+/* res[n*k+i] = argmin( i<=k<i+2^k, arr[k] ) */
+void RMQBuild(int arr[], int n, int res[]){
+    int i, k, hf;
+
+    for(i=0; i<n; i++) res[i] = i;
+    for(k=1;;k++){
+        hf = (1<<(k-1)); if(hf >= n) break;
+        for(i=0; i<n; i++){
+            res[n*k+i] = res[n*(k-1)+i];
+            if(i+hf < n && arr[res[n*k+i]] > arr[res[n*(k-1)+i+hf]]) res[n*k+i] = res[n*(k-1)+i+hf];
+        }
+    }
+}
+
+/* return argmin( a<=k<=b, arr[k] ) */
+int RMQQuery(int arr[], int n, int rmq[], int a, int b){
+    int dep, wid = b-a+1, A, B;
+    for(dep=0;(1<<(dep+1))<=wid;dep++);
+    A = rmq[n*dep+a];
+    B = rmq[n*dep+b-(1<<dep)+1];
+    if(arr[A] > arr[B]) A = B;
+    return A;
+}
+
+
+int a[100009], ainv[100009], rmq[2000009], rmqinv[2000009];
+
+map<pair<int,int>, int> rem;
+
+int findAns(int s, int e) {
+    if(s >= e) return 1;
+    pair<int,int> pr = make_pair(s,e);
+    if(rem.count(pr)) {
+        return rem[pr];
+    }
+    int mxi = RMQQuery(ainv, N, rmqinv, s, e);
+    int mni = RMQQuery(a, N, rmq, s, e);
+    long long diff = a[mxi] - a[mni];
+    int p = min(mxi, mni);
+    int q = max(mxi, mni);
+    long long ans = modexp(diff, (p-s+1)*1LL*(e-q+1));
+    ans = ans * findAns(s, q-1);
+    ans = ans%MOD;
+    ans = ans * findAns(p+1, e);
+    ans = ans%MOD;
+    ans = ans * modexp( findAns(p+1, q-1), MOD-2);
+    ans = ans%MOD;
+    
+    rem[pr] = ans;
+    return ans;
+}
+
+int main() {
+    
+    int i;
+    scanf("%d",&N);
+    for(i=0; i<N; ++i) {
+        scanf("%d",&a[i]);
+        ainv[i] = -a[i];
+    }
+
+    RMQBuild(a, N, rmq);
+    RMQBuild(ainv, N, rmqinv);
+
+    int ans = findAns(0, N-1);
+    printf("%d\n", ans);
+    return 0;
+}
+
+
+int modexp(int a, long long int b) {
+    long long ans = 1;
+    long long temp = a;
+    while(b) {
+        if((b&1LL) != 0) {
+            ans = ans*temp;
+            if(ans > MOD) ans = ans%MOD;
+        }
+        temp = temp*temp;
+        if(temp > MOD) temp = temp%MOD;
+        b = b/2;
+    }
+    return (int)ans;
+}

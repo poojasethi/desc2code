@@ -1,0 +1,62 @@
+#include<stdio.h>
+#include<string.h>
+
+const int MAXL=9+3;
+const long long MOD=1000000007;
+
+int f[MAXL];
+long long dfs(int u,int res)
+{
+	if(u==7)
+		return 1;
+	long long ans=0;
+	for(int i=0;i<res;++i)
+		if(f[i])
+		{
+			--f[i];
+			ans+=(f[i]+1)*dfs(u+1,res-i)%MOD;
+			++f[i];
+		}
+	return ans%MOD;
+}
+
+int C[MAXL][MAXL];
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt","r",stdin);
+	freopen("output.txt","w",stdout);
+#endif
+	int m;
+	scanf("%d",&m);
+	char c[MAXL];
+	sprintf(c,"%d",m);
+	int l=strlen(c),i,j;
+	for(i=0;i<l;++i)
+	{
+		C[i][0]=1;
+		for(j=1;j<=i;++j)
+			C[i][j]=C[i-1][j]+C[i-1][j-1];
+	}
+	int cnt=0;
+	for(i=0;i<l;++i)
+	{
+		int t=(c[i]>'4')+(c[i]>'7');
+		for(j=0;j<=l-i;++j)
+		{
+			if(j<l-i)
+				f[j+cnt]+=(c[i]-'0'-t)*C[l-i-1][j]<<j<<3*(l-i-1-j);
+			if(j)
+				f[j+cnt]+=t*C[l-i-1][j-1]<<(j-1)<<3*(l-i-j);
+		}
+		if(c[i]=='4' || c[i]=='7')
+			++cnt;
+	}
+	++f[cnt],--f[0];
+	long long ans=0;
+	for(i=1;i<=l;++i)
+		if(f[i])
+			ans+=f[i]*dfs(1,i)%MOD;
+	printf("%d\n",int(ans%MOD));
+	return 0;
+}

@@ -1,0 +1,202 @@
+/* Divanshu Garg */
+
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <deque>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <cstring>
+#include <climits>
+#include <cctype>
+#include <cassert>
+#include <complex>
+
+using namespace std;
+
+#define ull unsigned long long
+#define ill long long int
+#define pii pair<int,int>
+#define pb(x) push_back(x)
+#define F(i,a,n) for(int i=(a);i<(n);++i)
+#define FF(i,a,n) for(i=(a);i<(n);++i)
+#define REP(i,a,n) for(i=(a);i<(n);++i)
+#define FD(i,a,n) for(int i=(a);i>=(n);--i)
+#define FE(it,x) for(it=x.begin();it!=x.end();++it)
+#define V(x) vector<x>
+#define S(x) scanf("%d",&x)
+#define Sl(x) scanf("%llu",&x)
+#define M(x,i) memset(x,i,sizeof(x))
+#define debug(i,sz,x) F(i,0,sz){cout<<x[i]<<" ";}cout<<endl
+#define MAX(a,b) ((a)>(b)?(a):(b))
+ill ABS(ill a) { if ( a < 0 ) return (-a); return a; }
+#define fr first
+#define se second
+
+/* Relevant code begins here */
+
+/* Input from file or online */
+
+void input() {
+#ifndef ONLINE_JUDGE
+    freopen("input.txt","r",stdin);
+#endif
+}
+
+/* Input opener ends */
+
+#define MAXNODES 200005
+#define MAXLOG 20
+
+struct node {
+    int l,r;
+    int idx;
+} L[MAXNODES];
+
+int st[MAXLOG][MAXNODES];
+int n;
+
+bool cmp(node a,node b) {
+    if ( a.l != b.l ) return a.l<b.l;
+    return a.r<b.r;
+}
+
+int LCP[MAXNODES];
+
+int FindLCP(int x,int y) {
+    int res = 0;
+    int val = 1, step = 0;
+    while ( val < n ) {
+        val *= 2; step++;
+    }
+    while ( step >= 0 ) {
+        if ( x+val <= n && y+val <= n && st[step][x] == st[step][y] ) {
+            res += val;
+            x += val;
+            y += val;
+        }
+        step--;
+        val /= 2;
+    }
+    return res;
+}
+
+#define N 200005
+
+ill D[N], SL[N], SR[N];
+char s[N];
+
+vector<int> len[N];
+
+int main() {
+    input();
+
+    int t; S(t);
+    while ( t-- ) {
+        scanf("%s",s);
+        n = strlen(s);
+        
+        // build suffix array
+        for ( int i = 0; i < n; ++i )
+            st[0][i] = s[i]-'a';
+        for ( int step = 1, val = 1; val < n; step++, val*=2 ) {
+            for ( int i = 0; i < n; ++i ) {
+                L[i].l = st[step-1][i];
+                L[i].r = (i+val<n?st[step-1][i+val]:-1);
+                L[i].idx = i;
+            }
+            sort(L,L+n,cmp);
+            for ( int i = 0; i < n; ++i ) {
+                st[step][L[i].idx] = (i>0&&L[i].l==L[i-1].l&&L[i].r==L[i-1].r?st[step][L[i-1].idx]:i);
+            }
+        }
+        // F(i,0,n) cout << L[i].idx << " "; cout << endl;
+        // build LCP
+        LCP[0] = -1;
+        F(i,1,n) {
+            LCP[i] = FindLCP(L[i].idx,L[i-1].idx);
+        }
+        LCP[n] = -1;
+        // F(i,1,n) cout << LCP[i] << " "; cout << endl;
+
+        stack<pii> st;
+        st.push(pii(LCP[0],0));
+        F(i,1,n) {
+            int now = LCP[i];
+            while ( true ) {
+                pii tp = st.top();
+                if ( tp.fr < now ) break;
+                st.pop();
+            }
+            pii tp = st.top();
+            SL[i] = tp.se + 1;
+            st.push(pii(now,i));
+        }
+
+        while ( !st.empty() ) st.pop();
+        st.push(pii(LCP[n],n));
+        FD(i,n-1,1) {
+            int now = LCP[i];
+            while ( true ) {
+                pii tp = st.top();
+                if ( tp.fr < now ) break;
+                st.pop();
+            }
+            pii tp = st.top();
+            SR[i] = tp.se - 1;
+            st.push(pii(now,i));
+        }
+
+        // F(i,1,n) cout << SL[i] << " "; cout << endl;
+        // F(i,1,n) cout << SR[i] << " "; cout << endl;
+
+        F(i,0,n+5) D[i] = 0;
+        F(i,0,n+5) len[i].clear();
+
+        F(i,1,n) {
+            int now = LCP[i];
+            len[now].pb(i);
+        }
+
+        FD(i,n,1) {
+            F(j,0,len[i].size()) {
+                int whr = len[i][j];
+                if ( j == 0 || whr > SR[len[i][j-1]] ) {
+                    ill range = SR[whr] - SL[whr] + 2;
+                    int height = LCP[whr];
+                    height = min(height,LCP[whr]-LCP[SL[whr]-1]);
+                    height = min(height,LCP[whr]-LCP[SR[whr]+1]);
+                    D[range] += range*height;
+                }
+            }
+        }
+
+        D[1] = n;
+        D[1] *= (n+1);
+        D[1] /= 2;
+
+        FD(i,n,2) D[i] += D[i+1];
+
+        int q; S(q);
+        F(i,0,q) {
+            int x; S(x);
+            printf("%lld\n", D[x]);
+        }
+
+    }
+
+    return 0;
+}

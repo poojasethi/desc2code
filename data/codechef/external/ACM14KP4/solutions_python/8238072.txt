@@ -1,0 +1,251 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#define INF 1000000007
+
+typedef long long ll;
+typedef unsigned long long ull;
+typedef vector<int> vi;
+typedef vector<ll> vll;
+typedef vector<vector<int> > vvi;
+typedef pair<int,int> ii;
+typedef vector<pair<int,int> > vii;
+typedef vector<vector<pair<int,int> > > vvii;
+
+#define all(x) x.begin(), x.end()
+#define tr(x,it) for(auto it = x.begin();it!=x.end();++it)
+#define ntr(x,it) for(auto it = x.rbegin();it!=x.rend();++it)
+#define sz(a) int((a).size()) 
+#define pb push_back 
+#define PB pop_back
+#define pf push_front
+#define PF pop_front
+#define MP make_pair
+#define fpresent(c,x) ((c).find(x) != (c).end())  // set,map
+#define present(c,x) (find(all(c),x) != (c).end())  //vector
+#define F first
+#define S second
+#define FOR(i,a,b) for(int i=a;i<=b;++i)
+#define NFOR(i,a,b) for(int i=a;i>=b;--i)
+#define TCASE int __T;cin>>__T;while(__T--)
+#define iii pair<ii,int>
+
+
+struct BIT1
+{
+	vector<ll> t;
+	ll n;
+	BIT1()
+	{
+	        n=0;
+	        t.clear();
+	}
+	BIT1(ll sz)
+	{
+		n=sz;
+		t.clear();
+		t.resize(sz+1);
+	}
+	void clear(ll sz)
+	{
+		n=sz;
+		t.clear();
+		t.resize(sz+1);
+	}
+	void update(int i, ll val)
+	{
+		while(i<=n)
+		{
+			t[i]+=val;
+			i+=i&-i;
+		}
+	}
+	ll query(int i)
+	{
+		ll ans=0;
+		while(i>0)
+		{
+			ans+=t[i];
+			i-=i&-i;
+		}
+		return ans;
+	}
+};
+struct BIT2
+{
+	vector<ll> t;
+	ll n;
+	BIT1 y,z;
+	BIT2(ll sz)
+	{
+		n=sz;
+		t.clear();
+		t.resize(sz+1);
+		y.clear(sz);
+		z.clear(sz);
+	}
+	void clear(ll sz)
+	{
+		n=sz;
+		t.clear();
+		t.resize(sz+1);
+		y.clear(sz);
+		z.clear(sz);
+	}
+	ll query(int i)
+	{
+		ll ans=0;
+		while(i>0)
+		{
+			ans+=t[i];
+			i-=i&-i;
+		}
+		return ans;
+	}
+	void updater(int l, int r, ll val)
+	{
+	        y.update(l,val);
+	        y.update(r+1,-1*val);
+	        z.update(l,l*val);
+	        z.update(r+1,-1*(r+1)*val);
+	}
+	ll queryr(int l, int r)
+	{
+	        return (r+1)*(y.query(r)-y.query(l-1))+(r-l+1)*(y.query(l-1))-(z.query(r)-z.query(l-1));
+	}
+};
+
+BIT2 yo(100010);
+
+
+
+
+
+int n,m;
+vi p,l,pos;
+vvi g;
+vi sub;
+vector<vector<iii>> paths;
+int s[19][100011];
+
+
+int ctr;
+void dfs(int i)
+{
+	
+	pos[i]=ctr;
+	++ctr;
+	sub[i]=1;
+	tr(g[i],it)
+	{
+		if(*it==p[i]) continue;
+		
+		p[*it]=i;
+		l[*it]=l[i]+1;
+		dfs(*it);
+		sub[i]+=sub[*it];
+	}
+}
+void pre()
+{
+	
+	p.resize(n);
+	l.resize(n);
+	l[0]=0;
+	pos.resize(n);
+	sub.resize(n);
+	p[0]=-1;
+	dfs(0);
+	FOR(i,0,n-1)
+	for(int j=0;(1<<j)<n;++j)
+	s[j][i]=-1;
+	
+	FOR(i,0,n-1)s[0][i]=p[i];
+	
+	for(int j=1;(1<<j)<n;++j)
+	{
+		FOR(i,0,n-1)if(s[j-1][i]!=-1)s[j][i]=s[j-1][s[j-1][i]];
+	}
+	
+}
+inline int lca(int u, int v)
+{	
+	if(l[u]<l[v])u^=v^=u^=v;
+	
+	int LOG;
+	for(LOG=1;(1<<LOG)<=l[u];++LOG);--LOG;
+	
+	NFOR(i,LOG,0)
+	if(l[u]-(1<<i)>=l[v])
+	u=s[i][u];
+	
+	if(u==v)return u;
+	
+	NFOR(i,LOG,0)
+	if(s[i][u]!=-1&&s[i][u]!=s[i][v])
+	u=s[i][u],v=s[i][v];
+	
+	return p[u];
+}
+
+
+ll f(int u)
+{
+	ll x=0;
+	ll ans=0;
+	tr(g[u],it)
+	{
+		if(*it==p[u])continue;
+		x+=f(*it);
+	}
+	ans=x;
+	tr(paths[u],it)
+	{
+		ans=max(ans,x+it->S+yo.queryr(pos[(it->F).F],pos[(it->F).F])+yo.queryr(pos[(it->F).S],pos[(it->F).S]));
+	}
+	//assert((pos[u]+sub[u]-1)<=n);
+//	cout<<u<<" "<<pos[u]+sub[u]-1<<"\n";
+	yo.updater(pos[u],pos[u]+sub[u]-1,x-ans);
+	return ans;
+}
+
+
+int main()
+{
+    ios_base::sync_with_stdio(false);cin.tie(0);cout.tie(0);
+    int tc=0;
+    TCASE
+    {
+    	ctr=1;
+    	++tc;
+    	cin>>n;
+    	yo.clear(n+10);
+    	g.clear();
+    	g.resize(n);
+    	paths.clear();
+    	paths.resize(n);
+    	
+    	FOR(i,0,n-2)
+    	{
+    		int u,v;
+    		cin>>u>>v;
+    		g[u-1].pb(v-1);
+    		g[v-1].pb(u-1);
+    	}
+    	
+    	pre();
+    	cin>>m;
+    	FOR(i,0,m-1)
+    	{
+    		int a,b,c;
+    		cin>>a>>b>>c;
+    		--a,--b;
+    		paths[lca(a,b)].pb({{a,b},c});
+    	}
+    	
+    	cout<<"Case "<<tc<<": "<<f(0)<<"\n";
+    	
+    }
+    
+	return 0;
+}

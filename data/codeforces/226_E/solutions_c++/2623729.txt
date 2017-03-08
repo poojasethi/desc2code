@@ -1,0 +1,121 @@
+#include<cstdio>
+#include<cstring>
+#include<cstdlib>
+#include<iostream>
+#include<algorithm>
+using namespace std;
+const int N=100100,M=6010000;
+int n,m,cp=0,num=0,Q=0;
+int f[N][18],hd[N],ot[N],nt[N];
+int _in[N],_out[N],d[N];
+int A[N];
+void add(const int x,const int y)
+{
+    ot[++cp]=y,nt[cp]=hd[x],hd[x]=cp;
+}
+void dfs(const int x)
+{
+    
+    for(int i=1;i<=17;++i)
+        f[x][i]=f[f[x][i-1]][i-1];
+    d[x]=d[f[x][0]]+1;
+    _in[x]=(++Q);
+    for(int i=hd[x];i!=0;i=nt[i])
+        dfs(ot[i]);
+    _out[x]=Q+1;
+}
+int cnt[M],l[M],r[M];
+int build(const int x,const int y)
+{   
+    int now=(++num);
+    cnt[now]=0;
+    if ( x==y ) return now;
+    int mid=(x+y)>>1;
+    l[now]=build(x,mid),r[now]=build(mid+1,y);
+    return now;
+}
+int _ins(const int P,const int x,const int y,const int z,const int D)
+{
+    int now=(++num);
+    cnt[now]=cnt[P]+D;
+    if ( x==y ) return now;
+    int mid=(x+y)>>1;
+    if ( z<=mid ) r[now]=r[P],l[now]=_ins(l[P],x,mid,z,D);
+        else l[now]=l[P],r[now]=_ins(r[P],mid+1,y,z,D);
+    return now;
+}
+void init()
+{
+    int root;
+    scanf("%d",&n);
+    memset(f,0,sizeof(f));
+    memset(hd,0,sizeof(hd));
+    for(int i=1,F;i<=n;++i)
+    {
+        scanf("%d",&F),add(F,i);
+        f[i][0]=F;
+        if ( F==0 ) root=i;
+    }
+    dfs(root);
+    A[0]=build(1,n);
+}
+int lca(int u,int v)
+{
+    if ( d[u]<d[v] ) {int tmp=u;u=v,v=tmp;}
+    for(int i=17;i>=0;--i)
+        if ( d[f[u][i]]>=d[v] ) u=f[u][i];
+    if ( u==v ) return u;
+    for(int i=17;i>=0;--i)
+        if ( f[u][i]!=f[v][i] ) u=f[u][i],v=f[v][i];
+    return f[u][0];
+}
+int ask(int A,int B,int x)
+{
+    if ( x==0 ) return 0;
+    int L=1,R=n,mid,p=d[x];
+    x=_in[x];
+    while ( R!=x ) 
+    {
+        mid=(L+R)>>1;
+        if ( x<=mid ) A=l[A],B=l[B],R=mid;
+        else p+=cnt[l[B]]-cnt[l[A]],L=mid+1,A=r[A],B=r[B];
+    }
+    return p-cnt[A]+cnt[B];
+}
+int G(int A,int B,int u,int k)
+{
+    for(int i=17;i>=0;--i)
+        if ( ask(A,B,f[u][i])>=k ) u=f[u][i];
+    return u;
+}
+void Gans(int i)
+{
+    int u,v,k,y,p;
+    scanf("%d%d%d%d",&u,&v,&k,&y);
+    i=A[i],y=A[y];
+    p=lca(u,v);
+    int U=ask(i,y,f[u][0]),V=ask(i,y,f[v][0]),P=ask(i,y,p),F=ask(i,y,f[p][0]);
+    if ( U-F+V-P<k ) { puts("-1");return;}
+    if ( U-F>=k ) printf("%d\n",G(i,y,f[u][0],U-k+1));
+    else {
+        k-=U-F;
+        printf("%d\n",G(i,y,f[v][0],P+k));
+    }
+}
+int main()
+{
+    init();
+    scanf("%d",&m);
+    for(int i=1,T,C;i<=m;++i)
+    {
+        scanf("%d",&T);
+        if ( T==1 ) 
+        {
+            scanf("%d",&C);
+            int tmp=_ins(A[i-1],1,n,_in[C],1);
+            if ( _out[C]<=n ) tmp=_ins(tmp,1,n,_out[C],-1);
+            A[i]=tmp;
+        }else A[i]=A[i-1],Gans(i);
+    }
+    return 0;
+}

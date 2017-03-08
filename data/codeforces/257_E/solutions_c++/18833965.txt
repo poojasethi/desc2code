@@ -1,0 +1,142 @@
+/*
+* @Author: 逸闲
+* @Date:   2016-06-30 20:45:42
+* @Last Modified by:   逸闲
+* @Last Modified time: 2016-07-01 11:41:51
+*/
+
+#include "cstdio"
+#include "cstdlib"
+#include "iostream"
+#include "algorithm"
+#include "cstring"
+#include "queue"
+#include "set"
+
+using namespace std;
+
+#define INF 0x3F3F3F3F
+#define MAX_SIZE 100005
+#define Eps
+#define Mod
+#define Get(x, a) (x ? x -> a : 0)
+#define Travel(x) for(typeof(x.begin()) it = x.begin(); it != x.end(); ++it)
+#define PLI pair<long long, int>
+#define Lowbit(x) (x & -x)
+
+inline int Get_Int()
+{
+	int Num = 0, Flag = 1;
+	char ch;
+	do
+	{
+		ch = getchar();
+		if(ch == '-')
+			Flag = -Flag;
+	}
+	while(ch < '0' || ch > '9');
+	do
+	{
+		Num = Num * 10 + ch - '0';
+		ch = getchar();
+	}
+	while(ch >= '0' && ch <= '9');
+	return Num * Flag;
+}
+
+class Passenger
+{
+public:
+	long long Time, From, To, ID;
+
+	inline bool operator < (Passenger const &a) const
+	{
+		return Time < a.Time;
+	}
+}A[MAX_SIZE];
+
+long long N, M, Position, Time, Now;
+long long Ans[MAX_SIZE];
+
+multiset< PLI > Set;
+
+namespace BIT
+{
+	int Sum[MAX_SIZE];
+
+	inline void Modify(int x, int Value)
+	{
+		for(; x <= M; x += Lowbit(x))
+			Sum[x] += Value;
+	}
+
+	inline int Query(int x)
+	{
+		int Ans = 0;
+		for(; x; x -= Lowbit(x))
+			Ans += Sum[x];
+		return Ans;
+	}
+
+	inline int Query(int Left, int Right)
+	{
+		return Query(Right) - Query(Left - 1);
+	}
+}
+
+inline void Insert(int To, int ID)
+{
+	BIT::Modify(To, 1);
+	Set.insert(make_pair(To, ID));
+}
+
+int main()
+{
+	Position = 1;
+	cin >> N >> M;
+	for(int i = 1; i <= N; ++i)
+	{
+		A[i].Time = Get_Int();
+		A[i].From = Get_Int();
+		A[i].To = Get_Int();
+		A[i].ID = i;
+	}
+	sort(A + 1, A + N + 1);
+	A[N + 1].Time = 10000000000000LL;
+	Now = 1;
+	int Direction = 0;
+	while(Now <= N || !Set.empty())
+	{
+		PLI Next = make_pair(10000000000000LL, 0);
+		if(BIT::Query(Position, M) >= BIT::Query(1, Position - 1))
+			Direction = 1;
+		else
+			Direction = -1;
+		if(!Set.empty())
+			if(Direction >= 0)
+				Next = *Set.lower_bound(make_pair(Position, 0));
+			else
+				Next = *--Set.upper_bound(make_pair(Position, INF));
+		if(abs(Next.first - Position) <= A[Now].Time - Time)
+		{
+			Time += abs(Next.first - Position);
+			Position = Next.first;
+			Set.erase(Next);
+			BIT::Modify(Next.first, -1);
+			if(A[Next.second].From == Next.first)
+				Insert(A[Next.second].To, Next.second);
+			else
+				Ans[A[Next.second].ID] = Time;
+		}
+		else
+		{
+			if(!Set.empty())
+				Position += (A[Now].Time - Time) * Direction;
+			Insert(A[Now].From, Now);
+			Time = A[Now++].Time;
+		}
+	}
+	for(int i = 1; i <= N; ++i)
+		printf("%lld\n", Ans[i]);
+	return 0;
+}

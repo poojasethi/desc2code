@@ -1,0 +1,113 @@
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <cstdio>
+#include <cmath>
+#include <cstring>
+#include <vector>
+#include <queue>
+#include <stack>
+#include <algorithm>
+using namespace std;
+
+int T, N, M, K, onLine[55], onColumn[55];
+unsigned long long C[55], Low[55], High[55];
+bool Use[55];
+struct Laser {
+	int i, j;
+} Las[20];
+
+bool ValidSolution() {
+	unsigned long long R = 0, Rest;
+	int P = 0;
+	for (int i = 0; i < K; i++)
+		if (Use[i] == 0) {
+			onColumn[Las[i].i] = Las[i].j;
+		}
+	for (int i = N; i >= 1; i--) {
+		while (P < K && Las[P].i >= i) {
+			if (Use[P]) 
+				R |= (1LL << Las[P].j);
+			P++;
+		}
+		if (onLine[i] >= 2) continue;
+		Rest = C[i] & (~R);
+		if (Rest == 0 || (onLine[i] == 1 && ((Rest & Low[onColumn[i]]) == 0 || (Rest & High[onColumn[i]]) == 0) )) continue;
+		return 0;
+	}
+	return 1;
+}
+
+bool Possible() {
+	int P;
+	do {
+		if (ValidSolution()) {
+			return 1;
+		}
+		P = 0;
+		while (Use[P]) {
+			Use[P] = 0;
+			onLine[Las[P].i]++;	
+			P++;	
+		}
+		Use[P] = 1;
+		onLine[Las[P].i]--;	
+	} while (Use[K] == 0);
+	return 0;
+}
+
+bool LaserCompare(Laser A, Laser B) {
+	return A.i > B.i;
+}
+
+void GenerateMasks() {
+	Low[0] = 0;
+	for (int i = 1; i < M; i++) {
+		Low[i] = Low[i-1] + (1LL << (i-1));
+	}
+	High[M-1] = 0;
+	for (int i = M-2; i >= 0; i--) {
+		High[i] = High[i+1] + (1LL << (i+1));
+	}
+}
+
+int main() {
+	char x;
+
+	//freopen("input.in","r",stdin);
+	scanf("%d ", &T);
+	while(T--) {
+		memset(C, 0, sizeof(C));
+		memset(Use, 0, sizeof(Use));
+		memset(onLine, 0, sizeof(onLine));
+		memset(Low, 0, sizeof(Low));
+		memset(High, 0, sizeof(High));
+		K = 0;
+		
+		scanf("%d %d ", &N, &M);
+		for (int i = 1; i <= N; i++) 
+		for (int j = 0; j < M; j++) {
+			x = '.';
+			scanf("%c ", &x);
+			if (x == 'E') {
+				C[i] += (1LL << j);
+			} else
+			if (x == 'L') {
+				Las[K].i = i;
+				Las[K].j = j;
+				onLine[i]++;	// another laser on this line
+				K++;
+			}
+		}
+		
+		sort(Las, Las+K, LaserCompare);
+		GenerateMasks();
+		
+		if (Possible())
+			printf("Possible\n");
+		else
+			printf("Impossible\n");
+	}
+
+	return 0;
+}

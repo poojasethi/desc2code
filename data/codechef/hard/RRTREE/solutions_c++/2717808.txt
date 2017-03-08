@@ -1,0 +1,133 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+const int N = 100005, LOG = 20;
+
+int n;
+
+int cur_dia, v1, v2;
+int P[N][LOG];
+int L[N];
+
+int getLCA (int p, int q) {
+	//printf ("p : %d q : %d %d %d \n", p, q, L[p], L[q]);
+	if (L[p] < L[q])
+		swap (p, q);
+	
+	// compute log of L[p];
+	int log = 1;
+	for (log = 1; (1 << log) <= L[p]; log++);
+	log --;
+	
+	// find ancestor of p on the same level as that of q.
+	for (int i = log; i >= 0; i--) {
+		assert (p >= 0);
+		if (L[p] - L[q] >= (1 << i)) {
+			//printf ("lp %d %d %d %d\n", L[p], L[q], p, q);
+			p = P[p][i];
+			//printf ("p is %d \n", p);
+		}
+	}	
+	
+	if (p == q)
+		return p;
+	
+	// Now both on equal Level
+	assert (L[p] == L[q]);
+	for (int i = log; i >= 0; i--) {
+		if (P[p][i] != -1 && P[p][i] != P[q][i]) {
+			assert (p >= 0 && q >= 0);
+			p = P[p][i];
+			q = P[q][i];
+		}
+	}
+	
+	assert (P[p][0] == P[q][0]);
+		
+	return P[p][0];
+}
+
+int findParent (int u, int len) {
+	// 1<< len - 1
+	int x = (1 << len) - 1;
+	for (int i = LOG - 1; i >= 0; i--) {
+		if (x >= (1 << i) && u != -1) {
+			u = P[u][i];
+			x -= (1 << i);
+		}
+	}
+	
+	return u;
+}
+
+int findDist (int u, int v) {
+	int lca = getLCA (u, v);
+	
+	if (lca <= 0)
+		lca = 0;
+	//printf ("LCA of %d %d is %d\n", u, v, lca);
+	int d1 = L[u], d2 = L[v], d3 = L[lca];
+	
+	assert (lca >= 0);
+	
+	return d1 + d2 - 2 * d3;
+}
+
+void add (int u, int par) {
+	assert (v1 >= 0 && v2 >= 0);
+	L[u] = L[par] + 1;
+	
+	P[u][0] = par;
+	for (int len = 1; len < LOG; len++) {
+		P[u][len] = findParent (par, len);
+	}
+	
+	int d1 = findDist (u, v1);
+	int d2 = findDist (u, v2);
+	
+	//cout << "hi " << d1 << " " << d2 << " " << u << " " << v1 << " " << v2 << endl;
+	
+	if (d1 > d2) {
+		if (d1 > cur_dia) {
+			cur_dia = d1;
+			v2 = u;
+		}
+	} else {
+		if (d2 > cur_dia) {
+			cur_dia = d2;
+			v1 = u;
+		}
+	}
+}
+
+int main() {
+	//freopen ("input.txt", "r", stdin);
+	int T;
+	scanf ("%d", &T);
+	while (T--) {
+		scanf ("%d", &n);
+		memset (L, 0, sizeof (L));
+		memset (P, -1, sizeof (P));
+		
+		v1 = 0, v2 = 0;
+		cur_dia = 0;
+		for (int i = 0; i + 1 < n; i++) {
+			int t;
+			scanf ("%d", &t);
+			t --;
+			if (i == 0) {
+				L[i + 1] = 1;
+				v2 = i + 1;
+				cur_dia = 1;
+				P[i + 1][0] = 0;
+			} else {
+				add (i + 1, t);
+			}
+			
+			printf ("%d\n", cur_dia);
+		}
+	}
+	
+	return 0;
+}

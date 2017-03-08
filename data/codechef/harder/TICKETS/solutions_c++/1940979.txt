@@ -1,0 +1,200 @@
+#include <algorithm>
+#include <iostream>
+#include <iomanip>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+#include <string>
+#include <vector>
+#include <cmath>
+#include <ctime>
+using namespace std;
+
+int n, m;
+
+struct edge
+{
+	int a, b, index;
+	edge(){}
+	bool visited;
+	edge *pair;
+	edge(int _a, int _b){a = _a, b = _b;}
+	bool operator <(edge u)const
+	{
+		return a < u.a;
+	}
+}E[1001];
+
+int index2Position[1001];
+
+int eStart[201], eEnd[201], INF = 100000000;
+int dist[201];
+int Q[100001], now, z;
+int answer;
+int LCA[201][201];
+vector <int> sons[201];
+vector <edge> nonTree;
+int PAIR[1001];
+
+int F[201];
+int f(int w){return F[w] == w ? w : F[w] = f(F[w]);}
+void merge(int a, int b){F[f(a)] = f(b);}
+int v[201];
+
+int idx[201];
+int cnt;
+
+void dfs(int cur)
+{
+	v[cur] = true;
+	idx[cur] = cnt++;
+	for(int i = 0; i < (int)sons[cur].size(); i++)
+	{
+		int t = sons[cur][i];
+		dfs(t);
+		merge(t, cur);
+	}
+	for(int i = 1; i <= n; i++)
+		if(v[i])
+		{
+			int deep = dist[f(i)];
+			LCA[cur][i] = LCA[i][cur] = deep;
+		}
+}
+
+int findPair(int x)
+{
+	int t;
+	if(E[x].index <= m)
+		t = E[x].index + m;
+	else
+		t = E[x].index - m;
+	return index2Position[t];
+}
+
+void solve(int root)
+{
+	for(int i = 1; i <= 2 * m; i++)
+		E[i].visited = false;
+	for(int i = 1; i <= n; i++)
+	{
+		sons[i].clear();
+		F[i] = i;
+		v[i] = false;
+	}
+	nonTree.clear();
+	for(int i = 1; i <= n; i++)
+		dist[i] = INF;
+	dist[root] = 0;
+	Q[0] = root;
+	now = z = 0;
+	while(now <= z)
+	{
+		int s = Q[now];
+		for(int i = eStart[s]; i <= eEnd[s]; i++)
+		{
+			if(E[i].visited)
+				continue;
+			E[i].visited = true;
+			E[PAIR[i]].visited = true;
+			int t = E[i].b;
+			if(dist[t] > dist[s] + 1)
+			{
+				sons[s].push_back(t);
+				dist[t] = dist[s] + 1;
+				Q[++z] = t;
+			}
+			else
+			{
+				nonTree.push_back(E[i]);
+			}
+		}
+		++now;
+	}
+	/*cout << "nonTree.size() = " << nonTree.size() << endl;
+	for(int i = 0; i < (int)nonTree.size(); i++)
+		cout << nonTree[i].a << " <--> " << nonTree[i].b << endl;*/
+	cnt = 0;
+	dfs(root);
+	pair<int, int> v[4];
+	for(int i = 0; i < (int)nonTree.size(); i++)
+	{
+		if(dist[nonTree[i].a] + dist[nonTree[i].b] + 1 >= answer)
+			continue;
+		for(int j = 0; j < (int)nonTree.size(); j++)
+			if(i != j)
+			{
+                if(dist[nonTree[j].a] + dist[nonTree[j].b] + 1 >= answer)
+                    continue;
+
+				int totLength = 0;
+				totLength += dist[nonTree[i].a] + dist[nonTree[i].b] + 1;
+				totLength += dist[nonTree[j].a] + dist[nonTree[j].b];
+				totLength -= LCA[nonTree[j].a][nonTree[j].b] + LCA[nonTree[i].a][nonTree[i].b];
+				answer = min(answer, totLength);
+
+                    answer = min(answer, totLength - LCA[nonTree[i].a][nonTree[j].a]);
+
+                    answer = min(answer, totLength - LCA[nonTree[i].a][nonTree[j].b]);
+
+                    answer = min(answer, totLength - LCA[nonTree[i].b][nonTree[j].a]);
+
+                    answer = min(answer, totLength - LCA[nonTree[i].b][nonTree[j].b]);
+			}
+	}
+}
+
+int MAIN()
+{
+	int T;
+	cin >> T;
+	while(T--)
+	{
+		cin >> n >> m;
+		answer = m;
+		for(int i = 1; i <= m; i++)
+		{
+			int a, b;
+			cin >> a >> b;
+			E[i] = edge(a, b);
+			E[i+m] = edge(b, a);
+			E[i].index = i;
+			E[i+m].index = i+m;
+			E[i].pair = &E[i+m];
+			E[i+m].pair = &E[i];
+		}
+		sort(E + 1, E + 1 + 2 * m);
+		for(int i = 1; i <= 2*m; i++)
+			index2Position[E[i].index] = i;
+		for(int i = 1; i <= 2*m; i++)
+			PAIR[i] = findPair(i);
+		for(int i = 1; i <= n; i++)
+			eStart[i] = INF, eEnd[i] = -INF;
+		for(int i = 1; i <= 2 * m; i++)
+		{
+			eStart[E[i].a] = min(eStart[E[i].a], i);
+			eEnd[E[i].a] = max(eEnd[E[i].a], i);
+		}
+		for(int i = 1; i <= n; i++)
+			solve(i);
+		cout << max(answer, 0) << endl;
+	}
+	return 0;
+}
+
+int main()
+{
+	#ifdef LOCAL_TEST
+	freopen("in.txt", "r", stdin);
+	freopen("out.txt", "w", stdout);
+	int START_TIME = clock();
+	#endif
+	ios :: sync_with_stdio(false);
+	cout << fixed << setprecision(16);
+	int RUN_RESULT = MAIN();
+	#ifdef LOCAL_TEST
+	cout << endl;
+	cout << "[Time Used] " << clock() - START_TIME << " ms." << endl;
+	#endif
+	return RUN_RESULT;
+}

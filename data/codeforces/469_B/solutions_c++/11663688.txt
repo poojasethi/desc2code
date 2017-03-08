@@ -1,0 +1,10 @@
+#include<iostream>
+using namespace std;
+int i,j,p,q,r,t,g,A,a[50],b[50],c[50],d[50];
+int main(){
+ cin>>p>>q>>t>>r;
+ for(;i<p;i++)cin>>a[i]>>b[i];
+ for(;j<q;j++)cin>>c[j]>>d[j];
+ for(;t<=r;t++)for(g=i=0;i<p&&!g;i++)for(j=0;j<q&&!g;j++)if(a[i]<=d[j]+t&&b[i]>=c[j]+t)g=++A;
+ cout<<A<<endl;
+}

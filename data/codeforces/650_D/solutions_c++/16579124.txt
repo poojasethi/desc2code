@@ -1,0 +1,92 @@
+#include <cstdio>
+#include <vector>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+
+const int N = 400000 + 10;
+const int INF = 1000000000 + 10;
+
+int n, m, A;
+int a[N];
+int where[N];
+int origin[N];
+int ans[N];
+vector<pair<int, int> > query[N];
+vector<int> f, g;
+int numOfMatch, numOfMatch1;
+
+inline int calcIt(const int &id, const int &A)
+{
+	return f[id] < -g[A - id];
+}
+
+void modifyF(int p, int x)
+{
+	numOfMatch -= calcIt(p, A);
+	numOfMatch1 -= calcIt(p, A + 1);
+	f[p] = x;
+	numOfMatch += calcIt(p, A);
+	numOfMatch1 += calcIt(p, A + 1);
+}
+
+void modifyG(int p, int x)
+{
+	numOfMatch -= calcIt(A - p, A);
+	numOfMatch1 -= calcIt(A + 1 - p, A + 1);
+	g[p] = x;
+	numOfMatch += calcIt(A - p, A);
+	numOfMatch1 += calcIt(A + 1 - p, A + 1);
+}
+
+void solve()
+{
+	cin >> n >> m;
+	f = vector<int>(n + 2, INF);
+	g = f;
+	f[0] = 0;
+	g[0] = -INF;
+	for(int i = 0; i < n; ++ i) {
+		scanf("%d", a + i);
+		int id = lower_bound(f.begin(), f.end(), a[i]) - f.begin();
+		where[i] = id;
+		origin[i] = f[id];
+		f[id] = a[i];
+	}
+	for(int i = 0; i < m; ++ i) {
+		int u, x;
+		scanf("%d%d", &u, &x);
+		query[u - 1].push_back(make_pair(x, i));
+	}
+	A = lower_bound(f.begin(), f.end(), INF) - f.begin() - 1;
+
+	numOfMatch = 0;
+	numOfMatch1 = 0;
+	for(int i = 0; i <= A; ++ i) {
+		numOfMatch += calcIt(i, A);
+	}
+	for(int i = n - 1; i >= 0; -- i) {
+		modifyF(where[i], origin[i]);
+		for(int e = 0; e < query[i].size(); ++ e) {
+			int x = query[i][e].first;
+			int id = query[i][e].second;
+			int p = lower_bound(g.begin(), g.end(), -x) - g.begin();
+			int tmp = g[p];
+			modifyG(p, -x);
+			ans[id] = numOfMatch1 ? A + 1 : numOfMatch ? A : A - 1;
+			modifyG(p, tmp);
+		}
+		int p = lower_bound(g.begin(), g.end(), -a[i]) - g.begin();
+		modifyG(p, -a[i]);
+	}
+
+	for(int i = 0; i < m; ++ i) {
+		printf("%d\n", ans[i]);
+	}
+}
+
+int main()
+{
+	solve();
+	return 0;
+}

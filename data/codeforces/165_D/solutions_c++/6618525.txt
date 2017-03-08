@@ -1,0 +1,85 @@
+#include <iostream>
+#include <vector>
+using namespace std;
+
+const int N = 100005;
+const int SZ = 1 << 17;
+int n, m, c = 0, l[N], r[N], col[N], p[N], x[N], z = 1;
+vector<int> adj[N];
+
+int a[2 * SZ] = {};
+
+void upd(int p){
+  p += SZ;
+  a[p] ^= 1;
+  for(p = p / 2; p; p /= 2) a[p] = max(a[2 * p], a[2 * p + 1]);
+}
+
+int rmq(int l, int r, int x = -1 << 31){
+  l += SZ, r += SZ;
+  for( ; l <= r; l = (l+1)/2, r = (r-1)/2) x = max(x, max(a[l], a[r]));
+  return x;
+}
+
+void mark(int v, int u, int x, int d){
+  col[v] = x;
+  p[v] = d;
+  for(int i = 0; i < adj[v].size(); i++){
+    if(adj[v][i] != u) mark(adj[v][i], v, x, d + 1);
+  }
+  z++;
+}
+
+int main(){
+  ios::sync_with_stdio(0);
+  cin >> n;
+  for(int i = 1; i < n; i++){
+    cin >> l[i] >> r[i];
+    l[i]--, r[i]--;
+    adj[l[i]].push_back(r[i]);
+    adj[r[i]].push_back(l[i]);
+  }
+  for(int i = 0; i < n; i++){
+    if(adj[i].size() > adj[c].size()) c = i;
+  }
+  for(int i = 0; i < adj[c].size(); i++){
+    x[i] = z;
+    mark(adj[c][i], c, i, 0);
+  }
+  col[c] = -1;
+  p[c] = -1;
+  cin >> m;
+  for(int i = 0; i < m; i++){
+    int t, a, b;
+    cin >> t;
+    if(t < 3){
+      cin >> a;
+      if(p[l[a]] < p[r[a]]) swap(l[a], r[a]);
+      upd(x[col[l[a]]] + p[l[a]]);
+    } else {
+      cin >> a >> b;
+      a--, b--;
+      if(p[a] < p[b]) swap(a, b);
+      if(b == c){
+        if(rmq(x[col[a]], x[col[a]] + p[a]) == 1){
+          cout << "-1\n";
+        } else {
+          cout << p[a] + 1 << '\n';
+        }
+      } else if(col[a] == col[b]){
+        if(rmq(x[col[a]] + p[b] + 1, x[col[a]] + p[a]) == 1){
+          cout << "-1\n";
+        } else {
+          cout << p[a] - p[b] << '\n';
+        }
+      } else {
+        if(rmq(x[col[a]], x[col[a]] + p[a]) == 1 ||
+            rmq(x[col[b]], x[col[b]] + p[b]) == 1){
+          cout << "-1\n";
+        } else {
+          cout << p[a] + p[b] + 2 << '\n';
+        }
+      }
+    }
+  }
+}

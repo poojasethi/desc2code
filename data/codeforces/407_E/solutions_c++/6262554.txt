@@ -1,0 +1,132 @@
+#include <stdio.h>
+#include <map>
+#include <algorithm>
+using namespace std;
+struct Tree
+{
+	int l, r, v, lazy;
+	Tree *left, *right;
+};
+int n, k, d, mc, ansl, ansr, a[200000], pre[200000], q1[200000], q2[200000];
+Tree memory[400000], *tree;
+map<int, int> hash;
+Tree *BuildTree(int l, int r)
+{
+	Tree *ret = &memory[mc++];
+	ret->l = l, ret->r = r;
+	if(l == r)
+		ret->v = l;
+	else
+	{
+		ret->left = BuildTree(l, (l + r) / 2);
+		ret->right = BuildTree((l + r) / 2 + 1, r);
+		ret->v = min(ret->left->v, ret->right->v);
+	}
+	return ret;
+}
+void PushDown(Tree *t)
+{
+	t->v += t->lazy;
+	if(t->l < t->r)
+	{
+		t->left->lazy += t->lazy;
+		t->right->lazy += t->lazy;
+	}
+	t->lazy = 0;
+}
+void Add(Tree *t, int l, int r, int v)
+{
+	PushDown(t);
+	if(t->l == l && t->r == r)
+		t->lazy += v;
+	else
+	{
+		if(r <= t->left->r)
+			Add(t->left, l, r, v);
+		else if(l >= t->right->l)
+			Add(t->right, l, r, v);
+		else
+			Add(t->left, l, t->left->r, v), Add(t->right, t->right->l, r, v);
+		t->v = min(t->left->v + t->left->lazy, t->right->v + t->right->lazy);
+	}
+}
+int Find(Tree *t, int l, int r, int v)
+{
+	PushDown(t);
+	if(t->l == t->r)
+		return t->v <= v ? l : -1;
+	if(t->left->v + t->left->lazy <= v && l <= t->left->r)
+	{
+		int tmp = Find(t->left, l, min(r, t->left->r), v);
+		if(tmp != -1)
+			return tmp;
+	}
+	if(t->right->v + t->right->lazy <= v && r >= t->right->l)
+		return Find(t->right, max(l, t->right->l), r, v);
+	return -1;
+}
+void Update(int l, int r)
+{
+	if(r - l > ansr - ansl)
+		ansl = l, ansr = r;
+}
+void Work(int l, int r)
+{
+	for(int i = l; i < r; i++)
+	{
+		a[i] /= d;
+		map<int, int>::iterator it = hash.find(a[i]);
+		if(it != hash.end())
+			pre[i] = it->second, it->second = i;
+		else
+			pre[i] = l - 1, hash.insert(make_pair(a[i], i));
+	}
+	hash.clear();
+	int l1 = 0, l2 = 0, ml = l;
+	for(int i = l; i < r; i++)
+	{
+		ml = max(ml, pre[i] + 1);
+		while(l1 && a[q1[l1 - 1]] >= a[i])
+			l1--, Add(tree, l1 ? q1[l1 - 1] + 1 : l, q1[l1], a[q1[l1]] - a[i]);
+		while(l2 && a[q2[l2 - 1]] <= a[i])
+			l2--, Add(tree, l2 ? q2[l2 - 1] + 1 : l, q2[l2], a[i] - a[q2[l2]]);
+		q1[l1++] = q2[l2++] = i;
+		int tmp = Find(tree, ml, i, i + k);
+		if(tmp != -1)
+			Update(tmp, i);
+	}
+}
+int main()
+{
+	scanf("%d%d%d", &n, &k, &d);
+	for(int i = 0; i < n; i++)
+		scanf("%d", &a[i]);
+	if(d == 0)
+	{
+		for(int i = 0; i < n; )
+		{
+			int r = i + 1;
+			while(r < n && a[r] == a[i])
+				r++;
+			Update(i, r - 1);
+			i = r;
+		}
+	}
+	else
+	{
+		for(int i = 0; i < n; i++)
+			a[i] += 1000000000;
+		tree = BuildTree(0, n - 1);
+		for(int i = 0; i < n; )
+		{
+			int r = i + 1;
+			while(r < n && a[r] % d == a[i] % d)
+				r++;
+			Work(i, r);
+			i = r;
+		}
+	}
+	printf("%d %d\n", ansl + 1, ansr + 1);
+	getchar(); getchar();
+	return 0;
+}

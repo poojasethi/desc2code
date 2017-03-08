@@ -1,0 +1,74 @@
+#include <algorithm>
+#include <bitset>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <deque>
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <string>
+#define maxn 500005
+#define maxk 19
+using namespace std;
+
+int n,m;
+int a[maxn],b[maxn],reach[maxn][maxk];
+int tree[4 * maxn][maxk];
+
+void build(int i,int layer,int low,int high) {
+  if (low == high) {
+    tree[i][layer] = reach[low][layer];
+    return;
+  }
+  int mid = (low + high)/2;
+  build(2 * i,layer,low,mid);
+  build(2 * i + 1,layer,mid + 1,high);
+  tree[i][layer] = min(tree[2 * i][layer],tree[2 * i + 1][layer]);
+}
+
+int get(int i,int layer,int low,int high,int u,int v) {
+  if (v < low || high < u) return maxn;
+  if (u <= low && high <= v) return tree[i][layer];
+  int mid = (low + high)/2;
+  return min(get(2 * i,layer,low,mid,u,v),get(2 * i + 1,layer,mid + 1,high,u,v));
+}
+
+int main() {
+    scanf("%d", &n);
+    for (int i = 1; i <= n; i++) {
+        scanf("%d", &a[i]);
+        a[i + n] = a[i];
+    }
+    m = 2 * n - 1;
+    for (int i = 1; i <= m; i++) {
+        b[i] = i - a[i];
+        reach[i][0] = max(1,b[i]);
+    }
+    build(1,0,1,m);
+    for (int j = 1; j < maxk; j++) {
+      for (int i = 1; i <= m; i++) reach[i][j] = get(1,j - 1,1,m,reach[i][j - 1],i);
+      build(1,j,1,m);
+    }
+
+    long long ret = 0;
+    for (int end = n; end <= m; end++) {
+      int moves = 0;
+      int prev = end;
+      for (int j = maxk - 1; j >= 0; j--) {
+        int tmp = get(1,j,1,m,prev,end);
+	if (tmp > end - n + 1) {
+	  moves += 1 << j;
+	  prev = tmp;
+	}
+      }
+      moves++;
+      ret += moves;
+    }
+    cout << ret << endl;
+}

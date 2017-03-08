@@ -1,0 +1,215 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#define FOR(i, a, b) for (int i = (a); i < (b); ++i)
+#define REP(i, n) FOR(i, 0, n)
+
+typedef long long llint;
+
+const int MAXN = 777;
+const int MAX = 1e7 + 1000;
+
+bool e[MAXN][MAXN];
+
+int n;
+
+
+char* s[MAXN];
+int len[MAXN];
+
+struct node {
+	node* fail;
+	node* parent;
+	node* to[2];
+	node* finfail;
+	int fin;
+	bool mark;
+	bool e;
+	node () {
+		fail = 0;
+		fin = -1;
+	};
+} mem[MAX];
+node* alloc = mem;
+
+node* insert(node* x, char* s, int i) {
+	while (*s) {
+		int c = *s - 'a';
+		if (x->to[c] == 0) {
+			x->to[c] = alloc++;
+			x->to[c]->e = c;
+			x->to[c]->parent = x;
+		}
+		x = x->to[c];
+		s++;
+	}
+	x->fin = i;
+	return x;
+}
+
+void push_links(node *root) {
+	static node* Q[MAX];
+	int b, e;
+	b = e = 0;
+	Q[e++] = root;
+	while (b < e) {
+		node *x = Q[b++];
+
+		REP(i, 2)
+		if (x->to[i]) Q[e++] = x->to[i];
+
+		if (x == root || x->parent == root) {
+			x->fail = root;
+			x->finfail = NULL;
+		} else {
+			x->fail = x->parent->fail;
+			while (x->fail != root && !x->fail->to[x->e]) x->fail = x->fail->fail;
+			if (x->fail->to[x->e]) x->fail = x->fail->to[x->e];
+			if (x->fail->fin != -1) {
+				x->finfail = x->fail;
+			} else {
+				x->finfail = x->fail->finfail;
+			}
+		}
+	}
+}
+
+#define maxv 10010
+#define maxe 1000010
+struct HopcroftKarp {
+	int nx, ny, E, adj[maxe], next[maxe], last[maxv], run[maxv], level[maxv], que[maxv], matx[maxv], maty[maxv];
+	void init(int _nx, int _ny) {
+		nx = _nx; ny = _ny;
+		E = 0; memset(last, -1, sizeof(last));
+		memset(matx, -1, sizeof(matx)); memset(maty, -1, sizeof(maty));
+	}
+	void add(int x, int y) {
+		adj[E] = y; next[E] = last[x]; last[x] = E++;
+	}
+	bool bfs() {
+		int qsize = 0;
+		for (int x = 1; x <= nx; x++) if (matx[x] != -1) level[x] = -1;
+		else {
+			level[x] = 0;
+			que[qsize++] = x;
+		}
+		bool found = false;
+		for (int i = 0; i < qsize; i++) {
+			for (int x = que[i], e = last[x]; e != -1; e = next[e]) {
+				int y = adj[e];
+				if (maty[y] == -1) found = true;
+				else if (level[maty[y]] == -1) {
+					level[maty[y]] = level[x] + 1;
+					que[qsize++] = maty[y];
+				}
+			}
+		}
+		return found;
+	}
+	int dfs(int x) {
+		for (int &e = run[x]; e != -1; e = next[e]) {
+			int y = adj[e];
+			if (maty[y] == -1 || (level[maty[y]] == level[x] + 1 && dfs(maty[y]))) {
+				matx[x] = y;
+				maty[y] = x;
+				return 1;
+			}
+		}
+		return 0;
+	}
+	int maxmat() {
+		int total = 0;
+		while (bfs()) {
+			for (int x = 1; x <= nx; x++) run[x] = last[x];
+			for (int x = 1; x <= nx; x++) if (matx[x] == -1) total += dfs(x);
+		}
+		return total;
+	}
+} hopkarp;
+
+vector<int> adj[MAXN];
+vector<int> radj[MAXN];
+bool vis[2][MAXN];
+bool mark[2 * MAXN];
+
+void dfs(int u, bool flag) {
+	vis[flag][u] = 1;
+	if (flag) {
+		mark[u] = 1;
+		FOR(i, 0, adj[u].size()) {
+			int v = adj[u][i];
+			if (!vis[!flag][v] && hopkarp.matx[u] != v) dfs(v, !flag);
+		}
+	}
+	else {
+		mark[u + n] = 1;
+		FOR(i, 0, radj[u].size()) {
+			int v = radj[u][i];
+			if (!vis[!flag][v] && hopkarp.maty[u] == v) dfs(v, !flag);
+		}
+	}
+}
+
+int main() {
+//	freopen("in.txt", "r", stdin);
+	scanf("%d", &n);
+	static char buf[MAX];
+	static node* w[MAXN];
+	char* cur = buf;
+	node* root = alloc++;
+	REP(i, n) {
+		scanf("%s", cur);
+		s[i] = cur;
+		len[i] = strlen(cur);
+		cur += len[i] + 1;
+		w[i] = insert(root, s[i], i);
+	}
+	push_links(root);
+	vector<int> eq[MAXN];
+	REP(i, n) REP(j, n)
+	if (w[i]->fin == i)
+		if (i != j && w[i] == w[j]) {
+			eq[i].push_back(j);
+		}
+
+	REP(i, n) {
+		node *cur = root;
+
+		REP(j, len[i]) {
+			while (cur != root && !cur->to[s[i][j]-'a']) cur = cur->fail;
+			if (cur->to[s[i][j]-'a']) cur = cur->to[s[i][j]-'a'];
+
+			node *x = cur;
+			if (x->fin == -1) x = x->finfail;
+			while (x && !e[i][x->fin]) {
+				e[i][x->fin] = true;
+				x = x->finfail;
+			}
+		}
+
+		REP(j, n)
+		if (e[i][j]) {
+			FOR(k, 0, eq[j].size()) e[i][eq[j][k]] = true;
+		}
+		e[i][i] = false;
+	}
+	hopkarp.init(n, n);
+	FOR(i, 0, n) FOR(j, 0, n) if (e[i][j]) {
+		hopkarp.add(i + 1, j + 1);
+		adj[i + 1].push_back(j + 1);
+		radj[j + 1].push_back(i + 1);
+	}
+	hopkarp.maxmat();
+	FOR(i, 1, n + 1) if (!vis[1][i] && hopkarp.matx[i] == -1) dfs(i, true);
+	vector<int> ans; memset(vis, 0, sizeof(vis));
+	FOR(i, 1, n + 1) {
+//		if (hopkarp.matx[i] == -1) ans.push_back(i);
+		if (mark[i] && !mark[i + n]) ans.push_back(i);
+	}
+	cout<<ans.size()<<"\n";
+	FOR(i, 0, ans.size()) cout<<ans[i]<<" ";
+//	cout<<n - hopkarp.maxmat()<<"\n";
+//	FOR(i, 1, n + 1) if (hopkarp.matx[i] == -1) cout<<i<<" ";
+	
+	return 0;
+}

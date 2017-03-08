@@ -1,0 +1,171 @@
+#include<bits/stdc++.h>
+using namespace std;
+
+#define fi first
+#define se second
+#define mp make_pair
+#define pb push_back
+#define MAXN 300003
+#define INF 9000000000000000000LL
+
+typedef long long LL;
+typedef pair <int, int> pii;
+typedef pair <LL, LL> pll;
+int n, m;
+
+map <LL, int> ab;
+vector <LL> ba;
+
+struct ST {
+    pll sum[8 * MAXN];
+
+    void propagate (int node) {
+        for (int i=0; i<2; i++) {
+            sum[2*node+i].fi += sum[node].fi;
+            sum[2*node+i].se += sum[node].se;
+        }
+        sum[node] = mp(0, 0);
+        return;
+    }
+
+    void update (int node, int l, int r, int a, int b, pll val) {
+        if (l > b || r < a) return;
+        if (l >= a && r <= b) {
+            sum[node].fi += val.fi;
+            sum[node].se += val.se;
+            return;
+        }
+
+        propagate(node);
+
+        int mid = l + r >> 1;
+        update(2*node+0, l, mid+0, a, b, val);
+        update(2*node+1, mid+1, r, a, b, val);
+        return;
+    }
+
+    LL query (int node, int l, int r, int x) {
+        if (l > x || r < x) return 0;
+        if (l == x && r == x) return ba[x-1] * sum[node].fi + sum[node].se;
+
+        propagate (node);
+
+        int mid = l + r >> 1;
+        return query (2*node, l, mid, x) + query(2*node+1, mid+1, r, x);
+    }
+} tree2;
+
+struct ST2 {
+    pll maks[8 * MAXN];
+    bool need[8 * MAXN];
+
+    void update_line (int node, int l, int r, pll val) {
+        //cout << node << " " << l << " " << r << endl;
+        if (!need[node]) {
+            maks[node] = val;
+            need[node] = 1;
+            return;
+        }
+
+        if (val.fi == maks[node].fi) {
+            if (val.se > maks[node].se) maks[node] = val;
+            return;
+        }
+
+        if (val.fi * ba[l-1] + val.se >= maks[node].fi * ba[l-1] + maks[node].se && val.fi * ba[r-1] + val.se >= maks[node].fi * ba[r-1] + maks[node].se) {
+            maks[node] = val;
+            return;
+        }
+
+        if (val.fi * ba[l-1] + val.se < maks[node].fi * ba[l-1] + maks[node].se && val.fi * ba[r-1] + val.se < maks[node].fi * ba[r-1] + maks[node].se) {
+            return;
+        }
+
+        int mid = l + r >> 1;
+        update_line (2*node+0, l, mid+0, maks[node]);
+        update_line (2*node+0, l, mid+0, val);
+        update_line (2*node+1, mid+1, r, maks[node]);
+        update_line (2*node+1, mid+1, r, val);
+        need[node] = 0;
+
+        return;
+    }
+
+    void propagate (int node, int l, int r) {
+        if (!need[node]) return;
+
+        int mid = l + r >> 1;
+        update_line(2*node+0, l, mid+0, maks[node]);
+        update_line(2*node+1, mid+1, r, maks[node]);
+        need[node] = 0;
+
+        return;
+    }
+
+    void update (int node, int l, int r, int a, int b, pll val) {
+        if (l > b || r < a) return;
+        //cout << node << " " << l << " " << r << endl;
+        if (l >= a && r <= b) {
+            update_line (node, l, r, val);
+            return;
+        }
+
+        propagate(node, l, r);
+
+        int mid = l + r >> 1;
+        update (2*node+0, l, mid+0, a, b, val);
+        update (2*node+1, mid+1, r, a, b, val);
+        return;
+    }
+
+    LL query (int node, int l, int r, int x) {
+        if (l > x || r < x) return 0;
+        if (l == x && r == x) return (need[node]) ? maks[node].fi * ba[x-1] + maks[node].se : -INF;
+
+        propagate(node, l, r);
+
+        int mid = l + r >> 1;
+        return query(2*node, l, mid, x) + query(2*node+1, mid+1, r, x);
+    }
+} tree1;
+
+struct {
+    LL type, u, v, a, b;
+} q[MAXN];
+
+
+int main() {
+    scanf("%d %d", &n, &m);
+
+    for (int i=0; i<m; i++) {
+        scanf("%lld", &q[i].type);
+        if (q[i].type == 1) {
+            scanf("%lld %lld %lld %lld", &q[i].u, &q[i].v, &q[i].a, &q[i].b);
+            ba.pb(q[i].u); ba.pb(q[i].v);
+        } else if (q[i].type == 2) {
+            scanf("%lld %lld %lld %lld", &q[i].u, &q[i].v, &q[i].a, &q[i].b);
+            ba.pb(q[i].u); ba.pb(q[i].v);
+        } else {
+            scanf("%lld", &q[i].u);
+            ba.pb(q[i].u);
+        }
+    }
+
+    sort(ba.begin(), ba.end());
+    ba.resize(unique(ba.begin(), ba.end()) - ba.begin());
+    for (int i=0; i<ba.size(); i++) ab[ba[i]] = i+1;
+    //for (int i=0; i<ba.size(); i++) cout << ba[i] << " " << ab[ba[i]] << endl;
+
+    for (int i=0; i<m; i++) {
+        // a(i - u) + b = ai - au + b -> pers. garis
+        if (q[i].type == 1) tree1.update(1, 1, ba.size(), ab[q[i].u], ab[q[i].v], mp(q[i].a, q[i].b - q[i].a * q[i].u));
+        else if (q[i].type == 2) tree2.update(1, 1, ba.size(), ab[q[i].u], ab[q[i].v], mp(q[i].a, q[i].b - q[i].a * q[i].u));
+        else {
+            LL ans = tree1.query(1, 1, ba.size(), ab[q[i].u]);
+            if (ans == -INF) puts("NA");
+            else printf("%lld\n", ans + tree2.query(1, 1, ba.size(), ab[q[i].u]));
+        }
+    }
+
+    return 0;
+}

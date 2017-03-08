@@ -1,0 +1,178 @@
+#include <algorithm>
+#include <iostream>
+#include <cstring>
+#include <cstdio>
+using namespace std;
+typedef long long i64;
+const int N = 1e6;
+
+struct Data{
+	int type, l, r, val, id, newl, newr;
+	Data(){}
+	Data(int a, int b, int c, int d, int e){ type = a, l = b, r = c, val = d, id = e; }
+} a[N], ori[N];
+
+struct Relabel{ 
+	int num, id, type;
+	Relabel(){}
+	Relabel(int a, int b, int c){ num = a, id = b, type = c; }
+} temp[N];
+
+int n, m, video, channel, tot, range;
+i64 ans;
+
+inline bool Cmp(const Relabel &a, const Relabel &b){ return a.num < b.num; }
+
+void DataRebuild(){
+	int len = tot << 1;
+	range = 1;
+	sort(temp + 1, temp + len + 1, Cmp);
+	for (int i = 1; i <= len; ++ i){
+		if (temp[i].num != temp[i - 1].num) ++ range;
+		int p = temp[i].id;
+		! temp[i].type ? a[p].newl = range : a[p].newr = range;
+	}
+}
+
+void Init(){
+	scanf("%d%d", &n, &m);
+	tot = n + m;
+	for (int i = 1; i <= n; ++ i){
+		int l, r;
+		scanf("%d%d", &l, &r);
+		ori[i] = a[i] = Data(0, l, r, 0, i);
+
+		temp[i] = Relabel(l, i, 0);
+		temp[i + tot] = Relabel(r, i, 1);
+	}
+	for (int i = n + 1; i <= tot; ++ i){
+		int l, r, c;
+		scanf("%d%d%d", &l, &r, &c);
+		ori[i] = a[i] = Data(1, l, r, c, i - n);
+
+		temp[i] = Relabel(l, i, 0);
+		temp[i + tot] = Relabel(r, i, 1);
+	}
+
+	DataRebuild();
+}
+
+bool CmpA(const Data &a, const Data &b){ return (a.l < b.l) || (a.l == b.l && a.type < b.type); }
+bool CmpB(const Data &a, const Data &b){ return (a.r > b.r) || (a.r == b.r && a.type < b.type); }
+bool CmpC(const Data &a, const Data &b){ return (a.r < b.r) || (a.r == b.r && a.type < b.type); }
+
+void Left_Intersect(){
+	sort(a + 1, a + n + m + 1, CmpA);
+	for (int i = 1, far = -1, index; i <= n + m; ++ i){
+		if (! a[i].type){
+			if (far < a[i].r || far == -1){
+				far = a[i].r;
+				index = a[i].id;
+			}
+		}
+		else {
+			i64 sum = ~ far ? (i64)min(far - a[i].l, a[i].r - a[i].l) * a[i].val : 0;
+			if (sum > ans){
+				ans = sum;
+				video = index;
+				channel = a[i].id;
+			}
+		}
+	}
+}
+
+void Right_Intersect(){
+	sort(a + 1, a + n + m + 1, CmpB);
+	for (int i = 1, far = -1, index; i <= n + m; ++ i){
+		if (! a[i].type){
+			if (far > a[i].l || far == -1){
+				far = a[i].l;
+				index = a[i].id;
+			}
+		}
+		else {
+			i64 sum = ~ far ? (i64)min(a[i].r - far, a[i].r - a[i].l) * a[i].val : 0;
+			if (sum > ans){
+				ans = sum;
+				video = index;
+				channel = a[i].id;
+			}
+		}
+	}
+}
+
+#define PII pair <int, int>
+#define MP make_pair
+#define fi first
+#define se second
+#define lch(x) (x << 1)
+#define rch(x) ((x << 1) | 1)
+
+PII best, tr[N << 2];
+
+void modify(int x, int l, int r, int p, const PII &update){
+	if (l == r){
+		if (update > tr[x]) tr[x] = update;
+		return;
+	}
+	else {
+		int mid = (l + r) >> 1;
+		if (p <= mid){
+			modify(lch(x), l, mid, p, update); 
+			if (tr[x] < tr[lch(x)]) tr[x] = tr[lch(x)];
+		}
+		else {
+			modify(rch(x), mid + 1, r, p, update);
+			if (tr[x] < tr[rch(x)]) tr[x] = tr[rch(x)];
+		}
+	}
+}
+
+void query(int x, int l, int r, int p, int q, PII &ans){
+	if (r < p || l > q) return;
+	if (p <= l && q >= r){
+		if (ans < tr[x]) ans = tr[x];
+		return;
+	}
+	else {
+		int mid = (l + r) >> 1;
+		query(lch(x), l, mid, p, q, ans);
+		query(rch(x), mid + 1, r, p, q, ans);
+	}
+}
+
+void Line_Inside(){
+	sort(a + 1, a + n + m + 1, CmpC);
+
+	for (int i = 1; i <= n + m; ++ i){
+		if (! a[i].type) modify(1, 1, range, a[i].newl, MP(a[i].r - a[i].l, a[i].id));
+		else {
+			best = PII(0, 0);
+			query(1, 1, range, a[i].newl, a[i].newr, best);
+
+			i64 sum = (i64)best.fi * a[i].val;
+			if (sum > ans){
+				ans = sum;
+				video = best.se;
+				channel = a[i].id;
+			}
+		}
+	}
+}
+
+void Solve(){
+	Line_Inside();
+	Left_Intersect();
+	Right_Intersect();
+
+	printf("%I64d\n", ans);
+	if (ans) printf("%d %d\n", video, channel);
+}
+
+int main(){
+
+	Init();
+	Solve();
+
+	return 0;
+}

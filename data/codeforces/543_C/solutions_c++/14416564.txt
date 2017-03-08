@@ -1,0 +1,25 @@
+#include <bits/stdc++.h>
+using namespace std;
+int dp[(1<<20)],ar[20][20];string s[20];
+int main(){
+	int a,n,m,i,x,j;cin>>n>>m;for(int i=0;i<n;++i)cin>>s[i];
+	for(int i=0;i<n;++i)
+		for(int j=0;j<m;++j)cin>>ar[i][j];
+	memset(dp,0x3f,sizeof(dp));
+	int t= 0x3f3f3f3f;
+	dp[0]=0;
+	for(i=0;i<(1<<n)-1;++i){
+		if(dp[i]>=t)continue;
+		a= ~i;a= a&=-a;a =int(log(a)/log(2) +1e-8);
+		for(j=0;j<m;++j){
+			int cur = i+(1<<a);
+			dp[cur] = min(dp[cur],dp[i]+ar[a][j] );
+			int nex = cur,sum  =0, maxi =0;
+			for(x=0;x<n;++x)
+				if(s[a][j]==s[x][j])
+					nex|=1<<x,sum+=ar[x][j],maxi=max(maxi,ar[x][j]);
+			dp[nex]=min(dp[nex],dp[i]+sum-maxi);
+		}
+	}
+	cout<<dp[(1<<n)-1]<<endl;
+}

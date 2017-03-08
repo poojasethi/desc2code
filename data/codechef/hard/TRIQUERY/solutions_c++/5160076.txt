@@ -1,0 +1,101 @@
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+
+struct Querier {
+	int x,y,d,id;
+	void read() {
+		scanf("%d%d%d",&x,&y,&d);
+	}
+	static bool by_x(const Querier &a,const Querier &b) {
+		return a.x < b.x;
+	}
+	static bool by_y(const Querier &a,const Querier &b) {
+		return a.y < b.y;
+	}
+};
+
+struct Point {
+	int x,y;
+	void read() {
+		scanf("%d%d",&x,&y);
+	}
+	Point(int x=0,int y=0) 
+		:x(x),y(y) {}
+	static bool by_x(const Point &a,const Point &b) {
+		return a.x < b.x;
+	}
+	static bool by_y(const Point &a,const Point &b) {
+		return a.y < b.y;
+	}
+};
+
+template<int N> struct BIT {
+	int C[N];
+	void modify(int pos) {
+		for (int i = pos; i < N; i += i&-i) C[i] ++;
+	}
+	int query(int pos) {
+		if (pos >= N) pos = N-1;
+		int ret = 0;
+		for (int i = pos; i > 0; i -= i&-i) ret += C[i];
+		return ret;
+	}
+	void clear() {
+		memset(C,0,sizeof(C));
+	}
+};
+
+const int N = 300000 + 5;
+int n,m,answer[N];
+Querier querier[N];
+Point dot[N];
+BIT<N<<1> tree;
+
+void work() {
+	std::sort(querier,querier+m,Querier().by_x);
+	std::sort(dot,dot+n,Point().by_x);
+	tree.clear();
+	for (int i = 0,j = 0; i < m; ++ i) {
+		while (j<n && dot[j].x<querier[i].x)
+			tree.modify(dot[j++].y);
+		answer[querier[i].id] += tree.query(querier[i].y-1);
+	}
+	tree.clear();
+	for (int i = 0,j = 0; i < m; ++ i) {
+		while (j<n && dot[j].x<querier[i].x)
+			tree.modify(dot[j++].x+dot[j].y);
+		answer[querier[i].id] -= tree.query(querier[i].x+querier[i].y+querier[i].d);
+	}
+	std::sort(querier,querier+m,Querier().by_y);
+	std::sort(dot,dot+n,Point().by_y);
+	tree.clear();
+	for (int i = 0,j = 0; i < m; ++ i) {
+		while (j<n && dot[j].y<querier[i].y)
+			tree.modify(dot[j++].x+dot[j].y);
+		answer[querier[i].id] -= tree.query(querier[i].x+querier[i].y+querier[i].d);
+	}
+	tree.clear();
+	for (int i = 0; i < n; ++ i) {
+		tree.modify(dot[i].x+dot[i].y);
+	}
+	for (int i = 0; i < m; ++ i) {
+		answer[querier[i].id] += tree.query(querier[i].x+querier[i].y+querier[i].d);
+	}
+}
+
+int main() {
+	scanf("%d%d",&n,&m);
+	for (int i = 0; i < n; ++ i) {
+		dot[i].read();
+	}
+	for (int i = 0; i < m; ++ i) {
+		querier[i].read();
+		querier[i].id = i;
+	}
+	work();
+	for (int i = 0; i < m; ++ i) {
+		printf("%d\n",answer[i]);
+	}
+	return 0;
+}

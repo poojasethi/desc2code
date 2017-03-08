@@ -1,0 +1,147 @@
+#include <iostream>
+#include <cstdlib>
+
+#define COMPILE_TIME_ASSERT(predicate) _impl_CASSERT_LINE(predicate,__LINE__)
+#define _impl_PASTE(a,b) a##b
+#define _impl_CASSERT_LINE(predicate, line) \
+    typedef char _impl_PASTE(assertion_failed_,line)[2*!!(predicate)-1]
+
+typedef unsigned int uint;
+typedef unsigned long long ull;
+COMPILE_TIME_ASSERT(sizeof(unsigned int) >= 4);
+COMPILE_TIME_ASSERT(sizeof(ull) > 4);
+
+class FonCG {
+  uint n, blocks;
+# define MAXN 512
+# define BLOCKS (MAXN/32)
+# define DOUBLEBLOCKS (2*BLOCKS)
+  uint data[DOUBLEBLOCKS];
+  uint scratch1[DOUBLEBLOCKS], scratch2[DOUBLEBLOCKS];
+  void clear(uint* d) {
+    for (uint b = 0 ; b < blocks ; b++) d[b] = 0;
+  }
+  uint getBit(uint* d, uint pos) {
+    const uint& u = d[pos>>5];
+    return ((u >> (pos&31)) & 0x1);
+  }
+  void turnOnBit(uint* d, uint pos) {
+    uint& u = d[pos>>5];
+    u |= (1u << (pos&31));
+  }
+  void copy(uint* dest, uint* src) {
+    for (uint b = 0 ; b < blocks ; b++) dest[b] = src[b];
+  }
+  void duplicate(uint *d) {
+    const uint blockdifference = n>>5;
+    const uint blockshift      = n&31;
+    const uint mask            = (1ull << (32-blockshift)) - 1;
+    d[blockdifference] = d[blockdifference] & ((1u << blockshift) - 1);
+    d[blockdifference] |= (d[0] & mask) << blockshift;
+    for (uint b = 1 ; b <= blocks ; b++) {
+      d[blockdifference+b] = ((ull(d[b-1]) >> (32-blockshift)) |
+			      ((d[b] & mask) << blockshift));
+    }
+  }
+  uint bitCountMod2(uint n) const {
+    n ^= n >> 16;
+    n ^= n >> 8;
+    n ^= n >> 4;
+    n ^= n >> 2;
+    n ^= n >> 1;
+    return (n & 0x1);
+  }
+  void convolve(uint *dest, uint *src1, uint *src2) {
+    duplicate(src2);
+    clear(dest);
+    const uint halfn = n >> 1;
+    const uint lastblock    = n>>5;
+    const uint blockshift   = n&31;
+    const uint maskforlast  = (1u << blockshift) - 1;
+    // quadratic time is slow - you could do better
+    // (asymptotically)
+    for (uint x = 0 ; x <= halfn ; x++) {
+      uint convolvedval = 0;
+      for (uint b = 0 ; b < blocks ; b++) {
+	const uint src2val = src2[b+(x>>5)] >> (x&31) |
+	  ((src2[b+(x>>5)+1] & ((1u << (x&31)) - 1)) << (32 - (x&31)));
+	const uint src1val = (b == lastblock) ? (src1[b] & maskforlast) : src1[b];
+	convolvedval ^= src1val & src2val;
+      }
+      if (bitCountMod2(convolvedval)) {
+	turnOnBit(dest, x);
+	if (x > 0) turnOnBit(dest, n-x);
+      }
+    }
+  }
+public:
+  FonCG(uint n) {
+    this->n = n;
+    blocks = (n+31)>>5;
+    clear(data);
+    turnOnBit(data, 0);
+    turnOnBit(data, 1);
+    turnOnBit(data, n-1);
+  }
+  void raiseToThe(uint p) {
+    // may assume it isn't zero.
+    uint currentmask = p;
+    currentmask = currentmask | (currentmask >> 1);
+    currentmask = currentmask | (currentmask >> 2);
+    currentmask = currentmask | (currentmask >> 4);
+    currentmask = currentmask | (currentmask >> 8);
+    currentmask = currentmask | (currentmask >> 16);    
+    currentmask = (currentmask + 1) >> 1;
+    uint* s1 = scratch1;
+    uint* s2 = scratch2;
+    copy(s1, data);
+    currentmask >>= 1;
+#   define SWAP() { uint* t = s1; s1 = s2; s2 = t; }
+    while (currentmask) {
+      convolve(s2, s1, s1);
+      if (p & currentmask)
+	convolve(s1, s2, data);
+      else
+	SWAP();
+      currentmask >>= 1;
+    }
+    copy(data, s1);
+  }
+  uint apply(uint shift, uint array[]) {
+    uint val = 0;
+    for (uint x = 0 ; x < n ; x++) {
+      uint y = x + shift;
+      if (y >= n) y -= n;
+      if (getBit(data, x)) val ^= array[y];
+    }
+    return val;
+  }
+};
+
+void doTestCase() {
+  uint n, k;
+  std::cin >> n >> k;
+  FonCG focg(n);
+  focg.raiseToThe(k);
+  uint array[n];
+  for (uint x = 0 ; x < n ; x++) std::cin >> array[x];
+  if (k) {
+    for (uint x = 0 ; x < n ; x++) {
+      std::cout << focg.apply(x, array);
+      std::cout << ( (x < (n-1)) ? ' ' : '\n' );
+    }
+  } else {
+    for (uint x = 0 ; x < n ; x++) {
+      std::cout << array[x];
+      std::cout << ( (x < (n-1)) ? ' ' : '\n' );
+    }
+  }
+}
+
+int main() {
+  int numtestcases;
+  std::cin >> numtestcases;
+  for (int t = 0 ; t < numtestcases ; t++)
+    doTestCase();
+  return 0;
+}

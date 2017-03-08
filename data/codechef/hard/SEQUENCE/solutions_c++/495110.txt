@@ -1,0 +1,99 @@
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <set>
+#include <map>
+#include <vector>
+#include <list>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+#include <queue>
+#include <bitset>		//UWAGA - w czasie kompilacji musi byc znany rozmiar wektora - nie mozna go zmienic
+#include <cassert>
+#include <iomanip>		//do setprecision
+#include <ctime>
+using namespace std;
+#define PB push_back
+#define LL long long
+#define ULL unsigned LL
+#define LD long double
+
+#define MR 1<<15
+int w[MR], ktory[MR];
+
+//budowa kodu Gray'a - w[0] = 0
+//w[i] = {jesli i nieparzyste, w[i-1] z zamienionym ostatnim bitem, wpp bierzemy j - pierwszy od prawej
+//zapalony bit w w[i-1] i zamieniamy bit na pozycji j+1 -> w lewo
+
+void gray(int dl)	//generuj ciag gray'a o zadanej dlugosci
+{
+	w[0] = 0;
+	for(int i = 1; i < dl; i++)
+		if(i & 1)
+			w[i] = w[i-1]^1;
+		else
+			w[i] = w[i-1]^(1<<(__builtin_ctz(w[i-1])+1));
+}//gray
+
+void gen(int dl)	//wyznacza ciag bitow, ktore sie zmieniaja przy generacji ciagu graya
+{
+	for(int i = 1; i < dl; i++)		
+		ktory[i-1] = __builtin_ctz(w[i-1]^w[i]);	//mamy wczesniej wygenerowany kod graya
+}//gen
+
+int main()
+{
+	int tests;
+	scanf("%d", &tests);
+	for(int c = 0; c < tests; c++)
+	{
+		int n, a, b, dl;
+		scanf("%d%d%d", &n, &a, &b);
+		dl = 1 << n;
+		if(__builtin_popcount(a^b) > 1)	//mozemy normalny kod graya zrobic
+			gray(dl);
+		else
+		{
+			if(n < 3)	//w tej sytuacji nie da sie wygenerowac
+			{
+				printf("-1\n");
+				continue;
+			}			
+			gray(dl);
+			if(w[1] == (a^b) || w[dl-1] == (a^b))	//trzeba zmienic troche kod graya, 0 stoi obok a^b
+			{
+				gen(dl);
+				//wyznacz 2^k - ktory nie sasiaduje z 0
+				int k;
+				for(int i = 0; i < n; i++)
+					if((1<<i) != w[1] && (1<<i) != w[dl-1])
+					{
+						k = i;
+						break;
+					}
+				int j = __builtin_ctz(a^b);	//2^j == a^b
+				//zamien wystapienia bitow k na j i j na k
+				for(int i = 0; i < dl-1; i++)
+					if(ktory[i] == j)
+						ktory[i] = k;
+					else if(ktory[i] == k)
+						ktory[i] = j;
+				//odtworz ciag
+				for(int i = 1; i < dl; i++)
+					w[i] = w[i-1]^(1<<ktory[i-1]);				
+			}
+			//wynik trzeba xorowac przez a
+			for(int i = 0; i < dl; i++)
+				w[i] ^= a;
+		}		
+		//wypisz wynik
+		for(int i = 0; i < dl; i++)
+			printf("%d ", w[i]);
+		printf("\n");
+	}
+	return 0;
+}

@@ -1,0 +1,184 @@
+#include <cstdio>
+#include <cstring>
+ 
+#include <vector>
+#include <queue>
+#include <algorithm>
+#include <map>
+ 
+using namespace std;
+ 
+#define FOREACH(it,c) for(typeof((c).begin()) it=(c).begin();it!=(c).end();++it)
+ 
+struct Event {
+int id;
+char gender, type;
+Event(int _id, char _gender, char _type)
+: id(_id), gender(_gender), type(_type) {}
+};
+ 
+int B, G, L;
+int BS[200], BT[200];
+int GS[200], GT[200];
+bool likes[2][200][200];
+ 
+class BipartiteMatchingHK {
+const int static INF = 98765432;
+size_t Lsz, Rsz;
+vector<int> dist;
+bool _bfs();
+bool _dfs(int v);
+vector< vector<int> > adj;
+public:
+const int static NIL_VERTEX = 0;
+vector<bool> active;
+ 
+// output: warning: vertex indices start with 1, not 0
+vector<int> match;
+ 
+BipartiteMatchingHK(size_t _Lsz, size_t _Rsz)
+: Lsz(_Lsz), Rsz(_Rsz), adj(Lsz+1),
+active(_Lsz+_Rsz+1) {}
+ 
+void add_edge(int u, int v);
+ 
+int process();
+};
+ 
+inline void BipartiteMatchingHK::add_edge(int u, int v) {
+adj[u + 1].push_back(v + Lsz + 1);
+}
+ 
+int BipartiteMatchingHK::process() {
+match = vector<int>(Lsz+Rsz+1, +NIL_VERTEX);
+int nmatches = 0;
+dist = vector<int>(Lsz+1, +INF);
+active[NIL_VERTEX] = true;
+while (_bfs()) {
+for (int u = 1; u <= Lsz; ++u)
+if (active[u] && match[u] == NIL_VERTEX && _dfs(u))
+++nmatches;
+}
+return nmatches;
+}
+ 
+bool BipartiteMatchingHK::_dfs(int u) {
+if (!active[u]) return false;
+if (u == NIL_VERTEX)
+return true;
+for (int j = 0; j < adj[u].size(); ++j) {
+int v = adj[u][j];
+if (!active[v]) continue;
+if ( dist[ match[v] ] == dist[u]+1 && _dfs( match[v] ) ) {
+match[v] = u;
+match[u] = v;
+return true;
+}
+}
+dist[u] = INF;
+return false;
+}
+ 
+bool BipartiteMatchingHK::_bfs() {
+queue<int> q;
+for (int u = 1; u <= Lsz; ++u) {
+if (active[u] && match[u] == NIL_VERTEX) {
+dist[u] = 0;
+q.push(u);
+}
+else
+dist[u] = INF;
+}
+dist[NIL_VERTEX] = INF;
+while (!q.empty()) {
+int u = q.front();
+q.pop();
+if (u == NIL_VERTEX) continue;
+for (int j = 0; j < adj[u].size(); ++j) {
+int v = adj[u][j];
+if (!active[v] || !active[ match[v] ]) continue;
+if (dist[ match[v] ] >= INF) {
+dist[ match[v] ] = dist[u] + 1;
+q.push(match[v]);
+}
+}
+}
+return dist[NIL_VERTEX] < INF;
+}
+ 
+ 
+int main(int argc, char* argv[]) {
+int TC;
+scanf("%d", &TC);
+for (int tc = 1; tc <= TC; ++tc) {
+scanf("%d %d %d", &B, &G, &L);
+for (int i = 0; i < B; ++i)
+memset(likes[0][i], 0, sizeof(int)*(G+1));
+for (int j = 0; j < G; ++j)
+memset(likes[1][j], 0, sizeof(int)*(B+1));
+map< int, vector<Event> > events;
+for (int i = 0; i < B; ++i) {
+int N;
+scanf("%d %d %d", BS+i, BT+i, &N);
+events[BS[i]].push_back( Event(i, 'B', 'E') );
+events[BT[i]].push_back( Event(i, 'B', 'X') );
+while (N-- > 0) {
+int v;
+scanf("%d", &v);
+likes[0][i][v] = true;
+}
+}
+for (int j = 0; j < G; ++j) {
+int N;
+scanf("%d %d %d", GS+j, GT+j, &N);
+events[GS[j]].push_back( Event(j, 'G', 'E') );
+events[GT[j]].push_back( Event(j, 'G', 'X') );
+while (N-- > 0) {
+int v;
+scanf("%d", &v);
+likes[1][j][v] = true;
+}
+}
+BipartiteMatchingHK bpm(B, G);
+for (int i = 0; i < B; ++i) {
+for (int j = 0; j < G; ++j)
+if (likes[0][i][j] && likes[1][j][i])
+bpm.add_edge(i, j);
+}
+vector<int> res(min(B, G)+1, 0);
+int prev_time = 0;
+int prev_couples = 0;
+FOREACH(it, events) {
+const vector<Event>& v = it->second;
+for (int k = 0; k < v.size(); ++k) {
+if (v[k].gender == 'B')
+bpm.active[ v[k].id+1 ] = v[k].type == 'E';
+else
+bpm.active[ v[k].id+B+1 ] = v[k].type == 'E';
+}
+ 
+int cur_couples = bpm.process();
+ 
+/*
+fprintf(stderr, "T: %d\n", it->first);
+for (int i = 0; i < B; ++i)
+fprintf(stderr, "%c ", bpm.activeL[i+1] ? '1' : '0');
+fprintf(stderr,"\n");
+for (int j = 0; j < G; ++j)
+fprintf(stderr, "%c ", bpm.activeR[j] ? '1' : '0');
+fprintf(stderr, "\ncouples: %d\n\n", cur_couples);
+*/
+ 
+res[ prev_couples ] += it->first - prev_time;
+prev_couples = cur_couples;
+prev_time = it->first;
+}
+res[ prev_couples ] += L - prev_time;
+for (int m = 0; m < res.size(); ++m) {
+if (m > 0) putchar(' ');
+printf("%d", res[m]);
+}
+putchar('\n');
+}
+return 0;
+}

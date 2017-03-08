@@ -1,0 +1,74 @@
+
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+const int maxn = 100001;
+typedef long long LL;
+int n, a[maxn], b[maxn];
+LL k, pairs, result;
+struct btree_t {
+	int T[maxn];
+	int lowbit(int x) {
+		return x & (-x);
+	}
+	int query(int x) {
+		int result = 0;
+		for (; x; x -= lowbit(x)) {
+			result += T[x];
+		}
+		return result;
+	}
+	int query(int l, int r) {
+		if (l > r) return 0;
+		return query(r) - query(l - 1);
+	}
+	void update(int x, int delta) {
+		for (; x < maxn; x += lowbit(x)) {
+			T[x] += delta;
+		}
+	}
+} bit1, bit2;
+
+void push(int x) {
+	bit1.update(x, 1);
+	pairs += bit1.query(x + 1, n);
+	pairs += bit2.query(1, x - 1);
+}
+
+void pop(int x) {
+	bit2.update(x, -1);
+	pairs -= bit1.query(x + 1, n);
+	pairs -= bit2.query(1, x - 1);
+}
+
+int main() {
+	scanf("%d%I64d", &n, &k);
+	for (int i = 1; i <= n; ++i) {
+		scanf("%d", &a[i]);
+		b[i] = a[i];
+	}
+	sort(b + 1, b + 1 + n);
+	int sz = unique(b + 1, b + 1 + n) - b;
+	for (int i = 1; i <= n; ++i) {
+		a[i] = lower_bound(b + 1, b + sz, a[i]) - b;
+	}
+	int p = 1;
+	for (int i = n; i >= 1; --i) {
+		bit2.update(a[i], 1);
+		pairs += bit2.query(1, a[i] - 1);
+	}
+	for (int i = 1; i <= n; ++i) {
+		if (p == i) pop(a[p++]);
+		push(a[i]);
+		while (pairs > k && p <= n) {
+			pop(a[p++]);
+		}
+		result += n - p + 1;
+	}
+	printf("%I64d\n", result);
+	return 0;
+}

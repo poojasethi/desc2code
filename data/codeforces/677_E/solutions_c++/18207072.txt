@@ -1,0 +1,120 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef long long ll;
+typedef vector<int> vi;
+typedef vector<string> vs;
+typedef pair<int, int> pii;
+
+const int oo = 0x3f3f3f3f;
+const double eps = 1e-9;
+
+#define FOR(i,a,b) for (int i = (a); i < (b); i++)
+#define FORD(i,a,b) for (int i = int(b)-1; i >= (a); i--)
+#define FORIT(i,c) for (auto i = begin(c); i != end(c); i++)
+#define all(c) begin(c), end(c)
+#define sz(c) int((c).size())
+#define mp make_pair
+#define pb push_back
+#define DBG(...) ({ if(1) fprintf(stderr, __VA_ARGS__); })
+#define DBGDO(X) ({ if(1) cerr << "DBGDO: " << (#X) << " = " << (X) << endl; })
+
+template<class C, class I>
+bool has(C con, I item) {
+	return con.find(item) != con.end();
+}
+
+const ll MOD = 1000LL * 1000 * 1000 + 7;
+const int maxN = 1000 + 8;
+int N;
+
+string input[maxN];
+
+int grid[3][maxN][maxN];
+
+int maxSize[maxN][maxN];
+double val[maxN][maxN];
+double sumR[maxN][maxN];
+double sumC[maxN][maxN];
+
+double trans[4] = {-1, 0, 1, 1.584962500721156};
+
+bool valid(int r, int c) {
+	return r >= 0 && r < N && c >= 0 && c < N;
+}
+
+void findSize(int g, int r, int c, int dr, int dc) {
+	int pred = 0;
+
+	while (valid(r,c)) {
+		int cur = grid[g][r][c] ? pred + 1 : 0;
+		maxSize[r][c] = min(maxSize[r][c], cur);
+		pred = cur;
+		r += dr;
+		c += dc;
+	}
+}
+
+int main() {
+	ios::sync_with_stdio(false);
+
+	cin >> N;
+	cin.ignore(42, '\n');
+	FOR(i,0,N) getline(cin, input[i]);
+
+	FOR(r,0,N) FOR(c,0,N) grid[0][r][c] = input[r][c] - '0';
+
+	FOR(r,0,N) FOR(c,0,N) {
+		int g = ((r+c) & 1) ? 1 : 2;
+		grid[g][(r + c) / 2][(N - r + c) / 2] = grid[0][r][c];
+	}
+
+	double best = -1e10;
+	int br = 0, bc = 0, bg = -1;
+	ll result = 0;
+
+	FOR(g,0,3) {
+		FOR(r,0,N) FOR(c,0,N) val[r][c] = trans[ grid[g][r][c] ];
+
+		FOR(r,0,N) FOR(c,0,N) maxSize[r][c] = N;
+		FOR(r,0,N) findSize(g, r, 0, 0, 1);
+		FOR(r,0,N) findSize(g, r, N-1, 0, -1);
+		FOR(c,0,N) findSize(g, 0, c, 1, 0);
+		FOR(c,0,N) findSize(g, N-1, c, -1, 0);
+
+		FOR(r,0,N) sumR[r][0] = val[r][0];
+		FOR(r,0,N) FOR(c,1,N) sumR[r][c] = sumR[r][c-1] + val[r][c];
+
+		FOR(c,0,N) sumC[0][c] = val[0][c];
+		FOR(r,1,N) FOR(c,0,N) sumC[r][c] = sumC[r-1][c] + val[r][c];
+
+
+		FOR(r,0,N) FOR(c,0,N) if (maxSize[r][c] > 0) {
+			int s = maxSize[r][c];
+			double tmp = -val[r][c];
+			tmp += sumR[r][c+s-1];
+			if (c-s >= 0) tmp -= sumR[r][c-s];
+			tmp += sumC[r+s-1][c];
+			if (r-s >= 0) tmp -= sumC[r-s][c];
+			if (tmp > best) {
+				best = tmp;
+				br = r;
+				bc = c;
+				bg = g;
+			}
+		}
+
+		if (bg == g) {
+			result = grid[g][br][bc];
+			FOR(i, 1, maxSize[br][bc]) {
+				result *= grid[g][br - i][bc];
+				result *= grid[g][br + i][bc];
+				result *= grid[g][br][bc - i];
+				result *= grid[g][br][bc + i];
+				result %= MOD;
+			}
+		}
+	}
+
+	cout << result << endl;
+}

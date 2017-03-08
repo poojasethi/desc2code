@@ -1,0 +1,95 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <queue>
+#include <algorithm>
+#include <map>
+using namespace std;
+typedef long long ll;
+ifstream fin("input.txt");
+ofstream fout("output.txt");
+struct task{
+	ll t,s,p,id;
+	bool operator<(const task &a)const{
+		return t<a.t;
+	}
+};
+struct comp{
+	bool operator()(const task &a, const task &b)const{
+		return a.p < b.p;
+	}
+};
+const ll nmax = 5e4+5, inf = 2e15+5;
+ll n,xt,xid;
+vector<task> tasks;
+ll end_time[nmax];
+bool solve(ll xp){ // ret true, if end_time of x is less than xt
+	priority_queue<task,vector<task>,comp> pq;
+	ll id = 0, t = tasks[0].t;
+	while(id<n||!pq.empty()){
+		while(id<n&&tasks[id].t==t){
+			task add = tasks[id];
+			if(add.p==-1)
+				add.p=xp;
+			pq.push(add);
+			id++;
+		}
+		ll nxt_t = id>=n?inf:tasks[id].t;
+		while(!pq.empty()&&t<nxt_t){
+			task cur_t = pq.top();
+			pq.pop();
+			if(cur_t.s+t<=nxt_t){
+				t+=cur_t.s;
+				end_time[cur_t.id]=t;
+			}
+			else{
+				cur_t.s-=nxt_t-t;
+				pq.push(cur_t);
+				t=nxt_t;
+			}
+		}
+		t=nxt_t;
+	}
+	if(end_time[xid]<=xt)
+		return true;
+	return false;
+}
+int main(){
+	fin >> n;
+	vector<ll> pos_p;
+	map<ll,ll> banned;
+	tasks.resize(n);
+	for(ll i = 0; i < n; ++i){
+		fin >> tasks[i].t >> tasks[i].s >> tasks[i].p;
+		tasks[i].id=i;
+		if(tasks[i].p==-1)
+			xid=i;
+		else
+			banned[tasks[i].p]=1;
+	}
+	for(ll i = 0; i < n; ++i){
+		if(tasks[i].p==-1)
+			continue;
+		if(tasks[i].p-1>=1&&!banned[tasks[i].p-1])
+			pos_p.push_back(tasks[i].p-1);
+		if(tasks[i].p+1<=1e9&&!banned[tasks[i].p+1])
+			pos_p.push_back(tasks[i].p+1);
+	}
+	fin >> xt;
+	sort(tasks.begin(),tasks.end());
+	sort(pos_p.begin(),pos_p.end());
+//	for(ll i = 0; i < pos_p.size(); ++i) cout << pos_p[i] << '\n';
+	ll lo = 0, hi = pos_p.size()-1, mid;
+	while(lo<hi){
+		mid=(lo+hi)/2;
+		if(solve(pos_p[mid]))
+			hi=mid;
+		else
+			lo=mid+1;
+	}
+	solve(pos_p[lo]);
+	fout << pos_p[lo] << '\n';
+	for(ll i = 0; i < n; ++i)
+		fout << end_time[i] << " \n"[i==n-1];
+}
+

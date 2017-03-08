@@ -1,0 +1,131 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <cmath>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+using namespace std;
+
+#define pb push_back
+typedef long long ll;
+typedef double R;
+const int N = 105;
+R a, vm, vp, vm2, vp2;
+int w, l, n;
+bool b[N][N];
+int d[N][N], dist[N][N];
+double f[N][N];
+
+struct Z2 {
+	int x, y;
+	Z2() {
+	}
+	Z2(int x, int y) :
+			x(x), y(y) {
+	}
+	Z2 operator -(const Z2 A) const {
+		return Z2(x - A.x, y - A.y);
+	}
+	Z2 operator +(const Z2 A) const {
+		return Z2(x + A.x, y + A.y);
+	}
+	bool operator !=(const Z2 A) const {
+		return x != A.x || y != A.y;
+	}
+	int manh() {
+		return abs(x) + abs(y);
+	}
+	void read() {
+		scanf("%d%d", &x, &y);
+	}
+	void mark() {
+		b[x][y] = 1;
+	}
+	bool valid() {
+		return x >= 0 && x <= w && y >= 0 && y <= l;
+	}
+	void prt() const {
+		printf("%d %d\n", x, y);
+	}
+};
+const Z2 dir[4] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+Z2 T, p[N], q[N * N];
+
+void bfs(Z2 S) {
+	int h = 0, t = 1;
+	q[1] = S;
+	memset(d, -1, sizeof(d));
+	d[S.x][S.y] = 0;
+	while (h < t) {
+		Z2 A = q[++h];
+		if (S != A && b[A.x][A.y])
+			continue;
+		for (int k = 0; k < 4; ++k) {
+			Z2 B = A + dir[k];
+			if (B.valid() && d[B.x][B.y] < 0)
+				d[B.x][B.y] = d[A.x][A.y] + 1, q[++t] = B;
+		}
+	}
+}
+
+R sq(R x) {
+	return x * x;
+}
+
+R calc(int i, int j, int d, bool flag = 1) {
+	if (i == n || j == 0 || d < 0)
+		return 1e9;
+	if (i == j)
+		return 0;
+	R va = i == 0 ? 0 : vp, va2 = sq(va);
+	//printf("%d %d %d\n", i, j, d);
+	if (j == n && flag) {
+		if (vm2 - va2 < 2 * a * d)
+			return (vm - va) / a + (d - (vm2 - va2) / 2 / a) / vm;
+		else
+			return (sqrt(va2 + 2 * a * d) - va) / a;
+	}
+	//printf("%d %d %d %.15lf\n", i, j, d, (vp2 - va2) / 2 / a);
+	if (i == 0 && ((vp2 - va2) / 2 / a >= d))
+		return 1e10;
+	if (2 * a * d + va2 + vp2 < 2 * vm2) {
+		R v = sqrt((2 * a * d + va2 + vp2) / 2);
+		return (2 * v - va - vp) / a;
+	} else
+		return (2 * vm - va - vp) / a + (d - (2 * vm2 - va2 - vp2) / 2 / a) / vm;
+}
+
+int main() {
+#ifdef LOCAL
+	freopen("in", "r", stdin);
+#endif
+	scanf("%d%d%d%lf%lf%lf", &w, &l, &n, &a, &vm, &vp);
+	vp = min(vp, vm);
+	vm2 = sq(vm), vp2 = sq(vp);
+	p[0].read(), T.read();
+	for (int i = 1; i <= n; ++i) {
+		p[i].read();
+		//printf("%lf\n", calc(0, i, (p[i] - p[0]).manh(), 0));
+		if (calc(0, i, (p[i] - p[0]).manh(), 0) >= 1e9)
+			--i, --n;
+		else
+			p[i].mark();
+	}
+	//printf("%d\n", n);
+	p[++n] = T;
+	for (int i = 0; i <= n; ++i) {
+		bfs(p[i]);
+		for (int j = 0; j <= n; ++j) {
+			f[i][j] = calc(i, j, d[p[j].x][p[j].y]);
+			//printf("| %d %lf ", d[p[j].x][p[j].y], f[i][j]);
+		}
+		//puts("");
+	}
+	for (int k = 0; k <= n; ++k)
+		for (int i = 0; i <= n; ++i)
+			for (int j = 0; j <= n; ++j)
+				f[i][j] = min(f[i][j], f[i][k] + f[k][j]);
+	printf("%.15lf\n", f[0][n]);
+	return 0;
+}

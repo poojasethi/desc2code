@@ -1,0 +1,186 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<vector>
+#include<algorithm>
+using namespace std;
+#define gc getchar_unlocked
+//int a[1000006];
+//int b[1000006];
+/*int sc() 
+{
+  char c = gc();
+  int sign = 1;
+  while((c<'0' || c>'9') && c!='-') c = gc();
+  if(c=='-') {
+    sign = -1;
+    c = gc();
+  }
+  int ret = 0;
+  while(c>='0' && c<='9' ) {
+    ret = 10 * ret + c - 48;
+    c = gc();
+  }
+  return ret*sign;
+}
+*/
+int a[100005];
+//int b[100005];
+int c[100005];
+struct node
+{
+	int *ar;
+	int *s;
+	long long int fs;
+	int e;
+	node()
+	{
+		ar=NULL;
+		fs=1;
+		e=0;
+	}
+	node(int *a,int *su,long long int f,int se)
+	{
+		ar=a;
+		s=su;
+		fs=f;
+		e=se;
+	}
+}tree[1000005];
+void make(int in,int s1,int e1)
+{
+	if(s1>e1)
+		return ;
+	if(s1==e1)
+	{
+		int s;
+		int *t1, *t2;
+		int n=a[s1];
+		if(n==1)
+			n=2,s=0,t1=NULL,t2=NULL;
+		else
+		{
+			n=1;
+			s=1;
+			t1=new int[s];
+			t2=new int[s];
+			t1[0]=t2[0]=a[s1];
+		}	
+		tree[in]=node(t1,t2,n,s);
+		return ;
+	}
+	int m=(e1+s1)/2;
+	make(2*in,s1,m);
+	make(2*in+1,m+1,e1);
+	int le=2*in;
+	int ri=2*in+1;				
+	int k=0,i=0,j=0,f=1;
+	tree[in].fs=tree[le].fs-1+tree[ri].fs;
+	while(f)
+	{
+		f=0;
+		if(i<tree[le].e&&tree[le].ar[i]<=tree[in].fs)
+		{
+			f=1;
+			tree[in].fs+=tree[le].ar[i];
+			i++;
+		}
+		if(j<tree[ri].e&&tree[ri].ar[j]<=tree[in].fs)
+		{
+			f=1;
+			tree[in].fs+=tree[ri].ar[j];
+			j++;
+		}
+	}
+	f=tree[le].e-i+tree[ri].e-j;
+	tree[in].e=f;
+	if(f)
+	{
+		if(i<tree[le].e&&j<tree[ri].e)
+		{
+			tree[in].ar=new int[f];
+			while(i<tree[le].e&&j<tree[ri].e)
+			{
+				if(tree[le].ar[i]<=tree[ri].ar[j])
+					tree[in].ar[k++]=tree[le].ar[i++];
+				else
+					tree[in].ar[k++]=tree[ri].ar[j++];
+			}
+			while(i<tree[le].e)
+				tree[in].ar[k++]=tree[le].ar[i++];
+			while(j<tree[ri].e)
+				tree[in].ar[k++]=tree[ri].ar[j++];
+		}
+		else if(i<tree[le].e)
+			tree[in].ar=tree[le].ar+i;
+		else
+			tree[in].ar=tree[ri].ar+j;
+		tree[in].s=new int[f];
+		tree[in].s[0]=tree[in].ar[0];
+		for(int l1=1;l1<f;l1++)
+			tree[in].s[l1]=tree[in].ar[l1]+tree[in].s[l1-1];
+	}
+}
+int query[1000];
+int ql;
+void read(int in,int ss,int se,int qs,int qe)
+{
+	if(qs>se||qe<ss||ss>se)
+		return ;
+	else if(qs<=ss&&se<=qe)
+	{
+		query[ql++]=in;
+		return;
+	}
+	int m=(se+ss)/2;
+	read(2*in,ss,m,qs,qe);
+	read(2*in+1,m+1,se,qs,qe);
+	return;
+}
+int main()
+{
+	int n,m;
+	scanf("%d",&n);
+//	n=sc();
+	for(int i=1;i<=n;i++)
+//		a[i]=sc();
+		scanf("%d",&a[i]);
+	make(1,1,n);
+	int q;
+	scanf("%d",&q);
+	for(int i=0;i<q;i++)
+	{
+		int x,y;
+		scanf("%d %d",&x,&y);
+//		x=sc();
+//		y=sc();
+		long long fs=0;
+		ql=0;
+		read(1,1,n,x,y);
+		vector<int> pq(ql,0);
+		for(int i=0;i<ql;i++)
+			fs+=tree[query[i]].fs-1;
+		fs++;
+		int f=1;
+		while(f)
+		{
+			f=0;
+			for(int i=0;i<ql;i++)
+			{
+				if(tree[query[i]].e>pq[i])
+				{
+					int id=upper_bound(tree[query[i]].ar+pq[i],tree[query[i]].ar+tree[query[i]].e,fs)-tree[query[i]].ar;
+					if(id>=1&&id!=pq[i])
+					{
+						fs+=tree[query[i]].s[id-1];
+						f=1;
+						if(pq[i])
+							fs-=tree[query[i]].s[pq[i]-1];
+						pq[i]=id;
+					}
+				}
+			}
+		}
+		printf("%lld\n",fs);
+	}
+	return 0;
+}

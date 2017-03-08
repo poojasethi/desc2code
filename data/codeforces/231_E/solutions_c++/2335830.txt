@@ -1,0 +1,147 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+#define MAXN 100010
+#define ll long long
+
+const ll mod = 1000000007LL;
+
+int n,m,cycle[MAXN],pai[MAXN],ncycle,tam[MAXN],vis[MAXN],dist[MAXN],left[MAXN],N,T[10*MAXN];
+int lbl[MAXN],who[MAXN],help;
+vector<int> adj[MAXN],G[MAXN],tree;
+
+void dfs(int u) {
+	vis[u] = 1;
+	
+	for (int i=0; i<adj[u].size(); i++) {
+		int v = adj[u][i];
+		if (!vis[v]) { pai[v] = u;	dfs(v);	}
+		else if (v != pai[u] && cycle[u] == -1) {
+			int t = u,p=0;
+			while (t != v) {
+				cycle[t] = ncycle;
+				t = pai[t];
+				p++;
+			}
+			tam[ncycle] = p+1;
+			cycle[t] = ncycle++;
+		}
+	}
+	
+	return;
+}
+
+void dfs2(int u, int val) {
+	dist[u] = val;
+	if (tam[u]>=3) dist[u]++;
+	lbl[u] = help;
+	who[help++] = u;
+	
+	tree.push_back(lbl[u]);
+	left[u] = tree.size() - 1;
+	for (int i=0; i<G[u].size(); i++) {
+		int v = G[u][i];
+		if (v == pai[u]) continue;
+		pai[v] = u;
+		dfs2(v,dist[u]);
+		tree.push_back(lbl[u]);
+	}
+	
+	return;
+}
+
+int build(int v, int b, int e) {
+	if (b == e) return T[v] = tree[b];
+	
+	int m = (b+e) / 2;
+	return T[v] = min(build(2*v+1,b,m),build(2*v+2,m+1,e));
+}
+
+int query(int v, int b, int e, int i, int j) {
+	if (i > j) return query(v,b,e,j,i);
+	if (j<b || i>e) return 100000000;
+	
+	if (i<=b && e<=j) return T[v];
+	
+	int m = (b+e) / 2;
+	return min(query(2*v+1,b,m,i,j),query(2*v+2,m+1,e,i,j));
+}
+
+ll exp_fast(ll a, int n) {
+	if (!n) return 1LL;
+	
+	ll res = exp_fast(a,n/2);
+	res = (res * res) % mod;
+	if (n%2) res = (res * a) % mod;
+	return res;
+}
+
+int main() {
+	scanf("%d%d",&n,&m);
+	
+	for (int i=0; i<n; i++) {
+		adj[i].clear();
+		G[i].clear();
+	}
+	
+	while (m--) {
+		int u,v;
+		scanf("%d%d",&u,&v);
+		u--;	v--;
+		adj[u].push_back(v);
+		adj[v].push_back(u);
+	}
+	
+	memset(cycle,-1,sizeof(cycle));
+	memset(vis,0,sizeof(vis));
+	ncycle = 0;	pai[0] = -1;
+	dfs(0);
+	
+	for (int i=0; i<n; i++)
+		if (cycle[i] == -1) {
+			tam[ncycle] = 1;
+			cycle[i] = ncycle++;
+		}
+	
+	for (int i=0; i<n; i++) {
+		int u = cycle[i];
+		for (int j=0; j<adj[i].size(); j++) {
+			int v = cycle[adj[i][j]];
+			if (u != v) {
+				G[u].push_back(v);
+			}
+		}
+	}
+	
+	pai[0] = -1;
+	help = 0;
+	dfs2(0,0);
+	
+	int N = tree.size();
+	build(0,0,N-1);
+	int Q;
+	scanf("%d",&Q);
+	while (Q--) {
+		int u,v;
+		scanf("%d%d",&u,&v);
+		u--;	v--;
+		u = cycle[u];	v = cycle[v];
+		if (u == v) {
+			printf("2\n");
+			continue;
+		}
+		int x = query(0,0,N-1,left[u],left[v]);
+		x = who[x];
+		int d = dist[u] + dist[v] - 2*dist[x];
+		if (tam[x] >= 3) d++;
+		
+		ll res = exp_fast(2LL,d);
+		printf("%d\n",int(res));
+	}
+	
+	return 0;
+}

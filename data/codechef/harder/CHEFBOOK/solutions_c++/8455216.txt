@@ -1,0 +1,89 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define	n	205
+#define m	200005
+#define INF	1000000007
+#define For(i,a,b)	for(int i=a;i<=b;i++)
+
+int		T,N,M,D,Ans,val[n],A[n][n],B[n][n];
+int		V[n],st[n],Dis[n],pre[n],Q[m*100];
+int		X[m],Y[m],L[m],R[m];
+struct	Lin{int v,f,c,next;}E[m];
+
+void	Link(int u,int v,int f,int c){
+		E[++D]=(Lin){v,f,c,st[u]};	st[u]=D;
+		E[++D]=(Lin){u,0,-c,st[v]};	st[v]=D;
+}
+
+bool	SPFA(){
+		For(i,1,2*N+2)	Dis[i]=INF,pre[i]=V[i]=0;	Dis[Q[1]=2*N+1]=0;
+		for (int l=0,r=1;l<r;)	{
+			int u=Q[++l];	V[u]=0;
+			for (int i=st[u],v;i;i=E[i].next)
+			if	(E[i].f&&Dis[u]+E[i].c<Dis[v=E[i].v]){
+				Dis[v]=Dis[u]+E[i].c;	pre[v]=i;
+				if	(!V[v])	V[Q[++r]=v]=1;
+			}
+		}	return	Dis[2*N+2]!=INF;
+}
+void	Upd(){
+		int Min=INF;
+		for (int x=2*N+2;x!=2*N+1;x=E[pre[x]^1].v)	Min=min(Min,E[pre[x]].f);
+		for (int x=2*N+2;x!=2*N+1;x=E[pre[x]^1].v)	E[pre[x]].f-=Min,E[pre[x]^1].f+=Min;
+		Ans+=Min*Dis[2*N+2];
+}
+
+int		main(){
+	//	freopen("CHEFBOOK.in","r",stdin);
+	//	freopen("CHEFBOOK.out","w",stdout);
+
+		scanf("%d",&T);
+		for (;T--;)	{
+			scanf("%d%d",&N,&M);
+			For(i,1,2*N+2)	st[i]=val[i]=0;	Ans=0;	D=1;
+			For(i,1,2*N)	For(j,1,2*N)	A[i][j]=i==j?0:INF;
+
+			For(i,1,M)	{
+				int l;	scanf("%d%d%d%d%d",&X[i],&Y[i],&l,&L[i],&R[i]);
+				Ans+=l;	L[i]-=l,R[i]-=l;	val[X[i]]--,val[Y[i]+N]++;
+				Link(Y[i]+N,X[i],INF,R[i]);	Link(X[i],Y[i]+N,INF,-L[i]);
+				A[Y[i]+N][X[i]]=min(A[Y[i]+N][X[i]],R[i]);
+				A[X[i]][Y[i]+N]=min(A[X[i]][Y[i]+N],-L[i]);
+			}
+			For(i,1,2*N){
+				if	(val[i]>0)	Link(2*N+1,i,val[i],0);
+				if	(val[i]<0)	Link(i,2*N+2,-val[i],0);
+			}
+
+			int OK=0;
+			For(i,1,2*N)	For(j,1,2*N)	B[i][j]=A[i][j];
+			For(k,1,2*N)	For(i,1,2*N)	For(j,1,2*N)
+				A[i][j]=min(A[i][j],A[i][k]+A[k][j]);
+			For(i,1,2*N)	if	(A[i][i]<0)	OK=1;
+
+			if	(OK)	puts("Unlike");
+			else	{
+				for (;SPFA();Upd());printf("%d\n",Ans);
+				for (int i=1,t=3;i<=M;i++){
+					if	(E[t].f)	B[X[i]][Y[i]+N]=min(B[X[i]][Y[i]+N],-R[i]);	t+=2;
+					if	(E[t].f)	B[Y[i]+N][X[i]]=min(B[Y[i]+N][X[i]],+L[i]);	t+=2;
+				}
+				For(i,1,2*N)	Dis[i]=0,Q[i]=i,V[i]=1;
+
+				for (int l=0,r=2*N;l<r;){
+					int u=Q[++l];	V[u]=0;
+					For(v,1,2*N)	if	(Dis[u]+B[u][v]<Dis[v])
+						Dis[v]=Dis[u]+B[u][v],V[Q[++r]=v]=1;	
+				}
+
+				int Min=0;
+				For(i,1,2*N)	Min=min(Min,Dis[i]);
+				For(i,1,2*N)	Dis[i]-=Min;
+				For(i,1,N)	printf("%d%c",Dis[i]," \n"[i==N]);
+				For(i,1,N)	printf("%d%c",Dis[i+N]," \n"[i==N]);
+			}
+		}
+}

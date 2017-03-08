@@ -1,0 +1,64 @@
+#include<cstdio>
+#include<string>
+#include<cstring> 
+using namespace std; 
+
+const int MAXN = 200005;
+int n, K, cnt;
+long long res;
+string s[MAXN];
+char str[MAXN];
+struct State {
+	int len, vis, num, sum;
+	State *par, *trans[26];
+	State (int len = 0): par(0), len(len) { num = sum = vis = 0; memset(trans, 0, sizeof trans); }
+}*root, *last, G[MAXN];
+
+inline void extend(int w) {
+	State *p = last, *np = &(G[cnt++] = State(p->len+1));
+	for(; p && !p->trans[w]; p = p->par) p->trans[w] = np;
+	if(!p) np->par = root;
+	else {
+		State *q = p->trans[w];
+		if(p->len + 1 == q->len) np->par = q;
+		else {
+			State *nq = &(G[cnt++] = *q);
+			nq->len = p->len + 1;
+			np->par = q->par = nq;
+			for(; p && p->trans[w] == q; p = p->par) p->trans[w] = nq;
+		}
+	}
+	last = np;
+}
+
+inline void get_ans(State* p) {
+	if(p == root || p->vis == cnt + 2) return;
+	p->vis = cnt + 2; get_ans(p->par); p->sum += p->par->sum;
+}
+
+int main() {
+	scanf("%d%d", &n, &K);
+	root = &(G[cnt++] = State(0));
+	for(int i = 1; i <= n; ++i) {
+		scanf("%s", str); s[i] = (string) str;
+		last = root;
+		for(int j = 0; j < s[i].length(); ++j){
+			extend(s[i][j]-'a');
+			for(State *x = last; x && x->vis != i; x->vis = i, x = x->par) ++x->num;
+		} 
+	}
+	
+	for(int i = 1; i < cnt; ++i)
+	G[i].sum = (G[i].num >= K) * (G[i].len - G[i].par->len);
+	
+	for(int i = 1; i < cnt; get_ans(&G[i++]));
+	
+	for(int i = 1; i <= n; ++i) {
+		State* x = root->trans[s[i][0]-'a'];
+		for(int j = res = 0; j < s[i].length(); x = x->trans[s[i][++j]-'a'])
+			res += x->sum;
+		printf("%lld ", res);
+	}
+	return 0;
+}
+ 	  	  	  		        	  	  					

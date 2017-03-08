@@ -1,0 +1,111 @@
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+#define rep(i,s,t) for(int i=s;i<=t;i++)
+#define red(i,t,s) for(int i=t;i>=s;i--)
+#define vtson(k,x) for(int k=o[x];k;k=nex[k])
+#define LL long long
+#define DD double
+using namespace std;
+const DD pi=acos(-1.0);
+const int inf=1e9;
+const int NN=210101;
+inline int read()
+{
+    int t=0,f=1;char ch=getchar();
+    while(ch<'0'||ch>'9')f=(ch=='-')?-1:1,ch=getchar();
+    while(ch>='0'&&ch<='9')t=t*10+ch-'0',ch=getchar();
+    return t*f;
+}
+
+int n,a[NN],R[NN],c1[NN],c2[NN],l[500],r[500];
+
+
+struct E
+{
+	DD x,y;
+	E(){}
+	E(DD a,DD b){x=a,y=b;}
+	friend E operator +(const E &a,const E &b){return E(a.x+b.x,a.y+b.y);}
+	friend E operator -(const E &a,const E &b){return E(a.x-b.x,a.y-b.y);}
+	friend E operator *(const E &a,const E &b){return E(a.x*b.x-a.y*b.y,a.x*b.y+b.x*a.y);}
+	friend E operator /(const E &a,const DD &b){return E(a.x/b,a.y/b);}
+}aa[NN],bb[NN];
+
+void FFT(E *a,int n,int on)
+{
+	rep(i,0,n)
+		if(i<R[i])swap(a[i],a[R[i]]);
+	for(int l=1;l<n;l<<=1)
+	{
+		E wn(cos(pi/l),on*sin(pi/l));
+		for(int i=0;i<n;i+=l<<1)
+		{
+			E w(1,0);
+			rep(j,0,l-1)
+			{
+				E u=a[i+j],v=a[i+j+l]*w;
+				a[i+j]=u+v;
+				a[i+j+l]=u-v;
+				w=w*wn;
+			}
+		}
+	}
+	if(on==-1)
+		rep(i,0,n)
+			a[i]=a[i]/n;
+}
+
+LL calc(int l,int r)
+{
+	LL res=0;
+	rep(i,l,r)
+	{
+		c2[a[i]]--;
+		rep(j,l,i-1)
+			if(a[i]*2>a[j])res+=c2[a[i]*2-a[j]];
+		rep(j,i+1,r)
+			if(a[i]*2>a[j])res+=c1[a[i]*2-a[j]];
+	}
+	rep(i,l,r)c1[a[i]]++;
+	return res;
+}
+
+int main()
+{
+//    freopen("1.in","r",stdin);//freopen("1.out","w",stdout);    
+    n=read();
+	int mx=0;
+	rep(i,1,n)a[i]=read(),c2[a[i]]++,mx=max(mx,a[i]);
+	int d=sqrt(n*log2((DD)n)*2.6);
+	int cnt=0,st=1;
+	while(st<=n)
+	{
+		int ed=min(st+d-1,n);
+		l[++cnt]=st;
+		r[cnt]=ed;
+		st=ed+1;
+	}
+	int nn=1,L=0;
+	for(;nn<=mx+mx;nn<<=1)L++;
+	rep(i,0,nn)R[i]=R[i>>1]>>1|((i&1)<<(L-1));
+	LL ans=calc(l[1],r[1]);
+	rep(now,2,cnt-1)
+	{
+		memset(aa,0,sizeof(E)*(nn+5));
+		rep(i,1,mx)aa[i].x=c1[i];
+		ans+=calc(l[now],r[now]);
+		memset(bb,0,sizeof(E)*(nn+5));
+		rep(i,1,mx)bb[i].x=c2[i];
+		FFT(bb,nn,1),FFT(aa,nn,1);
+		rep(i,0,nn)aa[i]=aa[i]*bb[i];
+		FFT(aa,nn,-1);
+//		rep(i,0,nn)printf("%.1lf ",aa[i].x);puts("_end");
+		rep(i,l[now],r[now])
+			ans+=aa[a[i]*2].x+0.1;
+	}
+	if(cnt>1)ans+=calc(l[cnt],r[cnt]);
+	printf("%lld\n",ans);
+    return 0;
+}

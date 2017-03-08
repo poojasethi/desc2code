@@ -1,0 +1,102 @@
+#define _USE_MATH_DEFINES
+#define _CRT_SECURE_NO_DEPRECATE
+#include<cstdio>
+#include<cstring>
+#include<cstdlib>
+#include<algorithm>
+#include<iostream>
+using namespace std;
+namespace INPUT
+{
+  const int L=1<<15;
+  char _buf[L],*S,*T,ch;
+  char _gc()
+  {
+    if(S==T)
+    {
+      T=(S=_buf)+fread(_buf,1,L,stdin);
+      if(S==T) return EOF;
+    }
+    return *S++;
+  }
+  void readi(int &x)
+  {
+    while(ch=_gc(),ch<'0'||ch>'9');
+    x=ch^'0';
+    while(ch=_gc(),ch>='0'&&ch<='9')x=x*10+(ch^'0');
+  }
+  void reads(register char *s)
+  {
+  	while(ch=_gc(),ch!='0'&&ch!='1');
+  	*(s++)=ch;
+  	while(ch=_gc(),ch=='0'||ch=='1')*(s++)=ch;
+  	*s=0;
+	}
+}
+#define readi INPUT::readi
+#define reads INPUT::reads
+
+void writei(const unsigned &x)
+{if(x<10)putchar(x+'0');else writei(x/10),putchar(x%10+'0');}
+
+#ifndef _MSC_VER
+static inline int32_t __attribute__((always_inline))
+mm_popcnt_u32(uint32_t x){
+	int32_t result;
+	__asm__("popcnt %1, %0" : "=r" (result) : "r" (x));
+	return result;
+}
+#else
+#	define mm_popcnt_u32 _mm_popcnt_u32
+#endif
+
+#define cnt mm_popcnt_u32
+
+unsigned a[6333],b[32][6333],an,bn;
+char sa[200005],sb[200005];
+
+void div(register char *s,int n,unsigned *a)
+{
+	for(register int i=0;i<n;i++,s++)
+		a[i>>5]^=*s-'0'<<(i&31);
+}
+
+int main()
+{
+	reads(sa),div(sa,an=strlen(sa),a);
+	reads(sb),div(sb,bn=strlen(sb),b[0]);
+	for(register int s=bn+31>>5,k=1,i;k<32;k++)
+	{
+		b[k][0]=b[k-1][0]<<1;
+		for(i=1;i<=s;i++)
+			b[k][i]=b[k-1][i]<<1|b[k-1][i-1]>>31;
+	}
+	int qn,p1,p2,len;
+	register int k,r;
+	register unsigned *s,*t,ans;
+	for(readi(qn);qn--;)
+	{
+		readi(p1),readi(p2),readi(len);
+		k=p1-p2&31;
+		s=a+(p1>>5);
+		t=b[k]+(p2+k>>5);
+		r=p1&31;
+		ans=0;
+		if(r+len<32)
+		{
+			unsigned smask=(1u<<r+len)-1&~((1u<<r)-1);
+			ans=cnt((*s^*t)&smask);
+		}
+		else
+		{
+			unsigned fmask=~((1u<<r)-1);
+			ans+=cnt((*s^*t)&fmask);
+			for(len-=32-r,s++,t++;len>=32;len-=32,s++,t++)
+				ans+=cnt(*s^*t);
+			unsigned lmask=(1u<<len)-1;
+			ans+=cnt((*s^*t)&lmask);
+		}
+		writei(ans),putchar('\n');
+	}
+	return 0;
+}

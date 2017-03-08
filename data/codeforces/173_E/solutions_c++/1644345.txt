@@ -1,0 +1,119 @@
+#include<iostream>
+#include<vector>
+#include<sstream>
+#include<algorithm>
+#include<numeric>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<cmath>
+#include<complex>
+#include<set>
+#include<map>
+#include<queue>
+#include<cassert>
+
+using namespace std;
+
+#define rep(i,n) for(int i=0;i<n;i++)
+#define rp(i,c) rep(i,(c).size())
+#define fr(i,c) for(__typeof((c).begin()) i=(c).begin();i!=(c).end();i++)
+#define pb push_back
+#define mp make_pair
+#define all(c) (c).begin(),(c).end()
+#define dbg(x) cerr<<#x<<" = "<<(x)<<endl
+
+typedef vector<int> vi;
+typedef vector<string> vs;
+typedef pair<int,int> pi;
+typedef long long ll;
+
+const int inf=(int)1e9 + 1;
+const double INF=1e12,EPS=1e-9;
+
+const int MX = 131072;
+int n, k, q, r[MX], a[MX], x[MX], y[MX];
+int bit[MX], mx[MX], ans[MX], N, data[MX * 2];
+pi ps[MX], qs[MX];
+
+inline int sum(int i){
+	int res = 0;
+	for(; i; i -= i & -i) res += bit[i];
+	return res;
+}
+inline void add(int i, int x){
+	for(; i < MX; i += i & -i) bit[i] += x;
+}
+int get(int a, int b, int l, int r, int k){
+	if(b <= l || a >= r) return 0;
+	if(a <= l && r <= b) return data[k];
+	return max(get(a, b, l, (l+r) / 2, k*2 + 1),
+		get(a, b, (l+r) / 2, r, k*2 + 2));
+}
+void update(int x, int v){
+	x += N-1;
+	data[x] = max(data[x], v);
+	while(x > 0){
+		x = (x - 1) / 2;
+		data[x] = max(data[x], max(data[x * 2 + 1], data[x * 2 + 2]));
+	}
+}
+
+void run()
+{
+	int sz = 0;
+	map<int, int> m;
+	map<int, int>::iterator it;
+	
+	cin >> n >> k;
+	rep(i, n) cin >> r[i];
+	rep(i, n) cin >> a[i], ps[i] = mp(r[i], a[i]), m[a[i]] = 0;
+	sort(ps, ps + n);
+	fr(i, m) i->second = sz++;
+	m[inf] = sz++;
+	for(N = 1; N < sz; N *= 2);
+	
+	rep(i, n){
+		int j = i;
+		while(j < n-1 && ps[j+1].first == ps[i].first) j++;
+		for(int p = i; p <= j; p++) add(m[ps[p].second] + 1, 1);
+		
+		for(int p = i; p <= j; p++){
+			it = m.upper_bound(min((ll)ps[p].second + k, inf - 1ll));
+			int u = it->second;
+			it = m.lower_bound(max((ll)ps[p].second - k, 0ll));
+			int l = it->second, c = m[ps[p].second];
+			//cerr<<"u: "<<u<<" l: "<<l<<" c: "<<c<<" "; dbg(sum(u)-sum(l));
+			mx[p] = max(0, sum(u) - sum(l));
+		}
+		i = j;
+	}
+	
+	cin >> q;
+	rep(i, q){
+		cin >> x[i] >> y[i];
+		x[i]--; y[i]--;
+		qs[i] = mp(max(r[x[i]], r[y[i]]), i);
+	}
+	sort(qs, qs + q);
+	for(int i = q-1, j = n; i >= 0; i--){
+		while(j > 0 && qs[i].first <= ps[j-1].first){
+			j--;
+			update(m[ps[j].second], mx[j]);
+		}
+		int s = x[qs[i].second], t = y[qs[i].second];
+		if(a[s] > a[t]) swap(s, t);
+		it = m.upper_bound(min((ll)a[s] + k, inf - 1ll));
+		int u = it->second;
+		it = m.lower_bound(max((ll)a[t] - k, 0ll));
+		int l = it->second; //cerr<<"s: "<<s<<" t: "<<t<<" id: "<<qs[i].second<<" l: "<<l<<" u: "<<u<<endl;
+		ans[qs[i].second] = l < u ? get(l, u, 0, N, 0) : 0;
+		if(ans[qs[i].second] == 0) ans[qs[i].second] = -1;
+	}
+	rep(i, q) cout << ans[i] << endl;
+}
+
+int main()
+{
+	run();
+}

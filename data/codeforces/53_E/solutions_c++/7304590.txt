@@ -1,0 +1,26 @@
+#include <cstdio>
+
+using namespace std;
+
+int n,m,k,g[10][10];
+int f[1<<10][1<<10];
+
+int main()
+{
+	scanf("%d%d%d",&n,&m,&k);
+	for(int i=1,u,v;i<=m;i++){
+		scanf("%d%d",&u,&v);u--;v--;
+		g[u][v]=g[v][u]=1;f[(1<<u)|(1<<v)][(1<<u)|(1<<v)]=1;
+	}
+	for(int i=0;i<(1<<n);i++)
+		for(int j=0;j<=i;j++) if((i&j)==j && f[i][j])
+			for(int u=0;u<n;u++) if(!(i&(1<<u)))
+				for(int v=0;v<n;v++) if(g[u][v] && (i&(1<<v))){
+					int t=(j&~(1<<v))|(1<<u);
+					if(!(t>>u+1)) f[i|(1<<u)][t]+=f[i][j];
+				}
+	int ans=0;
+	for(int i=0;i<(1<<n);i++) if(__builtin_popcount(i)==k) ans+=f[(1<<n)-1][i];
+	printf("%d\n",ans);
+	return 0;
+}

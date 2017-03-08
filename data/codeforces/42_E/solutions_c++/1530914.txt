@@ -1,0 +1,104 @@
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <iostream>
+#define maxn 100010
+#define maxm 200010
+#define inf (1ll<<35)
+
+using namespace std;
+
+typedef long long ll;
+
+struct edge{
+	int u,v;
+	ll w;
+	edge(){}
+	edge(int x,int y,ll z):u(x),v(y),w(z){}
+	friend bool operator < (const edge &a,const edge &b){
+		return a.w<b.w;
+	}
+} a[maxn+maxm];
+int st[maxn],aim[maxn<<1],nxt[maxn<<1],ln;
+ll w[maxn<<1];
+int father[maxn];
+int an;
+int n,m;
+ll tot=0;
+void in_edge(int x,int y,ll z){
+	aim[ln]=y;
+	nxt[ln]=st[x];
+	w[ln]=z;
+	st[x]=ln++;
+}
+int Find(int x){
+	return father[x]= father[x]==x?x:Find(father[x]);
+}
+int level[maxn];
+ll fp[maxn][18],wp[maxn][18];
+void dfs(int fx,int x){
+	for (int i=1;i<18;i++){
+		if (fp[x][i-1]==-1) break;
+		fp[x][i]=fp[fp[x][i-1]][i-1];
+		if (fp[x][i]>-1){
+			wp[x][i]=max(wp[x][i-1],wp[fp[x][i-1]][i-1]);
+		}
+	}
+	for (int i=st[x];i!=-1;i=nxt[i])
+		if (aim[i]!=fx){
+			int v=aim[i];
+			level[v]=level[x]+1;
+			fp[v][0]=x;
+			wp[v][0]=w[i];
+			dfs(x,v);
+		}
+}
+ll work(int u,int v){
+	ll ret=0;
+	if (level[u]<level[v]) swap(u,v);
+	for (int i=17;i>=0;i--)
+		if (level[u]-(1<<i)>=level[v]){
+			ret=max(ret,wp[u][i]);
+			u=fp[u][i];
+		}
+	if (u==v) return tot-ret;
+	for (int i=17;i>=0;i--)
+		if (fp[u][i]!=fp[v][i]){
+			ret=max(ret,max(wp[u][i],wp[v][i]));
+			u=fp[u][i];
+			v=fp[v][i];
+		}
+	return tot-max(ret,max(wp[u][0],wp[v][0]));
+}
+int main(){
+	scanf("%d%d",&n,&m);
+	for (int i=0;i<m;i++){
+		int u,v,w;
+		scanf("%d%d%d",&u,&v,&w);
+		a[an++]=edge(u-1,v-1,w);
+	}
+	for (int i=1;i<n;i++) a[an++]=edge(i-1,i,inf);
+	sort(a,a+an);
+	for (int i=0;i<n;i++) father[i]=i;
+	memset(st,-1,sizeof(st));
+	for (int i=0;i<an;i++){
+		int u=Find(a[i].u),v=Find(a[i].v);
+		if (u!=v){
+			in_edge(a[i].u,a[i].v,a[i].w);
+			in_edge(a[i].v,a[i].u,a[i].w);
+			tot+=a[i].w;
+			father[u]=v;
+		}
+	}
+	level[0]=0;
+	fp[0][0]=-1;
+	dfs(-1,0);
+	scanf("%d",&m);
+	for (int t=0;t<m;t++){
+		int p,q;
+		scanf("%d%d",&p,&q);
+		ll ans=work(p-1,q-1);
+		if (ans<inf) cout<<ans<<endl;else puts("-1");
+	}
+	return 0;
+}

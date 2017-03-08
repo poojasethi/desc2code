@@ -1,0 +1,87 @@
+#include<vector>
+#include<cstdio>
+#include<algorithm>
+#include<functional>
+using namespace std;
+typedef long long ll;
+typedef pair<int,int>tp;
+typedef pair<ll,int>lp;
+
+const int N=100010;
+const int inf=0x3f3f3f3f;
+
+int n,q;
+int a[N],b[N],c[N];
+
+bool cmp(int i,int j){return a[i]>a[j];}
+
+struct node
+{
+    int low,high;
+    vector<tp>v;
+}tree[N<<2];
+
+void build(int p,int low,int high)
+{
+    tree[p].low=low;
+    tree[p].high=high;
+    tree[p].v.clear();
+    for(int k=low;k<=high;k++)
+    {
+        int i=c[k];
+        vector<tp>&v=tree[p].v;
+        while(!v.empty())
+        {
+            int j=v.back().second;
+            if(b[j]>=b[i]) break;
+            int t=(a[j]-a[i])/(b[i]-b[j])+1;
+            if(t<=v.back().first) v.pop_back();
+            else{v.push_back(tp(t,i));break;}
+        }
+        if(v.empty()) v.push_back(tp(0,i));
+    }
+    if(low==high) return;
+    int mid=(low+high)>>1;
+    stable_partition(c+low,c+high+1,bind2nd(less<int>(),mid+1));
+    build(p*2,low,mid);
+    build(p*2+1,mid+1,high);
+}
+
+lp query(int p,int low,int high,int t)
+{
+    node &cur=tree[p];
+    if(low<=cur.low&&cur.high<=high)
+    {
+        int id=lower_bound(cur.v.begin(),cur.v.end(),tp(t,inf))-cur.v.begin();
+        id=cur.v[id-1].second;
+        return lp(a[id]+(ll)t*b[id],id);
+    }
+    lp ans(0,0);
+    int mid=(cur.low+cur.high)>>1;
+    if(low<=mid) ans=max(ans,query(p*2,low,high,t));
+    if(mid<high) ans=max(ans,query(p*2+1,low,high,t));
+    return ans;
+}
+
+int main()
+{
+#ifdef LOCAL
+    freopen("in.txt","r",stdin);
+#endif
+    while(scanf("%d%d",&n,&q)!=EOF)
+    {
+        for(int i=1;i<=n;i++) scanf("%d%d",a+i,b+i);
+        for(int i=1;i<=n;i++) c[i]=i;
+        sort(c+1,c+n+1,cmp);
+        build(1,1,n);
+        int l,r,t;
+        for(int i=0;i<q;i++)
+        {
+            scanf("%d%d%d",&l,&r,&t);
+            printf("%d\n",query(1,l,r,t).second);
+        }
+    }
+    return 0;
+}
+
+	     				 	 	  	      			

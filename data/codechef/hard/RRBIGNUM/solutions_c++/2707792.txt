@@ -1,0 +1,189 @@
+#include <iostream>
+#include <cstdio>
+#include <climits>
+#include <algorithm>
+#include <queue>
+#include <cstring>
+#include <cmath>
+#include <vector>
+#include <list>
+#include <stack>
+#include <bitset>
+#include <string>
+#include <stack>
+#include <set>
+#include <map>
+#include <deque>
+#include <ctime>
+
+#define ALL(i,n)    for(i = 0; i < (n); i++)
+#define FOR(i,a,b)  for(i = (a); i < (b); i++)
+#define SET(p)      memset(p,-1,sizeof(p))
+#define CLR(p)      memset(p,0,sizeof(p))
+#define S(n)	    scanf("%d",&n)
+#define P(n)	    printf("%d\n",n)
+#define Sl(n)	    scanf("%lld",&n)
+#define Pl(n)	    printf("%lld\n",n)
+#define Sf(n)       scanf("%lf",&n)
+#define Ss(n)       scanf("%s",n)
+#define LL long long
+#define ULL unsigned long long
+#define pb push_back
+#define mod 1000000007
+using namespace std;
+
+LL sum1[6000005], sum0[6000005], cnt1[6000005];
+bool upd[6000005];
+char str[1000005];
+int n;
+
+long long int power(long long int a,long long int b,long long int m)
+{
+    long long int result=1;
+    while(b>0)
+    {
+        if(b&1)
+            result=(result*a)%m;
+        b=b>>1;
+        a=(a*a)%m;
+    }
+    return result;
+}
+
+void build(int p,int b,int e)
+{
+    int i,c;
+    if(b>e)
+        return;
+    if(b==e)
+    {
+        if(b==n)
+        {
+            sum1[p]=0;
+            sum0[p]=0;
+            cnt1[p]=str[b]-'0';
+        }
+        else if(str[b]=='1')
+        {
+            sum1[p]=power(2,n-b-1,mod);
+            sum0[p]=0;
+            cnt1[p]=1;
+        }
+        else
+        {
+            sum1[p]=0;
+            sum0[p]=power(2,n-b-1,mod);
+            cnt1[p]=0;
+        }
+        return;
+    }
+
+    c=p*2;
+    build(c,b,(b+e)/2);
+    build(c+1,(b+e)/2+1,e);
+    sum1[p] = (sum1[c] + sum1[c+1])%mod;
+    sum0[p] = (sum0[c] + sum0[c+1])%mod;
+    cnt1[p] = cnt1[c] + cnt1[c+1];
+}
+
+void lazy_update(int p,int b,int e,int l,int r)
+{
+    int c=2*p,i;
+    if (b>e || b>r || e<l )
+    {
+        if(upd[p]==true)
+        {
+            swap(sum1[p],sum0[p]);
+            cnt1[p]=(e-b+1)-cnt1[p];
+            if(b<e)
+            {
+                upd[c]^=upd[p];
+                upd[c+1]^=upd[p];
+            }
+            upd[p]=false;
+        }
+        return;
+    }
+
+    if(b==e)
+    {
+        upd[p]^=true;
+        if(upd[p]==true)
+        {
+            swap(sum1[p],sum0[p]);
+            cnt1[p]=(e-b+1)-cnt1[p];
+            upd[p]=false;
+        }
+        return;
+    }
+
+    if (l <= b && r >= e)
+    {
+        upd[p]^=true;
+        if(upd[p]==true)
+        {
+            swap(sum1[p],sum0[p]);
+            cnt1[p]=(e-b+1)-cnt1[p];
+            upd[c]^=upd[p];
+            upd[c+1]^=upd[p];
+            upd[p]=false;
+        }
+        return;
+    }
+
+    upd[c]^=upd[p];
+    upd[c+1]^=upd[p];
+    lazy_update(c,b,(b+e)/2,l,r);
+    lazy_update(c+1,(b+e)/2+1,e,l,r);
+
+    sum1[p] = (sum1[c] + sum1[c+1])%mod;
+    sum0[p] = (sum0[c] + sum0[c+1])%mod;
+    cnt1[p] = cnt1[c] + cnt1[c+1];
+    upd[p]=0;
+}
+
+int find_last(int p,int b,int e,int up)
+{
+    if(b==e)
+    {
+        up=up^upd[p];
+        if(up)
+            return 1-cnt1[p];
+        else
+            return cnt1[p];
+    }
+
+    return find_last(p*2+1,(b+e)/2+1,e,up^upd[p]);
+}
+
+int main()
+{
+    int t,m,i,j,k,l,r;
+
+    scanf("%s",str+1);
+    n=strlen(str+1);
+
+    build(1,1,n);
+    LL ans=sum1[1];
+    if(!(cnt1[1]&1))
+        ans++;
+    Pl(ans);
+
+    S(m);
+    for(i=1;i<=m;i++)
+    {
+        S(l); S(r);
+        lazy_update(1,1,n,l,r);
+        ans=sum1[1];
+        if(!(cnt1[1]&1))
+            ans++;
+        if((cnt1[1]&1) && find_last(1,1,n,false))
+        {
+            k=find_last(1,1,n,false);
+            ans++;
+        }
+        Pl(ans%mod);
+    }
+
+    return 0;
+}

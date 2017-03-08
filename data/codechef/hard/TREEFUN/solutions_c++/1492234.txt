@@ -1,0 +1,186 @@
+#include <cstdio>
+#include <cmath>
+#include <cstring>
+#include <cstdlib>
+#include <ctime>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <set>
+#include <map>
+#include <list>
+#include <complex>
+#pragma comment(linker, "/STACK:266777216")
+using namespace std;
+
+#define assert(f) { if(!(f)) { fprintf(stderr,"Assertion failed: "); fprintf(stderr,#f); fprintf(stderr,"\n"); exit(1); } }
+
+typedef long long LL;
+typedef unsigned long long ULL;
+typedef vector<int> VI;
+typedef vector<VI> VVI;
+typedef pair<int,int> PII;
+typedef vector<PII> VPII;
+typedef vector<double> VD;
+typedef pair<double,double> PDD;
+
+const int inf=1000000000;
+const LL INF=LL(inf)*inf;
+const double eps=1e-9;
+const double PI=2*acos(0.0);
+#define bit(n) (1<<(n))
+#define bit64(n) ((LL(1))<<(n))
+#define pb push_back
+#define sz size()
+#define mp make_pair
+#define cl clear()
+#define all(a) (a).begin(),(a).end()
+#define fill(ar,val) memset((ar),(val),sizeof (ar))
+#define MIN(a,b) {if((a)>(b)) (a)=(b);}
+#define MAX(a,b) {if((a)<(b)) (a)=(b);}
+#define sqr(x) ((x)*(x))
+#define X first
+#define Y second
+
+//clock_t start=clock();
+//fprintf(stderr,"time=%.3lfsec\n",0.001*(clock()-start));
+
+#define N 50505
+#define H 18
+VI a[N];
+int p[N][H];
+int mark[N];
+int d[N];
+int qu[N];
+int used[N];
+
+void dfs(int u,int pu,int du)
+{
+	mark[u]=1;
+	p[u][0]=pu;
+	d[u]=du;
+	for(int i=a[u].sz;i--;)
+	{
+		int v=a[u][i];
+		if(mark[v]) continue;
+		dfs(v,u,du+1);
+	}
+}
+
+int par(int u,int k)
+{
+	int pu=u;
+	for(int h=0;bit(h)<=k;h++)
+		if(k & bit(h))
+			pu=p[pu][h];
+	return pu;
+}
+
+int LCA_slow(int u,int v)
+{
+	int R=min(d[u],d[v])+1;
+	int L=0;
+	while(L+1<R)
+	{
+		int M=(L+R)/2;
+		int pu=par(u,d[u]-M);
+		int pv=par(v,d[v]-M);
+		if(pu==pv) L=M; else R=M;
+	}
+	return par(u,d[u]-L);
+}
+
+int LCA(int u,int v)
+{
+	if(d[u]<d[v]) swap(u,v);
+	u=par(u,d[u]-d[v]);
+	if(u==v) return u;
+	int h;
+	for(h=0;bit(h)<=d[u];h++);
+	for(;h--;)
+	{
+		int u1=p[u][h];
+		int v1=p[v][h];
+		if(u1!=v1) u=u1,v=v1;
+	}
+	assert(u!=v && p[u][0]==p[v][0]);
+	return p[u][0];
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("5.in","r",stdin);
+#endif
+	int T;
+	for(scanf("%d",&T);T--;)
+	{
+		int n,m,i;
+		scanf("%d%d",&n,&m);
+		for(i=1;i<=n;i++) a[i].cl;
+		for(i=1;i<n;i++)
+		{
+			int u,v;
+			scanf("%d%d",&u,&v);
+			a[u].pb(v);
+			a[v].pb(u);
+		}
+		fill(mark,0);
+		//fill(p,0);
+		dfs(1,0,0);
+		for(int h=0;bit(h)<=n;h++)
+			for(i=1;i<=n;i++)
+				p[i][h+1]=p[p[i][h]][h];
+		fill(used,0);
+		int id=0;
+		while(m--)
+		{
+			id++;
+			int k;
+			scanf("%d",&k);
+			for(int i=0;i<k;i++)
+				scanf("%d",qu+i);
+			int u=qu[0];
+			int v=qu[1];
+			int lca=LCA(u,v);
+			int ans=0;
+			if(k==2) {
+				ans=d[u]-d[lca]+d[v]-d[lca]-1;
+			} else {
+				int w=qu[2];
+				int star=lca;
+				int tmp=LCA(u,w);
+				if(d[star]<d[tmp]) star=tmp;
+				tmp=LCA(v,w);
+				if(d[star]<d[tmp]) star=tmp;
+				ans=1;
+				for(int i=0;i<k && ans;i++)
+					if(qu[i]==star) ans=0;
+				bool up=false;
+				for(int i=0;i<k && ans;i++)
+				{
+					int u=qu[i];
+					if(u==star) ans=0;
+					int tmp=LCA(u,star);
+					if(d[tmp]<d[star])
+					{
+						if(up) ans=0; else
+							up=true;
+					} else {
+						if(tmp!=star) ans=0; else
+						{
+							int w=par(u,d[u]-d[star]-1);
+							if(used[w]==id) ans=0; else
+								used[w]=id;
+						}
+					}
+				}
+			}
+			printf("%d\n",ans);
+		}
+	}
+	return 0;
+}

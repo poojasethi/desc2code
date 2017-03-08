@@ -1,0 +1,105 @@
+#include <bits/stdc++.h>
+
+#define FO(i,a,b) for (int i = (a); i < (b); i++)
+#define sz(v) int(v.size())
+
+using namespace std;
+
+typedef long long ll;
+
+struct node {
+    ll cnt[26];
+    node *l, *r;
+    ll ts;
+
+    node() {
+        l = r = NULL;
+        FO(i,0,26) cnt[i] = 0;
+        ts = 0;
+    }
+};
+
+node *root = new node;
+
+int n, m;
+int k[70];
+char s[105];
+int len;
+
+void init(node *nd, int rs, int re) {
+    nd->ts = re-rs;
+    if (rs+1 == re) {
+        nd->cnt[s[rs]-'a']++;
+    } else {
+        nd->l = new node;
+        nd->r = new node;
+        int md = (rs+re)/2;
+        init(nd->l, rs, md);
+        init(nd->r, md, re);
+        FO(i,0,26) nd->cnt[i] = nd->l->cnt[i] + nd->r->cnt[i];
+    }
+}
+
+ll cntans[26];
+
+node *mrg(node *l, node *r) {
+    node *res = new node;
+    res->l = l; res->r = r;
+    res->ts = l->ts+r->ts;
+    FO(i,0,26) res->cnt[i] = l->cnt[i]+r->cnt[i];
+    return res;
+}
+
+bool accum = true;
+node *qnd(node *nd, ll qs, ll qe) {
+    assert(0 <= qs && qs < qe && qe <= nd->ts);
+    if (qs == 0 && qe == nd->ts) {
+        if (!accum) {
+            FO(i,0,26) cntans[i] += nd->cnt[i];
+            return NULL;
+        }
+        return nd;
+    } else {
+        ll md = nd->l->ts;
+        node *l = NULL, *r = NULL;
+        if (qs < md) l = qnd(nd->l, qs, min(md,qe));
+        if (qe > md) r = qnd(nd->r, max(qs,md)-md, qe-md);
+        if (l == NULL) return r;
+        if (r == NULL) return l;
+        return mrg(l,r);
+    }
+}
+
+int main() {
+    scanf("%s %d %d", s, &n, &m);
+    len = strlen(s);
+    init(root, 0, len);
+    ll curlen = len;
+    FO(i,0,n) {
+        if (i < 64) scanf("%d", k+i);
+        else scanf("%*d");
+        if (curlen * 2. < 2e18) {
+            node *nrt;
+            k[i] %= curlen;
+            if (k[i] == 0) nrt = root;
+            else {
+                node *a, *b;
+                a = qnd(root, curlen-k[i],curlen);
+                b = qnd(root, 0, curlen-k[i]);
+                nrt = mrg(a,b);
+            }
+            root = mrg(root, nrt);
+            curlen *= 2;
+        }
+    }
+    accum = false;
+    FO(i,0,m) {
+        ll l, r; char c;
+        scanf("%lld%lld %c", &l, &r, &c); l--;
+        FO(j,0,26) cntans[j] = 0;
+        qnd(root, l, r);
+        ll v1 = cntans[c-'a'];
+        printf("%lld\n", v1);
+    }
+}
+ 	 		    	  					 		 	  		 	  	

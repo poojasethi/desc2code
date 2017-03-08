@@ -1,0 +1,168 @@
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<vector>
+#include<cmath>
+#include<map>
+using namespace std;
+#ifndef ONLINE_JUDGE
+inline int getchar_unlocked(){return getchar();}
+#endif 
+inline void in(int &x){int c=getchar_unlocked();x = 0;int neg=0;for(;((c<48||c>57)&&c!='-');c=getchar_unlocked());if(c=='-'){neg=1;c=getchar_unlocked();}for(;c>47&&c<58;c=getchar_unlocked()){x=(x<<1)+(x<<3)+c-48;}if(neg)x=-x;}
+
+vector<int> fact[100005];
+int A[100005];
+void sieve()
+{
+	for(int i=4;i<=100000;i+=2)A[i]=1;
+	for(int j,i=3;i<=317;i+=2)
+	if(A[i]==0)
+	{
+		for(j=i*i;j<=100000;j+=i+i)A[j]=1;
+	}
+}
+
+void preprocess()
+{
+	sieve();
+	for(int i=2;i<=100000;i++)
+	if(A[i]==0)
+	{
+		fact[i].push_back(i);
+		for(int j=i+i;j<=100000;j+=i)fact[j].push_back(i);
+	}
+}
+
+struct data
+{
+	int num,freq,prime;
+};
+vector<data> tree[262150];
+void build(int node,int st,int ed)
+{
+	if(st>ed)return;
+	if(st==ed){
+		data P;
+		P.num=A[st];
+		P.freq=1;
+		for(int sz=fact[A[st]].size(),i=0;i<sz;i++){
+			P.prime=fact[A[st]][i];
+			tree[node].push_back(P);
+		}
+		return;
+	}
+	
+	build(2*node,st,(st+ed)/2);
+	build(2*node+1,(st+ed)/2+1,ed);
+
+	data d;
+	int lch=2*node,rch=2*node+1;
+	int a,b,i=0,j=0,lsz=tree[lch].size(),rsz=tree[rch].size();
+	while(i<lsz&&j<rsz)
+	{
+		a=tree[lch][i].prime;
+		b=tree[rch][j].prime;
+		if(a<b){
+			d.num=tree[lch][i].num;
+			d.freq=tree[lch][i].freq;
+			d.prime=a;
+			i++;
+		}
+		else if(b<a){
+			d.num=tree[rch][j].num;
+			d.freq=tree[rch][j].freq;
+			d.prime=b;
+			j++;
+		}
+		else{
+			d.prime=a;
+			d.num=max(tree[lch][i].num,tree[rch][j].num);
+			if(tree[lch][i].num==tree[rch][j].num)d.freq=tree[lch][i].freq+tree[rch][j].freq;
+			else if(tree[lch][i].num>tree[rch][j].num)d.freq=tree[lch][i].freq;
+			else d.freq=tree[rch][j].freq;
+			i++,j++;
+		}
+		tree[node].push_back(d);
+	}
+	
+	while(i<lsz){
+		d.prime=tree[lch][i].prime;
+		d.num=tree[lch][i].num;
+		d.freq=tree[lch][i].freq;
+		i++;
+		tree[node].push_back(d);
+	}
+
+	while(j<rsz){
+		d.prime=tree[rch][j].prime;
+		d.num=tree[rch][j].num;
+		d.freq=tree[rch][j].freq;
+		j++;
+		tree[node].push_back(d);
+	}
+}
+struct querydata
+{
+	int mxnum,freq;
+};
+querydata query(int node,int st,int ed,int x,int y,int val)
+{
+	querydata qd;
+	qd.mxnum=qd.freq=-1;
+ 
+	if(st>ed||x>ed||y<st)return qd;
+	if(st>=x&&ed<=y)
+	{
+		int m,s=0,e=tree[node].size()-1;
+		while(s<=e)
+		{
+			m=(s+e)/2;
+			if(tree[node][m].prime==val){
+				qd.mxnum=tree[node][m].num;
+				qd.freq=tree[node][m].freq;
+				break;
+			}
+			else if(tree[node][m].prime>val)e=m-1;
+			else s=m+1;
+		}
+		return qd;
+	}
+	querydata lqd=query(2*node,st,(st+ed)/2,x,y,val);
+	querydata rqd=query(2*node+1,(st+ed)/2+1,ed,x,y,val);
+	
+	qd.mxnum=max(lqd.mxnum,rqd.mxnum);
+	if(lqd.mxnum==rqd.mxnum)qd.freq=lqd.freq+rqd.freq;
+	else if(lqd.mxnum>rqd.mxnum)qd.freq=lqd.freq;
+	else qd.freq=rqd.freq;
+	return qd;
+}
+	
+int n,m,g,x,y,mxnum,freq;
+int main()
+{
+	preprocess();
+	in(n),in(m);//scanf("%d %d",&n,&m);
+	for(int i=1;i<=n;i++)in(A[i]);//scanf("%d",&A[i]);
+	build(1,1,n);
+	/*for(int i=1;i<=10;i++)
+	{
+		cout<<i<<" : : : \n";
+		for(int j=0;j<tree[i].size();j++)cout<<tree[i][j].num<<" "<<tree[i][j].freq<<" "<<tree[i][j].prime<<endl;
+	}*/
+	
+	while(m--){
+		in(g),in(x),in(y);//scanf("%d %d %d",&g,&x,&y);
+		mxnum=freq=-1;
+		for(int sz=fact[g].size(),i=0;i<sz;i++)
+		{	
+			querydata qd=query(1,1,n,x,y,fact[g][i]);
+			if(mxnum<qd.mxnum){
+				mxnum=qd.mxnum;
+				freq=qd.freq;
+			}
+		}
+		printf("%d %d\n",mxnum,freq);
+	}
+	return 0;
+}

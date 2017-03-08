@@ -1,0 +1,129 @@
+#include <cstdio>
+#include <cmath>
+#include <cstring>
+#include <algorithm>
+
+#define maxn 100500
+#define maxk 131072
+#define maxq 5010
+
+using namespace std;
+
+template <class T> T min(T a, T b){return((a < b) ? a : b);}
+template <class T> T max(T a, T b){return((a > b) ? a : b);}
+template <class T> T abs(T x){return((x < 0) ? -x : x);}
+
+struct member{int typ, x, id;};
+struct clock{int x, id;};
+
+int n, q, curk, num = 0;
+member query[maxn * 4];
+int tree[maxk * 2];
+int pos_in_tree[maxn];
+clock sm[maxn];
+int late[maxq], ans[maxq];
+
+bool cmp1(clock a, clock b){return(a.x < b.x || a.x == b.x && a.id < b.id);}
+bool cmp2(member a, member b){return(a.x < b.x || a.x == b.x && a.typ > b.typ);}
+
+int init(int shift, int n = 0){
+	for(int i = 0; i < shift * 2; ++i)
+		tree[i] = 0;
+	return 0;
+}
+
+int update(int pos, int shift, int value = 0){
+	tree[pos + shift - 1] += value;
+	int par ((pos + shift - 1) / 2);
+	while(par){
+		tree[par] = tree[par * 2] + tree[par * 2 + 1];
+		par /= 2;
+	}
+	return 0;
+}
+
+int sum_seg(int ll, int rr, int shift){
+	int l (ll + shift - 1), 
+		r (rr + shift - 1),
+		res (0);
+	while(l < r){
+		if(l & 1)res += tree[l];
+		if(!(r & 1))res += tree[r];
+		l = (l + 1) / 2;
+		r = (r - 1) / 2;
+	}
+	if(l == r)res += tree[l];
+	return res;
+}
+
+inline int modify(int typ, int id){	
+	update(pos_in_tree[id], curk, typ);	
+	return 0;
+}
+
+int process(int id, int curtime){
+	int findTime = late[id];
+	int l (-1),
+		r (n),
+		m (0);
+	while(l < r - 1){
+		m = (l + r) / 2;
+		if(sm[m].x <= findTime)
+			l = m;
+		else
+			r = m;
+	}
+	ans[id] += sum_seg(r + 1, n, curk);
+	late[id] = curtime;
+	return 0;
+}
+
+int add_query(int x, int id, int typ){
+	query[num].x = x;
+	query[num].id = id;
+	query[num++].typ = typ;
+	return 0;
+}
+
+int main(){
+	scanf("%d", &n);
+	curk = 2;
+	while(curk < n)curk *= 2;
+
+	for(int i = 0; i < n; ++i){
+		int beg (0),
+			en (0);
+		scanf("%d%d", &beg, &en);
+		add_query(beg, i, 1);
+		add_query(en, i, -1);
+		sm[i].x = beg;
+		sm[i].id = i;
+	}
+
+
+	scanf("%d", &q);
+	for(int i = 0; i < q; ++i){
+		int k (0);
+		scanf("%d", &k);
+		for(int ii = 0; ii < k; ++ii){
+			int curtime (0);
+			scanf("%d", &curtime);
+			add_query(curtime, i, 0);
+		}
+	}
+ 	
+	sort(sm, sm + n, cmp1);
+	sort(query, query + num, cmp2);
+	
+	for(int i = 0; i < n; ++i)
+		pos_in_tree[sm[i].id] = i + 1;
+
+	for(int i = 0; i < num; ++i)
+		if(query[i].typ)modify(query[i].typ, query[i].id);
+		else process(query[i].id, query[i].x);
+
+	for(int i = 0; i < q; ++i)
+		printf("%d\n", ans[i]);
+
+	return 0;
+}

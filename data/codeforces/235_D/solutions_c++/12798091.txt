@@ -1,0 +1,70 @@
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+
+const int MaxN = 3010, MaxM = MaxN * 2;
+int N, Cirlen;
+class Graph {
+public:
+	int En[MaxN], Next[MaxM], Point[MaxM], Type[MaxM], Tot, Deg[MaxN];
+	void Add(int X, int Y) {
+		Next[++Tot] = En[X];
+		En[X] = Tot;
+		Point[Tot] = Y;
+		Deg[X]++;
+	}
+	
+	bool Mark[MaxN];
+	int Toplogic_sort() {
+		memset(Mark, 0, sizeof(Mark));
+		static int H[MaxN];
+		int L = 0, R = 0;
+		for (int i = 1; i <= N; i++)
+			if (Deg[i] == 1) H[++R] = i;
+		while (L++ != R) {
+			for (int i = En[H[L]]; i; i = Next[i])
+				if (--Deg[Point[i]] == 1) H[++R] = Point[i];
+		}
+		for (int i = 1; i <= R; i++) Mark[H[i]] = 1;
+		for (int i = 1; i <= N; i++)
+			if (!Mark[i]) for (int j = En[i]; j; j = Next[j])
+				if (!Mark[Point[j]]) Type[j] = 1;
+		return N - R;
+	}
+}	G;
+bool Vis[MaxN];
+double ans;
+
+void Dfs(int Now, int x, int y) {
+	Vis[Now] = 1;
+	if (x + y != 0) {
+		if (y != 0) 
+			ans += 1.0 / (x + y + 1) + 1.0 / (x + Cirlen - y + 1) - 1.0 / (Cirlen + x);
+		else 
+			ans += 1.0 / (x + 1);
+	}
+	for (int i = G.En[Now]; i; i = G.Next[i])
+		if (!Vis[G.Point[i]]) 
+			G.Type[i] ? Dfs(G.Point[i], x, y + 1) : Dfs(G.Point[i], x + 1, y);
+}
+
+int main()
+{
+	scanf("%d", &N);
+	for (int i = 1; i <= N; i++) {
+		int U, V;
+		scanf("%d%d", &U, &V);
+		G.Add(U + 1, V + 1);
+		G.Add(V + 1, U + 1);
+	}
+	Cirlen = G.Toplogic_sort();
+	for (int i = 1; i <= N; i++) {
+		memset(Vis, 0, sizeof(Vis));
+		Dfs(i, 0, 0);
+	}
+	printf("%.10lf\n", ans + N);
+	return 0;
+}

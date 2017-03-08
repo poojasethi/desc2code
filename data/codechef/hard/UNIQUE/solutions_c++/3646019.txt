@@ -1,0 +1,162 @@
+#include <cstdio>
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <sstream>
+#include <iomanip>
+#include <cmath>
+#include <cstdlib>
+#include <cctype>
+#include <cstring>
+#include <string>
+#include <ctime>
+#include <cassert>
+#include <utility>
+
+using namespace std;
+
+#define INF 1000000000
+#define MAXN 100005
+#define MAXLOGN 20
+
+struct suffix {
+    int nr[2];
+    int p;
+    
+    bool operator < (const suffix &a) const {
+        if(nr[0] != a.nr[0])
+            return nr[0] < a.nr[0];
+        return nr[1] < a.nr[1];
+    }
+};
+
+struct event {
+    bool start;
+    bool t;
+    int pos;
+    int len;
+    int suf;
+    
+    bool operator < (const event &a) const {
+        return pos < a.pos;
+    }
+};
+
+char str[MAXN];
+int N;
+int P[MAXLOGN][MAXN];
+suffix L[MAXN];
+int LCP[MAXN];
+vector<event> E;
+multiset<pair<int, int> > S;
+
+int calcLCP(int x, int y) {
+    int ret = 0;
+    for(int k = MAXLOGN - 1; k >= 0; k--)
+        if(x + (1 << k) - 1 < N && y + (1 << k) - 1 < N && P[k][x] == P[k][y]) {
+            ret += 1 << k;
+            x += 1 << k;
+            y += 1 << k;
+        }
+    return ret;
+}
+
+int main() {
+//	freopen("date.in", "r", stdin);
+//	freopen("date.out","w", stdout);
+	
+	scanf("%s", str);
+	N = strlen(str);
+	
+	for(int i = 0; i < N; i++) {
+        P[0][i] = str[i] - 'a';
+        L[i].p = i;
+	}
+	
+	for(int step = 1, cnt = 1; step <= N; step <<= 1, cnt++) {
+        for(int i = 0; i < N; i++) {
+            int idx = L[i].p;
+            L[i].nr[0] = P[cnt - 1][idx];
+            L[i].nr[1] = idx + step < N ? P[cnt - 1][idx + step] : -1;
+        }
+        sort(L, L + N);
+        for(int i = 0; i < N; i++)
+            if(i > 0 && L[i].nr[0] == L[i - 1].nr[0] && L[i].nr[1] == L[i - 1].nr[1])
+                P[cnt][L[i].p] = P[cnt][L[i - 1].p];
+            else
+                P[cnt][L[i].p] = i;
+	}
+	
+	for(int i = 0; i < N - 1; i++)
+        LCP[i] = calcLCP(L[i].p, L[i + 1].p);
+	
+	for(int i = 0; i < N; i++) {
+        int s = -1;
+        if(i < N - 1)
+            s = max(s, LCP[i]);
+        if(i > 0)
+            s = max(s, LCP[i - 1]);
+        int q = L[i].p;
+        if(q + s < N) {
+            E.push_back((event){ true, false, q, s + 1, i });
+            E.push_back((event){ false, false, q + s + 1, s + 1, i });
+        }
+        if(q + s + 1 < N) {
+            E.push_back((event){ true, true, q + s + 1, -1, i });
+        }
+	}
+	
+	sort(E.begin(), E.end());
+	
+	int j = 0;
+	int pmax = -1;
+	int smin = -1;
+	for(int i = 0; i < N; i++) {
+        while(j < (int)E.size() && E[j].pos == i) {
+            event &e = E[j];
+            int spos = L[ e.suf ].p;
+            if(e.t) {
+                if(spos > pmax || (spos == pmax && e.suf < smin)) {
+                    pmax = spos;
+                    smin = e.suf;
+                }
+            }
+            else {
+                if(e.start) {
+                    S.insert(make_pair(e.len, e.suf));
+                }
+                else {
+                    S.erase(S.find(make_pair(e.len, e.suf)));
+                }
+            }
+            j++;
+        }
+        
+        int len = INF;
+        int suf = INF;
+        if(pmax != -1) {
+            len = i - pmax + 1;
+            suf = smin;
+        }
+        
+        if(S.size() > 0) {
+            const pair<int, int> &p = *(S.begin());
+            if(p.first < len || (p.first == len && p.second < suf)) {
+                len = p.first;
+                suf = p.second;
+            }
+        }
+        
+        int spos = L[suf].p;
+        printf("%d %d\n", spos + 1, len);
+	}
+	
+	return 0;
+}

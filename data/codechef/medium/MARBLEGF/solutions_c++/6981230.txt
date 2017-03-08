@@ -1,0 +1,101 @@
+#include <cstdio>
+#include <vector>
+#include <cmath>
+
+using namespace std;
+
+typedef long long int ll;
+typedef vector<int> vi;
+typedef vector<ll> vll;
+
+vector<ll> t;
+int N, Q;
+// building a segment tree to solve range sum query
+
+void st_build(vll &t, const vi &A, int vertex, int L, int R) {
+  if(L == R) {
+    t[vertex] = A[L];
+    return;
+  }
+  int l_vertex, r_vertex;
+  l_vertex = 2 * vertex;
+  r_vertex = l_vertex + 1;
+  int mid_point = (L + R) / 2;
+  st_build(t, A, l_vertex, L, mid_point);
+  st_build(t, A, r_vertex, mid_point + 1, R);
+  t[vertex] = t[l_vertex] + t[r_vertex];	  
+}  
+
+void st_create(vll &t, const vi &A, int N) {
+  int len = (int) (2 * pow(2.0, floor(log((double)N) / log(2.0)) + 1)); //ceil should work, being safe with floor + 1
+  t.assign(len, 0);
+  st_build(t, A, 1, 0, N - 1);
+}
+
+ll st_rsq(vll &t, int vertex, int L, int R, int i, int j) {
+  if(i <= L && j >= R) { //this segment is completely contained
+    return t[vertex];
+  }
+  if(i > R || j < L) { //this segment is disjoint from reqd range
+    return 0;
+  }
+  int mid_point = (L + R) / 2;
+  int left_vertex, right_vertex;
+  left_vertex = 2 * vertex;
+  right_vertex = left_vertex + 1;
+  ll left_ans = st_rsq(t, left_vertex, L, mid_point, i, j);
+  ll right_ans = st_rsq(t, right_vertex, mid_point + 1, R, i, j);
+  ll ans = left_ans + right_ans;
+  return ans;
+  
+}
+
+ll st_rsq(vll &t, int i, int j) {
+  return st_rsq(t, 1, 0, N - 1, i, j);
+}
+
+void st_update(vll &t, int vertex, int L, int R, int index, int val) {
+  if(!(index >= L && index <= R)) return;
+  t[vertex] += val;
+  if(L == R) return;
+  int mid_point = (L + R) / 2;
+  int left_vertex = 2 * vertex;
+  int right_vertex = left_vertex + 1;
+  st_update(t, left_vertex, L, mid_point, index, val);
+  st_update(t, right_vertex, mid_point + 1, R, index, val);
+}
+
+void st_update(vll &t, int index, int val) { //note: not updating A
+  st_update(t, 1, 0, N - 1, index, val);
+}
+
+vi A;
+
+int main() {
+  scanf("%d %d", &N, &Q);
+  int i;
+  A.clear();
+  A.assign(N, 0);
+  for(i = 0; i < N; i++) {
+    scanf("%d", &A[i]);
+  }
+  st_create(t, A, N);
+  char c;
+  int a, b;
+  for(i = 0; i < Q; i++) {
+    scanf(" %c %d %d", &c, &a, &b);
+    switch(c) {
+    case 'S' :
+      printf("%lld\n", st_rsq(t, a, b));
+      break;
+    case 'G':
+      st_update(t, a, b);
+      break;
+    case 'T':
+      st_update(t, a, -b);
+      break;
+    }
+  }
+    
+  return 0;
+}

@@ -1,0 +1,86 @@
+#include <cassert>
+#include <cstdio>
+#include <cstring>
+
+#include <iostream>
+
+using namespace std;
+
+const int maxn = 200005;
+char s[maxn];
+int next[maxn][26];
+int suff[maxn];
+int len[maxn];
+
+int main() {
+  assert(fgets(s, maxn - 1, stdin));
+  int n = strlen(s);
+  if (s[n - 1] == '\n')
+    s[--n] = '\0';
+
+  memset(next, -1, sizeof(next));
+  int k = 0;
+  suff[k] = -1, len[k] = 0;
+  int last = k++;
+  for (int i = 0; i < n; i++) {
+    int ch = s[i] - 'a';
+    int v = k++;
+    len[v] = len[last] + 1;
+    assert(len[v] == i + 1);
+    suff[v] = 0;
+    for (int y = last; y != -1; y = suff[y]) {
+      if (next[y][ch] == -1) {
+        next[y][ch] = v;
+        continue;
+      }
+      int z = next[y][ch];
+      if (len[z] == len[y] + 1) {
+        suff[v] = z;
+        break;
+      }
+      int t = k++;
+      len[t] = len[y] + 1;
+      memcpy(next[t], next[z], sizeof(next[z]));
+      suff[t] = suff[z];
+      suff[v] = suff[z] = t;
+      for (; y != -1 && next[y][ch] == z; y = suff[y])
+        next[y][ch] = t;
+      break;
+    }
+    last = v;
+  }
+
+  int cnt[n + 1], pos[n + 1];
+  memset(cnt, 0, sizeof(cnt[0]) * (n + 1));
+  for (int i = 0; i < k; i++)
+    cnt[len[i]]++;
+  pos[0] = 0;
+  for (int i = 0; i < n; i++)
+    pos[i + 1] = pos[i] + cnt[i]; 
+  int p[k];
+  for (int i = 0; i < k; i++)
+    p[pos[len[i]]++] = i;
+
+  int d1[k], d2[k];
+  memset(d1, 0, sizeof(d1));
+  memset(d2, 0, sizeof(d2));
+  d1[0] = 1;
+  for (int i = 0; i < k; i++)
+    for (int j = 0; j < 26; j++)
+      if (next[p[i]][j] + 1)
+        d1[next[p[i]][j]] += d1[p[i]];
+  for (int y = last; y != -1; y = suff[y])
+    d2[y] = 1;
+  for (int i = k - 1; i >= 0; i--)
+    for (int j = 0; j < 26; j++)
+      if (next[p[i]][j] + 1)
+        d2[p[i]] += d2[next[p[i]][j]];
+
+  long long ans = 0;
+  for (int i = 1; i < k; i++)
+    ans += (long long)d1[i] * d2[i] * (d2[i] + 1) / 2;
+  cout << ans << endl;
+
+  return 0;
+}
+

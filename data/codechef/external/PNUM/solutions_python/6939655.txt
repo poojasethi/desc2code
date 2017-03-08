@@ -1,0 +1,21 @@
+#include<bits/stdc++.h>
+#include<stdio.h>
+
+using namespace std;
+
+int main()
+{
+	int T;
+	cin >> T;
+	while(T--)
+	{
+		int x,k;
+		char inp[10];
+		scanf("%d%*C%s%d",&x,inp,&k);
+		if(inp[0]=='o')
+			cout << 2*k << endl;
+		else
+			cout << 2*k-1 << endl;
+	}
+	return 0;
+}

@@ -1,0 +1,182 @@
+
+#include<algorithm>
+#include<cassert>
+#include<complex>
+#include<map>
+#include<iomanip>
+#include<sstream>
+#include<queue>
+#include<set>
+#include<string>
+#include<vector>
+#include<iostream>
+#include<cstring>
+#include<cstdio>
+#define FOR(i, a, b) for(int i =(a); i <=(b); ++i)
+#define FORD(i, a, b) for(int i = (a); i >= (b); --i)
+#define fup FOR
+#define fdo FORD
+#define REP(i, n) for(int i = 0;i <(n); ++i)
+#define VAR(v, i) __typeof(i) v=(i)
+#define FORE(i, c) for(VAR(i, (c).begin()); i != (c).end(); ++i)
+#define ALL(x) (x).begin(), (x).end()
+#define SZ(x) ((int)(x).size())
+#define siz SZ
+#define CLR(x) memset((x), 0, sizeof(x))
+#define PB push_back
+#define MP make_pair
+#define X first
+#define Y second 
+#define FI X
+#define SE Y
+#define SQR(a) ((a)*(a))
+#define DE 0
+#define E(x) {if (DE)cerr <<#x <<" = " <<x <<endl; }
+#define E2(x, y) {if (DE)cerr <<#x <<" = " <<x << ", " << #y << " = " << y << endl; }
+#define E3(x, y, z) {if (DE)cerr <<#x <<" = " <<x << ", " << #y << " = " << y << ", " << #z << " = " << z << endl; }
+#define E4(x, y, z, u) {if (DE)cerr <<#x <<" = " <<x << ", " << #y << " = " << y << ", " << #z << " = " << z << ", " << #u << " = " << u << endl; }
+#define E5(x, y, z, u, v) {if (DE)cerr <<#x <<" = " <<x << ", " << #y << " = " << y << ", " << #z << " = " << z << ", " << #u << " = " << u << ", " << #v << " = " << v << endl; }
+#define E6(x, y, z, u, v, o) {if (DE)cerr <<#x <<" = " <<x << ", " << #y << " = " << y << ", " << #z << " = " << z << ", " << #u << " = " << u << ", " << #v << " = " << v << ", " << #o << " = " << o << endl; }
+#define Ev(x) {if (DE) {cerr <<#x <<" = "; FORE(it, (x)) cerr <<*it <<", "; cout <<endl; }}
+
+using namespace std;
+
+typedef long long LL;
+typedef vector<int> VI;
+const LL INF64 = ((LL)1E18);
+const int INF=1E9+7;
+template<class C> void mini(C&a4, C b4) { a4 = min(a4, b4); }
+template<class C> void maxi(C&a4, C b4) { a4 = max(a4, b4); }
+template<typename T1, typename T2> ostream& operator<< (ostream &out, pair<T1, T2> pair) { out << "(" << pair.FI << ", " << pair.SE << ")"; return out; }
+
+#define EPS 1E-12
+
+typedef long long LL;
+typedef long double LD;
+typedef LD TYP;
+
+typedef complex<TYP> P;
+inline TYP operator^(P a, P b) { return real(a) * imag(b) - imag(a) * real(b); }//iloczyn wektorowy
+inline TYP operator%(P a, P b) { return real(a) * real(b) + imag(a) * imag(b); }//iloczyn skalarny
+inline TYP skret(P a, P b, P c) { return (b - a) ^ (c - a);}
+
+vector<P> prosta_okrag(P A, P B, P C,LD r){
+    vector<P> res;
+    LD d = skret(C, A, B) / abs(A - B);
+    P z = (A - B) / abs(A - B);
+    if (abs(d) > r + EPS) return res;
+    LD x = sqrtl(max(SQR(r) - SQR(d), TYP(0.0)));
+    res.PB(C + z * P(x, d));
+    if(abs(d) < r - EPS)
+        res.PB(C + z * P(-x, d));
+    return res;
+}
+
+vector<pair<pair<int, int>, int> > t;
+map<pair<int, int>, int> mapa;
+int n, h, w;
+
+vector<pair<LD, int> > events;
+P sr, tnie;
+int poczD = 0;
+LD R;
+
+LD kat(P a, P b, P c) {//skierowany kat ABC
+    LD res = arg((a-b)/(c-b)); //[-pi,pi]
+    if (res < 0) res += 2 * M_PI;
+    return res;
+}
+
+
+void dodaj(P a, P b, int waga) // dodaj wage na przecieciu prawej polpszaczynzy a-->b z kolem 
+{
+    vector<P> przec = prosta_okrag(a, b, sr, R);
+    if (siz(przec) == 2) {
+
+        P ww = (b - a) / abs(b - a);
+        ww *= abs(przec[1] - przec[0]) / 2;
+        if (norm(przec[0] + ww - przec[1]) > norm(przec[1] - przec[0])) swap(przec[0], przec[1]);
+        LD kat1 = kat(tnie, sr, przec[0]);
+        LD kat2 = kat(tnie, sr, przec[1]);
+        E2(kat1, kat2);
+        if (kat2 < kat1) {
+            events.PB(MP(kat2, waga));
+            events.PB(MP(kat1, -waga));
+        } else {
+            poczD += waga;
+            events.PB(MP(kat2, waga));
+            events.PB(MP(kat1, -waga));
+        }
+    }
+}
+
+bool ok(int idx, LD R_) {
+    events.clear();
+    R = R_;
+    sr = P(t[idx].FI.FI, t[idx].FI.SE);
+
+    int weight = t[idx].SE;
+    P dir(100000000, 1);
+    //P dir(LD(rand() % 1000000), LD(rand() % 1000000));
+
+    vector<P> przec = prosta_okrag(sr, sr + dir, sr, R);
+    assert(siz(przec) == 2);
+    tnie = przec[0];
+    E(tnie);
+    poczD = 0;
+    dodaj(P(0, h), P(0, 0), 10);
+    dodaj(P(w, 0), P(w, h), 10);
+    dodaj(P(0, 0), P(w, 0), 10);
+    dodaj(P(w, h), P(0, h), 10);
+
+    fup(i, 0, n - 1) if (i != idx) {
+        P other(t[i].FI.FI, t[i].FI.SE);
+        P sr2 = (sr + other) * LD(0.5);
+        P wek = other - sr;
+        wek /= abs(wek);
+        wek *= P(0, 1);
+        dodaj(sr2, sr2 + wek, t[i].SE);
+    }
+    sort(ALL(events));
+    Ev(events);
+    E(poczD);
+    if (poczD <= 1) return 1;
+    FORE(it, events) {
+        poczD += it -> SE;
+        E(poczD);
+        if (poczD <= 1) return 1;
+    }
+    return 0;
+}
+
+
+int main(){
+    ios_base::sync_with_stdio(false);
+    LD best = 0;
+    cerr << fixed << setprecision(10);
+    cin >> h >> w >> n;
+    swap(h, w);
+    fup(i, 1, n) { int a, b; cin >> a >> b; mapa[MP(a, b)]++; }
+    vector<pair<pair<int, int>, int> > tt(ALL(mapa));
+    t = tt;
+    n = siz(t);
+    const LD EPS2 = (1E-9);
+    random_shuffle(ALL(t));
+    fup(i, 0, n - 1) {
+        LD s, e;
+        s = EPS;
+        e = INF;
+        if (!ok(i, best + EPS2)) continue;
+        fup(j, 1, 60) {
+            LD q = (s + e) / 2;
+            if (ok(i, q)) {
+                maxi(best, q), s = q;
+            }
+            else e = q; 
+        }
+    }
+    cout << fixed << setprecision(12) << best << endl;
+
+    return 0;
+}
+

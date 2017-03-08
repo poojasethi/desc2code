@@ -1,0 +1,174 @@
+#include <bits/stdc++.h>
+
+#define maxn 800
+#define logn 23
+#define inf 0x3F3F3F3F
+#define linf 0x3F3F3F3F3F3F3F3FLL
+#define eps 1e-9
+#define pb push_back
+#define mp make_pair
+#define mod 1000000007LL
+
+using namespace std;
+
+typedef long long ll;
+typedef pair<int, int> pii;
+typedef vector<int> vi;
+typedef vector<pii> vii;
+typedef priority_queue<pii, vii, greater<pii> > pq;
+
+#ifdef ONLINE_JUDGE
+#define debug(args...)
+#else
+#define debug(args...) fprintf(stderr,args)
+#endif
+
+int n;
+string s[maxn];
+int g[maxn][maxn];
+int matched[maxn], mat[maxn];
+int vis[maxn], vis2[maxn][2];
+int cont;
+
+int trie[10001000][2];
+int b[10001000];
+int fim[10001000];
+int cont2;
+
+void add(int i)
+{
+    int x = 0;
+    for(int j = 0; j < s[i].size(); ++j)
+    {
+        int c = s[i][j]-'a';
+        if(!trie[x][c])
+            trie[x][c] = ++cont2;
+        x = trie[x][c];
+    }
+    fim[x] = i;
+}
+
+void aho()
+{
+    int x, p;
+    queue<int> q;
+    q.push(0);
+    while(!q.empty())
+    {
+        x = q.front(); q.pop();
+        p = b[x];
+        if(!fim[x])
+            fim[x] = fim[p];
+        for(int i = 0; i <= 1; ++i)
+        {
+            int &y = trie[x][i];
+            if(y)
+            {
+                b[y] = x? trie[p][i] : 0;
+                q.push(y);
+            }
+            else
+            {
+                y = trie[p][i];
+            }
+        }
+    }
+}
+
+void floyd()
+{
+    for(int i = 1; i <= n; ++i)
+        g[i][i] = 0;
+
+    for(int k = 1; k <= n; ++k)
+        for(int i = 1; i <= n; ++i)
+            for(int j = 1; j <= n; ++j)
+                g[i][j] |= (g[i][k]&g[k][j]);
+}
+
+bool match(int x)
+{
+    if(x == -1) return true;
+    if(vis[x] == cont) return false;
+    vis[x] = cont;
+    for(int i = 1; i <= n; ++i)
+    {
+        if(!g[x][i]) continue;
+        if(match(mat[i]))
+        {
+            mat[i] = x;
+            return true;
+        }
+    }
+    return false;
+}
+
+void dfs(int x, int side)
+{
+    if(vis2[x][side]) return;
+    vis2[x][side] = 1;
+    if(side == 1)
+    {
+        if(mat[x] != -1)
+            dfs(mat[x], 0);
+    }
+    for(int i = 1; i <= n; ++i)
+    {
+        if(!g[x][i]) continue;
+        dfs(i, 1);
+    }
+}
+
+int main()
+{
+    int x;
+    cin>>n;
+    for(int i = 1; i <= n; ++i)
+    {
+        cin>>s[i];
+        add(i);
+    }
+
+    aho();
+    for(int i = 1; i <= n; ++i)
+    {
+        x = 0;
+        for(int j = 0; j < s[i].size(); ++j)
+        {
+            x = trie[x][s[i][j]-'a'];
+            int y = x;
+            while(y && fim[y] && !g[i][fim[y]])
+            {
+                g[i][fim[y]] = 1;
+                y = b[y];
+            }
+        }
+    }
+    floyd();
+    
+    memset(mat, -1, sizeof mat);
+    for(int i = 1; i <= n; ++i)
+    {
+        cont++;
+        matched[i] = match(i);
+    }
+
+    for(int i = 1; i <= n; ++i)
+        if(!matched[i])
+            dfs(i, 0);
+
+    vi ans;
+    for(int i = 1; i <= n; ++i)
+        if(!((matched[i] && !vis2[i][0]) || (mat[i] != -1 && vis2[i][1])))
+            ans.pb(i);
+
+    cout<<ans.size()<<"\n";
+    for(int i = 0; i < ans.size(); ++i)
+    {
+        if(i) cout<<" ";
+        cout<<ans[i];
+    }
+    cout<<"\n";
+
+    return 0;
+}

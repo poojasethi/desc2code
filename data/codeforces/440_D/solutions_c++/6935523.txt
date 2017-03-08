@@ -1,0 +1,133 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+
+#define Size(s) ((int)s.size())
+#define rep(i, n) for(int i=0; i<n; ++i)
+#define Foreach(i, x) for (__typeof(x.begin()) i = x.begin(); i != x.end(); i++)
+#define F first
+#define S second
+#define X real()
+#define Y imag()
+#define MP make_pair
+
+template<class P, class Q> inline bool mmin(P &a, Q b) { if (a > b){ a = b; return true;} return false;}
+template<class P, class Q> inline bool mmax(P &a, Q b) { if (a < b){ a = b; return true;} return false;}
+
+typedef long long LL;
+typedef pair<int, int> pii;
+typedef complex<double> point;
+
+const int MAXn = 400 + 5, INF = 1000;
+int n;
+vector<pii> adj[MAXn];
+vector<int> son[MAXn];
+int par[MAXn];
+int dp[MAXn][MAXn];
+int cur[MAXn][MAXn], upd[MAXn][MAXn];
+bool mark[MAXn];
+int nxt[MAXn];
+
+inline void calcDP(int x)
+{
+	int m = Size(son[x]);
+	cur[m][0] = 0;
+	for(int j=1; j<MAXn; ++j)
+		cur[m][j] = INF;
+	for(int i=m-1; i>=0; --i) for(int j=0; j<MAXn; ++j) {
+		cur[i][j] = INF;
+		for(int k=0; k<=j; ++k)
+			if(mmin(cur[i][j], cur[i+1][j-k]+dp[son[x][i]][k]))
+				upd[i][j] = k;
+	}
+}
+
+void DFS(int x)
+{
+	rep(i, Size(adj[x])) {
+		int y = adj[x][i].F;
+		if(y!=par[x]) {
+			son[x].push_back(y);
+			par[y] = x;
+			DFS(y);
+		}
+	}
+
+	calcDP(x);
+
+	dp[x][0] = 1;
+	for(int j=1; j<MAXn; ++j)
+		dp[x][j] = cur[0][j-1];
+}
+
+void DFS2(int x, int k)
+{
+//	cerr << "HI " << x << ' ' << k << endl;
+	if(!k) return;
+	mark[x] = 1;
+	if(k==1) return;
+
+//	cerr << "! " << endl;
+	calcDP(x);
+//	cerr << "$" << endl;
+
+	int y = k-1;
+	rep(i, Size(son[x])) {
+//		cerr << "ready " << x << ' ' << son[x][i] << ' ' << nxt[son[x][i]] << endl;		
+		nxt[son[x][i]] = upd[i][y];
+		y -= upd[i][y];
+	}
+
+	y = k-1;
+	rep(i, Size(son[x])) {
+//		 cerr << "call " << x << ' ' << son[x][i] << ' ' << nxt[son[x][i]] << endl;
+		DFS2(son[x][i], nxt[son[x][i]]);
+		y -= nxt[son[x][i]];
+	}	
+}
+
+int main()
+{
+	ios_base::sync_with_stdio(false);
+
+	int k;
+	cin >> n >> k;
+	rep(i, n-1) {
+		int x, y;
+		cin >> x >> y;
+		--x; --y;
+		adj[x].push_back(pii(y, i+1));
+		adj[y].push_back(pii(x, i+1));
+	}
+
+	fill(dp[0], dp[n], INF);
+
+	DFS(0);
+
+	int mn = dp[0][k], ind = 0;
+	for(int i=1; i<n; ++i)
+		if(mmin(mn, dp[i][k]+1))
+			ind = i;
+
+//	cerr << k << endl;
+//	cerr << dp[0][k] << endl;
+//	cerr << mn << ' ' << ind << endl;
+
+	DFS2(ind, k);
+
+/*	rep(i, n)
+		cerr << mark[i] << ' ';
+	cerr << endl;*/
+
+	vector<int> v;
+	rep(i, n) rep(j, Size(adj[i])) if(adj[i][j].F>i && (mark[i] ^ mark[adj[i][j].F]))
+		v.push_back(adj[i][j].S);
+
+	cout << Size(v) << endl;
+	rep(i, Size(v))
+		cout << v[i] << ' ';
+	cout << endl;
+
+	return 0;
+}
+

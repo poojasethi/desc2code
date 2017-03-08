@@ -1,0 +1,81 @@
+#include <cstdio>
+#include <iostream>
+#include <algorithm>
+
+using std::cin;
+using std::endl;
+using std::cout;
+using std::max;
+using std::min;
+
+const int N = 500050, lgN = 20, inf = ~0u >> 1;
+
+int left[N], A[N], n;
+
+struct less_cmp {
+	bool operator() (int a, int b) {
+		if (a == inf) return 0;
+		if (b == inf) return 1;
+		return left[a] < left[b]; 
+	}
+};
+
+struct tree
+{
+	int l, r, v;
+	tree *lc, *rc;
+	tree (int _l, int _r) : l(_l), r(_r) { v = inf; }
+	void init ()
+	{
+		if (l == r) v = l;
+		else
+		{
+			int m = (l + r) >> 1;
+			(lc = new tree(l, m))->init();
+			(rc = new tree(m + 1, r))->init();
+			v = min(lc->v, rc->v, less_cmp());
+		}
+	}
+	int query (int ql, int qr)
+	{
+		if (ql <= l && r <= qr) return v;
+		int m = (l + r) >> 1, res(inf);
+		if (ql <= m) res = min(res, lc->query(ql, qr), less_cmp());
+		if (qr >  m) res = min(res, rc->query(ql, qr), less_cmp());
+		return res;
+	}
+} *R;
+
+int pre[N][lgN], val[N][lgN];
+
+int main ()
+{
+	cin >> n; 
+	for (int i = 1; i <= n; ++i)
+	{
+		cin >> A[i];
+		A[n + i] = A[i];
+	}
+	for (int i = 1; i <= n * 2; ++i)
+		left[i] = max(0, i - A[i]);
+	(R = new tree(1, n * 2))->init();
+	for (int i = 1; i <= n * 2; ++i)
+	{
+		pre[i][0] = (i == 1) ? 1 : R->query(left[i], i - 1);
+		val[i][0] = left[i];
+		for (int j = 1; j < lgN; ++j)
+			pre[i][j] = pre[pre[i][j - 1]][j - 1],
+			val[i][j] = val[pre[i][j - 1]][j - 1];
+	}
+	long long res(0);
+	for (int i = n + 1; i <= n + n; ++i)
+	{
+		int cp = i, cr = 0;
+		for (int j = lgN - 1; j >= 0; --j)
+			if (val[cp][j] > i - n + 1) cp = pre[cp][j], cr += (1 << j);
+	//	cout << cr + 1 << endl;
+		res += ++cr; // last move
+	}
+	cout << res << endl;
+}
+

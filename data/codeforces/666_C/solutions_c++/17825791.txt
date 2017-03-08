@@ -1,0 +1,118 @@
+#include <cstring>
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+using namespace std;
+
+const int N = 1e5 + 27;
+
+typedef long long LL;
+
+const LL Mo = 1e9 + 7;
+
+//map<PI, int> Hash;
+//map<PI, LL> Ans;
+
+vector<int> Ouc[N];
+
+int Map[N],Len[N],dfn,Col[N];
+char s[N];
+LL Fac[N],NiFac[N];//Ans[620][N];
+
+struct Node{
+	int type,ev,x;
+	LL ans;
+}E[N];
+
+int m,cur,curlen;
+
+void Chk(int len, int *n)
+{
+	if (Map[len]) *n = Map[len];
+		else *n = Map[len] = ++ dfn, Len[dfn] = len;
+}
+
+LL Comb(LL n, LL m)
+{
+	return Fac[n] * NiFac[m] % Mo * NiFac[n-m] % Mo;
+}
+
+LL Pow(LL x, LL t)
+{
+	LL tmp = 1;
+	while (t)
+	{
+		if (t & 1) tmp = tmp * x % Mo;
+		x = x * x % Mo; t >>= 1;
+	}
+	return tmp;
+}
+
+bool cmp(int x, int y)
+{
+	return E[x].x < E[y].x;
+}
+
+void Pre()
+{
+	Fac[0] = NiFac[0] = 1;
+	for (int i = 1; i <= 100000; i ++) Fac[i] = Fac[i-1] * i % Mo;
+	NiFac[100000] = Pow(Fac[100000], Mo - 2);
+	for (int i = 99999; i; i --) NiFac[i] = NiFac[i+1] * (i+1) % Mo;
+}
+
+int main()
+{
+	scanf("%d", &m);
+	scanf(" %s", s);
+
+	curlen = strlen(s);
+	Chk(curlen, &cur);
+	Pre();
+	
+	for (int i = 1; i <= m; i ++)
+	{
+		int type;scanf("%d", &type);
+		E[i].type = type;
+		if (type == 2)
+		{
+			E[i].ev = cur;
+			scanf("%d", &E[i].x);
+			Col[cur] = max(E[i].x, Col[cur]);
+			//Hash[PI(E[i].ev, E[i].x)] = 1;
+			Ouc[cur].push_back(i);
+		} else
+		{
+			scanf(" %s", s);
+			curlen = strlen(s);
+			Chk(curlen, &cur);
+		}
+	}
+
+	LL inv = Pow(26, Mo - 2);
+	for (int i = 1; i <= dfn; i ++)
+	{
+		sort(Ouc[i].begin(), Ouc[i].end(), cmp);
+		int j = 0;
+		while (j < Ouc[i].size() && E[Ouc[i][j]].x < Len[i]) j ++;
+		LL q = Pow(26, Len[i]), pt = Pow(inv, Len[i]), ans = 0, sum = 0;
+		for (int k = Len[i]; k <= Col[i]; k ++)
+		{
+			sum = (sum + pt * Comb(k - 1, Len[i] - 1) % Mo) % Mo;
+			//Ans[i][k] = sum * q % Mo;
+			
+			while (j < Ouc[i].size() && E[Ouc[i][j]].x == k)
+			{
+				E[Ouc[i][j]].ans = sum * q % Mo;
+				j ++;
+			}
+			q = q * 26 % Mo, pt = pt * 25ll % Mo * inv % Mo;
+		}
+	}
+
+	for (int i = 1; i <= m; i ++) if (E[i].type == 2)
+	{
+		printf("%I64d\n", E[i].ans);
+	}
+	return 0;
+}

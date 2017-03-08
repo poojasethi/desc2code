@@ -1,0 +1,85 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define n	55
+#define m	60005
+#define P	998244353
+#define For(i,a,b)	for(int i=a;i<b;i++)
+
+int		N,T,M,L,A[n],G[m],H[m],B[n][m],F[n][m],Ans[n][m];
+int		len,Tim=-1,rev[m],w[2][m];
+
+int		Pow(int a,int b){
+		int ret=1;
+		for (;b;b>>=1,a=1ll*a*a%P)
+			if	(b&1)	ret=1ll*ret*a%P;
+		return	ret;
+}
+void	Pre(){
+		int a=Pow(3,(P-1)/L),b=Pow(a,P-2);
+		For(i,0,L)	{
+			w[0][i]=i?1ll*w[0][i-1]*a%P:1;
+			w[1][i]=i?1ll*w[1][i-1]*b%P:1;
+			for (int x=1,t=i;x<L;x<<=1,t>>=1)	(rev[i]<<=1)|=t&1;
+		}
+}
+void	FFT(int A[m],int f){
+		For(i,0,L)	if	(rev[i]>i)	swap(A[i],A[rev[i]]);
+		for (int i=1;i<L;i<<=1)
+		for (int j=0,t=L/(i<<1);j<L;j+=i<<1)
+		for (int k=0,l=0;k<i;k++,l+=t)	{
+			int x=A[j+k],y=1ll*A[j+k+i]*w[f][l]%P;
+			A[j+k]=(x+y)%P;	A[j+k+i]=(x-y+P)%P;
+		}
+		if	(f)	{
+			int R=Pow(L,P-2);
+			For(i,0,L)	A[i]=1ll*A[i]*R%P;
+		}
+}
+
+void	Merge(int A[n][m],int B[n][m],int C[n][m]){
+		For(i,0,T)	For(j,0,L)	A[i][j]=0;
+		For(i,0,T)	FFT(B[i],0),FFT(C[i],0);
+		For(i,0,T)	For(j,0,T)	{
+			int k=(i+j)%T;
+			For(t,0,L)	A[k][t]=(1ll*B[i][t]*C[j][t]+A[k][t])%P;
+		}
+		For(i,0,T)	FFT(A[i],1);
+}
+void	Work(int F[m],int k){
+		For(j,0,L)	G[j]=0;	G[0]=1;
+		for (;k;k>>=1)	{
+			FFT(F,0);
+			if	(k&1)	{
+				FFT(G,0);	For(i,0,L)	G[i]=1ll*G[i]*F[i]%P;	FFT(G,1);
+				For(i,M,L)	G[i]=0;
+			}
+			For(i,0,L)	F[i]=1ll*F[i]*F[i]%P;	FFT(F,1);
+			For(i,M,L)	F[i]=0;
+		}
+		For(i,0,M)	F[i]=G[i];
+}
+
+int		main(){
+		scanf("%d%d%d",&N,&T,&M);
+		For(i,0,T)	A[i]=-1;	M++;N--;
+		for (int x=1%T;len<=N;x=x*10%T,len++)	{
+			if	(A[x]!=-1)	{Tim=A[x];break;}	A[x]=len;
+		}
+
+		for (L=1;L<M;L<<=1);L<<=1;	Pre();	Ans[0][0]=1;
+		For(d,0,T)	if	(A[d]!=-1)	{
+			For(i,0,L)	H[i]=0;
+			For(i,0,10)	if	(i<M)	H[i]++;
+			int cnt=(Tim==-1||A[d]<Tim)?1:(N-A[d])/(len-Tim)+1;	Work(H,cnt);
+
+			For(i,0,T)	For(j,0,L)	F[i][j]=0;
+			For(i,0,M)	F[i*d%T][i]=H[i];	Merge(B,F,Ans);
+			For(i,0,T)	For(j,0,M)	Ans[i][j]=B[i][j];
+			For(i,0,T)	For(j,M,L)	Ans[i][j]=0;
+		}
+		For(i,1,M)	Ans[0][i]=(Ans[0][i]+Ans[0][i-1])%P;
+		For(i,0,M)	printf("%d%c",Ans[0][i]," \n"[i==M-1]);
+}

@@ -1,0 +1,92 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+#define n	400005
+
+int		N,M,Q;
+struct	Max{
+		int L,R,Num;
+		bool	operator < (const Max&b)const {
+			return	Num>b.Num;
+		}
+};
+struct	Min{
+		int L,R,Num;
+		bool	operator < (const Min&b)const {
+			return	Num<b.Num;
+		}
+};
+void	swap(Min&a,Max&b){
+		Min t=a;a=(Min){b.L,b.R,b.Num};b=(Max){t.L,t.R,t.Num};
+}
+
+struct	Nod{
+		Min M0,L0,R0;	Max M1,L1,R1;	int rev,sum,L,R;
+		void	Up(int x,int k){
+			rev=0;sum=k;L=R=x;
+			M0=L0=R0=(Min){x,x,k};	M1=L1=R1=(Max){x,x,k};
+		}
+		void	Rev(){
+			rev^=1;	sum*=-1;swap(M0,M1);swap(L0,L1);swap(R0,R1);
+			M0.Num*=-1;L0.Num*=-1;R0.Num*=-1;
+			M1.Num*=-1;L1.Num*=-1;R1.Num*=-1;
+		}
+		Nod		operator +	(const Nod&b){
+			Nod	c,a=*this;	c.rev=0;c.sum=a.sum+b.sum;c.L=a.L;c.R=b.R;
+			c.M0=min(min(a.M0,b.M0),(Min){a.R0.L,b.L0.R,a.R0.Num+b.L0.Num});
+			c.M1=min(min(a.M1,b.M1),(Max){a.R1.L,b.L1.R,a.R1.Num+b.L1.Num});
+			c.L0=min(a.L0,(Min){L,b.L0.R,a.sum+b.L0.Num});
+			c.L1=min(a.L1,(Max){L,b.L1.R,a.sum+b.L1.Num});
+			c.R0=min(b.R0,(Min){a.R0.L,R,b.sum+a.R0.Num});
+			c.R1=min(b.R1,(Max){a.R1.L,R,b.sum+a.R1.Num});
+			return	c;
+		}
+}T[n],tmp[25];
+
+void	Up(int x){
+		for	(x>>=1;x;x>>=1)	T[x]=T[x<<1]+T[x<<1|1];
+}
+void	Dn(int x){
+		for	(int s=1,d=M>>1;d;(s<<=1)|=(x&d)>0,d>>=1)
+			if	(T[s].rev)	T[s<<1].Rev(),T[s<<1|1].Rev(),T[s].rev=0;
+}
+
+void	Mod(int x,int y){
+		Dn(x+M-1);	Dn(y+M+1);
+		for	(int l=x+M-1,r=y+M+1;l^r^1;l>>=1,r>>=1){
+			if	(l&1^1)	T[l^1].Rev();
+			if	(r&1)	T[r^1].Rev();
+		}	Up(x+M-1);	Up(y+M+1);
+}
+Nod		Ask(int l,int r){
+		Dn(l+M);Dn(r+M);Nod	x,y;int a=0,b=0;
+		for	(l+=M-1,r+=M+1;l^r^1;l>>=1,r>>=1){
+			if	(l&1^1)	a?x=x+T[l^1]:x=T[l^1],a=1;
+			if	(r&1)	b?y=T[r^1]+y:y=T[r^1],b=1;
+		}	return	(a&&b)?x+y:(a?x:y);
+}
+
+int		main(){
+		scanf("%d",&N);
+		for	(M=1;M<=N+1;M<<=1);
+		for	(int i=M+1,x;i<=M+N;i++)
+			scanf("%d",&x),T[i].Up(i,x);
+		for	(int i=M;i;i--)	T[i]=T[i<<1]+T[i<<1|1];
+
+		scanf("%d",&Q);
+		for	(int k,x,y,Ans=0;Q--;Ans=0){
+			scanf("%d",&k);
+			if	(!k){
+				scanf("%d%d",&x,&y);
+				Dn(M+x);T[M+x].Up(M+x,y);Up(M+x);
+			}	else{
+				scanf("%d%d%d",&x,&y,&k);
+				for	(int i=1;i<=k;i++){
+					tmp[i]=Ask(x,y),Mod(tmp[i].M1.L-M,tmp[i].M1.R-M);
+					if	(tmp[i].M1.Num<=0)	{k=i;break;}	Ans+=tmp[i].M1.Num;
+				}	printf("%d\n",Ans);
+				for	(int i=k;i;i--)	Mod(tmp[i].M1.L-M,tmp[i].M1.R-M);
+			}
+		}
+}

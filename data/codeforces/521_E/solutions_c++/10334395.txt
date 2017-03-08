@@ -1,0 +1,204 @@
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#include <stack>
+#include <vector>
+#include <cassert>
+using namespace std;
+
+const int Mn = 2 * 100000 + 10;
+const int Me = 2 * Mn + 10;
+
+int hd[Mn],nxt[Me],to[Me],cnt;
+int hd1[Mn],nxt1[Me],to1[Me],cnt1;
+
+int n, m;
+int st,ed;
+int S,T,len;
+
+
+int dfn[Mn],low[Mn],ecomp[Mn],vcomp[Me];
+int ecompnum,vcompnum,num;
+
+int par[Mn],incycle[Mn],path[Mn];
+int vvis[Mn],evis[Me],cycle[Mn];
+stack<int> edge,vert;
+vector<int> comp[Me];
+
+inline void add(int x,int y) {
+    to[cnt] = y;
+    nxt[cnt] = hd[x];
+    hd[x] = cnt++;
+}
+inline void add1(int x,int y) {
+    //cerr <<" --"<< x << " " << y << endl;
+    to1[cnt1] = y;
+    nxt1[cnt1] = hd1[x];
+    hd1[x] = cnt1++;
+}
+inline void init() {
+    cnt = cnt1 = 0;
+    memset(hd, -1, sizeof hd);
+    memset(hd1, -1, sizeof hd1);
+    memset(incycle,-1,sizeof incycle);
+    memset(evis,false,sizeof evis);
+}
+void findcomp(int x,int p) {
+    low[x] = dfn[x] = ++num;
+    vert.push(x);
+    int children(0);
+    for(int i = hd[x]; ~i; i = nxt[i])
+        if(!dfn[to[i]])
+            children++;
+    for(int i = hd[x]; ~i; i = nxt[i]) { 
+        if(!dfn[to[i]]) {
+            edge.push(i);
+            findcomp(to[i], i ^ 1);
+            low[x] = min(low[x], low[to[i]]);
+            if((children > 1 && p == -1) || (p != -1 && dfn[x] <= low[to[i]])) 
+            //if(dfn[x] <= low[to[i]])
+            {
+                vcompnum++;
+                int tmp;
+                do {
+                    tmp = edge.top();
+                    edge.pop();
+                    vcomp[tmp] = vcomp[1 ^ tmp] = vcompnum;
+                    
+                }while(tmp != i && tmp != (1 ^ i));
+            }
+        } 
+        else if(i != p && dfn[to[i]] < dfn[x]) {
+            low[x] = min(low[x],dfn[to[i]]);
+            edge.push(i);   
+        }
+    }
+    if(dfn[x] <= low[x]) {
+        ecompnum++;
+        int tmp;
+        do {
+            tmp = vert.top();
+            vert.pop();
+            ecomp[tmp] = ecompnum;
+        } while(tmp != x);
+    }
+}
+inline void bicomp() {
+    num = ecompnum = vcompnum = 0;
+    memset(dfn, 0, sizeof dfn);
+    memset(low, 0, sizeof low);
+    memset(ecomp, 0, sizeof ecomp);
+    memset(vcomp, 0, sizeof vcomp);
+    while(!edge.empty())edge.pop();
+    while(!vert.empty())vert.pop();
+    for(int i = 1; i <= n; ++i) {
+        if(!dfn[i]) {
+            findcomp(i,-1);
+        }
+    }
+}
+inline void build(int k) {
+
+    for(int i = 0; i < comp[k].size(); ++i) {
+        add1(to[comp[k][i] ^ 1],to[comp[k][i]]);
+    }
+}
+
+inline void findcycle(int x,int p, int rank) {
+    if(incycle[x] != -1) {
+        st = incycle[x];
+        ed = rank;
+        return;
+    }
+    incycle[x] = rank;
+    cycle[rank] = x;
+    if(nxt1[nxt1[hd1[x]]] != -1)
+        S = incycle[x];
+    for(int i = hd1[x]; ~i; i = nxt1[i]) {
+        if(to1[i] != p) {
+            findcycle(to1[i],x,rank+1);
+            if(S == -1)
+                incycle[x] = -1;
+            else if(rank >= st) {
+                evis[i] = evis[i^1] = true;
+            }
+            return;
+        }
+    }
+}
+inline void findway(int x,int rank) {
+    vvis[x] = -2;
+    path[rank] = x;
+    if(incycle[x] >= st && incycle[x] != S)
+    {
+        len = rank;
+        T = incycle[x];
+        return;
+    }
+    for(int i = hd1[x]; ~i && T == -1; i = nxt1[i]) {
+        if(vvis[to1[i]] != -2 && !evis[i]) {
+            findway(to1[i],rank+1);
+        }
+    }   
+}
+int main() {
+    init(); 
+    scanf("%d%d",&n,&m);
+    for(int i = 1; i <= m; ++i) {
+        int x,y;
+        scanf("%d%d",&x, &y);
+        add(x, y);
+        add(y, x);
+    }
+    bicomp();
+    for(int i = 0; i < cnt; ++i) {
+        comp[vcomp[i]].push_back(i);   
+    }
+    S = T = -1;
+    for(int i = 1; i <= vcompnum; ++i) {
+        if(comp[i].size() > 2) {
+            build(i);
+            findcycle(to[comp[i][0]],-1,0);
+            if(S != -1)
+                break;
+            
+            memset(hd1, -1, sizeof hd1);
+            cnt1 = 0;
+            
+        }
+    }
+    if(S == -1) 
+        cout << "NO" << endl;
+    else {
+        findway(cycle[S],0);
+        int l1, l2;
+        if (S < T)
+            l1 = T-S, l2 = ed-st+S-T;
+        else
+            l2 = S-T, l1 = ed-st+T-S;
+        cout << "YES" << endl;
+        cout << len+1;
+        for (int i = 0; i <= len; ++i)
+            cout << ' ' << path[i];
+        cout << endl;
+        cout << (l1+1) << ' ' << cycle[S];
+        for (int i = S; i != T; )
+        {
+            if (++i == ed)
+                i = st;
+            cout << ' ' << cycle[i];
+        }
+        cout << endl;
+        cout << (l2+1) << ' ' << cycle[S];
+        for (int i = S; i != T; )
+        {
+            if (i == st)
+                i = ed;
+            cout << ' ' << cycle[--i];
+        }
+        cout << endl;
+    }
+    return 0;
+} 

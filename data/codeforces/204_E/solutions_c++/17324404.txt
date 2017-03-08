@@ -1,0 +1,108 @@
+#include <cstdlib>
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <cstdio>
+#include <set>
+#include <string>
+
+using namespace std;
+const int N = 100000 + 5;
+const int C = 26;
+typedef long long ll;
+
+int n, cnt, k;
+int head[N << 1], color[N << 1];
+string s[N];
+set <int> occ[N << 1];
+set <int> :: iterator it;
+
+struct State {
+  int pre, len, next[C];
+}st[N << 1];
+
+struct SuffixAutomaton {
+  int sz, last;
+
+  void Init() {
+	sz = last = 1;
+	st[sz].pre = -1; st[sz].len = 0;
+	sz ++;
+  }
+
+  void add(int c, int ccc) {
+	int cur = sz ++, p;
+	st[cur].len = st[last].len + 1;
+	for(p = last; p != -1 && !st[p].next[c]; p = st[p].pre)
+	  st[p].next[c] = cur;
+	if(p == -1) st[cur].pre = 1;
+	else {
+	  int q = st[p].next[c];
+	  if(st[q].len == st[p].len + 1) st[cur].pre = q;
+	  else {
+		int cle = sz ++;
+		st[cle].pre = st[q].pre;
+		st[cle].len = st[p].len + 1;
+		for(int i = 0; i < C; ++ i) st[cle].next[i] = st[q].next[i];
+		for(; p != -1 && st[p].next[c] == q; p = st[p].pre)
+		  st[p].next[c] = cle;
+		st[q].pre = st[cur].pre = cle;
+	  }
+	}
+	last = cur;
+	occ[cur].insert(ccc);
+  }
+}sam;
+
+struct Edge {
+  int from, to, next;
+}edges[N << 1];
+
+void insert(int from, int to) {
+  ++ cnt;
+  edges[cnt].from = from; edges[cnt].to = to;
+  edges[cnt].next = head[from]; head[from] = cnt;
+}
+
+void dfs(int u) {
+  for(int i = head[u]; i; i = edges[i].next) {
+	int v = edges[i].to;
+	dfs(v);
+	if(occ[u].size() < occ[v].size())
+	  swap(occ[u], occ[v]);
+	for(it = occ[v].begin(); it != occ[v].end(); ++ it)
+	  occ[u].insert(*it);
+  }
+  color[u] = occ[u].size();
+}
+
+int main() {
+  ios :: sync_with_stdio(false);
+  cin.tie(0);
+
+  cin >> n >> k;
+  sam.Init();  
+  for(int i = 1; i <= n; ++ i) {
+	cin >> s[i];
+	int len = s[i].length();
+	for(int j = 0; j < len; ++ j) sam.add(s[i][j] - 'a', i);
+	sam.last = 1;
+  }
+  for(int i = 1; i < sam.sz; ++ i)
+	if(st[i].pre != -1) insert(st[i].pre, i);
+  dfs(1);
+  for(int i = 1; i <= n; ++ i) {
+	if(k > n) { cout << 0 << " "; continue; }
+	ll ans = 0;
+	int p = 1, ln = 0, len;
+	len = s[i].length();
+	for(int j = 0; j < len; ++ j) {
+	  p = st[p].next[(int) s[i][j] - 'a'];
+	  while(color[p] < k) p = st[p].pre;
+	  ln = min(ln + 1, st[p].len);
+	  ans += ln;
+	}
+	cout << ans << " ";
+  }
+  return 0;
+}

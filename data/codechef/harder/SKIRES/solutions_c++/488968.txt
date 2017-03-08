@@ -1,0 +1,108 @@
+#include <cstdio>
+#include <queue>
+#include <map>
+#include <algorithm>
+#include <utility>
+using namespace std;
+ 
+int R, C, Rr, Cr, Rt, Ct, h[50][50];
+ 
+const int dc[4]={0, 1, 0, -1}, dr[4]={1, 0, -1, 0};
+ 
+pair<pair<int, int>, pair<int, int> > edges[50*50*50];
+int edgestart[50*50*5+20];
+ 
+int aug(int src, int sink, int amt, char *mark){
+	if(src==sink)
+		return 1;
+	mark[src]=1;
+	for(int i=edgestart[src]; i<edgestart[src+1]; i++){
+		if(edges[i].second.first>=amt && !mark[edges[i].first.second] && aug(edges[i].first.second, sink, amt, mark)){
+			edges[i].second.first-=amt;
+			edges[edges[i].second.second].second.first+=amt;
+			return 1;
+		}
+	}
+	return 0;
+}
+ 
+int flow(int src, int sink){
+	int res=0;
+	for(int amt=1<<9; amt>0; amt>>=1){
+		for(;;){
+			char mark[50*50*5]={0};
+			if(aug(src, sink, amt, mark))
+				res+=amt;
+			else
+				break;
+		}
+	}
+	return res;
+}
+ 
+void read(){
+	scanf("%d %d %d %d %d %d", &R, &C, &Rr, &Cr, &Rt, &Ct);
+	Rr--;
+	Cr--;
+	Rt--;
+	Ct--;
+	for(int i=0; i<R; i++)
+	for(int j=0; j<C; j++){
+		scanf("%d", &h[i][j]);
+	}
+}
+ 
+int solve(){
+	if(abs(Rr-Rt)+abs(Cr-Ct)==1)
+		return h[Rr][Cr]>=h[Rt][Ct] ? -1 : 0;
+	map<pair<int, int>, pair<int, int> > edgesm;
+	for(int i=0; i<R; i++)
+	for(int j=0; j<C; j++){
+		vector<pair<int, int> > adj;
+		for(int d=0; d<4; d++){
+			int ni=i+dr[d];
+			int nj=j+dc[d];
+			if(!(0<=ni && ni<R && 0<=nj && nj<C))
+				continue;
+			if(h[ni][nj]>=h[i][j])
+				adj.push_back(make_pair(
+					i==Rt && j==Ct ? 50000 : h[ni][nj]-h[i][j]+1, ni*C+nj));
+		}
+		sort(adj.begin(), adj.end());
+		reverse(adj.begin(), adj.end());
+		int me=i*C+j;
+		for(int a=0; a<adj.size(); a++){
+			edgesm[make_pair(5*me+a+1, 5*me+a)]=make_pair(adj[a].first, 0);
+			edgesm[make_pair(5*adj[a].second, 5*me+a+1)]=make_pair(adj[a].first, 0);
+		}
+	}
+	for(typeof(edgesm.begin()) it=edgesm.begin(); it!=edgesm.end(); it++)
+		edgesm[make_pair(it->first.second, it->first.first)];
+	int e=0;
+	for(typeof(edgesm.begin()) it=edgesm.begin(); it!=edgesm.end(); it++){
+		edges[e]=*it;
+		if(it->first.first<it->first.second){
+			edgesm[make_pair(it->first.second, it->first.first)].second=e;
+		}else{
+			edges[it->second.second].second.second=e;
+		}
+		e++;
+	}
+	edges[e].first.first=1e9;
+	for(int i=1; i<5*R*C+20; i++){
+		edgestart[i]=edgestart[i-1];
+		while(edges[edgestart[i]].first.first<i)
+			edgestart[i]++;
+	}
+	int src=5*(Rr*C+Cr), sink=5*(Rt*C+Ct);
+	return flow(src, sink);
+}
+ 
+int main(){
+	int T;
+	for(scanf("%d", &T); T--; ){
+		read();
+		printf("%d\n", solve());
+	}
+}
+ 

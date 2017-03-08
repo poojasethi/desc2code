@@ -1,0 +1,139 @@
+#include <vector>
+#include <cstdio>
+#include <set>
+#include <map>
+#include <algorithm>
+#include <cstdlib>
+#include <sstream>
+#include <numeric>
+#include <queue>
+#include <iostream>
+#include <string>
+#include <cstring>
+#include <utility>
+#define sz(a) ((int)(a).size())
+#define pb push_back
+#define mk make_pair
+#define fi first
+#define se second
+#define Rep(i,j,k) for (int i=(j); i<=(k); i++)
+#define Repd(i,j,k) for (int i=(j); i>=(k); i--)
+#define ALL(c) (c).begin(),(c).end()
+#define TR(c,i) for(typeof((c).begin()) i = (c).begin(); i != (c).end(); i++)
+#define SUM(a) accumulate(all(a),string())
+#define online1
+using namespace std;
+typedef vector<int> VI;
+typedef vector<VI> VVI;
+typedef pair<int,int> II;
+typedef long long LL;
+
+const int MOD=1000000007;
+#define N (110000)
+
+int n, m;
+VI edge[N];
+II st[N];
+int f[N][18];
+int sum[N], dep[N], col[N], color;
+
+int lca(int x, int y){
+	if (dep[x]<dep[y]) swap(x,y);
+	for(int k=dep[x]-dep[y], i=0; i<=16; i++)
+		if ((k>>i)&1)
+			x=f[x][i];
+	if (x==y) return x;
+	Repd(i,16,0)
+		if (f[x][i]!=f[y][i])
+			x=f[x][i], y=f[y][i];
+	return f[x][0];
+}
+
+int getsum(int x, int y){
+	int ans=sum[x]-sum[f[y][0]];
+	if (col[f[y][0]]==col[y] && col[y])
+		ans++;
+	return ans;
+}
+
+int pow(int a, int n){
+	int ret=1;
+	while(n)
+		if (n&1)
+			n--, ret=(LL)ret*a%MOD;
+		else
+			n>>=1, a=(LL)a*a%MOD;
+	return ret;
+}
+
+int main(){
+	cin>>n>>m;
+	while(m--){
+		int x,y;
+		scanf("%d%d",&x,&y);
+		edge[x].pb(y);
+		edge[y].pb(x);
+	}
+	
+	memset(dep,0xff,sizeof(dep));
+	int tot=1;
+	st[tot]=mk(1,0);
+	dep[1]=1;
+	for(;tot;){
+		int x=st[tot].fi, &e=st[tot].se;
+		if (e==edge[x].size()){
+			tot--;
+			continue;
+		}
+		int y=edge[x][e++];
+		if (dep[y]==-1){
+			dep[y]=dep[x]+1;
+			f[y][0]=x;
+			st[++tot]=mk(y,0);
+			continue;
+		}
+		if (y!=f[x][0] && dep[x]>dep[y]){
+			++color;
+			for(int i=tot; i; i--){
+				col[st[i].fi]=color;
+				if (st[i].fi==y) break;
+			}
+		}
+	}
+	
+	st[tot=1]=mk(1,0);
+	sum[1]=col[1]!=0;
+	for(;tot;){
+		int x=st[tot].fi, &e=st[tot].se;
+		if (e==edge[x].size()){
+			tot--;
+			continue;
+		}
+		int y=edge[x][e++];
+		if (f[y][0]==x){
+			sum[y]=sum[x];
+			if (col[y] && col[y]!=col[x])
+				sum[y]++;
+			st[++tot]=mk(y,0);
+			continue;
+		}
+	}
+	
+	Rep(k,1,16)
+		Rep(x,1,n)
+			f[x][k]=f[f[x][k-1]][k-1];
+			
+	int T;
+	cin>>T;
+	while(T--){
+		int x, y;
+		scanf("%d%d",&x,&y);
+		int f=lca(x,y);
+		//cout<<x<<","<<y<<" f:"<<f<<endl;
+		int ans=getsum(x,f)+getsum(y,f);
+		if (col[f]) ans--;
+		cout<<pow(2,ans)<<endl;
+	}
+
+    return 0;
+}

@@ -1,0 +1,133 @@
+#include<cstdio>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+#include<queue>
+#include<cmath>
+#include<vector>
+#define fo(i,a,b) for(int i=a;i<=b;i++)
+#define fd(i,a,b) for(int i=a;i>=b;i--)
+#define maxn 100005
+#define maxp 805
+#define bl 800
+#define pb(i) push_back(i)
+#define ll long long
+using namespace std;
+
+int bel[maxn],n,block,q;
+
+struct note{
+	int l,r,id,lb;
+}ask[maxn];
+
+int a[maxn],cnt[maxn],tot[maxn],sum[maxn],now[maxp];
+
+ll ans[maxn];
+
+vector<int> big;
+
+priority_queue<int> que;
+
+inline bool cmp(note i,note j){
+	return i.lb<j.lb || i.lb == j.lb && i.r<j.r;
+}
+
+inline void add(int x,int y){
+	if (sum[x]<bl) {
+		now[cnt[x]]--;
+		cnt[x]+=y;
+		now[cnt[x]]++;
+	}
+	else cnt[x]+=y;
+}
+
+int tmp[maxp];
+
+inline ll calc(){
+	ll ret=0;
+	while (!que.empty()) que.pop();
+	memcpy(tmp,now,sizeof(tmp));
+	if (big.size()>0)
+	fo(i,0,big.size()-1) {
+		int pq=cnt[big[i]];
+		if (pq==0) continue;
+		if (pq<bl) tmp[pq]++;
+		else que.push(-pq);
+	}
+	int last=-1;
+	fo(i,1,bl) {
+		if (tmp[i]==0) continue;
+		if (last>0) {
+			ret+=last+i;
+			tmp[i]--;
+			if (last+i<bl) tmp[last+i]++;
+			else que.push((-last-i));
+		}
+		if (tmp[i]>=2) {
+			ret+=2ll*i*(tmp[i]/2);
+			if (2*i<bl) tmp[2*i]+=tmp[i] / 2;
+			else fo(j,1,tmp[i] / 2) que.push(-2*i);
+			tmp[i] %= 2;
+		}
+		if (tmp[i]) last=i;
+		else last=-1;
+	}
+	if (last!=-1) que.push(-last);
+	while (que.size()>=2) {
+		int x=que.top();
+		x=-x;
+		que.pop();
+		int y=que.top();
+		y=-y;
+		que.pop();
+		ret+=x+y;
+		que.push(-x-y);
+	}
+	return ret;
+}
+
+int main(){
+	scanf("%d",&n);
+	block=sqrt(n);
+	fo(i,1,n) {
+		bel[i]=(i-1) / block +1;
+		scanf("%d",&a[i]);
+		sum[a[i]]++;
+		if (sum[a[i]]==bl) big.pb(a[i]);
+	}
+	scanf("%d",&q);
+	fo(i,1,q) {
+		scanf("%d%d",&ask[i].l,&ask[i].r);
+		ask[i].id=i;
+		ask[i].lb=bel[ask[i].l];
+	}
+	sort(ask+1,ask+q+1,cmp);
+	int l=1,r=0;
+	int tot=0;
+	fo(i,1,q) {
+		int x=ask[i].l,y=ask[i].r;
+		while (r<y) {
+			tot++;
+			r++;
+			add(a[r],1);
+		}
+		while (r>y) {
+			tot++;
+			add(a[r],-1);
+			r--;
+		}
+		while (l<x) {
+			tot++;
+			add(a[l],-1);
+			l++;
+		}
+		while (l>x) {
+			tot++;
+			l--;
+			add(a[l],1);
+		}
+		ans[ask[i].id]=calc();
+	}
+	fo(i,1,q) printf("%I64d\n",ans[i]);
+	return 0;
+}

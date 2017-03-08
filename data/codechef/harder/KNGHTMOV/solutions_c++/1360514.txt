@@ -1,0 +1,217 @@
+#include<stdio.h>
+#include<assert.h>
+#define REP(i,a,b) for(i=a;i<b;i++)
+#define rep(i,n) REP(i,0,n)
+
+#define DAME 1123123123
+
+#define ll long long
+#define M 1000000007
+
+int GCD(int a,int b){
+  int r;
+  if(a<0) a=-a;
+  if(b<0) b=-b;
+  while(a){r=b; b=a; a=r%a;}
+  return b;
+}
+
+/* apply linear mapping */
+void cnv(int X, int Y, int AX, int AY, int BX, int BY, int *a, int *b){
+  int det = AX * BY - AY * BX;
+
+  assert(det);
+
+  *a =   BY * X - BX * Y;
+  *b = - AY * X + AX * Y;
+
+  if( (*a)%det || (*b)%det ){ *a = *b = DAME; return; }
+  *a /= det;
+  *b /= det;
+}
+
+ll inv[1010000];
+ll fact[1010000], factinv[1010000];
+ll dp[20000]; int blocked[20000];
+
+ll comb(int a, int b){
+  assert(a <= 1000000);
+  return (((fact[a] * factinv[b])%M) * factinv[a-b])%M;
+}
+
+int main(){
+  int T, X, Y, K, CX[17], CY[17];
+  int AX, AY, BX, BY, GX, GY, det, fg1, fg2, loop;
+  int GT, MX;
+  int i, j, mask, a, b;
+  int xx[17], yy[17], us;
+  ll res, tmp;
+
+  inv[1] = 1;
+  REP(i,2,1010000) inv[i] = ((M - M/i) * inv[M%i])%M;
+  
+  fact[0] = factinv[0] = 1;
+  REP(i,1,1010000){
+    fact[i] = (fact[i-1] * i) % M;
+    factinv[i] = (factinv[i-1] * inv[i]) % M;
+  }
+
+  assert( scanf("%d",&T)==1 );
+  assert( 1<=T && T<=5 );
+  while(T--){
+    assert( scanf("%d%d%d",&X,&Y,&K)==3 );
+    assert(-500 <= X && X <= 500 && -500 <= Y && Y <= 500);
+    assert(0<=K && K<=15);
+
+    assert( scanf("%d%d%d%d",&AX,&AY,&BX,&BY)==4 );
+    assert( -1000 <= AX && AX <= 1000 );
+    assert( -1000 <= AY && AY <= 1000 );
+    assert( -1000 <= BX && BX <= 1000 );
+    assert( -1000 <= BY && BY <= 1000 );
+
+    rep(i,K){
+      assert( scanf("%d%d",CX+i,CY+i)==2 );
+      assert( -1000<=CX[i] && CX[i]<=1000 );
+      assert( -1000<=CY[i] && CY[i]<=1000 );
+      assert( !(CX[i]==0 && CY[i]==0) );
+      assert( !(CX[i]==X && CY[i]==Y) );
+    }
+
+    det = AX * BY - AY * BX;
+
+    if(det==0){
+      if(AX==0 && AY==0 && BX==0 && BY==0){
+        res = 0;
+        if(X==0 && Y==0) res = -1;
+        printf("%d\n",res); continue;
+      }
+
+      GX = GCD(AX, BX);
+      GY = GCD(AY, BY);
+
+      if( (!GX && X) || (!GY && Y) ){ puts("0"); continue; }
+      if( (GX && X%GX) || (GY && Y%GY) ){ puts("0"); continue; }
+      rep(i,K){
+        if( CX[i]==DAME || (!GX && CX[i]) || (GX && CX[i]%GX) ) CX[i] = CY[i] = DAME;
+        if( CY[i]==DAME || (!GY && CY[i]) || (GY && CY[i]%GY) ) CX[i] = CY[i] = DAME;
+      }
+
+      if(GX){
+        AX /= GX, BX /= GX, X /= GX;
+        rep(i,K) if(CX[i]!=DAME) CX[i] /= GX;
+      }
+      if(GY){
+        AY /= GY, BY /= GY, Y /= GY;
+        rep(i,K) if(CY[i]!=DAME) CY[i] /= GY;
+      }
+
+      if(AX == AY && X != Y){ puts("0"); continue; }
+      rep(i,K) if(CX[i]!=DAME && AX==AY && CX[i]!=CY[i]) CX[i] = CY[i] = DAME;
+
+      if(!AX){
+        AX = AY, BX = BY, X = Y;
+        rep(i,K) CX[i] = CY[i];
+        AY = BY = Y = 0;
+        rep(i,K) if(CX[i]!=DAME) CY[i] = 0;
+      }
+
+      GT = 1525;
+      REP(i,-GT,GT+1) dp[i+GT] = 0, blocked[i+GT] = 0;
+      rep(i,K) if(CX[i]!=DAME) blocked[CX[i]+GT] = 1;
+
+      /* Bellman-Ford */
+      fg1 = fg2 = 0;
+      rep(loop,GT+10){
+        fg1 = 0;
+        REP(i,-GT,GT+1){
+          if(blocked[i+GT]) continue;
+          tmp = 0;
+          if(i==0) tmp = 1;
+          j = i-AX;
+          if(            -GT <= j && j <= GT) tmp += dp[j+GT];
+          j = i-BX;
+          if(AX != BX && -GT <= j && j <= GT) tmp += dp[j+GT];
+          tmp %= M;
+          if(i==X && tmp) fg2=1;
+          if(tmp!=dp[i+GT]) fg1=1;
+          dp[i+GT] = tmp;
+        }
+        if(!fg1) break;
+      }
+      
+      fg1 = 0;
+      rep(loop,GT+10){
+        REP(i,-GT,GT+1){
+          if(blocked[i+GT]) continue;
+          tmp = 0;
+          if(i==0) tmp = 1;
+          j = i-AX;
+          if(            -GT <= j && j <= GT) tmp += dp[j+GT];
+          j = i-BX;
+          if(AX != BX && -GT <= j && j <= GT) tmp += dp[j+GT];
+          tmp %= M;
+          if(i==X && tmp) fg2=1;
+          if(i==X && tmp!=dp[i+GT]) fg1=1;
+          dp[i+GT] = tmp;
+        }
+        if(fg1 && fg2) break;
+      }
+      
+      if(fg1 && fg2){ puts("-1"); continue; } /* There are loops which can be used from start to goal */
+      res = dp[X+GT];
+      printf("%d\n",(int)res);
+
+    } else {
+      cnv(X, Y, AX, AY, BX, BY, &a, &b);
+      if(a==DAME){ puts("0"); continue; }
+      X = a; Y = b;
+
+      j = 0;
+      rep(i,K){
+        cnv(CX[i], CY[i], AX, AY, BX, BY, &a, &b);
+        if(a==DAME) continue;
+        CX[j] = a; CY[j] = b; j++;
+      }
+      K = j;
+      
+      if(X < 0 || Y < 0){ puts("0"); continue; }
+
+      j = 0;
+      rep(i,K){
+        if(CX[i] < 0 || CX[i] > X || CY[i] < 0 || CY[i] > Y) continue;
+        CX[j] = CX[i]; CY[j] = CY[i]; j++;
+      }
+      K = j;
+      
+      rep(i,K) REP(j,1,K){
+        if(CX[j-1] > CX[j] || (CX[j-1]==CX[j] && CY[j-1] > CY[j])){
+          a = CX[j-1]; CX[j-1] = CX[j]; CX[j] = a;
+          a = CY[j-1]; CY[j-1] = CY[j]; CY[j] = a;
+        }
+      }
+      
+      res = 0;
+      rep(mask,1<<K){
+        xx[0] = yy[0] = 0;
+        us = 1;
+        rep(i,K) if(mask & 1<<i){
+          xx[us] = CX[i]; yy[us] = CY[i]; us++;
+        }
+        xx[us] = X; yy[us] = Y; us++;
+        
+        REP(i,1,us) if(yy[i-1] > yy[i]) break;
+        if(i<us) continue;
+        
+        tmp = 1;
+        REP(i,1,us) tmp = (tmp * comb(xx[i]+yy[i]-xx[i-1]-yy[i-1], xx[i]-xx[i-1]))%M;
+        
+        if(us%2==0) res += tmp; else res -= tmp;
+      }
+      res %= M;
+      if(res < 0) res += M;
+      printf("%d\n",(int)res);
+    }
+  }
+
+  return 0;
+}

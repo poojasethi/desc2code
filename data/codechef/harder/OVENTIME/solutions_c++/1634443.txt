@@ -1,0 +1,171 @@
+#include<iostream>
+#include<algorithm>
+#include<cstdio>
+#include<vector>
+#include<cstring>
+#include<string>
+#include<sstream>
+#include<queue>
+#include<set>
+#include<map>
+#include<stack>
+#include<ctime>
+#include<cstdlib>
+#include<cmath>
+#include<cassert>
+using namespace std;
+
+typedef vector<int> vi;
+typedef vector< vector<int> > vvi;
+typedef pair<int,int> pii;
+typedef long long ll;
+
+#define GI ({int t;scanf("%d",&t);t;})
+#define FOR(i,a,b) for(int i = a ; i <= b ; i++)
+#define REV(i,a,b) for(int i = a ; i >= b ; i--)
+#define REP(i,n) for(int i = 0 ; i < n ; i++)
+
+
+/*
+MinCostMaxFlow : All costs should be non-negative initially  
+Complexity     : O(V^3 * (largest supply to any node))
+Field Tests    : SPOJ - BABY
+SRM 506        : Div 1 600
+MAXE should be twice the number of edges added
+*/
+
+const long long INF = 1LL<<59;
+#define MAXV 105
+#define MAXE 405
+
+ll cap[MAXE], cost[MAXE];
+ll dist[MAXV], pot[MAXV];
+int to[MAXE], prev[MAXE];
+int end[MAXV], par[MAXV];
+bool used[MAXV];
+
+class MinCostMaxFlow
+{
+	int V,E;
+	ll maxflow,mincost;
+	public:
+	MinCostMaxFlow(int n)
+	{
+		V = n;
+		E = 0;
+		maxflow = mincost = 0;
+		REP(i,V)
+		{
+			end[i] = -1;
+			pot[i] = 0;
+		}
+	}
+	
+	void addedge(int x, int y, ll cost1, ll cap1)
+	{
+		cost[E] = cost1 ; cap[E] = cap1 ; to[E] = y ; prev[E] = end[x] ; end[x] = E ; E++;
+		cost[E] = -cost1 ; cap[E] = 0 ; to[E] = x ; prev[E] = end[y] ; end[y] = E ; E++;
+	}
+
+	bool augment(int s, int t)
+	{
+		REP(i,V)
+		{
+			used[i] = false;
+			dist[i] = INF;
+		}
+		dist[s]=0;
+		par[s]=-1;
+		
+		while(1)							// O(V^2) dijkstra
+		{
+			int v = -1;
+			REP(i,V) 
+				if(dist[i] < INF && !used[i])
+					if(v == -1 || dist[i] < dist[v])
+						v = i;
+			if(v==-1) break;
+			used[v] = true;
+			for(int e=end[v];e>=0;e=prev[e]) if(cap[e] > 0){
+				ll val = dist[v] + cost[e] + pot[v] - pot[to[e]];
+				if(val < dist[to[e]] && !used[to[e]])
+				{
+					dist[to[e]] = val;
+					par[to[e]]  = e;
+				}
+			}
+		}
+
+		REP(i,V) pot[i] += dist[i];					// new potentials
+
+		if(!used[t]) return false;					// exit if no path found
+	
+		ll addflow = INF, addcost = 0;					// added flow
+		for(int e=par[t];e>=0;e=par[to[e^1]]) addflow = min(addflow,cap[e]);
+		for(int e=par[t];e>=0;e=par[to[e^1]]) 				// added cost
+		{
+			addcost  += cost[e]*addflow;
+			cap[e]   -= addflow;
+			cap[e^1] += addflow;
+		}
+		maxflow += addflow;						// update
+		mincost += addcost;
+		
+		return true;
+	}
+
+	pair<ll,ll> mincostmaxflow(int s, int t)
+	{
+		while(augment(s,t));
+		return make_pair(maxflow,mincost);
+	}
+};
+
+/* MCMF code ends */
+
+int main()
+{
+    int t = GI;
+    while(t--) {
+        int n, m;
+        n = GI; m = GI;
+
+        MinCostMaxFlow M(m+3);
+
+        int dem[55];
+
+        REP(i, 55) dem[i] = 0;
+
+        long long ret = 0;
+
+        REP(i, n) {
+            int s, e, v;
+            s = GI; e = GI; v = GI;
+            dem[s]++;
+            dem[e]--;
+            M.addedge(s, e, v, 1);
+            ret += v;
+        }
+
+        REP(i, m) {
+            int x = GI;
+            M.addedge(i, i+1, 0, x);
+        }
+
+        int src = m+1;
+        int sink = m+2;
+
+        REP(i, m+1) {
+            if(dem[i] > 0)
+                M.addedge(src, i, 0, dem[i]);
+            else if(dem[i] < 0)
+                M.addedge(i, sink, 0, -dem[i]);
+        }
+        
+        pair<long long, long long> P = M.mincostmaxflow(src, sink);
+
+        ret -= P.second;
+        printf("%lld\n", ret);
+    }
+	return 0;
+}

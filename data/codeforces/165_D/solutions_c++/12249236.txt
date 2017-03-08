@@ -1,0 +1,67 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+const int N = 100005;
+
+int n, link[N], eu[N], ev[N], ch, id;
+int fen[N], chain[N], dep[N], pos[N], head[N];
+vector<int> adj[N];
+
+void add(int i, int x) {for (++i; i <= n; i += i & -i) fen[i] += x;}
+int sum(int i) {int s = 0; for (++i; i > 0; i -= i & -i) s += fen[i]; return s;}
+int sum(int a, int b) {return sum(max(a, b)) - sum(min(a, b) - 1);}
+
+void dfs(int u, int p) {
+	if (!head[ch]) head[ch] = u;
+	chain[u] = ch;
+	pos[u] = id++;
+	bool first = true;
+	for (int i = 0; i < adj[u].size(); ++i) {
+		int e = adj[u][i];
+		int v = eu[e] == u ? ev[e] : eu[e];
+		if (v != p) {
+			link[e] = v;
+			dep[v] = dep[u] + 1;
+			if (!first) ch++;
+			else first = false;
+			dfs(v, u);
+		}
+	}
+}
+
+int main() {
+	ios::sync_with_stdio(false);
+	cin.tie(0);
+	cin >> n;
+	for (int i = 1; i < n; ++i) {
+		cin >> eu[i] >> ev[i];
+		adj[eu[i]].push_back(i);
+		adj[ev[i]].push_back(i);
+	}
+	int beard = 1;
+	for (int i = 2; i <= n; ++i)
+		if (adj[i].size() > adj[beard].size())
+			beard = i;
+	dfs(beard, 0);
+	int m; cin >> m;
+	while (m--) {
+		int type, u, v; cin >> type >> u;
+		if (type <= 2) add(pos[link[u]], 3 - type * 2);
+		else {
+			cin >> v;
+			int black = 0, dist = 0;
+			if (chain[u] != chain[v])
+				black = sum(pos[head[chain[u]]], pos[u]) + sum(pos[head[chain[v]]], pos[v]),
+				dist = dep[u] + dep[v];
+			else if (u != v)
+				black = sum(min(pos[u], pos[v]) + 1, max(pos[u], pos[v])),
+				dist = max(dep[u], dep[v]) - min(dep[u], dep[v]);
+			cout << (black == 0 ? dist : -1) << '\n';
+		}
+	}
+	cout << flush;
+}

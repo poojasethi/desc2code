@@ -1,0 +1,235 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+using namespace std;
+typedef long long LL;
+const int Maxk=18,mod=1000000007,MaxN=5000005;
+int T,X,Y,K;
+int fac[MaxN],inv[MaxN],f[Maxk];
+int PoolFlag[1010],*flag;
+int PoolDp[1010],*dp;
+int PoolArr[1010],*arr;
+
+int gcd(int x,int y) {
+	return y?gcd(y,x%y):x;
+}
+
+int Pow(int a,int x) {
+	int ret=1;
+	for (;x;x>>=1,a=LL(a)*a%mod)
+		if (x&1)
+			ret=LL(ret)*a%mod;
+	return ret;
+}
+
+struct Point;
+int cross(const Point &u,const Point &v);
+
+struct Point{
+	int x,y;
+	Point() {}
+	Point(int x,int y):x(x),y(y) {}
+	bool trans(const Point &a,const Point &b) {
+		if (cross(*this,b)%cross(a,b)!=0||cross(*this,a)%cross(b,a)!=0) return false;
+		int u=cross(*this,b)/cross(a,b),
+			v=cross(*this,a)/cross(b,a);
+		x=u; y=v;
+		return true;
+	}
+	bool operator <(const Point &rhs)const{
+		return x<rhs.x||(x==rhs.x&&y<rhs.y);
+	}
+}p[Maxk],a,b;
+
+int cross(const Point &u,const Point &v) {
+	return u.x*v.y-u.y*v.x;
+}
+
+void init(int N) {
+	static int cur=0;
+	if (cur>=N) return;
+	for (int i=cur+1;i<=N;i++)
+		fac[i]=LL(fac[i-1])*i%mod;
+	inv[N]=Pow(fac[N],mod-2);
+	for (int i=N-1;i>cur;i--)
+		inv[i]=inv[i+1]*LL(i+1)%mod;
+	cur=N;
+}
+
+int C(int n,int k) {
+	return LL(fac[n])*inv[k]%mod*inv[n-k]%mod;
+}
+
+inline int id(int x) {
+	if (x>500) x=501;
+	else if (x<-500) x=-501;
+	return x;
+}
+
+void DfsArr(int pos) {
+	if (arr[pos]) return;
+	arr[pos]=1;
+	if (abs(pos)!=501) {
+		DfsArr(id(pos-a.x));
+		DfsArr(id(pos-b.x));
+	}
+	else {
+		if (a.x*b.x>=0) return;
+		if (pos==501) {
+			for (int i=501;i<=1000;i++) {
+				DfsArr(id(i-a.x));
+				DfsArr(id(i-b.x));
+			}
+		}
+		else {
+			for (int i=-1000;i<=-501;i++) {
+				DfsArr(id(i-a.x));
+				DfsArr(id(i-b.x));
+			}
+		}
+	}
+}
+
+void dfs(int pos) {
+	if (arr[pos]!=1) return;
+	if (flag[pos]==2) return;
+	if (flag[pos]==1) {
+		dp[pos]=-1;
+		return;
+	}
+	flag[pos]=1;
+	if (abs(pos)!=501) {
+		dfs(id(pos+a.x));
+		if (dp[id(pos+a.x)]==-1) {
+			dp[pos]=-1;
+			return;
+		}
+		(dp[pos]+=dp[id(pos+a.x)])%=mod;
+		if (a.x!=b.x) {
+			dfs(id(pos+b.x));
+			if (dp[id(pos+b.x)]==-1) {
+				dp[pos]=-1;
+				return;
+			}
+			(dp[pos]+=dp[id(pos+b.x)])%=mod;
+		}
+	}
+	else {
+		if (a.x*b.x>=0) {
+			flag[pos]=2;
+			return;
+		}
+		if (pos==501) {
+			for (int i=501;i<=1000;i++) {
+				dfs(id(i+a.x));
+				if (dp[id(i+a.x)]==-1) {
+					dp[pos]=-1;
+					return;
+				}
+				(dp[pos]+=dp[id(i+a.x)])%=mod;
+				if (a.x==b.x) continue;
+				dfs(id(i+b.x));
+				if (dp[id(i+b.x)]==-1) {
+					dp[pos]=-1;
+					return;
+				}
+				(dp[pos]+=dp[id(i+b.x)])%=mod;
+			}
+		}
+		else {
+			for (int i=-1000;i<=-501;i++) {
+				dfs(id(i+a.x));
+				if (dp[id(i+a.x)]==-1) {
+					dp[pos]=-1;
+					return;
+				}
+				(dp[pos]+=dp[id(i+a.x)])%=mod;
+				if (a.x==b.x) continue;
+				dfs(id(i+b.x));
+				if (dp[id(i+b.x)]==-1) {
+					dp[pos]=-1;
+					return;
+				}
+				(dp[pos]+=dp[id(i+b.x)])%=mod;
+			}
+		}
+	}
+	flag[pos]=2;
+}
+
+int main() {
+	fac[0]=inv[0]=1;
+	scanf("%d",&T);
+	while (T--) {
+		scanf("%d%d%d",&X,&Y,&K);
+		scanf("%d%d%d%d",&a.x,&a.y,&b.x,&b.y);
+		for (int i=1;i<=K;i++)
+			scanf("%d%d",&p[i].x,&p[i].y);
+		if (cross(a,b)!=0) {
+			for (int i=1;i<=K;i++)
+				if (!p[i].trans(a,b))
+					swap(p[i--],p[K--]);
+			p[++K]=Point(X,Y);
+			if (!p[K].trans(a,b)||p[K].x<0||p[K].y<0) {
+				puts("0");
+				continue;
+			}
+			for (int i=1;i<K;i++)
+				if (p[i].x<0||p[i].x>p[K].x||p[i].y<0||p[i].y>p[K].y)
+					swap(p[i],p[K--]),
+					swap(p[i--],p[K]);
+			sort(p+1,p+K+1);
+			init(p[K].x+p[K].y);
+			f[0]=1;
+			for (int i=1;i<=K;i++) {
+				f[i]=C(p[i].x+p[i].y,p[i].x);
+				for (int j=1;j<i;j++)
+					if (p[j].x<=p[i].x&&p[j].y<=p[i].y)
+						f[i]=(f[i]-LL(f[j])*C(p[i].x-p[j].x+p[i].y-p[j].y,p[i].x-p[j].x))%mod;
+			}
+			if (f[K]<0) f[K]+=mod;
+			printf("%d\n",f[K]);
+		}
+		else {
+			if (a.x==0&&a.y==0&&b.x==0&&b.y==0) {
+				puts(X==0&&Y==0?"-1":"0");
+				continue;
+			}
+			int gx=gcd(a.x,b.x),gy=gcd(a.y,b.y);
+			if ((gx==0&&X!=0)||(gy==0&&Y!=0)||(gx!=0&&X%gx!=0)||(gy!=0&&Y%gy!=0)||cross(Point(X,Y),Point(gx,gy))!=0) {
+				puts("0");
+				continue;
+			}
+			if (gx==0) {
+				swap(gx,gy);
+				swap(X,Y);
+				swap(a.x,a.y);
+				swap(b.x,b.y);
+				for (int i=1;i<=K;i++) swap(p[i].x,p[i].y);
+			}
+			for (int i=1;i<=K;i++)
+				if ((gx==0&&p[i].x!=0)||(gy==0&&p[i].y!=0)||(gx!=0&&p[i].x%gx!=0)||(gy!=0&&p[i].y%gy!=0)||cross(p[i],Point(gx,gy))!=0)
+					swap(p[i--],p[K--]);
+			a.x/=gx;
+			b.x/=gx;
+			X/=gx;
+			memset(PoolDp,0,sizeof(PoolDp));
+			dp=PoolDp+505;
+			memset(PoolFlag,0,sizeof(PoolFlag));
+			flag=PoolFlag+505;
+			memset(PoolArr,0,sizeof(PoolArr));
+			arr=PoolArr+505;
+			for (int i=1;i<=K;i++)
+				arr[p[i].x/=gx]=2;
+			DfsArr(X);
+			dp[X]=1;
+			dfs(0);
+			printf("%d\n",dp[0]);
+		}
+	}
+	return 0;
+}

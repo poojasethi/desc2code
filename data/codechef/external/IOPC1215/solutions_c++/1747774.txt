@@ -1,0 +1,226 @@
+#include<vector>
+#include<stack>
+#include<set>
+#include<map>
+#include<queue>
+#include<deque>
+#include<string>
+#include<iostream>
+#include<algorithm>
+#include<cstring>
+#include<cassert>
+#include<cstdlib>
+#include<cstdio>
+#include<cmath>
+
+using namespace std;
+
+#define s(n)					scanf("%d",&n);
+#define sl(n)                   scanf("%lld", &n);
+#define sf(n) 					scanf("%lf",&n);
+#define ss(n) 					scanf("%s",n);
+#define INF						(int)1e9
+#define LINF					(long long)1e18
+#define EPS						1e-12
+#define FOR(i,a,b)				for(int i=a;i<b;i++)
+#define REP(i,n)				FOR(i,0,n)
+#define foreach(v,c)            for( typeof((c).begin()) v = (c).begin();  v != (c).end(); ++v)
+#define mp						make_pair
+#define FF						first
+#define SS						second
+#define tri(a,b,c)				mp(a,mp(b,c))
+#define XX						first
+#define YY						second.first
+#define ZZ						second.second
+#define pb						push_back
+#define fill(a,v) 				memset(a,v,sizeof a)
+#define all(x)					x.begin(),x.end()
+#define SZ(v)					((int)(v.size()))
+#define DREP(a)					sort(all(a)); a.erase(unique(all(a)),a.end())
+#define INDEX(arr,ind)			(lower_bound(all(arr),ind)-arr.begin())
+#define debug(args...)			{dbg,args; cerr<<endl;}
+#define dline					cerr<<endl
+#define SP                      system("pause");
+#define HAHA                    printf("HAHA\n");
+#define mod                     10000
+
+void debugarr(int *arr, int ind1, int ind2)
+{
+	cout<<"[ ";
+	for(int i=ind1;i<=ind2;i++)
+		cout<<arr[i]<<" ";
+	cout<<"]"<<endl;
+}
+
+typedef long long LL;
+typedef pair<int,int> PII;
+typedef pair<LL,LL> PLL;
+typedef pair<LL,PII> TRI;
+
+typedef vector<int> VI;
+typedef vector<LL> VL;
+typedef vector<PII> VII;
+typedef vector<PLL> VLL;
+typedef vector<TRI> VT;
+
+typedef vector<VI> VVI;
+typedef vector<VL> VVL;
+typedef vector<VII> VVII;
+typedef vector<VLL> VVLL;
+typedef vector<VT> VVT;
+
+/////////////////////////////////////////////////////////////////////////////////////////
+
+#define N 1005
+#define M 20005
+
+int n, m, q;
+VII a[N];
+VI level[N];
+bool vis[N];
+int dis[2][N];
+int par[2][N];
+int lev[N], next[N];
+set< PII > heap;
+int t;
+map< PII, int > id;
+bool is_on_path[N][N];
+int ans[N][N];
+int edges[M][2];
+set< pair<int, pair<int, int> > > hheap;
+
+void dijkstra(int u)
+{
+    REP(i, n) dis[t][i] = INF;
+    heap.clear();
+    heap.insert(mp(0, u));
+    dis[t][u] = 0;
+    par[t][u] = -1;
+    fill(vis, 0);
+    while(!heap.empty())
+    {
+        int u = (*heap.begin()).SS;
+        heap.erase(heap.begin());
+        if(vis[u]) continue;
+        vis[u] = 1;
+        REP(i, a[u].size())
+        {
+            int v = a[u][i].FF;
+            int d = a[u][i].SS;
+            if(dis[t][u] + d < dis[t][v])
+            {
+                dis[t][v] = dis[t][u] + d;
+                par[t][v] = u;
+                heap.insert(mp(dis[t][v], v));
+            }
+        }
+    }
+}
+
+int trig(int v)
+{
+    if(v == n-1) next[v] = -1;
+    if(v!=0)
+    {
+        next[par[0][v]] = v;
+        is_on_path[par[0][v]][v] = 1;
+        is_on_path[v][par[0][v]] = 1;
+    }
+    if(v == 0)
+    {
+        level[0].pb(v);
+        return lev[v] = 0;
+    }
+    else
+    {
+        lev[v] = trig(par[0][v]) + 1;
+        level[lev[v]].pb(v);
+        return lev[v];
+    }
+}
+
+int find_level(int u)
+{
+    int p = par[0][u];
+    if(lev[p] != -1) lev[u] = lev[p];
+    else lev[u] = find_level(p);
+    level[lev[u]].pb(u);
+    return lev[u];
+}
+
+void final_punch()
+{
+    hheap.clear();
+    int stemu = 0;
+    while(next[stemu] != -1)
+    {
+        int l = lev[stemu];
+        REP(i, level[l].size())
+        {
+            int u = level[l][i];
+            REP(j, a[u].size())
+            {
+                int v = a[u][j].FF;
+                int d = a[u][j].SS;
+                if(u == stemu && v == next[u]) continue;
+                if(u != 0 && u == stemu && v == par[0][u]) continue;
+                if(lev[v] < l)
+                {
+                    hheap.erase(tri(dis[0][v] + d + dis[1][u], v, u));
+                }
+                if(lev[v] > l)
+                {
+                    hheap.insert(tri(dis[0][u] + d + dis[1][v], u, v));
+                }
+            }
+        }
+
+        if(!hheap.empty()) ans[stemu][next[stemu]] = ans[next[stemu]][stemu] = (*hheap.begin()).FF;
+        stemu = next[stemu];
+    }
+}
+
+int main()
+{
+    int te; s(te) while(te--){
+
+    s(n) s(m) s(q)
+    REP(i, n) REP(j, n) ans[i][j] = INF;
+    id.clear();
+    fill(is_on_path, 0);
+    REP(i, n+2) level[i].clear();
+    REP(i, n) a[i].clear();
+    REP(i, m)
+    {
+        int p, q, w; s(p) s(q) s(w)
+        edges[i][0] = p;
+        edges[i][1] = q;
+        a[p].pb(mp(q, w));
+        a[q].pb(mp(p, w));
+    }
+    t = 0; dijkstra(0);
+    t = 1; dijkstra(n-1);
+    fill(lev, -1);
+    trig(n-1);
+    REP(i, n) if(lev[i] == -1) find_level(i);
+
+    final_punch();
+
+    while(q--)
+    {
+        int query; s(query)
+        int u = edges[query][0];
+        int v = edges[query][1];
+        if(is_on_path[u][v])
+        {
+            if(ans[u][v] != -1 && ans[u][v] < INF) printf("%d\n", ans[u][v]);
+            else puts("no route for corrupt ministers!!!\n");
+        }
+        else printf("%d\n", dis[0][n-1]);
+    }
+
+
+    }
+}
+
+

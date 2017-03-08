@@ -1,0 +1,119 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+const int N = 205;
+const int M = 1005;
+
+int n, m, v[N], fa[N], f[N];
+
+namespace netw
+{
+	const int P = N;
+	const int E = M + M;
+	const int inf = 1e9;
+	
+	int to[E], next[E], end[P], f[E], tms;
+	
+	void link(int x, int y, int z)
+	{
+		to[++tms]=y, next[tms]=end[x], end[x]=tms, f[tms]=z;
+		to[++tms]=x, next[tms]=end[y], end[y]=tms, f[tms]=z;
+	}
+	
+	int dat[P], pred[P], cur[P], cnt[P], dist[P];
+	
+	int sap(int S, int T)
+	{
+		for(int i=1; i<=n; i++) dist[i]=1, cnt[i]=0, cur[i]=end[i];
+		dat[S]=inf, dist[T]=0, cnt[1]=n-1, cnt[0]=1;
+	
+		int x(S), p, q, ret(0);
+		for(;;)
+		{
+			for(p=cur[x]; p; p=next[p]) if(f[p]>0 && dist[to[p]]+1==dist[x]) break;
+			if(p)
+			{
+				dat[to[p]]=min(dat[x],f[p]), pred[to[p]]=p, cur[x]=p, x=to[p];
+				if(x==T) for(ret+=dat[T]; x!=S; x=to[pred[x]^1]) f[pred[x]]-=dat[T], f[pred[x]^1]+=dat[T];
+			}
+			else
+			{
+				if(--cnt[dist[x]]==0) return ret;
+				for(dist[x]=n+1, q=end[x]; q; q=next[q]) if(f[q]>0 && dist[to[q]]+1<dist[x])
+				dist[x]=dist[to[q]]+1, cur[x]=q;
+				++cnt[dist[x]];
+				if(dist[S]>n) return ret;
+				if(x^S) x=to[pred[x]^1];
+			}
+		}
+	}
+	
+	void paint(int x, int *v)
+	{
+		if(v[x]) return; v[x]=1;
+		for(int p=end[x]; p; p=next[p]) if(f[p]) paint(to[p], v);
+	}
+	
+	void bfs(int x, int *v)
+	{
+		for(int i=1; i<=n; i++) v[i] = 0;
+		paint(x, v);
+		for(int i=2, j; i<=tms; i+=2) j = f[i] + f[i+1], f[i] = f[i+1] = j / 2;
+	}
+}
+
+int to[N+N], next[N+N], end[N], d[N+N], fv[N+N], tms;
+int per[N], cp;
+
+void cgg(int x, int fa)
+{
+	for(int p=end[x]; p; p=next[p]) if(!fv[p] && to[p]!=fa)
+	{
+		if(!cp || d[p]<d[cp]) cp=p;
+		cgg(to[p], x);
+	}
+}
+
+void sp(int x)
+{
+	int u(1), tp;
+	for(int p=end[x]; p && u; p=next[p]) if(!fv[p]) u=0;
+	if(u) {per[++per[0]] = x; return;}
+	
+	cp=0, cgg(x, 0), fv[cp] = fv[cp^1] = 1;
+	tp=cp, sp(to[tp]), sp(to[tp^1]);
+}
+
+int main()
+{
+	
+	scanf("%d%d", &n, &m), netw :: tms = 1;
+	for(int i=1, x, y, z; i<=m; i++)
+	{
+		scanf("%d%d%d", &x, &y, &z);
+		netw :: link(x, y, z);
+	}
+	
+	for(int i=1; i<=n; i++) fa[i] = 1;
+	for(int i=2; i<=n; i++)
+	{
+		f[i] = netw :: sap(i, fa[i]), netw :: bfs(i, v), f[0] += f[i];
+		for(int j=i+1; j<=n; j++) if(v[j] && fa[j] == fa[i]) fa[j] = i;
+	}
+	
+	tms = 1;
+	for(int i=2; i<=n; i++)
+	{
+		to[++tms]=i, next[tms]=end[fa[i]], end[fa[i]]=tms, d[tms]=f[i];
+		to[++tms]=fa[i], next[tms]=end[i], end[i]=tms, d[tms]=f[i];
+	}
+	sp(1);
+	
+	printf("%d\n", f[0]);
+	for(int i=1; i<n; i++) printf("%d ", per[i]);
+	printf("%d\n", per[n]);
+	
+	return 0;
+}

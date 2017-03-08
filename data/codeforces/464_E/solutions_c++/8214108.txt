@@ -1,0 +1,118 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+#include <vector>
+#define maxn 110015
+#define mo   1000000007
+#define mid ((L+R)>>1)
+#define skydec puts("----------");
+using namespace std;
+
+int lc[maxn*100],rc[maxn*100],tot,n,m,pre[maxn],rot[maxn],vis[maxn];
+long long hash[maxn*100],Pow[maxn];
+int stk[maxn];
+
+int alloc(int x)
+{
+    int res=++tot;
+    lc[res]=lc[x];rc[res]=rc[x];hash[res]=hash[x];
+    return res;
+}
+
+int fg=0;
+void add(int &x,int L,int R,int key)
+{
+    x=alloc(x);
+    if(L==R)
+    {
+        if(hash[x]) hash[x]=0,fg=1;else hash[x]=1,fg=0;
+        return;
+    }
+    if(key<=mid)
+    {
+        add(lc[x],L,mid,key);
+        if(fg) add(rc[x],mid+1,R,mid+1);
+    }else add(rc[x],mid+1,R,key);
+    hash[x]=(hash[lc[x]]+1ll*hash[rc[x]]*Pow[mid-L+1]%mo)%mo;
+}
+
+struct e
+{
+    int u,v,w,pre;
+    e(int u=0,int v=0,int w=0,int pre=0):u(u),v(v),pre(pre),w(w) {}
+}edge[maxn*2];int dex,adj[maxn];
+
+struct node
+{
+    int link,id;
+    node(){link=id=0;}
+    node(int l,int i){link=l;id=i;}
+}q[maxn];int c;
+
+int Cmp(int x,int y)
+{
+    if(!lc[x] && !rc[x]) return hash[x]<hash[y];
+    if(hash[rc[x]]==hash[rc[y]]) return Cmp(lc[x],lc[y]);
+    else return Cmp(rc[x],rc[y]);
+}
+
+inline int cmp(const node &x,const node &y){return !Cmp(x.link,y.link);}
+
+int main()
+{
+    scanf("%d%d",&n,&m);
+    *Pow=1;for(int i=1;i<=maxn-1;i++) Pow[i]=Pow[i-1]*2ll%mo;
+    for(int i=1;i<=m;i++)
+    {
+        int u,v,w;
+        scanf("%d%d%d",&u,&v,&w);
+        edge[++dex]=e(u,v,w,adj[u]); adj[u]=dex;
+        edge[++dex]=e(v,u,w,adj[v]); adj[v]=dex;
+    }
+    int S,T;
+    scanf("%d%d",&S,&T);
+    if(S==T){
+       puts("0");
+       puts("1");
+       printf("%d\n",S);
+       return 0;
+    }
+    add(rot[S],0,maxn-1,0);
+    q[++c]=node(rot[S],S);
+    while(c)
+    {
+        node D=q[1];
+        pop_heap(q+1,q+c+1,cmp);--c;
+        if(D.id==T)
+        {
+            long long vv=hash[rot[T]];
+            vv--;if(!vv) vv=mo;
+            printf("%I64d\n",vv);
+            for(int z=T;z;z=pre[z]) stk[++*stk]=z;
+            printf("%d\n",*stk);
+            for(int i=*stk;i;i--) printf("%d ",stk[i]);
+            scanf("\n");
+            return 0;
+        }vis[D.id]=1;
+        for(int i=adj[D.id];i;i=edge[i].pre)
+        {
+            int v=edge[i].v;
+            if(vis[v])continue;
+            int Rot=rot[D.id];
+            add(Rot,0,maxn-1,edge[i].w);
+            if(D.id==3 && v==4)
+                v=4;
+            if(!rot[v] || Cmp(Rot,rot[v])){
+                rot[v]=Rot;++c;
+                q[c]=node(rot[v],v);
+                push_heap(q+1,q+c+1,cmp);
+                pre[v]=D.id;
+            }
+        }
+    }
+    puts("-1");
+    scanf("\n");
+    return 0;
+}

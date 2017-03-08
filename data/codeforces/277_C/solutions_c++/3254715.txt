@@ -1,0 +1,131 @@
+#include <iostream>
+#include <map>
+#include <utility>
+#include <vector>
+using namespace std;
+
+#define X first
+#define Y second
+
+typedef pair<int, int> P;
+typedef vector<P> Vp;
+typedef map<int, int> MAP;
+typedef MAP::iterator Mit;
+typedef map<int, Vp> MAPV;
+typedef MAPV::iterator MVit;
+
+void fun(const Vp& v, int m, Vp& u) {
+  int n = v.size();
+  map<int, int> mp;
+  for (int i = 0; i < n; ++i) {
+    ++mp[v[i].X];
+    --mp[v[i].Y];
+  }
+  int p0 = 0, q = 0;
+  for (Mit it = mp.begin(); it != mp.end(); ++it) {
+    if (it->Y == 0) continue;
+    if (q == 0 and it->X != 0) u.push_back(P(p0, it->X));
+    q += it->Y;
+    if (q == 0) p0 = it->X;
+  }
+  if (p0 != m) u.push_back(P(p0, m));
+}
+
+int cut(const Vp& v, int q) {
+  int t = 0;
+  for (int i = 0; i < int(v.size()); ++i) {
+    if (t + v[i].Y - v[i].X >= q) return v[i].X + q - t;
+    t += v[i].Y - v[i].X;
+  }
+  return -1;
+}
+
+int main() {
+  int n, m, k;
+  cin >> n >> m >> k;
+  
+  MAPV rows, cols;
+  for (int i = 0; i < k; ++i) {
+    int x1, y1, x2, y2;
+    cin >> x1 >> y1 >> x2 >> y2;
+    if (x1 == x2) rows[x1].push_back(P(min(y1, y2), max(y1, y2)));
+    else cols[y1].push_back(P(min(x1, x2), max(x1, x2)));
+  }
+  
+  int nim = 0;
+  if ((n - 1 - rows.size())%2 != 0) nim ^= m;
+  if ((m - 1 - cols.size())%2 != 0) nim ^= n;
+  
+  for (MVit it = rows.begin(); it != rows.end(); ++it) {
+    Vp v;
+    fun(it->Y, m, v);
+    int s = 0;
+    for (int i = 0; i < int(v.size()); ++i) s += v[i].Y - v[i].X;
+    nim ^= s;
+  }
+  
+  for (MVit it = cols.begin(); it != cols.end(); ++it) {
+    Vp v;
+    fun(it->Y, n, v);
+    int s = 0;
+    for (int i = 0; i < int(v.size()); ++i) s += v[i].Y - v[i].X;
+    nim ^= s;
+  }
+  
+  if (nim == 0) {
+    cout << "SECOND" << endl;
+    return 0;
+  }
+  
+  cout << "FIRST" << endl;
+  
+  if (n - 1 - rows.size() > 0) {
+    int t = m - (nim^m);
+    if (t > 0) {
+      int x = 1;
+      while (rows.count(x)) ++x;
+      cout << x << " 0 " << x << " " << t << endl;
+      return 0;
+    }
+  }
+  
+  if (m - 1 - cols.size() > 0) {
+    int t = n - (nim^n);
+    if (t > 0) {
+      int y = 1;
+      while (cols.count(y)) ++y;
+      cout << "0 " << y << " " << t << " " << y << endl;
+      return 0;
+    }
+  }
+  
+  for (MVit it = rows.begin(); it != rows.end(); ++it) {
+    Vp v;
+    fun(it->Y, m, v);
+    int s = 0;
+    for (int i = 0; i < int(v.size()); ++i) s += v[i].Y - v[i].X;
+    int t = s - (nim^s);
+    if (t > 0) {
+      int y = cut(v, t);
+      if (y != -1) {
+        cout << it->X << " 0 " << it->X << " " << y << endl;
+        return 0;
+      }
+    }
+  }
+  
+  for (MVit it = cols.begin(); it != cols.end(); ++it) {
+    Vp v;
+    fun(it->Y, n, v);
+    int s = 0;
+    for (int i = 0; i < int(v.size()); ++i) s += v[i].Y - v[i].X;
+    int t = s - (nim^s);
+    if (t > 0) {
+      int x = cut(v, t);
+      if (x != -1) {
+        cout << "0 " << it->X << " " << x << " " << it->X << endl;
+        return 0;
+      }
+    }
+  }
+}

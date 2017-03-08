@@ -1,0 +1,177 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+const int MAXN = 100000+100;
+struct edge
+{
+	int next,to,w;
+}
+e[2*MAXN];
+int p[MAXN],l;
+void init()
+{
+	memset(p,-1,sizeof(p));
+	l = 0;	
+}
+void ins(int a,int b,int c)
+{
+	e[l].next = p[a];
+	e[l].to = b;
+	e[l].w = c;
+	p[a] = l;
+	l++;	
+}
+
+struct Point
+{
+	int dis,dep;
+	Point(){}
+	Point(int _dep,int _dis):dis(_dis),dep(_dep){}
+};
+bool operator < (const Point &x,const Point &y)
+{
+	if(x.dis == y.dis)
+		return x.dep < y.dep;
+	return x.dis < y.dis;	
+}
+
+
+int n,L,W;
+bool done[MAXN];
+int s[MAXN],f[MAXN];
+int dis[MAXN],dep[MAXN];
+int root,size;
+vector<Point> v;
+long long ans = 0;
+
+
+int c[MAXN];
+int lowbit(int x)
+{
+	return x & (-x);
+}
+void add(int x,int a)
+{
+	x++;
+	for(int i=x;i <= n;i += lowbit(i))
+		c[i] += a;
+}
+int get(int x)
+{
+	x++;
+	if(x > n)
+		x = n;
+	int ret = 0;
+	for(int i=x;i > 0;i -= lowbit(i))
+		ret += c[i];
+	return ret;	
+}
+
+void getroot(int x,int fa)
+{
+	s[x] = 1;
+	f[x] = 0;
+	for(int i=p[x];i!=-1;i=e[i].next)
+	{
+		int b = e[i].to;
+		if(b != fa && !done[b])	
+		{
+			getroot(b,x);
+			f[x] = max(f[x],s[b]);
+			s[x] += s[b];
+		}
+	}
+	f[x] = max(f[x],size-s[x]);
+	if(f[x] < f[root])
+		root = x;
+}
+void getdep(int x,int fa)
+{
+	v.push_back(Point(dep[x],dis[x]));
+	s[x] = 1;
+	for(int i=p[x];i!=-1;i=e[i].next)
+	{
+		int b = e[i].to;
+		if(b != fa && !done[b])
+		{
+			dep[b] = dep[x] + 1;
+			dis[b] = dis[x] + e[i].w;
+			getdep(b,x);
+			s[x] += s[b];
+		}
+	}
+}
+
+long long calc(int x,int depp,int diss)
+{
+	long long ret = 0;
+	dep[x] = depp;
+	dis[x] = diss;
+	v.clear();
+	getdep(x,0);
+	sort(v.begin(),v.end());
+	for(int i=0;i<=v.size()-1;i++)
+		add(v[i].dep,1);
+	for(int l=0,r=v.size()-1;l <= r;)
+	{
+		if(v[l].dis+v[r].dis <= W)
+		{
+			add(v[l].dep,-1);
+			ret += get(L-v[l].dep);
+			l++;
+		}
+		else
+		{
+			add(v[r].dep,-1);
+			r--;
+		}
+	}
+	return ret;
+}
+
+void work(int x)
+{
+	ans += calc(x,0,0);
+	done[x] = true;
+	for(int i=p[x];i!=-1;i=e[i].next)
+	{
+		int b = e[i].to;
+		if(!done[b])
+		{
+			ans -= calc(b,1,e[i].w);
+			root = 0;
+			f[root] = size = s[b];
+			getroot(b,0);
+			work(root);
+		}
+	}
+}
+
+int main()
+{
+//	freopen("1.in","r",stdin);
+//	freopen("1.out","w",stdout);
+	ios::sync_with_stdio(false);
+	init();
+	cin>>n>>L>>W;
+	int a,b;
+	for(int i=1;i<=n-1;i++)
+	{
+		cin>>a>>b;
+		ins(a,i+1,b);
+		ins(i+1,a,b);
+	}
+	root = 0;
+	f[root] = size = n;
+	getroot(1,0);
+	work(root);
+	cout<<ans<<endl;
+	
+	return 0;
+}

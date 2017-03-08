@@ -1,0 +1,71 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define DEBUG(x) cerr << #x << " = " << x << endl;
+typedef long long LL;
+
+const int N = (int) 1e5 + 10;
+const int P = (int) 1e9 + 7;
+int n, q, x[N], y[N], h[N], timer;
+vector<int> adj[N];
+LL ft[2][N];
+
+void DFS(int u) {
+	x[u] = ++timer;
+	for (int i = 0; i < (int) adj[u].size(); ++i) {
+		int v = adj[u][i]; h[v] = h[u] + 1;
+		DFS(v);
+	}
+	y[u] = timer + 1;
+}
+
+void Update(LL *ft, int i, int v) {
+	while (i <= n) {
+		ft[i] = (ft[i] + v + P) % P;
+		i += i & -i;
+	}
+}
+
+LL Query(LL *ft, int i) {
+	LL ans = 0;
+	while (i) {
+		ans = (ans + ft[i] + P) % P;
+		i -= i & -i;
+	}
+	return ans;
+}
+
+int main() {
+#ifdef LOCAL
+	freopen("Data.inp", "r", stdin);
+	freopen("Data.out", "w", stdout);
+#endif
+
+	scanf("%d%d", &n, &q);
+	for (int i = 2; i <= n; ++i) {
+		int p; scanf("%d", &p);
+		adj[p].push_back(i);
+	}
+
+	timer = 0; DFS(1);
+	map<int, int> fib; fib[0] = 0; fib[1] = 1;
+	for (int i =  2; i <=  n + 1; ++i) fib[i] = (fib[i - 1] + fib[i - 2]) % P;
+	for (int i = -1; i >= -n - 1; --i) fib[i] = (fib[i + 2] - fib[i + 1] + P) % P;
+
+	while (q--) {
+		char st[10]; scanf("%s", st);
+		if (st[0] == 'U') {
+			int u, k; scanf("%d%d", &u, &k);
+			Update(ft[0], x[u], fib[k - h[u] + 1]); Update(ft[1], x[u], fib[k - h[u]]);
+			Update(ft[0], y[u],-fib[k - h[u] + 1]); Update(ft[1], y[u],-fib[k - h[u]]);
+		}
+		else {
+			int u; scanf("%d", &u);
+			LL a = Query(ft[0], x[u]);
+			LL b = Query(ft[1], x[u]);
+			LL ans = (fib[h[u]] * a + fib[h[u] - 1] * b) % P;// assert(ans >= 0);
+			printf("%d\n", (int) ans);
+		}
+	}
+	
+	return 0;
+}

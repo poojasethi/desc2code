@@ -1,0 +1,106 @@
+#include <cstdio>
+#include <vector>
+#include <map>
+#include <algorithm>
+#include <string>
+#include <cstring>
+
+using namespace std;
+
+const int MAX_L = 16;
+vector<string> dict;
+
+int cache[(1<<MAX_L)+1];
+bool word_table[(1<<MAX_L)+1];
+char board[MAX_L+1];
+// if n = 10001000,
+// then, the number of active chars is 2. so we can use 2 chars 
+// and we will iterate all possible combinations to n, then call
+// recursively.
+
+int board_size;
+
+inline bool is_valid_word(unsigned int n)
+{
+    string t;
+    for(int i=0; i<board_size; i++)
+    {
+        if (n & 1<<i)
+            t += board[i];
+    }
+    if (binary_search(dict.begin(), dict.end(), t))
+        return true;
+    else
+        return false;
+}
+
+bool solve(unsigned int n)
+{
+    if (cache[n] != -1)
+        return cache[n] == 1;
+
+    unsigned int tmp = n;
+    while (tmp > 0)
+    {
+        if (word_table[tmp] & !solve(n^tmp))
+        {
+            cache[n] = 1;
+            return true;
+        }
+        tmp = n & (tmp-1);
+    }
+    cache[n] = 0;
+    return false;
+}
+
+int main()
+{
+    int  D, R, C, T;
+    char word[MAX_L+1];
+    scanf("%d", &D);
+    for (int i=D; i; i--)
+    {
+        scanf("%s", word);
+        sort(word, word+strlen(word));
+        dict.push_back(word);
+    }
+
+    sort(dict.begin(), dict.end());
+
+    // if board_size == 3, we should start with 111
+    // 1 << 3 = 1000,   1000-1 = 111
+    // 1 << 4 = 10000, 10000-1 = 1111
+    
+
+    scanf("%d %d", &R, &C);
+    board_size = R*C;
+    unsigned int n = 1<<board_size;
+    scanf("%d", &T);
+
+    for (int i=T; T; T--)
+    {
+        for(int j=0; j<R; j++)
+            scanf("%s", board + j*C);
+        sort(board, board+strlen(board));
+
+        memset(cache, -1, sizeof(int)*((1<<MAX_L)+1));
+        memset(word_table, false, sizeof(bool)*((1<<MAX_L)+1));
+        for(int j=1; j<1<<board_size; j++)
+        {
+            string t;
+            for(int k=0; k<board_size; k++)
+                if (j & 1<<k)
+                    t += board[k];
+
+            if (binary_search(dict.begin(), dict.end(), t))
+                word_table[j] = true;
+        }
+
+        if (solve(n-1))
+            printf("Alice\n");
+        else
+            printf("Bob\n");
+    }
+    return 0;
+}
+

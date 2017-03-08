@@ -1,0 +1,113 @@
+#include<cstdio>
+#include<iostream>
+#include<cstring>
+#include<cmath>
+#include<algorithm>
+#include<vector>
+using namespace std;
+const int maxn = 200000 + 100 ;
+int f[maxn][20],p[maxn],maxi[maxn][20];
+vector <int> a[maxn],v[maxn];
+int x[maxn],y[maxn],w[maxn],n,m,l[maxn];
+bool ok[maxn];
+struct Edge{int x,y,v,id;}e[maxn];
+bool cmp(const Edge A,const Edge B){return A.v<B.v;}
+int find(int x){return p[x]==x? x:p[x]=find(p[x]);}
+void dfs(int x,int fa)
+{
+//	cout<<x<<endl;
+	for(int i=0;i<a[x].size();i++)
+	{
+		int y=a[x][i];
+		if(y==fa)continue;
+		f[y][0]=x;
+		maxi[y][0]=v[x][i];
+		l[y]=l[x]+1;
+		dfs(y,x);
+	}
+	return ;
+}
+void init()
+{
+	for(int i=1;i<=18;i++)
+	for(int j=1;j<=n;j++)
+	f[j][i]=f[f[j][i-1]][i-1];
+	for(int i=1;i<=18;i++)
+	for(int j=1;j<=n;j++)
+	if(f[j][i-1])
+	{
+		int A=f[j][i-1];
+		if(!f[A][i-1])maxi[j][i]=maxi[j][i-1];
+		else maxi[j][i]=max(maxi[j][i-1],maxi[A][i-1]);
+	}
+//	for(int j=1;j<=n;j++)
+//	{
+//		for(int i=0;i<=4;i++)
+//		cout<<f[j][i]<<" ";cout<<endl;
+//	}
+	return ;
+}
+int query(int x,int y)
+{
+	int ans=-1;
+	int l1=l[x],l2=l[y];
+	if(l1<l2)swap(x,y),swap(l1,l2); 
+	for(int i=18;i>=0;i--)
+	if(l1-(1<<i)>=l2)
+	{
+		ans=max(ans,maxi[x][i]);
+		x=f[x][i];
+		l1-=(1<<i);
+	}
+	if(x==y)return ans;
+	for(int i=18;i>=0;i--)
+	if(f[x][i]!=f[y][i])
+	{
+		ans=max(ans,maxi[x][i]);
+		x=f[x][i];
+		ans=max(ans,maxi[y][i]);
+		y=f[y][i];
+	}
+	ans=max(ans,maxi[x][0]);
+	ans=max(ans,maxi[y][0]);
+	return ans;
+}
+int main()
+{
+	cin>>n>>m;
+	for(int i=1;i<=m;i++)
+	{
+		scanf("%d%d%d",&e[i].x,&e[i].y,&e[i].v);
+		e[i].id=i;
+		x[i]=e[i].x;y[i]=e[i].y;w[i]=e[i].v;
+	}
+	sort(e+1,e+1+m,cmp);
+	for(int i=1;i<=n;i++)p[i]=i;
+	long long sum=0;int cnt=n-1;
+	for(int i=1;i<=m;i++)
+	{
+		int c=find(e[i].x),d=find(e[i].y);
+		if(c!=d)
+		{
+			ok[e[i].id]=1;
+			p[c]=d;
+			sum+=e[i].v;
+			cnt--;
+			a[e[i].x].push_back(e[i].y);
+			a[e[i].y].push_back(e[i].x);
+			v[e[i].x].push_back(e[i].v);
+			v[e[i].y].push_back(e[i].v); 
+		}
+		if(!cnt)break;
+	}
+	memset(f,0,sizeof(f));
+	memset(maxi,0,sizeof(maxi));
+	l[1]=1;dfs(1,0);
+	init();
+	for(int i=1;i<=m;i++)
+	{
+		if(ok[i])printf("%I64d\n",sum);
+		else printf("%I64d\n",sum-query(x[i],y[i])+w[i]);
+	}
+	return 0;
+}

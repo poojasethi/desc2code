@@ -1,0 +1,128 @@
+#include <iostream>
+#include <vector>
+#include <string>
+using namespace std;
+
+const int alphabet_size = '{' - 'a' + 1;
+const int inf = 1 << 29;
+
+int L, H;
+string txt;
+struct node {
+    int start, end, slink;
+    int next[alphabet_size];
+};
+vector<node> tree;
+int active_node, active_edge, active_len, remainder, pos, need_slink;
+int best_count, best_len;
+
+int new_node(int start, int end = inf) {
+    tree.push_back(node());
+    node &n = tree.back();
+    n.start = start;
+    n.end = end;
+    n.slink = 0;
+    for (int i = 0; i < alphabet_size; i++)
+        n.next[i] = 0;
+    return tree.size() - 1;
+}
+
+void add_slink(int node) {
+    if (need_slink)
+        tree[need_slink].slink = node;
+    need_slink = node;
+}
+
+bool walk_node(int node) {
+    int edge_len = min(tree[node].end, pos + 1) - tree[node].start;
+    if (active_len >= edge_len) {
+        active_edge += edge_len;
+        active_len -= edge_len;
+        active_node = node;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void suffix_tree() {
+    tree.clear();
+    new_node(-1, -1);
+    active_node = active_edge = active_len = remainder = 0;
+    for (pos = 0; pos < txt.size(); pos++) {
+        need_slink = 0;
+        remainder++;
+        while (remainder) {
+            if (active_len == 0)
+                active_edge = pos;
+            int next = tree[active_node].next[txt[active_edge]];
+            if (next == 0) {
+                int leaf = new_node(pos);
+                tree[active_node].next[txt[active_edge]] = leaf;
+                add_slink(active_node);
+            } else {
+                if (walk_node(next))
+                    continue;
+                if (txt[tree[next].start + active_len] == txt[pos]) {
+                    active_len++;
+                    add_slink(active_node);
+                    break;
+                } else {
+                    int leaf = new_node(pos);
+                    int split = new_node(tree[next].start, tree[next].start + active_len);
+                    tree[next].start += active_len;
+                    tree[active_node].next[txt[active_edge]] = split;
+                    tree[split].next[txt[tree[next].start]] = next;
+                    tree[split].next[txt[pos]] = leaf;
+                    add_slink(split);
+                }
+            }
+            remainder--;
+            if (active_node == 0 && active_len > 0) {
+                active_len--;
+                active_edge = pos - remainder + 1;
+            } else {
+                active_node = tree[active_node].slink;
+            }
+        }
+    }
+}
+
+int explore(int n, int depth) {
+    int edge_len = min(tree[n].end, int(txt.size())) - tree[n].start;
+    int descendants = 0;
+    bool leaf = tree[n].end == inf;
+    if (leaf) {
+        descendants = 1;
+        edge_len--;
+    } else {
+        for (int i = 0; i < alphabet_size; i++)
+            if (tree[n].next[i])
+                descendants += explore(tree[n].next[i], depth + edge_len);
+    }
+    // cout << tree[n].start << ' ' << tree[n].end << ' ' << descendants << endl;
+    // find deepest node with max(node.leaf_descendands), L <= node.depth <= H
+    int max_len = min(H, depth + edge_len);
+    if (L <= max_len and depth <= H and (best_count < descendants or
+                                         (best_count == descendants and best_len < max_len))) {
+        best_count = descendants;
+        best_len = max_len;
+    }
+    return descendants;
+}
+
+int main() {
+    ios_base::sync_with_stdio(false);
+    cin >> L >> H;
+    while (L) {
+        cin >> txt;
+        txt += '{';
+        for (int i = 0; i < txt.size(); i++)
+            txt[i] -= 'a';
+        suffix_tree();
+        best_count = best_len = 0;
+        explore(0, 0);
+        cout << best_count << " " << best_len << endl;
+        cin >> L >> H;
+    }
+}

@@ -1,0 +1,124 @@
+#include <set>
+#include <map>
+#include <cmath>
+#include <queue>
+#include <cstdio>
+#include <vector>
+#include <string>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+
+#define rep(i,a,b) for (int i=a; i<=b; ++i)
+#define dep(i,a,b) for (int i=a; i>=b; --i)
+#define REP(i,a) for (int i=0; i < (int)a; ++i)
+#define mp make_pair
+#define pb push_back
+#define inf (1<<30)
+#define PII pair<int,int>
+#define sz(x) ((int) x.size())
+
+const int nn = 210000;
+int n, S, T;
+vector<int> E[nn];
+int v[nn], d[nn], belong[nn], r[nn], pre[nn], A[nn][22], B[nn][22], po[nn];
+queue<int> Q;
+
+int BFS(int s, int b) {
+	d[s] = 1; v[s]=1; Q.push(s);
+	int res = s;
+	while (Q.size()) {
+		int x = Q.front(); Q.pop();
+		if (d[x] > d[res]) res = x;
+		belong[x] = b;
+		REP(i,sz(E[x])) {
+			int j = E[x][i];
+			if (v[j]) continue;
+			d[j] = d[x] + 1;
+			pre[j] = x;
+			v[j] = 1;
+			Q.push(j);
+		}
+	}
+	return res;
+}
+
+int Q1(int x, int y) {
+	if (x > y) return -inf;
+	int l = po[y-x+1], len = 1 << l;
+	return max(A[x][l], A[y-len+1][l]);
+}
+int Q2(int x, int y) {
+	if (x > y) return -inf;
+	int l = po[y-x+1], len = 1 << l;
+	return max(B[x][l], B[y-len+1][l]);
+	
+}
+int main() {
+	
+	scanf("%d",&n);
+	rep(i,1,n-1) {
+		int x,y; scanf("%d%d",&x,&y);
+		E[x].pb(y);
+		E[y].pb(x);
+	}
+	
+	rep(j,1,20) {
+		rep(i,(1<<j)+1,1<<(j+1)) {
+			if (i > n) break;
+			po[i] = j;
+		}
+	}
+	
+	S = BFS(1, 0);
+	rep(i,1,n) v[i] = 0;
+	T = BFS(S, 0);
+	
+	rep(i,1,n) v[i] = 0;
+	for (int i = T; ; i = pre[i]) {
+		r[++r[0]] = i;
+		v[i] = 1;
+		if (i == S) break;
+	}
+	
+	rep(i,1,r[0]) {
+		int x = r[i];
+		int y = BFS(x, i);
+		A[i][0] = i + d[y] - 1;
+		B[i][0] = -i + d[y] - 1;
+	}
+	rep(j,1,20) rep(i,1,n) {
+		if (i + ( 1 << j ) - 1 > r[0]) continue;
+		int k = i + (1 << (j-1));
+		A[i][j] = max(A[i][j-1], A[k][j-1]);
+		B[i][j] = max(B[i][j-1], B[k][j-1]);
+	}
+	
+	int q; scanf("%d", &q);
+	while (q--) {
+		int x, y; scanf("%d%d",&x,&y);
+		
+		if (belong[x] == belong[y]) {
+			printf("%d\n", min(d[x], d[y]) - 1 + max(r[0] - belong[x], belong[x] - 1));
+			continue;
+		}
+		
+		if (belong[x] > belong[y]) swap(x, y);
+		int a = belong[x], b = belong[y];
+		int L = d[x] - 1 + d[y] - 1 + b - a, ans = 0;
+		if (L / 2 < d[x] - 1) {
+			ans = max(b - 1, r[0] - b) + d[y] - 1;
+		}
+		else if (L / 2 < d[y] - 1) {
+			ans = max(a - 1, r[0] - a) + d[x] - 1;
+		}
+		else {
+			ans = max(d[x] - 1 + a - 1, d[y] - 1 + r[0] - b);
+			int o = a + L/2 - (d[x] - 1);
+			ans = max(ans, max(d[x] - 1 + Q1(a, o) - a, d[y] - 1 + Q2(o + 1, b) + b));
+		}
+		printf("%d\n", ans);
+	}
+	return 0;
+}

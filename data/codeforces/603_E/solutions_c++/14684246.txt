@@ -1,0 +1,89 @@
+#include <algorithm>
+#include <vector>
+#include <iostream>
+#include <cstdio>
+using namespace std;
+const int maxn=5e5;
+int parent[maxn],sz[maxn],xx[maxn],out[maxn],yy[maxn],zz[maxn];
+vector<pair<int,int> > backup[maxn*5];
+pair<int,int> edge[maxn];
+vector<int> ed[maxn*5];
+int ans,ll,n,m;
+int find_set(int x) {
+    if (parent[x]==0) return x;
+    return find_set(parent[x]);
+}
+void union_set(int root,int x, int y) {
+    x=find_set(x);
+    y=find_set(y);
+    if (x==y) return;
+    if (sz[x]<sz[y]) swap(x,y);
+    if (sz[x]%2==1 && sz[y]%2==1) ans-=2;
+    sz[x]+=sz[y];
+    parent[y]=x;
+    backup[root].push_back(make_pair(x,sz[x]-sz[y]));
+    backup[root].push_back(make_pair(y,-1));
+}
+void modify(int x, int l, int r, int ll, int rr, int y) {
+    if (ll<=l && r<=rr) {
+        ed[x].push_back(y);
+        return;
+    }
+    int mid=(r+l)/2;
+    if (ll<=mid) modify(x*2,l,mid,ll,rr,y);
+    if (rr>mid) modify(x*2+1,mid+1,r,ll,rr,y);
+}
+void roll_back(int x) {
+    for (int i=backup[x].size()-1;i>=0;i--) {
+        pair<int,int> p=backup[x][i];
+        if (p.second==-1) parent[p.first]=0;
+        else sz[p.first]=p.second;
+    }
+}
+void solve(int x, int l, int r) {
+    int prevans=ans;
+    for (int i=0;i<ed[x].size();i++) {
+        int to=ed[x][i];
+        union_set(x,xx[to],yy[to]);
+    }
+    if (l!=r) {
+        int mid=(r+l)/2;
+        solve(x*2+1,mid+1,r);
+        solve(x*2,l,mid);
+    }
+    else {
+        while (ll<m && ans>0) {
+            ll++;
+            int nm=edge[ll].second;
+            if (nm>r) continue;
+            union_set(x,xx[nm],yy[nm]);
+            if (nm<=r-1) modify(1,1,m,nm,r-1,nm);
+        }
+        if (ans>0) out[l]=-1;
+        else out[l]=zz[edge[ll].second];
+    }
+    roll_back(x);
+    ans=prevans;
+}
+int main() {
+    ios_base::sync_with_stdio(0);
+    cin >> n >> m;
+    if (n%2==1) {
+        for (int i=1;i<=m;i++) cout << "-1\n";
+        return 0;
+    }
+    for (int i=1;i<=n;i++) {
+        sz[i]=1;
+        parent[i]=0;
+    }
+    for (int i=1;i<=m;i++) {
+        cin >> xx[i] >> yy[i] >> zz[i];
+        edge[i]=make_pair(zz[i],i);
+    }
+    ans=n;
+    sort(edge+1,edge+m+1);
+    ll=0;
+    solve(1,1,m);
+    for (int i=1;i<=m;i++) cout << out[i] << "\n";
+    return 0;
+}

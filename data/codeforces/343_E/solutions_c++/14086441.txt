@@ -1,0 +1,170 @@
+#include <algorithm>
+#include <cstdio>
+#include <vector>
+using namespace std;
+
+#define fi first
+#define se second
+#define pb push_back
+#define all(x) (x).begin(), (x).end()
+#define sz(x) (int((x).size()))
+
+typedef pair<int, int> PII;
+typedef vector<int> VI;
+const int MN = 205;
+const int MM = 4005;
+int N, M, S, T;
+int a[MM], b[MM], c[MM];
+int fst[MN], nxt[MM];
+int prv[MN];
+int q[MN], hd, tl;
+
+void init() {
+	M = 0;
+	fill_n(fst, N, -1);
+}
+
+void add_edge(int u, int v, int w) {
+	a[M] = u, b[M] = v, c[M] = w;
+	nxt[M] = fst[u], fst[u] = M++;
+	a[M] = v, b[M] = u, c[M] = 0;
+	nxt[M] = fst[v], fst[v] = M++;
+}
+
+int max_flow() {
+	int e, k, u, v;
+	int inc, tot;
+	
+	tot = 0;
+	while (1) {
+		fill_n(prv, N, -1);
+		hd = tl = 0;
+		prv[S] = -2;
+		q[tl++] = S;
+		while (hd < tl) {
+			u = q[hd++];
+			for (e = fst[u]; ~e; e = nxt[e]) {
+				v = b[e];
+				if (prv[v] == -1 && c[e]) {
+					prv[v] = e;
+					q[tl++] = v;
+				}
+			}
+		}
+		if (prv[T] == -1) break;
+		for (k = fst[T]; ~k; k = nxt[k]) {
+			e = k ^ 1, u = a[e];
+			if (prv[u] == -1) continue;
+			inc = c[e];
+			for (v = u; v != S; v = a[e]) {
+				e = prv[v];
+				inc = min(inc, c[e]);
+			}
+			if (!inc) continue;
+			e = k ^ 1;
+			c[e] -= inc, c[e ^ 1] += inc;
+			for (v = u; v != S; v = a[e]) {
+				e = prv[v];
+				c[e] -= inc, c[e ^ 1] += inc;
+			}
+			tot += inc;
+		}
+	}
+	return tot;
+}
+
+int m;
+int x[MM], y[MM], z[MM];
+int w[MN], p[MN];
+vector<PII> adj[MN];
+int tot;
+
+void Gomory_Hu() {
+	int s, t, val, u, v, i, k;
+	
+	fill_n(p, N, 0);
+	for (s = 1; s < N; s++) {
+		init();
+		for (k = 0; k < m; k++) {
+			add_edge(x[k], y[k], z[k]);
+			add_edge(y[k], x[k], z[k]);
+		}
+		t = p[s];
+		S = s, T = t;
+		val = max_flow();
+		w[s] = val;
+		for (i = 0; i < N; i++) {
+			if (i != s && ~prv[i] && p[i] == t) p[i] = s;
+		}
+		if (~prv[p[t]]) {
+			p[s] = p[t], p[t] = s;
+			w[s] = w[t], w[t] = val;
+		}
+	}
+}
+
+void DFS(int u, int p, int& x, int& y, int& w) {
+	int i, v;
+	
+	for (i = sz(adj[u]) - 1; i >= 0; i--) {
+		v = adj[u][i].fi;
+		if (v == p) continue;
+		if (w == -1 || w > adj[u][i].se) {
+			x = u, y = v;
+			w = adj[u][i].se;
+		}
+		DFS(v, u, x, y, w);
+	}
+}
+
+void rem(vector<PII>& v, int i) {
+	for (int j = sz(v) - 1; j >= 0; j--) {
+		if (v[j].fi != i) continue;
+		v.erase(v.begin() + j);
+		return;
+	}
+}
+
+VI solve(int u) {
+	int j, x, y, w = -1;
+	VI rlt;
+	
+	DFS(u, -1, x, y, w);
+	if (w == -1) {
+		rlt.pb(u);
+		return rlt;
+	}
+	rem(adj[x], y), rem(adj[y], x);
+	tot += w;
+	rlt = solve(x);
+	reverse(all(rlt));
+	VI tp = solve(y);
+	for (j = 0; j < sz(tp); j++) rlt.pb(tp[j]);
+	return rlt;
+}
+
+int main() {
+//	freopen("in.txt", "r", stdin);
+//	freopen("out.txt", "w", stdout);
+	
+	int k;
+	
+	scanf("%d%d", &N, &m);
+	for (k = 0; k < m; k++) {
+		scanf("%d%d%d", &x[k], &y[k], &z[k]);
+		x[k]--, y[k]--;
+	}
+	
+	Gomory_Hu();
+	for (k = 1; k < N; k++) {
+		adj[p[k]].pb(PII(k, w[k]));
+		adj[k].pb(PII(p[k], w[k]));
+	}
+	tot = 0;
+	VI ans = solve(0);
+	printf("%d\n", tot);
+	for (k = 0; k < N; k++) printf("%d%s", ans[k] + 1, (k < N - 1) ? " " : "\n");
+	return 0;
+}
+
+                                                              

@@ -1,0 +1,117 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+typedef long long ll;
+typedef pair <int,int> pii;
+typedef vector <int> vi;
+
+#define rep(i, n) for(int i = 0; i < (n); ++i)
+#define forn(i, a, b) for(int i = (a); i < (b); ++i)
+#define ford(i, a, b) for(int i = (a); i >= (b); --i)
+#define fore(i, a, b) forn(i, a, b + 1)
+
+#define pb push_back
+#define mp make_pair
+#define ff first
+#define ss second
+#define all(c) c.begin(), c.end()
+#define mset(a, v) memset(a, v, sizeof(a))
+#define sz(a) ((int)a.size())
+
+#define gi(x) scanf("%d", &x)
+#define pis(x) printf("%d ", x)
+#define pin(x) printf("%d\n", x)
+#define pnl printf("\n")
+#define dbn cerr << "\n"
+#define dbg(x) cerr << #x << " : " << (x) << " "
+#define dbs(x) cerr << (x) << " "
+
+#define foreach(c, it) for(__typeof(c.begin()) it = c.begin(); it != c.end(); ++it)
+
+const int MAX_N = 2e5 + 100;
+const int INF = 1e9;
+
+multiset <pii> segT[MAX_N << 2];
+
+void update(int x, int l, int r, int pos, pii p, bool add) {
+    if(l == pos and r == pos) {
+        if(add) segT[x].insert(p);
+        else segT[x].erase(segT[x].find(p));
+        return;
+    }
+    int m = (l + r) >> 1;
+    if(pos <= m) update((x << 1) + 1, l, m, pos, p, add);
+    else update((x << 1) + 2, m + 1, r, pos, p, add);
+    if(add) segT[x].insert(p);
+    else segT[x].erase(segT[x].find(p));
+}
+
+const pii dummy = mp(INF, -1);
+
+pii query(int x, int l, int r, int ql, int qr, int need) {
+    if(ql <= l and qr >= r) {
+        multiset <pii>::iterator itr = segT[x].upper_bound(mp(need, -1));
+        if(itr == segT[x].end()) return dummy;
+        else return *itr;
+    }
+    int m = (l + r) >> 1;
+    pii ret = dummy;
+    if(ql <= m) ret = min(ret, query((x << 1) + 1, l, m, ql, qr, need));
+    if(qr > m) ret = min(ret, query((x << 1) + 2, m + 1, r, ql, qr, need));
+    return ret;
+}
+
+struct event {
+    bool start;
+    int idx;
+    int x, y1, y2;
+    event() {}
+    event(int i, int p, int q, int r, bool b) : idx(i), x(p), y1(q), y2(r), start(b) {}
+} events[MAX_N];
+
+bool cmp(const event & p, const event & q) {
+    if(p.x != q.x) return p.x < q.x;
+    else return p.y1 < q.y1;
+}
+
+int parent[MAX_N];
+
+int main() {
+    int n; gi(n);
+    vi vx, vy;
+    rep(i, n) {
+        int x1, y1, x2, y2;
+        gi(x1); gi(y1);
+        gi(x2); gi(y2);
+        events[2 * i] = event(i, x1, y1, y2, true);
+        events[2 * i + 1] = event(i, x2, y1, y2, false);
+        vx.pb(x1); vx.pb(x2);
+        vy.pb(y1); vy.pb(y2);
+    }
+    
+    sort(all(vx)); vx.resize(unique(all(vx)) - vx.begin());
+    sort(all(vy)); vy.resize(unique(all(vy)) - vy.begin());
+    
+    rep(i, (n << 1)) {
+        events[i].x = lower_bound(all(vx), events[i].x) - vx.begin();
+        events[i].y1 = lower_bound(all(vy), events[i].y1) - vy.begin();
+        events[i].y2 = lower_bound(all(vy), events[i].y2) - vy.begin();
+        events[i].x += 1; events[i].y1 += 1; events[i].y2 += 1;
+    }
+
+    mset(parent, -1);
+    sort(events, events + 2 * n, cmp);
+
+    rep(i, (n << 1)) {
+        int idx = events[i].idx;
+        if(events[i].start) {
+            pii ret = query(0, 0, MAX_N - 1, 0, events[i].y1 - 1, events[i].y2);
+            parent[idx] = ret.ss;
+        }
+        update(0, 0, MAX_N - 1, events[i].y1, mp(events[i].y2, idx), events[i].start);
+    }
+
+    rep(i, n) pin(parent[i]);
+    return 0;
+}

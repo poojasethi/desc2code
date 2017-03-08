@@ -1,0 +1,176 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <bits/stdc++.h>
+using namespace std;
+
+
+#define N 200020
+#define LL long long
+#define MOD 1000000007
+#define K 3
+#define G 3
+
+// 1000000000000000000 30000
+int m[] = {1004535809, 998244353, 104857601};
+
+LL qpow(LL x, LL k, int p) {
+	LL ret = 1;
+	while(k) {
+		if(k & 1) ret = ret * x % p;
+		k >>= 1;
+		x = x * x % p;
+	}
+	return ret;
+}
+
+struct _NTT {
+	int p;
+	int rev[N];
+
+	void change(LL y[], int len) {
+		for(int i = 1; i < len; ++i) {
+			rev[i] = (rev[i>>1] >> 1) + ((i & 1) * (len >> 1));
+			if(i < rev[i]) swap(y[i], y[rev[i]]);
+		}
+	}
+	void FFT(LL y[], int len, int on) {
+		change(y, len);
+		for(int h = 2; h <= len; h <<= 1) {
+			LL wn = qpow(G, (p - 1) / h, p);
+			if(on == -1) wn = qpow(wn, p - 2, p);
+			for(int j = 0; j < len; j += h) {
+				LL w = 1;
+				for(int k = j; k < j + h / 2; ++k) {
+					LL u = y[k];
+					LL t = w * y[k+h/2] % p;
+					y[k] = u + t;
+					if(y[k] >= p) y[k] -= p;
+					y[k+h/2] = u + p - t;
+					if(y[k+h/2] >= p) y[k+h/2] -= p;
+					w = w * wn % p;
+				}
+			}
+		}
+		if(on == -1) {
+			LL inv = qpow(len, p - 2, p);
+			for(int i = 0; i < len; ++i) y[i] = y[i] * inv % p;
+		}
+	}
+	void mul(LL a[], LL b[], int len) {
+		for(int i = 0; i < len; ++i) {
+			a[i] %= p;
+			b[i] %= p;
+		}
+		FFT(a, len, 1);
+		FFT(b, len, 1);
+		for(int i = 0; i < len; ++i) a[i] = a[i] * b[i] % p;
+		FFT(a, len, -1);
+	}	
+	void debug() {
+		LL a[] = {1, 1, 0, 0};
+		LL b[] = {1, 1, 0, 0};
+		mul(a, b, 4);
+		for(int i = 0; i < 4; ++i) printf("%lld ", a[i]);
+		puts("");
+	}
+		
+}ntt[K];
+
+
+LL tmp[N][K], r[K][K];
+LL t1[N], t2[N];
+
+LL CRT(LL a[]) {
+	LL x[K];
+	x[0] = a[0];
+	for(int i = 1; i < K; ++i) {
+		x[i] = a[i];
+		for(int j = 0; j < i; ++j) {
+			x[i] = (x[i] - x[j]) % m[i];
+			if(x[i] < 0) x[i] += m[i];
+			x[i] = x[i] * r[j][i] % m[i];
+		}
+	}
+	LL ret = x[K-1];
+	for(int i = K - 2; i >= 0; --i) {
+		ret = ret * m[i] % MOD;
+		ret = (ret + x[i]) % MOD;
+	}
+	return ret;
+}
+
+void mul(LL a[], LL b[], int len) {
+	for(int i = 0; i < K; ++i) {
+		for(int j = 0; j < len; ++j) t1[j] = a[j], t2[j] = b[j];
+		ntt[i].mul(t1, t2, len);
+		for(int j = 0; j < len; ++j) tmp[j][i] = t1[j];
+	}
+	for(int i = 0; i < len; ++i) a[i] = CRT(tmp[i]);
+}
+
+void debug() {
+	LL a[] = {1, 1, 0, 0};
+	LL b[] = {1, 1, 0, 0};
+	mul(a, b, 4);
+	for(int i = 0; i < 4; ++i) printf("%lld ", a[i]);
+	puts("");
+}
+
+int k;
+LL dp[N], dp1[N], dp2[N];
+LL f[N], nf[N];
+int L;
+
+LL C(int n, int m) {
+	return f[n] * nf[m] % MOD * nf[n-m] % MOD;
+}
+
+void calc(LL n) {
+	if(n == 1) {
+		for(int i = 1; i <= k; ++i) dp[i] = 1;
+		return;
+	}
+	calc(n / 2);
+	for(int i = 0; i < L; ++i) dp1[i] = dp2[i] = 0;
+
+	for(int i = 1; i < k; ++i) {
+		dp1[i] = dp[i] * nf[i] % MOD * qpow(2, n / 2 % (MOD - 1) * i, MOD) % MOD;
+		dp2[i] = dp[i] * nf[i] % MOD;
+	}
+
+	mul(dp1, dp2, L);
+	for(int i = 1; i <= k; ++i) dp[i] = dp1[i] * f[i] % MOD;
+	if(n & 1) {
+		for(int i = 0; i < L; ++i) dp1[i] = dp2[i] = 0;
+		for(int i = 1; i <= k; ++i) {
+			dp1[i] = dp[i] * nf[i] % MOD * qpow(2, i, MOD) % MOD;
+			dp2[i] = nf[i] % MOD;
+		}
+		mul(dp1, dp2, L);
+		for(int i = 1; i <= k; ++i) dp[i] = dp1[i] * f[i] % MOD;
+	}
+}
+		
+int main() {
+	for(int i = 0; i < K; ++i) {
+		ntt[i].p = m[i];
+		for(int j = 0; j < i; ++j) r[j][i] = qpow(m[j], m[i] - 2, m[i]);
+	}
+	nf[0] = f[0] = 1;
+	for(int i = 1; i < N; ++i) f[i] = f[i-1] * i % MOD, nf[i] = qpow(f[i], MOD - 2, MOD);
+
+	LL n;
+	cin >> n >> k;
+	if(n > k) {
+		puts("0");
+		return 0;
+	}
+	L = 1;
+	while(L <= k * 2) L <<= 1;
+	calc(n);
+	LL ans = 0;
+	for(int i = 1; i <= k; ++i) ans = (ans + dp[i] * C(k, i) % MOD) % MOD;
+	cout << ans << endl;
+	return 0;
+}

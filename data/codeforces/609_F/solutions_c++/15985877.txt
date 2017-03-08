@@ -1,0 +1,89 @@
+#include <set>
+#include <cstdio>
+#include <algorithm>
+
+using namespace std;
+
+#define N 200005
+
+typedef __int64 LL;
+
+struct Frog {
+	int id;
+	LL L, R;
+	Frog(LL L = 0, LL R = 0, int id = 0) : L(L), R(R), id(id) {}
+	bool operator < (const Frog &p) const {
+		return R < p.R;
+	}
+} p[N];
+
+bool cmp(Frog a, Frog b) { return a.L < b.L; }
+
+struct Mosquito {
+	int id;
+	LL pos, len;
+	Mosquito(LL pos = 0, LL len = 0, int id = 0) : pos(pos), len(len), id(id) {}
+	bool operator < (const Mosquito &p) const {
+		return pos != p.pos ? pos < p.pos : id < p.id;
+	}
+};
+
+int cnt[N];
+LL len[N];
+
+set <Frog> F;
+set <Mosquito> M;
+set <Frog> :: iterator sto[N];
+
+main() {
+	int n, m;
+	scanf("%d %d", &n, &m);
+	for (int i = 1; i <= n; i ++) {
+		int a, b;
+		scanf("%d %d", &a, &b);
+		p[i] = Frog(a, a + b, i);
+		cnt[i] = 0, len[i] = b;
+	}
+	sort(p + 1, p + n + 1, cmp);
+	LL cur = -1;
+	for (int i = 1; i <= n; i ++) {
+		if (cur < p[i].R) {
+			cur = p[i].R;
+			F.insert(p[i]);
+		}
+	}
+	for (int i = 1; i <= m; i ++) {
+		int x, y;
+		scanf("%d %d", &x, &y);
+		set <Frog> :: iterator pos = F.lower_bound(Frog(0, x, 0));
+		if (pos == F.end()) M.insert(Mosquito(x, y, i));
+		else if (x < pos -> L) M.insert(Mosquito(x, y, i));
+		else {
+			int idx = pos -> id;
+			cnt[idx] ++;
+			len[idx] += y;
+			LL init = pos -> L;
+			LL cur = pos -> R + y;
+			set <Frog> :: iterator nxt = pos;
+			while (!M.empty()) {
+                set <Mosquito> :: iterator it = M.upper_bound(Mosquito(cur, 0, m + 1));
+				if (it == M.begin()) break;
+				it --;
+				if (it -> pos < init) break;
+				cnt[idx] ++;
+				len[idx] += it -> len;
+				cur += it -> len;
+				M.erase(it);
+			}
+			int cs = 0;
+			for (nxt ++; nxt != F.end(); nxt ++) {
+				if (nxt -> R <= cur) sto[cs ++] = nxt;
+				else break;
+			}
+			for (int j = 0; j < cs; j ++) F.erase(sto[j]);
+			F.erase(pos);
+			F.insert(Frog(init, cur, idx));
+		}
+	}
+	for (int i = 1; i <= n; i ++) printf("%d %I64d\n", cnt[i], len[i]);
+}

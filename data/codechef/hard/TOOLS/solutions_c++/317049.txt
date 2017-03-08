@@ -1,0 +1,103 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <algorithm>
+#include <sstream>
+#include <iostream>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+
+using namespace std;
+
+int n;
+int cx[8], cy[8], tx[8], ty[8];
+int dp[9][9][17][1 << 8];
+
+int dist(int type1, int pos1, int type2, int pos2) {
+    int x1, y1, x2, y2;
+    if(type1 == 0)
+        x1 = cx[pos1], y1 = cy[pos1];
+    else
+        if(pos1 == n)
+            x1 = 0, y1 = 0;
+        else
+            x1 = tx[pos1], y1 = ty[pos1];
+    if(type2 == 0)
+        x2 = cx[pos2], y2 = cy[pos2];
+    else
+        if(pos2 == n)
+            x2 = 0, y2 = 0;
+        else
+            x2 = tx[pos2], y2 = ty[pos2];
+    return abs(x1 - x2) + abs(y1 - y2);
+}
+
+int go(int t1, int t2, int type, int pos, int mask) {
+
+    if(t1 > t2) swap(t1, t2);
+
+    // return home
+    if(mask == (1 << n) - 1)
+        return dist(type, pos, 1, n);
+
+    int &d = dp[t1][t2][type * n + pos][mask];
+    if(d != -1) return d;
+
+    int res = 1 << 30;
+
+    // get a tool
+    if(t1 == n && t2 == n) {
+        for(int i = 0; i < n; i++)
+            if(!(mask & (1 << i)))
+                res = min(res,
+                          go(i, t2, 1, i, mask) +
+                          dist(type, pos, 1, i));
+    }
+
+    // deliver a tool
+    else if(t1 != n && t2 != n) {
+        res = min(res,
+                  go(n, t2, 0, t1, mask | (1 << t1)) +
+                  dist(type, pos, 0, t1));
+        res = min(res,
+                  go(t1, n, 0, t2, mask | (1 << t2)) +
+                  dist(type, pos, 0, t2));
+    }
+
+    // get a tool in t2 or deliver t1
+    else {
+
+        for(int i = 0; i < n; i++)
+            if(!(mask & (1 << i)))
+                res = min(res,
+                          go(t1, i, 1, i, mask) +
+                          dist(type, pos, 1, i));
+
+        res = min(res,
+                  go(n, t2, 0, t1, mask | (1 << t1)) +
+                  dist(type, pos, 0, t1));
+
+    }
+
+    return d = res;
+
+}
+
+main(){
+
+    int T; cin >> T; while(T--) {
+
+        memset(dp, -1, sizeof(dp));
+
+        cin >> n;
+        for(int i = 0; i < n; i++)
+            cin >> cx[i] >> cy[i] >> tx[i] >> ty[i];
+
+        cout << go(n, n, 1, n, 0) << endl;
+
+    }
+}

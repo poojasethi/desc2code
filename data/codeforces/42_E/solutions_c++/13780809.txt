@@ -1,0 +1,98 @@
+#include <vector>
+#include <iostream>
+#include <algorithm>
+#define ll long long
+#define f first
+#define s second
+#define mp make_pair
+
+using namespace std;
+const ll Maxn = 111111, Log = 18, mod = 1e9 + 7;
+
+ll n, m, q, sum, c, l, anc[Maxn][Log], e[Maxn][Log];
+ll par[Maxn], h[Maxn], dis[Maxn];
+pair <ll, pair<ll, ll> > edge[Maxn * 2];
+vector <pair<ll, ll> > list[Maxn];
+bool color[Maxn];
+
+ll find(ll x){
+	if(x == par[x])	return x;
+	else return par[x] = find(par[x]);
+}
+
+bool merge(ll a, ll b){
+	ll pa = find(a), pb = find(b);
+	if(pa != pb){
+		if(h[pa] > h[pb]){
+			par[pb] = pa;
+		}else{
+			par[pa] = pb;
+			if(h[pa] == h[pb])	h[pb]++;
+		}
+		return true;
+	}
+	return false;
+}
+
+void dfs(ll v){
+	color[v] = true;
+	for(ll i = 0; i < list[v].size(); i++){
+		ll u = list[v][i].f, w = list[v][i].s;
+		if(!color[u]){
+			dis[u] = dis[v] + 1;
+			anc[u][0] = v;
+			e[u][0] = w;
+			dfs(u);
+		}
+	}
+}
+
+ll lca(ll v, ll u){
+	if(dis[u] > dis[v])	swap(v, u);
+	ll d = dis[v] - dis[u];
+	for(ll j = Log - 1; j >= 0; j--)	if(d & (1 << j))	v = anc[v][j];
+	if(v == u)	return v;
+	for(ll j = Log - 1; j >= 0; j--)	if(anc[v][j] != anc[u][j])	u = anc[u][j], v = anc[v][j];
+	return anc[v][0];
+}
+
+int main(){
+	cin >> n >> m;
+	for(ll i = 1; i <= m; i++){
+		ll v, u, w;
+		cin >> v >> u >> w;
+		edge[++c] = mp(w, mp(v, u));
+	}
+	sort(edge + 1, edge + 1 + c);
+	for(ll i = 1; i <= n; i++)	par[i] = i;
+	for(ll i = 1; i <= m; i++){
+		ll v = edge[i].s.f, u = edge[i].s.s, w = edge[i].f;
+		if(merge(v, u)){
+			sum += w;
+			list[v].push_back(mp(u, w));
+			list[u].push_back(mp(v, w));
+		}
+	}
+	for(ll i = 1; i <= n; i++)	if(!color[i])	dfs(i), l++;
+	for(ll j = 1; j < Log; j++)	for(ll i = 1; i <= n; i++)	anc[i][j] = anc[anc[i][j - 1]][j - 1];
+	for(ll j = 1; j < Log; j++)	for(ll i = 1; i <= n; i++)	e[i][j] = max(e[anc[i][j - 1]][j - 1], e[i][j - 1]);
+	cin >> q;
+	for(ll i = 1; i <= q; i++){
+		ll v, u;
+		cin >> v >> u;
+		if(l > 2)	cout << -1 << endl;
+		else{
+			if(l == 2){
+				if(find(v) == find(u))	cout << -1 << endl;
+				else	cout << sum << endl;
+			}else{
+				ll p = lca(v, u), w = 0;
+				for(ll j = Log - 1; j >= 0; j--)	if(dis[anc[v][j]] >= dis[p])	w = max(w, e[v][j]), v = anc[v][j];
+				for(ll j = Log - 1; j >= 0; j--)	if(dis[anc[u][j]] >= dis[p])	w = max(w, e[u][j]), u = anc[u][j];
+				cout << sum - w << endl;
+			}
+		}
+	}
+	return 0;
+}
+ 			 	 			 		    	 	  	 	    		

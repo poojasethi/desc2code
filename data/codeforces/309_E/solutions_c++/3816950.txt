@@ -1,0 +1,136 @@
+#include <map>
+#include <set>
+#include <cmath>
+#include <cstring>
+#include <cstdlib>
+#include <vector>
+#include <algorithm>
+#include <iterator>
+#include <cstdio>
+#include <sstream>
+#include <iostream>
+using namespace std;
+
+#define ff first
+#define ss second
+
+int N;
+
+inline bool int_less_than(int a, int b) { return a < b; }
+
+bool interval_less_than(const pair< pair<int, int>, int > &lhs, const pair< pair<int, int>, int > &rhs)
+{
+    if (lhs.ff.ss == rhs.ff.ss)
+    {
+        return int_less_than(lhs.ff.ff, rhs.ff.ff);
+    }
+    return int_less_than(lhs.ff.ss, rhs.ff.ss);
+}
+
+bool overlap(const pair<int, int> &lhs, const pair<int, int> &rhs)
+{
+    return max(lhs.ff, rhs.ff) <= min(lhs.ss, rhs.ss);
+}
+
+vector<int> solve(vector< pair< pair<int, int>, int > > &interval, int K)
+{
+    int current = 0;
+    vector<int> order, max_pos(N), pos(N);
+    int subsum[N];
+
+    for (int i = 0; i < N; i++)
+    {
+        max_pos[i] = N - 1;
+        pos[i] = -1;
+    }
+    for (int count = 0; count < N; count++)
+    {
+        pos[current] = count;
+
+        memset(subsum, 0, sizeof(subsum));
+        for (int i = 0; i < N; i++)
+        {
+            if (pos[i] < 0)
+            {
+                if (overlap(interval[i].ff, interval[current].ff))
+                {
+                    max_pos[i] = min(max_pos[i], pos[current] + K);
+                }
+                ++subsum[max_pos[i]];
+            }
+        }
+
+        // subset sum
+        for (int jj = count + 1; jj < N; jj++) subsum[jj] += subsum[jj - 1];
+
+        int j = 1, min_j = -1;
+        //int j = max(1, K - count), min_j = -1;
+        while (count + j < N)
+        {
+            if (subsum[count + j] > j)
+            {
+                return order;
+            }
+            if (subsum[count + j] == j && min_j < 0)
+            {
+                min_j = j;
+            }
+            ++j;
+        }
+
+        current = -1;
+        for (int i = 0; i < N; i++)
+        {
+            if (pos[i] < 0 && max_pos[i] <= count + min_j)
+            {
+                current = i;
+                break;
+            }
+        }
+    }
+
+    order.resize(N);
+    for (int i = 0; i < N; i++)
+    {
+        order[pos[i]] = interval[i].ss;
+    }
+    return order;
+}
+
+int main(const int argc, const char **argv)
+{
+ //   while
+    (cin >> N)
+    ;
+    {
+        vector< pair< pair<int, int>, int > > interval(N);
+        for (int i = 0; i < N; i++)
+        {
+            cin >> interval[i].ff.ff >> interval[i].ff.ss;
+            interval[i].ss = i + 1;
+        }
+        sort(interval.begin(), interval.end(), interval_less_than);
+
+        int st = 1, ed = N - 1, mid;
+        vector<int> result;
+
+        while (st <= ed)
+        {
+            int mid = (st + ed) / 2;
+            vector<int> order = solve(interval, mid);
+            if (order.size() > 0)
+            {
+                result = order;
+                ed = mid - 1;
+            }
+            else
+            {
+                st = mid + 1;
+            }
+        }
+
+        for (int i = 0; i < N; i++) cout << result[i] << " ";
+        cout << endl;
+    }
+    return 0;
+}

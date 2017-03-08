@@ -1,0 +1,121 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+#include <complex>
+#include <cmath>
+using namespace std;
+
+const long double pi = acos(-1);
+
+const int mod = 1000000007;
+const int M = 32768;
+
+int R[70000];
+int fac[70000],inv[70000];
+int len,k;
+int ans[70000],t1[70000],t2[70000],t3[70000];
+complex<long double> a1[70000],a2[70000],b1[70000],b2[70000],c1[70000],c2[70000],c3[70000];
+
+void fft(complex<long double> *a,int n,int f) {
+    for (int i = 0; i < n; i++)
+        if (i < R[i])
+            swap(a[i],a[R[i]]);
+    for (int i = 1; i < n; i <<= 1) {
+        complex<long double> wn(cos(pi / i),f * sin(pi / i));
+        for (int j = 0; j < n; j += (i << 1)) {
+            complex<long double> w(1,0);
+            for (int k = 0; k < i; k++) {
+                complex<long double> x = a[j + k],y = w * a[j + k + i];
+                a[j + k] = x + y;
+                a[j + k + i] = x - y;
+                w *= wn;
+            }
+        }
+    }
+    if (f == -1)
+        for (int i = 0; i < n; i++)
+            a[i] /= n;
+}
+
+void conv(int *a,int *b,int *res) {
+    for (int i = 0; i < len; i++) {
+        a1[i] = a[i] % M;
+        a2[i] = a[i] / M;
+        b1[i] = b[i] % M;
+        b2[i] = b[i] / M;
+    }
+    fft(a1,len,1);
+    fft(a2,len,1);
+    fft(b1,len,1);
+    fft(b2,len,1);
+    for (int i = 0; i < len; i++) {
+        c1[i] = a1[i] * b1[i];
+        c3[i] = a2[i] * b2[i];
+        c2[i] = (a1[i] + a2[i]) * (b1[i] + b2[i]) - c1[i] - c3[i];
+    }
+    fft(c1,len,-1);
+    fft(c2,len,-1);
+    fft(c3,len,-1);
+    for (int i = 0; i <= k; i++) {
+        int x = (long long)(c1[i].real() + 0.5) % mod,y = (long long)(c2[i].real() + 0.5) % mod,z = (long long)(c3[i].real() + 0.5) % mod;
+        res[i] = ((long long)z * M * M + (long long)y * M + x) % mod;
+    }
+}
+
+void cal(int *res,int *a,int *b,int n,int m) {
+    int bin = 1;
+    for (int i = 0; i < m; i++)
+        bin = (bin << 1) % mod;
+    int fac = 1;
+    for (int i = 0; i < len; i++) {
+        t3[i] = (long long)a[i] * fac % mod;
+        fac = (long long)fac * bin % mod;
+    }
+    conv(t3,b,res);
+}
+
+void getans(int n,int *res) {
+    if (n == 1) {
+        memcpy(res,inv,sizeof(int) * len);
+        return;
+    }
+    getans(n >> 1,t1);
+    cal(t2,t1,t1,n >> 1,n >> 1);
+    if (n & 1)
+        cal(res,t2,inv,n - 1,1);
+    else
+        memcpy(res,t2,sizeof(int) * len);
+}
+
+int main() {
+    long long m;
+    scanf("%I64d%d",&m,&k);
+    if (m > k) {
+        printf("0\n");
+        return 0;
+    }
+    int n = m;
+    fac[0] = fac[1] = inv[0] = inv[1] = 1;
+    for (int i = 2; i <= k; i++) {
+        inv[i] = (long long)(mod - mod / i) * inv[mod % i] % mod;
+        fac[i] = (long long)fac[i - 1] * i % mod;
+    }
+    for (int i = 2; i <= k; i++)
+        inv[i] = (long long)inv[i] * inv[i - 1] % mod;
+    int L = 0;
+    for (len = 1; len < k + k + 5; len <<= 1)
+        L++;
+    for (int i = 0; i < len; i++)
+        R[i] = (R[i >> 1] >> 1) | ((i & 1) << (L - 1));
+    inv[0] = 0;
+    getans(n,ans);
+    inv[0] = 1;
+    int ans1 = 0;
+    for (int i = 1; i <= k; i++)
+        ans1 = (ans1 + (long long)ans[i] * fac[k] % mod * inv[k - i] % mod) % mod;
+    printf("%d\n",ans1);
+    return 0;
+}
+

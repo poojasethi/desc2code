@@ -1,0 +1,156 @@
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <cmath>
+#include <ctime>
+#include <iostream>
+#include <algorithm>
+#include <queue>
+#include <stack>
+#include <set>
+#include <map>
+#include <vector>
+#include <bitset>
+#include <functional>
+using namespace std;
+const long long mod = 1e9 + 7;
+const int maxn = 100005;
+inline int read ()
+{
+	int res, ok = 1;
+	char ch;
+	for (ch = getchar (); ch < '0' || ch > '9'; ch = getchar ())
+	if (ch == '-')
+	ok = -1;
+	res = ch - '0';
+	for (ch = getchar (); ch >= '0' && ch <= '9'; ch = getchar ())
+	res = res * 10 + ch - '0';
+	return res * ok;
+}
+int n, m, s, a[2005], c[2005], dp[2005][2], par[2005][2], ans[2005];
+vector <int> b[2005];
+inline int get_dist (int x, int y)
+{
+	int d = (n + y - x) % n;
+	if (d > n - d)
+	d -= n;
+	return d;
+}
+inline void work (int x)
+{
+	int idx = n;
+	for (int i = m - 1; i >= 0; i--)
+	{
+		ans[idx--] = x;
+		if ((int)b[i].size () > 1)
+		{
+			int u = par[x][1], it = 0;
+			while (b[i][it] != x)
+			it++;
+			if (b[i][(it + 1) % (int)b[i].size()] == u)
+			{
+				while (b[i][it] != u)
+				{
+					it = (it + (int)b[i].size() - 1) % (int)b[i].size();
+					ans[idx--] = b[i][it];
+				}
+			}
+			else
+			{
+				while (b[i][it] != u)
+				{
+					it = (it + 1) % (int)b[i].size();
+					ans[idx--] = b[i][it];
+				}
+			}
+			x = u;
+		}
+		if (i == 0)
+		break;
+		x = par[x][0];
+	}
+	ans[0] = s;
+	for (int i = 0; i < n; i++)
+	{
+		int x = get_dist (ans[i], ans[i + 1]);
+		if (x >= 0)
+		printf ("+%d\n", x);
+		else
+		printf ("%d\n", x);
+	}
+	return;
+}
+int main ()
+{
+	n = read();
+	s = read();
+	s--;
+	for (int i = 0; i < n; i++)
+	{
+		a[i] = read();
+		c[i] = a[i];
+	}
+	sort (c, c + n);
+	m = unique (c, c + n) - c;
+	for (int i = 0; i < n; i++)
+	{
+		a[i] = lower_bound (c, c + m, a[i]) - c;
+		b[a[i]].push_back (i);
+	}
+	memset (dp, 127, sizeof (dp));
+	for (int i = 0; i < (int) b[0].size(); i++)
+	dp[b[0][i]][0] = abs (get_dist (s, b[0][i]));
+	for (int i = 0; i < m; i++)
+	{
+		if (b[i].size() == 1)
+		{
+			int x = b[i][0];
+			dp[x][1] = dp[x][0];
+			par[x][1] = x;
+		}
+		else
+		{
+			for (int j = 0; j < (int)b[i].size(); j++)
+			{
+				for (int dx = -1; dx <= 1; dx += 2)
+				{
+					int nxt = (j + dx + (int)b[i].size()) % (int)b[i].size(), dist;
+					dist  = get_dist (b[i][j], b[i][nxt]);
+					if (dx < 0 && dist < 0)
+					dist += n;
+					if (dx > 0 && dist > 0)
+					dist -= n;
+					int w = dp[b[i][j]][0] + abs (dist);
+					if (w < dp[b[i][nxt]][1])
+					{
+						dp[b[i][nxt]][1] = w;
+						par[b[i][nxt]][1] = b[i][j];
+					}
+				}
+			}
+		}
+		if (i == m - 1)
+		break;
+		for (int j = 0; j < (int) b[i].size (); j++)
+		for (int k = 0; k < (int) b[i + 1].size (); k++)
+		{
+			int x = b[i][j], y = b[i + 1][k], w;
+			w = dp[x][1] + abs (get_dist (x, y));
+			if (w < dp[y][0])
+			{
+				dp[y][0] = w;
+				par[y][0] = x;
+			}
+		}
+	}
+	int v = b[m - 1][0];
+	for (int i = 0; i < (int)b[m - 1].size (); i++)
+	{
+		int u = b[m - 1][i];
+		if (dp[u][1] < dp[v][1])
+		v = u;
+	}
+	printf ("%d\n", dp[v][1]);
+	work (v);
+	return 0;
+}

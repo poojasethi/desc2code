@@ -1,0 +1,75 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#define Inf 0x3f3f3f3f
+using namespace std;
+const int maxn = 30;
+int degree[maxn];
+vector<int> G[maxn];
+bool is_edge[maxn][maxn];
+bool visit[maxn];
+int n, m;
+
+void Init()
+{
+    memset(degree, 0, sizeof(degree));
+    for(int i = 0; i < maxn; ++i) G[i].clear();
+    memset(is_edge, false, sizeof(is_edge));
+}
+
+bool compare(int u, int v)
+{
+    if(degree[u] != degree[v]) return degree[u] < degree[v];
+    return u < v;
+}
+
+void dfs(int u)
+{
+    visit[u] = true;
+    for(int i = 0; i < static_cast<int>(G[u].size()); ++i)
+    {
+        if(!visit[G[u][i]])
+        {
+            dfs(G[u][i]);
+            return;
+        }
+    }
+}
+
+bool check()
+{
+    int ans = 0;
+    for(int i = 0; i < n; ++i) ans += visit[i];
+    return (ans == n);
+}
+
+int main()
+{
+    //freopen("aa.in", "r", stdin);
+    //freopen("bb.out", "w", stdout);
+    int u, v; bool flag = false;
+    scanf("%d %d", &n, &m); Init();
+    while(m--)
+    {
+        scanf("%d %d", &u, &v);
+        u--, v--;
+        if(u == v) continue;
+        if(is_edge[u][v]) continue;
+        G[u].push_back(v); G[v].push_back(u);
+        is_edge[u][v] = is_edge[v][u] = true;
+        degree[u]++, degree[v]++;
+    }
+    for(int i = 0; i < n; ++i) sort(G[i].begin(), G[i].end(), compare);
+    flag = false;
+    for(int i = 0; i < n; ++i)
+    {
+        memset(visit, false, sizeof(visit));
+        dfs(i);
+        if(check()) { printf("Yes\n"); flag = true; break;}
+    }
+    if(!flag) printf("No\n");
+    return 0;
+}

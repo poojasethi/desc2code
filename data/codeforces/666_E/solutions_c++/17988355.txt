@@ -1,0 +1,159 @@
+#include <cstring>
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+const int MAXS = 1e6 + 5;
+
+struct Sam {int Go[27], Pre, Len, Ord, Root;} Tr[MAXS];
+struct Tree {int l, r, Max, Ord;} T[MAXS * 20];
+struct Answer {int Max, Id;} Ans[MAXS];
+struct Seg {
+	int l, r, Ord;
+	Seg(void) {}
+	Seg(int L, int R, int O) {l = L, r = R, Ord = O;}
+};
+
+vector<Seg> Q[MAXS];
+
+char S[MAXS], Ti[MAXS];
+int N, q, Lst, Root, Cnt, tot, Num, Max, Same[MAXS], Tag[MAXS], Fa[MAXS][21], Id[MAXS];
+
+void SamAdd(int c, int Bel) {
+	int Np = ++ tot, p = Lst;
+	Tr[Np].Len = Tr[Lst].Len + 1, Tr[Np].Ord = Bel;
+	Lst = Np;
+	for (; p && !Tr[p].Go[c]; p = Tr[p].Pre) Tr[p].Go[c] = Np;
+	if (!p) Tr[Np].Pre = Root; else {
+		int q = Tr[p].Go[c];
+		if (Tr[q].Len == Tr[p].Len + 1) Tr[Np].Pre = q; else {
+			int Nq = ++ tot;
+			Tr[Nq] = Tr[q], Tr[Nq].Ord = 0;
+			Tr[Nq].Len = Tr[p].Len + 1;
+			Tr[Np].Pre = Tr[q].Pre = Nq;
+			for (; p && Tr[p].Go[c] == q; p = Tr[p].Pre) Tr[p].Go[c] = Nq;
+		}
+	}
+}
+
+void SamQuery(int c, int Ord) {
+	Same[Ord] = Same[Ord - 1];
+	for (; Lst != Root && !Tr[Lst].Go[c]; Lst = Tr[Lst].Pre, Same[Ord] = Tr[Lst].Len);
+	if (Tr[Lst].Go[c]) Lst = Tr[Lst].Go[c], Same[Ord] ++; 
+	Tag[Ord] = Lst;
+}
+
+void Prepare() {
+	for (int i = 1; i <= tot; i ++) Fa[i][0] = Tr[i].Pre;
+	for (int j = 1; j <= 20; j ++)
+		for (int i = 1; i <= tot; i ++) 	
+			Fa[i][j] = Fa[Fa[i][j - 1]][j - 1];
+}
+
+void SamPower(int l, int r, int p, int q, int Ord) {
+	int Now = Tag[q];
+	if (q - p + 1 > Same[q]) {
+		Ans[Ord].Id = l;
+		return;
+	}
+	for (int i = 20; i + 1; i --) 
+		if (Tr[Fa[Now][i]].Len >= q - p + 1) Now = Fa[Now][i]; 
+	Q[Now].push_back(Seg(l, r, Ord));
+}
+
+void Init() {
+	scanf("%s", S + 1);
+	scanf("%d", &N);
+	int Len = 0;
+	Root = Lst = ++ tot;
+	for (int i = 1; i <= N; i ++) {
+		scanf("%s", Ti + 1);
+		int Len = strlen(Ti + 1);
+		for (int j = 1; j <= Len; j ++) SamAdd(Ti[j] - 'a', i);
+		SamAdd(26, 0);
+	}
+	Prepare();
+	Lst = Root, Len = strlen(S + 1);
+	for (int i = 1; i <= Len; i ++) SamQuery(S[i] - 'a', i);
+	scanf("%d", &q);
+	for (int i = 1; i <= q; i ++) {
+		int p, q, l, r;
+		scanf("%d%d%d%d", &l, &r, &p, &q);
+		SamPower(l, r, p, q, i);
+	}
+}
+
+bool Cmp(int A, int B) {return Tr[A].Len > Tr[B].Len;}
+
+void Update(int Now) {
+	int l = T[Now].l, r = T[Now].r;
+	T[Now].Max = max(T[l].Max, T[r].Max);
+	T[Now].Ord = T[l].Ord;
+	if (T[r].Max > T[l].Max) T[Now].Ord = T[r].Ord;
+}
+
+void Insert(int &Rt, int l, int r, int Side) {
+	if (!Rt) Rt = ++ Cnt;
+	if (l == r) {
+		T[Rt].Max = T[Rt].Max + 1;
+		T[Rt].Ord = l;
+		return;
+	}
+	int Mid = (l + r) >> 1;
+	if (Side <= Mid) Insert(T[Rt].l, l, Mid, Side); else
+		Insert(T[Rt].r, Mid + 1, r, Side);
+	Update(Rt);
+}
+
+void Merge(int &Rt, int Ot, int l, int r) {
+	if (!Ot) return;
+	if (!Rt) Rt = ++ Cnt;
+	if (l == r) {
+		T[Rt].Max = T[Rt].Max + T[Ot].Max;
+		T[Rt].Ord = l;
+		return;
+	}	
+	int Mid = (l + r) >> 1;
+	Merge(T[Rt].l, T[Ot].l, l, Mid), Merge(T[Rt].r, T[Ot].r, Mid + 1, r);
+	Update(Rt);
+}
+
+void Query(int Rt, int l, int r, int lx, int rx) {
+	if (!Rt || r < lx || l > rx) return;
+	if (l >= lx && r <= rx) {
+		if (T[Rt].Max > Max) 
+			Max = T[Rt].Max, Num = T[Rt].Ord; 
+		return;
+	}
+	int Mid = (l + r) >> 1;
+	Query(T[Rt].l, l, Mid, lx, rx), Query(T[Rt].r, Mid + 1, r, lx, rx);
+}
+
+void Solve() {
+	for (int i = 1; i <= tot; i ++) Id[i] = i;
+	sort(Id + 1, Id + 1 + tot, Cmp);
+	for (int i = 1; i <= tot; i ++) {
+		int Now = Id[i];
+		if (Tr[Now].Ord) Insert(Tr[Now].Root, 1, N, Tr[Now].Ord);
+		Merge(Tr[Tr[Now].Pre].Root, Tr[Now].Root, 1, N);
+	}
+	for (int i = 1; i <= tot; i ++) {
+		int Size = Q[i].size();
+		for (int j = 0; j < Size; j ++) {
+			Seg Now = Q[i][j];
+			Max = 0, Num = Now.l;
+			Query(Tr[i].Root, 1, N, Now.l, Now.r);
+			Ans[Now.Ord].Max = Max, Ans[Now.Ord].Id = Num;
+		}
+	}
+	
+	for (int i = 1; i <= q; i ++) 
+		printf("%d %d\n", Ans[i].Id, Ans[i].Max);
+}
+
+int main() {
+	Init();
+	Solve();
+}

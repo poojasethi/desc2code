@@ -1,0 +1,177 @@
+#include<iostream>
+#include<stdio.h>
+#include<assert.h>
+#include<string.h>
+#include<time.h>
+#include<stdlib.h>
+#include<math.h>
+#include<string>
+#include<sstream>
+#include<map>
+#include<set>
+#include<queue>
+#include<stack>
+#include<vector>
+#include<algorithm>
+#pragma comment(linker, "/STACK:16777216")
+#define pb push_back
+#define ppb pop_back
+#define mp make_pair
+#define all(x) (x).begin(),(x).end()
+#define sz(x) (int)(x).size()
+#define LL long long
+#define bit __builtin_popcountll
+#define sqr(x) (x) * (x)
+using namespace std;
+typedef pair<int, int> pii;
+const double eps = 1e-9;
+const double pi = acos(-1.0);
+const int maxn = (int)1e5 + 10;
+vector<pii> g[maxn];
+int f[maxn],p[17][maxn],mi[17][maxn],in[maxn],out[maxn],T = 0;
+int totCost[maxn];
+void dfs(int v, int pr, int tot) {
+	totCost[v] = tot;
+	in[v] = T++;
+	p[0][v] = pr;
+	for (int i = 1; i < 17; i++) {
+		mi[i][v] = min(mi[i - 1][v],mi[i - 1][p[i - 1][v]]);
+		p[i][v] = p[i - 1][p[i - 1][v]];
+	}
+	for (int i = 0; i < sz(g[v]); i++) {
+		int to = g[v][i].first;
+		int cost = g[v][i].second;
+		if (to == pr) continue;
+		mi[0][to] = cost;
+		dfs(to,v,tot + cost);
+	}
+	out[v] = T++;
+}
+bool isUpper(int a, int b) {
+	return in[a] <= in[b] && out[b] <= out[a];
+}
+int lca(int a, int b) {
+	if (isUpper(a,b)) return a;
+	if (isUpper(b,a)) return b;
+	for (int i = 16; i >= 0; i--) {
+		if (!isUpper(p[i][a],b)) {
+			a = p[i][a];
+		}
+	}
+	return p[0][a];
+}
+int getDist(int a, int b) {
+	return totCost[a] + totCost[b] - 2 * totCost[lca(a,b)];
+}
+void solve() {
+	int k; scanf("%d",&k);
+	for (int i = 0; i < k; i++) {
+		scanf("%d",&f[i]);
+		--f[i];
+	}
+	int bestID = -1;
+	int bestVal = -1;
+	for (int i = 1; i < k; i++) {
+		if (getDist(f[0],f[i]) > bestVal) {
+			bestVal = getDist(f[0],f[i]);
+			bestID = f[i];
+		}
+	}
+	int bestID2 = -1;
+	int bestVal2 = -1;
+	for (int i = 0; i < k; i++) {
+		if (getDist(bestID,f[i]) > bestVal2) {
+			bestVal2 = getDist(bestID,f[i]);
+			bestID2 = f[i];
+		}
+	}
+	vector<int> aa,bb;
+	for (int i = 0; i < k; i++) {
+		int A = getDist(bestID,f[i]);
+		int B = getDist(bestID2,f[i]);
+		if (A == bestVal2 && B == bestVal2) {
+			printf("%d -1\n",bestVal2);
+			return;
+		}
+		if (B == bestVal2) {
+			aa.pb(f[i]);
+		}
+		if (A == bestVal2) {
+			bb.pb(f[i]);
+		}
+	}
+	int lca1 = bestID;
+	int lca2 = bestID2;
+	for (int i = 0; i < sz(aa); i++) {
+		lca1 = lca(lca1,aa[i]);
+	}
+	for (int i = 0; i < sz(bb); i++) {
+		lca2 = lca(lca2,bb[i]);
+	}
+	int ans = 10001;
+	if (isUpper(lca1,lca2)) {
+		for (int i = 16; i >= 0; i--) {
+			bool ok = true;
+			for (int j = 0; j < sz(aa); j++) {
+				if (isUpper(p[i][lca2],aa[j])) {
+					ok = false;
+					break;
+				}
+			}
+			if (!ok) continue;
+			ans = min(ans,mi[i][lca2]);
+			lca2 = p[i][lca2];
+		}
+		ans = min(ans,mi[0][lca2]);
+	} else if (isUpper(lca2,lca1)) {
+		for (int i = 16; i >= 0; i--) {
+			bool ok = true;
+			for (int j = 0; j < sz(bb); j++) {
+				if (isUpper(p[i][lca1],bb[j])) {
+					ok = false;
+					break;
+				}
+			}
+			if (!ok) continue;
+			ans = min(ans,mi[i][lca1]);
+			lca1 = p[i][lca1];
+		}
+		ans = min(ans,mi[0][lca1]);
+	} else {
+		int LCA = lca(lca1,lca2);
+		for (int i = 16; i >= 0; i--) {
+			if (lca1 != LCA && isUpper(LCA,p[i][lca1])) {
+				ans = min(ans,mi[i][lca1]);
+				lca1 = p[i][lca1];
+			}
+			if (lca2 != LCA && isUpper(LCA,p[i][lca2])) {
+				ans = min(ans,mi[i][lca2]);
+				lca2 = p[i][lca2];
+			}
+		}
+	}
+	assert(ans != 10001);
+	printf("%d %d\n",bestVal2,ans);
+}
+int main()
+{
+	#ifndef ONLINE_JUDGE
+	//freopen("input.txt","r",stdin);
+	//freopen("output.txt","w",stdout);
+	#endif
+	memset(mi,61,sizeof(mi));
+	int n; cin >> n;
+	for (int i = 0; i < n - 1; i++) {
+		int a,b,c; scanf("%d%d%d",&a,&b,&c);
+		--a;
+		--b;
+		g[a].pb(mp(b,c));
+		g[b].pb(mp(a,c));
+	}
+	dfs(0,0,0);
+	int q; cin >> q;
+	for (int i = 0; i < q; i++) {
+		solve();
+	}
+	return 0;
+}

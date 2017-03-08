@@ -1,0 +1,81 @@
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+#include <vector>
+#include <deque>
+
+using namespace std;
+
+const int MAXN = 100100, offset = 1 << 17;
+typedef pair<int,int> par;
+
+struct fenwick {
+    int data[MAXN];
+
+    void set (int x, int val) {
+        for (++x; x < MAXN; x += x&-x) data[x] += val;
+    }
+
+    int get (int x) {
+        int ret = 0;
+        for (++x; x > 0; x -= x&-x) ret += data[x];
+        return ret;
+    }
+} F;
+
+struct tournament {
+    int data[2*offset];
+
+    int get (int x, int lo, int hi, int from, int to) {
+        if (lo >= to || hi <= from) return MAXN;
+        if (lo >= from && hi <= to) return data[x];
+        return min( get(2*x, lo, (lo+hi)/2, from, to), get(2*x+1, (lo+hi)/2, hi, from, to) );
+    }
+
+    void set (int x, int val) {
+        data[x+=offset] = val;
+        for (x /= 2; x; x /= 2) data[x] = min(data[2*x], data[2*x+1]);
+    }
+} T;
+
+int n, a[MAXN], prev[MAXN], m, ans[MAXN], dobar[MAXN];
+vector<par> E[MAXN];
+vector<int> V[MAXN];
+
+int main ()
+{
+    scanf ("%d", &n);
+    for (int i = 0; i < n; ++i) scanf ("%d", a + i);
+    
+    scanf ("%d", &m);
+    for (int i = 0; i < m; ++i) {
+        int beg, end;
+        scanf ("%d%d", &beg, &end); --beg; --end;
+        E[end].push_back( par(beg, i) );
+    }
+
+    memset (prev, -1, sizeof prev);
+
+    for (int i = 0; i < n; ++i) {
+        if (prev[a[i]] != -1) {
+            F.set(prev[a[i]], -1);
+            T.set(prev[a[i]], MAXN);
+        }
+        if (V[a[i]].size() > 1) {
+            int x = V[a[i]].back(), y = *(V[a[i]].end() - 2);
+            if (i - x != x - y) dobar[a[i]] = y + 1;
+        }
+        T.set(i, dobar[a[i]]);
+        V[a[i]].push_back(i);
+        prev[a[i]] = i;
+        F.set(i, 1);
+        for (vector<par>::iterator it = E[i].begin(); it != E[i].end(); ++it) {
+            ans[it->second] = F.get(i) - F.get(it->first-1);
+            if (T.get(1, 0, offset, it->first, i + 1) > it->first) ++ans[it->second];
+        }
+    }
+
+    for (int i = 0; i < m; ++i) printf ("%d\n", ans[i]);
+
+    return 0;
+}

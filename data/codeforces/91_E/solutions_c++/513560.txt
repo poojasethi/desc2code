@@ -1,0 +1,167 @@
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+#define Max 400005
+
+#define MP make_pair
+#define F first
+#define S second
+#define INF 2147483640
+
+using namespace std;
+
+pair<int, int> arr[Max];
+
+struct node
+{
+	long long v, b;
+	int ma, T;
+};
+
+struct q
+{
+	int l, r, idx, T, ans;
+};
+
+int N;
+long long Tim;
+node T[Max];
+q Q[Max];
+
+bool cmp(const q &a, const q &b)
+{
+	return a.T < b.T;
+}
+bool cmp2(const q &a, const q &b)
+{
+	return a.idx < b.idx;
+}
+
+void update(int now)
+{
+	//cout<<now<<" "<<Tim<<" "<<T[now].T<<"\n";
+
+	if(Tim < T[now].T)
+		return ;
+
+	int a, b, t;
+	long long ta, tb;
+
+	a = now<<1, b = (now<<1) + 1;
+	update(a), update(b);
+
+	ta = T[a].v + T[a].b * Tim;
+	tb = T[b].v + T[b].b * Tim;
+
+
+	if(ta > tb)
+	{
+		T[now].v = T[a].v;
+		T[now].b = T[a].b;
+		T[now].ma = T[a].ma;
+	}
+	else
+	{
+		T[now].v = T[b].v;
+		T[now].b = T[b].b;
+		T[now].ma = T[b].ma;
+	}
+
+	if(T[b].b != T[a].b)
+		t = (T[a].v-T[b].v)/(T[b].b-T[a].b) + 1;
+	else
+		t = INF;
+
+	if(t <= Tim)
+		t = INF;
+
+	T[now].T = min(t, min(T[a].T, T[b].T) );
+}
+
+int ctmax(int a, int b)
+{
+	if(b == -1)
+		return a;
+
+	long long ta, tb;
+
+	ta = T[a+N].v + T[a+N].b * Tim;
+	tb = T[b+N].v + T[b+N].b * Tim;
+
+	return ta >= tb ? a : b;
+}
+
+int query(int s, int t)
+{
+	int ans;
+
+	ans = -1;
+
+	for(s=s+N-1, t=t+N+1;s^t^1;s>>=1, t>>=1)
+	{
+		if(~s & 1)
+			update(s^1), ans = ctmax(T[s^1].ma, ans);
+		if(t & 1)
+			update(t^1), ans = ctmax(T[t^1].ma, ans);
+	}
+	return ans;
+}
+
+int main()
+{
+	int n, m;
+
+	scanf("%d %d", &n, &m);
+	for(int i=0;i<n;i++)
+	{
+		int a, b;
+
+		scanf("%d %d", &a, &b);
+
+		arr[i] = MP(a, b);
+	}
+
+	for(N=1;N<(n+2);N<<=1);
+
+	Tim = 0;
+	for(int i=1;i<=n;i++)
+	{
+		T[i+N].v = arr[i-1].F;
+		T[i+N].b = arr[i-1].S;
+		T[i+N].T = INF;
+		T[i+N].ma = i;
+	}
+
+	for(int i=n+1;i<N;i++)
+	{
+		T[i+N].v = -INF;
+		T[i+N].b = -INF;
+		T[i+N].T = INF;
+	}
+	T[N].v = -INF;
+	T[N].b = -INF;
+	T[N].T = INF;
+
+
+	for(int i=N-1;i>0;i--)
+		update(i);
+
+	for(int i=0;i<m;i++)
+	{
+		int a, b, c;
+
+		scanf("%d %d %d", &a, &b, &c);
+		Q[i].l = a, Q[i].r = b, Q[i].idx = i, Q[i].T = c;
+	}
+	sort(Q, Q+m, cmp);
+
+	for(int i=0;i<m;i++)
+	{
+		Tim = Q[i].T;
+		Q[i].ans = query(Q[i].l, Q[i].r);
+	}
+
+	sort(Q, Q+m, cmp2);
+	for(int i=0;i<m;i++)
+		printf("%d\n", Q[i].ans);
+}

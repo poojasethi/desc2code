@@ -1,0 +1,110 @@
+import math
+import cmath
+
+class Circle:
+    def __init__(self,p,r):
+        self.type = "Circle"
+        self.p = p
+        self.r = r
+
+class Segment:
+    def __init__(self,bgn,end):
+        self.type = "Segment"
+        self.bgn = bgn
+        self.end = end
+
+def cross(a,b):
+    return (a.conjugate()*b).imag
+
+def rotate(p):
+    return complex(-p.imag,p.real)
+
+def l2lIntersect(a,b):
+    d1,d2 = a.end-a.bgn,b.end-b.bgn;
+    return a.bgn + d1*cross(b.bgn-a.bgn,d2)/cross(d1,d2);
+
+def c2lIntersect(a,b):
+    p,v = b.bgn,b.end-b.bgn
+    A = abs(v)*abs(v)
+    B = 2*(v.real*(p-a.p).real + v.imag*(p-a.p).imag)
+    C = abs(p-a.p)*abs(p-a.p)-a.r*a.r
+    if B*B-4*A*C<0: return []
+    ret = []
+    ret.append(p+v*(-B-math.sqrt(B*B-4*A*C))/(2*A))
+    ret.append(p+v*(-B+math.sqrt(B*B-4*A*C))/(2*A))
+    return ret
+
+def c2cIntersect(a,b):
+    d = abs(a.p-b.p)
+    if d==0 or a.r+b.r<d or a.r+d<b.r or b.r+d<a.r: return []
+    angle = math.acos((b.r*b.r-a.r*a.r-d*d)/(-2*a.r*d))
+    ret = []
+    ret.append((b.p-a.p)*cmath.rect(a.r/d, angle)+a.p)
+    ret.append((b.p-a.p)*cmath.rect(a.r/d,-angle)+a.p)
+    return ret
+
+
+def calcIntersect(a,b):
+    if a.type=="Segment" and b.type=="Segment":
+        return [l2lIntersect(a,b)]
+    if a.type=="Segment" and b.type=="Circle":
+        return c2lIntersect(b,a)
+    if a.type=="Circle" and b.type=="Segment":
+        return c2lIntersect(a,b)    
+    if a.type=="Circle" and b.type=="Circle":
+        return c2cIntersect(a,b)
+
+
+def getAngle(p,circle):
+    d = abs(p-circle.p)
+    return math.tan(circle.r/d)*2
+
+    
+def read():
+    ret = []
+    for i in range(3):
+        x,y,r = map(float,raw_input().split())
+        ret.append(Circle(complex(x,y),r))
+    return ret
+
+
+def work(circles):
+    toCalc = []
+    for i in range(2):
+        c1,c2 = circles[i],circles[i+1]
+        if c1.r==c2.r:
+            bgn = (c2.p-c1.p)*0.5+c1.p
+            toCalc.append(Segment(bgn,bgn+rotate(c2.p-c1.p)))
+        else:
+            L = (c2.p-c1.p)*c1.r/(c1.r+c2.r)+c1.p
+            R = (c2.p-c1.p)*c2.r/(c1.r-c2.r)+c2.p
+            toCalc.append(Circle((L+R)/2,abs(R-L)/2))
+
+    maxV = 0
+    XPs = calcIntersect(toCalc[0],toCalc[1])
+
+    for i in range(len(XPs)):
+        xp = XPs[i]
+        isOk = True
+        for j in range(3):
+            for k in range(3):
+                a = abs(xp-circles[j].p)
+                b = abs(xp-circles[k].p)
+                if abs(b*circles[j].r-a*circles[k].r)>1e-4:
+                   isOk = False
+        if isOk:
+            sumAngle = 0
+            for j in range(3):
+                   sumAngle += getAngle(xp,circles[i])
+            if maxV<sumAngle:
+                   maxV = sumAngle
+                   ans = xp
+
+    if maxV==0:
+        print ""
+    else:
+        print "%.5lf %.5lf"%(ans.real,ans.imag)
+
+work(read())
+
+

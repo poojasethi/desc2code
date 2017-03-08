@@ -1,0 +1,203 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define dbgs(x) cerr << (#x) << " --> " << (x) << ' '
+#define dbg(x) cerr << (#x) << " --> " << (x) << endl
+
+#define foreach(i,x) for(type(x)i=x.begin();i!=x.end();i++)
+#define FOR(ii,aa,bb) for(int ii=aa;ii<=bb;ii++)
+#define ROF(ii,aa,bb) for(int ii=aa;ii>=bb;ii--)
+
+#define type(x) __typeof(x.begin())
+
+#define pb push_back
+#define mp make_pair
+
+#define nd second
+#define st first
+
+#define endl '\n'
+
+typedef pair < int ,int > pii;
+
+typedef long long ll;
+
+const int inf = 1e9, mod = 1e9+7;
+const int N = 2e5+35;
+
+const int logN = 18;
+
+int begin, x, y, LOG[N], i, j, n, m, k, t, a[N], rmq[N][logN+1], suff[N], sorted[N];
+
+pair< pii , int > C[N];
+
+vector< int > ST[4 * N];
+
+int que(int x,int y){
+
+	y--;
+
+	if(x > y) return 0;
+
+	int t = LOG[y-x+1];
+
+	return min(rmq[x][t],rmq[y-(1<<t)+1][t]);
+
+}
+
+void init(int k,int bas,int son){
+	
+	if(bas == son) return (void)(ST[k].pb(sorted[bas])); 
+
+	int orta = bas + son >> 1;
+
+	init(2*k,bas,orta);
+	
+	init(2*k+1,orta+1,son);
+
+	ST[k].resize(ST[2*k].size()+ST[2*k+1].size());
+
+	merge(ST[2*k].begin(),ST[2*k].end(),ST[2*k+1].begin(),ST[2*k+1].end(),ST[k].begin());
+
+} 
+
+int query(int k,int bas,int son,int x,int y,int t){
+	
+	if(bas > y || son < x) return 0;
+
+	if(x <= bas && son <= y) return son - bas + 1 - (lower_bound(ST[k].begin(),ST[k].end(),t)-ST[k].begin());
+	
+	int orta = bas + son >> 1;
+
+	return query(2*k,bas,orta,x,y,t) + query(2*k+1,orta+1,son,x,y,t);
+	
+}
+
+int bs(int cur,int l){
+	
+	int bas = 0, son = cur-1;
+
+	while(bas < son){
+		
+		int orta = bas + son >> 1;
+
+		if(orta == bas) orta++;
+
+		if(que(cur-orta,cur) >= l) bas = orta;
+
+		else son = orta - 1;
+		
+	}
+
+	int leftmost = cur-bas;
+
+	bas = 0, son = n - cur;
+	
+	while(bas < son){
+		
+		int orta = bas + son >> 1;
+
+		if(orta == bas) orta++;
+		
+		if(que(cur,cur+orta) >= l) bas = orta;
+
+		else son = orta - 1;
+	
+	}
+
+	int rightmost = cur + bas;
+
+	///////////// (begin+1..begin+i-l)   begin+cur.begin+l  (begin+i+l ....begin+n)
+
+	cur = sorted[cur];
+
+	return query(1,1,n,leftmost,rightmost,begin+cur+l+1) +
+		   query(1,1,n,leftmost,rightmost,begin)     -
+		   query(1,1,n,leftmost,rightmost,begin+cur-l);
+}
+
+int main(){
+	
+	scanf("%d",&n);
+
+	int bef = 0;
+
+	FOR(i,1,n){
+		
+		scanf("%d",&x);
+	
+		if(i > 1) a[i-1] = bef - x;
+
+		bef = x;
+
+	}
+	
+	n--;
+	
+	begin = n + 1; 
+	
+	a[n+1] = -inf;
+
+	FOR(i,n+2,2*n+1) a[i] = -a[i-n-1];
+
+	n = 2 * n + 1;
+
+	FOR(i,1,n) LOG[i] = log2(i);
+
+	FOR(i,1,n) suff[i] = a[i];
+
+	suff[n+1] = -inf;
+
+	FOR(j,1,logN){
+	
+		FOR(i,1,n) C[i] = mp(mp(suff[i],suff[min(n+1,i+(1<<j-1))]),i);
+
+		sort(C+1,C+n+1);
+
+		FOR(i,1,n) suff[C[i].nd] = suff[C[i-1].nd] + (C[i].st != C[i-1].st);
+
+	}
+
+	FOR(i,1,n) sorted[suff[i]] = i;
+
+	int j = 0;
+
+	FOR(i,1,n){
+		
+		if(suff[i] == 1) continue;
+		
+		while(i + j <= n && sorted[suff[i]-1] + j <= n && a[i+j] == a[sorted[suff[i]-1]+j]) j++;
+	
+		rmq[suff[i]-1][0] = j;
+
+		if(j) j--;
+		
+	}
+
+	FOR(j,1,logN)
+
+		FOR(i,1,n)
+			
+			rmq[i][j] = min(rmq[i][j-1],rmq[min(n+1,i+(1<<j-1))][j-1]);
+	
+	init(1,1,n);
+
+	scanf("%d",&m);
+	
+	FOR(i,1,m){
+		
+		scanf("%d %d",&x,&y);
+
+		if(x == y){ printf("%d\n",begin-1); continue; }
+
+		y--;
+
+		int cur = suff[x];
+
+		printf("%d\n",bs(cur,y-x+1));
+		
+	}
+	
+    return 0;
+}

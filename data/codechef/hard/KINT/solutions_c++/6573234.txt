@@ -1,0 +1,92 @@
+#include <iostream>
+
+#include <cstring>
+
+#include <cassert>
+
+using namespace std;
+
+#define BITCOUNT(mask) ( __builtin_popcount((mask)) )
+#define HIGHESTSETBIT(mask) ( sizeof(int)*8-1-__builtin_clz((mask)) )
+
+//#define REP(i,n) for(int i=0,_n=(n);i<_n;++i)
+//#define FOR(i,a,b) for(int i=(a),_b=(b);i<=_b;++i)
+
+const int MOD = 1e9 + 7;
+
+#define IS_SET(mask, k) (((mask) >> (k)) & 1)
+
+
+int N, K, B;
+
+bool gen_new_mask(int bit_pos, int cur_eq_mask, int sel_mask, int& new_eq_mask) {
+   new_eq_mask = cur_eq_mask;
+
+   for (int k = 0; k < K; ++k) {
+      if (IS_SET(cur_eq_mask, k)) {
+          bool prev_num_isset =
+                 (k == K-1) ? IS_SET(N, bit_pos) : IS_SET(sel_mask, k+1);
+
+          if (IS_SET(sel_mask, k)) {
+             // set bit_pos of kth number to 1
+             if (!prev_num_isset)
+                return false;
+          }
+          else {
+             // set bit_pos of kth number to 0
+             if (prev_num_isset)
+                new_eq_mask &= ~(1<<k);
+          }
+      }
+   }
+
+   return true;
+}
+
+int memo[32][32][1<<8];
+int go(int bit_pos, int rem_bits, int eq_mask) {
+   if (rem_bits < 0) return 0;
+   if (bit_pos < 0)
+      return rem_bits == 0 && eq_mask == 0;  // means that x_(k-1) < x_k for 1 <= k < K
+   if (memo[bit_pos][rem_bits][eq_mask] < 0) {
+      long long res = 0;
+      for (int sel_mask = 0; sel_mask < (1<<K); ++sel_mask) {
+         int b = BITCOUNT(sel_mask) % 2;
+         int new_eq_mask;
+         if (!gen_new_mask(bit_pos, eq_mask, sel_mask, new_eq_mask))
+            continue;
+         int add = go(bit_pos-1, rem_bits-b, new_eq_mask);
+         res = (res + add) % MOD;
+         // if (res >= MOD) res -= MOD;
+      }
+      memo[bit_pos][rem_bits][eq_mask] = res;
+   }
+   return memo[bit_pos][rem_bits][eq_mask];
+}
+
+int main(int argc, char* argv[]) {
+   ios_base::sync_with_stdio(false); 
+   cin.tie(NULL);
+
+   int TC;
+   cin >> TC;
+   for (int tc = 1; tc <= TC; ++tc) {
+      cin >> N >> K >> B;
+/*
+      assert(1 <= N && N <= 1000000000);
+      assert(1 <= K && K <= 7);
+      assert(0 <= B && B <= 30);
+*/
+      int res;
+      N++;
+      if (K > N)
+         res = 0;
+      else {
+         memset(memo, -1, sizeof(memo));
+         res = go(HIGHESTSETBIT(N), B, (1<<K)-1);
+      }
+      cout << res << endl;
+   }
+
+   return 0;
+}

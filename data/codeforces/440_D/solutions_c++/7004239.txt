@@ -1,0 +1,123 @@
+#include <cmath>
+#include <map>
+#include <vector>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <set>
+#include <bitset>
+#include <memory.h>
+#include <functional>
+#include <queue>
+#include <fstream>
+#include <ctime>
+#include <deque>
+#include <utility>
+#include <stack>
+#include <sstream>
+#include <list>
+#include <cctype> 
+#include <numeric> 
+#include <iomanip>
+#include <assert.h>
+using namespace std;
+#define sqr(_) ((_)*(_))
+
+typedef pair<int, int> Pii;
+#define x first
+#define y second
+#define mp make_pair
+#define pb push_back
+
+typedef long long LL;
+
+const int MAXN = 400 + 10;
+
+struct Graph
+{
+	int id, next, b[MAXN];
+}g[MAXN * 2];
+int n, k, st[MAXN], f[MAXN][MAXN], size[MAXN];
+
+void Add(int tot, int x, int y)
+{
+	g[tot].id = y, g[tot].next = st[x], st[x] = tot;
+}
+void Tree_dp(int x, int fa)
+{
+	size[x] = 1;
+	f[x][1] = 0;
+	for (int i = st[x]; i != -1; i = g[i].next)
+		if (g[i].id != fa)
+		{
+			int y = g[i].id;
+			Tree_dp(y, x);
+			for (int j = size[x] + 1; j <= size[x] + size[y]; ++j)
+				f[x][j] = MAXN;
+			size[x] += size[y];
+			for (int j = min(size[x], k); j >= 1; --j)
+			{
+				g[i].b[j] = 0, ++f[x][j];
+				for (int k = 1; k <= min(size[y], j - 1); ++k)
+					if (f[x][j - k] + f[y][k] < f[x][j])
+						f[x][j] = f[x][j - k] + f[y][k], g[i].b[j] = k;
+			}
+		}
+}
+void DFS(int x, int k, int fa)
+{
+	vector<int> s;
+	for (int i = st[x]; i != -1; i = g[i].next)
+		if (g[i].id != fa)
+			s.pb(i);
+	reverse(s.begin(), s.end());
+	for (int i = 0; i < (int)s.size(); ++i)
+		if (!g[s[i]].b[k])
+			printf("%d ", s[i] / 2);
+		else
+		DFS(g[s[i]].id, g[s[i]].b[k], x),
+		k -= g[s[i]].b[k];
+}
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt", "r", stdin), freopen("output.txt", "w", stdout);
+#endif
+	
+	cin >> n >> k;
+	if (n == k)
+		puts("0"), exit(0);
+	memset(st, -1, sizeof(st));
+	for (int i = 1; i < n; ++i)
+	{
+		int x, y;
+		cin >> x >> y;
+		Add(i * 2, x, y);
+		Add(i * 2 + 1, y, x);
+	}
+	int Tohka = MAXN, Mashiro = 0;
+	if (k <= 10)
+		for (int i = 1; i <= n; ++i)
+		{
+			Tree_dp(i, 0);
+			if (f[i][k] < Tohka)
+				Tohka = f[i][k], Mashiro = i;
+		}
+	else
+	for (int i = 1; i <= n / k * 10; ++i)
+	{
+		int x = rand() % n + 1;
+		Tree_dp(x, 0);
+		if (f[x][k] < Tohka)
+			Tohka = f[x][k], Mashiro = x;
+	}
+	cout << Tohka << endl;
+	Tree_dp(Mashiro, 0);
+	DFS(Mashiro, k, 0);
+	
+	fclose(stdin);
+	fclose(stdout);
+	return 0;
+}

@@ -1,0 +1,139 @@
+#pragma comment(linker, "/STACK:1024000000,1024000000")
+#include <iostream>
+#include <string.h>
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <limits.h>
+#include <complex>
+#include <vector>
+#include <string>
+#define X first
+#define Y second
+#define MP make_pair
+#define PB push_back
+#define CLR(x) memset(x,0,sizeof(x))
+using namespace std;
+const double pi=acos(-1.0);
+const int                   Maxn=50010,Maxm=1000,Mo=7340033,oo=INT_MAX>>1;
+typedef pair<int, int>      F;
+typedef complex<double>     cp;
+typedef int                 Arr[Maxn];
+ 
+ 
+int                         n;
+long long                   ans;
+Arr                         use,t,s,vis,l,r,pr;
+vector<int>                 e[Maxn],a[Maxn];
+cp                          A[Maxn*4],B[Maxn*4],C[Maxn*4],tmp[Maxn*4];
+void FFT(int n,cp* A,int type){
+//næ�¯é�¿åº¦(2ç��å¹�),Aæ�¯ä¼ å�¥ç��æ�°ç»�,type -1ä»£è¡¨æ�¯FFT,1ä»£è¡¨DFT
+    double arg=pi;
+    for (int d=n/2; d ;d/=2,arg/=2){
+        cp w=cp(cos(arg),sin(arg)*type),pw=cp(1,0);
+        for (int i=0; i<n; i+=d , pw*=w)
+            for (int j=0, p=i*2%n; j<d; j++)
+                tmp[i+j]=A[p+j] + pw * A[p+d+j];
+        for (int i=0;i<n;i++) A[i]=tmp[i];
+    }
+    if(type + 1) for (int i=0;i<n;i++) A[i]/=n;
+}
+ 
+void calc(vector<int>&a,vector<int>&b)//ç»�è®¡å�½æ�° æ ¹æ�®å®�é��é��è¦�å��
+{
+    int N = 0;
+    for (int i=0;i<a.size();i++) A[a[i]]+=1, N=max(N,a[i]);
+    for (int i=0;i<b.size();i++) B[b[i]]+=1, N=max(N,b[i]);        
+    N++;
+    while(N&(N-1)) N += N&-N; N<<=1;
+    // cout<<N<<endl;
+    // cout<<"A:";for (int i=0;i<N;i++) cout<<A[i].real()<<" "; cout<<endl;
+    // cout<<"B:";for (int i=0;i<N;i++) cout<<B[i].real()<<" "; cout<<endl;    
+    FFT(N,A,-1);
+    FFT(N,B,-1);
+    for (int i=0;i<N;i++) C[i] = A[i]*B[i],A[i]=B[i]=cp(0,0);
+    FFT(N,C,1);
+    // cout<<"C:";for (int i=0;i<N;i++) cout<<C[i].real()<<" "; cout<<endl;    
+    for (int i=1;pr[i]<N;i++) ans+= (int)(C[pr[i]].real()+0.5);
+    // cout<<"ans:"<<ans<<endl;
+}
+F find(int u,int f,int sum)//æ�¾å�°æ �ç��é��å¿� sumè¡¨ç¤ºè¿�æ£µæ �ç��æ�»ç»�ç�¹æ�°ç�®
+{
+    // cout<<u<<endl;
+    s[u]=1;
+    int lar=0;
+    F ans=MP(oo,0);
+    for (int i=0;i<e[u].size();i++){
+        int v=e[u][i];
+        if (v==f||vis[v]) continue;
+        ans=min(ans,find(v,u,sum));
+        s[u]+=s[v];
+        lar=max(lar,s[v]);
+    }
+    lar=max(lar,sum-s[u]);
+    ans=min(ans,MP(lar,u));
+    return ans;
+}
+void dfs(int u,int f,int d,vector<int> &a)
+{
+    a.PB(d);
+    s[u]=1;
+    for (int i=0;i<e[u].size();i++){
+        int v=e[u][i];
+        if (v==f||vis[v]) continue;
+        dfs(v,u,d+1,a);
+        s[u]+=s[v];
+    }
+}
+void dfs(int u,int f,int sum)
+{
+    u=find(u,f,sum).Y;
+    int m=0,left;
+    for (int i=0;i<e[u].size();i++){//æ·±æ�� å¾�å�°å��ä¸ªå­�æ �ç��ä¿¡æ�¯
+        int v=e[u][i];
+        if (vis[v]) continue;
+        a[++m].clear();
+        dfs(v,u,1,a[m]);
+    }
+    a[++m].clear();
+    a[left=m].PB(0);
+    while(left>1){//å��å¹¶å��ä¸ªå­�æ �ç��ä¿¡æ�¯
+        int  d = left/2;
+        for (int i=1;i<=d;i++){
+            calc(a[i],a[i+d]);
+            for (int j=0;j<a[i+d].size();j++) a[i].PB(a[i+d][j]);
+        }
+        if (left&1) a[++d] = a[left];
+        left=d;
+    }
+    vis[u]=1;//vis è¡¨ç¤ºè¿�ä¸ªè��ç�¹å·²ç»�ä¸�å��æ �å��
+    for (int i=0;i<e[u].size();i++){
+        int v=e[u][i];
+        if (!vis[v]&&s[v]>1) dfs(v,u,s[v]);
+    }
+}
+ 
+void Prime(int Lim){
+    for (int i=2;i<=Lim;i++)
+    if (!vis[i]){
+        pr[++pr[0]] = i;
+        for(int p=i;p<=Lim;p+=i) vis[p]=1;
+    }
+    pr[++pr[0]] = oo;
+    CLR(vis);
+}
+int main()
+{
+    scanf("%d",&n);
+    Prime(n);
+    for (int i=1;i<n;i++){
+        int v,u;
+        scanf("%d%d",&u,&v);
+        e[u].PB(v);
+        e[v].PB(u);
+    }
+    dfs(1,0,n);
+    printf("%.8f\n", ans * 2.0 / n / (n-1) );
+}
+ 

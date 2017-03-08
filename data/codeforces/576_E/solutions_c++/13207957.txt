@@ -1,0 +1,106 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+const int N = 5e5 + 5;
+
+int from[N], to[N], color[N];
+int id[N], answer[N], cc[N];
+int next[N];
+int q;
+vector<pair<int *, int> > history;
+vector<pair<int, int> > tree[N * 4];
+int f[55][N], size[55][N], value[55][N];
+
+void add(int k, int m, int n, int l, int r, int id, int color) {
+    if (m > r || n < l) return ;
+    if (m >= l && n <= r) {
+        tree[k].push_back(make_pair(id, color));
+        return ;
+    }
+    int z1 = k << 1, z2 = z1 + 1, mid = (m + n) >> 1;
+    add(z1, m, mid, l, r, id, color);
+    add(z2, mid + 1, n, l, r, id, color);
+}
+
+pair<int, int> find(int x, int color) {
+    int val = value[color][x];
+    while (x != f[color][x]) {
+        x = f[color][x];
+        val ^= value[color][x];
+    }
+    return make_pair(x, val);
+}
+
+void change(int &x, int y) {
+    history.push_back(make_pair(&x, x));
+    x = y;
+}
+
+int merge(int x, int y, int color) {
+    pair<int, int> fax = find(x, color), fay = find(y, color);
+    if (fax.first == fay.first) return fax.second != fay.second;
+    if (size[color][fax.first] < size[color][fay.first]) {
+        swap(fax, fay);
+    }
+    if (fax.second == fay.second) change(value[color][fay.first], 1);
+    change(f[color][fay.first], fax.first);
+    change(size[color][fax.first], size[color][fax.first] + size[color][fay.first]);
+}
+
+void divide(int l, int r, int treeid) {
+    int cursize = history.size();
+    for (int i = 0; i < tree[treeid].size(); ++i) {
+        int ID = tree[treeid][i].first, col = tree[treeid][i].second;
+        merge(from[ID], to[ID], col);
+    }
+    if (l == r) {
+        answer[l] = merge(from[id[l]], to[id[l]], cc[l]);
+        if (answer[l]) color[id[l]] = cc[l];
+        if (color[id[l]] > 0) {
+            add(1, 1, q, l + 1, next[l] - 1, id[l], color[id[l]]);
+        }
+    }
+    else {
+        int mid = (l + r) >> 1;
+        divide(l, mid, treeid << 1);
+        divide(mid + 1, r, (treeid << 1) + 1);
+    }
+    while (history.size() > cursize) {
+        *history.back().first = history.back().second;
+        history.pop_back();
+    }
+}
+
+int main() {
+    int n, m, K;
+    scanf("%d%d%d%d", &n, &m, &K, &q);
+    for (int i = 1; i <= m; ++i) {
+        scanf("%d%d", &from[i], &to[i]);
+        color[i] = 0;
+    }
+    for (int i = 1; i <= q; ++i) {
+        scanf("%d%d", &id[i], &cc[i]);
+    }
+    static int last[N];
+    for (int i = 1; i <= m; ++i)
+        last[i] = q + 1;
+    for (int i = q; i > 0; --i) {
+        next[i] = last[id[i]];
+        last[id[i]] = i;
+    }
+    for (int j = 1; j <= K; ++j)
+        for (int i = 1; i <= n; ++i) {
+            f[j][i] = i;
+            size[j][i] = 1;
+            value[j][i] = 0;
+        }
+    divide(1, q, 1);
+    for (int i = 1; i <= q; ++i)
+        if (answer[i]) puts("YES");
+        else puts("NO");
+    return 0;
+}

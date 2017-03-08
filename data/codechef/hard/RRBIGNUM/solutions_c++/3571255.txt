@@ -1,0 +1,102 @@
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+
+#define MAXN 1010000
+#define MOD 1000000007
+
+using namespace std;
+
+typedef long long ll;
+
+char S[ MAXN + 1 ];
+
+struct node {
+	ll ans0, ans1, ans;
+	int ones, flag, right;
+};
+
+node segtree[ 4*MAXN + 1 ];
+ll modexp[ MAXN + 1 ];
+
+void init( int n, int l, int r )
+{
+	if( l == r ) {
+		if( S[ l ] == '1' ) {
+			segtree[ n ].right = true;
+			segtree[ n ].ones = 1;
+			segtree[ n ].ans0 = modexp[ l - 1 ];
+		} else {
+			segtree[ n ].ans1 = modexp[ l - 1 ];
+		}
+		segtree[ n ].ans = ( segtree[ n ].ans0 + ( segtree[ n ].ones % 2 == 0 || segtree[ n ].right ) ) % MOD;
+	} else {
+		init( 2*n, l, ( l + r ) / 2 );
+		init( 2*n + 1, ( l + r ) / 2 + 1, r );
+		segtree[ n ].right = segtree[ 2*n ].right;
+		segtree[ n ].ones = segtree[ 2*n ].ones + segtree[ 2*n + 1 ].ones;
+		segtree[ n ].ans0 = ( segtree[ 2*n ].ans0 + segtree[ 2*n + 1 ].ans0 ) % MOD;
+		segtree[ n ].ans1 = ( segtree[ 2*n ].ans1 + segtree[ 2*n + 1 ].ans1 ) % MOD;
+		segtree[ n ].ans = ( segtree[ n ].ans0 + ( segtree[ n ].ones % 2 == 0 || segtree[ n ].right ) ) % MOD;
+	}
+}
+
+void unflag( int n, int l, int r )
+{
+	if( segtree[ n ].flag ) {
+		swap( segtree[ n ].ans0, segtree[ n ].ans1 );
+		segtree[ n ].ones = r - l + 1 - segtree[ n ].ones;
+		segtree[ n ].right = 1 - segtree[ n ].right;
+		segtree[ n ].ans = segtree[ n ].ans0 + ( segtree[ n ].ones % 2 == 0 || segtree[ n ].right );
+		if( l != r ) {
+			segtree[ 2*n ].flag = 1 - segtree[ 2*n ].flag;
+			segtree[ 2*n + 1 ].flag = 1 - segtree[ 2*n + 1 ].flag;
+		}
+		segtree[ n ].flag = 0;
+	}
+}
+
+void update( int n, int l, int r, int i, int j )
+{
+	if( r < i || l > j ) {
+		unflag( n, l, r );
+		return;
+	}
+	else if( i <= l && r <= j ) {
+		segtree[ n ].flag = 1 - segtree[ n ].flag;
+		unflag( n, l, r );
+	} else {
+		unflag( n, l, r );
+		update( 2*n, l, ( l + r ) / 2, i, j );
+		update( 2*n + 1, ( l + r ) / 2 + 1, r, i, j );
+		if( l != r ) {
+			segtree[ n ].right = segtree[ 2*n ].right;
+			segtree[ n ].ones = segtree[ 2*n ].ones + segtree[ 2*n + 1 ].ones;
+			segtree[ n ].ans0 = ( segtree[ 2*n ].ans0 + segtree[ 2*n + 1 ].ans0 ) % MOD;
+			segtree[ n ].ans1 = ( segtree[ 2*n ].ans1 + segtree[ 2*n + 1 ].ans1 ) % MOD;
+			segtree[ n ].ans = ( segtree[ n ].ans0 + ( segtree[ n ].ones % 2 == 0 || segtree[ n ].right ) ) % MOD;
+		}
+	}
+}
+
+int main( void )
+{
+	modexp[ 0 ] = 1;
+	char newS[ MAXN + 1 ];
+	scanf("%s", newS );
+	int N = ( int )strlen( newS ), Q;
+	for( int i = 1; i <= N; i++ ) modexp[ i ] = 2*modexp[ i - 1 ] % MOD;
+	for( int i = 0; i < N; i++ ) S[ i ] = newS[ N - i - 1 ];
+	scanf("%d", &Q );
+	init( 1, 0, N - 1 );
+	printf("%lld\n", segtree[ 1 ].ans );
+	while( Q-- ) {
+		int u, v;
+		scanf("%d%d", &u, &v );
+		u = N - u;
+		v = N - v;
+		update( 1, 0, N - 1, v, u );
+		printf("%lld\n", segtree[ 1 ].ans );	
+	}
+	return 0;
+}

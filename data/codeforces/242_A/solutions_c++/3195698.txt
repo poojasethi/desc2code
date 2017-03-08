@@ -1,0 +1,12 @@
+#include <iostream>
+using namespace std;
+
+int main()
+{
+    int x,y,i,j,a,b,k=0;
+    cin>>x>>y>>a>>b;
+    for (i=a;i<=x;i++) for (j=b;((j<=y)&&(j<i));j++) k++;
+    cout<<k<<endl;
+    for (i=a;i<=x;i++) for (j=b;((j<=y)&&(j<i));j++) cout<<i<<" "<<j<<endl;
+    return 0;
+}

@@ -1,0 +1,120 @@
+#include <string.h>
+#include <stdio.h>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <queue>
+using namespace std;
+const int N=8e5+9;
+struct node
+{
+	int l,r,lz;
+	int col[12];
+}t[N<<2];
+#define ls (p<<1)
+#define rs (ls|1)
+#define mid (t[p].l+t[p].r>>1)
+char s[N][5];
+int n,m;
+int cal(char s[])
+{
+	//int len=strlen(s);
+	int ret=s[0]-'0',ch=s[0];
+	for(int i=1;;i++)
+	if(s[i])ret=ret*10+s[i]-'0',s[i-1]=s[i];
+	else 
+	{
+		s[i-1]=ch;
+		break;
+	}
+	return ret;
+}
+void push_up(int p)
+{
+	for(int i=0;i<12;i++) t[p].col[i]=max(t[ls].col[i],t[rs].col[i]);
+}
+void build(int p,int l,int r)
+{
+	t[p].l=l,t[p].r=r,t[p].lz=0;
+	if(l==r)
+	{
+		for(int i=0;i<12;i++)
+		{
+			t[p].col[i]=cal(s[l]);
+		}
+		return;
+	}
+	build(ls,l,mid);
+	build(rs,mid+1,r);
+	push_up(p);
+}
+void push_down(int p)
+{
+	int &d=t[p].lz;
+	if(d)
+	{
+		t[rs].lz+=d;
+		t[ls].lz+=d;
+		int tmp[12];
+		memcpy(tmp,t[ls].col,sizeof(tmp));
+		for(int i=0;i<12;i++) t[ls].col[i]=tmp[(i+d)%12];
+		memcpy(tmp,t[rs].col,sizeof(tmp));
+		for(int i=0;i<12;i++) t[rs].col[i]=tmp[(i+d)%12];
+		d=0;
+	}
+}
+void modify(int p,int l,int r,int f)
+{
+	//cout<<p<<" "<<l<<" "<<r<<" "<<f<<endl;
+	if(t[p].l==l&&t[p].r==r)
+	{
+		t[p].lz=(t[p].lz+f)%12;
+		int tmp[12];
+		memcpy(tmp,t[p].col,sizeof(tmp));
+		for(int i=0;i<12;i++)t[p].col[i]=tmp[(i+f)%12];
+		return;
+	}
+	push_down(p);
+
+	if(r<=mid) modify(ls,l,r,f);
+	else 
+		if(l>mid) modify(rs,l,r,f);
+		else modify(ls,l,mid,f),modify(rs,mid+1,r,f);
+	push_up(p);
+
+}
+int query(int p,int l,int r)
+{
+	if(t[p].l==l&&t[p].r==r)
+	{
+		return t[p].col[0];
+	}
+	push_down(p);
+	if(r<=mid) return query(ls,l,r);
+	else 
+		if(l>mid) return query(rs,l,r);
+		else return max(query(ls,l,mid),query(rs,mid+1,r));
+}
+int main()
+{
+	cin>>n;
+	for(int i=0;i<n;i++) scanf("%s",s[i]);
+	build(1,0,n-1);
+	cin>>m;
+	while(m--)
+	{
+		int it,l,r,f;
+		scanf("%d",&it);
+		if(it)
+		{
+			scanf("%d%d",&l,&r);
+			printf("%d\n",query(1,l,r));
+		}else 
+		{
+			scanf("%d%d%d",&l,&r,&f);
+			if(f%12)
+			modify(1,l,r,f%12);
+		}
+	}
+	return 0;
+}

@@ -1,0 +1,193 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#define sc( x ) scanf( "%d" , &x )
+#define REP( i , n ) for( int i = 0 ; i < n ; ++i )
+
+#define all( v ) v.begin() , v.end()
+#define pb push_back
+
+#define test puts( "***************test****************" );
+
+#define MOD 1000000007LL
+
+typedef vector< int > vi;
+typedef vector< vi > vvi;
+
+typedef long long ll;
+typedef unsigned long long ull;
+typedef vector< ull > vull;
+
+struct Pollard_Rho
+{
+	int q;
+	vi v;	
+	Pollard_Rho(){}
+	Pollard_Rho( int x ) {
+		q = x;
+	}
+	int mul( int a , int b , int c){
+	    return ( (ll)a * (ll)b )%c;
+	}
+	int modd( int a , int b, int c){
+	    int x = 1 , y = a; 
+	    while( b ){
+	        if( b&1 )
+	            x = mul( x , y , c );
+	        y = mul( y , y , c ); 
+	        b >>=1 ;
+	    }
+	    return x;
+	}
+	bool Miller( int p,int iteration){
+	    if( p < 2 )
+	        return false;
+	    if( p != 2 && (p&1) == 0 )
+	        return false;
+	    int s = p - 1;
+	    while( (s&1) ==0)
+	        s >>= 1;
+	        
+	    for(int i=0;i<iteration;i++){
+	        int a=rand()%(p-1) + 1 , temp = s;
+	        int mod = modd( a , temp , p );
+	        while( temp != p - 1 && mod != 1 && mod != p - 1 ){
+	            mod = mul( mod , mod , p );
+	            temp <<= 1;
+	        }
+	        if( mod != p - 1 && (temp&1) == 0 )
+	            return false;
+	    }
+	    return true;
+	}
+	int rho(int n){
+	    if( (n & 1) == 0 ) return 2;
+	    int x = 2 , y = 2 , d = 1;
+	    int c = rand() % n + 1;
+	    while( d == 1 ){
+	        x = (mul( x , x , n ) + c)%n;
+	        y = (mul( y , y , n ) + c)%n;
+	        y = (mul( y , y , n ) + c)%n;
+	        if( x - y >= 0 ) d = __gcd( x - y , n );
+	        else d = __gcd( y - x , n );
+	    }
+	    return d;
+	}
+	void factor(int n){
+	    if (n == 1) return;
+	    if( Miller( n , 10 ) ){
+	        if(q != n) v.push_back(n);
+	        return;
+	    }
+	    int divisor = rho(n);
+	    factor(divisor);
+	    factor(n/divisor);
+	}
+	vi primefact( int num )
+	{
+		v.clear();
+		if( num == 1 ) return v;
+		q = num;
+		factor( num );
+		sort( all(v) );
+		if( v.empty() ) // primos o 1 
+			v.pb( num );
+		return v;
+	}
+}obj;
+/*
+int solve( vi &v ){
+
+	int nv = v.size();
+	priority_queue< int > Q( all( v ) );
+		
+	while( Q.size() >= 2 ){
+		int a = Q.top() ; Q.pop();
+		int b = Q.top() ; Q.pop();
+		a -- , b--;
+		if( a ) Q.push( a );
+		if( b ) Q.push( b );
+	}
+	if( Q.empty() ) return 0;
+	return Q.top();
+	//return Q.empty() ? 0 : Q.top();
+}*/
+int solve( vi &v ){
+ 
+	int nv = v.size();
+	priority_queue< int > Q( all( v ) );
+		
+	while( Q.size() >= 2 ){
+		int a = Q.top() ; Q.pop();
+		int b = Q.top() ; Q.pop();
+		if( a == 1 && b == 1 ) continue;
+		if( b == 1 ){
+			Q.push( a - 1 );
+			continue;
+		}
+		Q.push( 1 );
+		Q.push( a - b + 1 );
+	}
+	if( Q.empty() ) return 0;
+	return Q.top();
+	//return Q.empty() ? 0 : Q.top();
+}
+vi primefact( int n ){
+	vi v;
+	for( int i = 2 ; i * i <= n ; ++i )
+		if( n % i == 0 ){
+			while( n % i == 0 ) n /= i , v.pb( i );
+		}
+	if( n > 1 ) v.pb( n );
+	return v;
+}
+int main(){
+	int cases , n , x;
+	sc( cases );
+	REP( tc , cases ){
+		sc( n );
+		vvi V( n );
+		vi SET;
+		REP( i , n ){
+			sc( x );
+			vi v = obj.primefact( x );
+			//vi v = primefact( x );
+			V[ i ] = v;
+			REP( j , v.size() ) SET.pb( v[ j ] );
+		}
+		
+		sort( all( SET ) );
+		int nv = unique( all( SET ) ) - SET.begin();
+		//REP( i , nv ) cout << SET[ i ] << endl;
+		SET.resize( nv );
+		vvi F( nv );
+		REP( i , n ){
+			REP( j , V[ i ].size() ){
+				int ind , f = 0;
+				for( int k = j ; k < V[ i ].size() ; ++k )
+					if( V[ i ][ k ] == V[ i ][ j ] ) ind = k , f ++;
+					else break;
+				int id = lower_bound( all( SET ) , V[ i ][ j ] ) - SET.begin();
+				F[ id ].pb( f );
+				j = ind;
+			}
+			V[ i ].clear();
+		}
+		
+		
+		//REP( i , nv ) cout << F[ i ].size() << endl;
+		ll ans = 1;
+		REP( i , nv ){
+			/*
+			cout << "exp = " << SET[ i ] << " : ";
+			REP( j , F[ i ].size() ) cout << F[ i ][ j ] << " " ;
+			cout << endl;*/
+			int exp = solve( F[ i ] );
+			int b = SET[ i ];
+			ans = ( ans * obj.modd( b , exp , MOD ) )%MOD;
+			//cout << b << " " << exp << endl;
+		}
+		cout << ans << '\n';
+	}
+}
+

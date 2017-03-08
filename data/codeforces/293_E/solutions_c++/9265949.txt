@@ -1,0 +1,124 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define fi first
+#define se second
+
+typedef long long LL;
+typedef pair<int, int> PI;
+
+const int N = 1e5 + 5;
+const int E = N + N;
+
+int n, l, w;
+int to[E], next[E], end[N], d[E], tms;
+
+LL ans, cal;
+
+int dcv[N], q[N], fa[N], path[N], size[N];
+
+void dfs(int s, int ff = 0)
+{
+	q[q[0] = 1] = s, fa[s] = ff;
+	for(int i = 1; i <= q[0]; i ++)
+	{
+		int x = q[i];
+		for(int p = end[x]; p; p = next[p]) if(!dcv[to[p]] && to[p] != fa[x])
+		q[++q[0]] = to[p], fa[to[p]] = x, path[to[p]] = d[p];
+	}
+}
+
+int select(int s)
+{
+	dfs(s);
+	for(int i = 1; i <= q[0]; i ++) size[q[i]] = 1;
+	for(int i = q[0]; i > 1; i --) size[fa[q[i]]] += size[q[i]];
+	
+	for(int i = 1, all = size[s]; i <= q[0]; i ++)
+	{
+		int x = q[i], okay = size[x] * 2 >= all;
+		for(int p = end[x]; p && okay; p = next[p]) if(!dcv[to[p]] && to[p] != fa[x])
+		okay &= size[to[p]] * 2 <= all;
+		if(okay) return x;
+	}
+	
+	return -1;
+}
+
+PI dat[N], h[N];
+int a[N], T[N];
+
+void ins(int x)
+{
+	for(; x; x-=x&(-x)) T[x]++;
+}
+
+int ask(int x)
+{
+	int r(0);
+	for(; x<=a[0]; x+=x&(-x)) r += T[x];
+	return r;
+}
+
+void deal(int x, int ff = 0, int dd = 0)
+{
+	dfs(x, ff);
+	
+	dat[x] = PI(ff ? 1 : 0, dd);
+	for(int i = 2; i <= q[0]; i ++) dat[q[i]] = PI(dat[fa[q[i]]].fi + 1, dat[fa[q[i]]].se + path[q[i]]);
+	
+	int cnt(0);
+	for(int i = 1; i <= q[0]; i ++) h[++ cnt] = dat[q[i]], a[i] = -dat[q[i]].se;
+	
+	sort(h+1, h+cnt+1), sort(a+1, a+cnt+1), a[0] = unique(a+1, a+cnt+1) - a - 1;
+	
+	cal = 0;
+	
+	for(int i = 1; i <= a[0]; i ++) T[i] = 0;
+	for(int i = q[0], j = 1; i; i --)
+	{
+		for(; j <= q[0] && h[j].fi + h[i].fi <= l; ++ j)
+		ins(lower_bound(a+1, a+a[0]+1, -h[j].se) - a);
+		
+		cal += ask(lower_bound(a+1, a+a[0]+1, h[i].se-w) - a);
+		
+		if(h[i].fi * 2 <= l && h[i].se * 2 <= w) cal --;
+	}
+	
+	cal /= 2;
+}
+
+void dc(int x)
+{
+	int cen = select(x);
+	
+	deal(cen), ans += cal;
+	
+	for(int p = end[cen]; p; p = next[p]) if(!dcv[to[p]])
+	deal(to[p], cen, d[p]), ans -= cal;
+	
+	dcv[cen] = 1;
+	for(int p = end[cen]; p; p = next[p]) if(!dcv[to[p]]) dc(to[p]);
+}
+
+int main()
+{
+	scanf("%d%d%d", &n, &l, &w);
+	for(int i = 2; i <= n; i ++)
+	{
+		int x, c;
+		scanf("%d%d", &x, &c);
+		to[++ tms] = x, next[tms] = end[i], end[i] = tms, d[tms] = c;
+		to[++ tms] = i, next[tms] = end[x], end[x] = tms, d[tms] = c;
+	}
+	
+	ans = 0;
+	
+	dc(1);
+	
+	printf("%I64d\n", ans);
+	
+	return 0;
+}

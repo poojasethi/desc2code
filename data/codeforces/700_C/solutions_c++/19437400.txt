@@ -1,0 +1,214 @@
+#include <iostream>
+#include <cstdlib>
+#include <cstdio>
+using namespace std;
+const int N = 1000, M = 30000;
+struct Edg {
+  int e, r, val, realId;
+  bool isBridge, lok;
+  Edg() :
+    isBridge(0) , lok(1) {
+  }
+};
+struct sp {
+  int q, id;
+  sp *w;
+  sp(int q, sp *w, int id) :
+    q(q), id(id) , w(w){
+  }
+};
+sp *a[N], *a1[N];
+Edg s[M];
+int f[N], first, last, q, numEdg;
+int conn[N];
+int k(int w) {
+  if (conn[w] != w) {
+    conn[w] = k(conn[w]);
+  }
+  return conn[w];
+}
+bool is_last_av;
+void check_availability(int q, int id, int t) {
+  f[q] = t;
+  for (sp *c = a[q]; c; c = c->w) {
+    if ((c->id != id) && (s[c->id].lok)) {
+      if (f[c->q] == -1) {
+        check_availability(c->q, c->id, t + 1);
+      }
+      if ((f[k(q)] > f[k(c->q)]) && (f[k(c->q)] > 0)) {
+        conn[k(q)] = k(c->q);
+      }
+    }
+  }
+  f[q] = -2;
+  if (q == last) {
+    is_last_av = 1;
+  }
+}
+int ans = 2000000001, numAns = 0;
+int res[2];
+
+int best_edg;
+bool not_real_bridge;
+
+bool check_bridges(int q, int par) {
+  for (sp *c = a1[q]; c; c = c->w) {
+    if ((c->q != par) && (s[c->id].lok)) {
+      if (check_bridges(c->q, q)) {
+        if ((best_edg == -1) || (s[best_edg].val > s[c->id].val)) {
+          best_edg = c->id;
+        }
+        if (!not_real_bridge) {
+          s[c->id].isBridge = 1;
+        }
+        return 1;
+      }
+    }
+  }
+  if (q == k(last)) {
+    return 1;
+  }
+  return 0;
+}
+int path[2][N], numPath[] = {0, 0};
+bool sch_path(int q, int y) {
+  f[q] = 0;
+  for (sp *c = a[q]; c; c = c->w) {
+    if ((f[c->q]) && (s[c->id].lok)) {
+      if (sch_path(c->q, y)) {
+        path[y][numPath[y]] = c->id;
+        numPath[y]++;
+        if (!s[c->id].isBridge) {
+          s[c->id].lok = 0;
+        }
+        return 1;
+      }
+    }
+  }
+  return (q == last);
+}
+
+void check_all_bridges(int int_edg) {
+  int w, e, r;
+  for (w = 0; w < q; w++) {
+    f[w] = -1;
+    conn[w] = w;
+    a1[w] = 0;
+  }
+  is_last_av = 0;
+  
+  if (int_edg != -1) {
+    s[int_edg].lok = 0;
+  }
+  
+  check_availability(first, -1, 1);
+  
+  if (!is_last_av) {
+    ans = numAns = 0;
+    return;
+  }
+  
+  for (w = 0; w < numEdg; w++) {
+    e = k(s[w].e);
+    r = k(s[w].r);
+    if (e != r) {
+      a1[e] = new sp(r, a1[e], w);
+      a1[r] = new sp(e, a1[r], w);
+    }
+  }
+  best_edg = -1;
+  
+  not_real_bridge = (int_edg != -1);
+  
+  check_bridges(k(first), -1);
+  if (best_edg == -1) {
+    goto cnt;
+  }
+  if (int_edg == -1) {
+    if (ans > s[best_edg].val) {
+      ans = s[best_edg].val;
+      numAns = 1;
+      res[0] = s[best_edg].realId;
+    }
+  } else {
+    if (ans > s[best_edg].val + s[int_edg].val) {
+      ans = s[best_edg].val + s[int_edg].val;
+      numAns = 2;
+      res[0] = s[best_edg].realId;
+      res[1] = s[int_edg].realId;
+    }
+  }
+  cnt:
+  
+  if (int_edg != -1) {
+    s[int_edg].lok = 1;
+  }
+  sp *c;
+  for (w = 0; w < q; w++) {
+    while (a1[w]) {
+      c = a1[w];
+      a1[w] = a1[w]->w;
+      delete c;
+    }
+  }
+  
+}
+
+int main() {
+  #ifdef Vlad_kv
+    freopen("input.txt", "r", stdin);
+    freopen("output.txt", "w", stdout);
+  #endif // Vlad_kv
+  int w, e, r, t;
+  scanf("%d%d%d%d", &q, &numEdg, &first, &last);
+  for (w = 0; w < q; w++) {
+    a[w] = 0;
+  }
+  first--;
+  last--;
+  t = 0;
+  for (w = 0; w < numEdg; w++) {
+    scanf("%d%d%d", &e, &r, &s[t].val);
+    e--; r--;
+    s[t].e = e;
+    s[t].r = r;
+    s[t].realId = w;
+    if (e != r) {
+      a[e] = new sp(r, a[e], t);
+      a[r] = new sp(e, a[r], t);
+      t++;
+    }
+  }
+  numEdg = t;
+  
+  check_all_bridges(-1);
+  
+  for (w = 0; w < 2; w++) {
+    for (e = 0; e < q; e++) {
+      f[e] = 1;
+    }
+    sch_path(first, w);
+  }
+  
+  for (r = 0; r < numEdg; r++) {
+    s[r].lok = 1;
+  }
+  
+  for (w = 0; w < 2; w++) {
+    for (e = 0; e < numPath[w]; e++) {
+      if (!s[path[w][e]].isBridge) {
+        check_all_bridges(path[w][e]);
+      }
+    }
+  }
+  
+  if (ans == 2000000001) {
+    cout << -1;
+  } else {
+    cout << ans << "\n" << numAns << "\n";
+    for (w = 0; w < numAns; w++) {
+      cout << res[w] + 1 << " ";
+    }
+  }
+  return 0;
+}

@@ -1,0 +1,247 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <cstdio>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <cstring>
+#include <algorithm>
+#include <set>
+#include <map>
+#include <deque>
+#include <queue>
+#include <vector>
+#include <cmath>
+#include <ctime>
+#include <cassert>
+#include <stack>
+
+#pragma comment(linker, "/STACK:64777216")
+using namespace std;
+
+
+typedef long long ll;
+typedef unsigned long long ull;
+
+template<typename T> int size(T & a) { return (int) a.size(); }
+template<typename T> T sqr(T a) {return a * a; }
+
+#define pb push_back
+#define mp make_pair
+#define vi vector<int>
+#define pii pair<int, int>
+#define _(a, b) memset((a), (b), sizeof(a))
+#define REP(i, a, b) for(int i=(a); i<(b); ++i)
+#define all(a) a.begin(),a.end()
+
+
+int a[1010];
+char s[10];
+int pre1[1010][1010];
+int pre2[1010][1010];
+int pre1id[1010][1010];
+int pre2id[1010][1010];
+
+int ans[5];
+int mainRoot;
+int lrestore, restoreValue, rrestore;
+
+int SZ;
+
+bool used[1010];
+int low[1010];
+int lst[1010];
+
+
+struct Fastset {
+	int a[32];
+	int b;
+	void clear() {
+		b=0;
+		_(a,0);
+	}
+	void add(int x) {
+		a[x >> 5] |= (1 << (x & 31));
+		b |= (1 << (x >> 5));
+	}
+	int inBlock(int num) {
+		int i=0;
+		while ((a[num] & (1 << i)) == 0) ++ i;
+		return (num<<5)+i;
+	}
+	int whole(int l, int r) {
+		if(l>r)return -1;
+		while (l <= r && ((b & (1 << l)) == 0)) ++l;
+		return l==r+1 ? -1 : inBlock(l);
+	}
+	int inBlockFromMid(int num, int start) {
+		if ((b & (1 << num)) == 0)return -1;
+		while (start < 32 && ((a[num] & (1 << start)) == 0)) ++start;
+		return start==32 ? -1 : start+(num<<5);
+	}
+	int inBlockToMid(int num, int finish) {
+		if ((b & (1 << num)) == 0)return -1;
+		int start = 0;
+		while (start <= finish && ((a[num] & (1 << start)) == 0)) ++start;
+		return start == finish + 1 ? -1 : (num<<5) + start;
+	}
+	int inBlockMiddle(int num, int l, int r) {
+		if ((b & (1 << num)) == 0)return -1;
+		int start = l;
+		while (start <= r && ((a[num] & (1 << start)) == 0)) ++start;
+		return start == r + 1 ? -1 : (num<<5) + start;
+	}
+	int getMin(int l, int r) {
+		if (l>r) return -1;
+		if ((l>>5) == (r>>5)){ 
+			return inBlockMiddle(l >> 5, l & 31, r & 31);
+		}
+		int r1=inBlockFromMid(l >> 5, l & 31);
+		if (r1 != -1) return r1;
+		int r2=whole((l>>5) + 1, (r>>5)-1);
+		if (r2 != -1) return r2;
+		return inBlockToMid(r >> 5, r & 31);
+	}
+};
+void solve() {
+	
+	int n;
+	scanf("%d %s\n", &n, s);
+	vector<int> vals;
+	REP(i,0,n) scanf("%d", &a[i]), vals.pb(a[i]);
+	sort(all(vals));
+	vals.erase(unique(all(vals)), vals.end());
+	REP(i,0,n) a[i]=lower_bound(all(vals), a[i])-vals.begin();
+	int lf[5];
+	lf[1]=-2;
+    lf[3]=-1;
+    lf[0]=0;
+    lf[2]=1;
+    lf[4]=2;
+
+    int perm[5];;
+    for(int i=0;i<5;++i)
+        perm[s[i]-'1']=i;
+	SZ=size(vals);
+
+	_(pre1[0], 63);
+	_(pre2[n-1], 63);
+	_(pre1id[0], 255);
+	_(pre2id[n-1], 255);
+
+	REP(i,0,n) REP(j,0,SZ) {
+		if (i>0) {
+			pre1[i][j]=pre1[i-1][j];
+			pre1id[i][j]=pre1id[i-1][j];
+		}
+		if(a[i]>=j) {
+			if (pre1[i][j]>a[i]) {
+				pre1[i][j]=a[i];
+				pre1id[i][j]=i;
+			}
+		}
+	}
+	for(int i=n-1; i>=0;--i) REP(j,0,SZ) {
+		if (i!=n-1) {
+			pre2[i][j]=pre2[i+1][j];
+			pre2id[i][j]=pre2id[i+1][j];
+		}
+		if(a[i]>=j) {
+			if (pre2[i][j]>a[i]) {
+				pre2[i][j]=a[i];
+				pre2id[i][j]=i;
+			}
+		}
+	}
+	REP(i,0,n) low[i]=SZ-1;
+	REP(i,0,n) lst[i]=-1;
+
+	Fastset q;
+
+	for(int p1=1; p1<n;++p1){
+		q.clear();
+		q.add(a[p1+1]);
+		for(int p2=p1+2; p2<n-1; ++p2) {
+            int mn=-1;
+            int sz=0;
+            for(int j=0;j<5;++j) {
+                int t=perm[j];
+                if (lf[t] < 0) {
+                    int g=(lf[t]==-2?p1:p2);
+                    if(a[g]>mn) {
+                        mn=a[g];
+                        ans[sz++]=g;
+                    } else {
+                        break;
+                    }
+                } else {
+					if (lf[t] != 1) {
+						int v;
+						if (lf[t]==0) {
+							v=(mn+1>SZ-1 ? -1 : pre1id[p1-1][mn+1]);
+						} else {
+							v=(mn+1>SZ-1 ? -1 : pre2id[p2+1][mn+1]);
+						}
+						if(v==-1){
+							break;
+						}
+						mn=a[v];
+						ans[sz++]=v;
+					} else {
+						
+						int value=q.getMin(mn+1, 999);
+						if (value==-1)
+							break;
+						mn=value;
+						ans[sz++]=-1;
+						restoreValue=value;
+						lrestore=p1+1;
+						rrestore=p2-1;
+					}
+                    
+                }
+            }
+            if(sz==5) {
+                for(int v=0;v<5;++v) {
+					if (ans[v]==-1) {
+						for(int u=lrestore; u <= rrestore; ++u)
+							if (a[u]==restoreValue)
+								ans[v]=u;
+					}
+				}
+				sort(ans, ans+5);
+				REP(i,0,5)printf("%d ",ans[i]);
+                printf("\n");
+                return ;
+			}
+			q.add(a[p2]);
+		}
+	}
+    printf("-1\n");
+}
+
+int main() {            
+
+#ifdef air
+	/*freopen("input.txt", "w", stdout);
+           printf("60\n");
+            for(int i=0;i<60;++i) {
+                printf("1000 12345\n");
+				for(int v=0;v<1000-5;++v)
+					printf("%d ", 1000-v);
+				for(int v=1; v<=5; ++v)
+					printf("%d ", v);
+				
+			}*/
+	freopen("input.txt", "r", stdin);
+    freopen("output.txt", "w", stdout);
+#endif
+	int tc;
+	scanf("%d\n", &tc);
+	while (tc --> 0) {
+		solve();
+	}
+#ifdef air
+    printf("\n\n%.3lf\n", clock() * 1.0 / CLOCKS_PER_SEC);
+#endif
+
+}

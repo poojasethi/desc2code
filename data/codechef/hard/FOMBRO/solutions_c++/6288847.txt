@@ -1,0 +1,145 @@
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <stack>
+#include <queue>
+#include <map>
+#include <cassert>
+
+using namespace std;
+
+#define MAXN 1000000
+
+long long f[MAXN + 1],g[MAXN + 1];
+
+int mod_pow(long long a, long long b, int c){
+    a %= c;
+    long long ret = 1;
+    
+    while(b){
+        if(b & 1) ret = ret * a % c;
+        a = a * a % c;
+        b >>= 1;
+    }
+    
+    return ret;
+}
+
+// a*x + b*y = gcd(a,b)
+long long extGcd(long long  a, long long b, long long &x, long long &y){
+    if(b == 0){
+        x = 1;
+        y = 0;
+        return a;
+    }
+    
+    long long g = extGcd(b,a % b,y,x);
+    y -= a / b * x;
+    return g;
+}
+
+// ASSUME: gcd(a, m) == 1
+long long modInv(long long a, long long m){
+    long long x,y;
+    extGcd(a, m, x, y);
+    return (x % m + m) % m;
+}
+
+long long calc(int N, int p){
+    long long ret = 0;
+    long long aux = p;
+    
+    while(aux <= N){
+        long long k = N / aux;
+        ret = ret + k * (N + 1) - k * (k + 1) / 2 * aux;
+        aux = aux * p;
+    }
+    
+    return ret;
+}
+
+
+int pdiv[MAXN + 1];
+
+int main(){
+    ios::sync_with_stdio(0);
+    
+    pdiv[1] = 1;
+    
+    for(int i = 2;i <= MAXN;++i){
+        if(pdiv[i] == 0){
+            pdiv[i] = i;
+            
+            if(i <= 1000)
+                for(int j = i * i;j <= MAXN;j += i)
+                    pdiv[j] = i;
+        }
+        
+        assert(i % pdiv[i] == 0);
+    }
+    
+    int T,N,M,Q,r;
+    
+    cin >> T;
+    
+    while(T--){
+        cin >> N >> M >> Q;
+        
+        f[0] = 1; g[0] = 1;
+        
+        for(int i = 1;i <= N;++i){
+            int aux = i;
+            f[i] = f[i - 1];
+            g[i] = g[i - 1];
+            
+            while(aux != 1){
+                int p = pdiv[aux];
+                int cont = 0;
+                
+                while(aux % p == 0){
+                    aux /= p;
+                    ++cont;
+                }
+                
+                if(M % p != 0){
+                    f[i] = f[i] * mod_pow(p,cont,M) % M;
+                    g[i] = g[i] * mod_pow(p,cont * i,M) % M;
+                }
+            }
+        }
+        
+        int aux = M;
+        vector<int> vp;
+        
+        for(int i = 2;i <= aux / i && i <= N;++i){
+            if(aux % i == 0){
+                while(aux % i == 0)
+                    aux /= i;
+                
+                vp.push_back(i);
+            }
+        }
+        
+        if(aux != 1 && aux <= N)
+            vp.push_back(aux);
+        
+        while(Q--){
+            cin >> r;
+            
+            long long ans = mod_pow(f[N],N + 1,M) * modInv(g[N],M) % M;
+            ans = ans * modInv(mod_pow(f[r],r + 1,M),M) % M *  g[r] % M;
+            ans = ans * modInv(mod_pow(f[N - r],N - r + 1,M),M) % M * g[N - r] % M;
+            
+            for(int i = 0;i < vp.size();++i)
+                ans = ans * mod_pow(vp[i],calc(N,vp[i]) - calc(r,vp[i]) - calc(N - r,vp[i]),M) % M;
+            
+            cout << ans << '\n';
+        }
+    }
+    
+    return 0;
+}

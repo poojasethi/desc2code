@@ -1,0 +1,130 @@
+//
+//	ID: y0rkl1u
+//	PROG: COUNTARI
+//	LANG: C++
+//	DATE: 04.14.2016
+//	NOTE: fnt, sqrt
+//
+
+#include <bits/stdc++.h>
+using namespace std;
+
+#define ef else if
+#define reg register
+#define rint reg int
+#define Min(a,b) ((a)<(b)?(a):(b))
+#define Max(a,b) ((a)>(b)?(a):(b))
+#define Abs(a) ((a)>=0?(a):(-(a)))
+#define cmax(a,b) ((a)<(b)?(a)=(b):1)
+#define cmin(a,b) ((a)>(b)?(a)=(b):1)
+#define For(i,l,r) for(rint i=(l),_c=(r);i<=_c;i++)
+#define Dor(i,l,r) for(rint i=(l),_c=(r);i>=_c;i--)
+#define clr(a,sz) memset(a,0,sizeof(a[0])*(sz+5))
+#define clrs(a,k,sz) memset(a,k,sizeof(a[0])*(sz+5))
+#define pt(x,b) cerr<<#x<<" = "<<x<<(b?'\n':'\t')
+#define pa(a,l,r) do{cerr<<#a<<" = ";\
+	For(_i,l,r)cerr<<a[_i]<<' ';cerr<<endl;}while(0)
+#define cpy(a,b,sz) memcpy(a,b,sizeof(a[0])*(sz+5))
+typedef long long ll;
+
+ll ExpMod(reg ll a,reg ll b,reg ll m)
+{
+	reg ll r=1;
+	for(;b;b>>=1,a=a*a%m)if(b%2)r=a*r%m;
+	return r;
+}
+const int MN=100010,MS=65536+10;
+struct FNT
+{
+	int mod,g,w[MS];
+	FNT(rint _mod,rint _g):mod(_mod),g(_g){}
+	void getW(rint n){
+		rint m=n>>1,e=ExpMod(g,(mod-1)/n,mod);w[m]=1;
+		For(i,1,m-1)w[i+m]=(ll)e*w[i+m-1]%mod;
+		Dor(i,m-1,1)w[i]=w[i<<1];
+	}
+	void DFT(rint*a,rint n){
+		for(rint i=0,j=0;i<n;++i){
+			if(i>j)swap(a[i],a[j]);
+			for(rint l=n>>1;(j^=l)<l;l>>=1);
+		}
+		for(rint s=2,m=1;s<=n;m=s,s<<=1){
+			for(rint i=0;i<n;i+=s)For(j,0,m-1){
+				rint tmp=(ll)a[i+j+m]*w[j+m]%mod;
+				a[i+j+m]=(a[i+j]-tmp+mod)%mod;
+				a[i+j]=(a[i+j]+tmp)%mod;
+			}
+		}
+	}
+	void mul(const rint*a,const rint*b,rint*c,rint n){
+		rint tn=1;while(tn<(n<<1))tn<<=1;getW(tn);
+		static int ta[MS],tb[MS];
+		cpy(ta,a,tn),cpy(tb,b,tn),DFT(ta,tn),DFT(tb,tn);
+		For(i,0,tn-1)c[i]=(ll)ta[i]*tb[i]%mod;
+		reverse(c+1,c+tn),DFT(c,tn);
+		rint inv=ExpMod(tn,mod-2,mod);
+		For(i,0,tn-1)c[i]=(ll)c[i]*inv%mod;
+	}
+}p1(786433,10),p2(65537,3);
+// m1*m2 >= max_element
+// m1*m2*m2 <= ll
+int m;
+void Mul(const rint*a,const rint*b,reg ll*c,rint n)
+{
+	if(n<=128){
+		For(t,0,2*(n-1))For(i,0,t)c[t]+=a[i]*b[t-i];
+	}
+	else{
+		static int ans1[MS],ans2[MS];
+		reg ll m=65537LL*786433LL;
+		p1.mul(a,b,ans1,n),p2.mul(a,b,ans2,n);
+		rint invm2=ExpMod(p2.mod,p1.mod-2,p1.mod),invm1=ExpMod(p1.mod,p2.mod-2,p2.mod);
+		For(i,0,n*2-2)c[i]=((ll)p2.mod*ans1[i]%m*invm2%m+(ll)p1.mod*ans2[i]%m*invm1%m)%m;
+	}
+	// For(i,0,n*2-2)c[i]=(ll)p2.mod*ans1[i]*invm2+(ll)p1.mod*ans2[i]*invm1;
+}
+
+int an,a[MN],T,bno[MN],bst[MN],bed[MN],bcnt=1,lmax[MN],rmax[MN];
+int lcnt[MS],rcnt[MS],buk[MS];
+inline void Main()
+{
+	scanf("%d",&an);
+	For(i,1,an)scanf("%d",a+i),cmax(m,a[i]);
+	// T=12*sqrt(m*log(m+1))+1;
+	T=6000;
+// T=3;
+	bst[bcnt]=1;
+	rint cnt=0;
+	For(i,1,an){
+		if(++cnt>T)++bcnt,cnt=1,bst[bcnt]=i,bed[bcnt-1]=i-1;
+		bno[i]=bcnt,lmax[i]=Max(lmax[i-1],a[i-1]);
+	}
+	if(bed[bcnt]!=an)bed[bcnt]=an;
+	bst[bcnt+1]=an+1;
+	Dor(i,an,1)rmax[i]=Max(rmax[i+1],a[i+1]);
+	Dor(i,an,bst[2])++rcnt[a[i]];
+
+	// lcnt, rcnt (bed), buk
+	reg ll ans=0;
+	For(i,1,an){
+		static ll res[MS];
+		if(i==bst[bno[i]])Mul(lcnt,rcnt,res,Max(lmax[bst[bno[i]]],rmax[bed[bno[i]]])+1);
+
+		ans+=res[2*a[i]];
+		For(j,i+1,bed[bno[i]])if(2*a[i]-a[j]>=0)ans+=buk[2*a[i]-a[j]];
+		For(j,bst[bno[i]],i-1)if(2*a[i]-a[j]>=0)ans+=rcnt[2*a[i]-a[j]];
+
+		if(i==bed[bno[i]]){
+			For(j,bst[bno[i]],bed[bno[i]])++lcnt[a[j]];
+			For(j,bst[bno[i]+1],bed[bno[i]+1])--rcnt[a[j]];
+			For(j,0,lmax[bst[bno[i]]]+rmax[bed[bno[i]]])res[j]=0;
+		}
+		++buk[a[i]];
+	}
+	cout<<ans<<endl;
+}
+int main()
+{
+	Main();
+	return 0;
+}

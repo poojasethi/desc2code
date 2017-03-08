@@ -1,0 +1,142 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+#include <queue>
+using namespace std;
+
+const int N = 1e5 + 5;
+
+int flag[N], dic[N], xx[N], yy[N], len[N];
+int n, q, tot;
+int mx;
+int ans[N];
+int f[N], g[N], id[N];
+int p[N << 2];
+
+int cmp(int a, int b) {
+    pair<int, int> A, B;
+    if (a < 0) A = make_pair(xx[-a] + len[-a], 1);
+    else {
+        A = make_pair(xx[a], -1);
+        if (flag[a] == 2) A.second = 0;
+    }
+    if (b < 0) B = make_pair(xx[-b] + len[-b], 1);
+    else {
+        B = make_pair(xx[b], -1);
+        if (flag[b] == 2) B.second = 0;
+    }
+    return A < B;
+}
+
+int find(int x) {
+    int ans = 0;
+    while (x > 0) {
+        if (g[x] != tot) {
+            g[x] = tot;
+            f[x] = 0;
+        }
+        ans += f[x];
+        x -= x & -x;
+    }
+    return ans;
+}
+
+void add(int x, int s) {
+    while (x <= mx) {
+        if (g[x] != tot) {
+            g[x] = tot;
+            f[x] = 0;
+        }
+        f[x] += s;
+        x += x & -x;
+    }
+}
+
+void solve(int dic1, int l1, int r1, int l2, int r2) {
+    int r = 0;
+    for (int i = l1; i <= r1; ++i)
+        if (dic[i] == dic1 && flag[i] == 1) {
+            p[++r] = i;
+            p[++r] = -i;
+        }
+    for (int i = l2; i <= r2; ++i)
+        if (flag[i] == 2) {
+            p[++r] = i;
+        }
+    sort(p + 1, p + 1 + r, cmp);
+    ++tot;
+    mx = n;
+    for (int i = 1; i <= r; ++i) {
+        if (flag[abs(p[i])] == 1) {
+            if (p[i] > 0) add(yy[p[i]], 1);
+            else add(yy[-p[i]], -1);
+        }
+        else {
+            ans[p[i]] -= find(mx) - find(yy[p[i]]);
+        }
+    }
+    ++tot;
+    mx = n * 3;
+    for (int i = 1; i <= r; ++i) {
+        if (flag[abs(p[i])] == 1) {
+            if (p[i] > 0) add(yy[p[i]] + len[p[i]] + xx[p[i]], 1);
+            else add(yy[-p[i]] + len[-p[i]] + xx[-p[i]], -1);
+        }
+        else ans[p[i]] -= find(yy[p[i]] + xx[p[i]] - 1);
+    }
+}
+
+void divide(int l, int r) {
+    if (l == r) return ;
+    int mid = (l + r) >> 1;
+    divide(l, mid);
+    divide(mid + 1, r);
+    solve(1, l, mid, mid + 1, r);
+    for (int i = l; i <= r; ++i)
+        yy[i] = n - yy[i] + 1;
+    solve(2, l, mid, mid + 1, r);
+    for (int i = l; i <= r; ++i)
+        yy[i] = n - yy[i] + 1;
+    for (int i = l; i <= r; ++i)
+        xx[i] = n - xx[i] + 1;
+    solve(3, l, mid, mid + 1, r);
+    for (int i = l; i <= r; ++i)
+        yy[i] = n - yy[i] + 1;
+    solve(4, l, mid, mid + 1, r);
+    for (int i = l; i <= r; ++i) {
+        xx[i] = n - xx[i] + 1;
+        yy[i] = n - yy[i] + 1;
+    }
+}
+
+int main() {
+    scanf("%d%d", &n, &q);
+    tot = 1;
+    mx = n;
+    for (int i = 1; i <= q; ++i) {
+        scanf("%d", &flag[i]);
+        if (flag[i] == 1) {
+            scanf("%d", &dic[i]);
+            scanf("%d%d%d", &xx[i], &yy[i], &len[i]);
+            if (dic[i] <= 2) {
+                add(xx[i], 1);
+                add(xx[i] + len[i] + 1, -1);
+            }
+            else {
+                add(xx[i] - len[i], 1);
+                add(xx[i] + 1, -1);
+            }
+        }
+        else {
+            scanf("%d%d", &xx[i], &yy[i]);
+            ans[i] = find(xx[i]);
+        }
+    }
+    divide(1, q);
+    for (int i = 1; i <= q; ++i)
+        if (flag[i] == 2)
+        printf("%d\n", ans[i]);
+    return 0;
+}

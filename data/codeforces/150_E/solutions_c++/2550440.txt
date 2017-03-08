@@ -1,0 +1,129 @@
+#include<cstdio>
+#include<cstring>
+#include<cstdlib>
+#include<iostream>
+#include<algorithm>
+using namespace std;
+typedef pair<int,int> PR;
+const int N=100100,inf=-(1<<20);
+int n,cp=0,mid,A,B;
+int hd[N],ot[N<<1],nt[N<<1],v[N<<1];
+void add(const int x,const int y,const int z)
+{
+    ot[++cp]=y,nt[cp]=hd[x],hd[x]=cp,v[cp]=z;
+}
+int f[N],u[N],w[N],b[N];
+int find_center(const int x)
+{
+    b[1]=x,w[0]=f[x]=0;
+    int h=1,t=1,now;
+    for(;h<=t;++h)
+    {
+        now=b[h];
+        for(int i=hd[now];i!=0;i=nt[i] )
+            if ( ot[i]!=f[now] && u[ot[i]]==0 ) 
+                b[++t]=ot[i],f[ot[i]]=now;
+        w[now]=1;
+    }
+    for(h=t;h>0;--h)
+    {
+        now=b[h];
+        if ( w[now]*2>t ) return now;
+        w[f[now]]+=w[now];
+    }
+    return 0;
+}
+void work(const int x,const int y)
+{
+    int C=find_center(x);
+    u[C]=y;
+    for(int i=hd[C];i!=0;i=nt[i] ) 
+        if ( u[ot[i]]==0 ) work(ot[i],y+1);
+}
+PR a[N],c[N];
+int d[N],g[N],e[N],flag=0,M,r[N];
+PR bfs(const int x,const int y)
+{
+    d[x]=1,b[1]=x,f[x]=0;
+    int h=1,t=1,now,E=0;
+    for(;h<=t;++h)
+    {
+        now=b[h];
+        if ( c[d[now]].first<g[now] || E<d[now] ) c[d[now]]=make_pair(g[now],now);
+        if ( E<d[now] ) E=d[now];
+        if ( d[now]==B ) continue;
+        for(int i=hd[now];i!=0;i=nt[i] ) 
+            if ( ot[i]!=f[now] && u[ot[i]]>y )
+            {
+                f[ot[i]]=now;
+                b[++t]=ot[i];
+                g[ot[i]]=g[now]+(v[i]>=mid?1:-1);
+                d[ot[i]]=d[now]+1;
+            }
+    }
+    h=1,t=0;
+    int F=M;
+    for(int i=1;i<=E;++i)
+    {
+        while ( F+i>=A && F>=0 )
+        {
+            while(h<=t && a[r[t]].first<=a[F].first ) --t;
+            r[++t]=F;
+            --F;
+        }
+        while ( h<=t && r[h]+i>B ) ++h;
+        if ( h<=t && a[r[h]].first+c[i].first>=0 ) return make_pair(c[i].second,a[r[h]].second);
+    }
+    for(int i=1;i<=E;++i)
+        if ( c[i]>a[i] || M<i ) a[i]=c[i];
+    if ( E>M ) M=E;
+    return make_pair(0,0);
+}
+PR ok(const int x)
+{
+    PR K;
+    ++flag;
+    a[M=0]=make_pair(0,x);
+    for(int i=hd[x];i!=0;i=nt[i] ) 
+        if ( u[ot[i]]>u[x] ) 
+        {
+            g[ot[i]]=(v[i]>=mid?1:-1);
+            K=bfs(ot[i],u[x]);
+            if ( K.first>0 ) return K;
+        }
+    return make_pair(0,0);
+}
+PR check()
+{
+    PR K;
+    for(int i=1;i<=n;++i)
+    {
+        K=ok(i);
+        if ( K.first>0 ) return K;
+    }
+    return make_pair(0,0);
+}
+int main()
+{
+    scanf("%d%d%d",&n,&A,&B);
+    memset(hd,0,sizeof(hd));
+    memset(e,0,sizeof(e));
+    memset(u,0,sizeof(u));
+    int L=-1,R=0;
+    for(int i=1,x,y,z;i<n;++i)
+    {
+        scanf("%d%d%d",&x,&y,&z),add(x,y,z),add(y,x,z);
+        if ( R<z ) R=z;
+    }
+    work(1,1);
+    ++R;
+    PR K,ans;
+    while ( L+1<R )
+    {
+        mid=(L+R)/2;
+        K=check();
+        if ( K.first>0 ) ans=K,L=mid;else R=mid;
+    }
+    cout<<ans.first<<' '<<ans.second<<endl;
+    return 0;
+}

@@ -1,0 +1,53 @@
+#include <algorithm>
+#include <cstring>
+#include <cstdio>
+#include <vector>
+using namespace std;
+const int L = 1000006;
+const int N = 205;
+const int M = 10;
+int n, m, q, f[N*N][M], vis[N][N], dx[M], dy[M];
+char a[N][N], s[L];
+vector<int> b;
+int id(int x, int y) { return x*m+y; }
+bool check(int x, int y) { return (x >= 0)&&(x < n)&&(y >= 0)&&(y < m); }
+void dfs(int x, int y) {
+	vis[x][y] = 1;
+	int t = a[x][y]-'0', u = id(x, y);
+	int xx = x+dx[t], yy = y+dy[t];
+	if (check(xx, yy)) {
+		int v = f[u][t] = id(xx, yy);
+		if (!vis[xx][yy]) dfs(xx, yy);
+		for (int i = 0; i < M; i++)
+			if (i != t) f[u][i] = f[v][i];
+	} else f[u][t] = u;
+}
+bool query(char* s) {
+	int len = strlen(s);
+	for (int i = 0; i < b.size(); i++) {
+		int x = b[i];
+		for (int p = 0; p < len; p++) {
+			x = f[x][s[p]-'0'];
+			if (x < 0) break;
+		}
+		if (x >= 0) return true;
+	}
+	return false;
+}
+int main() {
+	scanf("%d%d%d", &n, &m, &q);
+	for (int i = 0; i < n; i++) scanf("%s", a[i]);
+	for (int i = 0; i < M; i++) scanf("%d%d", dx+i, dy+i);
+	memset(f, 0xFF, sizeof(f));
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < m; j++) {
+			if (vis[i][j]) continue;
+			b.push_back(id(i, j));
+			dfs(i, j);
+		}
+	while (q--) {
+		scanf("%s", s);
+		printf("%s\n", query(s)? "YES": "NO");
+	}
+	return 0;
+}

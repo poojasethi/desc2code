@@ -1,0 +1,128 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#define min(a,b) (a < b ? a : b)
+#define max(a,b) (a > b ? a : b)
+
+using namespace std;
+
+const int MAXN = 1005,INF = int(8e7);
+
+typedef long long LL;
+
+struct Node
+{
+	int l,r,tag,mi;
+}T[MAXN * MAXN * 16];
+
+long long Ans;
+int A[MAXN][MAXN],N,dx,dy,mi,root,val,cnt,cv;
+
+void Mark(int jd,int v)
+{
+	T[jd].tag = max(T[jd].tag,v),T[jd].mi = max(T[jd].mi,v);
+}
+
+void Down(int jd)
+{
+	if (!T[jd].l) T[jd].l = ++ cnt;
+	if (!T[jd].r) T[jd].r = ++ cnt;
+	Mark(T[jd].l,T[jd].tag),Mark(T[jd].r,T[jd].tag);
+	T[jd].tag = 0;
+}
+
+void Query(int l,int r,int i,int j,int jd)
+{
+	if (j < l || i > r || T[jd].mi >= cv) return;
+	if (!jd) {cv = 0;return;}
+	if (i <= l && r <= j) {cv = T[jd].mi;return;}
+	int mid = l + r >> 1;
+	if (T[jd].tag) Down(jd);
+	Query(l,mid,i,j,T[jd].l),Query(mid + 1,r,i,j,T[jd].r);
+}
+
+void Change(int l,int r,int i,int j,int v,int &jd)
+{
+	if (j < l || i > r || v < T[jd].mi) return;
+	if (!jd) jd = ++ cnt;
+	if (i <= l && r <= j) {Mark(jd,v);} else
+	{
+		int mid = l + r >> 1;
+		if (T[jd].tag) Down(jd);
+		Change(l,mid,i,j,v,T[jd].l),Change(mid + 1,r,i,j,v,T[jd].r);
+		T[jd].mi = min(T[T[jd].l].mi,T[T[jd].r].mi);
+		T[jd].mi = max(T[jd].mi,T[jd].tag);
+	}
+}
+
+void Push(int x,int y,int a,int b)
+{
+	LL l = x * 1ll * dy - y * 1ll * dx,r = a * 1ll * dy - b * 1ll * dx;
+	if (l > r) swap(l,r);
+	l += int(2e7),r += int(2e7);
+	l *= 2,r *= 2;
+	cv = (1 << 30);
+	Query(0,INF,l,r,root);
+	mi = min(mi,cv);
+}
+
+void Qush(int x,int y,int a,int b)
+{
+	LL l = x * 1ll * dy - y * 1ll * dx,r = a * 1ll * dy - b * 1ll * dx;
+	if (l > r) swap(l,r);
+	l += int(2e7),r += int(2e7);
+	l *= 2,r *= 2;
+	Change(0,INF,l,r,val,root);
+}
+
+void Work(int x,int y)
+{
+	val = A[x][y];
+	mi = (1 << 30);
+	Push(x,y,x + 1,y),Push(x,y,x,y + 1),Push(x,y + 1,x + 1,y + 1),Push(x + 1,y,x + 1,y + 1);
+	Qush(x,y,x + 1,y),Qush(x,y,x,y + 1),Qush(x,y + 1,x + 1,y + 1),Qush(x + 1,y,x + 1,y + 1);
+	Ans += max(0,A[x][y] - mi);
+}
+
+void read(int &x)
+{
+	char c;
+	while (c = getchar(),c < '0' || c > '9');
+	x = c - 48;
+	while (c = getchar(),c >= '0' && c <= '9') x = x * 10 + c - 48;
+}
+
+int main()
+{
+//	freopen("cube.in","r",stdin),freopen("cube.out","w",stdout);
+	scanf("%d%d%d", &N, &dx, &dy);
+	dx = -dx,dy = -dy;
+	for(int i = 0;i < N;i ++)
+		for(int j = 0;j < N;j ++)
+			read(A[i][j]);
+	if (dx < 0)
+	{
+		if (dy < 0)
+		{
+			for(int i = 0;i < N;i ++)
+				for(int j = 0;j < N;j ++) Work(i,j);
+		} else
+		{
+			for(int i = 0;i < N;i ++)
+				for(int j = N - 1;j >= 0;j --) Work(i,j);
+		}
+	} else
+	{
+		if (dy < 0)
+		{
+			for(int i = N - 1;i >= 0;i --)
+				for(int j = 0;j < N;j ++) Work(i,j);
+		} else
+		{
+			for(int i = N - 1;i >= 0;i --)
+				for(int j = N - 1;j >= 0;j --) Work(i,j);
+		}
+	}
+	printf("%I64d\n", Ans);
+	return 0;
+}

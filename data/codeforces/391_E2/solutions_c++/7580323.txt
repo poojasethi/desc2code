@@ -1,0 +1,337 @@
+#include <iostream>
+#include <fstream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <ctime>
+#include <algorithm>
+#include <map>
+#include <queue>
+#include <vector>
+using namespace std;
+
+struct Tedge
+{
+       long long to, next;
+}      edge[1000050];
+
+struct Tnode
+{
+       long long current, pointer, father;
+}      stack[1000050];
+
+long long now, n[5], best[5], Q[1000050], first[5][1000050], rank[5][1000050], size[5][1000050];
+pair <long long, long long> area[5][100050];
+long long sum[5], tree[1000050], down[5][100050], up[5][100050], all[5][100050];
+long long u[5][100050], d[5][100050], ud[5][100050];
+
+void Addedge(long long x, long long y, long long flag)
+{
+     edge[++now].to = y;
+     edge[now].next = first[flag][x];
+     first[flag][x] = now;
+     
+     return;
+}
+
+void Down(long long root, long long flag)
+{
+long long  tp, current, pointer, next;
+     
+     stack[tp = 1].current = root;
+     stack[1].pointer = first[flag][root];
+     while (tp)
+     {
+           current = stack[tp].current;
+           pointer = stack[tp].pointer;
+           if (pointer)
+           {
+              next = edge[pointer].to;
+              stack[tp].pointer = edge[pointer].next;
+              if (next == stack[tp].father)
+              {
+                 continue;
+              }
+              stack[++tp].current = next;
+              stack[tp].father = current;
+              stack[tp].pointer = first[flag][next];
+           }  else
+           {
+              size[flag][current]++;
+              if (tp > 1)
+              {
+                 down[flag][stack[tp - 1].current] += down[flag][current] + size[flag][current];
+                 size[flag][stack[tp - 1].current] += size[flag][current];
+              }
+              tp--;
+           }
+     }
+     
+     return;
+}
+
+void Up(long long root, long long flag)
+{
+long long  tp, pointer, current, next;
+     
+     stack[tp = 1].current = root;
+     stack[1].pointer = first[flag][root];
+     while (tp)
+     {
+           current = stack[tp].current;
+           pointer = stack[tp].pointer;
+           if (pointer)
+           {
+              next = edge[pointer].to;
+              stack[tp].pointer = edge[pointer].next;              
+              if (next == stack[tp].father)
+              {
+                 continue;
+              }
+              stack[++tp].current = next;
+              stack[tp].father = current;
+              stack[tp].pointer = first[flag][next];
+              up[flag][next] = up[flag][current] + down[flag][current] - down[flag][next] - size[flag][next] +
+                               n[flag] - size[flag][next];
+           }  else
+           {
+              tp--;
+           }
+     }
+     
+     return;
+}
+
+void Solve_Down(long long root, long long flag, long long opp)
+{
+long long  tp, current, pointer, next;
+     
+     stack[tp = 1].current = root;
+     stack[1].pointer = first[flag][root];
+     d[flag][root] = all[flag][root];
+     while (tp)
+     {
+           current = stack[tp].current;
+           pointer = stack[tp].pointer;
+           if (pointer)
+           {
+              next = edge[pointer].to;
+              stack[tp].pointer = edge[pointer].next;
+              if (next == stack[tp].father)
+              {
+                 continue;
+              }
+              stack[++tp].current = next;
+              stack[tp].father = current;
+              stack[tp].pointer = first[flag][next];
+              d[flag][next] = all[flag][next];
+           }  else
+           {
+              if (tp > 1)
+              {
+                 d[flag][stack[tp - 1].current] = 
+                 max(d[flag][stack[tp - 1].current], d[flag][current] + n[opp]);
+              }
+              tp--;
+           }
+     }
+     
+     return;
+}
+
+void Update(long long root, long long nowleft, long long nowright, long long askleft, long long askright, long long value)
+{
+long long  mid = (nowleft + nowright) >> 1;
+     
+     if (nowright < askleft || askright < nowleft)
+     {
+        return;
+     }
+     if (askleft <= nowleft && nowright <= askright)
+     {
+        tree[root] = value;
+        return;
+     }
+     Update(root << 1, nowleft, mid, askleft, askright, value);
+     Update((root << 1) | 1, mid + 1, nowright, askleft, askright, value);
+     tree[root] = max(tree[root << 1], tree[(root << 1) | 1]);
+     
+     return;
+}
+
+long long Ask(long long root, long long nowleft, long long nowright, long long askleft, long long askright)
+{
+long long  mid = (nowleft + nowright) >> 1;
+     
+     if (nowright < askleft || askright < nowleft)
+     {
+        return -999999999999999999ll;
+     }
+     if (askleft <= nowleft && nowright <= askright)
+     {
+        return tree[root];
+     }
+     
+     return max(Ask(root << 1, nowleft, mid, askleft, askright), 
+                Ask((root << 1) | 1, mid + 1, nowright, askleft, askright));
+}
+
+void Solve_Up(long long root, long long flag, long long opp)
+{
+long long  tp, pointer, current, next;
+long long temp;
+     
+     stack[tp = 1].current = root;
+     stack[1].pointer = first[flag][root];
+     u[flag][root] = all[flag][root];
+     while (tp)
+     {
+           current = stack[tp].current;
+           pointer = stack[tp].pointer;
+           if (pointer)
+           {
+              next = edge[pointer].to;
+              stack[tp].pointer = edge[pointer].next;
+              if (next == stack[tp].father)
+              {
+                 continue;
+              }
+              stack[++tp].current = next;
+              stack[tp].father = current;
+              stack[tp].pointer = first[flag][next];
+              
+              Update(1, 1, n[flag], rank[flag][next], rank[flag][next], -999999999999999999ll);
+              temp = 
+              max(Ask(1, 1, n[flag], area[flag][current].first, area[flag][current].second) + n[opp], 
+                  u[flag][current]) + n[opp];
+              Update(1, 1, n[flag], rank[flag][next], rank[flag][next], d[flag][next]);
+              u[flag][next] = max(all[flag][next], temp);
+           }  else
+           {
+              tp--;
+           }
+     }
+     
+     return;
+}
+
+void Mark(long long root, long long flag)
+{
+long long  low, high, pointer, next, i;
+     
+     rank[flag][Q[low = high = 1] = root] = 1;
+     while (low <= high)
+     {
+           area[flag][Q[low]].first = high + 1;
+           for (pointer = first[flag][Q[low]]; pointer; pointer = edge[pointer].next)
+           {
+               next = edge[pointer].to;
+               if (rank[flag][next])
+               {
+                  continue;
+               }
+               rank[flag][next] = ++high;
+               Q[high] = next;
+           }
+           area[flag][Q[low]].second = high;
+           low++;
+     }
+     
+     return;
+}
+
+long long Rand()
+{
+    return (rand() << 15) | rand();
+}
+
+int main()
+{
+long long flag, opp, i, x, y;
+long long temp, one, total, answer;
+    
+//    freopen("e2.in", "r", stdin);
+//    freopen("e2.out", "w", stdout);
+    
+    srand((unsigned) time (0));
+    
+    for (flag = 1; flag <= 3; flag++)
+    {
+        scanf("%I64d", &n[flag]);
+    }
+    
+    for (flag = 1; flag <= 3; flag++)
+    {
+        for (i = 1; i < n[flag]; i++)
+        {
+            scanf("%I64d%I64d", &x, &y);
+            Addedge(x, y, flag);
+            Addedge(y, x, flag);
+        }
+        
+        Down(1, flag);
+        Up(1, flag);
+        
+        for (i = 1; i <= n[flag]; i++)
+        {
+            all[flag][i] = up[flag][i] + down[flag][i];
+        }
+        
+        best[flag] = 1;
+        for (i = 2; i <= n[flag]; i++)
+        if  (all[flag][i] > all[flag][best[flag]])
+        {
+            best[flag] = i;
+        }
+        
+        sum[flag] = 0;
+        for (i = 1; i <= n[flag]; i++)
+        {
+            sum[flag] += all[flag][i];
+        }
+        
+        Mark(1, flag);
+    }
+    
+    answer = 0;
+    
+    for (flag = 1; flag <= 3; flag++)
+    {
+    for (opp = 1; opp <= 3; opp++)
+    if  (flag != opp)
+    {
+        Solve_Down(1, flag, opp);
+        memset(tree, 0, sizeof(tree));
+        for (i = 1; i <= n[flag]; i++)
+        {
+            Update(1, 1, n[flag], rank[flag][i], rank[flag][i], d[flag][i]);
+        }
+        Solve_Up(1, flag, opp);
+        
+        for (i = 1; i <= n[flag]; i++)
+        {
+            ud[flag][i] = max(u[flag][i], d[flag][i]);
+        }
+        
+        for (i = 1; i <= n[flag]; i++)
+        {
+            one = 
+            max(all[opp][best[opp]] + all[flag][i] + n[flag], 
+                ud[flag][i] + all[opp][best[opp]] + n[opp]);
+            total = sum[flag] + sum[opp] + 2 * n[flag] * n[opp] + 
+                    2 * all[flag][i] * n[opp] + 
+                    2 * all[opp][best[opp]] * n[flag];
+            
+            temp = total + sum[6 - flag - opp] + 2 * (n[flag] + n[opp]) * n[6 - flag - opp] + 
+                   2 * one * n[6 - flag - opp] + 
+                   2 * all[6 - flag - opp][best[6 - flag - opp]] * (n[flag] + n[opp]);
+            answer = max(answer, temp);
+        }
+    }
+    }
+    
+    printf("%I64d\n", answer >> 1);
+    
+    return 0;
+}

@@ -1,0 +1,107 @@
+#include <algorithm>
+#include <stdio.h>
+#include <memory.h>
+#include <queue>
+#include <cmath>
+#include <set>
+#include <map>
+#include <string.h>
+#include <string>
+#include <ctype.h>
+#include <ctime>
+
+using namespace std;
+
+typedef long long INT;
+typedef pair<int, int> pii;
+
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
+template <class T> inline void chkmin(T &a, T b) { if (a>b) a=b; }
+template <class T> inline void chkmax(T &a, T b) { if (a<b) a=b; }
+
+#define NN 110000
+#define ninf 0xcfcfcfcf
+
+int node[NN*2], next[NN*2], dis[NN*2], first[NN], E;
+int w[NN], p[NN], s[NN];
+int f[NN][3], g[NN][3];
+int c[NN];
+
+int dfs1(int u) {
+	int i, v, x, y;
+	if (c[u]) x=0; else x=ninf;
+	y=0;
+	for (i=first[u]; i; i=next[i]) {
+		v=node[i];
+		if (v==p[u]) continue;
+		p[v]=u; w[v]=dis[i];
+		dfs1(v);
+		if (x<f[v][0]+w[v]) x=f[v][0]+w[v], y=f[v][1];
+		else if (x==f[v][0]+w[v]) y=0;
+	}
+	f[u][0]=x; f[u][1]=y?y:u; f[u][2]=u;
+}
+int dfs2(int u) {
+	int i, v, x=ninf, y=0, z=p[u];
+	for (i=first[z]; i; i=next[i]) {
+		v=node[i];
+		if (v==u || p[z]==v) continue;
+		if (x<f[v][0]+w[v]+w[u]) x=f[v][0]+w[v]+w[u], y=f[v][1];
+		else if (x==f[v][0]+w[v]+w[u]) y=0;
+	}
+	if (x<g[z][0]+w[u]) g[u][0]=g[z][0]+w[u], g[u][1]=g[z][1], g[u][2]=g[z][2];
+	else if (x>g[z][0]+w[u]) g[u][0]=x, g[u][1]=y?y:z, g[u][2]=z;
+	else g[u][0]=x, g[u][1]=g[u][2]=z;
+	if (g[u][0]<0 && c[u]) g[u][0]=0, g[u][1]=g[u][2]=u;
+	for (i=first[u]; i; i=next[i]) {
+		v=node[i];
+		if (p[u]==v) continue;
+		dfs2(v);
+	}
+}
+int dfs(int u) {
+	int i, v;
+	for (i=first[u]; i; i=next[i]) {
+		v=node[i];
+		if (p[u]==v) continue;
+		dfs(v);
+		s[u]+=s[v];
+	}
+}
+
+int main() {
+	int N, M, i, j, k, u, v, x, y;
+	
+	scanf("%d%d", &N, &M);
+	for (i=0; i<M; i++) {
+		scanf("%d", &u);
+		c[u]=1;
+	}
+	for (i=1; i<N; i++) {
+		scanf("%d%d%d", &u, &v, &k);
+		node[++E]=v; dis[E]=k; next[E]=first[u]; first[u]=E;
+		node[++E]=u; dis[E]=k; next[E]=first[v]; first[v]=E;
+	}
+	
+	memset(f, 0xcf, sizeof(f));
+	memset(g, 0xcf, sizeof(g));
+	
+	dfs1(1); dfs2(1);
+	
+	for (i=1; i<=N; i++) if (c[i] && f[i][0]!=g[i][0]) {
+		if (f[i][0]>g[i][0]) u=f[i][1], v=f[i][2];
+		else u=g[i][1], v=g[i][2];
+		s[i]++, s[u]++, s[v]--, s[p[v]]--;
+	}
+	
+	dfs(1);
+	x=ninf;
+	for (i=1; i<=N; i++) if (!c[i]) {
+		if (s[i]>x) x=s[i], y=1;
+		else if (s[i]==x) y++;
+	}
+	
+	printf("%d %d\n", x, y);
+	
+	return 0;
+}

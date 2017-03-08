@@ -1,0 +1,157 @@
+#include <map>
+#include <set>
+#include <stack>
+#include <queue>
+#include <cmath>
+#include <ctime>
+#include <vector>
+#include <cstdio>
+#include <cctype>
+#include <cstring>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#include<bitset>
+using namespace std;
+#define INF 0x3f3f3f3f
+#define inf -0x3f3f3f3f
+#define lson l,m,rt<<1
+#define rson m+1,r,rt<<1|1
+#define mem0(a) memset(a,0,sizeof(a))
+#define mem1(a) memset(a,-1,sizeof(a))
+#define mem(a, b) memset(a, b, sizeof(a))
+typedef long long ll;
+const int maxn=1010000;
+const int MAXN=1010;
+bool notprime[MAXN];
+bitset<1010>sumv[maxn],cur,ret;
+int id[maxn],pre[maxn],a[maxn],num[maxn],tot,addv[4*maxn],L,R,p,m;
+vector<int>G[maxn];
+
+void init(){
+    memset(notprime,false,sizeof(notprime));
+    notprime[0]=notprime[1]=true;
+    for(int i=2;i<m;i++)
+        if(!notprime[i]){
+            cur[i]=1;
+            if(i>m/i)
+                continue;
+            for(int j=i*i;j<m;j+=i)
+                notprime[j]=true;
+        }
+    tot=0;
+}
+
+void dfs(int u,int f){
+    id[u]=++tot;
+    num[id[u]]=a[u];
+    for(int i=0;i<G[u].size();i++){
+        int v=G[u][i];
+        if(v==f)
+            continue;
+        dfs(v,u);
+    }
+    pre[u]=tot;
+}
+
+void pushup(int rt){
+    sumv[rt]=sumv[rt<<1]|sumv[rt<<1|1];
+}
+
+void build(int l,int r,int rt){
+    if(l==r){
+        sumv[rt][num[l]]=1;
+        return ;
+    }
+    int m=(l+r)>>1;
+    build(lson);
+    build(rson);
+    pushup(rt);
+}
+
+void add(int rt,int u){
+    addv[rt]+=u;
+    if(addv[rt]>=m)
+        addv[rt]-=m;
+}
+
+void Change(int rt,int x){
+    sumv[rt]=(sumv[rt]<<x)|(sumv[rt]>>(m-x));
+}
+
+void pushdown(int rt){
+    if(addv[rt]){
+        Change(rt<<1,addv[rt]);
+        Change(rt<<1|1,addv[rt]);
+        add(rt<<1,addv[rt]);
+        add(rt<<1|1,addv[rt]);
+        addv[rt]=0;
+    }
+}
+
+void update(int l,int r,int rt){
+    if(L<=l&&R>=r){
+        add(rt,p);
+        Change(rt,p);
+        return ;
+    }
+    int m=(l+r)>>1;
+    pushdown(rt);
+    if(L<=m)
+        update(lson);
+    if(R>m)
+        update(rson);
+    pushup(rt);
+}
+
+void query(int l,int r,int rt){
+    if(L<=l&&R>=r){
+        ret=ret|sumv[rt];
+        return ;
+    }
+    int m=(l+r)>>1;
+    pushdown(rt);
+    if(L<=m)
+        query(lson);
+    if(R>m)
+        query(rson);
+}
+
+int main(){
+    int n,q;
+    scanf("%d%d",&n,&m);
+    init();
+    for(int i=1;i<=n;i++){
+        scanf("%d",&a[i]);
+        if(a[i]>=m)
+            a[i]%=m;
+    }
+    int u,v;
+    for(int i=1;i<=n-1;i++){
+        scanf("%d%d",&u,&v);
+        G[u].push_back(v);
+        G[v].push_back(u);
+    }
+    dfs(1,0);//dfs��
+    build(1,n,1);
+    scanf("%d",&q);
+    int op,point;
+    for(int i=1;i<=q;i++){
+        scanf("%d",&op);
+        if(op==1){
+            scanf("%d%d",&point,&p);
+            p%=m,L=id[point],R=pre[point];
+            if(p==0)
+                continue;
+            update(1,n,1);
+        }
+        else{
+            scanf("%d",&point);
+            L=id[point],R=pre[point];
+            ret.reset();
+            query(1,n,1);
+            printf("%d\n",(ret & cur).count());
+        }
+    }
+}
+

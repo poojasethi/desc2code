@@ -1,0 +1,80 @@
+#include <cstdio>
+#include <map>
+#include <algorithm>
+using namespace std;
+
+int n;
+
+struct inte { int l, r; };
+inline int eval (const inte &a) {
+	if (a.l == 1) return a.r - 1;
+	if (a.r == n) return a.r - a.l;
+	int l = a.r - a.l + 1;
+	return (l % 2 == 0) ? l / 2 - 1 : l / 2;
+}
+bool operator< (inte a, inte b) {
+	int la = eval(a), lb = eval(b);
+	if (la == lb) return a.l > b.l; else return la < lb;
+}
+inte operator+ (inte a, inte b) {
+	if (a.r < a.l) return b; if (b.r < b.l) return a;
+	return (inte){a.l, b.r};
+}
+
+struct tree
+{
+	int l, r; tree *lc, *rc;
+	inte ls, es, rs;
+	tree (int _l, int _r) {
+		lc = rc = 0; l = _l, r = _r;
+		ls = es = rs = (inte){l, r};
+	}
+	void init ()
+	{
+		if (l == r) return; int m = (l + r) >> 1;
+		(lc = new tree(l, m))->init();
+		(rc = new tree(m + 1, r))->init();
+	}
+	void modify (int x, int clear)
+	{
+		if (l == r)
+		{
+			if (clear) ls = rs = es = (inte){l, r};
+			else ls = (inte){l, l - 1}, rs = es = (inte){r + 1, r};
+		}
+		else
+		{
+			((x <= (l + r >> 1)) ? lc : rc)->modify(x, clear);
+			ls = lc->ls; if (lc->ls.r == lc->r) ls.r = rc->ls.r;
+			rs = rc->rs; if (rc->rs.l == rc->l) rs.l = lc->rs.l;			
+			es = max(max(lc->es, rc->es), lc->rs + rc->ls);
+		}
+	}
+} *rt;
+
+map<int, int> pos;
+
+int main ()
+{
+	int q, a, b;
+	scanf("%d%d", &n, &q);
+	(rt = new tree(1, n))->init();
+	while (q--)
+	{
+		scanf("%d%d", &a, &b);
+		if (a == 1)
+		{
+			inte t = rt->es; int p(-1);
+			if (t.l == 1) p = 1; else if (t.r == n) p = n;
+			else p = (t.l + t.r) >> 1;
+			printf("%d\n", p);
+			rt->modify(pos[b] = p, 0);
+		}
+		else
+		{
+			rt->modify(pos[b], 1);
+			pos.erase(b);
+		}
+	}
+	return 0;
+}

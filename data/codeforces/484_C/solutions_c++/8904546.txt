@@ -1,0 +1,68 @@
+#include<cstdio>
+#include<cstring>
+#include<string>
+#include<algorithm>
+#include<cmath>
+#include<iostream>
+#include<cstdlib>
+using namespace std;
+
+const int Ns=1000010;
+int tmp[Ns],a[Ns],b[Ns];
+char s[Ns],tmps[Ns],ch;
+int i,m,n,x,k,d,t,tot;
+
+void mul(int x)
+{
+	if (x<=1) return;
+	mul(x >> 1);
+	int i;
+	for (i=1;i<=n;i++) tmp[i]=a[a[i]];
+	for (i=1;i<=n;i++) a[i]=tmp[i];
+	if (x % 2==1)
+	{
+		for (i=1;i<=n;i++) tmp[i]=b[a[i]];
+		for (i=1;i<=n;i++) a[i]=tmp[i];
+	}
+}
+
+int main()
+{
+	for (ch=getchar();ch!='\n';ch=getchar()) s[++n]=ch;
+	scanf("%d",&m);
+	while (m--)
+	{
+		scanf("%d%d",&k,&d);
+		if (k==1)
+		{
+			for (i=1;i<=n;i++) putchar(s[i]);
+			printf("\n");
+			continue;
+		}
+		x=1-d;
+		tot=1;
+		for (i=1;i<=k;i++)
+		{
+			x+=d;
+			if (x>k) x=++tot;
+			b[i]=x;
+		}
+		for (i=k+1;i<=n;i++) b[i]=i;	//B
+		t=b[1];
+		for (i=1;i<n;i++) b[i]=b[i+1];
+		b[n]=t;
+		for (i=1;i<=n;i++) a[i]=b[i];
+		
+		mul(n-k+1);
+		
+		x=k-1;
+		for (i=1;i<=n;i++) tmps[i]=s[a[((i+x-1) % n)+1]];
+		for (i=1;i<=n;i++)
+		{
+			s[i]=tmps[i];
+			putchar(s[i]);
+		}
+		printf("\n");
+	}
+	return 0;
+}

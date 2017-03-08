@@ -1,0 +1,153 @@
+#include<bits/stdc++.h>
+using namespace std;
+const int maxn=1e5+15;
+int n,m,res[maxn];
+vector<int> w,xm;
+void init(){
+    scanf("%d",&n);
+    for (int i=1;i<=n;++i) scanf("%d",&res[i]);
+    scanf("%d",&m);
+    for (int x,i=1;i<=m;++i){scanf("%d",&x);w.push_back(x);xm.push_back(x);}
+}
+const int inf=1e9+1;
+typedef pair<int,int> PII;
+vector<int> t;
+PII process[maxn];
+int tot,a[maxn],b[maxn],c[maxn],d[maxn],x[maxn],y[maxn];
+void prepare(){
+    a[tot=1]=-inf;
+    for (int i=1;i<=n;++i)
+        if (res[i]==-1) ++b[tot+1];
+        else a[++tot]=res[i];
+    a[++tot]=inf;
+    for (int i=1;i<=tot;++i) process[i]=make_pair(a[i],i);
+    for (int i=1;i<=tot;++i) b[i]+=b[i-1];
+    sort(w.begin(),w.end());
+    w.erase(unique(w.begin(),w.end()),w.end());
+    for (int i=1;i<=tot;++i){
+        c[i]=lower_bound(w.begin(),w.end(),a[i])-w.begin();
+        d[i]=upper_bound(w.begin(),w.end(),a[i])-w.begin();
+    }
+    for (int i=1;i<=tot;++i){
+        t.push_back(x[i]=c[i]-b[i]);
+        t.push_back(y[i]=d[i]-b[i]);
+    }
+    sort(t.begin(),t.end());
+    t.erase(unique(t.begin(),t.end()),t.end());
+    for (int i=1;i<=tot;++i){
+        x[i]=lower_bound(t.begin(),t.end(),x[i])-t.begin()+1;
+        y[i]=lower_bound(t.begin(),t.end(),y[i])-t.begin()+1;
+    }
+}
+typedef pair<int,int> PII;
+struct Tbit{
+    static const int maxn=::maxn<<1;
+    PII T[maxn];
+    void clear(){
+    	for (int i=0;i<maxn;++i)
+    		T[i]=make_pair(-inf,-inf);
+	}
+    void init(int x){
+    	for (int p=x;p<maxn;p+=p&-p)
+    		T[p]=make_pair(-inf,-inf);
+	}
+	void modify(int x,PII v){
+        for (int p=x;p<maxn;p+=p&-p)
+            T[p]=max(T[p],v);
+    }
+    PII query(int x){
+       PII res=make_pair(-inf,-inf);
+        for (int p=x;p>=1;p-=p&-p)
+            res=max(res,T[p]);
+        return res;
+    }
+}bit[2];
+int f[maxn],from[maxn];
+void cdq_solve(int l,int r){
+	if (l==r){if (f[l]<1){f[l]=1;from[l]=l;}return;}
+	int mid=(l+r)>>1;
+	cdq_solve(l,mid);
+	static PII tmp[maxn];
+	for (int i=l;i<=r;++i) tmp[i]=process[i];
+	sort(tmp+l,tmp+mid+1);sort(tmp+mid+1,tmp+r+1);
+	int last=0,i=l,j=mid+1;
+	while (j<=r)
+		if (i<=mid&&tmp[i].first<tmp[j].first){
+			int u=tmp[i].second;
+			bit[0].modify(Tbit::maxn-y[u],make_pair(f[u]-d[u]+1,u));
+			bit[1].modify(y[u],make_pair(f[u]-b[u]+1,u));
+			last=i++;
+		}
+		else if (j<=r){
+			int u=tmp[j].second;
+			PII t1=bit[0].query(Tbit::maxn-x[u]),t2=bit[1].query(x[u]);
+			if (t1.first+c[u]>t2.first+b[u]){
+				if (t1.first+c[u]>f[u]){
+					f[u]=t1.first+c[u];
+					from[u]=t1.second;
+				}
+			}
+			else{
+				if (t2.first+b[u]>f[u]){
+					f[u]=t2.first+b[u];
+					from[u]=t2.second;
+				}
+			}
+			++j;
+		}
+	for (int i=l;i<=last;++i){
+		int u=tmp[i].second;
+		bit[0].init(Tbit::maxn-y[u]);
+		bit[1].init(y[u]);
+	}
+	cdq_solve(mid+1,r);
+}
+/*
+    将空位先去掉，得到新数列a，记录b[i]代表i以前的空位数 
+    f[i]代表以i结尾最长的LIS 
+    在数列头加-inf，尾加inf，最后去掉即可 
+    f[i]=max{min{count_num(a[j],a[i]),count_blank(j,i)}+f[j]+1},【且满足条件a[j]<a[i]】 
+    去重，记录小于a[i]的数的个数c[i]和小于等于a[i]的数的个数d[i] 
+    则count_num(a[j],a[i])=c[i]-d[j]；
+    则count_blank(j,i)=b[i]-b[j] 
+    当 c[i]-d[j]< b[i]-b[j] 时，答案为max{c[i]-d[j]+f[j]+1}
+    移项，c[i]-b[i]<d[j]-b[j]
+    当 c[i]-d[j]>=b[i]-b[j] 时，答案为max{b[i]-b[j]+f[j]+1}
+    移项, c[i]-b[i]>=d[j]-b[j] 
+*/
+int rest[maxn];
+void print(){
+	for (unsigned int i=0;i<xm.size();++i) ++rest[lower_bound(w.begin(),w.end(),xm[i])-w.begin()];
+	for (int r=tot;r!=1;r=from[r]){
+		int l=from[r];
+		if (!(b[r]-b[l])) continue;
+		int p=upper_bound(w.begin(),w.end(),a[l])-w.begin(),q=lower_bound(w.begin(),w.end(),a[r])-w.begin()-1;
+		for (int i=l;i<=r-1;++i){
+            for (int j=i+b[i];j<=i-1+b[i+1];++j)
+                if (res[j]==-1){
+                    while (!rest[p]) ++p;
+                    if (p>q) break;
+                    res[j]=w[p];--rest[p++];
+                }
+        }
+    }
+    for (int j=0,i=1;i<=n;++i)
+        if (res[i]==-1){
+            while (!rest[j]) ++j;
+            res[i]=w[j];--rest[j];
+        }
+    for (int i=1;i<=n;++i) printf("%d ",res[i]);
+    putchar('\n');
+}
+void work(){
+	bit[0].clear();bit[1].clear();
+    prepare();
+    cdq_solve(1,tot);
+    print();
+}
+int main(){
+    init();
+    work();
+    return 0;
+}
+		  								 	    	  			  			

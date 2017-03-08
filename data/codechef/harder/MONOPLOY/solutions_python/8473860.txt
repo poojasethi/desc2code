@@ -1,0 +1,170 @@
+#include <bits/stdc++.h>
+#define fi first
+#define se second
+#define mk make_pair
+#define pb push_back
+#define CH (ch=getchar())
+#define Exit(...)    printf(__VA_ARGS__),exit(0)
+#define dprintf(...) fprintf(stderr,__VA_ARGS__)
+#define rep(i,V)     for(__typeof(*V.begin()) i:  V)
+#define For(i,a,b)   for(int i=(int)a;i<=(int)b;i++)
+#define Rep(i,a,b)   for(int i=(int)a;i< (int)b;i++)
+#define Forn(i,a,b)  for(int i=(int)a;i>=(int)b;i--)
+#define pend(x)      ((x)=='\n'||(x)=='\r'||(x)=='\t'||(x)==' ')
+using namespace std;
+typedef	double		db;
+typedef	long long	ll;
+const	int N=100005;
+const	ll	Inf=(ll)1e10;
+const	int inf=(int)1e9;
+const	int	mo=ll(1e9+7);
+
+inline int IN(){
+	char ch;CH; int f=0,x=0;
+	for(;pend(ch);CH); if(ch=='-')f=1,CH;
+	for(;!pend(ch);CH) x=x*10+ch-'0';
+	return (f)?(-x):(x);
+}
+
+int Pow(int x,int y,int p){
+	int A=1;
+	for(;y;y>>=1,x=(ll)x*x%p) if(y&1) A=(ll)A*x%p;
+	return A;
+}
+
+int siz[N*4],Add[N*4];
+ll sum[N*4],ans;
+int n,fa[N],st[N],ed[N],tim;
+vector<int> e[N];
+
+
+void build(int x,int L,int R){
+	siz[x]=R-L+1;
+	sum[x]=Add[x]=0;
+	if(L==R)return;
+	int md=(L+R)>>1;
+	build(x*2,L,md);
+	build(x*2+1,md+1,R);
+}
+
+#define plu(x,y) sum[x]+=1ll*siz[x]*y,Add[x]+=y;
+void modify(int x,int L,int R,int ll,int rr,int val){
+	if(ll<=L&&R<=rr){
+		plu(x,val);
+		return;
+	}
+	int md=(L+R)>>1;
+	if(ll<=md) modify(x*2,L,md,ll,rr,val);
+	if(md<rr) modify(x*2+1,md+1,R,ll,rr,val);
+	sum[x]=sum[x*2]+sum[x*2+1]+1ll*Add[x]*siz[x];
+}
+
+void ask(int x,int L,int R,int ll,int rr,int val){
+	if(ll<=L&&R<=rr){
+		ans+=sum[x]+1ll*val*siz[x];
+		return;
+	}
+	int md=(L+R)>>1;
+	if(ll<=md) ask(x*2,L,md,ll,rr,val+Add[x]);
+	if(md<rr)  ask(x*2+1,md+1,R,ll,rr,val+Add[x]);
+}
+
+struct node{
+	node *s[2],*f;
+	int id;
+	int dir(){return f->s[1]==this;}
+	int isr(){return !f||(f->s[0]!=this&&f->s[1]!=this);}
+	void set(node *c,int d){if(c) c->f=this;s[d]=c;}
+	void rot(){
+		node *y=f; int d=dir();
+		if(!y->f) f=NULL;else{
+			if(y->f->s[0]==y) y->f->s[0]=this;
+			if(y->f->s[1]==y) y->f->s[1]=this;
+			f=y->f;
+		}
+		y->set(s[!d],d);
+		set(y,!d);
+	}
+}ex[N];
+
+void splay(node *x){
+	while(!x->isr()){
+		node *y=x->f;
+		if(y->isr()){
+			x->rot();
+			break;
+		}
+		(y->dir()==x->dir())?(y->rot()):(x->rot());
+		x->rot();
+	}
+}
+
+void access(node *x){
+	node *y=NULL;
+	while(x){
+		splay(x);
+		if(x->s[1]){
+			node *r=x->s[1];
+			while(r->s[0]) r=r->s[0];
+			modify(1,1,n,st[r->id],ed[r->id],1);
+		}
+		x->set(y,1);
+		if(y){
+			node *r=x->s[1];
+			while(r->s[0]) r=r->s[0];
+			modify(1,1,n,st[r->id],ed[r->id],-1);
+		}
+		y=x;
+		x=x->f;
+	}
+}
+
+void dfs(int x){
+	st[x]=++tim;
+	rep(v,e[x]){
+		if(v==fa[x])continue;
+		fa[v]=x;
+		ex[v].f=ex+x;
+		dfs(v);
+		modify(1,1,n,st[v],ed[v],1);
+	}
+	ed[x]=tim;
+}
+
+
+int Main(){
+	scanf("%d",&n);
+	For(i,1,n) fa[i]=st[i]=ed[i]=0;
+	For(i,1,n) e[i].clear();
+	For(i,1,n) ex[i].s[0]=ex[i].s[1]=ex[i].f=NULL;
+	tim=0;
+	For(i,2,n){
+		int x,y;
+		scanf("%d%d",&x,&y);
+		++x;++y;
+		e[x].pb(y);
+		e[y].pb(x);
+	}
+	build(1,1,n);
+	dfs(1);
+	For(i,1,n) ex[i].id=i;
+	int Q; scanf("%d",&Q);
+	while(Q--){
+		char s[2]; int x;
+		scanf("%s%d",s,&x);++x;
+		if(*s=='O'){
+			access(ex+x);
+		}else{
+			ans=0;
+			ask(1,1,n,st[x],ed[x],0);
+			printf("%.10lf\n",db(ans)/db(ed[x]-st[x]+1));
+		}
+	}
+	return 0;
+}
+
+int main(){
+	int T;
+	scanf("%d",&T);
+	while(T--) Main();
+}

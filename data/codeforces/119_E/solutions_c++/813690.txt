@@ -1,0 +1,152 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <deque>
+#include <queue>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <cctype>
+#include <string>
+#include <cstring>
+#include <ctime>
+#include <string.h>
+
+using namespace std;
+
+const double pi = acos(-1.0);
+const double eps = 1E-7;
+const int inf = 123456789;
+
+typedef long long int64;
+typedef unsigned long long uint64;
+#define two(X) (1<<(X))
+#define twoL(X) (((int64)(1))<<(X))
+#define contain(S,X) (((S)&two(X))!=0)
+#define containL(S,X) (((S)&twoL(X))!=0)
+#define sqr(x) ((x)*(x))
+typedef pair<int,int> ipair;
+#define SIZE(A) ((int)A.size())
+#define MP(A,B) make_pair(A,B)
+#define PB(X) push_back(X)
+#define ME(a) memset((a), 0, sizeof((a)))
+#define MM(a, b) memcpy((a), (b), sizeof((a)))
+#define FOR(i,n) for (int (i) = 0; (i) < (n); ++(i))
+#define REP(i,a,b) for (int (i) = (a); (i) < (b); ++(i))
+
+typedef double typec;
+int sgn(double x) {
+    if (x < -eps) return -1;
+    if (x > eps) return 1;
+    return 0;
+}
+
+//用来表示点或向量 
+struct Point {
+    typec x,y;
+    Point(typec _x, typec _y): x(_x),y(_y) {}
+    Point() {}
+};
+
+//表示p0到p1的线段或者射线 
+struct Seg {
+    Point p0,p1;
+    Seg(Point _p0, Point _p1): p0(_p0), p1(_p1) {}
+    Seg() {}
+};
+
+//定义圆 
+struct Circle{
+    Point o;
+    double r;
+    Circle() {}
+    Circle(Point _o, double _r) : o(_o), r(_r) {}
+};
+
+inline Point operator+(const Point &p1, const Point &p2) { return Point(p1.x+p2.x, p1.y+p2.y);}
+inline Point operator-(const Point &p1, const Point &p2) { return Point(p1.x-p2.x, p1.y-p2.y);}
+inline Point operator*(const Point &p, double k) {return Point(p.x*k, p.y*k);}
+inline typec operator^(const Point &p1, const Point &p2) {  return (p1.x*p2.y - p2.x*p1.y);}
+inline typec operator* (const Point &p1, const Point &p2) { return p1.x*p2.x + p1.y*p2.y;}
+inline typec cross(Point p0, Point p1, Point p2) {return (p1.x-p0.x)*(p2.y-p0.y)-(p2.x-p0.x)*(p1.y-p0.y);} 
+inline double get_dis(const Point &p1, const Point &p2) { return sqrt( (p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y) );}
+
+//三点确定圆心,三点共线返回false，否则结果保存在p中 
+inline bool getC(Point p0, Point p1, Point p2, Point &p) {
+    if(sgn(cross(p0,p1,p2)) == 0) return false; 
+    double a = p1.x-p0.x;
+    double b = p1.y-p0.y;
+    double c = 0.5*(sqr(p1.x)+sqr(p1.y)-sqr(p0.x)-sqr(p0.y));
+    double d = p2.x-p0.x;
+    double e = p2.y-p0.y;
+    double f = 0.5*(sqr(p2.x)+sqr(p2.y)-sqr(p0.x)-sqr(p0.y));
+    p = Point((c*e-f*b)/(a*e-b*d),(c*d-f*a)/(b*d-e*a));
+    return true;
+} 
+
+//点(d,e,f)在平面（ax+by+cz=0)上的投影 
+Point projection(double a, double b, double c, double d, double e, double f)
+{
+    if(sgn(a)==0&&sgn(b)==0)return Point(d,e);
+    if(sgn(b)==0&&sgn(c)==0)return Point(e,f);
+    if(sgn(c)==0&&sgn(a)==0)return Point(f,d);
+    double t=-(a*d+b*e+c*f+0.0)/(a*a+b*b+c*c);
+    double x=d+t*a,y=e+t*b,z=f+t*c;
+    double aa=sqrt(x*x+y*y+z*z),bb=sqrt(b*b+c*c),cc=sqrt(x*x+(c+y)*(c+y)+(z-b)*(z-b));
+    if(fabs(aa)<eps)return Point(0,0);
+    double ang=acos((aa*aa+bb*bb-cc*cc)/(2*aa*bb));
+    if(x<0)ang=-ang;
+    return Point(aa*cos(ang),aa*sin(ang));
+}
+
+//返回最小圆覆盖的半径
+//可根据需要调整坐标返回 
+double min_circle_cover(Point *pa, int n) {
+    random_shuffle(pa, pa+n); 
+    Point o(0,0);
+    double R = 0;
+    REP(i,1,n) if (get_dis(o,pa[i]) > R+eps){
+        o = pa[i]; 
+        R = 0;
+        FOR(j,i) if (get_dis(o,pa[j]) > R+eps) {
+            o = (pa[i]+pa[j])*0.5;
+            R = get_dis(o, pa[i]);
+            FOR(k,j) if (get_dis(o,pa[k]) > R+eps) {
+                getC(pa[i], pa[j], pa[k], o);
+                R = get_dis(o, pa[i]);
+            }
+        }
+    }
+    return R;
+}
+
+const int maxN = 1000+5;
+int xs[maxN], ys[maxN], zs[maxN];
+Point pa[maxN];
+int n,m;
+int main() {
+    //freopen("a.in", "r", stdin);
+    scanf("%d%d", &n, &m);
+    FOR(i,n) scanf("%d%d%d", xs+i, ys+i, zs+i);
+    FOR(r,m) {
+        int a,b,c;
+        scanf("%d%d%d", &a, &b, &c);
+        FOR(i,n) {
+            pa[i] = projection(a,b,c,xs[i],ys[i],zs[i]);
+    //      cout<<pa[i].x<<" "<<pa[i].y<<endl;
+        }
+        printf("%.8lf\n", min_circle_cover(pa, n));
+    }
+//  while (1>0) {}
+    return 0;
+} 

@@ -1,0 +1,145 @@
+#include<iostream>
+#include<stdio.h>
+#include<assert.h>
+#include<string.h>
+#include<time.h>
+#include<stdlib.h>
+#include<math.h>
+#include<string>
+#include<sstream>
+#include<map>
+#include<set>
+#include<queue>
+#include<stack>
+#include<vector>
+#include<algorithm>
+#pragma comment(linker, "/STACK:16777216")
+#define pb push_back
+#define ppb pop_back
+#define mp make_pair
+#define all(x) (x).begin(),(x).end()
+#define sz(x) (int)(x).size()
+#define LL long long
+#define bit __builtin_popcountll
+#define sqr(x) (x) * (x)
+using namespace std;
+typedef pair<int, int> pii;
+const double eps = 1e-9;
+const double pi = acos(-1.0);
+const int maxn = (int)1e6;
+const int mod = (int)1e9 + 7;
+int id[maxn],dp[22],ob[22],dp2[22],dp3[22][22],tmp[22],cnt[22],value[2 * maxn];
+int binpow(int a, int b) {
+	int res = 1;
+	while(b > 0) {
+		if (b & 1) {
+			res = res * (LL)a % mod;
+		}
+		a = a * (LL)a % mod;
+		b >>= 1;
+	}
+	return res;
+}
+int C(int n, int m) {
+	if (n < m) return 0;
+	int res = 1;
+	for (int i = n - m + 1; i <= n; i++) {
+		res = res * (LL)i % mod;
+	}
+	res = res * (LL)ob[m] % mod;
+	return res;
+}
+int main()
+{
+	#ifndef ONLINE_JUDGE
+	//freopen("input.txt","r",stdin);
+	//freopen("output.txt","w",stdout);
+	#endif
+	ob[0] = 1;
+	for (int i = 1; i < 22; i++) {
+		ob[i] = ob[i - 1] * (LL)i % mod;
+	}
+	for (int i = 0; i < 22; i++) {
+		ob[i] = binpow(ob[i],mod - 2);
+	}
+	int T; cin >> T;
+	while(T--) {
+		int n,k,a,b,c,m; cin >> n >> k >> a >> b >> c >> m;
+		memset(id,0,sizeof(id));
+		memset(dp,0,sizeof(dp));
+		dp[0] = 1;
+		int t = 1;
+		int x = a;
+		bool cycle = false;
+		while(t <= n) {
+			if (id[x]) {
+				cycle = true;
+				int len = t - id[x];
+				t -= len;
+				for (int i = 1; i < t; i++) {
+					for (int j = k; j >= 1; j--) {
+						dp[j] = (dp[j] + dp[j - 1] * (LL)value[i]) % mod;
+					}
+				}
+				int val = (n - t + 1) / len;
+				memset(dp2,0,sizeof(dp2));
+				dp2[0] = 1;
+				for (int i = 0; i < len; i++) {
+					for (int r = k; r >= 1; r--) {
+						dp2[r] = (dp2[r] + dp2[r - 1] * (LL)value[t + i]) % mod;
+					}
+				}
+				memset(dp3,0,sizeof(dp3));
+				dp3[0][0] = 1;
+				for (int i = 1; i <= k; i++) {
+					for (int j = 1; j <= i; j++) {
+						LL val = 0;
+						for (int r = 1; r <= i && i - r >= j - 1; r++) {
+							val += dp3[i - r][j - 1] * (LL)dp2[r];
+							//dp3[i][j] = (dp3[i][j] + dp3[i - r][j - 1] * (LL)dp2[r]) % mod;
+						}
+						dp3[i][j] = val % mod;
+					}
+				}
+				memset(tmp,0,sizeof(tmp));
+				for (int r = 0; r <= k; r++) {
+					cnt[r] = C(val,r);
+				}
+				for (int i = 0; i <= k; i++) {
+					for (int j = 0; i + j <= k; j++) {
+						LL tot = 0;
+						for (int r = 0; r <= j; r++) {
+							tot += dp3[j][r] * (LL)cnt[r] % mod;
+						}
+						tot %= mod;
+						tmp[i + j] = (tmp[i + j] + dp[i] * (LL)tot) % mod;
+					}
+				}
+				memcpy(dp,tmp,sizeof(dp));
+				int oldt = t;
+				t += val * len;
+				int idx = 0;
+				while(t <= n) {
+					for (int i = k; i >= 1; i--) {
+						dp[i] = (dp[i] + dp[i - 1] * (LL)value[oldt + idx]) % mod;
+					}
+					idx++;
+					t++;
+				}
+			} else {
+				value[t] = x;
+				id[x] = t++;
+				x = (x * (LL)b + c) % m;
+			}
+		}
+		if (!cycle) {
+			for (int i = 1; i <= n; i++) {
+				for (int j = k; j >= 1; j--) {
+					dp[j] = (dp[j] + dp[j - 1] * (LL)value[i]) % mod;
+				}
+			}
+		}
+		cout << dp[k] << endl;
+	}
+	return 0;
+}

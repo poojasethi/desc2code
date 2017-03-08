@@ -1,0 +1,125 @@
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <vector>
+using namespace std;
+
+char s[120000];
+int n;
+int counter[2];
+
+const int maxn=120000;
+struct node {
+    int l,r,numl,numr;
+} stree[maxn<<2];
+inline void pushup(int pos) {
+    node &cn=stree[pos];
+    if(cn.l==cn.r) return;
+    node &lc=stree[pos<<1],&rc=stree[pos<<1|1];
+    cn.numl=lc.numl+rc.numl;
+    cn.numr=lc.numr+rc.numr;
+}
+void build(int l,int r,int pos=1) {
+    node &cn=stree[pos];
+    cn.l=l; cn.r=r;
+    if(l==r) {
+        cn.numl=cn.numr=0;
+        if(s[l]=='L') ++cn.numl;
+        else ++cn.numr;
+        return;
+    }
+    build(l,(l+r)/2,pos<<1);
+    build((l+r)/2+1,r,pos<<1|1);
+    pushup(pos);
+    //printf("%d %d %d %d\n",l,r,cn.numl,cn.numr);
+}
+int query(int l,int r,int c,int pos=1) {
+    node &cn=stree[pos];
+    if(cn.l>r||cn.r<l) return 0;
+    if(cn.l>=l&&cn.r<=r)
+        return c?cn.numr:cn.numl;
+    return query(l,r,c,pos<<1)+query(l,r,c,pos<<1|1);
+}
+int next(int pos,int c) {
+    if(c==3) return min(next(pos,1),next(pos,0));
+    int l=pos+1,r=n;
+    if(l>r||query(l,r,c)==0) return n+1;
+    while(l<r) {
+        int mid=(l+r)>>1;
+        if(query(l,mid,c)>0) r=mid;
+        else l=mid+1;
+    }
+    return l;
+}
+/*int prev(int pos,int c) {
+    int l=1,r=pos-1;
+    if(query(l,r,c)==0) return n+1;
+    while(l<r) {
+        int mid=(l+r)>>1;
+        if(query(mid+1,r,c)>0) l=mid+1;
+        else r=mid;
+    }
+    return l;
+}*/
+void del(int p,int pos=1) {
+    node &cn=stree[pos];
+    if(cn.l==p&&cn.r==p) {
+        cn.numl=cn.numr=0;
+        return;
+    }
+    int mid=(cn.l+cn.r)>>1;
+    if(p<=mid) del(p,pos<<1);
+    else del(p,pos<<1|1);
+    pushup(pos);
+}
+
+int main() {
+    scanf("%s",s+1);
+    n=strlen(s+1);
+    build(1,n);
+    int x;
+    int lcount=query(1,n,0),rcount=n-lcount;
+    //printf("%d %d\n",lcount,rcount);
+    if(lcount<rcount) x=next(0,1);
+    else if(lcount>rcount) x=next(0,0);
+    else x=1;
+    int tot=0,ans=0;
+    vector<int> sol;
+    do {
+        del(x);
+        sol.push_back(x);
+        //printf("%d %d\n",x,query(1,24,0));
+        int tt=next(0,3);
+        if(tt>x)
+            x=next(0,s[x]=='L');
+        else {
+            if(s[x]==s[tt]) {
+                x=next(x,s[x]=='L');
+                if(x>n) {
+                    ++ans;
+                    x=next(0,s[x]=='L');
+                }
+            }
+            else {
+                int ttt;
+                x=next(ttt=next(x,s[x]=='L'),s[x]=='R');
+                if(x<=n) {
+                    //printf("%d\n",ttt);
+                    del(ttt);
+                    sol.push_back(ttt);
+                }
+                else {
+                    ++ans;
+                    x=tt;
+                }
+            }
+        }
+    } while(next(0,3)<=n);
+    //printf("%d\n",x);
+    printf("%d\n",ans);
+    //printf("%d %d\n",n,sol.size());
+    for(int i=0;i<sol.size();++i)
+        printf("%d ",sol[i]);
+    //system("pause");
+    return 0;
+}

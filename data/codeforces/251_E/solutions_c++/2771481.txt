@@ -1,0 +1,321 @@
+
+#include<algorithm>
+#include<cassert>
+#include<complex>
+#include<map>
+#include<iomanip>
+#include<sstream>
+#include<queue>
+#include<set>
+#include<string>
+#include<vector>
+#include<iostream>
+#include<cstring>
+#define FOR(i, a, b) for(int i =(a); i <=(b); ++i)
+#define FORD(i, a, b) for(int i = (a); i >= (b); --i)
+#define fup FOR
+#define fdo FORD
+#define REP(i, n) for(int i = 0;i <(n); ++i)
+#define VAR(v, i) __typeof(i) v=(i)
+#define FORE(i, c) for(VAR(i, (c).begin()); i != (c).end(); ++i)
+#define ALL(x) (x).begin(), (x).end()
+#define SZ(x) ((int)(x).size())
+#define siz SZ
+#define CLR(x) memset((x), 0, sizeof(x))
+#define PB push_back
+#define MP make_pair
+#define X first
+#define Y second 
+#define FI X
+#define SE Y
+#define SQR(a) ((a)*(a))
+#define DEBUG 0
+#define debug(x) {if (DEBUG)cerr <<#x <<" = " <<x <<endl; }
+#define debugv(x) {if (DEBUG) {cerr <<#x <<" = "; FORE(it, (x)) cerr <<*it <<", "; cout <<endl; }}
+using namespace std;
+
+typedef long long LL;
+typedef long double LD;
+typedef pair<int, int>P;
+typedef vector<int>VI;
+const int INF=1E9+7;
+template<class C> void mini(C&a4, C b4){a4=min(a4, b4); }
+template<class C> void maxi(C&a4, C b4){a4=max(a4, b4); }
+#define maxn 200005
+const LL mod = 1000000007;
+
+int n, idx = 0;
+VI t[maxn];
+int kto_nr[maxn], nr[maxn], path_len[maxn];
+LL dp[maxn];
+VI sons[maxn];
+
+int get_next(int act, int ile) {
+    return kto_nr[nr[act] + ile]; 
+}
+
+int is_path(int a) {
+    //if (DEBUG) cout << "IS_PATH " << a << endl;
+    if (path_len[a] == -1) return 0;
+    if (siz(sons[get_next(a, path_len[a])]) != 0) return 0;
+    return path_len[a] + 1;
+}
+
+LL policz1(int a, int b) {
+    if (DEBUG) cerr << "POLICZ1 " << a << " " << b << endl;
+    int lena, lenb;
+    lena = path_len[a];
+    lenb = path_len[b];
+    if (lena == -1 || lenb == -1) return 0;
+    if (lena == lenb) {
+        if (is_path(a) && is_path(b)) return 1;
+        if (is_path(b)) {
+            return dp[get_next(a, lena + 1)];
+        } else if (is_path(a)) return dp[get_next(b, lenb + 1)];
+        return 0;
+    }
+    if (lena < lenb) {
+        if (!is_path(a)) return 0;
+        if (DEBUG) cout << "TAK " << endl;
+        return dp[get_next(b, lena + 1)]; 
+    } else {
+        if (!is_path(b)) return 0;
+        return dp[get_next(a, lenb + 1)];
+    }
+}
+
+LL policz2(int a, int b) {
+    if (DEBUG) cout << "POLICZ2 " << a << " " << b << endl;
+    if (path_len[a] == -1) return 0;
+    if (path_len[a] == 0) {
+        if (siz(sons[a]) == 0) return dp[b];
+        else return 0;
+    }
+    else return policz1(get_next(a, 1), b);
+}
+
+LL policz3(int a, int b, int dop) {
+    assert(dop > 0);
+    LL sum = 0;
+    if (siz(sons[a]) == 0) return 0;
+
+    if (siz(sons[a]) == 1) {
+        if (is_path(a) - 1 == dop) return dp[b];
+    } else {
+        int son1, son2;
+        son1 = sons[a][0];
+        son2 = sons[a][1];
+        if (is_path(son1) == dop) sum += policz1(son2, b);
+        if (is_path(son2) == dop) sum += policz1(b, son1);
+    }
+    return sum % mod;
+}
+
+LL policz4(int a, int b, int dop) {
+    if (dop < 0) return 0;
+    //cout << "POL " << a << " " << b << " " << dop << endl;
+    int z = is_path(a);
+    if (!z) return 0;
+    if (z - 1 != dop) return 0;
+    return dp[b];
+}
+
+void dfs(int act, int papa) {
+    if (DEBUG) cerr << "DFS " << act << " " << papa << endl;
+    nr[act] = ++idx;
+    debug(nr[act]);
+    kto_nr[idx] = act;
+    FORE(it, t[act]) {
+        if (*it == papa) continue;
+        sons[act].PB(*it);
+        dfs(*it, act);
+    }
+    if (DEBUG) cerr << "SONS " << act << endl;
+    debugv(sons[act]);
+
+    path_len[act] = -1;
+    if (siz(sons[act]) == 1) {
+        path_len[act] = path_len[sons[act][0]] + 1;
+    } else if (siz(sons[act]) == 0) path_len[act] = 0;
+
+    if (DEBUG) cerr << "PATH_LEN " << act << " " << path_len[act] << endl;
+
+    if (siz(sons[act]) == 1) {
+        int son = sons[act][0];
+
+        // gora
+        if (path_len[son] != -1) {
+            if (path_len[son] == 0) {
+                if (is_path(son))
+                    dp[act] += 1;
+                else dp[act] += dp[get_next(son, 1)];
+            }
+            else {
+                dp[act] += dp[get_next(son, 1)];
+            }
+        }
+        // dol 
+        int l = is_path(son);
+        if (l) { l--; if (l >= 2 && l % 2 == 0) dp[act]++; }
+        else {
+            int z = get_next(son, path_len[son] + 1);    
+            debug(z);
+            int dop = path_len[son] + 2;
+            debug(dop);
+            LL x, y;
+            
+            x = policz3(sons[z][0], sons[z][1], dop);
+            y = policz3(sons[z][1], sons[z][0], dop);
+            debug(sons[z][0]);
+            debug(x);
+            debug(y);
+            dp[act] += x + y;
+
+            x = policz4(sons[z][0], sons[z][1], dop - 2);
+            y = policz4(sons[z][1], sons[z][0], dop - 2);
+            if (DEBUG)cout << "Z!!!!!!!!!!!!!!! " << x + y << endl;
+            debug(x);
+            debug(y);
+            dp[act] += x + y;
+        }
+    } else if (siz(sons[act]) == 2) {
+        dp[act] += policz2(sons[act][0], sons[act][1]);
+        dp[act] += policz2(sons[act][1], sons[act][0]);
+    } else {
+        dp[act] = 0;
+    }
+    dp[act] %= mod;
+
+    if (DEBUG) cerr << "________________DP " << act << " " << dp[act] << endl;
+
+}
+
+bool done[maxn];
+int sum = 0;
+
+bool neigh(int a, int b) {
+    int l = n / 2;
+    if (a > b) swap(a, b);
+    if (b == a + 1) {
+        if (a == l) return 0;
+        return 1;
+    }
+    if (a + l == b) return 1;
+    return 0;
+}
+
+int gdzie[maxn];
+int suma = 0;
+
+bool moge(int act, int pos) {
+    FORE(it, t[act]) {
+        if (nr[*it] < nr[act] && !neigh(pos, gdzie[*it])) return 0;
+    }  
+    return 1;
+}
+
+
+VI G[maxn];
+
+int brut2(int kto) {
+    if (kto == n + 1) {
+        ++suma;
+        return 0;
+    }
+    int act = kto_nr[kto];
+
+    fup(i, 1, n) if (!done[i]) {
+        if (moge(act, i)) {
+        gdzie[act] = i;
+        done[i] = 1;
+        brut2(kto + 1);
+        done[i] = 0;
+        }
+    }
+}
+
+int brut() {
+    fup(i, 1, n) fup(j, 1, n) if (neigh(i, j)) G[i].PB(j);
+    suma = 0;
+    brut2(1);
+    return suma;
+}
+
+int main(){
+	ios_base::sync_with_stdio(false);
+    cin >> n;
+    n *= 2;
+    fup(i, 1, n - 1) { 
+        int a, b;
+        cin >> a >> b;
+        t[a].PB(b);
+        t[b].PB(a);
+    }
+    int kto3 = -1;
+    int kto1 = -1;
+    fup(i, 1, n) {
+        if (siz(t[i]) > 3) { cout << 0 << endl; return 0; }
+        if (siz(t[i]) == 3) {
+            kto3 = i;
+        }
+        if (siz(t[i]) == 1) kto1 = i;
+    }
+    int root = kto3;
+    if (root == -1) root = kto1;
+    dfs(root, -1);
+
+    LL result = 0;
+    if (siz(sons[root]) == 3) {
+        if (DEBUG) cerr << "TRZY " << root << endl;
+        VI & so = sons[root];
+        sort(ALL(so));
+        do {
+            int a, b, c;
+            a = so[0];
+            b = so[1];
+            c = so[2];     
+            LL res = 0;
+            if (siz(sons[b]) == 0) {
+                if (DEBUG) cout << "T " << dp[a] << " " << dp[c] << endl;
+                res += dp[a] * dp[c];
+            } else if (siz(sons[b]) == 1) {
+                if (DEBUG) cout << "POLICZ " << policz1(sons[b][0], c) << endl;
+                res += dp[a] * policz1(sons[b][0], c);   
+                debug(res);
+                res += dp[c] * policz1(sons[b][0], a);   
+                debug(res);
+            } else if (siz(sons[b]) == 2) {
+                //cout << sons[b][1] << " " << c << endl;
+                res += policz1(sons[b][0], a) * policz1(sons[b][1], c);
+                debug(res);
+                res += policz1(sons[b][1], a) * policz1(sons[b][0], c);
+                debug(res);
+            }
+            res %= mod;
+            result += res;
+            if (DEBUG) cerr << "LICZ " << a << " " << b << " " << c << " " << res << endl;
+
+        } while (next_permutation(ALL(so)));
+        result %= mod;
+        result *= 2;
+    } else {
+        if (DEBUG) cerr << "PATH " << endl;
+        result = 2 * dp[root];
+        if (n != 2) result += 2 * dp[root];
+        LL sum = 0;
+        if (n >= 3) {
+            fup(i, 4, n - 2) {sum += dp[get_next(root, i)];
+                sum %= mod;
+            }
+        }
+        result += 4 * sum;
+    }
+    result %= mod;
+    cout << result << endl;
+    //int br = brut();
+    //cerr << br << endl;
+    //assert(br == result);
+ //   cout << "BRUT " << brut() << endl;
+	return 0;
+}
+

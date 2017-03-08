@@ -1,0 +1,61 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<iostream>
+using namespace std;
+const int maxn = 100005;
+bool vis[maxn];
+int g[maxn][7],n,ans[maxn];
+bool dfs(int u,int v,int dep)
+{
+	//cout<<u<<v<<dep<<endl;
+	if(dep == n) return v == 1;
+	ans[dep] = v;
+	vis[v] = 1;
+	
+	for(int i = 0; i < 4; i++)
+	{
+		int x = g[v][i];
+		if(vis[x]) continue;
+		if((u==g[x][0]||u==g[x][1]||u==g[x][2]||u==g[x][3])&&dfs(v,x,dep+1))
+			return 1;
+		//else cout<<u<<x<<endl;
+	}
+	vis[v] = 0;
+	return 0;
+}
+int main()
+{
+	int flag=2;
+	int ind[maxn] = {0};
+	int u,v;
+	scanf("%d",&n);
+	for(int i = 0; i < 2*n; i++)
+	{
+		scanf("%d%d",&u,&v);
+		g[u][ind[u]++] = v, g[v][ind[v]++] = u;
+		if(ind[u] > 4|| ind[v] > 4)
+		{
+			flag = 0;
+			break;
+		}
+	}
+	/*for(int i = 1; i<=n;i++)
+		for(int j=0;j<4;j++)
+			printf("%d %d\n",i,g[i][j]);*/
+	if(flag)
+	{
+		//cout<<"**\n";
+		for(int i = 0; i < 4; i++)
+		{
+			//vis[1] = 1;
+			ans[0] = 1;
+			if(dfs(1,g[1][i],1)) {flag = 1;break;}
+		}
+	}
+	if(flag == 1)
+		for(int i = 0; i < n; i++) printf("%d ",ans[i]);
+	else	printf("-1");
+	printf("\n");
+	return 0;
+}

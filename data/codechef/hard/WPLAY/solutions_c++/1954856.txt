@@ -1,0 +1,134 @@
+//program WPLAY
+
+#include<iostream>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+
+using namespace std;
+
+struct HashType
+{
+  long long Hash0,Hash1;
+  HashType *Next;
+};
+
+const int BigNumber=999991;
+
+int N;
+bool Flag[65536],Visited[65536],F[65536];
+HashType *Hash[BigNumber];
+
+void Add(long long Hash0,long long Hash1)
+{
+  int V=(Hash0*19961021+Hash1)%BigNumber;
+  HashType *P=new HashType;
+  P->Hash0=Hash0;
+  P->Hash1=Hash1;
+  P->Next=Hash[V];
+  Hash[V]=P;
+}
+
+bool Find(long long Hash0,long long Hash1)
+{
+  int V=(Hash0*19961021+Hash1)%BigNumber;
+  HashType *P=Hash[V];
+  while(P!=NULL)
+    {
+      if(P->Hash0==Hash0&&P->Hash1==Hash1)
+        return true;
+      P=P->Next;
+    }
+  return false;
+}
+
+void GetWord()
+{
+  char c,S[16];
+  int N=0;
+  while(c=getchar(),c<'A'||c>'Z');
+  while(c>='A'&&c<='Z')
+    {
+      S[N++]=c;
+      c=getchar();
+    }
+  sort(S,S+N);
+  long long Hash0=0,Hash1=0;
+  for(int j=0;j<8;j++)
+    if(j>=N)
+      Hash0=Hash0*27;
+    else
+      Hash0=Hash0*27+S[j]-64;
+  for(int j=8;j<16;j++)
+    if(j>=N)
+      Hash1=Hash1*27;
+    else
+      Hash1=Hash1*27+S[j]-64;
+  Add(Hash0,Hash1);
+}
+
+bool DP(int Mask)
+{
+  if(!Mask)
+    return false;
+  if(Visited[Mask])
+    return F[Mask];
+  Visited[Mask]=true;
+  int M=0,S[16];
+  for(int i=0;i<N;i++)
+    if(Mask&(1<<i))
+      S[M++]=1<<i;
+  for(int i=0;i<(1<<M);i++)
+    {
+      int Take=0;
+      for(int j=0;j<M;j++)
+        if(i&(1<<j))
+          Take|=S[j];
+      if(Flag[Take])
+        if(!DP(Mask^Take))
+          return F[Mask]=true;
+    }
+  return F[Mask]=false;
+}
+
+int main()
+{
+  int TotalWords;
+  scanf("%d",&TotalWords);
+  while(TotalWords--)
+    GetWord();
+  int M,Test;
+  scanf("%d%d%d",&M,&N,&Test);
+  N*=M;
+  while(Test--)
+    {
+      char S[16];
+      for(int i=0;i<N;i++)
+        while(S[i]=getchar(),S[i]<'A'||S[i]>'Z');
+      for(int i=1;i<(1<<N);i++)
+        {
+          char A[16];
+          int M=0;
+          for(int j=0;j<N;j++)
+            if(i&(1<<j))
+              A[M++]=S[j];
+          sort(A,A+M);
+          long long Hash0=0,Hash1=0;
+          for(int j=0;j<8;j++)
+            if(j>=M)
+              Hash0=Hash0*27;
+            else
+              Hash0=Hash0*27+A[j]-64;
+          for(int j=8;j<16;j++)
+            if(j>=M)
+              Hash1=Hash1*27;
+            else
+              Hash1=Hash1*27+A[j]-64;
+          Flag[i]=Find(Hash0,Hash1);
+        }
+      memset(Visited,0,sizeof(Visited));
+      printf(DP((1<<N)-1)?"Alice\n":"Bob\n");
+    }
+  return 0;
+}

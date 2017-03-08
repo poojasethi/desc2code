@@ -1,0 +1,91 @@
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+typedef long long llg;
+const int MAX=602000;
+llg mark[MAX];
+llg sum[MAX];
+llg _HASH[MAX];
+struct seg
+{
+    llg l,r,h;
+    int d;
+    seg(){}
+    seg(llg x1,llg x2,llg H,int c):l(x1),r(x2),h(H),d(c){}
+    bool operator<(const seg &a)const
+    {
+        return h<a.h;
+    }
+}s[MAX];
+
+void Upfather(int n,int left,int right)
+{
+    if(mark[n])sum[n]=_HASH[right+1]-_HASH[left];
+    else if(left == right)sum[n]=0;
+    else sum[n]=sum[n<<1]+sum[n<<1|1];
+}
+
+void Update(int L,int R,int d,int n,int left,int right)
+{
+    if(L<=left && right<=R)
+    {
+        mark[n]+=d;
+        Upfather(n,left,right);
+        return;
+    }
+    int mid=left+right>>1;
+    if(L<=mid)Update(L,R,d,n<<1,left,mid);
+    if(R>mid)Update(L,R,d,n<<1|1,mid+1,right);
+    Upfather(n,left,right);
+}
+
+llg search(llg key,llg* x,int n)
+{
+    int left=0,right=n-1;
+    while(left<=right)
+    {
+        int mid=left+right>>1;
+        if(x[mid] == key)return mid;
+        if(x[mid]>key)right=mid-1;
+        else left=mid+1;
+    }
+    return -1;
+}
+
+int main()
+{
+    int n,num=0;
+    int x1,x2,y1,y2;
+    while(~scanf("%d",&n))
+    {
+        int k=0;
+        for(int i=0;i<n;++i)
+        {
+            scanf("%d%d%d%d",&x1,&y1,&x2,&y2);
+            if(y1>y2 ||x1>x2) swap(y1,y2),swap(x1,x2);
+            x2++,y2++;
+
+            _HASH[k]=x1;
+            s[k++]=seg(x1,x2,y1,1);
+            _HASH[k]=x2;
+            s[k++]=seg(x1,x2,y2,-1);
+        }
+        sort(_HASH,_HASH+k);
+        sort(s,s+k);
+        int m=1;
+        for(int i=1;i<k;++i)
+            if(_HASH[i] != _HASH[i-1])_HASH[m++]=_HASH[i];
+        long long ans=0;
+        for(int i=0;i<k;++i)
+        {
+            int L=search(s[i].l,_HASH,m);
+            int R=search(s[i].r,_HASH,m)-1;
+            Update(L,R,s[i].d,1,0,m-1);
+            ans+=(llg)sum[1]*(llg)(s[i+1].h-s[i].h);
+        }
+        printf("%I64d\n",ans);
+    }
+    return 0;
+}

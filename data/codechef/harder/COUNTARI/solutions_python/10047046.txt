@@ -1,0 +1,143 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <vector>
+#include <deque>
+#include <queue>
+#include <list>
+#include <stack>
+#include <algorithm>
+#include <cassert>
+#include <map>
+
+using namespace std;
+
+inline int re() {
+	static int n = 0, ch;
+	ch = getchar(); n = 0;
+	while(!isdigit(ch)) ch = getchar();
+	while(isdigit(ch)) n = n * 10 + ch - '0', ch = getchar();
+	return n;
+}
+struct Vector
+{
+	double x , y;
+	Vector(double x=0 , double y=0):x(x),y(y){}
+	
+	double real() { return x; }
+	double imag() { return y; }
+	Vector operator +(Vector b) { return Vector(x + b.x , y + b.y); }
+	Vector operator -(Vector b) { return Vector(x - b.x , y - b.y); }
+	Vector operator *(Vector b) { return Vector(x * b.x - y * b.y , x * b.y + y * b.x);; }
+	Vector operator /(double  b) { return Vector(x / b , y / b); }
+};
+
+typedef Vector cd;
+typedef vector<cd> vc;
+typedef vector<double> vd;
+
+int m = 1;
+
+inline void FFT(vc &a , int inv)
+{
+	int n = m;
+	for(int i=0,j=0;i<n;i++)
+	{
+		if(j > i) swap(a[i] , a[j]);
+		
+		int k = n;
+		while(j & (k >>= 1)) j &= ~k;
+		j |= k;
+	}
+	
+	double Pi = inv * acos(-1);
+	for(int i=1;i<n;i <<= 1)
+	{
+		cd wn = cd(cos(Pi/i) , sin(Pi/i));
+		for(int j=0;j<n;j += i<<1)
+		{
+			cd w = cd(1 , 0);
+			for(int k=j;k<i+j;k++)
+			{
+				cd x = a[k];
+				cd y = a[k+i] * w;
+				a[k] = x + y;
+				a[k+i]=x - y;
+				w = w*wn;
+			}
+		}
+	}
+	
+	if(inv == -1) for(int i=0;i<n;i++) a[i] = a[i] / n;
+}
+
+vc c , d; vd res;
+vd operator *(vd&a , vd&b)
+{
+	for(int i=0;i<m;i++) c[i] = d[i] = 0;
+	for(int i=0;i<m;i++) c[i] = a[i];
+	FFT(c , 1);
+ 	for(int i=0;i<m;i++) d[i] = b[i];
+	FFT(d , 1);
+	for(int i=0;i<m;i++)  c[i] = c[i] * d[i];
+	FFT(c ,-1);
+	
+	for(int i=0;i<m;i++) res[i] = c[i].real();
+	return res;
+}
+
+const int maxn = 7e5+1e3;
+const int blockSize = 2000;
+const int blockNum = maxn/blockSize + 10;
+
+
+int n , a[maxn] , book[maxn];
+int l[blockNum] , r[blockNum];
+
+void move(vd &v , int w , int inv)
+{
+	for(int i=l[w];i<=r[w];i++) v[a[i]] += inv;
+}
+
+int main()
+{
+	n = re();
+	int mx = 0;
+	for(int i=0;i<n;i++) mx = max(mx , a[i] = re());
+	++(mx *= 2);
+	
+	while(m < mx) m <<= 1;
+	c = d = vc(m , 0); res = vd(m , 0);
+
+	int cnt = n/blockSize;
+	for(int i=0;i<cnt;i++) l[i] = i * blockSize , r[i] = l[i] + blockSize - 1;
+	if(n%blockSize) l[cnt] = n/blockSize*blockSize , r[cnt++] = n-1;
+
+	long long res = 0;
+	for(int i=0;i<cnt;i++) 
+	{
+		memset(book , 0 , sizeof (int) * m);
+		for(int j=l[i];j<=r[i];book[a[j++]]++) for(int k=j+1;k<=r[i];k++) if(2 * a[j] >= a[k]) res += book[2*a[j] - a[k]];
+	}
+	
+	vd L(m , 0) , R(m , 0);
+	for(int i=cnt-1;i;i--) move(R , i , 1);
+	for(int i=0;i<cnt;)
+	{	
+		for(int j=l[i];j<=r[i];j++) for(int k=j+1;k<=r[i];k++) 
+		{
+			if(2 * a[j] >= a[k]) res += int(L[2*a[j] - a[k]] + 0.5);
+			if(2 * a[k] >= a[j]) res += int(R[2*a[k] - a[j]] + 0.5);
+		}
+		
+		vd now = L * R;
+		for(int j=l[i];j<=r[i];j++) res += (long long)(now[a[j]*2] + 0.5);
+		
+		move(L ,  i , 1);
+		move(R ,++i ,-1);
+	}
+	printf("%lld\n" , res);
+	return 0;
+}

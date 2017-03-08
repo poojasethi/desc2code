@@ -1,0 +1,67 @@
+#include<cmath>
+#include<cstdio>
+
+#define	rep(i,n)	for(int i=0;i<n;i++)
+
+using namespace std;
+
+const double EPS=1e-11;
+
+inline double sq(double a){ return a*a; }
+inline double dis2(double a,double b,double c){ return sq(a)+sq(b)+sq(c); }
+
+int n,x[10001],y[10001],z[10001],v_po,v_sn,x_po,y_po,z_po;
+double t_sn[10001];
+
+double isCatchable(double t_sn,double x_sn,double y_sn,double z_sn){
+	return dis2(x_sn-x_po,y_sn-y_po,z_sn-z_po)<sq(v_po)*sq(t_sn+EPS);
+}
+
+double calc(int k,double &x_ans,double &y_ans,double &z_ans){
+	double sl=0,sr=t_sn[k]-t_sn[k-1];
+	double ux=x[k]-x[k-1],uy=y[k]-y[k-1],uz=z[k]-z[k-1];
+	double uabs=sqrt(dis2(ux,uy,uz)); ux/=uabs; uy/=uabs; uz/=uabs;
+	double vx=v_sn*ux,vy=v_sn*uy,vz=v_sn*uz;
+
+	double sm,xx,yy,zz;
+	rep(i,100){
+		sm=(sl+sr)/2;
+		xx=x[k-1]+vx*sm;
+		yy=y[k-1]+vy*sm;
+		zz=z[k-1]+vz*sm;
+		if(isCatchable(t_sn[k-1]+sm,xx,yy,zz))	sr=sm;
+		else									sl=sm;
+	}
+
+	x_ans=xx;
+	y_ans=yy;
+	z_ans=zz;
+	return t_sn[k-1]+sm;
+}
+
+int main(){
+	scanf("%d",&n); n++;
+	rep(i,n)	scanf("%d%d%d",x+i,y+i,z+i);
+	scanf("%d%d%d%d%d",&v_po,&v_sn,&x_po,&y_po,&z_po);
+
+	bool ok=false;
+	double l_sn=0;
+	double t_ans,x_ans,y_ans,z_ans;
+	for(int i=1;i<n;i++){
+		l_sn+=sqrt(dis2(x[i]-x[i-1],y[i]-y[i-1],z[i]-z[i-1]));
+		t_sn[i]=l_sn/v_sn;
+		double l_po=sqrt(dis2(x[i]-x_po,y[i]-y_po,z[i]-z_po));
+		double t_po=l_po/v_po;
+
+		if(t_po<t_sn[i]+1e-9){
+			t_ans=calc(i,x_ans,y_ans,z_ans);
+			ok=true;
+			break;
+		}
+	}
+
+	if(ok)	printf("YES\n%.9f\n%.9f %.9f %.9f\n",t_ans,x_ans,y_ans,z_ans);
+	else	puts("NO");
+
+	return 0;
+}

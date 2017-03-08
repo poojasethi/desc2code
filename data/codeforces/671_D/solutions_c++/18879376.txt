@@ -1,0 +1,144 @@
+#include<cstdio>
+#include<algorithm>
+using namespace std;
+typedef long long ll;
+const int N=3e5+5;
+const ll INF=1e18;
+int n,m;
+struct Edge{
+	int v;Edge *next;
+	Edge(){}
+	Edge(int v,Edge *next):v(v),next(next){}
+}pool[N<<1],*pis=pool,*fst[N];
+void Add(int u,int v){
+	*pis=Edge(v,fst[u]);fst[u]=pis++;
+	*pis=Edge(u,fst[v]);fst[v]=pis++;
+}
+int c[N];
+struct Node{
+	int id;Node *next;
+	Node(){}
+	Node(int id,Node *next):id(id),next(next){}
+}poolu[N],poolv[N],*pisu=poolu,*pisv=poolv,*fstu[N],*fstv[N];
+void Add(int u,int v,int id){
+	*pisu=Node(id,fstu[u]);fstu[u]=pisu++;
+	*pisv=Node(id,fstv[v]);fstv[v]=pisv++;
+}
+struct SegT{
+	struct Node{
+		int l,r;ll mn,add,mod;
+	}p[N<<2];
+	void B(int t,int l,int r){
+		p[t].l=l;p[t].r=r;
+		if(l==r){
+			p[t].mn=INF;
+			p[t].add=0;
+			p[t].mod=0;
+			return;
+		}
+		int mid=(l+r)>>1;
+		B(t<<1,l,mid);B(t<<1|1,mid+1,r);
+	}
+	void Add(int t,ll x){
+		p[t].mn+=x;
+		p[t].add+=x;
+	}
+	void Mod(int t,ll x){
+		p[t].mn=p[t].mod=x;
+		p[t].add=0;
+	}
+	void D(int t){
+		if(p[t].l==p[t].r) return;
+		if(p[t].mod){
+			Mod(t<<1,p[t].mod);
+			Mod(t<<1|1,p[t].mod);
+			p[t].mod=0;
+		}
+		if(p[t].add){
+			Add(t<<1,p[t].add);
+			Add(t<<1|1,p[t].add);
+			p[t].add=0;
+		}
+	}
+	void M(int t,int l,int r,ll x,bool d){
+		if(l<=p[t].l && p[t].r<=r){
+			if(d) Mod(t,x);
+			else Add(t,x);
+			return;
+		}
+		D(t);
+		if(l<=p[t<<1].r) M(t<<1,l,r,x,d);
+		if(p[t<<1].r<r) M(t<<1|1,l,r,x,d);
+		p[t].mn=min(p[t<<1].mn,p[t<<1|1].mn);
+	}
+	ll Q(int t,int l,int r){
+		if(l<=p[t].l && p[t].r<=r) return p[t].mn;
+		D(t);
+		if(r<=p[t<<1].r) return Q(t<<1,l,r);
+		if(p[t<<1].r<l) return Q(t<<1|1,l,r);
+		return min(Q(t<<1,l,r),Q(t<<1|1,l,r));
+	}
+	void Init(int n){B(1,1,n);}
+	void Modify(int l,int r,ll x,bool d){M(1,l,r,x,d);}
+	ll Query(int l,int r){return Q(1,l,r);}
+}T;
+ll f[N];
+int begin[N],end[N],p[N],clk;
+void DFS(int u,int fa){
+	begin[u]=clk+1;
+	for(Node *i=fstu[u];i;i=i->next) p[i->id]=++clk;
+	ll sum=0;
+	for(Edge *i=fst[u];i;i=i->next){
+		int v=i->v;
+		if(v==fa) continue;
+		DFS(v,u);
+		sum+=f[v];
+	}
+	end[u]=clk;
+	for(Node *i=fstu[u];i;i=i->next){
+		int id=i->id;
+		T.Modify(p[id],p[id],c[id]+sum,1);
+	}
+	if(u!=1) for(Node *i=fstv[u];i;i=i->next){
+		int id=i->id;
+		T.Modify(p[id],p[id],INF,1);
+	}
+	for(Edge *i=fst[u];i;i=i->next){
+		int v=i->v;
+		if(v==fa) continue;
+		T.Modify(begin[v],end[v],sum-f[v],0);
+	}
+	if(begin[u]>end[u]){
+		printf("-1\n");
+		exit(0);
+	}
+	f[u]=T.Query(begin[u],end[u]);
+	if(f[u]==INF){
+		printf("-1\n");
+		exit(0);
+	}
+}
+void Init(){
+	scanf("%d%d",&n,&m);
+	if(n==1){
+		printf("0\n");
+		exit(0);
+	}
+	for(int i=1,u,v;i<n;i++){
+		scanf("%d%d",&u,&v);
+		Add(u,v);
+	}
+	for(int i=1,u,v,c;i<=m;i++){
+		scanf("%d%d%d",&u,&v,&c);
+		if(u==v) continue;
+		::c[i]=c;
+		Add(u,v,i);
+	}
+	T.Init(m);
+}
+int main(){
+	Init();
+	DFS(1,0);
+	printf("%I64d\n",f[1]);
+	return 0;
+}

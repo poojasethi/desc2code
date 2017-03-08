@@ -1,0 +1,16 @@
+#include<iostream>
+using namespace std;
+int a,b,c,d,i,j;
+string m,n,k;
+main () {
+cin>>a;
+cin>>n;
+b=1;
+for(i=1;i<=a-1;i++){
+cin>>m;
+if(n==m)b++;
+else {d++;k=m;}}
+if(b>d) cout<<n;
+else cout<<k;
+//system("pause");
+}

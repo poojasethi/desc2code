@@ -1,0 +1,148 @@
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+#include <vector>
+#define logD 18
+using namespace std;
+struct timeNode
+{
+	int t,index;	
+};
+vector<timeNode> rec[100001];
+int arr[10000000],seq[100001],end[100001],pos[100001],head[100001],next[100001],to[100001];
+int d[100001],f[100001][19],n,m,year,dfn,nodeCnt,destroy[100001],root;
+inline int lowbit(int x) {return x&(-x);}
+void modify(int x,int d)
+{
+	for(int i=x;i<=n;i+=lowbit(i))
+	{
+		int u = rec[i][rec[i].size()-1].index;
+		timeNode v;
+		v.t = year; v.index = ++nodeCnt;
+		arr[v.index] = arr[u]+d;
+		rec[i].push_back(v);
+	}
+}
+inline int find(int x,int t)
+{
+	int left = 0; int right = rec[x].size()-1;
+	while(left < right-1)
+	{
+		int mid = (left+right)/2;
+		if(rec[x][mid].t == t && rec[x][mid+1].t>t) return mid;
+		else if(rec[x][mid].t > t) right = mid-1;
+		else left = mid;	
+	}
+	if(rec[x][right].t <= t) return right;
+	else return left;
+}
+inline int query(int x,int t)
+{
+	int re= 0; x = pos[x];
+	if(t == year)
+	{
+		for(int i=x;i;i-=lowbit(i))
+			re += arr[rec[i][rec[i].size()-1].index];
+		return re;
+	}
+	for(int i=x;i;i-=lowbit(i))
+	{
+		int u = find(i,t);
+		re += arr[rec[i][u].index];
+	}
+	return re;	
+}
+void dfs(int u)
+{
+	for(int j=1;f[u][j-1];j++)
+		f[u][j]	= f[f[u][j-1]][j-1];
+	pos[u] = ++dfn; seq[dfn] = u;
+	for(int i=head[u];i;i=next[i])
+		d[to[i]]=d[u]+1,dfs(to[i]);	
+	end[u] = dfn;
+}
+inline int getLCA(int u,int v)
+{
+	if(d[u] > d[v])
+		swap(u,v);
+	for(int j=logD;j>=0;j--)
+		if(d[f[v][j]] >= d[u])
+			v = f[v][j];		
+	if(d[v] > d[u]) v = f[v][0];
+	if(v == u) return u;
+	for(int j=logD;j>=0;j--)
+		if(f[v][j] != f[u][j])
+			{v = f[v][j]; u = f[u][j];}
+	return f[v][0];
+}
+inline int ask(int u,int g,int y)
+{
+	int qu = query(f[u][0],year) - query(f[u][0],y);
+	int qg = query(g,year) - query(g,y);
+	int sub = qu - qg;
+	int len = d[u] - d[g] -1;
+	return len-sub;
+}
+inline int k_anc(int u,int k,int y)
+{
+	u = f[u][0];
+	for(int i=logD;i>=0;i--)
+	if(f[u][i])
+	{
+		int qf = query(f[u][i],year)-query(f[u][i],y);
+		int qu = query(u,year)-query(u,y);
+		if(d[u]-d[f[u][i]]-qu+qf < k)
+		{
+			k -= (d[u]-d[f[u][i]]-qu+qf);
+			u = f[u][i];
+		}
+	}
+	return u;
+}
+inline int work(int u,int v,int k,int y)
+{
+	int lca = getLCA(u,v);
+	int q1 = ask(u,lca,y);
+	int q2 = ask(v,lca,y);
+	int q = q1+q2+ ((destroy[lca]>y)?0:1);
+	if(q < k) return -1;
+	if(q1 >= k) return k_anc(u,k,y);
+	else if(q1+ ((destroy[lca]>y)?0:1) >= k) return lca;
+	else return k_anc(v,q+1-k,y);
+}
+int main()
+{
+	//freopen("input.txt","r",stdin);
+	//freopen("output.txt","w",stdout);
+	scanf("%d",&n); 
+	int op,c,u,v,k,y;
+	for(int i=1;i<=n;i++)
+	{
+		scanf("%d",&f[i][0]);
+		if(f[i][0] == 0) root = i;
+		else{
+             next[i] = head[f[i][0]]; to[i] = i; head[f[i][0]] = i;
+        }
+	}
+	d[root] = 1; dfs(root);
+	for(int i=1;i<=n;i++)
+	{
+		timeNode x; x.index = i; x.t = 0;
+		rec[i].push_back(x); nodeCnt++;	
+	}
+	scanf("%d",&m);
+	for(year=1;year<=m;year++)
+	{
+		scanf("%d",&op);
+		if(op == 1)
+		{
+			scanf("%d",&c); destroy[c] = year;
+			modify(pos[c],1); modify(end[c]+1,-1);
+		}
+		else
+		{
+			scanf("%d%d%d%d",&u,&v,&k,&y);;
+			printf("%d\n",work(u,v,k,y));		
+		}
+	}
+}

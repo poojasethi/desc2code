@@ -1,0 +1,128 @@
+#include <bits/stdc++.h>
+
+#define mp make_pair
+#define st first
+#define nd second
+#define pb push_back
+
+using namespace std;
+
+typedef long long ll;
+typedef pair< ll,ll > pll;
+typedef pair< int,int > pii;
+
+const int inf = 2000000000, N = 100000;
+
+struct line {
+	int m, n;
+
+	bool operator< (line oth) const {
+		return m > oth.m || (m == oth.m && n > oth.n);
+	}
+
+	double inter(line oth) {
+		return (double) (n - oth.n) / (oth.m - m);
+	}
+
+	int get(int x) {
+		return m * x + n;
+	}
+};
+
+int n, m, sum[N+5], a[N+5], ans[N+5];
+deque< line > seg[4*N+5];
+vector< line > v[4*N+5];
+
+void init(int i, int l, int r) {
+	if (l == r) {
+		seg[i].push_back((line) {a[l], a[l] * (l-1) - sum[l-1]});
+		v[i].push_back((line) {a[l], a[l] * (l-1) - sum[l-1]});
+		return;
+	}
+
+	int mi = (l + r) / 2;
+
+	init(2*i, l, mi);	
+	init(2*i+1, mi+1, r);
+
+	v[i].resize(r - l + 1);
+	merge(v[2*i].begin(), v[2*i].end(), v[2*i+1].begin(), v[2*i+1].end(), v[i].begin());
+
+	for (int j = 0; j < r - l + 1; j++) {
+		while (seg[i].size() >= 2) {
+			line bot = seg[i].back();
+			seg[i].pop_back();
+
+			if (bot.m != v[i][j].m && bot.inter(seg[i].back()) < bot.inter(v[i][j])) {
+				seg[i].push_back(bot);
+				break;
+			}
+		}
+
+		if (seg[i].size() >= 1 && seg[i].back().m == v[i][j].m)
+			seg[i].pop_back();
+
+		seg[i].push_back(v[i][j]);
+	}
+}
+
+int query(int i, int l, int r, int x, int y, int t) {
+	if (x > r || y < l)
+		return inf;
+
+	if (x <= l && r <= y) {
+		while (seg[i].size() >= 2) {
+			line top = seg[i].front();
+			seg[i].pop_front();
+
+			if (top.inter(seg[i].front()) > t) {
+				seg[i].push_front(top);
+				break;
+			}
+		}
+
+		return seg[i].front().get(t);
+	}
+
+	int mi = (l + r) / 2;
+
+	return min(query(2*i, l, mi, x, y, t), query(2*i+1, mi+1, r, x, y, t));
+}
+
+int main()
+{
+	int x, y;
+
+	scanf("%d", &n);
+
+	for (int i = 1; i <= n; i++) {
+		scanf("%d", a+i);
+		sum[i] = sum[i-1] + a[i];
+	}
+
+	init(1, 1, n);
+
+	scanf("%d", &m);
+	
+	vector< pair<pii, pii> > q;
+
+	for (int i = 1; i <= m; i++) {
+		scanf("%d %d", &x, &y);
+
+		q.pb( mp(mp(x-y, i), mp(x, y)) );
+	}
+
+	sort(q.begin(), q.end());
+
+	for (int i = 0; i < m; i++) {
+		x = q[i].nd.st;
+		y = q[i].nd.nd;
+
+		ans[q[i].st.nd] = sum[y] + query(1, 1, n, y-x+1, y, x-y);
+	}
+
+	for (int i = 1; i <= m; i++)
+		printf("%d\n", ans[i]);
+
+	return 0;
+}

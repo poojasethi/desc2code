@@ -1,0 +1,83 @@
+#include <iostream>
+#include <cstdlib>
+#include <algorithm>
+#include <utility>
+#include <vector>
+#include <stack>
+#include <iomanip>
+#define MAXN 100010
+#define MAXQ 5005
+
+using namespace std;
+
+int n,q,a[MAXN];
+vector<pair<pair<int,int>,double> > v; //l, -r, p
+vector<int> ch[MAXQ];
+int hi[MAXQ];
+double dp[MAXQ][MAXQ];
+double ans;
+
+void calc_ch() {
+    stack<int> s;
+    s.push(0);
+    for (int i = 1; i < v.size(); i++) {
+        while (-v[s.top()].first.second < v[i].first.first) s.pop();
+        ch[s.top()].push_back(i);
+        s.push(i);
+    }
+}
+
+int calc_hi(int u) {
+    int l = v[u].first.first, r = -v[u].first.second;
+    for (int i = 0, j = l; j <= r;) {
+        if (i < ch[u].size() && j == v[ch[u][i]].first.first) {
+            hi[u] = max(hi[u],calc_hi(ch[u][i]));
+            j = -v[ch[u][i]].first.second + 1;
+            i++;
+        }
+        else hi[u] = max(hi[u],a[j++]);
+    }
+    return hi[u];
+}
+
+void dfs(int x) {
+    int sz = ch[x].size();
+    for (int i = 0; i < sz; i++) dfs(ch[x][i]);
+    vector<int> k(sz);
+    vector<double> p(sz);
+    double sum = 0.0;
+    for (int i = 0; i < MAXQ; i++) {
+        dp[x][i] = 1.0;
+        for (int j = 0; j < sz; j++) {
+            int y = ch[x][j];
+            while (k[j] < MAXQ && hi[y]+k[j] <= hi[x]+i)
+                p[j] += dp[y][k[j]++];
+            dp[x][i] *= p[j];
+        }
+        dp[x][i] -= sum;
+        sum += dp[x][i];
+    }
+    double pp = v[x].second;
+    for (int i = MAXQ-2; i >= 0; i--) {
+        dp[x][i+1] += dp[x][i] * pp;
+        dp[x][i] *= 1.0 - pp;
+    }
+}
+
+int main() {
+    cin >> n >> q;
+    for (int i = 1; i <= n; i++) cin >> a[i];
+    v.push_back(make_pair(make_pair(1,-n),0.0));
+    for (int i = 0; i < q; i++) {
+        int l,r;
+        double p;
+        cin >> l >> r >> p;
+        v.push_back(make_pair(make_pair(l,-r),p));
+    }
+    sort(v.begin(),v.end());
+    calc_ch();
+    calc_hi(0);
+    dfs(0);
+    for (int i = 0; i < MAXQ; i++) ans += (hi[0]+i) * dp[0][i];
+    cout << fixed << setprecision(15) << ans << '\n';
+}

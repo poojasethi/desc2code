@@ -1,0 +1,19 @@
+#include<iostream>
+using namespace std;
+int main()
+{int n,i,count=0;
+int a[7];
+cin>>n;
+for(i=0;i<7;i++)
+{cin>>a[i];
+}
+for(i=0;;i++)
+{n=n-a[i];
+if(n<=0)
+break;
+if(i==6)
+i=-1;
+}
+cout<<i+1;
+return 0;
+}

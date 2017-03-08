@@ -1,0 +1,117 @@
+#include <stdio.h>
+#include <string.h>
+#include <iostream>
+#include <vector>
+#include <queue>
+using namespace std;
+
+const int INF = 1000000000;
+
+class node {
+public:
+	int sum;
+	int vert;
+	int bits;
+	int mods;
+	node(int sum, int vert, int bits, int mods) {
+		this->sum = sum;
+		this->vert = vert;
+		this->bits = bits;
+		this->mods = mods;
+	}
+};
+
+class cmpnode {
+    public:
+    bool operator()(const node& t1, const node& t2)
+    {
+       if (t1.sum > t2.sum) return true;
+       return false;
+    }
+};
+
+int check(int bit, int mod) {
+	for (int i = 0; i < 6; ++i) {
+		if (((bit >> i) & 1) == 1 && mod % (2 + i)) {
+			return false;
+		}
+	}
+		
+	return true;
+}
+
+const int MAXN = 100;
+const int MAXB = 64;
+const int MAXM = 420;
+
+bool inq[MAXN][MAXB][MAXM];
+int dist[MAXN][MAXB][MAXM];
+
+int main() {
+	ios::sync_with_stdio(false);
+
+	while(1) {
+		int N;
+		cin >> N;
+		if (N == 0) 
+			break;
+
+		vector<int> bits(N);
+		vector<int> vals(N);
+		for(int i = 0; i < N; ++i) {
+			cin >> vals[i];
+			if (vals[i] > 1) 
+				bits[i] = 1 << (vals[i] - 2);
+		}
+
+		vector<vector<int> > adj(N);
+		for(int u = 0; u < N; ++u) {
+			for(int v = 0; v < N; ++v) {
+				int k; cin >> k;
+				if (k)
+					adj[u].push_back(v);
+			}
+		}
+
+		node s(vals[0], 0, bits[0], vals[0]);
+		priority_queue<node, vector<node>, cmpnode> pq;
+		pq.push(s);
+
+		memset(inq, 0, sizeof(inq));
+		memset(dist, 127, sizeof(dist));
+		dist[s.vert][s.bits][s.mods] = vals[s.vert];
+
+		int res = INF;
+		while(!pq.empty()) {
+			node u = pq.top(); pq.pop();
+			if (inq[u.vert][u.bits][u.mods])
+				continue;
+			
+			if (u.vert == N-1 && check(u.bits, u.mods)) {
+				res = dist[N-1][u.bits][u.mods];
+				break;
+			}
+
+			inq[u.vert][u.bits][u.mods] = true;
+			for(unsigned int i = 0; i < adj[u.vert].size(); ++i) {
+				int v = adj[u.vert][i];
+				int b = u.bits | bits[v];
+				int m = (u.mods * 10 + vals[v]) % MAXM;
+				if (!inq[v][b][m]) {
+					if (dist[v][b][m] > dist[u.vert][u.bits][u.mods] + vals[v]) {
+						dist[v][b][m] = dist[u.vert][u.bits][u.mods] + vals[v];
+						node u(dist[v][b][m], v, b, m);
+						pq.push(u);
+					}
+				}				
+			}
+		}
+
+		if (res == INF) 
+			cout << -1 << endl;
+		else 
+			cout << res << endl;
+	}	
+
+	return 0;
+}

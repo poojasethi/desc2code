@@ -1,0 +1,250 @@
+#include <bits/stdc++.h>
+
+typedef long long ll;
+
+const int BUFSIZE = 1 << 20;
+
+inline int getc()
+{
+	static char buf[BUFSIZE];
+	static char *buf_s, *buf_e;
+	
+	if(buf_s == buf_e)
+	{
+		buf_s = buf;
+		buf_e = buf + BUFSIZE;
+		fread(buf, 1, BUFSIZE, stdin);
+	}
+	return *buf_s++;
+}
+
+inline int read()
+{
+	int x = 0; int c = getc();
+	while(c < '0' || c > '9') c = getc();
+	while(c >= '0' && c <= '9') { x = x * 10 + c - '0'; c = getc(); }
+	return x;
+}
+
+inline void write(int x)
+{
+	static int s[20], top;
+	do s[++top] = x % 10; while(x /= 10);
+	while(top) putchar(s[top--] + '0');
+}
+
+const int MAXN = 300005;
+const int MAXM = 600005;
+const int BASE = 29;
+const int MOD = 998244353;
+
+int n;
+char s[MAXN];
+
+struct Graph
+{
+	int m, head[MAXN];
+	int v[MAXM], next[MAXM];
+
+	Graph()
+	{
+		m = 0;
+		memset(head, -1, sizeof(head));
+	}
+
+	void addarc(int a, int b)
+	{
+		v[m] = b;
+		next[m] = head[a];
+		head[a] = m++;
+	}
+
+	void addedge(int a, int b)
+	{
+		addarc(a, b);
+		addarc(b, a);
+	}
+} g;
+
+void input()
+{
+	scanf("%d%s", &n, s + 1);
+	for(int i = 1; i < n; ++i)
+		g.addedge(read(), read());
+}
+
+int fa[MAXN], son[MAXN], dep[MAXN], size[MAXN];
+int top[MAXN], seq[MAXN], dfn[MAXN], dfs_t;
+
+void dfs(int x, int p)
+{
+	fa[x] = p;
+	dep[x] = dep[p] + 1;
+	son[x] = 0;
+	size[x] = 1;
+
+	for(int i = g.head[x]; ~i; i = g.next[i])
+	{
+		int y = g.v[i];
+		if(y != p)
+		{
+			dfs(y, x);
+			size[x] += size[y];
+			if(size[y] > size[son[x]])
+				son[x] = y;
+		}
+	}
+}
+
+void DFS(int x, int t)
+{
+	top[x] = t;
+	dfn[x] = ++dfs_t;
+	seq[dfs_t] = x;
+	if(son[x]) DFS(son[x], t);
+
+	for(int i = g.head[x]; ~i; i = g.next[i])
+	{
+		int y = g.v[i];
+		if(y != fa[x] && y != son[x])
+			DFS(y, y);
+	}
+}
+
+int pw[MAXN], pre[MAXN], suf[MAXN];
+
+void prepare()
+{
+	dfs(1, 0);
+	DFS(1, 1);
+	pw[0] = 1;
+	for(int i = 1; i <= n; ++i) pw[i] = (ll)pw[i - 1] * BASE % MOD;
+	for(int i = 1; i <= n; ++i) pre[i] = ((ll)pre[i - 1] * BASE + s[seq[i]] - 'a' + 1) % MOD;
+	for(int i = n; i >= 1; --i) suf[i] = ((ll)suf[i + 1] * BASE + s[seq[i]] - 'a' + 1) % MOD;
+}
+
+inline int gethash(int l, int r)
+{
+	if(l < r)
+		return (pre[r] - (ll)pre[l - 1] * pw[r - l + 1] % MOD + MOD) % MOD;
+	else
+		return (suf[r] - (ll)suf[l + 1] * pw[l - r + 1] % MOD + MOD) % MOD;
+}
+
+struct Seg
+{
+	int l, r;
+
+	int size() { return abs(r - l) + 1; }
+	Seg(int l = 0, int r = 0): l(l), r(r) {}
+} x[233], y[233];
+
+int getpath(int a, int b, Seg *seg)
+{
+	static Seg l[233], r[233];
+
+	int lt = 0, rt = 0;
+	while(top[a] != top[b])
+	{
+		if(dep[top[a]] > dep[top[b]])
+			l[++lt] = Seg(dfn[a], dfn[top[a]]), a = fa[top[a]];
+		else
+			r[++rt] = Seg(dfn[top[b]], dfn[b]), b = fa[top[b]];
+	}
+	if(dep[a] > dep[b])
+		l[++lt] = Seg(dfn[a], dfn[b]);
+	else
+		r[++rt] = Seg(dfn[a], dfn[b]);
+	int segn = 0;
+	for(int i = 1; i <= lt; ++i) seg[++segn] = l[i];
+	for(int i = rt; i >= 1; --i) seg[++segn] = r[i];
+	return segn;
+}
+
+inline void get_interval(const Seg &s, int len, int &l, int &r)
+{
+	if(s.l < s.r)
+		l = s.l, r = l + len - 1;
+	else
+		l = s.l, r = l - len + 1;
+}
+
+inline void reduce(Seg *s, int &i, int len)
+{
+	if(s[i].size() == len)
+		s[i++] = Seg();
+	else
+	{
+		if(s[i].l < s[i].r)
+			s[i].l += len;
+		else
+			s[i].l -= len;
+	}
+}
+
+int query()
+{
+	int a = read();
+	int b = read();
+	int c = read();
+	int d = read();
+	int xn = getpath(a, b, x);
+	int yn = getpath(c, d, y);
+
+	int res = 0;
+	int idx = 1, idy = 1;
+	while(idx <= xn && idy <= yn)
+	{
+		int len = std::min(x[idx].size(), y[idy].size()), l, r;
+		get_interval(x[idx], len, l, r); int hx = gethash(l, r);
+		get_interval(y[idy], len, l, r); int hy = gethash(l, r);
+		if(hx == hy)
+		{
+			reduce(x, idx, len);
+			reduce(y, idy, len);
+			res += len;
+		}
+		else
+		{
+			int ans = 0;
+			int L = 1, R = len - 1;
+			while(L <= R)
+			{
+				len = (L + R) >> 1;
+				get_interval(x[idx], len, l, r); hx = gethash(l, r);
+				get_interval(y[idy], len, l, r); hy = gethash(l, r);
+				if(hx == hy)
+				{
+					L = len + 1;
+					ans = len;
+				}
+				else
+					R = len - 1;
+			}
+			res += ans;
+			break;
+		}
+	}
+	return res;
+}
+
+void solve()
+{
+	prepare();
+	int q = read();
+	while(q--)
+	{
+		write(query());
+		putchar('\n');
+	}
+}
+
+int main()
+{
+	input();
+	solve();
+
+	return 0;
+}
+
+   

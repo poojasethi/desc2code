@@ -1,0 +1,117 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#define FOR(i,s,e) for (int i=(s); i<(e); i++)
+#define FOE(i,s,e) for (int i=(s); i<=(e); i++)
+#define CLR(a, x) memset(a, x, sizeof(a))
+#define N 100005
+using namespace std;
+
+struct member{
+	int r, a;
+	bool operator < (member const &T) const{return r < T.r;}
+};
+
+struct query{
+	int x, y, z, r;
+	bool operator < (query const &T) const{return z < T.z;}
+};
+
+struct node{
+	int x, y, s;
+};
+
+
+int n, m, na, nq, x, y;
+int age[N], B[N], size[N], ret[N];
+member a[N];
+query b[N];
+node T[N<<2];
+
+void build(int d, int x, int y){
+	T[d].x = x, T[d].y = y;
+	if (x != y){
+		build(d<<1, x, (x+y)/2);
+		build(1+(d<<1), (x+y)/2+1, y);
+	}
+}
+
+void update(int d, int x, int v){
+	T[d].s = max(T[d].s, v);
+	if (T[d].x != T[d].y){
+		if (x <= T[d<<1].y) update(d<<1, x, v);
+		else update(1+(d<<1), x, v);
+	}
+}
+
+int query(int d, int x, int y){
+	if (y < T[d].x || x > T[d].y) return 0;
+	if (x <= T[d].x && y >= T[d].y) return T[d].s;
+	return max(query(d<<1, x, y), query(1+(d<<1), x, y));
+}
+
+int main(){
+	scanf("%d%d", &n, &m);
+	FOR(i,0,n) scanf("%d", &a[i].r);
+	FOR(i,0,n) scanf("%d", &a[i].a), age[i] = a[i].a;
+	
+	scanf("%d", &nq);
+	FOR(i,0,nq){
+		scanf("%d%d", &x, &y), b[i].r = i;
+		x--, y--;
+		if (age[x] > age[y]) swap(x, y);
+		b[i].x = age[x];
+		b[i].y = age[y];
+		b[i].z = max(a[x].r, a[y].r);
+	}
+	
+	// discretize age
+	sort(age, age + n);
+	na = unique(age, age + n) - age;
+	
+	// compute size[]
+	sort(a, a + n);
+	for (int i=0, j=0; i<n; i=j){
+		while (j < n && a[j].r == a[i].r){
+			x = lower_bound(age, age + na, a[j].a) - age + 1;
+			for (int k=x; k<=na; k+=k&-k) B[k]++;
+			j++;
+		}
+		FOR(k,i,j){
+			x = lower_bound(age, age + na, a[k].a - m) - age;
+			y = lower_bound(age, age + na, a[k].a + m + 1) - age;
+			size[k] = 0;
+			for (int l=x; l>=1; l-=l&-l) size[k] -= B[l];
+			for (int l=y; l>=1; l-=l&-l) size[k] += B[l];
+		}
+	}
+	
+	// main
+	build(1, 0, na - 1);
+	sort(b, b + nq);
+	for (int i=n-1, j=nq-1; i>=0 && j>=0; i--){
+		x = lower_bound(age, age + na, a[i].a) - age;
+		update(1, x, size[i]);
+//		printf("+ %d @ %d\n", size[i], x);
+//		printf("Insert %d,%d = %d\n", a[i].r, a[i].a, size[i]);
+		
+		while (j >= 0 && b[j].z == a[i].r && (!i || a[i-1].r != a[i].r)){
+			x = b[j].y - m;
+			y = b[j].x + m;
+			if (x > y) ret[b[j].r] = -1;
+			else{
+//				printf("Query %d-%d\n", x, y);
+				x = lower_bound(age, age + na, x) - age;
+				y = lower_bound(age, age + na, y + 1) - age - 1;
+				if (y >= x) ret[b[j].r] = query(1, x, y);
+				else ret[b[j].r] = -1;
+				if (!ret[b[j].r]) ret[b[j].r] = -1;
+			}
+//		printf("Process Query(%d) %d-%d %d\n",b[j].r,b[j].x,b[j].y,b[j].z);
+			j--;
+		}
+	}
+	
+	FOR(i,0,nq) printf("%d\n", ret[i]);
+	return 0;
+}

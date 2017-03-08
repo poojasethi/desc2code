@@ -1,0 +1,222 @@
+#include <cstdio>
+#include <cassert>
+#include <algorithm>
+
+const int MOD = 1000000007;
+const int MAXN = 50;
+const int MAXD = 500;
+
+// helper functions for modulo operations
+//
+
+void add(int &val, int addend){
+	if((val+=addend)>=MOD)
+		val-=MOD;
+}
+
+void sub(int &val, int subtra){
+	add(val, MOD-subtra);
+}
+
+int product(int a, int b){
+	return (long long)a*b%MOD;
+}
+
+void addproduct(int &val, int a, int b){
+	val=((long long)a*b+val)%MOD;
+}
+
+int inverse(int b){
+	int y=1, yy=0, q, tmp, a=MOD;
+	while(b>1){
+		q=a/b;
+		tmp=a%b; a=b; b=tmp;
+		tmp=y; y=yy-q*y; yy=tmp;
+	}
+	return y>0 ? y : MOD+y;
+}
+
+// binomial coefficient
+//
+int binom(int n, int r){
+	int num=1, den=1;
+	for(int i=0; i<r; i++){
+		num=product(num, n-i);
+		den=product(den, i+1);
+	}
+	return product(num, inverse(den));
+}
+
+// bigint modulo
+//
+int mod(const char *a, int b){
+	int res=0;
+	for(; *a; a++){
+		res=(10LL*res+(*a-'0'))%b;
+	}
+	return res;
+}
+
+// simple polynomial struct
+//
+struct poly{
+	int *coef, deg;
+	poly(int *coef_, int deg_): coef(coef_), deg(deg_){
+		while(deg>0 && coef[deg]==0)
+			deg--;
+	}
+};
+
+// polynomial division
+//
+// c-=(a/b)*d, a = a%b
+//
+void div(poly &a, const poly &b, poly &c, const poly &d){
+	if(a.deg<b.deg){
+		return;
+	}
+	int inv=inverse(b.coef[b.deg]);
+	for(int i=a.deg-b.deg; i>=0; i--){
+		int m=product(a.coef[b.deg+i], inv);
+		assert(product(b.coef[b.deg], m)==a.coef[b.deg+i]);
+		for(int j=0; j<=b.deg; j++){
+			addproduct(a.coef[i+j], MOD-m, b.coef[j]);
+		}
+		for(int j=0; j<=d.deg; j++)
+			addproduct(c.coef[i+j], d.coef[j], MOD-m);	
+		assert(a.coef[b.deg+i]==0);
+	}
+	c.deg=std::max(c.deg, d.deg+a.deg-b.deg);
+	while(a.deg>0 && a.coef[a.deg]==0)
+		a.deg--;	
+}
+
+// extended euclidean algorithm
+//
+// finds a polynomial u for which
+// a*u-1 is divisible by b and deg(u) < deg(b)
+//
+void euclid(int *a, int *b, int *u){
+	int buf1[MAXD]={1}, buf2[MAXD]={0};
+	poly r0(a, MAXD-1), r1(b, MAXD-1), s0(buf1, 0), s1(buf2, 0);
+	while(r1.deg!=0 || r1.coef[0]!=0){
+		div(r0, r1, s0, s1);
+		std::swap(r0, r1);
+		std::swap(s0, s1);
+	}
+	assert(r0.deg==0);
+	int m=inverse(r0.coef[0]);
+	for(int i=0; i<MAXD; i++)
+		u[i]=0;
+	for(int i=0; i<=s0.deg; i++)
+		u[i]=product(s0.coef[i], m);
+}
+
+// main solving method
+//
+// complexity O(N*N*D + N*D*D + N*log C)
+//
+int solve(int N, const int *denom, const char *C){
+	int res=0;
+	// handle each (1 - x^D_i) term
+	//
+	for(int i=0; i<N; i++){
+		// calculate (1 - x)*product(1 - x^D_j) % ((1 - x^D_i)/(1 - x))
+		//
+		// initialize to (1 - x)
+		//
+		int poly1[2*MAXD+1]={1, MOD-1};
+		for(int j=0; j<N; j++){
+			if(j==i)
+				continue;
+			// multiply by (1 - x^D_j)
+			for(int d=denom[i]; d>=0; d--)
+				sub(poly1[d+denom[j]], poly1[d]);
+			// mod by (1 - x^D_i)
+			for(int d=denom[j]; d>=0; d--){
+				add(poly1[d], poly1[d+denom[i]]);
+				poly1[d+denom[i]]=0;
+			}
+		}
+		// mod by (1 - x^D_i)/(1 - x)
+		//
+		for(int d=denom[i]-2; d>=0; d--)
+			sub(poly1[d], poly1[denom[i]-1]);
+		poly1[denom[i]-1]=0;
+		
+		// initialize poly2 = (1 - x^D_i)/(1 - x)
+		//
+		int poly2[MAXD]={}, poly3[MAXD]={};
+		for(int j=0; j<denom[i]; j++)
+			poly2[j]=1;
+		// perform extended euclidean algorithm
+		//
+		euclid(poly1, poly2, poly3);
+		// now determine this term's contribution to the
+		// final sum
+		//
+		// multiply by (1 - x)
+		//
+		for(int j=denom[i]-1; j>=0; j--)
+			sub(poly3[j+1], poly3[j]);
+		// extract the coefficient of x^(C%D_i)
+		// and add to the final sum
+		//
+		add(res, poly3[mod(C, denom[i])]);
+	}
+	// handle (1 - x)^N term
+	//
+	int poly1[MAXN+MAXD+1]={1};
+	int poly2[MAXD]={1};
+	// initialize poly2 = (1 - x^N)
+	//
+	for(int i=0; i<N; i++)
+		for(int j=i; j>=0; j--)
+			sub(poly2[j+1], poly2[j]);
+	// multiply by (1 - x^D_i)/(1 - x) for each i
+	//
+	for(int i=0; i<N; i++){
+		// multiply by (1 - x^D_i)
+		for(int j=N-1; j>=0; j--)
+			sub(poly1[j+denom[i]], poly1[j]);
+		// divide by (1 - x)
+		for(int j=0; j<N+denom[i]-1; j++)
+			add(poly1[j+1], poly1[j]);
+		// mod by (1 - x)^N
+		for(int j=denom[i]-1; j>=0; j--){
+			for(int k=0; k<N; k++)
+				if(N&1)
+					addproduct(poly1[j+k], poly2[k], poly1[j+N]);
+				else
+					addproduct(poly1[j+k], MOD-poly2[k], poly1[j+N]);
+			poly1[j+N]=0;
+		}
+	}
+	int poly3[MAXD]={};
+	// extended euclidean algorithm
+	//
+	euclid(poly1, poly2, poly3);
+	// determine this polynomial's contribution
+	// to the final sum.
+	int pos = mod(C, MOD);
+	for(int i=0; i<N; i++){
+		addproduct(res, binom(pos+(N-1)-i, N-1), poly3[i]);
+	}
+	return res;
+}
+
+int main(){
+	// perform I/O and call solve method
+	//
+	int T, N, denom[MAXN];
+	char C[102];
+	scanf("%d", &T);
+	while(T--){
+		scanf("%d %s", &N, C);
+		for(int i=0; i<N; i++){
+			scanf("%d", denom+i);
+		}
+		printf("%d\n", solve(N, denom, C));
+	}
+	return 0;
+}

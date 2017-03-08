@@ -1,0 +1,275 @@
+#include <algorithm>
+#include <iostream>
+#include <cstdio>
+#include <cassert>
+#include <cstring>
+
+#define NMAX 100010
+#define SQRT 320
+#define BL 100000
+
+using namespace std;
+
+int st[BL];
+int en[BL];
+int nxt[BL];
+int size[BL];
+
+int A[NMAX];
+int pref[NMAX];
+int N,B;
+
+int H;
+
+int tmp[NMAX];
+
+
+void rec(int b = 1){
+	int i,n;
+
+	n = 0;
+	if(b){
+		for(i = H; i >=0; i=nxt[i]){
+			for(int k = st[i]; k <= en[i]; ++k) tmp[n++] = A[k];
+		}
+
+		for(i = 0; i < N; ++i){
+			A[i] = tmp[i];
+		}
+	}
+
+	H = 0;
+	B = 0;
+	for(i = 0; i < N; ++i){
+		st[B] = i;
+		nxt[B] = B+1;
+		pref[i] = 1;
+		for(n = 2; i+1 < N && n*n <= N; ++n){
+			++i;
+			pref[i] = pref[i-1]+(A[i]!=A[i-1]);
+		}
+		size[B] = n-1;
+		en[B] = i;
+		++B;
+	}
+	nxt[B-1] = -1;
+}
+
+int query(int i, int j){
+	int k,idx,s,e;
+
+	idx = 0;
+
+	for(k = H; k >= 0; k=nxt[k]){
+		if(idx+size[k] <= i){
+			idx += size[k];
+			continue;
+		}
+		s = k;
+		break;
+	}
+
+	i = st[s] + (i-idx);
+
+	for(; k >= 0;k=nxt[k]){
+		if(idx+size[k] <= j){
+			idx += size[k];
+			continue;
+		}
+		e = k;
+		break;
+	}
+
+	j = st[e] + (j-idx);
+	if(s == e){
+		return (pref[j]-pref[i]+1);
+	}
+
+	int ct;
+
+	ct = pref[en[s]]-pref[i]+1;
+	int p = s;
+	for(k = nxt[s]; k^e; k=nxt[k]){
+		ct += pref[en[k]];
+		ct -= (A[st[k]] == A[en[p]]);
+		p = k;
+	}
+
+
+	ct -= (A[st[k]] == A[ en[p] ]);
+	ct += (pref[j]-pref[st[k]]+1);
+
+	return ct;
+}
+
+void computepref( int s, int e){
+	int i;
+	pref[s] = 1;
+
+	assert(s <= e);
+
+	for(i = s+1; i<=e; ++i){
+		pref[i] = pref[i-1]+(A[i]!=A[i-1]);
+	}
+}
+
+
+int create_block(int s, int e){
+	computepref(s,e);
+
+
+	st[B] = s;
+	en[B] = e;
+	size[B] = e-s+1;
+
+
+	return B++;
+}
+
+
+void update(int i, int j){
+	int k,idx,s,e,p2;
+
+	idx = 0;
+	int p = -1;
+
+	assert(i >= 0 && j >= 0);
+
+	int c = 0;
+	for(k = H; k >= 0; k=nxt[k]){
+		idx += size[k];
+		assert(c++  <B);
+	}
+	if(idx^N) N /=0;
+
+	idx = 0;
+
+
+
+	for(k = H; k >=0; k=nxt[k]){
+		if(idx+size[k] <= i){
+			idx += size[k];
+			p = k;
+			continue;
+		}
+		break;
+	}
+	s = k;
+	i = st[s] + (i-idx);
+
+	p2 = p;
+	for(; k >=0;k=nxt[k]){
+		if(idx+size[k] <= j){
+			idx += size[k];
+			p2 = k;
+			continue;
+		}
+		break;
+	}
+	e = k;
+	j = st[e] + (j-idx);
+
+	int b1,b2;
+	if(s == e){
+		assert(i <= j);
+		b1 = i == st[s] ? s : create_block(i,j);
+		if(H == b1) return;
+		b2 = j == en[e] ? -1 : create_block(j+1,en[e]);
+
+		if(b1^s){
+			en[s] = i-1	;
+			size[s] = en[s]-st[s]+1;
+		}else{
+			en[b1] = j;
+			size[b1] = en[b1]-st[b1]+1;
+		}
+
+		p = b1 == s ? p : s;
+
+		int n = nxt[s];
+		if(p >= 0) nxt[p] = b2 >= 0 ? b2 : nxt[e];
+		if(b2 >= 0) nxt[b2] = n;
+
+		nxt[b1] = H;
+
+		H = b1;
+		return;
+	}
+
+
+	b1 = i == st[s] ? s : create_block(i,en[s]);
+	if(H == b1) return;
+
+	b2 = j == en[e] ? e : create_block(st[e],j);
+
+	if(b1^s){
+		en[s] = i-1;
+		size[s] = en[s]-st[s]+1;
+	}
+	if(b2^e){
+		st[e] = j+1;
+		computepref(st[e],en[e]);
+		size[e] = en[e]-st[e]+1;
+	}
+
+	nxt[b1] = nxt[s];
+	p = b1 == s ? p : s;
+	p2 = p2 == s ? b1 : p2;
+	if(p >= 0) nxt[p] = e == b2 ? nxt[e] : e;
+	if(p2 >= 0) nxt[p2] = b2;
+	nxt[b2] = H;
+
+	H = b1;
+}
+
+void print(){
+	int i;
+	cout << B << endl;
+	for(i= H; i >= 0 ;i=nxt[i]){
+		cout << st[i] << " " << en[i]<< "\n";
+	}
+}
+
+
+int M;
+int main(){
+	int i,t,q,typ,j,m;
+
+
+	scanf("%d",&t);
+
+	while(t--){
+		scanf("%d",&N);
+
+		for(i = 0; i < N; ++i){
+			scanf("%d",&A[i]);
+		}
+
+		scanf("%d",&M);
+		q = 0;
+		m = M;
+
+		rec(0);
+		while(M--){
+			scanf("%d%d%d",&typ,&i,&j);
+			--i,--j;
+			if(typ==1){
+				printf("%d\n",query(i,j));
+			}else{
+				++q;
+				update(i,j);
+//				print();
+			}
+
+			if(q*q >= m){
+				rec();
+				q =0;
+			}
+		}
+	}
+
+
+
+
+	return 0;
+}

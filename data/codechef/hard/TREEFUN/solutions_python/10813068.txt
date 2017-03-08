@@ -1,0 +1,149 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#define TRACE
+#ifdef TRACE
+#define TR(...) __f(#__VA_ARGS__, __VA_ARGS__)
+template <typename Arg1>
+void __f(const char* name, Arg1&& arg1){
+  cerr << name << " : " << arg1 << std::endl;
+}
+template <typename Arg1, typename... Args>
+void __f(const char* names, Arg1&& arg1, Args&&... args){
+  const char* comma = strchr(names + 1, ',');cerr.write(names, comma - names) << " : " << arg1<<" | ";__f(comma+1, args...);
+}
+#else
+#define TR(...)
+#endif
+
+typedef long long                LL;
+typedef vector < int >           VI;
+typedef pair < int,int >         II;
+typedef vector < II >            VII;
+
+#define MOD                      1000000007
+#define EPS                      1e-12
+#define LOGN                     17
+#define N                        50100
+#define PB                       push_back
+#define MP                       make_pair
+#define F                        first 
+#define S                        second
+#define ALL(v)                   v.begin(),v.end()
+#define SZ(a)                    (int)a.size()
+#define FILL(a,b)                memset(a,b,sizeof(a))
+#define SI(n)                    scanf("%d",&n)
+#define SLL(n)                   scanf("%lld",&n)
+#define PLLN(n)                  printf("%lld\n",n)
+#define PIN(n)                   printf("%d\n",n)
+#define REP(i,j,n)               for(LL i=j;i<n;i++)
+#define PER(i,j,n)               for(LL i=n-1;i>=j;i--)
+#define endl                     '\n'
+#define fast_io                  ios_base::sync_with_stdio(false);cin.tie(NULL)
+
+int IN[N] , OUT[N] , Time;
+VI g[N];
+int q[N] , k , cnt , deg[N];
+bool mark[N] , f;
+stack <int> tS;
+int level[N] , P[LOGN][N];
+
+inline int LCA(int x , int y){
+  if(level[x] < level[y])swap(x , y);
+  int lg = 1; for(;(1<<lg) <= level[x] ; lg ++);lg--;
+  for(int i = lg ; i >= 0 ; i--)
+    if(level[x] - (1<<i) >= level[y])
+      x = P[i][x];
+  if(x == y)return x;
+  for(int i = lg ; i >= 0 ; i--)
+    if(P[i][x] != -1 && P[i][x] != P[i][y]){
+      x = P[i][x];
+      y = P[i][y];
+    }
+  return P[0][x];
+}
+
+
+void dfs0(int u , int p) {
+  P[0][u] = p;
+  for(int i = 1 ; i < LOGN ; i ++)
+    P[i][u] = P[i-1][P[i-1][u]];
+  IN[u] = ++Time;
+  for(auto i : g[u]) {
+    if(i == p) continue;
+    level[i] = level[u] + 1;
+    dfs0(i , u);
+  }
+  OUT[u] = ++Time;
+}
+
+
+
+bool isAnc(int p , int u){                    // check if p is ancestor of u
+  return IN[p] < IN[u] && OUT[p] > OUT[u];
+}
+
+bool cmp(int a , int b){                      // sorting according to in times.
+  return IN[a] < IN[b];
+}
+
+int build_tree(){
+  set<int>st;
+  REP(i,0,k)st.insert(q[i]);
+  k = 0;
+  for(auto it = st.begin() ; it != st.end() ; it++)
+    q[k++] = *it; // making the array unique.
+  sort(q,q+k,cmp);int K = k; // sorting according to in times... K = unique initial nodes.
+  REP(i,0,K-1){
+    int l = LCA(q[i] , q[i+1]); // adding LCA of adjacent pairs.
+    if(st.count(l))continue;
+    q[k++] = l; st.insert(l);
+  }
+  sort(q,q+k,cmp);
+  stack<int> S; S.push(q[0]);
+  REP(i,1,k){
+    while(!isAnc(S.top() , q[i])) S.pop();
+    deg[S.top()] ++;
+    deg[q[i]] ++;
+    //tree[S.top()].PB(q[i]);
+    //tree[q[i]].PB(S.top());
+    S.push(q[i]);
+  }
+  return q[0];
+}
+
+int main() {
+  int t; SI(t);
+  while(t --) {
+    int n , m; SI(n); SI(m);
+    REP(i,1,n+1) g[i].clear();
+    REP(i,0,n-1) {
+      int u , v; SI(u); SI(v);
+      g[u].PB(v); g[v].PB(u);
+    }
+    Time = 0;
+    dfs0(1 , 0);
+    REP(i,0,m) {
+      SI(k); int K = k;
+      REP(j,0,k) {
+        SI(q[j]);
+        mark[q[j]] = true;
+      }
+      if(K > 2) {
+        int root = build_tree();
+        int ans = 0;
+        REP(i,0,k)
+          if(deg[q[i]] == K && !mark[q[i]]) {
+            ans ++; break;
+          }
+        PIN(ans);
+      }
+      else {
+        PIN(level[q[0]] - 2 * level[LCA(q[0] , q[1])] + level[q[1]] - 1);
+      }
+      REP(i,0,k)
+        deg[q[i]] = 0 , mark[q[i]] = false;
+    }
+  }
+  return 0;
+}

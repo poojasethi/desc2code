@@ -1,0 +1,244 @@
+#include <algorithm>
+#include <bitset>
+#include <cctype>
+#include <cfloat>
+#include <climits>
+#include <complex>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <functional>
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <numeric>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <string>
+#include <unistd.h>
+#include <utility>
+#include <valarray>
+#include <vector>
+
+using namespace std;
+typedef long long ll;
+
+#define gc getchar
+int getint(){ unsigned int c; int x = 0; while (((c = gc()) - '0') >= 10) { if (c == '-') return -getint(); if (!~c) exit(0); } do { x = (x << 3) + (x << 1) + (c - '0'); } while (((c = gc()) - '0') < 10); return x; }
+int getc_str(char str[]) { unsigned int c, n = 0; while ((c = gc()) <= ' '); if (!~c) exit(0); do { str[n++] = c; } while ((c = gc()) > ' ' ); str[n] = '\0'; return n; }
+
+const int N = 200000 + 111;
+struct SuffixArray {
+    static const int MAX_N = N;
+    char in[MAX_N];
+    int n, m, sa[MAX_N], as[MAX_N], lcp[MAX_N], is[MAX_N];
+    vector<pair<int, int> > ds;
+    struct Compare {
+        int h, *p;
+        Compare(int h, int *p) : h(h), p(p) {}
+        bool operator() (int a, int b) {
+            return a == b ? 0 : (p[a] != p[b]) ? (p[a] < p[b]) : (p[a + h] < p[b + h]);
+        }
+    };
+    void build_sa() {
+        int i, hh;
+        for (i = 0; i <= n; ++i) as[sa[i] = i] = in[i];
+        is[0] = is[n] = hh = 0;
+        sort(sa, sa + n + 1, Compare(0, as));
+        for (hh = 1; is[n] != n; hh <<= 1) {
+            Compare cmp(hh, as);
+            sort(sa, sa + n + 1, cmp);
+            for (i = 0; i < n; ++i) is[i + 1] = is[i] + cmp(sa[i], sa[i + 1]);
+            for (i = 0; i <= n; ++i) as[sa[i]] = is[i];
+        }
+    }
+    void build_lcp() {
+        int i, j, h = 0;
+        for (i = 0; i < n; i++) {
+            for (j = sa[as[i] - 1]; in[j + h] == in[i + h]; ++h) continue;
+            lcp[as[i] - 1] = h;
+            if (h) --h;
+        }
+    }
+    pair<int, int> range_lcp(int s, int e) {
+        if (s > e) swap(s, e);
+        return (s == e) ? pair<int,int>((n - sa[s]),s) : (s + 1 == e) ? pair<int,int>(lcp[s],s) : range_min(s, e - 1);
+    }
+    void make_rm() {
+        int i, k, ln, p;
+        for (k = ln = 1, m = n + 1; k < m; k <<= 1) ++ln;
+        ds.assign(m * ln, pair<int, int>(0, 0));
+        vector<pair<int, int> >::iterator it = ds.begin();
+        // copy(lcp, lcp + m, it);
+        for (i = 0; i < m; i++) {
+            ds[i] = pair<int, int>(lcp[i], i);
+        }
+        for (k = 1; k < m; k <<= 1) {
+            copy(it, it + m, it + m), it += m;
+            for (i = 0; i < m - k; i++) {
+                *(it + i) = min(*(it + i),  *(it + i + k));
+            }
+        }
+    }
+    pair<int, int> range_min(int a, int b) {
+        int p = b - a, k = 0, e = 1, s;
+        s = ((p & 0xffff0000) != 0) << 4; p >>= s; e <<= s; k |= s;
+        s = ((p & 0x0000ff00) != 0) << 3; p >>= s; e <<= s; k |= s;
+        s = ((p & 0x000000f0) != 0) << 2; p >>= s; e <<= s; k |= s;
+        s = ((p & 0x0000000c) != 0) << 1; p >>= s; e <<= s; k |= s;
+        s = ((p & 0x00000002) != 0) << 0; p >>= s; e <<= s; k |= s;
+        return min(ds[a + m * k], ds[b + m * k - e + 1]);
+    }
+};
+
+template<class T, class Cmp = less<T> > struct RangeQuery {
+    int n;        // leaf size
+    vector<T> as;
+    T unit;
+    int init(int array_size, T ident) {
+        unit = ident;
+        for (n = 1; n < array_size; n <<= 1) continue;
+        as.assign(n << 1, unit);
+    }
+    void change(T& x, const T& a, const T& b) { x = Cmp()(a, b) ? a : b; }
+    void set(int idx, T value) {
+        as[idx += n] = value;
+        for (; idx >>= 1; ) change(as[idx], as[idx << 1], as[idx << 1 | 1]);
+    }
+    T get(int srt, int end) {
+        T sn = unit, en = unit;
+        for (srt += n, end += n; srt <= end; srt >>= 1, end >>= 1) {
+            if ( srt & 1) change(sn, sn, as[srt]), srt++;
+            if (~end & 1) change(en, as[end], en), end--;
+        }
+        change(sn, sn, en);
+        return sn;
+    }
+};
+
+const int inf = 1 << 28;
+int n;
+char str[N];
+ll freq[N], acc[N];
+
+SuffixArray sa;
+RangeQuery<pair<int, int> > rm;
+
+#define pch putchar
+void putint(int n) { int i = 16, a[i]; if (n < 0) pch('-'); do { a[--i] = 48 + abs(n % 10); n /= 10; } while (n); while (i < 16) pch(a[i++]); }
+void putll(ll n) { int i = 32, a[i]; if (n < 0) pch('-'); do { a[--i] = 48 + abs(n % 10); n /= 10; } while (n); while (i < 32) pch(a[i++]); }
+
+void solve(int srt, int end, int c, int depth = 0) {
+    cout << " depth = " << depth << endl;
+    if (srt == end) { freq[0] += (sa.n - sa.sa[srt]) - c; return; }
+    pair<int, int> res = rm.get(srt, end - 1);
+    freq[end - srt] += res.first - c;
+    solve(srt, res.second, res.first, depth + 1);
+    solve(res.second + 1, end, res.first, depth + 1);
+}
+
+template<class S> struct Compare {
+    bool operator() (const S& a, const S& b) const {
+        if (a.s != b.s) return a.s < b.s;
+        if (a.t != b.t) return a.t < b.t;
+        if (a.u != b.u) return a.u < b.u;
+        return 0;
+    }
+};
+
+template<class S, class T, class U> struct Tuple {
+    S s; T t; U u;
+    Tuple() {} Tuple(S s, T t, U u) : s(s), t(t), u(u) {}
+    typedef Compare<Tuple<S, T, U> > Cmp;
+    bool operator==(const Tuple<S, T, U>& a) const { return Cmp()(*this, a) == 0 and Cmp()(a, *this) == 0; }
+    bool operator!=(const Tuple<S, T, U>& a) const { return !this->operator==(a); }
+};
+
+template<class S, class T, class U> ostream& operator<<(ostream& os, const Tuple<S, T, U>& a) {
+    os << '(' << a.s << ' ' << a.t << ' ' << a.u << ')';
+    return os;
+}
+
+typedef Tuple<int, int, int> P;
+
+int segN;
+pair<int, int> seg[1000010];
+template<typename T> void chmin(T &t, const T &f) { if (t > f) t = f; }
+template<typename T> void chmax(T &t, const T &f) { if (t < f) t = f; }
+
+pair<int, int> rangeMin(int a, int b) {
+	pair<int, int> ret = make_pair(inf, -1);
+	for (a += segN, b += segN; a <= b; a >>= 1, b >>= 1) {
+		if ( a & 1) chmin(ret, seg[a++]);
+		if (~b & 1) chmin(ret, seg[b--]);
+	}
+	return ret;
+}
+
+void solve_stack(int srt, int end) {
+    if (srt == end) { freq[0] += (sa.n - sa.sa[srt]); return; }
+    stack<P> stk;
+    P d, a, b;
+    stk.push(P(srt, end, 0));
+    pair<int, int> p;
+    while (stk.empty() == 0) {
+        d = stk.top(), stk.pop();
+        if (d.s == d.t) { freq[0] += (sa.n - sa.sa[d.s]) - d.u; continue; }
+        //p = rm.get(d.s, d.t - 1);
+        // p = sa.range_lcp(d.s, d.t);
+        p = rangeMin(d.s, d.t - 1);
+        freq[d.t - d.s] += p.first - d.u;
+        a.s = d.s,          a.t = p.second, a.u = p.first;
+        if (a.s == a.t) {
+            freq[0] += (sa.n - sa.sa[a.s]) - a.u;
+        } else stk.push(a);
+        b.s = p.second + 1, b.t = d.t,      b.u = p.first;
+        if (b.s == b.t) {
+            freq[0] += (sa.n - sa.sa[b.s]) - b.u;
+        } else stk.push(b);
+    }
+}
+
+int main () {
+    int i, j, tcc, tc = getint();
+    for (tcc = 0; tcc < tc; tcc++) {
+        n = getc_str(str);
+        sa.n = n;
+        for (i = 0; i < n; i++) sa.in[i] = str[i]; sa.in[n] = 0;
+        sa.build_sa();
+        sa.build_lcp();
+        // sa.make_rm();
+        for (segN = 2; segN < n; segN <<= 1) ;
+        fill(seg, seg + 2 * segN, make_pair(inf, -1));
+        for (i = 0; i < n; i++) {
+            seg[segN + i] = make_pair(sa.lcp[i], i);
+        }
+        for (int a = segN; --a; ) {
+            seg[a] = min(seg[a << 1], seg[a << 1 | 1]);
+        }
+
+        // rm.init(n + 1, pair<int, int>(inf, -1));
+        /*
+        for (i = 0; i < n; i++) {
+            rm.set(i, make_pair(sa.lcp[i], i));
+        }
+        */
+        memset(freq, 0, sizeof(freq));
+        solve_stack(0, n);
+        // solve(0, n, 0);
+        acc[0] = 0;
+        for (i = 0; i < n; i++) {
+            acc[i + 1] = acc[i] + freq[i] * (i + 1);
+        }
+        int Q = getint();
+        for (int q = 0; q < Q; q++) {
+            int a = getint();
+            ll res = acc[n] - acc[min(a - 1, n)];
+            putll(res); puts("");
+        }
+    }
+    return 0;
+}

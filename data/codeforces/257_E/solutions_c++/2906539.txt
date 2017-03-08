@@ -1,0 +1,113 @@
+#include<iostream>
+#include<vector>
+#include<map>
+using namespace std;
+typedef multimap<int,int> mii;
+typedef pair<int,int> pii;
+typedef pair<int,mii> pimii;
+typedef long long llong;
+bool allin=false;
+mii elevator;
+map<int,mii> floor;
+multimap<int,vector<int> > info;
+int twait, dif=0, current_floor=0;
+llong Time;
+vector<llong> ans;
+
+void newpeople(int updown) {
+	static multimap<int,vector<int> >::iterator infoit= info.begin();
+	int i, from, to;
+	while (infoit->first==twait) {
+		i= infoit->second[0];
+		from= infoit->second[1];
+		to= infoit->second[2];
+		if (floor.find(from)!=floor.end()) {
+			floor[from].insert(pii(to,i));
+		}
+		else {
+			mii temp;
+			temp.insert(pii(to,i));
+			floor.insert(pimii(from,temp));
+		}
+		if (from< current_floor) dif--;
+		else if (from> current_floor) dif++;
+		else dif+=updown;
+		infoit++;
+		if (infoit==info.end()) break;
+	}
+	if (infoit==info.end()) allin=true;
+	else twait= infoit->first;
+}
+
+void elevator_inout(int updown) {
+	if (floor.find(current_floor)==floor.end()) return;
+	mii::iterator it2;
+	if (updown!=0) {
+		pair<mii::iterator, mii::iterator> ret= elevator.equal_range(current_floor);
+		for (it2=ret.first; it2!=ret.second; it2++) {
+			ans[it2->second]= Time;
+			dif-=updown;
+		}
+		elevator.erase(current_floor);
+	}
+	mii waiter= floor[current_floor];
+	elevator.insert(waiter.begin(),waiter.end());
+	for (it2=waiter.begin(); it2!=waiter.end(); it2++) {
+		floor.insert(pimii(it2->first, mii()));
+		dif-=updown;
+		if (it2->first< current_floor) dif--;
+		else dif++;
+	}
+	floor.erase(current_floor);
+}
+
+int main() {
+	int npeople, nfloor;
+	cin >> npeople >> nfloor;
+	for (int i=0, Time2,from,to; i<npeople; i++) {
+		cin >> Time2 >> from >> to;
+		int temp[3]={i,from-1,to-1};
+		info.insert(pair<int,vector<int> >(Time2,vector<int>(temp,temp+3)));
+	}
+	ans.assign(npeople,0);
+	twait=info.begin()->first;
+	for (int temp; ;) {
+		if (dif<0) {
+			temp= current_floor;
+			current_floor= (--floor.lower_bound(temp))->first;
+			Time+= temp-current_floor;
+			if (!allin && Time>= twait) {
+				if (Time> twait) {
+					current_floor+= Time-twait;
+					Time= twait;
+				}
+				newpeople(-1);
+			}
+			elevator_inout(-1);
+		}
+		else if (dif>0 || floor.size()>0) {
+			temp= current_floor;
+			current_floor= floor.upper_bound(temp)->first;
+			Time+= current_floor-temp;
+			if (!allin && Time>= twait) {
+				if (Time> twait) {
+					current_floor-= Time-twait;
+					Time= twait;
+				}
+				newpeople(1);
+			}
+			elevator_inout(1);
+		}
+		else {
+			if (allin) break;
+			Time= twait;
+			newpeople(0);
+			elevator_inout(0);
+		}
+	}
+	for (int i=0; i<npeople; i++)
+		cout << ans[i] << '\n';
+	cin.get();
+	cin.get();
+	return 0;
+}

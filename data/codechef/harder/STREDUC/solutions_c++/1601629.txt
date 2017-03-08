@@ -1,0 +1,136 @@
+// All Mythin
+// Create At 15:59 12-06 2012
+
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <bitset>
+#include <queue>
+#include <map>
+#include <set>
+
+using namespace std;
+
+// Self Template Code BGEIN
+
+#define sz(x) ((int)((x).size()))
+#define out(x) printf(#x" %d\n", x)
+#define all(x) (x).begin(), (x).end()
+#define rep(i,n) for (int i = 0; i < (n); ++i)
+#define repf(i,a,b) for (int i = (a); i <= (b); ++i)
+#define repd(i,a,b) for (int i = (a); i >= (b); --i)
+#define repcase int t; for (scanf ("%d", &t); t; --t)
+#define repeach(i,x) for (__typeof((x).begin()) i = (x).begin(); i != (x).end(); ++i)
+
+typedef long long int64;
+typedef pair<int, int> pii;
+typedef pair<int64, int64> pll;
+typedef pair<double, double> pdd;
+
+template<class T> inline void ckmin(T &a, const T b) { if (b < a) a = b; }
+template<class T> inline void ckmax(T &a, const T b) { if (b > a) a = b; }
+
+// Self Template Code END
+
+const int maxn = 250 + 5;
+const int maxm = 30 + 2;
+const int maxl = 20 + 2;
+
+char s[maxn], d[maxm][maxl];
+int n, len[maxn], dp[maxn];
+
+bool can_erase[maxn][maxn];
+int c_match[maxn][maxn][maxm][maxl];
+
+bool perfect_match(int l, int r, int id) {
+    rep (i, r - l + 1) {
+        if (d[id][i] != s[l + i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+int cut_match(int l, int r, int id, int pos) {
+    if (c_match[l][r][id][pos] != -1) {
+        return c_match[l][r][id][pos];
+    }
+    int& res = c_match[l][r][id][pos];
+    if (pos == len[id]) {
+        return res = (l == r + 1? 1 : 0);
+    }
+    if (r - l + 1 < len[id] - pos) {
+        return res = 0;
+    }
+    if (s[l] == d[id][pos]) {
+        if (cut_match(l + 1, r, id, pos + 1)) {
+            return res = 1;
+        }
+    }
+    repf (i, l, r - 1) {
+        if (can_erase[l][i] && cut_match(i + 1, r, id, pos)) {
+            return res = 1;
+        }
+    }
+    return res = 0;
+}
+
+void update(int& x, int y) {
+    if (x == -1 || x > y) {
+        x = y;
+    }
+}
+
+int main() {
+    while (scanf ("%s", s) != EOF) {
+        scanf ("%d", &n);
+        rep (i, n) {
+            scanf ("%s", d[i]);
+            len[i] = strlen(d[i]);
+        }
+        int slen = strlen(s);
+        memset (can_erase, 0, sizeof(can_erase));
+        rep (i, slen) rep (j, i + 1) rep (k, n) {
+            if (len[k] == i - j + 1 && perfect_match(j, i, k)) {
+                can_erase[j][i] = true;
+                break ;
+            }
+        }
+        memset (c_match, -1, sizeof(c_match));
+        repf (clen, 2, slen) {
+            rep (begin, slen - clen + 1) {
+                int end = begin + clen - 1;
+                rep (k, n) {
+                    if (can_erase[begin][end]) {
+                        break ;
+                    }
+                    if (clen > len[k] && s[end] == d[k][len[k] - 1]) {
+                        can_erase[begin][end] = cut_match(begin, end, k, 0);
+                    }
+                }
+                    //if (can_erase[begin][end]) {
+                        //printf ("can e %d %d\n", begin, end);
+                    //}
+            }
+        }
+        memset (dp, -1, sizeof(dp));
+        dp[0] = 0;
+        rep (i, slen) {
+            update (dp[i + 1], dp[i] + 1);
+            repf (j, i, slen - 1) {
+                if (can_erase[i][j]) {
+                    update (dp[j + 1], dp[i]);
+                }
+            }
+        }
+        printf ("%d\n", dp[slen]);
+    }
+    return 0;
+}
+

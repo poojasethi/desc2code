@@ -1,0 +1,188 @@
+//Edited by Hewr
+#include <cstdlib>
+#include <cctype>
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <iostream>
+#include <sstream>
+#include <map>
+#include <set>
+#include <queue>
+#include <stack>
+#include <fstream>
+#include <numeric>
+#include <iomanip>
+#include <bitset>
+#include <list>
+#include <stdexcept>
+#include <functional>
+#include <utility>
+#include <ctime>
+using namespace std;
+
+#define pb push_back
+#define MP make_pair
+
+#define fo(i,a,b) for (int i=a; i<=b; ++i)
+#define fd(i,a,b) for (int i=a; i>=b; --i)
+#define fe(i,x) for (int i=g[x],y=E[i].y; i; i=E[i].l,y=E[i].y)
+#define forall(i,x) for (typeof(x.begin()) i=x.begin(); i!=x.end(); ++i)
+#define inc(a,b) a=(((LL)a+b)%mo+mo)%mo
+#define clr(a,x) memset(&a,x,sizeof(a));
+#define sqr(x) ((x)*(x))
+#define UNIQUE(x) x.resize(unique(x.begin(),x.end())-x.begin())
+#define move(a,b) memcpy(&b,&a,sizeof(a))
+#define acms(x) accumulate(x.begin(),x.end(),string())
+#define SIZE(x) ((int)x.size())
+#define updmin(a,b) a=min(a,b)
+#define updmax(a,b) a=max(a,b)
+#define fi first
+#define se second
+
+template<class A,class B> A convert(B x) { stringstream ss; ss<<x; A ret; ss>>ret; return ret; }
+
+const int oo=~0u>>2;
+const double eps=1e-10,pi=acos(-1);
+
+typedef vector<int> VI;
+typedef vector<string> VS;
+typedef vector<double> VD;
+typedef long long LL;
+typedef long double LD;
+typedef unsigned long long ULL;
+typedef pair<int,int> PII;
+
+const int ROW = 7, COL = 8, mp = 10, mc = 4 - 1, MAX_PTS = mp*2+10, MAX_EDGES = sqr(MAX_PTS) * 2, mo=1000000007;
+const int fx[8][2]={{-1,0},{1,0},{0,-1},{0,1},{-1,-1},{-1,1},{1,-1},{1,1}};
+const char tml[5] = "BRWY";
+
+//Flow
+struct Edge{ int y, f, c, l; } E[MAX_EDGES];
+int g[MAX_PTS], dis[MAX_PTS], fa[MAX_PTS], Q[MAX_PTS];
+bool inq[MAX_PTS];
+int tt, S(mp * 2 + 1), T(mp * 2 + 2);
+
+//Pictures
+int a[ROW][COL];
+bool v[ROW][COL], hori[ROW][COL], vert[ROW][COL];
+int req[mp], pil[mp], num[mc + 1][mc + 1];
+PII ps_ty[mp];
+
+//Layouts
+char Now[ROW*2+1][COL*2+1], Ans[ROW*2+1][COL*2+1], TMP[ROW*2+1][COL*2+1];
+int Best(oo);
+set<int> mem;
+
+void add(int x, int y, int f, int c){
+    E[++tt].y = y, E[tt].f = f, E[tt].c = c, E[tt].l = g[x], g[x] = tt;
+    E[++tt].y = x, E[tt].f = 0, E[tt].c = -c, E[tt].l = g[y], g[y] = tt;
+}
+
+int diff(int x, int y){
+    PII l = MP(min(ps_ty[x].fi, ps_ty[x].se), max(ps_ty[x].fi, ps_ty[x].se));
+    PII r = MP(min(ps_ty[y].fi, ps_ty[y].se), max(ps_ty[y].fi, ps_ty[y].se));
+    if (l.fi == r.se || l.se == r.fi) swap(l.fi, l.se);
+    int ret = (l.fi != r.fi) + (l.se != r.se);
+    return ret;
+}
+
+void work(){
+    int enc(0);
+    fo (i, 0, mp - 1) enc = ((LL) enc * 29 + pil[i]) % mo;
+    if (mem.find(enc) != mem.end()) return;
+    mem.insert(enc);
+    clr(g, 0); tt = 1;
+    fo (i, 0, mp - 1){
+        add(S, i + 1, req[i], 0);
+        add(i + mp + 1, T, pil[i], 0);
+        fo (j, 0, mp - 1) add(i + 1, j + mp + 1, oo, diff(i,j));
+    }
+    int Cost(0);
+    do {
+        fo (i,0,T) dis[i] = oo, inq[i] = 0;
+        int l(0), r(0);
+        Q[r = (r + 1) % MAX_PTS] = S, dis[S] = 0, inq[S] = 1;
+        while (l != r){
+            int x = Q[l = (l + 1) % MAX_PTS];
+            fe (i, x) if (E[i].f && dis[x] + E[i].c < dis[y]){
+                dis[y] = dis[x] + E[i].c, fa[y] = i;
+                if (!inq[y]) inq[Q[r = (r + 1) % MAX_PTS] = y] = 1;
+            }
+            inq[x] = 0;
+        }
+        if (dis[T] == oo) break;
+        int Aug = oo, x = T;
+        while (x != S) updmin(Aug, E[fa[x]].f), x = E[fa[x] ^ 1].y;
+        Cost += Aug * dis[T], x = T;
+        while (x != S) E[fa[x]].f -= Aug, E[fa[x] ^ 1].f += Aug, x = E[fa[x] ^ 1].y;
+    } while (1);
+    if (Cost >= Best) return;
+    int need[mp][mp], asn[mp], Cnt(0);
+    fo (i, 0, mp - 1){
+        asn[i]=0;
+        int SN(i * (mp + 2) * 2 + 7);
+        for (int j = 0; j < mp; ++j, SN += 2){
+            need[j][i] = E[SN].f;
+            if (E[SN].f)
+                Cnt += E[SN].f * abs(E[SN].c);
+        }
+    }
+    move(Now, TMP);
+    fo (i, 0, ROW - 1) fo (j, 0, COL - 1) if (hori[i][j] || vert[i][j]){
+        int x, y;
+        if (hori[i][j]) x = i, y = j + 1;
+        else x = i + 1, y = j;
+        int h(num[a[i][j]][a[x][y]]),t;
+        if (need[h][h]){
+            --need[h][h], TMP[i * 2][j * 2] = tml[a[i][j]], TMP[x * 2][y * 2] = tml[a[x][y]];
+            continue;
+        }
+        while (!need[h][asn[h]]) ++asn[h];
+        --need[h][asn[h]], TMP[i * 2][j * 2] = tml[ps_ty[asn[h]].fi], TMP[x * 2][y * 2] = tml[ps_ty[asn[h]].se];
+        int D = (ps_ty[asn[h]].fi != a[i][j]) + (ps_ty[asn[h]].se != a[x][y]);
+        if (D!=diff(h,asn[h])) TMP[i * 2][j * 2] = tml[ps_ty[asn[h]].se], TMP[x * 2][y * 2] = tml[ps_ty[asn[h]].fi];
+    }
+    move(TMP, Ans); Best = Cost;
+}
+
+void dfs(int x, int y){
+    if (x == ROW){ work(); return; }
+    int nx = y == (COL - 1) ? x + 1 : x, ny = (y + 1) % COL;
+    if (v[x][y]){ dfs(nx, ny); return; }
+    if (y + 1 < COL && !v[x][y + 1]){
+        v[x][y] = v[x][y + 1] = 1, Now[x * 2][y * 2 + 1] = '-', hori[x][y] = 1;
+        ++pil[ num[ a[x][y] ][ a[x][y + 1] ] ];
+        dfs(nx,ny);
+        --pil[ num[ a[x][y] ][ a[x][y + 1] ] ];
+        v[x][y] = v[x][y + 1] = 0, Now[x * 2][y * 2 + 1] = '.', hori[x][y] = 0;
+    }
+    if (x + 1 < ROW && !v[x + 1][y]){
+        v[x][y] = v[x + 1][y] = 1, Now[x * 2 + 1][y * 2] = '|', vert[x][y] = 1;
+        ++pil[ num[ a[x][y] ][ a[x + 1][y] ] ];
+        dfs(nx,ny);
+        --pil[ num[ a[x][y] ][ a[x + 1][y] ] ];
+        v[x][y] = v[x + 1][y] = 0, Now[x * 2 + 1][y * 2] = '.', vert[x][y] = 0;
+    }
+}
+
+int main(){
+    for (int i = 0; i < ROW; ++i, scanf("\n")) fo (j, 0, COL - 1){
+        char ch;
+        scanf("%c", &ch);
+        a[i][j] = strchr(tml, ch) - tml;
+    }
+    int tt(0);
+    fo (i, 0, mc) fd (j, mc, i) {
+        num[i][j] = num[j][i] = tt;
+        ps_ty[tt++] = MP(i, j);
+    }
+    fo (i, 0, tt-1) scanf("%d", req+i);
+    clr(Now, '.'); clr(v, 0); clr(pil, 0); clr(hori, 0); clr(vert, 0); mem.clear();
+    dfs(0, 0);
+    printf("%d\n", ROW * COL - Best);
+    for (int i = 0; i < ROW * 2 - 1; printf("\n"), ++i) fo (j, 0, COL * 2 - 2) printf("%c",Ans[i][j]);
+}

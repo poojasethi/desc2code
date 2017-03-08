@@ -1,0 +1,107 @@
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<cmath>
+#include<vector>
+#include<queue>
+#include<string>
+using namespace std;
+int n, m, tot, l, r, mid, ans;
+int a[200010], A[200010], ver[400010], Next[400010], head[200010];
+int v[200010], sz[200010], f[200010], d[200010][2], g[200010][2], one[200010];
+
+void add(int x, int y)
+{
+	ver[++tot] = y, Next[tot] = head[x], head[x] = tot;
+}
+
+void update(int y, int fy, int x)
+{
+	if (fy > d[x][0])
+	{
+		d[x][1] = d[x][0];
+		g[x][1] = g[x][0];
+		d[x][0] = fy;
+		g[x][0] = y;
+	}
+	else if (fy > d[x][1])
+	{
+		d[x][1] = fy;
+		g[x][1] = y;
+	}
+}
+
+void dp(int x)
+{
+	v[x] = 1;
+	sz[x] = 1; one[x] = a[x]; f[x] = 1;
+	d[x][0] = d[x][1] = g[x][0] = g[x][1] = 0;
+	for (int i = head[x]; i; i = Next[i])
+	{
+		int y = ver[i];
+		if (v[y]) continue;
+		dp(y);
+		sz[x] += sz[y];
+		one[x] += one[y];
+		if (sz[y] == one[y]) f[x] += one[y];
+		else update(y, f[y], x);
+	}
+	f[x] += d[x][0];
+	if (!a[x]) f[x] = d[x][0] = g[x][0] = 0;
+	v[x] = 0;
+}
+
+void dfs(int x)
+{
+	v[x] = 1;
+	ans = max(ans, f[x]);
+	for (int i = head[x]; i; i = Next[i])
+	{
+		int y = ver[i];
+		if (v[y]) continue;
+		int fx = f[x], ox = one[x], sx = sz[x];
+		if (a[x])
+		{
+			if (sz[y] == one[y]) fx -= one[y];
+			else if (g[x][0] == y) fx = fx - d[x][0] + d[x][1];
+		}
+		sx -= sz[y]; sz[y] += sx;
+		ox -= one[y]; one[y] += ox;
+		if (a[y])
+		{
+			if (sx == ox) f[y] += ox;
+			else {
+				f[y] -= d[y][0];
+				update(x, fx, y);
+				f[y] += d[y][0];
+			}
+		}
+		dfs(y);
+	}
+	v[x] = 0;
+}
+
+int main()
+{
+	cin >> n >> m;
+	for (int i = 1; i <= n; i++) scanf("%d", &A[i]);
+	for (int i = 1; i < n; i++)
+	{
+		int x, y;
+		scanf("%d%d", &x, &y);
+		add(x, y), add(y, x);
+	}
+	l = 0, r = 1000000;
+	while (l < r)
+	{
+		int mid = (l + r + 1) / 2;
+		for (int i = 1; i <= n; i++) a[i] = A[i] >= mid ? 1 : 0;
+		ans = 0;
+		dp(1);
+		dfs(1);
+		if (ans >= m) l = mid; else r = mid - 1;
+	}
+	cout << l << endl;
+	return 0;
+}

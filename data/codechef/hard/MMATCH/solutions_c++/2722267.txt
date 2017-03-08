@@ -1,0 +1,203 @@
+#include <stdio.h>
+#include <string.h>
+ 
+int childrenCount, bedCount, caseCount;
+ 
+struct Grid
+{
+   char c[100];
+   char b[100];
+   char bc[100][100];
+};
+ 
+void ClearCell(struct Grid * pG, int const b, int const c)
+{
+   int ii;
+ 
+   pG->bc[b][c] = 0;
+   pG->b[b] = 0;
+   pG->c[c] = 0;
+ 
+   for (ii = 0; ii < bedCount; ++ii)
+   {
+      if (pG->bc[ii][c])
+      {
+         pG->bc[ii][c] = 0;
+         --(pG->b[ii]);
+      }
+   }
+ 
+   for (ii = 0; ii < childrenCount; ++ii)
+   {
+      if (pG->bc[b][ii])
+      {
+         pG->bc[b][ii] = 0;
+         --(pG->c[ii]);
+      }
+   }
+}
+ 
+int CalcMaxHappy(struct Grid const * const pG)
+{
+   int maxHappy, ii;
+   int cCount = 0;
+   int bCount = 0;
+ 
+   for (ii = 0; ii < bedCount; ++ii)
+   {
+      if (pG->b[ii])
+      {
+         ++bCount;
+      }
+   }
+ 
+   for (ii = 0; ii < childrenCount; ++ii)
+   {
+      if (pG->c[ii])
+      {
+         ++cCount;
+      }
+   }
+ 
+    maxHappy = (bCount <= cCount) ? bCount : cCount;
+    return maxHappy;
+}
+ 
+int GetTheOnes (struct Grid * pG)
+{
+   int ii, jj, kk;
+   bool goAgain;
+   int happy = 0;
+ 
+   do
+   {
+      goAgain = false;
+ 
+      for (ii = 0; ii < bedCount; ++ii)
+      {
+         if (pG->b[ii] == 1)
+         {
+            goAgain = true;
+            ++happy;
+ 
+            for (jj = 0; jj < childrenCount && !(pG->bc[ii][jj]); ++jj);
+            pG->c[jj] = 0;
+			
+            for (kk = 0; kk < bedCount; ++kk)
+            {
+               if (pG->bc[kk][jj])
+               {
+                  pG->bc[kk][jj] = 0;
+                  --(pG->b[kk]);
+               }
+            }
+         }
+      }
+ 
+      for (ii = 0; ii < childrenCount; ++ii)
+      {
+         if (pG->c[ii] == 1)
+         {
+            goAgain = true;
+            ++happy;
+ 
+            for (jj = 0; jj < bedCount && !(pG->bc[jj][ii]); ++jj);
+            pG->b[jj] = 0;
+			
+            for (kk = 0; kk < childrenCount; ++kk)
+            {
+               if (pG->bc[jj][kk])
+               {
+                  pG->bc[jj][kk] = 0;
+                  --(pG->c[kk]);
+               }
+            }
+         }
+      }
+   } while (goAgain);
+ 
+   return happy;
+}
+ 
+int Tree (struct Grid g, int const b, int const c)
+{
+   int t, ii, jj, maxHappy, happy;
+   int level = 0;
+ 
+   if (c >= 0 && b >= 0)
+   {
+      ClearCell(&g, b, c);
+      level = 1;
+   }
+ 
+   level += GetTheOnes(&g);
+   happy = level;
+ 
+   maxHappy = CalcMaxHappy(&g);
+ 
+   if (maxHappy == 0)
+   {
+      return happy;
+   }
+ 
+   maxHappy += level;
+ 
+   for (ii = 0; ii < bedCount; ++ii)
+   {
+      for (jj = 0; jj < childrenCount; ++jj)
+      {
+         if (g.bc[ii][jj])
+         {
+            t = Tree(g, ii, jj) + level;
+            if (t > happy)
+            {
+               happy = t;
+ 
+               if (maxHappy == happy)
+               {
+                  return happy;
+               }
+            }
+         }
+      }
+   }
+ 
+   return happy;
+}
+ 
+ 
+int main()
+{
+   int tcCount, ii;
+   struct Grid g;
+   scanf("%d", &tcCount);
+ 
+   for (ii = 0; ii < tcCount; ++ii)
+   {
+      scanf("%d %d", &childrenCount, &bedCount);
+      if (childrenCount > 100 || bedCount > 100) return -1; 
+ 
+      memset(&g, 0, sizeof(struct Grid));
+ 
+      while (1)
+      {
+         int c, b;
+ 
+         scanf("%d %d", &c, &b);
+ 
+         if (c == 0 && b == 0) break;
+         //if (c == 0 || b == 0) return -1;
+         //if (c > childrenCount || b > bedCount) return -2;
+         --b;
+         --c;
+ 
+         g.bc[b][c] = 1;
+         ++(g.c[c]);
+         ++(g.b[b]);
+      }
+ 
+      printf("%d\n", Tree(g, -1, -1));
+   }
+ 
+   return 0;
+}

@@ -1,0 +1,165 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define REP0(i, n) for (int i = 0; i < n; i++)
+#define REP1(i, n) for (int i = 1; i <= n; i++)
+#define REP(i, l, r) for (int i = l; i <= r; i++)
+#define RP(i, r, l) for (int i = r; i >= l; i--)
+#define FORE(i, x) for (int i = fi[x]; i != -1; i = e[i].n)
+
+#define MAX_N 410000
+#define oo 0x7ffffff 
+#define l(_)  c[_][0]
+#define r(_)  c[_][1]
+namespace LCT
+{
+          int c[MAX_N][2], p[MAX_N], mins[MAX_N], key[MAX_N], rev[MAX_N];
+          int st[MAX_N], ut[MAX_N], top, sz;
+          inline int min(int x, int y) { return x < y ? x : y; }
+          inline void swap(int &x, int &y) { int t = x; x = y, y = t; }
+          
+          inline int d(int x) { return r(p[x]) == x; }
+          inline bool isr(int x) { return l(p[x]) != x && r(p[x]) != x; }
+          inline void sc(int x, int y, int d) { if (x) if (c[x][d] = y) p[y] = x; }
+          inline void upd(int x){if (x) mins[x] = min(mins[l(x)], min(mins[r(x)], key[x])); }
+          inline void rot(int x)
+          {
+                 int f = p[x], dd = d(x);
+                 if (isr(f)) p[x] = p[f]; else sc(p[f], x, d(f));
+                 sc(f, c[x][!dd], dd), sc(x, f, !dd), upd(f);
+          }
+          inline void revs(int x) { if (x) rev[x] ^= 1, swap(l(x), r(x)); }
+          inline void down(int x) { if (x && rev[x]) revs(l(x)), revs(r(x)), rev[x] = 0; }
+          void push(int x) { while(x) st[++top] = x, x = p[x]; while(top) down(st[top--]); }
+          void splay(int x)
+          {
+               //push(x);
+               while (!isr(x))
+               {
+                     //printf ("%d\n", x);
+                     int f = p[x];
+                     if (isr(f)) rot(x);
+                     else if (d(f) == d(x)) rot(f), rot(x);
+                     else rot(x), rot(x);
+               }
+               upd(x);
+          }
+          int access(int x, int y = 0)
+          { push(x); do splay(x), sc(x, y, 1), upd(x), x = p[y = x]; while(x); return y; }
+          int getf(int x) { while (p[x]) x = p[x]; return x; }
+          bool same(int x, int y) { return getf(x) == getf(y);  }
+          int getfa(int x)
+          { access(x), splay(x), down(x = l(x));  while (r(x)) down(x = r(x)); return x; }
+          int LCA(int x, int y) { access(x); return access(y); }
+          void cut(int x, int y) //y is father
+          {
+               int t = LCA(x, y);
+               //printf ("fa[%d] = %d %d\n", x, t, y), fflush(stdout);
+               if (t != y) swap(x, y);
+            //   int z = getfa(x); ut[++sz] = z;
+               //printf ("fa[%d] = %d %d\n", x, getfa(x), y), fflush(stdout);
+               access(y), splay(x), ut[++sz] = l(x), l(x) = p[x] = 0, upd(x);
+          }
+          void evert(int x) { access(x), splay(x), revs(x); }
+          void link(int x, int y, int z)
+          {
+               evert(x);
+               int t = ut[sz--]; l(t) = r(t) = p[t] = 0, key[t] = mins[t] = z;
+               p[p[x] = t] = y;
+          }
+          int getmin(int x, int y)
+          {
+              access(x); int t = access(y);
+             // printf ("%d %d LCA = %d %d\n", x, y, t, mins[r(t)]);
+              splay(t); int s = mins[r(t)];
+              if (x != t) splay(x), /*printf ("-> %d %d\n", mins[x], key[x]), */s = min(s, mins[x]);
+              //printf ("%d\n", s), fflush(stdout);
+              return s;
+          }
+          void init(int n)
+          {
+               fill(mins + 1, mins + n + 1, oo), fill(key + 1, key + n + 1, oo);
+               n = n + n, fill(p, p + n + 1, 0), fill(rev, rev + n + 1, 0);
+               REP1(i, n) l(i) = r(i) = 0;
+          }
+}
+
+#define MAX_M 5000000
+typedef struct node* ntp;
+struct nodeE { int x, y; } e[MAX_N];
+struct node { ntp lc, rc; int s; } ua[MAX_M];
+ntp rt[MAX_N], ta;
+int test, n, m, nq;
+
+ntp ins(ntp v, int x, int y, int l = 1, int r = m)
+{
+    ntp now = ++ta; if (v) *now = *v; else now->lc = now->rc = NULL, now->s = 0; now->s += y;
+    if (l == r) return now;
+    int mid = (l + r) >> 1;
+    if (x <= mid) now->lc = ins(now->lc, x, y, l, mid);
+    else now->rc = ins(now->rc, x, y, mid + 1, r);
+    return now;
+}
+
+inline int S(ntp x) { return x ? x->s : 0; }
+int get(ntp v, int x, int l = 1, int r = m)
+{
+    if (!v) return 0;
+    if (l == r) return v->s;
+    int mid = (l + r) >> 1;
+    if (x <= mid) return get(v->lc, x, l, mid) + S(v->rc);
+    else return get(v->rc, x, mid + 1, r);
+}
+
+int main(void)
+{
+   // freopen ("input.txt", "r", stdin);
+   // freopen ("output.txt", "w", stdout);
+    scanf("%d", &test), LCT::mins[0] = oo;
+    while (test-- > 0)
+    {
+          scanf("%d%d%d", &n, &m, &nq), ta = ua, LCT::init(n);
+          REP1(i, n) LCT::ut[i] = i + n; LCT::sz = n;
+          REP1(i, m)
+          {
+              //REP1(j, n) printf ("%d %d[%d]\n", LCT::p[j], j, LCT::key[j]);
+              int x, y; scanf("%d%d", &x, &y), e[i] = (nodeE) { x, y };
+              if (x == y) { rt[i] = rt[i - 1]; continue; }
+              if (LCT::same(x, y))
+              {
+                // printf ("Same %d %d\n", x, y), fflush(stdout); 
+                 int t = LCT::getmin(x, y);
+             //    printf ("Same %d %d & Del %d\n", x, y, t), fflush(stdout); 
+                 LCT::cut(e[t].x, e[t].y), LCT::link(x, y, i);
+                 rt[i] = ins(ins(rt[i - 1], t, -1), i, 1);
+                // printf ("At %d INS %d DEL %d\n", i, i, t);
+              }
+              else
+              {
+              //    printf("Link %d %d\n", x, y), fflush(stdout);
+                  LCT::link(x, y, i);
+             //     printf("Link %d %d\n", x, y), fflush(stdout);
+                  rt[i] = ins(rt[i - 1], i, 1);
+               //  printf ("At %d INS %d\n", i, i);
+              }/*
+              if (i == 9)
+              {
+                 printf ("%d\n", LCT::getmin(5, 6));
+              }*/
+              
+             // fflush(stdout);
+          }
+          //fflush(stdout);
+          REP1(i, nq)
+          {
+              int x, y; scanf("%d%d", &x, &y);
+             // printf ("%d\n", );
+              printf ("%d\n", n - get(rt[y], x));
+          }
+          //fflush(stdout);
+    }
+    return 0;
+}

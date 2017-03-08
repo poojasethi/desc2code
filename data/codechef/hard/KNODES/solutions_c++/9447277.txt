@@ -1,0 +1,150 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+class Solution {
+private:
+	int n, k, t, m;
+	vector< vector<int> > Adj;
+	vector<int> dis;
+	vector<int> arrive, leave;
+	vector< vector<int> > LCA;
+
+	vector<int> vertices;
+
+	void readData();
+	void DFS(int u);
+	int findLCA(int u, int v);
+	void solveProb();
+	bool solveQuery();
+	void findCandD(int &closest, int &deepest);
+	void erasePath(int closest, int deepest, int &cnt);
+public:
+	Solution();
+};
+
+Solution::Solution() {
+	readData();
+	dis[0] = 0;
+	DFS(0);
+	solveProb();
+}
+
+void Solution::readData() {
+	scanf("%d", &n);
+	Adj.resize(n);
+	for(int u = 0; u < n; ++u)
+		Adj[u].clear();
+	for(int i = 0; i < n-1; ++i) {
+		int u, v;
+		scanf("%d %d", &u, &v);
+		Adj[u-1].push_back(v-1);
+		Adj[v-1].push_back(u-1);
+	}
+	dis.assign(n, -1);
+	arrive.assign(n, -1);
+	leave.assign(n, -1);
+	k = ceil(log(n)/log(2))+2;
+	LCA.assign(n, vector<int>(k+1, -1));
+	t = 0;
+}
+
+void Solution::DFS(int u) {
+	arrive[u] = ++t;
+	for(int i = 0, sz = Adj[u].size(); i < sz; ++i) {
+		if (arrive[Adj[u][i]] == -1) {
+			int v = Adj[u][i];
+			dis[v] = dis[u]+1;
+			LCA[v][0] = u;
+			for(int j = 1; j <= k; ++j)
+				if (LCA[v][j-1] >= 0)
+					LCA[v][j] = LCA[LCA[v][j-1]][j-1];
+			DFS(v);
+		}
+	}
+	leave[u] = t;
+}
+
+int Solution::findLCA(int u, int v) {
+	if (dis[u] < dis[v]) return findLCA(v, u);
+	int delta = dis[u]-dis[v], i = 0;
+	while (delta) {
+		if (delta&1) u = LCA[u][i];
+		delta >>= 1;
+		++i;
+	}
+	do {
+		if (u == v) return u;
+		if (LCA[u][0] == LCA[v][0]) return LCA[u][0];
+		for(i = k-1; i >= 0; --i) {
+			if (LCA[u][i] != LCA[v][i] && LCA[u][i+1] == LCA[v][i+1]) {
+				u = LCA[u][i];
+				v = LCA[v][i];
+				break;
+			}
+		}
+	} while (true);
+}
+
+void Solution::solveProb() {
+	int nQueries;
+	scanf("%d", &nQueries);
+	while (nQueries--) {
+		scanf("%d", &m);
+		vertices.resize(m);
+		for(int i = 0; i < m; ++i)
+			scanf("%d", &vertices[i]), --vertices[i];
+		if (solveQuery()) printf("Yes\n");
+		else printf("No\n");
+	}
+}
+
+void Solution::findCandD(int &closest, int &deepest) {
+	closest = deepest = -1;
+	for(int i = 0; i < m; ++i) if (vertices[i] >= 0)
+		if (closest < 0 || dis[closest] > dis[vertices[i]])
+			closest = vertices[i];
+	for(int i = 0; i < m; ++i) if (vertices[i] >= 0 && arrive[closest] <= arrive[vertices[i]] && leave[vertices[i]] <= leave[closest]) {
+		if (deepest < 0 || dis[deepest] < dis[vertices[i]])
+			deepest = vertices[i];
+	}
+}
+
+void Solution::erasePath(int closest, int deepest, int &cnt) {
+	for(int i = 0; i < m; ++i) if (vertices[i] >= 0) {
+		int u = vertices[i];
+		if (arrive[closest] <= arrive[u] 
+		&& arrive[u] <= arrive[deepest] 
+		&& leave[deepest] <= leave[u] 
+		&& leave[u] <= leave[closest]) {
+			vertices[i] = -1;
+			++cnt;
+		}
+	}
+}
+
+bool Solution::solveQuery() {
+	int cnt = 0;
+	
+	int deepest, closest;
+	findCandD(closest, deepest);
+	erasePath(closest, deepest, cnt);
+	
+	if (cnt == m) return true;
+
+	int deepest1, closest1;
+	findCandD(closest1, deepest1);
+	erasePath(closest1, deepest1, cnt);
+
+	if (cnt < m) return false;
+	int uu = findLCA(deepest, deepest1), vv = findLCA(closest, closest1);
+	return uu == vv;
+}
+
+int main() {
+	int nTests;
+	scanf("%d", &nTests);
+	while (nTests--)
+		Solution sol;
+	return 0;
+}

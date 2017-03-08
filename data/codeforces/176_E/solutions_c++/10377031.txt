@@ -1,0 +1,101 @@
+#include <bits/stdc++.h>
+#define fi first
+#define se second
+using namespace std;
+
+typedef long long lint;
+typedef pair < lint , lint > ii;
+
+const lint MAXN = 1e5+100;
+
+lint far[MAXN],ans,tmp;
+lint N,Q,bgn[MAXN],end[MAXN],ID[MAXN],dad[MAXN][21],depth[MAXN],cnt;
+vector < ii > way[MAXN];
+set < lint > sset;
+set < lint > :: iterator it,l,r;
+
+void dfs( lint node , lint path ){
+	
+	far[node] = path;
+	depth[node] = depth[dad[node][0]] + 1;
+	
+	bgn[node] = ++cnt;
+	ID[cnt] = node;
+	
+	for( lint i=1 ; 1<<i <= depth[node] ; i++ )
+		dad[node][i] = dad[dad[node][i-1]][i-1];
+	
+	for( lint i=0 ; i < (lint)way[node].size() ; i++ )
+		if( !bgn[way[node][i].fi] ){
+			dad[way[node][i].fi][0] = node;
+			dfs( way[node][i].fi , path + way[node][i].se );
+		}
+	
+	end[node] = cnt;
+}
+
+lint lca( lint a , lint b ){
+	
+	if( depth[a] < depth[b] )
+		swap( a , b );
+	
+	for( lint i=20 ; i > -1 ; i-- )
+		if( depth[dad[a][i]] >= depth[b] )
+			a = dad[a][i];
+	
+	if( a == b )
+		return a;
+	
+	for( lint i=20 ; i > -1 ; i-- )
+		if( dad[a][i] != dad[b][i] )
+			a = dad[a][i] , b = dad[b][i];
+	
+	a = dad[a][0];
+	
+	return a;
+}
+
+int main(){
+	
+	scanf("%I64d",&N);
+	
+	for( lint i=1,a,b,c ; i < N ; i++ ){
+		scanf("%I64d%I64d%I64d",&a,&b,&c);
+		way[a].push_back( ii( b , c ) );
+		way[b].push_back( ii( a , c ) );
+	}
+	
+	depth[0] = -1;
+	
+	dfs( 1 , 0 );
+	
+	scanf("%I64d",&Q);
+	
+	char type;
+	for( lint i=1,x,a,b ; i <= Q ; i++ ){
+		scanf(" %c",&type);
+		if( type == '?' )
+			printf("%I64d\n",ans);
+		else{
+			scanf("%I64d",&x);
+			it = sset.insert( bgn[x] ).fi;
+			l = r = it;
+			
+			if( l-- == sset.begin() )
+				l = --sset.end();
+			if( ++r == sset.end() )
+				r = sset.begin();
+			
+			a = ID[*l] , b = ID[*r];
+			
+			tmp = far[x] - far[lca( a , x )] - far[lca( b , x )] + far[lca( a , b )];
+			
+			if( type == '+' )
+				ans += tmp;
+			else
+				ans -= tmp , sset.erase( bgn[x] );
+		}
+	}
+	
+	return 0;
+}

@@ -1,0 +1,216 @@
+
+#include <vector>
+#include <iostream>
+#include<cstdio>
+#include<cmath>
+#include<algorithm>
+#include<string.h>
+#include<queue>
+#include <set>
+#include<map>
+#include<string>
+
+using namespace std;
+template <class T> void show(T a, int n) { for (int i = 0; i < n; ++i) cout << a[i] << ' '; cout << endl; }
+template <class T> void show(T a, int r, int l) { for (int i = 0; i < r; ++i) show(a[i], l); cout << endl; }
+#define max(a, b) (a > b?a:b)
+#define min(a, b) (a < b?a:b)
+
+#define ms(a, v)    memset(a, v, sizeof(a))
+#define pb push_back
+#define mp make_pair
+#define pii pair<int, int>
+
+typedef long long LL;
+
+const int N = 128;
+const int M = 1440;
+const int oo = 10000 * 10000 * 10;
+
+int m, n, dn;
+map<string, int> lis;
+bool use[M] = {0};
+int unext[M + 10][M + 10];
+int lef;
+int dp[N][M * 32];
+bool take[N][M * 32];
+
+string h_s[N];
+int h_t[N];
+int h_c[N];
+int st[N];
+
+bool cmp(int i, int j)
+{
+    return h_t[i] < h_t[j];
+}
+
+int go(int i, int ti) //next time can use
+{
+    i = st[i];
+    int need = lis[ h_s[i] ]; 
+    int di = ti + (need - 1) / lef * M;
+
+    need -= (need - 1) / lef * lef;
+
+    di += unext[di % M][need];
+
+    return di;
+}
+
+int cal(int dex, int t)
+{
+    int i, j, k;
+    if( t >= dn * M )
+        return 0;
+    if( dex >= n )
+        return 0;
+    int &ret = dp[dex][t];
+    if( ret != -1 )
+        return ret;
+    ret = 0;
+    if( use[t % M] )
+    {
+        ret = cal(dex, t + 1);
+        return ret;
+    }
+    ret = cal(dex + 1, t);
+    if( lis.count( h_s [ st[dex] ] ) == 0 )
+        return ret;
+    int dt = go(dex, t);
+    if( dt < h_t[ st[dex] ] )
+    {
+        int tv = h_c[ st[dex] ] + cal(dex + 1, dt + 1);
+        if( tv > ret )
+        {
+            ret = tv;
+            take[dex][t] = true;
+        }
+    }
+    return ret;
+}
+
+vector<int> s_d;
+vector<int> s_s;
+vector<int> s_t;
+void print(int dex, int t)
+{
+    if( t >= dn * M || dex >= n )
+        return ;
+    int i, j;
+
+    if( take[dex][t] )
+    {
+        s_d.push_back(dex);
+        s_s.push_back(t);
+        int dt = go(dex, t);
+        s_t.push_back(dt);
+
+        print(dex + 1, dt + 1);
+    }
+    else if( use[t % M] )
+        print(dex, t + 1);
+    else
+        print(dex + 1, t);
+}
+
+void solve()
+{
+    int i, j, k;
+    ms(take, 0);
+    ms(dp, -1);
+    int ans = cal(0, 0);
+    print(0, 0);
+    printf("%d\n", ans);
+    printf("%d\n", s_d.size());
+    for(i = 0; i < s_d.size();++i)
+    {
+        printf("%d ", st[ s_d[i] ] + 1);
+        printf("%d %02d:%02d ", s_s[i] / M + 1, (s_s[i] % M) / 60, s_s[i] % 60);
+        printf("%d %02d:%02d\n", s_t[i] / M + 1, (s_t[i] % M) / 60, s_t[i] % 60);
+    }
+    
+}
+
+int main()
+{
+//        freopen("in", "r", stdin);
+//        freopen("out1","w",stdout); 
+    int i, j, cas = 0;
+    
+    scanf("%d %d %d", &m, &n, &dn);
+    vector<string> name;
+    for(i = 0; i < m;++i)
+    {
+        string s;
+        cin>>s;
+        name.pb(s);
+    }
+    for(i = 0; i < m;++i)
+    {
+        int v;
+        scanf("%d", &v);
+        lis[ name[i] ] = v;
+    }
+    lef = 1440;
+    for(i = 0; i < 4;++i)
+    {
+        int h1, m1, h2, m2;
+        scanf("%d:%d-%d:%d\n", &h1, &m1, &h2, &m2);
+        int s = h1 * 60 + m1;
+        int t = h2 * 60 + m2;
+        for(j = s;j != t;j = (j + 1) % 1440)
+        {
+            use[j] = true;
+            --lef;
+        }
+        use[j] = true;
+        --lef;
+    }
+    
+    for(i = 0; i < M;++i)
+    {
+        if( use[i] )
+            continue;
+//        unext[i][0] = i;
+        unext[i][1] = i;
+        for(j = 2;j <= lef;++j)
+        {
+            int k = unext[i][j - 1] + 1;
+            if(k == M )
+                k = 0;
+            while(use[k])
+            {
+                ++k;
+                if( k == M )
+                    k = 0;
+            }
+            unext[i][j] = k;
+        }
+    }
+    for(i = 0; i < M;++i)
+    {
+        if( use[i] )
+            continue;
+        for(j = 1;j <= lef;++j)
+        {
+            int k = unext[i][j];
+            if( k >= i )
+                unext[i][j] = k - i;
+            else
+                unext[i][j] = M - i + k;
+        }
+    }
+    for(i = 0; i < n;++i)
+    {
+        cin>>h_s[i];
+        int a, b, d;
+        scanf(" %d %d:%d %d\n", &d, &a, &b, &h_c[i]);
+        h_t[i] = d * M - M + a * 60 + b;
+        st[i] = i;
+    }
+    sort(st, st + n, cmp);
+    solve();
+    return 0;
+}
+

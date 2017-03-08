@@ -1,0 +1,112 @@
+#include <iostream>
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+#define l(x) ch[x][0]
+#define r(x) ch[x][1]
+#define rep(i,x,y) for (int (i) = (x);(i) <= (y); (i)++)
+using namespace std;
+
+typedef long long LL;
+
+const int maxn = 10000000;
+
+int top1 = 0,ch[maxn][2];
+int N,M,root,u,v;
+bool flag;
+
+LL a,b,Exi[maxn],Maxa[maxn],Maxb[maxn];
+LL Suma[maxn],Sumb[maxn],ans;
+
+
+void insertSum(int &x,int left,int right,int l,int r,LL a,LL b) {
+    if (!x) { x = ++top1; Exi[x] = Suma[x] = Sumb[x] = 0; }
+    int mid = (left+right)>>1;
+    if (l <= left && right <= r) {
+        Suma[x] += a+b*(left-l); Sumb[x] += b;
+        return ;
+    }
+    if (l <= mid) insertSum(l(x),left,mid,l,r,a,b);
+    if (mid+1 <= r) insertSum(r(x),mid+1,right,l,r,a,b);
+}
+
+void getSum(int x,int left,int right,int d) {
+    if (!x) return ;
+    ans += Suma[x]+Sumb[x]*(d-left);
+    if (left == right) return;
+    int mid = (left+right)>>1;
+    if (d <= mid) getSum(l(x),left,mid,d);
+    else getSum(r(x),mid+1,right,d);
+
+}
+
+
+void insertMax(int &x,int left,int right,int l,int r,LL a,LL b) {
+    if (!x) { x = ++top1; Exi[x] = Suma[x] = Sumb[x] = 0; ; }
+    int mid = (left+right)>>1; double ri;
+    if (l <= left && right <= r) {
+        if (!Exi[x]) {
+            Exi[x] = 1; Maxa[x] = a+b*(left-l); Maxb[x] = b;
+            return ;
+        }
+        if (Maxa[x] >= a+b*(left-l) && Maxa[x]+Maxb[x]*(right-left) >= a+b*(right-l))
+                return ;
+        if (Maxa[x] <= a+b*(left-l) && Maxa[x]+Maxb[x]*(right-left) <= a+b*(right-l))
+        { Maxa[x] = a+b*(left-l); Maxb[x] = b; return ; }
+        ri = (Maxa[x]-(a+b*(left-l))-Maxb[x]*left+b*left)*1.0/(b-Maxb[x]);
+        if (Maxa[x] >= a+b*(left-l)) {
+            if (ri > mid) insertMax(r(x),mid+1,right,l,r,a,b);
+            else
+            { insertMax(l(x),left,mid,left,right,Maxa[x],Maxb[x]);
+              Maxa[x] = a+b*(left-l); Maxb[x] = b;
+            }
+        }else {
+            if (ri > mid) {
+                insertMax(r(x),mid+1,right,left,right,Maxa[x],Maxb[x]);
+                Maxa[x] = a+b*(left-l); Maxb[x] = b;
+            }else insertMax(l(x),left,mid,l,r,a,b);
+        }
+        return;
+    }
+    if (l <= mid) insertMax(l(x),left,mid,l,r,a,b);
+    if (mid+1 <= r) insertMax(r(x),mid+1,right,l,r,a,b);
+}
+
+void getMax(int x,int left,int right,int d) {
+    if (x == 0) { return ; }
+    if (Exi[x]) {
+        if (!flag) ans = Maxa[x]+Maxb[x]*(d-left);
+        else
+        ans = max(ans,Maxa[x]+Maxb[x]*(d-left));
+        flag = true;
+    }
+    if (left == right)
+        return ;
+    int mid = (left+right)>>1;
+    if (d <= mid) getMax(l(x),left,mid,d);
+    else getMax(r(x),mid+1,right,d);
+}
+
+int main() {
+    scanf("%d%d",&N,&M);
+    int tag; root = 0;
+    rep(i,1,M) {
+        scanf("%d",&tag);
+        if (tag == 1) {
+            scanf("%d%d%lld%lld",&u,&v,&a,&b);
+            insertMax(root,1,N,u,v,b,a);
+        }else if (tag == 2) {
+            scanf("%d%d%lld%lld",&u,&v,&a,&b);
+            insertSum(root,1,N,u,v,b,a);
+        }else {
+            scanf("%d",&u);
+            ans = 0; flag = false;
+            getMax(root,1,N,u);
+            getSum(root,1,N,u);
+            if (!flag) printf("NA\n");
+            else printf("%lld\n",ans);
+        }
+    }
+    return 0;
+}

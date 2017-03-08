@@ -1,0 +1,165 @@
+#include <stdio.h>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define For(i,a,b)	for(register int i=a,lim=b;i<=lim;i++)
+#define Rep(i,a,b)	for(register int i=a,lim=b;i>=lim;i--)
+
+#define n  8
+#define m  200005
+#define INF	(1<<30)
+
+int		N,now[n],A[n][n];
+int		Num[n],ID[n][n][m];
+char	s[n];
+
+int		rev[m],AnsX[m],AnsY[m];
+
+#undef	n
+#undef	m
+
+int		Len(int x){
+		int ret=0;
+		for (;x;x/=10)	ret++;
+		return	ret;
+}
+
+namespace	Flow{
+		#define	n	105
+		#define m	1005
+
+		int		C,S,T,DexL[9],DexR[9][9];
+
+		int		D=1,Q[n],Dis[n],st[n];
+		struct	Lin{int v,f,next;}E[m];
+
+		void	Link(int u,int v,int f)	{
+			E[++D]=(Lin){v,f,st[u]};	st[u]=D;
+			E[++D]=(Lin){u,0,st[v]};	st[v]=D;
+		}
+
+		bool	BFS(){
+			For(i,1,C)	Dis[i]=-1;
+			Dis[Q[1]=S]=0;
+
+			for	(int l=0,r=1;l<r;){
+				int u=Q[++l];
+				for	(int i=st[u],v;i;i=E[i].next)
+				if	(E[i].f&&Dis[v=E[i].v]==-1){
+					Dis[Q[++r]=v]=Dis[u]+1;
+					if	(v==T)	return	1;
+				}
+			}
+			return	0;
+		}
+
+		int		DFS(int u,int Lim){
+			if	(u==T)	return	Lim;
+			int ret=0;
+			
+			for	(int i=st[u],v;i;i=E[i].next)
+			if	(E[i].f&&Dis[u]+1==Dis[v=E[i].v]){
+				int t=DFS(v,min(E[i].f,Lim-ret));
+
+				if	(t)	{
+					E[i].f-=t;	E[i^1].f+=t;	ret+=t;
+					if	(ret==Lim)	break;
+				}	else	Dis[v]=-1;
+			}
+			
+			return	ret;
+		}
+		
+		bool	Main()	{
+			For(i,1,6)	if  (Num[i])	DexL[i]=++C;
+			For(i,1,6)	For(j,1,6)	if  (*ID[i][j])	DexR[i][j]=++C;
+			S=++C;	T=++C;
+			
+			For(i,1,6)	if  (DexL[i])	Link(S,DexL[i],Num[i]);
+			For(i,1,6)	For(j,1,6)	if  (DexR[i][j])	Link(DexR[i][j],T,*ID[i][j]);
+			
+			For(i,1,6)	For(j,1,6)
+			if  (DexR[i][j]) {
+				if  (!DexL[i]||!DexL[j])	return	0;
+				Link(DexL[i],DexR[i][j],N);
+				Link(DexL[j],DexR[i][j],N);
+			}
+			
+			int ret=0;
+			for	(;BFS();)	ret+=DFS(S,INF);
+			
+			if  (ret!=N-1)	return	0;
+			
+			For(i,1,6)	For(j,1,6)	For(k,1,6){
+				int u=DexL[k],v=DexR[i][j];
+				if  (!u||!v)	continue;
+				
+				for (int t=st[u];t;t=E[t].next)
+					if  (E[t].v==v){
+						if  (k==i)	A[j][i]+=N-E[t].f;
+							else	A[i][j]+=N-E[t].f;
+					}
+			}
+			return	1;
+		}
+
+		#undef	n
+		#undef	m
+};
+
+int		Q[200005];
+
+int		main(){
+	//	freopen("tree.in","r",stdin);
+	//	freopen("tree.out","w",stdout);
+
+		scanf("%d",&N);
+		For(i,2,N)	Num[Len(i)]++;
+
+		for (int i=1,u,v;i<N;i++){
+			scanf("%s",s);	u=strlen(s);
+			scanf("%s",s);	v=strlen(s);
+			if  (u>v)	swap(u,v),rev[i]=1;
+			ID[u][v][++*ID[u][v]]=i;
+		}
+		
+		if  (!Flow::Main())	return	puts("-1"),0;
+	/*	
+		For(i,1,6)	For(j,1,6)
+			if  (A[i][j])	printf("%d %d %d\n",i,j,A[i][j]);
+		return	0;
+	*/	
+		now[1]=1;
+		For(i,2,6)	now[i]=now[i-1]*10;
+		
+		Q[1]=1;	now[1]++;
+		for (int l=0,r=1;l<r;)	{
+			int u=Q[++l],x=Len(u);
+	/*		
+			printf("%d\n",x);
+			For(y,1,6)	printf("%d ",A[x][y]);
+			puts("");
+	*/		
+	//		for (int Tim=1;Tim<=200000000;Tim++);
+
+			For(y,1,6)	for (;A[x][y];)	{
+				int v=now[y]++;	A[x][y]--;	Q[++r]=v;
+				
+				int t=ID[min(x,y)][max(x,y)][*ID[min(x,y)][max(x,y)]];
+				AnsX[t]=min(u,v);
+				AnsY[t]=max(u,v);
+				--*ID[min(x,y)][max(x,y)];
+			}
+		}
+		
+	//	puts("HHH");
+		
+		For(i,1,6)	For(j,1,6)
+			if  (*ID[i][j])	return	puts("-1"),0;
+		
+		For(i,1,N-1)	{
+			if  (rev[i])	swap(AnsX[i],AnsY[i]);
+			printf("%d %d\n",AnsX[i],AnsY[i]);
+		}
+}

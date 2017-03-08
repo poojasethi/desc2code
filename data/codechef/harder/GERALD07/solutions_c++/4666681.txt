@@ -1,0 +1,227 @@
+/* ***********************************************
+Author        :kuangbin
+Created Time  :2014/8/30 7:41:04
+File Name     :E:\2014ACM\专题学习\数据结构\LCT\CC_GERALD07.cpp
+************************************************ */
+
+#include <stdio.h>
+#include <string.h>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <queue>
+#include <set>
+#include <map>
+#include <string>
+#include <math.h>
+#include <stdlib.h>
+#include <time.h>
+using namespace std;
+const int MAXN = 200010;
+const int INF = 0x3f3f3f3f;
+struct Node *null;
+struct Node{
+	Node *fa,*ch[2];
+	int Min,val;
+	int rev;//旋转标记
+	inline void clear(){
+		fa = ch[0] = ch[1] = null;
+		rev = 0;
+	}
+	inline void push_up(){
+		Min = min(val,min(ch[0]->Min,ch[1]->Min));
+	}
+	inline void setc(Node *p,int d){
+		ch[d] = p;
+		p->fa = this;
+	}
+	inline bool d(){
+		return fa->ch[1] == this;
+	}
+	inline bool isroot(){
+		return fa == null || fa->ch[0] != this && fa->ch[1] != this;
+	}
+	//翻转
+	inline void flip(){
+		if(this == null)return;
+		swap(ch[0],ch[1]);
+		rev ^= 1;
+	}
+	inline void push_down(){
+		if(rev){
+			ch[0]->flip(); ch[1]->flip(); rev = 0;
+		}
+	}
+	//直接标记下放
+	inline void go(){
+		if(!isroot())fa->go();
+		push_down();
+	}
+	inline void rot(){
+		Node *f = fa, *ff = fa->fa;
+		int c = d(), cc = fa->d();
+		f->setc(ch[!c],c);
+		this->setc(f,!c);
+		if(ff->ch[cc] == f)ff->setc(this,cc);
+		else this->fa = ff;
+		f->push_up();
+	}
+	inline Node* splay(){
+		go();
+		while(!isroot()){
+			if(!fa->isroot())
+				d()==fa->d() ? fa->rot() : rot();
+			rot();
+		}
+		push_up();
+		return this;
+	}
+	inline Node* access(){
+		for(Node *p = this,*q = null; p != null; q = p, p = p->fa){
+			p->splay()->setc(q,1);
+			p->push_up();
+		}
+		return splay();
+	}
+	//找该点的根
+	inline Node* find_root(){
+		Node *x;
+		for(x = access(); x->push_down(), x->ch[0] != null; x = x->ch[0]);
+		return x;
+	}
+	//变为树根(换根操作)
+	void make_root(){
+		access()->flip();
+	}
+	//切断该点和父亲结点的边
+	void cut(){
+		access();
+		ch[0]->fa = null;
+		ch[0] = null;
+		push_up();
+	}
+	//切断该点以x为根时,该点和父亲结点的根
+	//要求这个点和x在同一颗树而且不能相同
+	//x变为所在树的树根
+	void cut(Node* x){
+		if(this == x || find_root() != x->find_root())
+			puts("-1");
+		else {
+			x->make_root();
+			cut();
+		}
+	}
+	//该点连接到x
+	//假如是有虚边信息的，需要先x->access()再连接
+	void link(Node *x){
+		if(find_root() == x->find_root())
+			puts("-1");
+		else {
+			make_root(); fa = x;
+		}
+	}
+};
+//查询x->y路径上的点权最小值
+inline int ask(Node *x,Node *y){
+	x->access();
+	for(x = null; y != null; x = y, y = y->fa){
+		y->splay();
+		if(y->fa == null)return min(y->val,min(y->ch[1]->Min,x->Min));
+		y->setc(x,1);
+		y->push_up();
+	}
+}
+struct BIT{
+	int n;
+	int c[MAXN];
+	void init(int _n){
+		n = _n;
+		memset(c,0,sizeof(c));
+	}
+	int lowbit(int x){
+		return x&(-x);
+	}
+	int sum(int i){
+		int s = 0;
+		while(i > 0){
+			s += c[i];
+			i -= lowbit(i);
+		}
+		return s;
+	}
+	void add(int i,int val){
+		while(i <= n){
+			c[i] += val;
+			i += lowbit(i);
+		}
+	}
+}bt;
+struct Edge{
+	int u,v;
+}edge[MAXN];
+Node pool[MAXN*2],*tail;
+Node *node[MAXN],*edge_node[MAXN];
+struct QUERY{
+	int l,r;
+	int index;
+	bool operator <(const QUERY &b)const{
+		return r < b.r;
+	}
+}query[MAXN];
+int ans[MAXN];
+int main()
+{
+    //freopen("in.txt","r",stdin);
+    //freopen("out.txt","w",stdout);
+    int T;
+	int n,m,Q;
+	scanf("%d",&T);
+	while(T--){
+		scanf("%d%d%d",&n,&m,&Q);
+		tail = pool;
+		null = tail++;
+		null->fa = null->ch[0] = null->ch[1] = null;
+		null->val = null->Min = INF;
+		for(int i = 1;i <= n;i++){
+			node[i] = tail++;
+			node[i]->clear();
+			node[i]->val = node[i]->Min = INF;
+		}
+		for(int i = 1;i <= m;i++){
+			edge_node[i] = tail++;
+			edge_node[i]->clear();
+			edge_node[i]->val = edge_node[i]->Min = i;
+			scanf("%d%d",&edge[i].u,&edge[i].v);
+		}
+		bt.init(m);
+		for(int i = 0;i < Q;i++){
+			scanf("%d%d",&query[i].l,&query[i].r);
+			query[i].index = i;
+		}
+		sort(query,query+Q);
+		int j = 1;
+		for(int i = 0;i < Q;i++){
+			while(j <= m && j <= query[i].r){
+				int u = edge[j].u;
+				int v = edge[j].v;
+				if(u == v){
+					j++;
+					continue;
+				}
+				if(node[u]->find_root() == node[v]->find_root()){
+					int id = ask(node[u],node[v]);
+					edge_node[id]->cut(node[edge[id].u]);
+					edge_node[id]->cut(node[edge[id].v]);
+					bt.add(id,-1);
+				}
+				edge_node[j]->link(node[edge[j].u]);
+				edge_node[j]->link(node[edge[j].v]);
+				bt.add(j,1);
+				j++;
+			}
+			ans[query[i].index] = n - (bt.sum(query[i].r) - bt.sum(query[i].l-1));
+		}
+		for(int i = 0;i < Q;i++)printf("%d\n",ans[i]);
+	}
+    return 0;
+}

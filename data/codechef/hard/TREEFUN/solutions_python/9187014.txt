@@ -1,0 +1,206 @@
+#include <cstdio>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <algorithm>
+
+#define MAX 50001
+#define LOGN 20
+
+using namespace std;
+
+int t, n, m, k;
+
+struct przedzial
+{
+    int p, k;
+};
+
+vector< vector<int> > T(MAX);
+vector<int> odl(MAX), ojciec(MAX), nr(MAX);
+vector<przedzial> p(MAX);
+vector<int> pyt(MAX);
+int P[LOGN][MAX];
+
+bool children(int u, int v)
+{
+    if (nr[u] >= p[v].p && nr[u] <= p[v].k) return true;
+    else return false;
+}
+
+int lca(int u, int v)
+{
+    if (children(u, v)) return v;
+    if (children(v, u)) return u;
+    int i = u, j = LOGN - 1;
+    while (j >= 0)
+    {
+        if (children(v, P[j][i])) j--;
+        else i = P[j][i];
+	}
+	return P[0][i];
+}
+
+void dfs()
+{
+    ojciec[1] = -1;
+    stack<int> S;
+    vector<bool> odw(MAX, false);
+    int akt, akt_nr = 0;
+    odw[1] = true;
+    S.push(1);
+    while (!S.empty())
+    {
+        akt = S.top();
+        S.pop();
+        nr[akt] = akt_nr;
+        ++akt_nr;
+        for (int i = 0; i < T[akt].size(); ++i)
+        {
+            if (!odw[T[akt][i]])
+            {
+                odw[T[akt][i]] = true;
+                S.push(T[akt][i]);
+                ojciec[T[akt][i]] = akt;
+                P[0][T[akt][i]] = akt;
+            }
+        }
+    }
+    P[0][1] = 1;
+    for (int i = 1; i < LOGN; ++i) for (int j = 1; j < MAX; ++j) P[i][j] = P[i - 1][P[i - 1][j]];
+}
+
+void bfs()
+{
+    odl[1] = 0;
+    queue<int> Q;
+    vector<bool> odw(MAX, false);
+    int akt;
+    odw[1] = true;
+    Q.push(1);
+    while (!Q.empty())
+    {
+        akt = Q.front();
+        Q.pop();
+        for (int i = 0; i < T[akt].size(); ++i)
+        {
+            if (!odw[T[akt][i]])
+            {
+                odw[T[akt][i]] = true;
+                Q.push(T[akt][i]);
+                odl[T[akt][i]] = odl[akt] + 1;
+            }
+        }
+    }
+}
+
+void Przedzialy()
+{
+    vector<int> st_we(MAX);
+    st_we[1] = T[1].size();
+    for (int i = 2; i < n + 1; ++i) st_we[i] = T[i].size() - 1;
+    vector<bool> odw(MAX, false);
+    int akt;
+    for (int i = 1; i < n + 1; ++i)
+    {
+        if (!odw[i] && st_we[i] == 0)
+        {
+            akt = i;
+            while (st_we[akt] == 0)
+            {
+                odw[akt] = true;
+                if (T[akt].size() == 1 && akt != 1) p[akt] = {nr[akt], nr[akt]};
+                else
+                {
+                    int maxi = -1;
+                    for (int j = 0; j < T[akt].size(); ++j) if (T[akt][j] != ojciec[akt]) maxi = max(maxi, p[T[akt][j]].k);
+                    p[akt] = {nr[akt], maxi};
+                }
+                if (akt != 1)
+                {
+                    akt = ojciec[akt];
+                    --st_we[akt];
+                }
+                else break;
+            }
+        }
+    }
+}
+
+bool Spr(int x)
+{
+    for (int i = 0; i < k; ++i) if (pyt[i] == x) return false;
+    vector<int> podd;
+    for (int i = 0; i < k; ++i)
+    {
+        if (nr[pyt[i]] >= p[x].p && nr[pyt[i]] <= p[x].k)
+        {
+            int le, pr, s, r = -1;
+            if (x != 1) le = 1;
+            else le = 0;
+            pr = T[x].size() - 1;
+            while (le <= pr)
+            {
+                s = (le + pr) / 2;
+                if (nr[pyt[i]] >= p[T[x][s]].p && nr[pyt[i]] <= p[T[x][s]].k)
+                {
+                    r = s;
+                    break;
+                }
+                if (nr[pyt[i]] > p[T[x][s]].p && nr[pyt[i]] > p[T[x][s]].k) le = s + 1;
+                else pr = s - 1;
+            }
+            if (r != -1) podd.push_back(T[x][r]);
+        }
+        else podd.push_back(ojciec[x]);
+    }
+    sort(podd.begin(), podd.end());
+    for (int i = 0; i < podd.size() - 1; ++i) if (podd[i] == podd[i + 1]) return false;
+    return true;
+}
+
+int main()
+{
+    scanf("%d", &t);
+    for (int i = 0; i < t; ++i)
+    {
+        scanf("%d %d", &n, &m);
+        int a, b;
+        for (int j = 0; j < n - 1; ++j)
+        {
+            scanf("%d %d", &a, &b);
+            T[a].push_back(b);
+            T[b].push_back(a);
+        }
+        dfs();
+        bfs();
+        Przedzialy();
+        for (int j = 1; j < n + 1; ++j)
+        {
+            vector<int> wie;
+            for (int k = 0; k < T[j].size(); ++k) if (T[j][k] != ojciec[j]) wie.push_back(T[j][k]);
+            reverse(wie.begin(), wie.end());
+            if (j != 1)
+            {
+                T[j][0] = ojciec[j];
+                for (int k = 0; k < wie.size(); ++k) T[j][k + 1] = wie[k];
+            }
+            else for (int k = 0; k < wie.size(); ++k) T[j][k] = wie[k];
+        }
+        for (int j = 0; j < m; ++j)
+        {
+            scanf("%d", &k);
+            for (int l = 0; l < k; ++l) scanf("%d", &pyt[l]);
+            int odp;
+            if (k == 2) odp = odl[pyt[0]] + odl[pyt[1]] - 2 * odl[lca(pyt[0], pyt[1])] - 1;
+            else
+            {
+                if (Spr(lca(pyt[0], pyt[1])) || Spr(lca(pyt[1], pyt[2])) || Spr(lca(pyt[0], pyt[2]))) odp = 1;
+                else odp = 0;
+            }
+            printf("%d\n", odp);
+        }
+        for (int j = 1; j < n + 1; ++j) T[j].clear();
+    }
+    return 0;
+}

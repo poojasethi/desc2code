@@ -1,0 +1,192 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <deque>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <limits>
+#include <string>
+#include <cassert>
+
+using namespace std;
+typedef long long LL;
+typedef pair<int,int> pii;
+typedef pair<LL,LL> pll;
+
+#define forup(i,a,b) for(int i=a; i<b; ++i)
+#define fordn(i,a,b) for(int i=a; i>b; --i)
+#define rep(i,a) for(int i=0; i<a; ++i)
+
+#define dforup(i,a,b) for(i=a; i<b; ++i)
+#define dfordn(i,a,b) for(i=a; i>b; --i)
+#define drep(i,a) for(i=0; i<a; ++i)
+
+#define slenn(s,n) for(n=0; s[n]!=13 and s[n]!=0; ++n);s[n]=0
+
+#define gi(x) scanf("%d",&x)
+#define gl(x) cin>>x
+#define gd(x) scanf("%lf",&x)
+#define gs(x) scanf("%s",x)
+
+#define pis(x) printf("%d ",x)
+#define pin(x) printf("%d\n",x)
+#define pls(x) cout<<x<<" "
+#define pln(x) cout<<x<<"\n"
+#define pds(x) printf("%.12f ",x)
+#define pdn(x) printf("%.12f\n",x)
+#define pnl() printf("\n")
+
+#define fs first
+#define sc second
+
+#define pb push_back
+
+const int inv=1000000000;
+const int minv=-inv;
+
+struct point
+{
+	LL xc,yc;
+	point(){}
+	point(LL xc_, LL yc_){xc=xc_; yc=yc_;}
+};
+
+point operator +(const point &a, const point &b) {return point(a.xc+b.xc,a.yc+b.yc);} // Vector Addition
+point operator -(const point &a, const point &b) {return point(a.xc-b.xc,a.yc-b.yc);} // Vector Subtraction
+LL operator *(const point &a, const point &b) {return (a.xc*b.xc+a.yc*b.yc);} // Dot Product
+LL operator ^(const point &a, const point &b) {return (a.xc*b.yc-a.yc*b.xc);} // Cross Product : Right-Hand Rule
+
+bool leftturn(point X1, point X2, point X3) { return (((X2-X1)^(X3-X2))>0ll); }
+bool straight(point X1, point X2, point X3) { return (((X2-X1)^(X3-X2))==0ll); }
+
+LL sqdist(point a, point b) { return (a.xc-b.xc)*(a.xc-b.xc)+(a.yc-b.yc)*(a.yc-b.yc); }
+
+point pfix;
+struct point_tan_cmp : public binary_function <point,point,bool>
+{
+	bool operator() (const point &a, const point &b) { return ((a.yc-pfix.yc)*(b.xc-pfix.xc)>(b.yc-pfix.yc)*(a.xc-pfix.xc)); }
+};
+// X: all points should be distinct
+// X: order of points in array will be changed
+// X: triples of points may be collinear
+// X: there should exist three non-collinear points
+// cX: points will be sorted in clockwise order (all turn will be right turns)
+void ConvexHull(point X[], int N, point cX[], int &cXsz)
+{	
+	int fix=0;
+	for(int i = 1; i<N; i++){
+		if(X[i].xc<X[fix].xc or (X[i].xc==X[fix].xc and X[i].yc>X[fix].yc))
+			fix=i;
+	}
+	swap(X[0],X[fix]);
+	pfix=X[0];
+	
+	sort(X+1,X+N,point_tan_cmp());
+	X[N]=X[0];
+	
+	cXsz=0;
+	cX[cXsz++]=X[0];
+	cX[cXsz++]=X[1];
+	forup(i,2,N+1)
+	{
+		while(cXsz>=2 and (leftturn(cX[cXsz-2],cX[cXsz-1],X[i]) or straight(cX[cXsz-2],cX[cXsz-1],X[i])))
+			--cXsz;
+		if(i==N) break;
+		cX[cXsz++]=X[i];
+	}
+}
+
+const int max_n=100010;
+
+int T;
+int n;
+point P[max_n];
+point cP[max_n]; int cPsz;
+LL res;
+
+int main()
+{
+	gi(T);
+
+	rep(z,T)
+	{
+		gi(n);
+
+		int tx,ty;
+		rep(i,n)
+		{
+			gi(tx); gi(ty);
+			P[i]=point((LL(tx)),(LL(ty)));
+		}
+
+		if(n==1)
+		{
+			pin(0);
+			continue;
+		}
+		
+		pll minP,maxP;
+		minP=min(pll(P[0].xc,P[0].yc),pll(P[1].xc,P[1].yc));
+		maxP=max(pll(P[0].xc,P[0].yc),pll(P[1].xc,P[1].yc));
+		bool collinear=true;
+		forup(i,2,n)
+		{
+			minP=min(minP,pll(P[i].xc,P[i].yc));
+			maxP=max(maxP,pll(P[i].xc,P[i].yc));
+			//cout<<"@ "<<P[0].xc<<" "<<P[0].yc<<" :: "<<P[1].xc<<" "<<P[1].yc<<" :: "<<P[i].xc<<" "<<P[i].yc<<"\n";
+			if(not straight(P[0],P[1],P[i]))
+			{
+				collinear=false;
+				break;
+			}
+		}
+
+		if(collinear)
+		{
+			pln(sqdist(point(minP.fs,minP.sc),point(maxP.fs,maxP.sc)));
+			continue;
+		}
+
+		ConvexHull(P,n,cP,cPsz);
+
+		/*cout<<"n:"<<n<<"\n";
+		rep(i,n)
+			cout<<i<<" :: "<<cP[i].xc<<" "<<cP[i].yc<<"\n";*/
+
+		int a=0,b=0;
+		forup(i,1,cPsz)
+		{
+			if(cP[i].yc>cP[a].yc)
+				a=i;
+			if(cP[i].yc<cP[b].yc)
+				b=i;
+		}
+
+		res=sqdist(cP[a],cP[b]);
+		rep(zz,2*n)
+		{
+			if(leftturn(point(0ll,0ll),(cP[a]-cP[(a+1)%cPsz]),(cP[(b+1)%cPsz]-cP[b])))
+				b=(b+1)%cPsz;
+			else
+				a=(a+1)%cPsz;
+			res=max(res,sqdist(cP[a],cP[b]));
+		}
+
+		pln(res);
+	}
+	
+	return 0;
+}

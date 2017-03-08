@@ -1,0 +1,135 @@
+
+#include <algorithm>
+#include <cstring>
+#include <cstdio>
+
+using namespace std;
+
+const int base = 13331;
+
+struct Operation {
+    int t, v;
+    char c;
+} op[100000];
+
+int s1[100002], s2[100002], sa[100001], rank[100001], up[100001];
+int depth1[100001], depth2[100001], pre[100001][18];
+long long hash[100001], pow[18];
+pair<int, int> range[100001];
+
+bool cmp(int a, int b) {
+    int lg = 0;
+    while (1 << lg <= depth2[a] && 1 << lg <= depth2[b]) lg ++;
+    for (int i = lg - 1; i >= 0; i --) {
+        long long t1 = hash[a] - hash[pre[a][i]] * pow[i];
+        long long t2 = hash[b] - hash[pre[b][i]] * pow[i];
+        if (t1 == t2) {
+            a = pre[a][i];
+            b = pre[b][i];
+        }
+    }
+    return up[a] < up[b];
+}
+
+int goUp(int x, int step) {
+    for (int i = 0; 1 << i <= step; i ++)
+        if (step & 1 << i) x = pre[x][i];
+    return x;
+}
+
+int main() {
+    //freopen("input.txt", "r", stdin);
+    //freopen("output.txt", "w", stdout);
+    
+    int n;
+    scanf("%d", &n);
+    for (int i = 0; i < n; i ++) {
+        int x, y;
+        char tmp[11];
+        scanf("%d%d%s", &x, &y, tmp);
+        op[i].t = x;
+        op[i].v = y - 1;
+        op[i].c = tmp[0];
+    }
+    
+    hash[0] = 0;
+    up[0] = 0;
+    depth1[0] = 0;
+    memset(pre, -1, sizeof(pre));
+    int tot = 1;
+    for (int i = 0; i < n; i ++)
+        if (op[i].t == 2) {
+            depth2[tot] = depth2[op[i].v] + 1;
+            hash[tot] = hash[op[i].v] * base + op[i].c;
+            up[tot] = op[i].c;
+            pre[tot][0] = op[i].v;
+            for (int j = 1; 1 << j <= depth2[tot]; j ++)
+                pre[tot][j] = pre[pre[tot][j - 1]][j - 1];
+            tot ++;
+        }
+    
+    pow[0] = base;
+    for (int i = 1; 1 << i <= tot; i ++) pow[i] = pow[i - 1] * pow[i - 1];
+    for (int i = 0; i < tot; i ++) sa[i] = i;
+    sort(sa, sa + tot, cmp);
+    for (int i = 0; i < tot; i ++) rank[sa[i]] = i;
+    
+    memset(s1, 0, sizeof(s1));
+    memset(s2, 0, sizeof(s2));
+    long long ans = 0;
+    int cur1 = 1, cur2 = 1;
+    range[0] = make_pair(0, tot);
+    depth1[0] = 0;
+    for (int i = 0; i < n; i ++) {
+        if (op[i].t == 1) {
+            depth1[cur1] = depth1[op[i].v] + 1;
+            if (range[op[i].v].first != -1) {
+                int head, tail;
+                head = range[op[i].v].first;
+                tail = range[op[i].v].second - 1;
+                while (head <= tail) {
+                    int mid = (head + tail) / 2;
+                    if (up[goUp(sa[mid], depth1[op[i].v])] < op[i].c) {
+                        head = mid + 1;
+                    } else {
+                        tail = mid - 1;
+                    }
+                }
+                int l = head;
+                head = range[op[i].v].first;
+                tail = range[op[i].v].second - 1;
+                while (head <= tail) {
+                    int mid = (head + tail) / 2;
+                    if (up[goUp(sa[mid], depth1[op[i].v])] > op[i].c) {
+                        tail = mid - 1;
+                    } else {
+                        head = mid + 1;
+                    }
+                }
+                int r = tail + 1;
+                if (l >= r) {
+                    range[cur1] = make_pair(-1, -1);
+                } else {
+                    range[cur1] = make_pair(l, r);
+                    for (int j = r; j > 0; j -= j & -j) ans += s1[j];
+                    for (int j = l; j > 0; j -= j & -j) ans -= s1[j];
+                    for (int j = l + 1; j <= tot; j += j & -j) s2[j] ++;
+                    if (r < tot) {
+                        for (int j = r + 1; j <= tot; j += j & -j) s2[j] --;
+                    }
+                }
+            } else {
+                range[cur1] = make_pair(-1, -1);
+            }
+            cur1 ++;
+        } else {
+            int t = rank[cur2];
+            for (int j = t + 1; j <= tot; j += j & -j) s1[j] ++;
+            for (int j = t + 1; j > 0; j -= j & -j) ans += s2[j];
+            cur2 ++;
+        }
+        printf("%I64d\n", ans + cur2);
+    }
+    
+    return 0;
+}

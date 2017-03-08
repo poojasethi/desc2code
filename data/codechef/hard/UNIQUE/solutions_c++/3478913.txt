@@ -1,0 +1,298 @@
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <iostream>
+using namespace std;
+
+#define MAXN 200000
+#define MAXLG 20
+#define INF 1000000009
+
+
+struct entry
+{
+    int nr[2];
+    int p;
+} L[MAXN];
+
+int P[MAXLG][MAXN];
+int N,i;
+int stp, cnt,ar[MAXN],comp[MAXN];
+
+int cmp(entry a, entry b)
+{
+    if (a.nr[0]!=b.nr[0]) return a.nr[0]<b.nr[0];
+    else return a.nr[1]<b.nr[1];
+}
+
+int FindLCP (int x,int y)
+{
+    int ans = 0 , k=0 , tmp=cnt;
+    for (k=stp-1;k>= 0;k--,tmp>>=1)
+    {
+        if (x+tmp <= N && y+tmp <= N && P[k][x] == P[k][y])
+        {// sort-index is same if the first k characters are same
+            ans += tmp;
+            // now we wish to find the characters that are same in the remaining strings
+            x += tmp;
+            y += tmp;
+		}
+	}
+	return ans;
+}
+
+struct node
+{
+	int l,r,s,len,temp,v;
+}st[8*MAXN],st1[8*MAXN];
+
+void initialise(int left,int right,int i)
+{
+    st[i].s=0;
+    st[i].len=INF;
+    st[i].v=0;
+    st[i].temp=0;
+    //st[i].templen=INF;
+    st[i].l=left;
+    st[i].r=right;
+    st1[i].s=0;
+    st1[i].len=INF;
+    st1[i].v=0;
+    st1[i].temp=0;
+    //st[i].templen=INF;
+    st1[i].l=left;
+    st1[i].r=right;
+    int mid=(left+right)/2;
+    if(left<right)
+    {
+        initialise(left,mid,2*i);
+        initialise(mid+1,right,2*i+1);
+    }
+}
+
+int lazyquery1(int idx,int i)
+{
+	if(st1[i].l==st1[i].r){return i;}
+	else
+	{//printf("st1 %d %d %d %d %d %d\n",i,st1[i].l,st1[i].r,st1[i].temp,st1[i].s,st1[i].len);
+		if(st1[i].l!=st1[i].r&&st1[i].temp>0)
+        {
+			if(st1[i].len<st1[2*i].len)
+			{
+				st1[2*i].s=st1[i].s;
+				st1[2*i].len=st1[i].len;
+				st1[2*i].temp=1;
+			}
+			if(st1[i].len<st1[2*i+1].len)
+			{
+				st1[2*i+1].s=st1[i].s;
+				st1[2*i+1].len=st1[i].len;
+				st1[2*i+1].temp=1;
+			}
+            st1[i].temp=0;
+        }
+		if(st1[2*i].r>=idx)return lazyquery1(idx,2*i);
+		else return lazyquery1(idx,2*i+1);
+	}
+}
+int lazyquery(int idx,int i)
+{
+	if(st[i].l==st[i].r){return i;}
+	else
+	{
+		if(st[i].l!=st[i].r&&st[i].temp>0)
+		{
+			if(st[2*i].v<st[i].v)
+			{
+				st[2*i].v=st[i].v;
+				//st[2*i].len=st[i].len;
+				st[2*i].temp=1;
+			}
+			if(st[2*i+1].v<st[i].v)
+			{
+				st[2*i+1].v=st[i].v;
+				//st[2*i+1].len=st[i].len;
+				st[2*i+1].temp=1;
+			}
+			st[i].temp=0;
+		}
+		if(st[2*i].r>=idx)return lazyquery(idx,2*i);
+		else return lazyquery(idx,2*i+1);
+	}
+}
+
+void rangeupdate(int left,int right,int val,int i)
+{
+	if(st[i].l!=st[i].r&&st[i].temp>0)
+	{
+		if(st[2*i].v<st[i].v)
+		{
+			st[2*i].v=st[i].v;
+			//st[2*i].len=st[i].len;
+			st[2*i].temp=1;
+		}
+		if(st[2*i+1].v<st[i].v)
+		{
+			st[2*i+1].v=st[i].v;
+			//st[2*i+1].len=st[i].len;
+			st[2*i+1].temp=1;
+		}
+		st[i].temp=0;
+	}
+    if(st[i].r>=left&&st[i].l<=right)
+    {
+        if(st[i].l>=left&&st[i].r<=right)
+        {
+			if(st[i].v<val)
+			{
+				st[i].v=val;
+				//st[i].len=length;
+				st[i].temp=1;
+			}
+        }
+        else
+        {
+            rangeupdate(left,right,val,2*i);
+            rangeupdate(left,right,val,2*i+1);
+        }
+    }
+}
+
+void rangeupdate1(int left,int right,int i)
+{
+	int length=right-left+1;
+	if(st1[i].l!=st1[i].r&&st1[i].temp>0)
+        {
+			if(st1[i].len<st1[2*i].len)
+			{
+				st1[2*i].s=st1[i].s;
+				st1[2*i].len=st1[i].len;
+				st1[2*i].temp=1;
+			}
+			if(st1[i].len<st1[2*i+1].len)
+			{
+				st1[2*i+1].s=st1[i].s;
+				st1[2*i+1].len=st1[i].len;
+				st1[2*i+1].temp=1;
+			}
+            st1[i].temp=0;
+        }
+    if(st1[i].r>=left&&st1[i].l<=right)
+    {
+        if(st1[i].l>=left&&st1[i].r<=right)
+        {
+			if(length<st1[i].len)
+			{
+				st1[i].s=left;
+				st1[i].len=length;
+				st1[i].temp=1;
+
+			}//printf("st1 %d %d %d %d %d %d %d %d\n",left,right,i,st1[i].l,st1[i].r,st1[i].temp,st1[i].s,st1[i].len);
+        }
+        else
+        {
+            rangeupdate1(left,right,2*i);
+            rangeupdate1(left,right,2*i+1);
+        }
+    }
+}
+
+
+
+
+void solve()
+{
+    for(stp=1, cnt = 1; cnt < N; stp++, cnt *= 2)
+    {
+        for(i=0; i < N; i++)
+        {
+            L[i].nr[0]=P[stp- 1][i];
+            L[i].nr[1]=i +cnt <N? P[stp -1][i+ cnt]:-1;
+            L[i].p= i;
+        }
+        sort(L, L+N, cmp);
+        for(i=0; i < N; i++)
+            P[stp][L[i].p] =(((i> 0) && (L[i].nr[0]==L[i-1].nr[0]) && (L[i].nr[1] == L[i- 1].nr[1])) ? P[stp][L[i-1].p] : i);
+    }
+    //long long ans=N;
+    //ans=(ans*(ans+1))/2;
+    for(int i=0;i<N-1;i++)
+    {
+		ar[L[i].p]=FindLCP(L[i].p,L[i+1].p)+1;
+    }
+    for(int i=1;i<N;i++)
+    {
+		ar[L[i].p]=max(FindLCP(L[i].p,L[i-1].p)+1,ar[L[i].p]);
+    }
+    for(int i=1;i<N;i++)
+    {
+		if(ar[i]>N-i)ar[i]=INF;//printf("%d %d\n",i,ar[i]);
+    }
+    initialise(1,N,1);
+    for(int i=0;i<N;i++)
+    {
+		if(ar[L[i].p]!=INF)
+		{
+			rangeupdate1(L[i].p+1,L[i].p+ar[L[i].p],1);
+			rangeupdate(L[i].p+ar[L[i].p],N,L[i].p+1,1);
+		}
+		comp[L[i].p+1]=i+1;
+		//printf("%d %d\n",L[i].p,ar[L[i].p]);
+    }
+    for(int i=1;i<=N;i++)
+    {
+		int x=lazyquery1(i,1);
+		int s=st1[x].s,l=st1[x].len;
+		x=lazyquery(i,1);
+		//printf("%d %d %d %d\n",st[x].v,i-st[x].v+1,s,l);
+		if(i-st[x].v+1<l&&st[x].v>0)printf("%d %d\n",st[x].v,i-st[x].v+1);
+		else if(i-st[x].v+1==l&&st[x].v>0)
+		{
+			if(comp[st[x].v]<comp[s])printf("%d %d\n",st[x].v,i-st[x].v+1);
+			else printf("%d %d\n",s,l);
+		}
+		else printf("%d %d\n",s,l);
+    }
+    /*int last=ar[0],till=ar[0]-1,now=0,st=0;
+    printf("%d %d\n",st+1,last);
+    for(int i=1;i<N;i++)
+    {
+		if(till>=i)
+		{
+			if(last<ar[i])now=last;
+			else
+			{
+				now=ar[i];
+				st=i;
+				till=i+now-1;
+			}
+		}
+		else
+		{
+			last++;
+			till++;
+			if(last<ar[i])now=last;
+			else
+			{
+				now=ar[i];
+				till=i+now-1;
+			}
+		}
+		printf("%d %d\n",st+1,now);
+		last=now;
+    }*/
+}
+int main()
+{
+	int t=1,tmp,last;
+	string s;
+	scanf("%d",&t);
+	//while(t--)
+	{
+		cin>>s;
+		N=s.length();
+		for(int i=0;i<N;i++)P[0][i] = s[i];
+		solve();
+	}
+}

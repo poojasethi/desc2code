@@ -1,0 +1,43 @@
+#include<stdio.h>
+using namespace std;
+int used[210],d[210];
+int n,s;
+int ans1[210],ans2[210];
+int can[210];
+int main(){
+  int i,j,k1,k2,v[210],t1,t2;
+  scanf("%d",&n);
+  for (i=1;i<=(n-1)*n/2;i++){
+    scanf("%d",&s);
+    k1=0;k2=0;
+    t1=0;t2=0;
+    for (j=0;j<s;j++) {
+      scanf("%d",&v[j]);
+      if (used[v[j]]==0) used[v[j]]=i;
+      else if (can[v[j]]==0){
+        if (t1==used[v[j]]) ans1[k1++]=v[j];
+        else if (t2==used[v[j]]) ans2[k2++]=v[j];
+        else if (t1==0) {t1=used[v[j]];ans1[k1++]=v[j];}
+        else if (t2==0) {t2=used[v[j]];ans2[k2++]=v[j];}
+        can[v[j]]=1;
+      }
+    }
+    if (t1>0){
+      printf("%d",k1);
+      for (j=0;j<k1;j++) printf(" %d",ans1[j]);
+      printf("\n");
+    }
+    if (t2>0){
+      printf("%d",k2);
+      for (j=0;j<k2;j++) printf(" %d",ans2[j]);
+      printf("\n");
+    }
+  }
+  if (n==2){
+    printf("1 %d\n",v[0]);
+    printf("%d",s-1);
+    for (i=1;i<s;i++) printf(" %d",v[i]);
+    printf("\n");
+  }
+  return 0;
+}

@@ -1,0 +1,118 @@
+#include <cstdio>
+#include <cstdlib>
+#define sz 202020
+typedef long long int ll;
+template <class Q> void gi(Q &x){
+  char ch = getchar(); x = 0; int s = 1;
+  while (ch < '0' || ch > '9'){if (ch == '-') s = -1; ch = getchar();}
+  while (ch >= '0' && ch <= '9') x = x * 10 + ch - 48, ch = getchar();
+}
+void pi(ll x){if (x > 9) pi(x / 10); putchar(x % 10 + 48);}
+
+class Tree{
+public:
+  int n;
+  int node[sz], next[sz], to[sz], e;
+  void ins(int x, int y){e++; next[e] = node[x]; node[x] = e; to[e] = y;}
+  ll F, f[sz], b1[sz], b2[sz], maxf;
+
+  int q[sz], par[sz], dep[sz];
+  void bfs(){
+    int i, j, k, l, r;
+    q[l = r = 1] = 1;
+    while (l <= r){
+      k = q[l++];
+      for (j = node[k]; j; j = next[j])
+	if (to[j] != par[k]){
+	  par[to[j]] = k;
+	  dep[to[j]] = dep[k] + 1;
+	  q[++r] = to[j];
+	}
+    }
+  }
+
+  ll dsum[sz], siz[sz];
+  void getF(){
+    int i, j, k;
+    ll D = 0;
+    F = 0;
+    for (i = n; i; i--){
+      k = q[i]; dsum[k] = dep[k]; siz[k] = 1;
+      for (j = node[k]; j; j = next[j])
+	if (to[j] != par[k]){
+	  F += dsum[to[j]] * siz[k] + dsum[k] * siz[to[j]] - dep[k] * 2 * siz[k] * siz[to[j]];
+	  dsum[k] += dsum[to[j]];
+	  siz[k] += siz[to[j]];
+	}
+    }
+  }
+
+  void getf(){
+    int i, j, k;
+    for (i = 1; i <= n; i++) f[1] += dep[i];
+    if (f[1] > maxf) maxf = f[1];
+    for (i = 1; i <= n; i++){
+      k = q[i];
+      for (j = node[k]; j; j = next[j])
+	if (to[j] != par[k]){
+	  f[to[j]] = f[k] - siz[to[j]] + (n - siz[to[j]]);
+	  if (f[to[j]] > maxf) maxf = f[to[j]];
+	}
+    }
+  }
+
+  ll ANS;
+  void getbm(ll n1, ll n3){
+    int i, j, k;
+    ll tmp;
+    for (i = n; i; i--){
+      k = q[i];
+      b1[k] = n1 * (f[k] + n3 * dep[k]);
+      b2[k] = n3 * (f[k] + n1 * dep[k]);
+      for (j = node[k]; j; j = next[j])
+	if (to[j] != par[k]){
+	  tmp = b1[to[j]] + b2[k] - 2 * n1 * n3 * dep[k];
+	  if (tmp > ANS) ANS = tmp;
+	  tmp = b1[k] + b2[to[j]] - 2 * n1 * n3 * dep[k];
+	  if (tmp > ANS) ANS = tmp;
+	  if (b1[to[j]] > b1[k]) b1[k] = b1[to[j]];
+	  if (b2[to[j]] > b2[k]) b2[k] = b2[to[j]];
+	}
+    }
+  }
+} T1, T2, T3;
+
+ll n1, n2, n3, ANS = 0, tmp;
+int main(){
+  int x, y;
+  gi(n1); T1.n = n1; gi(n2); T2.n = n2; gi(n3); T3.n = n3;
+  for (int i = 1; i < n1; i++){
+    gi(x); gi(y); T1.ins(x, y); T1.ins(y, x);
+  }
+  for (int i = 1; i < n2; i++){
+    gi(x); gi(y); T2.ins(x, y); T2.ins(y, x);
+  }
+  for (int i = 1; i < n3; i++){
+    gi(x); gi(y); T3.ins(x, y); T3.ins(y, x);
+  }
+  T1.bfs(); T1.getF(); T1.getf();
+  T2.bfs(); T2.getF(); T2.getf();
+  T3.bfs(); T3.getF(); T3.getf();
+  T1.getbm(n2, n3);
+  T2.getbm(n3, n1);
+  T3.getbm(n1, n2);
+
+  tmp = T1.F + T2.F + T3.F + n1 * n2 + n2 * n3 + 2 * n1 * n3
+    + (n2 + n3) * T1.maxf + (n1 + n2) * T3.maxf + T2.ANS;
+  if (tmp > ANS) ANS = tmp;
+
+  tmp = T2.F + T3.F + T1.F + n2 * n3 + n3 * n1 + 2 * n2 * n1
+    + (n3 + n1) * T2.maxf + (n2 + n3) * T1.maxf + T3.ANS;
+  if (tmp > ANS) ANS = tmp;
+
+  tmp = T3.F + T1.F + T2.F + n3 * n1 + n1 * n2 + 2 * n3 * n2
+    + (n1 + n2) * T3.maxf + (n3 + n1) * T2.maxf + T1.ANS;
+  if (tmp > ANS) ANS = tmp;
+
+  pi(ANS); return 0;
+}

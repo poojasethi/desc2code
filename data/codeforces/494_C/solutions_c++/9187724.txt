@@ -1,0 +1,95 @@
+#include <algorithm>
+#include <cstdio>
+#include <vector>
+#include <cstring>
+#include <iostream>
+#define MAX_N 100005
+#define MAX_Q 5005
+using namespace std;
+const double eps = 1e-11;
+int A[MAX_N],M,N,par[MAX_N];
+vector<int> G[MAX_N];
+int tree[3*MAX_N],B[MAX_Q];
+double  dp[MAX_Q][MAX_Q*2];
+struct node{
+	int l,r;
+	double x;
+	node(){
+	}
+	node(int l,int r,double x):l(l),r(r),x(x){
+	}
+	bool operator<(const node&p)const{
+		if(l==p.l) return r>p.r;
+		return l<p.l;
+	}
+}E[MAX_N];
+int getnext(int k,int p)
+{
+	par[k]=p;
+	for(int i=k+1;i<=M;i=getnext(i,k)){
+		if(E[i].l>E[k].r)return i;
+	}
+	return M+1;
+}
+void build(int p,int l,int r)
+{
+
+	if(l==r){
+		tree[p]=A[l];
+		return;
+	}
+	build(p*2,l,(l+r)/2);
+	build(p*2+1,(l+r)/2+1,r);
+	tree[p]=max(tree[p*2],tree[p*2+1]);
+}
+int query(int p,int l,int r,int a,int b)
+{
+	if(a>r||l>b)return 0;
+	if(a<=l&&r<=b){
+		return tree[p];
+	}
+	int mid=(l+r)/2;
+	return max(query(p*2,l,mid,a,b),query(p*2+1,mid+1,r,a,b));
+}
+double calc(int v,int k)
+{
+	if(dp[v][k+MAX_Q]>-eps)return dp[v][k+MAX_Q];
+	if(B[v]>B[0]+k)return 0;
+	double ans=E[v].x,res=1.0-E[v].x;
+	if(B[v]==B[0]+k)ans=0;
+	for(int i=0;i<G[v].size();i++){
+		int u=G[v][i];
+		ans*=calc(u,k-1);
+		res*=calc(u,k);
+	}
+	return dp[v][k+MAX_Q]=res+ans;
+}
+int main()
+{
+	int i,j;
+	scanf("%d%d",&N,&M);
+	for(int i=1;i<=N;i++){
+		scanf("%d",&A[i]);
+	}
+	for(int i=1;i<=M;i++){
+		scanf("%d%d%lf",&E[i].l,&E[i].r,&E[i].x);
+	}
+	E[0]=node(1,N,0);
+	sort(E,E+M+1);
+
+	getnext(0,-1);
+/*	for(int i=0;i<=M;i++){
+		printf("[%d,%d]=%f\n",E[i].l,E[i].r,E[i].x);
+	}	*/
+	for(int i=1;i<=M;i++)G[par[i]].push_back(i);
+	build(1,1,N);
+	
+	double ans=0;
+	memset(dp,-1,sizeof dp);
+	for(int i=0;i<=M;i++)B[i]=query(1,1,N,E[i].l,E[i].r);
+//	printf("%d\n",B[0]);
+	for(int i=0;i<=M;i++)ans+=(B[0]+i)*(calc(0,i)-calc(0,i-1));
+	printf("%.10f\n",ans);
+	return 0;
+}
+ 				 	 	   				 				 	  	 	 	

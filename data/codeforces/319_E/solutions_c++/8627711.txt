@@ -1,0 +1,77 @@
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+const int N = 100010;
+
+int m, t[N], x[N], y[N], xp[N * 2], xpt;
+int n, ufs[N], l0[N], r0[N], l[N], r[N];
+vector<int> sv[N * 4];
+
+int gef(int u) {
+	return ufs[u] == u? u: ufs[u] = gef(ufs[u]);
+}
+void merge(int u, int v) {
+	if (gef(u) != gef(v)) {
+		int uu = ufs[u], vv = ufs[v];
+		l[uu] = min(l[uu], l[vv]);
+		r[uu] = max(r[uu], r[vv]);
+		ufs[vv] = uu;
+	}
+}
+void query(int d, int lt, int rt, int w, int id) {
+	while (sv[d].size()) {
+		merge(id, sv[d].back());
+		sv[d].pop_back();
+	}
+	if (lt != rt) {
+		int md = (lt + rt) >> 1;
+		if (w <= md)
+			query(d << 1 | 0, lt, md, w, id);
+		else
+			query(d << 1 | 1, md + 1, rt, w, id);
+	}
+}
+void insert(int d, int lt, int rt, int lq, int rq, int id) {
+	if (lq <= lt && rt <= rq) {
+		sv[d].push_back(id);
+		return;
+	}
+	int md = (lt + rt) >> 1;
+	if (lq <= md)
+		insert(d << 1 | 0, lt, md, lq, rq, id);
+	if (md < rq)
+		insert(d << 1 | 1, md + 1, rt, lq, rq, id);
+}
+int main() {
+	scanf("%d", &m);
+	for (int i = 1; i <= m; ++i) {
+		scanf("%d %d %d", &t[i], &x[i], &y[i]);
+		if (t[i] == 1) {
+			xp[xpt++] = x[i];
+			xp[xpt++] = y[i];
+		}
+	}
+	sort(xp, xp + xpt);
+	xpt = unique(xp, xp + xpt) - xp;
+
+	for (int i = 1; i <= m; ++i) {
+		if (t[i] == 1) {
+			ufs[++n] = n;
+			l[n] = l0[n] = lower_bound(xp, xp + xpt, x[i]) - xp;
+			r[n] = r0[n] = lower_bound(xp, xp + xpt, y[i]) - xp;
+			query(1, 0, xpt, l0[n], n);
+			query(1, 0, xpt, r0[n], n);
+			insert(1, 0, xpt, l[n] + 1, r[n] - 1, n);
+		}
+		if (t[i] == 2) {
+			int u = x[i], v = y[i], vf = gef(v);
+			if (gef(u) == vf || (l[vf] <= l0[u] && r0[u] <= r[vf] && (r[vf] - l[vf] > r0[u] - l0[u])))
+				printf("YES\n");
+			else
+				printf("NO\n");
+		}
+	}
+}

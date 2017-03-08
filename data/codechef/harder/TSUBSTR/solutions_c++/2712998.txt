@@ -1,0 +1,145 @@
+#include<iostream>
+#include<cstring>
+#include<cstdlib>
+#include<cstdio>
+#include<algorithm>
+#include<cmath>
+#include<vector>
+#include<set>
+#include<map>
+#include<queue>
+#define X first
+#define Y second
+#define fr(i,n) for(int i=1;i<=n;i++)
+#define pb push_back
+ 
+using namespace std;
+ 
+typedef long long ll;
+int n,Q;
+char str[30];
+char a[251000];
+vector<int>e[251000];
+struct Node
+{
+	Node *nxt[26],*p;
+	int len;
+	ll f;
+}node[801000],*last[301000],*now=node,*root;
+ 
+Node *newnode(int len)
+{
+	memset(now->nxt,0,sizeof now->nxt);
+	now->p=NULL;
+	now->len=len;
+	return now++;
+}
+ 
+void insert(int now,int fa,int x){
+    Node *p=last[fa];
+    if(p->nxt[x]){
+		Node *q=p->nxt[x];
+		if(q->len==p->len+1){
+			last[now]=p->nxt[x];
+		}
+		else{
+			Node *np=newnode(p->len+1);
+			memcpy(np->nxt,q->nxt,sizeof np->nxt);
+			np->p=q->p;
+			q->p=np;
+			while(p&&p->nxt[x]==q)
+				p->nxt[x]=np,p=p->p;
+			last[now]=np;
+		}
+        return;
+    }
+    else{
+	    Node *np=newnode(p->len+1);
+	    while(p&&p->nxt[x]==NULL)
+	        p->nxt[x]=np,p=p->p;
+	    if(!p){
+	        np->p=root;
+	    }
+	    else{
+	        Node *q=p->nxt[x];
+	        if(q->len==p->len+1){
+	            np->p=q;
+	        }
+	        else{
+	            Node *nq=newnode(p->len+1);
+	            memcpy(nq->nxt,q->nxt,sizeof nq->nxt);
+	            nq->p=q->p;
+	            q->p=np->p=nq;
+	            while(p&&p->nxt[x]==q)
+	                p->nxt[x]=nq,p=p->p;
+	        }
+	    }
+	    last[now]=np;
+	    return;
+	}
+}
+ 
+void build(int x,int fa)
+{
+	insert(x,fa,a[x]-'a');
+	for(int i=0,u;i<e[x].size();i++)
+		if((u=e[x][i])!=fa)
+			build(u,x);
+}
+ 
+ll getf(Node *rt)
+{
+	if(rt->f) return rt->f;
+	rt->f=1;
+	for(int i=0;i<26;i++)
+		if(rt->nxt[i])
+			rt->f+=getf(rt->nxt[i]);
+	return rt->f;
+}
+ 
+void solve(string &s,ll x,Node *rt)
+{
+	x--;
+	if(!x) return;
+	fr(i,26)
+	{
+		if(!rt->nxt[str[i]-'a']) continue;
+		if(rt->nxt[str[i]-'a']->f>=x)
+		{
+			s+=str[i];
+			solve(s,x,rt->nxt[str[i]-'a']);
+			break;
+		}
+		else x-=rt->nxt[str[i]-'a']->f;
+	}
+}
+ 
+int main()
+{
+	last[0]=root=newnode(0);
+	scanf("%d%d",&n,&Q);
+	scanf("%s",a+1);
+	fr(i,n-1)
+	{
+		int x,y;
+		scanf("%d%d",&x,&y);
+		e[x].pb(y);
+		e[y].pb(x);
+	}
+	build(1,0);
+	cout<<getf(root)<<endl;
+	for(int i=1;i<=Q;i++)
+	{
+		scanf("%s",str+1);
+		ll k;
+		cin>>k;
+		if(k<=root->f)
+		{
+			string ans;
+			solve(ans,k,root);
+			cout<<ans<<'\n';
+		}
+		else puts("-1");
+	}
+	return 0;
+}

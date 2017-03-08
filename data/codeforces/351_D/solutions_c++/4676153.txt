@@ -1,0 +1,75 @@
+#include <algorithm>
+#include <cstdio>
+#include <map>
+using namespace std;
+
+const int MAXN = 200000;
+int n, m;
+int a[MAXN], s[MAXN], p[MAXN];
+int ans[MAXN];
+pair< pair<int, int>, int> q[MAXN];
+map<int,int> last_pos, last_neg, len;
+
+void upd(int u, int x, int *s) {
+   for (; u<n; u|=(u+1)) {
+      s[u] += x;
+   }
+}
+
+int sum(int u, int *s) {
+   int ret=0;
+   for (; u>=0; (u&=(u+1))--) {
+      ret += s[u];
+   }
+   return ret;
+}
+
+int main() {
+   scanf("%d", &n);
+   for (int i = 0; i < n; i++) {
+      scanf("%d", a+i);
+   }
+   scanf("%d", &m);
+   for (int i = 0; i < m; i++) {
+      scanf("%d%d", &q[i].first.second, &q[i].first.first);
+      q[i].first.first--; q[i].first.second--;
+      q[i].second = i;
+   }
+   sort(q, q+m);
+   for (int i = 0, j = 0; i < m; i++) {
+      for (; j<=q[i].first.first; j++) {
+         if (!last_pos.count(a[j])) {
+            last_pos[a[j]] = j;
+            last_neg[a[j]] = n;
+            len[a[j]] = -1;
+            upd(j, 1, s);
+         } else if (j-last_pos[a[j]]==len[a[j]]||len[a[j]]==-1) {
+            upd(last_pos[a[j]], -1, s);
+            upd(j, 1, s);
+            len[a[j]] = j-last_pos[a[j]];
+            last_pos[a[j]] = j;
+         } else {
+            upd(last_neg[a[j]], 1, p);
+            last_neg[a[j]] = last_pos[a[j]]-len[a[j]];
+            upd(last_neg[a[j]], -1, p);
+            upd(last_pos[a[j]], -1, s);
+            upd(j, 1, s);
+            len[a[j]] = j-last_pos[a[j]];
+            last_pos[a[j]] = j;
+         }
+      }
+      int res = sum(n-1, s)-sum(q[i].first.second-1, s);
+      /*printf("Here querry(%d,%d): sum1=%d sum2=%d\n",
+            q[i].first.second+1, q[i].first.first+1,
+            res, sum(n-1, p)-sum(q[i].first.second-1, p));*/
+      res += 1 - (res!=-sum(n-1, p)+sum(q[i].first.second-1, p));
+      ans[q[i].second] = res;
+   }
+
+   for (int i = 0; i < m; i++) {
+      printf("%d\n", ans[i]);
+   }
+
+   return 0;
+}
+

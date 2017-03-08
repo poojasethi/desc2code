@@ -1,0 +1,129 @@
+#include <cstdio>
+#include <algorithm>
+#define K 25
+#define N 2000
+#define M 1000000
+#define INF 1000000000000LL
+#define LL long long
+#define fi(a, b, c) for(int a = (b); a < (c); a++)
+#define FI(a, b, c) for(int a = (b); a <= (c); a++)
+#define fe(a, b, c) for(int a = (b); a; a = c[a])
+using namespace std;
+
+int n, m, a, b, p1, p2, ay[K * K], ax[K * K], ac[K * K], by[K * K], bx[K * K], bc[K * K], dy[] = {-1, 0, 1, 0}, dx[] = {0, 1, 0, -1};
+int f[N], v[M], o[M], w[M], p, d[N], q[N], fl, S, T;
+LL dis[K * K][K * K];
+char s[K][K];
+
+void bd(int a, int b){
+	v[++p] = b; o[p] = f[a]; f[a] = p; w[p] = 1;
+	v[++p] = a; o[p] = f[b]; f[b] = p; w[p] = 0;
+}
+
+int dfs(int y, int ff){
+	if(y == T){
+		fl += ff;
+		return ff;
+	}
+	
+	int cap = ff;
+	fe(i, f[y], o) if(w[i] && d[v[i]] == d[y] + 1){
+		int x = dfs(v[i], min(cap, w[i]));
+		cap -= x;
+		w[i] -= x;
+		w[i ^ 1] += x;
+		if(!cap) break;
+	}
+	
+	if(cap == ff) d[y] = -1;
+	return ff - cap;
+}
+
+bool bfs(){
+	FI(i, 0, T) d[i] = -1;
+	d[S] = 0;
+	int l = 0, h = 0;
+	q[h++] = S;
+	
+	while(l < h){
+		int y = q[l++];
+		fe(i, f[y], o) if(w[i] && d[v[i]] < 0){
+			d[v[i]] = d[y] + 1;
+			q[h++] = v[i];
+			if(v[i] == T) return 1;
+		}
+	}
+	
+	return 0;
+}
+
+bool ok(LL val){
+	p = 1;
+	FI(i, 0, T) f[i] = 0;
+	fi(i, 0, a) bd(S, i);
+	fi(i, 0, b) bd(a + i, T);
+	fi(i, 0, n * m){
+		bd(a + b + i, a + b + i + n * m);
+		fi(j, 0, a) if(dis[(ay[j] - 1) * m + ax[j] - 1][i] <= val / ac[j]) bd(j, a + b + i);
+		fi(j, 0, b) if(dis[(by[j] - 1) * m + bx[j] - 1][i] <= val / bc[j]) bd(a + b + i + n * m, a + j);
+	}
+	
+	fl = 0;
+	while(bfs()) while(dfs(S, a));
+	return fl == a;
+}
+
+int main(){
+	scanf("%d %d %d %d", &n, &m, &a, &b);
+	if(abs(a - b) != 1){
+		puts("-1");
+		return 0;
+	}
+	
+	fi(i, 0, n * m) fi(j, 0, n * m) dis[i][j] = INF;
+	fi(i, 0, n) scanf("%s", s[i]);
+	fi(i, 0, n) fi(j, 0, m){
+		if(s[i][j] == '#') continue;
+		int e = i * m + j;
+		dis[e][e] = 0;
+		fi(k, 0, 4){
+			int ni = i + dy[k], nj = j + dx[k], ne = ni * m + nj;
+			if(ni < 0 || ni >= n || nj < 0 || nj >= m || s[ni][nj] == '#') continue;
+			dis[e][ne] = 1;
+		}
+	}
+	
+	fi(k, 0, n * m) fi(i, 0, n * m) fi(j, 0, n * m) dis[i][j] = min(dis[i][j], dis[i][k] + dis[k][j]);
+	
+	if(a > b){
+		scanf("%d %d %d", &by[0], &bx[0], &bc[0]);
+		p2++;
+	}else{
+		scanf("%d %d %d", &ay[0], &ax[0], &ac[0]);
+		p1++;
+	}
+	
+	fi(i, 0, a){
+		scanf("%d %d %d", &ay[p1], &ax[p1], &ac[p1]);
+		p1++;
+	}
+	
+	fi(i, 0, b){
+		scanf("%d %d %d", &by[p2], &bx[p2], &bc[p2]);
+		p2++;
+	}
+	
+	a = b = max(a, b);
+	S = a + b + n * m + n * m;
+	T = S + 1;
+	
+	LL l = 0, h = INF;
+	while(l < h){
+		LL m = l + h >> 1;
+		if(ok(m)) h = m;
+		else l = m + 1;
+	}
+	
+	if(h == INF) puts("-1");
+	else printf("%I64d\n", h);
+}

@@ -1,0 +1,168 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <string>
+#include <cstring>
+#include <map>
+#include <cstdlib>
+#include <algorithm>
+#include <list>
+#include <deque>
+#include <bitset>
+#include <cmath>
+#include <functional>
+#include <set>
+ 
+using namespace std;
+
+#define REP(i,n)     for(i=0; i<n; i++)
+
+int dp[33][33][33];
+int V[33],D[33],C[33];
+double P[33],sum[33][25000];
+vector<pair<int,double> > F[33];
+int T,N,M,a,b;
+double res=0;
+
+int Cmp(const pair<int, double> &a,const  pair<int, double> &b)
+{
+	return a.first < b.first;
+}
+
+int sol(int ind,int boxes,int dia)
+{
+    if(dia<0)return (1<<25);
+    if(boxes==0)return 0;
+    if(ind==M)return (1<<25);
+    if(dp[ind][boxes][dia]!=-1)return dp[ind][boxes][dia];
+    
+    return dp[ind][boxes][dia]=min(sol(ind+1,boxes,dia),sol(ind+1,boxes-1,dia-D[ind])+C[ind]);     
+}
+
+
+int binary1(int ind,int money)
+{
+    int s = 0,e = F[ind].size()-1;
+    while(s<e)
+    {
+     int m = (s+e+1)/2;
+     if(F[ind][m].first>money)e=m-1;
+     else s=m;
+    }
+    return e;
+}
+
+int binary2(int ind,int money)
+{
+    int s = 0,e = F[ind].size()-1;
+    while(s<e)
+    {
+     int m = (s+e)/2;
+     if(F[ind][m].first<money)s=m+1;
+     else e=m;
+    }
+    return s;
+}
+
+int main()
+{
+ cin>>T;
+ while(T--)
+ {
+           res = 0.0;
+           int i,j,k;
+           memset(dp,-1,sizeof dp);
+           cin>>N>>M;
+           REP(i,N)
+           {
+                   F[i].clear();
+                   cin>>V[i]>>P[i];
+                   P[i]/=100.0;
+           }
+           REP(i,M)cin>>C[i]>>D[i];
+           
+           a=N/2;
+           b=N-a;
+           
+           
+		   if (N > 15)
+		   {
+			a += 2;
+			b = N-a;
+		   }
+           
+           sol(0,M,30);
+           REP(i,(1<<a))
+           {
+                      double p = 1;
+                      int c = 0, d = 0;
+                      REP(j,a)
+                      {
+                          if(i&(1<<j))
+                          {
+                           p*=P[j];
+                           c+=V[j];            
+                          }        
+                          else
+                          {
+                           p*=(1-P[j]);
+                           d++;    
+                          }
+                      }
+                      F[d].push_back(make_pair(c,p));
+           }
+           
+           for(i=0;i<=a;i++)
+           {
+                           sort(F[i].begin(),F[i].end());
+                           for(j=0;j<F[i].size();j++)
+                           sum[i][j]=F[i][j].second+((j==0)?0:sum[i][j-1]);
+           }
+           REP(i,(1<<b))
+           {         
+                      double p = 1;
+                      int c = 0, d = 0; 
+                      REP(j,b)
+                      {
+                          if(i&(1<<j))
+                          {
+                           p*=P[a+j];
+                           c+=V[a+j];            
+                          }        
+                          else
+                          {
+                           p*=(1-P[a+j]);
+                           d++;    
+                          }
+                      }//cout<<sol(0,2,2)<<endl;
+                   //   cout<<"--  "<<p<<endl;
+                      for(j=d;j<=N;j++)
+                      {
+                          if(F[j-d].size()==0)continue;
+                         int x,y,l,r;
+                          for(k=M;k>=0;k--)
+                          {
+                            if(k!=M)y = x-1;
+                            else y=(1<<25);
+                            
+                            x = sol(0,k,j)-c;    
+                             if(y<0)break;
+                            l = lower_bound(F[j-d].begin(), F[j-d].end(), make_pair(x,0),Cmp) - F[j-d].begin();
+		                    r = upper_bound(F[j-d].begin(), F[j-d].end(), make_pair(y,0),Cmp) - F[j-d].begin() - 1;
+                           
+  // cout<<j<<" "<<d<<" "<<k<<" "<<sol(0,k,j)<<" "<<l<<" -- "<<r<<" "<<x<<" "<<y<<" "<<endl;
+                            if(l<=r&&l>=0){
+         //                   cout<<":"<<" "<<p<<" "<<k<<" "<<sum[j-d][r]<<endl;
+                              if(F[j-d][l].first>=x&&F[j-d][r].first<=y)
+                            res+=p*k*(sum[j-d][r]-((l==0)?0:sum[j-d][l-1]));}
+                          }
+                      }
+           }
+		printf("%0.4f\n", res);
+           
+ }   
+    
+    
+}

@@ -1,0 +1,237 @@
+#include <algorithm>
+#include <iostream>
+#include <iomanip>
+#include <complex>
+#include <cstring>
+#include <cstdlib>
+#include <string>
+#include <vector>
+#include <cstdio>
+#include <cmath>
+#include <map>
+#include <set>
+#include <assert.h>
+using namespace std;
+//#pragma comment(linker,"/STACK:102400000,102400000")
+
+typedef long long LL;
+
+const int MAXN = 100005;
+
+int n, m, K;
+LL cost[MAXN];
+int visited[MAXN];
+vector<int> g[MAXN];
+int comp;
+int containsPowerPlant[MAXN];
+int population[MAXN];
+
+void dfs(int from)
+{
+	visited[from] = comp;
+	for (int i = 0; i < g[from].size(); i++)
+	{
+		int to = g[from][i];
+		if (!visited[to])
+		{
+			dfs(to);
+		}
+	}
+}
+
+void print(vector<LL> a)
+{
+	for (int i = 0; i < a.size(); i++) cout << a[i] << " " ;
+	cout << endl;
+}
+
+LL doIt(vector<LL> moneyRequired, vector<LL> profit, LL money)
+{
+	if (moneyRequired.size() == 1)
+	{
+		if (moneyRequired[0] <= money)
+			return profit[0];
+		else 
+			return 0;
+	}
+	int sz = moneyRequired.size();
+	vector<pair<LL, LL> > firstHalf, secondHalf;
+	for (int i = 0; i < sz / 2; i++)
+		firstHalf.push_back(make_pair(moneyRequired[i], profit[i]));
+	for (int i = sz / 2; i < sz; i++)
+		secondHalf.push_back(make_pair(moneyRequired[i], profit[i]));
+	set<pair<LL, LL> > firstSet;
+	for (int mask = 1; mask < (1 << firstHalf.size()); mask++)
+	{
+		LL costNeeded = 0; 
+		LL profitAttained = 0;
+		for (int i = 0; i < firstHalf.size(); i++)
+			if (mask & (1 << i))
+			{
+				costNeeded += firstHalf[i].first;
+				profitAttained += firstHalf[i].second; 
+			}
+		firstSet.insert(make_pair(costNeeded, profitAttained));
+	}
+	set<pair<LL, LL> > secondSet;
+	for (int mask = 1; mask < (1 << secondHalf.size()); mask++)
+	{
+		LL costNeeded = 0; 
+		LL profitAttained = 0;
+		for (int i = 0; i < secondHalf.size(); i++)
+			if (mask & (1 << i))
+			{
+				costNeeded += secondHalf[i].first;
+				profitAttained += secondHalf[i].second; 
+			}
+		secondSet.insert(make_pair(costNeeded, profitAttained));
+	}
+	vector<pair<LL, LL> > F = vector<pair<LL, LL> > (firstSet.begin(), firstSet.end());
+	vector<pair<LL, LL> > S = vector<pair<LL, LL> > (secondSet.begin(), secondSet.end());
+	vector<LL> mxValues(S.size());
+	LL mx = 0;
+	for (int i = 0; i < S.size(); i++)
+	{
+		mx = max(mx, S[i].second);
+		mxValues[i] = mx;
+	}
+	mx = 0;
+	vector<LL> mxValuesAgain(F.size());
+	for (int i = 0; i < F.size(); i++)
+	{
+		mx = max(mx, F[i].second);
+		mxValuesAgain[i] = mx;
+	}
+	LL ans = 0;
+	int id = upper_bound(S.begin(), S.end(), make_pair(money, 0LL)) - S.begin();
+	id --;
+	if (id >= 0)
+		ans = max(ans, mxValues[id]);
+	id = upper_bound(F.begin(), F.end(), make_pair(money, 0LL)) - F.begin();
+	id --;
+	if (id >= 0)
+		ans = max(ans, mxValuesAgain[id]);
+	for (int i = 0; i < F.size(); i++)
+	{
+		int id = upper_bound(S.begin(), S.end(), make_pair(money -  F[i].first, 0LL)) - S.begin();
+		id --;
+		if (id >= 0 && id < S.size())
+		{
+			LL cur = F[i].second;
+			cur += mxValues[id];
+			ans = max(ans, cur);
+		}
+	}
+	return ans;
+}	
+
+int MAIN()
+{
+    int test = 1;
+	while (cin >> n >> m >> K)
+	{
+		test--;
+		set<pair<int, int> > st;
+		for (int i = 0; i < m; i++)
+		{
+			int from, to;
+			cin >> from >> to;
+			from --, to --;
+			assert(from >= 0 && from < n);
+			assert(to >= 0 && to < n);
+			assert(from != to);
+			if (from > to) swap(from, to);
+			st.insert(make_pair(from, to));
+			g[from].push_back(to);
+			g[to].push_back(from);
+		}
+		assert(st.size() == m);
+		set<int> cities;
+		vector<int> cityList;
+		for (int i = 0; i < n; i++)
+		{
+			cin >> population[i];
+			assert(population[i] >= 1 && population[i] <= 1000000);
+		}
+		for (int i = 0; i < K; i++)
+		{
+			int city;
+			cin >> city;
+			city--;
+			containsPowerPlant[city] = true;
+			cityList.push_back(city);
+			assert(city >= 0 && city < n);
+			cities.insert(city);
+		}
+		assert(cities.size() == K);
+		for (int i = 0; i < K; i++)
+		{
+			LL t;
+			cin >> t;
+			assert(t >= 0 && t <= 1000000000LL);
+			cost[cityList[i]] = t;
+		}
+		int mine;
+		LL money;
+		cin >> mine >> money;
+		assert(mine >= 0 && mine <= K);
+		assert(money >= 0 && money <= 32000000000LL);
+		for (int i = 0; i < mine; i++)
+		{
+			int id;
+			cin >> id;
+			id --;
+			assert(id >= 0 && id < K);
+			money += cost[cityList[id]];
+		}
+		comp = 1;
+		for (int i = 0; i < n; i++)
+		{
+			if (!visited[i])
+			{
+				dfs(i);
+				comp++;
+			}
+		}
+
+		vector<LL> values(comp + 1);
+		vector<LL> Size(comp + 1);
+		for (int i = 0; i < comp + 1; i++)
+			values[i] = (LL) 1e18;
+		for (int i = 0; i < n; i++)
+		{
+			int componentId = visited[i];
+			Size[componentId] += population[i];
+			if (containsPowerPlant[i])
+				values[componentId] = min(values[componentId], cost[i]);
+		}
+		vector<LL> costRequired;
+		vector<LL> profit;
+		for (int i = 0; i <= comp; i++)
+		{
+			if (values[i] != (LL) 1e18)
+			{
+				costRequired.push_back(values[i]);
+				profit.push_back(Size[i]);
+			}
+		}
+		assert(costRequired.size() <= K);
+		assert(profit.size() <= K);
+		cout << doIt(costRequired, profit, money) << endl;
+	}
+    assert(test == 0);
+    return 0;
+}
+
+int main()
+{
+	//#define LOCAL_TEST
+	#ifdef LOCAL_TEST
+		freopen("input.txt", "r", stdin);
+		//freopen("out.txt", "w", stdout);
+	#endif
+	ios :: sync_with_stdio(false);
+	cin.tie(NULL);
+	cout << fixed << setprecision(16);
+	return MAIN();
+}

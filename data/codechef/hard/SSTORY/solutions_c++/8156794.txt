@@ -1,0 +1,112 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <vector>
+#include <algorithm>
+#include <cstring>
+#include <string>
+#include <map>
+using namespace std;
+
+const int N = (int)5e5 + 10;
+const int A = 26;
+struct Automaton
+{
+//	map <char, int> go[N];
+	int go[N][A];
+	int len[N], link[N];
+	int mv;
+	int lastV;
+
+	Automaton ()
+	{
+		memset(len, 0, sizeof(len));
+		memset(link, 0, sizeof(link));
+		for (int i = 0; i < N; i++)
+			memset(go[i], -1, sizeof(go[i]));
+		mv = 1;
+		lastV = 0;
+		link[lastV] = -1;
+	}
+
+	void push(int c)
+	{
+		int newV = mv++;
+		len[newV] = len[lastV] + 1;
+
+		int p;
+		for (p = lastV; p != -1 && go[p][c] == -1; p = link[p])
+			go[p][c] = newV;
+		if (p == -1)
+		{
+			link[newV] = 0;
+			lastV = newV;
+			return;
+		}
+		int q = go[p][c];
+		if (len[q] == len[p] + 1)
+		{
+			link[newV] = q;
+			lastV = newV;
+			return;
+		}
+		int clone = mv++;
+		memcpy(go[clone], go[q], sizeof(go[q]));
+		len[clone] = len[p] + 1;
+		link[clone] = link[q];
+		link[q] = clone;
+		for (; p != -1 && go[p][c] == q; p = link[p])
+			go[p][c] = clone;
+		link[newV] = clone;
+		lastV = newV;
+	}
+};
+
+char a[N], b[N];
+int l = 0, r = -1;
+
+void relax(int x, int y)
+{
+	if (y - x + 1 > r - l + 1)
+		l = x, r = y;
+}
+
+void printAns()
+{
+	if (r - l + 1 > 0)
+	{
+		for (int i = l; i <= r; i++)
+			putchar(b[i]);
+		puts("");
+	}
+	printf("%d", r - l + 1);
+}
+
+Automaton aA = Automaton();
+int main()
+{
+	cin >> a >> b;
+	int lenA = strlen(a);
+	for (int i = 0; i < lenA; i++)
+		aA.push(a[i] - 'a');
+//	aA.print();
+
+	int lenB = strlen(b);
+	int it = 0;
+	int v = 0;
+	for (int i = 0; i < lenB; i++)
+	{
+		it = max(it, i);
+		while (it < lenB && aA.go[v][b[it] - 'a'] != -1)
+		{
+			v = aA.go[v][b[it] - 'a'];
+			it++;
+		}
+		relax(i, it - 1);
+		if (v != 0 && aA.len[aA.link[v]] == it - i - 1)
+			v = aA.link[v];
+	}
+	printAns();
+		
+	return 0;
+}

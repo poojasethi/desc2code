@@ -1,0 +1,241 @@
+#include <iostream>
+#include <fstream>
+#include <cstring>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <map>
+#include <queue>
+using namespace std;
+
+const int maxN = 100005, maxM = 300005;
+const int oo = 1000000001;
+
+struct Tnode{
+	Tnode *f, *son[2];
+	int size, Virtual, sum;
+	int val, maxV;
+	bool rev;
+}node[maxN+maxM];
+
+struct Edge{
+	int u, v, c, i;
+	Edge(){}
+	Edge(int A, int B, int C, int D):u(A), v(B), c(C), i(D){}
+};
+
+struct Tedge{
+	int u, v, c;
+}e[maxM];
+
+bool Cut[maxM];
+
+priority_queue <Edge> pq;
+
+int n, m, ans;
+
+bool operator < (const Edge &A, const Edge &B){
+	return A.c < B.c || A.c == B.c && A.i < B.i;
+}
+
+void Readln(){
+	scanf( "%d%d\n", &n, &m );
+}
+
+int Max(int A, int B){
+	if (A == 0) return B;
+	if (B == 0) return A;
+	if (e[A].c > e[B].c || e[A].c == e[B].c && A > B) return A;
+	return B;
+}
+
+void updata(Tnode *u){
+	u -> size = 1;
+	u -> sum = u -> Virtual;
+	u -> maxV = u -> val;
+	if (u -> son[0]){
+		u -> size += u -> son[0] -> size;
+		u -> sum += u -> son[0] -> sum;
+		u -> maxV = Max(u -> maxV, u -> son[0] -> maxV);
+	}
+	if (u -> son[1]){
+		u -> size += u -> son[1] -> size;
+		u -> sum += u -> son[1] -> sum;
+		u -> maxV = Max(u -> maxV, u -> son[1] -> maxV);
+	}
+}
+
+void down(Tnode *u){
+	if (!u -> rev) return;
+	u -> rev ^= 1;
+	swap(u -> son[0], u -> son[1]);
+	if (u -> son[0]) u -> son[0] -> rev ^= 1;
+	if (u -> son[1]) u -> son[1] -> rev ^= 1;
+}
+
+void rot(Tnode *u, bool t){
+	Tnode *v = u -> f;
+	Tnode *w = v -> f;
+	if (w){
+		if (w -> son[0] == v) w -> son[0] = u;
+		if (w -> son[1] == v) w -> son[1] = u;
+	}
+	u -> f = w;
+	v -> f = u;
+	if (u -> son[t]) u -> son[t] -> f = v;
+	v -> son[t^1] = u -> son[t];
+	u -> son[t] = v;
+	updata(v);
+}
+
+void splay(Tnode *u){
+	down(u);
+	while (u -> f && (u -> f -> son[0] == u || u -> f -> son[1] == u)){
+		Tnode *v = u -> f;
+		Tnode *w = v -> f;
+		if (w) down(w);
+		if (v) down(v);
+		if (u) down(u);
+		if (!w || (w -> son[0] != v && w -> son[1] != v)){
+			rot(u, v -> son[0] == u);
+			break;
+		}
+		bool p = (v -> son[0] == u), q = (w -> son[0] == v);
+		if (p^q) {rot(u, p); rot(u, q);}
+			else {rot(v, q); rot(u, p);}
+	}
+	updata(u);
+}
+
+void expose(Tnode *u){
+	Tnode *v = 0;
+	for (;u;v = u, u = v -> f){
+		splay(u);
+		int add = 0, del = 0;
+		if (v) del = v -> sum + v -> size;
+		if (u -> son[1]) add = u -> son[1] -> sum + u -> son[1] -> size;
+		u -> Virtual += add - del;
+		u -> sum += add - del;
+		u -> son[1] = v;
+		updata(u);
+	}
+}
+
+void changeroot(Tnode *u){
+	expose(u);
+	splay(u);
+	u -> rev ^= 1;
+}
+
+void insertedge(Tnode *u, Tnode *v, int c, int i){
+	changeroot(v);
+	changeroot(u);
+	splay(v); splay(u);
+	int sizeu = u -> size + u -> sum;
+	int sizev = v -> size + v -> sum;
+	Tnode *now = (node + n + i);
+	v -> f = now;
+	now -> f = u;
+	now -> Virtual += sizev;
+	now -> sum += sizev;
+	now -> val = i;
+	now -> maxV = i;
+	now -> size = 1;
+	u -> Virtual += sizev + 1;
+	u -> sum += sizev + 1;
+	
+	pq.push(Edge(u - node, v - node, c, i));
+}
+
+Tnode *getroot(Tnode *u){
+	expose(u);
+	splay(u);
+	while (u -> son[0]){
+		u = u -> son[0];
+		down(u);
+	}
+	return u;
+}
+
+void deleteedge(){
+	for (;;){
+		while (Cut[pq.top().i]) pq.pop();
+		int id = pq.top().i;
+		Tnode *now = (node + n + id);
+		changeroot(now);
+		expose(now);
+		Tnode *uu = node + pq.top().u, *vv = node + pq.top().v;
+		splay(uu); splay(vv);
+		int t1 = uu -> sum + uu -> size;
+		int t2 = vv -> sum + vv -> size;
+		if (((t1>>1)&1) && (t2>>1)&1){
+			uu -> f = vv -> f = 0;
+		}else break;
+		pq.pop();
+	}
+	ans = pq.top().c;
+}
+
+void Solve(){
+	ans = oo;
+	int tot = n;
+	for (int i=1; i<=n; i++) (node + i) -> size = 1;
+	for (int i=1; i<=m; i++){
+		int tu, tv, c;
+		scanf( "%d%d%d\n", &tu, &tv, &c );
+		e[i].u = tu; e[i].v = tv; e[i].c = c;
+		Tnode *u = node + tu;
+		Tnode *v = node + tv;
+		Tnode *fu = getroot(u);
+		Tnode *fv = getroot(v);
+		if (fu != fv){
+			if (ans == oo){
+				splay(fu);
+				int sizeu = fu -> sum + fu -> size;
+				splay(fv);
+				int sizev = fv -> sum + fv -> size;
+				
+				if (!((sizeu>>1)&1) && !((sizev>>1)&1)) tot -= 2;
+				
+				insertedge(u, v, c, i);
+				
+				if (tot == 0){
+					deleteedge();
+					printf( "%d\n", ans );
+				}else printf( "-1\n" );
+			}else{
+				if (c < ans) 
+				insertedge(u, v, c, i);
+				printf( "%d\n", ans );
+			}
+		}else{
+			changeroot(u);
+			expose(v);
+			splay(u);
+			int id = u -> maxV;
+			if (c < e[id].c){
+				Tnode *now = (node + n + id);
+				changeroot(now);
+				expose(now);
+				splay(node + e[id].u);
+				splay(node + e[id].v);
+				(node + e[id].u) -> f = (node + e[id].v) -> f = 0;
+				Cut[id] = true;
+				insertedge(u, v, c, i);
+			}
+			if (tot != 0){
+				printf( "-1\n" );
+				continue;
+			}
+			deleteedge();
+			printf( "%d\n", ans );
+		}
+	}
+}
+
+int main(){
+	Readln();
+	Solve();
+	return 0;
+}

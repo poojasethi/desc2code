@@ -1,0 +1,90 @@
+#include <bits/stdc++.h>
+#define N 100005
+using namespace std;
+
+struct data
+{
+	int l, r;
+	int ans, full, prefix, suffix;
+	bool valid;
+};
+
+data seg[4*N];
+int A[N];
+
+data combine(int nd){
+	data temp;
+	data left=seg[nd*2], right=seg[nd*2+1];
+	temp.l=left.l;
+	temp.r=right.r;
+	if(left.valid==true && right.valid==true && (right.l)-(left.r)==1){
+		temp.valid=true;
+		temp.full=left.full+right.full;
+		temp.prefix=left.full+right.prefix;
+		temp.suffix=left.suffix+right.full;
+		temp.ans=temp.full;
+	}
+	else{
+		temp.valid=false;
+		temp.full=-1;
+
+		if(left.full==-1)	temp.prefix=left.prefix;
+		else if(right.l-left.r==1)	temp.prefix=left.full+right.prefix;
+		else	temp.prefix=left.full;
+
+		if(right.full==-1)	temp.suffix=right.suffix;
+		else if(right.l-left.r==1)	temp.suffix=left.suffix+right.full;
+		else	temp.suffix=right.full;
+		
+		temp.ans=max(max(temp.suffix, temp.prefix), max(left.ans, right.ans));
+		if(right.l-left.r==1)	temp.ans=max(temp.ans, left.suffix+right.prefix);
+	}
+	//cout<<temp.l<<"-->"<<temp.prefix<<"-->"<<temp.suffix<<"-->"<<" "<<temp.full<<"-->"<<temp.ans<<endl;
+	return temp;
+}
+
+void build_tree(int l, int r, int nd){
+	if(l==r){
+		seg[nd].l=seg[nd].r=A[l];
+		seg[nd].ans=seg[nd].full=seg[nd].prefix=seg[nd].suffix=1;
+		seg[nd].valid=true;
+	}
+	else{
+		int mid=(l+r)/2;
+		build_tree(l,mid,nd*2);
+		build_tree(mid+1,r,nd*2+1);
+		seg[nd]=combine(nd);
+	}
+	return ;
+}
+
+void update(int l,int r, int nd, int x, int y){
+	if(l>x || r<x)	return ;
+	if(l==r && l==x)	seg[nd].l=seg[nd].r=y;
+	else{
+		int mid=(l+r)/2;
+		update(l,mid,nd*2,x,y);
+		update(mid+1,r,nd*2+1,x,y);
+		seg[nd]=combine(nd);
+	}
+	return ;
+}
+
+int main(){
+
+	for(int i=0;i<4*N;i++)	seg[i].l=seg[i].r=seg[i].ans=seg[i].full=seg[i].prefix=seg[i].suffix=seg[i].valid=false;
+
+	int n,m,x,y;
+	cin>>n>>m;
+	for(int i=1;i<=n;i++)	cin>>A[i];
+	build_tree(1,n,1);
+	while(m--){
+		cout<<seg[1].ans<<endl;
+		cin>>x>>y;
+		update(1,n,1,x,y);
+	}
+	cout<<seg[1].ans<<endl;
+
+	//system("pause");
+	return 0;
+}

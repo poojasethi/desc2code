@@ -1,0 +1,105 @@
+#include <ctime>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define n	70005
+#define P	104857601
+#define I64	long long
+#define For(i,a,b)	for(int i=a;i<b;i++)
+
+int		L,K,C[n],D[n],inv[n],rev[n],w[2][n];
+
+int		Pow(int a,int b){
+		int ret=1;
+		for (;b;b>>=1,a=1ll*a*a%P)
+			if	(b&1)	ret=1ll*ret*a%P;
+		return	ret;
+}
+void	Pre(int L){
+		int a=Pow(3,(P-1)/L),b=Pow(a,P-2);
+		For(i,0,L)	{
+			w[0][i]=i?1ll*w[0][i-1]*a%P:1;
+			w[1][i]=i?1ll*w[1][i-1]*b%P:1;	rev[i]=0;
+			for (int x=1,t=i;x<L;x<<=1,t>>=1)	(rev[i]<<=1)|=t&1;
+		}
+}
+void	FFT(int L,int*A,int f){
+		For(i,0,L)	if	(rev[i]>i)	swap(A[i],A[rev[i]]);
+		for (int i=1;i<L;i<<=1)
+		for (int j=0,t=L/(i<<1);j<L;j+=i<<1)
+		for (int k=0,l=0;k<i;k++,l+=t){
+			int x=A[j+k],y=1ll*A[j+k+i]*w[f][l]%P;
+			A[j+k]=x+y;	if	(A[j+k]>=P)	A[j+k]-=P;
+			A[j+k+i]=x-y+P;	if	(A[j+k+i]>=P)	A[j+k+i]-=P;
+		}
+		if	(f)	{
+			int R=Pow(L,P-2);
+			For(i,0,L)	A[i]=1ll*A[i]*R%P;
+		}
+}
+
+namespace	Inv{
+		int 	L,B[n],C[n];
+		void	Main(int N,int*A){
+			B[0]=Pow(A[0],P-2);
+			for (L=1;L<N;)	{
+				Pre((L<<=1)<<1);For(i,0,L)	C[i]=A[i];
+				FFT(L<<1,B,0);	FFT(L<<1,C,0);
+				For(i,0,L<<1)	B[i]=((-1ll*B[i]*C[i]+2)%P+P)*B[i]%P;
+				FFT(L<<1,B,1);	For(i,L,L<<1)	B[i]=0;
+			}
+			For(i,0,N)	A[i]=B[i];
+		}
+};
+
+namespace	Div{
+		int 	A[n];
+		void	Main(int N,int*a,int*D){
+			For(i,0,N)	A[i]=a[N-i-1];	For(i,N-K+1,N)	A[i]=0;
+			For(i,N,L)	A[i]=0;	FFT(L,A,0);
+			For(i,0,L)	D[i]=1ll*A[i]*inv[i]%P;	FFT(L,D,1);
+			For(i,N-K+1,L)	D[i]=0;	reverse(D,D+N-K+1);
+		}
+};
+
+void	Mod(int N,int*A)	{
+		for (;N>1&&!A[N-1];N--);
+		if	(N<K)	return;
+		Div::Main(N,A,D);	FFT(L,D,0);
+		For(i,0,L)	D[i]=1ll*D[i]*C[i]%P;	FFT(L,D,1);
+		For(i,0,L)	{
+			A[i]=(A[i]-D[i]+P);
+			if	(A[i]>=P)	A[i]-=P;
+		}
+};
+
+I64		N;
+int		ret,A[n],B[n],Ans[n];
+
+void	Work(){
+		Ans[0]=B[1]=1;
+		for (;N;N>>=1)	{
+			FFT(L,B,0);
+			if	(N&1)	{
+				FFT(L,Ans,0);
+				For(i,0,L)	Ans[i]=1ll*Ans[i]*B[i]%P;
+				FFT(L,Ans,1);	Mod(2*K,Ans);
+			}
+			For(i,0,L)	B[i]=1ll*B[i]*B[i]%P;	FFT(L,B,1);
+			Mod(2*K,B);
+		}
+}
+
+int		main(){
+		scanf("%d%lld",&K,&N);	N--;
+		For(i,0,K)	scanf("%d",&A[i]);
+		For(i,0,K)	scanf("%d",&C[K-i-1]),C[K-i-1]=(P-C[K-i-1])%P;	C[K++]=1;
+		For(i,0,K)	inv[i]=C[K-i-1];	Inv::Main(K,inv);
+		for (L=1;L<K;L<<=1);L<<=1;	Pre(L);	FFT(L,inv,0);	FFT(L,C,0);
+
+		Work();
+		For(i,0,K)	ret=(1ll*Ans[i]*A[i]+ret)%P;
+		printf("%d\n",ret);
+}

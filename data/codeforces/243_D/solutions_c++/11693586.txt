@@ -1,0 +1,84 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+typedef long long LL;
+
+const int N = 1010;
+const int M = 1001*1001+100;
+
+struct Node{
+	int tag,mint;
+	Node *lc,*rc;
+	inline void mdf(int _t){tag=max(tag,_t);mint=max(mint,_t);}
+	inline void upd(){mint=min(lc->mint,rc->mint);}
+	inline void sink(){if(tag) lc->mdf(tag),rc->mdf(tag),tag=0;}
+}pool[M*2],*tail=pool,*rt;
+
+int n,vx,vy;
+int a[N][N];
+int pos[N*N],cnt;
+
+inline void build(Node *&rt,int l,int r){
+	rt=tail++;
+	if(l<r){
+		int mid=l+r>>1;
+		build(rt->lc,l,mid);
+		build(rt->rc,mid+1,r);
+	}
+}
+inline int qry(Node *rt,int l,int r,int ql,int qr){
+	if(ql<=l && qr>=r) return rt->mint;
+	else{
+		int mid=l+r>>1;rt->sink();
+		if(qr<=mid) return qry(rt->lc,l,mid,ql,qr);
+		else if(ql>mid) return qry(rt->rc,mid+1,r,ql,qr);
+		else return min(qry(rt->lc,l,mid,ql,qr),qry(rt->rc,mid+1,r,ql,qr));
+	}
+}
+inline void mdf(Node *rt,int l,int r,int ql,int qr,int t){
+	if(ql<=l && qr>=r) rt->mdf(t);
+	else{
+		int mid=l+r>>1;rt->sink();
+		if(ql<=mid) mdf(rt->lc,l,mid,ql,qr,t);
+		if(qr>mid) mdf(rt->rc,mid+1,r,ql,qr,t);
+		rt->upd();
+	}
+}
+int main()
+{
+	scanf("%d%d%d",&n,&vx,&vy);
+	if(vy>=0 && vx<0){
+		vx=-vx;
+		for(int i=n;i>=1;i--) for(int j=1;j<=n;j++) scanf("%d",&a[i][j]);
+	}
+	else if(vx>=0 && vy<0){
+		vy=-vy;
+		for(int i=1;i<=n;i++) for(int j=n;j>=1;j--) scanf("%d",&a[i][j]);
+	}
+	else if(vx<0 && vy<0){
+		vx=-vx;vy=-vy;
+		for(int i=n;i>=1;i--) for(int j=n;j>=1;j--) scanf("%d",&a[i][j]);
+	}
+	else{
+		for(int i=1;i<=n;i++) for(int j=1;j<=n;j++) scanf("%d",&a[i][j]);
+	}
+	if(!vy){
+		swap(vx,vy);
+		for(int i=1;i<=n;i++) for(int j=i+1;j<=n;j++) swap(a[i][j],a[j][i]);
+	}
+	for(int i=0;i<=n;i++) for(int j=0;j<=n;j++) pos[++cnt]=i*vy-j*vx;
+	sort(pos+1,pos+cnt+1);cnt=unique(pos+1,pos+cnt+1)-pos-1;
+	build(rt,1,cnt);
+	LL res=0;
+	for(int j=1;j<=n;j++)
+		for(int i=1;i<=n;i++) if(a[i][j]){
+			int l=vy*(i-1)-j*vx+1,r=vy*i-(j-1)*vx;
+			l=lower_bound(pos+1,pos+cnt+1,l)-pos;
+			r=lower_bound(pos+1,pos+cnt+1,r)-pos;
+			res+=max(0,a[i][j]-qry(rt,1,cnt,l,r));
+			mdf(rt,1,cnt,l,r,a[i][j]);
+		}
+	printf("%I64d\n",res);
+	return 0;
+}

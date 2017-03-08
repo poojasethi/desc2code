@@ -1,0 +1,114 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define MAX (int)(1e5+5)
+typedef int LL;
+typedef pair<LL,LL> pii;
+
+vector<pii> lt[MAX],rt[MAX];
+vector<LL> v[MAX];
+LL ct[MAX],idx[MAX],H[MAX];
+LL q[MAX],cur[MAX];
+pii T[MAX];
+LL bit[MAX];
+LL N,Q,counter = 1;
+
+void update(LL x,LL val){
+    for(; x < max(counter,Q+1); x += x & -x)
+        bit[x] += val;
+}
+
+LL query(LL x){
+    LL sum = 0;
+    for(; x > 0; x -= x & -x)
+        sum += bit[x];
+    return sum;
+}
+
+void dfs(LL id){
+    LL sz = v[id].size();
+    idx[id] = counter;
+    cur[counter] = id;
+    ++counter;
+
+    for(LL i = 0; i < sz; ++i){
+        LL x = v[id][i];
+        dfs(x);
+        ct[id] += ct[x]+1;
+    }
+}
+
+int main()
+{
+    ios_base::sync_with_stdio(0);
+
+    LL a,b,c;
+    scanf("%d",&N);
+    //cin >> N;
+    for(LL i = 1; i <= N; ++i){
+        scanf("%d%d",&a,&b);
+        //cin >> a >> b;
+        H[i] = a;
+        v[b].push_back(i);
+    }
+
+    dfs(0);
+    scanf("%d",&Q);
+    //cin >> Q;
+
+    LL ct1 = 0, ct2 = 0;
+    for(LL i = 1; i <= Q; ++i){
+        scanf("%d%d",&a,&b);
+        //cin >> a >> b;
+        if (a == 1){
+            scanf("%d",&c);
+            //cin >> c;
+            LL l = idx[b]+1, r = idx[b]+ct[b];
+            lt[l].push_back(pii(i,c));
+            rt[r].push_back(pii(i,c));
+            q[i] = -1;
+        } else
+            q[i] = b;
+    }
+
+    for(LL i = 2; i < counter; ++i){
+        LL sz = lt[i].size();
+        for(LL j = 0; j < sz; ++j)
+            update(lt[i][j].first,lt[i][j].second);
+
+        LL l = 1, r = Q;
+        while(l < r){
+            LL mid = (l+r) >> 1;
+            LL res = query(mid);
+            if (res < H[cur[i]]) l = mid+1;
+            else r = mid;
+        }
+
+        if (query(r) >= H[cur[i]])
+            T[ct2++] = pii(r,i);
+
+        sz = rt[i].size();
+        for(LL j = 0; j < sz; ++j)
+            update(rt[i][j].first,-rt[i][j].second);
+    }
+
+    memset(bit,0,sizeof(bit));
+    sort(T,T+ct2);
+    LL i = 1, j = 0;
+    while(i <= Q){
+        LL id = q[i];
+        if (id == -1){
+            ++i;
+            continue;
+        }
+
+        LL x = idx[id]+1, y = idx[id]+ct[id];
+        while(j < ct2 && T[j].first <= i)
+            update(T[j].second,1), ++j;
+
+        LL res = query(y) - query(x-1);
+        printf("%d\n",ct[id]-res);
+        //cout << ct[id]-res << endl;
+        ++i;
+    }
+    return 0;
+}

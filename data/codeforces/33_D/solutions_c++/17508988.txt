@@ -1,0 +1,35 @@
+#include <cstdio>
+#include <bitset>
+#include <cstring>
+#include <iostream>
+#include <cmath>
+#define LL long long
+#define N 10010
+using namespace std;
+bitset<1000> mask[1010];
+LL sqr(int x){
+    return 1LL * x * x;
+}
+int n, m, k;
+int px[N], py[N], x[N], y[N], r[N];
+int main(){
+    int i, j;
+    scanf("%d%d%d", &n, &m, &k);
+    for (i = 0; i < n; ++ i){
+        scanf("%d%d", &px[i], &py[i]);
+    }
+    for (i = 0; i < m; ++ i){
+        scanf("%d%d%d", &r[i], &x[i], &y[i]);
+    }
+    for (i = 0; i < n; ++ i){
+        for (j = 0; j < m; ++ j)
+        if (sqr(px[i] - x[j]) + sqr(py[i] - y[j]) <= sqr(r[j]))
+            mask[i][j] = 1;
+    }
+    while (k--){
+        int a, b;
+        scanf("%d%d", &a, &b);
+        printf("%d\n", (mask[a - 1] ^ mask[b - 1]).count());
+
+    }
+}

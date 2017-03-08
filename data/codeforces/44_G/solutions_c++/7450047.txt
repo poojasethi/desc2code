@@ -1,0 +1,105 @@
+#include<cstdio>
+#include<algorithm>
+#include<vector>
+#define pii pair<int,int>
+#define A first
+#define B second
+using namespace std;
+struct plane{
+    int x1,x2,y1,y2,z,id;
+    void get(int _id){ 
+        scanf("%d%d%d%d%d",&x1,&x2,&y1,&y2,&z); 
+        id = _id; 
+    }
+    bool operator < (const plane &p) const { return z < p.z; }
+};
+int n,m,lim = 1<<18+1;
+pair<pii,pii> Tx[270000],Ty[5000001];
+int ref = 1,tmp[100001],ans[100001];
+plane pl[100001];
+vector <int> sv[100001];
+pair <pii,int> po[100001],tmp2[100001];
+bool cmp(pair<pii,int> i,pair<pii,int> j){ return i.A.B < j.A.B; }
+void buildSub(int pst,int fs,int ls,int re,int re2){
+    if(ls < fs) return ;
+    if(fs == ls){
+        Ty[ref+pst-1].A.A = Ty[ref+pst-1].A.B = po[re2+fs-1].A.B;
+        Ty[ref+pst-1].B = pii(po[re2+fs-1].B,re);
+        sv[po[re2+fs-1].B].push_back(ref+pst-1);
+        return ;
+    }
+    buildSub(pst*2,fs,(fs+ls)/2,re,re2);
+    buildSub(pst*2+1,(fs+ls)/2+1,ls,re,re2);
+    Ty[ref+pst-1].A.A = Ty[ref+2*pst-1].A.A;
+    Ty[ref+pst-1].A.B = Ty[ref+2*pst].A.B;
+    Ty[ref+pst-1].B = pii(min(Ty[ref+2*pst-1].B.A,Ty[ref+2*pst].B.A),re);
+}
+void build(int pst,int fs,int ls){
+    if(ls < fs) return ;
+    if(fs == ls){ 
+        Tx[pst].A.A = Tx[pst].A.B = po[fs].A.A;
+        buildSub(1,1,1+ls-fs,ref,fs);
+        Tx[pst].B = pii(ref,1);
+        ref++;
+        return ;
+    }
+    build(pst*2,fs,(ls+fs)/2);
+    build(pst*2+1,(ls+fs)/2+1,ls);
+    Tx[pst].A.A = Tx[pst*2].A.A; 
+    Tx[pst].A.B = Tx[pst*2+1].A.B;
+    //printf("%d %d : %d %d\n",fs,ls,Tx[pst].A.A,Tx[pst].A.B);
+    merge(po+fs,po+(ls+fs)/2+1,po+(ls+fs)/2+1,po+ls+1,tmp2,cmp);
+    copy(tmp2,tmp2+ls-fs+1,po+fs);
+    //sort(po+fs,po+ls+1,cmp);
+    buildSub(1,1,1+ls-fs,ref,fs);
+    Tx[pst].B = pii(ref,ls-fs+1);
+    ref += tmp[ls-fs+1];
+}
+int search2(int pst,int fs,int ls,int id,int re){
+    int tmpid = 1e8;
+    if(fs > ls || pl[id].y2 < Ty[pst+re-1].A.A || pl[id].y1 > Ty[pst+re-1].A.B) return tmpid;
+    if(pl[id].y1 <= Ty[pst+re-1].A.A && pl[id].y2 >= Ty[pst+re-1].A.B)
+        return Ty[re+pst-1].B.A;
+    tmpid = min(search2(pst*2,fs,(fs+ls)/2,id,re), search2(pst*2+1,(fs+ls)/2+1,ls,id,re));
+    return tmpid;
+}
+int search(int pst,int fs,int ls,int id){
+    int tmpid = 1e8;
+    if(fs > ls || pl[id].x2 < Tx[pst].A.A || pl[id].x1 > Tx[pst].A.B) return tmpid;
+    if(pl[id].x1 <= Tx[pst].A.A && pl[id].x2 >= Tx[pst].A.B) 
+        return search2(1,1,Tx[pst].B.B,id,Tx[pst].B.A);
+    tmpid = min(search(pst*2,fs,(fs+ls)/2,id),search(pst*2+1,(fs+ls)/2+1,ls,id));
+    return tmpid;
+}
+void upd(int pst,int re){
+    if(pst == 0) return ;
+    Ty[pst+re-1].B.A = min(Ty[pst*2+re-1].B.A,Ty[pst*2+re].B.A);
+    upd(pst/2,re);
+}
+int main(){
+    scanf("%d",&n);
+    for(int i=0;i<n;i++) pl[i].get(i+1);
+    sort(pl,pl+n);
+    scanf("%d",&m);
+    for(int i=1,u,v;i<=m;i++){
+        scanf("%d%d",&u,&v);
+        po[i] = make_pair(pii(u,v),i);
+    }
+    sort(po+1,po+m+1);
+    for(int i=1;i<=m;i++)
+        tmp[i] = 2*tmp[(i+1)/2]+1;
+    build(1,1,m);
+    for(int i=0;i<n;i++){
+        int svid = search(1,1,m,i);
+        if(svid <= m){
+            ans[svid] = pl[i].id;
+            for(int j=0;j<sv[svid].size();j++){
+                Ty[sv[svid][j]].B.A = 1e8;
+                upd((sv[svid][j]-Ty[sv[svid][j]].B.B+1)/2,Ty[sv[svid][j]].B.B);
+            }
+        }
+    }
+    for(int i=1;i<=m;i++)
+        printf("%d\n",ans[i]);
+    return 0;
+}

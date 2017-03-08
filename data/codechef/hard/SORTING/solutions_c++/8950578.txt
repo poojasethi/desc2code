@@ -1,0 +1,127 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define ll long long
+#define mod 1000000007
+#define INF (int)1e9
+#define s(n) scanf("%d", &n)
+#define sc(n) scanf("%c", &n)
+#define sl(n) scanf("%lld", &n)
+#define sf(n) scanf("%f", &n)
+#define ss(n) scanf("%s", n);
+#define all(a) a.begin(), a.end()
+#define pii pair<int, int>
+#define fi first
+#define se second
+#define pb push_back
+#define mp make_pair
+#define sq(x) ((x)*(x))
+#define mset(x,v) memset(x,v,sizeof(x))
+#define PI 3.1415926535897932384626
+
+int a[1111111], pos[1111111], tot, n;
+
+struct node {
+    int l, r, sum;
+    node * lc, * rc;
+
+} arr[20000000];
+
+node * root[1111111];
+
+node * create(int l, int r){ // create persistent segment tree
+	node * ret = &arr[tot++];
+	ret->l=l;
+	ret->r=r;
+	ret->lc=ret->rc=NULL;
+	if(l<r){
+		ret->lc=create(l,(l+r)/2); // create left son
+		ret->rc=create((l+r)/2+1,r); // create right son
+	}
+	return ret;
+}
+
+node * change(node * t,int j){ //	create a new version with the j-th number equal to one and all other numbers equal to the numbers in the version t
+	node * ret = &arr[tot++];
+	ret->l = t->l;
+	ret->r = t->r;
+	ret->lc = t->lc;
+	ret->rc = t->rc;
+	ret->sum = t->sum + 1; // increase the amount of ones in the semgment
+	if(t->l < t->r)
+		if(t->lc->r >= j)
+            ret->lc = change(ret->lc,j);
+		else
+            ret->rc = change(ret->rc,j); // standard thing
+	return ret;
+}
+
+int getKth(node * left, node * right, int k)
+{
+    if (left->l == left->r)
+        return left->l;
+    int tmp = right->lc->sum - left->lc->sum;
+    if (tmp >= k)
+        return getKth(left->lc, right->lc, k);
+    else
+        return getKth(left->rc, right->rc, k - tmp);
+}
+
+int ql[2222222], qr[2222222], q1, q2;
+ll ans;
+
+int solve(int l, int r)
+{
+    ql[q1] = l, qr[q1] = r;
+    q1++, q2 = 0;
+    while (q1 != q2) {
+        //cout << q1 << " " << q2 << endl;
+        //cout << ql[q2] << " sd " << qr[q2] << endl;
+        l = ql[q2], r = qr[q2];
+        if (r-l+1 > 1) {
+            int med = a[getKth(root[l-1], root[r], (r-l+2)/2)];
+            //cout << med << endl;
+            ans += r-l+1;
+            ql[q1] = l, qr[q1] = med-1;
+            q1++;
+            ql[q1] = med+1, qr[q1] = r;
+            q1++;
+        }
+        q2++;
+    }
+}
+
+/*ll solve (int l, int r)
+{
+    //cout << l << " " << r << endl;
+    if (r-l+1 <= 1)
+        return 0;
+    int x = getKth(root[l-1], root[r], (r-l+2)/2);
+    if (x >= 1 && x <= n) {
+        int med = a[x];
+    //cout << med << endl;
+    //return 0;
+    return ((ll)(r-l+1) + (ll)solve(l, med-1) + (ll)solve(med+1, r));
+    }
+    else
+        return 0;
+}*/
+
+int main()
+{
+    int  i;
+    s(n);
+
+    for (i = 1; i <= n; i++) {
+        s(a[i]);
+        pos[a[i]] = i;
+    }
+
+    root[0] = create(1, n);
+    for (i = 1; i <= n; i++)
+        root[i] = change(root[i-1], pos[i]);
+    solve(1, n);
+    cout << ans << endl;
+    return 0;
+}

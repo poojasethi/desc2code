@@ -1,0 +1,171 @@
+#include<iostream>
+#include<queue>
+#include<cmath>
+#include<cstring>
+#include<string>
+#include<vector>
+#include<map>
+#include<deque>
+#include<algorithm>
+#include<utility>
+#define pb push_back
+#define _USE_MATH_DEFINES
+#define LL long long
+#define plu pair<LL,unsigned>
+using namespace std;
+
+const int maxL=36;
+const int maxL1=maxL/2;
+const int maxL2=maxL-maxL1;
+
+const int N2=3*maxL1;
+const int N3=2*maxL1;
+const int N5=maxL1;
+const int N7=maxL1;
+
+int g2[]={0,0,1,0,2,0,1,0,3,0};
+int g3[]={0,0,0,1,0,0,1,0,0,2};
+int g5[]={0,0 ,0,0,0,1,0,0,0,0};
+int g7[]={0,0,0,0,0,0,0,1,0,0};
+
+LL pw2[N2+1];
+LL pw3[N3+1];
+LL pw5[N5+1];
+LL pw7[N7+1];
+unsigned pw9[20];
+unsigned pw10[20];
+
+unsigned dp[2][2*N2+1][2*N3+1][2*N5+1][2*N7+1];
+
+vector<plu > res[maxL+1];
+
+void precalc()	
+{
+	
+
+	res[0].pb(make_pair(1,1));
+
+	pw9[0]=1;
+	pw10[0]=1;
+	for(int i=1;i<=maxL2+1;i++)
+	{
+		pw9[i]=9*pw9[i-1];
+		pw10[i]=10*pw10[i-1];
+	}
+	
+	int L1,L2;
+	for(int L=1;L<=maxL;L++)
+	{
+		
+		L1=(L+1)/2;
+		L2=L-L1;
+		
+		unsigned temp=pw9[L2+1]*(pw10[L1-1]-pw9[L1-1]);
+
+		res[L].pb(make_pair(0,temp));
+	}	
+	
+
+	
+	pw2[0]=pw3[0]=pw5[0]=pw7[0]=1;
+	for(int i=1;i<=N2;i++)
+		pw2[i]=2*pw2[i-1];
+	for(int i=1;i<=N3;i++)
+		pw3[i]=3*pw3[i-1];
+	for(int i=1;i<=N5;i++)
+		pw5[i]=5*pw5[i-1];
+	for(int i=1;i<=N7;i++)
+		pw7[i]=7*pw7[i-1];
+	
+	memset(dp[0],0,sizeof(dp[0]));
+	dp[0][N2][N3][N5][N7]=1;
+
+	
+	int idx=0;
+	for(int L=1;L<=maxL;L++)
+	{
+		L1=L/2;
+		L2=(L-1)-L1;
+		idx=!idx;		
+		if(L2<0)
+			L2=0;
+		memset(dp[idx],0,sizeof(dp[idx]));
+		
+		for(int n2=-3*L2;n2<=3*L1;n2++)
+		{
+			for(int n3=-2*L2;n3<=2*L1;n3++)
+			{
+				for(int n5=-L2;n5<=L1;n5++)
+				{
+					for(int n7=-L2;n7<=L1;n7++)		
+					{
+						unsigned cnt=dp[!idx][N2+n2][N3+n3][N5+n5][N7+n7];
+						
+						if(cnt>0)
+						{	
+							dp[idx][N2-n2]  [N3-n3]  [N5-n5]  [N7-n7]  += cnt;
+							dp[idx][N2-n2+1][N3-n3]  [N5-n5]  [N7-n7]  += cnt; 
+							dp[idx][N2-n2]  [N3-n3+1][N5-n5]  [N7-n7]  += cnt; 
+							dp[idx][N2-n2+2][N3-n3]  [N5-n5]  [N7-n7]  += cnt; 
+							dp[idx][N2-n2]  [N3-n3]  [N5-n5+1][N7-n7]  += cnt; 
+							dp[idx][N2-n2+1][N3-n3+1][N5-n5]  [N7-n7]  += cnt; 
+							dp[idx][N2-n2]  [N3-n3]  [N5-n5]  [N7-n7+1]+= cnt; 
+							dp[idx][N2-n2+3][N3-n3]  [N5-n5]  [N7-n7]  += cnt; 
+							dp[idx][N2-n2]  [N3-n3+2][N5-n5]  [N7-n7]  += cnt; 
+							
+						}
+					}
+				}
+			}
+		}
+		L1=(L+1)/2;
+		L2=L-L1;
+		for(int n2=0;n2<=3*L1;n2++)
+		{
+			for(int n3=0;n3<=2*L1;n3++)
+			{
+				for(int n5=0;n5<=L1;n5++)
+				{
+					for(int n7=0;n7<=L1;n7++)		
+					{
+						unsigned cnt=dp[idx][N2+n2][N3+n3][N5+n5][N7+n7];
+						if(cnt>0)
+						{
+							
+							LL V=pw2[n2]*pw3[n3]*pw5[n5]*pw7[n7];
+							res[L].pb(make_pair(V,cnt));
+						}
+					}
+				}
+			}
+		}				
+	}
+
+	for(int i=0;i<=maxL;i++)
+		sort(res[i].begin(),res[i].end());
+	
+	
+}					
+		
+
+
+int main()
+{
+	int t;
+	cin>>t;
+	precalc();
+	while(t--)
+	{
+		LL V;
+		int L;
+		scanf("%d %llu",&L,&V);
+		unsigned ans=0;
+		int pos=lower_bound(res[L].begin(),res[L].end(),make_pair(V,0U))-res[L].begin();
+		if(pos<res[L].size()&&res[L][pos].first==V)
+			ans=res[L][pos].second;
+		
+		printf("%u\n",ans);
+	}
+	return 0;
+}		
+	

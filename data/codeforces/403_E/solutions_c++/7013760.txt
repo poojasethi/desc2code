@@ -1,0 +1,227 @@
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <cstdlib>
+#include <algorithm>
+#include <vector>
+#include <utility>
+#include <queue>
+#include <functional>
+#include <map>
+#include <set>
+
+//#define fi first
+//#define se second
+#define fo(i,a,b) for (int i = a; i <= b; i ++)
+#define fd(i,a,b) for (int i = a; i >= b; i --)
+#define fe(i,x,y) for (int i = x, y = lnk[i]; i; i = nxt[i], y = lnk[i])
+#define mkp make_pair
+#define pb push_back
+#define Fill(x,y) memset(x,y,sizeof(x))
+#define Cpy(x,y) memcpy(x,y,sizeof(x))
+#define Bit(x,y) ((((x) >> (y)) & 1))
+#define sit SI::iterator
+#define SQR(x) ((x) * (x))
+
+using namespace std;
+ 
+typedef long long LL;
+typedef long double DB;
+typedef pair <DB, DB> PD;
+typedef pair <LL, LL> PLI;
+typedef pair <PD, int> PDI;
+typedef pair <int, int> PI;
+typedef pair <int, PI> PII;
+typedef pair <PI, PI> PIII;
+typedef set <int> SI;
+typedef vector <int> VI;
+ 
+int Read()
+ {
+    char c; while (c = getchar(), (c != '-') && (c < '0' || c > '9'));
+    bool neg = (c == '-'); int ret = (neg ? 0 : c - 48);
+    while (c = getchar(), c >= '0' && c <= '9') ret = ret * 10 + c - 48;
+    return neg ? -ret : ret;
+ }
+ 
+const int MAXN = 200005;
+
+struct node
+ {
+	int mi, ma, fi, fa;
+ } ret, t1[1 << 19], t2[1 << 19];
+
+VI stage[MAXN << 1];
+SI s1[MAXN], s2[MAXN];
+int top, ti, stk[MAXN], cur[MAXN], bg1[MAXN], en1[MAXN], bg2[MAXN], en2[MAXN], seq1[MAXN], seq2[MAXN];
+int N, cnt, st1[MAXN], st2[MAXN], nxt[MAXN * 4], lnk[MAXN * 4], a[MAXN], b[MAXN];
+
+void init()
+ {
+	scanf("%d", &N);
+	fo (i, 2, N)
+	 {
+		int x = Read(); a[i] = x;
+		lnk[++ cnt] = i, nxt[cnt] = st1[x], st1[x] = cnt;
+		lnk[++ cnt] = x, nxt[cnt] = st1[i], st1[i] = cnt;
+	 }
+	//cnt = 0;
+	fo (i, 2, N)
+	 {
+		int x = Read(); b[i] = x;
+		lnk[++ cnt] = i, nxt[cnt] = st2[x], st2[x] = cnt;
+		lnk[++ cnt] = x, nxt[cnt] = st2[i], st2[i] = cnt;
+	 }
+ }
+ 
+void Traverse(int *bg, int *en, int *seq)
+ {
+	top = ti = stk[1] = bg[1] = seq[1] = 1;
+	while (top)
+	 {
+		int x = stk[top]; bool find = 0;
+		fe (i, cur[x], y) if (!bg[y])
+		 {
+			bg[y] = ++ ti, seq[ti] = stk[++ top] = y;
+			find = 1, cur[x] = nxt[i]; break;
+		 }
+		if (!find) en[x] = ti, -- top;
+	 }
+ }
+ 
+void Update(node &t, node tp)
+ {
+	if (tp.mi < t.mi) t.mi = tp.mi, t.fi = tp.fi;
+	if (tp.ma > t.ma) t.ma = tp.ma, t.fa = tp.fa;
+ }
+
+void iniTree(node *t, SI *s, int *seq, int id, int l, int r)
+ {
+	if (l == r)
+	 {
+		int x = seq[l]; t[id].fi = t[id].fa = x;
+		if (s[x].size())
+		 {
+			t[id].mi = *s[x].begin();
+			sit tmp = s[x].end(); tmp --;
+			t[id].ma = *tmp;
+		 } else t[id].mi = N + 1, t[id].ma = 0;
+		return;
+	 }
+	int mid = (l + r) >> 1;
+	iniTree(t, s, seq, id+id, l, mid), iniTree(t, s, seq, id+id+1, mid+1, r);
+	t[id] = t[id+id], Update(t[id], t[id+id+1]);
+ }
+ 
+void Remove(node *t, SI *s, int *seq, int id, int l, int r, int z, int v)
+ {
+	if (l == r)
+	 {
+		int x = seq[l];
+		s[x].erase(v);
+		if (s[x].size())
+		 {
+			t[id].mi = *s[x].begin();
+			sit tmp = s[x].end(); tmp --;
+			t[id].ma = *tmp;
+		 } else t[id].mi = N + 1, t[id].ma = 0;
+		return;
+	 }
+	int mid = (l + r) >> 1;
+	if (z <= mid) Remove(t, s, seq, id+id, l, mid, z, v); else Remove(t, s, seq, id+id+1, mid+1, r, z, v);
+	t[id] = t[id+id], Update(t[id], t[id+id+1]);
+ }
+ 
+void Query(node *t, int id, int l, int r, int gl, int gr)
+ {
+	if (gl <= l && r <= gr)
+	 {
+		Update(ret, t[id]);
+		return;
+	 }
+	int mid = (l + r) >> 1;
+	if (gl <= mid) Query(t, id+id, l, mid, gl, gr);
+	if (gr > mid) Query(t, id+id+1, mid+1, r, gl, gr);
+ }
+ 
+void Search(int cb, int *bg, int *en, int *bd, int *seq, node *t, SI *s, int x, int y)
+ {
+	if (bg[x] < bg[y]) swap(x, y);
+	
+	for (;;)
+	 {
+		ret.mi = N + 1, ret.ma = 0;
+		Query(t, 1, 1, N, bg[x], en[x]);
+		bool cont = 0;
+		if (ret.mi < bg[x])
+		 {
+			int dx = seq[ret.mi], dy = ret.fi;
+			if (bd[dy] == dx) swap(dx, dy);
+			stage[cb+1].pb(dx - 1), cont = 1;
+			Remove(t, s, seq, 1, 1, N, bg[dx], bg[dy]);
+			Remove(t, s, seq, 1, 1, N, bg[dy], bg[dx]);
+		 }
+		if (ret.ma > en[x])
+		 {
+			int dx = seq[ret.ma], dy = ret.fa;
+			if (bd[dy] == dx) swap(dx, dy);
+			stage[cb+1].pb(dx - 1), cont = 1;
+			Remove(t, s, seq, 1, 1, N, bg[dx], bg[dy]);
+			Remove(t, s, seq, 1, 1, N, bg[dy], bg[dx]);
+		 }
+		if (!cont) return;
+	 }
+ }
+ 
+void work()
+ {
+	Cpy(cur, st1), Traverse(bg1, en1, seq1);
+	Cpy(cur, st2), Traverse(bg2, en2, seq2);
+	
+	fo (i, 2, N)
+	 {
+		int x = i, y = a[i];
+		s2[x].insert(bg2[y]);
+		s2[y].insert(bg2[x]);
+	 }
+	 
+	fo (i, 2, N)
+	 {
+		int x = i, y = b[i];
+		s1[x].insert(bg1[y]);
+		s1[y].insert(bg1[x]);
+	 }
+	 
+	iniTree(t1, s1, seq1, 1, 1, N);
+	iniTree(t2, s2, seq2, 1, 1, N);
+	
+	int fir = Read(); stage[1].pb(fir);
+	// detele first
+	int tx = fir + 1, ty = a[fir + 1];
+	//if (bg2[tx] < bg2[ty]) swap(tx, ty);
+	Remove(t2, s2, seq2, 1, 1, N, bg2[tx], bg2[ty]);
+	Remove(t2, s2, seq2, 1, 1, N, bg2[ty], bg2[tx]);
+	//Remove(1, bg2, t2, s2, fir + 1, a[fir + 1]);
+	
+	fo (cb, 1, N+N)
+	 {
+		if (!stage[cb].size()) return;
+		sort(stage[cb].begin(), stage[cb].end());
+		
+		puts(cb & 1 ? "Blue" : "Red");
+		fo (i, 0, stage[cb].size() - 1)
+		 {
+			printf("%d%c", stage[cb][i], i + 1 < stage[cb].size() ? ' ' : '\n');
+			if (cb & 1) Search(cb, bg1, en1, b, seq1, t1, s1, stage[cb][i] + 1, a[stage[cb][i] + 1]);
+				else Search(cb, bg2, en2, a, seq2, t2, s2, stage[cb][i] + 1, b[stage[cb][i] + 1]);
+		 }
+	 }
+ }
+ 
+int main()
+ {
+	
+	init();
+	work();
+	return 0;
+ }

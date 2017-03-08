@@ -1,0 +1,51 @@
+#include<stdio.h>
+#include<vector>
+#include<algorithm>
+#define N 200005
+#define pb push_back
+using namespace std;
+vector<int>T[N];
+struct data{int x,y,z,id;}a[N];
+int f[N],ch[N],deep[N],F[N][20],G[N][20];
+int tot,n,u,v,i,m;long long MST,ans[N];
+int get(int u){return f[u]==u?u:f[u]=get(f[u]);}
+const int cmp(const data &a,const data &b){return a.z<b.z;}
+void DFS(int x){
+    for (int i=1;i<=18;i++)
+        F[x][i]=F[F[x][i-1]][i-1],
+        G[x][i]=max(G[x][i-1],G[F[x][i-1]][i-1]);
+    for (int i=0;i<T[x].size();i++){
+        int id=T[x][i],y=(x==a[id].x)?a[id].y:a[id].x;
+        if (y==F[x][0]) continue;deep[y]=deep[x]+1;
+        F[y][0]=x;G[y][0]=a[id].z;DFS(y);
+  }
+}
+int Query(int x,int y){
+    if (deep[x]<deep[y]) swap(x,y);
+    int ret=0,d=deep[x]-deep[y];
+    for (int i=0;i<=18;i++)
+        if ((d>>i)&1) ret=max(ret,G[x][i]),x=F[x][i];
+    if (x==y) return ret;
+    for (int i=18;i>=0;i--)
+        if (F[x][i]!=F[y][i])
+            ret=max(ret,G[x][i]),ret=max(ret,G[y][i]),x=F[x][i],y=F[y][i];
+    return max(ret,max(G[x][0],G[y][0]));
+}
+int main(){
+    scanf("%d%d",&n,&m);
+    for (i=1;i<=m;i++)
+        scanf("%d%d%d",&a[i].x,&a[i].y,&a[i].z),a[i].id=i;
+    for (i=1;i<=n;i++) f[i]=i;
+    sort(a+1,a+m+1,cmp);tot=n;
+    for (i=1;i<=m&&tot>1;i++){
+        u=get(a[i].x);v=get(a[i].y);
+        if (u==v) continue;ch[a[i].id]=1;
+        f[u]=v;tot--;MST+=a[i].z;
+        T[a[i].x].pb(i);T[a[i].y].pb(i);
+  }DFS(1);
+  for (i=1;i<=m;i++)
+    if (!ch[a[i].id])
+        ans[a[i].id]=MST+a[i].z-Query(a[i].x,a[i].y);
+  for (i=1;i<=m;i++)
+    printf("%I64d\n",(!ch[i])?ans[i]:MST);
+}

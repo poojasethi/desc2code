@@ -1,0 +1,107 @@
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#define N 100005
+#define L (d << 1)
+#define R (L | 1)
+#define M (l + r >> 1)
+#define INF 1000000001
+#define fi(a, b, c) for(int a = (b); a < (c); a++)
+#define FI(a, b, c) for(int a = (b); a <= (c); a++)
+using namespace std;
+
+int n, lx[N], ly[N], hx[N], hy[N], cx[N + N], c, t[1 << 19], q[N], l, h, a[N], ptr[N + N], pos[N], pre[N];
+vector<int> v[N + N];
+
+bool cmp(int x, int y){
+	return ly[x] < ly[y];
+}
+
+int hmin(int x, int y){
+	return cmp(x, y) ? x : y;
+}
+
+void init(int d, int l, int r){
+	if(l == r){
+		t[d] = v[l][0];
+		return;
+	}
+	
+	init(L, l, M);
+	init(R, M + 1, r);
+	t[d] = hmin(t[L], t[R]);
+}
+
+int query(int d, int l, int r, int b){
+	if(r <= b) return t[d];
+	int ret = query(L, l, M, b);
+	if(b > M) ret = hmin(ret, query(R, M + 1, r, b));
+	return ret;
+}
+
+void update(int d, int l, int r, int p){
+	if(l == r){
+		t[d] = v[l][++ptr[l]];
+		return;
+	}
+	
+	if(p > M) update(R, M + 1, r, p);
+	else update(L, l, M, p);
+	t[d] = hmin(t[L], t[R]);
+}
+
+void trace(int x){
+	if(x < 0) return;
+	trace(pre[x]);
+	printf("%d\n", x + 1);
+}
+
+int main(){
+	scanf("%d", &n);
+	fi(i, 0, n){
+		scanf("%d %d %d %d", &lx[i], &ly[i], &hx[i], &hy[i]);
+		cx[c++] = lx[i];
+		cx[c++] = hx[i];
+		a[i] = pre[i] = -1;
+	}
+	ly[n] = INF;
+	
+	sort(cx, cx + c);
+	c = unique(cx, cx + c) - cx;
+	
+	fi(i, 0, n){
+		if(!lx[i] && !ly[i]){
+			q[h++] = i;
+			a[i] = 1;
+			continue;
+		}
+		
+		pos[i] = lower_bound(cx, cx + c, lx[i]) - cx;
+		v[pos[i]].push_back(i);
+	}
+	
+	fi(i, 0, c){
+		sort(v[i].begin(), v[i].end(), cmp);
+		v[i].push_back(n);
+	}
+	
+	init(1, 0, c - 1);
+	
+	while(l < h){
+		int y = q[l++];
+		int ind = lower_bound(cx, cx + c, hx[y]) - cx;
+		int r;
+		//printf("vis %d\n", y);
+		while(r = query(1, 0, c - 1, ind), ly[r] <= hy[y]){
+			update(1, 0, c - 1, pos[r]);
+			q[h++] = r;
+			a[r] = a[y] + 1;
+			pre[r] = y;
+			//printf("go %d\n", r);
+		}
+	}
+	
+	printf("%d\n", a[n - 1]);
+	if(a[n - 1] >= 0) trace(n - 1);
+}
+

@@ -1,0 +1,140 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+ 
+#define BUF 4096
+ 
+struct Point {
+	int x, y;
+};
+ 
+Point p[1000000];
+ 
+char ibuf[BUF];
+int ipt;
+ 
+int readInt() {
+	int s = 1;
+	while (ipt < BUF && ibuf[ipt] < '-') ipt++;
+	if (ipt == BUF) {
+		fread(ibuf, 1, BUF, stdin);
+		ipt = 0;
+		while (ipt < BUF && ibuf[ipt] < '-') ipt++;
+	}
+	if (ipt < BUF && ibuf[ipt] == '-') { s = -1; ipt++; }
+	int n = 0;
+	while (ipt < BUF && ibuf[ipt] >= '0') n = (n*10)+(ibuf[ipt++]-'0');
+	if (ipt == BUF) {
+		fread(ibuf, 1, BUF, stdin);
+		ipt = 0;
+		while (ipt < BUF && ibuf[ipt] >= '0') n = (n*10)+(ibuf[ipt++]-'0');
+	}
+	return n*s;
+}
+ 
+inline void swapPoints(int i, int j) {
+	int s;
+	s = p[i].x; p[i].x = p[j].x; p[j].x = s;
+	s = p[i].y; p[i].y = p[j].y; p[j].y = s;
+}
+ 
+inline int ccw(const Point &p1, const Point &p2, const Point &p3) {
+	return (p2.x-p1.x)*(p3.y-p1.y) - (p2.y-p1.y)*(p3.x-p1.x);
+}
+ 
+inline int dist2(const Point &p1, const Point &p2) {
+	return (p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y);
+}
+ 
+inline bool scot(const Point &p1, const Point &p2) {
+	int c = ccw(p[0], p1, p2);
+	return c > 0 || (c == 0 && dist2(p[0], p1) < dist2(p[0], p2));
+}
+ 
+int grahamScan(int n) {
+	if (!n) return 0;
+	int nx = p[0].x, ny = p[0].y, ni = 0;
+	for (int i = 1; i < n; i++) if (p[i].y < ny || (p[i].y ==  ny && p[i].x < nx)) {
+		ny = p[i].y;
+		nx = p[i].x;
+		ni = i;
+	}
+	swapPoints(0, ni);
+	std::sort(p+1, p+n, scot);
+ 
+	int m = 1;
+	for (int i = 2; i < n; i++) {
+		while (m && ccw(p[m-1], p[m], p[i]) <= 0) m--;
+		swapPoints(++m, i);
+	}
+	return m+1;
+}
+ 
+int cutPoints(int n) {
+	Point xx = p[0], nx = p[0], xy = p[0], ny = p[0],
+		xxpy = p[0], nxpy = p[0], xxmy = p[0], nxmy = p[0];
+	for (int i = 0; i < n; i++) {
+		if (p[i].x > xx.x || (p[i].x == xx.x && abs(p[i].y) < abs(xx.y))) xx = p[i];
+		if (p[i].x < nx.x || (p[i].x == nx.x && abs(p[i].y) < abs(nx.y))) nx = p[i];
+		if (p[i].y > xy.y || (p[i].y == xy.y && abs(p[i].x) < abs(xy.x))) xy = p[i];
+		if (p[i].y < ny.y || (p[i].y == ny.y && abs(p[i].x) < abs(ny.x))) ny = p[i];
+		if (p[i].x+p[i].y > xxpy.x+xxpy.y) xxpy = p[i];
+		if (p[i].x+p[i].y < nxpy.x+nxpy.y) nxpy = p[i];
+		if (p[i].x-p[i].y > xxmy.x-xxmy.y) xxmy = p[i];
+		if (p[i].x-p[i].y < nxmy.x-nxmy.y) nxmy = p[i];
+	}
+ 
+	int m = 0;
+	for (int i = 0; i < n; i++) {
+		if (!(ccw(ny, xxmy, p[i]) > 0 && ccw(xxmy, xx, p[i]) > 0 &&
+				ccw(xx, xxpy, p[i]) > 0 && ccw(xxpy, xy, p[i]) > 0 &&
+				ccw(xy, nxmy, p[i]) > 0 && ccw(nxmy, nx, p[i]) > 0 &&
+				ccw(nx, nxpy, p[i]) > 0 && ccw(nxpy, ny, p[i]) > 0)) {
+			if (m < i) p[m] = p[i];
+			m++;
+		}
+	}
+	return m;
+}
+ 
+int ternary(int i, int j, int n) {
+	int lf = j, rt = n-1;
+	while (rt-lf > 2) {
+		int lth = (lf*2+rt)/3, rth = (lf+2*rt)/3;
+		if (abs(ccw(p[i], p[j], p[lth])) < abs(ccw(p[i], p[j], p[rth])))
+			lf = lth;
+		else
+			rt = rth;
+	}
+ 
+	int mx = 0;
+	for (int k = lf; k <= rt; k++) {
+		int a = abs(ccw(p[i], p[j], p[k]));
+		if (a > mx) mx = a;
+	}
+	return mx;
+}
+ 
+int main() {
+	int t = readInt();
+	for (int i = 0; i < t; i++) {
+		int n = readInt();
+		for (int j = 0; j < n; j++) {
+			p[j].x = readInt();
+			p[j].y = readInt();
+		}
+		if (n > 1500) {
+			int nn = cutPoints(n);
+			n = nn;
+		}
+		int ct = grahamScan(n);
+		int mxa = 0;
+		for (int j = 0; j < ct; j++)
+		for (int k = j+1; k < ct; k++) {
+			int a = ternary(j, k, ct);
+			if (a > mxa) mxa = a;
+		}
+		printf("%d\n", mxa);
+	}
+	return 0;
+} 

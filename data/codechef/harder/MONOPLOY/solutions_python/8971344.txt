@@ -1,0 +1,182 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+struct Edge {
+    int y,next;
+};
+
+Edge e[200010];
+int cnt;
+int b[100010];
+int f[100010],sz[100010],pl[100010],r[100010],son[100010];
+int fa[100010],ch[100010][2];
+int tk[100010];
+long long tb[100010];
+int id,n;
+
+void addedge(int x,int y) {
+    e[++cnt].y = y;
+    e[cnt].next = b[x];
+    b[x] = cnt;
+}
+
+void dfs(int x) {
+    pl[x] = ++id;
+    sz[x] = 1;
+    for (int i = b[x]; i != 0; i = e[i].next)
+        if (e[i].y != f[x]) {
+            f[e[i].y] = x;
+            dfs(e[i].y);
+            sz[x] += sz[e[i].y];
+        }
+    r[x] = id;
+}
+
+int dir(int x) {
+    return x == ch[fa[x]][1];
+}
+ 
+bool isroot(int x) {
+    return ch[fa[x]][0] != x && ch[fa[x]][1] != x;
+}
+
+void rotate(int x) {
+    int y = fa[x],b = dir(x);
+    int z = fa[y],a = ch[x][! b];
+    if (! isroot(y))
+        ch[z][dir(y)] = x;
+    fa[x] = z;
+    ch[x][! b] = y;
+    fa[y] = x;
+    ch[y][b] = a;
+    if (a != 0)
+        fa[a] = y;
+}
+
+void splay(int x) {
+    for (; ! isroot(x);) {
+        int y = fa[x];
+        int z = fa[y];
+        if (isroot(y))
+            rotate(x);
+        else {
+            int b = dir(x),c = dir(y);
+            if (b ^ c) {
+                rotate(x);
+                rotate(x);
+            }
+            else {
+                rotate(y);
+                rotate(x);
+            }
+        }
+    }
+}
+
+int lowbit(int x) {
+    return x & -x;
+}
+
+void add_(int x,int c) {
+    for (int i = x; i > 0; i -= lowbit(i))
+        tk[i] += c;
+    for (int i = x + 1,t = c * x; i <= n; i += lowbit(i))
+        tb[i] += t;
+}
+
+long long query_(int x) {
+    if (! x)
+        return 0;
+    int rk = 0;
+    long long rb = 0;
+    for (int i = x; i <= n; i += lowbit(i))
+        rk += tk[i];
+    for (int i = x; i > 0; i -= lowbit(i))
+        rb += tb[i];
+    return (long long)x * rk + rb;
+}
+
+void add(int l,int r,int c) {
+    add_(r,c);
+    add_(l - 1,-c);
+}
+
+long long query(int l,int r) {
+    return query_(r) - query_(l - 1);
+}
+
+void addst(int x,int c) {
+    add(pl[x],r[x],c);
+}
+
+long long queryst(int x) {
+    return query(pl[x],r[x]);
+}
+
+void expose(int x) {
+    int y = 0;
+    for (; x != 0;) {
+        splay(x);
+        if (y) {
+            for (; ch[y][0]; y = ch[y][0]);
+            splay(y);
+            addst(y,-1);
+        }
+        if (son[x])
+            addst(son[x],1);
+        son[x] = y;
+        ch[x][1] = y;
+        y = x;
+        x = fa[x];
+    }
+}
+
+int main() {
+    int T;
+    scanf("%d",&T);
+    for (; T--;) {
+        memset(b,0,sizeof(b));
+        memset(tk,0,sizeof(tk));
+        memset(tb,0,sizeof(tb));
+        cnt = 0;
+        scanf("%d",&n);
+        for (int i = 1; i < n; i++) {
+            int x,y;
+            scanf("%d%d",&x,&y);
+            addedge(x + 1,y + 1);
+            addedge(y + 1,x + 1);
+        }
+        id = 0;
+        dfs(1);
+        for (int i = 1; i <= n; i++) {
+            fa[i] = ch[i][0] = ch[i][1] = 0;
+            son[i] = 0;
+            if (i > 1) {
+                addst(i,1);
+                fa[i] = f[i];
+            }
+        }
+        int Q;
+        scanf("%d",&Q);
+        for (; Q--;) {
+            char c[3];
+            scanf("%s",c);
+            if (c[0] == 'O') {
+                int x;
+                scanf("%d",&x);
+                x++;
+                expose(x);
+            }
+            else {
+                int x;
+                scanf("%d",&x);
+                x++;
+                printf("%.7lf\n",(double)queryst(x) / sz[x]);
+            }
+        }
+    }
+}

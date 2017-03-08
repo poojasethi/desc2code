@@ -1,0 +1,109 @@
+#include <cstdio>
+#include <cassert>
+#include <vector>
+#include <algorithm>
+ 
+using namespace std;
+ 
+typedef vector<int> vi;
+typedef vector<vi> vvi;
+ 
+int MAXN = 0;
+vi BIT;
+ 
+int query(int idx)
+{
+    int ans = 0;
+    if (idx == 0) return ans;
+    while (idx > 0) {
+        ans += BIT[idx];
+        idx -= (idx & -idx);
+    }
+    return ans;
+}
+ 
+void update(int idx, int value = 1)
+{
+    if (idx == 0) return;
+    while (idx <= MAXN) {
+        BIT[idx] += value;
+        idx += (idx & -idx);
+    }
+}
+ 
+int main ()
+{
+    int N, M;
+    scanf("%d %d", &N, &M);
+ 
+    MAXN = N + 2;
+    BIT.assign(MAXN, 0);
+    vi A(N, 0);
+    vi B(N, 0);
+ 
+    for (int i = 0; i < N; i++) {
+        scanf("%d", &A[i]);
+        B[i] = A[i];
+    }
+ 
+    sort(B.begin(), B.end());
+ 
+    B.erase(unique(B.begin(), B.end()), B.end());
+ 
+    vi LT(M, 0), RT(M, 0);
+    vvi VLT(N, vi()), VRT(N, vi());
+    int x, y;
+    for (int i = 0; i < M; i++) {
+        scanf("%d %d", &x, &y);
+        x--; y--;
+        if (x > y) swap(x, y);
+        LT[i] = x;
+        RT[i] = y;
+        VLT[x].push_back(i);
+        VRT[y].push_back(i);
+    }
+ 
+    for (int i = 0; i < N; i++) {
+        int idx = lower_bound(B.begin(), B.end(), A[i]) - B.begin();
+        A[i] = idx + 1;
+    }
+ 
+    long long total = 0;
+    vi ans(M, 0);
+    for (int i = 0; i < N; i++) {
+        int sum = query(N);
+        int inv = sum - query(A[i]);
+        total += inv;
+ 
+        for (int j = 0; j < int(VLT[i].size()); j++) {
+ 
+            int qx = VLT[i][j];
+            int g1 = query(A[LT[qx]] - 1);
+            int g2 = sum - query(A[LT[qx]]);
+ 
+            int g3 = query(A[RT[qx]] - 1);
+            int g4 = sum - query(A[RT[qx]]);
+ 
+            ans[qx] += g1 - g2 - g3 + g4;
+        }
+ 
+        for (int j = 0; j < int(VRT[i].size()); j++) {
+ 
+            int qx = VRT[i][j];
+            int g1 = query(A[LT[qx]]-1);
+            int g2 = sum - query(A[LT[qx]]);
+ 
+            int g3 = query(A[RT[qx]] - 1);
+            int g4 = sum - query(A[RT[qx]]);
+ 
+            ans[qx] += -g1 + g2 + g3 - g4;
+        }
+        update(A[i]);
+    }
+ 
+    for (int i = 0; i < M; i++) {
+        printf("%lld\n", total + ans[i]);
+    }
+    return 0;
+}
+   

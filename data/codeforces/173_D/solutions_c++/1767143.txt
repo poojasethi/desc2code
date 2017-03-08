@@ -1,0 +1,106 @@
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+const int MaxN = 100005;
+const int MaxE = MaxN * 2;
+
+struct Edge {
+	int v;
+	Edge* next;
+} memo[MaxE], *cur, *g[MaxN];
+int N, M;
+bool vst[MaxN];
+vector<int> v[2];
+int ret[MaxN], d[MaxN];
+int K;
+
+void addEdge(int u, int v) {
+	cur->v = v;
+	cur->next = g[u];
+	g[u] = cur++;
+	d[u]++;
+}
+
+void DFS(int u, int c) {
+	vst[u] = true;
+	v[c].push_back(u);
+	for (Edge* it = g[u]; it; it = it->next)
+		if (!vst[it->v]) DFS(it->v, c ^ 1);
+}
+
+bool sol() {
+	int u, cnt = 0;
+	if (v[0].size() % 3 == 0) return true;
+	fill(vst, vst + N + 1, false);
+	for (int i = 0; i < (int)v[0].size(); i++) {
+		u = v[0][i];
+		if (ret[u] >= 0) continue;
+		if (d[u] + 2 <= (int)v[1].size()) {
+			for (Edge* it = g[u]; it; it = it->next) {
+				vst[it->v] = true;
+			}
+			ret[u] = K++;
+			cnt++;
+			for (int j = 0; cnt < 3 && j < (int)v[1].size(); j++) {
+				if (!vst[v[1][j]]) {
+					ret[v[1][j]] = K++;
+					cnt++;
+				}
+			}
+			return true;
+		}
+	}
+	return false;
+}
+
+int main() {
+	while (scanf("%d%d", &N, &M) == 2) {
+		fill(g, g + N + 1, (Edge* )NULL);
+		fill(d, d + N + 1, 0);
+		fill(vst, vst + N + 1, false);
+		cur = memo;
+		v[0].clear();
+		v[1].clear();
+		while (M--) {
+			int u, v;
+			scanf("%d%d", &u, &v);
+			addEdge(u, v);
+			addEdge(v, u);
+		}
+		for (int i = 1; i <= N; i++) if (!vst[i]) DFS(i, 0);
+		if (v[0].size() % 3 == 2) swap(v[0], v[1]);
+		/*for (int i = 0; i < (int)v[0].size(); i++)
+			printf("%d ", v[0][i]);
+		puts("");
+		for (int i = 0; i < (int)v[1].size(); i++)
+			printf("%d ", v[1][i]);
+		puts("");*/
+		try {
+			fill(ret, ret + N + 1, -1);
+			K = 0;
+			if (!sol()) {
+				swap(v[0], v[1]);
+				K = 0;
+				fill(ret, ret + N + 1, -1);
+				if (!sol() || !sol()) throw 0;
+			}
+			puts("YES");
+			for (int i = 0; i < 2; i++)
+				for (int j = 0; j < (int)v[i].size(); j++)
+					if (ret[v[i][j]] == -1) ret[v[i][j]] = K++;
+			for (int i = 1; i <= N; i++) {
+				printf("%d ", ret[i] / 3 + 1);
+			}
+			puts("");
+		} catch (...) {
+			puts("NO");
+		}
+	}
+	return 0;
+}
+

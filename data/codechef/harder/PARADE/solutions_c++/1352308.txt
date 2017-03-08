@@ -1,0 +1,143 @@
+#include <iostream>
+#include <cstdio>
+#include <cassert>
+#include <cstdlib>
+#include <set>
+#include <map>
+#include <vector>
+#include <string>
+#include <cmath>
+#include <cstring>
+#include <queue>
+#include <stack>
+#include <algorithm>
+#include <sstream>
+using namespace std; 
+
+#define f first
+#define s second
+#define mp make_pair
+#define sz(a) int((a).size()) 
+#define pb push_back 
+#define all(c) (c).begin(),(c).end() 
+#define forit(it,S) for(__typeof(S.begin()) it = S.begin(); it != S.end(); ++it)
+#ifdef WIN32
+	#define I64d "%I64d"
+#else
+	#define I64d "%lld"
+#endif
+
+typedef pair <int, int> pi;
+const int inf = int(1e6);
+pi c[11111];
+int n, m, k, cn, d[255][255];
+int S, T, N, res[11111], phi[555], dist[555], from[555], color[555], cc;
+double start;
+int cap[555][555], cost[555][555];
+
+void addEdge(int u, int v, int c) {
+	cap[u][v] = 1;
+	cost[u][v] = c, cost[v][u] = -c;
+}
+
+void simulateMinCostMaxFlow() {
+	int flow = 0;
+	int p = 0;
+	int sum = 0;
+	
+	while (p < cn) {		
+		for (int i = 0; i < N; ++i)
+			dist[i] = inf;
+		dist[S] = 0;
+		int u = S;
+		++cc;
+		while (u != -1) {				
+			color[u] = cc;
+			for (int v = 0; v < N; ++v) if (cap[u][v] > 0) {				
+				if (dist[u] + phi[u] - phi[v] + cost[u][v] < dist[v]) {
+					dist[v] = dist[u] + phi[u] - phi[v] + cost[u][v];
+					from[v] = u;		
+				}
+			}
+			u = -1;
+			for (int i = 0; i < N; ++i) if (color[i] != cc && dist[i] < inf) {
+				if (u == -1 || dist[i] < dist[u])
+					u = i;
+			}
+		}
+		if (dist[T] == inf) break;
+		for (int i = 0; i < N; ++i)
+			phi[i] += dist[i];
+			
+		int cur = 0;	
+		for (int u = T; u != S; ) {
+			int v = from[u];
+			--cap[v][u];			
+			++cap[u][v];
+			cur += cost[v][u];
+			u = v;
+		}	
+		while (p < cn && c[p].f <= cur) {
+			res[c[p].s] = sum + (n - flow) * c[p].f;
+			++p;
+		}
+		sum += cur;
+		++flow;
+	}
+	while (p < cn) {
+		res[c[p].s] = sum + (n - flow) * c[p].f;		
+		++p;
+	}	
+}
+
+int main() {
+	double start = clock();
+	scanf("%d", &n);
+	scanf("%d%d", &m, &cn);
+	for (int i = 0; i < n; ++i)
+		for (int j = 0; j < n; ++j)
+			d[i][j] = inf;
+			
+	for (int i = 0; i < m; ++i) {
+		int x, y, z;
+		scanf("%d%d%d", &x, &y, &z);
+		--x, --y;
+		if (d[x][y] > z) d[x][y] = z;
+	}	
+	
+	//floyd-warshall
+	for (int k = 0; k < n; ++k) {
+		for (int i = 0; i < n; ++i) {
+			for (int j = 0; j < n; ++j)
+				d[i][j] = min(d[i][j], d[i][k] + d[k][j]);
+		}
+	}
+	//floyd-warshall
+	
+	for (int i = 0; i < cn; ++i) {
+		scanf("%d", &c[i].f);
+		c[i].s = i;
+	}
+	sort(c, c + cn);
+	
+	for (int i = 0; i < n; ++i) {
+		for (int j = 0; j < n; ++j) if (d[i][j] < inf)
+			addEdge(i, n + j, d[i][j]);			
+	}
+	
+	S = n + n;
+	T = S + 1;
+	N = T + 1;
+	for (int i = 0; i < n; ++i)
+		addEdge(S, i, 0);
+	for (int i = 0; i < n; ++i)
+		addEdge(n + i, T, 0);
+	
+	
+	simulateMinCostMaxFlow();
+	for (int i = 0; i < cn; ++i)
+		printf("%d\n", res[i]);
+	
+	//cerr << "works  " << (clock() - start) / CLOCKS_PER_SEC << " sec";
+	return 0;		
+}

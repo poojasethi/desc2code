@@ -1,0 +1,101 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <algorithm>
+#include <functional>
+#include <math.h>
+
+inline void fastread(int* a)
+{
+  register char c = 0;
+  while (c < 33)
+    c = getchar();
+  *a = 0;
+  while (c > 33)
+  {
+    *a = (*a <<1)+(*a<<3) + c - '0';
+    c = getchar();
+  }
+}
+
+int N; // [1, 100000]
+int T = 1;
+
+struct MF
+{
+  int M;
+  int F;
+};
+
+MF mf[100001];
+
+template<class _Ty>
+struct lessP : public std::binary_function<_Ty, _Ty, bool>
+{
+  bool operator()(const _Ty& l, const _Ty& r) const
+  {
+    return (l.M < r.M);
+  }
+};
+
+MF mergeBuf[100001];
+long long mergeSort(int b, int e)
+{
+  if(e == (b + 1))
+    return 0;
+
+  const int m = (e + b) / 2;
+
+  long long swaps = mergeSort(b, m) + mergeSort(m, e);
+
+  int l = b; int r = m;
+  int ibuf = 0;
+  for(; (l < m) && (r < e); ++ibuf)
+  {
+    const int lF = mf[l].F;
+    const int rF = mf[r].F;
+    if(lF < rF) // left is less, so use it this iteration
+    {
+      mergeBuf[ibuf].F = lF;
+      ++l;
+    }
+    else // right is less, so use it this iteration
+    {
+      mergeBuf[ibuf].F = rF;
+      swaps += m - l;
+      ++r;
+    }
+  }
+
+  // Now copy the rest of the left to the merge buffer
+  const int leftRemaining = m - l;
+  memcpy(mergeBuf + ibuf, mf + l, sizeof(MF) * leftRemaining);
+  ibuf += leftRemaining;
+
+  // Now from the merge buffer to our array (don't have to bother with the remaining right items - they are on their places!)
+  memcpy(mf + b, mergeBuf, sizeof(MF) * ibuf);
+
+  return swaps;
+}
+
+int main()
+{
+  while(T--)
+  {
+    fastread(&N);
+
+    for(int i = 0; i < N; ++i)
+    {
+      fastread(&mf[i].M);
+      fastread(&mf[i].F);
+    }
+
+    std::sort(mf, mf + N, lessP<MF>());
+
+    const long long result = mergeSort(0, N);
+
+    printf("%lld\n", result);
+  }
+
+  return 0;
+}

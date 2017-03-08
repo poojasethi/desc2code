@@ -1,0 +1,93 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+typedef double db;
+
+const int N=505,NN=105;
+
+int n,m,k,t;
+int flag[N];
+int id[N];
+
+int deg[N],g[N][N];
+
+db cnt[N],b[N];
+
+db mat[N][N*2];
+
+void gaussinv(){
+	for(int i=1;i<=n;i++) mat[i][i+n]=1;
+	for(int i=1;i<=n;i++){
+		for(int j=i;j<=n;j++) if(mat[j][i]){
+			for(int k=n*2;k>=i;k--) swap(mat[i][k],mat[j][k]);
+			break;
+		}
+		for(int k=n*2;k>=i;k--) mat[i][k]/=mat[i][i];
+		for(int j=1;j<=n;j++) if(j!=i){
+			for(int k=n*2;k>=i;k--) mat[j][k]-=mat[j][i]*mat[i][k];
+		}
+	}
+}
+
+db p[N][N];
+
+db ans[NN][NN],opt[NN][NN],tmp[NN][NN];
+
+void mul(db c[NN][NN],db a[NN][NN],db b[NN][NN]){
+	for(int i=1;i<=t;i++)
+		for(int j=1;j<=t;j++){
+			tmp[i][j]=0;
+			for(int k=1;k<=t;k++)
+				tmp[i][j]+=a[i][k]*b[k][j];
+		}
+	for(int i=1;i<=t;i++)
+		for(int j=1;j<=t;j++)
+			c[i][j]=tmp[i][j];
+}
+
+int main(){
+	scanf("%d%d%d",&n,&m,&k);
+	for(int i=1;i<=n;i++){
+		scanf("%d",&flag[i]);
+		if(flag[i]) id[i]=++t;
+	}
+	while(m--){
+		int u,v; scanf("%d%d",&u,&v);
+		g[u][v]++;
+		g[v][u]++;
+		deg[u]++;
+		deg[v]++;
+	}
+	for(int i=1;i<=n;i++) mat[i][i]+=1;
+	for(int x=1;x<=n;x++){
+		for(int y=1;y<=n;y++) if(!flag[y]){
+			mat[x][y]-=1./deg[y]*g[y][x];
+		}
+	}
+	gaussinv();
+	for(int i=1;i<=n;i++){
+		for(int j=1;j<=n;j++) cnt[j]=1./deg[i]*g[i][j];
+		for(int u=1;u<=n;u++){
+			b[u]=0;
+			for(int v=1;v<=n;v++) if(!flag[v]) b[u]+=1./deg[v]*cnt[v]*g[v][u];
+		}
+		for(int x=1;x<=n;x++){
+			p[i][x]=cnt[x];
+			for(int y=1;y<=n;y++){
+				p[i][x]+=mat[x][y+n]*b[y];
+			}
+		}
+	}
+	for(int i=1;i<=n;i++) if(flag[i]) ans[id[i]][id[i]]=p[1][i];
+	for(int i=1;i<=n;i++) if(flag[i])
+		for(int j=1;j<=n;j++) if(flag[j])
+			opt[id[i]][id[j]]=p[i][j];
+	for(k-=2;k;k>>=1){
+		if(k&1)
+			mul(ans,ans,opt);
+		mul(opt,opt,opt);
+	}
+	db res=0;
+	for(int i=1;i<=t;i++) res+=ans[i][id[n]];
+	printf("%.12lf\n",res);
+}

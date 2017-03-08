@@ -1,0 +1,117 @@
+#include <cstdio>
+#include <vector>
+#include <queue>
+#include <algorithm>
+#include <functional>
+using namespace std;
+const int N=(int)1e5+5,inf=314000000;
+int m,n;
+struct node;
+struct rule{
+	node *bel;
+	int k,d,val;
+	vector<node*> a;
+	rule(node*);
+};
+struct node{
+	vector<rule> r;
+	vector<rule*> pre;
+	bool miok,maok,ins;
+	int mi,ma;
+	bool dfs();
+} V[N];
+rule::rule(node* belong):bel(belong),d(0){
+	int l; scanf("%d",&l);
+	while(l--){
+		int y; scanf("%d",&y);
+		if(y==-1) d++;
+		else{
+			a.push_back(V+y);
+			V[y].pre.push_back(this);
+		}
+	}
+	k=a.size();
+	val=d;
+}
+struct data{
+	node *u;
+	int dist;
+	friend bool operator < (const data &a,const data &b){
+		return a.dist>b.dist;
+	}
+};
+priority_queue<data> q;
+bool node::dfs(){
+	static node *s[N];
+	static int top=0;
+	if(!miok) return false;
+	if(maok){
+		if(ins||ma==-2) return true;
+		return false;
+	}
+	maok=true;
+	s[top++]=this;
+	ins=true;
+	for(vector<rule>::iterator it=r.begin();it!=r.end();it++){
+		rule &cur=*it;
+		int now=cur.d;
+		bool ok=true;
+		for(vector<node*>::iterator itt=cur.a.begin();itt!=cur.a.end();itt++){
+			node *v=*itt;
+			if(v->dfs())
+				now=-2;
+			else
+			if(!v->miok){
+				ok=false;
+				break;
+			}
+			else
+			if(now!=-2&&v->ma>0)
+				now+=v->ma;
+		}
+		if(!ok) continue;
+		if(now==-2){
+			ma=-2;
+			top--;
+			ins=false;
+			return true;
+		}
+		if(now>ma){
+			ma=now;
+		}
+	}
+	top--;
+	ins=false;
+	return false;
+}
+int main(){
+	scanf("%d%d",&m,&n);
+	while(m--){
+		int x; scanf("%d",&x);
+		V[x].r.push_back(*new rule(V+x));
+		if(!V[x].r.back().k)
+			q.push((data){V+x,V[x].r.back().d});
+	}
+	while(!q.empty()){
+		node *u=q.top().u;
+		int dist=q.top().dist;
+		q.pop();
+		if(u->miok) continue;
+		u->miok=true;
+		u->mi=dist;
+		for(vector<rule*>::iterator it=u->pre.begin();it!=u->pre.end();it++){
+			rule *cur=*it;
+			cur->val+=dist;
+			if(!--cur->k){
+				node *v=cur->bel;
+				q.push((data){v,cur->val});
+			}
+		}
+	}
+	for(node *u=V+1;u<=V+n;u++) if(!u->miok){
+		u->mi=u->ma=-1;
+	}
+	for(node *u=V+1;u<=V+n;u++) if(u->miok&&!u->maok)
+		u->dfs();
+	for(node *u=V+1;u<=V+n;u++) printf("%d %d\n",min(inf,u->mi),min(inf,u->ma));
+}

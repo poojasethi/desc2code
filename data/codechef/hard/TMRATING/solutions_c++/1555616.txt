@@ -1,0 +1,154 @@
+#define _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_DEPRECATE
+
+/* in code we trust */
+
+#include <cstdlib>
+#include <cstdio>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+
+#include <algorithm>
+#include <bitset>
+#include <vector>
+#include <set>
+#include <map>
+#include <string>
+#include <deque>
+#include <queue>
+#include <stack>
+
+#include <cmath>
+#include <cassert>
+#include <utility>
+#include <climits>
+
+using namespace std;
+
+#define eol << "\n"
+#define eol_ << "\n" << 
+#define __ << " " <<
+#define _ << " "
+#define prec(v) fixed << setprecision(v) <<
+
+#define  forx(i, n) for (int i = 0;   i < (n); i++)
+#define rforx(n, i) for (int i = (n); i >= 0; i--)
+#define allx(obj) (obj).begin(), (obj).end()
+#define rallx(obj) (obj).rbegin(), (obj).rend()
+#define pb push_back
+#define mp make_pair
+#define root(x) ((double) sqrt((double) (x)))
+#define sqr(x) ((x) * (x))
+
+#define oint long long
+#define uint unsigned int
+#define lod long double
+#define eps (1.0e-9)
+
+#define pii pair <int, int> 
+
+pii defval = mp(-1, -1);
+
+class node
+{
+public:
+	pii value;
+	node* left, *right;
+	node (pii _val = defval, node* _left = NULL, node* _right = NULL)
+	{	value = _val, left = _left, right = _right; }
+};
+
+pair <int, int> Best(pair <int, int> a, pair <int, int> b)
+{
+	vector <int> tmp(4);
+	tmp[0] = a.first, tmp[1] = a.second, tmp[2] = b.first, tmp[3] = b.second;
+	sort(tmp.begin(), tmp.end());
+	return make_pair(tmp[3], tmp[2]);
+}
+
+node* build(vector <int> &basic, int left, int right)
+{
+	if (left == right)
+	{
+		return new node(make_pair(basic[left], -1));
+	}
+	node* res = new node();
+	int mid = (left + right) / 2;
+	res->left  = build(basic, left, mid);
+	res->right = build(basic, mid + 1, right);
+	res->value = Best(res->left->value, res->right->value);
+	return res;
+}
+
+pair <int, int> handle (node* cur, int ql, int qr, int left, int right)
+{
+	if (ql == left && qr == right)
+		return cur->value;
+	if (qr < left || right < ql)
+		return defval;
+	int mid = (left + right) / 2;
+	return Best(
+		handle(cur->left, ql, min(mid, qr), left, mid),
+		handle(cur->right, max(mid + 1, ql), qr, mid + 1, right)
+		);
+}
+
+node* change (node* cur, int index, int value, int left, int right)
+{
+	if (left == right)
+		return new node(make_pair(value, -1));
+
+	node* res = new node();
+	int mid = (left + right) / 2;
+	if (index <= mid)
+	{
+		res->left  = change(cur->left, index, value, left, mid);
+		res->right = cur->right;
+	}
+	else
+	{
+		res->left  = cur->left;
+		res->right = change(cur->right, index, value, mid + 1, right);
+	}
+	res->value = Best(res->left->value, res->right->value);
+	return res;
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt", "r", stdin);
+	freopen("output.txt", "w", stdout);
+	freopen("log.txt", "w", stderr);
+#endif
+	int n, m;
+	long long A, B, C, D;
+	cin >> n >> m >> A >> B >> C >> D;
+	vector <int> init_rat(n);
+	for (int i = 0; i < n; i++)
+		cin >> init_rat[i];
+
+	vector <node*> roots;
+	roots.push_back(build(init_rat, 0, n - 1));
+	
+	int q;
+	pair <int, int> r = make_pair(0, 0);
+	cin >> q;
+	for (int K = 1; K <= q; K++)
+	{
+		int qi, qj;
+		int t = (A * r.first + D) % K;
+		
+		cin >> qi >> qj;
+		
+		r = handle(roots[t], qi, qj, 0, n - 1);
+		
+		cout << r.first << " " << r.second << "\n";
+		
+		int index = (B * r.first  + D) % n;
+		int value = (C * r.second + D) % m;
+		roots.push_back(change(roots[K - 1], index, value, 0, n - 1));
+	}
+}

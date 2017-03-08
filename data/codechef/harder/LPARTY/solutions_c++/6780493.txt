@@ -1,0 +1,164 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <algorithm>
+#include <map>
+using namespace std;
+
+int Case,T,n,m,i,j,k,l,ans;
+int c[1000],d[1000],h[1000],w[1000],tot,cnt;
+unsigned int bit[1000],e[1000],BIT,aim;
+int son[1000],next[10000],ed[10000],ltot;
+bool f[2005],g[2005],del[1000];
+char s[10];
+
+map <unsigned int,int> Hash[10],M[1000][235];
+
+void dfs(int x,int y,int z)
+{
+	if(x>n)
+	{
+		int sum=0;
+		for(int i=1;i<=tot;++i)if((c[i]&y)==y)++sum;
+		if(sum==(1<<(n-z)))d[++cnt]=y;
+		if(z==n)BIT=(BIT<<1)+f[y];
+		return;
+	}
+	dfs(x+1,y*4+1,z+1);
+	dfs(x+1,y*4+2,z+1);
+	dfs(x+1,y*4,z);
+}
+
+int calc(int k)
+{
+	int sum=0;
+	for(int i=1;i<=n;++i)
+	{
+		if(k%4)++sum;
+		k/=4;
+	}
+	return sum;
+}
+
+void work(int x,int y,int z,unsigned int B)
+{
+	if(y>=ans)return;
+	int i;
+	if(B==aim)
+	{
+		ans=y;
+		return;
+	}
+	if(x>cnt)return;
+	z=B%233;
+	if(M[x][z].find(B)==M[x][z].end())M[x][z][B]=y;
+	else
+	{
+		if(y>=M[x][z][B])return;
+		M[x][z][B]=y;
+	}
+	int k;
+	if((e[x]&B)!=e[x])
+	{
+		k=0;
+		for(i=e[x]^(e[x]&B);i;i-=i&-i)++k;
+		work(x+1,y+h[x],z+k,B|e[x]);
+	}
+	k=1;
+	for(i=son[x];i;i=next[i])
+	{
+		--w[ed[i]];
+		if(!w[ed[i]])k=0;
+	}
+	if(k)work(x+1,y,z,B);
+	for(i=son[x];i;i=next[i])
+	{
+		++w[ed[i]];
+	}
+}
+
+int main()
+{
+	scanf("%d",&T);
+	for(Case=1;Case<=T;++Case)
+	{
+		scanf("%d%d",&n,&m);
+		memset(f,false,sizeof(f));
+		memset(g,false,sizeof(g));
+		tot=cnt=0;
+		for(;m;--m)
+		{
+			scanf("%s",s+1);
+			k=0;
+			for(i=1;i<=n;++i)
+			if(s[i]>='a')k=k*4+1;
+			else k=k*4+2;
+			if(!f[k])c[++tot]=k;
+			f[k]=true;
+		}
+		BIT=0;
+		dfs(1,0,0);
+		if(Hash[n].find(BIT)!=Hash[n].end())
+		{
+			printf("%d\n",Hash[n][BIT]);
+			continue;
+		}
+		for(i=1;i<=cnt;++i)
+		{
+			k=d[i];
+			for(j=1;j<=cnt;++j)
+			if(d[j]!=k&&((k&d[j])==k))
+			{
+				d[j]=d[cnt];
+				--cnt;--j;
+			}
+		}
+		sort(d+1,d+cnt+1);
+		for(i=1;i<=cnt;++i)del[i]=false;
+		for(i=1;i<=cnt;++i)h[i]=calc(d[i]);
+		for(i=1;i<=cnt;++i)
+		{
+			bit[i]=0;
+			for(j=1;j<=tot;++j)bit[i]=(bit[i]<<1)+((d[i]&c[j])==d[i]);
+		}
+		for(i=1;i<=cnt;++i)
+		for(j=i+1;j<=cnt;++j)
+		{
+			if((bit[i]&bit[j])==bit[j])
+			del[j]=true;
+		}
+		j=0;
+		for(i=1;i<=cnt;++i)
+		if(!del[i])
+		{
+			++j;
+			if(i!=j)d[j]=d[i];
+		}
+		cnt=j;
+		for(i=1;i<=cnt;++i)h[i]=calc(d[i]);
+		for(i=1;i<=tot;++i)w[i]=0;
+		for(i=1;i<=cnt;++i)
+		for(j=1;j<=tot;++j)
+		if((d[i]&c[j])==d[i])
+		++w[j];
+		ans=n*tot;
+		for(i=1;i<=cnt;++i)son[i]=0;
+		ltot=0;
+		for(i=1;i<=cnt;++i)e[i]=0;
+		for(i=1;i<=cnt;++i)
+		for(j=1;j<=tot;++j)
+		if((d[i]&c[j])==d[i])
+		{
+			++ltot;next[ltot]=son[i];son[i]=ltot;ed[ltot]=j;
+			e[i]|=((unsigned int)1)<<j-1;
+		}
+		for(i=1;i<=cnt;++i)
+		for(j=0;j<=233;++j)
+		M[i][j].clear();
+		aim=0;
+		for(i=1;i<=tot;++i)aim=aim<<1|1;
+		work(1,0,0,0);
+		printf("%d\n",ans);
+		Hash[n][BIT]=ans;
+	}
+}

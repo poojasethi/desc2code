@@ -1,0 +1,113 @@
+/* Template the Final Chapter Light --- Fimbulvetr version 0.1 */
+/* In this blizzard, I will find peace. */
+# define LOCAL
+# include <cstring>
+# include <cstdio>
+# include <algorithm>
+
+using namespace std;
+# define REP( i, n ) for ( int i = 1; i <= n; i ++ )
+# define REP_0( i, n ) for ( int i = 0; i < n; i ++ )
+# define REP_0N( i, n ) for ( int i = 0; i <= n; i ++ )
+# define REP_S( i, ss ) for ( char *i = ss; *i; i ++ )
+# define REP_G( i, u ) for ( int i = pos[ c ][ u ]; i; i = g[ i ].frt )
+# define FOR( i, a, b ) for ( int i = a; i <= b; i ++ )
+# define DWN( i, a, b ) for ( int i = b; i >= a; i -- )
+# define RST( a ) memset ( a, 0, sizeof ( a ) )
+# define CLR( a, x ) memset ( a, x, sizeof ( a ) )
+# define CPY( a, b ) memcpy ( a, b, sizeof ( a ) )
+typedef long long LL;
+const int inf = 1 << 30;
+# define u seg[ x ]
+# define lc ch[ 0 ]
+# define rc ch[ 1 ]
+# define tc ch[ ty ]
+# define vc ch[ !ty ]
+# define ulfc seg[ u.lc ]
+# define urtc seg[ u.rc ]
+# define pii pair < int, int >
+# define v1 first
+# define v2 second
+# define tv tp[ ty ]
+# define NS 201000
+# define MOD 4000007
+struct segnode { int ch[ 2 ], l, r, tp[ 2 ]; pii mx; } seg[ NS << 2 ];
+int tsz, arg1[ NS ], arg2[ NS ], op[ NS ], nsz, tval[ NS ], q0, mxv[ 2 ];
+
+struct hashmap { int p, val, frt; void Set ( int ps, int vl, int fr ) { p = ps, val = vl, frt = fr; } } h[ NS ];
+int hp[ MOD ], hsz;
+void HashIns ( int x, int val ) { h[ ++ hsz ].Set ( x, val, hp[ x ] ), hp[ x ] = hsz; }
+int HashVal ( int x ) { for ( int i = hp[ x % MOD ]; i; i = h[ i ].frt ) if ( x == h[ i ].p ) return h[ i ].val; }
+
+void Build ( int x, int l, int r )
+{
+	u.l = l, u.r = r;
+	if ( l == r ) { u.mx.v2 = l; return ; }
+	int mid = ( l + r ) >> 1;
+	Build ( u.lc = ++ tsz, l, mid ), Build ( u.rc = ++ tsz, mid + 1, r );
+}
+int Rank ( int x, int k, bool ty )
+{
+	if ( k >= u.mx.v1 ) return 0;
+	if ( u.l == u.r || !k ) return u.tv;
+	int mid = ( u.l + u.r ) >> 1;
+	if ( k >= seg[ u.vc ].mx.v1 ) return Rank ( u.tc, k, ty );
+	return u.tv - seg[ u.vc ].tv + Rank ( u.vc, k, ty );
+}
+void SegMfy ( int x, int pos, int val )
+{
+	if ( u.l == u.r ) { u.mx.v1 = val, u.tp[ 0 ] = u.tp[ 1 ] = bool ( val ); return ; }
+	int mid = ( u.l + u.r ) >> 1; bool ty = pos > mid;
+	SegMfy ( u.tc, pos, val ), u.mx = max ( ulfc.mx, urtc.mx ); 
+	u.tp[ 0 ] = urtc.tp[ 0 ] + Rank ( u.lc, urtc.mx.v1, 0 );
+	u.tp[ 1 ] = ulfc.tp[ 1 ] + Rank ( u.rc, ulfc.mx.v1, 1 );
+}
+int Depth ( int x, int pos )
+{
+	if ( u.l == u.r ) { mxv[ 0 ] = mxv[ 1 ] = u.mx.v1; return 1; }
+	int mid = ( u.l + u.r ) >> 1, ret = 0; bool ty = pos > mid;
+	ret = Depth ( u.tc, pos ) + Rank ( u.vc, mxv[ !ty ], !ty ); 
+	mxv[ !ty ] = max ( mxv[ !ty ], seg[ u.vc ].mx.v1 );
+	return ret;
+}
+int Qry ( int pos ) { return Depth ( 1, pos ); }
+pii LCA ( int x, int ql, int qr )
+{
+	if ( ql == u.l && qr == u.r ) return u.mx;
+	int mid = ( u.l + u.r ) >> 1; pii ret; ret.v1 = ret.v2 = 0;
+	if ( ql <= mid ) ret = LCA ( u.lc, ql, min ( mid, qr ) );
+	if ( qr > mid ) ret = max ( ret, LCA ( u.rc, max ( mid + 1, ql ), qr ) );
+	return ret;
+}
+int Query ( int a, int b )
+{
+	if ( a > b ) swap ( a, b );
+	if ( a == b ) return 0;
+	return Qry ( a ) + Qry ( b ) - 2 * Qry ( LCA ( 1, a, b ).v2 );
+}
+int main ()
+{
+	scanf ( "%d", &q0 );
+	REP ( i, q0 )
+	{
+		scanf ( "%d%d", &op[ i ], &arg1[ i ] );
+		if ( op[ i ] == 1 ) continue;
+		scanf ( "%d", &arg2[ i ] );
+		if ( !op[ i ] ) tval[ ++ nsz ] = arg1[ i ];
+	}
+	sort ( tval + 1, tval + nsz + 1 );
+	REP ( i, nsz ) HashIns ( tval[ i ], i );
+	REP ( i, q0 )
+	{
+		if ( op[ i ] == 2 ) arg2[ i ] = HashVal ( arg2[ i ] );
+		arg1[ i ] = HashVal ( arg1[ i ] );
+	}
+	Build ( tsz = 1, 1, nsz );
+	REP ( i, q0 )
+	{
+		if ( op[ i ] == 0 ) SegMfy ( 1, arg1[ i ], arg2[ i ] );
+		else if ( op[ i ] == 1 ) SegMfy ( 1, arg1[ i ], 0 );
+		else printf ( "%d\n", Query ( arg1[ i ], arg2[ i ] ) );
+	}
+	return 0;
+}

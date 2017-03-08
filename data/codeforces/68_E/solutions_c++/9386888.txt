@@ -1,0 +1,183 @@
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <deque>
+#include <queue>
+#include <set>
+#include <map>
+#include <algorithm>
+#include <functional>
+#include <utility>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <cstdio>
+#include <stack>
+
+using namespace std;
+
+#define REP(i,n) for((i)=0;(i)<(int)(n);(i)++)
+#define foreach(c,itr) for(__typeof((c).begin()) itr=(c).begin();itr!=(c).end();itr++)
+
+#define INF (1<<29)
+#define eps 1.0E-9
+
+struct point {double x,y;};
+
+double dist(point P, point Q){
+    double dx = P.x - Q.x, dy = P.y - Q.y;
+    return sqrt(dx*dx + dy*dy);
+}
+
+vector <point> cccross(point O1, double r1, point O2, double r2){
+    double d = dist(O1,O2);
+    double t = (d * d + r1 * r1 - r2 * r2) / 2.0 / d / d;
+    double fx = O1.x + (O2.x - O1.x) * t, fy = O1.y + (O2.y - O1.y) * t;
+    double h = sqrt(r1 * r1 - t * d * t * d);
+    double dx = (O2.y - O1.y) / d * h, dy = (O1.x - O2.x) / d * h;
+    vector <point> ans;
+    point ans1 = {fx + dx, fy + dy}; ans.push_back(ans1);
+    point ans2 = {fx - dx, fy - dy}; ans.push_back(ans2);
+    return ans;
+}
+
+vector <double> tri[10];
+
+void read(int id){
+    point P,Q,R;
+    cin >> P.x >> P.y >> Q.x >> Q.y >> R.x >> R.y;
+    tri[id].push_back(dist(P,Q));
+    tri[id].push_back(dist(P,R));
+    tri[id].push_back(dist(Q,R));
+    sort(tri[id].begin(),tri[id].end());
+}
+
+bool quad(double a, double b, double c, double d){
+    double x[] = {a,b,c,d};
+    sort(x,x+4);
+    return (x[0] + x[1] + x[2] + eps > x[3]);
+}
+
+bool triineq(double a, double b, double c){
+    double x[] = {a,b,c};
+    sort(x,x+3);
+    return (x[0] + x[1] + eps > x[2]);
+}
+
+bool equals(double x, double y){
+    return (x-y < eps && x-y > -eps);
+}
+
+int N;
+point P[20];
+int a[(1<<4)],dp[(1<<4)];
+
+void dfs(int mask){
+    int i,x,y,z;
+
+    a[mask] = min(a[mask],N);
+
+    REP(i,4) if(!(mask&(1<<i))){
+        int mask2 = (mask | (1<<i));
+
+        bool found = false;
+        REP(x,N) REP(y,N) REP(z,N){
+            if(equals(dist(P[x],P[y]),tri[i][0]) && equals(dist(P[x],P[z]),tri[i][1]) && equals(dist(P[y],P[z]),tri[i][2])){
+                dfs(mask2);
+                found = true;
+            }
+        }
+
+        if(!found) REP(x,N) REP(y,N){
+            if(equals(dist(P[x],P[y]),tri[i][0])){
+                N++;
+                P[N-1] = cccross(P[x], tri[i][1], P[y], tri[i][2])[0];
+                dfs(mask2);
+                P[N-1] = cccross(P[x], tri[i][1], P[y], tri[i][2])[1];
+                dfs(mask2);
+                N--;
+            }
+
+            if(equals(dist(P[x],P[y]),tri[i][1])){
+                N++;
+                P[N-1] = cccross(P[x], tri[i][0], P[y], tri[i][2])[0];
+                dfs(mask2);
+                P[N-1] = cccross(P[x], tri[i][0], P[y], tri[i][2])[1];
+                dfs(mask2);
+                N--;
+            }
+
+            if(equals(dist(P[x],P[y]),tri[i][2])){
+                N++;
+                P[N-1] = cccross(P[x], tri[i][0], P[y], tri[i][1])[0];
+                dfs(mask2);
+                P[N-1] = cccross(P[x], tri[i][0], P[y], tri[i][1])[1];
+                dfs(mask2);
+                N--;
+            }
+        }
+    }
+}
+
+vector <point> allcross(point O1, double r1, point O2, double r2){
+    vector <point> ans = cccross(O1,r1,O2,r2);
+    vector <point> ans2 = cccross(O1,r2,O2,r1);
+    ans.push_back(ans2[0]); ans.push_back(ans2[1]);
+    return ans;
+}
+
+void init(void){
+    int a,b,c,i,j,k,x,y,z,mask;
+
+    REP(i,4){
+        N = 3;
+        P[0].x = P[0].y = P[1].y = 0.0;
+        P[1].x = tri[i][0];
+        P[2] = cccross(P[0], tri[i][1], P[1], tri[i][2])[0];
+        dfs(1<<i);
+    }
+
+    REP(a,4) REP(b,a) REP(c,b) REP(i,3) REP(j,3) REP(k,3){
+        if(triineq(tri[a][i],tri[b][j],tri[c][k])){
+            N = 6;
+            P[0].x = P[0].y = P[1].y = 0.0;
+            P[1].x = tri[a][i];
+            P[2] = cccross(P[0], tri[b][j], P[1], tri[c][k])[0];
+
+            vector <point> three = allcross(P[0], tri[a][(i+1)%3], P[1], tri[a][(i+2)%3]);
+            vector <point> four = allcross(P[0], tri[b][(j+1)%3], P[2], tri[b][(j+2)%3]);
+            vector <point> five = allcross(P[1], tri[c][(k+1)%3], P[2], tri[c][(k+2)%3]);
+
+            REP(x,4) REP(y,4) REP(z,4){
+                P[3] = three[x]; P[4] = four[y]; P[5] = five[z];
+                dfs((1<<a) | (1<<b) | (1<<c));
+            }
+        }
+    }
+}
+
+int main(void){
+    int i,j,k,l;
+
+    REP(i,4) read(i);
+
+    int ans = 9;
+    REP(i,3) REP(j,3) REP(k,3) REP(l,3) if(quad(tri[0][i],tri[1][j],tri[2][k],tri[3][l])) ans = 8;
+
+    REP(i,(1<<4)) a[i] = INF;
+    a[0] = 0;
+    init();
+
+//  REP(i,(1<<4)) cout << i << ' ' << a[i] << endl;
+
+    REP(i,(1<<4)){
+        dp[i] = a[i];
+        for(j=1;j<i;j++) if((i&j) == j) dp[i] = min(dp[i],dp[j]+a[i^j]-1);
+    }
+    ans = min(ans,dp[15]);
+
+    cout << ans << endl;
+
+    return 0;
+}

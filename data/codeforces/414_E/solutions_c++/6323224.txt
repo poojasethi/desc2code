@@ -1,0 +1,318 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+#include<iostream>
+#include<fstream>
+#include<map>
+#include<ctime>
+#include<set>
+#include<queue>
+#include<cmath>
+#include<vector>
+#include<bitset>
+#include<functional>
+#define x first
+#define y second
+#define mp make_pair
+#define pb push_back
+#define REP(i,l,r) for((i)=(l);(i)<=(r);++(i))
+#define REP2(i,l,r) for((i)=(l);(i)!=(r);++(i))
+using namespace std;
+
+typedef long long LL;
+typedef double ld;
+
+const int MAX=1000000+10;
+
+int n,m;
+vector<int> ne[MAX];
+
+struct Node
+{
+    int flag,val;//区间加减，维护区间最大值;
+    int to;
+    pair<int,Node*> mm,mi;
+    Node* lc,*rc,*p;
+    Node()
+    {
+        p=lc=rc=0;
+        flag=0;
+        val=0;
+        mm=mi=mp(0,this);
+    }
+};
+int tot;
+
+void update(Node* u)
+{
+    if(!u)
+        return;
+    u->mm=u->mi=mp(u->val,u);
+    if(u->lc)
+    {
+        u->mm=max(u->mm,u->lc->mm);
+        u->mi=min(u->mi,u->lc->mi);
+    }
+    if(u->rc)
+    {
+        u->mm=max(u->mm,u->rc->mm);
+        u->mi=min(u->mi,u->rc->mi);
+    }
+}
+
+void flagit(Node* u,int d)
+{
+    if(!u)
+        return;
+    u->flag+=d;
+    u->val+=d;
+    u->mm.x+=d;
+    u->mi.x+=d;
+}
+
+void down(Node* u)
+{
+    if(!u)
+        return;
+    if(u->flag)
+    {
+        flagit(u->lc,u->flag);
+        flagit(u->rc,u->flag);
+        u->flag=0;
+    }
+}
+
+void rot(Node* u)
+{
+    Node* p=u->p;
+    down(p);
+    down(u);
+    if(p->lc==u)
+    {
+        p->lc=u->rc;
+        if(u->rc)
+            u->rc->p=p;
+        u->rc=p;
+    }
+    else
+    {
+        p->rc=u->lc;
+        if(u->lc)
+            u->lc->p=p;
+        u->lc=p;
+    }
+    u->p=p->p;
+    p->p=u;
+    if(u->p)
+    {
+        if(u->p->lc==p)
+            u->p->lc=u;
+        else if(u->p->rc==p)
+            u->p->rc=u;
+    }
+    update(p);
+}
+
+Node *root,*l[MAX],*r[MAX];
+
+void Splay(Node* u,Node* r=0)
+{
+    for(;u->p!=r;rot(u))
+        if(u->p->p!=r)
+            rot( ( (u->p->p->lc==u->p)==(u->p->lc==u) )?u->p:u);
+    down(u);
+    update(u);
+    if(u->p==0)
+        root=u;
+}
+
+void ins(Node* c)
+{
+    if(root)
+        root->rc=c;
+    c->p=root;
+    Splay(c);
+    root=c;
+}
+
+void dfs(int u,int dep)
+{
+    l[u]=new Node;
+    l[u]->to=u;
+    l[u]->val=dep;
+    ins(l[u]);
+
+    for(size_t i=0;i<ne[u].size();++i)
+    {
+        if(i)
+        {
+            Node* p=new Node;
+            p->to=u;
+            p->val=dep;
+            ins(p);
+        }
+        int v=ne[u][i];
+        dfs(v,dep+1);
+    }
+
+    r[u]=new Node;
+    r[u]->to=u;
+    r[u]->val=dep;
+    ins(r[u]);
+}
+
+Node* findKth(Node* u,int k)
+{
+    Node* r=u->p;
+    for(;u;)
+    {
+        down(u);
+        if(u->rc && u->rc->mi.x<=k && u->rc->mm.x>=k)
+            u=u->rc;
+        else if(u->val==k)
+            break;
+        else
+            u=u->lc;
+    }
+    Splay(u,r);
+    return u;
+}
+
+Node* findLeft(Node* u)
+{
+    for(;u->lc;u=u->lc)
+        ;
+    Splay(u);
+    return u;
+}
+
+Node* findRight(Node* u)
+{
+    for(;u->rc;u=u->rc)
+        ;
+    Splay(u);
+    return u;
+}
+
+Node* Merge(Node* u,Node* v)
+{
+    if(!u)
+        return v;
+    if(!v)
+        return u;
+    u=findRight(u);
+    v=findLeft(v);
+    u->rc=v;
+    v->p=u;
+    update(u);
+    return u;
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+    freopen("input.txt","r",stdin);freopen("output.txt","w",stdout);
+#endif
+    int i;
+    scanf("%d%d",&n,&m);
+    REP(i,1,n)
+    {
+        int l,a;
+        scanf("%d",&l);
+        while(l--)
+        {
+            scanf("%d",&a);
+            ne[i].pb(a);
+        }
+    }
+    dfs(1,0);
+    REP(i,1,m)
+    {
+        int type,a,b;
+        scanf("%d%d",&type,&a);
+        if(type==1)
+        {
+            scanf("%d",&b);
+            if(a==b)
+            {
+                printf("0\n");
+                continue;
+            }
+            Node* u=l[a];
+            Node* v=l[b];
+
+            int ans=0;
+            Splay(u);
+            ans+=u->val;
+
+            Splay(v);
+            ans+=v->val;
+
+            Splay(u,v);
+            pair<int,Node*> tmp=min(mp(v->val,v),mp(u->val,u));
+            if(u==v->lc && u->rc)
+                tmp=min(tmp,u->rc->mi);
+            else if(u==v->rc && u->lc)
+                tmp=min(tmp,u->lc->mi);
+            ans-=tmp.x*2;
+
+            root=v;
+
+            cout<<ans<<endl;
+        }
+        else if(type==2)
+        {
+            scanf("%d",&b);
+            Node* u=l[a],*v=r[a];
+            Splay(u);
+            int need=u->val-b;
+            int fa=findKth(u->lc,need)->to;
+
+            Splay(u);
+            Splay(v,u);
+
+            Node* tmpl=u->lc;
+            Node* tmpr=v->rc;
+            tmpl->p=0;
+            tmpr->p=0;
+            u->lc=v->rc=0;
+            Merge(tmpl,tmpr);
+
+            update(v);
+            update(u);
+            flagit(u,-b+1);
+
+            Node* p=r[fa];
+            Splay(p);
+
+            Node* np=new Node;
+            np->p=np->lc=np->rc=0;
+            np->val=p->val;
+            np->to=p->to;
+            np->mm=np->mi=mp(p->val,(Node*)np);
+
+            Splay(u);
+            u->lc=np;
+            np->p=u;
+            update(u);
+
+            u=np;
+            Splay(u);
+
+            u->lc=p->lc;
+            if(p->lc)
+                p->lc->p=u;
+
+            p->lc=u;
+            u->p=p;
+
+            update(u);
+            update(p);
+            root=p;
+        }
+        else
+            cout<<abs( findKth(root, a)->to )<<endl;;
+    }
+    return 0;
+}

@@ -1,0 +1,108 @@
+#include<iostream>
+#include<algorithm>
+#include<stdlib.h>
+#include<string.h>
+#include<math.h>
+#include<string>
+#include<vector>
+#include<deque>
+#include<stack>
+#include<stdio.h>
+using namespace std;
+const int maxn = 201111;
+vector<int>P[maxn];
+int tot=0;
+deque<int>Sl,Sr;
+stack<int>SL,SR;
+char C[maxn];
+int main(){
+    scanf("%s",C+1);
+    int n=strlen(C+1);
+    for (int i=1;i<=n;i++)
+        P[i].clear();
+    while (Sl.size()) Sl.pop_back();
+    while (Sr.size()) Sr.pop_back();
+    for (int i=1;i<=n;i++){
+        if (C[i]=='L'){
+            if (Sr.empty()){
+                P[++tot].push_back(i);
+                if (C[P[tot][0]]=='R')
+                    Sl.push_front(tot);
+                else
+                    Sl.push_back(tot);
+            }
+            else{
+                int u=Sr.front();Sr.pop_front();
+                P[u].push_back(i);
+                if (C[P[u][0]]=='R')
+                    Sl.push_front(u);
+                else
+                    Sl.push_back(u);
+            }
+        }
+        else{
+            if (Sl.empty()){
+                P[++tot].push_back(i);
+                if (C[P[tot][0]]=='L')
+                    Sr.push_front(tot);
+                else
+                    Sr.push_back(tot);
+            }
+            else{
+                int u=Sl.front();Sl.pop_front();
+                P[u].push_back(i);
+                if (C[P[u][0]]=='L')
+                    Sr.push_front(u);
+                else
+                    Sr.push_back(u);
+            }
+        }
+    }
+    while (Sl.size()) Sl.pop_front();
+    while (Sr.size()) Sr.pop_front();
+    int lnum=0,rnum=0;
+    #define Sl SL
+    #define Sr SR
+    for (int i=1;i<=tot;i++){
+     //   cout<<i<<" "<<C[P[i][0]]<<" "<<C[P[i][P[i].size()-1]]<<endl;
+        if (C[P[i][0]]=='L' && C[P[i][P[i].size()-1]]=='L'){
+            Sl.push(i);
+            lnum++;
+        }
+        if (C[P[i][0]]=='R' && C[P[i][P[i].size()-1]]=='R'){
+            Sr.push(i);
+            rnum++;
+        }
+    }
+    for (int i=1;i<=tot;i++){
+        if (C[P[i][0]]=='L' && C[P[i][P[i].size()-1]]=='R') Sl.push(i);
+        if (C[P[i][0]]=='R' && C[P[i][P[i].size()-1]]=='L') Sr.push(i);
+    }
+    //cout<<lnum<<" "<<rnum<<endl;
+    //cout<<Sl.size()<<" "<<Sr.size()<<endl;
+    cout<<tot-1<<endl;
+    bool now;
+    if (lnum!=rnum)
+        now=(rnum>lnum);
+    else
+        now=(Sr.size()>Sl.size());
+    for (int t=1;t<=tot;t++){
+        int u;
+        if (now==0){
+            u=Sl.top();
+            Sl.pop();
+        }
+        else{
+            u=Sr.top();
+            Sr.pop();
+        }
+      //  cout<<t<<" "<<u<<endl;
+        int len=P[u].size();
+        for (int i=0;i<len;i++)
+            if (t==tot && i==len-1) printf("%d\n",P[u][i]);
+            else printf("%d ",P[u][i]);
+        if (C[P[u][len-1]]=='L') now=1;
+        else now=0;
+    }
+    return 0;
+}

@@ -1,0 +1,136 @@
+#include <algorithm>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+#define N 200010
+#define inf 1100000000
+#define For(i,x,y) for (i=x;i<=y;i++)
+using namespace std;
+struct ww {
+	int a,id;
+} tr[N*4];
+int i,j,k,n,m,L,R,x,y,z,t,s,ma,an,re,a1,a2,an1,an2;
+int a[N],b[N],next[N],head[N],gg[N],g[N],fa[N],F[N],c[N];
+inline void add(int x,int y,int z) {
+	a[++t]=y,b[t]=z,next[t]=head[x],head[x]=t;
+	a[++t]=x,b[t]=z,next[t]=head[y],head[y]=t;
+}
+inline int getroot(int x) {
+	int l,r,v,k,mi=N,an;
+	g[l=r=1]=x; fa[x]=0;
+	for (;l<=r;l++) for (v=head[g[l]];v;v=next[v])
+		if (fa[g[l]]!=a[v]&&!F[a[v]]) {
+			g[++r]=a[v]; fa[a[v]]=g[l]; c[++s]=b[v];
+		}
+	for (l--;l;l--) {
+		int ma=0;
+		k=g[l]; gg[k]=1;
+		for (v=head[k];v;v=next[v]) if (fa[k]!=a[v]&&!F[a[v]])
+			gg[k]+=gg[a[v]],ma=max(ma,gg[a[v]]);
+		ma=max(ma,r-gg[k]);
+		if (ma<mi) mi=ma,an=k;
+	}
+	return an;
+}
+inline void update(int x,int y,int z) {
+	tr[x]=tr[y];
+	if (tr[z].a>tr[x].a) tr[x]=tr[z];
+}
+void into(int q,int x,int y,int k,int t,int v) {
+	if (x==y) {
+		if (t>tr[q].a) tr[q]=(ww){t,v};
+		return;
+	}
+	int mid=(x+y)/2;
+	if (k<=mid) into(q*2,x,mid,k,t,v);
+	else into(q*2+1,mid+1,y,k,t,v);
+	update(q,q*2,q*2+1);
+}
+void Cal(int q,int x,int y,int l,int r) {
+	if (l<=x&&y<=r) {
+		if (tr[0].a<-inf) tr[0]=tr[q];
+		else update(0,0,q);
+		return;
+	}
+	int mid=(x+y)/2;
+	if (l<=mid) Cal(q*2,x,mid,l,r);
+	if (mid<r) Cal(q*2+1,mid+1,y,l,r);
+}
+void build(int q,int x,int y) {
+	if (x==y) {
+		tr[q].a=-inf;
+		return;
+	}
+	int mid=(x+y)/2;
+	build(q*2,x,mid);
+	build(q*2+1,mid+1,y);
+	update(q,q*2,q*2+1);
+}
+inline void cal(int t,int x,int y) {
+	int A=L-x,B=R-x;
+	B=min(B,ma);
+	A=max(A,0);
+	if (A<=B) {
+		tr[0].a=-inf-1;
+		Cal(1,0,ma,A,B);
+		int res=y+tr[0].a;
+		if (res>an) an=res,a1=t,a2=tr[0].id;
+	}
+}
+void dfs(int x,int li,int s,int t) {
+	int v;
+	if (gg[x]>R) return;
+	if (t) into(1,0,ma,gg[x],s,x);
+	else cal(x,gg[x],s);
+	for (v=head[x];v;v=next[v]) if (a[v]!=fa[x]&&!F[a[v]])
+		dfs(a[v],li,s+(b[v]>li?1:-1),t);
+}
+inline bool judge(int x,int li) {
+	int v;
+	build(1,0,ma);
+	into(1,0,ma,0,0,x); an=-inf;
+	for (v=head[x];v;v=next[v]) if (!F[a[v]]) {
+		dfs(a[v],li,b[v]>li?1:-1,0);
+		dfs(a[v],li,b[v]>li?1:-1,1);
+	}
+	return an>=0;
+}
+inline void work(int x) {
+	int i;
+	if (!s) return;
+	m=0; c[++s]=-1,c[++s]=inf;
+	sort(c+1,c+s+1);
+	For(i,1,s) if (!m||c[i]>c[m]) c[++m]=c[i];
+	int l,r,v;
+	ma=0;
+	g[l=r=1]=x; fa[x]=0; gg[x]=0;
+	for (;l<=r;l++) for (v=head[g[l]];v;v=next[v])
+		if (fa[g[l]]!=a[v]&&!F[a[v]]) {
+			g[++r]=a[v]; fa[a[v]]=g[l];
+			gg[a[v]]=gg[g[l]]+1;
+			ma=max(ma,gg[a[v]]);
+		}
+	int L=1,R=m,mid;
+	for (;L<=R;) {
+		mid=(L+R)/2;
+		if (judge(x,c[mid])) L=mid+1;
+		else R=mid-1;
+	}
+	judge(x,c[L-1]);
+	if (c[L]>re) re=c[L],an1=a1,an2=a2;
+}
+void dfs(int x) {
+	s=0;
+	int A=getroot(x),v;
+	F[A]=1;
+	work(A);
+	for (v=head[A];v;v=next[v]) if (!F[a[v]]) dfs(a[v]);
+}
+int main() {
+	scanf("%d%d%d",&n,&L,&R);
+	For(i,1,n-1) scanf("%d%d%d",&x,&y,&z),add(x,y,z);
+	re=-1; dfs(1);
+	printf("%d %d\n",an2,an1);
+	//for(;;);
+	return 0;
+}
