@@ -1,0 +1,126 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define dbgs(x) cerr << (#x) << " --> " << (x) << ' '
+#define dbg(x) cerr << (#x) << " --> " << (x) << endl
+
+#define foreach(i,x) for(type(x)i=x.begin();i!=x.end();i++)
+#define FOR(ii,aa,bb) for(int ii=aa;ii<=bb;ii++)
+#define ROF(ii,aa,bb) for(int ii=aa;ii>=bb;ii--)
+
+#define type(x) __typeof(x.begin())
+
+#define orta (bas + son >> 1)
+#define sag (k + k + 1)
+#define sol (k + k)
+
+#define pb push_back
+#define mp make_pair
+
+#define nd second
+#define st first
+
+#define endl '\n'
+
+typedef pair < int ,int > pii;
+
+typedef long long ll;
+
+const int inf = 1e9, mod = 1e9+7;
+const int N = 1e5+5;
+
+int n, m, a[N], sum[N], k, ans[N], x ,y;
+
+vector< pair< pii , pii > > v;
+
+double intersection(pii x,pii y){ return (y.nd-x.nd) * 1.0 / (x.st-y.st); }
+
+class persistent_splay_trick{
+	
+	public:
+	
+	deque < pii > d;
+	
+	void init(vector< pii > v){
+
+		foreach(it,v){
+		
+			while(d.size() && d.back().st == it->st) d.pop_back();
+			
+			while(d.size() > 1 && intersection(d.back(),*it) < intersection(d[d.size()-2],*it)) d.pop_back();
+			
+			d.push_back(*it);
+		
+		}
+	
+	}
+
+	int query(int x){
+	
+		while(d.size() > 1 && d[0].st*x+d[0].nd>d[1].st*x+d[1].nd ) d.pop_front();	
+	
+		return d.front().st * x + d.front().nd;
+	
+	}
+
+} ST[300000];
+
+vector<pii>	V[300000];
+
+void init(int k,int bas,int son){
+
+	if(bas == son){ V[k].pb(mp(a[bas],-sum[bas]+bas*a[bas])); ST[k].init(V[k]); return; }
+	
+	init(sol,bas,orta), init(sag,orta+1,son); 
+
+	V[k].resize(V[sol].size() + V[sag].size());
+	
+	merge(V[sol].begin(),V[sol].end(),V[sag].begin(),V[sag].end(),V[k].begin(),greater< pii >());
+	
+	V[sol].clear(); V[sag].clear();
+	
+	ST[k].init(V[k]); 
+}
+
+int query(int k,int bas,int son,int x,int y,int t){
+
+	if(bas > y || son < x) return inf;
+	
+	if(x <= bas && son <= y) return ST[k].query(t); 
+	
+	return min(query(sol,bas,orta,x,y,t), query(sag,orta+1,son,x,y,t));	
+
+}
+
+int main(){
+	
+	scanf("%d",&n);
+
+	FOR(i,1,n){ scanf("%d",&a[i]); }
+
+	FOR(i,1,n) sum[i] = sum[i-1] + a[i];
+
+	init(1,1,n);
+
+	scanf("%d",&m);
+
+	FOR(i,1,m){
+		scanf("%d %d",&x,&y);
+		v.pb(mp(mp(x-y,i),mp(x,y)));
+	}
+
+	sort(v.begin(),v.end());
+
+	FOR(i,0,m-1) {
+
+		x = v[i].nd.st, y = v[i].nd.nd;
+	
+		ans[v[i].st.nd] = query(1,1,n,y-x+1,y,x-y) + sum[y];
+	
+	}
+
+	FOR(i,1,m) printf("%d\n",ans[i]);
+
+    return 0;
+}

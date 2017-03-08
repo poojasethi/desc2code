@@ -1,0 +1,193 @@
+//shjj-414e
+
+#include <iostream>
+#include <cstring>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+
+using namespace std;
+
+const int N=200000;
+struct splay{int fa,lx,rx,s,hs,dep,Alls,depl,depr,Pres;}Q[N+3];
+int go[N+3],t[N+3],last[N+3],en;
+int g[N+3],gs[N+3],L[N+3],R[N+3],fa[N+3],n,m,root,ls;
+char ch;
+void read(int &ss){for (;!isdigit(ch);ch=getchar());ss=0;for (;isdigit(ch);ss=ss*10+ch-'0',ch=getchar());}
+inline int max(int x,int y){int m=(x-y)>>31;return y&m|x&~m;}
+inline int min(int x,int y){int m=(y-x)>>31;return y&m|x&~m;}
+void add(int u,int v){go[++en]=v;t[en]=last[u];last[u]=en;}
+void Dfs(int w)
+{
+gs[++ls]=w;L[w]=ls;
+for (int i=last[w];i;i=t[i]) Dfs(go[i]);
+gs[++ls]=w;R[w]=ls;
+}
+
+void getsnew(int w)
+{
+int lw=Q[w].lx,rw=Q[w].rx;
+Q[w].s=Q[lw].s+Q[rw].s+1;
+Q[w].dep=Q[lw].Alls+Q[w].hs*(Q[w].hs>0);
+Q[w].Pres=Q[lw].Alls+Q[w].hs;
+Q[w].Alls=Q[lw].Alls+Q[rw].Alls+Q[w].hs;
+Q[w].depl=Q[w].depr=Q[w].dep;
+if (lw) Q[w].depl=min(Q[lw].depl,Q[w].depl),Q[w].depr=max(Q[lw].depr,Q[w].depr);
+if (rw) Q[w].depl=min(Q[w].Pres+Q[rw].depl,Q[w].depl),Q[w].depr=max(Q[w].Pres+Q[rw].depr,Q[w].depr);
+}
+
+void lc(int x)
+{
+int y=Q[x].fa,z=Q[y].fa;
+Q[y].rx=Q[x].lx;Q[Q[y].rx].fa=y;
+Q[x].lx=y;Q[y].fa=x;Q[x].fa=z;if (Q[z].lx==y) Q[z].lx=x;else Q[z].rx=x;
+getsnew(y);getsnew(x);
+}
+ 
+void rc(int x)
+{
+int y=Q[x].fa,z=Q[y].fa;
+Q[y].lx=Q[x].rx;Q[Q[y].lx].fa=y;
+Q[x].rx=y;Q[y].fa=x;Q[x].fa=z;if (Q[z].lx==y) Q[z].lx=x;else Q[z].rx=x;
+getsnew(y);getsnew(x);
+}
+
+void splay(int x)
+{
+int y,z;
+for (;Q[x].fa;)
+  {
+  y=Q[x].fa,z=Q[y].fa;
+  if (!z) {if (Q[y].lx==x) rc(x);else lc(x);break;}
+  if (Q[z].lx==y)
+    {if (Q[y].lx==x) rc(y),rc(x);else lc(x),rc(x);}
+    else {if (Q[y].lx==x) rc(x),lc(x);else lc(y),lc(x);}
+  }
+root=x;
+}
+int seall(int w){if (!w) return 0;for (;Q[w].lx;w=Q[w].lx);return w;}
+int searr(int w){if (!w) return 0;for (;Q[w].rx;w=Q[w].rx);return w;}
+
+int LastK(int k)
+{
+int w=root,Alls=0;
+for (;;)
+  {
+  int lw=Q[w].lx,rw=Q[w].rx;
+  Alls+=Q[w].Pres;
+  int ll=Alls+Q[rw].depl,rr=Alls+Q[rw].depr;
+  if (rw&&ll<=k&&k<=rr) {w=rw;continue;}
+  Alls-=Q[w].Pres;
+  if (Alls+Q[w].dep==k) return gs[w];
+  w=lw;
+  }
+}
+
+int GetDep(int w){splay(w);return Q[w].dep;}
+int Rank(int w){splay(w);return Q[Q[w].lx].s+1;}
+int Kth(int k)
+{
+int w=root;
+for (;;)
+  {
+  if (Q[Q[w].lx].s+1==k) return w;
+  if (k<=Q[Q[w].lx].s) w=Q[w].lx;
+    else k-=Q[Q[w].lx].s+1,w=Q[w].rx;
+  }
+splay(w);
+return w;
+}
+
+int GetMin()
+{
+int w=root,Alls=0;
+for (;w;)
+  {
+  int lw=Q[w].lx,rw=Q[w].rx;
+  int lmin=1e9,rmin=1e9,wdep=Alls+Q[w].dep;
+  if (lw) lmin=Alls+Q[lw].depl;
+  if (rw) rmin=Alls+Q[w].Pres+Q[rw].depl;
+  if (rmin<=lmin&&rmin<wdep){Alls+=Q[w].Pres;w=Q[w].rx;continue;}
+  if (lmin<=rmin&&lmin<wdep) {w=Q[w].lx;continue;}
+  splay(w);return w;
+  }
+return 0;
+}
+
+int Get(int l,int r)
+{
+splay(l);
+int llw=Q[l].lx;
+Q[l].lx=0;getsnew(l);
+splay(r);
+int rrw=Q[r].rx;
+Q[r].rx=0;getsnew(r);
+int x=GetMin();
+int lw=seall(root);
+Q[lw].lx=llw;Q[llw].fa=lw;
+for (int w=lw;w;w=Q[w].fa) getsnew(w);
+int rw=searr(root);
+Q[rw].rx=rrw;Q[rrw].fa=rw;
+for (int w=rw;w;w=Q[w].fa) getsnew(w);
+return gs[x];
+}
+
+int Build(int l,int r,int ff)
+{
+if (l>r) return 0;
+int mid=(l+r)>>1;
+Q[mid].fa=ff;
+Q[mid].lx=Build(l,mid-1,mid);
+Q[mid].rx=Build(mid+1,r,mid);
+getsnew(mid);
+return mid;
+}
+
+int main()
+{
+read(n),read(m);
+for (int i=1;i<=n;i++)
+  {
+  int sl;read(sl);
+  for (int j=1;j<=sl;j++) read(g[j]),fa[g[j]]=i;
+  for (int j=sl;j>=1;j--) add(i,g[j]);
+  }
+Dfs(1);
+for (int i=1;i<=n;i++) Q[L[i]].hs=1,Q[R[i]].hs=-1;
+root=Build(1,ls,0);
+for (int i=1;i<=m;i++)
+  {
+  int typ;read(typ);
+  if (typ==1)
+    {
+	int x,y,Lca;read(x),read(y);
+    if (Rank(L[x])>Rank(L[y])) swap(x,y);
+    if (x!=y) Lca=fa[Get(Kth(Rank(L[x])+1),L[y])];
+      else Lca=x;
+	int dd=GetDep(L[Lca]);
+	printf("%d\n",GetDep(L[x])+GetDep(L[y])-dd*2);
+	}
+  if (typ==2)
+    {
+	int x,h;read(x),read(h);
+	int dep=GetDep(L[x])-h;
+	int ll=L[x],rr=R[x];
+	splay(rr);int rrw=Q[rr].rx;
+	Q[rr].rx=0;getsnew(rr);
+	splay(ll);splay(searr(Q[ll].lx));
+	Q[root].rx=0;getsnew(root);
+	int y=LastK(dep),rrr=searr(root);
+	splay(rrr);Q[rrr].rx=rrw;Q[rrw].fa=rrr;getsnew(rrr);
+	splay(R[y]);
+	int lll=searr(Q[root].lx);
+	Q[lll].rx=ll;Q[ll].fa=lll;getsnew(lll);
+	for (int w=lll;w;w=Q[w].fa) getsnew(w);
+	fa[x]=y;
+	}
+  if (typ==3)
+    {
+	int k;read(k);
+	printf("%d\n",LastK(++k));
+	}
+  }
+}

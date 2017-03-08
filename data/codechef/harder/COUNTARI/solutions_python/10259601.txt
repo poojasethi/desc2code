@@ -1,0 +1,86 @@
+//#pragma GCC optimize("O2")
+#include<cstdio>
+#include<cstring>
+#include<cmath>
+struct cmplx
+{
+	double x,y;
+	cmplx(double _x=0,double _y=0){x=_x;y=_y;}
+	cmplx operator +(const cmplx &b){return cmplx(x+b.x,y+b.y);}
+	cmplx operator -(const cmplx &b){return cmplx(x-b.x,y-b.y);}
+	cmplx operator *(const cmplx &b){return cmplx(x*b.x-y*b.y,x*b.y+y*b.x);}
+};
+const double pi=acos(-1);
+int n;
+int a[100001];
+int ksiz=3000,kgs,sy[100001],kwz[100001],beg[1011];
+int pre[1<<16],nxt[1<<16];
+cmplx fpre[1<<16],fnxt[1<<16],ff[1<<16],w[2][(1<<16)+1];
+int f[1<<16],dy[1<<16];
+long long ans;
+void fft(cmplx a[],int op=0)
+{
+	int i,j,k;
+	for(i=0;i<(1<<16);i++)if(i<dy[i]){cmplx t=a[i];a[i]=a[dy[i]];a[dy[i]]=t;}
+	for(i=2;i<=(1<<16);i<<=1)
+	{
+		for(j=0;j<(1<<16);j+=i)
+		{
+			for(k=0;k<i/2;k++)
+			{
+				cmplx u=a[j+k],v=a[j+k+i/2]*w[op][(1<<16)/i*k];
+				a[j+k]=u+v;a[j+k+i/2]=u-v;
+			}
+		}
+	}
+	//if(op)for(i=0;i<(1<<16);i++)_[i]=_[i]/(1<<16);
+	//for(i=0;i<(1<<16);i++)a[i]=_[i];
+}
+int main()
+{
+	int i,j,k;
+	//freopen("countari.in","r",stdin);
+	for(i=0;i<(1<<16);i++)
+	{
+		int t=0;
+		for(j=0,k=i;j<16;j++,k>>=1)t=(t<<1)|(k&1);
+		dy[i]=t;
+	}
+	for(i=0;i<=(1<<16);i++)w[0][i]=cmplx(cos(2*pi*i/(1<<16)),sin(2*pi*i/(1<<16)));
+	for(i=0;i<=(1<<16);i++)w[1][i]=cmplx(cos(2*pi*i/(1<<16)),-sin(2*pi*i/(1<<16)));
+	scanf("%d",&n);
+	for(i=1;i<=n;i++)scanf("%d",&a[i]);
+	for(i=1;i<=n;i++)
+	{
+		if(i>ksiz*kgs){kgs++;beg[kgs]=i;j=1;}else j++;
+		sy[i]=kgs;kwz[i]=j;
+	}
+	beg[kgs+1]=n+1;
+	for(i=1;i<=n;i++)nxt[a[i]]++;
+	for(i=1;i<=kgs;i++)
+	{
+		memset(f,0,sizeof(f));
+		for(j=beg[i];j<beg[i+1];j++)
+		{
+			for(k=j+1;k<beg[i+1];k++)if(a[j]*2-a[k]>0&&a[j]*2-a[k]<=30000)ans+=f[a[j]*2-a[k]];
+			f[a[j]]++;
+		}
+		for(j=beg[i];j<beg[i+1];j++)nxt[a[j]]--;
+		for(j=0;j<(1<<16);j++){fpre[j]=pre[j];fnxt[j]=nxt[j];}
+		fft(fpre);fft(fnxt);
+		for(j=0;j<(1<<16);j++)ff[j]=fpre[j]*fnxt[j];
+		fft(ff,1);
+		for(j=beg[i];j<beg[i+1];j++)ans+=(long long)(ff[2*a[j]].x+0.1)>>16;
+		for(j=beg[i];j<beg[i+1];j++)
+		{
+			for(k=j+1;k<beg[i+1];k++)if(a[j]*2-a[k]>0)ans+=pre[a[j]*2-a[k]];
+			for(k=beg[i];k<j;k++)if(a[j]*2-a[k]>0)ans+=nxt[a[j]*2-a[k]];
+		}
+		for(j=beg[i];j<beg[i+1];j++)pre[a[j]]++;
+		//printf("i=%d\n",i);
+	}
+	printf("%lld\n",ans);
+	return 0;
+}
+			
+		

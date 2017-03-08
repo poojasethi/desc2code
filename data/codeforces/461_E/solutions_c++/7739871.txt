@@ -1,0 +1,91 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+const int L = 100010;
+const int D = L * 12;
+
+const long long INF = 1e18 + 10;
+
+long long n;
+char s[L];
+
+int dn, c[D][4];
+
+struct mat {
+    long long r[4][4];
+
+    long long getmin() {
+        long long ret = INF;
+        for (int i = 0; i < 4; ++i)
+            for (int j = 0; j < 4; ++j)
+                ret = min(ret, r[i][j]);
+        return ret;
+    }
+} mat_0, mat_inf;
+
+mat prem[66];
+
+mat operator * (const mat& a, const mat& b) {
+    mat c = mat_inf;
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 4; ++j) {
+            long long tmp = INF;
+            for (int k = 0; k < 4; ++k)
+                if (a.r[i][k] != INF && b.r[k][j] != INF) {
+                    tmp = min(tmp, a.r[i][k] + b.r[k][j]);
+                }
+            c.r[i][j] = tmp;
+        }
+    return c;
+}
+void dfs(int u, int step, long long *one) {
+    for (int x = 0; x < 4; ++x)
+        if (c[u][x]) {
+            dfs(c[u][x], step + 1, one);
+        } else {
+            one[x] = min(one[x], 1LL + step);
+        }
+}
+int main() {
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 4; ++j) {
+            mat_inf.r[i][j] = INF;
+        }
+
+    scanf("%I64d", &n);
+    scanf("%s", s + 1);
+    int L = strlen(s + 1);
+
+    int root = ++dn;
+    for (int i = 1; i <= L; ++i) {
+        int o = root;
+        for (int j = 0; j <= 10 && i + j <= L; ++j) {
+            int x = s[i + j] - 'A';
+            if (!c[o][x]) {
+                c[o][x] = ++dn;
+            }
+            o = c[o][x];
+        }
+    }
+
+    mat om = mat_inf;
+    for (int x = 0; x < 4; ++x) {
+        dfs(c[root][x], 0, om.r[x]);
+    }
+    for (int lv = 0; lv <= 60; ++lv) {
+        prem[lv] = !lv? om: prem[lv - 1] * prem[lv - 1];
+    }
+    long long tot = 0;
+    mat tm = mat_0;
+    for (int lv = 60; lv >= 0; --lv) {
+        mat temp = tm * prem[lv];
+        if (temp.getmin() < n) {
+            tot += 1LL << lv;
+            tm = temp;
+        }
+    }
+    printf("%I64d\n", tot + 1);
+}

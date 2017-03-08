@@ -1,0 +1,4 @@
+n = input()
+a = list(raw_input())
+a, b = sorted(a[n:]), sorted(a[:n])
+print 'YES' if all(a[i] < b[i] for i in range(n)) or all(a[i] > b[i] for i in range(n)) else 'NO'

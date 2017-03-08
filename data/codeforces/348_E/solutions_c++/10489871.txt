@@ -1,0 +1,136 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+#include<iostream>
+using namespace std;
+inline void readi(int &x);
+const int maxn=100005,inf=(1<<30)-1;
+int n;
+int m[maxn],sum[maxn];
+int adj[maxn*4],c[maxn*4],next[maxn*4],head[maxn],gh[maxn],tot=1;
+int w[maxn],fa[maxn];
+
+int f[maxn][3],g[maxn][3];
+int ma[3],mi[3];
+
+void addedge(int *head,int u,int v,int w)
+{tot++;adj[tot]=v;c[tot]=w;next[tot]=head[u];head[u]=tot;}
+
+void dfs1(const int &x)
+{
+	int a=m[x]?0:-inf,b=x;
+	for(int i=head[x];i;i=next[i])
+		if(adj[i]!=fa[x])
+		{
+			fa[adj[i]]=x;
+			w[adj[i]]=c[i];
+			dfs1(adj[i]);
+			if(f[adj[i]][0]+c[i]>a)a=f[adj[i]][0]+c[i],b=f[adj[i]][1];
+			else if(f[adj[i]][0]+c[i]==a)b=x;
+		}
+	f[x][0]=a;
+	f[x][1]=b;
+	f[x][2]=x;
+}
+
+void dfs2(int x)
+{
+	x=x+1;x--;
+	memcpy(g[x],g[fa[x]],12);
+	g[x][0]+=w[x];
+	if(m[fa[x]]&&w[x]>g[x][0])g[x][0]=w[x],g[x][1]=g[x][2]=fa[x];
+	for(int i=gh[fa[x]];i;i=next[i])
+		if(adj[i]!=x)
+		{
+			if(f[adj[i]][0]+c[i]+w[x]>g[x][0])
+			{
+				g[x][0]=f[adj[i]][0]+c[i]+w[x];
+				g[x][1]=f[adj[i]][1];
+				g[x][2]=fa[x];
+			}
+			else if(f[adj[i]][0]+c[i]+w[x]==g[x][0])g[x][1]=fa[x],g[x][2]=fa[x];
+		}
+	mi[0]=mi[1]=mi[2]=0;
+	ma[0]=ma[1]=ma[2]=-inf;
+	for(int i=head[x];i;i=next[i])
+		if(adj[i]!=fa[x])
+		{
+			if(f[adj[i]][0]+c[i]>ma[0])
+			{
+				ma[2]=ma[1],mi[2]=mi[1];
+				ma[1]=ma[0],mi[1]=mi[0];
+				ma[0]=f[adj[i]][0]+c[i],mi[0]=adj[i];
+			}
+			else if(f[adj[i]][0]+c[i]>ma[1])
+			{
+				ma[2]=ma[1],mi[2]=mi[1];
+				ma[1]=f[adj[i]][0]+c[i],mi[1]=adj[i];
+			}
+			else if(f[adj[i]][0]+c[i]>ma[2])
+				ma[2]=f[adj[i]][0]+c[i],mi[2]=adj[i];
+		}
+	if(mi[0])addedge(gh,x,mi[0],w[mi[0]]);
+	if(mi[1])addedge(gh,x,mi[1],w[mi[1]]);
+	if(mi[2])addedge(gh,x,mi[2],w[mi[2]]);
+	for(int i=head[x];i;i=next[i])
+		if(adj[i]!=fa[x])dfs2(adj[i]);
+}
+
+void sumdfs(int x)
+{
+	for(int i=head[x];i;i=next[i])
+		if(adj[i]!=fa[x])sumdfs(adj[i]),sum[x]+=sum[adj[i]];
+}
+
+void init()
+{
+	int k;
+	readi(n),readi(k);
+	for(int t;k--;)
+		readi(t),m[t]=1;
+	for(int i=1,u,v,w;i<n;i++)
+		readi(u),readi(v),readi(w),addedge(head,u,v,w),addedge(head,v,u,w);
+	g[0][0]=-inf;
+}
+
+void work()
+{
+	for(int x=1;x<=n;x++)
+		if(m[x]&&f[x][0]!=g[x][0])
+		{
+			if(f[x][0]>g[x][0])
+			{
+				sum[f[x][1]]++;
+				sum[f[x][2]]--;
+			}
+			else
+			{
+				sum[g[x][1]]++;
+				sum[g[x][2]]--;
+				sum[x]++;
+				sum[fa[g[x][2]]]--;
+			}
+		}
+	sumdfs(1);
+	int x=-inf,y=0;
+	for(int i=1;i<=n;i++)
+		if(!m[i]&&sum[i]>x)x=sum[i],y=1;
+		else if(!m[i]&&sum[i]==x)y++;
+	printf("%d %d\n",x,y);
+}
+
+int main()
+{
+	init();
+	dfs1(1);
+	dfs2(1);
+	work();
+	return 0;
+}
+
+inline void readi(int &x)
+{
+  char c;for(c=getchar();c>'9'||c<'0';c=getchar());
+  x=c^'0';for(c=getchar();c>='0'&&c<='9';c=getchar())x=x*10+(c^'0');
+}

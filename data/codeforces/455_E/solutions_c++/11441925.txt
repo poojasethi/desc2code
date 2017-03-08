@@ -1,0 +1,63 @@
+#include <vector>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define n	100005
+#define DB	double
+#define Rep(i,a,b)	for(int i=a,lim=b;i>=lim;i--)
+#define For(i,a,b)	for(int i=a,lim=b;i<=lim;i++)
+
+int		N,M,A[n],S[n];
+struct	Lin{
+		int k,b;
+		DB	operator *	(const Lin&x)const {
+			return	1.*(x.b-b)/(k-x.k);
+		}
+};		vector<Lin>T[n*4],tmp;
+
+bool	Cmp(const Lin&a,const Lin&b){
+		return	a.k>b.k||(a.k==b.k&&a.b<b.b);
+}
+bool	Cross(const Lin&a,const Lin&b,const Lin&c)	{return	b*c<a*b;}
+
+void	Build(int u,int l,int r){
+		if	(l==r)	{
+			T[u].push_back((Lin){A[l],A[l]*l-S[l]});
+			return	;
+		}	int Mid=l+r>>1;
+		Build(u<<1,l,Mid);	Build(u<<1|1,Mid+1,r);
+
+		int tot=-1;	tmp.clear();
+		For(i,0,T[u<<1].size()-1)	tmp.push_back(T[u<<1][i]);
+		For(i,0,T[u<<1|1].size()-1)	tmp.push_back(T[u<<1|1][i]);
+		sort(tmp.begin(),tmp.end(),Cmp);
+		For(i,0,tmp.size()-1){
+			if	(i&&tmp[i].k==tmp[i-1].k)	continue;
+			for (;tot>0&&Cross(T[u][tot-1],T[u][tot],tmp[i]);tot--)	T[u].pop_back();
+			tot++;	T[u].push_back(tmp[i]);
+		}
+}
+
+int		Ask(vector<Lin>&T,int x){
+		int l=0,r=T.size();
+		for (;l+1<r;){
+			int Mid=l+r>>1;
+			T[Mid]*T[Mid-1]>=x?r=Mid:l=Mid;
+		}	return	T[l].k*x+T[l].b;
+}
+int		Query(int u,int l,int r,int x,int y,int k){
+		if	(x<=l&&r<=y)	return	Ask(T[u],k);	int Mid=l+r>>1,ret=1<<30;
+		if	(x<=Mid)	ret=min(ret,Query(u<<1,l,Mid,x,y,k));
+		if	(y>Mid)		ret=min(ret,Query(u<<1|1,Mid+1,r,x,y,k));
+		return	ret;
+}
+
+int		main(){
+		scanf("%d",&N);
+		For(i,1,N)	scanf("%d",&A[i]),S[i]=S[i-1]+A[i];
+		scanf("%d",&M);	Build(1,1,N);
+		for (int x,y;M--;)
+			scanf("%d%d",&x,&y),printf("%d\n",Query(1,1,N,y-x+1,y,x-y)+S[y]);
+}

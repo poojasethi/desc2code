@@ -1,0 +1,19 @@
+for q in range(int(raw_input())):
+    n,k,ans=[int(u) for u in raw_input().split()]
+    arr=[int(u) for u in raw_input().split()]
+    op=raw_input().strip()
+    if(k==0):
+        print ans
+        continue
+    if(op=='OR'):
+        for i in arr:
+            ans=ans|i
+    elif(op=='AND'):            
+        for j in range(min(k,2)):
+            for i in arr:
+                ans=ans&i
+    elif(op=='XOR'):
+        if(k%2==1):
+            for i in arr:
+                ans=ans^i
+    print ans

@@ -1,0 +1,20 @@
+#include<iostream>
+#include<algorithm>
+using namespace std;
+int main()
+{
+    int n,k;
+    cin>>n>>k;
+    int i,a,b,c[100005]={0},d=0;
+    for(i=0;i<n;i++)
+    {
+    cin>>a>>b;
+    c[i]=50*a-b;
+}
+sort(c,c+n);
+for(i=0;i<n;i++)
+if(c[i]==c[n-k])
+d++;
+cout<<d;
+return 0;
+}

@@ -1,0 +1,107 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+char intToChar (int c) {
+  if (c < 26) return c + 'a';
+  return c + 'A' - 26;
+}
+
+int charToInt (char c) {
+  if (c >= 'a' && c <= 'z') return c - 'a';
+  return c - 'A' + 26;
+}
+
+int n, K, m;
+string x, y;
+int p[200], d[200], prev[200];
+bool vis[200];
+int cap[200][200], cost[200][200], flow[200][200];
+
+int send_flow (int s, int t) {
+  memset (vis, 0, sizeof(vis));
+  memset (prev, -1, sizeof(prev));
+  for (int i = 0; i < m; i++) d[i] = 1000000000;
+  d[s] = 0;
+  for (int i = 0; i < m; i++) {
+    int close = 1000000000, v = -1;
+    for (int j = 0; j < m; j++) {
+      if (!vis[j] && d[j] < close) {
+        v = j;
+        close = d[j];
+      }
+    }
+    if (v == -1) break;
+    vis[v] = true;
+    for (int j = 0; j < m; j++) {
+      if (cap[v][j] > flow[v][j] && d[j] + p[j] > d[v] + p[v] + cost[v][j]) {
+        //  printf ("%d -> %d\n", v, j);
+        d[j] = d[v] + p[v] - p[j] + cost[v][j];
+        prev[j] = v;
+      }
+    }
+  }
+  vector <int> path;
+  int v = t;
+  while (v != -1) {
+    //    printf ("OP: %d\n", v);
+    path.push_back(v);
+    v = prev[v];
+  }
+  reverse (path.begin(), path.end());
+  int tot = 0;
+  for (int i = 1; i < (int) path.size(); i++) {
+    flow[path[i-1]][path[i]]++;
+    flow[path[i]][path[i-1]]--;
+    tot += cost[path[i-1]][path[i]];
+  }
+  // potentials from http://community.topcoder.com/tc?module=Static&d1=tutorials&d2=minimumCostFlow2
+  for (int i = 0; i < m; i++) {
+    p[i] += d[i];
+  }
+  return tot;
+}
+
+int min_cost_flow (int s, int t) {
+  int tot = 0;
+  for (int i = 0; i < K; i++) {
+    tot += n - send_flow (s, t);
+  }
+  return tot;
+}
+
+int main() {
+  ios_base::sync_with_stdio(0);
+  cin >> n >> K >> x >> y;
+  int s = 2 * K, t = 2 * K + 1; 
+  m = 2 * K + 2;
+  for (int i = 0; i < n; i++) {
+    int a = charToInt(x[i]);
+    assert (a < K);
+    int b = charToInt(y[i]) + K;
+    assert (b - K < K);
+    // printf ("%d %d\n", a, b);
+    cost[a][b]--;
+  }
+  for (int i = 0; i < K; i++) {
+    cap[s][i] = 1;
+    cap[i + K][t] = 1;
+    for (int j = 0; j < K; j++) {
+      cap[i][j + K] = 1;
+      cost[i][j + K] += n;
+      cost[j + K][i] = -cost[i][j + K];
+    }
+  }
+  printf ("%d\n", min_cost_flow (s, t));
+  for (int i = 0; i < K; i++) {
+    bool ok = false;
+    for (int j = 0; j < K; j++) {
+      if (flow[i][j + K] == 1) {
+        ok = true;
+        printf ("%c", intToChar(j));
+      }
+    }
+    if (!ok) printf (" ");
+  }
+  printf ("\n");
+}

@@ -1,0 +1,107 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <queue>
+#ifdef WIN32
+#define TAT "%I64d"
+#else
+#define TAT "%lld"
+#endif 
+#define int64 long long
+#define wc(c) freopen(c".in","r",stdin);   freopen(c".out","w",stdout);
+using namespace std;
+const int Maxn = 314000000;
+struct Node{
+	int id,v;
+};
+int n,m,bel[100100],tot[100100],tot2[100100],outit[100100];
+int head[100100],next[500500],to[500500],top;
+int head2[100100],next2[500500],to2[500500],top2;
+int head3[100100],next3[500500],to3[500500],top3;
+int f[100100],f2[100100];
+bool vis[100100];
+priority_queue <Node> Q;
+
+bool operator < (Node x,Node y){return x.v > y.v;}
+void link(int x,int y)
+{
+	next[++top] = head[x];   head[x] = top;   to[top] = y;
+}
+void link2(int x,int y)
+{
+	next2[++top2] = head2[x];   head2[x] = top2;   to2[top2] = y;
+}
+void link3(int x,int y)
+{
+	next3[++top3] = head3[x];   head3[x] = top3;   to3[top3] = y;
+}
+void work()
+{
+	for (int i = 1;i <= n;i++)    f[i] = Maxn + 1;
+	for (int i = 1;i <= m;i++)
+		if (!outit[i] && tot[i] < f[bel[i]])
+			f[bel[i]] = tot[i],Q.push((Node){bel[i],f[bel[i]]});
+	while (!Q.empty())
+		{
+			Node u = Q.top();    Q.pop();
+			while (u.v != f[u.id] && !Q.empty())
+				{
+					u = Q.top();   Q.pop();
+				}
+			if (u.v != f[u.id])    break ;
+			for (int i = head2[u.id],y;y = to2[i],i;i = next2[i])
+				{
+					tot[y] += u.v;   tot[y] = min(Maxn,tot[y]);
+					outit[y]--;
+					if (!outit[y] && tot[y] < f[bel[y]])
+						f[bel[y]] = tot[y],Q.push((Node){bel[y],f[bel[y]]});
+				}
+		}
+}
+int dfs(int x)
+{
+	if (vis[x])    return f2[x];
+	vis[x] = 1;   f2[x] = Maxn + 1;   int v = 0;
+	if (f[x] > Maxn)   return f2[x] = -1;
+	for (int i = head3[x],y;y = to3[i],i;i = next3[i])
+		{
+			int totv = tot2[y];    bool yes = 0,yes2 = 0,yes3 = 0;
+			for (int j = head[y],y2;y2 = to[j],j;j = next[j])
+				{
+					if (dfs(y2) == -1)    {yes3 = 1;break ;}
+					totv += dfs(y2);
+					if (totv >= Maxn)   totv = Maxn;
+					yes |= (dfs(y2) > Maxn);   yes2 = 1;
+				}
+			if (yes3)   continue ;
+			v = max(totv,v);
+			if (yes2 && yes)    {f2[x] = Maxn + 1;return f2[x];}
+		}
+	return f2[x] = v;
+}
+
+int main()
+{
+	cin >> m >> n;   int x,y;
+	for (int i = 1;i <= m;i++)
+		{
+			scanf("%d %d",&bel[i],&x);
+			link3(bel[i],i);
+			for (int j = 1;j <= x;j++)
+				{
+					scanf("%d",&y);
+					if (y == -1)   tot[i]++,tot2[i]++;
+					else link(i,y),link2(y,i),outit[i]++;
+				}
+		}
+	work();
+	for (int i = 1;i <= n;i++)   {
+		if (f[i] <= Maxn && !vis[i])     dfs(i);
+		if (f[i] > Maxn)   printf("-1 -1\n");
+		else printf("%d %d\n",f[i],f2[i] > Maxn ? -2 : f2[i]);
+	}
+}
+  

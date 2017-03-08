@@ -1,0 +1,198 @@
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <math.h>
+#include <time.h>
+#include <sys/time.h>
+
+#ifdef DD
+#define dbg(...) printf (__VA_ARGS__)
+#else
+#define dbg(...)
+#endif
+
+typedef unsigned char      uint_8;
+typedef unsigned short     uint_16;
+typedef unsigned int       uint_32;
+typedef unsigned long long uint_64;
+typedef char               sint_8;
+typedef short              sint_16;
+typedef int                sint_32;
+typedef long long          sint_64;
+
+const uint_64 MOD = 1000000007;
+
+int N, M, K;
+
+uint_64 Fac [1000005];
+uint_64 DP [1001][1001];
+
+static int Rand (int max);
+static void Generate (void);
+static uint_32 Clock_ms (void);
+//------------------------------------------
+static void Setup (void)
+{
+  Fac [0] = 1;
+  uint_64 f = 1;
+  for (uint_64 i = 1; i <= 1000001; i++)
+  {
+    f = (f * i) % MOD;
+    Fac [i] = f;
+    //dbg ("Fac %d\n", f);
+  }
+  dbg ("Fac done\n");
+
+
+  memset (DP, 0, sizeof (DP));
+  DP [0][0] = 1;
+  for (uint_32 i = 1; i <= 1000; i++)
+  {
+    for (uint_32 j = 0; j <= 1000; j++)
+    {
+      uint_64 tmp = ((uint_64) DP [i-1][j] * (uint_64) j) % MOD;
+      DP [i][j] = ((uint_64) DP [i][j] + tmp) % MOD;  // Cook dish that already has been cooked
+      if (j > 0)
+      {
+        DP [i][j] = ((uint_64) DP [i][j] + (uint_64) DP [i-1][j-1]) % MOD;    // Cook a new dish
+      }
+    }
+  }
+
+#ifdef DD
+  for (uint_32 i = 0; i <= 10; i++)
+  {
+    for (uint_32 j = 0; j <= 10; j++)
+    {
+      dbg ("%9d ", DP [i][j]);
+    }
+    dbg ("\n");
+  }
+#endif
+}
+
+//------------------------------------------
+// A raised to P mod M
+uint_64 power (const uint_64 &A, uint_64 P)
+{
+  if (P == 0)
+  {
+    return 1;
+  }
+
+  uint_64 C = power (A, P / 2);
+  C = (C * C) % MOD;
+
+  if ((P & 1) != 0)  // Odd
+  {
+    C = (C * A) % MOD;
+  }
+  dbg ("Pow (%d %d) = %d\n", A, P, C);
+  return C;
+}
+
+//------------------------------------------
+uint_64 power_2 (const uint_64 &A, uint_64 P)
+{
+  uint_64 C = A;
+  for (int i = 1; i < P; i++)
+  {
+    C = (C * A) % MOD;
+  }
+  dbg ("Pow_2 (%d %d) = %d\n", A, P, C);
+  return C;
+}
+
+//------------------------------------------
+uint_64 power_1 (const uint_64 &A, uint_64 P)
+{
+  dbg ("Power (%d %d)\n", A, P);
+  uint_64 C1 = power (A, P);
+#ifdef DD
+  if (A > 1)
+  {
+    uint_64 C2 = power_2 (A, P);
+    if (C1 != C2) dbg ("***************************\n%lld\n%lld\n", C1, C2);
+  }
+#endif
+  return C1;
+}
+
+//------------------------------------------
+static void Solve (int tc)
+{
+  dbg ("====== tc %d ====================\n", tc);
+
+  uint_64 Sum = 0;
+  uint_64 max = K;
+  if (max > M) max = M;
+  for (uint_64 j = 1; j <= max; j++)
+  {
+    uint_64 X = ((uint_64) DP [N][j] * (uint_64) Fac [M]) % MOD;
+    X = (X * (uint_64) power_1 (Fac [M - j], MOD - 2)) % MOD;
+    dbg ("Fac [%d] = %d\n", M - j, Fac [M - j]);
+    dbg ("J %d DP %d X %d  pow %d\n", j, DP [N][j], X, power (Fac [M - j], MOD - 2));
+    Sum = (Sum + X) % MOD;
+  }
+  dbg ("Res: ");
+  printf ("%lld\n", Sum);
+}
+
+//------------------------------------------
+int main (int argc, char **argv)
+{
+  uint_32 seed = Clock_ms ();
+  dbg ("seed: %d\n", seed);
+  srand (seed);
+#ifdef GG
+  Generate ();
+#endif
+
+  Setup ();
+
+  int T;
+  scanf ("%d", &T);
+
+  for (int tc = 1; tc <= T; tc++)
+  {
+    scanf ("%d %d %d", &N, &M, &K);
+    Solve (tc);
+  }
+  return 0;
+}
+
+//------------------------------------------
+static int Rand (int max)
+{
+  long long r = rand ();
+  r = r * (max + 1);
+  return r / RAND_MAX;
+}
+
+#ifdef GG
+//------------------------------------------
+static void GenerateOne (int n, int m)
+{
+  for (int i = 0; i < n; i++)
+  {
+  }
+}
+
+//------------------------------------------
+static void Generate (void)
+{
+  int nn = 1;
+  printf ("%d\n", nn);
+  Generate (nn, 10);
+  exit (0);
+}
+#endif
+
+//------------------------------------------
+static uint_32 Clock_ms (void)
+{
+  struct timeval t;
+  gettimeofday (&t, NULL);
+  return t.tv_sec * 1000 + t.tv_usec / 1000;
+}

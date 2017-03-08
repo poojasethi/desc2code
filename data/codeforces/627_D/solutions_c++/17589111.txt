@@ -1,0 +1,98 @@
+#include<cstdio>
+#include<iostream>
+#include<cstring>
+using namespace std;
+const int inf=1<<30;
+const int N=2e5+100;
+struct Edge {
+    int v,next;
+    Edge(int v=-1,int next=-1):v(v),next(next){}
+}e[N*2];
+int head[N],total;
+void init(){
+    memset(head,-1,sizeof(head));total=0;
+}
+void adde(int u,int v){
+    e[total]=Edge(v,head[u]);head[u]=total++;
+}
+
+int c1[N],c2[N][2],c3[N][2],fg[N];
+int aa[N];
+void dfs(int u,int f,int id){
+    c1[u]=c2[u][1]=c2[u][0]=c3[u][0]=c3[u][1]=0;fg[u]=0;
+    for(int i=head[u];i!=-1;i=e[i].next){
+        int v=e[i].v;if(v==f)continue;
+        dfs(v,u,id);
+        fg[u]+=fg[v]?1:0;
+        if(!fg[v])c1[u]+=c1[v];
+        else {
+            if(c2[u][1]<c1[v]+c2[v][1]){
+                swap(c2[u][1],c3[u][1]);swap(c2[u][0],c3[u][0]);
+                c2[u][0]=v;c2[u][1]=c1[v]+c2[v][1];
+            }
+            else if(c3[u][1]<c2[v][1]+c1[v]){
+                c3[u][0]=v;c3[u][1]=c2[v][1]+c1[v];
+            }
+        }
+    }
+    if(aa[u]<id){
+        c1[u]=c3[u][0]=c3[u][1]=c2[u][0]=c2[u][1]=0;fg[u]++;
+    }
+    else {
+        c1[u]++;
+    }
+}
+
+int ans;
+void dfs(int u,int f,int a,int b,int id){
+    if(b==1){
+        ans=max(ans,c1[u]+max(c2[u][1],a));
+    }
+    else {
+        ans=max(ans,c1[u]+a+c2[u][1]);
+    }
+    for(int i=head[u];i!=-1;i=e[i].next){
+        int v=e[i].v;if(v==f)continue;
+        if(aa[u]<id)dfs(v,u,0,1,id);
+        else {
+            int xx=fg[v]?0:c1[v],yy=(c2[u][0]==v)?c3[u][1]:c2[u][1];
+            if(b){
+                dfs(v,u,c1[u]-xx+max(a,yy),1,id);
+            }
+            else if(fg[u]-(fg[v]?1:0)){
+                dfs(v,u,c1[u]-xx+a+yy,1,id);
+            }
+            else dfs(v,u,c1[u]-xx+a,0,id);
+        }
+    }
+}
+int main(){
+    #ifdef DouBi
+    freopen("in.cpp","r",stdin);
+    #endif // DouBi
+    int n,k;
+    while(scanf("%d%d",&n,&k)!=EOF){
+        int l=inf,r=-1;
+        for(int i=1;i<=n;i++){
+            scanf("%d",&aa[i]);
+            l=min(aa[i],l);r=max(aa[i],r);
+        }
+        init();
+        for(int i=1;i<n;i++){
+            int a,b;scanf("%d%d",&a,&b);adde(a,b);adde(b,a);
+        }
+        r++;
+        c1[0]=c2[0][0]=c2[0][1]=c3[0][0]=c3[0][1]=0;fg[0]=0;
+        while(l+1<r){
+            int mid=(l+r)/2;
+            //printf("%d %d\n",l,r);
+            dfs(1,0,mid);       //printf("line1\n");
+            ans=0;
+            dfs(1,0,0,0,mid);   //printf("line2\n");
+            if(ans>=k)l=mid;
+            else r=mid;
+        }
+        printf("%d\n",l);
+    }
+    return 0;
+}

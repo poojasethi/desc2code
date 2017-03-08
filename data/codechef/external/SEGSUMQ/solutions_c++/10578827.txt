@@ -1,0 +1,130 @@
+#include <bits/stdc++.h>
+
+#define INF_MAX 2147483647
+#define INF_MIN -2147483647
+#define INF_LL 9223372036854775807LL
+#define INF 1000000000
+#define EPS 1e-8
+#define LL long long
+#define mod 1000000007
+#define pb push_back
+#define mp make_pair
+#define f first
+#define s second
+#define setzero(a) memset(a,0,sizeof(a))
+#define setdp(a) memset(a,-1,sizeof(a))
+#define bits(a) __builtin_popcount(a)
+
+using namespace std;
+
+int a[100005], b[100005];
+
+vector<int> tree[400005];
+vector<long long> suma[400005];
+vector<long long> sumb[400005];
+
+int cmp(int x, int y)
+{
+	if (a[x] == 0 && b[x] == 0)
+		return 1;
+	if (a[y] == 0 && b[y] == 0)
+		return 0;
+	return (a[x] * 1ll * b[y] < a[y] * 1ll * b[x]);
+}
+
+void build(int i, int l, int r)
+{
+	if (l > r)
+		return;
+	if (l == r)
+	{
+		tree[i] = vector<int>();
+		tree[i].push_back(l);
+		suma[i].push_back(a[l]);
+		sumb[i].push_back(b[l]);
+		return;
+	}
+	build(i*2 + 1, l, (l+r) / 2);
+	build(i * 2 + 2, (l+r) / 2 + 1, r);
+	tree[i] = vector<int> ();
+	int all = tree[i*2 + 1].size();
+	all += tree[i*2 + 2].size();
+	int f, s;
+	f = s = 0;
+	for (int j = 0; j < all; j++){
+		if (f == tree[i*2 + 1].size())
+	    {
+	    	tree[i].push_back(tree[i*2 + 2][s++]);
+	    }
+	    else if (s == tree[i*2 + 2].size())
+	    {
+	    	tree[i].push_back(tree[i*2 + 1][f++]);
+	    }
+	    else if (cmp(tree[i*2 + 1][f],tree[i*2 + 2][s]))
+	    {
+	    	tree[i].push_back(tree[i*2 + 1][f++]);
+	    }
+	    else
+	    {
+	    	tree[i].push_back(tree[i*2 + 2][s++]);
+	    }
+	    suma[i].push_back(a[tree[i][j]]);
+	    sumb[i].push_back(b[tree[i][j]]);
+	    if (j)
+	    {
+	      suma[i][j] += suma[i][j-1];
+	      sumb[i][j] += sumb[i][j-1];
+	    }
+	}
+}
+
+LL query(int i, int l, int r, int x, int y, int c, int d)
+{
+	if (l > r)
+		return 0;
+  if(l >= x && r <= y)
+  {
+    int L = 0, R = tree[i].size() - 1;
+    if(a[tree[i][R]] * 1ll * c <= d * 1ll * b[tree[i][R]])
+      return 0;
+    while(R > L)
+    {
+      int mid = L + (R - L) / 2;
+      if(a[tree[i][mid]] * 1ll * c > d * 1ll * b[tree[i][mid]])
+        R = mid;
+      else L = mid + 1;
+    }
+    return (suma[i][tree[i].size() - 1] - (R == 0 ? 0 : suma[i][R-1])) * 1LL * c - (sumb[i][tree[i].size() - 1] - (R == 0 ? 0 : sumb[i][R-1])) * 1LL * d;
+  }
+  if(l > y || r < x)
+    return 0;
+  return query(i*2 + 1, l, (l + r) / 2, x, y, c, d) + query(i*2 + 2, (l + r) / 2 + 1, r, x, y, c, d);
+}
+
+int main()
+{
+  int t, n, l, r, x, y, q;
+  scanf("%d", &n);
+  for(int i=0;i<n;i++)
+  {
+  	scanf("%d", &a[i]);
+//  	a[i] = 1000000;
+  }
+    
+  for(int i=0;i<n;i++)
+  {
+  	scanf("%d", &b[i]);
+//  	b[i] = 1000000;
+  }
+    
+  build(0, 0, n - 1);
+  scanf("%d", &q);
+  while(q--)
+  {
+    scanf("%d %d %d %d", &l, &r, &x, &y);
+    l--, r--;
+    printf("%lld\n", query(0, 0, n - 1, l, r, x, y));
+    fflush(stdout);
+  }
+  return 0;
+}

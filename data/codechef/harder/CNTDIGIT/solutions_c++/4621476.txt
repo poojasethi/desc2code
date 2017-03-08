@@ -1,0 +1,150 @@
+#pragma comment(linker, "/stack:32000000")
+#include <stdio.h>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <queue>
+#include <map>
+#include <set>
+#include <cmath>
+#include <sstream>
+#include <stack>
+#include <cassert>
+#include <string.h>
+#include <ctime>
+
+#define pb push_back
+#define mp make_pair
+#define PI 3.1415926535897932384626433832795
+#define sqr(x) (x)*(x)
+#define forn(i, n) for(int i = 0; i < n; ++i)
+#define ALL(x) x.begin(), x.end()
+#define sz(x) int((x).size())
+#define X first
+#define Y second
+typedef long long ll;
+typedef unsigned long long ull;
+typedef long double ld;
+using namespace std;
+typedef pair<int,int> pii;
+const int INF = 2147483647;
+const ll LLINF = 9223372036854775807LL;
+
+const int mod = 1000000007;
+
+struct num {
+	int x;
+	num():x(0) {}
+	num(int x):x(x) {}
+	num operator+(const num& o) const {
+		num res(x+o.x);
+		if (res.x >= mod) res.x -= mod;
+		return res;
+	}
+
+	num operator-(const num& o) const {
+		num res(x-o.x);
+		if (res.x < 0) res.x += mod;
+		return res;
+	}
+
+	num operator*(const num& o) const {
+		return num(x*(ll)o.x%mod);
+	}
+};
+
+num dp[110][1030][12][2][2][2];
+
+
+inline void add(num& x, num y) {
+	x = x + y;
+}
+
+inline int bits(int x) {
+	int res = 0;
+	while (x) res++, x&=x-1;
+	return res;
+}
+
+int main()
+{
+#ifdef _DEBUG
+	freopen("input.txt", "r", stdin);
+	//freopen("output.txt", "w", stdout);
+#endif
+	string s; cin >> s;
+	num N(0);
+	forn(i, sz(s)) N = N*num(10)+num(s[i]-'0');
+	vector<int> a(sz(s));
+	forn(i, sz(s)) a[i] = s[i]-'0';
+	num ans = N*(N+num(1)) * 500000004;
+	if (sz(s) == 1) {
+		ans = num(0);
+	} else {
+		num rem = (N-num(9))*num(10);
+		rem = rem + num(9*10/2);
+		ans = ans-rem;
+	}
+	ans = ans * 10;
+
+
+	num ansadd = num(0);
+
+	dp[0][0][0][0][0][0] = num(1);
+	forn(len, sz(s)) forn(msk, 1024) forn(lst, 10) forn(endz, 2) forn(nonz, 2) forn(fl, 2) {
+		num curmult = dp[len][msk][lst][endz][nonz][fl];
+		if (curmult.x == 0) continue;
+
+		if (len == sz(s)-1) {
+			forn(d1, 10) forn(d2, 10) {
+				if (!fl && d2 > a[len]) continue;
+				if (!nonz && d1 == 0) continue;
+				int curmask = msk;
+				int x = d1;
+				while (true) {
+					curmask |= 1<<x;
+					if (x == d2) break;
+					++x;
+					if (x == 10) x = 0;
+				}
+
+				if (nonz) {
+					curmask |= 1<<lst;
+					if (endz) curmask |= 1;
+				}
+
+				if (d1 > d2) {
+					if (!nonz) continue;
+					assert(lst);
+					curmask |= 1<<(lst-1);
+					if (endz) curmask |= 1<<9;
+				}
+				num curadd = num(bits(curmask)) * curmult;
+				ansadd = ansadd + curadd;
+			}
+			continue;
+		}
+		forn(dig, 10) {
+			int tofl = fl;
+			if (!fl && dig > a[len]) continue;
+			if (dig < a[len]) tofl = 1;
+			int tonz = nonz;
+			if (dig) tonz = 1;
+			int toendz = (dig==0);
+			int tolst = lst;
+			if (dig) tolst = dig;
+			int tomsk = msk;
+			if (dig) {
+				if (nonz) {
+					tomsk |= 1<<lst;
+					if (endz) tomsk |= 1;
+				}
+			}
+			add(dp[len+1][tomsk][tolst][toendz][tonz][tofl], dp[len][msk][lst][endz][nonz][fl]);
+		}
+	}
+	ans = ans + ansadd;
+	printf("%d\n", ans.x);
+	return 0;
+}

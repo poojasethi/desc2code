@@ -1,0 +1,150 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cassert>
+#include <map>
+#include <set>
+#include <vector>
+#include <string>
+#include <iostream>
+#include <cmath>
+#include <ctime>
+#include <algorithm>
+#include <queue>
+#include <stack>
+#include <deque>
+
+using namespace std;
+
+#define dbg(x) cerr << #x << " = " << x << endl
+#define deb(x) cerr << #x << " = " << x << endl
+#define all(c) (c).begin(),(c).end()
+#define pb push_back
+#define sz(c) (int)(c).size()          
+#define mp make_pair
+#define forn(i,n) for(int i=0;i<(int)n;++i)
+#define ford(i,n) for(int i=(int)n;i>=0;--i)
+#define X first
+#define Y second
+#define bits(x) __builtin_popcount(x)
+typedef long long int64;
+typedef long long ll;
+typedef long double ld;
+
+const int N = 3*100;
+
+vector<pair<ld,ld> > otr[N];
+int x[N],y[N];
+
+
+pair<bool,pair<ld,ld> > line_(int fs, int ff, int ss, int sf)
+{
+  int64 Af = y[fs]-y[ff];  
+  int64 Bf = x[ff]-x[fs];  
+  int64 Cf = -(Af * x[fs] + Bf * y[fs]);                                     
+
+  int64 As = y[ss]-y[sf];  
+  int64 Bs = x[sf]-x[ss];  
+  int64 Cs = -(As * x[ss] + Bs * y[ss]);
+
+  int64 C = Af*Bs - As*Bf;
+
+  if (C==0) return mp(false,mp(0,0));
+
+  int64 A = Cf*Bs-Cs*Bf;
+  int64 B = Cf*As-Cs*Af;
+
+  return mp(true,mp(-A/(ld)C,B/(ld)C));
+}
+
+const ld eps = 1e-8;
+
+inline bool onseg(pair<ld,ld> a, int f, int s)
+{
+  int x1 = min(x[f],x[s]);
+  int x2 = max(x[f],x[s]);
+  int y1 = min(y[f],y[s]);
+  int y2 = max(y[f],y[s]);
+  return x1<a.X+eps && x2>a.X-eps && y1<a.Y+eps && y2>a.Y-eps;
+}
+
+pair<bool,pair<ld,ld> > inter(int fs, int ff, int ss, int sf)
+{
+  pair<bool,pair<ld,ld> > l = line_(fs, ff, ss, sf);
+  if (!l.X)
+    return mp(false,mp(0,0));
+
+  if (!onseg(l.Y,fs,ff)) return mp(false,mp(0,0));
+  if (!onseg(l.Y,ss,sf)) return mp(false,mp(0,0));
+
+  return mp(true,l.Y);
+}
+
+
+inline ld area(ld aX, ld aY,ld bX, ld bY, ld cX,ld cY)
+{
+  return abs((aX-cX)*(bY-cY) - (aY-cY)*(bX-cX));
+}
+
+
+bool ins(pair<ld,ld>a, int t)
+{
+  return abs(
+              area(a.X,a.Y,x[3*t],y[3*t],x[3*t+1],y[3*t+1])+
+              area(a.X,a.Y,x[3*t],y[3*t],x[3*t+2],y[3*t+2])+
+              area(a.X,a.Y,x[3*t+2],y[3*t+2],x[3*t+1],y[3*t+1])-
+              area(x[3*t],y[3*t],x[3*t+1],y[3*t+1],x[3*t+2],y[3*t+2])
+            ) < eps;
+}
+
+
+inline ld len(pair<ld,ld>a,pair<ld,ld>b)
+{
+  return sqrt((a.X-b.X)*(a.X-b.X)+(a.Y-b.Y)*(a.Y-b.Y));
+}
+
+int main()
+{
+  int n;
+  scanf("%d",&n);
+  forn(i,n)
+    forn(j,3)
+      scanf("%d%d",&x[3*i+j],&y[3*i+j]);
+
+  #define nxt(a) (((a+1)%3==0)?(a-2):(a+1))
+ 
+  forn(i,3*n)
+  {
+    otr[i].pb(mp(x[i],y[i]));
+    otr[i].pb(mp(x[nxt(i)],y[nxt(i)]));
+  }
+
+  forn(i,3*n) 
+    forn(j,3*n)
+      if (i/3!=j/3)
+        {
+          pair<bool,pair<ld,ld> > q=inter(i,nxt(i),j,nxt(j));
+          if (q.X)
+            otr[i].pb(q.Y);
+        }   
+  ld ans=0;
+  forn(i,3*n)
+  {
+    sort(all(otr[i]));
+    forn(j,sz(otr[i])-1)
+    {
+      bool ok = true;
+      forn(t,n)
+      {
+        if (t==i/3)
+          continue;
+        ok &= !ins(otr[i][j],t) || !ins(otr[i][j+1],t);
+      }
+      if (ok)
+        ans+=len(otr[i][j],otr[i][j+1]);
+    }
+  }
+
+  printf("%.20lf\n",(double)ans);
+  return 0;                
+}

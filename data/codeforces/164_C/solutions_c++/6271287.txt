@@ -1,0 +1,66 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#define MAXD 1000001
+#define MAXN 1000001
+#define MAXQ 1000001
+#define MAXM 1000001
+using namespace std;
+const long long INF=~0u>>2;
+struct edge{long long from,node,flow,cost,next,opp;}e[MAXM];
+long long n,k,t,g,r[MAXD*2],whe[MAXD],x[MAXD],y[MAXD],c[MAXD],l[MAXD],h[MAXN],d[MAXN],p[MAXN],q[MAXQ];
+bool v[MAXN];
+void addedge(long long x,long long y,long long f,long long c) {
+    //printf("Addedge(%d,%d,%d,%d)\n",x,y,f,c);
+    t++;e[t]=(edge){x,y,f,c,h[x],t+1};h[x]=t;
+    t++;e[t]=(edge){y,x,0,-c,h[y],t-1};h[y]=t;
+}
+bool spfa(long long s,long long t,long long n) {
+    memset(v,false,sizeof(v));
+    memset(p,0,sizeof(p));
+    for (long long i=1;i<=n;i++) d[i]=-INF;
+    long long l=0,r=0;v[q[++r]=s]=true;d[s]=0;
+    while (l<r) {
+      l++;
+      for (long long i=h[q[l]];i;i=e[i].next)
+        if (e[i].flow && d[e[i].node]<d[q[l]]+e[i].cost) {
+          d[e[i].node]=d[q[l]]+e[i].cost;p[e[i].node]=i;
+          if (!v[e[i].node]) v[q[++r]=e[i].node]=true;
+        }
+      v[q[l]]=false;
+    }
+    return d[t]>-INF;
+}
+long long MCMF(long long s,long long t,long long n) {
+    long long ret=0;
+    while (spfa(s,t,n)) {
+      long long dflow=INF;
+      for (long long i=p[t];i;i=p[e[i].from]) dflow=min(dflow,e[i].flow);
+      for (long long i=p[t];i;i=p[e[i].from]) {
+        e[i].flow-=dflow;
+        e[e[i].opp].flow+=dflow;
+        ret+=dflow*e[i].cost;
+      }
+    }
+    return ret;
+}
+int main() {
+	scanf("%I64d%I64d",&n,&k);
+	for (long long i=1;i<=n;i++) {
+	  scanf("%I64d%I64d%I64d",x+i,y+i,c+i);y[i]+=x[i];
+	  l[++g]=x[i];l[++g]=y[i];
+	}
+	sort(l+1,l+g+1);g=unique(l+1,l+g+1)-l-1;
+	for (long long i=1;i<=g;i++) addedge(i,i+1,INF,0);
+	for (long long i=1;i<=n;i++) {
+	  x[i]=lower_bound(l+1,l+g+1,x[i])-l;
+	  y[i]=lower_bound(l+1,l+g+1,y[i])-l;
+	  addedge(x[i],y[i],1,c[i]);whe[i]=t;
+	}
+	addedge(g+2,1,k,0);
+	//printf("%d\n",MCMF(g+2,g+1,g+2));
+	MCMF(g+2,g+1,g+2);
+	for (long long i=1;i<=n;i++)
+	  printf("%I64d%c",e[whe[i]].flow,i==n?'\n':' ');
+	return 0;
+}

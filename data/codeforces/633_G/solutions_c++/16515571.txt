@@ -1,0 +1,110 @@
+#pragma comment(linker, "/STACK:102400000,102400000")
+#include <bits/stdc++.h>
+using namespace std;
+#define vi vector<int>
+#define pii pair<int,int>
+#define x first
+#define y second
+#define pb push_back
+#define mp make_pair
+#define all(x) x.begin(),x.end()
+#define ll long long 
+#define inf 1000000007
+#define mod 1000000007
+#define pi acos(-1)
+#define N 100010
+#define DBG(x) cerr<<(#x)<<"="<<x<<endl;
+#define FOREACH(it,x) for(__typeof(x.begin()) it=x.begin();it!=x.end();it++)
+
+template <class T,class U> inline void Max(T &a,U b){if(a<b)a=b;}
+template <class T,class U> inline void Min(T &a,U b){if(a>b)a=b;}
+
+inline void add(int &a,int b){a+=b;while(a>=mod)a-=mod;}
+
+int pow(int a,int b){
+    int ans=1;
+    while(b){
+        if(b&1)ans=1LL*ans*a%mod;
+        a=1LL*a*a%mod;b>>=1;
+    }
+    return ans;
+}
+
+int a[N],st[N],ed[N],w[N],cnt,M;
+vi g[N];
+void dfs(int u,int fa){
+    st[u]=++cnt;w[cnt]=a[u];
+    for(int i=0;i<g[u].size();i++){
+        int j=g[u][i];
+        if(j==fa)continue;
+        dfs(j,u);
+    }
+    ed[u]=cnt;
+}
+typedef bitset<1000> T;
+T msk,prime;
+T t[N<<2];
+int c[N<<2];
+T rot(const T &b,int x){
+    return ((b<<x)|(b>>M-x))&msk;
+}
+void upd(int p,int l,int r,int x,int y,int v){
+    if(l>=x&&r<=y){
+        c[p]=(c[p]+v)%M;
+        t[p]=rot(t[p],v);
+        return;
+    }
+    int m=(l+r)>>1;
+    if(x<=m)upd(p<<1,l,m,x,y,v);
+    if(y>m)upd(p<<1|1,m+1,r,x,y,v);
+    t[p]=rot(t[p<<1]|t[p<<1|1],c[p]);
+}
+T query(int p,int l,int r,int x,int y){
+    if(l>=x&&r<=y)return t[p];
+    int m=(l+r)>>1;
+    T res;
+    if(x<=m)res=query(p<<1,l,m,x,y);
+    if(y>m)res|=query(p<<1|1,m+1,r,x,y);
+    return rot(res,c[p]);
+}
+void build(int p,int l,int r){
+    c[p]=0;
+    if(l==r){
+        t[p][w[l]]=1;return;
+    }
+    int m=(l+r)>>1;
+    build(p<<1,l,m);
+    build(p<<1|1,m+1,r);
+    t[p]=t[p<<1]|t[p<<1|1];
+}
+
+int main(){
+    int i,j,k,n,m;
+    scanf("%d%d",&n,&M);
+    for(i=0;i<n;i++)scanf("%d",&a[i]),a[i]%=M;
+    for(i=1;i<n;i++){
+        scanf("%d%d",&j,&k);j--,k--;
+        g[j].pb(k);g[k].pb(j);
+    }
+    dfs(0,-1);
+    build(1,1,n);
+    for(i=0;i<M;i++)msk[i]=1;
+    for(i=2;i<M;i++)prime[i]=1;
+    for(i=2;i<M;i++)
+        for(j=i+i;j<M;j+=i)prime[j]=0;
+    scanf("%d",&m);
+    while(m--){
+        scanf("%d",&k);
+        if(k==1){
+            scanf("%d%d",&i,&j);i--;j%=M;
+            if(j==0)continue;
+            upd(1,1,n,st[i],ed[i],j);
+        }
+        else{
+            scanf("%d",&i);i--;
+            T res=query(1,1,n,st[i],ed[i])&prime;
+            printf("%d\n",res.count());
+        }
+    }
+    return 0;
+}

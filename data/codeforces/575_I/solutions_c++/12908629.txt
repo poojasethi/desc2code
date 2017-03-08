@@ -1,0 +1,164 @@
+/*
+ * Problem : 
+ * Author : Hwhitetooth
+ * Date : 
+ * Result :
+ */
+
+#include <iostream>
+#include <sstream>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <cmath>
+#include <cctype>
+#include <cstring>
+#include <string>
+#include <vector>
+#include <deque>
+#include <queue>
+#include <stack>
+#include <list>
+#include <map>
+#include <set>
+#include <algorithm>
+
+using namespace std;
+
+typedef long long LL;
+typedef unsigned long long ULL;
+typedef long double LD;
+
+const int N = 5000 + 10;
+const int Q = 100000 + 10;
+
+struct Item {
+	int x, y, key, type, id;
+
+	Item() {
+	}
+
+	Item(int _x, int _y, int _key, int _type, int _id) : x(_x), y(_y), key(_key), type(_type), id(_id) {
+	}
+
+	int operator <(const Item &that) const {
+		return key > that.key || (key == that.key && type < that.type);
+	}
+} a[Q];
+int dir[Q], x[Q], y[Q], len[Q], ans[Q];
+int bit[N][N];
+int n, q;
+
+vector<Item> vec;
+
+void ins(int x, int y, int delta) {
+	for (; x <= n; x += x & -x) {
+		for (int _y = y; _y <= n; _y += _y & -_y) {
+			bit[x][_y] += delta;
+		}
+	}
+}
+
+int ask(int x, int y) {
+	int ret = 0;
+	for (; x > 0; x -= x & -x) {
+		for (int _y = y; _y > 0; _y -= _y & -_y) {
+			ret += bit[x][_y];
+		}
+	}
+	return ret;
+}
+
+void solve(int l, int r) {
+	if (r - l <= 1) {
+		return;
+	}
+	int m = l + r >> 1;
+	solve(l, m);
+	solve(m, r);
+	vec.clear();
+	int cnt0 = 0, cnt1 = 0;
+	for (int i = l; i < m; ++i) {
+		if (a[i].type == 0) {
+			vec.push_back(a[i]);
+			++cnt0;
+		}
+	}
+	for (int i = m; i < r; ++i) {
+		if (a[i].type == 1) {
+			vec.push_back(a[i]);
+			++cnt1;
+		}	
+	}
+	if (cnt0 == 0 || cnt1 == 0) {
+		return;
+	}
+	sort(vec.begin(), vec.end());
+	for (int i = 0; i < (int)vec.size(); ++i) {
+		if (vec[i].type == 0) {
+			ins(vec[i].x, vec[i].y, 1);
+		}
+		else {
+			ans[vec[i].id] += ask(vec[i].x, vec[i].y);
+		}
+	}
+	for (int i = 0; i < (int)vec.size(); ++i) {
+		if (vec[i].type == 0) {
+			ins(vec[i].x, vec[i].y, -1);
+		}
+	}
+}	
+
+void solve(int direction) {
+	int tot = 0;
+	for (int i = 0; i < q; ++i) {
+		if (!dir[i] || dir[i] == direction) {
+			static int _x, _y;
+			switch (direction) {
+				case 1:
+					_x = x[i];
+					_y = y[i];
+					break;
+				case 2:
+					_x = x[i];
+					_y = n + 1 - y[i];
+					break;
+				case 3:
+					_x = n + 1 - x[i];
+					_y = y[i];
+					break;
+				case 4:
+					_x = n + 1 - x[i];
+					_y = n + 1 - y[i];
+					break;
+			}
+			a[tot++] = Item(_x, _y, _x + _y + len[i], !dir[i], i);
+		}
+	}
+	solve(0, tot);
+}
+
+int main() {
+	scanf("%d%d", &n, &q);
+	for (int i = 0; i < q; ++i) {
+		static int cmd;
+		scanf("%d", &cmd);
+		if (cmd == 1) {
+			scanf("%d%d%d%d", dir + i, x + i, y + i, len + i);
+		}
+		else {
+			scanf("%d%d", x + i, y + i);
+		}
+	}
+
+	for (int i = 1; i <= 4; ++i) {
+		solve(i);
+	}
+	
+	for (int i = 0; i < q; ++i) {
+		if (!dir[i]) {
+			printf("%d\n", ans[i]);
+		}
+	}
+	return 0;
+}

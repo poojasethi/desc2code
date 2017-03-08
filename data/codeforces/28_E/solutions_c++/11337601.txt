@@ -1,0 +1,115 @@
+// 10 monthes remaining for red =D
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+#define EPS 1E-8
+using namespace std;
+struct point{
+  double x,y;point(double _x=0,double _y=0){x=_x;y=_y;}
+  point operator+(point w){return point(x+w.x,y+w.y);}
+  point operator-(point w){return point(x-w.x,y-w.y);}
+  point operator*(double H){return point(x*H,y*H);}
+  double operator/(point w){
+   if(abs(w.x)>EPS)return x/w.x;
+   return y/w.y;
+                          }
+  bool operator==(point w){return (abs(x-w.x)<EPS && abs(y-w.y)<EPS);}
+};
+double sp(point a,point b){return (a.x*b.x+a.y*b.y);}
+inline double EQ_null(double A){
+  return false;
+  //return (min(A*(1-1E-10),A*(1+1E-10))<0 && 0<max(A*(1-1E-10),A*(1+1E-10)));
+}
+int ORI(point a,point b){
+  double O=a.x*b.y-a.y*b.x;
+  return (EQ_null(O) || abs(O)<EPS)?0:(O>0?1:-1);
+}
+struct prava{
+  double a,b,c;
+  prava(point f=point(0,0),point t=point(1,1)){a=t.y-f.y;b=f.x-t.x;c=t.x*f.y-f.x*t.y;}
+  point IP(prava w){
+   point ret;
+   if(abs(a)<EPS){ret.y=(-c)/b;ret.x=(-w.b*ret.y-w.c)/w.a;}
+   else{ret.y=(w.a*c-a*w.c)/(a*w.b-w.a*b);ret.x=(-b*ret.y-c)/a;}
+   return ret;
+                   }
+};
+point BEG;
+double X1,Y1,Z1,X2,Y2,Z2,D;
+int n;point M[10000];
+point L1,L2;
+bool is_in(point w){
+  w=w-BEG;
+  if(ORI(L1,L2)==0){
+   if(!(L1==point(0,0)) && ORI(L1,w)==0 && (w/L1>=0))return true;
+   if(!(L2==point(0,0)) && ORI(L2,w)==0 && (w/L2>=0))return true;
+   return false;
+                   }
+  return (ORI(L1,L2)*ORI(L1,w)>=0 && ORI(L2,L1)*ORI(L2,w)>=0);
+}
+double t1=1E9,t2=1E9;
+void get_time(point w){
+  if(ORI(L1,L2)!=0){
+   prava B(BEG,BEG+L1);
+   double T1,T2,T3;
+   point WIND(X2,Y2);
+   T3=(B.a*w.x+B.b*w.y+B.c)/(B.a*WIND.x+B.b*WIND.y);
+   if(T3<0 && abs(T3)<EPS)T3=0;
+   if(T3<0)return;
+   T1=point(w-WIND*T3-BEG)/point(X1,Y1);
+   if(T1<0 && abs(T1)<EPS)T1=0;
+   if(T1<0)return;
+   T2=(T1*Z1+T3*Z2)/(-D);
+   if(T2<0 && abs(T2)<EPS)T2=0;
+   if(T2<0)return;
+   if(t1>T1 || (abs(t1-T1)<EPS && t2>T2)){t1=T1;t2=T2;}
+                   }
+  else{
+   double T1,T2,T3;
+   if(!(point(X1,Y1)==point(0,0)) && point(X2,Y2)/point(X1,Y1)<0){
+     T1=(w-BEG)/point(X1,Y1);T2=(-Z1*T1)/D;
+     if(T1<0 && abs(T1)<EPS)T1=0;if(T2<0 && abs(T2)<EPS)T2=0;
+     if(T1<0 || T2<0)goto NEXT_TYPE;
+     if(t1>T1 || (abs(t1-T1)<EPS && t2>T2)){t1=T1;t2=T2;}
+     NEXT_TYPE:point SUM=point(X1,Y1)+point(X2,Y2)*(-Z1/Z2);
+     if(SUM==point(0,0))return;
+     T1=(w-BEG)/SUM;T2=0;
+     if(T1<0 && abs(T1)<EPS)T1=0;
+     if(T1<0 || T2<0)return;
+     if(t1>T1 || (abs(t1-T1)<EPS && t2>T2)){t1=T1;t2=T2;}
+                                                                }
+   else{
+    point SUM=point(X1,Y1)+point(X2,Y2)*(-Z1/Z2);
+    if(SUM==point(0,0))return;
+    T1=(w-BEG)/SUM;T2=0;
+    if(T1<0 && abs(T1)<EPS)T1=0;
+    if(T1<0 || T2<0)return;
+    if(t1>T1 || (abs(t1-T1)<EPS && t2>T2)){t1=T1;t2=T2;}
+       }
+      }
+}
+int main(){
+  int i,j,k,l;
+  scanf("%d",&n);
+  for(i=0;i<n;++i)scanf("%lf%lf",&M[i].x,&M[i].y);
+  scanf("%lf%lf",&BEG.x,&BEG.y);
+  scanf("%lf%lf%lf%lf%lf%lf%lf",&X1,&Y1,&Z1,&D,&X2,&Y2,&Z2);
+  L1=point(X1,Y1);
+  L2=L1-point(X2,Y2)*(Z1/Z2);
+  for(i=0;i<n;++i)
+   if(is_in(M[i]))get_time(M[i]);
+  for(i=0;i<n;++i){
+   j=i+1;if(j>=n)j-=n;
+   if(ORI(L1,M[i]-BEG)*ORI(L1,M[j]-BEG)<0){
+    point T=prava(BEG,BEG+L1).IP(prava(M[i],M[j]));
+    if(is_in(T))get_time(T);
+                                          }
+   if(ORI(L2,M[i]-BEG)*ORI(L2,M[j]-BEG)<0){
+    point T=prava(BEG,BEG+L2).IP(prava(M[i],M[j]));
+    if(is_in(T))get_time(T);
+                                          }
+                  }
+  if(t1<1E9)printf("%.12lf %.12lf\n",t1,t2);
+  else printf("-1 -1\n");
+  return 0;
+}

@@ -1,0 +1,84 @@
+#include <vector>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define n	100020
+#define m	20000005
+#define P	1000000007
+#define Pop	pop_heap
+#define Pus	push_heap
+
+int		N,M,C,D,S,T,tot,Ans,B[n],st[n],Dis[n],pre[n],H[m],ls[m],rs[m];
+struct	Lin{int v,c,next;}E[n*2];
+struct	Nod{int x,ID;}Q[n*2];
+bool	V[n];
+vector<int>Rb;
+
+int		Ask(int u,int l,int r,int x,int y){
+		if	(!u||x<=l&&r<=y)	return	H[u];	int Mid=l+r>>1;
+		if	(y<=Mid)	return	Ask(ls[u],l,Mid,x,y);
+		if	(x>Mid)		return	Ask(rs[u],Mid+1,r,x,y);
+		return	Ask(rs[u],Mid+1,r,x,y)*B[Mid-x+1]+Ask(ls[u],l,Mid,x,y);
+}
+void	Mod(int&u,int l,int r,int k,int t){
+		int v=u;u=++D;ls[u]=ls[v];rs[u]=rs[v];
+		if	(l==r)	{H[u]=t;return;}	int Mid=l+r>>1;
+		k<=Mid?Mod(ls[u],l,Mid,k,t):Mod(rs[u],Mid+1,r,k,t);
+		H[u]=H[rs[u]]*B[Mid-l+1]+H[ls[u]];
+	//	if	(!H[u])	Rb.push_back(u),u=0;
+}
+
+int		Add(int x,int k){
+		int t=x;
+		for	(;Ask(t,0,n,k,k)==1;k++)	Mod(t,0,n,k,0);
+		Mod(t,0,n,k,1);	return	t;
+}
+bool	Com(int x,int y,int k)	{return	Ask(x,0,n,k,n)==Ask(y,0,n,k,n);}
+bool	Small(int x,int y){
+		int l=0,r=n+1;
+		for	(;l+1<r;){
+			int Mid=l+r>>1;
+			Com(x,y,Mid)?r=Mid:l=Mid;
+		}	return	Ask(x,0,n,r-1,r-1)<Ask(y,0,n,r-1,r-1);
+}
+bool	Cmp(Nod x,Nod y)	{return	Small(y.x,x.x);}
+
+void	Link(int u,int v,int c){
+		E[++C]=(Lin){v,c,st[u]};	st[u]=C;
+		E[++C]=(Lin){u,c,st[v]};	st[v]=C;
+}
+void	Dij(){
+		memset(Dis,-1,sizeof(Dis));	Q[tot=1]=(Nod){Dis[S]=0,S};
+		for	(;tot&&!V[T];){
+			int	u=Q[1].ID;	Pop(Q+1,Q+tot+1,Cmp);--tot;
+			if	(V[u])	continue;	V[u]=1;
+			for	(int i=st[u],v;i;i=E[i].next)
+			if	(!V[v=E[i].v]){
+				int t=Add(Dis[u],E[i].c);
+				if	(Dis[v]==-1||Small(t,Dis[v]))
+					Dis[v]=t,pre[v]=u,Q[++tot]=(Nod){Dis[v],v},Pus(Q+1,Q+tot+1,Cmp);
+			}
+		}
+}
+void	Num(int u,int l,int r){
+		if	(l==r)	{
+			Ans=(Ans*2+H[u])%P;	return;
+		}	int Mid=l+r>>1;
+		Num(rs[u],Mid+1,r);	Num(ls[u],l,Mid);
+}
+
+int		main(){
+		scanf("%d%d",&N,&M);	B[0]=1;
+		for	(int i=1;i<n;i++)	B[i]=B[i-1]*10007;
+		for	(int i=1,u,v,c;i<=M;i++)
+			scanf("%d%d%d",&u,&v,&c),Link(u,v,c);
+		scanf("%d%d",&S,&T);	Dij();
+		if	(Dis[T]==-1)	puts("-1");
+		else	{
+			for	(Num(Dis[T],0,n),tot=0;T;T=pre[T])	B[++tot]=T;
+			printf("%d\n%d\n",Ans,tot);
+			for	(int i=tot;i;i--)	printf("%d ",B[i]);
+		}
+}

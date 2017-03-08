@@ -1,0 +1,280 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+#include <set>
+#include <vector>
+using namespace std;
+
+
+//MOJA IDEJA JE MISLIM O( N lg ^ 2 N ) ( moguce da je iteriratanje po setu lg N )
+//imam tournament sa vezeama od suprotnog stabla
+//i onda samo brisem sufix ili prefix.... zboh svojstva cvora node da su sva djeca [ disc[ node ], fin[ node ] ]
+
+#define tripar pair< pair< int, int >, int > 
+#define pii pair< int, int >
+#define pb push_back
+#define mp make_pair
+
+const int N = 200005;
+int n;
+
+int off = 1, lo, hi;
+vector< int > EDGE;
+int LIJEVA, DESNA;
+
+
+struct stabalce {
+    vector< pii > graf[ 200005 ];
+    bool bio[ 200005 ];
+    vector< pii > T[ ( 1 << 19 ) + 10 ]; //increasing
+    vector< pii > V[ ( 1 << 19 ) + 10 ]; //decreasing
+    int disc[ 200005 ];
+    int fin[ 200005 ];
+    int depth[ 200005 ];
+    int which_node[ 200005 ]; // KOJI CVOR JE NA i-tom DISCU
+    int timer;
+    pii VEZE[ 200005 ];
+    stabalce( ) { 
+        timer = -1;
+    }
+    void dfs( int node = 0, int par = -1, int dub = 0 ) {
+        disc[ node ] = ++timer;
+        which_node[ timer ] = node;
+        depth[ node ] = dub;
+        for( int i = 0; i < graf[ node ].size( ); i++ ) {
+            int sus = graf[ node ][ i ].first;
+            if( sus != par ) dfs( sus, node, dub + 1 );
+        }
+        fin[ node ] = timer;
+    }
+    inline void merge( int node ) {
+        int cnt1 = 0, cnt2 = 0;
+        int vel1 = ( int )T[ node * 2 ].size( );
+        int vel2 = ( int )T[ node * 2 + 1 ].size( );
+        for( ; ; ) {
+            if( cnt1 < vel1 && cnt2 < vel2 ) {
+                if( T[ node * 2 ][ cnt1 ].first < T[ node * 2 + 1 ][ cnt2 ].first ) {
+                    T[ node ].pb( T[ node * 2 ][ cnt1 ] );
+                    cnt1++;
+                }
+                else {
+                    T[ node ].pb( T[ node * 2 + 1 ][ cnt2 ] );
+                    cnt2++;
+                }
+            }
+            else if( cnt1 < vel1 ) T[ node ].pb( T[ node * 2 ][ cnt1 ] ), cnt1++;
+            else if( cnt2 < vel2 ) T[ node ].pb( T[ node * 2 + 1 ][ cnt2 ] ), cnt2++;
+            else break;
+        }
+    }
+    inline void ajmo( int node ) {
+        int cnt1 = 0, cnt2 = 0;
+        int vel1 = ( int ) V[ node * 2 ].size( );
+        int vel2 = ( int ) V[ node * 2 + 1 ].size( );
+        for( ; ; ) {
+            if( cnt1 < vel1 && cnt2 < vel2 ) {
+                if( V[ node * 2 ][ cnt1 ].first > V[ node * 2 + 1 ][ cnt2 ].first ) {
+                    V[ node ].pb( V[ node * 2 ][ cnt1 ] );
+                    cnt1++;
+                }
+                else {
+                    V[ node ].pb( V[ node * 2 + 1 ][ cnt2 ] );
+                    cnt2++;
+                }
+            }
+            else if( cnt1 < vel1 ) V[ node ].pb( V[ node * 2 ][ cnt1 ] ), cnt1++;
+            else if( cnt2 < vel2 ) V[ node ].pb( V[ node * 2 + 1 ][ cnt2 ] ), cnt2++;
+            else {
+                break;
+            }
+        }
+    }
+    inline void init( ) { //TREBAM POSTAVIT!!!!
+        for( int i = off; i < off + off; i++ ) {
+            sort( T[ i ].begin( ), T[ i ].end( ) );
+            sort( V[ i ].begin( ), V[ i ].end( ) );
+            reverse( V[ i ].begin( ), V[ i ].end( ) );
+        }
+        for( int i = off - 1; i >= 1; i-- ) merge( i ), ajmo( i );
+    }
+    void query( int a, int b, int node ) {
+        if( a > hi || b < lo ) return;
+        if( a >= lo && b <= hi ) {
+          /*  printf( "lo, hi %d %d\n", lo, hi );
+            printf( "O zivotati == %d\n", node );
+            printf( "Sadrzaj\n" );
+            for( int i = 0; i < T[ node ].size( ); i++ ) {
+                printf( "T[ node ][ i ].first == %d\n", T[ node ][ i ].first );
+            }
+            for( int i = 0; i < V[ node ].size( ); i++ ) {
+                printf( "V[ node ][ i ].first == %d\n", V[ node ][ i ].first );
+            }
+            system( "pause" );*/
+            while( !V[ node ].empty( ) ) {
+                int na_kojeg = V[ node ].back( ).first;
+                int idx = V[ node ].back( ).second;
+                if( bio[ idx ] ) {
+                    V[ node ].pop_back( );
+                    continue;
+                }
+                if( na_kojeg >= LIJEVA ) break;
+                bio[ idx ] = 1;
+                V[ node ].pop_back( );
+                EDGE.pb( idx );
+            }
+            while( !T[ node ].empty( ) ) {
+                int na_kojeg = T[ node ].back( ).first;
+                int idx = T[ node ].back( ).second;
+                if( bio[ idx ] ) {
+                    T[ node ].pop_back( );
+                    continue;
+                }
+                if( na_kojeg <= DESNA ) break;
+                bio[ idx ] = 1;
+                T[ node ].pop_back( );
+                EDGE.pb( idx );
+            }
+          /*  if( node == 5 ) {
+                printf( "KRAJ\n" );
+                system( "pause" );
+            }*/
+            return;
+        }
+        query( a, ( a + b ) / 2, node * 2 );
+        query( ( a + b ) / 2 + 1, b, node * 2 + 1 );
+    }
+};
+
+stabalce BLUE, RED;
+
+inline void load( ) {
+    scanf( "%d", &n );
+    for( int i = 1; i <= n - 1; i++ ) {
+        int x;
+        scanf( "%d", &x );
+        --x;
+        BLUE.VEZE[ i - 1 ].first = x;
+        BLUE.VEZE[ i - 1 ].second = i;
+        BLUE.graf[ x ].pb( mp( i, i - 1 ) );
+        BLUE.graf[ i ].pb( mp( x, i - 1 ) );
+    }
+    for( int i = 1; i <= n - 1; i++ ) {
+        int x;
+        scanf( "%d", &x );
+        --x;
+        RED.graf[ x ].pb( mp( i, i - 1 ) );
+        RED.graf[ i ].pb( mp( x, i - 1 ) );
+        RED.VEZE[ i - 1 ].first = x;
+        RED.VEZE[ i - 1 ].second = i;
+    }
+}
+
+inline void solve( ) {
+    while( off < n ) off <<= 1;
+    BLUE.dfs( );
+    RED.dfs( );
+    //DEBUG( );
+    //postavim BLUE
+    for( int i = 0; i < n; i++ ) {
+        int koji_cvor = BLUE.which_node[ i ];
+        if( RED.graf[ koji_cvor ].empty( ) ) continue;
+        for( int j = 0; j < RED.graf[ koji_cvor ].size( ); j++ ) {
+            int susjed = RED.graf[ koji_cvor ][ j ].first;
+            int index = RED.graf[ koji_cvor ][ j ].second;
+            int ovaj_izvana = BLUE.disc[ susjed ];
+            BLUE.T[ i + off ].pb( mp( ovaj_izvana, index ) );
+            BLUE.V[ i + off ].pb( mp( ovaj_izvana, index ) );
+        }
+    }
+    //POSTAVI RED
+    for( int i = 0; i < n; i++ ) {
+        int koji_cvor = RED.which_node[ i ];
+        if( BLUE.graf[ koji_cvor ].empty( ) ) continue;
+       // printf( "IDEMO za i == %d\n", i );
+       // printf( "to je za pravo crven == %d\n", RED.which_node[ i ] );
+        for( int j = 0; j < BLUE.graf[ koji_cvor ].size( ); j++ ) {
+            int susjed = BLUE.graf[ koji_cvor ][ j ].first;
+            int index = BLUE.graf[ koji_cvor ][ j ].second;
+           // printf( "u drugom stablu od %d je susjed %d, koji u mom stablu ima dic == %d\n", koji_cvor + 1, susjed + 1, RED.disc[ susjed ] );
+            int ovaj_izvana = RED.disc[ susjed ];
+            RED.T[ i + off ].pb( mp( ovaj_izvana, index ) );
+            RED.V[ i + off ].pb( mp( ovaj_izvana, index ) );
+        }
+       // system( "Pause" );
+    }
+    BLUE.init( );
+    RED.init( );
+    int za_heroje;
+    scanf( "%d", &za_heroje );
+    za_heroje--;
+    EDGE.pb( za_heroje );
+    RED.bio[ za_heroje ] = 1;
+   // DEBUG2( );
+    for( int i = 0; ; i++ ) {
+        if( EDGE.empty( ) ) break;
+        vector< int > tmp;
+        if( i % 2 == 0 ) printf( "Blue\n" );
+        else printf( "Red\n" );
+        sort( EDGE.begin( ), EDGE.end( ) );
+        for( int j = 0; j < EDGE.size( ); j++ ) printf( "%d ", EDGE[ j ] + 1 );
+        printf( "\n" );
+        tmp = EDGE;
+        EDGE.clear( );
+      //  printf( "ZA HEROJE!!!!\n" );
+      //  printf( "i == %d\n", i );
+        for( int j = 0; j < tmp.size( ); j++ ) {
+            if( i % 2 == 0 ) {
+                int node1 = BLUE.VEZE[ tmp[ j ] ].first;
+                int node2 = BLUE.VEZE[ tmp[ j ] ].second;
+                int dub1 = BLUE.depth[ node1 ];
+                int dub2 = BLUE.depth[ node2 ];
+                if( dub1 > dub2 ) swap( node1, node2 );
+               // printf( "SALJEMO node2 == %d\n", node2 );
+                
+                //node2 je na veoj dubini
+                lo = BLUE.disc[ node2 ];
+                hi = BLUE.fin[ node2 ];
+                LIJEVA = lo;
+                DESNA = hi;
+              //  printf( "lo, hi == %d %d\n", lo, hi );
+              //  system( "pause" );
+                BLUE.query( 0, off - 1, 1 );
+            }
+            else {
+              //  printf( "VEZA == %d\n", tmp[ j ] );
+                int node1 = RED.VEZE[ tmp[ j ] ].first;
+                int node2 = RED.VEZE[ tmp[ j ] ].second;
+              //  printf( "node1, node2 == %d %d\n", node1, node2 );
+                int dub1 = RED.depth[ node1 ];
+                int dub2 = RED.depth[ node2 ];
+                if( dub1 > dub2 ) swap( node1, node2 );
+                //
+            //    printf( "node1 == %d\n", node1 + 1 );
+            //    printf( "SALJEMO node2 == %d\n", node2 + 1 );
+                lo = RED.disc[ node2 ];
+                hi = RED.fin[ node2 ];
+                LIJEVA = lo;
+                DESNA = hi;
+            //    printf( "lo, hi %d %d\n", lo, hi );
+            //    system( "pause" );
+                RED.query( 0, off - 1, 1 );
+            }
+          /*  printf( "ZA SADA:::\n" );
+            for( int f = 0; f < ( int )EDGE.size( ); f++ ) {
+                printf( "%d ", EDGE[ f ] + 1 );
+            }
+            printf( "\n" );
+            system( "Pause" );*/
+        }
+       // system( "pause" );
+      //  printf( "\n\n" );
+    }
+}
+
+int main( void ) {
+    load( );
+    solve( );
+  //  system( "pause" );
+    return 0;
+}

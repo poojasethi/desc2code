@@ -1,0 +1,28 @@
+#include <cstdio>
+#include <iostream>
+using namespace std;
+
+int s,f,l,r;
+bool stay()
+{
+  int next=(s<f)?s+1:s-1;
+  return ((s>=l&&s<=r)||(next>=l&&next<=r));
+}
+int main()
+{
+	int t=0,k,x,tt=0,n,m;
+	scanf("%d%d%d%d",&n,&m,&s,&f);
+	while(s!=f)
+	{
+	  while((t==tt)&&(m--))
+		 {scanf("%d%d%d",&x,&l,&r);break;}
+	   tt=x;
+   	   t++;
+	  if((t==tt)&&stay()) putchar('X');
+	  else if(s>f) 
+	 putchar('L'),s--;
+ 	else if(s<f) putchar('R'),s++;
+  
+}
+return 0;
+}

@@ -1,0 +1,119 @@
+#include <set>
+#include <map>
+#include <cmath>
+#include <cctype>
+#include <cstdio>
+#include <string>
+#include <vector>
+#include <cstring>
+#include <cstdlib>
+#include <utility>
+#include <iostream>
+#include <algorithm>
+#define LL long long
+#define pi 3.1415926535897932384626433 
+#define sqr(a) ((a)*(a))
+
+using namespace std;
+
+const double eps = 1e-8;
+
+struct node
+{
+    double x, y;
+    node operator + (const node &o) const
+    {
+        node v = o;
+        v.x += x; v.y += y;
+        return v;
+    }
+    
+    node operator - (const node &o) const
+    {
+        node v = o;
+        v.x = x - v.x; v.y = y - v.y;
+        return v;
+    }
+};
+
+int cmp(double x)
+{
+    if (fabs(x) <= eps) return 0;
+    return (x > eps) ? 1 : -1;
+}
+
+double det(node a, node b)
+{
+    return a.x * b.y - b.x * a.y;
+}
+
+double dot(node a, node b)
+{
+    return a.x * b.x + a.y * b.y;
+}
+
+double dis(node a, node b)
+{
+    return sqrt(sqr(a.x - b.x) + sqr(a.y - b.y));
+}
+
+int n;
+node a[401010], b[401010], ctr;
+double s[401010], ans = 1e20;
+
+void work()
+{
+    memset(s, 0, sizeof(s));
+    int m = 2 * n;
+    for (int i = 1; i < m; i ++)
+        s[i] = s[i - 1] + fabs(det(b[i + 1] - b[i], ctr - b[i])) / 2.0;
+    int cur = 2;
+    for (int i = 1; i <= n; i ++)
+    {
+        if (cur <= i) cur = i + 1;
+        for ( ; ; cur ++)
+            if (cmp(dot(b[i + 1] - b[i], b[cur + 1] - b[cur])) <= 0)
+                break;
+        double len = dis(b[i], b[cur]);
+        double ang = dot(b[cur] - b[i], b[i + 1] - b[i]) / dis(b[cur], b[i]) / dis(b[i + 1], b[i]);
+        double x = len * ang;
+        double y = (cmp(len - x) == 0) ? 0 : sqrt(sqr(len) - sqr(x));
+        double area = x * y / 2.0;
+        double triangle = fabs(det(ctr - b[i], b[cur] - b[i])) / 2.0;
+        area -= s[cur - 1] - s[i - 1];
+        int flag = cmp(det(b[i + 1] - b[i], ctr - b[i]) * det(ctr - b[i], b[cur] - b[i]));
+        if (flag >= 0)
+            area -= triangle; else area += triangle;
+        ans = min(ans, area);
+    }
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+    freopen("a.in", "r", stdin);
+    freopen("a.out", "w", stdout);
+#endif
+    scanf("%d", &n);
+    ctr.x = ctr.y = 0;
+    for (int i = 1; i <= n; i ++)
+    {
+        int x, y;
+        scanf("%d%d", &x, &y);
+        a[i].x = (double) x;
+        a[i].y = (double) y;
+        ctr = ctr + a[i];
+    }
+    ctr.x /= (double) n;  
+    ctr.y /= (double) n;
+    //
+    for (int i = 1; i <= 2 * n; i ++)
+        b[i] = (i <= n) ? a[i] : a[i - n];
+    work();
+    //
+    for (int i = 1; i <= 2 * n; i ++)
+        b[i] = (i <= n) ? a[n - i + 1] : a[n - (i - n) + 1];
+    work();
+    printf("%.18lf\n", ans);
+    return 0;
+}

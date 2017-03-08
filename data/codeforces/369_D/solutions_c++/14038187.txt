@@ -1,0 +1,21 @@
+#include <cstdio>
+int N,K,a[3005],b[3005],ans;
+bool f[3005][3005];
+
+void dfs(int t,int x,int y)
+{
+	if (f[x][y]) return;
+	f[x][y]=1,ans++;
+	if (!t||y>N) return;
+	if (a[x]&&b[y]) dfs(t-1,y+1,y+2);
+	if (b[y]&&a[x]!=100) dfs(t-1,y,y+1);
+	if (a[x]&&b[y]!=100) dfs(t-1,x,y+1);
+}
+
+int main()
+{
+	scanf("%d%d",&N,&K);
+	for (int i=1; i<=N; i++) scanf("%d",&a[i]);
+	for (int i=N; i; i--) b[i]=b[i+1]<a[i]?a[i]:b[i+1];
+	dfs(K,1,2),printf("%d\n",ans);
+}

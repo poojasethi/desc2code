@@ -1,0 +1,113 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <cmath>
+#include <algorithm>
+ 
+using namespace std;
+ 
+const int oo = 0x1f1f1f1f;
+ 
+#define two(x) (1<<(x))
+char MAP[16][16];
+int N,ID[16][16], n, Trea[16], G[16][16];
+ 
+const int dx[] = {0, 0, 1, -1};
+const int dy[] = {1,-1, 0,  0};
+ 
+int dist[16 * 16], Q[16 * 16], Mod = 16 * 15;
+bool inQ[16 * 16];
+ 
+void spfa(int s)
+{
+	memset(inQ, 0, sizeof(inQ));
+	memset(dist, 0x1f, sizeof(dist));
+	int head = 0, tail = 0;
+	dist[s] = 0; inQ[s] = true; Q[tail++] = s;
+	while (head < tail)
+	{
+		int u = Q[head++%Mod]; 
+		int x = (u / 16), y = u % 16;
+		inQ[u] = false;
+		for (int d = 0; d < 4; d++)
+		{
+			int nx = x + dx[d], ny = y + dy[d];
+			if (nx >= 0 && nx < N && ny >= 0 && ny < N)
+			{
+				if (MAP[nx][ny] != '#')
+				{
+					int nu = nx * 16 + ny;
+					if (dist[u] + 1 < dist[nu])
+					{
+						dist[nu] = dist[u] + 1;
+						if (inQ[nu] == false)
+						{
+							inQ[nu] = true;
+							Q[tail++] = nu;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+ 
+int dp[16][1<<13];
+ 
+int dfs(int last, int S)
+{
+	if (S == two(n) - 1)
+		return G[last][n + 1];
+	int &ret = dp[last][S];
+	if (ret != -1) return ret;
+	ret = +oo;
+	for (int v = 0; v < n; v++) if (G[last][v] < +oo)
+	{
+		if ((S & two(v)) == 0)
+		{
+			int t = G[last][v] + dfs(v, S | two(v));
+			if (t < ret) ret = t;
+		}
+	}
+	return ret;
+}
+ 
+int main()
+{
+	int T;
+	scanf("%d", &T);
+	while (T--)
+	{
+		n = 0;
+		memset(ID, 0xff, sizeof(ID));
+		scanf("%d", &N);
+		for (int i = 0; i < N; i++)
+		{
+			scanf("%s", MAP[i]);
+			for (int j = 0; j < N; j++)
+			{
+				if (MAP[i][j] == '*')
+				{
+					Trea[n] = i * 16 + j;
+					ID[i][j] = n++;
+				}
+			}
+		}
+		Trea[n] = 0;
+		Trea[n + 1] = (N - 1) * 16 + N - 1;
+		for (int i = 0; i < n + 2; i++)
+		{
+			spfa(Trea[i]);
+			for (int j = 0; j < n + 2; j++)
+				G[i][j] = dist[Trea[j]];
+		}
+		memset(dp, 0xff, sizeof(dp));
+		int r = dfs(n, 0);
+		if (r >= +oo)
+			printf("-1\n");
+		else
+			printf("%d\n", r);
+	}
+	return 0;
+}

@@ -1,0 +1,181 @@
+#include<cstdio>
+#include<cstring>
+#include<cstdlib>
+#include<algorithm>
+#include<iostream>
+using namespace std;
+typedef long long LL;
+const int maxn=50005;
+int n,m;
+int head[maxn],adj[maxn],next[maxn],tot;
+LL ans,n2;
+
+inline void addedge(int u,int v)
+{tot++;adj[tot]=v;next[tot]=head[u];head[u]=tot;}
+
+inline void putans(){printf("%.10lf\n",(double)ans/n2);}
+
+struct node
+{
+	int val,cnt;
+	LL all,dta;
+	LL sv,sc,s;
+	node *f,*lc,*rc;
+	
+	inline void tagdta(const LL &d)
+	{
+		all+=d*cnt;
+		dta+=d;
+	}
+	
+	inline void update()
+	{
+		sv=val,sc=cnt,s=(LL)cnt*val;
+		if(lc)sv+=lc->sv,sc+=lc->sc,s+=lc->s;
+		if(rc)sv+=rc->sv,sc+=rc->sc,s+=rc->s;
+	}
+	
+	inline void downdate()
+	{
+		if(dta)
+		{
+			if(lc)lc->tagdta(dta);
+			if(rc)rc->tagdta(dta);
+			dta=0;
+		}
+	}
+	
+	inline bool isroot()
+	{return !f||f->lc!=this&&f->rc!=this;}
+	
+}V[maxn];
+
+inline void rotate(node *x)
+{
+	node *y=x->f,*z=y->f,*b=y->lc==x?x->rc:x->lc;
+	if(b)b->f=y;y->f=x;x->f=z;
+	if(z)
+	{
+		if(z->lc==y)z->lc=x;
+		else if(z->rc==y)z->rc=x;
+	}
+	if(y->lc==x)y->lc=b,x->rc=y;
+	else y->rc=b,x->lc=y;
+	y->update();
+}
+
+void splay(node *x)
+{
+	static node* stt[maxn];
+	int stn;
+	stt[stn=1]=x;
+	for(node *i=x;!i->isroot();i=i->f)stt[++stn]=i->f;
+	while(stn)stt[stn--]->downdate();
+	while(!x->isroot())
+	{
+		if(x->f->isroot())rotate(x);
+		else if((x->f->f->lc==x->f)==(x->f->lc==x))rotate(x->f),rotate(x);
+		else rotate(x),rotate(x);
+	}
+	x->update();
+}
+
+node* access(node *x)
+{
+	node *y=NULL;
+	for(;x;y=x,x=x->f)
+	{
+		splay(x);
+		if(x->rc)x->cnt+=x->rc->sc;
+		x->rc=y;
+		if(y)x->cnt-=y->sc;
+		x->update();
+	}
+	return y;
+}
+
+node* getfa(node *x)
+{
+	access(x);
+	splay(x);
+	if(!x->lc)return x->f;
+	x=x->lc;
+	while(x->downdate(),x->rc)x=x->rc;
+	splay(x);
+	return x;
+}
+
+void modify(int x,LL t)
+{
+	splay(V+x);
+	ans+=(t-V[x].val)*V[x].all;
+	V[x].val=t;
+	V[x].update();
+}
+
+void move(int u,int v)
+{
+	node *x=V+u,*y=V+v,*f;
+	access(x),splay(y);
+	if(!y->f)swap(x,y),swap(u,v);
+	f=getfa(y);
+	if(f==x)return;
+	
+	access(f),splay(f);
+	f->cnt-=y->sc;
+	f->update();
+	y->f=NULL;
+	ans-=2*f->s*y->sc;
+	f->tagdta(-2*y->sc);
+	
+	access(x),splay(x);
+	ans+=2*x->s*y->sc;
+	x->tagdta(2*y->sc);
+	x->cnt+=y->sc;
+	x->update();
+	y->f=x;
+}
+
+void tdfs(int x)
+{
+	V[x].all=V[x].cnt=1;
+	for(int y,i=head[x];i;i=next[i])
+	{
+		tdfs(y=adj[i]);
+		V[x].all+=2LL*V[x].cnt*V[y].cnt;
+		V[x].cnt+=V[y].cnt;
+	}
+	ans+=V[x].all*V[x].val;
+	V[x].update();
+}
+
+void init()
+{
+	scanf("%d",&n);n2=(LL)n*n;
+	for(int f,i=2;i<=n;i++)
+		scanf("%d",&f),addedge(f,i),V[i].f=&V[f];
+	for(int v,i=1;i<=n;i++)
+		scanf("%d",&V[i].val);
+	tdfs(1);
+	putans();
+}
+
+void work()
+{
+	scanf("%d",&m);
+	char op[10];
+	for(int x,y,i=1;i<=m;i++)
+	{
+		scanf("%s %d %d",op,&x,&y);
+		if(*op=='P')move(y,x);
+		else modify(x,y);
+		putans();
+	}
+}
+
+int main()
+{
+	init();
+	work();
+	return 0;
+}

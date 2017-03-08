@@ -1,0 +1,150 @@
+#include <cstdio>
+#include <vector>
+#include <set>
+#include <algorithm>
+#include <climits>
+using namespace std;
+
+#define N 100001
+
+vector<int> adj[N];
+set<int> chains[2][N];
+int n, q, id = 1, ch = 1, num[N], inv[N], wei[N], hev[N], top[N], pai[N], seg[2][N], S, col[N], dep[N], fio[N];
+
+int dfs(int p, int l)
+{
+	wei[p] = 1; num[p] = id; inv[id] = p; ++id; pai[p] = l; dep[p] = num[p];
+	
+	for (int i = 0; i < adj[p].size(); ++i)
+	{
+		int q = adj[p][i];
+		if (q == l) continue;
+		wei[p] += dfs(q, p);
+		dep[p] = dep[q];
+	}
+	
+	return wei[p];
+}
+
+void dfs2(int p, int l)
+{
+	for (int i = 0; i < adj[p].size(); ++i)
+	{
+		int q = adj[p][i];
+		if (q == l) continue;
+		if (wei[q] > wei[p]/2)
+		{
+			if (!hev[p]) hev[p] = ch, top[ch++] = p;
+			fio[p] = q;
+			hev[q] = hev[p];
+		}
+		dfs2(q, p);
+	}
+}
+
+int bit_query(int x)
+{
+	int r = 0;
+	while (x)
+	{
+		r += seg[S][x];
+		x -= x&-x;
+	}
+	return r;
+}
+
+int query(int i, int j)
+{
+	return bit_query(j)-bit_query(i-1);
+}
+
+void update(int x, int v)
+{
+	while (x <= n)
+	{
+		seg[S][x] += v;
+		x += x&-x;
+	}
+}
+
+int walk(int p, int l)
+{
+	if (p == 0) return l;
+	if (col[p] == !S) return l;
+	if (!hev[p]) return walk(pai[p], p);
+	
+	bool bob = chains[S][hev[p]].empty() || (-(*chains[S][hev[p]].rbegin()) > num[p]);
+	typeof(chains[S][hev[p]].begin()) it;
+	if (!bob) it = chains[S][hev[p]].lower_bound(-num[p]);
+	if (bob || it == chains[S][hev[p]].end())
+	{
+		p = top[hev[p]];
+		return walk(pai[p], p);
+	}
+	return fio[inv[-(*it)]];
+}
+
+#define getcx getchar_unlocked
+inline void inp( int &n )
+{
+	char ch=getcx(); n=0;
+	while( ch < '0' || ch > '9' ){ch=getcx();}
+	while( ch >= '0' && ch <= '9' ) n = (n<<3)+(n<<1) + ch-'0', ch=getcx();
+} 
+
+int main()
+{
+	inp(n);
+	for (int i = 0; i < n-1; ++i)
+	{
+		int a, b;
+		inp(a); inp(b);
+		adj[a].push_back(b);
+		adj[b].push_back(a);
+	}
+	dfs(1, 0);
+	dfs2(1, 0);
+	for (int i = 1; i < id; ++i) 
+	{
+		update(i, 1);
+		if (hev[i]) chains[1][hev[i]].insert(-num[i]);
+	}
+	dep[0] = id-1;
+	inp(q);
+	while (q--)
+	{
+		int a, b;
+		inp(a);	inp(b);
+		if (a == 0) // query
+		{
+			S = col[b];
+			int go = walk(b, b);
+			int use = query(num[go], dep[go]);
+			printf("%d\n", use);
+		}
+		else // change
+		{
+			col[b] ^= 1;
+			if (hev[b]) chains[col[b]][hev[b]].erase(-num[b]),
+				    chains[!col[b]][hev[b]].insert(-num[b]);
+				    
+			S = !col[b];
+			int go = pai[walk(pai[b], b)];
+			int use = query(num[b], dep[b]);
+			if (go != 0)
+			{
+				update(num[go], use);
+			}
+			update(num[b], -use);
+			
+			S = col[b];
+			update(num[b], -query(num[b], num[b])+1);
+			go = pai[walk(b, b)];
+			if (go != 0)
+			{
+				use = query(num[b]+1, dep[b])+1;
+				update(num[go], -use);
+			}
+		}
+	}
+}

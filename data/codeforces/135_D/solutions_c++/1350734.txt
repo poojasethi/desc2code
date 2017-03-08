@@ -1,0 +1,84 @@
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <algorithm>
+using namespace std;
+int n, m;
+char a[1005][1005];
+bool valid(int x, int y) {
+	return x>=0 &&x<n && y>=0&&y<m;
+}
+
+int ans=0;
+int g[2000005];
+int u[1005][1005], ucs;
+int v[3000005],vn=0;
+inline int FIND(int x) { return g[x]==x?x:g[x]=FIND(g[x]);}
+inline void UNION(int x, int y) { g[FIND(x)] = FIND(y); }
+inline int e(int x, int y) {return x*1005+y;}
+void add(int x, int y) {
+	if(!valid(x,y)) return;
+	if(a[x][y]=='1' && u[x][y]!=ucs) {
+		u[x][y]=ucs;
+		g[e(x,y)]=e(x,y);
+		v[vn++]=x; v[vn++]=y;
+	}
+}
+void go(int x, int y) {
+	if(!valid(x,y)) return;
+	add(x,y);
+	if(a[x][y]=='0') {
+		a[x][y]='-';
+		//go(x,y-1); go(x+1,y); go(x,y+1); go(x-1,y);
+		for(int i=-1;i<=1;i++)
+			for(int j=-1;j<=1;j++)
+				go(x+i,y+j);
+	}
+}
+int dx[4]={0,1,0,-1}, dy[4]={1,0,-1,0};
+
+void test() {
+	int siz=vn/2;
+	for(int i=0;i<vn;i+=2) {
+		int x=v[i], y=v[i+1];
+		int deg=0;
+		for(int j=0;j<4;j++) {
+			if(valid(x+dx[j], y+dy[j]) && u[x+dx[j]][y+dy[j]]==ucs) {
+				++deg;
+				if(FIND(e(x+dx[j],y+dy[j]))!=FIND(e(x,y))) {
+					--siz;
+					UNION(e(x+dx[j],y+dy[j]), e(x,y));
+				}
+			}
+		}
+		if(deg!=2) return;
+	}
+	if(siz>1) return;
+	ans=max(ans, vn/2);
+}
+
+int main(void) {
+	scanf("%d%d", &n, &m);
+	for(int i=0;i<n;i++) scanf("%s", a[i]);
+	for(int i=0;i<n;i++) {
+		if(a[i][0]=='0') { ++ucs; vn=0; go(i,0); }
+		if(a[i][m-1]=='0') { ++ucs; vn=0; go(i,m-1); }
+	}
+	for(int i=0;i<m;i++) {
+		if(a[0][i]=='0') { ++ucs; vn=0; go(0, i); }
+		if(a[n-1][i]=='0') { ++ucs; vn=0; go(n-1, i); }
+	}
+	for(int i=0;i<n;i++)
+		for(int j=0;j<m;j++)
+			if(a[i][j]=='0') {
+				vn=0;
+				++ucs;
+				go(i, j);
+				test();
+			} else if(a[i][j]=='1' && a[i+1][j]=='1' && a[i][j+1]=='1' && a[i+1][j+1]=='1') {
+				ans=max(ans, 4);
+			}
+	printf("%d\n", ans);
+	return 0;
+}
+

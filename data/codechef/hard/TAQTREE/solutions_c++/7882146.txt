@@ -1,0 +1,120 @@
+#include<iostream>
+#include<vector>
+#include<algorithm>
+#include<cstdio>
+#include<cmath>
+using namespace std;
+
+
+long long int sum[100009];
+long long int tree[100009];
+int pos[100009],y;
+int dp[20][100009];
+int subtree[100009];
+int depth[100009];
+bool visited[100009];
+vector<pair<int,int> >adj[100009];
+vector<int>indexx[100009];
+int otherend[100009];
+void update(int i,long long int val)
+{
+while(i<=100008)
+{
+tree[i]=tree[i]+val;
+i+=i&(-i);
+}
+}
+
+int query(int i)
+{
+long long int temp=0;
+while(i>0)
+{
+temp=temp+tree[i];
+i-=i&(-i);
+}
+return temp;
+}
+
+void dfs(int i,vector<pair<int,int> >*adj,bool *visited,int temp1,int temp2,int parent)
+{
+dp[0][i]=parent;
+visited[i]=true;
+subtree[i]=1;
+depth[i]=temp1;
+pos[i]=y++;
+sum[i]=temp2;
+for(int j=0;j<adj[i].size();j++)
+if(!visited[adj[i][j].second])
+{
+otherend[indexx[i][j]]=adj[i][j].second;
+dfs(adj[i][j].second,adj,visited,temp1+1,temp2+adj[i][j].first,i);
+subtree[i]+=subtree[adj[i][j].second];
+}
+}
+
+int lca(int a,int b)
+{
+if(depth[a]<depth[b])
+swap(a,b);
+int temp=log2(depth[a]);
+for(int i=temp;i>=0;i--)
+if(depth[a]-(1<<i)>=depth[b])
+a=dp[i][a];
+if(a==b)
+return a;
+for(int i=temp;i>=0;i--)
+if(dp[i][a]!=-1&&dp[i][a]!=dp[i][b])
+a=dp[i][a],b=dp[i][b];
+return dp[0][a];
+}
+
+
+int main()
+{
+ios_base::sync_with_stdio(false);
+int n;
+cin>>n;
+for(int i=1;i<n;i++)
+{
+int u,v,w;
+cin>>u>>v>>w;
+u--;
+v--;
+adj[u].push_back(make_pair(w,v));
+adj[v].push_back(make_pair(w,u));
+indexx[u].push_back(i-1);
+indexx[v].push_back(i-1);
+}
+dfs(0,adj,visited,0,0,-1);
+for(int i=0;i<y;i++)
+{
+update(pos[i]+1,sum[i]);
+update(pos[i]+1+1,-1*sum[i]);
+}
+for(int i=1;i<17;i++)
+for(int j=0;j<n;j++)
+if(dp[i-1][j]!=-1)
+dp[i][j]=dp[i-1][dp[i-1][j]];
+int q;
+cin>>q;
+while(q--)
+{
+int x,u,v;
+cin>>x>>u>>v;
+if(x==1)
+{
+int posi=pos[otherend[u-1]];
+int parent=dp[0][otherend[u-1]];
+long long int temp=query(pos[parent]+1);
+long long int diff=query(posi+1)-temp;
+update(posi+1,-diff);
+update(posi+1+subtree[otherend[u-1]],diff);
+update(posi+1,v);
+update(posi+1+subtree[otherend[u-1]],-v);
+}
+else if(x==2)
+cout<<query(pos[u-1]+1)+query(pos[v-1]+1)-2*query(pos[lca(u-1,v-1)]+1)<<endl;
+}
+return 0;
+}

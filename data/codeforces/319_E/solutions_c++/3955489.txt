@@ -1,0 +1,90 @@
+//by momo
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#define MXN 100010
+#define mid ((l+r)/2)
+#define lc id*2
+#define rc id*2+1
+#define SZ(x) ((int)(x).size())
+using namespace std;
+
+int N, TY[MXN], A[MXN], B[MXN];
+int StoQ[MXN], QtoS[MXN];
+int lx[MXN], rx[MXN], sn, app[MXN*2], an;
+
+int LW(int x){ return lower_bound(app, app+an, x)-app; }
+
+int fa[MXN];
+void init(){ for(int i = 0; i < sn; i++) fa[i] = i; }
+int find(int x){ return fa[x] = (fa[x] == x? x: find(fa[x])); }
+void unio(int a, int b){
+	a = find(a), b = find(b);
+	lx[b] = min(lx[b], lx[a]);
+	rx[b] = max(rx[b], rx[a]);
+	fa[a] = b;
+}
+
+vector<int> dat[MXN*8];
+void update(int l, int r, int x, int who, int id){
+	if(r < x || x < l) return;
+
+	for(int i = 0; i < SZ(dat[id]); i++){
+		int you = find(dat[id][i]);
+		if(lx[you] < app[x] && app[x] < rx[you]){
+			unio(who, you);
+			swap(dat[id][i], dat[id][SZ(dat[id])-1]);
+			i--; dat[id].pop_back();
+		}
+	}
+
+	if(l == r) return;
+	update(l, mid, x, who, lc);
+	update(mid+1, r, x, who, rc);
+}
+
+void insert(int l, int r, int a, int b, int who, int id){
+	if(r < a || b < l) return;
+	if(a <= l && r <= b){
+		dat[id].push_back(who);
+		return;
+	}
+	insert(l, mid, a, b, who, lc);
+	insert(mid+1, r, a, b, who, rc);
+}
+
+int main(){
+	//freopen("in.txt", "r", stdin);
+
+	scanf("%d", &N);
+	for(int i = 0; i < N; i++){
+		scanf("%d%d%d", &TY[i], &A[i], &B[i]);
+		if(TY[i] == 1){
+			lx[sn] = app[an++] = A[i];
+			rx[sn] = app[an++] = B[i];
+			StoQ[QtoS[i] = sn++] = i;
+		}
+		else A[i]--, B[i]--;
+	}
+	sort(app, app + an);
+	an = unique(app, app + an) - app;
+
+	init();
+	for(int i = 0; i < N; i++){
+		if(TY[i] == 1){
+			update(0, an-1, LW(A[i]), QtoS[i], 1);
+			update(0, an-1, LW(B[i]), QtoS[i], 1);
+			int who = find(QtoS[i]);
+			insert(0, an-1, LW(lx[who]), LW(rx[who]), who, 1);
+		}
+		else{
+			swap(A[i], B[i]);
+			int a = find(A[i]), b = StoQ[B[i]];
+			int lxa = lx[a], rxa = rx[a];
+
+			if(lxa <= A[b] && B[b] <= rxa) puts("YES");
+			else puts("NO");
+
+		}
+	}
+}

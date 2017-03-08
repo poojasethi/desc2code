@@ -1,0 +1,165 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#include <cstring>
+#include <map>
+#include <cassert>
+using namespace std;
+
+#define MAX  100005
+#define MOD  1000000007
+
+struct node {
+	int maxx[2];
+	long long countMax[2];
+	node() {
+        init();
+	}
+
+	void init() {
+		maxx[0] = 0, maxx[1] = -1;
+		countMax[0] = 1, countMax[1] = 0;
+	}
+
+	void setMax(int v, int cntMx, int cntSnMx) {
+        if (v == maxx[0]) {
+            countMax[0] += cntMx;
+            countMax[1] += cntSnMx;
+        } else if (v == maxx[0] + 1) {
+            maxx[0] = v, maxx[1] = v-1;
+            countMax[1] = countMax[0] + cntSnMx;
+            countMax[0] = cntMx;
+        } else {
+            maxx[0] = v, maxx[1] = v-1;
+            countMax[0] = cntMx;
+            countMax[1] = cntSnMx;
+        }
+        countMax[0] %= MOD;
+        countMax[1] %= MOD;
+	}
+
+	void print() {
+        cerr << "mx = " << maxx[0] << " cntMx = " << countMax[0] << endl;
+        cerr << "snMx = " << maxx[1] << " cntSnMax = " << countMax[1] << endl;
+	}
+};
+
+node merge(node &left, node &right) {
+	node x;
+
+    if (left.maxx[0] > right.maxx[0]) {
+        x.maxx[0] = left.maxx[0];
+        if (left.maxx[1] > right.maxx[0]) {
+            x.maxx[1] = left.maxx[1];
+        } else {
+            x.maxx[1] = right.maxx[0];
+        }
+    } else if (right.maxx[0] > left.maxx[0]) {
+        x.maxx[0] = right.maxx[0];
+        if (right.maxx[1] > left.maxx[0]) {
+            x.maxx[1] = right.maxx[1];
+        } else {
+            x.maxx[1] = left.maxx[0];
+        }
+    } else {
+        x.maxx[0] = left.maxx[0];
+        if (left.maxx[1] > right.maxx[1]) {
+            x.maxx[1] = left.maxx[1];
+        } else {
+            x.maxx[1] = right.maxx[1];
+        }
+    }
+
+	for (int i = 0; i <= 1; i++) {
+		x.countMax[i] = 0;
+		for (int j = 0; j <= 1; j++) {
+			if (x.maxx[i] == left.maxx[j]) {
+				x.countMax[i] += left.countMax[j];
+				x.countMax[i] %= MOD;
+			}
+		}
+		for (int j = 0; j <= 1; j++) {
+			if (x.maxx[i] == right.maxx[j]){
+				x.countMax[i] += right.countMax[j];
+				x.countMax[i] %= MOD;
+			}
+		}
+	}
+	if (x.maxx[0] == 0) x.countMax[0] = 1;
+    if (x.maxx[1] == 0) x.countMax[1] = 1;
+    return x;
+}
+
+node st[4*MAX];
+
+node query(int n, int ll, int rl, int ql, int qr) {
+	if (ll >= ql and rl <= qr) {
+		return st[n];
+	}
+	int mid = (ll + rl)/2;
+	if (qr <= mid) {
+		return query(2*n+1, ll, mid, ql, qr);
+	} else if (ql > mid) {
+		return query(2*n+2, mid+1, rl, ql, qr);
+	} else {
+		node left = query(2*n+1, ll, mid, ql, qr);
+		node right = query(2*n+2, mid+1, rl, ql, qr);
+		return merge(left, right);
+	}
+}
+
+node update(int n, int ll, int rl, int p, int v, long long cntMx, long long cntSnMx) {
+	if (p == ll and p == rl) {
+		st[n].setMax(v, cntMx, cntSnMx);
+		return st[n];
+	} else if (p < ll or p > rl) {
+	    return st[n];
+	} else {
+	    int mid = (ll + rl)/2;
+		node left = update(2*n+1, ll, mid, p, v, cntMx, cntSnMx);
+		node right = update(2*n+2, mid+1, rl, p, v, cntMx, cntSnMx);
+		st[n] = merge(left, right);
+        return st[n];
+	}
+}
+
+int main() {
+	int t;
+	scanf("%d", &t);
+	while (t--) {
+
+		int n;
+		scanf("%d", &n);
+		int a[MAX];
+
+        for (int i = 0; i < 4*n; i++) st[i].init();
+
+		map<int,int> h;
+		for (int i = 0; i < n; i++) {
+			scanf("%d", &a[i]);
+			h[a[i]] = 0;
+		}
+
+		//Compression
+		int cnt = 1;
+		for (map<int,int>::iterator i = h.begin(); i != h.end(); i++) {
+			i->second = cnt++;
+		}
+		for (int i = 0; i < n; i++) {
+			a[i] = h[a[i]];
+		}
+		//
+
+		for (int i = 0; i < n; i++) {
+            node x = st[0];
+            x = query(0, 0, cnt-1, 0, a[i]-1);
+			int mx = x.maxx[0], snMax = x.maxx[1];
+			int countMx = x.countMax[0], countSnMax = x.countMax[1];
+			update(0, 0, cnt-1, a[i], mx+1, countMx, countSnMax);
+        }
+
+		node x = st[0];
+        printf("%lld\n",  x.countMax[1]);
+	}
+}

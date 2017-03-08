@@ -1,0 +1,116 @@
+#include <iostream>
+#include <cstring>
+#include <cstdio>
+#include <algorithm>
+#include <cassert>
+using namespace std;
+const int Maxn = 50010;
+struct Node
+{
+	int next[27], fail, deep;
+	void clear()
+	{
+		memset(next, 0, sizeof(next));
+		fail = deep = 0;
+	}
+}node[Maxn * 12];
+int size, end;
+void init()
+{
+	fill(node[0].next, node[0].next + 26, 1);
+	node[0].deep = -1;
+	node[1].clear();
+	end = 1; size = 2;
+}
+void add(int c)
+{
+	int p = size++; node[p].clear(); node[p].deep = node[end].deep + 1;
+	for (; !node[end].next[c]; end = node[end].fail)
+		node[end].next[c] = p;
+	int p1 = node[end].next[c];
+	
+	if (node[p1].deep == node[end].deep + 1) node[p].fail = p1;
+	else 
+	{
+		int p2 = size++; node[p2] = node[p1]; node[p2].deep = node[end].deep + 1;
+		node[p1].fail = node[p].fail = p2;
+		for (; node[end].next[c] == p1; end = node[end].fail)
+			node[end].next[c] = p2;
+	}
+	end = p;
+}
+void build(char str[])
+{
+	init();
+	for (int i = 0; str[i]; ++i)
+		add(str[i] - 'a');
+}
+int dp[Maxn * 12];
+bool valid[Maxn * 12];
+char str[Maxn], s[Maxn];
+int n;
+void update(int c)
+{
+	for (; !node[end].next[c]; end = node[end].fail);
+	int p1 = node[end].next[c];
+	if (node[p1].deep == node[end].deep + 1) end = p1;
+	else 
+	{
+		int p2 = size++; node[p2] = node[p1]; dp[p2] = 0, valid[p2] = valid[p1]; node[p2].deep = node[end].deep + 1;
+		node[p1].fail = p2;
+		for (; node[end].next[c] == p1; end = node[end].fail)
+			node[end].next[c] = p2;
+		end = p2;
+	}
+	//cout << end << endl;
+	dp[end]++;
+}
+int wb[Maxn], st[Maxn * 12];
+void solve(char s[], int l, int r)
+{
+	for (int i = 1; i < size; ++i)
+		dp[i] = 0;
+	end = 1;
+	for (int i = 0; s[i]; ++i)
+		update(s[i] - 'a');
+	memset(wb, 0, sizeof(wb));
+	for (int i = 2; i < size; ++i) 
+	{	
+		assert(node[i].deep < Maxn);
+		wb[node[i].deep]++;
+	}
+	for (int i = 1; i < Maxn; ++i) wb[i] += wb[i - 1];
+	for (int i = size - 1; i >= 2; --i) st[--wb[node[i].deep]] = i;
+	for (int i = size - 3; i >= 0; --i)
+	{
+		int c = st[i];
+		int f = node[c].fail;
+		dp[f] += dp[c];
+		if (dp[c] < l || dp[c] > r)
+		{
+			valid[c] = false;
+			//cout << "failed =" << c << endl;
+		}
+	}
+}
+int main()
+{
+	scanf("%s", str);
+	scanf("%d", &n);
+	build(str);
+	for (int i = 2; i < size; ++i)
+		valid[i] = true;
+	while (n--)
+	{
+		int l, r;
+		scanf("%s%d%d", s, &l, &r);
+		solve(s, l, r);
+	}
+	long long ans = 0;
+	assert(size < Maxn * 12);
+	for (int i = 2; i < size; ++i)
+		if (valid[i]) ans += node[i].deep - node[node[i].fail].deep;
+	
+	printf("%I64d\n", ans);
+	return 0;
+}

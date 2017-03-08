@@ -1,0 +1,120 @@
+#include <cstring>
+#include <map>
+#include <deque>
+#include <queue>
+#include <stack>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <algorithm>
+#include <vector>
+#include <set>
+#include <complex>
+#include <list>
+#include <climits>
+#include <cctype>
+
+using namespace std;
+
+typedef complex<double> point;
+#define cross(a,b) ((conj(a)*(b)).imag())
+#define X real()
+#define Y imag()
+
+const double eps = 1e-9;
+
+int comp(double a, double b) {
+	if (fabs(a - b) < eps)
+		return 0;
+	return a > b ? 1 : -1;
+}
+
+struct pComp {
+	bool operator()(const point &A, const point &B) const {
+		if (comp(A.X, B.X))
+			return A.X < B.X;
+		if (comp(A.Y, B.Y))
+			return A.Y < B.Y;
+		return 0;
+	}
+};
+
+double len(point A, point B) {
+	return hypot(A.X - B.X, A.Y - B.Y);
+}
+
+bool pointOnSeg(point A, point B, point R) {
+	return comp(len(A, B), len(A, R) + len(B, R)) == 0;
+}
+
+bool lineInter(point A, point B, point P, point Q, point &R) {
+	double d1 = cross(P-A,B-A);
+	double d2 = cross(Q-A,B-A);
+	if (comp(d1, d2) == 0)
+		return false;
+	R = (d1 * Q - d2 * P) / (d1 - d2);
+	if (!pointOnSeg(A, B, R) || !pointOnSeg(P, Q, R))
+		return false;
+	return true;
+}
+
+int n;
+point st, en;
+vector<point> pol;
+
+double mat[34][34];
+
+int main() {
+	int x, y;
+	cin >> x >> y;
+	st = point(x, y);
+	cin >> x >> y;
+	en = point(x, y);
+	cin >> n;
+	for (int i = 0; i < n; i++) {
+		cin >> x >> y;
+		pol.push_back(point(x, y));
+	}
+	double ret = len(st, en);
+	set<point, pComp> intrs;
+	for (int i = 0; i < n; i++) {
+		point R;
+		if (lineInter(st, en, pol[i], pol[(i + 1) % n], R))
+			intrs.insert(R);
+	}
+	if (intrs.size() == 2) {
+		point p1 = *intrs.begin();
+		point p2 = *(++intrs.begin());
+		double d1 = -1, d2 = 0;
+		for (int i = 0; i < n; i++) {
+			int j = (i + 1) % n;
+			d2 += len(pol[i], pol[j]);
+			if (d1 == -1 && pointOnSeg(pol[i], pol[j], p1)) {
+				if (pointOnSeg(pol[i], pol[j], p2))
+					goto PRINT;
+				d1 = len(p1, pol[j]);
+				while (1) {
+					int j2 = (j + 1) % n;
+					if (pointOnSeg(pol[j], pol[j2], p2)) {
+						d1 += len(pol[j], p2);
+						break;
+					}
+					d1 += len(pol[j], pol[j2]);
+					j = j2;
+				}
+			}
+		}
+		d2 -= d1;
+		double d3 = len(p1, p2);
+		ret -= d3;
+		d3 *= 2;
+		ret += min(d3, min(d1, d2));
+	}
+	PRINT: ;
+	printf("%.9lf\n", ret);
+	return 0;
+}

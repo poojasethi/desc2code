@@ -1,0 +1,25 @@
+#include <stdio.h>
+#include <string.h>
+const int N=50500;
+char s[N],t[N];
+int n,p[N][32],q[32],d[N][108],x;
+main(){
+  scanf("%s",s+1);
+  n=strlen(s+1);
+  for(int i=1;i<=n;++i)for(int j=0;j<26;++j)p[i][j]=q[j],q[j]=j==s[i]-'a'?i:q[j];
+  for(int i=1,c;i<=n;++i){
+    c=s[i]-'a',d[i][1]=i;
+    d[i][2]=p[i][c]>d[i-1][2]?p[i][c]:d[i-1][2];
+    for(int j=1,u,v;j<101;++j){
+      u=d[i-1][j+2],v=p[d[i-1][j]][c];
+      d[i][j+2]=u>v?u:v;
+    }
+  }
+  x=100;
+  while(x>0&&!d[n][x])--x;
+  for(int i=0,j=x,k=n;i<j;x-=2){
+    while(s[k]!=s[d[k][x]])--k;
+    t[i++]=t[--j]=s[k--];
+  }
+  puts(t);
+}

@@ -1,0 +1,80 @@
+#include <bits/stdc++.h>
+typedef long long LL;
+#define rep(i,n) for(int i = 0;i < n;i ++)
+
+const int N = 400010;
+int ch[N][27], tot, tail, root;
+int fail[N], len[N];
+std::set<int> contain[N];
+void extend(int c, int id=-1) {
+	int p = tail;
+	tail = ++ tot;
+	len[tot] = len[p] + 1;
+	if(~id)
+		contain[tot].insert(id);
+	while(~p && !ch[p][c])
+		ch[p][c] = tail, p = fail[p];
+	if(p == -1) {
+		fail[tail] = root;
+	} else if(len[p] == len[ch[p][c]] - 1) {
+		fail[tail] = ch[p][c];
+	} else {
+		len[++ tot] = len[p] + 1;
+		int tmp = ch[p][c];
+		memcpy(ch[tot], ch[tmp], sizeof ch[tot]);
+		fail[tot] = fail[tmp];
+		fail[tmp] = fail[tail] = tot;
+		while(~p && ch[p][c] == tmp)
+			ch[p][c] = tot, p = fail[p];
+	}
+}
+char buf[N];
+std::vector<int> G[N];
+int cnt[N];
+void dfs(int u) {
+	rep(i, G[u].size()) {
+		int v = G[u][i];
+		dfs(v);
+		if(contain[u].size() < contain[v].size())
+			std::swap(contain[u], contain[v]);
+		contain[u].insert(contain[v].begin(), contain[v].end());
+		contain[v].clear();
+	}
+	cnt[u] = contain[u].size();
+}
+std::string S[N];
+int main() {
+	int n, m;
+	root = tail = 0;
+	fail[root] = -1;
+	scanf("%d%d", &n, &m);
+	rep(i, n) {
+		scanf("%s", buf);
+		S[i] = buf;
+		for(int j = 0; buf[j]; j ++)
+			extend(buf[j] - 'a', i);
+		extend(26);
+	}
+	for(int i = 1; i <= tot; i ++)
+		G[fail[i]].push_back(i);
+	dfs(0);
+	rep(i, n) {
+		int p = 0, l = 0;
+		LL answer = 0;
+		rep(j, S[i].size()) {
+			int c = S[i][j] - 'a';
+			while(p && !ch[p][c])
+				p = fail[p];
+			l = std::min(l, len[p]);
+			p = ch[p][c];
+			if(p)	l ++;
+			while(p && cnt[p] < m)
+				p = fail[p], l = len[p];
+			answer += l;
+		}
+		printf("%I64d ", answer);
+	}
+	puts("");
+	return 0;
+}
+

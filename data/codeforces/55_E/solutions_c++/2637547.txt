@@ -1,0 +1,39 @@
+//By Lin
+#include<cstdio>
+#include<cstring>
+#include<iostream>
+using namespace std;
+typedef long long LL;
+
+struct  Point{
+    int x,y;
+    void init(){ scanf("%d%d",&x, &y); }
+};
+int     n,m;
+Point   data[100005],tmp;
+
+int     xcmp( Point a , Point b , Point c ) {
+    LL  ret = ((LL)a.x-c.x)*((LL)b.y-c.y)-((LL)b.x-c.x)*((LL)a.y-c.y);
+    return ret>0?1:(ret<0?-1:0);
+}
+int     main(){
+    scanf("%d", &n );
+    for (int i = 0; i<n; i++) data[i].init();
+    scanf("%d", &m );
+    while ( m -- ) {
+        tmp.init();
+        LL  ans = ((LL)n)*(n-1)*(n-2)/6;
+        for (int i = 0,j=1; i<n; i++){
+            while ( xcmp(data[j],tmp,data[i])<0 ) { 
+                j=j+1;
+                if ( j == n ) j = 0;
+            }
+            LL  k = (j-1-i);
+            if ( k<0 ) k+=n;
+            ans -= k*(k-1)/2;
+        }
+        if ( ans < 0 ) ans = 0; 
+        cout<<ans<<endl;
+    }
+    return 0;
+}

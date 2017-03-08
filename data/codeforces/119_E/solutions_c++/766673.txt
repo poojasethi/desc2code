@@ -1,0 +1,189 @@
+#include <vector>
+#include <map>
+#include <set>
+#include <cmath>
+#include <string>
+#include <cstring>
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <sstream>
+#include <queue>
+using namespace std;
+
+#define EPS 1e-8
+#define MAXN 1005
+#define PI acos(-1.0)
+
+int n, m;
+double x[MAXN];
+double y[MAXN];
+double z[MAXN];
+
+double xx[MAXN];
+double yy[MAXN];
+double zz[MAXN];
+
+void proection(double a, double b, double c, double d = 0){
+	for (int i=0; i<n; i++){
+		//(a*t + x0, b*t + y0, c*t + z0) (for finding proection)
+		// a^2*t + x0*a + b^2*t + y0*b + c^2 *t + z0*c + d = 0
+		double t = -(d + a*x[i] + b*y[i] + c*z[i]) / (a*a + b*b + c*c);
+		xx[i] = x[i] + a*t;
+		yy[i] = y[i] + b*t;
+		zz[i] = z[i] + c*t;
+	}
+}
+
+void rotation(double x, double y, double z){
+	double angle = PI/2 - atan2(z, y);
+	double ty = y;
+	double tz = z;
+	z = cos(angle)*tz + sin(angle)*ty;
+	y = -sin(angle)*tz + cos(angle)*ty;
+
+	//cout << x << " " << y << " " << z << endl;
+	for (int i=0; i<n; i++){
+		double ty = yy[i], tz = zz[i];
+		zz[i] = cos(angle)*tz + sin(angle)*ty;
+		yy[i] = -sin(angle)*tz + cos(angle)*ty;
+	}
+
+	angle = PI/2 - atan2(z, x);
+
+	double tx = x;
+	tz = z;
+	z = cos(angle)*tz + sin(angle)*tx;
+	x = -sin(angle)*tz + cos(angle)*tx;
+	//cout << x << " " << y << " " << z << endl;
+
+	for (int i=0; i<n; i++){
+		double tx = xx[i], tz = zz[i];
+		zz[i] = cos(angle)*tz + sin(angle)*tx;
+		xx[i] = -sin(angle)*tz + cos(angle)*tx;
+	}
+}
+
+struct point{
+	double x, y;
+	point(){
+		x = 0;
+		y = 0;
+	}
+	point(double x, double y){
+		this->x = x;
+		this->y = y;
+	}
+} arr[1005];
+
+double dist(point p1, point p2){
+	return sqrt((p1.x - p2.x)*(p1.x - p2.x) + (p1.y - p2.y)*(p1.y - p2.y));
+}
+
+double det(double a, double b, double c, double d){
+	return a*d - b*c;
+}
+               
+bool intersect(double a1, double b1, double c1, double a2, double b2, double c2, point &ret){
+	double d = det(a1, b1, a2, b2);
+	if (fabs(d) < EPS){
+		return false;
+	}
+	ret.x = -det(c1, b1, c2, b2) / d;
+	ret.y = -det(a1, c1, a2, c2) / d;
+	return true;
+}
+
+point get_center(int x, int y, int z){
+	double a1 = arr[y].x - arr[x].x;
+	double b1 = arr[y].y - arr[x].y;
+	double c1 = -(a1*(arr[y].x + arr[x].x)/2 + b1*(arr[y].y + arr[x].y)/2);
+	double a2 = arr[z].x - arr[y].x;
+	double b2 = arr[z].y - arr[y].y;
+	double c2 = -(a2*(arr[z].x + arr[y].x)/2 + b2*(arr[z].y + arr[y].y)/2);
+	point ret;
+	if (intersect(a1, b1, c1, a2, b2, c2, ret)){
+		return ret;
+	} else {
+		throw "Critical error";
+	}
+}
+
+point mec3(int n, int m){
+	random_shuffle(arr, arr+n);
+	double r = dist(arr[n], arr[m])/2;
+	point center((arr[n].x + arr[m].x)/2, (arr[n].y + arr[m].y)/2);
+
+	for (int i=0; i<n; i++){
+		if (dist(arr[i], center) >= r + EPS){
+			center = get_center(i, n, m);
+			r = dist(center, arr[n]);
+		}
+	}
+	return center;
+}
+
+point mec2(int n){
+	random_shuffle(arr, arr+n);
+	double r = dist(arr[0], arr[n])/2;
+	point center((arr[0].x + arr[n].x)/2, (arr[0].y + arr[n].y)/2);
+	for (int j=1; j<n; j++){
+		if (dist(arr[j], center) >= r + EPS){
+			center = mec3(j, n);
+			r = dist(center, arr[n]);
+		}
+	}
+	return center;
+}
+
+point mec1(int n){
+	random_shuffle(arr, arr+n);
+	if (n == 1){
+		return arr[0];
+	} else {
+		double r = dist(arr[0], arr[1])/2;
+		point center((arr[0].x + arr[1].x)/2, (arr[0].y + arr[1].y)/2);
+		for (int j=2; j<n; j++){
+			if (dist(arr[j], center) >= r + EPS){
+				center = mec2(j);
+				r = dist(center, arr[j]);
+			}
+		}
+		return center;
+	}
+}
+
+double min_radius(int n){
+	for (int i=0; i<n; i++){
+		arr[i].x = xx[i];
+		arr[i].y = yy[i];
+	}
+	point center = mec1(n);
+	double ret = 0;
+	for (int i=0; i<n; i++){
+		ret = max(ret, dist(arr[i], center));
+	}
+	return ret;
+}
+
+int main(){
+	cin >> n >> m;
+	for (int i=0; i<n; i++){
+		cin >> x[i] >> y[i] >> z[i];
+	}
+	for (int i=0; i<m; i++){
+		double a, b, c, d = 0;
+		cin >> a >> b >> c;
+		proection(a, b, c);
+		//for (int j=0; j<n; j++){
+		//	cout << xx[j] << " " << yy[j] << " " << zz[j] << endl;			
+		//}
+		// WLOG d = 0 (it's easy even if d != 0, but at the moment, let's assume that d == 0)
+		rotation(a, b, c);
+		/*for (int i=0; i<n; i++){
+			printf("%.3lf %.3lf %.3lf\n", xx[i], yy[i], zz[i]);
+		}*/
+		printf("%.10lf\n", min_radius(n));
+	}
+	return 0;
+}

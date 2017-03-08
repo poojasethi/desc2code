@@ -1,0 +1,149 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+#ifdef WIN32
+	#define Ch64 "%I64d\n"
+#else
+	#define Ch64 "%lld\n"
+#endif
+using namespace std;
+typedef long long LL;
+const int Maxm=300005;
+int n,m;
+int pos[Maxm],N=0;
+
+inline int get() {
+	bool f=false; char ch;
+	while (!isdigit(ch=getchar())) f|=ch=='-';
+	int v=ch-48;
+	while (isdigit(ch=getchar())) v=v*10+ch-48;
+	return f?-v:v;
+}
+
+struct Operation{
+	int opx,u,v,a,b;
+}op[Maxm];
+
+struct node{
+	node *lc,*rc;
+	LL k0,b0,k1,b1;
+	bool flag;
+}po[Maxm*2],*pn=po;
+
+class SegmentTree{
+	node *root;
+	void build(node *&x,int l,int r) {
+		x=++pn;
+		if (l==r) return;
+		int mid=(l+r)>>1;
+		build(x->lc,l,mid);
+		build(x->rc,mid+1,r);
+	}
+	void pushdown(node *x,int l,int r,LL k,LL b) {
+		if (!x->flag) {
+			x->flag=true;
+			x->k0=k;
+			x->b0=b;
+			return;
+		}
+		LL fl=(k-x->k0)*pos[l]+b-x->b0,
+			fr=(k-x->k0)*pos[r]+b-x->b0;
+		if (fl<=0&&fr<=0) return;
+		if (fl>=0&&fr>=0) {
+			x->k0=k;
+			x->b0=b;
+			return;
+		}
+		int mid=(l+r)>>1;
+		LL fm=(k-x->k0)*pos[mid]+b-x->b0;
+		if (fm>=0) swap(k,x->k0),swap(b,x->b0);
+		if ((fm>=0)==(fl>=0)) pushdown(x->rc,mid+1,r,k,b);
+		else pushdown(x->lc,l,mid,k,b);
+	}
+	void modify0(node *x,int l,int r,int s,int t,LL k,LL b) {
+		if (s<=pos[l]&&t>=pos[r]) {
+			pushdown(x,l,r,k,b);
+			return;
+		}
+		if (l==r) return;
+		int mid=(l+r)>>1;
+		if (s<=pos[mid]) modify0(x->lc,l,mid,s,t,k,b);
+		if (t>=pos[mid+1]) modify0(x->rc,mid+1,r,s,t,k,b);
+	}
+	void modify1(node *x,int l,int r,int s,int t,LL k,LL b) {
+		if (s<=pos[l]&&t>=pos[r]) {
+			x->k1+=k;
+			x->b1+=b;
+			return;
+		}
+		if (l==r) return;
+		int mid=(l+r)>>1;
+		if (s<=pos[mid]) modify1(x->lc,l,mid,s,t,k,b);
+		if (t>=pos[mid+1]) modify1(x->rc,mid+1,r,s,t,k,b);
+	}
+	void query(node *x,int l,int r,int p,LL maxv,bool f,LL sum) {
+		if (x->flag) {
+			if (!f) {
+				f=true;
+				maxv=x->k0*p+x->b0;
+			}
+			else maxv=max(maxv,x->k0*p+x->b0);
+		}
+		sum+=x->k1*p+x->b1;
+		if (l==r) {
+			if (!f) puts("NA");
+			else printf(Ch64,maxv+sum);
+			return;
+		}
+		int mid=(l+r)>>1;
+		if (p<=pos[mid]) query(x->lc,l,mid,p,maxv,f,sum);
+		else query(x->rc,mid+1,r,p,maxv,f,sum);
+	}
+	public:
+		void build() {
+			build(root,1,N);
+		}
+		void modify0(int s,int t,LL k,LL b) {
+			modify0(root,1,N,s,t,k,b);
+		}
+		void modify1(int s,int t,LL k,LL b) {
+			modify1(root,1,N,s,t,k,b);
+		}
+		void query(int p) {
+			query(root,1,N,p,0,0,0);
+		}
+}T;
+
+int main() {
+	n=get(); m=get();
+	for (int i=1;i<=m;i++) {
+		op[i].opx=get();
+		if (op[i].opx==3) {
+			op[i].u=get();
+			pos[++N]=op[i].u;
+		}
+		else {
+			op[i].u=get();
+			op[i].v=get();
+			op[i].a=get();
+			op[i].b=get();
+		}
+	}
+	if (!N) return 0;
+	sort(pos+1,pos+N+1);
+	N=unique(pos+1,pos+N+1)-pos-1;
+	T.build();
+	for (int i=1;i<=m;i++) {
+		if (op[i].opx==1)
+			T.modify0(op[i].u,op[i].v,op[i].a,op[i].b-LL(op[i].a)*op[i].u);
+		if (op[i].opx==2)
+			T.modify1(op[i].u,op[i].v,op[i].a,op[i].b-LL(op[i].a)*op[i].u);
+		if (op[i].opx==3)
+			T.query(op[i].u);
+	}
+	return 0;
+}

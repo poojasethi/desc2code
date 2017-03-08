@@ -1,0 +1,119 @@
+//program DIFTRIP
+
+#include<iostream>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+#include<vector>
+
+using namespace std;
+
+int Get()
+{
+  char c;
+  while(c=getchar(),c<'0'||c>'z');
+  int X=0;
+  while(c>='0'&&c<='9')
+    {
+      X=X*10+c-48;
+      c=getchar();
+    }
+  return X;
+}
+
+const int Seed=19961021;
+const int Mod=1000000007;
+
+int Value[100000],Depth[100000];
+int DP[17][100000];
+long long Hash[17][100000];
+
+bool Cmp(int X,int Y)
+{
+  for(int i=16;X!=-1&&Y!=-1&&i>=0;i--)
+    if(Depth[X]>=(1<<i)&&Depth[Y]>=(1<<i))
+      if(Hash[i][X]==Hash[i][Y])
+        {
+          X=DP[i][X];
+          Y=DP[i][Y];
+        }
+  if(Y==-1)
+    return false;
+  if(X==-1)
+    return true;
+  return Value[X]<Value[Y];
+}
+
+int LCP(int X,int Y)
+{
+  int Ans=0;
+  for(int i=16;X!=-1&&Y!=-1&&i>=0;i--)
+    if(Depth[X]>=(1<<i)&&Depth[Y]>=(1<<i))
+      if(Hash[i][X]==Hash[i][Y])
+        {
+          X=DP[i][X];
+          Y=DP[i][Y];
+          Ans+=1<<i;
+        }
+  return Ans;
+}
+
+int main()
+{
+  int N=Get();
+  memset(Value,0,sizeof(Value));
+  static vector<int> G[100000];
+  for(int i=0;i<N-1;i++)
+    {
+      int X=Get()-1,Y=Get()-1;
+      G[X].push_back(Y);
+      G[Y].push_back(X);
+      Value[X]++;
+      Value[Y]++;
+    }
+  int F=0,R=1;
+  static int Queue[100000],Parent[100000];
+  Queue[0]=0;
+  Parent[0]=-1;
+  Depth[0]=1;
+  while(F<R)
+    {
+      int V=Queue[F++];
+      for(int i=0;i<G[V].size();i++)
+        {
+          int U=G[V][i];
+          if(U==Parent[V])
+            continue;
+          Queue[R++]=U;
+          Parent[U]=V;
+          Depth[U]=Depth[V]+1;
+        }
+    }
+  for(int i=0;i<N;i++)
+    DP[0][i]=Parent[i];
+  for(int i=1;i<17;i++)
+    for(int j=0;j<N;j++)
+      DP[i][j]=(DP[i-1][j]==-1)?-1:(DP[i-1][DP[i-1][j]]);
+  for(int i=0;i<N;i++)
+    Hash[0][i]=Value[i];
+  static long long Pow[17];
+  Pow[1]=Seed;
+  for(int i=2;i<17;i++)
+    Pow[i]=Pow[i-1]*Pow[i-1]%Mod;
+  for(int i=1;i<17;i++)
+    for(int j=0;j<N;j++)
+      if(Depth[j]>=(1<<i))
+        Hash[i][j]=Hash[i-1][j]*Pow[i]+Hash[i-1][DP[i-1][j]];
+  static int SA[100000];
+  for(int i=0;i<N;i++)
+    SA[i]=i;
+  sort(SA,SA+N,Cmp);
+  long long Ans=0;
+  for(int i=0;i<N;i++)
+    Ans+=Depth[i];
+  for(int i=1;i<N;i++)
+    Ans-=LCP(SA[i],SA[i-1]);
+  cout<<Ans<<endl;
+  return 0;
+}

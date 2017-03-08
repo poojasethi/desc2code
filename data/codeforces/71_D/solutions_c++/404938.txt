@@ -1,0 +1,111 @@
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <deque>
+#include <queue>
+#include <set>
+#include <map>
+#include <algorithm>
+#include <functional>
+#include <utility>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <cstdio>
+#include <stack>
+
+using namespace std;
+
+#define REP(i,n) for((i)=0;(i)<(int)(n);(i)++)
+#define foreach(c,itr) for(__typeof((c).begin()) itr=(c).begin();itr!=(c).end();itr++)
+
+string ranks = "23456789TJQKA";
+string suits = "CDHS";
+set <string> deck;
+
+int H,W;
+string cards[20][20];
+bool sqr[20][20];
+
+bool func(string J1, string J2){
+    int h,w,h2,w2,i,j,k;
+    
+    REP(h,H) REP(w,W) sqr[h][w] = false;
+    
+    REP(h,H-2) REP(w,W-2){
+        bool samesuit = true;
+        REP(i,3) REP(j,3) if(cards[h][w][1] != cards[h+i][w+j][1]) samesuit = false;
+        if(samesuit) sqr[h][w] = true;
+        
+        int mask = 0;
+        REP(i,3) REP(j,3){
+            REP(k,13) if(cards[h+i][w+j][0] == ranks[k]) break;
+            mask |= (1<<k);
+        }
+        if(__builtin_popcount(mask) == 9) sqr[h][w] = true;
+    }
+    
+    REP(h,H) REP(w,W) if(sqr[h][w]) REP(h2,H) REP(w2,W) if(sqr[h2][w2]) if(h2-h >= 3 || w2-w >= 3){
+        printf("Solution exists.\n");
+        if(!J1.empty() && !J2.empty()) printf("Replace J1 with %s and J2 with %s.\n",J1.c_str(),J2.c_str());
+        if(!J1.empty() && J2.empty()) printf("Replace J1 with %s.\n",J1.c_str());
+        if(J1.empty() && !J2.empty()) printf("Replace J2 with %s.\n",J2.c_str());
+        if(J1.empty() && J2.empty()) printf("There are no jokers.\n");
+        printf("Put the first square to (%d, %d).\n",h+1,w+1);
+        printf("Put the second square to (%d, %d).\n",h2+1,w2+1);
+        return true;
+    }
+    
+    return false;
+}
+
+int main(void){
+    int i,j;
+    
+    cin >> H >> W;
+    REP(i,H) REP(j,W) cin >> cards[i][j];
+    
+    REP(i,13) REP(j,4){
+        string tmp; tmp += ranks[i]; tmp += suits[j];
+        deck.insert(tmp);
+    }
+    REP(i,H) REP(j,W) if(cards[i][j] != "J1" && cards[i][j] != "J2") deck.erase(cards[i][j]);
+    
+    int j1x=-1,j1y=-1,j2x=-1,j2y=-1;
+    REP(i,H) REP(j,W){
+        if(cards[i][j] == "J1") {j1x = i; j1y = j;}
+        if(cards[i][j] == "J2") {j2x = i; j2y = j;}
+    }
+    
+    bool exist1 = (j1x != -1);
+    bool exist2 = (j2x != -1);
+    
+    if(exist1 && exist2) foreach(deck,itr1) foreach(deck,itr2){
+        string J1 = (*itr1), J2 = (*itr2);
+        if(J1 == J2) continue;
+        cards[j1x][j1y] = J1;
+        cards[j2x][j2y] = J2;
+        if(func(J1,J2)) return 0;
+    }
+    
+    if(exist1 && !exist2) foreach(deck,itr1){
+        string J1 = (*itr1);
+        cards[j1x][j1y] = J1;
+        if(func(J1,"")) return 0;
+    }
+    
+    if(!exist1 && exist2) foreach(deck,itr2){
+        string J2 = (*itr2);
+        cards[j2x][j2y] = J2;
+        if(func("",J2)) return 0;
+    }
+    
+    if(!exist1 && !exist2){
+        if(func("","")) return 0;
+    }
+        
+    cout << "No solution." << endl;
+    
+    return 0;
+}

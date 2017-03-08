@@ -1,0 +1,136 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define ll long long int
+#define max_value (ll)(1e15)
+ll tree[600000][6];
+ll A[100001];
+#define mxx 0
+#define sum 1
+#define right 4
+#define left 5
+#define inc 2
+#define dnc 3
+#define LLP pair<int , pair< ll , pair< int , int > > >
+#define LLLP pair<int , pair< ll , pair< int , pair<int , pair<int  , int > > > > >
+#define F first
+#define S second
+void build(int node , int start , int end ){
+   if(start > end )
+    return ;
+    if(start == end){
+        tree[node][mxx] = A[start];
+        tree[node][sum] = A[start];
+        tree[node][inc] = 1;
+        tree[node][dnc] = 1;
+        tree[node][left] = A[start];
+        tree[node][right] = A[start];
+        return ;
+    }
+    int mid = (start + end)/2;
+    build(node * 2 , start ,mid );
+    build(node * 2 + 1 , mid + 1 , end);
+        tree[node][mxx] = max(tree[2*node][mxx] , tree[2*node+ 1][mxx]);
+        tree[node][sum] = (tree[2*node][sum] + tree[2*node+ 1][sum]);
+        tree[node][inc] = (tree[2*node][right] <=  tree[2*node + 1][left] ? 1: 0) and
+                            tree[2* node][inc] and tree[2* node+1][inc] ;
+        tree[node][dnc] = (tree[2*node][right] >=  tree[2*node + 1][left] ? 1: 0) and
+                            tree[2* node][dnc] and tree[2* node+1][dnc] ;
+        tree[node][right] = tree[2*node + 1 ][right];
+        tree[node][left] = tree[2*node][left];
+}
+LLLP query( int node , int start , int end , int l , int r){
+   // need to think what should return here
+    if(start>r || end < l || start > end )
+        return {INT_MIN , { 0 , {1 , {1 , {-1 , -1}}}}};
+
+    if(start>=l && end<=r ){
+        return {tree[node][mxx] , {tree[node][sum] , {tree[node][inc] ,{ tree[node][dnc]
+        , { tree[node][left] , tree[node][right]}}}}};
+    }
+
+ 
+    int mid = (start + end)/2;
+    LLLP Left = query(node*2 , start , mid , l , r);
+    LLLP Right = query(node*2 + 1 , mid +1 , end ,  l ,r);
+
+    if(Left.S.S.S.S.S < 0){
+        Left.S.S.S.S.S = Right.S.S.S.S.F;
+        Left.S.S.S.S.F = Right.S.S.S.S.F;
+    }
+    else if(Right.S.S.S.S.S < 0){
+        Right.S.S.S.S.S =  Left.S.S.S.S.S;
+         Right.S.S.S.S.F =  Left.S.S.S.S.S;
+    }
+
+
+    Left.F = max(Left.F , Right.F);
+    Left.S.F = Left.S.F + Right.S.F;
+
+    Left.S.S.F = (Left.S.S.S.S.S <= Right.S.S.S.S.F ? 1: 0)
+                    and Left.S.S.F and Right.S.S.F;
+
+    Left.S.S.S.F = (Left.S.S.S.S.S >= Right.S.S.S.S.F ? 1: 0)
+                    and Left.S.S.S.F and Right.S.S.S.F;
+
+    int L = Left.S.S.S.S.F;
+    int R = Right.S.S.S.S.S;
+    Left.S.S.S.S.F = L;
+    Left.S.S.S.S.S = R;
+    return Left;
+}
+void update(int node , int start , int end , int ind , ll val){
+    if(start > end || ind > end || start > ind )
+          return;
+    if(start==end){
+        A[start] = val;
+        tree[node][mxx] = A[start];
+        tree[node][sum] = A[start];
+        tree[node][inc] = 1;
+        tree[node][dnc] = 1;
+        tree[node][left] = A[start];
+        tree[node][right] = A[start];
+        return ;
+    }
+    ll mid = (start + end)/2;
+    update(2*node  ,start , mid , ind , val );
+    update(2*node + 1 , mid +1 , end , ind , val );
+    tree[node][mxx] = max(tree[2*node][mxx] , tree[2*node+ 1][mxx]);
+    tree[node][sum] = (tree[2*node][sum] + tree[2*node+ 1][sum]);
+    
+    tree[node][inc] = (tree[2*node][right] <=  tree[2*node + 1][left] ? 1: 0) and
+                            tree[2* node][inc] and tree[2* node+1][inc] ;
+    tree[node][dnc] = (tree[2*node][right] >=  tree[2*node + 1][left] ? 1: 0) and
+                            tree[2* node][dnc] and tree[2* node+1][dnc] ;
+    tree[node][right] = tree[2*node + 1 ][right];
+    tree[node][left] = tree[2*node][left];
+}
+int main() {
+        int N  , M;
+        scanf("%d%d" , &N , &M);
+        for(int i =1;i<= N ;i++)
+            scanf("%lld", A + i );
+         build(1 , 1 , N);
+        while(M--){
+                        char type;
+                 scanf(" %c",&type);
+            if(type=='U'){
+                int P , X ;
+                scanf("%d%d" , &P , &X);
+                update(1 , 1 , N , P , X);
+            }
+            else{
+                int L , R ;
+                scanf("%d%d" , &L , &R);
+                LLLP Ans = query(1 , 1 , N , L , R);
+                if(type =='M')
+                    printf("%d\n" , Ans.F);
+                else if(type =='S')
+                    printf("%lld\n" , Ans.S.F);
+                else if(type =='I')
+                    printf("%d\n" , Ans.S.S.F);
+                else 
+                    printf("%d\n" , Ans.S.S.S.F);
+            }
+
+        }
+    }

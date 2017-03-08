@@ -1,0 +1,193 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <deque>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <memory.h>
+#include <cstring>
+using namespace std;
+struct data
+{
+	vector<int> neb;
+	int level,start,end;
+}node[100005];
+pair<int,int> query[100005];
+int stamp;
+int stodd[1000000],steven[1000000];
+int arrodd[200000],arreven[200000]; 
+void dfs(int n,int l)
+{
+	node[n].start=stamp;
+	stamp++;
+	node[n].level=l;
+	for(int i=0;i<node[n].neb.size();i++)
+	{
+		dfs(node[n].neb[i],l+1);
+	}
+	node[n].end=stamp;
+	stamp++;
+	if(l%2==0)
+	{
+		arreven[node[n].start]=1;
+		arreven[node[n].end]=1;
+	}
+	else
+	{
+		arrodd[node[n].start]=1;
+		arrodd[node[n].end]=1;
+	}
+}
+int constreeodd(int ss,int se,int si)
+{
+	if(ss==se)
+	{
+		stodd[si]=arrodd[ss];
+		return arrodd[ss];
+	}	
+	int mid = ss + (se -ss)/2;
+	stodd[si]=constreeodd(ss,mid,si*2+1)+constreeodd(mid+1,se,si*2+2);
+	return stodd[si];
+}
+int constreeeven(int ss,int se,int si)
+{
+	if(ss==se)
+	{
+		steven[si]=arreven[ss];
+		return arreven[ss];
+	}	
+	int mid = ss + (se -ss)/2;
+	steven[si]=constreeeven(ss,mid,si*2+1)+constreeeven(mid+1,se,si*2+2);
+	return steven[si];
+}
+void updateodd(int ss,int se,int ind,int si)
+{
+	if (ind < ss || ind > se)
+        return;
+    stodd[si]=stodd[si]-1;
+    if (se != ss)
+    {
+        int mid = ss + (se -ss)/2;
+        updateodd(ss, mid, ind,2*si + 1);
+        updateodd(mid+1, se, ind,2*si + 2);
+    }
+}
+void updateeven(int ss,int se,int ind,int si)
+{
+	if (ind < ss || ind > se)
+        return;
+    steven[si]=steven[si]-1;
+    if (se != ss)
+    {
+        int mid = ss + (se -ss)/2;
+        updateeven(ss, mid, ind,2*si + 1);
+        updateeven(mid+1, se, ind,2*si + 2);
+    }
+}
+int getodd(int ss, int se, int qs, int qe, int si)
+{
+	if (qs <= ss && qe >= se)
+        return stodd[si];
+    if (se < qs || ss > qe)
+        return 0;
+    int mid = ss + (se -ss)/2;
+    return getodd(ss, mid, qs, qe, 2*si+1) +
+           getodd(mid+1, se, qs, qe, 2*si+2);
+}
+int geteven(int ss, int se, int qs, int qe, int si)
+{
+	if (qs <= ss && qe >= se)
+        return steven[si];
+    if (se < qs || ss > qe)
+        return 0;
+    int mid = ss + (se -ss)/2;
+    return geteven(ss, mid, qs, qe, 2*si+1) +
+           geteven(mid+1, se, qs, qe, 2*si+2);
+}
+int main()
+{
+	int t;
+	scanf("%d",&t);
+	while(t--)
+	{
+		stamp=0;
+		memset(arreven,0,sizeof arreven);
+		memset(arrodd,0,sizeof arrodd);
+		memset(steven,0,sizeof steven);
+		memset(stodd,0,sizeof stodd);
+		memset(query,0,sizeof query);
+		memset(node,0,sizeof node);
+		int m;
+		int v=1;
+		scanf("%d",&m);
+		for(int i=0;i<m;i++)
+		{
+			scanf("%d %d",&query[i].first,&query[i].second);
+			if(query[i].first==0)
+			{
+				node[query[i].second].neb.push_back(v);
+				query[i].second=v;
+				v++;
+			}
+		}
+		dfs(0,0);
+		int n=2*v;
+		//cout<<n<<" "<<stamp<<endl;
+		constreeodd(0,n,0);
+		constreeeven(0,n,0);
+		vector<long long> answer;
+		for(int i=m-1;i>=0;i--)
+		{
+			int v=query[i].second;
+			if(query[i].first==0)
+			{
+				if(node[v].level%2==0)
+					updateeven(0,n,node[v].start,0),
+					updateeven(0,n,node[v].end,0);
+				else
+					updateodd(0,n,node[v].start,0),
+					updateodd(0,n,node[v].end,0);
+			}
+			else
+			{
+				int ts=node[v].start,te=node[v].end;
+				if(ts+1==te)
+				{
+					//cout<<v<<" "<<ts<<" "<<te<<endl;
+					//printf("xx0\n");
+					answer.push_back(0);
+				}
+				else
+				{
+					long long x=geteven(0,n,ts+1,te-1,0)/2;
+					long long y=getodd(0,n,ts+1,te-1,0)/2;
+					long long ans=x*(x-1)/2 + y*(y-1)/2;
+					if(node[v].level%2==0)
+					{
+						ans=ans+x;
+					}
+					else
+					{
+						ans=ans+y;
+					}
+					answer.push_back(ans);
+				}
+				
+			}	
+		}
+		for(int i=answer.size()-1;i>=0;i--)
+			printf("%lld\n",answer[i]);
+	}
+} 

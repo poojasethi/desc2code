@@ -1,0 +1,212 @@
+#include <bits/stdc++.h>
+
+#define FOR(i, a, b) for(int i = a;  i <= b;  i++)
+#define DFU(i, a, b) for(int i = a;  i >= b;  i--)
+#define SIZE(s) int(s.size())
+
+using namespace std;
+
+long long n, k;
+int sum[10][2][1111111];
+int fi[1111111], z[1111111], se[1111111], nz = 0;
+int cut = 7;
+long long power[22];
+bool ok[11111111];
+vector<int> st, pq;
+int np = 0, p[22];
+
+int getModulo(int x) {
+	int ans = 0;
+	FOR(i, 1, cut - 1) {
+		ans = (ans + x % 10 * power[i - 1] % n) % n;
+		x = x / 10;
+	}
+	return ans;
+}
+
+bool check(long long s, int dig) {
+	np = 0;
+	while (s) {
+		p[++np] = s % 10;
+		s /= 10;
+	}
+	if (dig != 0) {
+		if (np < dig) {
+			p[++np] = 0;
+		}
+	}
+	if (np >= 2) if (p[1] == p[2]) return false;
+	FOR(i, 2, np - 1) {
+		if (((p[i] > p[i - 1]) && (p[i] > p[i + 1])) || ((p[i] < p[i - 1]) && (p[i] < p[i + 1]))) {
+		} else {
+			return false;
+		}
+	}
+	return true;
+}
+
+void tryAll() {
+	long long s = n;
+	while (s <= 100000000000000ll) {
+		if (check(s, 0)) {
+			k--;
+			//cout << s << endl;
+		}
+		if (k == 0) {
+			cout << s << endl;
+			return;
+		}
+		s += n;
+	}
+	cout << -1 << endl;
+}
+
+void Init() {
+	// Init power of 10
+	memset(ok, false, sizeof(ok));
+	power[0] = 1;
+	FOR(i, 1, 8) power[i] = power[i - 1] * 10;
+
+	int ncount = 0;
+	st.clear();
+	FOR(i, 0, 9) st.push_back(i);
+	FOR(i, 1, cut - 1) {
+		pq.clear();
+		//cout << "start -- " << i << endl;
+		//FOR(j, 0, SIZE(st) - 1) cout << st[j] << " ";  cout << endl;
+		while (!st.empty()) {
+			int s = st.back();  st.pop_back();
+			int news;
+			ok[s] = true;
+			int l = 0, r = 9;
+			if (i >= 2) {
+				int s1 = s % power[i - 1] / power[i - 2];
+				int s0 = s % power[i] / power[i - 1];
+				if (s0 == s1) continue;
+				else if (s0 < s1) {
+					l = s0 + 1;
+				} else if (s0 > s1) {
+					r = s0 - 1;
+				}
+			}
+			FOR(j, l, r) {
+				news = power[i] * j + s;
+				pq.push_back(news);
+			}
+		}
+		while (!pq.empty()) {
+			st.push_back(pq.back());
+			pq.pop_back();
+		}
+	}
+	while (!st.empty()) {
+		int s = st.back();  st.pop_back();
+		ok[s] = true;
+		int s1 = s % power[cut - 1] / power[cut - 2];
+		int s0 = s % power[cut] / power[cut - 1];
+		nz++;  z[nz] = s;  fi[nz] = s0;  
+		if (s1 > s0) se[nz] = 1;
+		else if (s1 < s0) se[nz] = 0;
+		else nz--;
+	}
+	//	cout << z[nz] << endl;
+	//	cout << "Finish init " << nz << endl;
+}
+
+void SecInit() {
+	memset(sum, 0, sizeof(sum));
+	FOR(i, 1, nz) {
+		int value = z[i];
+		int mod = getModulo(value);
+		sum[fi[i]][se[i]][mod]++;
+	}
+}
+
+void Trace(int digit, int tp, int mod) {
+//	cout << digit << " " << mod << " " << tp << " " << sum[digit][tp][mod] << endl;
+	while ((mod < 1000000)) {
+		int s = digit * power[cut - 1] + mod;
+		bool duoc = false;
+		if ((tp == 0) && (digit > (mod / power[cut - 2]))) duoc = true;
+		if ((tp == 1) && (digit < (mod / power[cut - 2]))) duoc = true;
+		if (check(s, 7) && (duoc)) {
+			k--;
+			if (k == 0) {
+				DFU(i, np, 1) cout << p[i];
+				return;
+			}
+		}
+		mod += n;
+	}
+}
+
+bool Test(int i, int j, long long mod, int l, int r, int tp) {
+	//cout << "start test: " << i << " " << j << " " << k << endl;
+	//cout << "imporant" << sum[0][1][91] << endl;
+	FOR(t, l, r) {
+		long long nmod = (mod - power[cut - 1] * t % n + n) % n;
+		if (nmod >= 1000000) continue;
+		if (sum[t][tp][nmod] >= k) {
+			if (i) cout << i;
+			cout << j;  Trace(t, tp, nmod);  cout << endl;
+			return true;
+		} else {
+			k -= sum[t][tp][nmod];
+		}
+	}
+	//	cout << "value of k: " << k << endl;
+	return false;
+}
+
+void Solve() {
+	long long s = n;
+	while (s <= power[cut] - 1) {
+		if (check(s, 0)) k--;
+		if (k == 0) {
+			cout << s << endl;
+			return;
+		}
+		s += n;
+	}
+
+	FOR(i, 0, power[cut - 1] - 1) if (ok[i]) {
+		FOR(j, 0, 9) if (ok[i * 10 + j] && (i || j)) {
+			long long mod = power[cut] * (i * 10 + j) % n;
+			mod = n - mod;
+			if ((i == 0) || (i % 10 < j)) {
+				int l = 0, r = j - 1, tp = 1;
+				if (Test(i, j, mod, l, r, tp)) return;
+			}
+			if ((i == 0) || (i % 10 > j)) {
+				int l = j + 1, r = 9, tp = 0;
+				if (Test(i, j, mod, l, r, tp)) return;
+			}
+		}
+	}
+	cout << -1 << endl;
+}
+
+int main() {
+	clock_t start, finish;
+//	freopen("test.inp", "r", stdin);
+	int ntest;
+	//	cin >> ntest;
+	ntest = 1;
+	Init();
+	//	finish = clock();
+	//	cout << (finish - start)  << endl;
+	FOR(test, 1, ntest) {
+		cin >> n >> k;
+		long long temp = k;
+		if (n >= 10000000) tryAll();
+		else {
+			k = temp;
+			SecInit();
+			start = clock();
+			Solve();
+		}
+	}  
+	finish = clock();
+	//	cout << (finish - start)  << endl;
+	return 0;
+}

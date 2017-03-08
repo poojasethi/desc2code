@@ -1,0 +1,138 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#define fo(i,a,b) for(i=a;i<=b;++i)
+#define fd(i,a,b) for(i=a;i>=b;--i)
+using namespace std;
+const int inf=1<<30,mn=201000,ml=20;
+int a[mn],sa[mn],rk[mn],h[mn],s[mn];
+int f[mn][ml],log[mn],bi[ml];
+int n,L,m,i,j,la;
+bool cmp(int i,int j){return a[i]<a[j];}
+struct tree
+{
+    int tt,rt[mn],le[mn*ml],ri[mn*ml],s[mn*ml];
+    void add(const int t,int&p,int l,int r,int k)
+    {
+        s[p=++tt]=s[t]+1;
+        if(l==r)return;
+        int m=(l+r)/2;
+        if(k<=m)add(le[t],le[p],l,m,k),ri[p]=ri[t];
+        else add(ri[t],ri[p],m+1,r,k),le[p]=le[t];
+    }
+    int calc(int p,int l,int r,int x,int y)
+    {
+        if(x<=l&&y>=r)return s[p];
+        int m=(l+r)/2,res=0;
+        if(x<=m)res+=calc(le[p],l,m,x,y);
+        if(y>m)res+=calc(ri[p],m+1,r,x,y);
+        return res;
+    }
+    int query(int a,int b,int x,int y)
+    {
+        int res=calc(rt[b],1,n,x,y)-calc(rt[a-1],1,n,x,y);
+        return res;
+    }
+}T;
+void suffix()
+{
+    int i,j,m,p=1,t;
+    fo(i,1,L)sa[i]=i;
+    sort(sa+1,sa+1+L,cmp);
+    rk[sa[1]]=1;
+    fo(i,2,L)rk[sa[i]]=rk[sa[i-1]]+(a[sa[i]]!=a[sa[i-1]]);
+    for(m=rk[sa[L]];m<L;p+=p)
+    {
+        t=0;
+        fo(i,1,L)if(sa[i]+p>L)h[++t]=sa[i];
+        fo(i,1,L)if(sa[i]>p)h[++t]=sa[i]-p;
+        memset(s,0,sizeof(int)*(m+2));
+        fo(i,1,L)++s[rk[i]];
+        fo(i,1,m)s[i]+=s[i-1];
+        fd(i,L,1)
+            sa[s[rk[h[i]]]--]=h[i];
+        memcpy(h,rk,sizeof(int)*(L+2)),rk[sa[1]]=1;
+        fo(i,2,L)rk[sa[i]]=rk[sa[i-1]]+(h[sa[i]]!=h[sa[i-1]]||h[sa[i]+p]!=h[sa[i-1]+p]);
+        m=rk[sa[L]];
+    }
+    h[1]=t=0;
+    fo(i,1,L)
+    {
+        if(rk[i]==1)continue;
+        if(t>0)--t;
+        for(j=sa[rk[i]-1];a[i+t]==a[j+t];++t);
+        h[rk[i]]=t;
+    }
+}
+void solve()
+{
+    int i,j;
+    s[0]=0,log[1]=0;
+    fo(i,1,L)f[i][0]=h[i];
+    fo(i,2,L)log[i]=log[i>>1]+1;
+    fo(i,1,L)
+    {
+        s[i]=s[i-1];
+        if(sa[i]>n+1)
+        {
+            ++s[i];
+            T.add(T.rt[i-1],T.rt[i],1,n,sa[i]-n-1);
+        }
+        else T.rt[i]=T.rt[i-1];
+    }
+    fo(i,0,log[L])bi[i]=1<<i;
+    fo(j,1,log[L])
+        fo(i,1,L-bi[j]+1)
+            f[i][j]=min(f[i][j-1],f[i+bi[j-1]][j-1]);
+}
+int query(int l,int r)
+{
+    if(l>r)return inf;
+    int k=log[r-l+1];
+    return min(f[l][k],f[r-bi[k]+1][k]);
+}
+int calc(int l,int r)
+{
+    int hi=r-l+1,a,b,x,y,m,res;
+    x=1,y=rk[l];
+    while(x<y)
+    {
+        m=(x+y)/2;
+        if(query(m+1,rk[l])<hi)x=m+1;
+        else y=m;
+    }
+    a=x;
+    x=rk[l],y=L;
+    while(x<y)
+    {
+        m=(x+y+1)/2;
+        if(query(rk[l]+1,m)<hi)y=m-1;
+        else x=m;
+    }
+    b=x;
+    res=s[b]-s[a-1]-T.query(a,b,max(1,l-hi),min(r+1,n));
+    return res;
+}
+int main()
+{
+    scanf("%d%d",&n,&la);
+    --n;
+    fo(i,1,n)
+    {
+        scanf("%d",&j);
+        a[i]=j-la,la=j;
+    }
+    a[L=n+1]=inf;
+    fo(i,1,n)a[++L]=-a[i];
+    a[L+1]=inf+1;
+    suffix();
+    solve();
+    scanf("%d",&m);
+    while(m--)
+    {
+        scanf("%d%d",&i,&j);
+        if(i==j)printf("%d\n",n);
+        else printf("%d\n",calc(i,j-1));
+    }
+    return 0;
+}

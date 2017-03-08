@@ -1,0 +1,199 @@
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+#include<cstring>
+#include<set>
+using namespace std;
+const int M=100050;
+struct tree {
+	int s,fa,l,r,v;
+}T[M*60];
+int sum;
+struct node {
+	int tim,x,y,len,k,d;
+}a[M],q[M],b[M];
+int tot;
+int nn,tg,vis[M],root[M],N;
+int ans[M],n,m,tim;
+inline void Updata(int k)
+{
+	if (!k) return;
+	T[k].s=T[T[k].l].s+T[T[k].r].s+1;
+}
+inline void turn(int x)
+{
+	int y=T[x].fa,z=T[y].fa,b= (T[y].l==x) ? T[x].r : T[x].l;
+	T[y].fa=x; T[x].fa=z; if (b) T[b].fa=y;
+	(T[z].l==y ? T[z].l : T[z].r) = x;
+	if (T[y].l==x) T[x].r=y,T[y].l=b;
+	else T[x].l=y,T[y].r=b;
+	Updata(y);
+	return;
+}
+inline void splay(int x,int fa,int &rt)
+{
+	int y,z;
+	while (T[x].fa!=fa)
+	{
+		y=T[x].fa; z=T[y].fa;
+		if (z!=fa) {
+			if ((T[y].l==x)==(T[z].l==y)) turn(y);
+			else turn(x);
+		}
+		turn(x);
+	}
+	Updata(x);
+	if (!fa) rt=x;
+}
+inline void Init(int k)
+{
+	T[k].s=T[k].l=T[k].r=T[k].fa=T[k].v=0;
+}
+inline void Ins(int &k,int fa,int v)
+{
+	if (!k) {
+		++sum;
+		Init(sum);
+		T[k=sum].v=v;
+		T[k].s=1;
+		T[k].fa=fa;
+		return;
+	}
+	if (T[k].v<=v) Ins(T[k].l,k,v);
+	else Ins(T[k].r,k,v);
+}
+inline void Add(node a)
+{
+	int v=a.x+a.y+a.len;
+	//if (a.d==3) cerr<<v<<endl;
+	for (int i=a.y;i<=nn;i+=i & (-i)) {
+		//if (tot==18&&a.y==19) cerr<<i<<endl;
+		if (vis[i]!=tg) {
+			vis[i]=tg;
+			//Init(root[i]);
+			root[i]=0; 
+		}
+		Ins(root[i],0,v);
+		splay(sum,0,root[i]);
+		//if (tot==18&&i==25) cerr<<a.x<<endl;
+	}
+}
+inline int Find(int k,int v)
+{
+	int g=0;
+	while (k) {
+		//cerr<<T[k].r<<endl;
+		if (T[k].v>=v) {
+			g=k;
+			k=T[k].r;
+		} else {
+			k=T[k].l;
+		}
+	}
+	return g;
+}
+inline int Ask(node a)
+{
+	//cerr<<T[6].r<<endl;
+	int r=0,v=a.x+a.y,k;
+	for (int i=a.y;i;i-=i & (-i)) 
+	{
+		//cerr<<i<<endl;
+		if (vis[i]==tg) {
+			k=Find(root[i],v);
+			if (k) {
+				splay(k,0,root[i]);
+				r+=T[T[k].l].s+1;
+			}
+			//if (tot==18&&a.x==7&&a.y==25) cerr<<T[root[i]].v<<endl;
+		}
+	}
+	return r;
+}
+inline void cdq_Solve(int l,int r)
+{
+	if (l==r) return;
+	int mid=l+r>>1;
+	cdq_Solve(l,mid); cdq_Solve(mid+1,r);
+//	if (l==1&&r==18&&r==tot)
+//	{
+		//for (int i=1;i<=tot;++i)
+		//	cerr<<q[i].x<<endl;
+//	}
+	++tg; sum=0;
+	int t=l-1,j=l;
+	for (int i=mid+1;i<=r;++i)
+	{
+		while (j<=mid&&q[j].x<=q[i].x) {
+			b[++t]=q[j];
+			if (q[j].k==1) 
+			{
+				Add(q[j]);
+				//if (l==1&&r==tot&&tot==18) cerr<<q[j].y<<" "<<T[1].v<<" "<<sum<<endl;
+			}
+			++j;
+		}
+		//if (tot==18&&l==1&&r==tot) cerr<<j<<" "<<T[1].v<<endl;
+		b[++t]=q[i];
+		if (q[i].k==2) ans[q[i].tim]+=Ask(q[i]);
+	}
+	while (j<=mid) { b[++t]=q[j]; ++j; }
+	//for (int i=l;i<=mid;++i) Clear(q[i]);
+	for (int i=l;i<=r;++i) q[i]=b[i];
+	//cerr<<ans[8]<<endl;
+	return;
+}
+
+int main()
+{
+	scanf("%d%d",&n,&m);
+	nn=n<<1;	N=nn*2;
+	for (int i=1;i<=m;++i)
+	{
+		scanf("%d",&a[i].k);
+		if (a[i].k==1) {
+			scanf("%d%d%d%d",&a[i].d,&a[i].x,&a[i].y,&a[i].len);
+		} else {
+			scanf("%d%d",&a[i].x,&a[i].y);
+			a[i].tim=++tim;	
+		}
+	}
+	tot=0;
+	for (int i=1;i<=m;++i)
+		if (a[i].k==2||a[i].d==1) q[++tot]=a[i];
+	cdq_Solve(1,tot);
+	tot=0;
+	for (int i=1;i<=m;++i)
+		if (a[i].k==2||a[i].d==2) {
+			a[i].y=nn-a[i].y;
+			q[++tot]=a[i];
+		}
+	cdq_Solve(1,tot);
+	tot=0;
+	for (int i=1;i<=m;++i)
+		if (a[i].k==2) {
+			a[i].x=nn-a[i].x;
+			a[i].y=nn-a[i].y;
+			//cerr<<a[i].x<<" "<<a[i].y<<endl;
+			//cerr<<a[i].x<<endl;
+			q[++tot]=a[i];
+		}
+		else if (a[i].d==3) {
+			a[i].x=nn-a[i].x;
+			q[++tot]=a[i];
+		}
+	cdq_Solve(1,tot);
+	tot=0;
+	for (int i=1;i<=m;++i)
+		if (a[i].k==2) {
+			a[i].y=nn-a[i].y;
+			q[++tot]=a[i];
+		} else if (a[i].d==4) {
+			a[i].x=nn-a[i].x;
+			a[i].y=nn-a[i].y;
+			q[++tot]=a[i];
+		}
+	cdq_Solve(1,tot);
+	for (int i=1;i<=tim;++i)
+		printf("%d\n",ans[i]);
+}

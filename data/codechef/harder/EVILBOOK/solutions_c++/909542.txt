@@ -1,0 +1,114 @@
+#include <cstdio>
+
+typedef long long LL;
+const double eps = 1e-9;
+inline int bit(int n) { return 1<<n; }
+
+const int maxN = 10;
+const int minX = 10;
+const int maxX = 666;
+const double maxXeps = maxX - eps;
+const int maxM = 1000000000;
+const int maxP3 = 17; // maxM/3^maxP3 <= minX
+int p3[maxP3]={1};
+
+int n,x;
+int c[maxN],m[maxN];
+int L[maxN],R[maxN];
+int pw[maxN+1];
+double minrat[1<<maxN];
+double mag[maxN][maxP3];
+double eff[maxN][maxP3];
+
+const int maxSZ = 1<<(2*maxN);
+int tst;
+char mark[maxSZ];
+int cnt=0;
+
+double res;
+double effort,magic;
+int mask;
+void dfs(int state)
+{
+	if(res<effort+(maxX-magic)*minrat[mask]+eps) return;
+	if(mark[state]==tst) return;
+	mark[state]=tst;
+	cnt++;
+	for(int i=0;i<n;i++) if(mask & bit(i))
+	{
+		double *magi=mag[i];
+		double *effi=eff[i];
+		int maxk=magic/x+eps;
+		int k=L[i]-1;
+		if(k<0) k=0;
+		if(k>maxk) k=maxk;
+		for(;k<R[i] && k<=maxk;k++)
+		{
+			magic+=magi[k];
+			effort+=effi[k];
+			if(magic>=maxXeps)
+			{
+				if(res>effort) res=effort;
+			}
+			else
+			{
+				mask^=bit(i);
+				dfs(state+pw[i]*(k-L[i]+1));
+				mask^=bit(i);
+			}
+			effort-=effi[k];
+			magic-=magi[k];
+		}
+	}
+}
+
+int main()
+{
+	for(n=1;n<maxP3;n++)
+		p3[n]=3*p3[n-1];
+	int TST;
+	scanf("%d",&TST);
+	for(tst=1;tst<=TST;tst++)
+	{
+		scanf("%d%d",&n,&x);
+		LL tot=0;
+		pw[0]=1;
+		int i;
+		for(i=0;n--;)
+		{
+			scanf("%d%d",c+i,m+i);
+			if(m[i]==0) continue;
+			tot+=m[i];
+			int l=-1,r;
+			for(r=0;LL(x)*r*p3[r]<m[i];r++)
+				if(m[i]<LL(maxX)*p3[r] && l<0) l=r;
+			L[i]=l; R[i]=r;
+			pw[i+1]=pw[i]*(R[i]-L[i]+1);
+			for(int k=0;k<R[i];k++)
+			{
+				eff[i][k]=1.*c[i]/p3[k];
+				mag[i][k]=-k*x+1.*m[i]/p3[k];
+			}
+			i++;
+		}
+		cnt=0;
+		n=i;
+		if(tot<maxX) puts("impossible"); else
+		{
+			for(mask=0;mask<bit(n);mask++)
+			{
+				double cur=1e20;
+				for(int i=0;i<n;i++)
+					if((mask & bit(i)) && cur>1.*c[i]/m[i])
+						cur=1.*c[i]/m[i];
+				minrat[mask]=cur;
+			}
+			res=1e20;
+			effort=magic=0.;
+			mask=bit(n)-1;
+			dfs(0);
+			printf("%.lf\n",res);
+		}
+	}	
+	return 0;
+}

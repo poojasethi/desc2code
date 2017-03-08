@@ -1,0 +1,116 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <complex>
+#include <stdio.h>
+using namespace std;
+
+#define PB push_back
+const double PI = 4*atan(1);
+typedef complex<double> base;
+typedef unsigned long long uint64;
+
+vector<base> omega;
+uint64 FFT_N;
+
+
+inline int read_int()
+{
+    register char c;
+    while ((c=getchar_unlocked()) < 48 || c > 57);
+    int p = c-48;
+    while ((c=getchar_unlocked()) >= 48 && c <= 57) p=p*10+c-48;
+    return p;
+}
+
+
+void init_fft(uint64 n)
+{
+	FFT_N  = n;
+	omega.resize(n);
+	double angle = 2 * PI / n;
+	for(int i = 0; i < n; i++)
+	omega[i] = base( cos(i * angle), sin(i * angle));
+}
+
+
+void fft (vector<base> & a)
+{
+	uint64 n = (uint64) a.size();
+	if (n == 1)  return;
+	uint64 half = n >> 1;
+	vector<base> even (half),  odd (half);
+	for (int i=0, j=0; i<n; i+=2, ++j)
+	{
+		even[j] = a[i];
+		odd[j] = a[i+1];
+	}
+	fft (even), fft (odd);
+	for (int i=0, fact = FFT_N/n; i < half; ++i)
+	{
+		base twiddle =  odd[i] * omega[i * fact] ;
+		a[i] =  even[i] + twiddle;
+		a[i+half] = even[i] - twiddle;
+	}
+}
+
+
+void multiply (const vector<uint64> & a, const vector<uint64> & b, vector<uint64> & res)
+{
+	vector<base> fa (a.begin(), a.end()),  fb (b.begin(), b.end());
+	uint64 n = 1;
+	while (n < 2*max (a.size(), b.size()))  n <<= 1;
+	fa.resize (n),  fb.resize (n);
+
+	init_fft(n);
+	fft (fa),  fft (fb);
+	for (size_t i=0; i<n; ++i) fa[i] = conj( fa[i] * fb[i]);
+	
+	fft (fa);
+	res.resize (n);
+	for (size_t i=0; i<n; ++i)
+	{
+		res[i] = (uint64) (fa[i].real() / n + 0.5);
+		//res[i]%=mod;
+	}
+}
+
+int main()
+{
+	int t;
+	cin>>t;
+
+	while (t--)
+	{
+		vector<uint64> p1, p2;
+		p1.clear(); p2.clear();
+
+		int n, m;
+		scanf("%d %d",&n, &m);
+
+		for (int i = 0; i <= n; i++)
+		{
+			int x;
+			//scanf("%d",&x);
+			x = read_int();
+			p1.push_back(x);
+		}
+
+		for (int i = 0; i <= m; i++)
+		{
+			int x;
+			//scanf("%d",&x);
+			x = read_int();
+			p2.PB(x);
+		}
+
+		vector<uint64> res;
+		multiply(p1, p2, res);
+
+		printf("%d\n",n+m);
+		for (int i = 0; i < (n+m+1); i++) printf("%llu ", res[i]);
+		printf("\n");
+	}
+	
+	return 0;
+}

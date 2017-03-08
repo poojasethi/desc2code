@@ -1,0 +1,165 @@
+/*
+ * Word Play
+ * File:   WPLAY.cpp
+ * Author: Andy Y.F. Huang
+ * Created on February 1, 2013, 5:10 PM
+ */
+
+#include <algorithm>
+#include <bitset>
+#include <cassert>
+#include <cctype>
+#include <climits>
+#include <cmath>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <complex>
+#include <deque>
+#include <fstream>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <list>
+#include <map>
+#include <numeric>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <string>
+#include <utility>
+#include <valarray>
+#include <vector>
+
+#ifdef AZN
+#include "Azn.cpp"
+#endif
+
+using namespace std;
+
+/**
+ * Unsolved
+ * @author Andy Y.F. Huang
+ */
+namespace WPLAY {
+const unsigned int buffer_size = 1 << 16;
+char input_buffer[buffer_size];
+unsigned int bytes_read = 0;
+unsigned int input_index = 0;
+
+inline char next_char() {
+  if (input_index == bytes_read) {
+    bytes_read = fread(input_buffer, sizeof (char) , buffer_size, stdin);
+    input_buffer[bytes_read] = '\0'; //sentinel
+    input_index = 0;
+  }
+  return input_buffer[input_index++];
+}
+
+inline char* next_str(char* str) {
+  char c = 0;
+  while (c <= ' ') c = next_char();
+  do {
+    *str++ = c;
+    c = next_char();
+  } while (c > ' ');
+  *str = '\0';
+  return str;
+}
+
+inline int next_int() {
+  char c = 0;
+  int ans = 0;
+  while (c < '-') c = next_char();
+  while (c >= '0') {
+    ans = (ans << 1) + (ans << 3);
+    ans += c - '0';
+    c = next_char();
+  }
+  return ans;
+}
+
+inline char getchar() {
+  char c = 0;
+  while (c <= ' ') c = next_char();
+  return c;
+}
+
+#define two(x) (1<<(x))
+typedef long long llong;
+llong hashes[505000], pw[27];
+char str[25];
+char grid[25];
+bool win[66666], have[66666];
+int dictlen, rows, cols, quests;
+
+llong gethash(char* s, int len) {
+  llong res = 0;
+  for (int i = 0; i < len; i++)
+    res += pw[s[i] - 'A'];
+  return res;
+}
+
+void solve(int test_num) {
+  pw[0] = 1;
+  for (int i = 1; i < 27; i++)
+    pw[i] = 1000000007 * pw[i - 1];
+  dictlen = next_int();
+  for (int i = 0; i < dictlen; i++) {
+    int len = next_str(str) - str;
+    sort(str, str + len);
+    hashes[i] = gethash(str, len);
+  }
+  sort(hashes, hashes + dictlen);
+  //plnarr(hashes, hashes + dictlen);
+  rows = next_int();
+  cols = next_int();
+  quests = next_int();
+  int size = rows * cols;
+  win[0] = have[0] = false;
+  for (int q = 0; q < quests; q++) {
+    for (int i = 0; i < size; i++)
+      grid[i] = getchar();
+    sort(grid, grid + size);
+    for (int mask = 1; mask < two(size); mask++) {
+      int len = 0;
+      for (int bit = 0; bit < size; bit++)
+        if (1 << bit & mask)
+          str[len++] = grid[bit];
+      have[mask] = binary_search(hashes, hashes + dictlen, gethash(str, len));
+      if (have[mask]) {
+        win[mask] = true;
+        continue;
+      }
+      win[mask] = false;
+      for (int sub = (mask - 1) & mask; sub > 0; sub = (sub - 1) & mask) {
+        if (have[sub] && !win[mask ^ sub]) {
+          win[mask] = true;
+          break;
+        }
+      }
+    }
+    if (win[two(size) - 1]) puts("Alice");
+    else puts("Bob");
+  }
+}
+
+void solve() {
+  #ifdef AZN
+  freopen("input.txt", "r", stdin);
+  freopen("output.txt", "w", stdout);
+  freopen("azn.txt", "w", stderr);
+  #endif
+  solve(1);
+}
+}
+
+int main() {
+  WPLAY::solve();
+  return 0;
+}
+

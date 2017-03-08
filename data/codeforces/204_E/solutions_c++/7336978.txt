@@ -1,0 +1,97 @@
+#include <iostream>
+#include <iomanip>
+#include <cstring>
+#include <algorithm>
+#include <set>
+
+using namespace std;
+
+const int MaxN = 200100;
+
+#define MS(_) memset(_,0,sizeof(_))
+#define FOR(i,l,r) for(int i=l;i<r;i++)
+#define FORD(i,r,l) for(int i=r;i>=l;i--)
+
+int n,m,len;
+char buf[MaxN];
+int s[MaxN],num[MaxN],tl[MaxN];
+int sa[MaxN],rank[MaxN],cnt[MaxN],tmp[2][MaxN],height[MaxN];
+int w[20][MaxN],leftPos[MaxN];
+long long ans[MaxN];
+
+void SA(){
+	int *x=tmp[0],*y=tmp[1],n=len,m=100050;
+	FOR(i,0,n) cnt[x[i]=s[i]]++;
+	FOR(i,1,m) cnt[i]+=cnt[i-1];
+	FORD(i,n-1,0) sa[--cnt[x[i]]]=i;
+	for(int k=1;k<=n;k<<=1){
+		int p=0;MS(cnt);
+		FOR(i,n-k,n) y[p++]=i;
+		FOR(i,0,n) if(sa[i]>=k) y[p++]=sa[i]-k;
+		FOR(i,0,n) cnt[x[y[i]]]++;
+		FOR(i,1,m) cnt[i]+=cnt[i-1];
+		FORD(i,n-1,0) sa[--cnt[x[y[i]]]]=y[i];
+		swap(x,y);p=1;x[sa[0]]=0;
+		FOR(i,1,n) x[sa[i]]=(y[sa[i]]==y[sa[i-1]] && y[sa[i]+k]==y[sa[i-1]+k]) ? p-1 : p++;
+		if(p>=n) break;m=p;
+	}
+	FOR(i,0,n) rank[sa[i]]=i;
+}
+
+void calc_height(){
+	for(int i=0,j,k=0;i<len-1;height[rank[i++]]=k)
+		for(k ? k-- : 0,j=sa[rank[i]-1];s[i+k]==s[j+k];k++);
+}
+
+void init_RMQ(){
+	FOR(i,0,len) w[0][i]=height[i];
+	FOR(i,1,20) FOR(j,0,len-(1<<i)+1) w[i][j]=min(w[i-1][j],w[i-1][j+(1<<i-1)]);
+}
+void init_Bound(){
+	static int hash[MaxN];
+	set<int> list;
+	FOR(i,0,len){
+		int j=sa[i];
+		if(num[j]){
+			if(hash[num[j]]) list.erase(hash[num[j]]);
+			list.insert(hash[num[j]]=i);
+			if(list.size()>m){
+				hash[num[sa[*(list.begin())]]]=0;
+				list.erase(list.begin());
+			}
+			if(list.size()>=m) leftPos[i]=*(list.begin());
+			else leftPos[i]=-1;
+		}
+		else leftPos[i]=-1;
+	}
+}
+int check(int pos,int len){
+	int l=pos,r=pos;
+	FORD(j,19,0){
+		if(l+1>=(1<<j) && w[j][l+1-(1<<j)]>=len) l-=(1<<j);
+		if(w[j][r+1]>=len) r+=(1<<j);
+	}
+	return leftPos[r]>=l;
+}
+int main()
+{
+	ios::sync_with_stdio(false);
+	cin>>n>>m;
+	for(int i=1;i<=n;i++){
+		cin>>buf;
+		for(int j=0;buf[j];j++) s[len+j]=buf[j]-'a'+100001,num[len+j]=i;
+		len+=strlen(buf)+1;tl[i]=len-1;s[len-1]=i;
+	}
+	SA();calc_height();init_RMQ();init_Bound();
+	FOR(i,0,len) if(num[sa[i]]){
+		int l=1,r=tl[num[sa[i]]]-sa[i],dt=0;
+		while(l<=r){
+			int mid=l+r >> 1;
+			if(check(i,mid)) dt=mid,l=mid+1;
+			else r=mid-1;
+		}
+		ans[num[sa[i]]]+=dt;
+	}
+	FOR(i,1,n+1) cout << ans[i] << ' ';cout << endl;
+	return 0;
+}

@@ -1,0 +1,14 @@
+#include<stdio.h>
+
+int main(){
+	int n;
+	int i;
+	int x;
+	int soma = 0;
+	scanf("%d ",&n);
+	for(i=1;i<=n;i++){
+		scanf("%d ",&x);
+		soma+=x*i;
+	}
+	printf("%d\n",soma);
+}

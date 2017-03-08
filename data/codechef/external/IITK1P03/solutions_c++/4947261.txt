@@ -1,0 +1,155 @@
+/*
+ *Kartik Singal @ ka4tik
+ */
+#include<bits/stdc++.h>
+using namespace std;
+struct debugger{template<typename T> debugger& operator,(const T& v){cerr<<v<<" ";return *this;}}dbg;
+#define db(args...) do {cerr << #args << ": "; dbg,args; cerr << endl;} while(0)
+#define s(n) scanf("%lld",&n);
+#define MAXN 1111111
+#define ll long long
+#define ii pair<ll,ll>
+vector< vector<ll> > g;
+vector<ll> visit(MAXN,0);
+vector<ll> population(MAXN,0);
+map<ll,ll> good,cost;
+void dfs(ll u,ll &total_population,ll &mincost)
+{
+    visit[u]=1;
+    total_population+=population[u];
+    if(good[u])
+        mincost=min(mincost,cost[u]);
+    for(ll i=0;i<g[u].size();i++)
+    {
+        ll v=g[u][i];
+        if(!visit[v])
+            dfs(v,total_population,mincost);
+    }
+}
+int main()
+{
+    //freopen("in","r",stdin);
+
+    ll n,m,k;
+    s(n);s(m);s(k);
+    g.assign(n,vector<ll>());
+    for(int i=0;i<m;i++)
+    {
+        ll a,b;s(a);s(b);a--;b--;
+        g[a].push_back(b);
+        g[b].push_back(a);
+    }
+
+    for(ll i=0;i<n;i++)
+        s(population[i]);
+
+    map<ll,ll> h;
+    for(ll i=0;i<k;i++)
+    {
+        ll t;s(t);t--;good[t]=1;
+        h[i]=t;
+    }
+
+    for(ll i=0;i<k;i++)
+    {
+        ll t;s(t);
+        cost[h[i]]=t;
+    }
+
+    ll x,money;
+    s(x);s(money);
+    for(ll i=0;i<x;i++)
+    {
+        ll t;s(t);t--;money+=cost[h[t]];
+    }
+    vector<ii> cp;
+    for(ll i=0;i<n;i++)
+    {
+        if(!visit[i])
+        {
+            ll cost=LONG_MAX;
+            ll population=0;
+            dfs(i,population,cost);
+            if(cost!=LONG_MAX&&cost!=0)
+                cp.push_back(ii(cost,population));
+        }
+    }
+    if(cp.size()==1)
+    {
+        cout<<cp[0].second<<endl;
+        return 0;
+    }
+    ll first=cp.size()/2;
+    ll second=cp.size()-first;
+    set<ii> first_half,second_half;
+    for(ll i=0;i<(1<<first);i++)
+    {
+        ll pop=0;
+        ll cost=0;
+        for(ll j=0;j<first;j++)
+        {
+            if(i&(1<<j))
+            {
+                pop+=cp[j].second;
+                cost+=cp[j].first;
+            }
+        }
+        first_half.insert(ii(cost,pop));
+    }
+    for(ll i=0;i<(1<<second);i++)
+    {
+        ll pop=0;
+        ll cost=0;
+        for(ll j=0;j<second;j++)
+        {
+            if(i&(1<<j))
+            {
+                pop+=cp[first+j].second;
+                cost+=cp[first+j].first;
+            }
+        }
+        second_half.insert(ii(cost,pop));
+    }
+    ll mx=0;
+    set<ii> t;
+    for(set<ii>::iterator it=first_half.begin();it!=first_half.end();it++)
+    {
+        t.insert(ii(it->first,max(it->second,mx)));
+        mx=max(mx,it->second);
+    }
+    first_half=t;
+
+    t.clear();mx=0;
+    for(set<ii>::iterator it=second_half.begin();it!=second_half.end();it++)
+    {
+        t.insert(ii(it->first,max(it->second,mx)));
+        mx=max(mx,it->second);
+    }
+    second_half=t;
+
+
+    ll ans=0;
+    for(set<ii>::iterator it=second_half.begin();it!=second_half.end();it++)
+        if(it->first<=money)
+            ans=max(it->second,ans);
+    for(set<ii>::iterator it=first_half.begin();it!=first_half.end();it++)
+        if(it->first<=money)
+            ans=max(it->second,ans);
+
+    for(set<ii>::iterator it=first_half.begin();it!=first_half.end();it++)
+    {
+        set<ii>::iterator it2=second_half.lower_bound(ii(money-it->first,LONG_MAX));
+        if(it2!=second_half.begin())
+        {
+            it2--;
+            assert((it->first+it2->first)<=money);
+            ans=max(ans,it->second+it2->second);
+            
+        }
+    }
+
+    cout<<ans<<endl;
+
+    return 0;
+}
+

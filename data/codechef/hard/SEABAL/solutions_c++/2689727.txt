@@ -1,0 +1,168 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#include <string>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <stack>
+#include <map>
+#include <new>
+
+#define LL long long int
+#define MAX 100005
+#define MAXX 400005
+#define INF 1000000005
+
+using namespace std;
+
+int n,m;
+vector<int> a;
+vector<int> lefts,rights;
+vector<pair<int,int> > sp;//segment points
+vector<int> counts;
+vector<int> miny;
+int ans;
+
+void preprocess() {
+    n=m=0;
+    a.resize(MAX);
+    lefts.resize(MAX);
+    rights.resize(MAX);
+    sp.resize(MAX,make_pair(MAXX,MAXX));
+    counts.resize(MAX,0);
+    miny.resize(MAXX);
+    ans=0;
+}
+
+void build_st(int node,int l,int h) {
+    if(l==h) {
+        miny[node]=sp[l].second;
+        return;
+    }
+    int mid=(l+h)/2;
+    build_st(2*node,l,mid);
+    build_st(2*node+1,mid+1,h);
+    miny[node]=min(miny[2*node],miny[2*node+1]);
+}
+
+int LEFT(int pos) {
+    if(lefts[pos]==pos) {
+        return pos;
+    }
+    else {
+        return lefts[pos]=LEFT(lefts[pos]);
+    }
+}
+
+int RIGHT(int pos) {
+    if(rights[pos]==pos) {
+        return pos;
+    }
+    else {
+        return rights[pos]=RIGHT(rights[pos]);
+    }
+}
+//return 0 if no such desired y found 
+//return 1 if such y exists
+int query(int node,int l,int h,int a1,int b,int ls,int rs) {
+    if(b<l || a1>h){
+        return 0;
+    }
+    if(a1<=l && b>=h && miny[node]>rs) {
+        return 0;
+    }
+    if(l==h) {
+        sp[l].second=INF;
+        miny[node]=INF;
+        return 1;
+    }
+    int mid=(l+h)/2;
+    if(query(2*node,l,mid,a1,b,ls,rs)) {
+        miny[node]=min(miny[2*node],miny[2*node+1]);
+        return 1;
+    }
+    if(query(2*node+1,mid+1,h,a1,b,ls,rs)) {
+        miny[node]=min(miny[2*node],miny[2*node+1]);
+        return 1;
+    }
+    return 0;
+}
+
+void process(int pos) {
+    if(pos && a[pos-1]==0) {
+        lefts[pos]=pos-1;
+        rights[pos-1]=pos;
+    }
+    if(pos+1<n && a[pos+1]==0) {
+        rights[pos]=pos+1;
+        lefts[pos+1]=pos;
+    }
+    int ls,rs;//actual left and right
+    ls=LEFT(pos);
+    rs=RIGHT(pos);
+    int a1,b;//lower and upper bound
+    a1=(ls==0 ? 0 : counts[ls-1]);
+    b=counts[rs]-1;
+    while(query(1,0,m-1,a1,b,ls,rs)) {
+        ans++;
+    }
+}
+
+int main() {
+    //ios_base::sync_with_stdio(false);
+    //freopen("input.txt","r",stdin);
+    //freopen("output.txt","w",stdout);
+    preprocess();
+    //cin>>n>>m;
+    scanf("%d %d",&n,&m);
+    for(int i=0;i<n;i++) {
+        //cin>>a[i];
+        int bal;
+        scanf("%d",&bal);
+        a[i]=bal;
+        lefts[i]=i;
+        rights[i]=i;
+    }
+    for(int i=0;i<m;i++) {
+        int ml,mr;
+        //cin>>ml>>mr;
+        scanf("%d %d",&ml,&mr);
+        ml--;mr--;
+        //sp[i].first=ml;
+        //sp[i].second=mr;
+        counts[ml]++;
+        sp[i].first=ml;
+        sp[i].second=mr;
+    }
+    sort(sp.begin(),sp.end());
+    for(int i=1;i<n;i++) {
+        counts[i]+=counts[i-1];
+        
+    }
+    build_st(1,0,m-1);
+    for(int i = 0; i < n; i++)
+		if(!a[i])
+			process(i);
+    int k;
+    //cin>>k;
+    scanf("%d",&k);
+    int p;
+    for(int i=0;i<k;i++) {
+        //cin>>p;
+        scanf("%d",&p);
+        p=p+ans;
+        p--;
+        a[p]--;
+        if(a[p]) {
+            //cout<<ans<<endl;
+            printf("%d\n",ans);
+            continue;
+        }
+        process(p);
+        //cout<<ans<<endl;
+        printf("%d\n",ans);
+    }
+    return 0;
+}

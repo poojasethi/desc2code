@@ -1,0 +1,140 @@
+#include <bits/stdc++.h>
+#include <cmath>
+#include <vector>
+#define fi first
+#define se second
+#define rep(i,l,r) for(int i=l;i<=r;++i)
+using namespace std;
+typedef long long ll;
+typedef pair<int,int> pii;
+const string YY="a24";
+void IO(){
+    freopen((YY+".in").c_str(),"r",stdin);
+    freopen((YY+".out").c_str(),"w",stdout);
+}
+
+const double pi=acos((double)-1);
+const int maxn=500000+11,SIZE=1500;
+
+struct Complex{
+    double re,im;
+    Complex(double re_=0,double im_=0):re(re_),im(im_){}
+    
+    friend Complex operator +(const Complex &A,const Complex &B){return Complex(A.re+B.re,A.im+B.im);}
+    friend Complex operator -(const Complex &A,const Complex &B){return Complex(A.re-B.re,A.im-B.im);}
+    friend Complex operator *(const Complex &A,const Complex &B){return Complex(A.re*B.re-A.im*B.im,A.re*B.im+A.im*B.re);}
+}W[2][maxn];
+
+int rev[maxn],n;
+void prepare_rev(int N){
+    rep(i,0,N-1){
+        int x=i,y=0;
+        for(int j=1;j<N;x>>=1,j<<=1)(y<<=1)|=x&1;
+        rev[i]=y;
+    }
+}
+
+struct Poly{
+    Complex a[maxn];
+    int len;
+    Poly():len(0){}
+    
+    void clear(){
+        memset(a,0,sizeof(a));
+        len=0;
+    }
+    
+    void DFT_fast(int f){
+        Complex Wn,W,x,y;
+        rep(i,0,len-1)if(i<rev[i])swap(a[i],a[rev[i]]);
+        for(int i=1;i<len;i<<=1){
+            Wn=Complex(cos(pi/i),sin(f*pi/i));
+            for(int j=0;j<len;j+=i<<1){
+                W=Complex(1,0);
+                for(int k=0;k<i;++k){
+                    x=W*a[j+k+i];
+                    y=a[j+k];
+                    a[j+k]=y+x;
+                    a[j+k+i]=y-x;
+                    W=W*Wn;
+                }
+            }
+        }
+    }
+    
+};
+
+void FFT_fast(Poly *A,Poly *B){
+    int n=max(A->len,B->len)<<1;
+    A->len=B->len=n;
+    prepare_rev(n);
+    A->DFT_fast(1); B->DFT_fast(1);
+    rep(i,0,n-1) A->a[i]=A->a[i]*B->a[i];
+    A->DFT_fast(-1);
+    rep(i,0,n-1)A->a[i].re/=n;
+}
+
+inline void read(int &a){
+    char ch;
+    bool f=false;a=0;
+    while(!((((ch=getchar())>='0')&&(ch<='9'))||(ch=='-')));
+    if(ch!='-')a*=10,a+=ch-'0';else f=true;
+    while(((ch=getchar())>='0')&&(ch<='9'))a*=10,a+=ch-'0';
+    if(f)a=-a;
+}
+
+
+int N,c[maxn],sum[maxn],s[maxn],l;
+
+int main(){
+    //IO();
+    scanf("%d",&N);
+    Poly *A=new Poly(),*B=new Poly();
+    rep(i,1,N) read(c[i]);
+    ll ans=0;
+    for(int i=1;i<=N;i+=SIZE){
+        if(i!=1 && i+SIZE-1<N){
+            B->clear(); A->clear();
+            int n=1;
+            rep(j,1,i-1){A->a[c[j]].re+=1;while(c[j]>=n)n<<=1;}
+            rep(j,i+SIZE,N){B->a[c[j]].re+=1;while(c[j]>=n)n<<=1;}
+            A->len=B->len=n;
+            FFT_fast(A,B);
+            rep(j,i,i+SIZE-1)
+            ans+=(ll)(A->a[c[j]*2].re+0.5);
+        }
+        rep(j,i,min(i+SIZE-1,N)){
+            rep(k,i,j-1){
+                if(!sum[c[j]-c[k]+60000]) s[++l]=c[j]-c[k]+60000;
+                sum[c[j]-c[k]+60000]++;
+            }
+            rep(k,j+1,min(i+SIZE-1,N))
+            ans+=sum[c[k]-c[j]+60000];
+            while(l) sum[s[l--]]=0;
+        }
+        if(i+SIZE-1<N){
+            rep(j,i,i+SIZE-1){
+                rep(k,j+1,i+SIZE-1){
+                    if(!sum[2*c[k]-c[j]+60000]) s[++l]=2*c[k]-c[j]+60000;
+                    sum[2*c[k]-c[j]+60000]++;
+                }
+            }
+            rep(j,i+SIZE,N)
+            ans+=sum[c[j]+60000];
+            while(l) sum[s[l--]]=0;
+        }
+        if(i>1){
+            rep(j,i,min(N,i+SIZE-1)){
+                rep(k,j+1,min(N,i+SIZE-1)){
+                    if(!sum[2*c[j]-c[k]+60000]) s[++l]=2*c[j]-c[k]+60000;
+                    sum[2*c[j]-c[k]+60000]++;
+                }
+            }
+            rep(j,1,i-1)
+            ans+=sum[c[j]+60000];
+            while(l) sum[s[l--]]=0;
+        }
+    }
+    printf("%lld\n",ans);
+    return 0;
+}

@@ -1,0 +1,186 @@
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+#define M 100100
+using namespace std;
+
+struct Interval{
+	int l,r,val;
+	Interval() {}
+	Interval(int _,int __,int ___):
+		l(_),r(__),val(___) {}
+	bool operator < (const Interval &i) const
+	{
+		return val < i.val ;
+	}
+	friend Interval operator + (const Interval &i1,const Interval &i2)
+	{
+		return Interval(i1.l,i2.r,i1.val+i2.val);
+	}
+	void Flip()
+	{
+		val=-val;
+	}
+};
+
+struct abcd{
+	Interval sum;
+	Interval l_max,r_max,_max;
+	Interval l_min,r_min,_min;
+	abcd() {}
+	abcd(int _,int __)
+	{
+		sum=l_max=r_max=_max=l_min=r_min=_min=Interval(_,_,__);
+	}
+	friend abcd operator + (const abcd &x,const abcd &y)
+	{
+		abcd re;
+		re.sum=x.sum+y.sum;
+		re.l_max=max(x.l_max,x.sum+y.l_max);
+		re.r_max=max(y.r_max,x.r_max+y.sum);
+		re.l_min=min(x.l_min,x.sum+y.l_min);
+		re.r_min=min(y.r_min,x.r_min+y.sum);
+		re._max=max(max(x._max,y._max),x.r_max+y.l_max);
+		re._min=min(min(x._min,y._min),x.r_min+y.l_min);
+		return re;
+	}
+	void Flip()
+	{
+		swap(_max,_min);
+		swap(l_max,l_min);
+		swap(r_max,r_min);
+		sum.Flip();
+		l_max.Flip();
+		r_max.Flip();
+		l_min.Flip();
+		r_min.Flip();
+		_max.Flip();
+		_min.Flip();
+	}
+};
+
+struct Segtree{
+	Segtree *ls,*rs;
+	abcd sta;
+	bool mark;
+	void* operator new (size_t)
+	{
+		static Segtree mempool[M<<1],*C=mempool;
+		return C++;
+	}
+	void Flip()
+	{
+		sta.Flip();
+		mark^=1;
+	}
+	void Push_Up()
+	{
+		sta=ls->sta+rs->sta;
+	}
+	void Push_Down()
+	{
+		if(mark)
+		{
+			ls->Flip();
+			rs->Flip();
+			mark=false;
+		}
+	}
+	void Build_Tree(int x,int y,int a[])
+	{
+		int mid=x+y>>1;
+		if(x==y)
+		{
+			sta=abcd(mid,a[mid]);
+			return ;
+		}
+		(ls=new Segtree)->Build_Tree(x,mid,a);
+		(rs=new Segtree)->Build_Tree(mid+1,y,a);
+		Push_Up();
+	}
+	void Modify(int x,int y,int pos,int val)
+	{
+		int mid=x+y>>1;
+		if(x==y)
+		{
+			sta=abcd(mid,val);
+			return ;
+		}
+		Push_Down();
+		if(pos<=mid)
+			ls->Modify(x,mid,pos,val);
+		else
+			rs->Modify(mid+1,y,pos,val);
+		Push_Up();
+	}
+	void Flip(int x,int y,int l,int r)
+	{
+		int mid=x+y>>1;
+		if(x==l&&y==r)
+		{
+			Flip();
+			return ;
+		}
+		Push_Down();
+		if(r<=mid)
+			ls->Flip(x,mid,l,r);
+		else if(l>mid)
+			rs->Flip(mid+1,y,l,r);
+		else
+			ls->Flip(x,mid,l,mid) , rs->Flip(mid+1,y,mid+1,r) ;
+		Push_Up();
+	}
+	abcd Query(int x,int y,int l,int r)
+	{
+		int mid=x+y>>1;
+		if(x==l&&y==r)
+			return sta;
+		Push_Down();
+		if(r<=mid)
+			return ls->Query(x,mid,l,r);
+		if(l>mid)
+			return rs->Query(mid+1,y,l,r);
+		return ls->Query(x,mid,l,mid) + rs->Query(mid+1,y,mid+1,r) ;
+	}
+}*tree=new Segtree;
+
+int n,m,top;
+int a[M];
+Interval stack[50];
+
+int main()
+{
+	int i,j,p,x,y,k;
+	cin>>n;
+	for(i=1;i<=n;i++)
+		scanf("%d",&a[i]);
+	tree->Build_Tree(1,n,a);
+	cin>>m;
+	for(i=1;i<=m;i++)
+	{
+		scanf("%d",&p);
+		if(p==0)
+		{
+			scanf("%d%d",&x,&y);
+			tree->Modify(1,n,x,y);
+		}
+		else
+		{
+			scanf("%d%d%d",&x,&y,&k);
+			int ans=0;
+			for(j=1;j<=k;j++)
+			{
+				Interval temp=tree->Query(1,n,x,y)._max;
+				if(temp.val<=0) break;
+				ans+=temp.val;
+				stack[++top]=temp;
+				tree->Flip(1,n,temp.l,temp.r);
+			}
+			printf("%d\n",ans);
+			while(top)
+				tree->Flip(1,n,stack[top].l,stack[top].r),top--;
+		}
+	}
+	return 0;
+}

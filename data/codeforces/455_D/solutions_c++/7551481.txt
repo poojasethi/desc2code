@@ -1,0 +1,68 @@
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+#include <deque>
+
+using namespace std;
+
+const int blockSize = 350;
+const int MaxN = 100010;
+
+int n,q;
+int c[MaxN];
+int cnt[blockSize][MaxN];
+deque<int> a[blockSize];
+int blockCnt,blockLeft,lastans;
+
+void flip(int l,int r){
+	int fl=l/blockSize,fr=r/blockSize,p,x;
+	if(fl==fr){
+		p=r%blockSize;
+		x=a[fl][p];
+		a[fl].erase(a[fl].begin()+p);
+		a[fl].insert(a[fl].begin()+l%blockSize,x);
+	}
+	else{
+		for(int i=fl;i<fr;i++){
+			x=a[i].back();a[i].pop_back();cnt[i][x]--;
+			a[i+1].push_front(x);cnt[i+1][x]++;
+		}
+		p=r%blockSize+1;
+		x=a[fr][p];a[fr].erase(a[fr].begin()+p);cnt[fr][x]--;
+		a[fl].insert(a[fl].begin()+l%blockSize,x);cnt[fl][x]++;
+	}
+}
+
+int query(int l,int r,int k){
+	int res=0,fl=l/blockSize,fr=r/blockSize;
+	if(fl==fr) for(int i=l%blockSize;i<=r%blockSize;i++) res+=(a[fl][i]==k);
+	else{
+		for(int i=l%blockSize;i<blockSize;i++) res+=(a[fl][i]==k);
+		for(int i=0;i<=r%blockSize;i++) res+=(a[fr][i]==k);
+		for(int i=fl+1;i<fr;i++) res+=cnt[i][k];
+	}
+	return res;
+}
+
+int main()
+{
+	scanf("%d",&n);
+	for(int i=0;i<n;i++) scanf("%d",&c[i]);
+	blockCnt=ceil(1.0*n/blockSize);
+	for(int i=0,l=0;i<blockCnt;i++,l+=blockSize)
+		for(int j=0;j<blockSize && j+l<n;j++)
+			a[i].push_back(c[j+l]),cnt[i][c[j+l]]++;
+	scanf("%d",&q);
+	while(q--){
+		int t,l,r,k;scanf("%d%d%d",&t,&l,&r);
+		l=(l+lastans-1)%n;r=(r+lastans-1)%n;
+		if(l>r) swap(l,r);
+		if(t==1) flip(l,r);
+		else{
+			scanf("%d",&k);k=(k+lastans-1)%n+1;
+			printf("%d\n",lastans=query(l,r,k));
+		}
+	}
+	return 0;
+}

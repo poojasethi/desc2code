@@ -1,0 +1,162 @@
+#include <stdio.h>
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long ll;
+#define pii pair<int,int>
+#define pll pair<ll,ll>
+#define pdd pair<double,double>
+#define FILL(a,x) memset(a,x,sizeof(a))
+#define	foreach( gg,ii ) for( typeof(gg.begin()) ii=gg.begin();ii!=gg.end();ii++)
+#define	mp make_pair
+#define	pb push_back
+#define	X first
+#define	Y second
+#define sz(a) int((a).size())
+#define N 1000010
+#define MAX 17
+#define mod 1000000007
+#define REP(i,a) for(int i=0;i<a;++i)
+#define REPP(i,a,b) for(int i=a;i<b;++i)
+#define all(a) a.begin(),a.end()
+const ll INF = 1e18+1;
+
+inline ll input(void)
+{
+	char t;
+	ll x=0;
+	int neg=0;
+	t=getchar();
+	while((t<48 || t>57) && t!='-')
+		t=getchar();
+	if(t=='-')
+		{neg=1; t=getchar();}
+    while(t>=48 && t<=57)
+    {
+        x=(x<<3)+(x<<1)+t-48;
+        t=getchar();
+    }
+	if(neg)
+		x=-x;
+	return x;
+}
+
+inline void output(ll x)
+{
+	char a[20];
+	int i=0,j;
+	a[0]='0';
+	if (x<0) {putchar('-'); x=-x;}
+	if (x==0) putchar('0');
+	while(x)
+	{
+		a[i++]=x%10+48;
+		x/=10;
+	}
+	for(j=i-1;j>=0;j--)
+	{
+		putchar(a[j]);
+	}
+	putchar('\n');
+}
+
+int P[MAX][N], rmq[MAX][N], o1[N], LCP[N], n, stp, cnt;
+char A[100005], B[100005];
+//string A,B;
+
+struct entry
+{
+	int nr[2];
+	int p;
+} L[N];
+
+inline int cmp(struct entry a, struct entry b)
+{
+	return a.nr[0] == b.nr[0] ? (a.nr[1] < b.nr[1] ? 1 : 0) : (a.nr[0] < b.nr[0] ? 1 : 0);
+}
+
+inline int lcp(int x, int y, int n)
+{
+	int k, ret = 0;
+	if (x == y) return n - x;
+	for (k = stp - 1;k >= 0&&x<n&&y<n;k --)
+		if (P[k][x] == P[k][y])
+		{
+			x += 1 << k;
+			y += 1 << k;
+			ret += 1 << k;
+			//output(ret);
+		}
+	return ret;
+}
+
+inline void makermq(int n)
+{
+	int logv=0,curr=1;
+	REPP(i,1,n-1)
+	{
+		o1[i]=logv;
+		if (i==curr)
+		{
+			logv++;
+			curr*=2;
+		}
+	}
+	logv--;
+	REP(i,n-1) REP(j,logv)
+	{
+		if (j==0) rmq[0][i]=LCP[i];
+		else rmq[j][i]=min(rmq[j-1][i],rmq[j-1][min(n-2,i+1<<(j-1))]);
+	}
+}
+
+inline void makearray(int n)
+{
+	for (int i = 0; i<n;i++) P[0][i]=A[i]-'a';
+	for (stp = 1,cnt = 1; cnt >> 1 < n; stp ++, cnt <<= 1)
+	{
+		for (int i = 0; i<n ; i++)
+		{
+			L[i].nr[0] = P[stp - 1][i];
+			L[i].nr[1] = i + cnt < n ? P[stp - 1][i + cnt] : -1;
+			L[i].p = i;
+		}
+		sort(L, L + n, cmp);
+		for (int i = 0; i < n; i ++) P[stp][L[i].p] = i > 0 && L[i].nr[0] == L[i - 1].nr[0] && L[i].nr[1] == L[i - 1].nr[1] ? P[stp][L[i - 1].p] : i;
+	}
+	REP(i,n-1) LCP[i]=lcp(L[i].p,L[i+1].p,n);
+	//makermq(n);
+}
+
+int main()
+{
+	ll t,a,b,ans,prev,wq;
+	t=input();
+	while(t--)
+	{
+		ans=0;
+		prev=-1;
+		a=input();
+		b=input();
+		scanf("%s",A);
+		scanf("%s",B);
+		A[a]=('z'+1);
+		for(wq=0;wq<b;wq++)
+			A[wq+a+1]=B[wq];
+		//A+=B;
+		makearray(a+b+1);
+		//REP(i,a+b+1) output(L[i].p);
+		REP(i,a+b-1)
+		{
+			if ((L[i].p<a&&L[i+1].p>a)||(L[i].p>a&&L[i+1].p<a))
+			{
+				ans+=lcp(L[i].p,L[i+1].p,a+b+1);
+				//printf("%dth prev, ans - %d\n",prev,ans);
+				if (prev!=-1) ans-=lcp(L[i+1].p,L[prev].p,a+b+1);
+				prev=i;
+				//printf("%dth pos, ans - %d\n",i,ans);
+			}
+		}
+		output(ans);
+	}
+return 0;
+}

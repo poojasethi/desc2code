@@ -1,0 +1,86 @@
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <cstdio>
+#include <map>
+using namespace std;
+
+const int N = 200005;
+
+#define mp make_pair
+#define pb push_back
+
+struct Edge {
+	int v, w, id;
+	Edge(int _v, int _w, int _id = 0): v(_v), w(_w), id(_id) {
+	}
+};
+int n, L;
+bool vis[N];
+int pa[N], dis[N], mark[N];
+
+#define pos(m, x) (lower_bound(m.begin(), m.end(), x) - m.begin())
+
+int main() {
+	cin >> n >> L;
+	vector<int> x(n), d(n), t(n), p(n), m;
+
+	for (int i = 0; i < n; i++) {
+		scanf("%d%d%d%d", &x[i], &d[i], &t[i], &p[i]);
+		if (x[i] - p[i] >= 0) {
+			m.pb(x[i] - p[i]);
+			m.pb(x[i] + d[i]);
+		}
+	}
+	m.pb(0);
+	m.pb(L);
+	sort(m.begin(), m.end());
+	m.erase(unique(m.begin(), m.end()), m.end());
+	int sz = m.size();
+	vector<vector<Edge> > e(sz);
+	for (int i = 1; i < sz; i++) {
+		e[i - 1].pb(Edge(i, m[i] - m[i - 1]));
+		e[i].pb(Edge(i - 1, m[i] - m[i - 1]));
+	}
+	for (int i = 0; i < n; i++) {
+		if (x[i] - p[i] < 0) continue;
+		int st = pos(m, x[i] - p[i]);
+		int ed = pos(m, x[i] + d[i]);
+		e[st].pb(Edge(ed, p[i] + t[i], i + 1));
+	}
+	fill(dis, dis + sz, -1);
+	multimap<int, int> M;
+	M.insert(mp(0, 0));
+	dis[0] = 0;
+	while (!M.empty()) {
+		pair<int, int> now = *M.begin();
+		M.erase(M.begin());
+		int u = now.second;
+		vis[u] = true;
+		for (int i = 0; i < e[u].size(); i++) {
+			int v = e[u][i].v;
+			int w = e[u][i].w;
+			if (!vis[v] && (dis[v] == -1 || dis[u] + w < dis[v])) {
+				dis[v] = dis[u] + w;
+				pa[v] = u;
+				mark[v] = e[u][i].id;
+				M.insert(mp(dis[v], v));
+			}
+		}
+	}
+	vector<int> ans;
+	int cur = sz - 1;
+	while (cur) {
+		if (mark[cur]) {
+			ans.pb(mark[cur]);
+		}
+		cur = pa[cur];
+	}
+	cout << dis[sz - 1] << endl;
+	cout << ans.size() << endl;
+	for (int i = ans.size() - 1; i >= 0; i--) {
+		printf("%d ", ans[i]);
+	}
+
+	return 0;
+}

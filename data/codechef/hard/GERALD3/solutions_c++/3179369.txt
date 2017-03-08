@@ -1,0 +1,207 @@
+#ifdef _WIN32
+#  define LL "%I64d"
+#else
+#  define LL "%Ld"
+#endif
+
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <cstring>
+#include <ctime>
+#include <vector>
+#include <deque>
+#include <set>
+#include <map>
+#include <queue>
+#include <stack>
+#include <bitset>
+#include <string>
+#include <algorithm>
+#include <complex>
+#include <utility>
+#include <cassert>
+using namespace std;
+#define null NULL
+#define mp make_pair
+#define pb(a) push_back(a)
+#define sz(a) ((int)(a).size())
+#define all(a) a.begin() , a.end()
+#define fi first
+#define se second
+#define relaxMin(a , b) (a) = min((a),(b))
+#define relaxMax(a , b) (a) = max((a),(b))
+#define SQR(a) ((a)*(a))
+typedef vector<int> vi;
+typedef pair<int,int> pii;
+typedef long long ll;
+// SA
+#define MAXN 50010
+char in[MAXN];
+int L;
+int id[MAXN] , nid[MAXN] , scr[MAXN];
+void bucket_sort(vi& w){
+  int len = max(300 , sz(w));
+  memset(nid , 0 , len*sizeof(int));
+  for(int i=0;i<sz(w);++i)
+   ++nid[scr[w[i]]];
+  for(int i=1;i<len;++i)
+   nid[i] += nid[i-1];
+  vi ret(sz(w));
+  for(int i=sz(w)-1;i>=0;--i)
+   ret[--nid[scr[w[i]]]] = w[i];
+  w.swap(ret);
+}
+int get_prev(int w , int dlt){
+  w -= dlt;
+  if(w < 0) w += L;
+  return w;
+}
+vi create_sa(){
+  vi sa;
+  for(int i=0;i<L;++i) sa.pb(i) , scr[i] = in[i];
+  bucket_sort(sa);
+  id[sa[0]] = 0;
+  for(int i=1;i<L;++i)
+   id[sa[i]] = id[sa[i-1]] + (in[sa[i]] != in[sa[i-1]]);
+  int span = 1;
+  while(id[sa[L-1]] != L-1){
+   for(int i=0;i<L;++i)
+    scr[sa[i]] = id[get_prev(sa[i] , span)];
+   bucket_sort(sa);
+   nid[sa[0]] = 0;
+   for(int i=1;i<L;++i){
+    int add = 0;
+    if(mp(id[sa[i-1]] , id[get_prev(sa[i-1] , span)]) !=
+       mp(id[sa[i]] , id[get_prev(sa[i] , span)])) ++add;
+    nid[sa[i]] = nid[sa[i-1]] + add;
+                       }
+   for(int i=0;i<L;++i)
+    id[get_prev(sa[i] , span)] = nid[sa[i]],
+    sa[i] = get_prev(sa[i] , span);
+   span *= 2;
+                           }
+  return sa;
+}
+// LCP
+vi create_lcp(vi& sa){
+  vi ret(sz(sa));
+  for(int i=0;i<L;++i)
+   nid[sa[i]] = i;
+  int CL = 0;
+  for(int i=0;i<L;++i){
+   CL = max(CL-1 , 0);
+   int p = nid[i];
+   if(p+1 < sz(sa)){
+    while(in[sa[p]+CL] == in[sa[p+1]+CL]) ++CL;
+    ret[p] = CL;
+                   }
+                      }
+  return ret;
+}
+// RMQ
+#define LOG 16
+int MIN[LOG][MAXN] , take[MAXN];
+void init_RMQ(vi& from){
+  take[1] = 0;
+  for(int i=2;i<=sz(from);++i){
+   take[i] = take[i-1];
+   if(i >= (1<<(take[i]+1))) ++take[i];
+                              }
+  for(int i=0;i<sz(from);++i)
+   MIN[0][i] = from[i];
+  for(int i=1;i<LOG;++i){
+   memcpy(MIN[i] , MIN[i-1] , sz(from)*sizeof(int));
+   for(int j=0;j+(1<<(i-1))<sz(from);++j)
+    relaxMin(MIN[i][j] , MIN[i-1][j+(1<<(i-1))]);
+                        }
+}
+int get_min(int lo , int hi){
+  if(lo > hi) swap(lo , hi);
+  --hi;
+  int span = take[hi-lo+1];
+  return min(MIN[span][lo] , MIN[span][hi-(1<<span)+1]);
+}
+// doit
+int rev[MAXN];
+ll SUM;
+struct compare{
+  bool operator()(const int& f , const int& s)const{
+   return rev[f] < rev[s];
+                                                   }
+};
+typedef set<int , compare> SET;
+SET nal;
+void add(int pos){
+  int prv = -1 , nxt = -1;
+  SET::iterator it = nal.lower_bound(pos);
+  if(it != nal.end()) nxt = *it;
+  if(it != nal.begin()) prv = *(--it);
+  if(prv != -1 && nxt != -1)
+   SUM += get_min(rev[prv] , rev[nxt]);
+  if(prv != -1)
+   SUM -= get_min(rev[prv] , rev[pos]);
+  if(nxt != -1)
+   SUM -= get_min(rev[pos] , rev[nxt]);
+  SUM += L - 1 - pos;
+  nal.insert(pos);
+}
+void rem(int pos){
+  nal.erase(pos);
+  int prv = -1 , nxt = -1;
+  SET::iterator it = nal.lower_bound(pos);
+  if(it != nal.end()) nxt = *it;
+  if(it != nal.begin()) prv = *(--it);
+  if(prv != -1 && nxt != -1)
+   SUM -= get_min(rev[prv] , rev[nxt]);
+  if(prv != -1)
+   SUM += get_min(rev[prv] , rev[pos]);
+  if(nxt != -1)
+   SUM += get_min(rev[pos] , rev[nxt]);
+  SUM -= L - 1 - pos;
+}
+#define BLOCK 250
+int QL[MAXN] , QR[MAXN] , use[MAXN] , Q;
+ll out[MAXN];
+pii QID[MAXN];
+bool q_compare(const int& f , const int& s){
+  return QID[f] < QID[s];
+}
+void doit(){
+  scanf("%s" , &in);
+  L = strlen(in) + 1;
+  in[L-1] = in[L] = 0;
+  vi sa = create_sa();
+  vi lcp = create_lcp(sa);
+  init_RMQ(lcp);
+  for(int i=0;i<L;++i)
+   rev[sa[i]] = i;
+  scanf("%d" , &Q);
+  for(int i=0;i<Q;++i)
+   use[i] = i,
+   scanf("%d%d" , &QL[i] , &QR[i]),
+   --QL[i] , --QR[i],
+   QID[i] = mp(QL[i] / BLOCK , QR[i]);
+  sort(use , use + Q , q_compare);
+  SUM = 0;
+  nal.clear();
+  int cl = QL[use[0]] , cr = cl - 1;
+  for(int i=0;i<Q;++i){
+   int q = use[i];
+   while(cr < QR[q]) add(++cr);
+   while(cl > QL[q]) add(--cl);
+   while(cr > QR[q]) rem(cr--);
+   while(cl < QL[q]) rem(cl++);
+   out[q] = SUM;
+                      }
+  for(int i=0;i<Q;++i)
+   printf("%lld\n" , out[i]);
+}
+int main(){
+  int Q;
+  scanf("%d" , &Q);
+  while(Q-- > 0)
+   doit();
+  return 0;
+}

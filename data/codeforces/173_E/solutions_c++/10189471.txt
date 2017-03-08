@@ -1,0 +1,117 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+#include <cassert>
+
+using namespace std;
+
+#define err(x) cout<<#x<<" : "<<x<<'\n';
+typedef pair<int,int> pii;
+const int N = 100000+10;
+const int INF = 1000000000+100;
+
+int n,k,r[N],nl[N],rnk[N];
+vector<pii> a;
+vector<int> vr[4*N], maxto[4*N];
+vector<pii> vr2[4*N];
+int seg[4*N];
+
+inline void build(int i,int lo,int hi){
+  if (lo+1==hi){
+    vr[i].push_back(r[a[lo].second]);
+    return;
+  }
+  int mid = lo+hi>>1, c1 = i<<1, c2 = c1|1;
+  build(c1,lo,mid);
+  build(c2,mid,hi);
+  merge(vr[c1].begin(), vr[c1].end(), vr[c2].begin(), vr[c2].end(), back_inserter(vr[i]));
+}
+
+inline int askLeader(int i,int lo,int hi,int ql,int qr,int qv){
+  if (hi<=ql || qr<=lo) return 0;
+  if (ql<=lo && hi<=qr)
+    return upper_bound(vr[i].begin(), vr[i].end(), qv)  - vr[i].begin();
+  int mid = lo+hi>>1, c1 = i<<1, c2 = c1|1;
+  return askLeader(c1,lo,mid,ql,qr,qv) + askLeader(c2,mid,hi,ql,qr,qv);
+}
+
+inline void make(int i,int lo,int hi){
+  if (lo+1==hi){
+    vr2[i].push_back(pii(r[a[lo].second],lo));
+    maxto[i].push_back(nl[lo]);
+    maxto[i].push_back(0);
+    return;
+  }
+  int mid = lo+hi>>1, c1 = i<<1, c2 = c1|1;
+  make(c1,lo,mid);
+  make(c2,mid,hi);
+  merge(vr2[c1].begin(), vr2[c1].end(), vr2[c2].begin(), vr2[c2].end(), back_inserter(vr2[i]));
+  int maxi = 0;
+  maxto[i].push_back(maxi);
+  for (int j=vr2[i].size()-1;j>=0;j--){
+    maxi = max(maxi, nl[vr2[i][j].second]);
+    maxto[i].push_back(maxi);
+  }
+  reverse(maxto[i].begin(), maxto[i].end());  
+}
+
+inline int ask(int i,int lo,int hi,int ql,int qr,int bound){
+  if (hi<=ql || qr<=lo) return 0;
+  if (ql<=lo && hi<=qr){
+    int id = lower_bound(vr2[i].begin(), vr2[i].end(), pii(bound,-1)) - vr2[i].begin();
+    assert(id < (int)maxto[i].size());
+    return maxto[i][id];
+  }
+  int mid = lo+hi>>1, c1 = i<<1, c2 = c1|1;
+  return max(ask(c1,lo,mid,ql,qr,bound), ask(c2,mid,hi,ql,qr,bound));
+}
+
+int main(){
+  scanf("%d%d",&n,&k);
+  for (int i=0;i<n;i++)
+    scanf("%d",r+i);
+  int age;
+  for (int i=0;i<n;i++){
+    scanf("%d",&age);
+    a.push_back(pii(age,i));
+  }
+  sort(a.begin(),a.end());
+  for (int i=0;i<n;i++)
+    rnk[a[i].second] = i;
+  build(1,0,n);
+  int st, fin, beg, en;
+  for (int i=0;i<n;i++){
+    st = max(0, a[i].first - k);
+    fin = min(INF, a[i].first + k);
+    beg = lower_bound(a.begin(),a.end(),pii(st,-1)) - a.begin();
+    en = upper_bound(a.begin(),a.end(),pii(fin,INF)) - a.begin();
+    assert(en <= n && 0 <= beg);
+    nl[i] = askLeader(1,0,n,beg,en,r[a[i].second]);
+    assert(0 < nl[i]);
+  }
+
+  make(1,0,n);
+  int q,x,y,idx,idy,ans;
+  for (scanf("%d",&q);q--;){
+    scanf("%d%d",&x,&y);
+    --x; --y;
+    idx = x;
+    idy = y;
+    x = rnk[x];
+    y = rnk[y];
+    if (x > y) swap(x,y);
+    if (a[y].first - a[x].first > 2*k){
+      printf("-1\n");
+      continue;
+    }
+    en = upper_bound(a.begin(),a.end(),pii(a[x].first + k,INF)) - a.begin();
+    beg = lower_bound(a.begin(),a.end(),pii(a[y].first - k,-1)) - a.begin();
+    ans = ask(1,0,n,beg,en,max(r[idx],r[idy]));
+    printf("%d\n",ans ? ans: -1);
+  }
+
+  return 0;
+}
+							 		  				 	    		 	 	

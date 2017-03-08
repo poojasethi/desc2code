@@ -1,0 +1,194 @@
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <deque>
+#include <queue>
+#include <stack>
+#include <set>
+#include <map>
+#include <algorithm>
+#include <functional>
+#include <utility>
+#include <bitset>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <cstdio>
+
+using namespace std;
+
+#define REP(i,n) for((i)=0;(i)<(int)(n);(i)++)
+#define snuke(c,itr) for(__typeof((c).begin()) itr=(c).begin();itr!=(c).end();itr++)
+
+int N,M;
+
+vector <int> graph[200010];
+vector <int> child[200010];
+int parent[200010];
+bool used[200010];
+int aa[200010],bb[200010];
+int cnt[200010];
+int depth[200010];
+int gparent[20][200010];
+
+int lca(int x, int y){
+    int i;
+    
+    if(depth[x] > depth[y]) swap(x, y);
+    int diff = depth[y] - depth[x];
+    for(i=19;i>=0;i--) if((1<<i) <= diff){
+        diff -= (1<<i);
+        y = gparent[i][y];
+    }
+    
+    if(x == y) return x;
+    
+    for(i=19;i>=0;i--){
+        int x2 = gparent[i][x];
+        int y2 = gparent[i][y];
+        if(x2 != y2){
+            x = x2;
+            y = y2;
+        }
+    }
+    
+    return parent[x];
+}
+
+vector <int> get_path(int t, int s){
+    vector <int> ans;
+    int x = t;
+    ans.push_back(x);
+    while(1){
+        if(x == s) break;
+        x = parent[x];
+        ans.push_back(x);
+    }
+    return ans;
+}
+
+vector <int> merge(vector <int> &v1, vector <int> &v2){
+    vector <int> v;
+    int i;
+    REP(i,v1.size()) v.push_back(v1[i]);
+    REP(i,v2.size()) v.push_back(v2[i]);
+    return v;
+}
+
+void print(vector <int> v){
+    int i;
+    cout << v.size();
+    REP(i,v.size()) printf(" %d", v[i]+1);
+    printf("\n");
+}
+
+void construct(int s, int t){
+    int i;
+    int s1 = -1, t1 = -1, s2 = -1, t2 = -1;
+    
+//  cout << s << ' ' << t << endl;
+    
+    REP(i,M){
+        int ss = aa[i], tt = bb[i];
+        if(depth[ss] > depth[tt]) swap(ss, tt);
+        if(ss == s && tt == t) continue;
+        if(lca(s, ss) == ss && lca(t, tt) == t){
+            if(s1 == -1){
+                s1 = ss;
+                t1 = tt;
+            } else {
+                s2 = ss;
+                t2 = tt;
+                break;
+            }
+        }
+    }
+    
+    s = s1 + s2 - lca(s1, s2);
+    t = lca(t1, t2);
+    
+//  cout << s << ' ' << t << ' ' << s1 << ' ' << t1 << ' ' << s2 << ' ' << t2 << endl;
+    
+    vector <int> v1 = get_path(t, s);
+    vector <int> v2 = get_path(t1, t);
+    reverse(v2.begin(),v2.end());
+    vector <int> v3 = get_path(s, s1);
+    reverse(v3.begin(),v3.end());
+    vector <int> v4 = merge(v2, v3);
+    vector <int> v5 = get_path(t2, t);
+    reverse(v5.begin(),v5.end());
+    vector <int> v6 = get_path(s, s2);
+    reverse(v6.begin(),v6.end());
+    vector <int> v7 = merge(v5, v6);
+    
+    print(v1);
+    print(v4);
+    print(v7);
+}
+
+void dfs(int x, int d){
+    int i;
+    used[x] = true;
+    depth[x] = d;
+    REP(i,graph[x].size()){
+        int y = graph[x][i];
+        if(!used[y]){
+            dfs(y, d+1);
+            child[x].push_back(y);
+            parent[y] = x;
+        }
+    }
+}
+
+int dfs2(int x){
+    int i;
+    REP(i,child[x].size()) cnt[x] += dfs2(child[x][i]);
+    return cnt[x];
+}
+
+void check(int a, int b){
+    if(parent[a] == b || parent[b] == a) return;
+    if(depth[a] < depth[b]) swap(a, b);
+    cnt[a]++;
+    cnt[b]--;
+}
+
+int main(void){
+    int i,j;
+    
+    cin >> N >> M;
+    REP(i,M){
+        int a,b;
+        scanf("%d%d", &a, &b);
+        a--; b--;
+        graph[a].push_back(b);
+        graph[b].push_back(a);
+        aa[i] = a; bb[i] = b;
+    }
+    
+    REP(i,N) parent[i] = -1;
+    REP(i,N) if(!used[i]) dfs(i, 0);
+    
+    REP(i,N) gparent[0][i] = parent[i];
+    for(i=1;i<20;i++) REP(j,N){
+        int tmp = gparent[i-1][j];
+        gparent[i][j] = ((tmp == -1) ? -1 : gparent[i-1][tmp]);
+    }
+    
+    REP(i,M) check(aa[i], bb[i]);
+    REP(i,N) if(parent[i] == -1) dfs2(i);
+    
+    int x = -1;
+    REP(i,N) if(cnt[i] >= 2) x = i;
+    if(x == -1){
+        cout << "NO" << endl;
+        return 0;
+    }
+    
+    cout << "YES" << endl;
+    construct(parent[x], x);
+    
+    return 0;
+}

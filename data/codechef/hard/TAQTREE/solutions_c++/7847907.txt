@@ -1,0 +1,133 @@
+
+#include <bits/stdc++.h>
+using namespace std;
+#define MOD 1000000007
+#define pii pair<int, int>
+#define pll pair<long long, long long>
+#define vi  vector<int>
+#define pb  push_back
+#define mp  make_pair
+#define M(a,x) memset(a,x,sizeof(a))
+#define sci(x) scanf("%d",&x);
+#define scl(x) scanf("%lld",&x);
+#define scs(x) scanf("%s",x);
+#define print(x) printf("%d",x);
+#define nl printf("\n")
+#define printl(x) printf("%lld",x)
+#define FF(i,a,n) for(int i=a;i<n;i++)
+#define INF 100000000000000000LL
+#define LL long long
+#define F first
+#define S second
+const int N=1e5+5;
+LL depth[N];
+LL subtree[N];
+LL tree[N];
+LL pos[N];
+LL dp[N][18];
+LL par[N];
+LL path[N];
+vector<int> adj[N];
+int visited[N];
+int cnt;
+int n;
+int h;
+pair< pair< LL,LL >, LL > p[N];
+inline void update(int idx,LL val) {
+    while(idx>0) {
+	tree[idx]+=val;
+	idx-=idx&-idx;
+    }
+}
+LL query(int idx) {
+    LL sm=0;
+    while(idx<N-2) {
+	sm+=tree[idx];
+	idx+=idx&-idx;
+    }
+    return sm;
+}
+inline void dfs(int u) {
+    subtree[u]=1;
+    visited[u]=1;
+    FF(i,0,adj[u].size()) {
+	int v=adj[u][i];
+	if(!visited[v]) {
+	    dp[v][0]=u;
+	    par[v]=u;
+	    depth[v]=1+depth[u];
+	    dfs(v);
+	    subtree[u]+=subtree[v];
+	}
+    }
+    pos[u]=cnt--;
+}
+inline void jump(int &u,int height) {
+    for(int i=h;i>=0;i--) {
+	if((1<<i)<=height) {
+	    height-=(1<<i);
+	    u=dp[u][i];
+	}
+    }
+}
+int LCA(int u,int v) {
+    if(depth[u]>depth[v]) {
+	jump(u,depth[u]-depth[v]);
+    }
+    else
+	jump(v,depth[v]-depth[u]);
+    if(v==u) return u;
+    for(int i=h;i>=0;i--) {
+	if(dp[u][i]!=dp[v][i]) {
+	    u=dp[u][i];
+	    v=dp[v][i];
+	}
+    }
+    return dp[u][0];
+}
+int main() {
+    sci(n);
+    FF(i,1,n) {
+	int x,y,w;
+	sci(x);sci(y);sci(w);
+	adj[x].pb(y);adj[y].pb(x);
+	p[i].F.F=x;p[i].F.S=y;
+	p[i].S=w;
+    }
+    cnt=n;
+    dfs(1);
+    h=log2(n)+1;
+    for(int j=1;j<=h;j++) {
+	for(int i=1;i<=n;i++) {
+	    dp[i][j]=dp[dp[i][j-1]][j-1];
+	}
+    }
+    for(int i=1;i<n;i++) {
+	int x;
+	if(par[p[i].F.F]==p[i].F.S) {
+	    x=p[i].F.F;
+	}
+	else
+	    x=p[i].F.S;
+	    update(pos[x]+subtree[x]-1,p[i].S);
+	    update(pos[x]-1,-p[i].S);
+    }
+    int q;sci(q);
+    while(q--) {
+	int tp,x,y;
+	sci(tp);sci(x);sci(y);
+	if(tp==1) {
+	    int e;
+	    if(par[p[x].F.F]==p[x].F.S)
+		e=p[x].F.F;
+	    else
+		e=p[x].F.S;
+	   update(pos[e]+subtree[e]-1,-p[x].S+y);
+	   update(pos[e]-1,p[x].S-y);
+	   p[x].S=y;
+	}
+	else {
+	    printf("%lld\n",query(pos[x])+query(pos[y])-2*query(pos[LCA(x,y)]));
+	}
+    }
+}

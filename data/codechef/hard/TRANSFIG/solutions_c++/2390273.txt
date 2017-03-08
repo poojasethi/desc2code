@@ -1,0 +1,132 @@
+#pragma comment(linker, "/STACK:16777216")
+
+/*
+ 	C++ Template
+	Pradeep George Mathias
+ */
+
+/* Solution :
+ * Given that the preorder and postorder are of a valid tree T, we can find how many children each node has
+ * The positions of "null" being different will cause difference in trees
+ * Thus, we need to calculate product(K choose numchildren) for all nodes
+ * In constructing the tree, we have state space as some contiguous part of P1 matching with some contiguous part of P2
+ */
+
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <cassert>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <set>
+#include <map>
+#include <stack>
+#include <queue>
+#include <cstdlib>
+using namespace std;
+
+#define s(T) scanf("%d", &T)
+#define sl(T) scanf("%lld", &T)
+#define fill(a, val) memset(a, val, sizeof(a))
+#define mp make_pair
+#define pb push_back
+#define all(x) x.begin(), x.end()
+#define DREP(x) sort(all(x)); x.erase(unique(all(x)), x.end())
+#define INDEX(a, val) (lower_bound(all(a), val) - a.begin())
+
+const int maxn = 100000;
+const int MOD = 1000000007;
+
+int totalCases, testNum;
+
+int N, K;
+int P1[maxn]; int invP1[maxn+1];
+int P2[maxn]; int invP2[maxn+1];
+int numchildren[maxn+1];
+
+int modInv[maxn + 1];
+
+void preprocess()
+{
+	modInv[1] = 1;
+	for(int i = 2; i <= maxn; i++)
+		modInv[i] = (-(MOD/i) * 1ll * modInv[MOD % i]) % MOD + MOD;			// if MOD = i*q + r, then 1/i = -q/r (modulo MOD)
+}
+
+long long nCr(int n, int r)
+{
+	long long ret = 1;
+	for(int i = 1; i <= r; i++)
+		ret = ((ret * (n-i+1)) % MOD * modInv[i]) % MOD;
+	return ret;
+}
+
+int f(int i1, int j1, int i2, int j2)		// finds how many rooted K-ary subtrees are there having preorder P1[i1...j1], and postorder P2[i2...j2]
+{
+	if(j1 - i1 != j2 - i2)		//different sizes of "subtrees"
+		return 0;
+	if(P1[i1] != P2[j2])		//subtree root not well defined
+		return 0;
+	int root = P1[i1];
+	if(j1 == i1)				//base case
+		return 1;
+	
+	long long ret = 1;
+	int children = 0;
+	for(int last1 = i1, last2 = i2; last1 != j1; )	//increments performed in-loop
+	{
+		int ch = P1[last1+1];	//take next child
+		int pos2 = invP2[ch];	//find where it is in postorder
+		if(pos2 < last2 || j2 <= pos2) return 0;	// node is not in the correct position in postorder
+		int numnodes = pos2 - last2 + 1;
+		
+		ret = (ret * f(last1+1, last1 + numnodes, last2, last2 + numnodes-1)) % MOD;
+		if(ret == 0) return 0;
+		children++;
+		last1 += numnodes;
+		last2 += numnodes;
+	}
+	if(children > K)
+		return 0;
+	//fprintf(stderr, "Number of Children of node %d = %d\n", root, children);
+	return (nCr(K, children) * ret) % MOD;
+}
+
+bool input()
+{
+	fill(invP1, -1);
+	fill(invP2, -1);
+	s(N); s(K); assert(2 <= N && N <= maxn); assert(1 <= K && K < N);
+	for(int i = 0; i < N; i++)
+	{
+		s(P1[i]); assert(1 <= P1[i] && P1[i] <= N); assert(invP1[P1[i]] == -1);
+		invP1[P1[i]] = i;
+	}
+
+	for(int i = 0; i < N; i++)
+	{
+		s(P2[i]); assert(1 <= P2[i] && P2[i] <= N); assert(invP2[P2[i]] == -1);
+		invP2[P2[i]] = i;
+	}
+	return true;
+}
+
+void solve()
+{
+	fill(numchildren, 0);
+	printf("%d\n", f(0, N-1, 0, N-1));
+}
+
+int main()
+{
+	preprocess();
+	s(totalCases);
+	for(testNum = 1; testNum <= totalCases; testNum++)
+	{
+		if( !input())
+			break;
+		solve();
+	}
+}

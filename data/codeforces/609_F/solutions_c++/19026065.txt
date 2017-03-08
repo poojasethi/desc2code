@@ -1,0 +1,111 @@
+#include <bits/stdc++.h>
+
+#pragma comment(linker, "/STACK:102400000,102400000")
+using namespace std;
+
+#define LL long long
+#define pii pair<int,int>
+#define MP make_pair
+#define ls i << 1
+#define rs ls | 1
+#define md (ll + rr >> 1)
+#define lson ll, md, ls
+#define rson md + 1, rr, rs
+#define Pi acos(-1.0)
+#define mod 1000000007
+#define eps 1e-10
+#define inf 0x3f3f3f3f
+#define N 400010
+#define M 800020
+
+struct frog{
+	int x, t, sum, id;
+	void input(int i){
+		id = i;
+		scanf("%d%d", &x, &t);
+		sum = 0;
+	}
+	bool operator < (const frog &b) const {
+		return x < b.x;
+	}
+}f[N];
+int n, m, san[N], cnt, sx[N], sz[N];
+int mi[N<<2], ans1[N], ans2[N];
+multiset<pii > S;
+multiset<pii >::iterator it, itt;
+int upp(int x){
+	return upper_bound(san + 1, san + 1 + cnt, x) - san;
+}
+int low(int x){
+	return lower_bound(san + 1, san + 1 + cnt, x) - san;
+}
+
+
+void update(int l, int r, int v, int ll, int rr, int i){
+	if(l <= ll && r >= rr){
+		mi[i] = min(mi[i], v);
+		return ;
+	}
+	if(r <= md) update(l, r, v, lson);
+	else if(l > md) update(l, r, v, rson);
+	else update(l, md, v, lson), update(md + 1, r, v, rson);
+}
+int query(int x, int ll, int rr, int i){
+	if(ll == rr) return mi[i];
+	int ret = mi[i];
+	if(x <= md) ret = min(ret, query(x, lson));
+	else ret = min(ret, query(x, rson));
+	return ret;
+}
+
+int main(){
+	scanf("%d%d", &n, &m);
+	for(int i = 1; i <= n; ++i)
+		f[i].input(i);
+	for(int i = 1; i <= m; ++i){
+		scanf("%d%d", &sx[i], &sz[i]);
+		san[++cnt] = sx[i];
+	}
+	sort(f + 1, f + 1 + n);
+	sort(san + 1, san + 1 + cnt);
+	cnt = unique(san + 1, san + 1 + cnt) - san - 1;
+	memset(mi, 0x3f, sizeof mi);
+	for(int i = 1; i <= n; ++i){
+		int R = upp(f[i].x + f[i].t) - 1;
+		int L = low(f[i].x);
+		if(L > R) continue;
+		update(L, R, i, 1, m, 1);
+	}
+	for(int i = 1; i <= m; ++i){
+		int pos = low(sx[i]);
+		int id = query(pos, 1, m, 1);
+		if(id == inf){
+			S.insert(MP(sx[i], sz[i]));
+			continue;
+		}
+		f[id].sum++;
+		f[id].t += sz[i];
+		while(!S.empty()){
+			itt = S.upper_bound(MP(f[id].x + f[id].t, inf));
+			it = S.lower_bound(MP(f[id].x, 0));
+			if(itt == it) break;
+			while(it != itt){
+				f[id].t += (*it).second;
+				f[id].sum++;
+				S.erase(it++);
+			}
+		}
+		int R = upp(f[id].x + f[id].t) - 1;
+		int L = low(f[id].x);
+		if(L > R) continue;
+		update(L, R, id, 1, m, 1);
+	}
+	for(int i = 1; i <= n; ++i){
+		int id = f[i].id;
+		ans1[id] = f[i].sum;
+		ans2[id] = f[i].t;
+	}
+	for(int i = 1; i <= n; ++i)
+		printf("%d %d\n", ans1[i], ans2[i]);
+	return 0;
+}

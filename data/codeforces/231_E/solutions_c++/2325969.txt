@@ -1,0 +1,143 @@
+#include <cstdio>
+#include <vector>
+#include <iostream>
+
+#define pb push_back
+#define SIZE(A) ((int)A.size())
+using namespace std;
+
+typedef pair<int,int> ii;
+
+const int MAXN = 100010;
+
+const int inf = 1e8;
+
+int N,M;
+
+vector<int> way[MAXN];
+vector<int> cway[MAXN];
+
+int cyc[MAXN];
+int id[MAXN];
+int lo[MAXN];
+int st[MAXN];
+int sz[MAXN];
+int disc;
+int at;
+int cnt;
+
+void f(int dad,int k)
+{
+	id[k]=++disc;
+	lo[k]=disc;
+	st[++at]=k;
+	for(int i=0;i<SIZE(way[k]);i++)
+		if(dad!=way[k][i]){
+			if(!id[way[k][i]]){
+				f(k,way[k][i]);
+				lo[k]=min(lo[k],lo[way[k][i]]);
+			}
+			else
+				lo[k]=min(lo[k],id[way[k][i]]);
+		}
+	if(lo[k]==id[k])
+	{
+		cnt++;
+		do{
+			id[st[at]]=inf;
+			cyc[st[at]]=cnt;
+			at--;
+			sz[cnt]++;
+		}while(k!=st[at+1]);
+	}
+	
+}
+
+int pos[MAXN];
+int ar[MAXN*3];
+int hc[MAXN*3];
+int mark[MAXN*3];
+int say;
+
+void rec(int dad,int k,int t){
+	
+	mark[k]=t;
+	pos[k]=++say;
+	hc[say]=k;
+	ar[say]=pos[k];
+	for(int i=0;i<SIZE(cway[k]);i++)
+		if(cway[k][i]!=dad)
+			if(!pos[cway[k][i]])
+			{
+				rec(k,cway[k][i],t+(sz[cway[k][i]]>2));
+				ar[++say]=pos[k];
+			}
+	
+}
+
+int kd[MAXN*6];
+
+int eval(int k,int b,int e){
+	if(b==e)	return kd[k]=ar[b];
+	return kd[k]=min(eval(k*2,b,(b+e)/2),eval(k*2+1,(b+e)/2+1,e));
+}
+int find(int k,int b,int e,int x1,int x2){
+	if(e<x1 || b>x2)	return inf;
+	if(x1<=b && e<=x2)	return kd[k];
+	return min(find(k*2,b,(b+e)/2,x1,x2),find(k*2+1,(b+e)/2+1,e,x1,x2));
+}
+
+long long pow[MAXN];
+
+vector<ii> calc[MAXN];
+
+const int MOD = 1e9+7;
+
+int main(){
+	
+	scanf(" %d %d",&N,&M);
+	
+	for(int i=1,a,b;i<=M;i++)
+	{
+		scanf("%d %d",&a,&b);
+		way[a].pb(b);
+		way[b].pb(a);
+	}
+	
+	f(0,1);
+	
+	for(int i=1;i<=N;i++)
+		for(int j=0;j<SIZE(way[i]);j++)
+			if(cyc[i]!=cyc[way[i][j]] && i<way[i][j])
+			{
+				cway[cyc[i]].pb(cyc[way[i][j]]),
+				cway[cyc[way[i][j]]].pb(cyc[i]);
+			}
+	
+	rec(0,1,sz[1]>2);
+	
+	eval(1,1,say);
+	
+	int Q;
+	
+	scanf(" %d",&Q);
+	
+	pow[0]=1;
+	for(int i=1;i<=N;i++)
+		pow[i]=(pow[i-1]*2)%MOD;
+	
+	for(int i=1,a,b,dad;i<=Q;i++)
+	{
+		scanf("%d %d",&a,&b);
+		a=cyc[a];
+		b=cyc[b];
+		if(a!=b)
+			dad=hc[find(1,1,say,min(pos[a],pos[b]),max(pos[a],pos[b]))];
+		else
+			dad=a;
+		cout << pow[ mark[a]-mark[dad]+mark[b]-mark[dad]+(sz[dad]>2) ] << endl;
+	}
+	
+	return 0;
+	
+}

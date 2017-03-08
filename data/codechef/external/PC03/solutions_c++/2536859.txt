@@ -1,0 +1,142 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <queue>
+#include <algorithm>
+#include <vector>
+#include <cassert>
+using namespace std;
+int _clock;
+
+struct Chef
+{
+	int working;
+	bool isWorking()
+	{
+		return working != 0;
+	}
+	void work()
+	{
+		assert(working);
+		working++;
+		if(working == 6) working = 0;
+	}
+}chef[5];
+void pass()
+{
+	for (int i = 0; i < 5; ++i)
+		if (chef[i].isWorking()) chef[i].work();
+	_clock++;
+}
+int waittime;
+struct Per
+{
+	int time;
+	int order[5];
+	int p;
+	bool servered;
+	bool isServered()
+	{
+		return servered;
+	}
+	Per(){p = 0; servered = false;}
+	void finish()
+	{
+		order[cuisine()] -= 2;
+		servered = false;
+	}
+	void wait()
+	{
+		waittime++;
+	}
+	int cuisine()
+	{
+		if (p == 5) return 5;
+		while (order[p] == 0) p++;
+		return p;
+	}
+	void deal()
+	{
+		servered = true;
+	}
+	bool operator < (const Per &e)const
+	{
+		return time < e.time;
+	}
+};
+const int Maxn = 1000000;
+Per que[Maxn];
+int in, out;
+vector<Per> vec;
+int s, n;
+void solve()
+{
+	in = 0, out = 0;
+	//cout << vec[1].time <<" " << vec.size() << endl;
+	for (_clock = 0; s < vec.size() || in > out; pass())
+	{
+		if (s < vec.size())
+		{
+			if (_clock == vec[s].time)
+			{
+				que[(in++) % Maxn] = vec[s];
+				s++;
+			}
+		}
+		while (in > out)
+		{
+			int cui = que[(out) % Maxn].cuisine();
+			if (cui == 5) 
+			{
+				out++;
+				continue;
+			}
+			if (que[out % Maxn].isServered() && chef[cui].isWorking() == false) 
+			{
+			//	cout << que[out].time <<" " << cui << endl;
+				que[out % Maxn].finish();
+				que[(in++) % Maxn] = que[(out++) % Maxn];
+				chef[cui].working = 1;
+			}
+			else break;
+		}
+		if (in > out)
+		{	
+			Per& p = que[out % Maxn];
+			int cui = p.cuisine();
+			if (p.isServered() == false)
+			{
+				p.deal();
+			//	cout<< _clock <<" " <<p.time << " " << p.p<<" " <<chef[cui].working<< endl;
+			}
+			else if (chef[cui].isWorking())
+				p.wait();
+		}
+	}
+}
+
+int main()
+{
+	int T;
+	scanf("%d", &T);
+	while (T--)
+	{
+		waittime = 0;
+		s = 0;
+		scanf("%d", &n);
+		vec.clear();
+		for (int i = 0; i < n; ++i)
+		{
+			Per per;
+			scanf("%d", &per.time);
+			for (int j = 0; j < 5; ++j)
+				scanf("%d", &per.order[j]);
+			per.p = 0;
+			vec.push_back(per);
+		}
+		sort(vec.begin(), vec.end());
+		solve();
+		printf("%d\n", waittime);
+	}
+	return 0;
+}

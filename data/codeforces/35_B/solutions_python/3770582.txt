@@ -1,0 +1,96 @@
+#!/usr/bin/python
+
+class SegmentTree:
+	def __init__(self, n, NodeClass):
+		self.NodeClass = NodeClass
+		self.leaves = [None for i in range(n)]
+		self.root = self.build(0, n-1, None)
+	def build(self, i, j, parent):
+		node = self.NodeClass(i, j, parent)
+		if i == j:
+			self.leaves[i] = node
+		else:
+			middle = i + (j-i)/2
+			node.left  = self.build(i, middle, node)
+			node.right = self.build(middle+1, j, node)
+		return node
+	def propagateUp(self, node):
+		node.update()
+		if node.changed and node.parent != None:
+			self.propagateUp(node.parent)
+	def updateLeaf(self, i, data):
+		node = self.leaves[i]
+		node.updateData(data)
+		if node.changed and node.parent != None:
+			self.propagateUp(node.parent)
+	def findSucc(self, i, cond):
+		p = self.leaves[i]
+		while not cond(p):
+			while p.parent and p == p.parent.right:
+				p = p.parent
+			if p.parent == None:
+				return None
+			p = p.parent.right
+		while p.i != p.j:
+			if cond(p.left):
+				p = p.left
+			else:
+				p = p.right
+		return p.i
+
+class Node:
+	def __init__(self, i, j, parent):
+		self.i = i
+		self.j = j
+		self.parent = parent
+		self.left   = None
+		self.right  = None
+		self.occupied = False
+	def update(self):
+		assert self.left and self.right
+		oldOccupied = self.occupied
+		self.occupied = self.left.occupied and self.right.occupied
+		self.changed = (self.occupied != oldOccupied)
+	def updateData(self, data):
+		assert not self.left and not self.right
+		oldOccupied = self.occupied
+		self.occupied = data
+		self.changed = (self.occupied != oldOccupied)
+
+cond = lambda node: not node.occupied
+
+def coordToIndex(i, j, n, m):
+	return (i-1)*m + (j-1)
+
+def indexToCoord(i, n, m):
+	return (i/m+1, i%m+1)
+
+inFile = open("input.txt")
+outFile = open("output.txt", 'w')
+table = dict()
+n, m, k = map(lambda x: int(x), inFile.readline().split())
+tree = SegmentTree(n*m, Node)
+for i in range(k):
+	line = inFile.readline()
+	items = line.split()
+	if items[0] == '+1':
+		x = int(items[1])
+		y = int(items[2])
+		name = items[3]
+		index = coordToIndex(x, y, n, m)
+		slot = tree.findSucc(index, cond)
+		if slot != None:
+			table[name] = slot
+			tree.updateLeaf(slot, True)
+	else:
+		assert items[0] == '-1'
+		name = items[1]
+		if name not in table:
+			outFile.write("-1 -1\n")
+		else:
+			slot = table[name]
+			coord = indexToCoord(slot, n, m)
+			outFile.write("%d %d\n" % (coord[0], coord[1]))
+			tree.updateLeaf(slot, False)
+			del table[name]
+

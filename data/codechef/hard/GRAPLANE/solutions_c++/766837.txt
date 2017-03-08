@@ -1,0 +1,221 @@
+#include<cstdio>
+#include<iostream>
+#include<map>
+#include<stack>
+#include<queue>
+#include<algorithm>
+#include<functional>
+#include<limits>
+#include<cstdlib>
+#include<cmath>
+#include<vector>
+#include<string>
+
+using namespace std;
+
+const int inv=numeric_limits<int>::max();
+const int minv=numeric_limits<int>::min();
+const int max_n=18;
+const int max_p2n=262144;
+
+int n,m;
+int T;
+
+int inner[max_p2n];
+int setb[max_p2n];
+int p2[max_n+1];
+int adj[max_n];
+int best[max_p2n];
+int bestc[max_p2n];
+int mi,q[4];
+int quad[max_n],srno[max_n];
+int Qsrno[4];
+
+int s,k;
+bool A[max_n]={0};
+void backtrack(int ix, int ns)
+{
+    if(ix==n)
+    {
+        inner[s]=0;
+        for(int i=0; i<n; ++i)
+        {
+            if(A[i])
+            {
+                inner[s]+=setb[adj[i]&s];
+            }
+        }
+        inner[s]/=2;
+    }
+    else
+    {
+        if(ix-ns<n-k)
+        {
+            backtrack(ix+1,ns);
+        }
+        if(ns<k)
+        {
+            A[ix]=true;
+            s+=p2[ix];
+            backtrack(ix+1,ns+1);
+            A[ix]=false;
+            s-=p2[ix];
+        }
+    }
+}
+
+int s2;
+int s2c;
+int Alist[max_n/2],Blist[max_n/2];
+
+int n3,k3,s3,s4;
+void backtrack3(int ix, int ns)
+{
+    if(ix==n3)
+    {
+        if(best[s2]<inner[s3]+inner[s2-s3])
+        {
+            best[s2]=inner[s3]+inner[s2-s3];
+            bestc[s2]=s3;
+        }
+        if(best[s2c]<inner[s4]+inner[s2c-s4])
+        {
+            best[s2c]=inner[s4]+inner[s2c-s4];
+            bestc[s2c]=s4;
+        }
+    }
+    else
+    {
+        if(ix-ns<n3-k3)
+        {
+            backtrack3(ix+1,ns);
+        }
+        if(ns<k3)
+        {
+            s3+=p2[Alist[ix]];
+            s4+=p2[Blist[ix]];
+            backtrack3(ix+1,ns+1);
+            s3-=p2[Alist[ix]];
+            s4-=p2[Blist[ix]];
+        }
+    }
+}
+
+void backtrack2(int ix, int ns)
+{
+    if(ix==n)
+    {
+        s2c=p2[n]-1-s2;
+        best[s2]=-1; best[s2c]=-1;
+        backtrack3(0,0);
+        
+        if(best[s2]+best[s2c]>mi)
+        {
+            mi=best[s2]+best[s2c];
+            q[0]=bestc[s2]; q[1]=s2-bestc[s2];
+            q[2]=bestc[s2c]; q[3]=s2c-bestc[s2c];
+        }
+    }
+    else
+    {
+        if(ix-ns<n-k)
+        {
+            Blist[ix-ns]=ix;
+            backtrack2(ix+1,ns);
+        }
+        if(ns<k)
+        {
+            s2+=p2[ix];
+            Alist[ns]=ix;
+            backtrack2(ix+1,ns+1);
+            s2-=p2[ix];
+        }
+    }
+}
+
+int main()
+{
+    int a[4]={1,-1,-1,1};
+    int b[4]={1,1,-1,-1};
+    
+    scanf("%d",&T);
+    
+    //cerr<<"www"<<endl<<endl;
+    
+    p2[0]=1;
+    for(int i=1; i<=max_n; ++i)
+        p2[i]=p2[i-1]*2; 
+        
+    for(int i=0; i<max_p2n; ++i)
+    {
+        setb[i]=0;
+        int j=i;
+        while(j>0)
+        {
+            if((j%2)==1)
+                ++setb[i];
+            j/=2;
+        }
+    }
+    
+    for(int z=0; z<T; ++z)
+    {
+        scanf("%d %d",&n,&m);
+        //cerr<<"x"<<endl;
+        
+        for(int i=0; i<n; ++i)
+            adj[i]=0;
+        
+        int tv1, tv2;
+        for(int i=0; i<m; ++i)
+        {
+            scanf("%d %d",&tv1,&tv2);
+            --tv1; --tv2;
+            adj[tv1]+=p2[tv2];
+            adj[tv2]+=p2[tv1];
+        }
+    
+        s=0; k=n/4;
+        backtrack(0,0);
+        if(n%4!=0)
+        {
+            s=0; ++k;
+            backtrack(0,0);
+        }
+        
+        //cerr<<"a"<<endl;
+        
+        s2=0; k=n/2;
+        s3=0; s4=0; n3=n/2; k3=n/4;
+        mi=-1;
+        backtrack2(0,0);
+        
+        //cerr<<"b"<<endl;
+        //cerr<<q[0]<<" "<<q[1]<<" "<<q[2]<<" "<<q[3]<<endl;
+        
+        for(int i=0; i<4; ++i)
+        {
+            Qsrno[i]=1;
+            for(int j=n-1; j>=0; --j)
+            {
+                if(q[i]>=p2[j])
+                {
+                    quad[j]=i;
+                    srno[j]=Qsrno[i];
+                    ++Qsrno[i];
+                    q[i]-=p2[j];
+                }
+            }
+        }
+        
+        //cout<<n<<" "<<mi<<" ";
+        printf("%d\n",m-mi);
+        
+        for(int i=0; i<n; ++i)
+            printf("%d %d\n",srno[i]*a[quad[i]],srno[i]*b[quad[i]]);
+        
+        printf("\n");
+    }
+    
+    return 0;
+}

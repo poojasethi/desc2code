@@ -1,0 +1,150 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+const int maxn = 120;
+const int maxlen = 2010000;
+
+int flow[maxn+1][maxn+1],capa[maxn+1][maxn+1],cost[maxn+1][maxn+1];
+int xl[maxn+1];
+int dist[maxn+1];
+int head, tail, xlge, n, len;
+int S, T;
+char s_cipher[maxlen+1], s_answer[maxlen+1];
+int result;
+int pre[maxn+1];
+bool inxl[maxn+1];
+
+void init() {
+	int i, j, cc, ca;
+	scanf("%d%d",&len,&n);
+	scanf("%s%s",s_cipher, s_answer);
+	T=n+n+2;
+	S=n+n+1;
+	for (i=1; i<=T; ++i)
+		for (j=1; j<=T; ++j)
+			flow[i][j]=cost[i][j]=capa[i][j]=0;
+	for (i=1; i<=n; ++i)
+		capa[S][i]=capa[i+n][T]=1;
+	for (i=1; i<=n; ++i)
+		for (j=1; j<=n; ++j)
+			capa[i][j+n]=1;
+	for (i=1; i<=len; ++i) {
+		if ((s_cipher[i-1]>='a')&&(s_cipher[i-1]<='z'))
+			cc=s_cipher[i-1]-'a'+1;
+		else cc=s_cipher[i-1]-'A'+1+26;
+
+		if ((s_answer[i-1]>='a')&&(s_answer[i-1]<='z'))
+			ca=s_answer[i-1]-'a'+1;
+		else ca=s_answer[i-1]-'A'+1+26;
+
+		ca += n;
+
+		--cost[cc][ca];
+	}
+//	for (i=1; i<=n; ++i)
+//		for (j=1; j<=n; ++j)
+//			printf("cost[%d][%d]=%d\n",i,j+n,cost[i][j+n]);
+}
+
+bool zhao() {
+	int i, j, k;
+	for (i=1; i<=T; ++i) {
+		dist[i] = 1000000;
+		inxl[i] = false;
+	}
+	xlge = 1;
+	head = 0;
+	tail = 1;
+	xl[1] = S;
+	dist[S] = 0;
+	inxl[S] = true;
+	while (xlge) {
+		--xlge;
+		++head;
+		if (head > T)
+			head = 1;
+		i=xl[head];
+		inxl[i] = false;
+		for (j=1; j<=T; ++j) {
+			if ((flow[i][j] < capa[i][j]) && (dist[i] + cost[i][j] < dist[j])) {
+				dist[j] = dist[i] + cost[i][j];
+				pre[j] = i;
+				if (!inxl[j]) {
+					inxl[j] = true;
+					++xlge;
+					++tail;
+					if (tail > T)
+						tail = 1;
+					xl[tail] = j;
+				}
+			}
+		}
+		for (j=1; j<=T; ++j) {
+			if ((flow[j][i]) && (dist[i] - cost[j][i] < dist[j])) {
+				dist[j] = dist[i] - cost[j][i];
+				pre[j] = -i;
+				if (!inxl[j]) {
+					inxl[j] = true;
+					++xlge;
+					++tail;
+					if (tail > T)
+						tail = 1;
+					xl[tail] = j;
+				}
+			}
+		}
+	}
+
+	return (dist[T] < 1000000);
+}
+
+void change() {
+	int j, k;
+	j = T;
+	while (j!=S) {
+		k = pre[j];
+		if (k < 0)
+			k = -k;
+		if (pre[j] < 0) {
+			--flow[j][k];
+			result-=cost[j][k];
+		} else {
+			++flow[k][j];
+			result+=cost[k][j];
+		}
+		j = k;
+	}
+}
+
+void work() {
+	int result = 0;
+	while (zhao())
+		change();
+}
+
+char num2char(int p) {
+	if (p<=26)
+		return 'a'+p-1;
+	else return 'A'+(p-26)-1;
+}
+
+void output() {
+	int i, j;
+	printf("%d\n", -result);
+	for (i=1; i<=n; ++i)
+		for (j=1; j<=n; ++j)
+			if (flow[i][j+n]==1) {
+				printf("%c", num2char(j));
+				break;
+			}
+
+	printf("\n");
+}
+
+int main() {
+	//freopen("C.in", "r", stdin);
+	init();
+	work();
+	output();
+	return 0;
+}

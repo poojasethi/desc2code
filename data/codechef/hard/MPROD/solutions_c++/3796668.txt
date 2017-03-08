@@ -1,0 +1,160 @@
+#include<iostream>
+#include<map>
+#include<cmath>
+#include<queue>
+
+#define MAX_SN 10100
+#define PRIME 1000000007
+
+using namespace std;
+
+bool primes[MAX_SN+1];
+int nextPrimes[MAX_SN+1];
+
+void sievePrimes()
+{
+    for (int i = 0; i < MAX_SN+1; ++i)
+    {
+        primes[i] = true;
+    }
+    for (int i = 2; i < MAX_SN+1; ++i)
+    {
+        if (!primes[i])
+        {
+            continue;
+        }
+        for (int j = 2*i; j < MAX_SN+1; j += i)
+        {
+            primes[j] = false;
+        }
+    }
+}
+
+void initNextPrimes()
+{
+    int prevPrime = 2;
+    for (int i = 3; i < MAX_SN+1; ++i)
+    {
+        if (primes[i])
+        {
+            nextPrimes[prevPrime] = i;
+            prevPrime = i;
+        }
+    }
+    nextPrimes[prevPrime] = -1; // guard
+}
+
+void calcDistribution(int k, map<int, int>& distr)
+{
+    int prime = 2;
+    while ((k > 1) && (prime != -1))  // test guard
+    {
+        while ((k % prime) == 0)
+        {
+            if (distr.find(prime) == distr.end())
+            {
+                distr.insert(pair<int,int>(prime, 0));
+            }
+            distr[prime]++;
+            k /= prime;
+        }
+        prime = nextPrimes[prime];
+    }
+    if (k > 1)
+    {
+        distr.insert(pair<int,int>(k, 1));
+    }
+}
+
+void enqueDistribution(map<int, priority_queue<int> >& Q, const map<int, int>& distr)
+{
+    for (map<int, int>::const_iterator it = distr.begin(); it != distr.end(); ++it)
+    {
+        Q[it->first].push(it->second);
+    }
+}
+
+long long calcProduct(map<int, priority_queue<int> >& Q)
+{
+    long long mult = 1;
+    for (map<int, priority_queue<int> >::iterator it = Q.begin(); it != Q.end(); ++it)
+    {
+        long long power = it->first;
+//        cout << "POWER: " << power << endl;
+        priority_queue<int>& queue = it->second;
+        int top = queue.top();
+        queue.pop();
+        while (!queue.empty())
+        {
+            int top2 = queue.top();
+            queue.pop();
+            if (top2 > 1)
+            {
+                int div = top2/2;
+                queue.push(top - top2 + div);
+                queue.push(div);
+            }
+            else if ((top - top2) > 0)
+            {
+                queue.push(top - top2);
+            }
+            if (queue.empty())
+            {
+                top = 0;
+            }
+            else
+            {
+                top = queue.top();
+                queue.pop();
+            }
+        }
+        for (int i = 0; i < top; ++i)
+        {
+            mult = (mult * power) % PRIME; 
+        }
+    }
+    return mult;
+}
+
+void testCase()
+{
+    int N, K;
+    cin >> N;
+
+    map<int, priority_queue<int> > Q;
+    map<int, int> distr;
+
+    for (int i = 0; i < N; ++i)
+    {
+        cin >> K;
+        distr.clear();
+        calcDistribution(K, distr);
+        enqueDistribution(Q, distr);
+// Wypisz rozkład na czynniki
+/*
+cout << "Distribution: " << endl;
+for (map<int, int>::iterator it = distr.begin(); it != distr.end(); ++it)
+{
+    cout << it->first << "^" << it->second << " * ";
+}
+cout << 1 << endl;
+*/
+    }
+
+    long long product = calcProduct(Q);
+    cout << product << endl;
+}
+
+int main()
+{
+    sievePrimes();
+    initNextPrimes();
+
+    int T;
+    cin >> T;
+    for (int i = 0; i < T; ++i)
+    {
+        testCase();
+    }
+    return 0;
+}

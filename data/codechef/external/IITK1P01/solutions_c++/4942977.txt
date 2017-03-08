@@ -1,0 +1,124 @@
+/*pranjuldb*/
+#include <bits/stdc++.h>
+#define pri(a) printf("%d",a)
+#define prl(a) printf("%lld",a)
+#define nl printf("\n")
+#define sp printf(" ")
+#define prs(str) printf("%s", str)
+#define pb push_back
+#define mem(a,b) memset(a, b, sizeof(a))
+#define pi pair<int, int>
+#define ll long long
+#define rep(i,j,k) for(i = j; i < k; i++)
+#define nrep(i,j,k) for(i = j; i >= k; i--)
+#define scs(str) scanf("%s", str)
+#define sci(a) scanf("%d",&a)
+#define scl(a) scanf("%lld",&a)
+#define Rep(i,n) for(typeof(n) i = 0; i < (n); ++i)
+#define Repd(i,n) for(typeof(n) i = (n)-1; i >= 0; --i)
+
+
+using namespace std;
+const int INF = 999999999;
+int initial[201][201]; // initial undirected weighted matrix
+int good_indx[15]; // stores indexes of good cities
+int pow3[15]; // stores pow of 3 , will be used while checking the masking and turn
+int dp[13][1000010]; // optimized result.. dp[i][j] for ith pos and jth mask
+
+void floydwarshall(int n)
+{
+    int i, j, k;
+    rep(i, 0, n) {
+        rep(j, 0, n) {
+            rep(k, 0, n) {
+                initial[j][k] = min(initial[j][k], initial[j][i] + initial[i][k]);
+            }
+        }
+    }
+}
+
+void cal_pow()
+{
+    pow3[0] = 1;
+    int i;
+    rep(i,1,13) {
+        pow3[i] = 3*pow3[i-1];
+    }
+}
+
+int check_bit(int mask, int pos)
+{
+    return (mask/pow3[pos])%3;
+}
+
+int initial_sum(vector<int> v1, vector<int> v2)
+{
+    int ans = 0;
+    int i, j;
+    rep(i,0,v1.size()) {
+        rep(j,0,v2.size()) {
+            ans += initial[v1[i]][v2[j]];
+        }
+    }
+    return ans;
+}
+
+int solve(int pos, int mask, int k)
+{
+    int i;
+    if(pos == k) {
+        vector<int> v1, v2;
+        rep(i,0,k) {
+            if(check_bit(mask,i) == 1) {
+                v1.pb(good_indx[i]);
+            }
+            else {
+                v2.pb(good_indx[i]);
+            }
+        }
+        return initial_sum(v1,v2);
+    }
+    if(dp[pos][mask] != -1) return dp[pos][mask];
+    int ans;
+    if(pos%2 == 0) {
+        ans = 0;
+        rep(i,0,k) {
+            if(check_bit(mask,i) == 0) {
+                ans = max(ans, solve(pos+1, mask+2*pow3[i], k));
+            }
+        }
+    }
+    else {
+        ans = 10000000;
+        rep(i,0,k) {
+            if(check_bit(mask,i) == 0) {
+                ans = min(ans, solve(pos+1, mask+pow3[i], k));
+            }
+        }
+    }
+    return dp[pos][mask] = ans;
+}
+
+int main()
+{
+    int n, m, k;
+    int i,j,l;
+    sci(n); sci(m); sci(k);
+    cal_pow();
+    mem(dp, -1);
+    int x, y, z;
+    rep(i,0,n) rep(j,0,n) initial[i][j] = INF;
+    while(m--) {
+        sci(x); sci(y); sci(z);
+        x--, y--;
+        initial[x][y] = initial[y][x] = z;
+    }
+    rep(i,0,k) {
+        sci(good_indx[i]);
+        good_indx[i]--;
+    }
+    floydwarshall(n);
+    pri(solve(0, 0, k)), nl;
+
+    return 0;
+}

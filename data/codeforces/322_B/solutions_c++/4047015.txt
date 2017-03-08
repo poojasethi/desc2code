@@ -1,0 +1,16 @@
+#include <iostream>
+using namespace std;
+int a,b,c;
+int fl(int x)
+{
+	return x+(a-x)/3+(b-x)/3+(c-x)/3;
+}
+int main()
+{
+	int t;
+	cin>>a>>b>>c;
+	if (a<b) t=a;else t=b;
+	if (c<t) t=c;
+	cout<<max(max(fl(t),fl(max(t-1,0))),fl(max(t-2,0)));
+	return 0;
+}

@@ -1,0 +1,254 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <deque>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <limits>
+#include <string>
+#include <cstring>
+#include <cassert>
+
+using namespace std;
+
+typedef long long ll;
+typedef pair <int,int> pii;
+typedef vector <int> vi;
+
+#define rep(i, n) for(int i = 0; i < (n); ++i)
+#define forn(i, a, b) for(int i = (a); i < (b); ++i)
+#define ford(i, a, b) for(int i = (a); i >= (b); --i)
+#define fore(i, a, b) forn(i, a, b + 1)
+
+#define pb push_back
+#define mp make_pair
+#define ff first
+#define ss second
+#define all(c) c.begin(), c.end()
+#define fill(a, v) memset(a, v, sizeof(a))
+#define sz(a) ((int)a.size())
+
+#define gl(x) cin >> x
+#define gi(x) scanf("%d", &x)
+#define pls(x) cout << x << " "
+#define pln(x) cout << x << "\n"
+#define pis(x) printf("%d ", x)
+#define pin(x) printf("%d\n", x)
+#define pnl printf("\n")
+#define dbn cerr << "\n"
+#define dbg(x) cerr << #x << " : " << x << " "
+#define dbs(x) cerr << x << " "
+
+#define foreach(c, it) for(__typeof(c.begin()) it = c.begin(); it != c.end(); ++it)
+
+const int N = 100100;
+
+#define l(x) (x << 1) + 1
+#define r(x) (x << 1) + 2
+#define mid(l, r) ((l + r) >> 1)
+
+int a[N];
+
+struct node {
+
+    int min;
+    bool push;
+
+    inline void combine(const node & left, const node & right) {
+        min = left.min < right.min ? left.min : right.min;
+    }
+
+} T[N << 2];
+
+struct segmentTree {
+    int n;
+    
+    segmentTree(int m) : n(m) {
+        build(0, 0, n - 1);
+    }
+
+    void build(int x, int l, int r) {
+        T[x].push = false;
+        if(l == r) {
+            T[x].min = N;
+            return;
+        }
+        int m = (l + r) >> 1;
+        build(l(x), l, m);
+        build(r(x), m + 1, r);
+        T[x].combine(T[l(x)], T[r(x)]);
+    }
+
+    inline void resolve(int x, int l, int r) {
+        if(T[x].push) {
+            if(l < r) {
+                T[l(x)].min = min(T[x].min, T[l(x)].min);
+                T[r(x)].min = min(T[x].min, T[r(x)].min);
+                T[l(x)].push = true;
+                T[r(x)].push = true;
+            }
+            T[x].push = false;
+        }
+    }
+
+    void updateRange(int x, int l, int r, int ql, int qr, int v) {
+        resolve(x, l, r);
+        if(l > qr || r < ql) return;
+        if(l >= ql && r <= qr) {
+            T[x].min = min(T[x].min, v);
+            T[x].push = true;
+            resolve(x, l, r);
+            return;
+        }
+        int m = (l + r) >> 1;
+        updateRange(l(x), l, m, ql, qr, v);
+        updateRange(r(x), m + 1, r, ql, qr, v);
+        T[x].combine(T[l(x)], T[r(x)]);
+    }
+
+    int queryRange(int x, int l, int r, int ql, int qr) {
+        resolve(x, l, r);
+        if(l >= ql && r <= qr) return T[x].min;
+        int ret = N;
+        int m = (l + r) >> 1;
+        if(ql <= m) ret = min(ret, queryRange(l(x), l, m, ql, qr));
+        if(qr > m) ret = min(ret, queryRange(r(x), m + 1, r, ql, qr));
+        return ret;
+    }
+
+    void update(int ql, int qr, ll v) {
+        updateRange(0, 0, n - 1, ql, qr, v);
+    }
+
+    int query(int ql, int qr) {
+        return queryRange(0, 0, n - 1, ql, qr);
+    }
+};
+
+char s[N];
+int dp[N][20], logVal[N];
+
+inline void init(int sz) {
+    rep(i, sz) {
+        dp[i][0] = (1 << (s[i] - 'a'));
+    }
+    
+    for(int j = 1; (1 << j) <= sz; j++) {
+        for(int i = 0; i + (1 << j) <= sz; i++)
+            dp[i][j] = dp[i][j - 1] | dp[i + (1 << (j - 1))][j - 1];
+    }
+}
+
+inline int getCount(int l, int r) {
+    int k = logVal[r - l + 1];
+    return __builtin_popcount(dp[l][k] | dp[r - (1 << k) + 1][k]);
+}
+
+int lt[N], rt[N];
+
+struct Query {
+    int l, r, minL, maxL, idx;
+
+    Query(int a, int b, int c, int d, int e) {
+        l = a, r = b, minL = c, maxL = d, idx = e;
+    }
+
+    bool operator < (const Query & o) const {
+        if(l != o.l) return l < o.l;
+        else return r < o.r;
+    }
+};
+
+pii ans[N];
+vector <Query> q[27];
+
+int main() {
+    logVal[0] = -1;
+    for(int i = 1; i < N; ++i) {
+        logVal[i] = logVal[i - 1];
+        if(!(i & (i - 1))) logVal[i]++;
+    }
+
+    scanf("%s", s);
+    int n = strlen(s);
+
+    int Q; gi(Q);
+    rep(i, Q) {
+        int x, minL, maxL, l, r;
+        gi(x), gi(minL), gi(maxL), gi(l), gi(r);
+        q[x].pb(Query(l, r, minL, maxL, i));
+    }
+
+    init(n);
+
+    for(int x = 1; x <= 26; ++x) if(sz(q[x]) > 0) {
+
+        rep(i, n) {
+            if(getCount(i, n - 1) < x) {
+                lt[i] = rt[i] = n;
+            } else {
+                int l, r;
+
+                l = i, r = n - 1;
+                while(l < r) {
+                    int m = (l + r) >> 1;
+                    if(getCount(i, m) < x) l = m + 1;
+                    else r = m;
+                }
+                lt[i] = l;
+
+                l = i, r = n - 1;
+                while(l < r) {
+                    int m = (l + r + 1) >> 1;
+                    if(getCount(i, m) > x) r = m - 1;
+                    else l = m;
+                }
+                rt[i] = l;
+
+            }
+        }
+
+        segmentTree st(N - 1);
+        sort(all(q[x]));
+
+        int ptr = n - 1;
+
+        for(int i = sz(q[x]) - 1; i >= 0; --i) {
+            Query cur = q[x][i];
+            while(ptr >= cur.l) {
+                if(lt[ptr] < n) st.update(lt[ptr] - ptr + 1, rt[ptr] - ptr + 1, ptr);
+                --ptr;
+            }
+
+            if(cur.r - cur.l + 1 >= cur.minL) {
+                cur.maxL = min(cur.maxL, cur.r - cur.l + 1);
+                int l = st.query(cur.minL, cur.maxL);
+                if(max(lt[l], l + cur.minL - 1) <= cur.r) {
+                    ans[cur.idx] = mp(l, max(lt[l], l + cur.minL - 1));
+                } else ans[cur.idx] = mp(-1, -1);
+            } else {
+                ans[cur.idx] = mp(-1, -1);
+            }
+        }
+
+    }
+
+    rep(i, Q) {
+        pis(ans[i].ff), pin(ans[i].ss);
+    }
+
+    return 0;
+}

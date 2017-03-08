@@ -1,0 +1,103 @@
+#include<iostream>
+#include<stdio.h>
+#include<algorithm>
+#include<set>
+using namespace std ;
+typedef pair<int,int> P ;
+#define MAXN 1002
+int n,m,a,b,c[MAXN][MAXN] ;
+
+int sz ;
+pair<long long,P> val[MAXN*MAXN] ;
+int row_min[MAXN][MAXN],tab_min[MAXN][MAXN] ;
+long long sum[MAXN][MAXN] ;
+long long get_sum(int x1,int y1,int x2,int y2)
+{
+ long long ret = sum[x2][y2] ;
+ if(y1 > 0) ret -= sum[x2][y1 - 1] ;
+ if(x1 > 0) ret -= sum[x1 -1][y2] ;
+ if(x1 > 0 && y1 > 0) ret += sum[x1 - 1][y1 - 1] ;
+ return ret ;
+}
+
+void compute()
+{
+ int i,j,k ;
+ 
+ for(i = 0;i < m;i++)
+ {
+  multiset<P> Min ;
+  for(j = 0;j < n;j++)
+  {
+   Min.insert(P(c[j][i],j)) ;
+   if(j >= a - 1)
+   {
+    row_min[j - a + 1][i] = (*Min.begin()).first ;
+    Min.erase(P(c[j - a + 1][i],j - a + 1)) ;
+   }
+  }
+ }
+ for(i = 0;i + a <= n;i++)
+ {
+  multiset<P> Min ;
+  for(j = 0;j < m;j++)
+  {
+   Min.insert(P(row_min[i][j],j)) ;
+   if(j >= b - 1)
+   {
+    tab_min[i][j - b + 1] = (*Min.begin()).first ;
+    Min.erase(P(row_min[i][j - b + 1],j - b + 1)) ;
+   }
+  }
+ }
+ 
+ for(i = 0;i < n;i++)
+  for(j = 0;j < m;j++)
+  {
+   sum[i][j] = c[i][j] ;
+   if(i > 0) sum[i][j] += sum[i - 1][j] ;
+   if(j > 0) sum[i][j] += sum[i][j - 1] ;
+   if(i > 0 && j > 0) sum[i][j] -= sum[i - 1][j - 1] ;
+  }
+ 
+ for(i = 0;i + a <= n;i++)
+  for(j = 0;j + b <= m;j++)
+  {
+   long long cval = get_sum(i,j,i + a - 1,j + b - 1) ;
+   cval -= (long long)a * b * tab_min[i][j] ;
+   val[sz++] = make_pair(cval,P(i,j)) ;
+  }
+ sort(val,val+sz) ;
+}
+
+int total ;
+long long solution[MAXN*MAXN*3] ;
+bool invalid[MAXN][MAXN] ;
+main()
+{
+ int i,j,k ;
+ scanf("%d%d%d%d",&n,&m,&a,&b) ;
+ for(i = 0;i < n;i++)
+  for(j = 0;j < m;j++)
+   scanf("%d",&c[i][j]) ;
+ 
+ compute() ;
+ for(k = 0;k < sz;k++)
+ {
+  pair<long long,P> cur = val[k] ;
+  int x = cur.second.first,y = cur.second.second ;
+  if(invalid[x][y]) continue ;
+  
+  for(i = max(0,x - a + 1);i <= x + a - 1;i++)
+   for(j = max(0,y - b + 1);j <= y + b - 1;j++)
+    invalid[i][j] = true ;
+  
+  solution[total++] = x + 1 ;
+  solution[total++] = y + 1 ;
+  solution[total++] = cur.first ;
+ }
+ 
+ printf("%d\n",total/3) ;
+ for(i = 0;i < total;i+=3)
+  printf("%I64d %I64d %I64d\n",solution[i],solution[i + 1],solution[i + 2]) ; 
+}

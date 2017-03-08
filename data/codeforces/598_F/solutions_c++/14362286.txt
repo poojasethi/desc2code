@@ -1,0 +1,112 @@
+#include <cmath>
+#include <cstdio>
+#include <algorithm>
+
+using namespace std;
+
+#define N 1005
+
+typedef long double LD;
+
+const LD EPS = 1e-9;
+const LD PI = acos(-1);
+
+struct pnt {
+    LD x, y;
+    pnt(LD x = 0, LD y = 0) : x(x), y(y) {}
+    pnt operator - (const pnt &p) const {
+        return pnt(x - p.x, y - p.y);
+    }
+    pnt operator + (const pnt &p) const {
+        return pnt(x + p.x, y + p.y);
+    }
+    pnt operator * (LD p) const {
+        return pnt(x * p, y * p);
+    }
+    pnt operator / (LD p) const {
+        return pnt(x / p, y / p);
+    }
+    LD operator & (const pnt &p) const {
+        return x * p.x + y * p.y;
+    }
+    LD operator ^ (const pnt &p) const {
+        return x * p.y - y * p.x;
+    }
+    inline LD dist() {
+        return sqrt(x * x + y * y);
+    }
+    void input() {
+        double xx, yy;
+        scanf("%lf %lf", &xx, &yy);
+        x = (LD)xx, y = (LD)yy;
+    }
+    void print() {
+        printf("%lf %lf\n", (double)x, (double)y);
+    }
+} p[N];
+
+int n;
+
+bool inside(pnt a, pnt b, pnt c) {
+    LD A = a - b & a - c;
+    LD B = a - b ^ a - c;
+    if (fabs(B) > EPS) return 0;
+    return A <= 0;
+}
+
+int intersect(pnt a, pnt b, pnt c, pnt d, pnt &res) {
+    if (fabs(b - a ^ d - c) < EPS) {
+		if (fabs(b - c ^ a - c) < EPS) return -1;
+		return 0;
+    }
+    LD chk1 = b - a ^ c - a;
+    LD chk2 = b - a ^ d - a;
+    if (chk1 > EPS && chk2 > EPS) return 0;
+    if (chk1 < EPS && chk2 < EPS) return 0;
+    LD s1 = b - a ^ d - c, s2 = b - c ^ a - c;
+	LD s = s2 / s1;
+	res = c + ((d - c) * s);
+    return 1;
+}
+
+LD sto[N];
+
+typedef pair <LD, LD> PDD;
+
+PDD V[N];
+
+main() {
+	int m;
+	scanf("%d %d", &n, &m);
+	for (int i = 0; i < n; i ++) p[i].input();
+	while (m --) {
+		pnt a, b;
+		a.input(), b.input();
+		int cnt = 0, cv = 0;
+		LD len = (b - a & b - a);
+		for (int i = 0; i < n; i ++) {
+			pnt tp;
+			int chk = intersect(a, b, p[i], p[(i + 1) % n], tp);
+			if (chk > 0) {
+				sto[cnt ++] = (tp - a & b - a) / len;
+			} else if (chk < 0) {
+				LD x = (p[i] - a & b - a) / len;
+				LD y = (p[(i + 1) % n] - a & b - a) / len;
+				if (x > y) swap(x, y);
+				V[cv ++] = PDD(x, y);
+			}
+		}
+		sort(sto, sto + cnt);
+
+		for (int i = 0; i + 1 < cnt; i += 2) V[cv ++] = PDD(sto[i], sto[i + 1]);
+		sort(V, V + cv);
+		LD rlt = 0, cur = -(1e18);
+		len = sqrt(len);
+		for (int i = 0; i < cv; i ++) {
+			if (cur < V[i].first) cur = V[i].first;
+			if (cur < V[i].second) rlt += V[i].second - cur, cur = V[i].second;
+		}
+
+		printf("%.15lf\n", (double)(rlt * len));
+	}
+}

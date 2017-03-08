@@ -1,0 +1,148 @@
+#include<cstdio>
+#include<queue>
+#include<vector>
+using namespace std;
+inline void readi(int &x);
+typedef long long LL;
+typedef unsigned long long ULL;
+const int N=100100,M=1000000007;
+ULL pw[N+5];
+int n,m,S,T,pre[N];
+int head[N],adj[N+N],c[N+N],next[N+N],tot;
+void addedge(int u,int v,int w)
+{tot++;adj[tot]=v;c[tot]=w;next[tot]=head[u];head[u]=tot;
+tot++;adj[tot]=u;c[tot]=w;next[tot]=head[v];head[v]=tot;}
+
+struct node
+{
+	ULL s;
+	bool mn;
+	node *lc,*rc;
+	
+	inline void update(const int &l,const int &r)
+	{
+		s=lc->s+rc->s*pw[r-l+2>>1];
+		mn=lc->mn&rc->mn;
+	}
+}null[1],pool[N*250],*ns=pool,*dist[N];
+
+inline node* New(const node *p)
+{return *ns=*p,ns++;}
+
+#define all 0,N
+
+bool Cmp(node *x,node *y,int l=0,int r=N)
+{
+	if(l==r)return x->s<y->s;
+	if(x->rc->s!=y->rc->s)return Cmp(x->rc,y->rc,l+r+2>>1,r);
+	return Cmp(x->lc,y->lc,l,l+r>>1);
+}
+
+int First0(node *x,int l,int r,const int &p)
+{
+	if(x->mn)return -1;
+	if(l==r&&x->s==0)return l;
+	int mid=l+r>>1,res=-1;
+	if(p<=mid)res=First0(x->lc,l,mid,p);
+	if(res==-1)res=First0(x->rc,mid+1,r,p);
+	return res;
+}
+
+void Set0(node* &x,int l,int r,const int &a,const int &b)
+{
+	if(l>=a&&r<=b){x=null;return;}
+	x=New(x);
+	int mid=l+r>>1;
+	if(a<=mid)Set0(x->lc,l,mid,a,b);
+	if(b>mid)Set0(x->rc,mid+1,r,a,b);
+	x->update(l,r);
+}
+
+void Set1(node* &x,int l,int r,const int &p)
+{
+	x=New(x);
+	if(l==r){x->s=x->mn=1;return;}
+	int mid=l+r>>1;
+	if(p<=mid)Set1(x->lc,l,mid,p);
+	else Set1(x->rc,mid+1,r,p);
+	x->update(l,r);
+}
+
+node* Add(node *x,int c)
+{
+	int p=First0(x,all,c);
+	if(p>c)Set0(x,all,c,p-1);
+	Set1(x,all,p);
+	return x;
+}
+
+pair<int,int> Calc(node *x,int l=0,int r=N)
+{
+	if(l==r)return make_pair(x->s,2);
+	int mid=l+r>>1;
+	pair<int,int> lp,rp;
+	lp=Calc(x->lc,l,mid);
+	rp=Calc(x->rc,mid+1,r);
+	return make_pair(((LL)rp.first*lp.second+lp.first)%M,(LL)lp.second*rp.second%M);
+}
+
+void init()
+{
+	readi(n),readi(m);
+	for(int u,v,w,i=0;i<m;i++)
+		readi(u),readi(v),readi(w),addedge(u,v,w);
+	readi(S),readi(T);
+	for(int i=pw[0]=1;i<=N;i++)
+		pw[i]=pw[i-1]*233ULL;
+	null->lc=null->rc=null;
+}
+
+struct state
+{
+	int id;
+	node *num;
+	state(){}
+	state(int a,node* b):id(a),num(b){}
+	bool operator<(const state &o)const
+	{return Cmp(o.num,num);}
+};
+
+priority_queue<state> Q;
+vector<int> path;
+
+void dijkstra()
+{
+	dist[0]=null;
+	Set1(dist[0],all,N);
+	for(int i=1;i<=n;i++)
+		dist[i]=dist[0];
+	dist[S]=null;
+	Q.push(state(S,dist[S]));
+	node *t,*w;
+	for(int u,v,i;!Q.empty();)
+	{
+		t=Q.top().num,u=Q.top().id,Q.pop();
+		if(dist[u]!=t)continue;
+		for(i=head[u];i;i=next[i])
+			if(Cmp(w=Add(t,c[i]),dist[v=adj[i]]))
+				pre[v]=u,Q.push(state(v,dist[v]=w));
+	}
+	if(dist[T]==dist[0]){puts("-1");return;}
+	printf("%d\n",Calc(dist[T]).first);
+	for(int i=T;i!=S;i=pre[i])path.push_back(pre[i]);
+	printf("%d\n",path.size()+1);
+	for(int i=path.size()-1;~i;i--)
+		printf("%d ",path[i]);
+	printf("%d\n",T);
+}
+
+int main()
+{
+	init();
+	dijkstra();
+	return 0;
+}
+
+inline void readi(int &x)
+{char c;while(c=getchar(),c<'0'||c>'9');
+x=c^'0';while(c=getchar(),c>='0'&&c<='9')x=x*10+(c^'0');}

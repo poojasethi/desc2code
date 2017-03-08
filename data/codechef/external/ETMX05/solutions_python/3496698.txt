@@ -1,0 +1,7 @@
+x=raw_input()
+l=len(x)
+if l>=3:
+    l=l/2
+    print x[l-1:l+2]
+else:
+    print "0"

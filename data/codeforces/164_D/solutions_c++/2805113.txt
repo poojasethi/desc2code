@@ -1,0 +1,97 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+const int N = 1050;
+
+template <class T> inline T sqr (T x) { return x * x; }
+
+int par[N][N];
+int removed[N], n, k;
+struct point { int x, y; } P[N];
+int disp[N * N], dis[N][N];
+
+int dfs (int x, int rest)
+{
+/*	int n_rest = k;
+	for (int i = 1; i <= n; ++i)
+		if (removed[i]) --n_rest;
+	if (n_rest != rest)
+		throw;*/
+	if (x == n + 1) return true;
+	if (removed[x])
+		return dfs(x + 1, rest);
+	
+	int used = 0;
+	for (int i = 1, y; i <= par[x][0]; ++i)
+		if (!removed[y = par[x][i]] ++) ++used;
+	if (rest >= used && dfs(x + 1, rest - used)) return true;
+	for (int i = 1; i <= par[x][0]; ++i)
+		--removed[par[x][i]];
+	
+	if (used <= 1) return false;
+
+	if (rest >= 1)
+	{
+		++removed[x];
+		if (dfs(x + 1, rest - 1)) return true;
+		--removed[x];
+	}
+	return false;
+}
+
+bool check (int m)
+{
+	for (int i = 1; i <= n; ++i)
+	{
+		par[i][0] = 0;
+		removed[i] = 0;
+	}
+	for (int i = 1; i <= n; ++i)
+		for (int j = 1; j <= n; ++j)
+			if (dis[j][i] > m) par[i][++par[i][0]] = j;
+	return dfs(1, k);
+}
+
+int main ()
+{
+#ifdef LOCAL
+	freopen("in", "r", stdin);
+#endif
+	scanf("%d%d", &n, &k);
+	for (int i = 1; i <= n; ++i)
+		scanf("%d%d", &P[i].x, &P[i].y);
+	int ck = 0;
+	for (int i = 1; i <= n; ++i)
+		for (int j = 1; j < i; ++j)
+			disp[++ck] = dis[i][j] = dis[j][i] = sqr(P[i].x - P[j].x) + sqr(P[i].y - P[j].y);
+	sort(disp + 1, disp + 1 + ck);
+	ck = unique(disp + 1, disp + 1 + ck) - (disp + 1);
+	int l = 0, r = ck;
+	while (l + 1 < r)
+	{
+		int m = (l + r) >> 1;
+		if (check(disp[m])) r = m;
+		else l = m;
+	}
+	if (!check(disp[r]))
+	   throw;
+#ifdef LOCAL
+	printf("%d\n", r);
+#endif
+	for (int i = 1; i <= n; ++i)
+		if (removed[i])
+		{
+			--k;
+			printf("%d ", i);
+		}
+	for (int i = 1; i <= n && k > 0; ++i)
+		if (!removed[i])
+		{
+			--k;
+			printf("%d ", i);
+		}
+	printf("\n");
+	return 0;
+}
+

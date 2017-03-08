@@ -1,0 +1,63 @@
+#include<cstdio>
+#include<vector>
+#include<iostream>
+#include<algorithm>
+using namespace std;
+typedef pair <int, int> PII;
+const int MAX_N = (1e5)+10;
+int p[MAX_N], key[MAX_N], l[MAX_N], r[MAX_N], root;
+int tmax[MAX_N], tmin[MAX_N], lmax[MAX_N], rmin[MAX_N];
+int N;
+vector< PII > query;
+void dfs(int x)
+{
+  tmax[x] = tmin[x] = key[x];
+  if (l[x]) {
+    dfs(l[x]);
+    lmax[x] = tmax[l[x]];
+    tmin[x] = tmin[l[x]];
+  }
+
+  if (r[x]) {
+    dfs(r[x]);
+    rmin[x] = tmin[r[x]];
+    tmax[x] = tmax[r[x]];
+  }
+}
+double avg[MAX_N];
+void solve(int x, long long sum, int cnt, int low, int high)
+{
+  if (low >= high) return;
+  if (!l[x] && !r[x]) {
+    for (int i  = low; i < high; i++) avg[query[i].second] = sum*1.0/cnt;
+    return;
+  }
+  int pos = lower_bound(query.begin() + low, query.begin() + high, make_pair(key[x],0))- query.begin();
+
+  solve(l[x], sum + rmin[x], cnt + 1, low, pos);
+  solve(r[x], sum + lmax[x], cnt + 1, pos, high);
+}
+int main()
+{
+  cin>>N;
+  for (int i = 1; i <= N; i++) {
+    cin>>p[i]>>key[i];
+    if (p[i] == -1) root = i;
+  }
+  for (int i = 1; i <= N; i++) if (i != root) {
+      if (key[i] < key[p[i]]) l[p[i]] = i;
+      else r[p[i]] = i;
+    }
+  int k;
+  cin>>k;
+  for (int i = 1; i <= k; i++) {
+    int x;
+    cin>>x;
+    query.push_back(PII(x, i));
+  }
+  sort(query.begin(), query.end());
+  dfs(root);
+  solve(root, 0, 0, 0, query.size());
+  for (int i = 1; i <= k; i++) printf ("%.12lf\n", avg[i]);
+  return 0;
+}

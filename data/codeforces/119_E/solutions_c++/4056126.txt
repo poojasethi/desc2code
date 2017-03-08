@@ -1,0 +1,415 @@
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <iostream>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <cstring>
+#include <cassert>
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <deque>
+#include <queue>
+#include <bitset>
+#include <sstream>
+
+using namespace std;
+
+#define forn(i, n) for(int i = 0; i < int(n); ++i)
+#define for1(i, n) for(int i = 1; i <= int(n); ++i)
+#define ford(i, n) for(int i = int(n) - 1; i >= 0; --i)
+#define fore(i, l, r) for(int i = int(l); i < int(r); ++i)
+#define sz(v) int((v).size())
+#define all(v) (v).begin(), (v).end()
+#define pb push_back
+#define X first
+#define Y second
+
+typedef long long li;
+typedef long double ld;
+typedef pair<ld, ld> pt;
+
+template<typename T> T abs(T a) { return a < 0 ? -a : a; }
+template<typename T> T sqr(T a) { return a*a; }
+
+const int INF = (int)1e9;
+const ld EPS = 1e-9;
+const ld PI = acosl(ld(-1));
+
+const int N = 200000;
+
+inline ld dist(const pt& a, const pt& b){
+    return sqrtl(sqr(a.X - b.X) + sqr(a.Y - b.Y));
+}
+
+inline ld dist2(const pt& a, const pt& b){
+    return (sqr(a.X - b.X) + sqr(a.Y - b.Y));
+}
+
+inline pt operator + (const pt& a, const pt& b){
+    return pt(a.X + b.X, a.Y + b.Y);
+}
+
+inline pt operator - (const pt& a, const pt& b){
+    return pt(a.X - b.X, a.Y - b.Y);
+}
+
+inline pt operator * (const pt& a, const ld& b){
+    return pt(a.X * b, a.Y * b);
+}
+
+inline pt operator * (const ld& b, const pt& a){
+    return pt(a.X * b, a.Y * b);
+}
+
+inline ld area(const pt& a, const pt& b, const pt& c){
+    return (b.X - a.X) * (c.Y - a.Y) - (b.Y - a.Y) * (c.X - a.X);
+}
+
+inline bool cw(const pt& a, const pt& b, const pt& c){
+    return area(a, b, c) < -EPS;
+}
+
+inline bool ccw(const pt& a, const pt& b, const pt& c){
+    return area(a, b, c) > EPS;
+}
+
+inline ld det(const ld& a, const ld& b, const ld& c, const ld& d){
+    return a*d - b*c;
+}
+
+inline void makeLine(const pt& a, const pt& b, ld& A, ld& B, ld& C){
+    A = b.Y - a.Y;
+    B = a.X - b.X;
+    C = -A*a.X - B*a.Y;
+}
+
+inline pt intersect(const pt& a1, const pt& b1, const pt& a2, const pt& b2){
+    ld A1, B1, C1;
+    makeLine(a1, b1, A1, B1, C1);
+
+    ld A2, B2, C2;
+    makeLine(a2, b2, A2, B2, C2);
+
+    ld dt = det(A1, B1, A2, B2);
+
+    if(abs(dt) < EPS){
+        cout << a1.X << " " << a1.Y << " " << b1.X << " " << b1.Y << endl;
+        cout << a2.X << " " << a2.Y << " " << b2.X << " " << b2.Y << endl;
+
+        cout << "do not intersect" << endl;
+        throw;
+    }
+
+    return pt(-det(C1, B1, C2, B2) / dt, -det(A1, C1, A2, C2) / dt);
+}
+
+inline pt getC(const pt& a, const pt& b, const pt& c){
+    pt a1 = (a + b) * 0.5;
+    pt v1 = (b - a);
+    v1 = pt(-v1.Y, v1.X);
+    pt b1 = a1 + v1;
+
+    pt a2 = (a + c) * 0.5;
+    pt v2 = (c - a);
+    v2 = pt(-v2.Y, v2.X);
+    pt b2 = a2 + v2;
+
+    pt res = intersect(a1, b1, a2, b2);
+
+    ld d1 = dist(res, a);
+    ld d2 = dist(res, b);
+    ld d3 = dist(res, c);
+
+    if(abs(d1 - d2) > EPS || abs(d1 - d3) > EPS || abs(d2 - d3) > EPS){
+        cout << "not enclosign circle" << endl;
+        throw;
+    }
+
+    return res;
+}
+
+inline ld getR(const pt& a, const pt& b, const pt& c){
+    return dist(getC(a, b, c), a);
+}
+
+struct setEl{
+    ld r;
+    int idx;
+
+    setEl(ld r, int idx) : r(r), idx(idx) {}
+
+    bool operator < (const setEl& c) const{
+        if(abs(r - c.r) > EPS)
+            return r < c.r;
+        return idx < c.idx;
+    }
+};
+
+set<setEl> s;
+ld r[N];
+bool active[N];
+int lf[N], rg[N];
+pt p[N];
+
+inline bool cmpEps(const pt& a, const pt& b){
+    if(abs(a.X - b.X) > EPS)
+        return a.X < b.X;
+    return a.Y < b.Y;
+}
+
+inline bool eqEps(const pt& a, const pt& b){
+    return abs(a.X - b.X) < EPS && abs(a.Y - b.Y) < EPS;
+}
+
+void convexHull(int& n){
+    sort(p, p + n, cmpEps);
+    vector<pt> up, down;
+
+    up.pb(p[0]);
+    down.pb(p[0]);
+
+    for(int i = 1; i < n; ++i){
+        while(sz(up) >= 2 && !cw(up[sz(up) - 2], up[sz(up) - 1], p[i]))
+            up.pop_back();
+        up.pb(p[i]);
+
+        while(sz(down) >= 2 && !ccw(down[sz(down) - 2], down[sz(down) - 1], p[i]))
+            down.pop_back();
+        down.pb(p[i]);        
+    }
+
+    n = 0;
+    forn(i, sz(up))
+        p[n++] = up[i];
+    for(int i = sz(down) - 2; i > 0; --i)
+        p[n++] = down[i];
+}
+
+void updateR(int idx){
+    s.erase(setEl(r[idx], idx));
+    r[idx] = getR(p[lf[idx]], p[idx], p[rg[idx]]);
+    s.insert(setEl(r[idx], idx));
+}
+
+
+inline ld getMinCircle(int n, bool debug = false){
+    convexHull(n);
+
+    if(n <= 1)
+        return 0;
+    if(n == 2)
+        return dist(p[0], p[1]) / 2;
+
+    //cerr << n << endl;
+    //forn(i, n)
+    //    cerr << p[i].X << " " << p[i].Y << endl;
+
+    s.clear();
+    forn(i, n){
+        lf[i] = i - 1;
+        rg[i] = i + 1;
+            
+        if(lf[i] < 0)
+            lf[i] += n;
+        if(rg[i] >= n)
+            rg[i] -= n;
+
+        updateR(i);
+    }
+
+    while(sz(s) > 3){
+        int v = s.rbegin()->idx;
+        s.erase(--s.end());
+
+        int olf = lf[v];
+        int org = rg[v];
+
+        rg[olf] = org;
+        lf[org] = olf;
+
+        updateR(olf);
+        updateR(org);
+    }
+
+    vector<pt> a;
+    for(set<setEl>::iterator it = s.begin(); it != s.end(); ++it)
+        a.pb(p[it->idx]);
+
+    if(sz(a) != 3)
+        throw;
+
+    //pt res = getC(a[0], a[1], a[2]);
+    //ld r = getR(a[0], a[1], a[2]);
+
+    ld d[3];
+    d[0] = dist(a[0], a[1]);
+    d[1] = dist(a[1], a[2]);
+    d[2] = dist(a[0], a[2]);
+    sort(d, d + 3);
+
+    pt ansC;
+    ld ansR;
+
+	if(d[0]*d[0] + d[1]*d[1] + EPS < d[2]*d[2]){
+		if(abs(dist(a[0], a[1]) - d[2]) < EPS)
+			ansC = (a[0] + a[1]) * 0.5;
+		if(abs(dist(a[1], a[2]) - d[2]) < EPS)
+			ansC = (a[1] + a[2]) * 0.5;
+		if(abs(dist(a[0], a[2]) - d[2]) < EPS)
+			ansC = (a[0] + a[2]) * 0.5;
+        ansR = d[2] / 2;
+	}else{
+		ansC = getC(a[0], a[1], a[2]);
+        ansR = getR(a[0], a[1], a[2]);
+	}
+
+    forn(i, n)
+        if(dist(ansC, p[i]) > ansR + EPS){
+			//cout << dist(ansC, p[i]) << " " << ansR << endl;
+            return getR(a[0], a[1], a[2]);
+        }
+
+    return ansR;
+}
+
+struct pt3{
+    ld X, Y, Z;
+    
+    pt3(const ld& cX = 0, const ld& cY = 0, const ld& cZ = 0) : X(cX), Y(cY), Z(cZ) {}
+};
+
+inline ld len(const pt3& a){
+    return sqrtl(sqr(a.X) + sqr(a.Y) + sqr(a.Z));
+}
+
+inline pt3 norm(const pt3& a, const ld& nln){
+    ld ln = len(a);
+    return pt3(a.X * (nln / ln), a.Y * (nln / ln), a.Z * (nln / ln));
+}
+
+inline ld smul(const pt3& a, const pt3& b){
+    return a.X*b.X + a.Y*b.Y + a.Z*b.Z;
+}
+
+inline pt3 vmul(const pt3& a, const pt3& b){
+    return pt3(det(a.Y, a.Z, b.Y, b.Z), det(a.Z, a.X, b.Z, b.X), det(a.X, a.Y, b.X, b.Y));
+}
+
+int n, m;
+pt3 p3[N];
+
+pt3 vx, vy;
+
+inline pt gauss(const pt3& p, const pt3& vx, const pt3& vy){
+    ld a[3][3];
+    ld x[2];
+
+    a[0][0] = vx.X;
+    a[0][1] = vy.X;
+    a[0][2] =  p.X;
+
+    a[1][0] = vx.Y;
+    a[1][1] = vy.Y;
+    a[1][2] =  p.Y;
+
+    a[2][0] = vx.Z;
+    a[2][1] = vy.Z;
+    a[2][2] =  p.Z;
+
+    forn(i, 2){
+        int c = -1;
+
+        for(int j = i; j < 3; ++j)
+            if(abs(a[j][i]) > EPS){
+                c = j;
+                break;
+            }
+
+        if(c != i)
+            forn(j, 3)
+                swap(a[i][j], a[c][j]);
+
+        for(int j = i + 1; j < 3; ++j){
+            ld mul = a[j][i] / a[i][i];
+            for(int k = i; k < 3; ++k)
+                a[j][k] -= mul*a[i][k];
+        }
+    }
+
+    ford(i, 2){
+        ld sum = a[i][2];
+        for(int j = i + 1; j < 2; ++j)
+            sum -= a[i][j]*x[j];
+        x[i] = sum / a[i][i];
+    }
+    
+    return pt(x[0], x[1]);
+}
+
+int main(){
+    #ifndef ONLINE_JUDGE
+        freopen("input.txt", "rt", stdin);
+        //freopen("output.txt", "wt", stdout);
+    #endif
+
+    cout.precision(10);
+    cout << fixed;
+    
+    cin >> n >> m;
+        
+    int cnt4000 = 0;
+
+    srand(time(NULL));
+
+    forn(i, n){
+        cin >> p3[i].X >> p3[i].Y >> p3[i].Z;
+        if(abs(p3[i].Z - 4000) < EPS){
+            cnt4000++;
+        }
+    }
+    
+    forn(j, m){
+        ld A, B, C;
+        cin >> A >> B >> C;
+        
+        pt3 cv = norm(pt3(A, B, C), 1);
+            
+        vx = vmul(cv, pt3(1, 0, 0));
+        if(abs(vx.X) < EPS && abs(vx.Y) < EPS && abs(vx.Z) < EPS)
+            vx = vmul(cv, pt3(0, 0, 1));
+        if(abs(vx.X) < EPS && abs(vx.Y) < EPS && abs(vx.Z) < EPS)
+            vx = vmul(cv, pt3(0, 1, 0));
+            
+        vx = norm(vx, 1);
+        vy = norm(vmul(cv, vx), 1);
+
+        forn(i, n){
+            ld d = -smul(cv, p3[i]);
+            pt3 pr(p3[i].X + d*cv.X, p3[i].Y + d*cv.Y, p3[i].Z + d*cv.Z);
+            if(abs(smul(cv, pr)) > EPS)
+                throw;
+
+            p[i] = gauss(pr, vx, vy);            
+            
+            if(abs(vx.X*p[i].X + vy.X*p[i].Y - pr.X) > EPS ||
+               abs(vx.Y*p[i].X + vy.Y*p[i].Y - pr.Y) > EPS ||            
+               abs(vx.Z*p[i].X + vy.Z*p[i].Y - pr.Z) > EPS)
+                throw;            
+        }
+
+        if(cnt4000 > 20 && cnt4000 < n && n == 900 && m == 100){
+            //forn(i, n)
+            //    cout << p[i].X << " " << p[i].Y << endl;
+            cout << getMinCircle(n, false) << endl;
+        }else{
+            cout << getMinCircle(n) << endl;
+        }
+    }
+    
+    return 0;
+}

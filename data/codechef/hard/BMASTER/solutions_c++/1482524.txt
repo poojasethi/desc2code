@@ -1,0 +1,213 @@
+#include <cstdio>
+
+typedef long long LL;
+
+int N,M,Q;
+int Sx,Sy;
+int p[6][2];
+int NM; // the product N * M
+
+void read() {
+	scanf("%d %d %d %d %d", &N, &M, &Q, &Sx, &Sy);
+	--Sx; --Sy;
+	for (int k = 0; k < 6; ++k)	{
+		scanf("%d %d", &p[k][0], &p[k][1]);
+	}
+	NM = N * M;
+}
+
+//U=0, D=1, L=2, R=3
+int dx[4] = {-1, 1, 0, 0}; // dx[h] is the change of the row index by h-th direction
+int dy[4] = {0, 0, -1, 1}; // dy[h] is the change of the column index by h-th direction
+
+// dir[0] is P1, dir[1] is P2 from the problem statement
+int dir[6][2] = {
+	{0, 1},
+	{2, 3},
+	{0, 3},
+	{3, 1},
+	{1, 2},
+	{2, 0}
+};
+
+const int maxNM = 34;
+// move[M * i + j][k] the bit-mask of cells where images appear
+// from the cell (i, j) if F(i, j) mod 6 = k
+LL move[maxNM][6];
+const int H = maxNM / 2;
+const int HALF = (1 << H) - 1;
+int bitcnt[1 << H]; // bitcnt[x] is the number of ones in binary in x
+LL cross[maxNM]; // cross[M * i + j] is the bit-mask of cells in the cross of the cell (i,j)
+int r6[maxNM]; // residues modulo 6, it speeds up the program a bit
+
+void precalc()
+{
+	// residues modulo 6 precalc
+	for (int i = 0; i < M + N; ++i) {
+		r6[i] = i % 6;
+	}
+
+	// precalc of 'move[M * i + j][k]'
+	for (int i = 0; i < N; ++i) {
+		for (int j = 0; j < M; ++j) {
+			for (int k = 0; k < 6; ++k) {
+				// the variable where bit-mask of cells with images will be stored
+				LL grid = 1LL << (M * i + j); // initialize by the cell (i, j)
+				// h=0 <-> (D1,P1); h=1 <-> (D2,P2)
+				for (int h = 0; h < 2; ++h) {
+					int x = i, y = j;
+					while (true) {
+						x += dx[dir[k][h]] * p[k][h];
+						y += dy[dir[k][h]] * p[k][h];
+						if (!(0 <= x && x < N && 0 <= y && y < M)) {
+							break;
+						}
+						grid |= 1LL << (M * x + y);
+					}
+				}
+				move[M * i + j][k] = grid;
+			}
+		}
+	}
+
+	// bitcnt precalc
+	bitcnt[0] = 0;
+	for (int i = 1; i < (1 << H); ++i) {
+		bitcnt[i] = bitcnt[i / 2] + i % 2;
+	}
+
+	// cross precalc
+	for (int i = 0; i < N; ++i) {
+		for (int j = 0; j < M; ++j) {
+			int u = M * i + j;
+			cross[u] = 0;
+
+			// add all cells in the same column
+			for (int k = 0; k < N; ++k) {
+				cross[u] |= 1LL << (M * k + j);
+			}
+
+			// add all cells in the same row
+			for (int k = 0; k < M; ++k) {
+				cross[u] |= 1LL << (M * i + k);
+			}
+		}
+	}
+}
+
+// return the number of ones in numbers up to 2^34
+// as a sum of bitcnt for lower and higher groups of bits
+int BITCNT(LL grid) {
+	return bitcnt[grid & HALF] + bitcnt[grid >> H & HALF];
+}
+
+const int PER = 350000; // some upper bound on the index of the first repetition
+const int SIZE = 700001; // the next prime after 2 * PER
+LL grid; // the grid of the current move
+int len; // the index of the current move
+LL grids[PER]; // grids[i] is the grid at the i-th move
+int ind[SIZE]; // contains indexes of the grids in some tricky way
+int sum[PER]; // sum[n] = CNT(G0) + ... + CNT(Gn) from the editorial
+
+
+void init() {
+	// -1 denotes the empty slot 
+	for (int i = 0; i < SIZE; ++i) {
+		ind[i] = -1;
+	}
+	// initial grid composed of just one cell
+	grid = 1LL << (M * Sx + Sy);
+
+	ind[grid % SIZE] = 0;
+	grids[0] = grid;
+	sum[0] = 1;
+	len = 1;
+}
+
+int main() {
+/*#ifndef ONLINE_JUDGE
+	freopen("in.txt","r",stdin);
+	freopen("1.in","r",stdin);
+	freopen("1_my.out","w",stdout);
+#endif*/
+	read();
+	precalc();
+	init();
+
+	int q = 0, p = 0;
+	while (p == 0) {
+
+		LL new_grid=0;
+		for (int u = 0; u < NM; ++u) {
+			// check whether 'grid' have cell 'u'
+			if (grid & 1LL << u) {
+				// bit-mask magic:
+				// 'grid & cross[u]' is the bit-mask of cells with images in the grid
+				// in the cross of the cell 'u'
+				// 'BITNCT()' counts the number of these images
+				// 'r6[]' takes the residue modulo 6
+				// 'move[u][]' is the bit-mask of the images that appear from the cell 'u'
+				// ^= performs one on one fight
+				new_grid ^= move[u][BITCNT(grid & cross[u])%6];
+			}
+		}
+		grid = new_grid;
+
+		// update 'grids' and 'sum' by the new grid
+		grids[len] = grid;
+		sum[len] = sum[len - 1] + BITCNT(grid);
+
+		// 'pos' is the position in 'ind' where we try to put 'grid'
+		int pos = grid % SIZE;
+		for(;;)
+		{
+			// if this position is free we assign 'ind[pos] = len'
+			// which means that the grid of the 'len'-th move
+			// is stored at 'pos'-th slot of 'ind'
+			if (ind[pos] < 0) {
+				ind[pos] = len;
+				++len;
+				break;
+			} else {
+				// if this position is already occupied by exactly this grid
+				// then we met a repetition in the sequence of moves;
+				// we calculate p and q and stop performing the moves
+				if (grids[ind[pos]] == grid) {
+					q = ind[pos];
+					p = len;
+					break;
+				} else {
+					// otherwise it is a bad luck - we should seek for another position
+					// but due to randomness of moves and the fact that SIZE is prime
+					// this happens very rarely - no more then 'len' times for the first 'len' moves
+					// that is why this approach is very fast
+					++pos;
+					// we consider 'ind' as a cyclic array, so if we reach the end
+					// we jump to the start
+					if (pos == SIZE) {
+						pos = 0;
+					}
+				}
+			}
+		}
+	}
+
+	int w = p - q; // period
+	LL period_sum = sum[p] - sum[q];
+	for (int i = 0; i < Q; ++i) {
+		LL T;
+		scanf("%lld", &T);
+
+		// all this made exactly as in editorial
+		LL ans;
+		if (T <= p) {
+			ans=sum[T]; 
+		} else {
+			LL L = (T - q) / w;
+			int r = T - L * w;
+			ans = sum[r] + L * period_sum;
+		}
+		printf("%lld\n", ans);
+	}
+	return 0;
+}

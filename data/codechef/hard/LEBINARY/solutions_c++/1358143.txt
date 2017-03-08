@@ -1,0 +1,95 @@
+#include <iostream>
+#include <cstring>
+#include <cstdlib>
+#include <cassert>
+
+using namespace std;
+
+static const int SZ = (1<<16);
+static const int DI = (1<<10);
+char *a[SZ];
+int k;
+
+char *get_mem() {
+    return (char *) calloc(DI, sizeof(char));
+}
+
+#define FOR(i,n) for(int i=0;i<(n);i++)
+
+void pre_calc() {
+    a[2] = get_mem(); a[2][0] = 2;
+    a[3] = get_mem(); a[3][0] = 2;
+    int n = 1, r = 1;
+    int nd = 0;
+    k = 3;
+    for(int it = 4; it < SZ && nd <= 1000; it++) {
+        k++;
+        n++;
+        a[it] = get_mem();
+        
+        int ca = 0;
+        FOR(i,DI) {
+            int v = a[it-1][i];
+            v *= n;
+            v += ca;
+            a[it][i] = (v%10);
+            ca = v / 10;
+        }
+        
+        int di;
+        if(it%2) di = ++r;
+        else di = n-r;
+        
+        int rc = 0;
+        for(int i=DI-1;i>=0;i--) {
+            rc *= 10;
+            rc += a[it][i];
+            a[it][i] = (rc/di);
+            rc %= di;
+        }
+        assert(rc == 0);
+        
+        FOR(i,DI) if(a[it][i]) nd = i;
+    }
+    assert(k < SZ);
+}
+
+void clean_up() {
+    FOR(i,SZ) {
+        free(a[i]);
+        a[i] = NULL;
+    }
+}
+
+char buf[1024];
+char c[1024];
+int main() {
+    pre_calc();
+    int T;
+    cin >> T;
+    while(T--) {
+        cin >> buf;
+        int len = strlen(buf);
+        memset(c,0,sizeof(c));
+        FOR(i,len) c[i] = buf[len-i-1]-'0';
+        int lo = 2, hi = k;
+        while(lo < hi) {
+            int mid = (lo+hi)/2;
+            
+            bool f = true;
+            for(int i=DI-1;i>=0 && f;i--)
+                if(c[i] > a[mid][i]) f = false;
+                else if(c[i] < a[mid][i]) break;
+            
+            if(f) hi = mid;
+            else lo = mid+1;
+        }
+        
+        bool f = true;
+        FOR(i,DI) f = (f && (c[i] == a[lo][i]));
+        
+        cout << (f?"YES":"NO") << endl;
+    }
+    clean_up();
+    return 0;
+}

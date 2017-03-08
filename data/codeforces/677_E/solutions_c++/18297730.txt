@@ -1,0 +1,152 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define MAXN 1005
+int n;
+int a[MAXN][MAXN];
+const double log_10_2=0.6931471805599453;
+const double log_10_3=1.0986122886681098;
+struct Data
+{
+	int a,b,c;
+	Data(int _a=0,int _b=0,int _c=0):a(_a),b(_b),c(_c){}
+	friend Data operator-(const Data &a,const Data &b)
+		{return Data(a.a-b.a,a.b-b.b,a.c-b.c);}
+	friend Data operator*(const Data &a,const Data &b)
+		{return Data(a.a+b.a,a.b+b.b,a.c+b.c);}
+	friend bool operator>(const Data &a,const Data &b)
+	{
+		if(a.a) return 0;
+		if(b.a) return 1;
+		int cnt2=a.b-b.b;
+		int cnt3=a.c-b.c;
+		if(cnt2>=0)
+		{
+			if(cnt3>=0) return 1;
+			else
+			{
+				if(log_10_2*cnt2>-log_10_3*cnt3) return 1;
+				else return 0;
+			}
+		}
+		else
+		{
+			if(cnt3>=0)
+			{
+				if(log_10_3*cnt3>-log_10_2*cnt2) return 1;
+				else return 0;
+			}
+			else return 0;
+		}
+	}
+}cnt[4][MAXN][MAXN];
+int len[8][MAXN][MAXN];
+#define MOD 1000000007
+int Power(int x,int y)
+{
+	int re=1;
+	while(y)
+	{
+		if(y&1) re=1ll*re*x%MOD;
+		x=1ll*x*x%MOD;y>>=1;
+	}
+	return re;
+}
+int main()
+{
+	scanf("%d",&n);
+	for(int i=1;i<=n;i++)
+		for(int j=1;j<=n;j++)
+			scanf("%1d",&a[i][j]);
+	for(int i=1;i<=n;i++)
+		for(int j=1;j<=n;j++)
+		{
+			cnt[0][i][j]=cnt[0][i][j-1];
+			cnt[1][i][j]=cnt[1][i-1][j];
+			cnt[2][i][j]=cnt[2][i-1][j-1];
+			cnt[3][i][j]=cnt[3][i-1][j+1];
+			if(i!=1&&a[i][j])
+			{
+				len[0][i][j]=len[0][i-1][j]+1;
+				len[4][i][j]=len[4][i-1][j]-1;
+			}
+			else
+			{
+				len[0][i][j]=a[i][j]!=0;
+				len[4][i][j]=2;while(i+len[4][i][j]<=n&&a[i+len[4][i][j]][j])len[4][i][j]++;
+			}
+			if(j!=1&&a[i][j])
+			{
+				len[2][i][j]=len[2][i][j-1]-1;
+				len[6][i][j]=len[6][i][j-1]+1;
+			}
+			else
+			{
+				len[2][i][j]=2;while(j+len[2][i][j]<=n&&a[i][j+len[2][i][j]])len[2][i][j]++;
+				len[6][i][j]=a[i][j]!=0;
+			}
+			if(i!=1&&j!=1&&a[i][j])
+			{
+				len[3][i][j]=len[3][i-1][j-1]-1;
+				len[7][i][j]=len[7][i-1][j-1]+1;
+			}
+			else
+			{
+				len[3][i][j]=2;while(i+len[3][i][j]<=n&&j+len[3][i][j]<=n&&a[i+len[3][i][j]][j+len[3][i][j]])len[3][i][j]++;
+				len[7][i][j]=a[i][j]!=0;
+			}
+			if(i!=1&&j!=n&&a[i][j])
+			{
+				len[1][i][j]=len[1][i-1][j+1]+1;
+				len[5][i][j]=len[5][i-1][j+1]-1;
+			}
+			else
+			{
+				len[1][i][j]=a[i][j]!=0;
+				len[5][i][j]=2;while(i+len[5][i][j]<=n&&j-len[5][i][j]+1>1&&a[i+len[5][i][j]][j-len[5][i][j]])len[5][i][j]++;
+			}
+			if(a[i][j]==0)
+			{
+				cnt[0][i][j].a++;
+				cnt[1][i][j].a++;
+				cnt[2][i][j].a++;
+				cnt[3][i][j].a++;
+			}
+			else if(a[i][j]==2)
+			{
+				cnt[0][i][j].b++;
+				cnt[1][i][j].b++;
+				cnt[2][i][j].b++;
+				cnt[3][i][j].b++;
+			}
+			else if(a[i][j]==3)
+			{
+				cnt[0][i][j].c++;
+				cnt[1][i][j].c++;
+				cnt[2][i][j].c++;
+				cnt[3][i][j].c++;
+			}
+		}
+	Data ans=Data(1,0,0);
+	for(int i=1;i<=n;i++)
+		for(int j=1;j<=n;j++)
+		{
+			if(i==4&&j==6)
+				i=4;
+			Data tmp;
+			int d;
+			d=min(min(len[0][i][j],len[2][i][j]),min(len[4][i][j],len[6][i][j]));
+			tmp=(cnt[0][i][j+d-1]-cnt[0][i][j-d])*(cnt[1][i+d-1][j]-cnt[1][i-d][j]);
+			if(a[i][j]==0) tmp.a--;
+			else if(a[i][j]==2) tmp.b--;
+			else if(a[i][j]==3) tmp.c--;
+			if(tmp>ans) ans=tmp;
+			d=min(min(len[1][i][j],len[3][i][j]),min(len[5][i][j],len[7][i][j]));
+			tmp=(cnt[2][i+d-1][j+d-1]-cnt[2][i-d][j-d])*(cnt[3][i+d-1][j-d+1]-cnt[3][i-d][j+d]);
+			if(a[i][j]==0) tmp.a--;
+			else if(a[i][j]==2) tmp.b--;
+			else if(a[i][j]==3) tmp.c--;
+			if(tmp>ans) ans=tmp;
+		}
+	printf("%I64d",ans.a?0:1ll*Power(2,ans.b)*Power(3,ans.c)%MOD);
+	return 0;
+}

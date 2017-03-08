@@ -1,0 +1,80 @@
+#include <iostream>
+#include <string>
+#include <cstdio>
+#include <cstring>
+#include <queue>
+#include <stack>
+#include <map>
+#include <set>
+#include <cmath>
+#include <sstream>
+#include <algorithm>
+#include <numeric>
+using namespace std;
+const int INF=0x3f3f3f3f;
+template<typename X> inline bool minimize(X&p,X q){if(p<=q)return 0;p=q;return 1;}
+int val[205],dp[205][1<<7],S[205],inq[205],dir[4][2]={-1,0,1,0,0,1,0,-1};
+vector< pair<int,int> > pre[205][1<<7];
+char Ans[205];
+void dfs(int u,int s){
+    Ans[u]='X';
+    for(int i=pre[u][s].size()-1;~i;--i)
+        dfs(pre[u][s][i].first,pre[u][s][i].second);
+}
+int main()
+{
+    int N,M,K,Z,MaxS;
+    memset(dp,0x3f,sizeof(dp));
+    scanf("%d%d%d",&N,&M,&K);
+    Z=N*M;MaxS=1<<K;
+    for(int i=0;i<Z;++i)
+        scanf("%d",val+i);
+    for(int i=0,x,y;i<K;++i){
+        scanf("%d%d",&x,&y);
+        --x;--y;
+        S[x*M+y]=1<<i;
+    }
+    fill_n(Ans,Z,'.');
+    for(int i=0;i<Z;++i)
+        dp[i][S[i]]=0;
+    for(int s=1;s<MaxS;++s){
+        queue<int> Q;
+        fill_n(inq,Z,0);
+        for(int u=0;u<Z;++u){
+            for(int i=s&s-1;i>(s^i);i=i-1&s)
+            if(minimize(dp[u][s],dp[u][i|S[u]]+dp[u][(s^i)|S[u]])){
+                pre[u][s].clear();
+                pre[u][s].push_back(make_pair(u,i|S[u]));
+                pre[u][s].push_back(make_pair(u,(s^i)|S[u]));
+            }
+            if(dp[u][s]!=INF)Q.push(u),inq[u]=true;
+        }
+        while(!Q.empty()){
+            int u=Q.front();Q.pop();inq[u]=false;
+            int x=u/M,y=u%M;
+            for(int i=0;i<4;++i){
+                int nx=x+dir[i][0],ny=y+dir[i][1];
+                if(nx<0||ny<0||nx>=N||ny>=M)continue;
+                int v=nx*M+ny,ns=s|S[v];
+                if(minimize(dp[v][ns],dp[u][s]+val[u])){
+                    pre[v][ns].clear();
+                    pre[v][ns].push_back(make_pair(u,s));
+                    if(s==ns&&!inq[v]){
+                        Q.push(v);inq[v]=true;
+                    }
+                }
+            }
+        }
+    }
+    int au=0,Min=dp[0][MaxS-1]+val[0];
+    for(int i=1;i<Z;++i)
+        if(minimize(Min,dp[i][MaxS-1]+val[i]))au=i;
+    dfs(au,MaxS-1);
+    printf("%d\n",Min);
+    for(int i=0;i<N;++i){
+        for(int j=0;j<M;++j)
+            printf("%c",Ans[i*M+j]);
+        putchar('\n');
+    }
+    return 0;
+}

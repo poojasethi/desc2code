@@ -1,0 +1,107 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+#include <iostream>
+#include <queue>
+#include <vector>
+#define foreach(x, E) for (__typeof(E.begin()) x = E.begin(); x != E.end(); x++)
+using namespace std;
+int n;
+struct Tnode{
+	int ch[26], fail;
+} a[1000011];
+int root, tot;
+struct Tbit{
+	int data[3000001];
+	void add(int a, int b)
+	{
+		for (; a <= 2 * tot; a += (a & (-a))) data[a] += b;
+	}
+	int getsum(int a)
+	{
+		int ret = 0;
+		for (; a; a -= (a & (-a))) ret += data[a];
+		return ret;
+	}
+} bit;
+int ins(char *S)
+{
+	int now = 1;
+	for (; *S; S++){
+		if (a[now].ch[*S - 'a'] == 0) a[now].ch[*S - 'a'] = ++tot;
+		now = a[now].ch[*S - 'a'];
+	}
+	return now;
+}
+queue<int> Q;
+void build_ac()
+{
+	Q.push(1);
+	while(!Q.empty()){
+		int x = Q.front(); Q.pop();
+		for (int i = 0; i < 26; i++){
+			int t = a[x].ch[i];
+			a[t].fail = x == 1 ? 1 : a[a[x].fail].ch[i];
+			if (t == 0) a[x].ch[i] = a[t].fail;
+			else Q.push(t);
+		}
+	}
+}
+int DFSX, op[3000001], ed[3000001];
+int etot, e[3000001], next[3000001], v[3000001];
+void add(int a, int b)
+{
+	++etot; next[etot] = e[a]; e[a] = etot; v[etot] = b;
+}
+void dfs(int x)
+{
+	++DFSX; op[x] = DFSX;
+	for (int i = e[x]; i; i = next[i]) dfs(v[i]);
+	++DFSX; ed[x] = DFSX;
+}
+char buf[3000001], s[3000001];
+int end[3000001];
+bool del[3000001];
+int main()
+{
+	root = tot = 1; int Q;
+	scanf("%d%d", &Q, &n); getchar();
+	for (int i = 1; i <= n; i++){
+		gets(s); end[i] = ins(s);
+	}
+	build_ac();
+	for (int i = 2; i <= tot; i++) add(a[i].fail, i);
+	dfs(1);
+	for (int i = 1; i <= n; i++){
+		bit.add(op[end[i]], 1); bit.add(ed[end[i]], -1);
+	}
+	while(Q--){
+		char c; while((c = getchar()) == '\n');
+		switch(c){
+			case '+':{
+						 int w; scanf("%d", &w);
+						 if (!del[w]) break; del[w] = false;
+						 bit.add(op[end[w]], 1); bit.add(ed[end[w]], -1);
+						 break;
+					 }
+			case '-':{
+						 int w; scanf("%d", &w);
+						 if (del[w]) break; del[w] = true;
+						 bit.add(op[end[w]], -1); bit.add(ed[end[w]], 1);
+						 break;
+					 }
+			case '?':{
+						 scanf("%s", buf);
+						 int now = 1; long long ans = 0;
+						 for (char *s = buf; *s; s++){
+							now = a[now].ch[*s - 'a'];
+							ans += bit.getsum(op[now]);
+						 }
+						 printf("%I64d\n", ans);
+						 break;
+					 }
+		}
+	}
+						 
+}

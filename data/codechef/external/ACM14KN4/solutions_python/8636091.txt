@@ -1,0 +1,113 @@
+#include<bits/stdc++.h>
+using namespace std;
+long long arr[100010];
+struct segTree
+{
+    long long S, M, I, D, left, right;
+}st[400010];
+
+void change(long long p)
+{
+    st[p].S = st[2*p].S + st[2*p+1].S;
+    st[p].M = max(st[2*p].M, st[2*p+1].M);
+    st[p].left = st[2*p].left;
+    st[p].right = st[2*p+1].right;
+    if(st[2*p].I == 1 && st[2*p+1].I == 1 && st[2*p].right <= st[2*p+1].left)
+        st[p].I = 1;
+    else
+        st[p].I = 0;
+    if(st[2*p].D == 1 && st[2*p+1].D == 1 && st[2*p].right >= st[2*p+1].left)
+        st[p].D = 1;
+    else
+        st[p].D = 0;
+}
+long long query(char o, long long p)
+{
+    if(o == 'M')
+        return st[p].M;
+    else if(o == 'S')
+        return st[p].S;
+    else if(o == 'I')
+        return st[p].I;
+    else
+        return st[p].D;
+}
+
+void init(long long p, long long l, long long r)
+{
+    if(l == r)
+    {
+        st[p].S = st[p].M = st[p].left = st[p].right = arr[l];
+        st[p].I = st[p].D = 1;
+        return;
+    }
+    long long m = (l+r)/2;
+    init(2*p, l, m);
+    init(2*p+1, m+1, r);
+    change(p);
+}
+
+void update(long long idx, long long val, long long p, long long l, long long r)
+{
+    if(l > idx || r < idx)
+        return;
+    if(l == idx && r == idx)
+    {
+        arr[l] = st[p].S = st[p].M = st[p].left = st[p].right = val;
+        st[p].I = st[p].D = 1;
+        return;
+    }
+    long long m = (l+r)/2;
+    update(idx, val, 2*p, l, m);
+    update(idx, val, 2*p+1, m+1, r);
+    change(p);
+}
+long long rmq(char o, long long x, long long y, long long p, long long l, long long r)
+{
+    if(l > y || r < x)
+        return -1;
+    if(l >= x && r <= y)
+        return query(o, p);
+    long long m = (l+r)/2;
+    long long lq = rmq(o, x, y, 2*p, l, m);
+    long long rq = rmq(o, x, y, 2*p+1, m+1, r);
+    if(lq == -1)
+        return rq;
+    if(rq == -1)
+        return lq;
+    if(o == 'M')
+        return max(lq, rq);
+    else if(o == 'S')
+        return lq+rq;
+    else if(o == 'I')
+    {
+        if(lq == 1 && rq == 1 && st[2*p].right > st[2*p+1].left)
+            lq = rq = 0;
+        return lq*rq;
+    }
+    else if(o == 'D')
+    {
+        if(lq == 1 && rq == 1 && st[2*p].right < st[2*p+1].left)
+            lq = rq = 0;
+        return lq*rq;
+    }
+}
+
+int main()
+{
+    long long n, m, x, y;
+    char o;
+    cin >> n >> m;
+    for(long long i = 0; i < n; i++)
+        cin >> arr[i];
+    init(1, 0, n-1);
+    while(m--)
+    {
+        cin >> o >> x >> y;
+        if(o == 'U')
+            update(x-1, y, 1, 0, n-1);
+        else
+            cout << rmq(o, x-1, y-1, 1, 0, n-1) << endl;
+    }
+    return 0;
+}

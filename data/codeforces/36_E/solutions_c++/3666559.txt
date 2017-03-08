@@ -1,0 +1,167 @@
+#include <cstdio>
+#include <list>
+#include <vector>
+#include <stack>
+using namespace std;
+#define N 10001
+
+int m, out[N], vis[N], pos[N];
+vector<int> adj[N], num[N], verts;
+vector<list<int> > paths;
+int vet[2];
+
+void printList(list<int>& l)
+{
+	printf("%d\n", l.size());
+	for (typeof(l.begin()) it = l.begin(); it != l.end(); ++it)
+		printf("%d ", *it);
+	printf("\n");
+}
+
+void dfs1(int p)
+{
+	vis[p] = 1;
+	vet[adj[p].size()&1]++;
+	verts.push_back(p);
+	for (int i = 0; i < adj[p].size(); ++i) if (!vis[adj[p][i]])
+		dfs1(adj[p][i]);
+}
+
+void build(int p, list<int>& l)
+{
+	stack<int> sta, aux;
+	sta.push(p);
+	while (!sta.empty())
+	{
+		p = sta.top();
+		int& u = pos[p];
+		while (u < adj[p].size() && out[num[p][u]])
+			++u;
+		if (u != adj[p].size())
+		{
+			sta.push(adj[p][u]);
+			out[num[p][u]] = 1;
+			aux.push(num[p][u]);
+		}
+		else
+		{
+			sta.pop();
+			if (!aux.empty()) l.push_back(aux.top());
+			aux.pop();
+		}
+	}
+	//printList(l);
+}
+
+void solve1()
+{
+	for (int i = 0; i < verts.size(); ++i)
+	{
+		int v = verts[i];
+		if (vet[1] == 0 || (adj[v].size()&1))
+		{
+			list<int> l;
+			build(v, l);
+			//printList(l);
+			paths.push_back(l);
+			break;
+		}
+	}
+}
+
+void solve2()
+{
+	int a = -1, b = -1;
+	for (int i = 0; i < verts.size() && b == -1; ++i)
+	{
+		int v = verts[i];
+		if (adj[v].size()&1)
+		{
+			if (a == -1) a = v;
+			else b = v;
+		}
+	}
+	adj[a].push_back(b);
+	adj[b].push_back(a);
+	num[a].push_back(0);
+	num[b].push_back(0);
+	solve1();
+	list<int> l1 = paths[0], l2, l3;
+	paths.clear();
+	//printList(l1);
+	for (typeof(l1.begin()) it = l1.begin(); it != l1.end(); ++it)
+	{
+		if (*it == 0) 
+		{
+			l2.insert(l2.end(), l1.begin(), it);
+			l3.insert(l3.end(), ++it, l1.end());
+			break;
+		}
+	}
+	paths.push_back(l2);
+	paths.push_back(l3);
+}
+
+void fix()
+{
+	list<int> l1, l2;
+	typeof(paths[0].begin()) it = paths[0].begin();
+	l1.push_back(*it);
+	l2.insert(l2.end(), ++it, paths[0].end());
+	paths.clear();
+	paths.push_back(l1); paths.push_back(l2);
+}
+
+void print()
+{
+	if (paths.size() == 1) fix();
+	if (paths.empty() || paths.size() != 2 || paths[0].empty() || paths[1].empty())
+	{
+		printf("-1\n");
+		return;
+	}
+	printList(paths[0]);
+	printList(paths[1]);
+}
+
+int main()
+{
+	freopen("input.txt", "r", stdin);
+	freopen("output.txt", "w", stdout);
+	scanf("%d", &m);
+	if (m < 2)
+	{
+		printf("-1\n");
+		return 0;
+	}
+	for (int i = 1; i <= m; ++i)
+	{
+		int a, b;
+		scanf("%d%d", &a, &b);
+		adj[a].push_back(b);
+		adj[b].push_back(a);
+		num[a].push_back(i);
+		num[b].push_back(i);
+	}
+	
+	int c = 0;
+	for (int i = 1; i < N; ++i)
+	{
+		if (vis[i] || !adj[i].size()) continue;
+		++c;
+		verts.clear();
+		vet[0] = vet[1] = 0;
+		dfs1(i);
+		if (vet[1] <= 2) solve1();
+		else if (vet[1] == 4) solve2();
+		else
+		{
+			paths.clear();
+			break;
+		}
+	}
+	
+	print();
+}
+
+

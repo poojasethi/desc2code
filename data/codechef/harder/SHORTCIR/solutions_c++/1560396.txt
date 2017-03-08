@@ -1,0 +1,164 @@
+#include <algorithm>
+#include <cstdio>
+#include <iostream>
+#include <map>
+#include <string>
+#include <vector>
+using namespace std;
+ 
+enum {VAR, NEGVAR, CONJ, DISJ};
+ 
+struct Node {
+  char var[8];
+  int type;
+  Node* lc, * rc;
+};
+ 
+char e[50001];
+map<string, double> vprob;
+ 
+Node* parse_term(int& i, bool neg);
+Node* parse_fact(int& i, bool neg);
+ 
+Node* parse_expr(int& i, bool neg) {
+  Node* nd1 = parse_term(i, neg);
+  while (isspace(e[i])) i++;
+  if (!e[i]) return nd1;
+  if (e[i] != 'o' || e[i+1] != 'r' || isalpha(e[i+2]))
+    return nd1;
+  i += 2;
+  Node* nd2 = parse_expr(i, neg);
+  Node* nd = new Node;
+  nd->type = (neg ? DISJ : CONJ);
+  nd->lc = nd1; nd->rc = nd2;
+  return nd;
+}
+ 
+Node* parse_term(int& i, bool neg) {
+  Node* nd1 = parse_fact(i, neg);
+  while (isspace(e[i])) i++;
+  if (!e[i]) return nd1;
+  if (e[i] != 'a' || e[i+1] != 'n' || e[i+2] != 'd' || isalpha(e[i+3]))
+    return nd1;
+  i += 3;
+  Node* nd2 = parse_term(i, neg);
+  Node* nd = new Node;
+  nd->type = (neg ? CONJ : DISJ);
+  nd->lc = nd1; nd->rc = nd2;
+  return nd;
+}
+ 
+Node* parse_fact(int& i, bool neg) {
+  while (isspace(e[i])) i++;
+ 
+  if (e[i] == 'n' && e[i+1] == 'o' && e[i+2] == 't' && !isalpha(e[i+3])) {
+    i += 3;
+    return parse_fact(i, !neg);
+  }
+ 
+  if (e[i] == '(') {
+    i++;
+    Node* nd = parse_expr(i, neg);
+    if (e[i] == ')') i++;
+    return nd;
+  }
+ 
+  Node* nd = new Node;
+  nd->type = (neg ? NEGVAR : VAR);
+  int j;
+  for (j = 0; isalpha(e[i]); j++)
+    nd->var[j] = e[i++];
+  nd->var[j] = 0;
+  vprob[nd->var] = 0;
+  return nd;
+}
+ 
+void destroy_node(Node* nd) {
+  if (nd->type == CONJ || nd->type == DISJ) {
+    destroy_node(nd->lc);
+    destroy_node(nd->rc);
+  }
+  delete nd;
+}
+ 
+void print_node(Node* nd) {
+  if (nd->type == CONJ || nd->type == DISJ) {
+    putchar('(');
+    print_node(nd->lc);
+    putchar(nd->type == CONJ ? '|' : '&');
+    print_node(nd->rc);
+    putchar(')');
+  } else {
+    if (nd->type == NEGVAR) putchar('!');
+    printf("%s", nd->var);
+  }
+}
+ 
+bool conjcmp(const pair<double, double>& a, const pair<double, double>& b) {
+  return a.first / a.second < b.first / b.second;
+}
+ 
+bool disjcmp(const pair<double, double>& a, const pair<double, double>& b) {
+  return a.first / (1.0-a.second) < b.first / (1.0-b.second);
+}
+ 
+pair<double, double> calc(Node* nd);
+void gather(Node* nd, vector<pair<double, double> >& v, int type) {
+  if (nd->type != type) {
+    v.push_back(calc(nd));
+  } else {
+    gather(nd->lc, v, type);
+    gather(nd->rc, v, type);
+  }
+}
+ 
+pair<double, double> calc(Node* nd) {
+  if (nd->type == VAR || nd->type == NEGVAR) {
+//printf("%s: c=%.3lf p=%.3lf\n", nd->var, 1.0, nd->type == VAR ? vprob[nd->var] : 1.0 - vprob[nd->var]);
+    return make_pair(1.0, nd->type == VAR ? vprob[nd->var] : 
+                                            1.0 - vprob[nd->var]);
+  }
+  vector<pair<double, double> > v;
+  gather(nd, v, nd->type);
+  pair<double, double> ret(0.0, 1.0);
+  if (nd->type == CONJ) {
+    sort(v.begin(), v.end(), conjcmp);
+    for (int i = v.size()-1; i >= 0; i--) {
+      ret.first *= 1.0-v[i].second;
+      ret.first += v[i].first;
+      ret.second *= 1.0-v[i].second;
+    }
+    ret.second = 1.0-ret.second;
+  } else {
+    sort(v.begin(), v.end(), disjcmp);
+    for (int i = v.size()-1; i >= 0; i--) {
+      ret.first *= v[i].second;
+      ret.first += v[i].first;
+      ret.second *= v[i].second;
+    }
+  }
+//print_node(nd);
+//printf(": c=%.3lf p=%.3lf\n", ret.first, ret.second);
+  return ret;
+}
+ 
+main() {
+  int T;
+  for (scanf("%d", &T); T--;) {
+    scanf(" %[^\n]", e);
+    int i;
+    vprob.clear();
+    Node* nd = parse_expr(i = 0, false);
+    for (i = 0; i < vprob.size(); i++) {
+      char var[10];
+      double prob;
+      scanf(" %s %lf", var, &prob);
+      vprob[var] = prob;
+    }
+//print_node(nd);
+//putchar('\n');
+    printf("%.6lf\n", calc(nd).first);
+//putchar('\n');
+    destroy_node(nd);
+  }
+}

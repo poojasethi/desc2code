@@ -1,0 +1,122 @@
+#include <stdio.h>
+#include <string.h>
+#include <vector>
+#include <algorithm>
+#define INF 0x3f3f3f3f
+#define MAX_COLOR 1000000
+#define pb push_back
+
+using namespace std;
+
+int grid[1005][1005];
+int used[1005][1005];
+int parent[1005][1005][2];
+int d1[1005][1005];
+int d2[1005][1005];
+int cor[MAX_COLOR + 5];
+
+int dx[] = {0, 1, 0, -1};
+int dy[] = {1, 0, -1, 0};
+
+int max_d, idx, idy;
+int cycle;
+
+vector <pair <int, int> > g[1005][1005];
+
+int n, m;
+int r;
+
+void DFS (int x, int y, int color) {
+    int nx, ny;
+
+    used[x][y] = 1;
+    for (int i = 0; i < 4; i++) {
+        nx = x + dx[i];
+        ny = y + dy[i];
+
+        if (nx >= 0 && nx < n && ny >= 0 && ny < m) {
+            if (grid[nx][ny] == color) {
+                if (used[nx][ny] && !(parent[x][y][0] == nx && parent[x][y][1] == ny)) {
+                    r = max(r, cor[color]);
+                    cycle = 1;
+                    break;
+                } else if (!used[nx][ny]) {
+                    used[nx][ny] = 1;
+                    parent[nx][ny][0] = x;
+                    parent[nx][ny][1] = y;
+                    g[x][y].pb(make_pair(nx, ny));
+                    g[nx][ny].pb(make_pair(x, y));
+                    DFS(nx, ny, color);
+                }
+            }
+        }
+    }
+    return;
+}
+
+void DFS2 (int x, int y, int d[1005][1005]) {
+    int nx, ny;
+
+    if (d[x][y] > max_d) {
+        max_d = d[x][y];
+        idx = x;
+        idy = y;
+    }
+
+    for (int i = 0; i < (int)g[x][y].size(); i++) {
+        nx = g[x][y][i].first;
+        ny = g[x][y][i].second;
+
+        if (d[nx][ny] > d[x][y] + 1) {
+            d[nx][ny] = d[x][y] + 1;
+            DFS2(nx, ny, d);
+        }
+    }
+    return;
+}
+
+
+int diameter(int x, int y) {
+    d1[x][y] = 0;
+    max_d = 0;
+    DFS2(x, y, d1);
+    d2[idx][idy] = 0;
+    max_d = 0;
+    DFS2(idx, idy, d2);
+
+    return max_d;
+}
+
+int main(void) {
+    scanf(" %d %d", &n, &m);
+
+    memset(cor, 0, sizeof(cor));
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < m; j++) {
+            scanf(" %d", &grid[i][j]);
+            cor[grid[i][j]]++;
+            used[i][j] = 0;
+            parent[i][j][0] = parent[i][j][1] = -1;
+            g[i][j].clear();
+        }
+    }
+    r = 0;
+    memset(d1, INF, sizeof(d1));
+    memset(d2, INF, sizeof(d2));
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < m; j++) {
+            if (!used[i][j]) {
+                cycle = 0;
+                DFS(i, j, grid[i][j]);
+                if (!cycle) {
+                    r = max(r, 1 + diameter(i, j));
+                    cycle = 0;
+                }
+            }
+        }
+    }
+    printf("%d\n", r);
+
+    return 0;
+}

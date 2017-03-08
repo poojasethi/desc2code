@@ -1,0 +1,119 @@
+#include <iostream>
+#include <algorithm>
+#include <string>
+#include <cstdio>
+#include <set>
+#include <queue>
+#include <map>
+#include <iomanip>
+#include <cstring>
+
+using namespace std;
+
+typedef long long ll;
+typedef pair<int , int> pt;
+
+#define sz(a) ((int) a.size() )
+#define LL(x) (x << 1)
+#define RR(x) ((x << 1) | 1)
+#define For(i , a , b) for (int i = a ; i <= b ; i++)
+#define Ford(i , a , b) for (int i = a ; i >= b ; i--)
+#define Rep(i , n) for (int i = 0 ; i < n ; i++)
+
+const int maxn = 200000 + 1912;
+int n , m;
+
+struct Frog{
+    int x  , id , eat;
+    long long len;
+
+    bool operator < (Frog b) const {
+        return x < b.x;
+    }
+} a[maxn];
+
+void ReadData() {
+    cin >> n >> m;
+    For(i , 1 , n) {
+        cin >> a[i].x >> a[i].len;
+        a[i].id = i;
+    }
+    sort(a + 1 , a + 1 + n);
+}
+
+//-----------------------------------------------------------------------------
+int l[maxn * 4] , h[maxn * 4];
+long long it[maxn * 4]; // max xi + leni tu l->h
+
+void Build(const int x , const int low , const int high) {
+    l[x] = low ; h[x] = high;
+    if (low == high) {
+        it[x] = a[low].x + a[low].len;
+    } else {
+        int mid = (low + high) >> 1;
+        Build(LL(x) , low , mid);
+        Build(RR(x) , mid + 1 , high);
+        it[x] = max(it[LL(x)] , it[RR(x)]);
+    }
+}
+
+void Update(const int x , const int pos , const long long val) {
+    if (l[x] > pos || h[x] < pos) return;
+    if (l[x] == h[x]) {
+        it[x] = max(it[x] , val);
+        return;
+    }
+    Update(LL(x) , pos , val);
+    Update(RR(x) , pos , val);
+    it[x] = max(it[LL(x)] , it[RR(x)]);
+}
+
+int FindPos(const int x , const int val) { // tu l[x] -> h[x] , tim thang nho nhat >= val
+    if (a[l[x]].x > val) return -1;
+    if (it[x] < val) return -1;
+    if (l[x] == h[x]) return h[x];
+    long long tmp = it[LL(x)];
+    if (tmp >= val) return FindPos(LL(x) , val);
+    return FindPos(RR(x) , val);
+}
+//-----------------------------------------------------------------------------
+multiset<pair<int , int> > Mosquito;
+bool CompareID(const Frog a , const Frog b) {
+    return a.id < b.id;
+}
+
+void Process() {
+    Build(1 , 1 , n);
+    while (m--){
+        int pos , Size;
+        cin >> pos >> Size;
+        int id = FindPos(1 , pos);
+        if (id == -1) {
+            Mosquito.insert(make_pair(pos , Size));
+            continue;
+        }
+        a[id].len += Size;
+        Update(1 , id , a[id].x + a[id].len);
+        a[id].eat++;
+        while (sz(Mosquito)) {
+             multiset<pair<int , int> >::iterator tt = Mosquito.lower_bound(make_pair(a[id].x , 0));
+             if (tt == Mosquito.end()) break;
+             if (tt->first <= a[id].x + a[id].len) {
+                  a[id].eat++;
+                  a[id].len += tt->second;
+                  Update(1 , id , a[id].x + a[id].len);
+                  Mosquito.erase(tt);
+             } else break;
+        }
+    }
+    sort(a + 1 , a + 1 + n , CompareID);
+    For(i , 1 , n) cout << a[i].eat << " " << a[i].len << "\n";
+}
+
+int main() {
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+  // freopen("/users/youaremysky/documents/workspace/input.inp" , "r" , stdin);
+    ReadData();
+    Process();
+}

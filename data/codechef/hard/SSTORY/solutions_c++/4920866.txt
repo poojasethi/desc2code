@@ -1,0 +1,152 @@
+/**
+ * This code also finds the longest common substring
+ * but this method uses hashing and binary search
+ *
+ * The concept is this: If a substring of size is n is matching then substring
+ * 			size < n will also match so start matching from middle 
+ * 			and move forward.
+ * Author: thecodekaiser
+ */
+
+#include <iostream>
+#include <cstdlib>
+#include <cstdio>
+#include <string>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+const int MOD = 1000007;
+const int base =  37;			// This is the magic number
+
+vector<int> visited(MOD,-1), next(MOD,-1), head(MOD,-1);
+string a, b;
+int done = 0;
+
+
+// Function : To add to the hash table
+// Hash --> Hash calculated, pos --> Position at which it was calculated
+inline void add(const int & hash, const int & pos)
+{
+	if(visited[hash] != done)
+	{
+		visited[hash] = done;
+		head[hash] = -1;
+	}
+	next[pos] = head[hash];
+	head[hash] = pos;
+}
+
+// Function : To check for a matching , given the length of pattern , incidence of occuring and hash
+inline bool checkMatch(const int & hash, const int & len, const int & pos)
+{
+	if(visited[hash] != done)
+		return false;
+	
+	int i,j;
+	// There may be many strings with same hash so we look at all
+	for(i = head[hash]; i != -1; i = next[i])
+	{
+		for(j = 0; j < len;  j++)
+		{
+			if(a[i+j] != b[pos+j])
+				break;			
+		}
+		if(j == len)
+			return true;
+	}
+
+	return false;
+}
+
+// Function : To get the hashes of a substring and then check
+// It will return the starting point of a match in the first string
+int create(const int & len)
+{
+
+	// Everytime we increment it
+	done++;
+	
+	// If length is already 0 then return
+	if(len == 0)
+	    return -1;
+    
+	int i;
+    	int weight = 1, hash = 0;
+        for(i = 0; i < len-1; i++)				// To get that magic number
+    	{
+		weight = (weight * base) % MOD;
+    	}
+
+	// Getting the hash of the first substring in first string
+    	for(i = 0; i < len; i++)
+     	{
+		hash = (hash * base + a[i]) % MOD;
+    	}
+   
+	add(hash,0);
+	// Getting subsequent hashses
+	for(i = 0; i < (int)a.size() - len; i++)
+    	{
+        	hash = (hash -(a[i] * weight) % MOD + MOD) % MOD;
+        	hash = (hash * base) % MOD;
+        	hash = (hash + a[i+len]) % MOD;
+        	add(hash,i+1);
+    	}
+
+	// Now getting the hash of the substring of second string
+    	hash = 0;
+    	for(i = 0; i < len; i++)
+    	{
+        	hash = (hash * base + b[i]) % MOD;
+    	}	
+	// Checking if we have already got it    	
+	if(checkMatch(hash,len,0))
+    	{
+        	return 0;
+    	}
+
+    	for(i = 0; i < (int)b.size() - len; i++)
+    	{
+		hash = (hash - (b[i] * weight) % MOD + MOD) % MOD;
+		hash = (hash * base) % MOD;
+		hash = (hash + b[i+len]) % MOD;
+        	if(checkMatch(hash,len,i+1))
+        	{
+            		return i+1;
+        	}
+    	}
+    	return -1;
+}
+
+void solve()
+{
+	cin >> a;
+	cin >> b;
+
+	int lo = 0, hi = b.size(), mid;
+	while(lo < hi)
+	{
+		mid=(lo+hi+1)>>1;
+		int ans = create(mid) ;
+		//cout << "Lo: " << lo << " Mid: " << mid << " Hi: " << hi << " ans: " << ans << endl;
+		if(ans != -1)
+			lo = mid;
+		else
+			hi = mid-1;
+	}
+
+	int ans_index = create(lo);
+	if(ans_index != -1)
+		cout << b.substr(ans_index,lo) << "\n" << lo << "\n";
+	else
+		cout << "0" << endl;
+	return;
+}
+
+int main()
+{
+	solve();
+	return 0;
+}

@@ -1,0 +1,119 @@
+#include <stdio.h>
+#include <vector>
+using namespace std;
+#define mod 1000000007
+#define ll long long
+// params. choose such that S*S >= M
+#define M 100
+#define S 10
+#define SP 4 // number of primes <= S
+
+bool is_prime(int n) {
+    if (n < 2) return false;
+    for (int k = 2; k * k <= n; k++) {
+        if (n % k == 0) return false;
+    }
+    return true;
+}
+
+vector<int> primes;
+vector<int> small_primes;
+vector<int> big_primes;
+
+int masks[M+1];
+vector<int> possible_values[1<<SP];
+int small_maskc, small_mask;
+ll inv[111];
+void init() {
+    for (int p = 2; p <= M; p++) {
+        if (is_prime(p)) {
+            primes.push_back(p);
+            (p <= S ? small_primes : big_primes).push_back(p);
+        }
+    }
+
+    small_maskc = 1<<small_primes.size();
+    small_mask = small_maskc-1;
+
+    for (int i = 1; i <= M; i++) {
+        int j = i;
+        int mask = 0;
+        for (int idx = 0; idx < small_primes.size(); idx++) {
+            int p = small_primes[idx];
+            while (j % p == 0) {
+                mask |= 1<<idx;
+                j /= p;
+            }
+        }
+
+        if (j == 1) {
+            masks[i] = mask;
+            possible_values[mask].push_back(i);
+        }
+    }
+    inv[0] = inv[1] = 1;
+    for (int n = 2; n < 111; n++) {
+        inv[n] = (mod - mod/n) * inv[mod%n] % mod;
+    }
+}
+
+int smalls[1<<SP];
+int larges[S+1];
+ll answers[111111][1<<SP];
+
+ll ans(int n, int mask, int den, int coeff, int ctden, int ctcoeff) {
+    ll res;
+    if (coeff < den) {
+        res = ans(n, mask, den, coeff+1, ctden, 0);
+    } else if (den < S) {
+        res = ans(n, mask, den+1, 1, larges[den+1], 0);
+    } else {
+        res = answers[n][mask];
+    }
+    if (n && ctden && !(mask & masks[coeff])) {
+        res += n * ctden % mod * inv[ctcoeff+1] % mod * ans(n-1, mask | masks[coeff], den, coeff, ctden-1, ctcoeff+1);
+        res %= mod;
+    }
+    return res % mod;
+}
+
+
+int main() {
+    init();
+    int z;
+    scanf("%d", &z);
+    while (z--) {
+        int n, m;
+        scanf("%d%d", &n, &m);
+        for (int mask = 0; mask < small_maskc; mask++) {
+            smalls[mask] = 0;
+            for (int idx = 0; idx < possible_values[mask].size(); idx++) {
+                int i = possible_values[mask][idx];
+                smalls[mask] += i <= m;
+            }
+        }
+
+        for (int i = 0; i <= S; i++) larges[i] = 0;
+        for (int i = 0; i < big_primes.size(); i++) larges[m/big_primes[i]]++;
+
+        for (int mask = 0; mask < small_maskc; mask++) {
+            answers[0][mask] = 1;
+        }
+        for (int i = 1; i <= n; i++) {
+            for (int mask = 0; mask < small_maskc; mask++) {
+                ll total = 0;
+                int u = small_mask ^ mask;
+                int nmask = 0;
+                do {
+                    total += smalls[nmask] * answers[i-1][mask | nmask];
+                    total %= mod;
+                } while (nmask = nmask - 1 & u);
+                answers[i][mask] = total;
+            }
+        }
+
+        ll res = ans(n, 0, 1, 1, larges[1], 0);
+        if ((res %= mod) < 0) res += mod;
+        printf("%lld\n", res);
+    }
+}

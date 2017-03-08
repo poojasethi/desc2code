@@ -1,0 +1,48 @@
+#include <cstdio>
+#include <algorithm>
+
+using namespace std;
+
+long long M[50],s[50],l[50],r[50];
+
+int main() {
+    int n,m;
+    scanf("%d %d",&n,&m);
+    for (int i=0; i<n; i++) {
+        int li;
+        scanf("%d",&li);
+        M[i]=-1000;
+        long long tmp=0;
+        for (int j=0; j<li; j++) {
+            int a;
+            scanf("%d",&a);
+            if (a>M[i])
+                M[i]=a;
+            if (tmp>0)
+                tmp+=a;
+            else
+                tmp=a;
+            if (tmp>M[i])
+                M[i]=tmp;
+            s[i]+=a;
+            if (s[i]>l[i])
+                l[i]=s[i];
+            if (s[i]<r[i])
+                r[i]=s[i];
+        }
+        r[i]=s[i]-r[i];
+    }
+    long long res=-9223372036854775808LL,tmp=0;
+    while (m--) {
+        int bi;
+        scanf("%d",&bi);
+        bi--;
+        if (M[bi]>res)
+            res=M[bi];
+        if (tmp!=0&&((tmp+l[bi])>res))
+            res=(tmp+l[bi]);
+        tmp=max(0LL,max(r[bi],tmp+s[bi]));
+    }
+    printf("%I64d\n",res);
+    return 0;
+}

@@ -1,0 +1,218 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+typedef long long LL;
+
+const int N = 1e5 + 6;
+const int Nlg = 18;
+
+int n, m;
+int to[N+N], next[N+N], end[N], tms;
+int fi[N], se[N], rat[N], dep[N], fa[N], up[N][Nlg];
+
+namespace seg
+{
+	LL cnt[N<<2];
+	int tag[N<<2], siz[N<<2];
+	
+	void pup(int x){cnt[x] = cnt[x+x] + cnt[x+x+1];}
+	void ptg(int x, int tg){tag[x] += tg, cnt[x] += siz[x] * tg;} 
+	void pdw(int x){if(tag[x]) ptg(x+x, tag[x]), ptg(x+x+1, tag[x]), tag[x]=0;}
+	
+	void cons(int x, int l, int r)
+	{
+		cnt[x] = tag[x] = 0, siz[x] = r-l+1;
+		if(l==r) {cnt[x] = dep[rat[l]]; return;}
+		int mid = (l+r) >> 1;
+		cons(x+x, l, mid), cons(x+x+1, mid+1, r);
+		pup(x);
+	}
+	
+	int opl, opr, opty, opg;
+	LL opans;
+	
+	// 0 : modify 1 : query
+	void step(int x, int l, int r)
+	{
+		if(opl<=l && r<=opr)
+		{
+			if(opty) opans += cnt[x]; else ptg(x, opg);
+			return;
+		}
+		int mid = (l+r)>>1; pdw(x);
+		if(opl<=mid) step(x+x, l, mid);
+		if(opr>mid) step(x+x+1, mid+1, r);
+		if(!opty) pup(x);
+	}
+	
+	int root;
+	
+	int ances(int x, int y){ return fi[x] <= fi[y] && fi[y] <= se[x]; }
+	int jump(int x, int h) { for(int i=0; h; h>>=1, i++) if(h&1) x=up[x][i]; return x;}
+	
+	void deal(int x)
+	{
+		if(x == root) opl = 1, opr = n, step(1, 1, n);
+		else if(ances(x, root))
+		{
+			x = jump(root, dep[root]-dep[x]-1);
+			if(fi[x]>1) opl = 1, opr = fi[x]-1, step(1, 1, n);
+			if(se[x]<n) opl = se[x]+1, opr = n, step(1, 1, n);
+		}
+		else opl = fi[x], opr = se[x], step(1, 1, n);
+	}
+	
+	void modify(int x, int op) { opty = 0, opg = op, deal(x); }
+	LL query(int x) { return opty = 1, opans = 0, deal(x), opans; }
+	
+	int count(int x)
+	{
+		if(x == root) return n;
+		if(ances(x, root)) return x = jump(root, dep[root]-dep[x]-1),  n-(se[x]-fi[x]+1);
+		return se[x]-fi[x]+1;
+	}
+}
+
+namespace lct
+{
+	
+	struct rc
+	{
+		int rev, l, r, val;
+		rc *c[2], *f;
+		
+		int d(){return f->c[1]==this;}
+		int rt(){return f->c[1]!=this && f->c[0]!=this;}
+		void sc(rc *x, int d){c[d]=x, x->f=this;}
+		
+		void pup(){l = c[0]->val ? c[0]->l : val, r = c[1]->val ? c[1]->r : val;}
+		void re(){rev^=1, swap(c[0], c[1]), swap(l, r);}
+		void pdw(){if(rev) c[0]->re(), c[1]->re(), rev=0;}
+	}nil[N];
+	
+	#define T(x) (nil+x)
+	
+	void zig(rc *x)
+	{
+		int d = x->d();
+		rc *p = x->f;
+		p->sc(x->c[!d], d), p->pup();
+		if(p->rt()) x->f=p->f; else p->f->sc(x, p->d());
+		x->sc(p, !d);
+	}
+	
+	void splay(rc *x)
+	{
+		for(rc *y; !x->rt(); )
+		{
+			if(y=x->f, !y->rt()) y->f->pdw();
+			y->pdw(), x->pdw();
+			if(!y->rt()) x->d() ^ y->d() ? zig(x) : zig(y);
+			zig(x);
+		}
+		x->pup();
+	}
+	
+	void access(rc *x)
+	{
+		rc *v = x, *y = nil;
+		for(int u; x!=nil; )
+		{
+			splay(x), x->pdw();
+			if(x->c[1]!=nil) u=x->c[1]->l, seg :: modify(u, 1);
+			if(y!=nil) u=y->l, seg :: modify(u, -1);
+			x->sc(y, 1), x->pup(), y = x, x = x->f;
+		}
+		splay(v);
+	}
+	
+	void evert(rc *x){access(x), x->re();}
+	
+	void cons()
+	{
+		for(int i=1; i<=n; i++)
+		T(i)->f = T(fa[i]), T(i)->l = T(i)->r = T(i)->val = i, 
+		T(i)->c[0] = T(i)->c[1] = nil;
+	}
+	
+	void upload(int x){ access(T(x)); }
+	void croot(int x){ evert(T(x)); }
+}
+
+namespace rec
+{
+	
+	void init()
+	{
+		tms = 0;
+		memset(end, 0, sizeof end);
+		
+		scanf("%d", &n);
+		for(int i=1, x, y; i<n; i++)
+		{
+			scanf("%d%d", &x, &y), ++x, ++y;
+			to[++tms]=y, next[tms]=end[x], end[x]=tms;
+			to[++tms]=x, next[tms]=end[y], end[y]=tms;
+		}
+	}
+	
+	void dfs(int x)
+	{
+		fi[x] = ++fi[0], rat[fi[0]] = x, up[x][0] = fa[x];
+		for(int i=0; up[up[x][i]][i]; ++i) up[x][i+1] = up[up[x][i]][i];
+		for(int p=end[x], v; p; p=next[p]) if(v=to[p], v!=fa[x])
+		fa[v]=x, dep[v]=dep[x]+1, dfs(v);
+		se[x] = fi[0];
+	}
+	
+	void prep()
+	{
+		fi[0] = 0, dep[1] = 0;
+		memset(fa, 0, sizeof fa);
+		memset(up, 0, sizeof up);
+		
+		dfs(1);
+		seg :: cons(1, 1, n);
+		seg :: root = 1;
+	}
+	
+	int gc()
+	{
+		int c;
+		while(c=getchar(), c<=' ');
+		return c;
+	}
+	
+	void answ()
+	{
+		scanf("%d", &m);
+		for(int i=1, t, x; i<=m; i++)
+		{
+			t = gc(), scanf("%d", &x), ++x;
+			if(t=='O') lct :: upload(x);
+			else printf("%.12lf\n", seg :: query(x) / double(seg :: count(x)));
+		}
+	}
+	
+}
+
+int main()
+{
+
+	
+	int Ts;
+	
+	scanf("%d", &Ts);
+	
+	for(; Ts; Ts--)
+	{
+		rec :: init();
+		rec :: prep();
+		lct :: cons();
+		rec :: answ();
+	}
+	
+	return 0;
+}

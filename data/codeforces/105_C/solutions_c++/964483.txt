@@ -1,0 +1,173 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <map>
+#include <string>
+
+using namespace std;
+
+struct item {
+  string clase;
+  int val,size,acum,num;
+};
+
+struct resident {
+  string clase,home;
+  int bonus;
+};
+
+map<string,item> mapitem;
+map<string,resident> mapresident;
+
+string buscamaximo(string clase)
+{
+  string sol;
+  int acum=-1;
+  for (map<string,item>::iterator it=mapitem.begin();it!=mapitem.end();it++) {
+    if (it->second.clase==clase and it->second.acum>acum) {
+      sol=it->first;
+      acum=it->second.acum;
+    }
+  }
+  return sol;
+}
+
+void escribeelems(string name)
+{
+  cout<<mapitem[name].num;
+  for (map<string,resident>::iterator it=mapresident.begin();
+       it!=mapresident.end();it++) {
+    if (it->second.home==name)
+      cout<<" "<<it->first;
+  }
+  cout<<endl;
+}
+
+map<string,pair<string,vector<string> > > sol;
+
+void escribeclase(string clase)
+{
+  string name=sol[clase].first;
+  vector<string> &v=sol[clase].second;
+  cout<<name<<" "<<int(v.size());
+  for (int i=0;i<int(v.size());i++)
+    cout<<" "<<v[i];
+  cout<<endl;
+}
+
+void obtenmaximoclase(string clase)
+{
+  vector<pair<int,string> > v;
+  for (map<string,resident>::iterator it=mapresident.begin();
+       it!=mapresident.end();it++)
+    if (it->second.clase==clase)
+      v.push_back(pair<int,string> (it->second.bonus,it->first));
+  sort(v.begin(),v.end());
+  string name;
+  int maximo=-1;
+  int nummaximo;
+  for (map<string,item>::iterator it=mapitem.begin();it!=mapitem.end();it++) {
+    if (it->second.clase==clase) {
+      int acum=it->second.val;
+      int size=it->second.size;
+      int num=0;
+      for (int i=int(v.size())-1;i>=0 and num<size;i--) {
+	acum+=v[i].first;
+	num++;
+      }
+      if (maximo<acum) {
+	maximo=acum;
+	name=it->first;
+	nummaximo=num;
+      }
+    }
+  }
+  sol[clase].first=name;
+  for (int i=0;i<nummaximo;i++) {
+    sol[clase].second.push_back(v[int(v.size())-1-i].second);
+    mapresident.erase(v[int(v.size())-1-i].second);
+  }
+}
+
+void rellenasolucion(string clase)
+{
+  string name=sol[clase].first;
+  vector<string> &v=sol[clase].second;
+  while (int(v.size())<mapitem[name].size and
+	 int(mapresident.size())>0) {
+    string nameres=(mapresident.begin())->first;
+    mapresident.erase(nameres);
+    v.push_back(nameres);
+  }
+}
+
+int main()
+{
+  int n;
+  cin>>n;
+  for (int i=0;i<n;i++) {
+    string name,clase;
+    int val1,val2,val3,size;
+    cin>>name>>clase>>val1>>val2>>val3>>size;
+    item it;
+    it.clase=clase;
+    if (clase=="weapon") {
+      it.val=val1;
+    } else if (clase=="armor") {
+      it.val=val2;
+    } else {
+      it.val=val3;
+    }
+    it.size=size;
+    it.acum=it.val;
+    it.num=0;
+    mapitem[name]=it;
+  }
+  int m;
+  cin>>m;
+  for (int i=0;i<m;i++) {
+    string name,clase,home;
+    int bonus;
+    cin>>name>>clase>>bonus>>home;
+    resident res;
+    if(clase=="gladiator") {
+      clase="weapon";
+    } else if (clase=="sentry") {
+      clase="armor";
+    } else {
+      clase="orb";
+    }
+    res.clase=clase;
+    res.bonus=bonus;
+    res.home=home;
+    mapresident[name]=res;
+    if (mapitem[home].clase==clase) {
+      mapitem[home].acum+=bonus;
+    }
+    mapitem[home].num++;
+  }
+  bool completo=true;
+  for (map<string,item>::iterator it=mapitem.begin();it!=mapitem.end();it++) {
+    if (it->second.size!=it->second.num)
+      completo=false;
+  }
+  if (completo) {
+    string name;
+    name=buscamaximo("weapon");
+    cout<<name<<" ";escribeelems(name);
+    name=buscamaximo("armor");
+    cout<<name<<" ";escribeelems(name);
+    name=buscamaximo("orb");
+    cout<<name<<" ";escribeelems(name);
+  } else {
+    obtenmaximoclase("weapon");
+    obtenmaximoclase("armor");
+    obtenmaximoclase("orb");
+    rellenasolucion("weapon");
+    rellenasolucion("armor");
+    rellenasolucion("orb");
+    escribeclase("weapon");
+    escribeclase("armor");
+    escribeclase("orb");
+  }
+}

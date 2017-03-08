@@ -1,0 +1,270 @@
+#include<iostream>
+#include<cstdio>
+#include<string>
+#include<cstring>
+#include<vector>
+#include<cmath>
+#include<queue>
+#include<stack>
+#include<map>
+#include<set>
+#include<algorithm>
+using namespace std;
+const int N=600005;
+
+int next[N],node[N],head[N],e;
+
+void add(int u,int v)
+{
+    node[e]=v;
+    next[e]=head[u];
+    head[u]=e++;
+}
+
+int n;
+char s[N];
+
+int dep[N],sonNum[N],fa[N];
+
+void dfs(int u,int pre)
+{
+    dep[u]=dep[pre]+1;
+    fa[u]=pre;
+    sonNum[u]=1;
+    for(int i=head[u];i!=-1;i=next[i])
+    {
+        int v=node[i];
+        if(v!=pre)
+        {
+            dfs(v,u);
+            sonNum[u]+=sonNum[v];
+        }
+    }
+}
+
+int root[N],end[N];
+
+void DFS(int u,int rt)
+{
+    root[u]=rt;
+    end[rt]=u;
+
+    int s=0;
+    for(int i=head[u];i!=-1;i=next[i])
+    {
+        int v=node[i];
+        if(dep[v]>dep[u]&&sonNum[v]>sonNum[s])
+        {
+            s=v;
+        }
+    }
+    if(!s) return;
+    DFS(s,rt);
+
+    for(int i=head[u];i!=-1;i=next[i])
+    {
+        int v=node[i];
+        if(dep[v]>dep[u]&&v!=s)
+        {
+            DFS(v,v);
+        }
+    }
+}
+
+int S[N];
+int sNum;
+int p[N][4];
+
+
+
+struct SufArr
+{
+    int r[N],sa[N],wa[N],wb[N],wd[N],rank[N],h[N];
+
+    int cmp(int *r,int a,int b,int len)
+    {
+        return r[a]==r[b]&&r[a+len]==r[b+len];
+    }
+
+    void da(int *r,int *sa,int n,int m)
+    {
+        int i,j,p,*x=wa,*y=wb,*t;
+        for(int i=0;i<m;i++) wd[i]=0;
+        for(int i=0;i<n;i++) wd[x[i]=r[i]]++;
+        for(int i=1;i<=m-1;i++) wd[i]+=wd[i-1];
+        for(int i=n-1;i>=0;i--) sa[--wd[x[i]]]=i;
+        for(j=1,p=1;p<n;j<<=1,m=p)
+        {
+            p=0;
+            for(int i=n-j;i<=n-1;i++) y[p++]=i;
+            for(int i=0;i<n;i++) if(sa[i]>=j) y[p++]=sa[i]-j;
+            for(int i=0;i<m;i++) wd[i]=0;
+            for(int i=0;i<n;i++) wd[x[i]]++;
+            for(int i=1;i<=m-1;i++) wd[i]+=wd[i-1];
+            for(int i=n-1;i>=0;i--) sa[--wd[x[y[i]]]]=y[i];
+            t=x;x=y;y=t;p=1;x[sa[0]]=0;
+            for(int i=1;i<=n-1;i++) x[sa[i]]=cmp(y,sa[i-1],sa[i],j)?p-1:p++;
+        }
+    }
+
+    void calHeight(int *r,int *sa,int n)
+    {
+        int i,j,k=0;
+        for(int i=1;i<=n;i++) rank[sa[i]]=i;
+        for(int i=0;i<n;i++)
+        {
+            if(k) k--;
+            j=sa[rank[i]-1];
+            while(i+k<n&&j+k<n&&r[i+k]==r[j+k]) k++;
+            h[rank[i]]=k;
+        }
+    }
+
+    int f[N][20],n;
+
+    void init()
+    {
+        int i,j;
+        for(int i=1;i<=n;i++) f[i][0]=h[i];
+        for(i=1;1+(1<<i)<=n;i++) for(j=1;j+(1<<i)-1<=n;j++)
+        {
+            f[j][i]=min(f[j][i-1],f[j+(1<<(i-1))][i-1]);
+        }
+    }
+
+    int cal(int a,int b)
+    {
+        if(a==b) return n-a;
+        a=rank[a];
+        b=rank[b];
+        if(a>b) swap(a,b);
+        a++;
+        int m=floor(log(1.0*(b-a+1))/log(2.0));
+        return min(f[a][m],f[b-(1<<m)+1][m]);
+    }
+
+    /**store: r[0~len-1] and r[i]>0 for all i**/
+    void process(int *r,int len,int typeNum)
+    {
+        n=len;
+        r[len]=0;
+        da(r,sa,len+1,typeNum);
+        calHeight(r,sa,n);
+        init();
+    }
+}A;
+
+
+
+vector<pair<int,int> > init(int a,int b)
+{
+    vector<pair<int,int> > pp,qq;
+    while(root[a]!=root[b])
+    {
+        if(dep[root[a]]>dep[root[b]])
+        {
+            int rt=root[a];
+            int y=p[rt][1];
+            int x=y-(dep[a]-dep[rt]);
+            pp.push_back(make_pair(x,y));
+            a=fa[rt];
+        }
+        else
+        {
+            int rt=root[b];
+            int x=p[rt][2];
+            int y=x+(dep[b]-dep[rt]);
+            qq.push_back(make_pair(x,y));
+            b=fa[rt];
+        }
+    }
+    if(dep[a]>dep[b])
+    {
+        int rt=root[a];
+        int e=p[rt][1];
+        int y=e-(dep[b]-dep[rt]);
+        int x=e-(dep[a]-dep[rt]);
+        pp.push_back(make_pair(x,y));
+    }
+    else
+    {
+        int rt=root[a];
+        int e=p[rt][2];
+        int y=e+(dep[b]-dep[rt]);
+        int x=e+(dep[a]-dep[rt]);
+        pp.push_back(make_pair(x,y));
+    }
+    for(int i=qq.size()-1;i>=0;i--)
+    {
+        pp.push_back(qq[i]);
+    }
+    return pp;
+}
+
+int cal(int a,int b,int c,int d)
+{
+    vector<pair<int,int> > p=init(a,b);
+    vector<pair<int,int> > q=init(c,d);
+
+    int ans=0;
+    int i=0,j=0;
+    while(i<p.size()&&j<q.size())
+    {
+        int len=A.cal(p[i].first,q[j].first);
+        int tmp=min(p[i].second-p[i].first+1,q[j].second-q[j].first+1);
+        int k=min(len,tmp);
+        ans+=k;
+        if(len<tmp) break;
+        if(k>=p[i].second-p[i].first+1) i++;
+        else p[i].first+=k;
+
+        if(k>=q[j].second-q[j].first+1) j++;
+        else q[j].first+=k;
+    }
+    return ans;
+}
+
+int main()
+{
+    memset(head,-1,sizeof(head));
+    scanf("%d",&n);
+    scanf("%s",s+1);
+    for(int i=1;i<n;i++)
+    {
+        int u,v;
+        scanf("%d%d",&u,&v);
+        add(u,v);
+        add(v,u);
+    }
+    dfs(1,0);
+    DFS(1,1);
+    sNum=-1;
+    for(int i=1;i<=n;i++) if(i==root[i])
+    {
+        p[i][0]=sNum+1;
+        for(int k=end[i];;k=fa[k])
+        {
+            S[++sNum]=s[k]-'a'+1;
+            if(k==i) break;
+        }
+        p[i][1]=sNum;
+        p[i][2]=sNum+1;
+        for(int k=sNum;k>=p[i][0];k--)
+        {
+            S[++sNum]=S[k];
+        }
+        p[i][3]=sNum;
+    }
+    sNum++;
+    A.process(S,sNum,30);
+
+    int Q;
+    scanf("%d",&Q);
+    while(Q--)
+    {
+        int a,b,c,d;
+        scanf("%d%d%d%d",&a,&b,&c,&d);
+        printf("%d\n",cal(a,b,c,d));
+    }
+    return 0;
+}

@@ -1,0 +1,116 @@
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#include <functional>
+using namespace std;
+
+typedef long long LL;
+
+const int N = 100050, M = 200050;
+
+#define for_(it,W) for(__typeof(W.begin())it=W.begin();it!=W.end();++it)
+
+inline LL sgn (LL x) { return x == 0 ? 0 : x > 0 ? 1 : -1; }
+
+struct point { LL x, y; } P[N];
+inline LL operator* (point a, point b) {
+	return a.x * b.y - b.x * a.y;
+}
+inline point operator- (point a, point b) {
+	return (point){a.x - b.x, a.y - b.y};
+}
+
+struct edge { int t, id; };
+vector<edge> e[N];
+vector<int> sflow[N];
+int eflow[M], vis[N], n;
+
+void dfs (int x)
+{
+	vis[x] = 1;
+	for_(it, e[x]) if (!vis[it->t])
+	{
+		dfs(it->t);
+		vis[x] += vis[it->t];
+		eflow[it->id ^ 1] += vis[it->t];
+		eflow[it->id ^ 0] -= vis[it->t];
+	}
+}
+
+struct byPolar {
+	point x;
+	byPolar (point t) : x(t) {}
+	bool operator() (const edge &a, const edge &b)
+	{
+		point pa = P[a.t] - x, pb = P[b.t] - x;
+		static point basi = (point){10000, 1};
+		int qa = sgn(pa * basi), qb = sgn(pb * basi);
+		if (qa != qb) return qa < qb;
+		return pa * pb > 0;
+	}
+};
+
+inline int getPos (int y, int x) {
+	return lower_bound(e[y].begin(), e[y].end(), (edge){x, -1}, byPolar(P[y])) - e[y].begin();
+}
+
+int R[N];
+
+int main ()
+{
+#ifdef LOCAL
+	freopen("in", "r", stdin);
+#endif
+	int m, a, b;
+	scanf("%d%d", &n, &m);
+	for (int i = 1; i <= m; ++i)
+	{
+		scanf("%d%d", &a, &b);
+		e[a].push_back((edge){b, i * 2});
+		e[b].push_back((edge){a, i * 2 + 1});
+	}
+	int leftmost = 1;
+	for (int i = 1; i <= n; ++i)
+	{
+		scanf("%I64d%I64d", &P[i].x, &P[i].y);
+		if (P[i].x < P[leftmost].x || (P[i].x == P[leftmost].x && P[i].y < P[leftmost].y))
+			leftmost = i;
+	}
+	dfs(leftmost);
+	for (int x = 1; x <= n; ++x)
+	{
+		sort(e[x].begin(), e[x].end(), byPolar(P[x]));
+		sflow[x].resize(e[x].size());
+		for (size_t i = 0, ie = e[x].size(); i < ie; ++i)
+		{
+			sflow[x][i] = eflow[e[x][i].id];
+			if (i) sflow[x][i] += sflow[x][i - 1];
+		}
+	}
+	scanf("%d", &b);
+	while (b--)
+	{
+		int k; LL area(0);
+		scanf("%d", &k);
+		for (int i = 1; i <= k; ++i) scanf("%d", R + i);
+		R[k + 1] = R[1];
+		for (int i = 1; i <= k; ++i)
+			area += P[R[i]] * P[R[i + 1]];
+		if (area > 0)
+			reverse(R + 1, R + 1 + k);
+		R[0] = R[k]; R[k + 1] = R[1];
+		int res(0);
+		for (int i = 1; i <= k; ++i)
+		{
+			int l = getPos(R[i], R[i - 1]), r = getPos(R[i], R[i + 1]);
+			vector<int> &s = sflow[R[i]];
+			if (l > r)
+				res += s[s.size() - 1] - s[l] + (r ? s[r - 1] : 0);
+			else if (l < r)
+				res += s[r - 1] - s[l];
+		}
+		printf("%d\n", -res + k);
+	}
+	return 0;
+}
+

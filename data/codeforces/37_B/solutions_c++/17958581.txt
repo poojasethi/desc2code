@@ -1,0 +1,33 @@
+///	B : Coded by Choe Kwang
+
+#include <bits/stdc++.h>
+using namespace std;
+#define N 1010
+
+int n, M, reg, p[N], d[N];
+vector <int> v, w;
+bool vis[N];
+
+int main() {
+//	freopen("b.in", "r", stdin);
+	scanf("%d %d %d", &n, &M, &reg);
+	for (int i = 1; i <= n; i ++) scanf("%d %d", &p[i], &d[i]);
+	int time = 0, dx = -reg, m = M;
+	while (1) {
+		if (m <= 0) break;
+		int mx = 0, num = 0;
+		for (int i = 1; i <= n; i ++) if (!vis[i]) {
+			if (p[i] * M >= 100 * m && mx < d[i]) mx = d[i], num = i;
+		}
+		if (!mx && dx <= 0) {
+			puts("NO"); return 0;
+		}
+		if (mx) vis[num] = 1, v.push_back(num), w.push_back(time);
+		dx += mx;
+		m = min(M, m - dx); time ++;
+	}
+	puts("YES");
+	printf("%d %d\n", time, v.size());
+	for (int i = 0; i < v.size(); i ++) printf("%d %d\n", w[i], v[i]);
+	return 0;
+}

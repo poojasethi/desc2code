@@ -1,0 +1,110 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <algorithm>
+using namespace std;
+
+int T,n,m,lim,tot,i,j,k,d;
+int V[35],P[35],C[35],D[35];
+int f[35][35],cnt[35];
+int c_pool[2000005],*c[35];
+double P_[35],p_pool[2000005],*p[35],ans;
+
+struct node
+{
+	int c,d;
+	double p;
+}t[2000005];
+inline bool cmp(const node &a,const node &b)
+{
+	if(a.d!=b.d)return a.d<b.d;
+	return a.c>b.c;
+}
+
+void dfs1(int x,int c,int d,double p)
+{
+	if(x>lim)
+	{
+		++tot;t[tot].c=c;t[tot].d=d;t[tot].p=p;
+		return;
+	}
+	dfs1(x+1,c+V[x],d,p*P_[x]);
+	dfs1(x+1,c,d+1,p*(1-P_[x]));
+}
+
+double calc(int d,int C)
+{
+	int l=1,r=cnt[d],mid,aim=0;
+	while(l<=r)
+	{
+		mid=l+r>>1;
+		if(c[d][mid]>=C)aim=mid,l=mid+1;
+		else r=mid-1;
+	}
+	if(!aim)return 0;
+	return p[d][aim];
+}
+
+void dfs2(int x,int c,int d,double p)
+{
+	if(x>n)
+	{
+		if(p==0)return;
+		for(int i=0;i<=lim;++i)
+		for(int j=1;j<=m;++j)
+		ans+=p*calc(i,f[j][i+d]-c);
+		return;
+	}
+	dfs2(x+1,c+V[x],d,p*P_[x]);
+	dfs2(x+1,c,d+1,p*(1-P_[x]));
+}
+
+int main()
+{
+	scanf("%d",&T);
+	for(;T;--T)
+	{
+		ans=0;
+		scanf("%d%d",&n,&m);
+		for(i=1;i<=n;++i)scanf("%d%d",&V[i],&P[i]),P_[i]=P[i]/100.0;
+		for(i=1;i<=m;++i)scanf("%d%d",&C[i],&D[i]);
+		memset(f,0x3f,sizeof(f));
+		f[0][0]=0;
+		for(i=1;i<=m;++i)
+		for(j=i-1;j>=0;--j)
+		for(k=n-D[i];k>=0;--k)
+		if(f[j][k]+C[i]<f[j+1][k+D[i]])
+		f[j+1][k+D[i]]=f[j][k]+C[i];
+		for(i=0;i<=m;++i)
+		for(j=1;j<=n;++j)
+		if(f[i][j-1]<f[i][j])
+		f[i][j]=f[i][j-1];
+		for(i=m;i>=1;--i)
+		for(j=0;j<=n;++j)
+		if(f[i][j]<f[i-1][j])
+		f[i-1][j]=f[i][j];
+		lim=min(n/2+2,n-1);
+		tot=0;
+		dfs1(1,0,0,1);
+		sort(t+1,t+tot+1,cmp);
+		for(i=1;i<=tot;++i)
+		{
+			d=t[i].d;
+			if(i==1||d!=t[i-1].d)
+			{
+				cnt[d]=1;
+				p[d]=p_pool+i-1;
+				c[d]=c_pool+i-1;
+				k=1;p[d][k]=t[i].p;c[d][k]=t[i].c;
+			}
+			else
+			{
+				cnt[d]=++k;
+				p[d][k]=p[d][k-1]+t[i].p;
+				c[d][k]=t[i].c;
+			}
+		}
+		dfs2(lim+1,0,0,1);
+		printf("%.4lf\n",ans);
+	}
+}

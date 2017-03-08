@@ -1,0 +1,199 @@
+#include <algorithm>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+#include <vector>
+#include <ctime>
+#define fi first
+#define se second
+#define PA pair<int,int>
+#define VI vector<int>
+#define VP vector<PA >
+#define mk(x,y) make_pair(x,y)
+#define N 50010
+#define db double
+#define For(i,x,y) for (i=x;i<=y;i++)
+using namespace std;
+struct ww {
+	int a,l,ll,k1,k2,cov,si;
+	db an,ss,sson,last;
+} a[N];
+int i,j,k,n,m;
+int g[N];
+VI b[N];
+db an,sum;
+inline bool isroot(int x) {
+	return !a[x].a||a[a[x].a].l!=x&&a[a[x].a].ll!=x;
+}
+inline void update(int x) {
+	if (!x) return;
+	int y=a[x].l,z=a[x].ll;
+	db A=a[x].k1-a[x].k2;
+	a[x].ss=a[y].ss+a[z].ss+A;
+	a[x].an=a[y].an+a[z].an+A*a[x].si;
+}
+void dfs(int x,int y) {
+	int i;
+	a[x].a=y;
+	a[x].si=1;
+	for (i=0;i<b[x].size();i++) {
+		int A=b[x][i];
+		if (A==y) continue;
+		dfs(A,x);
+		a[x].si+=a[A].si;
+		a[x].sson+=1.*a[A].si*a[A].si;
+	}
+	an+=1.*a[x].k1*(1.*a[x].si*a[x].si-a[x].sson);
+	a[x].last=1.*a[x].si*a[x].si;
+	a[x].k2=a[y].k1;
+	update(x);
+}
+inline void right(int x) {
+	int y=a[x].a,z=a[y].a;
+	if (a[z].l==y) a[z].l=x;
+	if (a[z].ll==y) a[z].ll=x;
+	a[x].a=z; a[y].a=x; a[y].l=a[x].ll;
+	a[x].ll=a[a[y].l].a=y; update(y);
+}
+inline void left(int x) {
+	int y=a[x].a,z=a[y].a;
+	if (a[z].l==y) a[z].l=x;
+	if (a[z].ll==y) a[z].ll=x;
+	a[x].a=z; a[y].a=x; a[y].ll=a[x].l;
+	a[x].l=a[a[y].ll].a=y; update(y);
+}
+inline void inc(int x,int y) {
+	a[x].cov+=y;
+	a[x].si+=y;
+	a[x].an+=a[x].ss*y;
+}
+inline void renew(int x) {
+	if (!x) return;
+	int y=a[x].l,z=a[x].ll;
+	if (a[x].cov) inc(y,a[x].cov),inc(z,a[x].cov);
+	a[x].cov=0;
+}
+inline void splay(int x) {
+	if (!x) return;
+	int y,z;
+	for (y=x,g[z=1]=x;!isroot(y);g[++z]=a[y].a,y=a[y].a);
+	for (;z;z--) renew(g[z]);
+	for (;!isroot(x);) {
+		y=a[x].a,z=a[y].a;
+		if (isroot(y)) if (a[y].l==x) right(x); else left(x);
+			else if (a[z].l==y)
+				if (a[y].l==x) right(y),right(x); else left(x),right(x);
+				else if (a[y].l==x) right(x),left(x); else left(y),left(x);
+	}
+	update(x);
+}
+inline int find_l(int x) {
+	for (x=a[x].l;x&&a[x].ll;x=a[x].ll);
+	splay(x);
+	return x;
+}
+inline int find_r(int x) {
+	for (x=a[x].ll;x&&a[x].l;x=a[x].l);
+	splay(x);
+	return x;
+}
+inline int find_L(int x) {
+	for (;a[x].l;x=a[x].l);
+	splay(x);
+	return x;
+}
+inline void gen(int x,int y) {
+	if (!y) return;
+	splay(y);
+	splay(x);
+	a[x].sson-=a[y].last;
+	a[y].last=1.*a[y].si*a[y].si;
+	a[x].sson+=a[y].last;
+}
+inline void xiu(int x,int &y) {
+	splay(x);
+	gen(x,find_r(x));
+	
+	if (!y) return;
+	splay(y);
+	y=find_L(y);
+	splay(y);
+	a[y].k2=a[x].k1;
+	update(y);
+}
+inline int access(int x) {
+	int y=0;
+	for (;x;y=x,x=a[x].a) {
+		xiu(x,y);
+		splay(x);
+		a[x].ll=y;
+		update(x);
+	}
+	return y;
+}
+inline void duan(int x) {
+	access(x);
+	splay(x);
+	int l=find_l(x);
+	if (!l) return;
+	access(l);
+	splay(l);
+	inc(l,-a[x].si);
+	an-=a[l].an*a[x].si*2;
+	a[l].sson-=a[x].last;
+}
+inline void lian(int x,int y) {
+	access(y);
+	splay(y);
+	an+=a[y].an*a[x].si*2;
+	inc(y,a[x].si);
+	a[x].a=y;
+	a[x].last=1.*a[x].si*a[x].si;
+	a[y].sson+=a[x].last;
+}
+inline void cut(int x,int y) {
+	access(x);
+	int A=access(y);
+	if (A==x) swap(x,y);
+	
+	duan(x);
+	lian(x,y);
+}
+inline void gai(int x,int y) {
+	access(x);
+	splay(x);
+	
+	db cha=a[x].k1-y;
+	an-=cha*(1.*a[x].si*a[x].si-a[x].sson);
+	
+	a[x].k1=y;
+	update(x);
+}
+int main() {
+	//freopen("482e.in","r",stdin);
+	scanf("%d",&n);
+	For(i,2,n) {
+		int x;
+		scanf("%d",&x);
+		b[i].push_back(x);
+		b[x].push_back(i);
+	}
+	For(i,1,n) {
+		int x;
+		scanf("%d",&x);
+		a[i].k1=x;
+	}
+	dfs(1,0);
+	sum=1.*n*n;
+	printf("%.12lf\n",an/sum);
+	scanf("%d",&m);
+	For(i,1,m) {
+		char p[2];
+		int x,y;
+		scanf("%s%d%d",p,&x,&y);
+		if (p[0]=='P') cut(x,y);
+		else gai(x,y);
+		printf("%.12lf\n",an/sum);
+	}
+	return 0;
+}

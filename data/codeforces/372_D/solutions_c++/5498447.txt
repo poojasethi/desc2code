@@ -1,0 +1,85 @@
+#include <iostream>
+#include <cstring>
+#include <set>
+#include <vector>
+using namespace std;
+
+int n, k, rel_n = 0, l = 0, r = 0, sz = 0, res = 0;
+int rel[100005], par[100005], dep[100005], dp[100005][18];
+set<int> s;
+vector<int> adj[100005];
+
+void precomp_lca(){
+	memset(dp,-1,sizeof(dp));
+	for(int i = 0; i<n; i++) dp[i][0] = par[i];
+	for(int j = 1; (1<<j)<n; j++){
+		for(int i = 0; i<n; i++) if(dp[i][j-1]!=-1) dp[i][j] = dp[dp[i][j-1]][j-1];
+	}
+}
+
+int lca(int a, int b){
+	if(dep[a]<dep[b]) swap(a,b);
+	for(int i = 17; i>=0; i--){
+		if(dep[a]-(1<<i)>=dep[b]) a = dp[a][i];
+		if(a==b) return a;
+	}
+	for(int i = 17; i>=0; i--) if((dp[a][i]!=-1)&&(dp[a][i]!=dp[b][i])) a = dp[a][i], b = dp[b][i];
+	return par[a];
+}
+
+void relabel(int cur, int prev, int d){
+	rel[cur] = rel_n++;
+	if(prev<0) par[rel[cur]] = -1;
+	else par[rel[cur]] = rel[prev];
+	dep[rel[cur]] = d;
+	for(int i = 0; i<adj[cur].size(); i++) if(adj[cur][i]!=prev) relabel(adj[cur][i], cur, d+1);
+}
+
+int get_len(int v){
+	if(sz==0) return 1;
+	int a = lca(*s.begin(), *--s.end());
+	if(lca(a,v)==a){
+		int cl = 0;
+		set<int>::iterator it = s.lower_bound(v);
+		if(it!=s.end()) cl = lca(v, *it);
+		if(it!=s.begin()){
+			int b = lca(v, *--it);
+			if(dep[b]>dep[cl]) cl = b;
+		}
+		return dep[v]-dep[cl];
+	} else {
+		return dep[v]+dep[a]-2*dep[lca(a,v)];
+	}
+}
+
+void pop(int v){
+	s.erase(v);
+	sz-=get_len(v);
+}
+
+void push(int v){
+	sz+=get_len(v);
+	s.insert(v);
+}
+
+int main(){
+
+	cin >> n >> k;
+	for(int i = 1; i<n; i++){
+		int a, b;
+		cin >> a >> b;
+		a--, b--;
+		adj[a].push_back(b);
+		adj[b].push_back(a);
+	}
+	relabel(0, -1, 0);
+	precomp_lca();
+
+	for( ; r<n; r++){
+		push(rel[r]);
+		while(sz>k) pop(rel[l++]);
+		res = max(res, r-l+1);
+	}
+	cout << res;
+
+}

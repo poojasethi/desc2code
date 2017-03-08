@@ -1,0 +1,164 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+const int MAXLEN = 700;
+const int MAXN = 560;
+const int MAXNUMOFNUM = (MAXN / 2 + 1) * (MAXN / 2) / 2 * 2;
+const int MAXANS = 1000;
+
+struct HPN
+{
+    int num[MAXLEN];
+    int len;
+
+    void operator = (int x)
+    {
+        len = 0;
+        if(x == 0) len = 1, num[0] = 0;
+        else while(x > 0) num[len ++] = x % 10, x /= 10;
+
+        return;
+    }
+
+    HPN operator * (int x)
+    {
+        HPN ret;
+        ret.len = len + 20;
+        for(int i = 0; i < ret.len; i ++) ret.num[i] = 0;
+        for(int i = len; i < ret.len; i ++) num[i] = 0;
+        for(int i = 0; i < ret.len; i ++)
+            ret.num[i] += num[i] * x, ret.num[i + 1] += ret.num[i] / 10, ret.num[i] %= 10;
+        while(ret.len > 1 && ret.num[ret.len - 1] == 0) ret.len --;
+
+        return ret;
+    }
+
+    HPN operator + (HPN other)
+    {
+        HPN ret;
+        ret.len = max(len, other.len) + 1;
+        for(int i = 0; i < ret.len; i ++) ret.num[i] = 0;
+        for(int i = len; i < ret.len; i ++) num[i] = 0;
+        for(int i = other.len; i < ret.len; i ++) other.num[i] = 0;
+        for(int i = 0; i < ret.len; i ++)
+            ret.num[i] += num[i] + other.num[i], ret.num[i + 1] += ret.num[i] / 10, ret.num[i] %= 10;
+        while(ret.len > 1 && ret.num[ret.len - 1] == 0) ret.len --;
+
+        return ret;
+    }
+
+    HPN operator - (HPN other)
+    {
+        HPN ret;
+        ret.len = max(len, other.len);
+        for(int i = 0; i < ret.len; i ++) ret.num[i] = 0;
+        for(int i = len; i < ret.len; i ++) num[i] = 0;
+        for(int i = other.len; i < ret.len; i ++) other.num[i] = 0;
+        for(int i = 0; i < ret.len; i ++)
+            ret.num[i] += num[i] - other.num[i], ret.num[i + 1] -= (ret.num[i] < 0),
+            ret.num[i] = (ret.num[i] + 10) % 10;
+        while(ret.len > 1 && ret.num[ret.len - 1] == 0) ret.len --;
+
+        return ret;
+    }
+
+    bool operator < (HPN other)
+    {
+        if(len != other.len)
+            return len < other.len;
+        else
+            for(int i = len - 1; i >= 0; i --)
+            if(num[i] != other.num[i]) return num[i] < other.num[i];
+        return false;
+    }
+
+    bool operator == (HPN other)
+    {
+        if(len != other.len)
+            return false;
+        else
+            for(int i = len - 1; i >= 0; i --)
+            if(num[i] != other.num[i]) return false;
+        return true;
+    }
+};
+
+HPN a[MAXNUMOFNUM];
+char Ast[MAXLEN];
+HPN A;
+vector<int> ansv;
+vector< pair<int, int> > ansvar;
+
+int GetIndex(int x, int y)
+{
+    if(y == -1)
+        return GetIndex(x, (x + 1) / 2);
+    else
+        return ((1 + (x - 1) / 2) * ((x - 1) / 2) / 2 * 2) + (x + 1) % 2 * ((x + 1) / 2) + y;
+}
+
+bool compvar(const pair<int, int> p0, const pair<int, int> p1)
+{
+    return a[GetIndex(p0.first, p0.second)] < a[GetIndex(p1.first, p1.second)];
+}
+
+void StrToHPN(HPN& dst, char *st)
+{
+    dst.len = strlen(st);
+    for(int i = 0; i < dst.len; i ++) dst.num[i] = st[dst.len - 1 - i] - '0';
+
+    return;
+}
+
+void PrintHPN(HPN hpn)
+{
+    for(int i = hpn.len - 1; i >= 0; i --) printf("%d", hpn.num[i]);
+    printf("\n");
+
+    return;
+}
+
+int main() {
+
+    int n;
+
+    // freopen("D:\\1.in", "r", stdin);
+    // freopen("D:\\1.out", "w", stdout);
+
+    scanf("%s", Ast);
+    StrToHPN(A, Ast);
+    a[GetIndex(1, 1)] = 2;
+    a[GetIndex(2, 1)] = 13;
+    for(int i = 3; i < MAXNUMOFNUM; i ++)
+    {
+        a[GetIndex(i, -1)] = a[GetIndex(i - 1, -1)] * 13 - a[GetIndex(i - 2, -1)] * 12;
+        for(int j = 1; j < (i + 1) / 2; j ++) a[GetIndex(i, j)] = a[GetIndex(i - 2, j)] * 12;
+        if(A < a[GetIndex(i, 1)]) { n = i; break; }
+    }
+
+    for(int i = 1; i <= n; i ++)
+    for(int j = 1; j <= (i + 1) / 2; j ++)
+    if(a[GetIndex(i, j)] == A)
+    {
+        ansv.push_back(i);
+        for(int k = 1; k <= (i + 1) / 2; k ++)
+        if(j != k) ansvar.push_back(make_pair(i, k));
+        break;
+    }
+
+    sort(ansvar.begin(), ansvar.end(), compvar);
+
+    if(ansv.size() == 0)
+        printf("NO\n");
+    else
+    {
+        printf("YES\n%d\n", min((int)ansv.size(), MAXANS));
+        for(int i = 0; i < min((int)ansv.size(), MAXANS); i ++)
+            printf("%d ", ansv[i]);
+        printf("\n%d\n", min((int)ansvar.size(), MAXANS));
+        for(int i = 0; i < min((int)ansvar.size(), MAXANS); i ++)
+            PrintHPN(a[GetIndex(ansvar[i].first, ansvar[i].second)]);
+    }
+
+	return 0;
+}

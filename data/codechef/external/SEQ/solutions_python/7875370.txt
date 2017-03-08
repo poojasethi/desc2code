@@ -1,0 +1,11 @@
+for i in xrange(input()):
+     N=input()
+     c=1
+     S=2
+     while c<N:
+          if c%2!=0:
+               S=(S*2)-1
+          else:
+               S=(S*2)+1
+          c+=1
+     print S

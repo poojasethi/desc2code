@@ -1,0 +1,100 @@
+#include <map>
+#include <set>
+#include <cmath>
+#include <stack>
+#include <queue>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <sstream>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+#define li       	long long int
+#define rep(i,to)	for(li i=0;i<((li)(to));i++)
+#define pb       	push_back
+#define sz(v)    	((li)v.size())
+#define bit(n)   	(1ll<<(li)(n))
+
+
+#define MAX 50005
+#define MP make_pair
+
+bool is_upper(li x0,li y0,li x1,li y1,li X,li Y){
+	return (y1-y0)*X+(x1-x0)*y0-(y1-y0)*x0<(x1-x0)*Y;
+}
+
+bool is_lower(li x0,li y0,li x1,li y1,li X,li Y){
+	return (x1-x0)*Y<(y1-y0)*X+(x1-x0)*y0-(y1-y0)*x0;
+}
+
+int main(){
+	li x[3][MAX],y[3][MAX],n[3],stage;
+	li p[3]={0,0,0},cnt[3]={0,0,0};
+	vector<li> vx,vy;
+	rep(i,3){
+		cin>>n[i];
+		rep(j,n[i]) cin>>x[i][j]>>y[i][j];
+	}
+	rep(i,3)rep(j,n[i]){
+		double d0=atan2(y[i][(j+1)%n[i]]-y[i][j],x[i][(j+1)%n[i]]-x[i][j]);
+		double d1=atan2(y[i][p[i]+1]-y[i][p[i]],x[i][p[i]+1]-x[i][p[i]]);
+		if(d0<d1) p[i]=j;
+	}
+	vx.pb(x[0][p[0]]+x[1][p[1]]+x[2][p[2]]);
+	vy.pb(y[0][p[0]]+y[1][p[1]]+y[2][p[2]]);
+	while(n[0]!=cnt[0] || n[1]!=cnt[1] || n[2]!=cnt[2]){
+		li t=-1;
+		rep(i,3)if(n[i]!=cnt[i]){
+			if(t==-1){ t=i; continue; }
+			double d0=atan2(y[i][(p[i]+1)%n[i]]-y[i][p[i]],x[i][(p[i]+1)%n[i]]-x[i][p[i]]);
+			double d1=atan2(y[t][(p[t]+1)%n[t]]-y[t][p[t]],x[t][(p[t]+1)%n[t]]-x[t][p[t]]);
+			if(d0<d1) t=i;
+		}
+		p[t]=(p[t]+1)%n[t];
+		cnt[t]++;
+		vx.pb(x[0][p[0]]+x[1][p[1]]+x[2][p[2]]);
+		vy.pb(y[0][p[0]]+y[1][p[1]]+y[2][p[2]]);
+	}
+	li m0=0,m1=0;
+	rep(i,sz(vx)){
+		if(vx[i]<vx[m0]) m0=i;
+		if(vx[m1]<vx[i]) m1=i;
+	}
+	vector<pair<li,li> > _up,_down,up,down;
+	rep(i,sz(vx)){
+		if(!is_upper(vx[m0],vy[m0],vx[m1],vy[m1],vx[i],vy[i])) _down.pb(MP(vx[i],vy[i]));
+		if(!is_lower(vx[m0],vy[m0],vx[m1],vy[m1],vx[i],vy[i])) _up.pb(MP(vx[i],vy[i]));
+	}
+	sort(_up.begin(),_up.end());
+	sort(_down.begin(),_down.end());
+	rep(i,sz(_up)){
+		if(sz(up)==0 || up.back().first!=_up[i].first) up.pb(_up[i]);
+		else up.back().second=max(up.back().second,_up[i].second);
+	}
+	rep(i,sz(_down)){
+		if(sz(down)==0 || down.back().first!=_down[i].first) down.pb(_down[i]);
+		else down.back().second=min(down.back().second,_down[i].second);
+	}
+	for(cin>>stage;stage--;){
+		li xx,yy;
+		cin>>xx>>yy; xx*=3; yy*=3;
+		vector<pair<li,li> >::iterator u1,u0,d1,d0;
+		u0=upper_bound(up.begin(),up.end(),MP(xx,bit(60)));
+		d0=upper_bound(down.begin(),down.end(),MP(xx,bit(60)));
+		if(u0==up.begin() || d0==down.begin()){ cout<<"NO"<<endl; continue; }
+		u1=u0--; 
+		d1=d0--;
+		if(u1==up.end()){
+			cout<<((xx==u0->first && d0->second<=yy && yy<=u0->second)?"YES":"NO")<<endl;
+			continue;
+		}
+		bool ok=true;
+		if(is_upper(u0->first,u0->second,u1->first,u1->second,xx,yy)) ok=false;
+		if(is_lower(d0->first,d0->second,d1->first,d1->second,xx,yy)) ok=false;
+		cout<<((ok)?"YES":"NO")<<endl;
+	}
+}

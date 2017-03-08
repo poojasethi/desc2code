@@ -1,0 +1,130 @@
+#include <iostream>
+#include <cstdio>
+#include <string.h>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <map>
+using namespace std;
+const int maxn = 200011;
+const int maxh = 20;
+
+struct edge{
+    int k,next;
+}e[maxn];
+int st[maxn][maxh],f[maxn],d[maxn],w[maxn],L[maxn],R[maxn],first[maxn];
+vector<pair<int,int> > c[maxn];
+int n,m,nn,sum,head;
+void addedge(int p,int q){
+    e[++sum].k=q;
+    e[sum].next=first[p];
+    first[p]=sum;
+}
+void dfs(int k,int fa,int dp){
+    d[k]=dp;
+    f[k]=fa;
+    L[k]=++head;
+    for (int i=first[k];i;i=e[i].next)
+        if (e[i].k!=fa) dfs(e[i].k,k,dp+1);
+    R[k]=++head;
+}
+void makest(){
+    for (int i=1;i<=n;++i) st[i][0]=f[i];
+    for (int j=1;j<maxh;++j)
+        for (int i=1;i<=n;++i)
+            st[i][j]=st[st[i][j-1]][j-1];
+}
+int lca(int a,int b){
+    int i;
+    if (d[a]<d[b]) swap(a,b);
+    for (;d[a]>d[b];a=st[a][i-1])
+        for (i=0;d[st[a][i]]>=d[b];++i);
+    if (a==b) return a;
+    for (;f[a]!=f[b];a=st[a][i-1],b=st[b][i-1])
+        for (i=0;st[a][i]!=st[b][i];++i);
+    return f[a];
+}
+int gethis(int k,int y){
+    int l=0,r=c[k].size(),mid;
+    while (l<r-1){
+        mid=(l+r)>>1;
+        if (c[k][mid].first<=y) l=mid;
+        else r=mid;
+    }
+    return c[k][l].second;
+}
+int lowbit(int k){return (k&(-k));}
+void update(int k,int y,int delta){
+    for (int i=k;i<=n*2+1;i+=lowbit(i))
+		if (c[i][c[i].size()-1].first==y) c[i][c[i].size()-1].second+=delta;
+		else c[i].push_back(make_pair(y,c[i][c[i].size()-1].second+delta));
+}
+int getsum(int k,int x,int y){
+    int ret=0;
+    for (int i=k;i;i-=lowbit(i))
+        ret+=gethis(i,y)-gethis(i,x);
+    return ret;
+}
+int O1,O2,d1,d2,d3;
+int count(int a,int b,int y,int now){
+	if (a==b) return (a!=O1 && a!=O2 && w[a]<=y);
+	int ret=d[a]-d[b]-getsum(L[a],y,now)+getsum(L[b],y,now)+d3;
+	if (a==O1) ret-=d1;
+	if (a==O2) ret-=d2;
+	return ret;
+}
+
+int work(int k,int lca,int fd,int y,int now){
+	for (int i=19;i>=0;--i){
+		if (!st[k][i] || d[st[k][i]]<d[lca]) continue;
+		if (count(st[k][i],lca,y,now)>=fd) k=st[k][i];
+	}
+	return k;
+}
+
+int ask(int p1,int p2,int lca,int k,int y,int now){
+	if (p1==p2) return k?-1:p1;
+	O1=p1;O2=p2;
+    d1=(w[p1]<=y),d2=(w[p2]<=y),d3=(lca!=p1 && lca!=p2 && w[lca]<=y);
+	int t1=count(p1,lca,y,now),t2=count(p2,lca,y,now);
+	if (t1>=k) return work(p1,lca,t1-k+1,y,now);
+	k-=t1-d3;
+	if (t2>=k) return work(p2,lca,k,y,now);
+	return -1;
+}
+int main(){
+	cin>>n;
+	nn=sum=head=0;
+	memset(first,0,sizeof(first));
+	int p1,p2;
+	for (int i=1,p1;i<=n;++i){ 
+		cin>>p1;
+		if (!p1) continue;
+		addedge(p1,i);
+		addedge(i,p1);
+	}
+	dfs(1,0,1);
+	makest();
+	for (int i=1;i<=n*2;++i){
+		c[i].clear();
+		c[i].push_back(make_pair(-1,0));
+	}
+	for (int i=1;i<=n;++i) w[i]=-1;
+	cin>>m;
+	for (int i=1,p1,p2,p3,p4,p5;i<=m;++i){
+		cin>>p1;
+		if (p1==1){
+			cin>>p2;
+			update(L[p2],i,1);
+			update(R[p2],i,-1);
+			w[p2]=i;
+			continue;
+		}
+		cin>>p2>>p3>>p4>>p5;
+		int la=lca(p2,p3);
+		printf("%d\n",ask(p2,p3,la,p4,p5,i));
+	}
+	return 0;
+}
+
+

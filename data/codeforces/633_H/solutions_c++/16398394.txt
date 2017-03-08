@@ -1,0 +1,129 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define LL long long
+int N,M,Q,len,l,r,pos,step,stepp;
+int a[30010],b[30010],F[30010],Fr[30010],num[30010];
+class que{
+	public:int l,r,t,ans,order;
+}q[30010];
+class rec{
+	public:
+	int s1,s2,mark,num;
+}seg[300010];
+bool cmpq(const que &a,const que &b){
+	return (a.t<b.t)||(a.t==b.t&&a.r<b.r);
+}
+bool cmpord(const que &a,const que &b){
+	return (a.order<b.order);
+}
+void move_right(int x,int delta){
+	int t1=(seg[x].s1*F[delta+1]+seg[x].s2*F[delta])%M;
+	int t2=(seg[x].s1*F[delta]+seg[x].s2*F[delta-1])%M;
+	seg[x].s1=t1;
+	seg[x].s2=t2;
+	seg[x].mark+=delta;
+}
+void move_left(int x,int delta){
+	int t1=(seg[x].s1*Fr[delta-1]+seg[x].s2*Fr[delta])%M;
+	int t2=(seg[x].s1*Fr[delta]+seg[x].s2*Fr[delta+1])%M;
+	seg[x].s1=t1;
+	seg[x].s2=t2;
+	seg[x].mark-=delta;
+}
+void mark_down(int x,int l,int r){
+	if (l<r){
+		if (seg[x].mark>0){
+			move_right(x<<1,seg[x].mark);
+			move_right((x<<1)+1,seg[x].mark);
+		}
+		if (seg[x].mark<0){
+			move_left(x<<1,-seg[x].mark);
+			move_left((x<<1)+1,-seg[x].mark);
+		}
+	}
+	seg[x].mark=0;
+}
+void move(int x,int l,int r,int ll,int rr,int delta){
+	if (l==ll&&r==rr){
+		if (delta>0)move_right(x,delta);
+		if (delta<0)move_left(x,-delta);
+		return;
+	}
+	if (seg[x].mark)mark_down(x,l,r);
+	int mid=(l+r)>>1;
+	if (rr<=mid)move(x<<1,l,mid,ll,rr,delta);
+	else if (ll>mid)move((x<<1)+1,mid+1,r,ll,rr,delta);
+	else move(x<<1,l,mid,ll,mid,delta),move((x<<1)+1,mid+1,r,mid+1,rr,delta);
+}
+void Init(int x,int l,int r,int t,int delta){
+	mark_down(x,l,r);
+	seg[x].num+=delta;
+	if (l==r){
+		pos+=seg[x].num;
+		if (delta>0){
+			if (t<len)move(1,1,len,t+1,len,1);
+			seg[x].s1=F[pos]*b[t]%M;
+			seg[x].s2=F[pos-1]*b[t]%M;
+		}
+		if (delta<0){
+			seg[x].s1=seg[x].s2=0;
+			if (t<len)
+				move(1,1,len,t+1,len,-1);
+		}
+		return;
+	}
+	int mid=(l+r)>>1;
+	if (t<=mid)Init(x<<1,l,mid,t,delta);
+	else pos+=seg[x<<1].num,Init((x<<1)+1,mid+1,r,t,delta);
+	seg[x].s1=seg[x<<1].s1+seg[(x<<1)+1].s1;
+	seg[x].s2=seg[x<<1].s2+seg[(x<<1)+1].s2;
+	if (seg[x].s1>=M)seg[x].s1-=M;
+	if (seg[x].s2>=M)seg[x].s2-=M;
+}
+int main(){
+	scanf("%d%d",&N,&M);
+	F[0]=0;F[1]=1;
+	for (int i=2;i<=N;i++)F[i]=(F[i-1]+F[i-2])%M;
+	Fr[0]=0;Fr[1]=1;
+	for (int i=2;i<=N;i++)Fr[i]=(Fr[i-2]-Fr[i-1]+M)%M;
+	for (int i=1;i<=N;i++)scanf("%d",&a[i]);
+	memcpy(b,a,sizeof(b));
+	sort(b+1,b+N+1);
+	len=unique(b+1,b+N+1)-b-1;
+	for (int i=1;i<=N;i++)a[i]=lower_bound(b+1,b+len+1,a[i])-b;
+	for (int i=1;i<=len;i++)b[i]=b[i]%M;
+	scanf("%d",&Q);
+	for (int i=1;i<=Q;i++)scanf("%d%d",&q[i].l,&q[i].r),q[i].t=(q[i].l-1)/sqrt(N),q[i].order=i;
+	sort(q+1,q+Q+1,cmpq);
+	l=1;r=0;
+	for (int i=1;i<=Q;i++){
+		pos=0;
+		while (r<q[i].r){
+//			stepp++;
+			num[a[++r]]++;
+			if (num[a[r]]==1)pos=0,Init(1,1,len,a[r],1);
+		}
+		while (l>q[i].l){
+//			stepp++;
+			num[a[--l]]++;
+			if (num[a[l]]==1)pos=0,Init(1,1,len,a[l],1);
+		}
+		while (r>q[i].r){
+//			stepp++;
+			num[a[r]]--;
+			if (num[a[r]]==0)pos=0,Init(1,1,len,a[r],-1);
+			r--;
+		}
+		while (l<q[i].l){
+//			stepp++;
+			num[a[l]]--;
+			if (num[a[l]]==0)pos=0,Init(1,1,len,a[l],-1);
+			l++;
+		}
+		q[i].ans=seg[1].s1;
+		if (q[i].ans<0)q[i].ans+=M;
+	}
+	sort(q+1,q+Q+1,cmpord);
+	for (int i=1;i<=Q;i++)
+		printf("%d\n",q[i].ans);
+}

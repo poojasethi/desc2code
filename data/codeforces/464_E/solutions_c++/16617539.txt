@@ -1,0 +1,114 @@
+#include <algorithm>
+#include <iostream>
+#include <cstring>
+#include <climits>
+#include <vector>
+#include <cstdio>
+#include <queue>
+#include <cmath>
+#include <set>
+#define Clear(a, b) memset(a, b, sizeof a)
+#define Copy(a, b) memcpy(a, b, sizeof a)
+using namespace std;
+typedef long long i64;
+const int N = 4e5+10, M = 1e7, L = 2e5+10, MOD = 1e9+7;
+
+int n, m, st, ed;
+int tms, en[N], to[N], next[N], cost[N];
+int cnt, rt[N], lch[M], rch[M], val[M];
+i64 pw[N], hash[M];
+
+bool Judge(int l, int r, int u, int v) {
+	if (l==r) return val[u]>val[v];
+	int m=(l+r)>>1;
+	if (hash[rch[u]] == hash[rch[v]]) return Judge(l, m, lch[u], lch[v]);
+	return Judge(m+1, r, rch[u], rch[v]);
+}
+
+int Modify(int l, int r, int p, int u, int &v) {
+	if (!v) v = ++cnt;
+	if (l==r) { hash[v] = val[v] = val[u]^1; return val[u]; }
+	int m=(l+r)>>1, add=0;
+	if (p>m) {
+		lch[v] = lch[u];
+		add = Modify(m+1, r, p, rch[u], rch[v]);
+	}
+	else {
+		add = Modify(l, m, p, lch[u], lch[v]);
+		if (!add) rch[v] = rch[u];
+		else add = Modify(m+1, r, m+1, rch[u], rch[v]);
+	}
+	hash[v] = (hash[rch[v]]*pw[m-l+1]%MOD + hash[lch[v]]) % MOD;
+	return add;
+}
+
+struct data {
+	int u, rt;
+	data(int _u=0, int _rt=0) { 
+		u = _u, rt = _rt; 
+	}
+	inline bool operator < (const data &a) const {
+		return Judge(0, L, rt, a.rt);
+	}
+};
+
+inline void Link(int u, int v, int d) {
+	to[++tms] = v, next[tms] = en[u], en[u] = tms, cost[tms] = d;
+}
+
+void Init() {
+	scanf("%d%d", &n, &m);
+	for (int i=1; i<=m; ++i) {
+		int u, v, d;
+		scanf("%d%d%d", &u, &v, &d);
+		Link(u, v, d), Link(v, u, d);
+	}
+	scanf("%d%d", &st, &ed);
+	pw[0] = 1;
+	for (int i=1; i<N; ++i) pw[i] = (pw[i-1]<<1)%MOD;
+}
+
+priority_queue<data> q;
+int pre[N];
+bool flag[N];
+
+void Print() {
+	printf("%I64d\n", hash[rt[ed]]);
+	static int node[N], r;
+	for (int u=ed; u!=st; u=pre[u]) node[++r] = u;
+	printf("%d\n%d", r+1, st);
+	for (int i=r; i; --i) printf(" %d", node[i]);
+	puts("");
+}
+
+void Solve() {
+	rt[st] = cnt = 1;
+	q.push(data(st, rt[st]));
+	bool sol=0;
+	while (!q.empty()) {
+		data now=q.top(); q.pop();
+		int u=now.u, lrt=rt[u];
+		if (u == ed) { Print(); sol=1; break; }
+		if (flag[u]) continue;
+		flag[u] = 1;
+		for (int p=en[u]; p; p=next[p]) {
+			int v=to[p], nrt=0;
+			Modify(0, L, cost[p], lrt, nrt);
+			if (!rt[v] || Judge(0, L, rt[v], nrt)) {
+				rt[v] = nrt;
+				pre[v] = u;
+				q.push(data(v, nrt));
+			}
+		}
+	}
+	if (!sol) puts("-1");
+}
+
+int main() {
+
+	Init();
+	Solve();
+
+	return 0;
+}
+

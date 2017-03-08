@@ -1,0 +1,107 @@
+#include <cstdio>
+
+#include <set>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+typedef long long llint;
+
+const int MAX = 300000;
+
+int n, L;
+llint x[MAX], d[MAX], t[MAX], p[MAX];
+
+vector<int> V;
+
+llint dist[MAX];
+int back[MAX];
+vector<int> ramp[MAX];
+
+struct cmp {
+  bool operator () ( int a, int b ) {
+    if( dist[a] != dist[b] ) return dist[a] < dist[b];
+    return a < b;
+  }
+};
+set<int,cmp> S;
+
+inline void update( int a, int b, llint w, int r ) {
+  if( dist[a] + w < dist[b] ) {
+    if( S.find( b ) != S.end() ) S.erase( b );
+
+    dist[b] = dist[a] + w;
+    back[b] = r;
+
+    S.insert( b );
+  }
+}
+
+int main( void ) {
+  scanf( "%d%d", &n, &L );
+
+  for( int i = 0; i < n; ++i ) {
+    scanf( "%lld%lld%lld%lld", x+i, d+i, t+i, p+i );
+    d[i] += x[i];
+    x[i] -= p[i];
+    t[i] += p[i];
+  }
+
+  for( int i = 0; i < n; ++i ) {
+    if( x[i] >= 0 && d[i] <= L ) {
+      V.push_back( x[i] );
+      V.push_back( d[i] );
+    }
+  }
+  V.push_back( 0 );
+  V.push_back( L );
+
+  sort( V.begin(), V.end() );
+  V.resize( unique( V.begin(), V.end() ) - V.begin() );
+
+  for( int i = 0; i < n ;++i ) {
+    if( x[i] >= 0 && d[i] <= L ) {
+      x[i] = lower_bound( V.begin(), V.end(), x[i] ) - V.begin();
+      d[i] = lower_bound( V.begin(), V.end(), d[i] ) - V.begin();
+      ramp[x[i]].push_back( i );
+    }
+  }
+  n = V.size();
+
+  for( int i = 0; i < n; ++i ) dist[i] = 1LL<<50;
+  
+  dist[0] = 0;
+  S.insert( 0 );
+
+  while( !S.empty() ) {
+    int p = *S.begin();
+    S.erase( S.begin() );
+
+    for( vector<int>::iterator it = ramp[p].begin(); it != ramp[p].end(); ++it )
+      update( p, d[*it], t[*it], *it );
+    
+    if( p+1 < n ) update( p, p+1, V[p+1] - V[p], -1 );
+    if( p > 0 ) update( p, p-1, V[p] - V[p-1], -2 );
+  }
+
+  printf( "%lld\n", dist[n-1] );
+  
+  vector<int> ans;
+  for( int p = n-1; p > 0; ) {
+    if( back[p] == -1 ) {
+      --p;
+    } else if( back[p] == -2 ) {
+      ++p;
+    } else {
+      ans.push_back( back[p] );
+      p = x[back[p]];
+    }
+  }
+  reverse( ans.begin(), ans.end() );
+
+  printf( "%d\n", ans.size() );
+  for( int i = 0; i < ans.size(); ++i )
+    printf( "%d%c", ans[i]+1, i+1 < ans.size() ? ' ' : '\n' );
+
+  return 0;
+}

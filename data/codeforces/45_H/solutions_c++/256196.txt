@@ -1,0 +1,109 @@
+#include <cstdio>
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <cstdlib>
+#include <vector>
+#include <utility>
+#include <numeric>
+#include <memory>
+
+#define X first
+#define Y second
+#define MIN(x, y) x = x > (y) ? (y) : x
+#define REP(i, n) for (int i = 0; i < (n); ++i)
+#define FOR(i, a, b) for (int i = (a); i < (b); ++i)
+#define CLEAR(x) memset(x, 0, sizeof(x))
+
+using namespace std;
+
+typedef pair<int, int> PII;
+typedef vector<PII> VPII;
+typedef vector<int> VI;
+
+const int MAXN = 1000;
+const int MAXM = 200000 + 10;
+
+int n, m, ans, tot, _tot, low[MAXN], u, v, dfn[MAXN], cnt, dr[MAXN], st, d = 1, ttt;
+int head[MAXN], _head[MAXN], next[MAXM], _next[MAXM], vis[MAXM], _vis[MAXM];
+bool check[MAXN], f[MAXN], prt[MAXN], hp;
+
+inline void add(int u, int v)
+{
+        next[++tot] = head[u];
+        vis[head[u] = tot] = v;
+}
+
+inline void _add(int u, int v)
+{
+        _next[++_tot] = _head[u];
+        _vis[_head[u] = _tot] = v;
+        ++dr[u];
+}
+
+void dfs(int x, int y)
+{
+        check[x] = true;
+        dfn[x] = low[x] = ++cnt;
+        for (int i = head[x], k; i; i = next[i])
+                if (!check[k = vis[i]]) dfs(k, x), MIN(low[x], low[k]);
+                else if (k != y) MIN(low[x], dfn[k]);
+        if (x != 1 && low[x] == dfn[x]) f[x] = true;
+}
+
+void build(int x, int y)
+{
+        check[x] = true;
+        if (f[x]) _add(x, y), _add(y, x), y = x;
+        if (y == 1) prt[x] = true;
+        for (int i = head[x], k; i; i = next[i])
+                if (!check[k = vis[i]]) build(k, y);
+}
+
+PII calc(int x)
+{
+        check[x] = true;
+        VPII que;
+        for (int i = _head[x], k; i; i = _next[i])
+                if (!check[k = _vis[i]]) que.push_back(calc(k));
+        if (!que.size()) return PII(x, 0);
+        VI tmp; 
+        REP(i, que.size())
+                if (!que[i].Y) swap(que[i], que[que.size() - 1]);
+        REP(i, que.size()) tmp.push_back(que[i].X);
+        REP(i, que.size()) if (que[i].Y) tmp.push_back(que[i].Y);
+        for (int i = 2 - (tmp.size() & 1); i < tmp.size(); i += 2)
+                cout << tmp[i] << " " << tmp[i + 1] << endl;
+        if (x == st) cout << tmp[0] << " " << tmp[1] << endl;
+        return tmp.size() & 1 ? PII(tmp[0], 0) : PII(tmp[0], tmp[1]);
+}
+
+int main(int argc, char* argv[])
+{
+        cin >> n >> m;
+        REP(i, m) cin >> u >> v, add(u, v), add(v, u);
+        if (n == 2)
+        {
+                cout << -1 << endl;
+                return 0;
+        }
+        dfs(1, 0);
+        CLEAR(check);
+        build(1, 1);
+        CLEAR(check);
+        FOR(i, 1, n + 1)
+                if (dr[i] > 1) st = i;
+                else if (dr[i] == 1) ++ans, ttt = i;
+        cout << (ans + 1) / 2 << endl;
+        if (!st && ans == 2)
+        {
+                for (int i = head[1]; i; i = next[i])
+                        if (vis[i] == ttt) hp = true;
+                if (hp)
+                        FOR(i, 2, n + 1) if (prt[i]) d = i;
+                if (hp && d == 1) ttt = ttt == 2 ? 3 : 2;
+                cout << d << " " << ttt << endl;
+                return 0;
+        }
+        if (st) calc(st);
+}

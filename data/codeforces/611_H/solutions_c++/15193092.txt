@@ -1,0 +1,178 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <queue>
+#include <assert.h>
+using namespace std;
+
+const int N = 10;
+int a[N][N];
+vector<int> v[N];
+int center[N];
+
+int cal_digit(int n) {
+    if (n == 0) return 0;
+    return cal_digit(n / 10) + 1;
+}
+
+struct Dinic {
+    int source, sink;
+    int dis[45], a[45][45];
+    Dinic() {
+        memset(a, 0, sizeof(a));
+    }
+
+    Dinic(int source, int sink): source(source), sink(sink) {
+        memset(a, 0, sizeof(a));
+    }
+
+    void add(int x, int y, int val) {
+        a[x][y] += val;
+    }
+
+    bool bfs() {
+        memset(dis, -1, sizeof(dis));
+        dis[source] = 0;
+        queue<int> q;
+        q.push(source);
+        while (!q.empty()) {
+            int u = q.front();
+            q.pop();
+            for (int i = 0; i <= sink; i++)
+                if (a[u][i] && dis[i] == -1) dis[i] = dis[u] + 1, q.push(i);
+        }
+        if (dis[sink] == -1) return false;
+        return true;
+    }
+
+    int dfs(int u, int flow) {
+        if (u == sink) return flow;
+        int pre_flow = flow;
+        for (int i = 0; i <= sink && flow; i++)
+            if (dis[i] == dis[u] + 1 && a[u][i]) {
+                int f = dfs(i, min(flow, a[u][i]));
+                a[u][i] -= f;
+                a[i][u] += f;
+                flow -= f;
+            }
+        return pre_flow - flow;
+    } 
+
+    int maxflow() {
+        int ans = 0;
+        while (bfs()) {
+            ans += dfs(source, 1000000000);
+        }
+        return ans;
+    }
+};
+
+int find(int x, int pre[]) {
+    if (pre[x] == -1) return x;
+    return pre[x] = find(pre[x], pre);
+}
+
+bool check(int n, int m, int state) {
+    int x[45], y[45], cnt = 0;
+    int b[N][N];
+    for (int i = 1; i <= m; i++)
+        for (int j = 1; j <= m; j++)
+            b[i][j] = a[i][j];
+    for (int i = 1; i <= m; i++)
+        for (int j = i + 1; j <= m; j++) {
+            x[cnt] = i;
+            y[cnt++] = j;
+        }
+    int pre[N];
+    memset(pre, -1, sizeof(pre));
+    for (int i = 0; i < cnt; i++) {
+        if (state & (1 << i)) {
+            int fx = find(x[i], pre);
+            int fy = find(y[i], pre);
+            if (fx == fy) return false;
+            pre[fx] = fy;
+            b[x[i]][y[i]]--;
+            if (b[x[i]][y[i]] < 0) return false;
+        }
+    }
+    int tmp = 0;
+    for (int i = 1; i <= m; i ++) 
+        if (pre[i] == -1) tmp ++;
+    if (tmp > 1) return false;
+
+    cnt = 0;
+    for (int i = 1; i <= m; i++)
+        for (int j = i; j <= m; j++) {
+            x[cnt] = i;
+            y[cnt++] = j;
+        }
+    Dinic dinic(0, m + cnt + 1);
+    for (int i = 1; i <= m; i++) {
+        dinic.add(0, i, v[i].size() - 1);
+    }
+    for (int i = 0; i < cnt; i ++) {
+        if (b[x[i]][y[i]]) {
+            dinic.add(x[i], m + i + 1, n);
+            if (x[i] != y[i]) dinic.add(y[i], m + i + 1, n);
+        }
+        dinic.add(m + i + 1, m + cnt + 1, b[x[i]][y[i]]);
+    }
+    if (dinic.maxflow() != n - 1 - (m - 1)) return false;
+    cnt = 0;
+    for (int i = 1; i <= m; i++)
+        for (int j = i + 1; j <= m; j++) {
+            x[cnt] = i;
+            y[cnt++] = j;
+        }
+    for (int i = 0; i < cnt; i++)
+        if (state & (1 << i)) printf("%d %d\n", center[x[i]], center[y[i]]);
+
+    cnt = 0;
+    for (int i = 1; i <= m; i++)
+        for (int j = i; j <= m; j++) {
+            x[cnt] = i;
+            y[cnt++] = j;
+        }
+    for (int i = m + 1; i <= m + cnt; i++) {
+        assert (v[x[i - m - 1]].size() >= dinic.a[i][x[i - m - 1]]);
+        assert (v[y[i - m - 1]].size() >= dinic.a[i][y[i - m - 1]]);
+        while (dinic.a[i][x[i - m - 1]] -- > 0) {
+            printf("%d %d\n", center[y[i - m - 1]], v[x[i - m - 1]].back());
+            v[x[i - m - 1]].pop_back();
+        }
+        while (dinic.a[i][y[i - m - 1]] -- > 0) {
+            printf("%d %d\n", center[x[i - m - 1]], v[y[i - m - 1]].back());
+            v[y[i - m - 1]].pop_back();
+        }
+    } 
+    return true; 
+}
+            
+            
+bool solve(int n, int m) {
+    for (int i = 0; i < (1 << (m * (m - 1) / 2)); i++)
+        if (check(n, m, i)) return true;
+    return false; 
+}
+int main()
+{
+    int n;
+    scanf("%d", &n);
+    for (int i = 1; i <= n; i++) v[cal_digit(i)].push_back(i);
+    int m = cal_digit(n);
+    for (int i = 1; i <= m; i++) center[i] = v[i][0];
+    char s[15], str[15];
+    for (int i = 1; i < n; i++) {
+        scanf("%s%s", s, str);
+        if (strlen(s) < strlen(str)) {
+            a[strlen(s)][strlen(str)]++;
+        }
+        else a[strlen(str)][strlen(s)]++;
+    }
+    
+    if (!solve(n, m)) printf("-1\n");
+    return 0;
+}
+
+  	  		    	   			 		 	   			

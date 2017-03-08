@@ -1,0 +1,162 @@
+#include <algorithm>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <queue>
+#include <set>
+#include <map>
+#include <cstdio>
+#include <cstdlib>
+#include <cctype>
+#include <cmath>
+#include <cstring>
+#include <ctime>
+#include <cassert>
+using namespace std;
+typedef long long LL;
+#define FOR(k, a, b) for (int k(a); k < (b); ++k)
+#define FORD(k, a, b) for (int k(b - 1); k >= (a); --k)
+#define REP(k, a) for (int k = 0; k < (a); ++k)
+#define ABS(a) ((a) > 0 ? (a) : -(a))
+ 
+char c[1002][1002];
+char ans[2000000];
+int N, T;
+ 
+char dirc[4] = {'U', 'D', 'R', 'L'};
+int dir[4][2] = {{-1, 0}, {1, 0}, {0, 1}, {0, -1}};
+ 
+string findroute(const pair<int, int>& from, const pair<int, int>& to) {
+  vector<pair<pair<int, int>, string> > q;
+  q.push_back(make_pair(from, string()));
+  REP(i, q.size()) {
+    pair<int, int> actpos = q[i].first;
+    string actstr = q[i].second;
+    int row = actpos.first;
+    int col = actpos.second;
+    REP(j, 4) {
+      int nr = row + dir[j][0];
+      int nc = col + dir[j][1];
+      if (nr >= 0 && nr < N && nc >= 0 && nc < N && c[nr][nc] != '#') {
+        pair<int, int> npos = make_pair(nr, nc);
+        string ns = actstr + dirc[j];
+        if (npos == to) return ns;
+        q.push_back(make_pair(npos, ns));
+      }
+    }
+  }
+  return string();
+}
+ 
+int main(int argc, char* argv[]) {
+#ifdef HOME
+  freopen("in.txt", "r", stdin);
+  freopen("out.txt", "wb", stdout);
+#endif
+  scanf("%d", &T);
+ 
+  while (T--) {
+    scanf("%d", &N);
+    REP(i, N)
+    scanf("%s", c[i]);
+    vector<string> dr((N + 1) / 2);
+    vector<pair<int, int> > start((N + 1) / 2), finish((N + 1) / 2);
+    REP(r, (N + 1) / 2) {
+      vector<vector<bool> > used(2, vector<bool>(N, 0));
+      int row1 = 2 * r;
+      int row2 = 2 * r + 1;
+      if (row2 == N) {
+        row2 -= 2;
+        swap(row1, row2);
+      }
+      int row = row1;
+      int col = 0;
+      if (c[row][col] == '#') ++row;
+      start[r] = make_pair(row, col);
+      used[row - row1][col] = 1;
+      while (1) {
+        int otherrow = row == row1 ? row2 : row1;
+        // try to step up,down if it is not used or forbidden
+        if (c[otherrow][col] == '.' && !used[otherrow - row1][col]) {
+          // then step
+          if (row == row1) {
+            dr[r].push_back('D');
+            ++row;
+          } else {
+            dr[r].push_back('U');
+            --row;
+          }
+          used[row - row1][col] = 1;
+        } else if (col + 1 < N && c[row][col + 1] == '.') {
+          // step right
+          dr[r].push_back('R');
+          ++col;
+          used[row - row1][col] = 1;
+        } else if (col + 1 < N) {
+          // go back
+          if (row == row1) {
+            dr[r].push_back('D');
+            ++row;
+          } else {
+            dr[r].push_back('U');
+            --row;
+          }
+        } else {
+          finish[r] = make_pair(row, col);
+          break;
+        }
+      }
+    }
+    int pos = 0, dir = 0;
+    for (; pos < dr[0].length(); ++pos) ans[pos] = dr[0][pos];
+    FOR(i, 1, dr.size()) {
+      // connect i-1 finish with i
+      dir = 1 - dir;
+      if (dir) {
+        // connect i-1 finish with i finish
+        string str = findroute(finish[i - 1], finish[i]);
+        REP(j, str.size()) {
+          ans[pos] = str[j];
+          ++pos;
+        }
+        //
+        FORD(j, 0, dr[i].size()) {
+          char& c = dr[i][j];
+          switch (c) {
+            case 'R':
+              ans[pos] = 'L';
+              break;
+            case 'L':
+              ans[pos] = 'R';
+              break;
+            case 'U':
+              ans[pos] = 'D';
+              break;
+            case 'D':
+              ans[pos] = 'U';
+              break;
+            default:
+              assert(false);
+          }
+          ++pos;
+        }
+      } else {
+        // connect i-1 start with i start
+        string str = findroute(start[i - 1], start[i]);
+        REP(j, str.size()) {
+          ans[pos] = str[j];
+          ++pos;
+        }
+        //
+        REP(j, dr[i].size()) {
+          ans[pos] = dr[i][j];
+          ++pos;
+        }
+      }
+    }
+    ans[pos] = 0;
+    printf("%s\n", ans);
+  }
+  return 0;
+}  

@@ -1,0 +1,119 @@
+#include <bits/stdc++.h>
+#define MEM(a) memset(a,0,sizeof(a))
+#define mid ((l+r)>>1)
+#define lch tr[c].lc
+#define rch tr[c].rc
+using namespace std;
+typedef long long ll;
+typedef pair<int,int> ii;
+const int INF = 999999999;
+const int MAXNODE = 31000000;
+const int MAXN = 400100;
+const int R = 100050;
+const int MOD = 1000000007;
+
+int numn, flag;//ST
+ll POW[MAXN];//ST
+int dis[MAXN], in[MAXN], pre[MAXN], ans[MAXN], cnt;
+
+struct node
+{
+    int lc, rc, v;
+    ll Hash;
+    void clear(){lc=rc=v=Hash=0;}
+}tr[MAXNODE];
+
+struct edge
+{
+    int u, v, next;
+}e[MAXN];
+int head[MAXN], nume;
+
+inline void addedge(int x, int u, int v)
+{
+    e[++nume].u = u;
+    e[nume].v = v;
+    e[nume].next = head[x];
+    head[x] = nume;
+}
+
+void add(int &c, int l, int r, int x)
+{
+    tr[++numn] = tr[c]; c = numn;
+    if (l == r)
+    {
+        if (!tr[c].v) tr[c].v = tr[c].Hash = 1, flag = 0;
+        else tr[c].clear();
+        return;
+    }
+    if (x>mid) add(rch,mid+1,r,x);
+    else
+    {
+        add(lch,l,mid,x);
+        if (flag)
+        {
+            if (tr[rch].v==r-mid) rch=0;
+            else add(rch,mid+1,r,mid+1);
+        }
+    }
+    tr[c].Hash=(tr[rch].Hash*POW[mid-l+1]+tr[lch].Hash)%MOD;
+    tr[c].v = tr[lch].v + tr[rch].v;
+}
+
+bool cmp(int c1, int c2, int l, int r)
+{
+    if (l == r) return tr[c1].v < tr[c2].v;
+    if (tr[tr[c1].rc].Hash == tr[tr[c2].rc].Hash) return cmp(tr[c1].lc, tr[c2].lc, l, mid);
+    else return cmp(tr[c1].rc, tr[c2].rc, mid + 1, r);
+}
+
+struct Cmp{ bool operator()(const ii&a, const ii&b){ return !cmp(a.second, b.second, 0, R); } };
+priority_queue<ii, vector<ii>, Cmp> q;
+
+void work()
+{
+    int i, j, n, m, t1, t2, t3, s, t, c, cc;
+    ii tt;
+    scanf("%d%d", &n, &m);
+    POW[0] = 1;
+    for (i = 1; i <= R; ++i) POW[i] = POW[i - 1] * 2 % MOD;
+    for (i = 1; i <= m; ++i)
+    {
+        scanf("%d%d%d", &t1, &t2, &t3);
+        addedge(t1, t2, t3);
+        addedge(t2, t1, t3);
+    }
+    scanf("%d%d", &s, &t);
+    q.push(make_pair(s,0));
+    in[s]=1;
+    while (!q.empty())
+    {
+        tt = q.top();q.pop();c=tt.first;
+        if (in[c] == 2) continue;
+        in[c]=2;
+        for (i = head[c]; i; i = e[i].next)
+        {
+            flag = 1;
+            cc = dis[c];
+            add(cc, 0, R, e[i].v);
+            if (in[e[i].u] != 2 && (in[e[i].u] == 0 || cmp(cc, dis[e[i].u], 0, R)))
+            {
+                in[e[i].u] = 1;
+                dis[e[i].u] = cc;
+                q.push(make_pair(e[i].u,dis[e[i].u]));
+                pre[e[i].u] = c;
+            }
+        }
+        if (in[t]==2) break;
+    }
+    if (in[t]==0) { printf("-1\n"); return; }
+    for (i = t; i; i = pre[i]) ans[++cnt] = i;
+    printf("%d\n%d\n", (int)tr[dis[t]].Hash, cnt);
+    for (i = cnt; i; --i) printf("%d ", ans[i]);
+}
+
+int main()
+{
+    work();
+    return 0;
+}

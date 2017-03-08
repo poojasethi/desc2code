@@ -1,0 +1,152 @@
+#include <cstdio>
+#include <vector>
+#include <map>
+#include <algorithm>
+using namespace std;
+
+typedef pair<int,int> pii;
+int n, m;
+
+struct seg{
+    int x, y, l;
+    seg(int a, int b, int c) : x(a), y(b), l(c){};
+};
+
+struct event{
+    int x, t, v1, v2;
+    event(int a, int b, int c, int d=0):x(a), t(b), v1(c), v2(d){};
+};
+bool operator<(event a, event b){   if (a.x != b.x) return a.x < b.x;
+                                    else return a.t < b.t;}
+
+// t == 1 start of horizontal line -> v1 - y
+// t == 2 vertical line -> v1 - y / v2 - y + l
+// t == 3 end of horizontal line -> v1 - y
+
+vector<seg> h,v;
+
+int bit[(int)1e6+10];
+inline void clear(int lim){
+    for (int i=0;i<=lim;i++)
+        bit[i] = 0;
+}
+
+inline void update(int i, int v, int lim){
+    while (i <= lim){
+        bit[i] += v;
+        i += i&-i;
+    }
+}
+
+inline int query(int ini, int fim, int lim){
+    // printf("query %d - %d", ini, fim);
+    ini--;
+    int sum = 0;
+    while (fim > 0){
+        sum += bit[fim];
+        fim -= fim&-fim;
+    }
+
+    while (ini > 0){
+        sum -= bit[ini];
+        ini -= ini&-ini;
+    }
+
+    // printf(" %d\n", sum);
+    return sum;
+}
+
+inline bool ls(int k){
+    vector<event> li;
+    map<int,int> yrtov;
+    vector<int> yvtor;
+    vector<int> listy;
+    int xix = 1, yix = 1;
+
+    for (int i=0;i<n;i++){
+        int y = v[i].y + k, l = v[i].l - 2*k;
+        if (l >= 0){
+            listy.push_back(y); listy.push_back(y+l);
+        }
+    }
+
+    for (int i=0;i<m;i++){
+        int y = h[i].y, l = h[i].l - 2*k;
+        if (l >= 0){
+            listy.push_back(y);
+        }
+    }
+
+    yvtor.push_back(0);
+    sort(listy.begin(), listy.end());
+
+    int last = - (int) 1e9;
+    for (int i=0;i<listy.size();i++){
+        if (listy[i] == last) continue;
+        yrtov[listy[i]] = yix++;
+        yvtor.push_back(listy[i]);
+        last = listy[i];
+    }
+
+    for (int i=0;i<n;i++){
+        int y = v[i].y + k, l = v[i].l - 2*k;
+        if (l >= 0)
+            li.push_back(event(v[i].x, 2, yrtov[y], yrtov[y+l]));
+    }
+
+    for (int i=0;i<m;i++){
+        int x = h[i].x + k, y = h[i].y, l = h[i].l - 2*k;
+        if (l >= 0){
+            li.push_back(event(x, 1, yrtov[y], 0));
+            li.push_back(event(x+l, 3, yrtov[y], 0));
+        }
+    }
+
+    int lim = yix; clear(lim);
+    sort(li.begin(), li.end());
+
+    for (int i=0;i<li.size();i++){
+        if (li[i].t == 1){
+            update(li[i].v1, 1, lim);
+        }else if (li[i].t == 2){
+            if (query(li[i].v1, li[i].v2, lim) >= 1)
+                return 1;
+        }else{
+            update(li[i].v1, -1, lim);
+        }
+    }
+    return 0;
+}
+
+inline int bs(int ini, int fim){
+    int mid = (ini + fim + 1)/2;
+    while (ini < fim){
+        // printf("\nini %d fim %d mid %d\n", ini, fim, mid);
+        int value = ls(mid);
+        // printf("line sweep: %d\n", value);
+        if (value)
+            ini = mid;
+        else
+            fim = mid-1;
+        mid = (ini + fim + 1)/2;
+    }
+    return mid;
+}
+
+int main(){
+    int maxh = 0, maxv = 0;
+    scanf("%d %d", &n, &m);
+
+    for (int i=1,a,b,c;i<=n;i++){
+        scanf("%d %d %d", &a, &b, &c);
+        v.push_back(seg(a,b,c));
+        maxv = max(maxv, c);
+    }
+    for (int i=1,a,b,c;i<=m;i++){
+        scanf("%d %d %d", &a, &b, &c);
+        h.push_back(seg(a,b,c));
+        maxh = max(maxh, c);
+    }
+
+    printf("%d\n", bs(0, max(maxh, maxv)+2));
+}

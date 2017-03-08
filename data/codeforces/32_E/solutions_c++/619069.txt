@@ -1,0 +1,115 @@
+#include <iostream>
+#include <vector>
+#include <complex>
+
+using namespace std;
+
+typedef long double ldouble;
+
+typedef complex<ldouble> point;
+
+ldouble prodesc(point p1,point p2)
+{
+  return real(conj(p1)*p2);
+}
+
+ldouble prodvec(point p1,point p2)
+{
+  return imag(conj(p1)*p2);
+}
+
+point interseccio(point p1,point u1,point p2,point u2)
+{
+  return p1+(prodvec(p2-p1,u2)/prodvec(u1,u2))*u1;
+}
+
+ldouble error=1e-13;
+
+bool paralels(point u,point v)
+{
+  return abs(prodvec(u,v))<error;
+}
+
+int signe(ldouble x)
+{
+  if (x>=0) return 1;
+  return -1;
+}
+
+bool mateixcostat(point p1,point p2,point p,point v)
+{
+  return (not paralels(p1-p,v)) and (not paralels(p2-p,v)) and
+    signe(prodvec(p1-p,v))==signe(prodvec(p2-p,v));
+}
+
+ldouble distancia(point p1,point p,point v)
+{
+  return abs(prodvec(p1-p,v))/abs(v);
+}
+
+point projeccio(point p1,point p,point v)
+{
+  return p+(prodesc(p1-p,v)/(abs(v)*abs(v)))*v;
+}
+
+point puntreflexio(point p1,point p2,point p,point v)
+{
+  ldouble d1=distancia(p1,p,v);
+  ldouble d2=distancia(p2,p,v);
+  point pro1=projeccio(p1,p,v);
+  point pro2=projeccio(p2,p,v);
+  return pro1*(d2/(d1+d2))+pro2*(d1/(d1+d2));
+}
+
+bool puntensegment(point p1,point p,point v)
+{
+  return prodesc(p1-p,v)>-error and prodesc(p1-p,v)<norm(v)+error;
+}
+
+point llegeix()
+{
+  ldouble x,y;
+  cin>>x>>y;
+  return point(x,y);
+}
+
+bool obstacle(point p1,point p2,point q1,point q2)
+{
+  if (paralels(p2-p1,q2-q1)) return false;
+  point p=interseccio(p1,p2-p1,q1,q2-q1);
+  return puntensegment(p,p1,p2-p1) and puntensegment(p,q1,q2-q1);
+}
+
+bool obstaclepared(point p1,point p2,point q1,point q2)
+{
+  if (paralels(p2-p1,q2-q1))
+    return distancia(q1,p1,p2-p1)<error and
+      (puntensegment(q1,p1,p2-p1) or puntensegment(q2,p1,p2-p1));
+  return obstacle(p1,p2,q1,q2);
+}
+
+
+int main()
+{
+  point p,q,w1,w2,m1,m2;
+  p=llegeix();q=llegeix();w1=llegeix();w2=llegeix();m1=llegeix();m2=llegeix();
+  if (not obstaclepared(p,q,w1,w2)) {
+    if (not obstacle(p,q,m1,m2))
+      cout<<"YES"<<endl;
+    else
+      cout<<"NO"<<endl;
+  } else {
+    if (mateixcostat(p,q,m1,m2-m1)) {
+      point rebot=puntreflexio(p,q,m1,m2-m1);
+      if (not puntensegment(rebot,m1,m2-m1))
+	cout<<"NO"<<endl;
+      else if ((not obstaclepared(p,rebot,w1,w2)) and
+	       (not obstaclepared(q,rebot,w1,w2)))
+	cout<<"YES"<<endl;
+      else
+	cout<<"NO"<<endl;
+    } else {
+      cout<<"NO"<<endl;
+    }
+  }
+}

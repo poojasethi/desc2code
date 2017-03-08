@@ -1,0 +1,114 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <iostream>
+#include <cmath>
+#include <vector>
+
+using namespace std;
+
+const int N = 1010;
+const double eps = 1e-8;
+
+#define sqr(x) (x * x)
+inline int sign(double x) {return x < -eps ? -1 : x > eps;}
+
+struct Point3D
+{
+	double x, y, z;
+	Point3D() {}
+	Point3D(double _x, double _y, double _z): x(_x), y(_y), z(_z) {}
+	Point3D operator + (const Point3D &o) const {return Point3D(x + o.x, y + o.y, z + o.z);}
+	Point3D operator - (const Point3D &o) const {return Point3D(x - o.x, y - o.y, z - o.z);}
+	Point3D operator * (double o) {return Point3D(x * o, y * o, z * o);}
+	Point3D operator / (double o) {return Point3D(x / o, y / o, z / o);}
+	double dot(const Point3D &o) const {return x * o.x + y * o.y + z * o.z;}
+	Point3D det(const Point3D &o) const {return Point3D(y * o.z - z * o.y, z * o.x - x * o.z, x * o.y - y * o.x);}
+	Point3D unit() {return *this / abs();}
+	double abs() {return sqrt(sqr(x) + sqr(y) + sqr(z));}
+	void show() {cout << x << ' ' << y << ' ' << z << endl;}
+	void read() {scanf("%lf%lf%lf", &x, &y, &z);}
+};// 3D_Geo_Point
+struct Point
+{
+	double x, y;
+	Point(){}
+	Point(double _x, double _y): x(_x), y(_y) {}
+	Point operator + (const Point &o) const {return Point(x + o.x, y + o.y);}
+	Point operator - (const Point &o) const {return Point(x - o.x, y - o.y);}
+	Point operator * (double o) {return Point(x * o, y * o);}
+	Point operator / (double o) {return Point(x / o, y / o);}
+	double dot(const Point &o) const {return x * o.x + y * o.y;}
+	double det(const Point &o) const {return x * o.y - y * o.x;}
+	void read() {scanf("%lf%lf", &x, &y);}
+	void show() {cout << x << ' ' << y << endl;}
+	double abs() {return sqrt(sqr(x) + sqr(y));}
+	Point unit() {return *this / abs();}
+	friend double dis(Point x) {return x.abs();};
+};// 2D_Geo_Point
+
+int n, m;
+Point3D p[N];
+Point ps[N];
+
+inline bool check(const Point &p0, const Point &s, double r)
+{
+	return sign(dis(p0 - s) - r) > 0;
+}
+Point circumCenter(const Point &a, const Point &b,const Point &c)
+{
+	double a1 = b.x - a.x, b1 = b.y - a.y, c1 = (a1 * a1 + b1 * b1) / 2;
+	double a2 = c.x - a.x, b2 = c.y - a.y, c2 = (a2 * a2 + b2 * b2) / 2;
+	double d = a1 * b2 - a2 * b1;
+	return Point(a.x + (c1 * b2 - c2 * b1) / d, a.y + (a1 * c2 - a2 * c1) / d);
+}
+double minCircleCover()
+{
+	random_shuffle(ps , ps + n);
+
+	Point s = ps[0];
+	double r = 0;
+	for(int i = 1; i < n; ++i)
+		if(check(ps[i], s, r))
+		{
+			s = ps[i]; r = 0;
+			for(int j = 0; j < i; ++j)
+				if(check(ps[j], s, r))
+				{
+					s = (ps[i] + ps[j]) / 2;
+					r = dis(ps[j] - s);
+					for(int k = 0; k < j; ++k)
+						if(check(ps[k], s, r))
+						{
+							s = circumCenter(ps[i], ps[j], ps[k]);
+							r = dis(ps[k] - s); 
+						}
+				}
+		}
+	return r;
+}
+int main()
+{
+	scanf("%d %d", &n, &m);
+	for(int i = 0; i < n; ++i)
+		p[i].read();
+
+	for(int i = 0; i < m; ++i)
+	{
+		double a, b, c;
+		scanf("%lf %lf %lf", &a, &b, &c);
+		Point3D pn(a, b, c), dx, dy, o(0, 0, 0);
+		if(sign(a))
+			dx = Point3D(-c / a, 0, 1);
+		else if(sign(b))
+			dx = Point3D(1, -a / b, 0);
+		else 
+			dx = Point3D(1, 0, -a / c);
+		dy = pn.det(dx);
+		dx = dx.unit(), dy = dy.unit();
+		for(int i = 0; i < n; ++i)
+			ps[i] = Point(p[i].dot(dx), p[i].dot(dy));
+		printf("%.10f\n", minCircleCover());
+	}
+	return 0;
+}

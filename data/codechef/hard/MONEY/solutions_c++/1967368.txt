@@ -1,0 +1,82 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+ 
+using namespace std;
+ 
+#define MAXP 64000
+bool isprime[MAXP];
+vector<unsigned> P;
+ 
+#define MAXC 100000
+unsigned cache[MAXC];
+ 
+void accum(vector<pair<unsigned, unsigned> >& pf, vector<unsigned>& fact,
+           unsigned m, unsigned x) {
+  if(x == pf.size()) {
+    fact.push_back(m);
+    return;
+  }
+  for(unsigned i = 0; i <= pf[x].second; i++) {
+    accum(pf, fact, m, x + 1);
+    m *= pf[x].first;
+  }
+}
+ 
+vector<unsigned> factors(unsigned N) {
+  vector<pair<unsigned, unsigned> > pf;
+  for(unsigned i = 0; P[i] * P[i] <= N; i++) {
+    unsigned cnt = 0;
+    while(N % P[i] == 0) {
+      N /= P[i];
+      ++cnt;
+    }
+    if(cnt) {
+      pf.push_back(make_pair(P[i], cnt));
+    }
+  }
+  if(N > 1) pf.push_back(make_pair(N, 1));
+  vector<unsigned> fact;
+  accum(pf, fact, 1, 0);
+  return fact;
+}
+ 
+unsigned solve(unsigned N) {
+  ++N;
+  vector<unsigned> fact = factors(N);
+  vector<unsigned> dp(fact.size(), 0);
+  for(unsigned i = dp[0] = 1; i < fact.size(); i++) {
+    if(fact[i] < MAXC && cache[fact[i]]) {
+      dp[i] = cache[fact[i]];
+    } else {
+      for(int j = i - 1; j >= 0; j--) {
+        if(fact[i] % fact[j] == 0) {
+          dp[i] += dp[j];
+        }
+      }
+      if(fact[i] < MAXC) cache[fact[i]] = dp[i];
+    }
+  }
+  return dp[fact.size() - 1];
+}
+ 
+int main() {
+  for(unsigned i = 0; i < MAXP; i++) isprime[i] = true;
+  for(unsigned i = 2; i * i < MAXP; i++) {
+    if(!isprime[i]) continue;
+    for(unsigned j = i * i; j < MAXP; j += i) {
+      isprime[j] = false;
+    }
+  }
+  for(unsigned i = 2; i < MAXP; i++) {
+    if(isprime[i]) {
+      P.push_back(i);
+    }
+  }
+ 
+  unsigned T; cin >> T;
+  for(unsigned t = 1; t <= T; t++) {
+    unsigned N; cin >> N;
+    cout << solve(N) << endl;
+  }
+}

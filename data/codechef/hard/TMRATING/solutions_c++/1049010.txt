@@ -1,0 +1,90 @@
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <cstdio>
+#include <ctime>
+#include <vector>
+#include <fstream>
+#include <sstream>
+#include <queue>
+#include <cmath>
+#include <set>
+using namespace std;
+#define L(s) (int)((s).size())
+#define pb push_back
+#define pii pair<int, int>
+#define mp make_pair
+#define x first
+#define y second
+#define inf 1000000000
+#define all(s) (s).begin(), (s).end()
+#define ll long long
+#define VI vector<int>
+#define ull unsigned ll
+const int N = (111111 << 2) * 20;
+int l[N], r[N];
+pii f[N];
+int top[N];
+int n, m, a, b, c, d, V, q;
+inline pii mix(pii a, pii b) {
+	if (a.y >= b.x) return a; else
+		if (b.y >= a.x) return b; else
+			return mp(max(a.x, b.x), min(a.x, b.x));
+}
+void create(int v, int vl, int vr, int pos, int val) {
+	if (vl + 1 == vr) {
+		f[v].x = val;
+		return;
+	}
+	if (l[v] == -1) l[v] = V++;
+	if (r[v] == -1) r[v] = V++;
+	int mid = (vl + vr + 1) / 2;
+	if (pos < mid) create(l[v], vl, mid, pos, val);
+	else create(r[v], mid, vr, pos, val);
+	f[v] = mix(f[l[v]], f[r[v]]);
+}
+pii get(int v, int vl, int vr, int st, int fn) {
+//	cerr << v << " " << vl << " " << vr  << " " << st << " " << fn << endl;
+	if (v == -1) exit(0);
+	if (vl == st && vr == fn) return f[v];
+	int mid = (vl + vr + 1) / 2; pii ans = mp(0, 0);
+	if (st < mid) ans = mix(ans, get(l[v], vl, mid, st, min(mid, fn)));
+	if (fn > mid) ans = mix(ans, get(r[v], mid, vr, max(st, mid), fn));
+	return ans;
+}
+int upd(int v, int vl, int vr, int pos, int newval) {
+	if (vl + 1 == vr) {
+		f[V++] = mp(newval, 0);
+		return V - 1;
+	}
+	int mid = (vl + vr + 1) / 2;
+	int who = V++;
+	l[who] = l[v];
+	r[who] = r[v];
+	if (pos < mid)
+		l[who] = upd(l[v], vl, mid, pos, newval);
+	else
+		r[who] = upd(r[v], mid, vr, pos, newval);
+	f[who] = mix(f[l[who]], f[r[who]]);
+	return who;
+}
+int main() {
+	scanf("%d%d%d%d%d%d", &n, &m, &a, &b, &c, &d);
+	memset(l, -1, sizeof(l));
+	memset(r, -1, sizeof(r));
+	V = 1;
+	for(int i = 0; i < n; ++i) {
+		int x; scanf("%d", &x); create(0, 0, n, i, x);
+	}
+	top[0] = 0;
+	scanf("%d", &q);
+	pii ans = mp(0, 0);
+	for(int k = 1; k <= q; ++k){
+		int t = ((ll)a * ans.x + d) % k;
+		int st, fn;
+		scanf("%d%d", &st, &fn); ++fn;
+		ans = get(top[t], 0, n, st, fn);
+		printf("%d %d\n", ans.x, ans.y);
+		top[k] = upd(top[k - 1], 0, n, ((ll)b * ans.x + d) % n, ((ll)c * ans.y + d) % m);
+	}
+}

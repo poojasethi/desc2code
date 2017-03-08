@@ -1,0 +1,133 @@
+#include <iostream>
+#include <iomanip>
+#include <climits>
+#include <stack>
+#include <fstream>
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <string>
+#include <vector>
+#include <deque>
+#include <queue>
+#include <set>
+#include <map>
+#include <cassert>
+
+#define FOR(i,n) for(int i=0,_n=n;i<_n;i++)
+#define FORR(i,s,n) for(int i=s,_n=n;i<_n;i++)
+#define mp make_pair
+#define pb push_back
+#define pii pair<int,int>
+#define pli pair<ll,int>
+#define vi vector<int>
+#define fs first
+#define sec second
+
+#define maxn 300000
+
+using namespace std;
+typedef long long ll;
+
+const ll MOD = 1000000007LL;
+
+int a[maxn+10];
+int b[maxn+10];
+int w[maxn+10];
+pii edge[maxn+10];
+ll res[maxn+10];
+vi stree[4*maxn+10];
+
+int n,m,ptr=0;
+
+vector <pair<int*,int> > sprememba;
+int parent[maxn/3+10];
+int rank[maxn/3+10];
+int size[maxn/3+10];
+int sodost=0;
+
+void rollback(int nlen){
+	while(sprememba.size()>nlen){
+		*sprememba.back().fs=sprememba.back().sec;
+		sprememba.pop_back();
+	}
+}
+
+void nastavi(int *a,int b){
+	sprememba.pb(mp(a,*a));
+	*a=b;
+}
+
+int find(int pz){
+	while(parent[pz]!=pz){
+		pz=parent[pz];
+	}
+	return pz;
+}
+
+void merge(int a, int b){
+	a=find(a);
+	b=find(b);
+	if(a==b)return;
+	if(rank[a]==rank[b])nastavi(rank+a,rank[a]+1);
+	if(rank[a]>rank[b])swap(a,b);
+	nastavi(parent+a,b);
+	int dsodost = (size[a]+size[b])%2-size[a]%2-size[b]%2;
+	nastavi(&sodost,sodost+dsodost);
+	nastavi(size+b,size[a]+size[b]);
+}
+
+void dodaj(int pz, int trl, int trd, int kl, int kd, int el){
+	if(trd<kl || trl>kd)return;
+	if(trd<=kd && trl>=kl){
+		stree[pz].pb(el);
+		return;
+	}
+	int s=(trl+trd)/2;
+	dodaj(pz*2,trl,s,kl,kd,el);
+	dodaj(pz*2+1,s+1,trd,kl,kd,el);
+}
+
+void solve(int pz, int l, int d){
+	int dprej=sprememba.size();
+	FOR(i,stree[pz].size())
+		merge(a[stree[pz][i]],b[stree[pz][i]]);
+	if(l!=d){
+		int s=(l+d)/2;
+		solve(pz*2+1,s+1,d);
+		solve(pz*2,l,s);
+	} else {
+		while(ptr<m && sodost>0){
+			int tredge=edge[ptr++].sec;
+			if(tredge>d)continue;
+			merge(a[tredge],b[tredge]);
+			dodaj(1,0,m-1,tredge,d-1,tredge);
+		}
+		if(sodost)res[l]=-1;
+		else res[l]=w[edge[ptr-1].sec];
+	}
+	rollback(dprej);
+}
+
+int main(){
+	scanf("%d%d",&n,&m);
+	if(n%2){
+		FOR(i,m)printf("-1\n");
+		return 0;
+	}
+	FOR(i,m){
+		scanf("%d%d%d",a+i,b+i,w+i);
+		a[i]--,b[i]--;
+		edge[i]=mp(w[i],i);
+	}
+	FOR(i,n+2){
+		parent[i]=i;
+		size[i]=1;
+	}
+	sodost=n;
+	sort(edge,edge+m);
+	solve(1,0,m-1);
+	FOR(i,m)printf("%lld\n",res[i]);
+	return 0;
+}

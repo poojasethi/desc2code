@@ -1,0 +1,128 @@
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long ll;
+#define pii pair<int,int>
+#define pll pair<ll,ll>
+#define pdd pair<double,double>
+#define X first
+#define Y second
+#define REP(i,a) for(int i=0;i<a;++i)
+#define REPP(i,a,b) for(int i=a;i<b;++i)
+#define FILL(a,x) memset(a,x,sizeof(a))
+#define	foreach( gg,itit )	for( typeof(gg.begin()) itit=gg.begin();itit!=gg.end();itit++ )
+#define	mp make_pair
+#define	pb push_back
+#define sz(a) int((a).size())
+#define	debug(ccc)	cout << #ccc << " = " << ccc << endl;
+#define present(c,x) ((c).find(x) != (c).end())
+#define EQ(a,b) (fabs((a)-(b))<eps)
+inline int max(int a,int b){return a<b?b:a;}
+inline int min(int a,int b){return a>b?b:a;}
+inline ll max(ll a,ll b){return a<b?b:a;}
+inline ll min(ll a,ll b){return a>b?b:a;}
+const int mod = 1e9+7;
+const int N = 1e6+10;
+const ll INF = 1e18;
+
+int par[N],d[N],u[N],low[N],cmp[N],tl[N],gl=0,cmp2[N],dep[N];
+int fat[N][20];
+vector<int> G[N],Gt[N];
+void dfs1(int v,int cid,int dep){
+  u[v]=1; d[v]=dep;
+  low[v]=dep;
+  cmp[v]=cid;
+  REP(i,G[v].size()){
+    int to=G[v][i];
+    if(u[to]!=1){
+      par[to]=v;
+      dfs1(to,cid,dep+1);
+      low[v]=min(low[v],low[to]);
+    }else if(par[v]!=to) low[v]=min(low[v],low[to]); else par[v]=-1;
+  }
+}
+void dfs2(int v,int cid,int h){
+  u[v]=1; cmp2[v]=cid;
+  REP(i,G[v].size()){
+    int to=G[v][i];
+    if(!u[to]){
+      if(low[to]>d[v]){
+        Gt[cid].pb(gl);
+        fat[gl][0]=cid;
+        dep[gl]=h+1;
+        dfs2(to,gl++,h+1);
+      }else dfs2(to,cid,h);
+    }
+  }
+}
+int lca(int u,int v){
+  if(dep[u]!=dep[v]){
+    if(dep[u]>dep[v]) swap(u,v);
+    int dif=dep[v]-dep[u];
+    for(int i=20-1;i>=0;--i) if((dif>>i)&1) v=fat[v][i];
+  }
+  if(u==v) return u;
+  for(int i=20-1;i>=0;i--) if(fat[u][i]!=fat[v][i]){
+    u=fat[u][i];v=fat[v][i];
+  }
+  return fat[u][0];
+}
+int a[N],b[N],c[N];
+int dfs3(int v){
+  u[v]=1;
+  REP(i,Gt[v].size()){
+    int to=Gt[v][i];
+    dfs3(to); a[v]+=a[to];b[v]+=b[to];c[v]+=c[to];
+  }
+}
+
+int main(){
+  int n,m,q,g=0;
+  FILL(a,0);FILL(b,0);FILL(c,0);
+  scanf("%d %d %d",&n,&m,&q);
+  REP(i,m){
+    int x,y;
+    scanf("%d %d",&x,&y);
+    x--;y--;
+    G[x].pb(y);G[y].pb(x);
+  }
+  FILL(u,0);
+  REP(i,n) if(!u[i]){
+    par[i]=i;
+    dfs1(i,gl++,0);
+  }
+  gl=0;
+  FILL(u,0);
+  FILL(fat,-1);
+  REP(i,n) if(!d[i]){
+    fat[gl][0]=-1;
+    dep[gl]=0;
+    dfs2(i,gl++,0);
+  }
+  REPP(j,1,20)  REP(i,gl)
+    fat[i][j]=fat[fat[i][j-1]][j-1];
+
+
+  int f=0;
+  REP(i,q){
+    int x,y;
+    scanf("%d %d",&x,&y);
+    x--;y--;
+    if(cmp[x]!=cmp[y]) f=1;
+    else{
+      x=cmp2[x];y=cmp2[y];
+      int p=lca(x,y);
+      a[x]++; b[y]++;c[p]++;
+    }
+  //  if(g==1&&f==1) printf("h%d %d %d\n",x,y,q);
+  }
+  FILL(u,0);
+  REP(i,gl) {
+    if(!u[i]) dfs3(i);
+    if(a[i]-c[i]>0&&b[i]-c[i]>0) f=1;
+  //  if(g==1&&f==1) printf("g%d %d %d %d\n",a[i],b[i],c[i],i);
+  }
+  if(g==1) {  printf("Yes\n");return 0;}
+  if(f==1) printf("No\n");
+  else printf("Yes\n");
+  return 0;
+}

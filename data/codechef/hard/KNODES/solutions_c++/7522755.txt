@@ -1,0 +1,184 @@
+#include<bits/stdc++.h>
+
+using namespace std;
+
+// Shortcuts for "common" data types in contests
+typedef long long int ll;
+typedef vector<int> vi;
+typedef pair<int, int> ii;
+typedef vector<ii> vii;
+typedef set<int> si;
+typedef map<string, int> msi;
+// To simplify repetitions/loops, Note: define your loop style and stick with it!
+#define s(i) scanf("%d",&i)
+#define sl(i) scanf("%ld",&i)
+#define sll(i) scanf("%lld",&i)
+#define REP(i, a, b) \
+for (int i = int(a); i <= int(b); i++) // a to b, and variable i is local!
+#define NREP(i,a,b) \
+for (int i = int(a); i >= int(b); i--)
+#define TRvi(c, it) \
+for (vi::iterator it = (c).begin(); it != (c).end(); it++)
+#define TRvii(c, it) \
+for (vii::iterator it = (c).begin(); it != (c).end(); it++)
+#define TRmsi(c, it) \
+for (msi::iterator it = (c).begin(); it != (c).end(); it++)
+#define INF 2000000000 // 2 billion
+
+const int MAXN=100009;
+int N, V[MAXN+1]={0}, E[2*MAXN]={0}, L[2*MAXN]={0}, H[MAXN+1]={0}, P[MAXN+1]={-1}, K=0, dep[100009];
+bool disc[MAXN+1]={false};
+vector <vi> g;
+class SparseTable {
+private:
+	int **M, N, LOGN, *A;
+public:
+	SparseTable(int N_, int A_[]) {
+		N = N_, A = A_, LOGN = ceil(log2(N));
+		M = new int*[N];
+		REP(i, 0, N-1) {
+			M[i] = new int[LOGN];
+			memset(M[i], 0, LOGN * sizeof(int));
+		}
+		REP(i, 0, N-1) { M[i][0] = i; }
+		for (int j = 1; 1 << j <= N; j++) {
+		    for (int i = 0; i + (1 << j) - 1 < N; i++) {
+		        if (A[M[i][j - 1]] < A[M[i + (1 << (j - 1))][j - 1]]) {
+		            M[i][j] = M[i][j - 1];
+		        } else {
+		            M[i][j] = M[i + (1 << (j - 1))][j - 1];
+		        }
+		    }
+		}
+	}
+    int query(int i, int j) {
+        int k = log2(j - i + 1);
+        if(A[ M[i][k] ] <= A[ M[j - (1<<k) + 1][k] ]) { return M[i][k]; }
+        else { return M[j - (1<<k) + 1][k]; }
+    }
+};
+
+
+void dfs(int v, int d, int &k) {
+    H[v] = k;
+    E[k] = v;
+    L[k++] = d;
+    disc[v]=true;
+    REP(i, 0, g[v].size()-1) {
+    	int u = g[v][i];
+        if (!disc[u]) {
+            P[u] = v;
+            dfs(u, d+1, k);
+            E[k] = v;
+            L[k++] = d;
+        }
+    }
+}
+
+void pre()
+{
+    REP( i , 0 , N + 2 )
+        dep[i] = -1;
+    dep[1] = 0;
+    queue < int > qu;
+    qu.push( 1 );
+    while( !qu.empty() )
+    {
+        int u = qu.front();qu.pop();
+        TRvi( g[u] , it )
+        {
+            if( dep[*it] == -1 )
+            {
+                dep[*it] = dep[u] + 1;
+                qu.push(*it);
+            }
+        }
+    }
+}
+
+vi que;
+
+int LCA( int a , int b , SparseTable * ST )
+{
+    return E[ST -> query(min(H[a], H[b]), max(H[a], H[b]))];
+}
+
+int dis( int p , int q , int LC )
+{
+    return (dep[p] + dep[q] - 2 * dep[LC]);
+}
+
+void init_search() {
+    K = 0;
+    g.clear();
+    REP(i, 0, N + 2 ) {
+        disc[i]=false;
+    }
+}
+
+bool check( SparseTable *ST )
+{
+    int ext = 0;
+    TRvi( que , it )
+    {
+        if( dep[*it] > dep[ext] )
+            ext = *it;
+    }
+    int nxt = ext;
+    TRvi( que , it )
+    {
+        if( dis( ext , *it , LCA( ext , *it , ST ) ) > dis( ext , nxt , LCA( ext , nxt , ST ) ) )
+            nxt = *it;
+    }
+    int tot = dis( ext , nxt , LCA( ext , nxt , ST ) );
+    //cout << ext << " " << nxt << " " << tot << endl;
+    TRvi( que , it )
+    {
+        int dis1 = dis( ext , *it , LCA( ext , *it , ST ) );
+        int dis2 = dis( nxt , *it , LCA( nxt , *it , ST ) );
+        if( dis1 + dis2 != tot )
+        {
+            que.clear();
+            return false;
+        }
+    }
+    que.clear();
+    return true;
+}
+
+int main()
+{
+    //freopen("input.txt","r",stdin);
+    //freopen("output.txt","w",stdout);
+    int t;s(t);
+    while( t-- )
+    {
+        s(N);
+        init_search();
+        g.resize(N+1);
+        REP(i, 1, N-1) {
+            int x,y;
+            s(x);s(y);
+            g[x].push_back(y);
+            g[y].push_back(x);
+        }
+        dfs(1, 0, K);
+        SparseTable ST(2*N, L);
+        pre();
+        int q;s(q);
+        REP( i , 0 , q - 1 )
+        {
+            int k;s(k);
+            REP( i , 0 , k - 1 )
+            {
+                int p;s(p);
+                que.push_back( p );
+            }
+            if( check(&ST) )
+                printf("Yes\n");
+            else
+                printf("No\n");
+        }
+    }
+    return 0;
+}

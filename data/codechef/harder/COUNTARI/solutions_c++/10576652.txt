@@ -1,0 +1,124 @@
+#include <bits/stdc++.h>
+
+#define ll long long
+#define uint unsigned
+
+#define debug(...) fprintf(stderr, __VA_ARGS__)
+
+#define SZ(x) (int)(x).size()
+#define pb push_back
+
+template<class T>inline void chkmax(T &x, const T &y) {if(x < y) x = y;}
+template<class T>inline void chkmin(T &x, const T &y) {if(x > y) x = y;}
+
+template<class T>
+inline void read(T &x) {
+    char c;int f = 1;x = 0;
+    while(((c=getchar()) < '0' || c > '9') && c != '-');
+    if(c == '-') f = -1;else x = c-'0';
+    while((c=getchar()) >= '0' && c <= '9') x= x*10+c-'0';
+    x *= f;
+}
+static int outn;
+static char out[(int)2e7];
+template<class T>
+inline void write(T x) {
+    if(x < 0) out[outn++] = '-', x = -x;
+    if(x) {
+        static int tmpn;
+        static char tmp[20];
+        tmpn = 0;
+        while(x) tmp[tmpn++] = x%10+'0', x /= 10;
+        while(tmpn) out[outn++] = tmp[--tmpn];
+    }
+    else out[outn++] = '0';
+}
+
+const int N = 1e5, V = 1<<16;
+const double pi = acos(-1.0);
+
+int n, a[N+9], maxv;
+int size, num;
+int cntpre[V+9], cntsuf[V+9];
+ll cnt[V+9], ans;
+
+struct cpx {
+    double a, b;
+    cpx() {}
+    cpx(double _a, double _b):a(_a), b(_b) {}
+    inline friend cpx operator + (const cpx &p, const cpx &q) {
+        return cpx(p.a+q.a, p.b+q.b);
+    }
+    inline friend cpx operator - (const cpx &p, const cpx &q) {
+        return cpx(p.a-q.a, p.b-q.b);
+    }
+    inline friend cpx operator * (const cpx &p, const cpx &q) {
+        return cpx(p.a*q.a-p.b*q.b, p.a*q.b+p.b*q.a);
+    }
+    inline friend cpx operator / (const cpx &p, const double &k) {
+        return cpx(p.a/k, p.b/k);
+    }
+}A[V+9], B[V+9];
+
+inline void dft(cpx *a, int n, int f) {
+    for(int i = 0; i < n; ++i) {
+        int s = i, p = 0;
+        for(int j = 1; j < n; j <<= 1)
+            p = p<<1|(s&1), s >>= 1;
+        if(i > p) std::swap(a[i], a[p]);
+    }
+    for(int l = 1; l <= n; l <<= 1) {
+        cpx wn = cpx(cos(f*2*pi/l), sin(f*2*pi/l));
+        for(int i = 0; i < n; i += l) {
+            cpx w = cpx(1, 0);
+            for(int j = 0; j < (l>>1); ++j) {
+                cpx u = a[i+j], v = a[i+j+(l>>1)]*w;
+                a[i+j] = u+v, a[i+j+(l>>1)] = u-v;
+                w = w*wn;
+            }
+        }
+    }
+    if(f == -1) {
+        for(int i = 0; i < n; ++i)
+            a[i] = a[i]/n;
+    }
+}
+
+inline void mult(int *a, int *b) {
+    int v = 1;
+    while(v <= 2*maxv) v <<= 1;
+    for(int i = 0; i < v; ++i) A[i] = cpx(a[i], 0);
+    for(int i = 0; i < v; ++i) B[i] = cpx(b[i], 0);
+    dft(A, v, 1), dft(B, v, 1);
+    for(int i = 0; i < v; ++i) A[i] = A[i]*B[i];
+    dft(A, v, -1);
+    for(int i = 0; i < v; ++i) cnt[i] = (ll)(A[i].a+0.5);
+}
+
+int main() {
+    read(n);
+    for(int i = 1; i <= n; ++i)
+        read(a[i]), chkmax(maxv, a[i]), cntsuf[a[i]]++;
+    size = std::min(std::max((int)sqrt(17*maxv*log(maxv)), 1), n), num = (n-1)/size+1;
+    for(int i = 1; i <= num; ++i) {
+        int l = (i-1)*size+1, r = std::min(n, i*size);
+        for(int j = l; j <= r; ++j)
+            cntsuf[a[j]]--;
+        mult(cntpre, cntsuf);
+        for(int j = l; j <= r; ++j)
+            ans += cnt[2*a[j]];
+        for(int j = l; j <= r; ++j) {
+            for(int k = j+1; k <= r; ++k) {
+                int val = 2*a[j]-a[k];
+                if(val >= 1 && val <= maxv)
+                    ans += cntpre[val];
+                val = 2*a[k]-a[j];
+                if(val >= 1 && val <= maxv)
+                    ans += cntsuf[val];
+            }
+            cntpre[a[j]]++;
+        }
+    }
+    std::cout << ans << std::endl;
+    return 0;
+}

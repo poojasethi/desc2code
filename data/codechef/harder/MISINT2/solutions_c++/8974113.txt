@@ -1,0 +1,198 @@
+#include <map>
+#include <ctime>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define I64	long long
+#define P	1000000007
+#define Lim	10000000000ll
+#define	For(i,a,b)	for(register int i=a;i<=b;i++)
+
+int		T,D;
+I64		Ans,A[65],B[65];
+
+inline	int	Pow(int a,I64 b){
+		int ret=1;
+		for	(;b;b>>=1,a=1ll*a*a%P)
+			if	(b&1)	ret=1ll*ret*a%P;
+		return	ret;
+}
+
+inline	I64	Plu(I64 a,I64 b,I64 p)	{
+		a+=b;
+		if	(a>=p)	a-=p;
+		return	a;
+}
+inline	I64 Mul(I64 x,I64 y,I64 p){
+		I64 t=(x*y-(I64)((long double)x/p*y+1.0e-8)*p);
+		return t<0 ? t+p : t;
+}
+inline	I64		Pow(I64 a,I64 b,I64 p){
+		I64	ret=1;
+		for	(;b;b>>=1,a=Mul(a,a,p))
+			if	(b&1)	ret=Mul(ret,a,p);
+		return	ret;
+}
+
+#define M	100000
+#define m	M+5
+
+I64		phi[m][40],ord[m][40],F[m][40],rem[m];
+int		fac[m][40],prime[m],V[m];
+
+I64		Ord(I64 x){
+		I64	b=phi[x][1],ret=b;
+		for	(I64 i=2;i*i<=b;i++)
+		if	(b%i==0){
+			if	(Pow(2,i,x)==1)	ret=min(ret,i);
+			if	(Pow(2,b/i,x)==1)	ret=min(ret,b/i);
+		}
+		return	ret;
+}
+inline	I64		gcd(I64 a,I64 b)	{return	!b?a:gcd(b,a%b);}
+inline	I64		Gcd(I64 a,I64 b)	{return	gcd(a<0?-a:a,b<0?-b:b);}
+inline	I64		Lcm(I64 a,I64 b)	{return	a*b/Gcd(a,b);}
+
+void	Pre(){
+		For(i,2,M)	if	(!V[i]){
+			For(j,2,M/i)	V[i*j]=1;
+			phi[i][1]=i-1;
+			ord[i][1]=Ord(i);
+			prime[++*prime]=i;
+
+			I64	x=i;
+			for	(int j=2;;j++){
+				if	(x*i>Lim)	break;	x*=i;
+				phi[i][j]=phi[i][j-1]*i;
+				ord[i][j]=ord[i][j-1];
+				if	(Pow(2,ord[i][j],x)!=1)	ord[i][j]*=i;
+			}
+		}
+		For(i,2,M)	{
+			int x=i;
+			for	(int j=2;j*j<=x;j++)
+				for	(;x%j==0;)	x/=j,fac[i][++*fac[i]]=j;
+			if	(x^1)	fac[i][++*fac[i]]=x;
+		}
+}
+
+namespace	Miller{
+		const	I64	Pri[]={2,3,5,7,11,13,17,19,23,29};
+		bool	Check(I64 a,I64 b,I64 t,I64 p){
+			I64	y=Pow(a,b,p),x;
+			for	(;t--;y=x)
+				if	((x=Mul(y,y,p))==1&&y!=1&&y!=p-1)	return	0;
+			return	x==1;
+		}
+		bool	Main(I64 a){
+			if	(a<2)	return	0;
+			if	(a<=M)	return	!V[a];
+
+			for	(int i=0;i<2;i++)
+				if	(a==Pri[i])	return	1;
+			I64	t=0,b=a-1;	for	(;b&1^1;b>>=1,t++);
+			for	(int i=0;i<2;i++)
+				if	(!Check(Pri[i],b,t,a))	return	0;
+			return	1;
+		}
+};
+
+namespace	RHO{
+		I64		Find(I64 Num,I64 c)	{
+			I64	x=rand()%Num,y=x,i=1,j=2,d;
+			for	(;;){
+				x=Plu(Mul(x,x,Num),c,Num);	i++;	d=Gcd(y-x,Num);
+				if	(d>1&&d<Num)	return	d;
+				if	(x==y)		return	Num;
+				if	(i==j)	j<<=1,y=x;
+			}
+		}
+		void	Work(I64 N){
+			if	(N==1)	return;
+			if	(N<=M)	{
+				For(i,1,*fac[N])	A[++*A]=fac[N][i];
+				return	;
+			}
+			if	(Miller::Main(N))	{A[++*A]=N;return;}
+
+			I64	x=N;
+			for	(;x==N;)	x=Find(x,rand()%(x-1)+1);
+			Work(x);	Work(N/x);
+		}
+		void	Main(I64 x){
+			*A=0;
+			For(i,1,50)	for	(;x%prime[i]==0;)	x/=prime[i],A[++*A]=prime[i];
+
+			Work(x);
+			sort(A+1,A+*A+1);	*B=0;
+			For(i,1,*A)	if	(!*B||A[i]!=A[*B])	A[++*B]=A[i],B[*B]=1;
+				else	B[*B]++;
+		}
+};
+
+I64		C[65],Num1[65][65],Num2[65][65];
+
+void	DFS(int d,I64 a,I64 b,int t){
+		if	(d>D)	{
+			if	(t)	Ans+=a/b;	return;
+		}
+		DFS(d+1,a,b,t);
+		For(i,1,C[d])	DFS(d+1,a*Num1[d][i],Lcm(b,Num2[d][i]),1);
+}
+
+map<I64,I64>H;
+
+I64		Cal(I64 x){
+		if	(H.count(x))	return	H[x];
+
+		D=*B;
+		For(i,1,D)	C[i]=B[i];
+		For(i,1,D)	if	(A[i]<=M){
+			For(j,1,B[i])	Num1[i][j]=phi[A[i]][j],Num2[i][j]=ord[A[i]][j];
+		}	else	{
+			Num2[i][1]=Num1[i][1]=A[i]-1;	RHO::Main(A[i]-1);
+			For(j,1,*B)	for	(;Num2[i][1]%A[j]==0&&Pow(2,Num2[i][1]/A[j],Num1[i][1]+1)==1;)	Num2[i][1]/=A[j];
+		}
+		Ans=0;	DFS(1,1,1,0);	return	Ans;
+}
+
+int		Work(I64 L,I64 R){
+		I64	l=max(1ll,L/2*2),r=R+1;	int ret=0;
+		for	(I64 x=l;x<=r;x++)	rem[x-l+1]=x,*F[x-l+1]=0;
+
+		For(i,1,*prime)	{
+			I64 a=(l-1)/prime[i]+1;
+			for	(a*=prime[i];a<=r;a+=prime[i])
+			for	(;rem[a-l+1]%prime[i]==0;)	rem[a-l+1]/=prime[i],F[a-l+1][++*F[a-l+1]]=prime[i];
+		}
+		for	(I64 x=l;x<=r;x++)	if	(rem[x-l+1]!=1)	F[x-l+1][++*F[x-l+1]]=rem[x-l+1];
+
+		for	(I64 x=l;x<=R;x++){
+			if	(x==1)	{
+				if	(x>=L&&x<=R)	ret=26;
+				continue;
+			}
+
+			*A=0;
+			For(i,1,*F[x+1-l+1])	A[++*A]=F[x+1-l+1][i];
+			sort(A+1,A+*A+1);	*B=0;
+			For(i,1,*A)	if	(!*B||A[i]!=A[*B])	A[++*B]=A[i],B[*B]=1;
+				else	B[*B]++;
+
+			I64	t=Cal(x+1);		H[x+1]=t;
+			if	(x>=L&&x<=R)	ret=(Pow(26,t)+ret)%P;	x++,t++;
+			if	(x>=L&&x<=R)	ret=(Pow(26,t)+ret)%P;
+		}
+		return	ret;
+}
+
+int		main(){
+		srand(time(0));	Pre();
+		scanf("%d",&T);
+		for	(I64 L,R;T--;)
+			scanf("%lld%lld",&L,&R),printf("%d\n",Work(L,R));
+}

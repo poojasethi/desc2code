@@ -1,0 +1,184 @@
+#include <cstdio>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <queue>
+#include <stack>
+#include <set>
+#include <map>
+#include <cstring>
+#include <cstdlib>
+#include <cmath>
+#include <string>
+#include <memory.h>
+#include <sstream>
+#include <ctime>
+ 
+#define oo 1000000005
+#define eps 1e-11
+ 
+#define REP(i,n) for(int i = 0, _n = (n); i < _n; i++)
+#define REPD(i,n) for(int i = (n) - 1; i >= 0; i--)
+#define FOR(i,a,b) for (int i = (a), _b = (b); i <= _b; i++)
+#define FORD(i,a,b) for (int i = (a), _b = (b); i >= _b; i--)
+#define FOREACH(it,c) for (__typeof ((c).begin()) it = (c).begin(); it != (c).end(); it++)
+#define RESET(c,x) memset (c, x, sizeof (c))
+ 
+#define sqr(x) ((x) * (x))
+#define PB push_back
+#define MP make_pair
+#define F first
+#define S second
+#define ALL(c) (c).begin(), (c).end()
+#define SIZE(c) (c).size()
+ 
+using namespace std;
+ 
+const double PI = 2.0 * acos (0.0);
+ 
+typedef long long LL;
+typedef pair <int, int> PII;
+ 
+inline int getInt () { int x; scanf ("%d", &x); return x; }
+inline LL getLL () { LL x; scanf ("%lld", &x); return x; };
+inline int NUM (char c) { return (int)c - 48; }
+inline char CHR (int n) { return (char)(n + 48); }
+template <class T> inline T MAX (T a, T b) { if (a > b) return a; return b; }
+template <class T> inline T MIN (T a, T b) { if (a < b) return a; return b; }
+ 
+inline void OPEN (string s) {
+    freopen ((s + ".in").c_str (), "r", stdin);
+    freopen ((s + ".out").c_str (), "w", stdout);
+}
+ 
+// ptrrsn_1's template
+ 
+#define LEFT(x) (((x)<<1)+1)
+#define RIGHT(x) (((x)<<1)+2)
+#define MAXN 100000
+ 
+struct node {
+	int push_val, cost;
+	node() {}
+	node(int a, int b) : push_val(a), cost(b) {}
+};
+ 
+struct segment_tree {
+	node A[MAXN * 3 + 5];
+	
+	inline void make_tree(int node, int l, int r) {
+		if (r - l > 1) {
+			int mid = (l + r) >> 1;
+			make_tree(LEFT(node), l, mid);
+			make_tree(RIGHT(node), mid, r);
+		}
+		A[node].cost = A[node].push_val = 0;
+	}
+	
+	inline void push(int node, int l, int r) {
+		A[LEFT(node)].push_val += A[node].push_val;
+		A[RIGHT(node)].push_val += A[node].push_val;
+		
+		if (A[node].push_val % 2 == 1) {
+			int mid = (l + r) >> 1;
+			A[LEFT(node)].cost = mid - l - A[LEFT(node)].cost;
+			A[RIGHT(node)].cost = r - mid - A[RIGHT(node)].cost;
+		}
+		
+		A[node].push_val = 0;
+		A[node].cost = A[LEFT(node)].cost + A[RIGHT(node)].cost;
+	}
+	
+	inline void add(int node, int l, int r, int left, int right) {
+		if (l == left && r == right) {
+			A[node].push_val++;
+			A[node].cost = r - l - A[node].cost;
+		} else {
+			push(node, l, r);
+			int mid = (l + r) >> 1;
+			if (right <= mid) {
+				add(LEFT(node), l, mid, left, right);
+			} else if (left >= mid) {
+				add(RIGHT(node), mid, r, left, right);
+			} else {
+				add(LEFT(node), l, mid, left, mid);
+				add(RIGHT(node), mid, r, mid, right);
+			}
+			A[node].cost = A[LEFT(node)].cost + A[RIGHT(node)].cost;
+		}
+	}
+	
+	inline int query(int node, int l, int r, int left, int right) {
+		if (l == left && r == right) {
+			return A[node].cost;
+		} else {
+			push(node, l, r);
+			int mid = (l + r) >> 1;
+			if (right <= mid) {
+				return query(LEFT(node), l, mid, left, right);
+			} else if (left >= mid) {
+				return query(RIGHT(node), mid, r, left, right);
+			} else {
+				return query(LEFT(node), l, mid, left, mid) + query(RIGHT(node), mid, r, mid, right);
+			}
+		}
+	}
+};
+ 
+segment_tree treex, treey, treez;
+ 
+int main () {
+	// OPEN("7");
+	int nTC;
+	scanf("%d", &nTC);
+	while (nTC--) {
+		int Nx, Ny, Nz, Q;
+		scanf("%d%d%d%d", &Nx, &Ny, &Nz, &Q);
+		treex.make_tree(0, 0, Nx);
+		treey.make_tree(0, 0, Ny);
+		treez.make_tree(0, 0, Nz);
+		while (Q--) {
+			int opt;
+			scanf("%d", &opt);
+			if (opt == 0) {
+				int a, b;
+				scanf("%d%d", &a, &b);
+				treex.add(0, 0, Nx, a, b + 1);
+			} else if (opt == 1) {
+				int a, b;
+				scanf("%d%d", &a, &b);
+				treey.add(0, 0, Ny, a, b + 1);
+			} else if (opt == 2) {
+				int a, b;
+				scanf("%d%d", &a, &b);
+				treez.add(0, 0, Nz, a, b + 1);
+			} else {
+				int x1, y1, z1, x2, y2, z2;
+				scanf("%d%d%d%d%d%d", &x1, &y1, &z1, &x2, &y2, &z2);
+				int dx = treex.query(0, 0, Nx, x1, x2 + 1);
+				int dy = treey.query(0, 0, Ny, y1, y2 + 1);
+				int dz = treez.query(0, 0, Nz, z1, z2 + 1);
+				LL ret = 0;
+				REP (a, 2) REP (b, 2) REP (c, 2) {
+					if ((a + b + c) % 2 == 1) {
+						LL aa, bb, cc;
+						
+						if (!a) aa = x2 - x1 + 1 - dx;
+						else aa = dx;
+						
+						if (!b) bb = y2 - y1 + 1 - dy;
+						else bb = dy;
+						
+						if (!c) cc = z2 - z1 + 1 - dz;
+						else cc = dz;
+						
+						ret += aa * bb * cc;
+					}
+				}
+				//printf("dx = %d, dy = %d, dz = %d\n", dx, dy, dz);
+				cout << ret << endl;
+			}
+		}
+	}
+    return 0;
+}

@@ -1,0 +1,100 @@
+#include <iostream>
+#include <cstdio>
+#include <stack>
+#include <vector>
+#define pii pair<int,int>
+#define MAXN 500005
+#define x first
+#define y second
+#define idx(l,r) ((l+r)|(l!=r))
+using namespace std;
+
+int n, m, Q, k, to[MAXN], nxt[MAXN], cc[MAXN];
+pii e[MAXN], q[MAXN];
+
+struct node
+{
+    int col, u, fa, rnk, val;
+    node(){}
+    node(const int a,const int b,const int c,const int d,const int e)
+    {col=a, u=b, fa=c, rnk=d, val=e;}
+}tmp;
+
+struct UFS
+{
+    int fa[MAXN], rnk[MAXN], val[MAXN];
+    void init(int n)
+    {for(int i=1;i<=n;++i)fa[i]=i, rnk[i]=val[i]=0;}
+    pii root(int u)
+    {
+        int v=0;
+        for(;u!=fa[u];u=fa[u])v^=val[u];
+        return pii(u,v);
+    }
+    bool check(int u,int v){return root(u)!=root(v);}
+    void Union(int u,int v,int col,stack<node> &a)
+    {
+        pii rt1=root(u), rt2=root(v);
+        u=rt1.x, v=rt2.x;
+        if(u==v)return;
+        bool f=0;
+        if(rnk[u]==rnk[v])f=1, ++rnk[u];
+        if(rnk[u]>rnk[v])swap(u,v);
+        a.push(node(col,u,fa[u],rnk[u]-f,val[u]));
+        fa[u]=v, val[u]=rt1.y^rt2.y^1;
+    }
+}s[52];
+int ql, qr, qc, qe;
+vector<pii>adj[MAXN<<1];
+void add(int p,int l,int r)
+{
+    if(ql<=l&&r<=qr)
+    {
+        adj[p].push_back(pii(qc,qe));
+        return;
+    }
+    int mid=(l+r)>>1;
+    if(ql<=mid)add(idx(l,mid),l,mid);
+    if(mid<qr)add(idx(mid+1,r),mid+1,r);
+}
+
+void work(int p,int l,int r)
+{
+    stack<node>t;
+    for(vector<pii>::iterator it=adj[p].begin();it!=adj[p].end();++it)
+		s[it->x].Union(e[it->y].x,e[it->y].y,it->x,t);
+    if(l==r)
+    {
+        qe=q[l].x;
+        int u=e[qe].x, v=e[qe].y, col=q[l].y;
+        if(s[col].check(u,v))puts("YES"), cc[qe]=col;
+        else puts("NO");
+        ql=l+1, qr=to[l]-1, qc=cc[qe];
+        if(cc[qe])add(idx(1,Q),1,Q);
+    }
+    else
+    {
+        int mid=(l+r)>>1;
+        work(idx(l,mid),l,mid);
+        work(idx(mid+1,r),mid+1,r);
+    }
+    while(!t.empty())
+    {
+        tmp=t.top();t.pop();
+        s[tmp.col].val[tmp.u]=tmp.val;
+        s[tmp.col].fa[tmp.u]=tmp.fa;
+        s[tmp.col].rnk[tmp.u]=tmp.rnk;
+    }
+}
+
+int main()
+{
+    scanf("%d%d%d%d",&n,&m,&k,&Q);
+    for(int i=1;i<=k;++i)s[i].init(n);
+    for(int i=1;i<=m;++i)
+    {scanf("%d%d",&e[i].x,&e[i].y);nxt[i]=Q+1;}
+    for(int i=1;i<=Q;++i)scanf("%d%d",&q[i].x,&q[i].y);
+    for(int i=Q;i;--i)to[i]=nxt[q[i].x], nxt[q[i].x]=i;
+	work(idx(1,Q),1,Q);
+    return 0;
+}

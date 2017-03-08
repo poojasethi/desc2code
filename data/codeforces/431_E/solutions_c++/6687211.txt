@@ -1,0 +1,91 @@
+#include<cstring>
+#include<cstdlib>
+#include<algorithm>
+#include<cstdio>
+#include<iostream>
+#include<vector>
+#include<set>
+#include<map>
+using namespace std;
+typedef long long ll;
+typedef double db;
+struct node{int ch[2],v,fix,sz;ll su;}t[1000005];int ndtot=0;
+void pu(int x){
+    t[x].su=t[t[x].ch[0]].su+t[t[x].ch[1]].su+t[x].v;
+    t[x].sz=t[t[x].ch[0]].sz+t[t[x].ch[1]].sz+1;
+}
+int root=0;
+void rot(int &x,int f){
+    int y=t[x].ch[!f];
+    t[x].ch[!f]=t[y].ch[f];
+    t[y].ch[f]=x;
+    pu(x);pu(y);
+    x=y;
+}
+void ins(int &x,int v){
+    if(x==0){
+        x=++ndtot;
+        t[x].ch[0]=t[x].ch[1]=0;
+        t[x].sz=1;
+        t[x].fix=rand();
+        t[x].v=t[x].su=v;
+    }else{
+        int f=v>=t[x].v;
+        ins(t[x].ch[f],v);
+        pu(x);
+        if(t[t[x].ch[f]].fix<t[x].fix)rot(x,!f);
+    }
+}
+void del(int &x){
+    if(!t[x].ch[0] && !t[x].ch[1])x=0;
+    else{
+        int f=!t[x].ch[0] || t[x].ch[1]&&t[t[x].ch[1]].fix<t[t[x].ch[0]].fix;
+        rot(x,!f);
+        del(t[x].ch[!f]);
+        pu(x);
+    }
+}
+void del_num(int &x,int v){
+    if(t[x].v==v)del(x);
+    else{
+        int f=v>=t[x].v;
+        del_num(t[x].ch[f],v);
+        pu(x);
+    }
+}
+int n;
+int cur[100005];
+db queryans(db v){
+    int p=root,q;
+    ll presum=0;int presz=0;
+    while(p){
+        ll su=presum+t[t[p].ch[0]].su+t[p].v;
+        int sz=presz+t[t[p].ch[0]].sz+1;
+        if(v>=1ll*t[p].v*sz-su){
+            presum=su;
+            presz=sz;
+            p=t[p].ch[1];
+        }else p=t[p].ch[0];
+    }
+    return 1.0*(presum+v)/presz;
+}
+int main()
+{
+    t[0]=(node){{0,0},0,0,0,0};
+    int que;
+    scanf("%d%d",&n,&que);
+    for (int i=1;i<=n;i++)scanf("%d",&cur[i]);
+    for (int i=1;i<=n;i++)ins(root,cur[i]);
+    while(que--){
+        int opt;scanf("%d",&opt);
+        if(opt==1){
+            int x,y;scanf("%d%d",&x,&y);
+            del_num(root,cur[x]);
+            ins(root,cur[x]=y);
+        }else{
+            ll v;scanf("%I64d",&v);
+            printf("%.5lf\n",queryans(v));
+        }
+    }
+    return 0;
+}

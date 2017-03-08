@@ -1,0 +1,157 @@
+#include <bits/stdc++.h>
+
+#define FOR(i,a,b) for(int i=(a),_b=(b); i<=_b; i++)
+#define FORD(i,a,b) for(int i=(a),_b=(b); i>=_b; i--)
+#define REP(i,a) for(int i=0,_a=(a); i<_a; i++)
+
+#define DEBUG(x) { cout << #x << " = "; cout << (x) << endl; }
+#define PR(a,n) { cout << #a << " = "; FOR(_,1,n) cout << a[_] << ' '; cout << endl; }
+#define PR0(a,n) { cout << #a << " = "; REP(_,n) cout << a[_] << ' '; cout << endl; }
+using namespace std;
+
+const int MAX_BLOCK = 400;
+const int MN = 200111;
+
+// n, m, q: as defined in the problem statement
+int n, m, q;
+// The edges of the graph
+pair<int,int> edges[MN];
+
+// Disjoint set
+int lab[MN], nComponent;
+// The updates that we need to restore a previous state of disjoint set
+vector< pair<int,int> > restore;
+int oldNComponent;
+
+// Store block information
+// blockId[i] = the block that contains i
+// blockStart[k] = the index of the first element in the k-th block
+// blockEnd[k] = the index of the last element in the k-th block
+int blockId[MN], blockStart[MN], blockEnd[MN];
+
+// Disjoint set operation - get root of an element
+int getRoot(int u) {
+    if (lab[u] < 0) return u;
+    else return getRoot(lab[u]);
+}
+
+// Disjoint set operation - merge 2 sets
+void merge(int u, int v, bool needRestore) {
+    u = getRoot(u); v = getRoot(v);
+    if (u == v) return ;
+
+    if (needRestore) {
+        restore.push_back(make_pair(u, lab[u]));
+        restore.push_back(make_pair(v, lab[v]));
+    }
+    --nComponent;
+
+    int x = lab[u] + lab[v];
+    if (lab[u] < lab[v]) {
+        lab[u] = x;
+        lab[v] = u;
+    }
+    else {
+        lab[v] = x;
+        lab[u] = v;
+    }
+}
+
+// Restore a previous state of disjoint set
+void restoreLab() {
+    FORD(i,restore.size()-1,0) {
+        lab[restore[i].first] = restore[i].second;
+    }
+    nComponent += restore.size() / 2;
+    restore.clear();
+}
+
+// Initialize the disjoint set
+void init() {
+    memset(lab, -1, sizeof lab);
+    nComponent = n;
+}
+
+// struct for storing information about a query
+struct Query {
+    int l, r, id;
+} queries[MN];
+// The result of the queries - our answers
+int res[MN];
+
+// Mo's algorithm comperator
+bool operator < (const Query &a, const Query &b) {
+    if (blockId[a.l] != blockId[b.l]) return blockId[a.l] < blockId[b.l];
+    return a.r < b.r;
+}
+
+void solve() {
+    sort(queries+1, queries+q+1);
+
+    // Process small queries
+    init();
+    FOR(i,1,q) {
+        int l = queries[i].l, r = queries[i].r;
+        if (blockId[l] == blockId[r]) {
+            FOR(t,l,r) {
+                int u = edges[t].first, v = edges[t].second;
+                merge(u, v, true);
+            }
+            res[queries[i].id] = nComponent;
+            restoreLab();
+        }
+    }
+
+    // Process other queries
+    int last = -1, lastBlock = -1;
+    FOR(i,1,q) {
+        int l = queries[i].l, r = queries[i].r;
+        if (blockId[l] == blockId[r]) continue;
+
+        if (blockId[l] != lastBlock) {
+            lastBlock = blockId[l];
+            init();
+            last = blockEnd[blockId[l]];
+        }
+        FOR(t,last+1,r) {
+            merge(edges[t].first, edges[t].second, false);
+        }
+        last = r;
+
+        FORD(t,blockEnd[blockId[l]],l) {
+            merge(edges[t].first, edges[t].second, true);
+        }
+
+        res[queries[i].id] = nComponent;
+        restoreLab();
+    }
+}
+
+int main() {
+    ios :: sync_with_stdio(false);
+    int ntest; cin >> ntest;
+    FOR(test,1,ntest) {
+        cin >> n >> m >> q;
+
+        // Init block information
+        FOR(i,1,m) {
+            blockId[i] = i / MAX_BLOCK;
+            if (!blockStart[blockId[i]]) blockStart[blockId[i]] = i;
+            blockEnd[blockId[i]] = i;
+        }
+
+        // Read input
+        FOR(i,1,m) cin >> edges[i].first >> edges[i].second;
+        FOR(i,1,q) {
+            cin >> queries[i].l >> queries[i].r;
+            queries[i].id = i;
+        }
+
+        // Answer the queries
+        solve();
+
+        // Print answers
+        FOR(i,1,q) cout << res[i] << "\n";
+    }
+    return 0;
+}

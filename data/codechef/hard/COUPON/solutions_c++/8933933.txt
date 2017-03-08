@@ -1,0 +1,103 @@
+#include <bits/stdc++.h>
+#include <iostream>
+#include <cstdio>
+using namespace std;
+
+map< pair<int, pair<int, int> >, long long int > pricings;
+int **prices, **discounts;
+int n, m;
+
+long long int get_min(int shop, int product, int discount, long long int no_discount_ahead){
+//ordering in the argument is opposite to the input taken
+	map< pair<int, pair<int, int> >, long long int > :: iterator it = pricings.find(make_pair(shop, make_pair(product, discount))); 
+	if(it != pricings.end()){
+		return it->second;
+	}
+	if(product >= n){
+		return 0;
+	}
+
+	long long int min_price = min(get_min(shop, product+1, 1, 0), no_discount_ahead);
+
+	if(discount == 1 && product >= 1){
+		min_price += prices[product][shop] - min(prices[product][shop], discounts[product-1][shop]);
+	}
+	else{
+		min_price += prices[product][shop];
+	}
+
+	// cout << "in function " << shop << " " << product << " " << discount << " " << min_price << endl; 
+	pricings.insert(make_pair(make_pair(shop, make_pair(product, discount)), min_price));
+	return min_price;
+}
+
+
+
+int main(){
+	int t;
+	cin >> t;
+	while(t--){
+		scanf("%d %d", &n, &m);
+		prices = new int*[n];
+		discounts = new int*[n];
+		for (int i = 0; i < n; ++i)
+		{
+			prices[i] = new int[m];
+			discounts[i] = new int[m];
+		}
+
+		int price, discount;
+		for (int i = 0; i < n; ++i){
+			for (int j = 0; j < m; ++j){
+				scanf("%d", &price);
+				prices[i][j] = price;
+			}
+		}
+
+		for (int i = 0; i < n; ++i){
+			for (int j = 0; j < m; ++j){
+				scanf("%d", &discount);
+				discounts[i][j] = discount;
+			}
+		}
+
+		long long int min_price = -1;
+		long long int no_discount_ahead = 0;
+		long long int temp = -1;
+		for (int i = n-1; i > 0; --i){
+			for (int j = 0; j < m; ++j){
+				long long int cost = get_min(j, i, 0, no_discount_ahead);
+				if(temp == -1){
+					temp = cost;
+				} 
+				else if(temp > cost){
+					temp = cost;
+				}			
+			}
+
+			for (int j = 0; j < m; ++j){
+				long long int cost = get_min(j, i, 1, no_discount_ahead);			
+			}
+			no_discount_ahead = temp;
+			temp = -1;
+		}
+
+		for (int i = 0; i < m; ++i){
+			long long int cost = get_min(i, 0, 0, no_discount_ahead);
+
+			// cout << i << " " << cost << endl;
+			if(min_price == -1){
+				min_price = cost;
+			}
+			else if(min_price > cost){
+				min_price = cost;
+			}
+		}
+
+		printf("%lld\n", min_price);
+
+		pricings.clear();
+		delete[] prices;
+		delete[] discounts;
+	}
+}

@@ -1,0 +1,18 @@
+#include<iostream>
+#include<cmath>
+#include<cstdio>
+int main()
+{
+    int a,b,i,x;
+    scanf("%d%d%d",&a,&b,&x);
+    for(i=-1000;i<=1000;i++)
+
+        if(fabs(a*pow(i,x)-b)<0.1)
+        {
+            printf("%d\n",i);
+            return 0;
+        }
+        printf("No solution");
+        return 0;
+
+}

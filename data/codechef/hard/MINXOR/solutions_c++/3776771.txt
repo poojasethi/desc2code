@@ -1,0 +1,198 @@
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <bitset>
+#include <deque>
+#include <list>
+#include <map>
+#include <queue>
+#include <set>
+#include <stack>
+#include <vector>
+#include <iostream>
+#include <algorithm>
+#include <functional>
+#include <new>
+#include <string>
+
+using namespace std;
+
+#define GETC getchar_unlocked()
+inline void fastRead(int *a)
+{
+ register char c=0;
+ int sign=1;
+ while (c<33) c=GETC;
+ *a=0;
+ while (c>33)
+ {
+    if(c=='-'){sign=-1;}
+    else{
+     *a=*a*10+c-'0';
+    }
+     c=GETC;
+ }
+ *a = *a * sign;
+}
+ 
+#define S(__x__) fastRead(__x__)
+
+typedef unsigned long long ULL;
+
+#define N 250004
+#define MOD 1000000009
+
+#define MxBtSz 16
+#define MBlk_Sz 502
+
+int pr[16];
+
+struct node {
+    int cnt,link[2];
+    node() {
+        cnt=0;link[0]=link[1]=-1;
+    }
+};
+
+int blk_sz;
+
+struct block {
+    int pv,h;
+    node *trie;
+    block() {
+        pv=0;
+        trie=new node[blk_sz*MxBtSz+5];
+        clear();
+    }
+    void clear() {
+        for(int i=0;i<(blk_sz*MxBtSz+5);i++)
+            trie[i]=node();
+        h=1;
+    }
+    void insert(int num) {
+        int cn=0;
+        for(int i=MxBtSz-1;i>=0;i--) {
+            int bit=min((pr[i])&num,1);
+            if(trie[cn].link[bit]==-1) {
+                trie[cn].link[bit]=h++;
+            }
+            cn=trie[cn].link[bit];
+        }
+        (trie[cn].cnt)++;
+    }
+    pair<int,int> get_min_with_cnt() {
+        int cn=0;int minm=0;
+        for(int i=MxBtSz-1;i>=0;i--) {
+            int bit=min((pr[i])&pv,1);
+            if(trie[cn].link[bit]==-1) {
+                cn=trie[cn].link[bit^1];
+                minm+=(pr[i]);
+                continue;
+            }
+            cn=trie[cn].link[bit];
+        }
+        return make_pair(minm,trie[cn].cnt);
+    }
+};
+
+pair<int,int> operator+(pair<int,int> a1,pair<int,int> b1) {
+    if(a1.first<b1.first)
+        return a1;
+    if(b1.first<a1.first)
+        return b1;
+    return make_pair(a1.first,a1.second+b1.second);
+}
+
+int n,q,qt,l,r,k,bn;
+int *a,*id,*l_id,*r_id,*flg;
+block *blk;
+
+void build_block(int b) {
+    blk[b].clear();
+    for(int i=l_id[b];i<=r_id[b];i++)
+        blk[b].insert(a[i]);
+    flg[b]=1;
+}
+
+void sqrt_decompose() {
+    blk=new block[blk_sz+5];
+    int i=1;
+    while(i<=n) {
+        ++bn;
+        l_id[bn]=i;
+        r_id[bn]=min(i+blk_sz-1,n);
+        for(int j=l_id[bn];j<=r_id[bn];j++)
+            id[j]=bn;
+        build_block(bn);
+        i=r_id[bn]+1;
+    }
+}
+
+void process_q1() {
+    pair<int,int> ans(make_pair((1<<MxBtSz),0));
+    if(id[l]==id[r]) {
+        for(int i=l;i<=r;i++)
+            ans=ans+make_pair(a[i]^(blk[id[l]].pv),1);
+    }
+    else {
+    for(int i=l;i<=r_id[id[l]];i++) {
+        ans=ans+make_pair(a[i]^(blk[id[l]].pv),1);
+    }
+    for(int i=l_id[id[r]];i<=r;i++) {
+        ans=ans+make_pair(a[i]^(blk[id[r]].pv),1);
+    }
+    for(int i=id[l]+1;i<=id[r]-1;i++) {
+        if(flg[i]==0)
+            build_block(i);
+        ans=ans+blk[i].get_min_with_cnt();
+    }
+    }
+    printf("%d %d\n",ans.first,ans.second);
+}
+
+void process_q2() {
+    if(id[l]==id[r]) {
+        for(int i=l;i<=r;i++)
+            a[i]=a[i]^k;
+        flg[id[l]]=0;
+    }
+    for(int i=l;i<=r_id[id[l]];i++)
+        a[i]=a[i]^k;
+    flg[id[l]]=0;
+    for(int i=id[l]+1;i<=id[r]-1;i++)
+        blk[i].pv^=k;
+    for(int i=l_id[id[r]];i<=r;i++)
+        a[i]=a[i]^k;
+    flg[id[r]]=0;
+}
+
+int main() {
+    //ios_base::sync_with_stdio(false);
+    //freopen("input.txt","r",stdin);
+    //freopen("output.txt","w",stdout);
+    pr[0]=1;
+    for(int i=1;i<16;i++)
+        pr[i]=2*pr[i-1];
+    S(&n);S(&q);
+    a=new int[n+5];
+    id=new int[n+5];
+    blk_sz=((int)sqrt(n));
+    l_id=new int[blk_sz+5];
+    r_id=new int[blk_sz+5];
+    flg=new int[blk_sz+5];memset(flg,0,sizeof(flg));
+    for(int i=1;i<=n;i++)
+        S(&a[i]);
+    sqrt_decompose();
+    while(q--) {
+        S(&qt);S(&l);S(&r);
+        if(qt==1) {
+            process_q1();
+        }
+        else {
+            S(&k);
+            process_q2();
+        }
+    }
+    return 0;
+}

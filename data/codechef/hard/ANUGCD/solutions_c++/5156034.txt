@@ -1,0 +1,87 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+
+int pm;
+int prime[222222];
+int presize[222222];
+vector<int> contains[222222];
+vector<int> where[222222];
+bool flag[222222];
+int a[222222];
+int st[20][1002222];
+void get_rmq(int n) {
+	for (int i = 1; i < 19; ++i)
+	for (int j = 0; j < n; ++j) {
+		st[i][j] = st[i-1][j];
+		if (j+(1<<i-1) < n) st[i][j] = max(st[i][j], st[i-1][j+(1<<i-1)]);
+	}
+}
+int rmq(int l, int r) {
+	if (l > r) return -1;
+	int k = 31 - __builtin_clz(r-l+1);
+	return max(st[k][l], st[k][r-(1<<k)+1]);
+}
+vector<int> SET[222222];
+int main() {
+	
+	
+	for (int i = 2; i <= 100000; ++i) if (!flag[i]) {
+		prime[pm] = i;
+		for (int j = i; j <= 100000; j += i) {
+			flag[j] = 1;
+			contains[j].push_back(pm);
+		}
+		pm++;
+	}
+	
+	//freopen("Cin","r",stdin);
+	
+	int n = 0;
+	int m = 0;
+	scanf("%d %d", &n, &m);
+	for (int i = 1; i <= n; ++i) {
+		scanf("%d", a+i);
+		int x = a[i];
+		for (vector<int> :: iterator it = contains[x].begin(); it != contains[x].end(); ++it) {
+		//	int idx = lower_bound(prime, prime + pm, *it) - prime;
+			where[*it].push_back(i);
+		}
+		SET[a[i]].push_back(i);
+	}
+	int tot = 0;
+	
+	for (int i = 0; i < pm; ++i) {
+		presize[i] = tot;
+		for (vector<int> :: iterator it = where[i].begin(); it != where[i].end(); ++it) {
+			st[0][tot++] = a[*it];
+		}
+	}
+	get_rmq(tot);
+
+	for (int i = 0; i < m; ++i) {
+	
+		int G, x, y; scanf("%d %d %d", &G, &x, &y);
+		int ans = -1;
+		
+		for (vector<int> :: iterator it = contains[G].begin(); it != contains[G].end(); ++it) {
+			int l = 0;
+			int r = 0;
+			
+			l = lower_bound(where[*it].begin(), where[*it].end(), x) - where[*it].begin() + presize[*it];
+			r = upper_bound(where[*it].begin(), where[*it].end(), y) - where[*it].begin() + presize[*it];
+			--r;
+			ans = max(ans, rmq(l, r));
+		}
+		if (ans == -1) {
+			printf("%d %d\n", -1, -1);
+			continue;
+		}
+		x = lower_bound(SET[ans].begin(), SET[ans].end(), x) - SET[ans].begin();
+		y = upper_bound(SET[ans].begin(), SET[ans].end(), y) - SET[ans].begin();
+		
+		printf("%d %d\n", ans, y-x);
+	}
+
+	return 0;
+}

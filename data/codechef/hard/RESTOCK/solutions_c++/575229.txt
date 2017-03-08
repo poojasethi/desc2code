@@ -1,0 +1,170 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cassert>
+#include <utility>
+#include <queue>
+//#include <iostream>
+ 
+using namespace std;
+ 
+#define FOR(i,a,b) for(int i=(a);i<(b);i++)
+ 
+struct val_node {
+    int r_index;
+    int c_index;
+    int val;
+};
+ 
+struct node {
+    int depth;
+    int location;
+    node *left;
+    node *right;
+    int r_begin;
+    int r_end;
+    int c_begin;
+    int c_end;
+    bool is_leaf;
+    val_node *data;
+};
+ 
+int R, C;
+int W[512][512];
+ 
+node* build_tree(int depth, int r_begin, int r_end, int c_begin, int c_end) {
+    //cout << depth << " " << r_begin << " " << r_end << " " << c_begin << " " << c_end << endl;
+    if(r_begin >= r_end || c_begin >= c_end) return NULL;
+    node *n = new node;
+    n->r_begin = r_begin;
+    n->r_end = r_end;
+    n->c_begin = c_begin;
+    n->c_end = c_end;
+    if(r_end - r_begin == 1 && c_end - c_begin == 1) {
+        n->depth = depth;
+        n->location = c_begin;
+        n->left = NULL;
+        n->right = NULL;
+        n->is_leaf = true;
+        n->data = new val_node;
+        n->data->r_index = r_begin;
+        n->data->c_index = c_begin;
+        n->data->val = W[r_begin][c_begin];
+    } else if(depth % 2 == 0) {
+        n->depth = depth;
+        int median = (r_begin + r_end) / 2;
+        n->location = median;
+        n->left = build_tree(depth+1, r_begin, median, c_begin, c_end);
+        n->right = build_tree(depth+1, median, r_end, c_begin, c_end);
+        n->is_leaf = false;
+        n->data = NULL;
+    } else {
+        n->depth = depth;
+        int median = (c_begin + c_end) / 2;
+        n->location = median;
+        n->left = build_tree(depth+1, r_begin, r_end, c_begin, median);
+        n->right = build_tree(depth+1, r_begin, r_end, median, c_end);
+        n->is_leaf = false;
+        n->data = NULL;
+    }
+    return n;
+}
+ 
+int dist[512][512];
+ 
+typedef pair<int,int> ip;
+typedef pair<int,ip> qe;
+ 
+#define fi first
+#define se second.first
+#define th second.second
+ 
+priority_queue<qe> Q;
+ 
+struct query {
+    int r_begin;
+    int r_end;
+    int c_begin;
+    int c_end;
+    
+    int wt;
+    int dist;
+} qu;
+ 
+// search, delete / update nodes from the kd-tree that are within the range of the query
+node *update_and_enqueue(node *root) {
+    if(root == NULL) return NULL;
+    if(root->r_begin >= qu.r_end || root->c_begin >= qu.c_end || root->r_end <= qu.r_begin || root->c_end <= qu.c_begin || dist[root->r_end - 1][root->c_end - 1] <= qu.dist) return root;
+    if(root->is_leaf) {
+        //should be reported :-D
+        Q.push(qe(qu.wt - root->data->val, ip(root->data->r_index, root->data->c_index)));
+        delete root->data;
+        delete root;
+        return NULL;
+    }
+    root->left = update_and_enqueue(root->left);
+    root->right = update_and_enqueue(root->right);
+    if(root->left == NULL && root->right == NULL) {
+        delete root;
+        return NULL;
+    }
+    return root;
+}
+ 
+node *cleanup_tree(node *root) {
+    if(root == NULL) return NULL;
+    cleanup_tree(root->left);
+    cleanup_tree(root->right);
+    if(root->is_leaf) {
+        delete root->data;
+    }
+    delete root;
+    return NULL;
+}
+ 
+void cleanup_queue() {
+    while(!Q.empty()) Q.pop();
+}
+ 
+int main() {
+    FOR(i,0,512) FOR(j,0,512) {
+        dist[i][j] = (i*i) + (j*j);
+    }
+    int T;
+    scanf("%d", &T);
+    while(T--) {
+        scanf("%d %d",&R,&C);
+        
+        int D, endR, endC;
+        scanf("%d %d %d",&D,&endR,&endC);
+        
+        FOR(i,0,R) FOR(j,0,C) scanf("%d", &W[i][j]);
+        
+        node *root = build_tree(0, 0, R, 0, C);
+        
+        Q.push(qe(0,ip(0,0)));
+        
+        while(!Q.empty()) {
+            qe t = Q.top();
+            Q.pop();
+            
+            int w = t.fi, r = t.se, c = t.th;
+            if(r == endR && c == endC) {
+                printf("%d\n", -w);
+                break;
+            }
+            
+            qu.r_begin = r - D;
+            qu.r_end = r + D + 1;
+            qu.c_begin = c - D;
+            qu.c_end = c + D + 1;
+            qu.dist = dist[r][c];
+            qu.wt = w;
+            
+            root = update_and_enqueue(root);
+        }
+        root = cleanup_tree(root);
+        cleanup_queue();
+    }
+    return 0;
+}
+ 

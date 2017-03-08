@@ -1,0 +1,135 @@
+#include <cstdio>
+#include <vector>
+#include <list>
+#include <algorithm>
+#include <string>
+#include <map>
+#include <iostream>
+#include <cstring>
+#include <set>
+#define REP(i,n) for(int i=0; i<(n); i++)
+#define FOR(i,a,b) for(int i = (a); i<=(b); i++)
+#define X first
+#define Y second
+
+using namespace std;
+
+typedef pair<int, int> Int;
+typedef long long int ll;
+
+struct classcomp {
+  bool operator() (Int a, Int b){
+    if(a.Y - a.X > b.Y - b.X)
+      return true;
+    if(a.Y - a.X < b.Y - b.X)
+      return false;
+    return a.Y > b.Y;  
+  }
+};
+
+set<Int, classcomp> ints;
+map<int,Int> konce;
+map<int,int> wiszace;
+
+void addInt(int a, int b){
+   ints.insert(Int(a,b));
+   konce[a] = Int(a,b);
+   konce[b] = Int(a,b);    
+}
+
+int P;
+map<int, int> results;
+
+void ins(int v){
+  v+=P;
+  results[v] = 1;
+  while(v>1){
+    v/=2;
+    results[v] = results[2*v] + results[2*v+1];
+  }
+}
+
+void del(int v){
+  v+=P;
+  results[v] = 0;
+  while(v>1){
+    v/=2;
+    results[v] = results[2*v] + results[2*v+1];
+  }
+}
+
+void powies(int k){
+  Int interval = *(ints.begin());
+  ints.erase(ints.begin());
+  int u = (interval.X + interval.Y+1)/2;  
+  konce[u] = Int(0,0);
+  if(u>interval.X)
+    addInt(interval.X, u-1);
+  if(u<interval.Y)
+    addInt(u+1, interval.Y);   
+  
+  wiszace[k] = u;    
+  ins(u);
+}
+
+void wez(int k){
+  int v = wiszace[k];  
+  wiszace[k] = 0;
+  Int i1 = konce[v-1];
+  Int i2 = konce[v+1];
+  ints.erase(i1);
+  ints.erase(i2); //!!
+  konce[v-1] = Int(0,0);
+  konce[v+1] = Int(0,0);  
+  
+  int a = v;
+  int b = v;
+  if(i1.X != 0)
+    a = i1.X;  
+  if(i2.Y != 0)
+    b = i2.Y;      
+
+  addInt(a,b);      
+  del(v);  
+}
+
+int get(int v, int l, int r, int a, int b){
+  if((r<a) || (b<l))
+    return 0;
+  if((a<=l)&&(r<=b)){
+    int res = results[v];
+    return res;
+  }
+  int result = get(2*v, l, (l+r)/2, a, b) + get(2*v+1, (l+r)/2+1,r, a, b);
+//  printf("|%d %d %d %d %d= %d|\n",v,l,r,a,b,result);
+  return result;
+}
+
+int get(int a, int b){
+  int res = get(1,0,P-1,a,b);
+  return res;
+}
+
+int main(){  
+  int N,Q;
+  scanf("%d%d",&N,&Q); 
+  
+  P = 1;
+  while(P<=N)
+    P<<=1;
+  
+  ints.insert(Int(1,N));
+  REP(i,Q){
+    int a;
+    scanf("%d",&a);
+    if(!a){
+      int u,w;
+      scanf("%d%d",&u,&w);
+      printf("%d\n",get(u,w));
+      continue;
+    }    
+    if(wiszace[a]){
+      wez(a);
+    }else powies(a);
+  }
+}

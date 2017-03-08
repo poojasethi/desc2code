@@ -1,0 +1,181 @@
+#ifdef NALP_PROJECT
+#pragma hdrstop
+#else
+#define _SECURE_SCL 0
+#endif
+
+#define _CRT_SECURE_NO_DEPRECATE
+#pragma comment(linker, "/STACK:200000000")
+
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <cctype>
+#include <cmath>
+#include <algorithm>
+#include <utility>
+
+#include <set>
+#include <map>
+#include <vector>
+#include <string>
+#include <queue>
+#include <memory.h>
+
+#include <iostream>
+#include <sstream>
+
+using namespace std;
+
+typedef long long int64;
+
+#define forn(i, n) for(int i = 0; i < (int)(n); i++)
+#define ford(i, n) for(int i = (int)(n) - 1; i >= 0; i--)
+#define pb push_back
+#define mp make_pair
+#define y1 YYYYYYYYYYYY1
+#define all(a) (a).begin(), (a).end()
+#define rall(a) (a).rbegin(), (a).rend()
+
+template<typename T> inline T Abs(T x) { return (x >= 0) ? x : -x; }
+template<typename T> inline T sqr(T x) { return x * x; }
+template<typename T> string toStr(T x) { stringstream st; st << x; string s; st >> s; return s; }
+
+const int INF = (int)1E9;
+const int64 INF64 = (int64)1E18;
+const long double EPS = 1E-9;
+const long double PI = 3.1415926535897932384626433832795;
+
+const int MAXN = 50100;
+const int LOG = 16;
+
+int n, m, h[MAXN], tin[MAXN], tout[MAXN], T;
+int next[LOG][MAXN];
+vector<int> g[MAXN];
+
+void DFS(int v, int prev, int H) {
+	h[v] = H;
+	tin[v] = T++;
+	next[0][v] = prev;
+	for(int i = 1; i < LOG; i++)
+		next[i][v] = next[i - 1][next[i - 1][v]];
+
+	forn(i, g[v].size()) {
+		int u = g[v][i];
+		if (u != prev)
+			DFS(u, v, H + 1);
+	}
+
+	tout[v] = T++;
+}
+
+inline bool isprev(int v, int u) {
+	return tin[v] <= tin[u] && tout[u] <= tout[v];
+}
+
+inline int getLCA(int v, int u) {
+	if (isprev(v, u)) return v;
+	if (isprev(u, v)) return u;
+
+	ford(i, LOG)
+		if (!isprev(next[i][v], u))
+			v = next[i][v];
+
+	return next[0][v];
+}
+
+pair<int, int> l[MAXN];
+int used[MAXN], cused = 0, size;
+
+inline bool check(const vector<int> &a, int lca) {
+	if (count(all(a), lca) != 0) return false;
+	if (g[lca].size() < a.size()) return false;
+
+	size = 0;
+	cused++;
+
+	forn(i, g[lca].size()) {
+		int v = g[lca][i];
+		if (v != next[0][lca])
+			l[size++] = mp(tin[v], tout[v]);
+	}
+
+	int ext = 0;
+	forn(i, a.size()) {
+		int v = a[i];
+		int pos = (int)(upper_bound(l, l + size, mp(tin[v], INF)) - l - 1);
+		if (pos < 0 || pos >= size) {
+			ext++;
+			if (ext > 1) return false;
+			continue;
+		}
+
+		if (l[pos].first <= tin[v] && tout[v] <= l[pos].second)
+			if (used[pos] == cused)
+				return 0;
+			else
+				used[pos] = cused;
+		else
+			ext++;
+
+		if (ext > 1) return false;
+	}
+
+	return ext <= 1;
+}
+
+int get(vector<int> &a) {
+	int lca = getLCA(a[0], a[1]);
+	if (a.size() == 2)
+		return max(0, h[a[0]] + h[a[1]] - 2*h[lca] - 1);
+
+	int l1 = getLCA(a[0], a[2]);
+	int l2 = getLCA(a[1], a[2]);
+	return (check(a, lca) || check(a, l1) || check(a, l2)) ? 1 : 0;
+
+}
+
+void solve() {
+	cin >> n >> m;
+	forn(i, n)
+		g[i].clear();
+	
+	forn(i, n - 1) {
+		int v, u;
+		scanf("%d%d", &v, &u);
+		v--; u--;
+
+		g[v].pb(u);
+		g[u].pb(v);
+	}
+
+	T = 0;
+	DFS(0, 0, 0);
+	forn(j, m) {
+		int k;
+		scanf("%d", &k);
+		vector<int> cur(k);
+		forn(i, k) {
+			scanf("%d", &cur[i]);
+			cur[i]--;
+		}
+
+		printf("%d\n", get(cur));
+	}
+}
+
+
+int main() {
+#ifdef NALP_PROJECT
+	freopen("input.txt", "rt", stdin);
+//	freopen("output.txt", "wt", stdout);
+#else
+#endif
+
+	int tests;
+	cin >> tests;
+	forn(test, tests)
+		solve();
+
+	return 0;
+}

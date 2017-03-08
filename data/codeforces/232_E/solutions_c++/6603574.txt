@@ -1,0 +1,88 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <bitset>
+#include <algorithm>
+using namespace std;
+inline int getnum()
+{
+	int ans=0,fh=1;char ch=getchar();
+	while(ch<'0'||ch>'9'){if(ch=='-')fh*=-1;ch=getchar();}
+	while(ch>='0'&&ch<='9')ans=ans*10+ch-'0',ch=getchar();
+	return fh*ans;
+}
+inline char getalpha()
+{
+	char ch=getchar();
+	while(ch!='.'&&ch!='#')ch=getchar();
+	return ch;
+}
+int n,m,Q;
+char str[610];
+int isblock[610][610];
+int ans[610000];
+struct question{int p1[2],p2[2],pos;}q[610000],t1[610000],t2[610000];
+int t1num,t2num;
+bitset<600> b[610][610];
+void merge(int l,int r,int ql,int qr)
+{
+	if(l==r)
+	{
+		int sum[610]={0};
+		for(int i=1;i<=m;i++)
+			sum[i]=sum[i-1]+isblock[l][i];
+		for(int i=ql;i<=qr;i++)
+			ans[q[i].pos]=(sum[q[i].p2[1]]-sum[q[i].p1[1]-1])?0:1;
+		return ;
+	}
+	int mid=(l+r+1)/2;
+	for(int i=l;i<=r;i++)
+		for(int j=1;j<=m;j++)
+		b[i][j].reset();
+	for(int i=m;i>=1;i--)
+		if(!isblock[mid][i])
+		b[mid][i][i]=1,b[mid][i]|=b[mid][i+1];
+	for(int i=mid-1;i>=l;i--)
+		for(int j=m;j>=1;j--)
+		if(!isblock[i][j])
+		b[i][j]=b[i][j+1]|b[i+1][j];
+	//p1[0]<mid p2[0]>=mid
+	for(int i=1;i<=m;i++)
+		b[mid][i].reset();
+	for(int i=1;i<=m;i++)
+		if(!isblock[mid][i])
+		b[mid][i][i]=1,b[mid][i]|=b[mid][i-1];
+	for(int i=mid+1;i<=r;i++)
+		for(int j=1;j<=m;j++)
+		if(!isblock[i][j])
+		b[i][j]=b[i-1][j]|b[i][j-1];
+	t1num=0;t2num=0;
+	for(int i=ql;i<=qr;i++)
+	{
+		if(q[i].p1[0]<mid&&q[i].p2[0]>=mid)
+			ans[q[i].pos]=(b[q[i].p1[0]][q[i].p1[1]]&b[q[i].p2[0]][q[i].p2[1]]).any();
+		else if(q[i].p2[0]<mid)t1[++t1num]=q[i];
+		else t2[++t2num]=q[i];
+	}
+	int t1l=ql,t1r=ql-1;
+	for(int i=1;i<=t1num;i++)q[++t1r]=t1[i];
+	int t2l=t1r+1,t2r=t1r;
+	for(int i=1;i<=t2num;i++)q[++t2r]=t2[i];
+	if(t1l<=t1r)merge(l,mid-1,t1l,t1r);
+	if(t2l<=t2r)merge(mid,r,t2l,t2r);
+}
+int main(int argc, char *argv[])
+{
+	n=getnum();m=getnum();
+	for(int i=1;i<=n;i++)
+		for(int j=1;j<=m;j++)
+			isblock[i][j]=getalpha()=='#';
+	Q=getnum();
+	for(int i=1;i<=Q;i++)
+		q[i].p1[0]=getnum(),q[i].p1[1]=getnum(),
+		q[i].p2[0]=getnum(),q[i].p2[1]=getnum(),
+		q[i].pos=i;
+	merge(1,n,1,Q);
+	for(int i=1;i<=Q;i++)puts(ans[i]?"Yes":"No");
+	return 0;
+}

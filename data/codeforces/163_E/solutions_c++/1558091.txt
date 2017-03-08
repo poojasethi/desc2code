@@ -1,0 +1,131 @@
+#include<stdio.h>
+#include<string.h>
+#include<algorithm>
+#include<vector>
+#define M 1000000
+using namespace std;
+
+typedef struct N{
+	int id;
+	int count;
+	vector<struct N *>revfail;
+	struct N *next[26];
+	struct N *fail;
+	N()
+	{
+		for(int i=0;i<26;i++) next[i]=NULL;
+		fail=NULL; revfail.clear();
+		id=count=0;
+	}
+}Node;
+
+Node *root;
+Node *queue[M+10];
+Node *hash[M/10+10];
+int front,rear;
+int in_list[M+10];
+char command[M+10];
+
+void Insert(char s[],int id)
+{
+	int L=strlen(s);
+	Node *cur=root;
+	for(int i=0;i<L;i++)
+	{
+		int t=s[i]-'a';
+		if(cur->next[t]==NULL) cur=cur->next[t]=new Node();
+		else cur=cur->next[t];
+	}
+	cur->id=id;
+	cur->count=1;
+	hash[id]=cur;
+}
+void AC_Make()
+{
+	front=rear=0;
+	queue[rear++]=root;
+	while(rear>front)
+	{
+		Node *cur=queue[front++];
+		if(cur->fail!=NULL) 
+		{
+			cur->count+=cur->fail->count;
+			cur->fail->revfail.push_back(cur);
+		}
+		for(int i=0;i<26;i++)
+		{
+			if(cur->next[i]==NULL) cur->next[i]=(cur==root)?root:cur->fail->next[i];
+			else
+			{
+				cur->next[i]->fail=(cur==root)?root:cur->fail->next[i];
+				queue[rear++]=cur->next[i];
+			}
+		}
+	}
+}
+
+void update(Node *cur,int val)
+{
+	if(cur==NULL) return;
+	cur->count+=val;
+	for(int i=0;i<cur->revfail.size();i++) update(cur->revfail[i],val);
+}
+int query(char s[])
+{
+	int L=strlen(s);
+	Node *cur=root;
+	int ans=0;
+	for(int i=0;i<L;i++)
+	{
+		cur=cur->next[s[i]-'a'];
+		ans+=cur->count;
+	}
+	return ans;
+}
+
+int main()
+{
+	int m,n;
+	while(scanf("%d%d",&m,&n)!=EOF)
+	{
+		in_list[0]=0;
+		for(int i=1;i<=n;i++) in_list[i]=1;
+		
+		root=new Node();
+		for(int i=1;i<=n;i++)
+		{
+			scanf("%s",command);
+			Insert(command,i);
+		}
+		AC_Make();
+		
+		for(int i=1;i<=m;i++)
+		{
+			scanf("%s",command);
+			if(command[0]=='+')
+			{
+				int index;
+				sscanf(command+1,"%d",&index);
+				if(!in_list[index]) update(hash[index],1);
+				in_list[index]=1;
+			}
+			else if(command[0]=='-')
+			{
+				int index;
+				sscanf(command+1,"%d",&index);
+				if(in_list[index]) update(hash[index],-1);
+				in_list[index]=0;
+			}
+			else
+			{
+				int ans=query(command+1);
+				printf("%d\n",ans);
+			}
+		}
+		
+		for(int i=0;i<rear;i++) delete queue[i];
+	}
+	return 0;
+}
+
+	   	  	    						  	  			

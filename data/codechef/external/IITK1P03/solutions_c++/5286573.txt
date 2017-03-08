@@ -1,0 +1,166 @@
+#include<bits/stdc++.h>
+using namespace std;
+
+#define pb(a) push_back(a)
+#define mp(a, b) make_pair(a, b)
+
+typedef long long ll;
+typedef pair<ll, ll> pl;
+
+int n, e, k, a, b;
+
+const int N = 1e5 + 50;
+vector< int > adj[N];
+
+ll compCnt[N];
+int comp[N];
+ll total;
+int popu[N];
+
+vector< int > ph;
+vector< ll > cost;
+int totalComp = 0;
+
+
+void dfs(int cur){
+    if(comp[cur] != -1) return;
+    compCnt[totalComp] += popu[cur];
+    comp[cur] = totalComp;
+    for(int i = 0; i < adj[cur].size(); i++){
+        int to = adj[cur][i];
+        dfs(to);
+    }
+}
+vector< ll > bestInComp;
+vector< ll > cnt;
+
+void solve(int idx, int last, ll tCost, ll tVal, vector< pl >& v){
+    if(idx == last){
+        v.push_back(pl(tCost, tVal));
+        return;
+    }
+    //if(bestInComp[idx] > (1LL << 55)) return solve(idx + 1, last, tCost, tVal, v);
+    solve(idx + 1, last, tCost, tVal, v);
+    solve(idx + 1, last, tCost + bestInComp[idx], tVal + cnt[idx] , v);
+}
+
+
+
+int main() {
+#ifndef ONLINE_JUDGE
+    freopen("in.in", "r", stdin);
+#endif
+    /*srand(time(NULL));
+    freopen("in.in", "w", stdout);
+    cout << 100000 << " " << 200000 << " " << 31 << endl;
+    for(int i = 0; i < 200000; i++){
+        int a = rand() * rand() % 100000 + 1;
+        int b = rand() * rand() % 100000 + 1;
+        cout << a << " " << b << " " << endl;
+    }
+    for(int i = 0; i < 100000; i++){
+        cout << rand()*rand() << endl;
+    }
+
+    for(int i = 0; i < 31; i++){
+        cout << rand() * rand() % 100000 + 1 << " ";
+    }
+    cout << endl;
+    for(int i = 0; i < 31; i++){
+        cout << cout << rand()*rand() << " ";
+    }
+    cout << endl;
+    cout << 0 << " " << rand()*rand() << endl;
+    return 0;*/
+
+    ios::sync_with_stdio(false);
+    cin.tie(0);
+    cout.tie(0);
+
+    //double S = clock();
+
+    cin >> n >> e >> k;
+    memset(comp, -1, sizeof comp);
+    for(int i = 0; i < e; i++){
+        cin >> a >> b;
+        adj[a].push_back(b);
+        adj[b].push_back(a);
+    }
+
+    for(int i = 1; i <= n; i++){
+        cin >> popu[i];
+    }
+
+    for(int i = 0; i < k; i++){
+        cin >> a;
+        ph.pb(a);
+    }
+
+    for(int i = 0; i < k; i++){
+        cin >> a;
+        cost.pb(a);
+    }
+
+    cin >> b >> total;
+
+    for(int i = 0; i < b; i++){
+        cin >> a;
+        a--;
+        total += cost[a];
+    }
+
+    for(int i = 1; i <= n; i++){
+        if(comp[i] == -1){
+            dfs(i);
+            totalComp++;
+        }
+    }
+
+    bestInComp = vector<ll>(totalComp, 1LL << 59);
+
+    for(int i = 0; i < ph.size(); i++){
+        bestInComp[comp[ph[i]]] = min(bestInComp[comp[ph[i]]], cost[i]);
+    }
+    vector< ll > tmp;
+    for(int i = 0; i < bestInComp.size(); i++){
+        if(bestInComp[i] > (1LL << 55)) continue;
+        tmp.push_back(bestInComp[i]);
+        cnt.push_back(compCnt[i]);
+    }
+    bestInComp = tmp;
+    totalComp = bestInComp.size();
+    int mid = totalComp / 2;
+    vector< pl > v1, v2;
+    vector< ll > maximums;
+    solve(0, mid, 0, 0, v1);
+    solve(mid, totalComp, 0, 0, v2);
+
+    sort(v2.begin(), v2.end());
+    assert(v1.size() && v1[0].first == 0);
+    assert(v2.size()&& v2[0].first == 0);
+
+    ll curMax = 0;
+    maximums.pb(0);
+    for(int i = 1; i < v2.size(); i++){
+        curMax = max(curMax, v2[i].second);
+        maximums.pb(curMax);
+    }
+
+    ll besti = 0;
+    for(int i = 0; i < v1.size(); i++){
+        ll rem = total - v1[i].first;
+        if(rem < 0) continue;
+        int idx = upper_bound(v2.begin(), v2.end(), pl(rem, 1LL << 60)) - v2.begin();
+        idx--;
+        assert(idx >= 0);
+        besti = max(besti, maximums[idx] + v1[i].second);
+    }
+
+
+    cout << besti << endl;
+
+    //cout << (clock() - S) /  CLOCKS_PER_SEC << endl;
+
+    return 0;
+}
+

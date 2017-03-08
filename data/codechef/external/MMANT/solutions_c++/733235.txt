@@ -1,0 +1,130 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <cassert>
+#include <cstdlib>
+#include <algorithm>
+using namespace std;
+#define F first
+#define S second
+typedef pair<int,int>pi;
+const int INF=10000;
+char ar[12][20];
+int R,C;
+int dist[13][13][13][13];
+bool isset(int mask,int i)
+{
+    if ( mask&(1<<(i)))
+        return true;
+    return false;   
+}
+int dp[10][1<<10][13][13];
+int rec(int mask,pi* food,int cnt,int h,pi end)
+{
+    if ( mask==0)return dist[food[h].F][food[h].S][end.F][end.S];
+    int &ret=dp[h][mask][end.F][end.S];
+    if ( ret!=-1)return ret;
+    ret=INF;
+    for ( int i=0;i<cnt;++i){
+        if (isset(mask,i)){
+            ret=min(ret,dist[food[h].F][food[h].S][food[i].F][food[i].S]+rec(mask^(1<<i),food,cnt,i,end));
+        }   
+    }
+    //if ( f )printf("rec %d %d %d %d\n",mask,end.F,end.S,ret);
+    return ret;
+}
+
+void solve()
+{
+    
+    pi food[10];
+    pi home;
+    int fcnt=0;
+    for ( int i=0;i<R;++i){
+        for(int j=0;j<C;++j){
+            if ( ar[i][j]=='H'){
+                home.first=i;home.second=j;   
+            }
+            else if ( ar[i][j]=='F'){
+                food[fcnt].F=i;
+                food[fcnt].S=j;
+                fcnt++;   
+            }
+        }   
+    }
+    food[fcnt++]=home;
+    
+    //for ( int i=0;i<R;++i)for(int j=0;j<C;++j)dist[i][j][i][j]=0;
+    
+    for ( int i=0;i<R;++i)for(int j=0;j<C;++j)for(int k=0;k<R;++k)for(int l=0;l<C;++l){
+        if ( i==k && j==l)dist[i][j][k][l]=0;
+        else if ( ar[i][j]=='#' || ar[k][l]=='#')
+            dist[i][j][k][l]=INF;
+        else if ( i==k && abs(j-l)==1 || j==l && abs(i-k)==1)
+            dist[i][j][k][l]=1;
+        else dist[i][j][k][l]=INF;
+           
+    }
+    
+    for ( int ki=0;ki<R;++ki)for(int kj=0;kj<C;++kj){
+        for(int ix=0;ix<R;++ix)for(int iy=0;iy<C;++iy){
+            for(int jx=0;jx<R;++jx)for(int jy=0;jy<C;++jy){
+                dist[ix][iy][jx][jy]=min(dist[ix][iy][jx][jy],dist[ix][iy][ki][kj]+dist[ki][kj][jx][jy]);
+            }   
+        }   
+    }
+    
+    //for ( int i=0;i<R;++i)for(int j=0;j<C;++j)for(int k=0;k<R;++k)for(int l=0;l<C;++l)printf("%d %d %d %d= %d\n",i,j,k,l,dist[i][j][k][l]);
+    
+    memset(dp,-1,sizeof(dp));
+    int ans= INF;
+    for ( int i=0;i<(1<<fcnt);++i){
+        int mmask=i;
+        int fmask=0;
+        if ( isset(i,fcnt-1)==false)continue;
+        for(int j=0;j<fcnt;++j){
+            if ( (mmask&(1<<j))==0)
+                fmask|= 1<<j;
+        }
+        fmask|=1<<(fcnt-1);
+        //if ( fmask!=(((1<<fcnt)-1)&(~mmask)))printf("%d %d %d\n",mmask,fmask,((1<<fcnt)-1)&(~mmask));
+        //assert(fmask==(((1<<fcnt)-1)&(~mmask)));
+        //assert((fmask&mmask)==0 && ((fmask|mmask))==(1<<fcnt)-1);
+        for (int x=0;x<R;++x){
+            for ( int y=0;y<C;++y){
+                pi end=pi(x,y);
+                food[fcnt].F=x;
+                food[fcnt].S=y;
+                
+                if ( ar[x][y]!='#'){
+                    assert((mmask&(1<<(fcnt-1)))!=0);
+                    assert((fmask&(1<<(fcnt-1)))!=0);
+                    int aa=rec(mmask^(1<<fcnt-1),food,fcnt,fcnt-1,end);
+                    int bb=rec(fmask^(1<<fcnt-1),food,fcnt,fcnt-1,end);
+                    ans=min(ans,max(aa,bb));   
+                }
+            }   
+        }
+    }
+    if ( ans==INF)ans=-1;
+    printf("%d\n",ans);
+}
+void input()
+{
+    scanf("%d%d",&R,&C);
+    for(int i=0;i<R;++i)scanf("%s",ar[i]);
+}
+int main()
+{
+    int t;
+    scanf("%d",&t);
+    int i=0;
+    while(t--){
+        input();
+        ++i;
+        printf("Case %d: ",i);
+        solve();
+    }   
+    
+return 0;
+}

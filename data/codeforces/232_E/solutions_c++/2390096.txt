@@ -1,0 +1,112 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <bitset>
+#include <vector>
+using namespace std;
+
+typedef unsigned int USN;
+typedef long long LL;
+typedef unsigned long long ULL;
+
+#define rep(i,l,r) for (int i=(l); i<=(r); i++)
+#define repd(i,r,l) for (int i=(r); i>=(l); i--)
+
+#define maxn 510
+
+struct qtype
+{
+	int x1,y1,x2,y2,where;
+	qtype() {}
+	qtype(int _x1, int _y1, int _x2, int _y2, int _w) { x1=_x1; y1=_y1; x2=_x2; y2=_y2; where=_w; }
+};
+
+vector <qtype> vlist[maxn];
+
+void qins(int l, int r, const qtype &q)
+{
+	int mid=(l+r)>>1;
+	if (q.y1<=mid && mid<=q.y2) 
+	{
+		vlist[mid].push_back(q);
+		return;
+	}
+	if (q.y2<mid) qins(l,mid-1,q); else qins(mid+1,r,q);
+}
+
+int can[maxn][maxn],n,m,final[600010];
+bitset<maxn> dl[maxn][maxn], dr[maxn][maxn];
+
+void solve(int l, int r)
+{
+	if (l>r) return;
+	int mid=(l+r)>>1;
+	
+	rep(i,l,mid) rep(j,1,n) dl[i][j].reset();
+	
+	if (can[n][mid]) dl[mid][n].set(n);
+	repd(j,n-1,1)
+		if (can[j][mid])
+			dl[mid][j]=dl[mid][j+1], dl[mid][j].set(j);
+	
+	repd(j,mid-1,l)
+		if (can[n][j])
+			dl[j][n]=dl[j+1][n];
+			
+	repd(i,mid-1,l)
+		repd(j,n-1,1)
+			if (can[j][i])
+				dl[i][j]=dl[i+1][j] | dl[i][j+1];
+	
+	rep(i,mid,r) rep(j,1,n) dr[i][j].reset();
+	
+	if (can[1][mid]) dr[mid][1].set(1);
+	rep(j,2,n)
+		if (can[j][mid])
+			dr[mid][j]=dr[mid][j-1], dr[mid][j].set(j);
+	
+	rep(j,mid+1,r)
+		if (can[1][j])
+			dr[j][1]=dr[j-1][1];
+			
+	rep(i,mid+1,r)
+		rep(j,2,n)
+			if (can[j][i])
+				dr[i][j]=dr[i-1][j] | dr[i][j-1];
+				
+	for (vector<qtype>::iterator iter=vlist[mid].begin(); iter!=vlist[mid].end(); iter++)
+		if ((dl[iter->y1][iter->x1] & dr[iter->y2][iter->x2]).any()) 
+			final[iter->where]=1;
+			
+	solve(l,mid-1); solve(mid+1,r);
+}
+
+char buf[maxn];
+
+void lemon()
+{
+	scanf("%d%d",&n,&m);
+	rep(i,1,n)
+	{
+		scanf("%s",buf+1);
+		rep(j,1,m) if (buf[j]=='.') can[i][j]=1;
+	}
+	rep(i,1,m) vlist[i].clear();
+	int qa; scanf("%d",&qa);
+	rep(i,1,qa)
+	{
+		int x1,y1,x2,y2; scanf("%d%d%d%d",&x1,&y1,&x2,&y2);
+		qins(1,m,qtype(x1,y1,x2,y2,i));
+	}
+	solve(1,m);
+	rep(i,1,qa) if (final[i]) printf("Yes\n"); else printf("No\n");
+}
+
+int main()
+{
+	#ifndef ONLINE_JUDGE
+		freopen("232E.in","r",stdin);
+	#endif
+	lemon();
+	return 0;
+}

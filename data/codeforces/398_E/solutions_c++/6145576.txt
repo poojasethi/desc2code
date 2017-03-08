@@ -1,0 +1,169 @@
+#include <iostream>
+#include <vector>
+#include <stdio.h>
+#include <algorithm>
+
+#define MX 100005
+#define MK 13
+#define mp make_pair
+#define pb push_back
+#define MOD 1000000007
+#define rep(i, n) for (int i = 0; i < n; i ++)
+
+using namespace std;
+
+typedef pair<int, int> PII;
+
+typedef long long LL;
+vector <LL> ring[MX], rev[MX];
+
+int N, K, L;
+int MAXR;
+
+int a[MX], chk[MX], pos[MX];
+int tot[MX];
+int size[MK], len[MK], cnt[MK];
+
+LL RLT, rlt;
+
+LL Pow(LL a, LL b) {
+	if (!b) return 1LL;
+	LL res = Pow(a, b/2);
+	res = res * res % MOD;
+	if (b & 1) res *= a;
+	return res % MOD;	
+}
+
+int init() {
+	int i, j, k;
+	for (i = 1; i <= N; i ++) {
+		k = N / i;
+		ring[i].resize(k + 1, 0);
+		rev[i].resize(k + 1);
+		rep(j, k + 1) {
+			if (!j) ring[i][j] = 1;
+			else {
+				ring[i][j] = ring[i][j - 1] * i % MOD;
+				if (j > 1) ring[i][j] += (ring[i][j - 2] * (j - 1) % MOD) * i % MOD;
+				ring[i][j] %= MOD;
+			}
+			rev[i][j] = Pow(ring[i][j], MOD - 2);	
+		}	
+	}
+}
+
+int get_ring() {
+	int id, n;
+	int flag;
+	int j, k;
+	
+	rep(i, N) if (!chk[i]) {
+		flag = n = 0;
+		n ++;
+		chk[i] = 1;
+		id = i;
+		
+		while (1) {
+			id = a[id];
+			if (id == -1) break;
+			if (chk[id]) {
+				tot[n] ++;
+				flag ++;
+				break;	
+			}
+			n ++;
+			chk[id] = 1;
+		}
+		if (flag) continue;
+	
+		id = i;
+		while (1) {
+			id = pos[id];
+			if (id == -1) break;
+			n ++;
+			chk[id] = 1;
+		}
+		size[L ++] = n;
+	}	
+}
+
+LL init_ans() {
+	rlt = 1LL;	
+	rep(i, N + 1) if (i) {
+		rlt *= ring[i][tot[i]];
+		rlt %= MOD;
+		if (tot[i]) MAXR = max(i, MAXR);
+	}
+}
+
+int find(int id, int NR, LL ans, int MAXR) {
+	if (id == K) {
+		if (MAXR > 2) RLT += ans;
+		else RLT += 1;	
+		RLT %= MOD;
+		return 0;
+	}
+	
+	LL res = ans;
+	int L;
+	
+	res *= rev[size[id]][tot[size[id]]];
+	res %= MOD;
+	res *= ring[size[id]][++ tot[size[id]]];
+	res %= MOD;
+	len[NR] = size[id]; cnt[NR] = 1;
+	
+	find(id + 1, NR + 1, res, max(MAXR, size[id]));
+	tot[size[id]] --;
+	
+	rep(i, NR) {
+		
+		res = ans;
+		res *= rev[len[i]][tot[len[i]]];
+		res %= MOD;
+		res *= ring[len[i]][-- tot[len[i]]];
+		res %= MOD;
+		
+		len[i] += size[id];
+		L = len[i];
+		res *= rev[L][tot[L]];
+		res %= MOD;
+		res	*= ring[L][++ tot[L]];
+		res %= MOD;
+		res *= cnt[i];
+		res %= MOD;
+		cnt[i] ++;
+		
+		find(id + 1, NR, res, max(MAXR, L));
+	
+		tot[L] --;	
+		len[i] -= size[id];
+		tot[len[i]] ++;
+		cnt[i] --;
+	}
+	
+}
+
+int main() {    
+	
+	init();
+	
+	cin >> N >> K;
+	
+	rep(i, N) pos[i] = -1;
+	rep(i, N) {
+		scanf("%d", a + i);
+		a[i] --;
+		if (a[i] >= 0) pos[a[i]] = i;
+	}
+	
+	init();
+	get_ring();
+	init_ans();
+	
+	find(0, 0, rlt, MAXR);
+	
+	cout << RLT << endl;
+
+	return 0;
+}

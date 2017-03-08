@@ -1,0 +1,158 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <cstring>
+#define ll long long
+using namespace std;
+ 
+#define maxn 100005
+#define logN 20
+ 
+vector<pair<int,int> > adj[maxn];
+int f[maxn][logN], depth[maxn], n,m,a,b,c;
+ 
+int BIT[100005];
+bool visited[maxn];
+int start[maxn];
+int end[maxn];
+int cost[maxn];
+int revr[maxn];
+int ft[maxn];
+int sd[maxn];
+int ct[maxn];
+ 
+void dfs(int u) {
+    for (int i = 1; i < logN; i++)
+        f[u][i] = f[f[u][i - 1]][i - 1];
+ 
+    for (int i = 0; i < (int) adj[u].size(); i++) {
+        int v = adj[u][i].first;
+ 
+        if (!depth[v]) {
+            f[v][0] = u;
+            depth[v] = depth[u] + 1;
+            dfs(v);
+        }
+    }
+}
+ 
+int lca (int u, int v) {
+    if (depth[u] < depth[v]) swap(u, v);
+ 
+    for (int i = logN - 1; i >= 0; i--)
+        if (depth[f[u][i]] >= depth[v]) {
+            u = f[u][i];
+        }
+ 
+    if (u == v) return u;
+ 
+    for (int i = logN - 1; i >= 0; i--)
+        if (f[u][i] != f[v][i]) {
+            u = f[u][i];
+            v = f[v][i];
+        }
+ 
+    return f[u][0];
+}
+ 
+ 
+ 
+void update(int x, int val)
+{
+      for(; x <= n; x += x&-x)
+        BIT[x] += val;
+}
+int query(ll x)
+{
+     int sum = 0;
+     for(; x > 0; x -= x&-x)
+        sum += BIT[x];
+     return sum;
+}
+ 
+ 
+int cnt=0;
+void dfsOrder(int u,int parent,int edge){
+	
+	cost[u] = cost[parent] + edge;
+    visited[u]=true;
+    start[u]=++cnt;    
+    for(int i=0;i<adj[u].size();i++){
+    
+        if(!visited[adj[u][i].first]){
+            dfsOrder(adj[u][i].first,u,adj[u][i].second);
+        }
+    }
+    end[u]=cnt; 
+}
+ 
+int main() {
+	// your code goes here
+	
+	scanf("%d",&n);
+	
+	memset(visited,false,sizeof visited);
+	
+	for(int i=1;i<n;i++){
+		scanf("%d %d %d",&a,&b,&c);
+		adj[a].push_back(make_pair(b,c));
+		adj[b].push_back(make_pair(a,c));
+		ft[i] = a;
+		sd[i] = b;
+		ct[i] = c;
+	}
+	dfsOrder(1,0,0);
+	memset(BIT,0,sizeof BIT);
+	for(int i=1;i<=n;i++){
+		revr[start[i]] = i;
+	}
+	cost[0] = 0;
+	depth[1] = 1;
+	int temp = 0;
+	for(int i=2;i<=n;i++){
+		int tmp = cost[revr[i]];
+		cost[revr[i]]-=temp;
+		temp = tmp;
+		
+	}
+	for(int i=1;i<=n;i++){
+		//cout<<i<<" " << start[i]<<" "<<end[i]<<"="<<cost[i]<<endl;
+		update(i,cost[revr[i]]);
+		
+	}
+	dfs(1);
+ 
+	scanf("%d",&m);
+	
+	while(m--){
+		
+		scanf("%d %d %d",&a,&b,&c);
+		
+		if(a==1){
+			int u1 = ft[b];
+			int u2 = sd[b];
+			int u3 = ct[b];
+			ct[b] = c;
+			if(depth[u1]<depth[u2])
+				b = u2;
+			else
+				b = u1;
+			int value = c-u3;
+			update(start[b],value);
+			value *= -1;
+			update(end[b]+1,value);
+ 
+			
+		} else{
+			
+			int xx = lca(b,c);
+			int ans = query(start[b]) + query(start[c]) - 2*query(start[xx]);
+			//cout << query(start[b])<<" "<<query(start[c])<<endl;
+			printf("%d\n",ans);
+		
+		}
+		
+	}
+	
+	return 0;
+}

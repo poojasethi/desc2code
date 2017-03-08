@@ -1,0 +1,67 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+typedef long long LL;
+const int maxn=510000;
+int n,A[maxn];
+
+namespace Ninit{
+	void init(){
+		int i;
+		scanf("%d",&n);
+		for(i=0;i<n;++i)
+			scanf("%d",A+i),A[i+n]=A[i];
+		for(i=0;i<2*n;++i)A[i]=i-A[i];
+	}
+}
+
+namespace Nsolve{
+	LL ans;
+	int G[20][maxn];
+	namespace Nprep{
+		int F[20][maxn],ln[maxn];
+		int get(int a,int b){
+			if(a<0)return 0;
+			int k=ln[b-a+1];
+			a=F[k][a],b=F[k][b-(1<<k)+1];
+			return A[a]<A[b]?a:b;
+		}
+		void solve(){
+			int i,j,a,b;
+			for(ln[0]=-1,i=1;i<2*n;++i)ln[i]=ln[i-1]+((i&-i)==i);
+			for(i=0;i<2*n;++i)F[0][i]=i;
+			for(j=1;j<20;++j)
+			for(i=0;i+(1<<j)<=2*n;++i){
+				a=F[j-1][i],b=F[j-1][i+(1<<j-1)];
+				A[a]<A[b]?F[j][i]=a:F[j][i]=b;
+			}
+			
+			for(i=0;i<2*n;++i)G[0][i]=get(A[i],i);
+			for(j=1;j<20;++j)
+			for(i=0;i<2*n;++i)
+				G[j][i]=G[j-1][G[j-1][i]];
+		}
+	}
+	void solve(){
+		int i,k,x;
+		Nprep::solve();
+		for(ans=n,i=n;i<2*n;++i){
+			for(x=i,k=19;k>=0;--k)
+			if(A[G[k][x]]>i-n+1){
+				x=G[k][x],ans+=(1<<k);
+			}
+			if(A[x]>i-n+1)++ans;
+		}
+		cout<<ans<<endl;
+	}
+}
+
+int main(){
+	//freopen("A.in","r",stdin);
+	Ninit::init();
+	Nsolve::solve();
+	return 0;
+}

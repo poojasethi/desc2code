@@ -1,0 +1,147 @@
+#include <iostream>
+#include <stdio.h>
+#include <algorithm>
+#include <math.h>
+#include <map>
+#include <vector>
+#include <queue>
+#include <set>
+#include <string.h>
+#include <deque>
+using namespace std;
+
+#define MOD (1000000007)
+#define N 100005
+
+class vps{
+public:
+   int i, j;
+   vps(int x, int y){i=x;j=y;}
+};
+long long p[N+1];
+vector<vps> vp;
+
+void fillPerm(int n) {
+    p[0] = 1;
+    for(int i=1;i<=n;i++) {
+        p[i] = (p[i-1]*i)%MOD;
+    }
+}
+
+void solve(int n, int set_size) {
+    long long ret = 0, d = 0, s1=0, s2=0, s = 0;
+    unsigned int pow_set_size = pow(2, set_size);
+    int counter, j;
+    for(counter = 0; counter < pow_set_size; counter++) {
+        int ele=0, c=0, c1=0;
+        set<int> st;
+        int id[N]; memset(id, 0, sizeof(id));
+        int idn=1;
+        deque<int> vid[100];
+        deque<int>::iterator vidt, it, it1, it2;
+        for(j = 0; j < set_size; j++) {
+            if(counter & (1<<j)) {
+                ele++;
+                int x = vp[set_size-1-j].i; int y = vp[set_size-1-j].j;
+                st.insert(x); st.insert(y);
+                if(id[x] == 0 && id[y] == 0) {
+                    id[x] = id[y] = idn;
+                    vid[idn].push_back(x); vid[idn].push_back(y);
+                    idn++; c++;
+                }
+                else if (id[x] != 0 && id[y] !=0) {
+                    if (id[x] == id[y]) {
+                        int s = 0;
+                        it1 = find(vid[id[x]].begin(), vid[id[x]].end(), x);
+                        it2 = find(vid[id[y]].begin(), vid[id[y]].end(), y);
+                        if (it1 > it2) s = it1 - it2;
+                        else s = it2 - it1;
+                        
+                        if (s>1) {ele=0; break;}
+                        else {continue;}
+                    }
+                    if(x !=vid[id[x]].front()  && x != vid[id[x]].back()) {ele=0;break;}
+                    if(y !=vid[id[y]].front()  && y != vid[id[y]].back()) {ele=0;break;}
+                    
+                    int px = (x==vid[id[x]].front()?1:0);
+                    int py = (y==vid[id[y]].front()?1:0);
+                    if ((px == 0 && py == 1) || (px == 1 && py == 0)) {
+                        int a = (px==0?id[x]:id[y]), b =(px==1?id[x]:id[y]);
+                        for(vidt = vid[b].begin(); vidt!=vid[b].end();++vidt) {
+                            id[(*vidt)] = a;
+                            vid[a].push_back(*vidt);
+                        }
+                        vid[b].clear();
+                    }
+                    else if(px == 1 && py == 1) {
+                        int a = id[x], b =id[y];
+                        for(vidt = vid[b].begin(); vidt!=vid[b].end();++vidt) {
+                            id[(*vidt)] = a;
+                            vid[a].push_front(*vidt);
+                        }
+                        vid[b].clear();
+                    }
+                    else {
+                        int a = id[x], b =id[y], s = vid[b].size();
+                        vidt = vid[b].end() - 1;
+                        for(int i=0;i<s;i++) {
+                            id[(*vidt)] = a;
+                            vid[a].push_back(*vidt); vidt--;
+                        }
+                        vid[b].clear();
+                    }
+                    c--;
+                }
+                else{
+                    if(id[x]) {
+                        if(x !=vid[id[x]].front()  && x != vid[id[x]].back()) {ele=0;break;}
+                        
+                        if (x == vid[id[x]].front()) vid[id[x]].push_front(y);
+                        else vid[id[x]].push_back(y);
+                        id[y] = id[x];
+                    }
+                    else {
+                        if(y !=vid[id[y]].front()  && y != vid[id[y]].back()) {ele=0;break;}
+                        
+                        if (y == vid[id[y]].front()) vid[id[y]].push_front(x);
+                        else vid[id[y]].push_back(x);
+                        id[x] = id[y];    
+                    }
+                }
+            }
+       }
+       c1= st.size();
+       if (ele==0 || c == 0 || c1 == 0) continue;
+       long long a2 = (long long)pow(2,c);
+       d = (p[n-c1+c]*a2);
+       if(ele%2){ 
+           s1 += d;
+           if (s1 >= MOD) s1 %= MOD;
+       }
+       else {
+           s2 += d;
+           if (s2 >= MOD) s2 %= MOD;
+       }
+    }
+   // cout << s1 << " " <<s2 <<" "<< p[n] << endl;
+    s = s1 - s2;
+    if (p[n] < s) p[n] += MOD;
+    printf("%lld\n", (p[n] - s)%MOD);
+}
+
+int main() {
+    int t, n, m, x, y,mm;
+    scanf("%d", &t);
+    fillPerm(N);
+    while(t--) {
+        vp.clear();
+        scanf("%d %d", &n, &m); mm = m;
+        for(int i=0;i<mm;i++){ 
+            scanf("%d %d", &x, &y);
+           if (x==y) {m--; continue;}
+            vp.push_back(vps(x,y));
+        }
+       //if (n==1) {printf("1\n"); continue;}
+        solve(n,m);
+    }
+}

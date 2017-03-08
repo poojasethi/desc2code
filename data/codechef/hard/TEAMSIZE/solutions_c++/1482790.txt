@@ -1,0 +1,106 @@
+#include <cstdio>
+#include <cstring>
+
+const int LIMIT = 10000;
+const int maxN = 500000;
+
+int A[maxN]; // skills of the cooks
+int minQ[maxN], maxQ[maxN]; // implementation of deque using array, see below
+int cnt[maxN + 1]; // cnt[j] is the number of those i for which i-beg[i]+1=j
+int teams[maxN + 1]; // teams[j] is the number of candidate teams of size j
+int query[maxN + 1]; // query[m] is the minimal team size for which we have <=m teams
+
+int main() {
+#ifndef ONLINE_JUDGE
+	freopen("11.in","r",stdin);
+	freopen("11_my.out","wb",stdout);
+#endif
+	int T;
+	scanf("%d",&T);
+	for (int t = 0; t < T; ++t) {
+
+		// X, Y, Z are A, B, D from the problem statement
+		int N, C, Q, X, Y, Z;
+		scanf("%d %d %d %d %d %d\n", &N, &C, &Q, &X, &Y, &Z);
+
+		for(int i = 0; i < N && i < LIMIT; ++i) {
+			scanf("%d", A+i);
+		}
+
+		// you don't need long long to calculate the sequence ;)
+		for(int i = LIMIT; i < N; ++i) {
+			A[i] = (X * A[i - 1] + Y * A[i - 2] + Z) & ((1 << 30) - 1);
+		}
+
+		// minQb = minQ.begin(), minQe = minQ.end();
+		int minQb = 0, minQe = 0;
+
+		// maxQb = maxQ.begin(), maxQe = maxQ.end();
+		int maxQb = 0, maxQe = 0;
+
+		int beg = 0; // at the i-th step it is equal to beg[i] from the editorial
+
+		memset(cnt, 0, 4 * (N + 1)); // fill cnt by zeros
+
+		for (int i = 0; i < N; ++i) {
+			// the query of first type for minQ: increase i by 1
+			// minQe > minQb <=> minQ is non-empty
+			// minQ[minQe - 1] = minQ.front()
+			while (minQe > minQb && A[minQ[minQe - 1]] > A[i]) {
+				-- minQe; // <=> minQ.pop_front();
+			}
+			minQ[minQe++] = i; // <=> minQ.push_front(i);
+
+			// the same but for maxQ but with opposite inequality sign 
+			while (maxQe > maxQb && A[maxQ[maxQe - 1]] < A[i]) {
+				maxQe--;
+			}
+			maxQ[maxQe++] = i;
+
+			while(true) {
+				int mini = minQ[minQb]; // = minQ.back()
+				int maxi = maxQ[maxQb]; // = maxQ.back()
+
+				if (A[maxi] - A[mini] <= C) {
+					break;
+				}
+
+				// 'beg' jumps to 'max(mini, maxi) + 1'
+				// so here we can increase 'beg' by more than 1
+				if (maxi < mini) {
+					++maxQb; // <=> maxQ.pop_back()
+					beg = maxi + 1;
+				} else {
+					++minQb; // <=> minQ.pop_back()
+					beg = mini + 1;
+				}
+			}
+			// increase corresponding element of 'cnt'
+			// we don't save 'beg's as we don't need them later
+			++ cnt[i - beg + 1];
+		}
+
+		// teams[i] = F[i] from the ediorials
+		for (int i = N; i > 0; --i) {
+			teams[i] = cnt[i] + (i < N ? teams[i + 1] : 0);
+		}
+
+		// query[j] = i <=> teams[i] <= j < teams[i-1]
+		// that is for size i we have at most j candidate teams
+		// but for size i-1 we have more than j candidate teams
+		query[N]=1;
+		for (int i = 2; i <= N; ++i) {
+			for (int j = teams[i]; j < teams[i - 1]; ++j) {
+				query[j] = i;
+			}
+		}
+
+		for(int q = 0; q < Q; ++q) {
+			int m;
+			scanf("%d",&m);
+			int size = query[m];
+			printf("%d %d\n", size, teams[size]);
+		}
+	}
+	return 0;
+}

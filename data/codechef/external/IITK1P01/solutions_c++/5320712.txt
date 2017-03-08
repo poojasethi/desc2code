@@ -1,0 +1,186 @@
+#include <stdio.h>
+#include <functional>
+#include <bitset>
+#include <math.h>
+#include <time.h>
+#include <stdlib.h>
+#include <algorithm>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <set>
+#include <map>
+#include <sstream>
+#include <queue>
+#include <stack>
+#include <string.h>
+#include <numeric>
+using namespace std;
+
+typedef vector<int> vi;
+typedef vector<vi> vvi;
+typedef pair<int,int> ii;
+typedef long long ll;
+#define sz(a) int((a).size())
+#define pb push_back
+#define all(c) (c).begin(),(c).end()
+#define tr(c,i) for(typeof((c).begin() i = (c).begin(); i != (c).end(); i++)
+#define present(c,x) ((c).find(x) != (c).end())
+#define cpresent(c,x) (find(all(c),x) != (c).end())
+#define INF 1<<20
+#define mp make_pair
+#define vec(a,b) ((b) - (a))
+#define EPS 1e-9
+
+ll dp[550000][2];
+int Good[15];
+int dist[220][220];
+int K;
+
+string getMask (int mask)
+{
+    string s;
+    while (mask > 0)
+    {
+        s += (mask%3 + '0');
+        mask /= 3;
+    }
+    
+    int m = sz(s);
+    for (int i=0 ; i<K-m ; i++) s+='0';
+    reverse(all(s));
+    return s;
+}
+
+int getBit (int i, string s)
+{
+    return (s[i] - '0');
+}
+
+int toMask (string s)
+{
+    int ret = 0;
+    int curPow = 1;
+    for (int i=sz(s)-1 ; i>=0 ; i--)
+    {
+        int x = s[i] - '0';
+        ret += x*curPow;
+        curPow *= 3;
+    }
+    
+    return ret;
+}
+
+ll calc (string s)
+{
+    vi K1,K2;
+    for (int i=0 ; i<sz(s) ; i++)
+    {
+        if (getBit(i,s) == 1) K1.pb(i);
+        else K2.pb(i);
+    }
+    
+    ll ret = 0;
+    for (int i=0 ; i<sz(K1) ; i++)
+    {
+        for (int j=0 ; j<sz(K2) ; j++)
+        {
+            int u = K1[i];
+            int v = K2[j];
+            ret += dist[Good[u]][Good[v]];
+        }
+    }
+    return ret;
+}
+
+int setBit (int i , string s , int val)
+{
+    s[i] = (val + '0');
+    return toMask(s);
+}
+
+ll solve (int mask , bool player)
+{
+//    cout << getMask(mask) << " " << player << endl;
+    bool end = 1;
+    if (dp[mask][player] != -1) return dp[mask][player];
+    string s = getMask(mask);
+    for (int i=0  ; i<K && end ; i++)
+    {
+        if (s[i] == '0') end = 0;
+    }
+    
+    if (end)
+    {
+//        cout << getMask(mask) << " " << calc(s) << endl;
+        return dp[mask][player] = calc(s);
+    }
+    
+    ll ret;
+    if (player)
+    {
+        ret = 0;
+        for (int i=0 ; i<sz(s) ; i++)
+        {
+            if (s[i] == '0')
+            {
+                s[i] = '1';
+                ret = max(ret, solve(toMask(s) , 0));
+                s[i] = '0';
+            }
+        }
+
+    }
+    else
+    {
+        ret = 1<<30;
+        for (int i=0 ; i<sz(s) ; i++)
+        {
+            if (s[i] == '0')
+            {
+                s[i] = '2';
+                ret = min(ret, solve(toMask(s) , 1));
+                s[i] = '0';
+                
+            }
+        }
+    }
+    
+    return dp[mask][player] = ret;
+}
+
+int main ()
+{
+    //freopen("/Users/ziadouf/Developer/XCode Projects/UVA_12784/UVA_12784/txt.in","r",stdin);
+    int N,M;
+    cin >> N >> M >> K;
+    memset(dp,-1,sizeof dp);
+    for (int i=0 ; i<210 ; i++)
+    {
+        for (int j=0 ; j<210 ; j++)
+            dist[i][j] = 1<<20;
+        dist[i][i] = 0;
+    }
+    
+    for (int i=0 ; i<M ; i++)
+    {
+        int u,v,w;
+        cin >> u >> v >> w;
+        u--,v--;
+        dist[u][v] = dist[v][u] = w;
+    }
+    
+    for (int k=0 ; k<N ; k++)
+        for (int i=0 ; i<N ; i++)
+            for (int j=0 ; j<N ; j++)
+                dist[i][j] = min(dist[i][j],dist[i][k] + dist[k][j]);
+    
+    
+    for (int i=0 ; i<K ; i++)
+    {
+        cin >> Good[i];
+        Good[i]--;
+    }
+    
+    cout << solve(0,1) << endl;
+}

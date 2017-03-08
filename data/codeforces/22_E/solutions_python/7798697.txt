@@ -1,0 +1,83 @@
+import sys
+
+def get_heads(graph, num_vertices):
+    return set(range(0, num_vertices)) - set(graph)
+
+def get_components(graph, heads):
+    cycle_rep2heads = {}
+    head2cycle_rep = {}
+
+    explored = [-1] * len(graph)
+
+    def search(start, is_head):
+        curr = start
+        while explored[curr] == -1:
+            explored[curr] = start
+            curr = graph[curr]
+        # already saw curr before: must be in a cycle
+        prev_head = explored[curr]
+        if is_head:
+            if prev_head in head2cycle_rep:
+                curr_cycrep = head2cycle_rep[prev_head]
+                head2cycle_rep[start] = curr_cycrep
+                cycle_rep2heads[curr_cycrep].append(start)
+            else:
+                head2cycle_rep[start] = curr
+                cycle_rep2heads[curr] = [start]
+        else:
+            cycle_rep2heads[curr] = []
+
+    for head in heads:
+        search(head, True)
+    for vert, comp in enumerate(explored):
+        if comp == -1:
+            search(vert, False)
+    return head2cycle_rep, cycle_rep2heads
+
+def go():
+    num_vertices = int(sys.stdin.next())
+    
+    # subtract by 1
+    graph = [int(num) - 1 for num in sys.stdin.next().split(' ')]
+    heads = get_heads(graph, num_vertices)
+    head2cycle_rep, cycle_rep2heads = get_components(graph, heads)
+##### DEBUG
+#    expected_num = 0
+#    for cy_guy in cycle_rep2heads:
+#        heads = cycle_rep2heads[cy_guy]
+#
+#        expected_num += len(heads) if heads else 1
+#    
+##### END DEBUG
+
+    new_edges = {}
+
+    guys = cycle_rep2heads.items()
+    cy_rep = guys[0][0]
+    heads = guys[0][1]
+    first = heads[0] if heads else cy_rep
+    for idx, head in enumerate(heads[:-1]):
+        new_edges[head] = heads[idx+1]
+    prev_last = cy_rep
+
+    for cy_rep, heads in guys[1:]:
+        new_edges[prev_last] = heads[0] if heads else cy_rep
+
+        for idx, head in enumerate(heads[:-1]):
+            new_edges[head] = heads[idx+1]
+        prev_last = cy_rep
+
+    if prev_last != first:
+        new_edges[prev_last] = first
+
+    # print soln
+###### DEBUG
+    #print "EXPECTED: {}".format(expected_num)
+###### END DEBUG
+    print len(new_edges)
+    for v1, v2 in new_edges.items():
+        v1 += 1
+        v2 += 1
+        print v1, v2
+
+go()

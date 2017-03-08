@@ -1,0 +1,397 @@
+#include <iostream>
+#include <fstream>
+#include <cstring>
+#include <string>
+#include <cstdlib>
+#include <cstdio>
+#include <algorithm>
+#include <cmath>
+#include <bitset>
+#include <ctime>
+#include <map>
+#include <queue>
+#include <set>
+#include <vector>
+#include <list>
+using namespace std;
+
+typedef unsigned long long int64;
+const int64 maxV=(1ULL << 60)-1;
+const int N=120;
+const int M=N/2;
+const int K=M/2;
+const int H=K/2;
+const int maxH=(1 << H)-1;
+int64 mod64(int64 a,int n)
+{
+	return a&((1ULL << n)-1);
+}
+struct int128
+{
+	int64 low,high;
+	int128() {low=high=0;}
+	int128(int64 low,int64 high=0):low(low),high(high) {}
+};
+bool operator < (int128 a,int128 b)
+{
+	return a.high<b.high || a.high==b.high && a.low<b.low;
+}
+bool operator > (int128 a,int128 b)
+{
+	return a.high>b.high || a.high==b.high && a.low>b.low;
+}
+bool operator == (int128 a,int128 b)
+{
+	return a.high==b.high && a.low==b.low;
+}
+bool operator <= (int128 a,int128 b)
+{
+	return (a<b) || (a==b);
+}
+bool operator >= (int128 a,int128 b)
+{
+	return (a>b) || (a==b);
+}
+bool operator != (int128 a,int128 b)
+{
+	return !(a==b);
+}
+int128 operator >> (int128 a,int b)
+{
+	if (b>=M) return int128(a.high>>(b-M),0);
+	return int128((a.low>>b)|(mod64(a.high,b)<<(M-b)),a.high>>b);
+}
+int128 operator << (int128 a,int b)
+{
+	if (b>=M) return int128(0,(a.low<<(b-M))&maxV);
+	return int128((a.low<<b)&maxV,((a.high<<b)+(a.low>>(M-b)))&maxV);
+}
+int128 operator + (int128 a,int128 b)
+{
+	int128 ls(a.low+b.low,a.high+b.high);
+	if (ls.low>maxV)
+	{
+		ls.low&=maxV;
+		ls.high++;
+	}
+	ls.high&=maxV;
+	return ls;
+}
+int128 operator - (int128 a)
+{
+	if (a.low) return int128(maxV+1-a.low,maxV-a.high);
+	if (a.high) return int128(0,maxV+1-a.high);
+	return int128(0,0);
+}
+int128 operator - (int128 a,int128 b)
+{
+	return a+(-b);
+}
+int128 mult(int64 a,int64 b)
+{
+	int64 al=mod64(a,K);
+	int64 ah=mod64(a>>K,K);
+	int64 bl=mod64(b,K);
+	int64 bh=mod64(b>>K,K);
+	int128 ls(0,0);
+	ls.low=al*bl;
+	ls.high=ah*bh;
+	int64 mid=(ls.low>>K)+al*bh+ah*bl;
+	ls.low=mod64(ls.low,K)+(mod64(mid,K)<<K);
+	ls.high+=mid>>K;
+	return ls;
+}
+int128 operator * (int128 a,int128 b)
+{
+	int128 ls=mult(a.low,b.low);
+	ls.high=(ls.high+a.low*b.high+a.high*b.low)&maxV;
+	return ls;
+}
+int128 mod128(int128 a,int b)
+{
+	if (b>M) return int128(a.low,mod64(a.high,b-M));
+	return int128(mod64(a.low,b),0);
+}
+//
+//
+int128 bit[N+5];
+int128 bit1[N+5];
+int bitPrepare()
+{
+	for (int i=0;i<N;i++)
+	 if (i>=M) bit[i]=int128(0,1ULL << (i-M));
+	 	else bit[i]=int128(1ULL << i);
+	bit1[0]=0;
+	for (int i=1;i<=N;i++) bit1[i]=bit1[i-1]+bit[i-1];
+	return 0;
+}
+int128 inv(int128 a)
+{
+	int128 b(1,0);
+	for (int i=2;i<=N;i++)
+		if (mod128(a*b,i)!=int128(1,0))
+			b=b+bit[i-1];
+	return b;
+}
+int128 read()
+{
+	char s[50];
+	scanf("%s",s);
+	int len=strlen(s);
+	int128 b(0,0);
+	for (int i=0;i<len;i++)
+	 b=b*int128(10,0)+int128(s[i]-'0',0);
+	return b;
+}
+int print(int128 a)
+{
+	int s[50];
+	memset(s,0,sizeof(s));
+	int len=0;
+	for (int i=0;i<2;i++)
+	{
+		int64 ls;
+		if (i==0) ls=a.high; else ls=a.low;
+		int j=0;
+		for (;j<len || ls;j++)
+		{
+			ls+=(int64)s[j]<<M;
+			s[j]=ls%10;
+			ls/=10;
+		}
+		len=j;
+	}
+	len=max(len,1);
+	for (int i=len-1;i>=0;i--) printf("%d",s[i]);
+	printf("\n");
+	return 0;
+}
+//
+//
+int deg2(int64 x)
+{
+	int i;
+	for (i=0;!(x&1);i++,x>>=1);
+	return i;
+}
+struct ext
+{
+	int128 odd;
+	int times;
+	ext() {odd=int128(0,0);times=0;}
+	ext(int128 odd,int times):odd(odd),times(times) {}
+	ext(int128 a)
+	{
+		if (!a.low)
+		{
+			int kk=deg2(a.high);
+			odd=int128(a.high>>kk,0);
+			times=M+kk;
+		}
+		else
+		{
+			int kk=deg2(a.low);
+			odd=a >> kk;
+			times=kk;
+		}
+	}
+};
+ext operator * (ext a,ext b)
+{
+	return ext(a.odd*b.odd,a.times+b.times);
+}
+int abs(int x)
+{
+	if (x<0) return -x;
+	return x;
+}
+ext inv(int a)
+{
+	ext ls(abs(a));
+	if (a<0) ls.odd=-ls.odd;
+	ls.odd=inv(ls.odd);
+	ls.times*=-1;
+	return ls;
+}
+//
+//
+const int presiz=500000;
+int128 fact2_pre[presiz+10];
+int fact2_prepare()
+{
+	fact2_pre[0]=1;
+	for (int i=1;i<=presiz;i++)
+		fact2_pre[i]=fact2_pre[i-1]*(2*i-1);
+	return 0;
+}
+//
+//
+typedef vector<pair<int,int> > decom_prime;
+decom_prime pfact[N+10];
+const int prime[29]={3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97,
+					101,103,107,109,113};
+int decomposition_prepare()
+{
+	for (int i=3;i<=N;i+=2)
+	{
+		int ls=i;
+		for (int j=0;j<29;j++)
+		if (ls%prime[j]==0)
+		{
+			int p=0;
+			while (ls%prime[j]==0)
+			{
+				p++;
+				ls/=prime[j];
+			}
+			pfact[i].push_back(make_pair(j,p));
+		}
+	}
+	return 0;
+}
+//
+//
+int128 prime_pow[29][8][1 << H];
+int primepow_prepare()
+{
+	for (int i=0;i<29;i++)
+	{
+		int128 p=prime[i];
+		for (int j=0;j<8;j++)
+		{
+			int128 pw=1;
+			for (int k=0;k<(1 << H);k++)
+			 {
+			 	prime_pow[i][j][k]=pw;
+			 	pw=pw*p;
+			 }
+			p=pw;
+		}
+	}
+	return 0;
+}
+//
+//
+ext pseudo_fact[M+5][M+5];
+int pseudofact_prepare()
+{
+	for (int j=1;j<=M;j++)
+	{
+		pseudo_fact[0][j]=inv(j);
+		for (int r=1;r<=M;r++)
+		{
+			pseudo_fact[r][j]=pseudo_fact[r-1][j];
+			if (r==j) continue;
+			pseudo_fact[r][j]=pseudo_fact[r][j]*inv(j*j-r*r);
+		}
+	}
+	return 0;
+}
+//
+//
+int128 Pow(int nump,int128 exp)
+{
+	int128 ans=1;
+	int64 expp=exp.low;
+	for (int i=0;i<4;expp>>=H,i++)
+		ans=ans*prime_pow[nump][i][expp&maxH];
+	expp=exp.high;
+	for (int i=4;i<8;expp>>=H,i++)
+		ans=ans*prime_pow[nump][i][expp&maxH];
+	return ans;
+}
+//
+//
+int128 fact2(int128 red,int n)
+{
+	int r=n/2;
+	red=(red+1)>>1;
+	if (red<=presiz) return mod128(fact2_pre[red.low],n);
+	int r8;
+	if (red.low%4<2) r8=1;
+	else if (red.low%4==2) r8=3;
+	 else r8=7;
+	if (n<=3) return mod64(r8,n);
+	vector <ext> origin(r+1),pref(r+1),sucf(r+2);
+	for (int i=1;i<=r;i++) origin[i]=ext(red+i)*ext(red-i);
+	pref[0]=ext(red);
+	for (int i=1;i<=r;i++) pref[i]=pref[i-1]*origin[i];
+	sucf[r+1]=ext(1);
+	for (int i=r;i>=1;i--) sucf[i]=sucf[i+1]*origin[i];
+	vector <int128> degr(r+2),degp(30);
+	for (int i=r;i>=2;i--)
+	{
+		ext ls=pref[i-1]*sucf[i+1]*pseudo_fact[r][i];
+		degr[i]=degr[i+1]+(ls.odd<<ls.times);
+	}
+	for (int i=2;i<=r;i++)
+	{
+		decom_prime ls=pfact[2*i-1];
+		for (int j=0;j<ls.size();j++)
+			degp[ls[j].first]=degp[ls[j].first]+(degr[i]*ls[j].second);
+	}
+	int128 ans=1;
+	for (int i=0;i<29;i++) ans=ans*Pow(i,degp[i]);
+	if (ans.low%4!=r8%4) ans=-ans;
+	return mod128(ans,n);
+}
+//
+//
+int128 fact2_bit1[N+1];
+int fact2bit1_prepare()
+{
+	for (int i=0;i<=N;i++) fact2_bit1[i]=fact2(bit1[i],N);
+	return 0;
+}
+//
+//
+int128 done(int n,int128 R)
+{
+	int128 K=(R.low%4)/2;
+	int128 son=mod128(R,2);
+	int128 mother=1;
+	for (int j=3;j<=n;j++)
+	{
+		int par=K.low%2;
+		if (mod128(son,j)!=mod128(R*mother,j))
+		{
+			if (par)
+			{
+				son=son*K;
+				mother=mother*(bit[j-1]-K);
+			}
+			else
+			{
+				son=son*(bit1[j-1]-K);
+				mother=mother*(K+1);
+			}
+			K.low^=1;
+		}
+		K=(K << 1)+par;
+		son=son*fact2_bit1[j];
+		mother=mother*fact2(K,n)*fact2(bit1[j]-K,n);
+	}
+	return K;
+}
+//
+//
+int main()
+{
+	bitPrepare();
+	fact2_prepare();
+	decomposition_prepare();
+	primepow_prepare();
+	pseudofact_prepare();
+	fact2bit1_prepare();
+	int G;
+	scanf("%d",&G);
+	while (G--)
+	{
+		int n;
+		scanf("%d",&n);
+		int128 R=read();
+		if (R.low%2==0) printf("-1\n");
+		 else print(done(n,R));
+	}
+	return 0;
+}

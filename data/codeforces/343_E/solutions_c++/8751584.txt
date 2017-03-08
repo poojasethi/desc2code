@@ -1,0 +1,115 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <cctype>
+#include <algorithm>
+#include <iostream>
+using namespace std;
+
+const int N=200+5;
+const int M=1000+5;
+const int INF=1<<30;
+
+struct Edge
+{
+	int to,nxt,c;
+}e[M<<1],g[N<<1];
+int n,m,cnt,tope,topg,he[N],hg[N],cur[N],d[N],q[N],fa[N];
+bool vis[N],used[N];
+
+inline void addedge(Edge *e,int *hd,int& top,int x,int y,int w)
+{
+	e[++top].to=y;e[top].c=w;e[top].nxt=hd[x];hd[x]=top;
+	e[++top].to=x;e[top].c=w;e[top].nxt=hd[y];hd[y]=top;
+}
+
+inline bool bfs(int s,int t)
+{
+	int l,r,now,p;
+	for (int i=1;i<=n;++i) cur[i]=he[i],d[i]=-1;
+	for (d[q[l=r=1]=s]=0;l<=r;++l)
+		for (p=he[now=q[l]];~p;p=e[p].nxt)
+			if (e[p].c && !~d[e[p].to]) d[q[++r]=e[p].to]=d[now]+1;
+	return ~d[t];
+}
+
+inline int dfs(int now,int t,int delta)
+{
+	if (now==t) return delta;
+	int tot=0,tmp;
+	for (int& p=cur[now];~p;p=e[p].nxt)
+		if (e[p].c && d[e[p].to]==d[now]+1)
+		{
+			tot+=(tmp=dfs(e[p].to,t,min(delta-tot,e[p].c)));
+			e[p].c-=tmp;e[p^1].c+=tmp;
+			if (tot==delta) break;
+		}
+	return tot;
+}
+
+inline int dinic(int s,int t)
+{
+	int rt=0;
+	for (int i=0;i<=tope;++i)
+		if (!(i&1)) e[i].c=(e[i].c+e[i^1].c)>>1;
+		else e[i].c=e[i^1].c;
+	while (bfs(s,t)) rt+=dfs(s,t,INF);
+	return rt;
+}
+
+inline void display(int pos)
+{
+	int s,t,ed,minn=INF,l,r,now,p;
+	memset(vis,0,sizeof vis);
+	for (vis[q[l=r=1]=pos]=1;l<=r;++l)
+		for (p=hg[now=q[l]];~p;p=g[p].nxt)
+			if (!used[p>>1] && !vis[g[p].to])
+			{
+				vis[q[++r]=g[p].to]=1;
+				if (g[p].c<minn) minn=g[p].c,s=now,t=g[p].to,ed=p;
+			}
+	if (r==1)
+	{
+		printf("%d%c",pos," \n"[++cnt==n]);
+		return;
+	}
+	used[ed>>1]=1;
+	display(s);
+	display(t);
+}
+
+inline void solve(void)
+{
+	int tot,ans=0;
+	for (int i=1;i<=n;++i) fa[i]=1;
+	for (int i=2;i<=n;++i)
+	{
+		ans+=(tot=dinic(i,fa[i]));
+		addedge(g,hg,topg,fa[i],i,tot);
+		for (int j=i+1;j<=n;++j)
+			if (~d[j] && fa[i]==fa[j])
+				fa[j]=i;
+	}
+	printf("%d\n",ans);
+	display(1);
+}
+
+int main(int argc,char **argv)
+{
+	#ifndef ONLINE_JUDGE
+		if (argc==1) freopen("343E.in","r",stdin),freopen("343E.out","w",stdout);
+		else freopen(argv[1],"r",stdin),freopen(argv[2],"w",stdout);
+	#endif
+	int x,y,w;
+	memset(he,-1,sizeof he);tope=-1;
+	memset(hg,-1,sizeof hg);topg=-1;
+	scanf("%d%d",&n,&m);
+	for (int i=1;i<=m;++i)
+	{
+		scanf("%d%d%d",&x,&y,&w);
+		addedge(e,he,tope,x,y,w);
+	}
+	solve();
+	return 0;
+}

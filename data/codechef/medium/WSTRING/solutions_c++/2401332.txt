@@ -1,0 +1,192 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <cstdio>
+#include <algorithm>
+#include <climits>
+#include <utility>
+#include <fstream>
+
+const int MAX_LENGTH = 10001;
+const int ALPHABET_SIZE = 26;
+int char_count[ALPHABET_SIZE];
+
+int dp_left[MAX_LENGTH];
+int dp_right[MAX_LENGTH];
+int dp_middle[MAX_LENGTH][MAX_LENGTH] = {0};
+
+void precompute(const std::string &s) {
+	int n = s.length();
+	std::fill_n(dp_left, n, 0);
+	std::fill_n(dp_right, n, 0);
+
+	// find on max length from left
+	std::fill_n(char_count, ALPHABET_SIZE, 0);
+	int left_max = 0;
+	for (int i = 0; i < n; ++i) {
+		if (s[i] != '#') {
+			char_count[s[i] - 'a']++;
+			left_max = std::max(left_max, char_count[s[i] - 'a']);
+		}
+		dp_left[i] = left_max;
+	}
+
+	// find on max length from right 
+	std::fill_n(char_count, ALPHABET_SIZE, 0);
+	int right_max = 0;
+	for (int i = n - 1; i >= 0; --i) {
+		if (s[i] != '#') {
+			char_count[s[i] - 'a']++;
+			right_max = std::max(right_max, char_count[s[i] - 'a']);
+		}
+		dp_right[i] = right_max;
+	}
+}
+
+int longest_equal_alaphabet_subsequence(const std::string &s, int left, int right) {
+	if (right < left) {
+		return 0;
+	} else if (left == right) {
+		return (s[left] == '#') ? 0 : 1;
+	} else {
+		std::fill_n(char_count, 26, 0);
+		int max_length = 0;
+		for (int i = left; i <= right; ++i) {
+			if (s[i] != '#') {
+				char_count[s[i] - 'a']++;
+				max_length = std::max(max_length, char_count[s[i] - 'a']);
+			}
+		}
+		return max_length;
+	}
+}
+
+struct bound_sign {
+	std::vector<int> indexes;
+	int n;
+
+	bound_sign(const std::string &s) {
+		n = s.length();
+		for (int i = 0; i < n; ++i) {
+			if (s[i] == '#') {
+				indexes.push_back(i);
+			}
+		}
+	}
+
+	bool has_enough_pounds() const {
+		return indexes.size() >= 3;
+	}
+
+	const std::vector<int> get_indexes() const {
+		return indexes;
+	}
+
+	bool is_any_consecutive_pound(int l, int m, int r) const {
+		return (l + 1 == m) || (m + 1 == r);
+	}
+};
+
+int compute_w_length(const std::string &s, int left, int middle, int right) {
+	int r = 0;
+	int length = 0;
+	// length = longest_equal_alaphabet_subsequence(s, 0, left - 1);
+	length = dp_left[left];
+	if (length == 0) {
+		return 0;
+	} 
+	r += length;
+
+	length = longest_equal_alaphabet_subsequence(s, left + 1, middle - 1);
+	if (length == 0) {
+		return 0;
+	}
+	r += length;
+
+	length = longest_equal_alaphabet_subsequence(s, middle + 1, right - 1);
+	if (length == 0) {
+		return 0;
+	}
+	r += length;
+
+	// length = longest_equal_alaphabet_subsequence(s, right + 1, s.size() - 1);
+	length = dp_right[right];
+	if (length == 0) {
+		return 0;
+	}
+	r += length;
+
+	r += 3; // 3 #
+	return r;
+}
+
+int longest_w_string(const std::string &s) {
+	bound_sign bs(s);
+	if (!bs.has_enough_pounds()) {
+		return 0;
+	} else {
+		precompute(s);
+		std::vector<int> indexes = bs.get_indexes();
+		int max_length = 0;
+		int w_length;
+		int no_pounds = indexes.size();
+		// for every 3 '#'
+		for (int i = 0; i + 2 <= no_pounds - 1; i++) {
+			if (bs.is_any_consecutive_pound(indexes[i], indexes[i + 1], indexes[i + 2])) {
+				continue;
+			}
+			w_length = compute_w_length(s, indexes[i], indexes[i + 1], indexes[i + 2]);
+			max_length = std::max(max_length, w_length);
+		}
+		return max_length;
+	}
+}
+
+
+void inout_w_string() {
+	int test_cases;
+	std::cin >> test_cases;
+	std::string s;
+	while (test_cases--) {
+		std::cin >> s;
+		std::cout << longest_w_string(s) << '\n';
+	}
+}
+
+void test() {
+	std::cout << longest_w_string("#a#a#a#a#aaa") << '\n';
+	std::cout << longest_w_string("#") << '\n';
+	std::cout << longest_w_string("##") << '\n';
+	std::cout << longest_w_string("###") << '\n';
+	std::cout << longest_w_string("####") << '\n';
+	std::cout << longest_w_string("aaaaa#bb#cc#dddd") << '\n';
+	std::cout << longest_w_string("acb#aab#bab#accba") << '\n';
+	std::cout << longest_w_string("abc#dda#bb#bb#aca") << '\n';
+	std::cout << longest_w_string("#a#a#a") << '\n';
+	std::cout << longest_w_string("aa##a#a") << '\n';
+
+	std::cout << longest_w_string("a#b#c#d") << '\n';
+	std::cout << longest_w_string("aaa#yyy#aaa#yy") << '\n';
+	std::cout << longest_w_string("o#oo#ooo#oooo") << '\n';
+}
+
+void test_dp() {
+	std::string s ="##aaaaa#bb#cc#daaaddda";
+	precompute(s);
+	std::cout << "left\n";
+	for (int i = 0; i < s.length(); ++i) {
+		std::cout << i << ":" << dp_left[i] << '\n';
+	}
+	std::cout << '\n';
+	std::cout << "right\n";
+	for (int i = s.length() - 1; i >= 0; --i) {
+		std::cout << i << ":" << dp_right[i] << '\n';
+	}
+}
+
+int main() {
+	inout_w_string();
+	//test_dp();
+	//test();
+	return 0;
+}

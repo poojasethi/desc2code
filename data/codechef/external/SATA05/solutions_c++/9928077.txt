@@ -1,0 +1,86 @@
+#include <bits/stdc++.h>
+using namespace std;
+const long long int MOD = 1000000007;
+long long int power(long long int a, int b)
+{
+	if(b == 0)
+		return 1;
+	long long int ans = power(a,b/2);
+	ans = (ans*ans)%MOD;
+	if(b%2)
+		ans = (ans*a)%MOD;
+	return ans;
+}
+vector < vector <long long int> > get_inverse_transpose(vector <long long int> &xs)
+{
+	int n = xs.size();
+	vector < vector <long long int> > ret(n, vector <long long int> (n,0));
+	// stor product of (x-x0)*(x-x1)...(x-xn) in all_prod
+	vector <long long int> all_prod(n+1,0);
+	all_prod[0] = 1;
+	for (int i = 0; i < n; ++i)
+	{
+		long long int mul = MOD - xs[i];
+		for (int j = n; j >= 0; --j)
+		{
+			if(j)
+				all_prod[j] = (all_prod[j-1] + mul*all_prod[j])%MOD;
+			else
+				all_prod[j] = (mul*all_prod[j])%MOD;
+		}
+	}
+	// now if we were inverting usual vandermonde then every column would have
+	// been lagrangian. since inv_transpose, therefore fill them in row-wise
+	for (int i = 0; i < n; ++i)
+	{
+		// prod will have all_prod/(x-xi)
+		vector <long long int> prod(n);
+		long long int mul = xs[i], rem = all_prod[n];
+		for (int j = n-1; j >= 0; --j)
+		{
+			prod[j] = rem;
+			rem = (all_prod[j] + mul*rem)%MOD;
+		}
+		// now store denominator in mul
+		mul = 1;
+		for (int j = 0; j < n; ++j)
+		{
+			if(j != i)
+			{
+				long long int temp = xs[i] + MOD - xs[j];
+				mul = (mul*temp)%MOD;
+			}
+		}
+		mul = power(mul,MOD-2);
+		for (int j = 0; j < n; ++j)
+			ret[i][j] = (prod[j]*mul)%MOD;
+	}
+	return ret;
+}
+int main()
+{
+	ios_base::sync_with_stdio(0);
+	int n;
+	cin>>n;
+	vector <long long int> xs(n),B(n);
+	for (int i = 0; i < n; ++i)
+	{
+		cin>>B[i];
+		xs[i] = i+1;
+	}
+	vector < vector <long long int> > inv = get_inverse_transpose(xs);
+	vector <long long int> coeff(n,0);
+	// coeff = inv*B
+	for (int i = 0; i < n; ++i)
+		for (int j = 0; j < n; ++j)
+			coeff[i] = (coeff[i] + inv[i][j]*B[j])%MOD;
+	// now we have a1 a2 ...an simply evealuate polynomial at all required points
+	for (int i = 0; i < n; ++i)
+	{
+		long long int ans = 0;
+		for (int j = 1; j <= n; ++j)
+			ans = (ans + coeff[j-1]*power(i,j))%MOD;
+		cout<<ans<<" ";
+	}
+	return 0;
+}

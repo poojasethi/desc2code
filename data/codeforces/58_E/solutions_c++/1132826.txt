@@ -1,0 +1,185 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#define inf 1000000000
+#define LL long long
+using namespace std;
+char str[100];
+int a[10],b[10],c[10];
+int pa[10],pb[10],pc[10];
+int dp[20][9][9][9][2];
+LL ans[20][9][9][9][2][2];
+int zero[20][9][9][9][2][2];
+int jz[20];
+void init()
+{
+		a[0]=b[0]=c[0]=0;
+		pa[0]=pb[0]=pc[0]=0;
+		int l=strlen(str);
+		int stop=1;
+		for(int i=0;i<l;i++)
+		{
+			if(str[i]=='+'||str[i]=='=')
+			{
+				stop++;
+				continue;
+			}
+			if(stop==1)
+			pa[++pa[0]]=str[i]-48;
+			else if(stop==2)
+			pb[++pb[0]]=str[i]-48;
+			else
+			pc[++pc[0]]=str[i]-48;
+		}
+		a[0]=pa[0];b[0]=pb[0];c[0]=pc[0];
+		for(int i=a[0];i>=1;i--)a[a[0]-i+1]=pa[i];
+		for(int i=b[0];i>=1;i--)b[b[0]-i+1]=pb[i];
+		for(int i=c[0];i>=1;i--)c[c[0]-i+1]=pc[i];
+		a[a[0]+1]=b[b[0]+1]=c[c[0]+1]=100;
+		jz[1]=1;
+		for(int i=2;i<17;i++)
+		jz[i]=jz[i-1]*10;
+		memset(zero,0,sizeof(zero));
+}
+int main()
+{
+	while(~scanf("%s",str))
+	{
+		init();
+		for(int i=0;i<17;i++)
+		for(int j=0;j<=a[0];j++)
+		for(int p=0;p<=b[0];p++)
+		for(int q=0;q<=c[0];q++)
+		for(int k=0;k<2;k++)
+		for(int t=0;t<2;t++)
+		dp[i][j][p][q][k]=inf;
+		dp[0][0][0][0][0]=0;
+		ans[0][0][0][0][0][0]=0;
+		ans[0][0][0][0][0][1]=0;
+		for(int i=0;i<17;i++)
+		for(int j=0;j<=a[0];j++)
+		for(int p=0;p<=b[0];p++)
+		for(int q=0;q<=c[0];q++)
+		for(int k=0;k<2;k++)
+		{
+			if(dp[i][j][p][q][k]==inf) continue;
+			int val=dp[i][j][p][q][k];
+			int o1=zero[i][j][p][q][k][0];
+			int o2=zero[i][j][p][q][k][1];
+			for(int n1=0;n1<10;n1++)
+			for(int n2=0;n2<10;n2++)
+			{
+				int res=val;
+				if(p==b[0]&&n2==0) res--;
+				if(j==a[0]&&n1==0) res--;
+				if(j==a[0]&&n1!=0) res+=o1;
+				if(p==b[0]&&n2!=0) res+=o2;
+				if(res+3<dp[i+1][j][p][q][(n1+n2+k)/10])
+				{
+					ans[i+1][j][p][q][(n1+n2+k)/10][0]=ans[i][j][p][q][k][0]+n1*jz[i+1];
+					ans[i+1][j][p][q][(n1+n2+k)/10][1]=ans[i][j][p][q][k][1]+n2*jz[i+1];
+					dp[i+1][j][p][q][(n1+n2+k)/10]=res+3;
+					if(j==a[0]&&n1==0) zero[i+1][j][p][q][(n1+n2+k)/10][0]=o1+1;
+					if(p==b[0]&&n2==0) zero[i+1][j][p][q][(n1+n2+k)/10][1]=o2+1;
+				}
+				if((n1+n2+k)%10==c[q+1])
+				{
+					res=val;
+					if(p==b[0]&&n2==0) res--;
+					if(j==a[0]&&n1==0) res--;
+					if(j==a[0]&&n1!=0) res+=o1;
+					if(p==b[0]&&n2!=0) res+=o2;
+					if(res+2<dp[i+1][j][p][q+1][(n1+n2+k)/10])
+					{
+						ans[i+1][j][p][q+1][(n1+n2+k)/10][0]=ans[i][j][p][q][k][0]+n1*jz[i+1];
+						ans[i+1][j][p][q+1][(n1+n2+k)/10][1]=ans[i][j][p][q][k][1]+n2*jz[i+1];
+						dp[i+1][j][p][q+1][(n1+n2+k)/10]=res+2;
+						if(j==a[0]&&n1==0) zero[i+1][j][p][q+1][(n1+n2+k)/10][0]=o1+1;
+						if(p==b[0]&&n2==0) zero[i+1][j][p][q+1][(n1+n2+k)/10][1]=o2+1;
+					}
+				}
+			}
+			for(int num=0;num<10;num++)
+			{
+				int res=val;
+				if(p==b[0]&&num==0) res--;
+				if(p==b[0]&&num!=0) res+=o2;
+				if(res+2<dp[i+1][j+1][p][q][(num+a[j+1]+k)/10])
+				{
+					ans[i+1][j+1][p][q][(num+a[j+1]+k)/10][0]=ans[i][j][p][q][k][0]+a[j+1]*jz[i+1];
+					ans[i+1][j+1][p][q][(num+a[j+1]+k)/10][1]=ans[i][j][p][q][k][1]+num*jz[i+1];
+					dp[i+1][j+1][p][q][(num+a[j+1]+k)/10]=res+2;
+					if(p==b[0]&&num==0) zero[i+1][j+1][p][q][(num+a[j+1]+k)/10][1]=o2+1;
+				}
+				if(c[q+1]==(num+a[j+1]+k)%10)
+				{
+					if(res+1<dp[i+1][j+1][p][q+1][(num+a[j+1]+k)/10])
+					{
+						ans[i+1][j+1][p][q+1][(num+a[j+1]+k)/10][0]=ans[i][j][p][q][k][0]+a[j+1]*jz[i+1];
+						ans[i+1][j+1][p][q+1][(num+a[j+1]+k)/10][1]=ans[i][j][p][q][k][1]+num*jz[i+1];
+						dp[i+1][j+1][p][q+1][(num+a[j+1]+k)/10]=res+1;
+						if(p==b[0]&&num==0) zero[i+1][j+1][p][q+1][(num+a[j+1]+k)/10][1]=o2+1;
+					}
+				}
+				res=val;
+				if(j==a[0]&&num==0) res--;
+				if(j==a[0]&&num!=0) res+=o1;
+				if(res+2<dp[i+1][j][p+1][q][(num+b[p+1]+k)/10])
+				{
+					ans[i+1][j][p+1][q][(num+b[p+1]+k)/10][0]=ans[i][j][p][q][k][0]+num*jz[i+1];
+					ans[i+1][j][p+1][q][(num+b[p+1]+k)/10][1]=ans[i][j][p][q][k][1]+b[p+1]*jz[i+1];
+					dp[i+1][j][p+1][q][(num+b[p+1]+k)/10]=res+2;
+					if(j==a[0]&&num==0) zero[i+1][j][p+1][q][(num+b[p+1]+k)/10][0]=o1+1;
+				}
+				if(c[q+1]==(num+b[p+1]+k)%10)
+				{
+					if(res+1<dp[i+1][j][p+1][q+1][(num+b[p+1]+k)/10])
+					{
+						ans[i+1][j][p+1][q+1][(num+b[p+1]+k)/10][0]=ans[i][j][p][q][k][0]+num*jz[i+1];
+						ans[i+1][j][p+1][q+1][(num+b[p+1]+k)/10][1]=ans[i][j][p][q][k][1]+b[p+1]*jz[i+1];
+						dp[i+1][j][p+1][q+1][(num+b[p+1]+k)/10]=res+1;
+						if(j==a[0]&&num==0) zero[i+1][j][p+1][q+1][(num+b[p+1]+k)/10][0]=o1+1;
+					}
+				}
+			}
+			if(c[q+1]==(a[j+1]+b[p+1]+k)%10)
+			{
+				if(val<dp[i+1][j+1][p+1][q+1][(a[j+1]+b[p+1]+k)/10])
+				{
+					ans[i+1][j+1][p+1][q+1][(a[j+1]+b[p+1]+k)/10][0]=ans[i][j][p][q][k][0]+a[j+1]*jz[i+1];
+					ans[i+1][j+1][p+1][q+1][(a[j+1]+b[p+1]+k)/10][1]=ans[i][j][p][q][k][1]+b[p+1]*jz[i+1];
+					dp[i+1][j+1][p+1][q+1][(a[j+1]+b[p+1]+k)/10]=val;
+				}
+			}
+			if(val+1<dp[i+1][j+1][p+1][q][(a[j+1]+b[p+1]+k)/10])
+			{
+				ans[i+1][j+1][p+1][q][(a[j+1]+b[p+1]+k)/10][0]=ans[i][j][p][q][k][0]+a[j+1]*jz[i+1];
+				ans[i+1][j+1][p+1][q][(a[j+1]+b[p+1]+k)/10][1]=ans[i][j][p][q][k][1]+b[p+1]*jz[i+1];
+				dp[i+1][j+1][p+1][q][(a[j+1]+b[p+1]+k)/10]=val+1;
+			}
+		}
+		int ret=inf;
+		LL x,y;
+		for(int i=0;i<17;i++)
+		{
+			if(ret>dp[i][a[0]][b[0]][c[0]][0])
+			{
+				
+				ret=dp[i][a[0]][b[0]][c[0]][0];
+				x=ans[i][a[0]][b[0]][c[0]][0][0];
+				y=ans[i][a[0]][b[0]][c[0]][0][1];
+			}			
+			if(ret>dp[i][a[0]][b[0]][c[0]][1]+1)
+			{
+			
+				ret=dp[i][a[0]][b[0]][c[0]][1]+1;
+				x=ans[i][a[0]][b[0]][c[0]][1][0];
+				y=ans[i][a[0]][b[0]][c[0]][1][1];
+			}
+		}
+		printf("%I64d+%I64d=%I64d\n",x,y,x+y);
+	
+	}
+	return 0;
+}
+ 	 	  	  	   	  	  	 	    	

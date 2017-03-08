@@ -1,0 +1,92 @@
+#include <cstdio>
+#include <cstdlib>
+#include <vector>
+#include <algorithm>
+#include <string>
+#include <map>
+#include <set>
+#include <iostream>
+#include <cstring>
+using namespace std;
+
+map<string, set<string> > edges;
+map<pair<string, int>, int> f;
+set<string> like;
+set<string> dislike;
+
+string get_father(string s) {
+	while (s[s.length() - 1] != '/') {
+		s = s.substr(0, s.length() - 1);
+	} 
+	return s.substr(0, s.length() - 1);
+}
+
+void build(string s) {
+	while (1) {
+		string father = get_father(s);
+		edges[father].insert(s);
+		s = father;
+		if (s == "") {
+			return ;
+		}
+	}
+}
+
+int dfs(string x, int type) {
+	if (f.count(make_pair(x, type))) {
+		return f[make_pair(x, type)];
+	}
+	
+	int& ret = f[make_pair(x, type)];
+	ret = 0;
+	if (edges[x].size() == 0) {
+		if ((like.count(x) && type == 0)
+		|| (dislike.count(x) && type == 1)) {
+			ret = 1;
+		} else {
+			ret = 0;
+		}
+		return ret;
+	}
+	
+	set<string> vec = edges[x];
+	
+	int ans0 = 0, ans1 = 0;
+	
+	for (set<string> :: iterator it = vec.begin(); it != vec.end(); ++it) {
+		ans0 += dfs(*it, 0);
+		ans1 += dfs(*it, 1);
+	}
+	if (type == 0) {
+		ret = min(ans0, ans1 + 1);
+	} else {
+		ret = min(ans1, ans0 + 1);
+	}
+	
+	//cout << x << " " << type << " " << ret << " " << ans0 << " " << ans1 << endl;
+	return ret;
+}
+
+int main() {
+	int tests;
+	scanf("%d", &tests);
+	while (tests--) {
+		edges.clear();
+		f.clear();
+		like.clear();
+		dislike.clear();
+		
+		int n; scanf("%d", &n);
+		string type, file;
+		for (int i = 0; i < n; i++) {
+			cin >> type >> file;
+			build(file);
+			if (type == "stage") {
+				like.insert(file);
+			} else {
+				dislike.insert(file);
+			}
+		}
+		printf("%d\n", dfs("", 0));
+	}
+}

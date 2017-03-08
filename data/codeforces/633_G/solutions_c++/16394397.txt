@@ -1,0 +1,122 @@
+#include <cmath>
+#include <cstdio>
+#include <vector>
+#include <iostream>
+#include <algorithm>
+#include<map>
+#include <set>
+#include<bitset>
+#include<string>
+#include<iomanip>
+#define mod7 %1000000007
+#define LL long long
+using namespace std;
+const int M = 1000;
+const int N = 100001;
+bitset<M> T[4 * N];
+int upd[4 * N];
+vector<int> g[N];
+
+int n, m, x, y, a[N];
+
+int cnt, in[N], out[N],arr[N];
+void traverse(int v,int p) {
+	arr[++cnt] = v;
+	in[v] = cnt;
+	for (int i = 0; i < g[v].size(); i++)
+		if (g[v][i] != p)
+			traverse(g[v][i], v);
+	out[v] = cnt;
+}
+void Build(int v, int tl, int tr) {
+	if (tl == tr) {
+		T[v].set(a[arr[tl]] % m, 1);
+		return;
+	}
+	int tm = (tl + tr) / 2;
+	Build(2 * v, tl, tm);
+	Build(2 * v + 1, tm + 1, tr);
+	T[v] = T[2 * v] | T[2 * v + 1];
+}
+void make_shift(int v,int val) {
+	T[v] = (T[v] >> (m - val)) | ((T[v] << (M - m + val)) >> (M - m));
+	 
+}
+void push(int v) {
+	if (upd[v] != 0) {
+		upd[v] %= m;
+		upd[2 * v] += upd[v];
+		upd[2 * v + 1] += upd[v];
+		make_shift(2 * v, upd[v]);
+		make_shift(2 * v + 1, upd[v]);
+		upd[2 * v] %= m;
+		upd[2 * v + 1] %= m;
+		upd[v] = 0;
+	}
+}
+void add(int v, int tl, int tr, int l,int r, int add_val) {
+	if (l > r) return;
+	if (tl == l && tr == r) {
+		upd[v] += add_val;
+		upd[v] %= m;
+		make_shift(v, add_val);
+		return;
+	}
+	int tm = (tl + tr) / 2;
+	push(v);
+	add(2 * v, tl, tm, l, min(tm, r), add_val);
+	add(2 * v + 1, tm + 1, tr, max(tm + 1, l), r, add_val);
+	T[v] = T[2 * v] | T[2 * v + 1];
+}
+bitset<M> query(int v, int tl, int tr, int l, int r) {
+	if (l > r) return bitset<M>();
+	if (tl == l && tr == r) return T[v];
+	int tm = (tl + tr) / 2;
+	push(v);
+	return query(2 * v, tl, tm, l, min(tm, r)) | query(2 * v + 1, tm + 1, tr, max(tm + 1, l), r);
+}
+
+int d[M];
+vector<int> primes;
+bitset<M> correct;
+int main() {
+	//freopen("input.txt", "r", stdin);
+	//freopen("output.txt", "w", stdout);
+ 
+	scanf("%d%d", &n, &m);
+	for (int i = 2; i < m; i++) {
+		if (d[i] == 0) correct[i] = 1;
+		if (d[i]==0)
+		for (int j = i; j < m; j += i) {
+			d[j] = 1;
+		}
+	}
+	for (int i = 1; i <= n; i++)
+		scanf("%d", &a[i]),a[i]%=m;
+	for (int i = 1; i < n; i++) {
+		scanf("%d%d", &x, &y);
+		g[x].push_back(y);
+		g[y].push_back(x);
+	}
+	traverse(1,-1);
+
+	Build(1, 1, n);
+	int T;
+	scanf("%d",&T);
+	while (T--) {
+		int op;
+		scanf("%d", &op);
+		if (op == 1) {
+			scanf("%d%d", &x, &y);
+			y %= m;
+			add(1, 1, n, in[x],out[x], y);
+		}
+		else {
+			scanf("%d", &x);
+			bitset<M> result = query(1, 1, n, in[x], out[x]);
+			result &= correct;
+			printf("%d\n", result.count());
+		}
+	}
+	return 0;
+}

@@ -1,0 +1,76 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+using namespace std;
+
+const int N_MAX = 100005, K_MAX = 505;
+
+struct constraint
+{
+    char letter;
+    int low, high;
+};
+
+int N, K, L, R;
+char str[N_MAX];
+constraint constraints[K_MAX];
+int partial_count[26][N_MAX];
+int start[K_MAX], end[K_MAX];
+int valid_constraints[N_MAX], LR_good;
+long long total;
+
+inline bool betweenLR(int pos)
+{
+    return L <= valid_constraints[pos] && valid_constraints[pos] <= R;
+}
+
+inline void modify(int pos, int change)
+{
+    int before = betweenLR(pos);
+    valid_constraints[pos] += change;
+    int after = betweenLR(pos);
+    LR_good += after - before;
+}
+
+int main()
+{
+    scanf("%s %d %d %d", str, &K, &L, &R);
+    N = strlen(str);
+
+    for (int k = 0; k < K; k++)
+        scanf(" %c %d %d", &constraints[k].letter, &constraints[k].low, &constraints[k].high);
+
+    for (int c = 0; c < 26; c++)
+    {
+        partial_count[c][0] = 0;
+
+        for (int i = 0; i < N; i++)
+            partial_count[c][i + 1] = partial_count[c][i] + (str[i] == c + 'a' ? 1 : 0);
+    }
+
+    total = 0;
+    LR_good = L == 0 ? N + 1 : 0;
+
+    for (int i = 0; i < N; i++)
+    {
+        for (int k = 0; k < K; k++)
+        {
+            int c = constraints[k].letter - 'a', low = constraints[k].low, high = constraints[k].high;
+            start[k] = max(start[k], i + 1);
+            end[k] = max(end[k], i + 1);
+
+            while (start[k] <= N && partial_count[c][start[k]] - partial_count[c][i] < low)
+                modify(start[k]++, -1);
+
+            while (end[k] <= N && partial_count[c][end[k]] - partial_count[c][i] <= high)
+                modify(end[k]++, 1);
+        }
+
+// endpoint must be at least i + 1
+        LR_good -= betweenLR(i);
+        total += LR_good;
+    }
+
+    cout << total << '\n';
+    return 0;
+}

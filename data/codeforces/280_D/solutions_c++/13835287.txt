@@ -1,0 +1,115 @@
+#include <iostream>
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+using namespace std;
+#define N 100050
+struct Node
+ {int ma,lm,rm,mx,my,ly,rx,s;} a[N*4],b[N*4],C;
+int n,m,v[N],p,cz[21][2],ans;bool fz[N*4];
+inline int Read()
+ {
+ 	int x=0;char y;bool z=0;
+ 	do y=getchar(),z|=y=='-'; while (y<'0'||y>'9');
+ 	do x=x*10+y-'0',y=getchar(); while (y>='0'&&y<='9');
+ 	return z?-x:x;
+ }
+inline Node Marge(Node x,Node y)
+ {
+ 	C=x;int k=x.rm+y.lm;
+ 	if (y.ma>k&&y.ma>C.ma)
+ 	  C.ma=y.ma,C.mx=y.mx,C.my=y.my; else
+ 	if (k>C.ma) C.ma=k,C.mx=x.rx,C.my=y.ly;
+ 	k=y.lm+x.s;
+ 	if (k>x.lm) C.lm=k,C.ly=y.ly;
+ 	k=y.s+x.rm;
+ 	if (k>y.rm) C.rm=k,C.rx=x.rx; else
+ 	  C.rm=y.rm,C.rx=y.rx;
+ 	C.s+=y.s;
+ 	return C;
+ }
+inline Node Mirge(Node x,Node y)
+ {
+ 	C=x;int k=x.rm+y.lm;
+ 	if (y.ma<k&&y.ma<C.ma)
+ 	  C.ma=y.ma,C.mx=y.mx,C.my=y.my; else
+ 	if (k<C.ma) C.ma=k,C.mx=x.rx,C.my=y.ly;
+ 	k=y.lm+x.s;
+ 	if (k<x.lm) C.lm=k,C.ly=y.ly;
+ 	k=y.s+x.rm;
+ 	if (k<y.rm) C.rm=k,C.rx=x.rx; else
+ 	  C.rm=y.rm,C.rx=y.rx;
+ 	C.s+=y.s;
+ 	return C;
+ }
+void fzj(int x,int y,int z)
+ {
+ 	if (!fz[z]) return;
+ 	int j=z << 1;
+ 	fz[z]=false;swap(a[z],b[z]);
+ 	a[z].ma=-a[z].ma;b[z].ma=-b[z].ma;
+ 	a[z].lm=-a[z].lm;b[z].lm=-b[z].lm;
+ 	a[z].rm=-a[z].rm;b[z].rm=-b[z].rm;
+ 	a[z].s=-a[z].s;b[z].s=-b[z].s;
+ 	if (x!=y) fz[j]=!fz[j],fz[j+1]=!fz[j+1];
+ }
+inline void Change(int x,int z)
+ {
+ 	a[z].ma=a[z].lm=a[z].rm=a[z].s=v[x];
+ 	a[z].mx=a[z].my=a[z].ly=a[z].rx=x;b[z]=a[z];
+ }
+void Set_up(int x,int y,int z)
+ {
+ 	int i=x + y >> 1,j=z << 1;
+ 	if (x==y) {Change(x,z);return;}
+ 	Set_up(x,i,j);Set_up(i+1,y,j+1);
+ 	a[z]=Marge(a[j],a[j+1]);b[z]=Mirge(b[j],b[j+1]);
+ }
+void Insert(int x,int y,int z,int o,int p)
+ {
+ 	int i=x + y >> 1,j=z << 1;fzj(x,y,z);
+ 	if (x==y) {v[x]=p;Change(x,z);return;}
+ 	if (o<=i) Insert(x,i,j,o,p),fzj(i+1,y,j+1); else
+ 	  Insert(i+1,y,j+1,o,p),fzj(x,i,j);
+ 	a[z]=Marge(a[j],a[j+1]);b[z]=Mirge(b[j],b[j+1]);
+ }
+Node Query(int x,int y,int z,int o,int p)
+ {
+ 	int i=x + y >> 1,j=z << 1;fzj(x,y,z);
+ 	if (x==o&&y==p) return a[z];
+ 	if (p<=i) return Query(x,i,j,o,p); else
+ 	 if (o>i) return Query(i+1,y,j+1,o,p); else
+ 	   return Marge(Query(x,i,j,o,i),Query(i+1,y,j+1,i+1,p));
+ }
+void Modify(int x,int y,int z,int o,int p)
+ {
+ 	int i=x + y >> 1,j=z << 1;fzj(x,y,z);
+ 	if (x==o&&y==p) {fz[z]=true;fzj(x,y,z);return;}
+ 	if (o<=i) Modify(x,i,j,o,min(i,p)); else fzj(x,i,j);
+ 	if (p>i) Modify(i+1,y,j+1,max(o,i+1),p); else fzj(i+1,y,j+1);
+ 	a[z]=Marge(a[j],a[j+1]);b[z]=Mirge(b[j],b[j+1]);
+ }
+int main()
+ {
+ 	n=Read();
+ 	for (int i=1;i<=n;i++) v[i]=Read();
+ 	m=Read();Set_up(1,n,1);
+    while (m--)
+     if (!Read())
+      {int k=Read(),l=Read();Insert(1,n,1,k,l);} else
+      {
+      	 int q=Read(),w=Read(),e=Read();ans=0;
+      	 for (int i=1;i<=e;i++)
+      	  {
+      	  	 Node k=Query(1,n,1,q,w);
+      	  	 if (k.ma<0) {e=i-1;break;} else
+      	  	   cz[i][0]=k.mx,cz[i][1]=k.my,
+      	  	   Modify(1,n,1,cz[i][0],cz[i][1]),
+      	  	   ans+=k.ma;
+      	  }
+      	 printf("%d\n",ans);
+      	 for (int i=1;i<=e;i++) Modify(1,n,1,cz[i][0],cz[i][1]);
+      }
+    return 0;
+ }

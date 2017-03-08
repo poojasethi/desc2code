@@ -1,0 +1,39 @@
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int n;
+vector<vector<int> > adjlist;
+unsigned long long ans;
+
+unsigned long long dfs(int i, int parent) {
+	unsigned long long path = 0, sum = 1, sub;
+	for (vector<int>::iterator it = adjlist[i].begin(); it != adjlist[i].end(); ++it) {
+		if (*it == parent) continue;
+		sub = dfs(*it, i);
+		path += sum*sub;
+		sum += sub;
+	}
+	ans -= path*(path+2*sum*(n-sum));
+	return sum;
+}
+
+int main() {
+	ios_base::sync_with_stdio(false);
+	cin.tie(0);
+	cin >> n;
+	adjlist.resize(n+1);
+	ans = (long long)n*(n-1)/2;
+	ans *= ans;
+
+	int u, v;
+	for (int i = 1; i < n; ++i) {
+		cin >> u >> v;
+		adjlist[u].push_back(v);
+		adjlist[v].push_back(u);
+	}
+
+	dfs(n/2+1, 0);
+	cout << ans;
+	return 0;
+}

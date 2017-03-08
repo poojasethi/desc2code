@@ -1,0 +1,207 @@
+#include<cstring>
+#include<cstdlib>
+#include<algorithm>
+#include<cstdio>
+#include<iostream>
+using namespace std;
+const int s5=383008016;
+const int mo=1000000009;
+int X,Y,A,B;
+int xp[222222],tmpxs[222222],yp[222222],tmpys[222222],*xs=tmpxs+1,*ys=tmpys+1;
+int qp(int a,int b){int ans=1;do{if(b&1)ans=1ll*ans*a%mo;a=1ll*a*a%mo;}while(b>>=1);return ans;}
+int n;
+struct edge{int v,next;}e[400005];int etot=0;int g[200005];
+void ae(int u,int v){e[etot].v=v;e[etot].next=g[u];g[u]=etot++;}
+int qu[200005],p,q,son[200005],up[200005],pre[200005],sz[200005],id[200005],h[200005],idr[200005],idtot=0;
+void dfs(int u){
+    id[u]=++idtot;
+    if(son[u])dfs(son[u]);
+    for (int i=g[u];~i;i=e[i].next)if(e[i].v!=pre[u] && e[i].v!=son[u])dfs(e[i].v);
+    idr[u]=idtot;
+}
+void bfs(int rt){
+    p=q=0;qu[q++]=rt;
+    while(p!=q){
+        int u=qu[p++];sz[u]=1;
+        for (int i=g[u];~i;i=e[i].next)if(e[i].v!=pre[u]){
+            qu[q++]=e[i].v;
+            h[e[i].v]=h[u]+1;
+            pre[e[i].v]=u;
+        }
+    }
+    for (int i=q-1;i>=1;i--){
+        sz[pre[qu[i]]]+=sz[qu[i]];
+        if(sz[qu[i]]>sz[son[pre[qu[i]]]])son[pre[qu[i]]]=qu[i];
+    }
+    for (int i=q-1;i>=0;i--)if(!son[qu[i]]){
+        int u=qu[i];while(pre[u] && son[pre[u]]==u)u=pre[u];
+        int v=u;while(v){up[v]=u;/*id[v]=++idtot;*/v=son[v];}
+    }
+    dfs(rt);
+}
+struct node{int lch,rch;int s,lx,ly,rx,ry;}t[50000000];int ndtot;
+int l1,r1;int sx,sy,dir;
+int upd(int x,int l,int r){
+    int y=++ndtot;
+    t[y]=t[x];
+    if(l1<=l && r<=r1){
+        if(dir==0){
+            t[y].lx=(t[y].lx+1ll*sx*xp[l-l1])%mo;
+            t[y].ly=(t[y].ly+1ll*sy*yp[l-l1])%mo;
+        }else{
+            t[y].rx=(t[y].rx+1ll*sx*xp[r1-r])%mo;
+            t[y].ry=(t[y].ry+1ll*sy*yp[r1-r])%mo;
+        }
+    }else{
+        int l2=max(l,l1),r2=min(r,r1);
+        if(dir==0){
+        t[y].s=(t[y].s+1ll*sx*xp[l2-l1]%mo*xs[r2-l2]%mo*A)%mo;
+        t[y].s=(t[y].s+1ll*sy*yp[l2-l1]%mo*ys[r2-l2]%mo*B)%mo;
+    }else{
+        t[y].s=(t[y].s+1ll*sx*xp[r1-r2]%mo*xs[r2-l2]%mo*A)%mo;
+        t[y].s=(t[y].s+1ll*sy*yp[r1-r2]%mo*ys[r2-l2]%mo*B)%mo;
+    }
+        int mid=l+r>>1;
+        if(r1>mid)t[y].rch=upd(t[x].rch,mid+1,r);
+        if(l1<=mid)t[y].lch=upd(t[x].lch,l,mid);
+    }
+    return y;
+}
+int que(int x,int l,int r){
+    if(!x)return 0;
+    if(l1<=l && r<=r1)return (t[x].s+1ll*(t[x].lx+t[x].rx)*xs[r-l]%mo*A+1ll*(t[x].ly+t[x].ry)*ys[r-l]%mo*B)%mo;
+    else{
+        int l2=max(l,l1),r2=min(r,r1);
+        int ret=((1ll*t[x].lx*xp[l2-l]%mo*xs[r2-l2]+1ll*t[x].rx*xp[r-r2]%mo*xs[r2-l2])%mo*A  + (1ll*t[x].ly*yp[l2-l]%mo*ys[r2-l2] + 1ll*t[x].ry*yp[r-r2]%mo*ys[r2-l2])%mo*B )%mo;
+        int mid=l+r>>1;
+        if(r1>mid)ret=(ret+que(t[x].rch,mid+1,r))%mo;
+        if(l1<=mid)ret=(ret+que(t[x].lch,l,mid))%mo;
+        return ret;
+    }
+}
+int head[200005]={0};int totsave=0,nowstate=0;
+int query(int x,int y){
+    int ans=0;
+    while(up[x]!=up[y]){
+        if(h[up[x]]>h[up[y]])swap(x,y);
+        l1=id[up[y]],r1=id[y];
+        ans=(ans+que(head[nowstate],1,n))%mo;
+        y=pre[up[y]];
+    }
+    if(h[x]>h[y])swap(x,y);
+    l1=id[x],r1=id[y];
+    return (ans+que(head[nowstate],1,n))%mo;
+}
+int lca(int x,int y){
+    while(up[x]!=up[y]){
+        if(h[up[x]]>h[up[y]])swap(x,y);
+        y=pre[up[y]];
+    }if(h[x]>h[y])return y;
+    else return x;
+}
+void modi(int x,int y){
+    int l=lca(x,y),len=h[x]+h[y]-2*h[l]+1;
+    int hd=head[nowstate];
+    int gox=1,goy=len;
+    while(up[x]!=up[y]){
+        if(h[up[x]]>h[up[y]]){
+            swap(x,y);
+        swap(gox,goy);
+        }
+        l1=id[up[y]],r1=id[y];
+    int toy;
+    if(gox<goy)toy=goy-(h[y]-h[up[y]]);
+    else toy=goy+(h[y]-h[up[y]]);
+    if(toy<=goy){
+        sx=xp[toy],sy=yp[toy];dir=0;
+    }else{
+        sx=xp[goy],sy=yp[goy];dir=1;
+    }
+        hd=upd(hd,1,n);
+        y=pre[up[y]];
+    if(gox<goy)goy=toy-1;
+    else goy=toy+1;
+    }
+    if(h[x]>h[y]){
+        swap(x,y);
+    swap(gox,goy);
+    }
+    int toy=gox;
+    if(toy<=goy){
+        sx=xp[toy],sy=yp[toy];dir=0;
+    }else{
+        sx=xp[goy],sy=yp[goy];dir=1;
+    }
+    l1=id[x],r1=id[y];
+    hd=upd(hd,1,n);
+    head[nowstate=++totsave]=hd;
+}
+void getn(int &x){
+    char c;while((c=getchar())<'0'||c>'9');x=c-'0';
+    while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+}
+int main()
+{
+    A=qp(s5,mo-2);
+    B=mo-A;
+    X=1ll*(1+s5)*qp(2,mo-2)%mo;
+    Y=1ll*(mo+1-s5)*qp(2,mo-2)%mo;
+    xp[0]=1;for (int i=1;i<=200000;i++)xp[i]=1ll*xp[i-1]*X%mo;
+    for (int i=0;i<=200000;i++)xs[i]=(xs[i-1]+xp[i])%mo;
+    yp[0]=1;for (int i=1;i<=200000;i++)yp[i]=1ll*yp[i-1]*Y%mo;
+    for (int i=0;i<=200000;i++)ys[i]=(ys[i-1]+yp[i])%mo;
+    int q;scanf("%d%d",&n,&q);
+    memset(g,-1,sizeof(g));
+    for (int i=1;i<n;++i){
+        int x,y;getn(x);getn(y);
+        ae(x,y);ae(y,x);
+    }
+    bfs(1);
+    int lastans=0;
+    while(q--){
+        char str[5];scanf("%s",str);
+        if(str[0]=='A'){
+            int x,y;getn(x);getn(y);x^=lastans;
+            modi(x,y);
+        }else if(str[1]=='S'){
+            int x,y;getn(x);getn(y);x^=lastans;
+            int ans;    
+            if(x==y){
+                l1=1,r1=n;
+                ans=que(head[nowstate],1,n);
+            }else if(id[x]>=id[y] && idr[x]<=idr[y]){
+                l1=1,r1=n;
+                ans=que(head[nowstate],1,n);
+                int ls=0;
+                while(up[x]!=up[y])ls=x,x=pre[up[x]];
+                int z;
+                if(x!=y)z=son[y];
+                else z=up[ls];
+                l1=id[z],r1=idr[z];
+                ans=(ans-que(head[nowstate],1,n)+mo)%mo;
+            }else{
+                l1=id[y],r1=idr[y];
+                ans=que(head[nowstate],1,n);
+            }
+            printf("%d\n",ans);
+            head[++totsave]=head[nowstate];
+            nowstate=totsave;
+            lastans=ans;
+        }else if(str[1]=='C'){
+            int x,y;getn(x);getn(y);x^=lastans;
+            int ans=query(x,y);
+            printf("%d\n",ans);
+            head[++totsave]=head[nowstate];
+            nowstate=totsave;
+            lastans=ans;
+        }else{
+            int tmp;
+            getn(tmp);
+            tmp^=lastans;
+            nowstate=tmp;
+            head[++totsave]=head[nowstate];
+            nowstate=totsave;
+        }
+    }
+    return 0;
+}

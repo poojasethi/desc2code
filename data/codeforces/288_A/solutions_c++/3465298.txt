@@ -1,0 +1,9 @@
+#include<cstdio>
+int main()
+{
+    int n, k;
+    scanf("%d%d", &n, &k);
+    if(n < k || (k == 1 && n > 1)) puts("-1");
+    else for(int i = 0; i < n; ++i) putchar('a' + (i > n - k + 1 ? i - n + k : (i&1)));
+    return 0;
+}

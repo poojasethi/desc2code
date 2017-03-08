@@ -1,0 +1,146 @@
+#include <cstdio>
+#include <iostream>
+#include <cmath>
+#include <sstream>
+#include <vector>
+#include <map>
+#include <set>
+#include <complex>
+#include <algorithm>
+#include <functional>
+#include <fstream>
+#include <numeric>
+#include <string>
+#include <valarray>
+
+
+using namespace std;
+
+const int MAX_N=1000+200;
+
+template<class t>
+ostream & operator << (ostream & tout,const vector<t> &s){
+  tout<<'[';
+  for (int i=0;i<s.size();i++)
+    if (i+1 == s.size())
+      tout<<s[i];
+    else
+      tout<<s[i]<<',';
+  tout<<']';
+  return(tout);
+}
+
+
+vector<vector<int> > components;
+vector<int> all;
+vector<int> e[MAX_N],e2[MAX_N];
+int n,dep[MAX_N],next[MAX_N],cmp[MAX_N];
+
+int dfs(int s,int parent,int d){
+  dep[s]=d;
+  int ans=d;
+  for (int i=0;i<e[s].size();i++)
+    if (dep[e[s][i]]){
+      if (e[s][i] != parent)
+	ans=min(ans,dep[e[s][i]]);
+    }else{
+      int sp=all.size();
+      int temp=dfs(e[s][i],s,d+1);
+      if (temp > d){
+	components.push_back(vector<int>());
+	while (all.size() > sp){
+	  components.back().push_back(all.back());
+	  all.pop_back();
+	}
+      }else
+	ans=min(ans,temp);
+    }
+  all.push_back(s);
+  return(ans);
+}
+
+bool hasE(int s,int t){
+  for (int i=0;i<e[s].size();i++)
+    if (e[s][i] == t)
+      return(true);
+  return(false);
+}
+
+vector<int> leaves;
+vector<bool> mark;
+
+void mc(int s){
+  if (mark[s])
+    return;
+  mark[s]=true;
+  if (e2[s].size() == 1)
+    leaves.push_back(s);
+  for (int i=0;i<e2[s].size();i++)
+    mc(e2[s][i]);
+}
+
+int main(){
+  int m;
+  cin>>n>>m;
+  if (n == 2){
+    cout<<-1<<endl;
+    return(0);
+  }
+  for (int i=1;i<=m;i++){
+    int a,b;
+    cin>>a>>b;
+    e[a].push_back(b);
+    e[b].push_back(a);
+  }
+  dfs(1,-1,1);
+  components.push_back(all);
+//   cout<<components<<endl;
+
+  for (int i=0;i<components.size();i++)
+    for (int j=0;j<components[i].size();j++){
+      next[components[i][j]]=components[i][(j+1)%components[i].size()];
+      cmp[components[i][j]]=i;
+    }
+//   for (int i=1;i<=n;i++)
+//     cout<<cmp[i]<<' ';
+  for (int i=1;i<=n;i++)
+    for (int j=0;j<e[i].size();j++)
+      if (cmp[i] != cmp[e[i][j]]){
+// 	cout<<i<<' '<<e[i][j]<<endl;
+	e2[cmp[i]].push_back(cmp[e[i][j]]);
+      }
+
+//   for (int i=0;i<components.size();i++)
+//     if (e2[i].size() == 1)
+//       leaves.push_back(i);
+//   for (int i=0;i<components.size();i++)
+//     cout<<e2[i]<<' ';
+//   cout<<endl;
+  vector<int> a,b;
+  if (components.size() > 1)
+    if (components.size() == 2){
+      a.push_back(0);
+      b.push_back(1);
+    }else{
+      mark=vector<bool> (components.size());
+      for (int i=0;i<components.size();i++)
+	if (e2[i].size() > 1){
+	  mc(i);
+	  break;
+	}
+      for (int i=0;i*2+1<leaves.size();i++){
+	a.push_back(leaves[i]);
+	b.push_back(leaves[i+leaves.size()/2]);
+      }
+      if (leaves.size()%2){
+	a.push_back(leaves[0]);
+	b.push_back(leaves.back());
+      }
+    }
+  cout<<a.size()<<endl;
+  for (int i=0;i<a.size();i++)
+    if (hasE(components[a[i]][0],components[b[i]][0]))
+      cout<<components[a[i]].back()<<' '<<components[b[i]].back()<<endl;
+    else
+      cout<<components[a[i]][0]<<' '<<components[b[i]][0]<<endl;
+}

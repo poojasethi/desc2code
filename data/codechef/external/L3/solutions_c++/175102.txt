@@ -1,0 +1,198 @@
+#include <cstdlib>
+#include <iostream>
+#include <string>
+#include <ctime>
+#include <vector>
+
+using namespace std;
+
+long long int PV[13] = {1LL, 10LL, 100LL, 1000LL, 10000LL,
+			100000LL, 1000000LL, 10000000LL,
+			100000000LL, 1000000000LL,
+			10000000000LL, 100000000000LL,
+			1000000000000LL};
+
+int SmallPrimes[24] = { 3, 5, 7, 11, 13, 17, 19, 23, 29,
+		       31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
+		       73, 79, 83, 89, 97};
+
+class PInput {
+public:
+  PInput(const string& a);
+  long long int Value() const;
+  bool IsPrime() const;
+  bool FillNextValue();
+
+private:
+  void UpdateDR();
+  bool MillerRabin(int w) const ;
+  long long int base_int_;
+  vector<int> windices_;
+  vector<int> wvalues_;
+  long long int value_;
+  long long int d_;
+  int r_;
+};
+
+PInput::PInput(const string& a) {
+  value_ = 0LL;
+  int j = 0;
+  for (int i = a.size() - 1; i >= 0; --i, ++j) {
+    if ((a[i] >= '0') && (a[i] <= '9'))
+      value_ += PV[j] * (a[i] - '0');
+
+    if (a[i] == '?') {
+      windices_.push_back(j);
+      if ((j == 0) || (i == 0)) {
+	wvalues_.push_back(1);
+	value_ += PV[j];
+      } else {
+	wvalues_.push_back(0);
+      }
+    }
+  }
+
+  UpdateDR();  
+}
+
+long long int PInput::Value() const {
+  return value_;
+}
+
+bool PInput::FillNextValue() {
+  int i = 0;
+  while ((i < windices_.size()) && (wvalues_[i] == 9))
+    ++i;
+
+  if (i == windices_.size()) {
+    return false;
+  }
+
+  if (windices_[i] == 0) {
+    if (wvalues_[i] == 3) {
+      wvalues_[i] += 4;
+      value_ += 4;
+    } else {
+      wvalues_[i] += 2;
+      value_ += 2;
+    }
+    UpdateDR();
+    return true;
+  }
+
+  wvalues_[i] += 1;
+  value_ += PV[windices_[i]];
+  for (int j = i - 1; j >= 0; --j) {
+    if (windices_[j] == 0) {
+      wvalues_[j] = 1;
+      value_ -= 8;
+    } else {
+      wvalues_[j] = 0;
+      value_ -= 9 * PV[windices_[j]];
+    }
+  }
+  UpdateDR();
+  return true;
+}
+
+bool PInput::IsPrime() const {
+  for (int i = 0; i < 24; ++i) {
+    if ((value_ % SmallPrimes[i]) == 0) {
+      if (value_ == SmallPrimes[i]) {
+	return true;
+      }
+
+      return false;
+    }
+  }
+
+  srand(time(NULL));
+  if (MillerRabin(rand())) {
+    return false;
+  }
+  if (MillerRabin(rand())) {
+    return false;
+  }
+  if (MillerRabin(rand())) {
+    return false;
+  }
+
+  return true;
+}
+    
+void PInput::UpdateDR() {
+  if (value_ == 1) {
+    d_ = 1; r_ = 0;
+    return;
+  }
+
+  d_ = value_ - 1; r_ = 0;
+  while ((d_ & 1) == 0) {
+    d_ >>= 1;
+    ++r_;
+  }
+}
+
+long long int mulmod(long long int a, long long int b, long long int modulus) {
+  long long int result = 0;
+  long long int temp = a % modulus;
+  while (b > 0) {
+    if ((b & 1) == 1) {
+      result = (result + temp) % modulus;
+    }
+    b >>= 1;
+    temp = (temp << 1) % modulus;
+  }
+  return result;
+}
+
+long long int expmod(long long int base,
+		     long long int exponent,
+		     long long int modulus) {
+  long long int result = 1;
+  while (exponent > 0) {
+    if ((exponent & 1) == 1) {
+      result = mulmod(result, base, modulus);
+    }
+    exponent >>= 1;
+    base = mulmod(base, base, modulus);
+  }
+  return result;
+}
+
+bool PInput::MillerRabin(int w) const {
+  long long int oddpower = expmod(w, d_, value_);
+  if (oddpower == 1) {
+    return false;
+  }
+
+  for (int i = 0; i < r_; ++i) {
+    if (oddpower == value_ - 1) {
+      return false;
+    }
+
+    oddpower = (oddpower*oddpower) % value_;
+  }
+
+  return true;
+}
+
+int main() {
+  int num_in;
+  cin >> num_in;
+  vector<string>* inputs = new vector<string>(num_in);
+  for (int i = 0; i < num_in; ++i)
+    cin >> inputs->at(i);
+
+  for (int i = 0; i < num_in; ++i) {
+    PInput P(inputs->at(i));
+
+    while (! P.IsPrime()) {
+      if (! P.FillNextValue()) {
+	break;
+      }
+    }
+    cout << P.Value() << endl;
+  }
+  return 0;
+}

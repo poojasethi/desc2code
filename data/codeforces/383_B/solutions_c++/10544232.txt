@@ -1,0 +1,79 @@
+#include <bits/stdc++.h>
+
+#define mp make_pair
+#define st first
+#define nd second
+#define pb push_back
+
+using namespace std;
+
+typedef long long ll;
+typedef pair< ll,ll > pll;
+typedef pair< int,int > pii;
+
+const int inf = 1000000000, M = 100000;
+
+int n, m;
+pii p[M+5];
+
+int main()
+{
+	scanf("%d %d", &n, &m);
+
+	for (int i = 1; i <= m; i++) {
+		scanf("%d %d", &p[i].st, &p[i].nd);
+	}
+
+	sort(p+1, p+m+1);
+
+	vector< pii > bef, cur;
+	int befx = 0, curx;
+
+	bef.pb(mp(1, 1));
+
+	for (int i = 1; i <= m;) {
+		curx = p[i].st;
+
+		if (befx < curx - 1) {
+			if (!bef.empty()) {
+				int t = bef.front().st;
+				bef.clear();
+				bef.pb(mp(t, n));
+			}
+		}
+
+		cur.clear();
+		
+		int befy = 0, j = 0;
+		for (; i <= m && p[i].st == curx; i++) {
+			for (; j < bef.size() && bef[j].nd <= befy; j++);	
+			
+			if (j < bef.size() && max(bef[j].st, befy+1) < p[i].nd)
+				cur.pb( mp(max(bef[j].st, befy+1), p[i].nd - 1) );
+
+			befy = p[i].nd;
+		}
+			
+		for (; j < bef.size() && bef[j].nd <= befy; j++);
+
+		if (j < bef.size() && max(bef[j].st, befy+1) < n+1) {
+			cur.pb( mp(max(bef[j].st, befy+1), n) );
+		}
+		
+//		cout << curx << endl;
+//		for (int j = 0; j < cur.size(); j++)
+//			cout << cur[j].st << " " << cur[j].nd << endl;
+
+		bef = cur;
+		befx = curx;
+	}
+
+	bool flag = false;
+
+	if (bef.size() && (bef.back().nd == n || befx < n))
+		printf("%d\n", 2 * n - 2);
+	else 
+		puts("-1");
+	
+	return 0;
+}

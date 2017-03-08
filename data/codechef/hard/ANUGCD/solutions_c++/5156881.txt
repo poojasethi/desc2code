@@ -1,0 +1,199 @@
+#include <iostream>
+#include <algorithm>
+#include <set>
+#include <map>
+#include <queue>
+#include <deque>
+#include <vector>
+#include <bitset>
+#include <string>
+#include <cmath>
+#include <ctime>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
+#define LL long long
+#define FI first
+#define SE second
+#define PB push_back
+#define MP make_pair
+#define VI vector<int>
+#define VP vector<PII>
+#define VS vector<string>
+#define PII pair<int, int>
+#define SZ(a) ((int) a.size())
+#define ALL(a) a.begin(), a.end()
+#define mem(a) memset(a, 0, sizeof(a))
+#define memm(a) memset(a, -1, sizeof(a))
+
+#define SL(a) strlen(a)
+#define RS(s) scanf("%s", (s))
+#define PI(r) printf("%d\n", (r))
+#define RI(a) scanf("%d", &(a))
+#define RII(a, b) scanf("%d%d", &(a), &(b))
+#define RIII(a, b, c) scanf("%d%d%d", &(a), &(b), &(c))
+
+#define DBG(x, s) cout << (x) << ' ' << (s) << endl
+#define REP(i, n) for (int i = 0; i < (int) (n); ++i)
+#define REPP(i, a, b) for (int i = (int) (a); i <= (int) (b); ++i)
+#define RED(i, n) for (int i = (int) (n - 1); i >= 0; --i)
+#define REDD(i, a, b) for (int i = (int) (a); i >= (int) (b); --i)
+
+#define L (x << 1)
+#define R ((x << 1) | 1)
+#define MID ((l + r) >> 1)
+#define LC L, l, MID
+#define RC R, MID + 1, r
+#define LB(x) ((x) & (-(x)))
+#define B(x) __builtin_popcount(x)
+
+#define EPS 1e-7
+#define INF 0x3f3f3f3f
+#define LIM (1ll << 60)
+
+using namespace std;
+
+int n, m;
+
+const int N = 100005;
+int p[N], a[N], tot;
+bool vis[N];
+int ql, qr, g;
+
+void GetPrime() {
+	for (int i = 2; i < N; ++i) {
+		if (!vis[i]) p[tot++] = i;
+		for (int j = 0; j < tot && i * p[j] < N; ++j) {
+			vis[i * p[j]] = 1;
+			if (i % p[j] == 0) break;
+		}
+	}
+}
+
+VI pos[N];
+VP mx[N];
+
+void maintain(int id, int x, int l, int r) {
+	if (mx[id][L].FI == mx[id][R].FI) {
+		mx[id][x].FI = mx[id][R].FI;
+		mx[id][x].SE = mx[id][L].SE + mx[id][R].SE;
+	}
+	else if (mx[id][L].FI > mx[id][R].FI) {
+		mx[id][x] = mx[id][L];
+	}
+	else mx[id][x] = mx[id][R];
+}
+
+void build(int id, int x, int l, int r) {
+	if (l == r) {
+		mx[id][x] = MP(a[pos[id][l]], 1);
+	}
+	else {
+		build(id, LC), build(id, RC);
+		maintain(id, x, l, r);
+	}
+}
+
+PII ans, tmp;
+
+void update(PII &a, PII b) {
+	if (a.FI < b.FI) a = b;
+	else if (a.FI == b.FI && a.SE < b.SE) a = b; 
+}
+
+void get(PII &a, PII b) {
+	if (a.FI == b.FI) {
+		a.SE += b.SE;
+	} 
+	else if (b.FI > a.FI) a = b;
+}
+
+void query(int id, int x, int l, int r) {
+	if (ql <= l && qr >= r) {
+		get(tmp, mx[id][x]);
+	}
+	else {
+		if (ql <= MID) query(id, LC);
+		if (qr > MID) query(id, RC);
+	}
+}
+
+int main(){
+	//freopen("1.in", "r", stdin);
+	//freopen("1.ans", "w", stdout);
+	//ios :: sync_with_stdio(0);
+
+	int t, x, y, z, ca = 1;
+
+	REP(i, N) pos[i].PB(0);
+	GetPrime();
+
+	RII(n, m);
+	REPP(i, 1, n) {
+		RI(a[i]);
+		int tmp = a[i];
+		for (int j = 0; p[j] * p[j] <= tmp; ++j) {
+			if (tmp % p[j] == 0) {
+				while (tmp % p[j] == 0) tmp /= p[j];
+				pos[j].PB(i);
+			}
+		}
+		if (tmp > 1) {
+			int y = lower_bound(p, p + tot, tmp) - p;
+			pos[y].PB(i);
+		}
+	}
+
+	REP(i, N) if (SZ(pos[i]) > 1) {
+		mx[i].resize(SZ(pos[i]) << 2, MP(0, 0));
+		build(i, 1, 1, SZ(pos[i]) - 1);
+	}
+
+	while (m--) {
+		RIII(g, x, y);
+
+		ans = MP(-1, -1);
+		for (int j = 0; p[j] * p[j] <= g; ++j) {
+			if (g % p[j] == 0) {
+				while (g % p[j] == 0) g /= p[j];
+				if (SZ(pos[j]) <= 1) continue;
+				else {
+					ql = lower_bound(ALL(pos[j]), x) - pos[j].begin();
+					if (ql == SZ(pos[j])) continue;
+					qr = lower_bound(ALL(pos[j]), y) - pos[j].begin();
+					if (qr == SZ(pos[j])) qr--;
+					if (pos[j][qr] > y) qr--;
+					if (ql > qr) continue;
+					else {
+						tmp = MP(-1, -1);
+						query(j, 1, 1, SZ(pos[j]) - 1);
+						update(ans, tmp);
+					}
+				}
+			}
+		}
+
+		if (g > 1) {
+			int j = lower_bound(p, p + tot, g) - p;
+			if (SZ(pos[j]) > 1) {
+				ql = lower_bound(ALL(pos[j]), x) - pos[j].begin();
+				if (ql < SZ(pos[j])) {
+					qr = lower_bound(ALL(pos[j]), y) - pos[j].begin();
+					if (qr == SZ(pos[j])) qr--;
+					if (pos[j][qr] > y) qr--;
+					if (ql <= qr) {
+						tmp = MP(-1, -1);
+						query(j, 1, 1, SZ(pos[j]) - 1);
+						update(ans, tmp);
+					}
+				}
+			}
+		}
+
+		printf("%d %d\n", ans.FI, ans.SE);
+	}
+
+	return 0;
+}
+

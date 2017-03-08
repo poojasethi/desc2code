@@ -1,0 +1,152 @@
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#define maxn 500010
+using namespace std;
+int n,k;
+int now[maxn];
+struct Edge{
+	int to,next;
+}edge[maxn<<1],G[maxn<<1];
+int h[maxn],cnt,H[maxn],CNT;
+void add(int u,int v){
+	cnt++;
+	edge[cnt].to=v;
+	edge[cnt].next=h[u];
+	h[u]=cnt;
+}
+int fa[maxn],dep[maxn],dfn[maxn],dfs_clock;
+const int root=1;
+bool cmp(int x,int y){return dfn[x]<dfn[y];}
+
+void re_add(int u,int v){
+	CNT++;
+	G[CNT].to=v;
+	G[CNT].next=H[u];
+	H[u]=CNT;
+}
+
+void dfs(int u){
+	dfn[u]=++dfs_clock;
+	dep[u]=dep[fa[u]]+1;
+	for(int i=h[u];i;i=edge[i].next){
+		int v=edge[i].to;
+		if(v==fa[u])continue;
+		fa[v]=u;
+		dfs(v);
+	}
+}
+int anc[maxn][20];
+void pre_LCA(){
+	memset(anc,-1,sizeof anc);
+	for(int i=1;i<=n;i++)
+		anc[i][0]=fa[i];
+	for(int j=1;1<<j<=n;j++)
+		for(int i=1;i<=n;i++){
+			int a=anc[i][j-1];
+			if(~a)anc[i][j]=anc[a][j-1];
+		}
+}
+int ask_LCA(int p,int q){
+	if(dep[p]<dep[q])swap(p,q);
+	int log;
+	for(log=1;1<<log<=dep[p];log++);log--;
+	for(int i=log;i>=0;i--)
+		if(~anc[p][i]&&dep[anc[p][i]]>=dep[q])
+			p=anc[p][i];
+	if(p==q)return p;
+	for(int i=log;i>=0;i--)
+		if(~anc[p][i]&&anc[p][i]!=anc[q][i])
+			p=anc[p][i],q=anc[q][i];
+	return fa[p];
+}
+int sta[maxn],top;
+int mark[maxn],ans;
+int dp[maxn][2];
+void Tree(int u){
+	for(int i=H[u];i;i=G[i].next)
+		Tree(G[i].to);
+	if(mark[u]){
+		dp[u][1]=0;
+		if(!fa[u])dp[u][0]=0;
+		else dp[u][0]=1;
+		for(int i=H[u];i;i=G[i].next){
+			int v=G[i].to;
+			dp[u][1]+=dp[v][0];
+			dp[u][0]+=dp[v][0];
+		}
+	}
+	else{
+		dp[u][1]=0;
+		dp[u][0]=1;
+		int tmp=0,d=0;
+		for(int i=H[u];i;i=G[i].next){
+			int v=G[i].to;
+			tmp+=dp[v][0];
+			dp[u][1]+=dp[v][0];
+			dp[u][0]+=min(dp[v][0],dp[v][1]);
+			d=min(d,dp[v][1]-dp[v][0]);
+		}
+		dp[u][1]+=d;
+		dp[u][0]=min(dp[u][0],tmp);
+	}
+	H[u]=0;
+}
+int main(){
+	scanf("%d",&n);
+	int u,v;
+	for(int i=1;i<n;i++){
+		scanf("%d%d",&u,&v);
+		add(u,v),add(v,u);
+	}
+	dfs(root);
+	pre_LCA();
+	int test;
+	scanf("%d",&test);
+	while(test--){
+		scanf("%d",&k);
+		for(int i=1;i<=k;i++)
+			scanf("%d",&now[i]);
+		for(int i=1;i<=k;i++)
+			mark[now[i]]=true;
+		int flag=true;
+		for(int i=1;i<=k;i++)
+			if(mark[fa[now[i]]]){
+				flag=false;
+				break;
+			}
+		if(flag){
+			for(int i=1;i<=k;i++)
+				now[i+k]=fa[now[i]];
+			k<<=1;
+			sort(now+1,now+1+k,cmp);
+			k=unique(now+1,now+1+k)-now-1;
+			//Build_tree
+			sta[++top]=root;
+			for(int i=1;i<=k;i++){
+				int x=now[i],f=ask_LCA(x,sta[top]);
+				while(dep[sta[top]]>dep[f]){
+					if(dep[sta[top-1]]<=dep[f]){
+						re_add(f,sta[top--]);
+						if(sta[top]!=f)sta[++top]=f;
+						break;
+					}
+					re_add(sta[top-1],sta[top]);top--;
+				}
+				if(x!=sta[top])sta[++top]=x;
+			}
+			while(--top)re_add(sta[top],sta[top+1]);
+			ans=0;
+			Tree(root);
+			printf("%d\n",min(dp[root][1],dp[root][0]));
+		}
+		else printf("-1\n");
+		CNT=0;
+		for(int i=1;i<=k;i++)
+			mark[now[i]]=false;
+	}
+
+	return 0;
+}
+ 		 	   	 	  	 		    	 	 		 	

@@ -1,0 +1,147 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define N 200005
+#define FOR(i, a, b) for(int i = a; i < b; i++)
+#define REP(i, n) FOR(i, 0, n)
+#define ll long long
+
+int n;
+char s[N];
+
+int rank[N][20], order[N], neworder[N], it;
+int cnt[N], relpos[N];
+int pw[20];
+
+int cmp(int i, int j)
+{
+    return s[i] < s[j];
+}
+inline void sa()
+{
+    REP(i, n) order[i] = i;
+    sort(order, order+n, cmp);
+    int newrank = -1;
+    REP(i, n)
+    {
+        if(i == 0 or s[order[i]] != s[order[i-1]]) newrank++;
+        rank[order[i]][0] = newrank;
+    }
+    for(it = 0; pw[it] <= n; it++)
+    {
+        REP(i, n) cnt[i] = relpos[i] = 0;
+        REP(i, n) cnt[rank[i][it]+1]++;
+        FOR(i, 1, n) cnt[i] += cnt[i-1];
+        REP(i, n) if(i + pw[it] >= n)
+        {
+            int r = rank[i][it];
+            neworder[cnt[r] + relpos[r]] = i;
+            relpos[r]++;
+        }
+        REP(i, n) if(order[i] - pw[it] >= 0)
+        {
+            int r = rank[order[i]-pw[it]][it];
+            neworder[cnt[r] + relpos[r]] = order[i] - pw[it];
+            relpos[r]++;
+        }
+        REP(i, n) order[i] = neworder[i];
+        newrank = -1;
+        REP(i, n)
+        {
+            if(i == 0) newrank++;
+            else if(rank[order[i]][it] != rank[order[i-1]][it]) newrank++;
+            else if(order[i-1] + pw[it] >= n and order[i] + pw[it] < n) newrank++;
+            else if(order[i-1] + pw[it] < n and order[i] + pw[it] < n
+                and rank[order[i-1]+pw[it]][it] != rank[order[i]+pw[it]][it]
+            ) newrank++;
+            rank[order[i]][it+1] = newrank;
+        }
+    }
+}
+
+inline int lcp(int x, int y)
+{
+    int ret = 0;
+    for(int i = it; i >= 0; i--) if(x + pw[i] - 1 < n and y + pw[i] - 1 < n and rank[x][i] == rank[y][i])
+    {
+        x += pw[i];
+        y += pw[i];
+        ret += pw[i];
+    }
+    return ret;
+}
+
+int par[N], sz[N];
+int temp[N], tempn;
+inline int root(int x)
+{
+    tempn = 0;
+    while(x != par[x]) temp[tempn++] = x, x = par[x];
+    REP(i, tempn) par[temp[i]] = x;
+    return x;
+}
+ll ans[N], curh;
+inline void merge(int u, int v)
+{
+    u = root(u);
+    v = root(v);
+    if(sz[v] > sz[u]) swap(u, v);
+    ans[sz[u]+1] -= (sz[u]+1)*curh;
+    ans[sz[v]+1] -= (sz[v]+1)*curh;
+    par[v] = u;
+    sz[u] += sz[v];
+    ans[sz[u]+1] += (sz[u]+1)*curh;
+}
+
+int l[N], z[N];
+bool done[N];
+
+int cmp2(int i, int j)
+{
+    return l[i] > l[j];
+}
+inline void ko()
+{
+    REP(i, n-1) l[i] = lcp(order[i], order[i+1]);
+    l[n-1] = 0;
+    REP(i, n) done[i] = 0, ans[i+1] = 0;
+    REP(i, n) z[i] = i;
+    sort(z, z+n, cmp2);
+    REP(i, n) par[i] = i, sz[i] = 1;
+    REP(i, n)
+    {
+        curh = l[z[i]];
+        ans[2] += 2*curh;
+        if(z[i] > 0 and done[z[i]-1]) merge(z[i], z[i]-1);
+        if(z[i] < n-1 and done[z[i]+1]) merge(z[i], z[i]+1);
+        done[z[i]] = 1;
+    }
+    REP(i, n)
+    {
+        int sub = l[i];
+        if(i > 0) sub = max(sub, l[i-1]);
+        ans[1] += max(0, n-order[i] - sub);
+    }
+    for(int i = n-1; i >= 1; i--) ans[i] += ans[i+1];
+}
+
+int main()
+{
+    REP(i, 20) pw[i] = 1<<i;
+    int t; scanf("%d\n", &t);
+    while(t--)
+    {
+        gets(s);
+        n = strlen(s);
+        sa();
+        ko();
+        int q; scanf("%d\n", &q);
+        while(q--)
+        {
+            int x; scanf("%d\n", &x);
+            printf("%lld\n", ans[x]);
+        }
+    }
+    return 0;
+}

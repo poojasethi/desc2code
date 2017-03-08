@@ -1,0 +1,147 @@
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#include <cstring>
+using namespace std;
+#define rep(i,a,n) for (int i=a;i<(int)n;i++)
+#define pb push_back
+#define mp make_pair
+#define fi first
+#define se second
+typedef long long ll;
+const char DIR[]="URDL";
+const int dx[]={0,1,0,-1},dy[]={1,0,-1,0};
+const int N=201000;
+typedef pair<int,int> pii;
+int col[N*4],dir[N],dirq[N],nxt[N],nxtq[N],root[N],rt[N],p[N][21],vis[N],cyc[N],pos[N];
+ll len[N],x1[N],x2[N],y1[N],y2[N],x[N],y[N],dep[N],clen[N],tm[N],pl[N][21],b;
+int n,q;
+pii ord[N];
+char ch;
+vector<int> s[N];
+struct cmp {
+	int k;
+	cmp(){}
+	cmp(int k):k(k) {}
+	bool operator () (const pii &x,const pii &y) {
+		if (k<2) return x.fi>y.fi||(x.fi==y.fi&&x.se>y.se);
+		else return x.fi<y.fi||(x.fi==y.fi&&x.se>y.se); 
+	}
+};
+int getval(int id,int k) {
+	if (k!=dir[id]) return (k&1)?x1[id]:y1[id];
+	else return (k&1)?x2[id]:y2[id];
+}
+void push(int p) {
+	if (col[p]) {
+		col[p+p]=col[p+p+1]=col[p];
+		col[p]=0;
+	}
+}
+int ask(int p,int l,int r,int x) {
+	if (l==r) return col[p];
+	else {
+		push(p);
+		int md=(l+r)>>1;
+		if (x<=md) return ask(p+p,l,md,x); else return ask(p+p+1,md+1,r,x);
+	}
+}
+void modify(int p,int tl,int tr,int l,int r,int c) {
+	if (tl==l&&tr==r) col[p]=c;
+	else {
+		push(p);
+		int md=(tl+tr)>>1;
+		if (r<=md) modify(p+p,tl,md,l,r,c);
+		else if (l>md) modify(p+p+1,md+1,tr,l,r,c);
+		else modify(p+p,tl,md,l,md,c),modify(p+p+1,md+1,tr,md+1,r,c);
+	}
+}
+void dfs(int u,ll depth,int rot) {
+	dep[u]=depth;root[u]=rot;vis[u]=1;
+	rep(j,0,s[u].size()) {
+		int v=s[u][j];
+		if (rt[v]) continue;
+		dfs(v,depth+len[v],rot);
+	}
+}
+inline void check(ll &x) { x=max(x,0ll);x=min(x,b);}
+void go(ll &x,ll &y,int dr,int nq,ll tm) {
+	int Tm;
+	if (nq==0) { x+=dx[dr]*tm,y+=dy[dr]*tm,check(x),check(y);return;}
+	int _x1=x1[nq],_x2=x2[nq],_y1=y1[nq],_y2=y2[nq];
+	if (_x1>_x2) swap(_x1,_x2);if (_y1>_y2) swap(_y1,_y2);
+	if (_x1<=x&&x<=_x2&&_y1<=y&&y<=_y2) Tm=0; else
+	if (dr==0) Tm=_y1-y; else if (dr==1) Tm=_x1-x; else if (dr==2) Tm=y-_y2; else Tm=x-_x1;
+	if (tm<=Tm) { x+=dx[dr]*tm,y+=dy[dr]*tm;return;}
+	tm-=Tm;
+	x+=dx[dr]*Tm+dx[dir[nq]]*tm;y+=dy[dr]*Tm+dy[dir[nq]]*tm;
+}
+void jump(ll &x,ll &y,int q,ll tm) {
+	for (int j=19;j>=0;j--) if (pl[q][j]<tm) tm-=pl[q][j],q=p[q][j];
+	go(x=x2[q],y=y2[q],dir[q],nxt[q],tm);
+}
+int main() {
+	scanf("%d%I64d",&n,&b);
+	rep(i,1,n+1) {
+		scanf("%I64d%I64d%I64d%I64d",x1+i,y1+i,x2+i,y2+i);
+		if (x1[i]!=x2[i]) dir[i]=(x1[i]>x2[i])*2+1;
+		else dir[i]=(y1[i]>y2[i])*2;
+	}
+	scanf("%d",&q);
+	rep(i,0,q) {
+		scanf("%I64d%I64d %c%I64d",x+i,y+i,&ch,tm+i);
+		rep(j,0,4) if (ch==DIR[j]) dirq[i]=j;
+	}
+	rep(k,0,4) {
+		memset(col,0,sizeof(col));
+		rep(i,1,n+1) ord[i-1]=mp(getval(i,k),i);
+		rep(i,0,q) ord[i+n]=mp((k&1)?x[i]:y[i],-i);
+		sort(ord,ord+n+q,cmp(k));
+		rep(i,0,n+q) {
+			int id=ord[i].se;
+			if (id>0) {
+				if (dir[id]==k) nxt[id]=ask(1,0,b,(k&1)?y1[id]:x1[id]);
+				int l=(k&1)?y1[id]:x1[id],r=(k&1)?y2[id]:x2[id];
+				if (l>r) swap(l,r);
+				modify(1,0,b,l,r,id);
+			} else {
+				id=-id;
+				if (dirq[id]!=k) continue;
+				nxtq[id]=ask(1,0,b,(k&1)?y[id]:x[id]);
+			}
+		}
+	}
+	rep(i,1,n+1) if (nxt[i]) s[nxt[i]].pb(i),len[i]=abs(x2[i]-x2[nxt[i]])+abs(y2[i]-y2[nxt[i]]);
+	rep(i,1,n+1) if (!vis[i]) {
+		int u=i,cnt=0;
+		while (u&&!vis[u]) {
+			vis[u]=1;
+			cyc[pos[u]=cnt++]=u;
+			u=nxt[u];
+		}
+		if (!u) rt[cyc[cnt-1]]=1,dfs(cyc[cnt-1],0,cyc[cnt-1]);
+		else {
+			ll cycl=0;
+			rep(j,pos[u],cnt) rt[cyc[j]]=1,cycl+=len[cyc[j]];
+			rep(j,pos[u],cnt) clen[cyc[j]]=cycl,dfs(cyc[j],0,cyc[j]);
+		}
+	}
+	rep(i,1,n+1) p[i][0]=nxt[i],pl[i][0]=len[i];
+	rep(j,1,20) rep(i,1,n+1) p[i][j]=p[p[i][j-1]][j-1],pl[i][j]=pl[i][j-1]+pl[p[i][j-1]][j-1];
+	rep(i,0,q) {
+		ll cx=x[i],cy=y[i];
+		if (!nxtq[i]||abs(x2[nxtq[i]]-x[i])+abs(y2[nxtq[i]]-y[i])>=tm[i]) go(cx,cy,dirq[i],nxtq[i],tm[i]);
+		else {
+			tm[i]-=(abs(x2[nxtq[i]]-x[i])+abs(y2[nxtq[i]]-y[i]));
+			int q=nxtq[i];cx=x2[q],cy=y2[q];
+			if (dep[q]>tm[i]) jump(cx,cy,q,tm[i]);
+			else {
+				tm[i]-=dep[q];q=root[q];
+				cx=x2[q],cy=y2[q];
+				if (clen[q]) tm[i]%=clen[q],jump(cx,cy,q,tm[i]);
+				else cx+=dx[dir[q]]*tm[i],cy+=dy[dir[q]]*tm[i],check(cx),check(cy);
+			}
+		}
+		printf("%I64d %I64d\n",cx,cy);
+	}
+}

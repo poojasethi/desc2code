@@ -1,0 +1,91 @@
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <climits>
+#include <string>
+#include <vector>
+#include <queue>
+#include <set>
+#include <cmath>
+#include <cstdio>
+using namespace std;
+int N, rec[26];
+struct Tree {
+	int seg[270000];
+	int toset[270000];
+	Tree() {
+		memset(seg,0,sizeof(seg));
+		memset(toset,0,sizeof(toset));
+	}
+	void prop(int sn,int s,int e) {
+		if(!toset[sn]) return;
+		int m = (s+e)/2, lsn = sn*2+1, rsn = sn*2+2;
+		if(toset[sn] == 1) {
+			seg[lsn] = (m-s+1);
+			seg[rsn] = (e-m);
+		}
+		else seg[lsn] = seg[rsn] = 0;
+		toset[lsn] = toset[rsn] = toset[sn];
+		toset[sn] = 0;
+	}
+	void ins(int qs,int qe,int typ,int sn = 0,int s = 1,int e = N) {
+		int m = (s+e)/2, lsn = sn*2+1, rsn = sn*2+2;
+		if(qs <= s && e <= qe) {
+			if(typ == 1) seg[sn] = (e-s+1);
+			else seg[sn] = 0;
+			toset[sn] = typ;
+			return;
+		}
+		prop(sn,s,e);
+		if(qs <= m) ins(qs,qe,typ,lsn,s,m);
+		if(qe > m) ins(qs,qe,typ,rsn,m+1,e);
+		seg[sn] = seg[lsn] + seg[rsn];
+	}
+	int query(int qs,int qe,int sn = 0,int s = 1,int e = N) {
+		int m = (s+e)/2, lsn = sn*2+1, rsn = sn*2+2;
+		if(qs <= s && e <= qe) return seg[sn];
+		prop(sn,s,e);
+		int ret = 0;
+		if(qs <= m) ret += query(qs,qe,lsn,s,m);
+		if(qe > m) ret += query(qs,qe,rsn,m+1,e);
+		return ret;
+	}
+} T[26];
+char str[100005];
+int main() {
+	freopen("input.txt","r",stdin);
+	freopen("output.txt","w",stdout);
+	int M;
+	scanf("%d%d%s",&N,&M,str);
+	for(int i=1;i<=N;++i)
+		T[str[i-1]-'a'].ins(i,i,1);
+	for(int i=0;i<M;++i) {
+		int L,R,mid = -1;
+		scanf("%d%d",&L,&R);
+		for(int l=0;l<26;++l) {
+			rec[l] = T[l].query(L,R);
+			if(rec[l]&1) {
+				if(mid != -1) {
+					mid = -2;
+					break;
+				}
+				else mid = l;
+			}
+		}
+		if(mid == -2) continue;
+		int cc = 0;
+		// update
+		for(int l=0;l<26;++l) {
+			if(!rec[l]) continue;
+			T[l].ins(L,R,2);
+			T[l].ins(L+cc,L+cc+rec[l]/2-1,1);
+			T[l].ins(R-cc-rec[l]/2+1,R-cc,1);
+			if(rec[l]&1) T[l].ins((R+L)/2,(R+L)/2,1);
+			cc += rec[l]/2;
+		}
+	}
+	for(int l=0;l<26;++l)
+		for(int i=1;i<=N;++i)
+			if(T[l].query(i,i) == 1) str[i-1] = char(l+'a');
+	printf("%s\n",str);
+}

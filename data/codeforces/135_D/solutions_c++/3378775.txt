@@ -1,0 +1,118 @@
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <map>
+using namespace std;
+
+const int dx[]	=	{0,1,0,-1,1,1,-1,-1};
+const int dy[]	=	{1,0,-1,0,1,-1,1,-1};
+
+const int maxn	=	1005;
+
+int father[maxn*maxn];
+int n,m;
+char a[maxn][maxn];
+bool vis[maxn][maxn];
+vector< pair<int,int> > comp;
+
+inline int find(int x)
+{
+	int y=x;
+	while (father[y]!=y) y=father[y];
+	while (x!=y){
+		int t=father[x];
+		father[x]=y;
+		x=t;
+	}
+	return y;
+}
+
+inline void flood(int x,int y)
+{
+	if (x<0 || x>=n || y<0 || y>=m || vis[x][y] || a[x][y]=='1'){
+		return;
+	}
+	vis[x][y]=true;
+	comp.push_back(make_pair(x,y));
+	for (int k=0;k<8;++k){
+		flood(x+dx[k],y+dy[k]);
+	}
+}
+
+int main()
+{
+	scanf("%d%d",&n,&m);
+	for (int i=0;i<n;++i){
+		scanf("%s",a[i]);
+	}
+	int ans=0;
+	for (int i=0;i+1<n;++i){
+		for (int j=0;j+1<m;++j){
+			if (a[i][j]=='1' && a[i+1][j+1]=='1' && a[i][j+1]=='1' && a[i+1][j]=='1'){
+				ans=4;
+			}
+		}
+	}
+	for (int i=0;i<n;++i){
+		for (int j=0;j<m;++j){
+			if (a[i][j]=='0' && !vis[i][j]){
+				comp.clear();
+				flood(i,j);
+//printf("comp size = %d\n",comp.size());
+				map< pair<int,int>,int > cycle;
+				int node=0;
+				for (int k=0;k<comp.size();++k){
+					for (int dir=0;dir<8;++dir){
+						int x=comp[k].first+dx[dir];
+						int y=comp[k].second+dy[dir];
+						if (x>=0 && y>=0 && x<n && y<m && a[x][y]=='1'){
+							if (!cycle.count(make_pair(x,y))){
+								cycle[make_pair(x,y)]=node++;
+							}
+						}
+					}
+				}
+//printf("cycle size = %d\n",node);
+				if (node<=ans || node<=(int)comp.size()){
+					continue;
+				}
+				int comps=node;
+				for (int k=0;k<node;++k){
+					father[k]=k;
+				}
+				bool valid=true;
+				for (map< pair<int,int>,int >::iterator it=cycle.begin();it!=cycle.end() && valid;++it){
+					int degree=0;
+					for (int dir=0;dir<4;++dir){
+						int x=it->first.first+dx[dir];
+						int y=it->first.second+dy[dir];
+						if (cycle.count(make_pair(x,y))){
+							++degree;
+							int fa=find(it->second);
+							int fb=find(cycle[make_pair(x,y)]);
+							if (fa!=fb){
+								father[fa]=fb;
+								--comps;
+							}
+						}
+					}
+//printf("	degree = %d\n",degree);
+					if (degree!=2){
+						valid=false;
+					}
+				}
+				if (valid && comps==1){
+					ans=node;
+				}
+			}
+		}
+	}
+	printf("%d\n",ans);
+	
+	return 0;
+}
+
+   		 		    		 	 		      	

@@ -1,0 +1,268 @@
+#include <algorithm>
+#include <cassert>
+#include <cctype>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <ctime>
+#include <fstream>
+#include <functional>
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <numeric>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
+// http://discuss.codechef.com/questions/42557/funagp-editorial
+// May 2014
+
+using namespace std;
+
+const int IO_MAXCHARS = 1<<16;
+char input_buffer[IO_MAXCHARS+1];
+struct FastReader {
+    char *p, *q;
+    FastReader(): p(input_buffer), q(input_buffer) {}
+    char next_char() {
+        if (p == q) {
+            p = input_buffer;
+            q = p + fread(input_buffer, 1, IO_MAXCHARS, stdin);
+            *q = '\0';
+        }
+        return *p++;
+    }
+    int next_uint() {
+        char c;
+        int ret = firstnws()-'0';
+        while (isdigit(c=next_char())) {
+            ret = 10*ret + (c-'0');
+        }
+        return ret;
+    }
+    int next_int() {
+        char c = firstnws();
+        if (c == '-') {
+            return -next_uint();
+        } else {
+            --p;
+            return next_uint();
+        }
+    }
+    private:
+    char firstnws() {
+        char c;
+        while (isspace(c=next_char())) ;
+        return c;
+    }
+} reader;
+
+char output_buffer[IO_MAXCHARS];
+struct FastWriter {
+    char *p;
+    FastWriter(): p(output_buffer) {}
+    ~FastWriter() { flush(); }
+    void flush() {
+        *p = '\0';
+        fputs(output_buffer, stdout);
+        p = output_buffer;
+    }
+    void write_char(char c) {
+        if (p-output_buffer+1 == sizeof output_buffer) {
+            flush();
+        }
+        *p++ = c;
+    }
+    void write_uint(int x) {
+        if (x < 10) {
+            write_char(char('0' + x));
+        } else {
+            int t = x/10;
+            write_uint(t);
+            write_char(char('0' + x-10*t));
+        }
+    }
+} writer;
+
+struct Node {
+    int sum, S, D;
+    Node(int sum=0, int S=0, int D=0): sum(sum), S(S), D(D) {}
+    bool dirty() const {
+        return S!=0 || D!=0;
+    }
+};
+
+struct TournamentTree {
+    int n;
+    int R, mod;
+    int l, r;
+    vector<Node> T;
+    vector<int> Rpow;
+    vector<int> seq1; // 1 + R + R^2 + ... + R^i
+    vector<int> seq2; // 0 + R + 2R^2 + ... + iR^i
+    TournamentTree(int N, int R, int mod): R(R%mod), mod(mod) {
+        for (n=1; n<N; n*=2) ;
+        T.assign(2*n, Node());
+
+        Rpow.reserve(n+1);
+        seq1.reserve(n+1);
+        seq2.reserve(n+1);
+
+        Rpow.push_back(1);
+        for (int i=1; i<=n; ++i) {
+            Rpow.push_back(modmul(Rpow[i-1], R));
+        }
+        seq1.push_back(1);
+        for (int i=1; i<=n; ++i) {
+            seq1.push_back(modadd(seq1[i-1], Rpow[i]));
+        }
+        seq2.push_back(0);
+        for (int i=1; i<=n; ++i) {
+            seq2.push_back(modadd(seq2[i-1], modmul(i, Rpow[i])));
+        }
+    }
+
+    int get(int pos) {
+        return get(pos, pos+1);
+    }
+    int get(int a, int b) {
+        l = a;
+        r = b;
+        return get(1, 0, n);
+    }
+    int get(int x, int a, int b) {
+        if (a>=r || b<=l) {
+            return 0;
+        } else if (l<=a && b<=r) {
+            return T[x].sum;
+        } else {
+            push(T[x], T[2*x], T[2*x+1], (b-a)/2);
+            return modadd(get(2*x, a, (a+b)/2),
+                          get(2*x+1, (a+b)/2, b));
+        }
+    }
+
+    void set(int pos, int val) {
+        //(void)get(pos); // force pushes
+        pos += n;
+        T[pos].sum = val%mod;
+        for (pos/=2; pos>0; pos/=2) {
+            // this is fine since pushes were forced above
+            T[pos].sum = modadd(T[2*pos].sum, T[2*pos+1].sum);
+        }
+    }
+
+    void add_AGP(int a, int b, int S, int D) {
+        l = a;
+        r = b;
+        add_AGP(1, 0, n, S%mod, D%mod);
+    }
+    void add_AGP(int x, int a, int b, int S, int D) {
+        if (a>=r || b<=l) return;
+        if (a+1 == b) {
+            int offset = a-l;
+            S = modadd(S, modmul(offset, D));
+            S = modmul(S, Rpow[offset]);
+            T[x].sum = modadd(T[x].sum, S);
+        } else if (l<=a && b<=r) {
+            int offset = a-l;
+            int newS = modadd(S, modmul(offset, D));
+            newS = modmul(newS, Rpow[offset]);
+            int newD = modmul(D, Rpow[offset]);
+            add(T[x], newS, newD, b-a-1);
+        } else {
+            int halflen = (b-a)/2;
+            push(T[x], T[2*x], T[2*x+1], halflen);
+            add_AGP(2*x, a, a+halflen, S, D);
+            add_AGP(2*x+1, a+halflen, b, S, D);
+            T[x].sum = modadd(T[2*x].sum, T[2*x+1].sum);
+        }
+    }
+
+    void add(Node &p, int S, int D, int len) {
+        const int add1 = modmul(S, seq1[len]);
+        const int add2 = modmul(D, seq2[len]);
+        p.sum = modadd(p.sum, modadd(add1, add2));
+        p.S = modadd(p.S, S);
+        p.D = modadd(p.D, D);
+    }
+    void push(Node &p, Node &x, Node &y, int halflen) {
+        if (p.dirty()) {
+            add(x, p.S, p.D, halflen-1);
+            int rightS = modadd(p.S, modmul(halflen, p.D));
+            rightS = modmul(rightS, Rpow[halflen]);
+            int rightD = modmul(p.D, Rpow[halflen]);
+            add(y, rightS, rightD, halflen-1);
+            p.S = p.D = 0;
+        }
+    }
+    int modadd(int a, int b) const {
+        a += b;
+        return a>=mod ? a-mod : a;
+    }
+    int modmul(long long a, long long b) const {
+        a *= b;
+        return int(a>=mod ? a%mod : a);
+    }
+};
+
+void solve() {
+    int n = reader.next_uint();
+    int Q = reader.next_uint();
+    int R = reader.next_uint();
+    int p1 = reader.next_uint();
+    int p2 = reader.next_uint();
+
+    TournamentTree T1(n, R, p1);
+    TournamentTree T2(n, R, p2);
+    for (int i=0; i<n; ++i) {
+        int val = reader.next_uint();
+        T1.set(i, val);
+        T2.set(i, val);
+    }
+
+    while (Q--) {
+        int type = reader.next_uint();
+        if (type == 0) {
+            int S = reader.next_uint();
+            int D = reader.next_uint();
+            int X = reader.next_uint() - 1;
+            int Y = reader.next_uint();
+            T1.add_AGP(X, Y, S, D);
+            T2.add_AGP(X, Y, S, D);
+        } else if (type == 1) {
+            int X = reader.next_uint() - 1;
+            int g = reader.next_uint();
+            int newval = 1;
+            int v = T2.get(X);
+            (void)T1.get(X); // force pushes
+            while (g > 0) {
+                if (g&1) newval = int((long long)newval*v%p2);
+                v = int((long long)v*v%p2);
+                g /= 2;
+            }
+            T2.set(X, newval);
+            T1.set(X, newval);
+        } else {
+            assert(type == 2);
+            int X = reader.next_uint() - 1;
+            int Y = reader.next_uint();
+            writer.write_uint(T1.get(X, Y));
+            writer.write_char('\n');
+        }
+    }
+}
+
+int main() {
+    int T = reader.next_uint();
+    while (T--) {
+        solve();
+    }
+
+    return 0;
+}

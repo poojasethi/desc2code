@@ -1,0 +1,195 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <ctime>
+#include <cassert>
+#include <algorithm>
+#include <bitset>
+#include <string>
+#include <vector>
+#include <deque>
+#include <queue>
+#include <map>
+#include <set>
+ 
+using namespace std;
+ 
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
+#define pb push_back
+#define mp make_pair
+#define sz(x) ((int)(x).size())
+#ifdef _WIN32
+#define LLD "%I64d"
+#elif linux
+#define LLD "%lld"
+#else
+#error Invalid OS...
+#endif
+ 
+typedef long long ll;
+typedef vector<ll> vll;
+typedef vector<int> vi;
+typedef vector<vi> vvi;
+typedef vector<bool> vb;
+typedef vector<vb> vvb;
+typedef pair<int, int> pii;
+ 
+struct cd {
+  double a, b;
+};
+namespace fft {
+  const int k = 22;
+  const int n = 1 << k;
+  const int n2 = n >> 1;
+  const int n4 = n >> 2;
+  int rev[n];
+  cd tmp[n];
+  cd ws[n2];
+ 
+  void init() {
+    for (int mb = 0; mb < k; mb++) {
+      for (int i = 0; i < (1 << mb); i++)
+        rev[i | (1 << mb)] = rev[i] | (1 << (k - mb - 1));
+    }
+    double ang = 2 * M_PI / n;
+ 
+    for (int i = 0; i <= n4; i++)
+      ws[i].a = ws[n4 - i].b = cos(i * ang);
+    for (int i = n4 + 1; i < n2; i++) {
+      ws[i].a = -ws[n2 - i].a;
+      ws[i].b =  ws[n2 - i].b;
+    }
+    for (int i = 0; i < n2; i++)
+      tmp[rev[i] >> 1] = ws[i];
+    for (int i = 0; i < n2; i++)
+      ws[i] = tmp[i];
+  }
+  void fft(cd *v) {
+    for (int i = 0; i < n; i++)
+      tmp[rev[i]] = v[i];
+    memcpy(v, tmp, sizeof(tmp[0]) * n);
+ 
+    int coff = k;
+    int pos;
+    cd x, y, w, tmp;
+ 
+    for (int len = 1; len < n; len <<= 1, coff--) {
+      pos = 0;
+      for (int i = 0; i + len < n; i++) {
+        x = v[i]; y = v[i + len];
+        w = ws[rev[pos] >> coff];
+        tmp.a = y.a * w.a - y.b * w.b;
+        tmp.b = y.a * w.b + y.b * w.a;
+ 
+        v[i].a = x.a + tmp.a;
+        v[i].b = x.b + tmp.b;
+        v[i + len].a = x.a - tmp.a;
+        v[i + len].b = x.b - tmp.b;
+ 
+        if (++pos == len) {
+          i += len;
+          pos = 0;
+        }
+      }
+    }
+  }
+  void fft_rev(cd *v) {
+    fft::fft(v);
+    reverse(v + 1, v + n);
+    for (int i = 0; i < n; i++)
+      v[i].a /= n, v[i].b /= n;
+  }
+}
+ 
+cd v1[fft::n];
+cd v2[fft::n];
+ 
+const int MAXS1 = 2e7;
+bool was[MAXS1 + 1];
+ 
+const int MAXS2 = 2e6;
+ 
+int main() {
+  #ifdef DEBUG
+  freopen(".in", "r", stdin);
+  freopen(".out", "w", stdout);
+  #endif
+ 
+  fft::init();
+ 
+  int n;
+  while (scanf("%d", &n) == 1) {
+    vi as(n);
+    for (int i = 0; i < n; i++)
+      scanf("%d", &as[i]);
+ 
+    if (n <= 2000) {
+      vll all;
+      all.reserve(n * (n - 1) / 2);
+      for (int a = 0; a < n; a++) {
+        ll cur = 0;
+        for (int b = a; b < n; b++) {
+          cur += as[b];
+          all.pb(cur);
+        }
+      }
+      sort(all.begin(), all.end());
+      all.erase(unique(all.begin(), all.end()), all.end());
+      printf("%d\n", sz(all) - 1);
+      continue;
+    }
+    if (n <= 20000) {
+      memset(was, 0, sizeof was);
+      for (int a = 0; a < n; a++) {
+        int cur = 0;
+        for (int b = a; b < n; b++) {
+          cur += as[b];
+          assert(0 <= cur && cur <= MAXS1);
+          was[cur] = true;
+        }
+      }
+      int ans = 0;
+      for (int i = 0; i <= MAXS1; i++) ans += was[i];
+      printf("%d\n", ans - 1);
+      continue;
+    }
+    memset(v1, 0, sizeof v1);
+    int sumall;
+    {
+      int sum = 0;
+      for (int a = 0; a <= n; a++) {
+        v1[sum].a = 1;
+        if (a < n)
+          sum += as[a];
+      }
+      sumall = sum;
+    }
+    {
+      int sum = 0;
+      for (int a = n; a >= 0; a--) {
+        if (a < n) sum += as[a];
+        v1[sum].b = 1;
+      }
+    }
+    fft::fft(v1);
+    for (int i = 0; i < fft::n; i++) {
+      cd a = v1[i], b = v1[(fft::n - i) & (fft::n - 1)];
+      cd x, y;
+      x.a = (a.a + b.a) / 2;
+      x.b = (a.b - b.b) / 2;
+      y.a = (a.b + b.b) / 2;
+      y.b = -(a.a - b.a) / 2;
+      v2[i].a = x.a * y.a - x.b * y.b;
+      v2[i].b = x.a * y.b + x.b * y.a;
+    }
+    fft::fft_rev(v2);
+    int ans = 0;
+    for (int i = 0; i < sumall; i++)
+      ans += fabs(v2[i].a) > 0.5;
+    assert(ans > 0);
+    printf("%d\n", ans - 1);
+  }
+  eprintf("Time=%.3lfs\n", clock() * 1.0 / CLOCKS_PER_SEC);
+  return 0;
+}

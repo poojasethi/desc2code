@@ -1,0 +1,123 @@
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <ctime>
+using namespace std;
+
+int n,m,x,y,cnt,Cnt,a[100001];
+long long sum[100001];
+int lson1[400001],rson1[400001],son1[400001];
+long long K[9000001],B[9000001];
+int lson2[9000001],rson2[9000001];
+bool vis[9000001];
+long long ans,ansK,ansB;
+
+void add(int p,int l,int r,long long k,long long b)
+{
+	if (!vis[p])
+	{
+		K[p]=k; B[p]=b; vis[p]=1;
+		return;
+	}
+	if (k==K[p])
+	{
+		if (b<B[p]) B[p]=b;
+		return;
+	}
+	int mid=(l+r)>>1; double xx=(double)(B[p]-b)/(k-K[p]);
+	if (k>K[p])
+	{
+		if (xx>=r) { K[p]=k; B[p]=b; return; }
+		if (xx<=l) return;
+		if (xx>=mid+1)
+		{
+			if (!rson2[p]) rson2[p]=++Cnt;
+			add(rson2[p],mid+1,r,k,b);
+		}
+		if (!lson2[p]) lson2[p]=++Cnt;
+		add(lson2[p],l,mid,k,b);
+	} else {
+		if (xx<=l) { K[p]=k; B[p]=b; return; }
+		if (xx>=r) return;
+		if (xx<=mid)
+		{
+			if (!lson2[p]) lson2[p]=++Cnt;
+			add(lson2[p],l,mid,k,b);
+		}
+		if (!rson2[p]) rson2[p]=++Cnt;
+		add(rson2[p],mid+1,r,k,b);
+	}
+}
+
+void insert(int p,int l,int r,int x,long long k,long long b)
+{
+	if (!son1[p]) son1[p]=++Cnt; add(son1[p],-n,n,k,b);
+	if (l==r) return;
+	int mid=(l+r)>>1;
+	if (x<=mid)
+	{
+		if (!lson1[p]) lson1[p]=++cnt;
+		insert(lson1[p],l,mid,x,k,b);
+	} else {
+		if (!rson1[p]) rson1[p]=++cnt;
+		insert(rson1[p],mid+1,r,x,k,b);
+	}
+}
+
+void query2(int p,int l,int r,int x)
+{
+	if (vis[p])
+	{
+		if ((long long)K[p]*x+B[p]<ans) 
+		{
+			ans=(long long)K[p]*x+B[p];
+			ansK=K[p]; ansB=B[p];
+		}
+	}
+	if (l==r) return;
+	int mid=(l+r)>>1;
+	if (x<=mid)
+	{
+		if (lson2[p]) query2(lson2[p],l,mid,x);
+	} else {
+		if (rson2[p]) query2(rson2[p],mid+1,r,x);
+	}
+}
+
+void query1(int p,int l,int r,int x,int y,int xx)
+{
+	if (l==x&&r==y)
+	{
+		if (son1[p]) query2(son1[p],-n,n,xx);
+		return;
+	}
+	int mid=(l+r)>>1;
+	if (y<=mid) 
+	{
+		if (lson1[p]) query1(lson1[p],l,mid,x,y,xx);
+	} else if (x>=mid+1) {
+		if (rson1[p]) query1(rson1[p],mid+1,r,x,y,xx);
+	} else {
+		if (lson1[p]) query1(lson1[p],l,mid,x,mid,xx);
+		if (rson1[p]) query1(rson1[p],mid+1,r,mid+1,y,xx);
+	}
+}
+
+int main()
+{
+	scanf("%d",&n); cnt=1;
+	for (int i=1;i<=n;i++) 
+	{
+		scanf("%d",&a[i]);
+		sum[i]=sum[i-1]+a[i];
+		insert(1,1,n,i,a[i],(long long)i*a[i]-sum[i]);
+	}
+	scanf("%d",&m);
+	for (int i=1;i<=m;i++)
+	{
+		scanf("%d%d",&x,&y);
+		ans=20000000000ll;
+		query1(1,1,n,max(y-x,1),y,x-y);
+		printf("%I64d\n",ans+sum[y]);
+	}
+}

@@ -1,0 +1,119 @@
+#include <cstdio>
+#include <iostream>
+#include <cmath>
+using namespace std;
+
+int a[2][100001];
+
+long long int inline f1(int i) { return (a[0][i] + a[1][i]);}
+long long int inline f2(int i) { return (a[0][i] - a[1][i]);}
+long long int inline f3(int i) { return (-a[0][i] + a[1][i]);}
+long long int inline f4(int i) { return (-a[0][i] - a[1][i]);}
+
+void inline updateNode(int node, int st[], long long int (*f)(int)) {
+    if(f(st[2*node]) >= f(st[2*node+1])) st[node] = st[2*node];
+    else                                 st[node] = st[2*node+1];
+}
+
+void update(int node, int e, int b, int i, int st1[], int st2[], int st3[], int st4[]) {
+    if(e == b) return;
+
+    if(i <= (e + b)/2)
+        update(2*node, e, (e + b)/2, i, st1, st2, st3, st4);
+    else
+        update(2*node + 1, (e + b)/2 + 1, b, i, st1, st2, st3, st4);
+
+    updateNode(node, st1, f1);
+    updateNode(node, st2, f2);
+    updateNode(node, st3, f3);
+    updateNode(node, st4, f4);
+}
+
+int queryTrees(int node, int e, int b, int i, int j, int st[], long long int (*f)(int)) {
+    if(i > b || j < e)   return -1;
+    if(i <= e && j >= b) return st[node];
+
+    int p1 = queryTrees(2*node, e, (e+b)/2, i, j, st, f);
+    int p2 = queryTrees(2*node+1, (e+b)/2 + 1, b, i, j, st, f);
+
+    if(p1 == -1) return p2;
+    if(p2 == -1) return p1;
+    if(f(p1) > f(p2)) return p1;
+    else              return p2;
+}
+
+long long int query(int e, int b, int i, int j, int st1[], int st2[], int st3[], int st4[]) {
+    int p = queryTrees(1, e, b, i, j, st1, f1);
+    int q = queryTrees(1, e, b, i, j, st2, f2);
+    int r = queryTrees(1, e, b, i, j, st3, f3);
+    int s = queryTrees(1, e, b, i, j, st4, f4);
+
+    long long int ans1 = ((long long int)a[0][p] + a[1][p]);
+    ans1 = ans1 - a[0][s] - a[1][s];
+
+    long long int ans2 = ((long long int)a[0][q] - a[1][q]);
+    ans2 = ans2 - a[0][r] + a[1][r];
+
+    if(ans1 < 0) ans1 = ans1 * -1LL;
+    if(ans2 < 0) ans2 = ans2 * -1LL;
+
+    if(ans1 < ans2) ans1 = ans2;
+    return ans1;
+}
+
+void initialize(int node, int e, int b, int st[], int st2[], int st3[], int st4[]) {
+//    cout << node << " " << e << " " << b << "\n";
+    if(e == b) {
+        st[node] = b;
+        st2[node] = b;
+        st3[node] = b;
+        st4[node] = b;
+        return ;
+    }
+
+    initialize(2*node, e, (e+b)/2, st, st2, st3, st4);
+    initialize(2*node + 1, (e+b)/2 + 1, b, st, st2, st3, st4);
+
+    updateNode(node, st, f1);
+    updateNode(node, st2, f2);
+    updateNode(node, st3, f3);
+    updateNode(node, st4, f4);
+
+ //   cout << node << " " << st[node] << " " << st2[node] << " " << st3[node] << " " << st4[node] << "\n";
+}
+
+int main() {
+    int n;
+
+    scanf("%d", &n);
+
+    int stLength = (1 << ((int)log2(n - 1) + 2));
+    int st1[stLength], st2[stLength], st3[stLength], st4[stLength];
+
+    for(int i = 0; i < n; i++)
+        scanf("%d %d", &a[0][i], &a[1][i]);
+
+    initialize(1, 0, n-1, st1, st2, st3, st4);
+
+    int q, l, r, i;
+    scanf("%d", &q);
+    char c;
+    while(q--) {
+        scanf("%*c%c", &c);
+        if(c == 'U') {
+            // Update.
+            scanf("%d %d %d", &i, &l, &r);
+            a[0][i] = l; a[1][i] = r;
+            update(1, 0, n-1, i, st1, st2, st3, st4);
+        }
+        else {
+            // Query.
+            scanf("%d %d", &l, &r);
+            long long int ans = query(0, n-1, l, r, st1, st2, st3, st4);
+            printf("%lld\n", ans);
+            // Output.
+        }
+    }
+
+    return 0;
+}

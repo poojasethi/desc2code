@@ -1,0 +1,280 @@
+#include <cstdlib>
+#include <cstdio>
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <cmath>
+#include <queue>
+#include <stack>
+#include <vector>
+#include <list>
+#include <set>
+#include <bitset>
+#include <map>
+#include <cassert>
+#include <ctime>
+
+#define iter(c) __typeof((c).begin())
+#define Tr(a,b) for(iter(b) a = (b).begin(); a != (b).end(); ++a)
+#define Fr(a,b,c) for(int a = b; a < c; ++a)
+#define Rp(a,c) Fr(a,0,c)
+#define PB push_back
+#define MP make_pair
+#define F first
+#define S second
+#define oo 0x3F3F3F3F
+
+using namespace std;
+
+typedef pair<int,int> pii;
+typedef long long ll;
+typedef unsigned int uint;
+typedef unsigned long long ull;
+typedef unsigned long long rash;
+
+#define dbg if(0)
+
+
+#define MAXN  50050
+#define MAXM 100100
+
+#define MAXP ((65536+1) << 3)
+
+#define T double
+void fast_fft(T *data, int nn, int isign) {
+	int n = nn << 1, j = 1;
+	for(int i = 1; i < n; i += 2) {
+		if(j > i)
+			swap(data[j], data[i]), swap(data[j + 1], data[i + 1]);
+		
+		int z = n >> 1;
+		for(; z >= 2 && j > z; j -= z, z >>= 1);
+		j += z;
+	}
+    
+	int mmax = 2;
+	while(n > mmax) {
+		int istep = mmax << 1;
+		T theta = 2 * M_PI / (isign * mmax);
+		T wtemp = sin(0.5 * theta);
+		T wpr = - 2.0 * wtemp * wtemp;
+		T wpi = sin(theta);
+		T wr = 1.0, wi = 0.0;
+		for(int m = 1; m < mmax; m += 2) {
+			for(int i = m; i <= n; i += istep) {
+				j = i + mmax;
+				T tempr = wr*data[j]   - wi*data[j+1];
+				T tempi = wr*data[j+1] + wi*data[j];
+				data[j]    = data[i]   - tempr;
+				data[j+1]  = data[i+1] - tempi;
+				data[i]   += tempr;
+				data[i+1] += tempi;
+			}
+			
+			wr = (wtemp = wr) * wpr - wi * wpi + wr;
+			wi = wi * wpr + wtemp * wpi + wi;
+		}
+		
+		mmax = istep;
+	}
+}
+
+inline void multiplication(T *a, int size) { // a = a * a
+	Rp(i,size + 1) {
+		T new_real = a[2 * i + 1] * a[2 * i + 1] - a[2 * i + 2] * a[2 * i + 2];
+		T new_imag = a[2 * i + 1] * a[2 * i + 2] + a[2 * i + 2] * a[2 * i + 1];
+		a[2 * i + 1] = new_real;
+		a[2 * i + 2] = new_imag;
+	}
+}
+
+#undef T
+
+int adj[MAXN], gr[MAXN];
+int to[MAXM], ant[MAXM], edges;
+
+inline void add(int x, int y) {
+	to[edges] = y, ant[edges] = adj[x];
+	++gr[x];
+	adj[x] = edges++;
+}
+
+int fila[MAXN], from[MAXN], dist[MAXN];
+int mark[MAXN], tempo;
+
+int n;
+int moreDistant(int node) {
+	++tempo;
+	int ini = 0, fim = 0;
+	mark[node] = tempo, dist[node] = 0, from[node] = node, fila[fim++] = node;
+	while(ini < fim) {
+		int at = fila[ini++];
+		for(int i = adj[at]; ~i; i = ant[i]) if(~adj[to[i]] && mark[to[i]] != tempo)
+			mark[to[i]] = tempo, dist[to[i]] = dist[at] + 1, from[to[i]] = at, fila[fim++] = to[i];
+	}
+	
+	return fila[fim - 1];
+}
+
+inline int getRoot(int node, int steps) {
+	int s = steps >> 1;
+	for(; s; --s) node = from[node];
+	if(!(steps & 1) && gr[node] < gr[from[node]]) return from[node];
+	return node;
+}
+
+void show_poly(double *bb, int sz) {
+	Rp(i,sz) printf("(%lf + %lf)\n", bb[2 * i + 1], bb[2 * i + 2]);
+}
+
+ll qtd[MAXN];
+double aa[MAXP], bb[MAXP];
+
+void solve(int root, int size) {
+	dbg {
+	printf("solved(root = %d)\n", root);
+	printf("  size ? %d\n", size);
+	puts("Quant"); Rp(i,10) printf(" qtd[%2d] %lld (%lld)\n", i, qtd[i] >> 1, qtd[i]); puts("");
+	}
+	
+	while((size & - size) != size) size += size & - size;
+	size <<= 2;
+	Rp(i,(size << 1)) aa[i] = 0;
+	
+	mark[root] = ++tempo;
+	for(int j = adj[root]; ~j; j = ant[j]) if(~adj[to[j]]) {
+		--gr[to[j]];
+		
+		int ini = 0, fim = 0;
+		fila[fim++] = to[j];
+		dist[to[j]] = 1;
+		
+		mark[to[j]] = tempo;
+		while(ini < fim) {
+			int at = fila[ini++];
+			for(int i = adj[at]; ~i; i = ant[i]) if(~adj[to[i]] && mark[to[i]] != tempo) {
+				mark[to[i]] = tempo;
+				fila[fim++] = to[i];
+				dist[to[i]] = dist[at] + 1;
+			}
+		}
+		
+		int sz = dist[fila[fim - 1]];
+		while((sz & - sz) != sz) sz += sz & - sz;
+		sz <<= 2;
+		
+		Rp(i,fim) qtd[dist[fila[i]]] += 2;
+		
+		//@Debug
+		dbg memset(bb, 0, sizeof(bb));
+		Rp(i,(sz << 1)) bb[i] = 0;
+		Rp(i,fim) bb[2 * dist[ fila[i] ] + 1]++;
+		Rp(i,fim) aa[2 * dist[ fila[i] ] + 1]++;
+		
+		dbg {
+		printf(" Distance "); Rp(i,fim) printf(" %2d,", dist[fila[i]]); puts("");
+		puts(" A"), show_poly(bb, sz), puts("");
+		}
+		
+		fast_fft(bb, sz, 1);
+		multiplication(bb, sz);
+		fast_fft(bb, sz, -1);
+		
+		//Normalizar resultado
+		Rp(i,sz + 1) bb[2 * i + 1] /= sz, bb[2 * i + 2] /= sz;
+		
+		dbg {
+		puts(" C"), show_poly(bb, sz), puts("");
+		puts("");
+		}
+		
+		Rp(i,sz) {
+			ll v = (ll) round(bb[2 * i + 1]);
+			dbg printf("< subtraindo %lld from %d\n", v, i);
+			qtd[i] -= v;
+		}
+		
+		dbg { puts("Quant"); Rp(i,10) printf(" qtd[%2d] %lld (%lld)\n", i, qtd[i] >> 1, qtd[i]); puts(""); }
+	}
+	
+	dbg puts(" X"), show_poly(aa, size), puts("");
+	
+	fast_fft(aa, size, 1);
+	multiplication(aa, size);
+	fast_fft(aa, size, -1);
+	Rp(i,size + 1) aa[2 * i + 1] /= size, aa[2 * i + 2] /= size;
+	
+	dbg {
+	puts(" Z"), show_poly(aa, size), puts("");
+	puts("");
+	}
+	
+	Rp(i,size) {
+		ll v = (ll) round(aa[2 * i + 1]);
+//		printf("   round(%lf) => %lld\n", aa[2 * i + 1], v);
+//		printf("< somando   %lld from %d\n", v, i);
+		qtd[i] += v;
+	}
+	
+//	puts("Quant"); Rp(i,10) printf(" qtd[%2d] %lld (%lld)\n", i, qtd[i] >> 1, qtd[i]); puts("");
+//	Fr(i,1,10) assert(!(qtd[i] & 1));
+//	puts("");
+	
+	adj[root] = -1;
+}
+
+bool num[MAXN];
+int prime[MAXN], pprimes;
+void pre() {
+	memset(num, true, sizeof(num));
+	int raiz = 225;
+	prime[0] = 2, pprimes = 1;
+	Fr(i,3,raiz) {
+		if(num[i]) {
+			prime[pprimes++] = i;
+			for(int j = i * i; j < MAXN; j += i) num[j] = false;
+		}
+		++i;
+	}
+	
+	Fr(i,raiz,MAXN) {
+		if(num[i]) prime[pprimes++] = i;
+		++i;
+	}
+}
+
+
+int main() {
+	memset(mark, 0, sizeof(mark));
+	tempo = 0;
+	
+	scanf("%d", &n);
+	
+	Rp(i,n) adj[i] = -1;
+	Rp(i,n) gr[i] = 0;
+	edges = 0;
+	
+	Fr(i,1,n) {
+		int a, b;
+		scanf("%d%d", &a, &b);
+		--a, --b;
+		add(a, b);
+		add(b, a);
+	}
+	
+	Rp(i,n + 2) qtd[i] = 0;
+	Rp(i,n) while(~adj[i]) {
+		int x = moreDistant(moreDistant(i));
+		if(dist[x] <= 1) adj[i] = adj[from[x]] = -1;
+		else solve(getRoot(x, dist[x]), dist[x]);
+	}
+	
+	pre();
+	
+	ll ans = 0;
+	Rp(i,pprimes) ans += qtd[prime[i]];
+//	printf("<< ans %3lld, tot %3lld\n", ans, n * (n - 1LL));
+	printf("%.8lf\n", ans / (n * (n - 1.0)));
+	
+	return 0;
+}

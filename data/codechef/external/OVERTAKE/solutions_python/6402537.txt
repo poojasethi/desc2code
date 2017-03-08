@@ -1,0 +1,153 @@
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Comparator;
+
+public class Main {
+
+    public static void main(String[] args) throws IOException {
+        InputReader reader = new InputReader(System.in);
+        int T = reader.readInt();
+        for (int t=0; t<T; t++) {
+            int N = reader.readInt();
+            long end = reader.readLong();
+            Car[] cars = new Car[N];
+            for (int n=0; n<N; n++) {
+                long position = reader.readLong();
+                long speed = reader.readLong();
+                Car car = new Car();
+                car.initialPosition = position;
+                car.finalPosition = position + speed*end;
+                car.speed = speed;
+                car.n = n;
+                cars[n] = car;
+            }
+            Arrays.sort(cars, new Comparator<Car>() {
+                @Override
+                public int compare(Car o1, Car o2) {
+                    long diff = o1.initialPosition-o2.initialPosition;
+                    if (diff == 0) {
+                        diff = o1.speed - o2.speed;
+                        if (diff == 0) {
+                            diff = o1.n - o2.n;
+                        }
+                    }
+                    return (int)Math.signum(diff);
+                }
+            });
+            for (int n=0; n<N; n++) {
+                cars[n].startIndex = n;
+            }
+            long answer = mergeSort(cars);
+            System.out.println(answer);
+        }
+    }
+
+    static long mergeSort(Car[] array) {
+        int length = array.length;
+        if (length <= 1) {
+            return 0;
+        }
+        Car[] leftHalf = new Car[length/2];
+        Car[] rightHalf = new Car[length-leftHalf.length];
+        System.arraycopy(array, 0, leftHalf, 0, leftHalf.length);
+        System.arraycopy(array, leftHalf.length, rightHalf, 0, rightHalf.length);
+        long result = mergeSort(leftHalf);
+        result += mergeSort(rightHalf);
+        int leftIndex = 0;
+        int rightIndex = 0;
+        for (int i=0; i<array.length; i++) {
+            if (leftIndex == leftHalf.length) {
+                array[i] = rightHalf[rightIndex++];
+            } else if (rightIndex == rightHalf.length) {
+                array[i] = leftHalf[leftIndex++];
+            } else {
+                Car leftCar = leftHalf[leftIndex];
+                Car rightCar = rightHalf[rightIndex];
+                if (leftCar.finalPosition < rightCar.finalPosition || (leftCar.finalPosition == rightCar.finalPosition
+                        && leftCar.speed > rightCar.speed) || (leftCar.finalPosition == rightCar.finalPosition && leftCar.speed == rightCar.speed && leftCar.n < rightCar.n)) {
+                    array[i] = leftHalf[leftIndex++];
+                } else {
+                    array[i] = rightHalf[rightIndex++];
+                    result += leftHalf.length-leftIndex;
+                }
+            }
+        }
+        return result;
+    }
+
+    static class Car {
+        int startIndex;
+        long initialPosition;
+        long finalPosition;
+        long speed;
+        int n;
+    }
+
+    static final class InputReader {
+        private final InputStream stream;
+        private final byte[] buf = new byte[1024];
+        private int curChar;
+        private int numChars;
+
+        public InputReader(InputStream stream) {
+            this.stream = stream;
+        }
+
+        private int read() throws IOException {
+            if (curChar >= numChars) {
+                curChar = 0;
+                numChars = stream.read(buf);
+                if (numChars <= 0) {
+                    return -1;
+                }
+            }
+            return buf[curChar++];
+        }
+
+        public final int readInt() throws IOException {
+            return (int)readLong();
+        }
+
+        public final long readLong() throws IOException {
+            int c = read();
+            while (isSpaceChar(c)) {
+                c = read();
+                if (c == -1) throw new IOException();
+            }
+            boolean negative = false;
+            if (c == '-') {
+                negative = true;
+                c = read();
+            }
+            long res = 0;
+            do {
+                res *= 10;
+                res += c - '0';
+                c = read();
+            } while (!isSpaceChar(c));
+            return negative ? -res : res;
+        }
+
+        public final int[] readIntArray(int size) throws IOException {
+            int[] array = new int[size];
+            for (int i=0; i<size; i++) {
+                array[i] = readInt();
+            }
+            return array;
+        }
+
+        public final long[] readLongArray(int size) throws IOException {
+            long[] array = new long[size];
+            for (int i=0; i<size; i++) {
+                array[i] = readLong();
+            }
+            return array;
+        }
+
+        private boolean isSpaceChar(int c) {
+            return c == ' ' || c == '\n' || c == '\r' || c == '\t' || c == -1;
+        }
+    }
+
+}

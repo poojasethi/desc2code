@@ -1,0 +1,9 @@
+#include <iostream>
+using namespace std;
+
+int main(){
+	int n, m, t;
+	cin>>n>>m>>t;
+	cout<<((n-m)*t+m-1)/m<<endl;
+	return 0;
+}

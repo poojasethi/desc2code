@@ -1,0 +1,138 @@
+//program 243-D
+
+#include<iostream>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+
+using namespace std;
+
+int Get()
+{
+  char c;
+  while(c=getchar(),(c<'0'||c>'9')&&(c!='-'));
+  bool Flag=(c=='-');
+  if(Flag)
+    c=getchar();
+  int X=0;
+  while(c>='0'&&c<='9')
+    {
+      X=X*10+c-48;
+      c=getchar();
+    }
+  return Flag?-X:X;
+}
+
+int X[2000000];
+int Max[4194304],Min[4194304];
+
+int Find(int T,int N)
+{
+  int Left=0,Right=N-1;
+  while(Left<Right)
+    {
+      int Mid=(Left+Right)/2;
+      if(X[Mid]==T)
+        Left=Right=Mid;
+      else if(X[Mid]<T)
+        Left=Mid+1;
+      else
+        Right=Mid-1;
+    }
+  return Left;
+}
+
+void Check(int P,int L,int R)
+{
+  if(!Max[P])return;
+  Min[P]=max(Min[P],Max[P]);
+  if(R-L>1)
+    {
+      Max[P*2]=max(Max[P*2],Max[P]);
+      Max[P*2+1]=max(Max[P*2+1],Max[P]);
+    }
+  Max[P]=0;
+}
+
+int GetMin(int P,int Left,int Right,int L,int R)
+{
+  Check(P,Left,Right);
+  if(L==Left&&R==Right)
+    return Min[P];
+  int Mid=(Left+Right)/2;
+  if(R<=Mid)
+    return GetMin(P*2,Left,Mid,L,R);
+  if(L>=Mid)
+    return GetMin(P*2+1,Mid,Right,L,R);
+  return min(GetMin(P*2,Left,Mid,L,Mid),GetMin(P*2+1,Mid,Right,Mid,R));
+}
+
+void Update(int P,int Left,int Right,int L,int R,int D)
+{
+  if(L==Left&&R==Right)
+    {
+      Max[P]=max(Max[P],D);
+      return;
+    }
+  int Mid=(Left+Right)/2;
+  if(R<=Mid)
+    Update(P*2,Left,Mid,L,R,D);
+  else if(L>=Mid)
+    Update(P*2+1,Mid,Right,L,R,D);
+  else
+    {
+      Update(P*2,Left,Mid,L,Mid,D);
+      Update(P*2+1,Mid,Right,Mid,R,D);
+    }
+  Check(P*2,Left,Mid);
+  Check(P*2+1,Mid,Right);
+  Min[P]=min(Min[P*2],Min[P*2+1]);
+}
+
+int main()
+{
+  int N=Get(),Vx=Get(),Vy=Get();
+  static int A[1000][1000];
+  for(int i=0;i<N;i++)
+    for(int j=0;j<N;j++)
+      A[i][j]=Get();
+  if(Vx<0)
+    for(int i0=0,i1=N-1;i0<i1;i0++,i1--)
+      for(int j=0;j<N;j++)
+        swap(A[i0][j],A[i1][j]);
+  if(Vy<0)
+    for(int i=0;i<N;i++)
+      for(int j0=0,j1=N-1;j0<j1;j0++,j1--)
+        swap(A[i][j0],A[i][j1]);
+  Vx=abs(Vx);
+  Vy=abs(Vy);
+  static int Left[1000][1000],Right[1000][1000];
+  int Total=0;
+  for(int i=0;i<N;i++)
+    for(int j=0;j<N;j++)
+      {
+        X[Total++]=Left[i][j]=Vy*i-Vx*(j+1);
+        X[Total++]=Right[i][j]=Vy*(i+1)-Vx*j;
+      }
+  sort(X,X+Total);
+  int Temp=Total;
+  Total=1;
+  for(int i=1;i<Temp;i++)
+    if(X[i]!=X[i-1])
+      X[Total++]=X[i];
+  memset(Max,0,sizeof(Max));
+  memset(Min,0,sizeof(Min));
+  long long Ans=0;
+  for(int i=0;i<N;i++)
+    for(int j=0;j<N;j++)
+      {
+        int L=Find(Left[i][j],Total);
+        int R=Find(Right[i][j],Total);
+        int Min=GetMin(1,0,Total-1,L,R);
+        Ans+=max(A[i][j]-Min,0);
+        Update(1,0,Total-1,L,R,A[i][j]);
+      }
+  cout<<Ans<<endl;
+  return 0;
+}

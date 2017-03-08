@@ -1,0 +1,126 @@
+
+#include <algorithm>
+#include <deque>
+#include <cstdio>
+#include <vector>
+#define MAXN 500000
+#define MASK ((1 << 30) - 1)
+
+using namespace std;
+
+int N;
+long long C;
+int Q;
+long long A, B, D;
+long long s[MAXN];
+
+vector <int> pos[MAXN + 1];
+bool marked[MAXN];
+int cand[MAXN + 1];
+
+void solve() {
+    for (int i = 1; i <= N; i++)
+        pos[i].clear();
+
+    // get counts for maximum segments
+    int prev = 0;
+    deque <int> qmin, qmax;
+    qmin.push_back(0), qmax.push_back(0);
+    for (int i = 1; i < N; i++) {
+        if (s[i] < s[qmin.front()]) {
+            if (s[qmax.front()] - s[i] > C) {
+                pos[i - prev].push_back(prev);
+                while (qmax.size() > 0 && s[qmax.front()] - s[i] > C) {
+                    prev = qmax.front() + 1;
+                    qmax.pop_front();
+                }
+            }
+            qmax.push_back(i);
+            qmin.clear();
+            qmin.push_back(i);
+        }
+        else if (s[i] > s[qmax.front()]) {
+            if (s[i] - s[qmin.front()] > C) {
+                pos[i - prev].push_back(prev);
+                while (qmin.size() > 0 && s[i] - s[qmin.front()] > C) {
+                    prev = qmin.front() + 1;
+                    qmin.pop_front();
+                }
+            }
+            qmin.push_back(i);
+            qmax.clear();
+            qmax.push_back(i);
+        }
+        else {
+            while (qmin.size() > 0 && s[i] <= s[qmin.back()])
+                qmin.pop_back();
+            qmin.push_back(i);
+
+            while (qmax.size() > 0 && s[i] >= s[qmax.back()])
+                qmax.pop_back();
+            qmax.push_back(i);
+        }
+    }
+    pos[N - prev].push_back(prev);
+
+    // get cumulative counts
+    vector <int> cur;
+    for (int i = 0; i < N; i++)
+        marked[i] = false;
+
+    cand[N] = pos[N].size();
+    for (int j = 0; j < pos[N].size(); j++)
+        marked[pos[N][j]] = true, cur.push_back(pos[N][j]);
+    for (int i = N - 1; i > 0; i--) {
+        cand[i] = cand[i + 1];
+        vector <int> next;
+        for (int j = 0; j < cur.size(); j++) {
+            cur[j]++;
+            if (cur[j] < N && !marked[cur[j]])
+                marked[cur[j]] = true, cand[i]++, next.push_back(cur[j]);
+        }
+        for (int j = 0; j < pos[i].size(); j++) {
+            if (!marked[pos[i][j]])
+                marked[pos[i][j]] = true, cand[i]++, next.push_back(pos[i][j]);
+        }
+        cur = next;
+    }
+
+    /*
+    for (int i = 1; i <= N; i++)
+        printf("> %02d %d\n", i, cand[i]);
+    */
+}
+
+void calc(int M) {
+    int low = 1, high = N;
+    while (low < high) {
+        int mid = (low + high) / 2;
+        if (cand[mid] <= M)
+            high = mid;
+        else
+            low = mid + 1;
+    }
+    printf("%d %d\n", low, cand[low]);
+}
+
+int main() {
+    int T;
+    scanf("%d", &T);
+    while (T--) {
+        scanf("%d%lld%d", &N, &C, &Q);
+        scanf("%lld%lld%lld", &A, &B, &D);
+        int X = min(N, 10000);
+        for (int i = 0; i < X; i++)
+            scanf("%lld", &s[i]);
+        for (int i = X; i < N; i++)
+            s[i] = (A * s[i - 1] + B * s[i - 2] + D) & MASK;
+
+        solve();
+        while (Q--) {
+            int M;
+            scanf("%d", &M);
+            calc(M);
+        }
+    }
+}

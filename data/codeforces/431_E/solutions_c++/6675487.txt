@@ -1,0 +1,111 @@
+#include <cstdio>
+#include <vector>
+#include <map>
+#include <set>
+#include <cmath>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+
+#define REP(i,n) for(int i=0,_n=(n);i<_n;++i)
+#define FOR(i,a,b) for(int i=(a),_b=(b);i<=_b;++i)
+#define FORD(i,a,b) for(int i=(a),_b=(b);i>=_b;--i)
+#define FOREACH(it,arr) for (__typeof((arr).begin()) it=(arr).begin(); it!=(arr).end(); it++)
+
+const double     EPS = 1E-9;
+const long long OVER = 1000000000000000000LL;
+
+typedef pair<int,long long> pil;
+
+
+map <int,int> ma;
+long long mb[600005];
+
+struct tdata {
+	int L, R, M, num;
+	long long sum;
+};
+
+tdata tree[600005];
+
+inline int LE(int x) { return (x << 1); }
+inline int RI(int x) { return (x << 1) + 1; }
+
+void build(int x, int L, int R) {
+	tree[x] = (tdata){L,R,(L+R)>>1,0,0};
+	if ( L < R ) {
+		build(LE(x),L,tree[x].M);
+		build(RI(x),tree[x].M+1,R);
+	}
+}
+
+int add(int x, int k, int v) {
+	if ( tree[x].L == tree[x].R ) {
+		tree[x].num += v;
+		tree[x].sum += v * (long long)mb[k];
+	}
+	else {
+		add(k <= tree[x].M ? LE(x) : RI(x), k, v);
+		tree[x].num = tree[LE(x)].num + tree[RI(x)].num;
+		tree[x].sum = tree[LE(x)].sum + tree[RI(x)].sum;
+	}
+}
+
+pil operator + (const pil a, const pil b){
+	return make_pair(a.first+b.first,a.second+b.second);
+}
+pil f(int x, double k) {
+	if ( mb[tree[x].L] >  k ) return make_pair(0,0);
+	if ( mb[tree[x].R] <= k ) return make_pair(tree[x].num,tree[x].sum);
+	return f(LE(x),k) + f(RI(x),k);
+}
+
+int main()
+{
+	int n, q;
+	int h[100005];
+	int a[100005];
+	long long b[100005];
+	int c[100005];
+
+	scanf( "%d %d", &n, &q );
+	FOR(i,1,n) scanf( "%d", &h[i] );
+	REP(i,q) {
+		scanf( "%d", &a[i] );
+		if ( a[i] == 1 ) cin >> b[i] >> c[i];
+		if ( a[i] == 2 ) cin >> b[i];
+	}
+
+	set <int> s;
+	FOR(i,1,n) s.insert(h[i]);
+	REP(i,q) if ( a[i] == 1 ) s.insert(c[i]);
+
+
+	int id = 0;
+	FOREACH(it,s) ma[*it] = id, mb[id] = *it, id++;
+	int limit = 1; while ( limit < s.size() ) limit <<= 1;
+	while ( id < limit ) mb[id] = OVER, id++;
+	build(1,0,limit-1);
+
+	FOR(i,1,n) add(1,ma[h[i]],1);
+
+	REP(i,q) {
+		if ( a[i] == 1 ) {
+			add(1,ma[h[b[i]]],-1);
+			h[b[i]] = c[i];
+			add(1,ma[h[b[i]]],1);
+		}
+		if ( a[i] == 2 ) {
+			double L = 0, R = 1E16;
+			REP(_,100) {
+				double M = (L + R) / 2;
+				pil    y = f(1,M);
+				double x = (double)(y.second + b[i]) / y.first;
+				if ( x < M - EPS ) R = M; else L = M;
+			}
+			printf( "%.6lf\n", L );
+		}
+	}
+
+	return 0;
+}

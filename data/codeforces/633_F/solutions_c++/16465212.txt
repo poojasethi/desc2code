@@ -1,0 +1,72 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+typedef long long LL;
+const int maxn=100010;
+
+int head[maxn],next[maxn<<1],E[maxn<<1],Ecnt;
+LL f0[maxn],f1[maxn],f2[maxn];
+int a[maxn];
+int n;
+LL ans;
+
+void Add_Edge(int x,int y) {next[++Ecnt]=head[x];head[x]=Ecnt;E[Ecnt]=y;next[++Ecnt]=head[y];head[y]=Ecnt;E[Ecnt]=x;}
+
+struct Node
+{
+	int id;
+	LL v;
+	Node (LL _v=0,int _id=0):id(_id),v(_v){}
+}Q1[maxn],Q2[maxn],Q3[maxn];
+bool cmp(const Node &a,const Node &b) {return a.v>b.v;}
+
+void DP(int x,int fa)
+{
+	int sons=0;
+	for (int i=head[x];i;i=next[i]) if (E[i]!=fa) DP(E[i],x);
+	for (int i=head[x];i;i=next[i]) if (E[i]!=fa)
+	{
+		++sons;
+		Q1[sons]=Node(f0[E[i]],E[i]);
+		Q2[sons]=Node(f1[E[i]],E[i]);
+		Q3[sons]=Node(f2[E[i]],E[i]);
+	}
+	sort(Q1+1,Q1+1+sons,cmp);
+	sort(Q2+1,Q2+1+sons,cmp);
+	sort(Q3+1,Q3+1+sons,cmp);
+	LL res=0,Q11=Q1[1].v,Q12=Q1[2].v,Q13=(sons>=3?Q1[3].v:0),Q21=Q2[1].v,Q22=Q2[2].v,Q23=(sons>=3?Q2[3].v:0),Q31=Q3[1].v,Q32=Q3[2].v;
+	if (!sons) {f0[x]=f1[x]=f2[x]=a[x];ans=max(ans,(LL)a[x]);return;}
+	if (sons==1) {f0[x]=f1[x]=Q11+a[x];f1[x]=max(f1[x],Q21);f2[x]=max(f2[x],Q31+a[x]);ans=max(ans,f0[x]);ans=max(ans,f1[x]);ans=max(ans,f2[x]);return;}
+	
+	f0[x]=Q11+a[x];
+	f1[x]=max(Q11+Q12+a[x],Q21);
+	if (Q1[1].id==Q2[1].id) f2[x]=max(Q11+Q22,Q12+Q21)+a[x];else f2[x]=Q11+Q21+a[x];
+	f2[x]=max(f2[x],Q31+a[x]);
+
+	if (Q1[1].id==Q2[1].id)
+	{
+		res=max(res,Q12+Q13+Q21+a[x]);
+		if (Q1[2].id==Q2[2].id) res=max(res,Q11+max(Q12+Q23,Q13+Q22)+a[x]);else res=max(res,Q11+Q12+Q22+a[x]);
+	}
+	else if (Q1[2].id==Q2[1].id)
+	{
+		res=max(res,Q11+Q13+Q21+a[x]);
+		if (Q1[1].id==Q2[2].id) res=max(res,Q12+max(Q11+Q23,Q13+Q22)+a[x]);else res=max(res,Q11+Q12+Q22+a[x]);
+	}
+	else res=max(res,Q11+Q12+Q21+a[x]);
+	if (Q1[1].id==Q3[1].id) res=max(res,max(Q11+Q32,Q12+Q31)+a[x]);
+	else res=max(res,Q11+Q31+a[x]);
+	res=max(res,Q21+Q22);
+	ans=max(ans,res);
+}
+
+int main()
+{
+	scanf("%d",&n);
+	for (int i=1;i<=n;i++) scanf("%d",&a[i]);
+	for (int i=1,x,y;i<n;i++) scanf("%d%d",&x,&y),Add_Edge(x,y);
+	DP(1,0);
+	printf("%I64d\n",ans);
+	return 0;
+}

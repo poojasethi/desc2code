@@ -1,0 +1,26 @@
+T = int(raw_input())
+
+for z in xrange(T):
+    s = raw_input().strip()
+
+    cache = [ [0 for j in xrange(55)] for i in xrange(55) ]
+
+    N = len(s)
+    for l in xrange(N,0,-1):
+        for i in xrange(N-l+1):
+            j = i+l
+            
+            if i == 0 or j == N:
+                cache[i][j] = 0
+            else:
+                cache[i][j] = cache[i-1][j] + cache[i][j+1] - cache[i-1][j+1]
+                if s[i-1] == s[j]:
+                    cache[i][j] += cache[i-1][j+1] + 1
+
+    tot = 0
+    for i in xrange(N):
+        for j in xrange(i+1,N+1):
+            if s[i] == s[j-1]:
+                tot += cache[i][j] + 1
+
+    print tot

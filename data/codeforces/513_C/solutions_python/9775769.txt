@@ -1,0 +1,116 @@
+#!/usr/bin/env python
+#-*- coding:utf-8 -*-
+
+from itertools import combinations, product
+
+n = int(raw_input())
+rmax = 0
+intervals = []
+for _ in xrange(n):
+    l, r = map(int, raw_input().split())
+    rmax = max(rmax, r)
+    intervals.append((l, r))
+INDS = range(len(intervals))
+
+
+def prob_smaller_equal(ints, val):
+    res = 1.0
+    for l, r in ints:
+        d = min(val + 1 - l, r + 1 - l)
+        if d <= 0:
+            return 0.0
+        res *= float(d) / (r + 1 - l)
+        if res == 0.0:
+            return 0.0
+    return res
+
+
+def prob_smaller(ints, val):
+    res = 1.0
+    for l, r in ints:
+        d = min(val - l, r + 1 - l)
+        if d <= 0:
+            return 0.0
+        res *= float(d) / (r + 1 - l)
+        if res == 0.0:
+            return 0.0
+    return res
+
+
+def prob_greater(ints, val):
+    res = 1.0
+    for l, r in ints:
+        d = min(r - val, r + 1 - l)
+        if d <= 0:
+            return 0.0
+        res *= float(d) / (r + 1 - l)
+        if res == 0.0:
+            return 0.0
+    return res
+
+
+def prob_equal(ints, val):
+    res = 1.0
+    for l, r in ints:
+        if not (l <= val <= r):
+            return 0.0
+        res *= 1.0 / (r + 1 - l)
+    return res
+
+
+def combos(ints, minn, maxn):
+    for ntie in xrange(minn, maxn + 1):
+        for c in combinations(ints, r=ntie):
+            yield c
+
+
+def prod(cache, inds, price):
+    res = 1.0
+    for i in inds:
+        res *= cache[i][price]
+        if res == 0.0:
+            return 0.0
+    return res
+
+
+cache_smaller = [[0] * 10002 for _ in xrange(5)]
+cache_smaller_equal = [[0] * 10002 for _ in xrange(5)]
+cache_equal = [[0] * 10002 for _ in xrange(5)]
+cache_greater = [[0] * 10002 for _ in xrange(5)]
+for i, (l, r) in enumerate(intervals):
+    for price in xrange(1, rmax + 1):
+        cache_smaller[i][price] = prob_smaller([(l, r)], price)
+        cache_smaller_equal[i][price] = prob_smaller_equal([(l, r)], price)
+        cache_equal[i][price] = prob_equal([(l, r)], price)
+        cache_greater[i][price] = prob_greater([(l, r)], price)
+
+res = 0
+for price in xrange(1, rmax + 1):
+    # case 1: 1 larger  1+ equal  * smaller
+    for ind1 in INDS:
+        other = [i for i in INDS if i != ind1]
+        res += (
+            price *
+            prod(cache_greater, (ind1,), price) *
+            (
+                prod(cache_smaller_equal, other, price) -
+                prod(cache_smaller, other, price)
+            )
+        )
+
+    # case 2: 0 larger  2+ equal  * smaller
+    for ind1 in INDS:
+        for ind2 in xrange(ind1 + 1, len(intervals)):
+            smaller = [ii for ii in xrange(ind2) if ii != ind1]
+            smaller_equal = [ii for ii in xrange(ind2 + 1, len(intervals))]
+
+            assert len(smaller) + len(smaller_equal) + 2 == len(intervals)
+
+            res += (
+                price *
+                prod(cache_equal, [ind1, ind2], price) *
+                prod(cache_smaller, smaller, price) *
+                prod(cache_smaller_equal, smaller_equal, price)
+            )
+
+print res

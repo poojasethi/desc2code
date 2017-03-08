@@ -1,0 +1,111 @@
+//Program: d
+//Author: gary
+//Date: 28/12/2013
+#include <cstdio>
+#include <cmath>
+#include <cstring>
+#include <set>
+#include <vector>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+#define SZ(x) ( (int) ( (x).size() ) )
+const int BLACK = 1;
+const int WHITE = !BLACK;
+const int MAX_N = 1e5 + 100;
+const int INF = 1e9;
+
+set<int> W[MAX_N]; // White edges
+vector<int> E[MAX_N];
+pair<int, int> edges[MAX_N];
+// All are black at the beginning
+int n;
+int root;
+int depth[MAX_N];
+int pcolor[MAX_N];
+int chain[MAX_N];
+
+void dfs(int u, int p, int chainno){
+  pcolor[u] = BLACK;
+  depth[u] = depth[p] + 1;
+  chain[u] = chainno;
+
+  for(int i = 0; i < SZ(E[u]); i++)
+    if(E[u][i] != p)
+      dfs(E[u][i], u, chainno);
+}
+
+void update(int i){
+  int u = edges[i].first, v = edges[i].second;
+  if(depth[u] < depth[v]) swap(u, v);
+  if(pcolor[u] == WHITE)
+    W[chain[u]].erase(depth[u]);
+  pcolor[u] ^= 1;
+  if(pcolor[u] == WHITE){
+    //    printf("u=%d\n", u);
+    W[chain[u]].insert(depth[u]);
+  }
+}
+
+int dist(int u, int v){
+  if(depth[u] < depth[v]) swap(u, v); // u is deeper
+  
+  set<int>::iterator it = W[chain[u]].lower_bound(depth[v] + 1);
+  if(it == W[chain[u]].end() || *it > depth[u])
+    return depth[u] - depth[v];
+  return -INF;
+}
+
+int query(int u, int v){
+  int res;
+  if(chain[u] != chain[v]){
+    res = dist(u, root) + dist(v, root);
+  } else {
+    res = dist(u, v);
+  }
+  return res < 0 ? -1 : res;
+  
+}
+
+int main(){
+  ios::sync_with_stdio(0);
+  while(cin >> n){
+    root = 1;
+    
+    for(int i = 0; i <= n; i++){
+      E[i].clear();
+      W[i].clear();
+    }
+
+    for(int i = 1; i <= n - 1; i++){
+      int u, v;
+      cin >> u >> v;
+      E[u].push_back(v);
+      E[v].push_back(u);
+      edges[i] = make_pair(u, v);
+    }
+
+    for(int i = 1; i <= n; i++)
+      if(SZ(E[i]) > SZ(E[root]))
+	root = i;
+
+    depth[root] = 0;
+    for(int i = 0; i < SZ(E[root]); i++){
+      dfs(E[root][i], root, i);
+    }
+    int q, u, v;
+    cin >> q;
+    while(q--){
+      int t;
+      cin >> t;
+      if(t <= 2){
+	cin >> u;
+	update(u);
+      } else {
+	cin >> u >> v;
+	printf("%d\n", query(u, v));
+      }
+    }
+  }
+  return 0;
+}

@@ -1,0 +1,120 @@
+#include <algorithm>
+#include <cstdio>
+#include <cstdlib>
+#include <list>
+#include <map>
+#include <queue>
+#include <set>
+#include <stack>
+#include <vector>
+#include <cstring>
+
+using namespace std;
+ 
+typedef long long LL;
+typedef long double LD;
+typedef vector<int> VI;
+typedef pair<int,int> PII;
+ 
+#define REP(i,n) for(int i=0;i<(n);++i)
+#define SIZE(c) ((int)((c).size()))
+#define FOR(i,a,b) for (int i=(a); i<(b); ++i)
+#define FOREACH(i,x) for (__typeof((x).begin()) i=(x).begin(); i!=(x).end(); ++i)
+#define FORD(i,a,b) for (int i=((int)(a))-1; i>=(b); --i)
+ 
+#define pb push_back
+#define mp make_pair
+#define st first
+#define nd second
+
+bool visited[300000];
+list<int> adj[100000];
+int fraction[300000];
+
+vector<int> ff[2];
+int who[300000];
+
+void go(int v, int f) {
+  visited[v] = true;
+  fraction[v] = f;
+  FOREACH(it, adj[v])
+    if (!visited[*it])
+      go(*it, 1 - f);
+}
+
+int start = 0;
+void colorRest() {
+    REP(i,ff[0].size()) {
+      if (!who[ff[0][i]])
+        who[ff[0][i]] = (start++) / 3 + 1;
+    }
+    REP(i,ff[1].size()) {
+      if (!who[ff[1][i]])
+        who[ff[1][i]] = (start++) / 3 + 1;
+    }
+}
+
+void nn(int v) {
+  who[v] = (start++) / 3 + 1;
+  set<int> S;
+  FOREACH(it, adj[v]) S.insert(*it);
+  FOREACH(it, ff[1 - fraction[v]]) {
+    if (S.find(*it) == S.end()) {
+      who[*it] = (start++) / 3 + 1;
+//        printf("%d||",*it);
+    }
+    if (start % 3 == 0) return;
+  }
+}
+
+bool solve() {
+
+  if (ff[0].size() % 3 == 0) {
+    colorRest();
+    return true;
+  }
+  
+  int zero = 0, one = 1;
+  if (ff[0].size() % 3 == 2) swap(zero, one);
+  
+  REP(i,ff[zero].size())
+    if (adj[ff[zero][i]].size() + 1 < ff[one].size()) {
+      nn(ff[zero][i]);
+      colorRest();
+      return true;
+    }
+  
+  int q1 = 0;
+  while ((q1 < ff[one].size()) && (adj[ff[one][q1]].size() + 2 > ff[zero].size() )) ++q1;
+  int q2 = q1 + 1;  
+  while ((q2 < ff[one].size()) && (adj[ff[one][q2]].size() + 2 > ff[zero].size() )) ++q2;  
+  if (q2 >= ff[one].size()) return false;
+  nn(ff[one][q1]);
+  nn(ff[one][q2]);
+  colorRest();
+  return true;
+}
+
+int main() {
+  int N,M;
+  scanf("%d%d",&N,&M);
+  REP(i,M) {
+    int a,b;
+    scanf("%d%d",&a,&b);
+    --a, --b;
+    adj[a].push_back(b);
+    adj[b].push_back(a);    
+  }
+  REP(i,N) if (!visited[i]) {
+    go(i,0);
+  }
+  REP(i,N) ff[fraction[i]].push_back(i);
+
+  bool result = solve();
+  if (!result) printf("NO\n");
+  else {
+    printf("YES\n");
+    REP(i,N) printf("%d ",who[i]);
+    printf("\n");
+  }
+}

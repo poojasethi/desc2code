@@ -1,0 +1,141 @@
+#include <stdio.h>
+#include <deque>
+#include <set>
+#include <map>
+#include <vector>
+#include <utility>
+#include <stdexcept>
+#include <bitset>
+
+//http://www.codechef.com/NOV12/problems/JABO
+typedef unsigned offset_type;
+typedef unsigned voltage_type;
+typedef std::pair<offset_type, unsigned> cell_type;
+struct group {
+    offset_type offset;
+    voltage_type voltage;
+    inline explicit group(offset_type o=0):offset(o),voltage(0){}
+};
+struct jam {
+    std::vector<group> connections;
+
+    inline jam(offset_type size) :connections(size)
+    { for(offset_type i=0; i<connections.size(); ++i)connections[i] = group(i); }
+    inline group& get_top(offset_type a) {
+        const unsigned max_depth=20;
+        while(connections.at(a).offset!=a) {
+            offset_type orig = a;
+            for(unsigned td=0; connections.at(a).offset!=a && td<max_depth; ++td)
+                a = connections[a].offset; 
+            connections[orig].offset = a;
+        }
+        return connections[a];
+    }
+    inline void add_wire(offset_type one, offset_type two) {
+        group& topone = get_top(one);
+        group& toptwo = get_top(two);
+        if (&topone != &toptwo) {
+            toptwo.offset = topone.offset; 
+            topone.voltage += toptwo.voltage;
+        }
+    }
+    inline void add_voltage(cell_type one) { 
+        group& v = get_top(one.first);
+        if ((++v.voltage) == 0) throw std::logic_error("too many voltages");
+    }
+    inline void remove_voltage(cell_type one) { 
+        group& v = get_top(one.first);
+        if ((v.voltage--) == 0)throw std::logic_error("too few voltages");
+    }
+    inline void try_LED(offset_type one, offset_type two) {
+        bool ov = get_top(one).voltage>0;
+        bool tv = get_top(two).voltage>0;
+        if (ov != tv) printf("ON\n");
+        else printf("OFF\n");
+    }
+    inline void print(unsigned columns) {
+#ifdef _DEBUG
+        printf("\n");
+        for(unsigned r=0;r<connections.size()/columns; ++r) {
+            for(unsigned c=0;c<columns;++c) {
+                offset_type o=r*columns+c;
+                printf("%d%c", connections[o].offset, (connections[o].voltage ? '*' : ' '));
+            }
+            printf("\n");
+        }
+#endif
+    }
+};
+inline unsigned base52(char i) {
+    if (i>='A' && i<='Z')
+        return i-'A';
+    else if (i>='a' && i<='z')
+        return i-'a'+26;
+    throw std::logic_error("b52");
+}
+inline unsigned read_digit() {
+    char a=0,b=0;
+    if(scanf("%c%c",&a,&b)!=2) throw std::logic_error("ab");
+    return base52(a)*52+base52(b);
+}
+inline cell_type read_coord(int columns) {
+    unsigned x = read_digit()-1;
+    unsigned y = read_digit()-1;
+#ifdef _DEBUG
+    printf("%d ", x+y/5*columns);
+#endif
+    return cell_type(x+y/5*columns, y%5);
+}
+int go() {
+    unsigned l=0,c=0,r=0;
+    //why is this input r/c instead of the other way around?
+    if(scanf("%u %u %u",&l,&r,&c)!=3) throw std::logic_error("lrc"); 
+    if (c>2500) throw std::logic_error("l");//2500c, 500r max
+    if (r>500) throw std::logic_error("r");
+    jam j(r*c); 
+    for(unsigned i=0; i<l; ++i) {
+        char t=0;
+        if(scanf(" %c",&t)!=1) throw std::logic_error("t");
+        switch(t) {
+        case 'W': j.add_wire(read_coord(c).first, read_coord(c).first); break;
+        case 'V': j.add_voltage(read_coord(c)); break;
+        case 'R': j.remove_voltage(read_coord(c)); break;
+        case 'L': j.try_LED(read_coord(c).first, read_coord(c).first); break;
+        default: throw std::logic_error("t"); break;
+        }
+        j.print(c);
+    }
+    return 0;
+}
+
+//#include <ctime>
+int main() {
+    int r = 0;
+    //clock_t start = clock();
+    //for(int i=0; i<1000;++i)
+        r = go();
+    //double dur = double(clock()-start)/CLOCKS_PER_SEC;
+    //printf("1000 ticks over %fs at %fs each.", dur, dur/1000.0);
+    return r;
+}
+
+/*
+Input:
+9 2 10
+WADAEAFAG
+VAGAD
+LAFAHAGAE
+VAKAK
+LAJAKAKAJ
+LAKAIAGAB
+LABABACAB
+RAKAK
+LAJAKAKAJ
+
+Output:
+ON
+ON
+OFF
+OFF
+OFF
+*/

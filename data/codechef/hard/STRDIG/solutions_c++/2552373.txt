@@ -1,0 +1,194 @@
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+using namespace std;
+
+typedef long long int64;
+
+const int N = 100500;
+const int64 LIM = (int64)1e9;
+
+int n;
+char s[N];
+int64 pow10[12];
+
+void add1(char s[], int &len)
+{
+	for (int i = len - 1; i >= 0; i--)
+	{
+		if (s[i] != '9')
+		{
+			s[i]++;
+			return;
+		}
+		else
+		{
+			s[i] = '0';
+		}
+	}
+
+	len++;
+	s[0] = '1';
+	for (int i = 1; i < len; i++)
+		s[i] = '0';
+	s[len] = 0;
+}
+
+bool is_suffix_of_number_from_segment(char s[], int len, int64 a, int64 b)
+{
+	char buf[20];
+	strncpy(buf, s, len);
+	buf[len] = 0;
+
+	int64 num;
+	sscanf(buf, "%lld", &num);
+
+	char as[20];
+	sprintf(as, "%lld", a);
+	int as_len = strlen(as);
+	int64 last_digs = 0;
+	for (int i = 0; i < len; i++)
+		if (as_len - 1 - i >= 0)
+			last_digs += pow10[i] * (as[as_len - 1 - i] - '0');
+
+	int64 shift = (num - last_digs + pow10[len]) % pow10[len];
+	if (a + shift <= b)
+		return a + shift >= 1 && a + shift + 1 <= LIM;
+	return false;
+}
+
+bool is_good(int prefix, int len)
+{
+	if (prefix >= n)
+		return false;
+	if (s[prefix] == '0')
+		return false;
+
+	if (prefix + len > n)
+	{
+		if (prefix == 0)
+			return false;
+
+		int fade = (prefix + len) - n;
+
+		int64 num;
+		sscanf(s + prefix, "%lld", &num);
+			
+		if (is_suffix_of_number_from_segment(s, prefix, num * pow10[fade] - 1, num * pow10[fade] + (pow10[fade] - 2)))
+			return true;
+		return false;
+	}
+	else
+	{
+		int64 num;
+		char dig = s[prefix + len];
+		s[prefix + len] = 0;
+		sscanf(s + prefix, "%lld", &num);
+		s[prefix + len] = dig;
+		if (num == 0 || num > LIM)
+			return false;
+
+		if (prefix > 0)
+		{
+			if (num == 1)
+				return false;
+
+			char prefix_s[20];
+			sprintf(prefix_s, "%lld", num - 1);
+			int prefix_s_len = strlen(prefix_s);
+			if (prefix_s_len < prefix)
+				return false;
+			for (int i = 0; prefix - 1 - i >= 0; i++)
+				if (prefix_s[prefix_s_len - 1 - i] != s[prefix - 1 - i])
+					return false;
+		}
+
+		char cur[20];
+		strncpy(cur, s + prefix, len);
+		cur[len] = 0;
+		int cur_len = len;
+
+		for (int i = prefix; i < n; )
+		{
+			int comp_len = cur_len;
+			if (i + cur_len > n)
+				comp_len = n - i;
+			if (strncmp(cur, s + i, comp_len) != 0)
+				return false;
+			i += cur_len;
+			if (i < n)
+				add1(cur, cur_len);
+		}
+
+		int64 final_num;
+		sscanf(cur, "%lld", &final_num);
+		return final_num <= LIM;
+	}
+}
+
+bool check_single()
+{
+	if (n > 10)
+		return false;
+
+	char buf[20];
+	if (s[0] == '0')
+	{
+		strcpy(buf + 1, s);
+		buf[0] = '1';
+	}
+	else
+	{
+		strcpy(buf, s);
+	}
+
+	int64 num;
+	sscanf(buf, "%lld", &num);
+
+	return num >= 1 && num <= LIM;
+}
+
+void solve()
+{
+	if (n < 10)
+	{
+		puts("YES");
+		return;
+	}
+
+	if (check_single())
+	{
+		puts("YES");
+		return;
+	}
+
+	for (int prefix = 0; prefix < 10; prefix++)
+		for (int len = max(1, prefix); len <= 10; len++)
+			if (is_good(prefix, len))
+			{
+				puts("YES");
+				return;
+			}
+
+	puts("NO");
+}
+
+int main()
+{
+	pow10[0] = 1;
+	for (int i = 1; i < 12; i++)
+		pow10[i] = pow10[i - 1] * 10;
+
+	int test_cases;
+	scanf("%d", &test_cases);
+
+	for (int cur_test = 0; cur_test < test_cases; cur_test++)
+	{
+		scanf("%s", s);
+		n = strlen(s);
+		solve();
+	}
+
+	return 0;
+}

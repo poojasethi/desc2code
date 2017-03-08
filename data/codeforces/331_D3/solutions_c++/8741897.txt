@@ -1,0 +1,202 @@
+#include <cstdio>
+#include <algorithm>
+#include <map>
+#include <vector>
+#include <cstring>
+
+using namespace std;
+
+typedef long long int64;
+typedef pair<int,int> PII;
+typedef pair<PII,int> PIII;
+
+const int N = 200010, D = N * 3;
+const int vx[4] = {-1, 0, 1, 0};
+const int vy[4] = {0, -1, 0, 1};
+
+int n, m, b;
+int dir[N], ed[N], qx[N], qy[N], qd[N], qid[N];
+int64 qt[N];
+
+vector<PIII> cx[N], cy[N];
+
+map<PII,int> IDC;
+int dn, dx[D], dy[D], dz[D], toi[D], tod[D];
+int fa[D][51];
+int64 fw[D][51];
+
+int id(int x, int y, int dr) {
+	int &t = IDC[make_pair(dr * 100001 + x, y)];
+	if (!t) {
+		t = ++dn;
+		dx[t] = x, dy[t] = y, dz[t] = dr;
+	}
+	return t;
+}
+void link(int u, int v) {
+	if (u != v) {
+		fa[u][0] = v;
+		fw[u][0] = abs(dx[u] - dx[v]) + abs(dy[u] - dy[v]);
+	}
+}
+
+struct event {
+	int ty, t, x, y, d;
+};
+bool cmp0(const event& a, const event& b) {
+	return a.t < b.t || (a.t == b.t && a.ty < b.ty);
+}
+bool cmp1(const event& a, const event& b) {
+	return a.t > b.t || (a.t == b.t && a.ty < b.ty);
+}
+struct little_O {
+	event ev[N * 2];
+	int key, _xx[N * 4], _id[N * 4], evt;
+
+	void mark(int d, int xx, int id) {
+		_xx[d] = xx;
+		_id[d] = id;
+	}
+	void push(int d) {
+		if (_id[d]) {
+			mark(d << 1 | 0, _xx[d], _id[d]);
+			mark(d << 1 | 1, _xx[d], _id[d]);
+			_id[d] = _xx[d] = 0;
+		}
+	}
+	void cover(int d, int lt, int rt, int lq, int rq, int xx, int id) {
+		if (lq <= lt && rt <= rq)
+			return mark(d, xx, id);
+		int md = (lt + rt) >> 1;
+		push(d);
+		if (lq <= md)
+			cover(d << 1 | 0, lt, md, lq, rq, xx, id);
+		if (md < rq)
+			cover(d << 1 | 1, md + 1, rt, lq, rq, xx, id);
+	}
+	void query(int d, int lt, int rt, int w, int xx, int id) {
+		if (lt == rt) {
+			if (_id[d]) {
+				toi[id] = _id[d];
+				tod[id] = abs(xx - _xx[d]);
+			}
+			return;
+		}
+		int md = (lt + rt) >> 1;
+		push(d);
+		if (w <= md)
+			query(d << 1 | 0, lt, md, w, xx, id);
+		else
+			query(d << 1 | 1, md + 1, rt, w, xx, id);
+	}
+	void add_ev(int t, int l, int r, int id) {
+		ev[++evt] = (event) {0, t, l, r, id};
+	}
+	void add_qs(int t, int x, int d) {
+		ev[++evt] = (event) {1, t, x, 0, d};
+	}
+	void solve() {
+		sort(ev + 1, ev + evt + 1, key < 2? cmp0: cmp1);
+		memset(_xx, 0, sizeof(_xx));
+		memset(_id, 0, sizeof(_id));
+		for (int i = 1; i <= evt; ++i) {
+			if (ev[i].ty == 0)
+				cover(1, 0, b, ev[i].x, ev[i].y, ev[i].t, ev[i].d);
+			else
+				query(1, 0, b, ev[i].x, ev[i].t, ev[i].d);
+		}
+	}
+} OY[4];
+
+void solve(int u, int64 t) {
+	for (int j = 50; j >= 0; --j)
+		if (fa[u][j] && fw[u][j] <= t) {
+			t -= fw[u][j];
+			u = fa[u][j];
+		}
+	int64 xx = dx[u], yy = dy[u];
+	xx += t * vx[dz[u]];
+	yy += t * vy[dz[u]];
+	if (xx < 0) xx = 0; if (xx > b) xx = b;
+	if (yy < 0) yy = 0; if (yy > b) yy = b;
+	printf("%d %d\n", (int)xx, (int)yy);
+}
+bool special(int i, vector<PIII> vc, int p) {
+	PIII pp = make_pair(make_pair(p, b + 2), 0);
+	vector<PIII>::iterator it = lower_bound(vc.begin(), vc.end(), pp);
+	if (it == vc.begin()) return 0;
+	--it;
+	PII rg = (*it).first;
+	int ii = (*it).second;
+	if (rg.first <= p && p <= rg.second) {
+		qid[i] = id(qx[i], qy[i], dir[ii]);
+		link(qid[i], ed[ii]);
+		return 1;
+	}
+	return 0;
+}
+int main() {
+	scanf("%d %d", &n, &b);
+	for (int i = 1; i <= n; ++i) {
+		int x0, y0, x1, y1;
+		scanf("%d %d %d %d", &x0, &y0, &x1, &y1);
+		if (x0 == x1) dir[i] = y0 < y1? 3: 1;
+		if (y0 == y1) dir[i] = x0 < x1? 2: 0;
+		ed[i] = id(x1, y1, dir[i]);
+		if (dir[i] & 1)
+			OY[dir[i]].add_qs(y1, x1, ed[i]);
+		else
+			OY[dir[i]].add_qs(x1, y1, ed[i]);
+
+		if (x0 > x1) swap(x0, x1);
+		if (y0 > y1) swap(y0, y1);
+		if (x0 == x1) cx[x0].push_back(make_pair(make_pair(y0, y1), i));
+		if (y0 == y1) cy[y0].push_back(make_pair(make_pair(x0, x1), i));
+		OY[3].add_ev(y0, x0, x1, i);
+		OY[1].add_ev(y1, x0, x1, i);
+		OY[2].add_ev(x0, y0, y1, i);
+		OY[0].add_ev(x1, y0, y1, i);
+	}
+	for (int x = 0; x <= b; ++x) {
+		sort(cx[x].begin(), cx[x].end());
+		sort(cy[x].begin(), cy[x].end());
+	}
+
+	scanf("%d", &m);
+	for (int i = 1; i <= m; ++i) {
+		char ch;
+		scanf("%d %d %c %I64d", &qx[i], &qy[i], &ch, &qt[i]);
+		if (special(i, cx[qx[i]], qy[i]) || special(i, cy[qy[i]], qx[i])) {
+			continue;
+		}
+		if (ch == 'L') qd[i] = 0;
+		if (ch == 'D') qd[i] = 1;
+		if (ch == 'R') qd[i] = 2;
+		if (ch == 'U') qd[i] = 3;
+		qid[i] = id(qx[i], qy[i], qd[i]);
+		if (qd[i] & 1)
+			OY[qd[i]].add_qs(qy[i], qx[i], qid[i]);
+		else
+			OY[qd[i]].add_qs(qx[i], qy[i], qid[i]);
+	}
+	for (int x = 0; x < 4; ++x) {
+		OY[x].key = x;
+		OY[x].solve();
+	}
+	for (int i = 1; i <= dn; ++i)
+		if (toi[i]) {
+			int x = dx[i] + tod[i] * vx[dz[i]];
+			int y = dy[i] + tod[i] * vy[dz[i]];
+			int atd = id(x, y, dir[toi[i]]);
+			link(i, atd);
+			link(atd, ed[toi[i]]);
+		}
+	for (int j = 1; j <= 50; ++j)
+		for (int i = 1; i <= dn; ++i) {
+			fa[i][j] = fa[fa[i][j - 1]][j - 1];
+			fw[i][j] = min(fw[i][j - 1] + fw[fa[i][j - 1]][j - 1], (int64)1e18);
+		}
+	for (int i = 1; i <= m; ++i) {
+		solve(qid[i], qt[i]);
+	}
+}

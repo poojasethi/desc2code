@@ -1,0 +1,67 @@
+#include <bits/stdc++.h>
+#define MAX 502
+#define LOG 10
+
+using namespace std;
+
+int n, m, q;
+string f[MAX];
+bitset <MAX> con[2][LOG][MAX][MAX];
+
+void preprocess() {
+  for (int i = LOG - 1; i >= 0; i--) {
+    for (int j = (1 << i); j <= n; j += (1 << (i+1))) {
+      for (int k = m; k >= 1; k--) {
+        if (f[j-1][k-1] == '#') continue;
+        con[0][i][j][k][k] = 1;
+        if (k < m) con[0][i][j][k] |= con[0][i][j][k+1];
+      }
+      for (int k = j-1; k > max (0, j - (1 << i)); k--) {
+        for (int l = m; l >= 1; l--) {
+          if (f[k-1][l-1] == '#') continue;
+          con[0][i][k][l] |= con[0][i][k+1][l];
+          if (l < m) con[0][i][k][l] |= con[0][i][k][l+1];
+        }
+      }
+      for (int k = 1; k <= m; k++) {
+        if (f[j-1][k-1] == '#') continue;
+        con[1][i][j][k][k] = 1;
+        if (k > 1) con[1][i][j][k] |= con[1][i][j][k-1];
+      }
+      for (int k = j+1; k <= min (n, j + (1 << i)); k++) {
+        for (int l = 1; l <= m; l++) {
+          if (f[k-1][l-1] == '#') continue;
+          con[1][i][k][l] |= con[1][i][k-1][l];
+          if (l > 1) con[1][i][k][l] |= con[1][i][k][l-1];
+        }
+      }
+    }
+  }
+}
+
+bool query (int x1, int y1, int x2, int y2) {
+  for (int i = LOG - 1; i >= 0; i--) {
+    int z = (x2 / (1 << i)) * (1 << i);
+    if (x2 >= z && z >= x1) {
+      return (con[0][i][x1][y1] & con[1][i][x2][y2]).any();
+    }
+  }
+  assert(false);
+  return false;
+}
+
+int main() {
+  ios_base::sync_with_stdio(0);
+  cin.tie(NULL);
+  cin >> n >> m;
+  for (int i = 0; i < n; i++) {
+    cin >> f[i];
+  }
+  preprocess();
+  cin >> q;
+  for (int i = 0; i < q; i++) {
+    int x1, y1, x2, y2;
+    cin >> x1 >> y1 >> x2 >> y2;
+    cout << (query (x1, y1, x2, y2) ? "Yes" : "No") << "\n";
+  }
+}

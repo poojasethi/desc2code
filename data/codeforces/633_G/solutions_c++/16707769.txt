@@ -1,0 +1,109 @@
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+#include<cstdio>
+#include<bitset>
+#include<cmath>
+#define rep(i,l,r) for (int i=l;i<=r;i++)
+#define down(i,l,r) for (int i=l;i>=r;i--)
+#define clr(x,y) memset(x,y,sizeof(x))
+#define maxn 100500
+using namespace std;
+bitset<1000> t[maxn*4],pre,ret;
+int n,m,tot,idx,head[maxn],a[maxn],l[maxn],r[maxn],tag[maxn*4],pos[maxn];
+struct data{int obj,pre;
+}e[maxn*2];
+int read(){
+	int x=0,f=1; char ch=getchar();
+	while (!isdigit(ch)){if (ch=='-') f=-1; ch=getchar();}
+	while (isdigit(ch)){x=x*10+ch-'0'; ch=getchar();}
+	return x*f;
+}
+void insert(int x,int y){
+	e[++tot].obj=y;	 e[tot].pre=head[x]; head[x]=tot;
+}
+void dfs(int u,int f){
+	l[u]=++idx; pos[idx]=u; 
+	for (int j=head[u];j;j=e[j].pre){
+		int v=e[j].obj;
+		if (v==f) continue;
+		dfs(v,u);
+	}
+	r[u]=idx;
+}
+bool ispri(int x){
+	rep(i,2,int(sqrt(x))) if (x%i==0) return 0;
+	return 1; 
+}
+void build(int i,int l,int r){
+	int mid=(l+r)/2;
+	if (l==r) {
+		t[i].flip(a[pos[l]]); return;
+	}
+	build(i*2,l,mid); build(i*2+1,mid+1,r);
+	t[i]=t[i*2]|t[i*2+1];
+}
+void go(int i,int val){
+	tag[i]=(tag[i]+val)%m;
+	t[i]=(t[i]<<val)|(t[i]>>(m-val));
+}
+void Down(int i){
+	tag[i]=tag[i]%m;
+	if (tag[i]){
+		go(i*2,tag[i]);
+		go(i*2+1,tag[i]);
+		tag[i]=0;
+	}
+}
+void change(int i,int l,int r,int L,int R,int val){
+	if (L<=l&&r<=R) {
+		go(i,val); return;
+	}
+	Down(i);	
+	int mid=(l+r)/2;
+	if (R<=mid) change(i*2,l,mid,L,R,val);
+	else if (L>mid) change(i*2+1,mid+1,r,L,R,val);
+	else change(i*2,l,mid,L,mid,val),change(i*2+1,mid+1,r,mid+1,R,val); 
+	t[i]=t[i*2]|t[i*2+1];
+}
+void ask(int i,int l,int r,int L,int R){
+	if (L<=l&&r<=R){
+		ret|=t[i]; return;
+	}
+	Down(i);
+	int mid=(l+r)/2;
+	if (R<=mid) ask(i*2,l,mid,L,R);
+	else if (L>mid) ask(i*2+1,mid+1,r,L,R);
+	else ask(i*2,l,mid,L,mid),ask(i*2+1,mid+1,r,mid+1,R);
+	t[i]=t[i*2]|t[i*2+1];
+}
+int main(){
+//	freopen("in.txt","r",stdin);
+	n=read(); m=read();
+	rep(i,2,m-1) if (ispri(i)) pre.flip(i);
+//	rep(i,2,m-1) if (ispri(i)) printf("%d ",pre[i]);
+	rep(i,1,n) a[i]=read()%m;
+	rep(i,1,n-1){
+		int x=read(),y=read();
+		insert(x,y); insert(y,x);
+	}
+	dfs(1,0);
+	build(1,1,n);
+	int q=read();
+	rep(i,1,q){
+		int op=read();
+		if (op==1){
+			int u=read(),x=read();
+			x=x%m;
+			change(1,1,n,l[u],r[u],x);
+		}
+		else {
+			int u=read();
+			ret.reset();
+			ask(1,1,n,l[u],r[u]);
+			ret=ret&pre;
+			printf("%d\n",ret.count());
+		}
+	}
+ 	return 0;
+}

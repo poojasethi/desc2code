@@ -1,0 +1,229 @@
+# include <iostream>
+# include <cstdio>
+# include <vector>
+# include <set>
+# include <map>
+# include <bitset>
+# include <algorithm>
+# include <string>
+# include <cstring>
+# include <sstream>
+# include <cstdlib>
+# include <queue>
+# include <stack>
+using namespace std;
+# define MAXN 50100
+# define MAXQ 50100
+# define MAXNLOGN 19
+
+int n,q;
+int sz;
+int A[MAXN];
+int cq;
+int used[MAXN];
+int M[MAXN][MAXNLOGN];
+int P[MAXN];
+int H[MAXN];
+vector<int> adj[MAXN];
+bool visited[MAXN];
+
+void dfs(int u)
+{
+  if(visited[u]) return;
+  visited[u] = true;
+
+  int i,v;
+  for(i = 0; i < adj[u].size(); i++)
+    {
+      v = adj[u][i];
+      if(!visited[v])
+	{
+	  H[v] = H[u] + 1;
+	  P[v] = u;
+	  M[v][0] = u;
+	  dfs(v);
+	}
+    }
+}
+
+
+void build()
+{
+  int i,j;
+  for(j = 1; (1 << j) < n; j++)
+    {
+      for(i = 0; i < n; i++)
+	{
+	  if(M[i][j - 1] != -1)
+	    {
+	      M[i][j] = M[ M[i][j - 1] ][j - 1];
+	    }
+	}
+    }
+  return;
+}
+
+int lca(int p, int q)
+{
+  if(H[p] < H[q]) swap(p, q);
+
+  int log,i;
+
+  for(log = 0; (1 << log) < n; log++);
+  log--;
+
+  for(i = log; i >= 0; i--)
+    if(H[p] - (1 << i) >= H[q])
+      p = M[p][i];
+
+  if(p == q) return q;
+
+  for(i = log; i >= 0; i--)
+    {
+      if(M[p][i] != -1 && M[p][i] != M[q][i])
+	{
+	  p = M[p][i];
+	  q = M[q][i];
+	}
+    }
+
+  return P[p];
+  
+}
+
+
+int anc(int u, int h)
+{
+  int log,i;
+  for(log = 0; (1 << log) < n; log++);
+  log--;
+
+  for(i = log; i >= 0; i--)
+    {
+      if(h >= (1 << i))
+	{
+	  u = M[u][i];
+	  h -= (1 << i);
+	}
+    }
+  return u;
+}
+
+
+
+void calc()
+{
+  int pp,qq,l,i;
+  if(sz == 2)
+    {
+      pp = A[0];
+      qq = A[1];
+      l = lca(pp, qq);
+      printf("%d\n", H[pp] - H[l] + H[qq] - H[l] - 1);
+      return;
+    }
+
+  int x1 = lca(A[0], A[1]);
+  int x2 = lca(A[1], A[2]);
+  int x3 = lca(A[2], A[0]);
+  bool Flag;
+  int k,u,v;
+
+  u = x1;
+  
+  if(H[x2] > H[u]) u = x2;
+  if(H[x3] > H[u]) u = x3;
+
+  Flag = true;
+  memset(used, 0, sizeof(used));
+
+  for(i = 0; i < sz; i++)
+    {
+      if(A[i] == u)
+	{
+	  Flag = false;
+	  break;
+	}
+
+      v = A[i];
+      if(H[v] > H[u])
+	{
+	  k = anc(v, H[v] - H[u] - 1);
+	  if(P[k] == u)
+	    {
+	      if(used[k] == cq)
+		{
+		  Flag = false;
+		  break;
+		}
+	      else used[k] = cq;
+	    }
+	  else
+	    {
+	      if(used[ P[u] ] == cq)
+		{
+		  Flag = false;
+		  break;
+		}
+	      else used[ P[u] ] = cq;
+	    }
+	}
+      else
+	{
+	  if(used[ P[u] ] == cq)
+	    {
+	      Flag = false;
+	      break;
+	    }
+	  else used[ P[u] ] = cq;
+	} 
+    }
+
+  if(!Flag)
+    printf("%d\n", 0);
+  else printf("%d\n", 1);
+}
+
+
+int main()
+{
+  int t,i,j,src,dest;
+  scanf("%d", &t);
+  while(t--)
+    {
+      scanf("%d %d", &n, &q);
+      for(i = 1; i < n; i++)
+	{
+	  scanf("%d %d", &src, &dest);
+	  src--;
+	  dest--;
+	  adj[src].push_back(dest);
+	  adj[dest].push_back(src);
+	}
+
+      memset(visited, false, sizeof(visited));
+      memset(M, -1, sizeof(M));
+      H[0] = 0;
+      dfs(0);
+      build();
+
+      for(i = 1; i <= q; i++)
+	{
+	  cq = i;
+	  scanf("%d", &sz);
+	  for(j = 0; j < sz; j++)
+	    {
+	      scanf("%d", &A[j]);
+	      A[j]--;
+	    }
+	  calc();
+	}
+
+      for(i = 0; i < n; i++)
+	{
+	  adj[i].clear();
+	}
+    }
+
+  return 0;
+}

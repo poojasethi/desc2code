@@ -1,0 +1,109 @@
+#include <cstdio>
+#include <algorithm>
+#include <utility>
+#include <iostream>
+using namespace std;
+#define x first
+#define y second
+#define mp make_pair
+#define calc(x) ( x >= limited ? 1 : -1 )
+const int oo=1000000001,nn=100010;
+struct edge
+{
+    int k,f,next;
+}   e[nn<<1];
+int cq,size,sum,tot,limited;
+int n,L,R,ans = -1;
+int m = 1,now[nn];
+int s[nn];
+bool beused[nn];
+pair< int, int > p[nn],f[nn],g[nn],tempe,res;
+int dl[nn];
+void getsum( int i, int fa )
+{
+	++sum;
+	for (int j=now[i];j;j=e[j].next)
+	if (!beused[e[j].k]&&e[j].k!=fa)
+	getsum(e[j].k,i);
+}
+void getcq(int i,int fa)
+{
+	int t=0;s[i]=1;
+	for (int j=now[i];j;j=e[j].next)
+	if (!beused[e[j].k]&&e[j].k!=fa)
+	{
+		getcq(e[j].k,i);s[i]+=s[e[j].k];t=max(t,s[e[j].k]);
+	}
+    t=max(t,sum-s[i]);
+    if(t<size)
+    {
+		size=t;cq=i;
+	}
+}
+void dfs(int i,int fa,int d,int s)
+{
+	g[d]=max(g[d],mp(s,i));
+	for(int j=now[i];j;j=e[j].next)
+	if(!beused[e[j].k]&&e[j].k!=fa)
+	dfs(e[j].k,i,d+1,s+calc(e[j].f));
+}
+bool check()
+{
+	int i,j,k,l,r;f[0].y=cq;
+	for(i=1;i<=tot;++i)
+	{
+		for(j=1;j<=p[i].x;++j) g[j].x=-oo;
+		dfs(e[p[i].y].k,0,1,calc(e[p[i].y].f));
+		l=1,r=0;
+		for(j=1,k=min(p[i-1].x,R);j<=min(p[i].x,R);++j)
+		{
+			while (k>=max(L-j,0))
+			{
+				while (l<=r&&f[dl[r]]<=f[k]) --r;
+				dl[++r]=k--;
+			}
+			while (l<=r&&j+dl[l]>R) ++l;
+			if (l<=r&&g[j].x+f[dl[l]].x>=0)
+			{
+				tempe=mp(g[j].y,f[dl[l]].y);
+				return true;
+			}
+		}
+		for(j=1;j<=p[i-1].x;++j) f[j]=max(f[j],g[j]);
+		for(;j<=p[i].x;++j)	f[j] = g[j];
+	}
+	return false;
+}
+void work(int i)
+{
+	sum=0;getsum(i,0);size=oo;getcq(i,0);beused[cq]=1;tot=0;
+	for(i=now[cq];i;i=e[i].next) if (!beused[e[i].k])
+	p[++tot]=mp(s[e[i].k]<s[cq]?s[e[i].k]:sum-s[cq],i);
+	sort(p+1,p+tot+1);
+	int l=0,r=oo;
+	while (l<r)
+	{
+		limited=(l+r)>>1;
+		if (check()) l=limited+1;
+		else r=limited;
+	}
+	if (ans<l-1)
+	{
+		ans=limited=l-1;check();res=tempe;
+	}
+	for(i=now[cq];i;i=e[i].next)
+	if (!beused[e[i].k]) work(e[i].k);
+}
+int main()
+{
+	int i,u,v,w;
+	scanf("%d%d%d",&n,&L,&R);
+	for(i=1;i<n;++i)
+	{
+		scanf("%d%d%d",&u,&v,&w);
+		++m;e[m].k=v;e[m].f=w;e[m].next=now[u];now[u]=m;
+		++m;e[m].k=u;e[m].f=w;e[m].next=now[v];now[v]=m;
+	}
+	work(1);
+	printf("%d %d\n",res.x,res.y);
+}

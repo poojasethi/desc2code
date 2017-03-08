@@ -1,0 +1,158 @@
+#include<cstdio>
+#include<cstring>
+#include<cstdlib>
+#include<iostream>
+#include<algorithm>
+#define PR pair<int,int>
+#define sd second
+#define ft first
+using namespace std;
+const int N=200100,inf=-(1<<30)-200;
+int n,Q,len;
+int a[N],rk[N],sa[N],H[N];
+pair<PR,int> b[N];
+void G0()
+{
+	for(scanf("%*d%d",&Q);Q--;) puts("0");
+}
+void init_suffix()
+{
+	int x,y;
+	scanf("%d",&x);
+	for(int i=1;i<n;++i)
+		scanf("%d",&y),rk[i]=a[i]=x-y,x=y;
+	rk[n]=a[n]=inf;
+	for(int i=1;i<n;++i) rk[i+n]=a[i+n]=-a[i];
+	len=n+n-1,a[n+n]=inf-1;
+	for(int p=1,q=0;q<len;p<<=1)
+	{
+		for(int i=1;i+p<=len;++i)
+			b[i]=make_pair(make_pair(rk[i],rk[i+p]),i);
+		for(int i=len-p+1;i<=len;++i)
+			b[i]=make_pair(make_pair(rk[i],inf),i);
+		sort(b+1,b+1+len);
+		rk[b[1].sd]=q=1;
+		for(int i=2;i<=len;++i)
+		{
+			if ( b[i].ft!=b[i-1].ft ) ++q;
+			rk[b[i].sd]=q;
+		}
+	}
+	for(int i=1;i<=len;++i) sa[rk[i]]=i;
+	sa[0]=0,a[0]=inf-2;
+	for(int i=1,j,k=0;i<=len;++i)
+	{
+		if ( k>0 ) --k;
+		j=sa[rk[i]-1];
+		while ( a[i+k]==a[j+k] ) ++k;
+		H[rk[i]]=k;
+	}
+}
+int A[N][20],B[N][20],e[30],KK=0;
+void pre_RMQ()
+{
+	for(int i=1;i<=len;++i)
+		A[i][0]=B[i][0]=H[i];
+	e[0]=1,e[1]=2;
+	for(int i=1;e[i]<=len;++i)
+	{
+		KK=i;
+		e[i+1]=e[i]<<1;
+		for(int j=1;j+e[i-1]<=len;++j)
+			A[j][i]=min(A[j][i-1],A[j+e[i-1]][i-1]);
+		for(int j=len-e[i-1]+1;j<=len;++j)
+			A[j][i]=A[j][i-1];
+		for(int j=len;j>e[i-1];--j)
+			B[j][i]=min(B[j][i-1],B[j-e[i-1]][i-1]);
+		for(int j=e[i-1];j>0;--j)
+			B[j][i]=B[j-1][i];
+	}
+}
+int _A(int x,const int y)
+{
+	if ( H[x+1]<y ) return x+1;
+	++x;
+	for(int i=KK;x<=len && i>=0;--i)
+		if ( A[x][i]>=y ) x+=e[i];
+	return min(len+1,x);
+}
+int _B(int x,const int y)
+{
+	for(int i=KK;x>0 && i>=0;--i)
+		if ( B[x][i]>=y ) x-=e[i];
+	return max(0,x);
+}
+int LL=0,l[N*20],r[N*20],cnt[N*20];
+int P[N];
+int build(const int x,const int y)
+{
+	if ( x==y )
+	{
+		++LL;
+		l[LL]=r[LL]=cnt[LL]=0;
+		return LL;
+	}
+	int now=(++LL),mid=(x+y)>>1;
+	cnt[now]=0;
+	l[now]=build(x,mid),r[now]=build(mid+1,y);
+	return now;
+}
+int _ins(const int AA,const int z,const int x,const int y)
+{
+	if ( x==y )
+	{
+		++LL;
+		l[LL]=r[LL]=0;
+		cnt[LL]=cnt[AA]+1;
+		return LL;
+	}
+	int mid=(x+y)>>1,now=(++LL);
+	cnt[now]=cnt[AA]+1;
+	if ( z<=mid ) 
+		r[now]=r[AA],l[now]=_ins(l[AA],z,x,mid);
+	else l[now]=l[AA],r[now]=_ins(r[AA],z,mid+1,y);
+	return now;
+}
+void maketree()
+{
+	P[0]=build(1,n-1);
+	for(int i=1;i<=len;++i)
+	{
+		if ( sa[i]<n ) P[i]=_ins(P[i-1],sa[i],1,n-1);
+			else P[i]=P[i-1];
+	}
+}
+int G(const int _A,const int _B,const int x,const int y,const int L,const int R)
+{
+	if ( x==L && R==y ) return cnt[_B]-cnt[_A];
+	int mid=(L+R)>>1;
+	if ( y<=mid ) return G(l[_A],l[_B],x,y,L,mid);
+	else if ( x>mid ) return G(r[_A],r[_B],x,y,mid+1,R);
+	return G(l[_A],l[_B],x,mid,L,mid)+G(r[_A],r[_B],mid+1,y,mid+1,R);
+}
+void work()
+{
+	int x,y,L,R,ans=0;
+	for(scanf("%d",&Q);Q--;)
+	{
+		scanf("%d%d",&x,&y);
+		if ( x==y ) printf("%d\n",n-1);
+		else {
+			ans=0;
+			L=_B(rk[x+n],y-x),R=_A(rk[x+n],y-x);
+			if ( 2*x-y-1>=1 ) ans+=G(P[L-1],P[R-1],1,2*x-y-1,1,n-1);
+			if ( y<n-1 ) ans+=G(P[L-1],P[R-1],y+1,n-1,1,n-1);
+			printf("%d\n",ans);
+		}
+	}
+}
+int main()
+{
+	scanf("%d",&n);
+	if ( n==1 ) return G0(),0;
+	init_suffix();
+	pre_RMQ();
+	maketree();
+	work();
+	return 0;
+}

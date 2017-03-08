@@ -1,0 +1,148 @@
+#include<queue>
+#include<vector>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+const int maxn=500000+10;
+using namespace std;
+int n,m,k,q,top;
+struct Edge{
+    int u,v;
+}e[maxn];
+struct Query{
+	int num,col;
+}query[maxn];
+//first-color second-Edge number
+queue<pair<int,int> > modify[maxn];
+//first-color second-time
+vector<pair<int,int> > v[maxn<<2];
+//first-color second-Edge number
+struct Union_Find_Set;
+pair<Union_Find_Set*,int> stack[maxn<<2];
+//first-color second-operation
+int color[maxn];
+struct Union_Find_Set{
+    int pre[maxn];
+    char rank[maxn],dis[maxn];
+    int find(int x)
+    {
+     	return pre[x] ? find(pre[x]):x;
+    }
+    int Distance(int x)
+    {
+        if(!pre[x])
+            return 0;
+        return dis[x]^Distance(pre[x]);
+    }
+    void Union(int x,int y)
+    {
+        int fx=find(x),fy=find(y);
+        if(fx==fy) return ;
+        if(rank[fx]>rank[fy])
+       	{
+	        swap(x,y);
+			swap(fx,fy);	
+		}
+        if(rank[fx]==rank[fy])
+        {
+			++rank[fy];
+			stack[++top]=pair<Union_Find_Set*,int>(this,-fy);
+		}
+        dis[fx]=Distance(x)^Distance(y)^1;
+        pre[fx]=fy;
+        stack[++top]=pair<Union_Find_Set*,int>(this,fx);
+    }
+}dsu[51];
+inline int read()
+{
+    int x=0;
+    char ch=getchar();
+    while (ch<'0'||ch>'9')
+        ch=getchar();
+    while (ch>='0'&&ch<='9')
+    {
+        x=x*10+ch-'0';
+        ch=getchar();
+    }
+    return x;
+}
+void Restore(int bot)
+{
+    while (top>bot)
+    {
+        if (stack[top].second<0)
+            stack[top].first->rank[-stack[top].second]--;
+        else
+            stack[top].first->pre[stack[top].second]=0;
+        top--;
+    }
+}
+void Insert(int o,int l,int r,int ql,int qr,pair<int,int> val)
+{
+    if (ql<=l&&r<=qr)
+    {
+        v[o].push_back(val);
+        return ;
+    }
+    int mid=(l+r)>>1,lson=o<<1,rson=lson|1;
+    if (qr<=mid)
+        Insert(lson,l,mid,ql,qr,val);
+    else
+        if (ql>mid)
+            Insert(rson,mid+1,r,ql,qr,val);
+        else
+        {
+            Insert(lson,l,mid,ql,qr,val);
+            Insert(rson,mid+1,r,ql,qr,val);
+        }
+}
+void solve(int o,int l,int r)
+{
+    int mid=(l+r)>>1,bot=top;
+    for (int i=0;i<(signed)v[o].size();i++)
+    {
+        int x=e[v[o][i].second].u;
+        int y=e[v[o][i].second].v;
+        dsu[v[o][i].first].Union(x,y);
+    }
+    if (l==r)
+    {
+        Union_Find_Set &dsu=::dsu[query[mid].col];
+        int x=e[query[mid].num].u;
+        int y=e[query[mid].num].v;
+        if (dsu.find(x)!=dsu.find(y)||dsu.Distance(x)^dsu.Distance(y))
+            puts("YES"),color[query[mid].num]=query[mid].col;
+        else
+            puts("NO");
+        modify[query[mid].num].pop();
+        if (mid!=q)
+            Insert(1,1,q,mid+1,modify[query[mid].num].front().second,pair<int,int>(color[query[mid].num],query[mid].num));
+    }
+    else
+    {
+        solve(o<<1,l,mid);
+        solve(o<<1|1,mid+1,r);
+    }
+    Restore(bot);
+}
+int main()
+{
+    if (fopen("E.in","r")!=NULL)
+    {
+        freopen("E.in","r",stdin);
+        freopen("E.out","w",stdout);
+    }
+    n=read(),m=read(),k=read(),q=read();
+    for (int i=1;i<=m;i++)
+        e[i].u=read(),e[i].v=read();
+    for (int i=1;i<=q;i++)
+    {
+        query[i].num=read(),query[i].col=read();
+        modify[query[i].num].push(pair<int,int>(query[i].col,i));
+    }
+    for (int i=1;i<=m;i++)
+        modify[i].push(pair<int,int>(0,q));
+    solve(1,1,q);
+    return 0;
+}
+                                                                                           

@@ -1,0 +1,149 @@
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <set>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+const int kMaxN = 100000, kMaxM = 100000, kInf = 0x3f3f3f3f;
+int n, m;
+
+struct Point {
+	int x, y;
+	Point() {}
+	Point(int x_, int y_) : x(x_), y(y_) {}
+	bool operator < (const Point &t) const {
+		return (x < t.x || (x == t.x && y < t.y));
+	}
+} bad[kMaxN + 1], query[kMaxM];
+
+struct Seg {
+	int l, r;
+	Seg() {}
+	Seg(int l_, int r_) : l(l_), r(r_) {}
+	bool operator < (const Seg &t) const {
+		return (r < t.r || (r == t.r && l > t.l));
+	}
+};
+
+struct Ans {
+	int x, y, d;
+	Ans() {}
+	Ans(int x_, int y_, int d_) : x(x_), y(y_), d(d_) {}
+	bool operator < (const Ans &t) const {
+		return (x - y < t.x - t.y || (x - y == t.x - t.y && x > t.x));
+	}
+};
+
+set<Seg> bst;
+set<Ans> ans;
+
+int main() {
+	//freopen("t.in", "r", stdin);
+	int t;
+	for (scanf("%d", &t); t --; ) {
+		scanf("%d", &n);
+		for (int i = 0; i < n; ++ i) scanf("%d%d", &bad[i].x, &bad[i].y);
+		bad[n ++] = Point(kInf, kInf);
+		scanf("%d", &m);
+		for (int i = 0; i < m; ++ i) scanf("%d%d", &query[i].x, &query[i].y);
+		sort(bad, bad + n);
+		bst.clear();
+		ans.clear();
+		for (int pre_x = -1, i = 0, j = 0; i < n; i = j) {
+			while (j < n && bad[j].x == bad[i].x) ++ j;
+			int now_x = bad[i].x;
+			if (now_x - pre_x > 1) {
+				int need = now_x - pre_x - 1;
+				int x = pre_x + 1;
+				while (need) {
+					Seg fst = bst.size() ? *bst.begin() : Seg((kInf << 1) + 1, kInf << 1);
+					Seg snd = Seg((kInf << 1) + 1, kInf << 1);
+					if (bst.size() > 1) {
+						set<Seg>::iterator it = bst.begin();
+						++ it;
+						snd = *it;
+					}
+					int delta = 0, y;
+					if (fst.l != 0) {
+						delta = min(need, fst.l);
+						y = 0;
+					}
+					else {
+						delta = min(need, snd.l - fst.r - 1);
+						y = fst.r + 1;
+					}
+					assert(delta > 0);
+					ans.insert(Ans(x, y, delta));
+					need -= delta;
+					x += delta;
+					int l = y, r = y + delta - 1;
+					set<Seg>::iterator it = bst.lower_bound(Seg(y + delta, y + delta));
+					if (it != bst.end() && it->l == y + delta) {
+						r = it->r;
+						bst.erase(it);
+					}
+					it = bst.lower_bound(Seg(y - 1, y - 1));
+					if (it != bst.end() && it->r == y - 1) {
+						l = it->l;
+						bst.erase(it);
+					}
+					bst.insert(Seg(l, r));
+
+				}
+			}
+			for (int k = i; k < j; ++ k) {
+				int y = bad[k].y;
+				set<Seg>::iterator it = bst.lower_bound(Seg(y, y));
+				if (it != bst.end() && it->l <= y && y <= it->r) {
+					int l = it->l, r = it->r;
+					bst.erase(it);
+					if (l < y) bst.insert(Seg(l, y - 1));
+					if (y < r) bst.insert(Seg(y + 1, r));
+				}
+			}
+			static vector<int> tmp;
+			tmp.clear();
+			tmp.push_back(-1);
+			for (int k = i; k < j; ++ k) tmp.push_back(bad[k].y);
+			tmp.push_back(kInf + 1);
+			int tmp_sz = tmp.size();
+			for (int k = 0; k < tmp_sz - 1; ++ k) {
+				int x = now_x, y = tmp[k] + 1;
+				set<Seg>::iterator it = bst.lower_bound(Seg(y, y));
+				if (it != bst.end() && it->l <= y && y <= it->r)
+					y = it->r + 1;
+				if (y < tmp[k + 1]) {
+					ans.insert(Ans(x, y, 1));
+					int l = y, r = y;
+					it = bst.lower_bound(Seg(y + 1, y + 1));
+					if (it != bst.end() && it->l == y + 1) {
+						r = it->r;
+						bst.erase(it);
+					}
+					it = bst.lower_bound(Seg(y - 1, y - 1));
+					if (it != bst.end() && it->r == y - 1) {
+						l = it->l;
+						bst.erase(it);
+					}
+					bst.insert(Seg(l, r));
+				}
+			}
+			pre_x = now_x;
+		}
+		//for (set<Ans>::iterator it = ans.begin(); it != ans.end(); ++ it)
+		//	printf("%d %d %d\n", it->x, it->y, it->d);
+		for (int i = 0; i < m; ++ i) {
+			int x = query[i].x, y = query[i].y;
+			set<Ans>::iterator it = ans.lower_bound(Ans(x, y, 1));
+			if (it != ans.end() && x - y == it->x - it->y && x >= it->x && x < it->x + it->d && y >= it->y && y < it->y + it->d)
+				puts("Bob");
+			else
+				puts("Alice");
+		}
+	}
+	return 0;
+}

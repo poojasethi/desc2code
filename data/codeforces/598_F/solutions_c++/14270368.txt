@@ -1,0 +1,123 @@
+#include <algorithm>
+#include <iostream>
+#include <iomanip>
+#include <complex>
+#include <vector>
+#include <cmath>
+#define X real()
+#define Y imag()
+#define eps 1e-9
+using namespace std;
+typedef complex<long double> point;
+const int MAX = 1005;
+point p[MAX];
+long double cross(point A, point B)
+{
+	return A.X * B.Y - A.Y * B.X;
+}
+long double dist(point A, point B)
+{
+	long double dx = A.X - B.X;
+	long double dy = A.Y - B.Y;
+	return sqrt(dx * dx + dy * dy);
+}
+bool check(point A, point B, point C, point D)
+{
+	point AB = B - A;
+	point AC = C - A;
+	point AD = D - A;
+	point CD = D - C;
+	if (abs(cross(AB, CD)) < eps)
+		return false;
+	if (cross(AB, AC) >= -eps && cross(AB, AD) >= -eps)
+		return false;
+	if (cross(AB, AC) < -eps && cross(AB, AD) < -eps)
+		return false;
+	return true;
+}
+point intersect(point A, point B, point C, point D)
+{
+	point AB = B - A;
+	point CD = D - C;
+	point AC = C - A;
+	long double alpha = cross(AC, CD) / cross(AB, CD);
+	return A + alpha * AB;
+}
+bool collinear(point A, point B, point C, point D)
+{
+	point AB = B - A;
+	point AC = C - A;
+	point AD = D - A;
+	if (abs(cross(AB, AC)) > eps)
+		return false;
+	if (abs(cross(AB, AD)) > eps)
+		return false;
+	return true;
+}
+bool cmp(point A, point B)
+{
+	if (abs(A.X - B.X) < eps)
+		return (A.Y < B.Y);
+	return (A.X < B.X);
+}
+long double dist2(point A, point B)
+{
+	long double ans = dist(A, B);
+	if (cmp(A, B))
+		ans *= -1.0;
+	return ans;
+}
+int n, q;
+long double get(point A, point B)
+{
+	vector<long double> ver;
+	vector<pair<long double, long double> > seg;
+	for (int i = 0; i < n; i++)
+	{
+		point C = p[i];
+		point D = p[i + 1];
+		if (check(A, B, C, D))
+			ver.push_back(dist2(A, intersect(A, B, C, D)));
+		if (collinear(A, B, C, D))
+		{
+			long double p1 = dist2(A, C);
+			long double p2 = dist2(A, D);
+			if (p1 > p2)
+				swap(p1, p2);
+			seg.push_back(make_pair(p1, p2));
+		}
+	}
+	sort(ver.begin(), ver.end());
+	for (int i = 0; i + 1 < (int)ver.size(); i += 2)
+		seg.push_back(make_pair(ver[i], ver[i + 1]));
+	sort(seg.begin(), seg.end());
+	long double ans = 0.0;
+	long double last = -1e18;
+	for (int i = 0; i < (int)seg.size(); i++)
+	{
+		if (last < seg[i].first)
+			last = seg[i].first;
+		if (seg[i].second > last)
+		{
+			ans += seg[i].second - last;
+			last = seg[i].second;
+		}
+	}
+	return ans;
+}
+int main()
+{
+	ios::sync_with_stdio(false);
+	cin.tie(0);
+	cin >> n >> q;
+	for (int i = 0; i < n; i++)
+		cin >> p[i].X >> p[i].Y;
+	p[n] = p[0];
+	while (q--)
+	{
+		point A, B;
+		cin >> A.X >> A.Y >> B.X >> B.Y;
+		cout << setprecision(18) << fixed << get(A, B) << "\n";
+	}
+	return 0;
+}

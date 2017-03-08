@@ -1,0 +1,136 @@
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+
+#define LY(p) freopen (p".in", "r", stdin); freopen (p".out", "w", stdout)
+#define LL long long
+#define dbl double
+#define ld long double
+#ifdef WIN32
+#define LLD "%I64d"
+#else
+#define LLD "%lld"
+#endif
+#define N 100010
+const LL inf = 1LL << 60;
+char T[N];
+bool vis[N << 1];
+int m;
+int rt = 1, lt = 1, cnt = 1;
+int to[N << 1][5], dis[5][5];
+LL n, g[70][5][5], s[5][5], q[5][5];
+
+struct node {
+	int ch[5], par, len;
+} a[N << 1];
+
+void insert (int c) {
+	int np = ++ cnt, p = lt;
+	lt = np;
+	a[np].len = a[p].len + 1;
+	for ( ; p && ! a[p].ch[c]; p = a[p].par)
+		a[p].ch[c] = np;
+	if (p) {
+		int q = a[p].ch[c];
+		if (a[q].len == a[p].len + 1)
+			a[np].par = q;
+		else {
+			int nq = ++ cnt;
+			a[nq] = a[q], a[nq].len = a[p].len + 1;
+			a[q].par = a[np].par = nq;
+			for (; p && a[p].ch[c] == q; p = a[p].par)
+				a[p].ch[c] = nq;
+		}
+	}
+	else
+		a[np].par = rt;
+}
+
+void build() {
+	for (int i = 1; i <= m; i++)
+		insert (T[i] - 'A');
+}
+
+void dfs (int o) {
+	if (vis[o]) return;
+	vis[o] = 1;
+	for (int i = 0; i < 4; i++)
+		to[o][i] = m * 2;
+	for (int i = 0; i < 4; i++)
+		if (a[o].ch[i]) {
+			dfs (a[o].ch[i]);
+			for (int j = 0; j < 4; j++)
+				to[o][j] = min (to[ a[o].ch[i] ][j] + 1, to[o][j]);
+		}
+		else
+			to[o][i] = 0;
+}
+
+bool judge (LL c) {
+	for (int i = 0; i < 4; i++)
+		for (int j = 0; j < 4; j++)
+			s[i][j] = 0;
+	for (int t = 0; c; t++, c >>= 1)
+		if (c & 1) {
+			for (int i = 0; i < 4; i++)
+				for (int j = 0; j < 4; j++)
+					q[i][j] = inf;
+			for (int i = 0; i < 4; i++)
+				for (int j = 0; j < 4; j++)
+					for (int k = 0; k < 4; k++)
+						q[i][j] = min (s[i][k] + g[t][k][j], q[i][j]);
+			for (int i = 0; i < 4; i++)
+				for (int j = 0; j < 4; j++)
+					s[i][j] = q[i][j];
+		}
+	LL ml = inf;
+	for (int i = 0; i < 4; i++)
+		for (int j = 0; j < 4; j++)
+			ml = min (s[i][j], ml);
+	return ml < n;
+}
+
+LL EF (LL L, LL R) {
+	for (LL mid; mid = (L + R + 1 >> 1), L < R;)
+		if (judge (mid - 1))
+			L = mid;
+		else
+			R = mid - 1;
+	return L;
+}
+
+void work() {
+	dfs (rt);
+	for (int i = 0; i < 4; i++) {
+		int o = a[rt].ch[i];
+		for (int j = 0; j < 4; j++)
+			dis[i][j] = to[o][j] + 1;
+	}
+	for (int i = 0; i < 4; i++)
+		for (int j = 0; j < 4; j++)
+			g[0][i][j] = dis[i][j];
+	for (int t = 0; t < 60; t++) {
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
+				g[t + 1][i][j] = inf;
+
+		for (int i = 0; i < 4; i++)
+			for (int j = 0; j < 4; j++)
+				for (int k = 0; k < 4; k++)
+					g[t + 1][i][j] = min (g[t][i][k] + g[t][k][j], g[t + 1][i][j]);
+	}
+	printf (LLD, EF (1, n));
+}
+
+int main()
+{
+	//LY("string");
+	scanf (LLD, &n);
+	scanf ("%s", T + 1);
+	m = strlen (T + 1);
+	build();
+	work();
+	return 0;
+}

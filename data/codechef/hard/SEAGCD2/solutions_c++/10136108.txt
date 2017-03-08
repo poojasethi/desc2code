@@ -1,0 +1,213 @@
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <set>
+#include <map>
+#define MAX 101
+#define MAXV 100005
+#define MOD 1000000007ll
+#define ll long long int
+using namespace std;
+bool Primes[MAX];
+int lPrimes[MAX],nprimes;
+int masks[MAX];
+
+void generate_primes(){
+	memset(Primes,true,sizeof Primes);
+	Primes[0] = Primes[1] = false;
+	for(int i = 2;i*i <= MAX;i++){
+		if(!Primes[i]) continue;
+		for(int  j = 2*i;j < MAX;j += i) Primes[j] = false;
+	}
+	
+	nprimes = 0;
+	for(int i = 2;i <= MAX/2;i++){
+		if(Primes[i]){
+			lPrimes[nprimes] = i;
+			nprimes++;
+		}
+	}
+}
+
+int amasks[(1 << 15)];
+
+void generate_mask(){
+	memset(masks,0,sizeof masks);
+	for(int i = 2;i < MAX;i++){
+		int mask = 0;
+		for(int k = 0;k < nprimes;k++){
+			if(i % lPrimes[k] == 0) mask |= (1 << k); 
+		}
+		masks[i] = mask;
+	}
+}
+int gfPrimes,lfPrimes,totPrimes; // total prime numbers
+int cmasks[1 << 15],pmasks[1 << 15];
+vector < int > vmasks;
+
+void get_masks(int x){
+	memset(cmasks,0,sizeof cmasks);
+	vmasks.clear();
+	lfPrimes = 0;
+	gfPrimes = 0;
+	for(int i = 2;i <= x;i++){
+		if(Primes[i] && i > 50) gfPrimes++;
+		if(Primes[i] && i < 50) lfPrimes++;
+		if(cmasks[masks[i]] == 0 && masks[i] != 0){
+			//printf("inserting %d %d\n",i,masks[i]);
+			vmasks.push_back(masks[i]);
+		}
+		
+		cmasks[masks[i]]++;				
+	}
+	totPrimes = gfPrimes + lfPrimes;
+	cmasks[0] = 1;
+	
+	// pos of mask
+}
+
+// MODULAR POTENCY ALGORITHM
+
+ll powMod(ll base, ll extra_primesp) {
+  base %= MOD;
+  ll result = 1ll;
+  while (extra_primesp > 0) {
+    if (extra_primesp & 1) result = (result * base) % MOD;
+    base = (base * base) % MOD;
+    extra_primesp >>= 1;
+  }
+  return result;
+}
+
+ll F[MAXV],I[MAXV];
+void generate_factorial(){
+	F[0] = 1; F[1] = 1;
+	I[0] = 1; I[1] = 1;
+	
+	for(int i = 2;i < MAXV;i++){
+		F[i] = (F[i - 1]*((ll)i)) % MOD;
+		I[i] = powMod(F[i],MOD - 2ll);
+	}
+}
+
+ll choose(int n,int m){
+	ll aux = (F[n] * I[m]) % MOD;
+	aux = (aux * I[n - m]) % MOD;
+	return aux;
+}
+
+ll permutation(int n,int m){
+	ll aux = (F[n]*I[n - m]) % MOD;
+	return aux;
+}
+
+int vdp[1 << 15][26];
+ll dp[1 << 15][26];
+int _cntdp;
+
+/*
+ll count_gcd(int mask,int m,int gfp){
+	
+	if(m == 0 && mask != 0) return 1ll;	
+	if(m <= 0) return 0ll;
+	
+	if(vdp[mask][m][gfp] == _cntdp) return dp[mask][m][gfp];
+	vdp[mask][m][gfp] = _cntdp;
+	
+	dp[mask][m][gfp] = 0ll;
+	
+	for(int i = 0;i < vmasks.size();i++){
+		if((mask & vmasks[i]) != 0) continue;
+		dp[mask][m][gfp] = (dp[mask][m][gfp] + (cmasks[vmasks[i]]*count_gcd((mask | vmasks[i]),m - 1,gfp)) % MOD) % MOD;		
+	}
+	
+	//int i = min(gfPrimes,m);
+	int i = min(gfp,m);
+	// here is wrong because it counts more than one time
+	while(i >= 1){
+		dp[mask][m][gfp] = (dp[mask][m][gfp] + (count_gcd(mask,m - i,gfp - i) * permutation(gfp,i)) % MOD) % MOD;
+		i--;
+	}
+	
+	return dp[mask][m][gfp]; 
+}*/
+
+ll result[MAX];
+ll acum[MAX];
+
+ll solve_gcd(int m){
+	memset(result,0,sizeof result);
+	memset(acum,0,sizeof acum);
+	memset(dp,0,sizeof dp);
+	// last try with a multiset, there is only that option
+		
+	for(int i = 1;i <= m;i++){
+		for(int smask = 1;smask < (1 << lfPrimes);smask++){
+			if(i == 1){
+				dp[smask][i] = cmasks[smask];
+			}
+			else{
+				for(int v = 0;v < vmasks.size();v++){
+					if((smask & vmasks[v]) != vmasks[v]) continue;
+					dp[smask][i] = (dp[smask][i] + (cmasks[vmasks[v]]*dp[(smask ^ vmasks[v])][i - 1]) % MOD) % MOD;
+				}				
+			}
+			acum[i] = (acum[i] + dp[smask][i]) % MOD; 
+		}
+		
+		result[i] = (acum[i] * I[i]) % MOD;
+		int h = min(gfPrimes,i);
+		while(h >= 1){
+			ll aux = (acum[i - h]*I[i - h]) % MOD;
+			aux = (aux * choose(gfPrimes,h)) % MOD;
+			result[i] = (result[i] + aux) % MOD;
+			h--;
+		}
+	}
+}
+
+
+
+int main(){
+	generate_primes();
+	generate_mask();
+	generate_factorial();
+	memset(vdp,0,sizeof vdp);
+	_cntdp = 1;
+	int t,n,m;
+	scanf("%d",&t);
+	while(t--){
+		scanf("%d %d",&n,&m);
+		get_masks(m);
+		int l = min(totPrimes,n);
+		solve_gcd(l);
+		
+		ll res = 1ll;
+		while(l > 0){
+			ll aux = result[l];//count_gcd(0,l,gfPrimes);
+			//aux = (aux * I[l]) % MOD;
+			//printf("%lld of ways of length %d\n",aux,l);
+			aux = (aux * F[n]) % MOD;
+			aux = (aux * I[n - l]) % MOD;
+						
+			res = (res + aux) % MOD;
+			l--;
+		}
+		// leaves only counting apareances of primes greater than 50
+		int i = 1;
+		while(i <= min(gfPrimes,n)){
+			ll aux = choose(gfPrimes,i);
+			//printf("%lld ways of length %d\n",aux,i);
+			aux = (aux * F[n]) % MOD;
+			aux = (aux * I[n - i]) % MOD;			
+			res = (res + aux) % MOD;
+			i++;
+		}
+		
+		printf("%lld\n",res);
+		_cntdp++;
+	}
+	return 0;
+}

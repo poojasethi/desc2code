@@ -1,0 +1,219 @@
+//Kanv Kumar
+#include <bits/stdc++.h>
+#define PB push_back
+#define MP make_pair
+#define F first
+#define S second
+#define SZ(a) (int)(a.size())
+#define CLR(a) a.clear()
+#define SET(a,b) memset(a,b,sizeof(a))
+#define LET(x,a) __typeof(a) x(a)
+#define TR(v,it) for( LET(it,v.begin()) ; it != v.end() ; it++)//vector Traversal
+#define FORi(i,a,b) for(LET(i,a) ; i<b; i++)
+#define repi(i,n) for(int i=0; i<(int)n;i++)
+#define si(n) scanf("%d",&n)
+#define sll(n) scanf("%lld",&n)
+#define pi(n) printf("%d",n)
+#define piw(n) printf("%d ",n)// white space
+#define pin(n) printf("%d\n",n)// newline
+#define sortv(a) sort(a.begin(),a.end())// vector sort
+#define all(a) a.begin(),a.end()
+#define DRT() int t; cin>>t; while(t--)
+#define DRI(n) int n; cin>>n;
+#define DRII(n,m) int n,m; cin>>n>>m;
+#define TRACE
+#define md 1000000007
+using namespace std;
+//FILE *fin = freopen("in","r",stdin);
+//FILE *fout = freopen("out","w",stdout);
+#ifdef TRACE
+#define trace1(x) cerr << #x << ": " << x << endl;
+#define trace2(x, y) cerr << #x << ": " << x << " | " << #y << ": " << y << endl;
+#define trace3(x, y, z) cerr << #x << ": " << x << " | " << #y << ": " << y << " | " << #z << ": " << z << endl;
+#define trace4(a, b, c, d) cerr << #a << ": " << a << " | " << #b << ": " << b << " | " << #c << ": " << c << " | " << #d << ": " << d << endl;
+#define trace5(a, b, c, d, e) cerr << #a << ": " << a << " | " << #b << ": " << b << " | " << #c << ": " << c << " | " << #d << ": " << d << " | " << #e << ": " << e << endl;
+#define trace6(a, b, c, d, e, f) cerr << #a << ": " << a << " | " << #b << ": " << b << " | " << #c << ": " << c << " | " << #d << ": " << d << " | " << #e << ": " << e << " | " << #f << ": " << f << endl;
+#else
+#define trace1(x)
+#define trace2(x, y)
+#define trace3(x, y, z)
+#define trace4(a, b, c, d)
+#define trace5(a, b, c, d, e)
+#define trace6(a, b, c, d, e, f)
+#endif
+ 
+typedef long long ll;
+typedef pair<int,int> PII;
+typedef vector<int> VI;
+typedef vector< PII > VPII;
+typedef vector< pair< int , PII > > VPIII;
+
+#define N 100001  
+//#define inf 0x7fffffff
+
+//lazy prop. when updating in range
+int arr[N];
+int tree[3*N];
+int add[3*N];//lazy prop. for adding value
+int mul[3*N];//lazy prop. for multiplying value
+int paste[3*N];// lazy prop. for pasting value
+int qt[3*N];
+int type,val;
+
+void build_tree(int node, int a, int b)
+{
+  	//add[node]=mul[node]=paste[node]=0;
+  	if(a > b) return; // Out of range
+  	
+  	if(a == b)// Leaf node 
+  	{ 
+    	tree[node] = arr[a]; // Init value
+		return;
+	}
+	
+	build_tree(node*2, a, (a+b)/2); // Init left child
+	build_tree(node*2+1, 1+(a+b)/2, b); // Init right child
+	
+	tree[node] = (tree[node*2]+tree[node*2+1])%md; // Init root value
+}
+
+//a...b for segement
+void lazy(int node,int a,int b)
+{
+	//lazy update start
+	if(paste[node] != 0) // This node needs to be updated
+  	 { 
+   		tree[node] =(1LL*paste[node]*(b-a+1))%md; // Update it
+		if(a != b) //not leaf
+		{
+			add[node*2]=add[node*2+1]=0;
+			mul[node*2]=mul[node*2+1]=0;
+
+			paste[node*2] = paste[node]; // Mark child as -> lazy
+    		paste[node*2+1] = paste[node]; // Mark child as -> lazy
+		}
+  	 }
+
+  	 if(mul[node]!=0) //needs to be updated
+  	 {
+  	 	tree[node] =(1LL*mul[node]*tree[node])%md; // Update it
+  	 	if(a!=b) //not leaf
+  	 	{
+  	 		add[node*2]=(1LL*add[node*2]*mul[node])%md; //add's childs -> lazy
+  	 		add[node*2+1]=(1LL*add[node*2+1]*mul[node])%md; 
+
+  	 		mul[node*2]=(mul[node*2]!=0)? (1LL*mul[node*2]*mul[node])%md : mul[node];//mul's childs -> lazy
+  	 		mul[node*2+1]=(mul[node*2+1]!=0)? (1LL*mul[node*2+1]*mul[node])%md : mul[node];
+  	 	}
+  	 }
+
+  	 if(add[node]!=0) //needs to be updated
+  	 {
+  	 	tree[node]=(((1LL*(b-a+1)*add[node]))%md + tree[node])%md;
+  	 	if(a!=b)
+  	 	{
+  	 		add[node*2]=(add[node*2]+add[node])%md; //add's childs -> lazy
+  	 		add[node*2+1]=(add[node*2+1]+add[node])%md;
+  	 	}
+  	 }
+
+  	 paste[node] = add[node] = mul[node] =0; // Reset it
+  	 //Lazy update end
+}
+
+// Updation of elements within range [i, j] with value val using lazy propagation
+void update_tree(int node, int a, int b, int i, int j)//2 time lazy call...imp
+{ 
+	lazy(node,a,b);
+
+	if(a > b || a > j || b < i) // Current segment is not within range [i, j]
+		return;
+
+  	if(a >= i && b <= j) // Segment is fully within range
+  	{ 
+    		if(type==1)
+    			add[node]=val;//imp
+    	    if (type==2)
+    			mul[node]=val;//imp
+ 			if(type==3)
+ 				paste[node] =val;//imp
+ 			lazy(node,a,b); //lazy for that segment
+	}
+ 
+ 	else
+ 	{
+		update_tree(node*2, a, (a+b)/2, i, j); // Updating left child
+		update_tree(1+node*2, 1+(a+b)/2, b, i, j); // Updating right child
+		tree[node] = (tree[node*2]+tree[node*2+1])%md; // Updating root with sum value
+	}
+}
+ 
+/**
+ * Query tree to get max element value within range [i, j]
+ */
+void query_tree(int node, int a, int b, int i, int j) 
+{
+	lazy(node,a,b);//lazy propogate and then query
+	
+	if(a > b || a > j || b < i) qt[node]=0; // Out of range
+	
+	
+	else if(a >= i && b <= j) // Current segment is totally within range [i, j]
+	{	
+		qt[node]=tree[node];
+ 	}
+
+ 	else
+ 	{
+		query_tree(node*2, a, (a+b)/2, i, j); // Query left child
+		query_tree(node*2 + 1 , (a+b)/2 + 1 , b, i, j); // Query right child
+ 		qt[node]=(qt[node*2]+qt[node*2+1])%md; // Return final result
+	}
+	//return res;
+}
+ 
+int main() 
+{
+	int x,y,n,q;
+	cin>>n>>q;
+	//memset(tree,0,sizeof(tree));
+	for(int i = 1; i <= n; i++) cin>>arr[i];
+ 	
+	build_tree(1, 1, n);
+	memset(add,0,sizeof(add)); //SET(add,0)
+	memset(mul,0,sizeof(mul)); //SET(mul,0)
+	memset(paste,0,sizeof(paste)); //SET(paste,0)
+	//memset(qt,0,sizeof(qt));
+	//int type;
+	while(q--)
+	{
+		cin>>type;
+		if(type==1)
+		{
+			cin>>x>>y>>val;
+			update_tree(1,1,n,x,y);
+		}
+		else if(type==2)
+		{
+			cin>>x>>y>>val;
+			update_tree(1,1,n,x,y);
+		}
+		else if(type==3)
+		{
+			cin>>x>>y>>val;
+			update_tree(1,1,n,x,y);
+		}
+		else if(type==4)
+		{
+			cin>>x>>y;
+			query_tree(1, 1, n, x, y);
+			cout << qt[1] << endl;				
+		}
+		/*update_tree(1, 0, N-1, 0, 6, 5); // Increment range [0, 6] by 5
+		update_tree(1, 0, N-1, 7, 10, 12); // Incremenet range [7, 10] by 12
+		update_tree(1, 0, N-1, 10, N-1, 100); // Increment range [10, N-1] by 100*/
+ 
+		//cout << query_tree(1, 0, n-1, x-1, y-1) << endl; // Get max element in range [0, N-1]
+	}
+	return 0;
+}

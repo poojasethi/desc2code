@@ -1,0 +1,215 @@
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+#include <cstdlib>
+#include <iostream>
+#include <cassert>
+#include <sstream>
+#include <bitset>
+#include <numeric>
+#include <climits>
+#include <string>
+#include <cctype>
+#include <ctime>
+#include <iomanip>
+#include <cmath>
+#include <vector>
+#include <queue>
+#include <list>
+#include <map>
+#include <set>
+using namespace std;
+
+#define foreach(e, x) for (__typeof((x).begin()) e = (x).begin(); e != (x).end(); ++e)
+
+typedef long long int64; 
+
+typedef pair <int, int> PII;
+
+const int INF = int(1e9);
+const int MAX_N = int(1e5) + 100;
+const int MAX_M = 30 * int(1e5);
+
+int qs[MAX_N][2];
+int lc[MAX_M], rc[MAX_M], aux[MAX_M], minimal[MAX_M], tot;
+PII key[MAX_M];
+int lower[MAX_M], upper[MAX_M];
+
+inline void update(int k) {
+	minimal[k] = min(key[k].second, min(minimal[lc[k]], minimal[rc[k]]));
+	if (lc[k]) {
+		lower[k] = lower[lc[k]];
+	} else {
+		lower[k] = key[k].first;
+	}
+	if (rc[k]) {
+		upper[k] = upper[rc[k]];
+	} else {
+		upper[k] = key[k].first;
+	}
+}
+
+inline void l_rotate(int &x) {
+	int y = rc[x];
+	rc[x] = lc[y];
+	lc[y] = x;
+	update(x);
+	x = y;
+}
+
+inline void r_rotate(int &x) {
+	int y = lc[x];
+	lc[x] = rc[y];
+	rc[y] = x;
+	update(x);
+	x = y;
+}
+
+void insert(int &k, const PII &x) {
+	if (!k) {
+		k = ++tot;
+		key[k] = x;
+		aux[k] = rand();
+		minimal[k] = x.second;
+		lower[k] = upper[k] = x.first;
+		return;
+	}
+	if (x < key[k]) {
+		insert(lc[k], x);
+		if (aux[lc[k]] < aux[k]) {
+			r_rotate(k);
+		}
+	} else {
+		insert(rc[k], x);
+		if (aux[rc[k]] < aux[k]) {
+			l_rotate(k);
+		}
+	}
+	update(k);
+}
+
+void erase(int &k, const PII &x) {
+	if (key[k] == x) {
+		if (lc[k] == 0 && rc[k] == 0) {
+			k = 0;
+			return;
+		}
+		if (aux[lc[k]] < aux[rc[k]]) {
+			r_rotate(k);
+			erase(rc[k], x);
+		} else {
+			l_rotate(k);
+			erase(lc[k], x);
+		}
+	} else {
+		erase(x < key[k] ? lc[k] : rc[k], x);
+	}
+	update(k);
+}
+
+int find_minimal(int k, int l, int r) {
+	if (k == 0 || l > upper[k] || r < lower[k]) {
+		return INF;
+	}
+	if (l <= lower[k] && upper[k] <= r) {
+		return minimal[k];
+	}
+	int ret = INF;
+	if (l <= key[k].first && key[k].first <= r) {
+		ret = min(ret, key[k].second);
+	}
+	if (l <= upper[lc[k]]) {
+		ret = min(ret, find_minimal(lc[k], l, r));
+	}
+	if (r >= lower[rc[k]]) {
+		ret = min(ret, find_minimal(rc[k], l, r));
+	}
+	return ret;
+}
+
+int tree[MAX_N * 4];
+
+void modify(int k, int s, int t, int p, int x, bool v) {
+	if (v) {
+		insert(tree[k], make_pair(qs[x][1], x));
+	} else {
+		erase(tree[k], make_pair(qs[x][1], x));
+	}
+	if (s == t) {
+		return;
+	}
+	int mid = s + t >> 1;
+	if (p <= mid) {
+		modify(k << 1, s, mid, p, x, v);
+	} else {
+		modify(k << 1 | 1, mid + 1, t, p, x, v);
+	}
+}
+
+int query(int k, int s, int t, int l, int r, int d, int u) {
+	if (l > t || r < s) {
+		return INF;
+	}
+	if (l <= s && t <= r) {
+		return find_minimal(tree[k], d, u);
+	}
+	int mid = s + t >> 1, ret = INF;
+	if (l <= mid) {
+		ret = min(ret, query(k << 1, s, mid, l, r, d, u));
+	}
+	if (mid < r) {
+		ret = min(ret, query(k << 1 | 1, mid + 1, t, l, r, d, u));
+	}
+	return ret;
+}
+
+int n, m;
+int mat[MAX_N][5], ans[MAX_N];
+int order[MAX_N];
+vector <int> all_x;
+
+bool cmp(int i, int j) {
+	return mat[i][4] < mat[j][4];
+}
+
+int main() {
+	srand(time(0));
+	minimal[0] = INF;
+	aux[0] = INT_MAX;
+	upper[0] = -INF, lower[0] = INF;
+
+	scanf("%d", &n);
+	for (int i = 0; i < n; i++) {
+		order[i] = i;
+		scanf("%d%d%d%d%d", mat[i], mat[i] + 2, mat[i] + 1, mat[i] + 3, mat[i] + 4);
+		//all_x.push_back(mat[i][0]);
+		//all_x.push_back(mat[i][2]);
+	}
+	sort(order, order + n, cmp);
+	scanf("%d", &m);
+	for (int i = 0; i < m; i++) {
+		scanf("%d%d", qs[i], qs[i] + 1);
+		all_x.push_back(qs[i][0]);
+	}
+	sort(all_x.begin(), all_x.end());
+	all_x.resize(unique(all_x.begin(), all_x.end()) - all_x.begin());
+	int l = all_x.size();
+	for (int i = 0; i < m; i++) {
+		int p = lower_bound(all_x.begin(), all_x.end(), qs[i][0]) - all_x.begin() + 1;
+		modify(1, 1, l, p, i, true);
+	}
+	for (int t = 0; t < n; t++) {
+		int i = order[t];
+		int tl = lower_bound(all_x.begin(), all_x.end(), mat[i][0]) - all_x.begin() + 1;
+		int tr = upper_bound(all_x.begin(), all_x.end(), mat[i][2]) - all_x.begin();
+		int p = query(1, 1, l, tl, tr, mat[i][1], mat[i][3]);
+		if (p < INF) {
+			ans[p] = i + 1;
+			int q = lower_bound(all_x.begin(), all_x.end(), qs[p][0]) - all_x.begin() + 1;
+			modify(1, 1, l, q, p, false); 
+		}
+	}
+	for (int i = 0; i < m; i++) {
+		printf("%d\n", ans[i]);
+	}
+}

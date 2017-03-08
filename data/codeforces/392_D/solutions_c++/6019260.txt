@@ -1,0 +1,94 @@
+#include <algorithm>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+#include <set>
+#include <queue>
+#define N 300010
+#define mk(x,y) make_pair(x,y)
+#define fi first
+#define se second
+#define For(i,x,y) for (i=x;i<=y;i++)
+using namespace std;
+int i,j,k,n,m,s,an;
+int a[N],b[N],c[N],d[N],flag[N],f[N],g[N][3],fa[N],ff[N*2];
+set<pair<int,int> > S;
+priority_queue<int> q;
+typedef set<pair<int,int> >::iterator w1;
+inline void prepare() {
+	For(i,1,n) scanf("%d",&a[i]),d[++s]=a[i];
+	For(i,1,n) scanf("%d",&b[i]),d[++s]=b[i];
+	For(i,1,n) scanf("%d",&c[i]),d[++s]=c[i];
+	sort(d+1,d+s+1);
+	For(i,1,s) if (i==1||d[i]>d[m]) d[++m]=d[i];
+	For(i,1,n) a[i]=lower_bound(d+1,d+m+1,a[i])-d;
+	For(i,1,n) b[i]=lower_bound(d+1,d+m+1,b[i])-d;
+	For(i,1,n) c[i]=lower_bound(d+1,d+m+1,c[i])-d;
+	For(i,1,n) if (flag[a[i]]!=1) flag[a[i]]=1,fa[i]=1;
+	For(i,1,n) if (flag[b[i]]!=2) flag[b[i]]=2,g[b[i]][1]=i;
+	For(i,1,n) if (flag[c[i]]!=3) flag[c[i]]=3,g[c[i]][2]=i;
+}
+inline void dian(int x) {
+	if (!flag[x]) s++;
+	flag[x]++;
+}
+inline void work1() {
+	s=0;
+	For(i,1,m) flag[i]=0;
+	For(i,1,n) dian(a[i]);
+	For(i,1,n) dian(b[i]);
+	For(i,0,n) f[i]=N;
+	for (j=1;j<=n&&s<m;j++) dian(c[j]);
+	for (i=n;i>=0;i--) {
+		f[i]=j-1;
+		if (!i) break;
+		if (!(--flag[b[i]])) s--;
+		for (;j<=n&&s<m;j++) dian(c[j]);
+		if (s<m) break;
+	}
+}
+inline void Into(int x,int y) {
+	S.insert(mk(x,y)); q.push(-x-y);
+}
+inline void Do(int r,int k) {
+	w1 A=S.lower_bound(mk(r+1,-1));
+	if (A!=S.end()&&A->se>=k) return;
+	int B=-1,C,F=0;
+	for (;;) {
+		A=S.lower_bound(mk(r+1,-1)); A--;
+		if (A->se==k) F=1;
+		if (A->se>=k) break;
+		if (B<0) C=A->se;
+		B=A->fi; ff[A->fi+A->se]++; S.erase(A);
+	}
+	if (B<0) return;
+	A=S.lower_bound(mk(r+1,-1));
+	if (r<n&&!(A!=S.end()&&A->fi==r+1)) Into(r+1,C);
+	if (!F) Into(B,k);
+}
+inline void work2() {
+	S.insert(mk(-1,N+1));
+	For(i,0,n) if (!i||f[i]!=f[i-1]) Into(i,f[i]);
+	for (i=n;i>=0;i--) {
+		int res;
+		for (;ff[res=-q.top()];) ff[res]--,q.pop();
+		an=min(an,i+res);
+		if (!i) break;
+		int A=a[i];
+		if (fa[i]) {
+			int B=g[A][1],C=g[A][2];
+			if (!B&&!C) return;
+			if (!B) Do(n,C);
+			else if (!C) Do(B-1,N);
+			else Do(B-1,C);
+		}
+	}
+}
+int main() {
+	scanf("%d",&n);
+	prepare();
+	work1();
+	an=n*3,work2();
+	printf("%d\n",an);
+	return 0;
+}

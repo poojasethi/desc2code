@@ -1,0 +1,117 @@
+#include <bits/stdc++.h>
+#define filein(t) freopen(t, "r", stdin)
+#define fileout(t) freopen(t, "w", stdout)
+#define ll long long
+#define ull unsigned long long
+#define mp make_pair
+#define f first
+#define s second
+#define N 250007
+#define cs 1373
+#define BIT(i, n) ( (n >> i) & 1 )
+#define ln 1000000000
+#define oo 1000000007
+#define Pa pair <int, int>
+
+using namespace std;
+
+int pos[N], LCP[N], Sa[N], len, n, tmp[N], L, R, WL, WR;
+int Mi[20][N];
+pair <int, int> ans;
+string S;
+
+bool cmp(int p, int q)
+{
+    if(pos[p] != pos[q])
+        return pos[p] < pos[q];
+    p += len;
+    q += len;
+    return ((p <= n && q <= n) ? (pos[p] < pos[q]) : (p > q));
+}
+
+void Build_SA()
+{
+    for(int i=1; i<=n; i++)
+    {
+        Sa[i] = i;
+        pos[i] = S[i] - 'a' + 1;
+    }
+    for(len=1;; len*=2)
+    {
+        sort(Sa+1, Sa+n+1, cmp);
+        for(int i=1; i<=n; i++)
+            tmp[i+1] = tmp[i] + cmp(Sa[i], Sa[i+1]);
+        for(int i=1; i<=n; i++)
+            pos[Sa[i]] = tmp[i]+1;
+        if(tmp[n] == n-1)
+            break;
+    }
+}
+
+void Build_LCP()
+{
+    int k = 0;
+    for(int i=1; i<=n; i++)
+    {
+        if(pos[i] == n) continue;
+        int u = Sa[pos[i]+1];
+        while(S[i+k] == S[u+k] && u+k <= n) k++;
+        LCP[pos[i]] = k;
+        if(k)   k--;
+    }
+}
+
+int Get_Min(int d, int c)
+{
+    if(d > c)   return ln;
+    int lo = log2(c-d+1);
+    return min(Mi[lo][d], Mi[lo][c-(1<<lo)+1]);
+}
+
+void Solve(int x)
+{
+    int L = 1;
+    int R = x+1;
+    while(R - L > 1)
+    {
+        int M = (L + R) / 2;
+        if(Get_Min(M, x) >= WL) R = M;
+        else L = M;
+    }
+    if(ans.f == x - R + 2)
+        ans.s = max(ans.s, Get_Min(R, x));
+    if(ans.f < x - R + 2)
+    {
+        ans.f = x - R + 2;
+        ans.s = Get_Min(R, x);
+    }
+}
+
+int main()
+{
+    //filein("REPSTR.inp");   fileout("REPSTR.out");
+    while(cin >> WL >> WR)
+    {
+        if(WL == WR && WL == 0)
+            return 0;
+        cin >> S;
+        n = S.size();
+        if(WL > n)
+        {
+            cout << "0 0" << endl;
+            continue;
+        }
+        S = ' ' + S;
+        ans = mp(1, n);
+        Build_SA();
+        Build_LCP();
+        for(int i=1; i<n; i++)
+            Mi[0][i] = LCP[i];
+        for(int j=1; j<18; j++)
+            for(int i=1; i<n-(1<<(j-1)); i++)
+                Mi[j][i] = min(Mi[j-1][i], Mi[j-1][i+(1<<(j-1))]);
+        for(int i=1; i<n; i++)
+            Solve(i);
+        cout << ans.f << " "  << min(ans.s, min(WR, n)) << endl;
+    }
+}

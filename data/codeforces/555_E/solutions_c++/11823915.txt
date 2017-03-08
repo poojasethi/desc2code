@@ -1,0 +1,124 @@
+// in the name of god
+#include <bits/stdc++.h>
+#define F first
+#define S second
+#define ll long long
+using namespace std;
+typedef pair<int,int> pii;
+typedef pair<pii,int> piii;
+const int maxn=2e5+10;
+
+vector <int> v[maxn];
+vector <int> edge[maxn];
+int flag[maxn],val[2][maxn];
+bool bad[maxn];
+int par[maxn][20];
+
+inline int dfs(int x,int p)
+{
+    par[x][0]=p;
+    for(int i=1;i<20;i++)
+        par[x][i]=par[par[x][i-1]][i-1];
+    flag[x]=flag[p]+1;
+    int ret=flag[x];
+    int cnt=0;
+    for(int i=0;i<v[x].size();i++)
+    {
+        int u=v[x][i];
+        if(flag[u]==0)
+            ret=min(ret,dfs(u,x));
+        else
+        {
+            if(flag[u]==flag[x]-1)
+                cnt++;
+            else
+                ret=min(ret,flag[u]);
+        }
+    }
+    if(cnt>1)
+        ret=min(ret,flag[x]-1);
+    bad[x]=ret==flag[x];
+    return ret;
+}
+inline int Par(int x,int k)
+{
+    for(int i=20;i>=0;i--)
+        if(k&(1<<i))
+        {
+            x=par[x][i];
+            k-=(1<<i);
+        }
+    return x;
+}
+inline int cpar(int x,int y)
+{
+    if(flag[x]<flag[y])
+        swap(x,y);
+    x=Par(x,flag[x]-flag[y]);
+    if(x==y)
+    return x;
+    for(int i=19;i>=0;i--)
+        if(par[x][i]!=par[y][i])
+        {
+            x=par[x][i];
+            y=par[y][i];
+        }
+    return par[x][0];
+}
+inline pii dfs2(int x)
+{
+    pii ret(0,0);
+    ret.F+=val[0][x];
+    ret.S+=val[1][x];
+    flag[x]=true;
+    for(int i=0;i<v[x].size();i++)
+        if(flag[v[x][i]]==0)
+        {
+            pii g=dfs2(v[x][i]);
+            ret.F+=g.F;
+            ret.S+=g.S;
+        }
+    if(bad[x]&&ret.F&&ret.S)
+    {
+        cout<<"No";
+        exit(0);
+    }
+    return ret;
+}
+
+int main()
+{
+    int n,m,q;
+    cin>>n>>m>>q;
+    for(int i=1;i<=m;i++)
+    {
+        int x,y;
+        cin>>x>>y;
+        v[x].push_back(y);
+        v[y].push_back(x);
+    }
+    for(int i=1;i<=n;i++)
+        if(flag[i]==0)
+            dfs(i,0);
+    while(q--)
+    {
+        int x,y;
+        cin>>x>>y;
+        int u=cpar(x,y);
+        val[0][x]++;
+        val[0][u]--;
+        val[1][u]--;
+        val[1][y]++;
+    }
+    memset(flag,0,sizeof flag);
+    for(int i=1;i<=n;i++) if(flag[i]==0){
+        pii G=dfs2(i);
+        if(G.F||G.S)
+        {
+            cout<<"No";
+            return 0;
+        }
+    }
+    cout<<"Yes";
+    return 0;
+}

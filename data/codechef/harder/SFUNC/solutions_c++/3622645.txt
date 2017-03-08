@@ -1,0 +1,147 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+#ifdef WIN32
+#define LD "%I64d"
+#else
+#define LD "%lld"
+#endif
+long long n,mod,N;
+void up(long long &v,long long x){
+   v+=x;
+   while(v>mod)v-=mod;
+   while(v<0) v+=mod;
+}
+ 
+struct matrix{
+   long long x[25][25];
+   int n,m;
+   void clean(){
+     n=0,m=0;
+     memset(x,0,sizeof(x));
+   }
+   void clear(){
+     memset(x,0,sizeof(x));
+     for(int i=0;i<n;i++)
+       x[i][i]=1;
+   }
+};
+ 
+ 
+int k;
+const int sqn=1000050;
+int ss[sqn],sz,f[sqn];
+ 
+long long sta[50];
+int top;
+ 
+void IPS(){ 
+  scanf("%lld",&n);
+  scanf("%d",&k);
+  scanf("%lld",&mod);
+  N=n;
+  for(int i=2;i*i<=n;i++)
+    if(!f[i]){
+	   for(int j=2;i*j<=sqn-50;j++)
+	     f[i*j]=1;
+	   if(n%i==0){
+	     sta[++top]=i;
+	     while(n%i==0) n/=i;
+	   }  
+	}
+  if(n!=1) sta[++top]=n;
+}
+ 
+matrix MF,ST;
+matrix Mf[42];
+
+long long Tms=0;
+ 
+long long cheng(long long x,long long y){
+  long long ans=0;
+  for(;y;y/=2,up(x,x))
+    if(y&1)
+      up(ans,x);
+  return ans;    
+}
+ 
+matrix cheng(const matrix &x,const matrix &y){
+  matrix ans;
+  ans.clean();
+  ans.n=x.n;ans.m=y.m;
+  for(int i=0;i<ans.n;i++)
+    for(int j=0;j<ans.m;j++)
+      for(int k=0;k<x.m;k++)
+        up(ans.x[i][j],cheng(x.x[i][k],y.x[k][j]));
+  return ans;      
+}
+ 
+matrix ksm(long long y){
+   matrix ans;
+   ans.m=ans.n=k+2;
+   int x=0;
+   ans.clear();
+   for(;y;y/=2,x++)
+     if(y&1)
+       ans=cheng(ans,Mf[x]);
+   return ans;    
+}
+ 
+long long ksm(long long x,long long y){
+  long long ans=1;
+  for(;y;y/=2,x=cheng(x,x))
+    if(y&1)
+      ans=cheng(ans,x);
+  return ans;    
+}
+ 
+long long S(long long x){
+  matrix st=ST;
+  for(int i=0;x;x/=2,i++)
+    if(x&1)
+      st=cheng(st,Mf[i]);
+  return st.x[0][k+1];
+}
+long long Ans;
+void go(int v,long long Lcm,int _){
+  if(v==top+1){
+	 long long x=N/Lcm;
+	 if(_)Ans-=cheng(ksm(Lcm,k),S(x));
+	 else Ans+=cheng(ksm(Lcm,k),S(x));
+	 Ans%=mod;
+	 return;
+  }
+  go(v+1,Lcm*sta[v],_^1);
+  go(v+1,Lcm,_);
+}
+ 
+void WRK(){
+  go(1,1,0);
+  if(Ans<0)Ans+=mod;
+  printf("%lld",Ans);
+}
+
+void PFM(){
+  MF.clean();
+  MF.n=MF.m=k+2;
+  for(int i=0;i<=k;i++) MF.x[0][i]=MF.x[i][i]=1;
+  for(int j=1;j<=k;j++)
+    for(int i=1;i<j;i++)
+      MF.x[i][j]=(MF.x[i-1][j-1]+MF.x[i][j-1])%mod;
+  MF.x[k][k+1]=1;MF.x[k+1][k+1]=1;
+  ST.clean();
+  ST.n=1;ST.m=k+2;
+  for(int i=0;i<=k;i++) ST.x[0][i]=1;
+  ST.x[0][k+1]=0;
+  Mf[0]=MF;
+  for(int i=1;i<=40;i++)
+    Mf[i]=cheng(Mf[i-1],Mf[i-1]);
+}
+ 
+int main(){ 
+  IPS();
+  if(N==0) {printf("0");return 0;}
+  PFM();
+  WRK();
+}

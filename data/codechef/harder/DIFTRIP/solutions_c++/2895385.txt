@@ -1,0 +1,114 @@
+#include<iostream>
+#include<stdio.h>
+#include<algorithm>
+#include<vector>
+#include<math.h>
+
+#define N 1010010
+#define F first
+#define S second
+
+using namespace std;
+
+int P[N][20];
+int rank[N][20];
+int deg[N],n;
+int sim[N];
+pair < pair < int , int > , int > tmp[N];
+
+vector <int> g[N];
+
+void dfs(int u)
+ {
+  int i=0;
+  for (i=0;i<g[u].size();i++)
+    if (!sim[g[u][i]])
+     {
+      P[g[u][i]][0]=u;
+      sim[g[u][i]]=sim[u]+1;
+      dfs(g[u][i]);
+     }
+ }
+
+void init()
+ {
+  sim[1]=1;
+  dfs(1);
+  int i=0,k=0;
+  for (k=1;k<=17;k++)
+   for (i=1;i<=n;i++)
+    P[i][k]=P[P[i][k-1]][k-1];
+ }
+
+void SORT()
+ {
+  int i=0,k=0;
+  for (i=1;i<=n;i++)
+   rank[i][0]=deg[i];
+  for (k=1;k<=17;k++)
+   {
+    for (i=1;i<=n;i++)
+     {
+      tmp[i].F.F=rank[i][k-1];
+      if (sim[i] <= (1 << (k-1))) tmp[i].F.S=-1; else
+                               tmp[i].F.S=rank[P[i][k-1]][k-1];
+      tmp[i].S=i;
+     }
+    sort(tmp+1,tmp+n+1);
+    rank[tmp[1].S][k]=1;
+    for (i=2;i<=n;i++)
+     if (tmp[i-1].F == tmp[i].F)
+      rank[tmp[i].S][k]=rank[tmp[i-1].S][k]; else
+      rank[tmp[i].S][k]=rank[tmp[i-1].S][k]+1;
+   }
+ }
+
+void read()
+ {
+  cin>>n;
+  int i=0,x=0,y=0;
+  for (i=1;i<n;i++)
+   {
+    cin>>x>>y;
+    g[x].push_back(y);
+    g[y].push_back(x);
+    deg[x]++;
+    deg[y]++;
+   }
+ }
+
+int lcp(int u,int v)
+ {
+  if (rank[u][17] == rank[v][17]) return min(sim[u],sim[v]);
+  int ret=0,k=0;
+  for (k=17;k>=0;k--)
+   {
+    if (u <= 0 || v <= 0) break;
+    if (rank[u][k] == rank[v][k])
+     {
+      ret+=(1<<k);
+      u=P[u][k];
+      v=P[v][k];
+     }
+   }
+  return ret;
+ }
+
+void CALC()
+ {
+  long long ret=0;
+  int ipop=0;
+  for (ipop=1;ipop<=n;ipop++)
+   ret+=sim[ipop];
+  for (ipop=1;ipop<n;ipop++)
+   ret-=lcp(tmp[ipop].S,tmp[ipop+1].S);
+  cout<<ret<<endl;
+ }
+
+main()
+ {
+  read();
+  init();
+  SORT();
+  CALC();
+ }

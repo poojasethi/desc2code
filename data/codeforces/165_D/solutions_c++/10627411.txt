@@ -1,0 +1,112 @@
+#include <cstdio>
+#include <vector>
+using namespace std;
+
+#define FOR(I,S,T) for(int I=S;I<T;++I)
+#define REP(I,N) FOR(I,0,N)
+
+#define ADJ(U, AI) (E[A[U][AI]].u == U ? E[A[U][AI]].v : E[A[U][AI]].u)
+
+struct Edge {
+	int u;
+	int v;
+};
+
+vector<Edge> E;
+vector<vector<int> > A;
+
+int Root = 0;
+
+struct BGPos {
+	int s;
+	int d;
+};
+
+vector<BGPos> P;
+vector<bool> V;
+vector<vector<int> > FT;
+
+void PrepareFT(int s, int u, int d) {
+	if (V[u]) return;
+	V[u] = true;
+	P[u].s = s;
+	P[u].d = d;
+	FT[s].push_back(0);
+	REP(ai, A[u].size()) {
+		int v = ADJ(u, ai);
+		PrepareFT(s, v, d+1);
+	}
+}
+
+
+int Inc(int s, int x, int d) {
+	for (; x < FT[s].size(); x = (x | (x-1)) + 1) FT[s][x] += d;
+}
+
+int Sum(int s, int x) {
+	int res = 0;
+	for (; x > 0; x = x & (x-1)) res += FT[s][x];
+	return res;
+}
+
+int main() {
+	int N, Q;
+	scanf("%d", &N);
+	E = vector<Edge>(N);
+	A = vector<vector<int> >(N);
+	P = vector<BGPos>(N);
+	V = vector<bool>(N);
+	REP(i, N-1) {
+		int u, v;
+		scanf("%d%d", &u, &v);
+		--u; --v;
+		E[i].u = u;
+		E[i].v = v;
+		A[u].push_back(i);
+		A[v].push_back(i);
+		if (A[u].size() > 2) Root = u;
+		if (A[v].size() > 2) Root = v;
+	}
+	
+	V[Root] = true;
+	FT = vector<vector<int> >(A[Root].size());
+	REP(s, A[Root].size()) {
+		int v = ADJ(Root, s);
+		FT[s].push_back(0);
+		PrepareFT(s, v, 1);
+		FOR(fti, 1, FT[s].size()) Inc(s, fti, 1);
+	}
+
+	scanf("%d", &Q);
+	REP(q, Q) {
+		int t, a, b;
+		scanf("%d%d", &t, &a);
+		Edge e = E[a-1];
+		int u = (P[e.u].d < P[e.v].d) ? e.v : e.u;
+		if (t == 1) {
+			Inc(P[u].s, P[u].d, 1);
+		} else if (t == 2) {
+			Inc(P[u].s, P[u].d, -1);
+		} else {
+			scanf("%d", &b);
+			int u = a - 1;
+			int v = b - 1;
+			int du = Sum(P[u].s, P[u].d);
+			int dv = Sum(P[v].s, P[v].d);
+			//printf("%d (%d %d):%d <-> %d (%d %d):%d\n", u, P[u].s, P[u].d, du, v, P[v].s, P[v].d, dv);
+			if (P[u].s == P[v].s) {
+				if (du - dv == P[u].d - P[v].d) {
+					printf("%d\n", du > dv ? du - dv : dv - du);
+				} else {
+					printf("-1\n");
+				}
+			} else {
+				printf("%d\n", du != P[u].d || dv != P[v].d ? -1 : du + dv);
+			}
+		}
+	}
+	
+	return 0;
+}
+
+	  	 		 	 			    	 		 	    	

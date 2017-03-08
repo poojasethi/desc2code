@@ -1,0 +1,207 @@
+#include<cstdio>
+#include<vector>
+#include<cstring>
+#include<algorithm>
+
+using namespace std;
+
+const int MAXN = 5005;
+
+typedef vector<int>::iterator vi;
+
+bool Q[MAXN];
+vector<int> E[MAXN];
+char s[MAXN][MAXN];
+int Num[MAXN][3],Bel[MAXN],Ch[MAXN],cnt,N,tot,root,cur;
+
+//Define 0->empty 1->full 2->semi-full
+
+void Dfs(int Cur)
+{
+	Num[Cur][0] = Num[Cur][1] = Num[Cur][2] = 0;
+	if (Cur <= N)
+	{
+		Bel[Cur] = (s[cur][Cur] == '1');
+		Num[Cur][Bel[Cur]] ++;
+		return;
+	}
+	int f0 = 1,f1 = 1;
+	for(vi i = E[Cur].begin();i != E[Cur].end();i ++)
+	{
+		Dfs(*i);
+		Num[Cur][Bel[*i]] ++;
+		if (Bel[*i]) f0 = 0;
+		if (Bel[*i] != 1) f1 = 0;
+	}
+	if (f0) Bel[Cur] = 0; else
+	if (!f1) Bel[Cur] = 2; else 
+		Bel[Cur] = 1;
+}
+
+int Get(int Cur,vector<int> &Lk)
+{
+	if (Num[Cur][2] > 1) return 1;
+	if (Q[Cur])
+	{
+		vi Fr = E[Cur].begin();
+		if (Bel[*Fr] != 1 && Num[Cur][1] || Bel[*Fr] != 2 && !Num[Cur][1])
+			reverse(E[Cur].begin(),E[Cur].end());
+		Fr = E[Cur].begin();
+		for(int i = 1;i <= Num[Cur][1];i ++)
+		{
+			if (Bel[*Fr] != 1) return 1;
+			Lk.push_back(*Fr);
+			Fr ++;
+		}
+		bool Flag = 0;
+		for(;Fr != E[Cur].end();Fr ++)
+		{
+			if (!Flag && Num[Cur][2] && Bel[*Fr] != 2) return 1;
+			if (Bel[*Fr] == 2)
+			{
+				Flag = 1;
+				if (Get(*Fr,Lk)) return 1;
+			} else
+				Lk.push_back(*Fr);
+		}
+		return 0;
+	}
+	if (Num[Cur][1])
+	{
+		int t1 = ++ tot;
+		for(vi i = E[Cur].begin();i != E[Cur].end();i ++)
+			if (Bel[*i] == 1) E[t1].push_back(*i);
+		if (E[t1].size() == 1) t1 = E[t1][0];
+		Lk.push_back(t1);
+	}
+	for(vi i = E[Cur].begin();i != E[Cur].end();i ++)
+		if (Bel[*i] == 2 && Get(*i, Lk)) return 1;
+	if (Num[Cur][0])
+	{
+		int t2 = ++ tot;
+		for(vi i = E[Cur].begin();i != E[Cur].end();i ++)
+			if (!Bel[*i]) E[t2].push_back(*i);
+		if (E[t2].size() == 1) t2 = E[t2][0];
+		Lk.push_back(t2);
+	}
+	return 0;
+}
+
+int Getr(int Cur,vector<int> &Lk)
+{
+	int tmp = Lk.size();
+	if (!Get(Cur,Lk))
+	{
+		reverse(Lk.begin() + tmp,Lk.end());
+		return 0;
+	}
+	return 1;
+}
+
+int Getl(int Cur,vector<int> &Lk)
+{
+	return Get(Cur,Lk);
+}
+
+int Calc(int Cur)
+{
+	if (Cur <= N) return 0;
+	if (Num[Cur][2] > 2) return 1;
+	if (Num[Cur][1] + Num[Cur][2] == 1)
+	{
+		for(vi i = E[Cur].begin();i != E[Cur].end();i ++)
+		if (Bel[*i]) return Calc(*i);
+	}
+	vector<int> Tmp;
+	Tmp.clear();
+	if (Q[Cur])
+	{
+		bool End = 0,One = 0;
+		for(vi i = E[Cur].begin();i != E[Cur].end();i ++)
+		{
+			if (End && Bel[*i]) return 1;
+			if (One && !Bel[*i]) End = 1;
+			if (Bel[*i] == 2)
+			{
+				if (!One)
+				{
+					if (Getr(*i, Tmp)) return 1;
+				} else
+					if (Getl(*i,Tmp)) return 1;
+			} else
+				Tmp.push_back(*i);
+			if (Bel[*i]) One = 1;
+		}
+		E[Cur] = Tmp;
+		return 0;
+	} else
+	{
+		int t1 = ++ tot;Q[t1] = 1;
+		for(vi i = E[Cur].begin();i != E[Cur].end();i ++)
+		if (Bel[*i] == 2)
+		{
+			if (Getr(*i, E[t1])) return 1;
+			break;
+		}
+		if (Num[Cur][1])
+		{
+			int t2 = ++ tot;
+			for(vi i = E[Cur].begin();i != E[Cur].end();i ++)
+			if (Bel[*i] == 1) E[t2].push_back(*i);
+			if (E[t2].size() == 1) t2 = E[t2][0];
+			E[t1].push_back(t2);
+		}
+		int Fl = 0;
+		for(vi i = E[Cur].begin();i != E[Cur].end();i ++)
+		if (Bel[*i] == 2)
+		{
+			if (!Fl) Fl = 1; else
+			{
+				if (Getl(*i, E[t1])) return 1;
+				break;
+			}
+		}
+		if (E[t1].size() == 1) t1 = E[t1][0];
+		Tmp.push_back(t1);
+		for(vi i = E[Cur].begin();i != E[Cur].end();i ++)
+		if (!Bel[*i]) Tmp.push_back(*i);
+	}
+	E[Cur] = Tmp;
+	return 0;
+}
+
+void Get_Order(int Cur)
+{
+	if (Cur <= N)
+	{
+		Ch[++ cnt] = Cur;
+		return;
+	}
+	for(vi i = E[Cur].begin();i != E[Cur].end();i ++)
+		Get_Order(*i);
+}
+
+int main()
+{
+	//freopen("data.in","r",stdin),freopen("data.out","w",stdout);
+	scanf("%d", &N);
+	root = tot = N + 1;
+	for(int i = 1;i <= N;i ++) E[tot].push_back(i);
+	for(int i = 1;i <= N;i ++)
+	{
+		scanf("%s", s[i] + 1);
+		cur = i,Dfs(root);
+		if (Calc(root)) 
+		{
+			printf("NO\n");
+			return 0;
+		}		
+	}
+	Get_Order(root);
+	printf("YES\n");
+	for(int i = 1;i <= N;i ++)
+	{
+		for(int j = 1;j <= N;j ++) printf("%c", s[i][Ch[j]]);
+		printf("\n");
+	}
+}

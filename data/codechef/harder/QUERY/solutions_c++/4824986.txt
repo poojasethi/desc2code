@@ -1,0 +1,317 @@
+#include<algorithm>
+#include<cstdio>
+#include<iostream>
+#include<vector>
+#define MAX   100100
+#define LOG   17
+#define FOR(i,a,b) for (int i=(a),_b=(b);i<=_b;i=i+1)
+#define FORD(i,b,a) for (int i=(b),_a=(a);i>=_a;i=i-1)
+#define REP(i,n) for (int i=0,_n=(n);i<_n;i=i+1)
+#define FORE(i,v) for (__typeof((v).begin()) i=(v).begin();i!=(v).end();i++)
+using namespace std;
+typedef long long ll;
+inline ll SUM(int l,int r) {
+    if (l>r) return (0);
+    return (1LL*(r+l)*(r-l+1)/2);
+}
+class IT {
+    private:
+    struct node {
+        ll sum,add,lev;
+        node* ch[2];
+        node() {
+            sum=add=lev=0;
+            REP(i,2) ch[i]=NULL;
+        }
+        node(node *p) {
+            sum=p->sum;
+            add=p->add;
+            lev=p->lev;
+            REP(i,2) ch[i]=p->ch[i];
+        }
+        int getdir(node *p) const {
+            REP(i,2) if (ch[i]==p) return (i);
+        }
+        void pushdown(int l,int r) {
+            REP(i,2) {
+                ch[i]=new node(ch[i]);
+                ch[i]->lev+=lev;
+                ch[i]->add+=add;
+            }
+            int m=(l+r)>>1;
+            ch[0]->sum+=(m-l+1)*add+lev*SUM(0,m-l);
+            ch[1]->sum+=(r-m)*add+lev*SUM(m-l+1,r-l);
+            ch[1]->add+=lev*(m-l+1);
+            add=lev=0;
+        }
+    };
+    void update(node *q,node *&p,int l,int r,int u,int v,ll a,ll b) {
+        if (l>v) return;
+        if (r<u) return;
+        if (l>r) return;
+        if (v<u) return;
+        int dir=q!=NULL?q->getdir(p):0;
+        p=new node(p);
+        if (q==NULL) root=p; else q->ch[dir]=p;
+        if (u<=l && r<=v) {
+            p->sum+=(r-l+1)*a+b*SUM(l-u,r-u);
+            p->add+=a+b*(l-u);
+            p->lev+=b;
+            return;
+        }
+        p->pushdown(l,r);
+        int m=(l+r)>>1;
+        update(p,p->ch[0],l,m,u,v,a,b);
+        update(p,p->ch[1],m+1,r,u,v,a,b);
+        p->sum=p->ch[0]->sum+p->ch[1]->sum;
+    }
+    ll getsum(node *p,int l,int r,int u,int v) {
+        if (l>v) return (0);
+        if (r<u) return (0);
+        if (l>r) return (0);
+        if (v<u) return (0);
+        if (u<=l && r<=v) return (p->sum);
+        p->pushdown(l,r);
+        int m=(l+r)>>1;
+        ll L=getsum(p->ch[0],l,m,u,v);
+        ll R=getsum(p->ch[1],m+1,r,u,v);
+        return (L+R);
+    }
+    void build(node *&t,int l,int r) {
+        if (l>r) return;
+        t=new node();
+        if (l==r) return;
+        int m=(l+r)>>1;
+        build(t->ch[0],l,m);
+        build(t->ch[1],m+1,r);
+    }
+    node *root;
+    int n;
+    public:
+    IT() {
+        root=NULL;
+        n=0;
+    }
+    IT(int n) {
+        this->n=n;
+        build(root,1,n);
+    }
+    void update(int l,int r,ll a,ll b) {
+        update(NULL,root,1,n,l,r,a,b);
+    }
+    ll getsum(int l,int r) {
+        return (getsum(root,1,n,l,r));
+    }
+};
+class Version {
+    private:
+    struct node {
+        IT tree;
+        node *ch[2];
+        node() {
+            REP(i,2) ch[i]=NULL;
+        }
+        node(node *p) {
+            tree=p->tree;
+            REP(i,2) ch[i]=p->ch[i];
+        }
+    };
+    void build(node *&t,int l,int r,const vector<vector<int> > &v) {
+        if (l>r) return;
+        t=new node();
+        if (l==r) {
+            t->tree=IT(v[r-1].size());
+            return;
+        }
+        int m=(l+r)>>1;
+        build(t->ch[0],l,m,v);
+        build(t->ch[1],m+1,r,v);
+    }
+    node *root;
+    int n;
+    public:
+    Version() {
+        root=NULL;
+        n=0;
+    }
+    Version(const vector<vector<int> > &v) {
+        n=v.size();
+        build(root,1,n,v);
+    }
+    void change(int id,int u,int v,ll a,ll b) {
+        node *q=NULL;
+        node *p=root;
+        int l=1;
+        int r=n;
+        int d=0;
+        while (true) {
+            p=new node(p);
+            if (q==NULL) root=p; else q->ch[d]=p;
+            if (l==r) {
+                p->tree.update(u,v,a,b);
+                return;
+            }
+            int m=(l+r)>>1;
+            q=p;
+            if (id>m) {
+                l=m+1;
+                d=1;
+            }
+            else {
+                r=m;
+                d=0;
+            }
+            p=p->ch[d];
+        }
+    }
+    ll getsum(int id,int u,int v) {
+        ll res=0;
+        node *p=root;
+        int l=1;
+        int r=n;
+        while (true) {
+            if (l==r) return (p->tree.getsum(u,v));
+            int m=(l+r)>>1;
+            if (id>m) {
+                p=p->ch[1];
+                l=m+1;
+            }
+            else {
+                p=p->ch[0];
+                r=m;
+            }
+        }
+    }
+};
+vector<int> g[MAX];
+int h[MAX],nc[MAX],p[MAX][LOG+1];
+int chid[MAX],chpos[MAX];
+int n,q,cv;
+vector<vector<int> > chain;
+vector<Version> all;
+void loadtree(void) {
+    scanf("%d%d",&n,&q);
+    REP(zz,n-1) {
+        int u,v;
+        scanf("%d%d",&u,&v);
+        g[u].push_back(v);
+        g[v].push_back(u);
+    }
+    h[0]=-1;
+}
+void dfs(int u) {
+    nc[u]=1;
+    FORE(it,g[u]) if (*it!=p[u][0]) {
+        int v=*it;
+        p[v][0]=u;
+        h[v]=h[u]+1;
+        dfs(v);
+        nc[u]+=nc[v];
+    }
+}
+void setup_LCA(void) {
+    dfs(1);
+    FOR(j,1,LOG) FOR(i,1,n) p[i][j]=p[p[i][j-1]][j-1];
+}
+int LCA(int u,int v) {
+    if (h[v]>h[u]) return (LCA(v,u));
+    FORD(i,LOG,0) if (h[p[u][i]]>=h[v]) u=p[u][i];
+    if (u==v) return (u);
+    FORD(i,LOG,0) if (p[u][i]!=p[v][i]) {
+        u=p[u][i];
+        v=p[v][i];
+    }
+    return (p[u][0]);
+}
+int jump(int u,int t) {
+    FORD(i,LOG,0) if (t>=(1<<i)) {
+        t-=1<<i;
+        u=p[u][i];
+    }
+    return (u);
+}
+void getchain(int u) {
+    FORE(it,g[u]) if (*it!=p[u][0]) {
+        int v=*it;
+        if (2*nc[v]>nc[u]-1) {
+            chid[v]=chid[u];
+            chain[chid[v]-1].push_back(v);
+            chpos[v]=chain[chid[v]-1].size();
+        }
+        else {
+            chain.push_back(vector<int>(1,v));
+            chid[v]=chain.size();
+            chpos[v]=1;
+        }
+        getchain(v);
+    }
+}
+void setupchain(void) {
+    chid[1]=chpos[1]=1;
+    chain.push_back(vector<int>(1,1));
+    getchain(1);
+    all.push_back(Version(chain));
+}
+void change(int u,int v,ll a,ll b) {
+    while (h[u]>=h[v]) {
+        int id=chid[u];
+        int t=chain[id-1][0];
+        int w=h[v]>h[t]?v:t;
+        all.back().change(id,chpos[w],chpos[u],a+1LL*b*(h[w]-h[v]),b);
+        u=p[w][0];
+    }
+}
+ll getsum(int u,int v) {
+    ll res=0;
+    while (h[u]>=h[v]) {
+        int id=chid[u];
+        int t=chain[id-1][0];
+        int w=h[v]>h[t]?v:t;
+        res+=all[cv].getsum(id,chpos[w],chpos[u]);
+        u=p[w][0];
+    }
+    return (res);
+}
+void process(void) {
+    ll last=0;
+    FOR(i,1,q) {
+        char t;
+        int x,y,a,b;
+        scanf(" %c%d",&t,&x);
+        if (t=='c') {
+            scanf("%d%d%d",&y,&a,&b);
+            int u=(last+x)%n+1;
+            int v=(last+y)%n+1;
+            //printf("CHANGE %d %d %d %d\n",u,v,a,b);
+            int w=LCA(u,v);
+            all.push_back(all[cv]);
+            change(u,w,a+1LL*b*(h[u]-h[w]),-b);
+            if (h[v]>h[w]) change(v,jump(v,h[v]-h[w]-1),a+1LL*b*(h[u]-h[w]+1),b);
+            cv=all.size()-1;
+        }
+        if (t=='q') {
+            scanf("%d",&y);
+            int u=(last+x)%n+1;
+            int v=(last+y)%n+1;
+            //printf("ASK %d %d\n",u,v);
+            int w=LCA(u,v);
+            last=getsum(u,w);
+            if (h[v]>h[w]) last+=getsum(v,jump(v,h[v]-h[w]-1));
+            cout<<last<<endl;
+        }
+        if (t=='l') cv=(last+x)%all.size();
+        /*printf("AFTER %d\n",i);
+        FOR(i,1,n) cerr<<getsum(i,i)<<" ";
+        cerr<<endl;*/
+    }
+}
+int main(void) {
+#ifdef SKY
+    freopen("tmp.txt","r",stdin);
+#endif
+    loadtree();
+    setup_LCA();
+    setupchain();
+    process();
+    return 0;
+}

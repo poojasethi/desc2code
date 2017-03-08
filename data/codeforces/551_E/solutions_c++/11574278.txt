@@ -1,0 +1,83 @@
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+using namespace std;
+
+const int MAXN = 5e5+10, MAXG = 1e3+10;
+
+int N,Q;
+int G;
+long long A[MAXN],D[MAXN];
+
+typedef pair<long long,int> ii;
+pair <long long,int> pa[MAXG][MAXG];
+
+int group(int i){
+	// 1 ... G = 1
+	// G+1 ... 2G = 2
+	return (i-1)/G + 1;
+}
+
+void sortgroup(int num_group,int start){
+	int num = 0;
+	for(int i=start;i>=1 and group(i) == num_group;i--) pa[num_group][num++] = ii(A[i],i);
+	for(int i=start+1;i<=N and group(i) == num_group;i++) pa[num_group][num++] = ii(A[i],i);
+	sort(pa[num_group],pa[num_group] + num);
+}
+
+int main(){
+	// freopen("in","r",stdin);
+	scanf("%d %d",&N,&Q);
+	for(int i=1;i<=N;i++) scanf("%lld",&A[i]);
+	G = sqrt(N);
+	for(int i=1,g=1;g <= N;i++,g+=G) sortgroup(i,g);
+	while(Q--){
+		int tt;
+		scanf("%d",&tt);
+		if(tt == 1){
+			int l,r;
+			long long x;
+			scanf("%d %d %lld",&l,&r,&x);
+			int p = group(l), q = group(r);
+			if(p == q){
+				for(int i=l;i<=r;i++) A[i] += x;
+				sortgroup(p,l);
+			}else{
+				for(int i=l;i <= N and group(i) == p;i++) A[i] += x;
+				for(int i=r;i >= 1 and group(i) == q;i--) A[i] += x;
+				sortgroup(p,l);
+				sortgroup(q,r);
+				for(int i=p+1;i<=q-1;i++) D[i] += x;
+			}
+		}else{
+			int y;
+			scanf("%d",&y);
+			
+			int mi=0,ma;
+			for(int i=1,g=1;g <= N;i++,g+=G){
+				int end = min(N,g+G-1), len = end - g + 1;
+				int pos = lower_bound(pa[i],pa[i]+ len, ii(y-D[i],0)) - pa[i];
+
+				if(pos < N && pa[i][pos].first == y-D[i]){
+					mi = pa[i][pos].second;
+					break;
+				}	
+			}
+
+			for(int i=group(N),g=(i-1)*G+1;g >= 1;i--,g-=G){
+				int end = min(N,g+G-1), len = end - g + 1;
+				int pos = lower_bound(pa[i],pa[i]+len,ii(y-D[i],N+1)) - pa[i] - 1;
+
+				if(pos < N && pos >= 0 && pa[i][pos].first == y - D[i]){
+					ma = pa[i][pos].second;
+					break;
+				}
+			}
+
+			if(mi) printf("%d\n",ma-mi);
+			else printf("%d\n",-1);
+		}
+	}
+
+	return 0;
+}

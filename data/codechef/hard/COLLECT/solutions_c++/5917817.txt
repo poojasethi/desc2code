@@ -1,0 +1,94 @@
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+#include <iostream>
+#include <algorithm>
+#define FOE(i,a,b) for (int i = int(a); i <= b; i++)
+#define mod 3046201
+using namespace std;
+int T[122222 * 4], a[122222];
+long long f[3444444];
+int n;
+void bt(int s, int l, int r) {
+	if (l == r) {
+		T[s] = a[l];return;
+	}
+	int mid = (l + r) / 2;
+	int s1 = s << 1, s2 = s1 | 1;
+	bt(s1, l, mid);
+	bt(s2, mid + 1, r);
+	T[s] = T[s1] + T[s2];
+}
+int get(int s, int l, int r, int u, int v) {
+	if (v < l || r < u) return 0;
+	if (u <= l && r <= v) return T[s];
+	int mid = (l + r) / 2;
+	int s1 = s << 1, s2 = s1 | 1;
+	return get(s1, l, mid, u, v) + get(s2, mid + 1, r, u, v);
+}
+void upd(int s, int l, int r, int u, int v) {
+	if (u < l || r < u) return;
+	if (l == r) {
+		T[s] = v;
+		return;
+	}
+	int mid = (l + r) / 2;
+	int s1 = s << 1, s2 = s1 | 1;
+	upd(s1, l, mid, u, v);
+	upd(s2, mid + 1, r, u, v);
+	T[s] = T[s1] + T[s2];
+}
+long long mypow(int n, int k) {
+	if (k == 0) return 1;
+	long long rt = mypow(n, k / 2);
+	rt = (rt * rt) % mod;
+	if (k % 2) rt = (rt * n) % mod;
+	return rt;
+}
+long long mydiv (int x, int y) {
+	long long rt = x;
+	rt = (rt * mypow(y, mod - 2)) % mod;
+	return rt;
+}
+long long P (int n, int k) {
+	long long rt = mydiv(f[n], f[n - k]);return rt;
+}
+long long C(int n, int k) {
+	long long rt = mydiv(P(n, k), f[k]);return rt;
+}
+int solve(int n, int k) {//k people, n thing
+	long long A, B;
+	A = (C(k, n % k) * P(n, n % k)) % mod;//choose to give more , how to choose those item for more 
+	A = (A * f[n - (n % k)]) % mod;//perm for remaining item
+	B = (mypow(f[n/k + 1], n % k) * mypow(f[n/k],k-n%k)) % mod;
+	long long rt = mydiv (A, B);
+	rt = (rt + mod) % mod;
+	return rt;
+}
+void init() {
+	f[0] = 1;
+	FOE (i, 1, 3000000) f[i] = (f[i - 1] * (1LL) * i) % mod;
+}
+int main() {
+	init();scanf("%d",&n);
+	FOE (i, 1, n) scanf("%d", a + i);
+	bt(1, 1, n);
+	int q;scanf("%d",&q);
+	string s;
+	while (q--) {
+		cin >> s;
+		int u, v;
+		if (s ==  "query") {
+			scanf("%d %d", &u, &v);
+			int sum = get(1, 1, n, u, v);
+			int k = v - u + 1;
+			printf("%d\n", solve(sum, k));
+		}
+		else if (s == "change") {
+			scanf("%d %d", &u, &v);
+			upd(1, 1, n, u, v);
+			a[u] = v;
+		}
+	}
+	return 0;
+}

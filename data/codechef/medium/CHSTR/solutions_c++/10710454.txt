@@ -1,0 +1,132 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+
+#define MAX 5010
+int Count[MAX], output[MAX];
+struct suffixArray
+{
+#define MAX_lg 20
+#define minchar 'a'
+#define Index(a) (((a) < len) ? index[mlgn][a] : -1)
+    int pos[MAX], index[MAX_lg][MAX], lcp[MAX], len, mlgn;
+
+    suffixArray() {}
+    suffixArray(const char *S)
+    {
+        create(S);
+    }
+    void CountSort(int add)
+    {
+        int to = max(len, 26);
+        memset(Count, 0, sizeof(Count));
+        for(int i = 0; i < len; i++) ++Count[ Index(pos[i] + add) + 1 ];
+        for(int i = 1; i <= to; i++) Count[i] += Count[i-1];
+        for(int i = len-1; i >= 0; i--) output[ --Count[ Index(pos[i] + add) + 1 ] ] = pos[i];
+        for(int i = 0; i < len; i++) pos[i] = output[i];
+    }
+    int Lcp(int x, int y)
+    {
+        int ret = 0;
+        for(int i = mlgn; i >= 0 && x < len && y < len; i--) if(index[i][x] == index[i][y])
+                x += (1 << i),
+                     y += (1 << i),
+                          ret += (1 << i);
+        return ret;
+    }
+    void create(const char *S)
+    {
+        len = strlen(S), mlgn = 0;
+        for(int i = 0; i < len; i++) index[0][i] = S[i] - minchar;
+        for(int done = 1; done < len; done <<= 1)
+        {
+            for(int i = 0; i < len; i++) pos[i] = i;
+            CountSort(done);
+            CountSort(0);
+            for(int i = 0; i < len; i++)
+            {
+                int sc1 = (i > 0) ? Index(pos[i-1] + done) : -1;
+                int sc2 = Index(pos[i] + done);
+                index[mlgn+1][pos[i]] = (i > 0 && index[mlgn][pos[i]] == index[mlgn][pos[i-1]] && sc1 == sc2) ? index[mlgn+1][pos[i-1]] : i;
+            }
+            mlgn++;
+        }
+        lcp[0] = 0;
+        for(int i = 1; i < len; i++) lcp[i] = Lcp(pos[i], pos[i-1]);
+    }
+};
+
+char str[5005];
+
+#define MOD 1000000007
+#define si(a) scanf("%d",&a)
+
+int mod_plus(int a,int b)
+{
+    return (a+b)%MOD;
+}
+
+int mod_mul(long long a,long long b)
+{
+    return (a*b)%MOD;
+}
+
+int NCR[5005][5005];
+
+int ncr(int n,int r)
+{
+    if(n==r || r==0) return 1;
+    if(NCR[n][r]!=-1)return NCR[n][r];
+    return NCR[n][r]=mod_plus(ncr(n-1,r),ncr(n-1,r-1));
+}
+
+int cnt[5005],ans[5005];
+
+void solve(int ca)
+{
+    int n,q,i,j;
+    si(n);si(q);
+    scanf("%s",str);
+    suffixArray ob(str);
+    memset(cnt,0,sizeof(cnt));
+    memset(ans,-1,sizeof(ans));
+    ans[1]=(n*(n+1))/2;
+    for(i=1;i<=n;i++){
+        for(j=1;j<n;j++){
+            if(ob.lcp[j]<i)
+                continue;
+            int k=j;
+            while(k<n && ob.lcp[k]>=i)k++;
+            cnt[k-j+1]++;
+            j=k-1;
+        }
+    }
+    for(i=0;i<q;i++){
+        int x;
+        si(x);
+        if(x>n){
+            printf("0\n");
+            continue;
+        }
+        if(ans[x]!=-1){
+            printf("%d\n",ans[x]);
+            continue;
+        }
+        ans[x]=0;
+        for(j=x;j<=n;j++)
+            ans[x]=mod_plus(ans[x],mod_mul(cnt[j],ncr(j,x)));
+        printf("%d\n",ans[x]);
+    }
+    return ;
+}
+
+int main()
+{
+    //freopen("input.txt","r",stdin);
+    memset(NCR,-1,sizeof(NCR));
+    int t;
+    si(t);
+    for(int ca=1;ca<=t;ca++)
+        solve(ca);
+    return 0;
+}

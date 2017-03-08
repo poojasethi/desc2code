@@ -1,0 +1,197 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <algorithm>
+using namespace std;
+
+int n,m,i,j,k,u,v,c,ll,rr,U,V,W,ans,ansr;
+int son[100005],next[200005],ed[200005],cost[200005],tot;
+int size[100005],deep[100005],val[100005];
+int fa[100005],heavy[100005],head[100005];
+int dfn[100005],id[100005],cnt;
+int sum[400005],Max[400005],Maxl[400005],Maxr[400005],Min[400005],Minl[400005],Minr[400005];
+bool rev[400005];
+char opt;
+
+int LCA(int u,int v)
+{
+	for(;head[u]!=head[v];)
+	if(deep[head[u]]>deep[head[v]])u=fa[head[u]];
+	else v=fa[head[v]];
+	if(deep[u]<deep[v])return u;
+	return v;
+}
+int dist(int u,int v)
+{
+	int lca=LCA(u,v);
+	return deep[u]+deep[v]-2*deep[lca];
+}
+
+void dfs1(int x)
+{
+	size[x]=1;
+	for(int i=son[x];i;i=next[i])
+	if(!size[ed[i]])
+	{
+		fa[ed[i]]=x;
+		deep[ed[i]]=deep[x]+1;
+		val[ed[i]]=cost[i];
+		dfs1(ed[i]);
+		size[x]+=size[ed[i]];
+		if(size[ed[i]]>size[heavy[x]])heavy[x]=ed[i];
+	}
+}
+
+void dfs2(int x)
+{
+	dfn[x]=++cnt;id[cnt]=x;
+	if(!head[x])head[x]=x;
+	if(heavy[x])head[heavy[x]]=head[x],dfs2(heavy[x]);
+	for(int i=son[x];i;i=next[i])
+	if(deep[ed[i]]==deep[x]+1&&ed[i]!=heavy[x])dfs2(ed[i]);
+}
+
+void update(int x)
+{
+	sum[x]=sum[x<<1]+sum[x<<1|1];
+	Max[x]=max(Maxr[x<<1]+Maxl[x<<1|1],max(Max[x<<1],Max[x<<1|1]));
+	Maxl[x]=max(Maxl[x<<1],sum[x<<1]+Maxl[x<<1|1]);
+	Maxr[x]=max(Maxr[x<<1|1],sum[x<<1|1]+Maxr[x<<1]);
+	Min[x]=min(Minr[x<<1]+Minl[x<<1|1],min(Min[x<<1],Min[x<<1|1]));
+	Minl[x]=min(Minl[x<<1],sum[x<<1]+Minl[x<<1|1]);
+	Minr[x]=min(Minr[x<<1|1],sum[x<<1|1]+Minr[x<<1]);
+}
+
+void Rev(int x)
+{
+	rev[x]^=1;
+	sum[x]=-sum[x];
+	swap(Max[x],Min[x]);Max[x]=-Max[x];Min[x]=-Min[x];
+	swap(Maxl[x],Minl[x]);Maxl[x]=-Maxl[x];Minl[x]=-Minl[x];
+	swap(Maxr[x],Minr[x]);Maxr[x]=-Maxr[x];Minr[x]=-Minr[x];
+}
+
+void B(int x,int l,int r)
+{
+	if(l==r)
+	{
+		sum[x]=Max[x]=Maxl[x]=Maxr[x]=Min[x]=Minl[x]=Minr[x]=val[id[l]];
+		return;
+	}
+	int mid=l+r>>1;
+	B(x<<1,l,mid);
+	B(x<<1|1,mid+1,r);
+	update(x);
+}
+
+void C(int x,int l,int r)
+{
+	if(l>=ll&&r<=rr)
+	{
+		Rev(x);
+		return;
+	}
+	int mid=l+r>>1;
+	if(rev[x])Rev(x<<1),Rev(x<<1|1),rev[x]=false;
+	if(rr<=mid)C(x<<1,l,mid);
+	else if(ll>mid)C(x<<1|1,mid+1,r);
+		else C(x<<1,l,mid),C(x<<1|1,mid+1,r);
+	update(x);
+}
+
+void Ql(int x,int l,int r)
+{
+	if(l>=ll&&r<=rr)
+	{
+		if(Max[x]>ans)ans=Max[x];
+		if(ansr+Maxl[x]>ans)ans=ansr+Maxl[x];
+		ansr+=sum[x];if(Maxr[x]>ansr)ansr=Maxr[x];
+		return;
+	}
+	int mid=l+r>>1;
+	if(rev[x])Rev(x<<1),Rev(x<<1|1),rev[x]=false;
+	if(rr<=mid)Ql(x<<1,l,mid);
+	else if(ll>mid)Ql(x<<1|1,mid+1,r);
+		else Ql(x<<1,l,mid),Ql(x<<1|1,mid+1,r);
+}
+
+void Qr(int x,int l,int r)
+{
+	if(l>=ll&&r<=rr)
+	{
+		if(Max[x]>ans)ans=Max[x];
+		if(ansr+Maxr[x]>ans)ans=ansr+Maxr[x];
+		ansr+=sum[x];if(Maxl[x]>ansr)ansr=Maxl[x];
+		return;
+	}
+	int mid=l+r>>1;
+	if(rev[x])Rev(x<<1),Rev(x<<1|1),rev[x]=false;
+	if(rr<=mid)Qr(x<<1,l,mid);
+	else if(ll>mid)Qr(x<<1|1,mid+1,r);
+		else Qr(x<<1|1,mid+1,r),Qr(x<<1,l,mid);
+}
+
+void REV(int u,int v)
+{
+	int lca=LCA(u,v);
+	for(;head[u]!=head[lca];u=fa[head[u]])ll=dfn[head[u]],rr=dfn[u],C(1,1,n);
+	if(lca!=u)ll=dfn[lca]+1,rr=dfn[u],C(1,1,n);
+	for(;head[v]!=head[lca];v=fa[head[v]])ll=dfn[head[v]],rr=dfn[v],C(1,1,n);
+	if(lca!=v)ll=dfn[lca]+1,rr=dfn[v],C(1,1,n);
+}
+
+int al[105],ar[105],atot;
+void calc(int u,int v)
+{
+	int lca=LCA(u,v);
+	for(;head[u]!=head[lca];u=fa[head[u]])ll=dfn[head[u]],rr=dfn[u],Qr(1,1,n);
+	if(lca!=u)ll=dfn[lca]+1,rr=dfn[u],Qr(1,1,n);
+	for(;head[v]!=head[lca];v=fa[head[v]])al[++atot]=dfn[head[v]],ar[atot]=dfn[v];
+	if(lca!=v)al[++atot]=dfn[lca]+1,ar[atot]=dfn[v];
+	for(;atot;--atot)ll=al[atot],rr=ar[atot],Ql(1,1,n);
+}
+
+int main()
+{
+	scanf("%d",&n);
+	for(i=1;i<=n;++i)
+	{
+		scanf("%d%d%d",&u,&v,&c);
+		++tot;next[tot]=son[u];son[u]=tot;ed[tot]=v;cost[tot]=c;
+		++tot;next[tot]=son[v];son[v]=tot;ed[tot]=u;cost[tot]=c;
+	}
+	dfs1(1);dfs2(1);
+	for(i=1;i<=n;++i)
+	for(j=son[i];j;j=next[j])
+	{
+		k=ed[j];
+		if(fa[i]!=k&&fa[k]!=i)U=i,V=k,W=cost[j];
+	}
+	B(1,1,n);
+	scanf("%d",&m);
+	for(;m;--m)
+	{
+		for(opt=getchar();opt!='f'&&opt!='?';opt=getchar());
+		scanf("%d%d",&u,&v);
+		if(opt=='f')
+		{
+			if(dist(u,U)>dist(u,V))swap(U,V);
+			if(dist(u,v)<dist(u,U)+dist(V,v)+1)REV(u,v);
+			else REV(u,U),W=-W,REV(V,v);
+		}
+		else
+		{
+			ans=0;ansr=0;
+			if(dist(u,U)>dist(u,V))swap(U,V);
+			if(dist(u,v)<dist(u,U)+dist(V,v)+1)calc(u,v);
+			else
+			{
+				calc(u,U);
+				if(W>ans)ans=W;
+				if(ansr+W>ans)ans=ansr+W;
+				ansr+=W;if(W>ansr)ansr=W;
+				calc(V,v);
+			}
+			printf("%d\n",ans);
+		}
+	}
+}

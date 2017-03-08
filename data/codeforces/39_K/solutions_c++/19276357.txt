@@ -1,0 +1,120 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+struct Rect
+{
+    int x0, x1, y0, y1;
+};
+
+const int MAXN = 1005;
+const int MAXOBJN = 91;
+char mp[MAXN][MAXN];
+Rect objs[MAXOBJN];
+long long ans;
+int n, m, k;
+int ya[2 * MAXOBJN + 2];
+
+int comp0(const void *a, const void *b)
+{
+    int pa = *((int *)a);
+    int pb = *((int *)b);
+    
+    return pa - pb;
+}
+
+int comp(const void *a, const void *b)
+{
+    int *pa = (int *)a;
+    int *pb = (int *)b;
+    
+    return pa[1] - pb[1];
+}
+
+long long Calc(int bot, int top)
+{
+    long long ret = 0;
+    int kn = 0;
+    int segs[MAXOBJN][3];
+    int lmaxv;
+
+    for(int i = 0; i < k; i ++)
+    if(objs[i].y0 <= top && objs[i].y1 >= bot)
+    {
+        segs[kn][1] = objs[i].x0; segs[kn][2] = objs[i].x1;
+        if(objs[i].y0 >= bot && objs[i].y1 <= top) segs[kn][0] = 1;
+        else segs[kn][0] = 4;
+        kn ++;
+    }
+    
+    qsort(segs, kn, sizeof(segs[0]), comp);
+    
+    lmaxv = INT_MIN;
+    for(int i = 0; i < kn; i ++)
+    {
+        int nowl = INT_MAX, nowr = INT_MIN;
+        for(int j = i; j < min(i + 3, kn); j ++)
+        if(segs[j][0] == 1)
+        {
+            nowl = min(nowl, segs[j][1]); nowr = max(nowr, segs[j][2]);
+            if((i == 0 || lmaxv < nowl) && (j == kn - 1 || segs[j + 1][1] > nowr))
+            ret += (nowl - (i == 0 ? -1 : lmaxv)) * ((j == kn - 1 ? n : segs[j + 1][1]) - nowr);
+        }
+        else break;
+        lmaxv = max(lmaxv, segs[i][2]);
+        
+    }
+    
+    return ret;
+}
+
+int main()
+{
+    int kn, yn, newyn;
+    
+    scanf("%d%d%d", &n, &m, &k);
+    kn = yn = 0;
+    for(int i = 0; i < n; i ++) scanf("%s", mp[i]);
+    for(int i = 0; i < n; i ++)
+    for(int j = 0; j < m; j ++)
+    if(mp[i][j] == '*')
+    {
+        objs[kn].x0 = i; objs[kn].y0 = j;
+        int x, y;
+        for(x = i; x < n; x ++)
+        if(mp[x][j] == '*')
+            for(y = j; y < m; y ++)
+            if(mp[x][y] == '*') mp[x][y] = '+'; else break;
+        else break;
+        objs[kn].x1 = x - 1; objs[kn].y1 = y - 1;
+        ya[yn ++] = objs[kn].y0;
+        ya[yn ++] = objs[kn].y1;
+        kn ++;
+    }
+    ya[yn ++] = 0;
+    ya[yn ++] = m - 1;
+    qsort(ya, yn, sizeof(ya[0]), comp0);
+    
+    newyn = 0;
+    for(int i = 0; i < yn; i ++)
+    if(i == 0 || ya[i] != ya[i - 1])
+        ya[newyn ++] = ya[i];
+    yn = newyn;
+    
+    ans = 0;
+    for(int i = 0; i < yn; i ++)
+    for(int j = i; j < yn; j ++)
+    {
+        int top, bot;
+        long long cof;
+        bot = ya[i];
+        top = ya[j];
+        if(j < yn - 1) cof = ya[j + 1] - ya[j];
+        else cof = m - top;
+        if(i > 0) cof *= ya[i] - ya[i - 1];
+        ans += cof * Calc(bot, top);
+    }
+    
+    printf("%I64d\n", ans);
+    
+    return 0;
+}

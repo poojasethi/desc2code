@@ -1,0 +1,164 @@
+#ifdef _WIN32
+#  define LL "%I64d"
+#else
+#  define LL "%Ld"
+#endif
+
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <cstring>
+#include <ctime>
+#include <vector>
+#include <deque>
+#include <set>
+#include <map>
+#include <queue>
+#include <stack>
+#include <bitset>
+#include <string>
+#include <algorithm>
+#include <complex>
+#include <utility>
+using namespace std;
+#define null NULL
+#define mp make_pair
+#define pb(a) push_back(a)
+#define sz(a) ((int)(a).size())
+#define all(a) a.begin() , a.end()
+#define fi first
+#define se second
+#define relaxMin(a , b) (a) = min((a),(b))
+#define relaxMax(a , b) (a) = max((a),(b))
+#define SQR(a) ((a)*(a))
+typedef vector<int> vi;
+typedef pair<int,int> pii;
+typedef long long ll;
+#define MOD 1000000007LL
+#define MAXN 100010
+// Max in interval
+#define SZ 17
+int max_val[17][100010];
+int LOG[100010];
+void init(const vi& from){
+  for(int i=0;i<sz(from);++i)
+   max_val[0][i] = from[i];
+  for(int L=1;L<SZ;++L)
+   for(int i=0;i<sz(from);++i){
+    max_val[L][i] = max_val[L-1][i];
+    if(i + (1<<(L-1)) < sz(from))
+     relaxMax(max_val[L][i] ,
+              max_val[L-1][i + (1<<(L-1))]);
+                              }
+}
+int querry(int lo , int hi){
+  int size = LOG[hi - lo + 1];
+  return max(max_val[size][lo] ,
+             max_val[size][hi - (1<<size) + 1]);
+}
+// </end>
+ll fact[MAXN];
+ll POW(ll w , ll step){
+  ll ret = 1;
+  for(;step>0;step>>=1 , w = (w*w)%MOD)
+   if(step&1)ret = (ret*w)%MOD;
+  return ret;
+}
+ll OEM(ll to){
+  return POW(to , MOD-2);
+}
+ll comb(int el , int kl){
+  if(kl > el)return 0;
+  return ((fact[el] * OEM(fact[kl]))%MOD *
+          OEM(fact[el-kl]) )%MOD;
+}
+// Tree ops
+ll ans;
+struct node{
+  int id;
+  vector<node*> fo;
+  node(int _id = 0){
+   id = _id;
+                   }
+};
+int N , K;
+vi pre , post;
+vi pre_pos , post_pos;
+node* build(int pre_lo , int pre_hi ,
+            int post_lo , int post_hi){
+  if(pre[pre_lo] != post[post_hi]){
+   ans = 0;
+   return null;
+                                  }
+  if(pre_lo == pre_hi)
+   return new node(pre[pre_lo]);
+  node* root = new node(pre[pre_lo]);
+  ++pre_lo , --post_hi;
+  while(pre_lo <= pre_hi){
+   int post_mid = post_pos[pre[pre_lo]];
+   if(post_mid < post_lo || post_mid > post_hi){
+    ans = 0;
+    return null;
+                                               }
+   int pre_mid = querry(post_lo , post_mid);
+   if(pre_mid < pre_lo || pre_mid > pre_hi){
+    ans = 0;
+    return null;
+                                           }
+   if(pre_mid - pre_lo != post_mid - post_lo){
+    ans = 0;
+    return null;
+                                             }
+   root->fo.pb(build(pre_lo , pre_mid , post_lo , post_mid));
+   pre_lo = pre_mid + 1 , post_lo = post_mid + 1;
+                         }
+  return root;
+}
+void dfs(node* vr){
+  if(!vr)return;
+  ans = (ans * comb(K , sz(vr->fo)))%MOD;
+  for(int i=0;i<sz(vr->fo);++i)
+   dfs(vr->fo[i]);
+}
+void doit(){
+  ans = 1;
+  scanf("%d%d" , &N , &K);
+  pre.resize(N) , post.resize(N);
+  pre_pos.resize(N) , post_pos.resize(N);
+  for(int i=0;i<N;++i)
+   scanf("%d" , &pre[i]),
+   --pre[i];
+  for(int i=0;i<N;++i)
+   scanf("%d" , &post[i]),
+   --post[i];
+  vi buf(N);
+  for(int i=0;i<N;++i)
+   pre_pos[pre[i]] = i,
+   post_pos[post[i]] = i;
+  for(int i=0;i<N;++i)
+   buf[i] = pre_pos[post[i]];
+  init(buf);
+  node* root = build(0 , N-1 , 0 , N-1);
+  if(ans == 0)printf("0\n");
+  else{
+   dfs(root);
+   printf("%d\n" , (int)ans);
+      }
+}
+int main(){
+  LOG[1] = 0;
+  for(int i=2;i<100010;++i){
+   LOG[i] = LOG[i-1];
+   if(i >= (1<<(LOG[i]+1)))
+    ++LOG[i];
+                           }
+  fact[0] = 1;
+  for(int i=1;i<MAXN;++i)
+   fact[i] = (i*fact[i-1])%MOD;
+  int Q;
+  scanf("%d" , &Q);
+  while(Q-- > 0)
+   doit();
+  return 0;
+}

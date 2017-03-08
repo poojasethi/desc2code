@@ -1,0 +1,156 @@
+#include <iostream>
+#include <cmath>
+
+using namespace std;
+
+const int MAX_N = 131072;
+
+const int TAILS = 0;
+const int HEADS = 1;
+class Node
+{
+public:
+    Node() : heads(0), side(TAILS)
+    {}
+    
+    int heads; // total nr of heads
+    int side;
+    
+    // [a, b)
+    int a; // inclusive
+    int b; // exclusive
+};
+
+class IntervalTree
+{
+public:
+    void init()
+    {
+        init(1, 0, MAX_N);
+    }
+    
+    // [a, b)
+    void flip(int a, int b)
+    {
+        flip(1, a, b);
+    }
+    
+    // [a, b)
+    int query(int a, int b)
+    {
+        return query(1, a, b);
+    }
+    
+    void print()
+    {
+        int br = 2;
+        while (br <= 2*MAX_N)
+        {
+            for (int i = br/2; i < br; ++i)
+            {
+                cout << "[" << nodes[i].a << ", " << nodes[i].b << ") ";
+                cout << nodes[i].side << ", total=" << nodes[i].heads << "      ";
+            }    
+            cout << endl << endl;
+            br *= 2;
+        } 
+    }
+    
+private:
+    void init(int i, int beg, int end)
+    {
+        nodes[i].a = beg;
+        nodes[i].b = end;
+        int mid = (beg + end)/2;
+        if (mid > beg)
+        {
+            init(2*i, beg, mid);
+            init(2*i+1, mid, end);
+        }
+    }
+    
+    void flip(int i, int a, int b)
+    {
+        //cout << "flip " << a << ' ' << b << " --- " << nodes[i].a << ' ' << nodes[i].b << endl;
+        if (a == nodes[i].a && b == nodes[i].b)
+        {
+            nodes[i].side = 1 - nodes[i].side;
+        }
+        else // it may not be a leaf
+        {
+            if (a < nodes[2*i].b)
+                flip(2*i, a, min(b, nodes[2*i].b));
+            if (b > nodes[2*i+1].a)
+                flip(2*i+1, max(a, nodes[2*i+1].a), b);
+        }
+        recalculateHeads(i);
+    }
+    
+    void recalculateHeads(int i)
+    {
+        if (isLeaf(i))
+            nodes[i].heads = nodes[i].side == HEADS ? 1 : 0;
+        else
+        {
+            int aux = nodes[2*i].heads + nodes[2*i+1].heads;
+            if (nodes[i].side == TAILS)
+                nodes[i].heads = aux;
+            else
+                nodes[i].heads = nodes[i].b - nodes[i].a - aux;
+        }
+    }
+    
+    bool isLeaf(int i)
+    {
+        return i >= MAX_N;
+    }
+    
+    int query(int i, int a, int b)
+    {
+        if (a == nodes[i].a && b == nodes[i].b)
+        {
+            return nodes[i].heads;
+        }
+        else // it may not be a leaf
+        {
+            int l = 0, r = 0;
+            if (a < nodes[2*i].b)
+                l = query(2*i, a, min(b, nodes[2*i].b));
+            if (b > nodes[2*i+1].a)
+                r = query(2*i+1, max(a, nodes[2*i+1].a), b);
+            
+            if (nodes[i].side == TAILS)
+                return l + r;
+            else
+                return b - a - l - r;
+        }
+    }
+    
+    Node nodes[2*MAX_N];
+};
+
+int main()
+{
+    ios_base::sync_with_stdio(0);
+    int N, Q;
+    cin >> N >> Q;
+    IntervalTree iTree;
+    iTree.init();
+    int type, A, B;
+    while (Q--)
+    {
+        cin >> type >> A >> B;
+        if (type)
+        {
+               cout << iTree.query(A, B+1) << endl;
+        }
+        else
+        {
+               iTree.flip(A, B+1);
+               //cout << "After flip " << "[" << A << ", " << B+1 << "):" << endl;
+               //iTree.print();
+               //cout << "----------------------------------" << endl << endl;
+        }
+    } 
+    return 0;
+}

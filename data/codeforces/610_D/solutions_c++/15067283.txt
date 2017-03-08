@@ -1,0 +1,77 @@
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+#define mid (l+r>>1)
+#define maxn 100000
+using namespace std;
+typedef long long LL;
+LL num[2*maxn+10];
+int tot;
+int find(int x){
+	int l=1,r=tot;
+	for(;;){
+		int m=mid;
+		if(num[m]==x)return m;
+		if(x<num[m])r=m-1;
+		else l=m+1;
+	}
+}
+struct segmenttree{
+	int lc[4*maxn+10],rc[4*maxn+10],addv[4*maxn+10],cnt;
+	LL sumv[4*maxn+10];
+	void maketree(int &o,int l,int r){
+		o=++cnt;
+		if(l==r)return;
+		int m=mid;
+		maketree(lc[o],l,m);
+		maketree(rc[o],m+1,r);
+	}
+	void update(int o,int l,int r,int ql,int qr,int v){
+		int m=mid;
+		if(ql<=l&&r<=qr)addv[o]+=v;
+		else{
+			if(ql<=m)update(lc[o],l,m,ql,qr,v);
+			if(qr>m)update(rc[o],m+1,r,ql,qr,v);
+		}
+		if(addv[o]>0)sumv[o]=num[r+1]-num[l];
+		else sumv[o]=sumv[lc[o]]+sumv[rc[o]];
+	}
+}seg;
+struct event{
+	int l,r,h,v;
+	bool operator<(const event&a)const{return h==a.h?v>a.v:h<a.h;}
+}ev[2*maxn+10];
+int main(){
+	int n;
+	scanf("%d",&n);
+	int x1,x2,y1,y2;
+	for(int i=1;i<=n;i++){
+		scanf("%d%d%d%d",&x1,&y1,&x2,&y2);
+		if(x1==x2){
+			if(y1>y2)swap(y1,y2);
+			ev[2*i-1]=(event){x1,x1+1,y1,1};
+			ev[2*i]=(event){x1,x1+1,y2+1,-1};
+			num[2*i-1]=x1;
+			num[2*i]=x1+1;
+		}else{
+			if(x1>x2)swap(x1,x2);
+			ev[2*i-1]=(event){x1,x2+1,y1,1};
+			ev[2*i]=(event){x1,x2+1,y1+1,-1};
+			num[2*i-1]=x1;num[2*i]=x2+1;
+		}
+	}
+	sort(ev+1,ev+2*n+1);
+	sort(num+1,num+2*n+1);
+	tot=1;
+	for(int i=2;i<=2*n;i++)if(num[i]!=num[i-1])num[++tot]=num[i];
+	int o;
+	seg.maketree(o,1,tot);
+	int cur=1;
+	LL ans=0;
+	for(int i=1;i<=2*n;i++){
+		ans+=seg.sumv[1]*(ev[i].h-ev[i-1].h);
+		seg.update(1,1,tot,find(ev[i].l),find(ev[i].r)-1,ev[i].v);
+	}
+	cout<<ans<<endl;
+	return 0;
+}

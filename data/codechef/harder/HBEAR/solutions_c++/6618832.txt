@@ -1,0 +1,123 @@
+#include <cstdio>
+#include <algorithm>
+#include <ctime>
+ 
+using namespace std;
+ 
+int n, m, K;
+char s[301][301];
+int F[301][301];
+ 
+#define btw(a, b, c, d) (F[a][b] - F[a][d+1] - F[c+1][b] + F[c+1][d+1])
+int my[1000][1000];  
+ 
+int main()
+{
+    //freopen("output.txt", "r", stdin);
+    //freopen("fastsol2new.txt", "w", stdout);
+    
+    clock_t start = clock();
+    
+    scanf("%d%d%d", &n, &m, &K);
+        
+    for(int i = 0; i < n; i++)
+      scanf("%s", s[i]);
+    
+    for(int i = 0; i < n; i++)
+      for(int j = 0; j < m; j++)
+        s[i][j] = (s[i][j]=='.')?0:1;
+    
+    for(int i = n-1; i >= 0; i--)
+      for(int j = m-1; j >= 0; j--)
+        F[i][j] = s[i][j] + F[i+1][j] + F[i][j+1] - F[i+1][j+1];     
+    
+    for(int i = 0; i < n; i++)
+    {
+      for(int j = 0; j < m; j++)
+      {
+        //printf("Starting search from %d %d\n", i, j);
+        //getchar();
+        int limitn = n-1, limitm = m-1;
+        int lo, mid, hi, idx=i, idy=j;
+        // binary search for an index idx from i to limitn such that btw(i, j, idx, m-1) >= k
+        while(limitm>=j)
+        {
+          int lo = idx, hi = limitn;
+          while(lo < hi)
+          { 
+            mid = lo + (hi-lo)/2;
+            //printf("mid = %d, pmid = %d\n", mid, btw(i, j, mid, limitm));
+            if(btw(i, j, mid, limitm) >= K)
+              hi = mid;
+            else
+              lo = mid+1;
+          
+          }
+          if(btw(i, j, lo, limitm) < K)
+          {
+              //printf("%d %d %d %d k =  %d is false\n", i, j, lo, limitm, K);
+              goto out;
+          }
+          else
+          {
+            idx = lo;
+          }
+          
+          // binary search for an index idy from j to limitm such that btw(i, j, idx, idy) >= k
+          lo = j, hi = limitm;
+          while(lo < hi)
+          {
+            mid = lo + (hi-lo)/2;
+            if(btw(i, j, idx, mid) >= K)
+              hi = mid;
+            else
+              lo = mid+1;
+          }
+          if(btw(i, j, idx, lo) < K)
+          {
+            goto out;
+          }
+          else
+          {
+            idy = lo;
+          }
+          int x1, y1, x2, y2;
+          x1 = idx-i+1; y1 = idy-j+1; x2 = n-i; y2 = limitm-j+1;
+          my[x1][y1]++;
+          my[x2+1][y2+1]++;
+          my[x1][y2+1]--;
+          my[x2+1][y1]--;
+          limitm = idy-1;
+        }    
+        out:
+            ;
+      }
+    }  
+ 
+   int memoiz[301][301];
+   int answers[301][301];
+   for(int i = 0; i <= n; i++)
+   {
+     memoiz[i][0] = answers[i][0] = 0;
+     memoiz[0][i] = answers[0][i] = 0;
+   
+   }
+   for(int i = 1; i <= n; i++)        
+     for(int j = 1; j <= m; j++)
+       memoiz[i][j] = my[i][j] + memoiz[i-1][j] + memoiz[i][j-1] - memoiz[i-1][j-1];
+    
+   for(int i = 1; i <= n; i++)        
+     for(int j = 1; j <= m; j++)
+       answers[i][j] = memoiz[i][j] + answers[i-1][j] + answers[i][j-1] - answers[i-1][j-1];
+          
+          
+   int Q;
+   scanf("%d", &Q);
+   for(int i = 0; i < Q; i++)
+   {
+      int a, b;
+      scanf("%d %d", &a, &b);
+      printf("%d\n", answers[a][b]);
+   }
+}
+  

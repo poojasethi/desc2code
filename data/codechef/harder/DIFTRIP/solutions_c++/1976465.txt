@@ -1,0 +1,240 @@
+#include <cstdio>
+#include <vector>
+#include <stack>
+#include <cassert>
+
+using namespace std;
+typedef vector<int> vi;
+typedef long long ll;
+
+const int NMAX = 100000;
+vi edge[NMAX+1];
+
+int depth[NMAX+1];
+int up[18][NMAX+1];
+bool visited[NMAX+1];
+
+int N, logN;
+
+vi p (NMAX+1);
+vi pn(NMAX+1);
+vector<vi> rank(18, vi(NMAX+1));
+
+void dfs(int i)
+{
+    depth[i] = 1;
+    up[0][i] = -1;
+    stack<int> s;
+    s.push(i);
+    while(s.size()!=0)
+    {
+        int from = s.top(); s.pop();
+        visited[from] = true;
+        for(vector<int>::iterator it=edge[from].begin(); 
+            it != edge[from].end(); it++)
+        {
+            int to = *it;
+            if (!visited[to])
+            {
+                depth[to] = depth[from]+1;
+                up[0][to] = from;
+                s.push(to);
+            }
+        }
+    }
+}
+
+void set_ups()
+{
+    int upper;
+    for(upper=0; (1<<upper) < N-1; upper++);
+
+    for(int k=1; k<=upper; k++)
+    {
+        for(int i=1; i<=N; i++)
+        {
+            if (up[k-1][i] != -1)
+                up[k][i] = up[k-1][up[k-1][i]];
+            else
+                up[k][i] = -1;
+        }
+    }
+}
+
+
+void build_suffix()
+{
+    vector<int> cnt0(NMAX+1, 0);
+    vector<int> srad(NMAX+1, 0);
+    // phase 0
+    for(int i=1; i<=N; i++)
+        cnt0[edge[i].size()]++; 
+
+    for(int i=1; i<=N; i++)
+        cnt0[i] += cnt0[i-1];
+
+    for(int i=N; i>=1; i--)
+        p[cnt0[edge[i].size()]--] = i;
+
+    int cls = 1;
+    for(int i=1; i<=N; i++)
+    {
+        if (i == 0 || edge[p[i]].size() != edge[p[i-1]].size())
+            cls++;
+        rank[0][p[i]] = cls-1;
+    }
+
+    //for(int i=1; i<=N; i++)
+    //    printf("P0[%d]=%d rank[0]=%d\n", i, p[i], rank[0][p[i]]);
+
+    //printf("=======\n");
+    // phase n
+    for(int k=1; (1<<(k-1))<N; k++)
+    {
+        vi cntn(cls, 0);
+        srad.clear();
+
+        // gather by prior radix
+        for(int i=1; i<=N; i++)
+        {
+            int second_pos = up[k-1][i];
+            int second_rad;
+            if (second_pos != -1)
+                second_rad = rank[k-1][second_pos];
+            else
+                second_rad = 0;
+            //printf("i=%d second_pos=%d second_rad=%d\n", 
+            //        i, second_pos, second_rad);
+            srad[i] = second_rad;
+            cntn[second_rad]++;
+        }
+
+        for(int i=1; i<cls; i++)
+            cntn[i] += cntn[i-1];
+
+        for(int i=1; i<=N; i++)
+            pn[cntn[srad[i]]--] = i;
+
+        //for(int i=1; i<=N; i++)
+        //    printf("pn[%d]=%d\n", i, pn[i]);
+        //printf("===========\n");
+  
+        vi(cls, 0).swap(cntn);
+        //vi cntn2(cls, 0);
+        //cntn.clear();
+        // counting sort
+        for(int i=1; i<=N; i++)
+            cntn[rank[k-1][pn[i]]]++;
+
+        for(int i=1; i<cls; i++)
+            cntn[i] += cntn[i-1];
+
+        for(int i=N; i>=1; i--)
+        {
+            //printf("pn[%d]=%d cnt=%d rank=%d\n", i, pn[i], 
+            //cntn[rank[k-1][pn[i]]], rank[k-1][pn[i]]);
+            p[cntn[rank[k-1][pn[i]]]--] = pn[i];
+        }
+
+        //for(int i=1; i<=N; i++)
+        //    printf("p[%d]=%d\n", i, p[i]);
+
+        cls = 1;
+        for(int i=1; i<=N; i++)
+        {
+            if (i==1 || rank[k-1][p[i]] != rank[k-1][p[i-1]])
+                cls++; 
+            else
+            {
+                if (srad[p[i]] != srad[p[i-1]])
+                    cls++;
+            }
+            rank[k][p[i]] = cls - 1;
+            logN = k;
+        }
+
+        //for(int i=1; i<=N; i++)
+        //    printf("P[%d]=%d rank[0]=%d\n", i, p[i], rank[k][p[i]]);
+        //break;
+        //printf("====\n");
+    }
+    //for(int i=1; i<=N; i++)
+    //    printf("P[%d]=%d rank=%d\n", i, p[i], rank[logN][p[i]]);
+}
+
+ll get_lca(int i, int j)
+{
+    //printf("i=%d j=%d \n", i, j);
+    if (i < 0 || j < 0)
+        return 0;
+    if (edge[i].size() != edge[j].size())
+        return 0;
+
+    if (rank[logN][i] == rank[logN][j])
+    {
+        if (depth[i] != depth[j])
+            assert(false);
+        return min(depth[i], depth[j]);
+    }
+
+    ll ans = 0;
+    for(int k=logN-1; k>=0; k--)
+    {
+        if(rank[k][i] == rank[k][j])
+        {
+            ans += (1<<k);
+            i    = up[k][i];
+            j    = up[k][j];
+        }
+        if (i < 0 || j < 0)
+            break;
+    }
+    //printf("ans=%lld\n", ans);
+    //printf("=-===\n");
+    return ans;
+}
+
+ll solve()
+{
+    //int logN;
+    //for(logN=0; (1<<logN) < N; logN++);
+    //logN += 1;
+    //printf("N=%d logN=%d\n", N, logN);
+
+    dfs(1);
+    set_ups();
+    //for(int i=1; i<=N; i++)
+    //    for(int k=0; k<logN; k++)
+    //        printf("Up[%d][%d] = %d\n", k, i, up[k][i]);
+
+    build_suffix();
+
+    ll ans = depth[p[1]];
+    //printf("ans=%lld\n",  ans);
+    for(int i=2; i<=N; i++)
+    {
+        ll lca = get_lca(p[i], p[i-1]);
+        ans = ans + depth[p[i]] - lca;
+    }
+    //printf("ANS=%lld\n", ans);
+    return ans;
+}
+
+int main()
+{
+    scanf("%d", &N);
+
+    //for(logN=0; (1<<logN) < N; logN++);
+    //logN += 1;
+
+    for(int i=0; i<N-1; i++)
+    {
+        int u, v;
+        scanf("%d %d", &u, &v);
+        edge[u].push_back(v);
+        edge[v].push_back(u);
+    }
+    printf("%lld\n", solve());
+
+    return 0;
+}

@@ -1,0 +1,86 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <cstring>
+#include <string>
+#include <cmath>
+#include <map>
+#include <set>
+#include <queue>
+#include <algorithm>
+
+
+#define se second
+#define fs first
+#define pb push_back
+#define PB pop_back
+#define bk back()
+#define INF (0x3f3f3f3f)
+
+typedef long long ll;
+using namespace std;
+
+const int maxo=1e6;
+ll cov[maxo],len[maxo];
+int dicx[maxo];
+void update(int o,int a,int b,int x,int l,int r){
+    if(a>=r||b<=l) return;
+    if(l>=a&&r<=b){
+        cov[o]+=x;
+        if(cov[o]==0){
+            if(r-l<=1) len[o]=0;
+            else len[o]=len[o<<1]+len[(o<<1)|1];
+        }
+        if(cov[o]==1) len[o]=dicx[r]-dicx[l];
+        return;
+    }
+    update(o<<1,a,b,x,l,(l+r)>>1);
+    update((o<<1)|1,a,b,x,(r+l)>>1,r);
+    if(cov[o]<=0) len[o]=len[o<<1]+len[(o<<1)|1];
+}
+ll query(int o,int a,int b,int l,int r){
+    if(a>=r||b<=l) return 0;
+    if(l>=a&&r<=b) return len[o];
+    if(cov[o]>=1) return min(dicx[r],dicx[b])-max(dicx[l],dicx[a]);
+    return query(o<<1,a,b,l,(r+l)>>1)+query((o<<1)|1,a,b,(r+l)>>1,r);
+}
+
+struct line{
+    int a,b,h,v;
+    line(int a=0,int b=0,int h=0,int v=0):a(a),b(b),h(h),v(v){}
+    bool operator < (const line &C)const{
+        return h<C.h;
+    }
+}L[maxo];
+int n;
+int dh;
+int idx(int x){
+    return lower_bound(dicx,dicx+dh,x)-dicx;
+}
+int main(){
+    ////freopen("/home/slyfc/CppFiles/in","r",stdin);
+
+    cin>>n;
+    for(int i=0;i<n;i++){
+        int a,b,c,d;
+        scanf("%d%d%d%d",&a,&b,&c,&d);
+        if(a>c||b>d) swap(a,c),swap(b,d);
+        L[i]=line(a,c+1,b,1);
+        L[i+n]=line(a,c+1,d+1,-1);
+        dicx[i]=a;
+        dicx[i+n]=c+1;
+    }
+    sort(dicx,dicx+n*2);
+    sort(L,L+n*2);
+    dh=unique(dicx,dicx+n*2)-dicx;
+    ll ans=0;
+    ll lastlen=0,lastpos=-INF;
+    for(int i=0;i<n*2;i++){
+        ans+=lastlen*(L[i].h-lastpos);
+        update(1,idx(L[i].a),idx(L[i].b),L[i].v,0,dh);
+        lastlen=len[1];
+        lastpos=L[i].h;
+    }
+    cout<<ans<<endl;
+    return 0;
+}

@@ -1,0 +1,50 @@
+#include<cstdio>
+
+typedef long long ll;
+
+const int N = 100002;
+const int MOD = 1000000007;
+
+char a[N],b[N];
+int main()
+{
+    int n;
+
+    scanf("%d",&n);
+    scanf("%s%s",a+1,b+1);
+    ll s0=1,s1=1,s2=1,s3=1;
+    for(int i=1;i<=n;i++)
+    {
+        if(a[i]=='?' && b[i]=='?')
+        {
+            s0=s0*100%MOD;
+            s1=s1*55%MOD;
+            s2=s2*55%MOD;
+            s3=s3*10%MOD;
+        }
+        else if(a[i]=='?')
+        {
+            s0=s0*10%MOD;
+            s1=s1*('9'-b[i]+1)%MOD;
+            s2=s2*(b[i]-'0'+1)%MOD;
+        }
+        else if(b[i]=='?')
+        {
+            s0=s0*10%MOD;
+            s1=s1*(a[i]-'0'+1)%MOD;
+            s2=s2*('9'-a[i]+1)%MOD;
+        }
+        else
+        {
+            if(a[i]!=b[i])
+            {
+                s3=0;
+                if(a[i]<b[i]) s1=0;
+                else if(a[i]>b[i]) s2=0;
+            }
+        }
+    }
+    ll ans=((s0-s1-s2+s3)%MOD+MOD)%MOD;
+    printf("%I64d\n",ans);
+    return 0;
+}

@@ -1,0 +1,86 @@
+#include<cstdio>
+#include<cstring>
+#include<cstdlib>
+#include<iostream>
+#include<algorithm>
+using namespace std;
+
+const int maxn=710;
+const int mod=10000;
+int n,u,v;
+int h[maxn],cnt=0;
+int sz[maxn];
+struct edge{
+	int to,next;
+}G[maxn<<1];
+void add(int x,int y){
+	cnt++;G[cnt].to=y;G[cnt].next=h[x];h[x]=cnt;
+}
+struct big_num{
+	int a[120],len;
+	void clear(){memset(a,0,sizeof(a));len=1;}
+	void mul(int k){
+		len++;
+		for(int i=1;i<=len;++i)a[i]*=k;
+		for(int i=1;i<=len;++i){
+			a[i+1]+=a[i]/mod;
+			a[i]%=mod;
+		}
+		while(len>0&&a[len]==0)len--;
+	}
+	bool check(const big_num &A){
+		if(A.len!=len)return len<A.len;
+		for(int i=len;i>=1;--i){
+			if(A.a[i]!=a[i])return a[i]<A.a[i];
+		}return false;
+	}
+	void print(){
+		printf("%d",a[len]);
+		for(int i=len-1;i>=1;--i)printf("%04d",a[i]);
+		printf("\n");
+	}
+}f[maxn][maxn];
+big_num operator *(big_num A,big_num B){
+	big_num C;C.clear();
+	C.len=A.len+B.len+1;
+	int x=0;
+	for(int i=1;i<=A.len;++i){
+		for(int j=1;j<=B.len;++j){
+			C.a[i+j-1]+=A.a[i]*B.a[j]+x;
+			x=C.a[i+j-1]/mod;
+			C.a[i+j-1]%=mod;
+		}C.a[i+B.len]=x;x=0;
+	}
+	while(C.len>0&&C.a[C.len]==0)C.len--;
+	return C;
+}
+void Get_DP(int u,int fa){
+	bool flag=true;sz[u]=1;
+	big_num A;f[u][1].len=1;f[u][1].a[1]=1;
+	for(int i=h[u];i;i=G[i].next){
+		int v=G[i].to;
+		if(v==fa)continue;
+		Get_DP(v,u);flag=false;
+		for(int j=sz[u];j>=1;--j){
+			big_num B=f[u][j];
+			for(int k=1;k<=sz[v];++k){
+				A=B*f[v][k];
+				if(f[u][j+k].check(A))f[u][j+k]=A;
+				A.mul(k);
+				if(f[u][j].check(A))f[u][j]=A;
+			}
+		}sz[u]+=sz[v];
+	}return;
+}
+int main(){
+	scanf("%d",&n);
+	for(int i=1;i<n;++i){
+		scanf("%d%d",&u,&v);
+		add(u,v);add(v,u);
+	}Get_DP(1,-1);
+	for(int i=2;i<=n;++i){
+		f[1][i].mul(i);
+		if(f[1][i].check(f[1][i-1]))f[1][i]=f[1][i-1];
+	}f[1][n].print();
+	return 0;
+}

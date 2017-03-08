@@ -1,0 +1,17 @@
+#include <math.h>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+int a,b,c,i,j,n,m;
+main () {
+cin>>a>>b;
+for(i=1;i<=a;i++){
+cin>>c;
+n=0;
+while(c>0){
+if(c%10==4 || c%10==7) n++;
+c=c/10;}
+if(n<=b) m++;}
+cout<<m;
+
+}

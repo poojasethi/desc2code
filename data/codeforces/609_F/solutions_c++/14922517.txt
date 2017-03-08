@@ -1,0 +1,85 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<queue>
+#include<map>
+#include<utility>
+using namespace std;
+typedef long long ll;
+const int lim=1000000002;
+struct data{
+	int x,v;
+}a[210001],b[210001];
+struct tnode{
+	int v,d,ls,rs;
+}t[11000001];
+multimap<int,int> h;
+multimap<int,int>::iterator it;
+ll d[210001];
+int tot,i,j,k,n,m,c[210001],rt;
+bool cmp(data a,data b){
+	return a.x<b.x;
+}
+int newnode(){
+	int p;
+	p=++tot;t[p].ls=t[p].rs=0;t[p].d=t[p].v=n+1;
+	return p;
+}
+void down(int p,int l,int r){
+	if (t[p].d>n) return;
+	t[p].v=min(t[p].v,t[p].d);
+	if (l<r){
+		if (!t[p].ls) t[p].ls=newnode();
+		if (!t[p].rs) t[p].rs=newnode();
+		t[t[p].ls].d=min(t[t[p].ls].d,t[p].d);
+		t[t[p].rs].d=min(t[t[p].rs].d,t[p].d);
+	}
+	t[p].d=n+1;
+}
+void change(int &p,int l,int r,int lm,int rm,int v){
+	int m=(l+r)>>1;
+	if (!p) p=newnode();else down(p,l,r);
+	if (lm<=l&&r<=rm){
+		t[p].d=min(t[p].d,v);return;
+	}
+	if (lm<=m) change(t[p].ls,l,m,lm,rm,v);
+	if (rm>=m+1) change(t[p].rs,m+1,r,lm,rm,v);
+}
+int query(int p,int l,int r,int v){
+	int m=(l+r)>>1,res;
+	if (!p) return n+1;
+	down(p,l,r);
+	if (v<=m) res=(t[p].ls)?query(t[p].ls,l,m,v):t[p].v;else res=t[p].rs?query(t[p].rs,m+1,r,v):t[p].v;
+	return res;
+}
+void work(int x,int v){
+	int k;
+	c[a[x].v]++;d[a[x].v]+=v;
+	while (1){
+		k=min((ll)lim,d[a[x].v]+a[x].x);
+		it=h.lower_bound(a[x].x);
+		if (it==h.end()||(*it).first>k) break;
+		c[a[x].v]++;d[a[x].v]+=(*it).second;
+		h.erase(it);
+	}
+	change(rt,1,lim,a[x].x,k,x);
+}
+int main(){
+	//freopen("a.in","r",stdin);freopen("a.out","w",stdout);
+	h.clear();
+	rt=tot=0;scanf("%d%d",&n,&m);memset(c,0,sizeof(c));
+	for (i=1;i<=n;i++) scanf("%d%d",&a[i].x,&k),d[i]=k,a[i].v=i,a[i].x++;
+	sort(a+1,a+1+n,cmp);
+	for (i=1,k=0;i<=n;i++){
+		j=min((ll)lim,a[i].x+d[a[i].v]);
+		if (j<=k) continue;
+		change(rt,1,lim,a[i].x,j,i);k=j;
+	}
+	for (i=1;i<=m;i++){
+		scanf("%d%d",&b[i].x,&b[i].v);b[i].x++;
+		k=query(rt,1,lim,b[i].x);
+		if (k<=n) work(k,b[i].v);else h.insert(make_pair(b[i].x,b[i].v));
+	}
+	for (i=1;i<=n;i++) printf("%d %I64d\n",c[i],d[i]);
+	return 0;
+}

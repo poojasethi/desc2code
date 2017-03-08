@@ -1,0 +1,218 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define PB push_back
+#define MP make_pair
+#define F first
+#define S second
+#define sd(x) scanf("%d", &x)
+#define sld(x) scanf("%lld", &x)
+#define LL long long
+#define MOD 1000000007
+
+#define N 500100
+
+LL pow(LL x, LL y){
+    if(y == 0) return 1;
+    LL ans = pow(x, y / 2);
+    ans *= ans;
+    if(ans >= MOD) ans %= MOD;
+    if(y & 1) ans *= x;
+    if(ans >= MOD) ans %= MOD;
+    return ans;
+}
+LL gcd(LL x, LL y){
+    if(x < y) return gcd(y, x);
+    if(y == 0) return x;
+    return gcd(y, x % y);
+}
+
+int n, val[N], tobe[N], ans[N], len[N];
+int cnt[300], pre[300];
+int nex[N][30];
+int vis[300], st[N][30], num[N];
+
+void make(int l, int r, int node, int va){
+    tobe[node] = -1;
+    num[node] = l;
+    if(l == r){
+        val[node] = va;
+        return;
+    }
+    int mid = (l + r) / 2;
+    make(l , mid, 2 * node, va);
+    make(mid + 1 , r, 2 * node + 1, va);
+    val[node] = va;
+}
+
+void update(int node, int x, int y, int l, int r, int va){
+    if(l == x && r == y){
+        if(va <= val[node]){
+            val[node] = va;
+            num[node] = l;
+        }
+        if(tobe[node] == -1){
+            tobe[node] = va;
+        }
+        else if(tobe[node] > va){
+            tobe[node] = va;
+        }
+        return;
+    }
+    int mid = (l + r) / 2;
+    if(x <= mid && y <= mid){
+        update(2 * node, x, y, l, mid, va);
+    }
+    else if(x > mid && y > mid){
+        update(2 * node + 1, x, y, mid + 1, r, va);
+    }
+    else{
+        update(2 * node, x, mid, l, mid, va);
+        update(2 * node + 1, mid + 1, y, mid + 1, r, va);
+    }
+    if(val[2 * node] <= val[2 * node + 1]){
+        num[node] = num[2 * node];
+    }
+    else{
+        num[node] = num[2 * node + 1];
+    }
+    val[node] = min( val[2 * node], val[2 * node + 1] );
+}
+int an, nu;
+int query(int node, int x, int y, int l, int r){
+    if(l == x && r == y){
+        if(an > val[node]){
+            an = val[node];
+            nu = num[node];
+        }
+        else if(an == val[node]){
+            nu = min(nu, num[node]);
+        }
+        return 0;
+    }
+
+    int mid = (l + r) / 2;
+    pair<int, int> p1, p2;
+    if(tobe[node] != -1){
+        update(2 * node, l, mid, l, mid, tobe[node]);
+        update(2 * node + 1, mid + 1, r, mid + 1, r, tobe[node]);
+        tobe[node] = -1;
+    }
+    if(x <= mid && y <= mid){
+        query(2 * node, x, y, l, mid);
+    }
+    else if(x > mid && y > mid){
+        query(2 * node + 1, x, y, mid + 1, r);
+    }
+    else{
+        query(2 * node, x, mid, l, mid);
+        query(2 * node + 1, mid + 1, y, mid + 1, r);
+    }
+}
+
+vector< pair<pair<pair<int,int> ,int>, pair<int, int> > > v[30];
+
+int solve(){
+    string s;
+    cin>>s;
+    n = s.length();
+    s = ' ' + s;
+    int q, i, x, mil, mal, l, r, ti, j, k, ind, tmp;
+    char ch, ch1;
+    cin>>q;
+    for(i = 1; i <= q; i++){
+        sd(x);
+        sd(mil);
+        sd(mal);
+        sd(l);
+        sd(r);
+        l++;
+        r++;
+        v[x].PB( MP(MP(MP(l, r), i), MP(mil, mal)) );
+        ans[i] = -1;
+        len[i] = -1;
+    }
+
+    for(i = 'a'; i <= 'z'; i++){
+        pre[i - 'a'] = n + 1;
+    }
+
+    for(i = n; i >= 1; i--){
+        for(j = 'a'; j <= 'z'; j++){
+            nex[i][j - 'a'] = pre[j - 'a'];
+        }
+        ch = s[i];
+        pre[ch - 'a'] = i;
+    }
+
+    for(i = 1; i <= n; i++){
+        ch = s[i];
+        for(j = 'a'; j <= 'z'; j++){
+            vis[j] = 0;
+        }
+        st[i][1] = i;
+        vis[ch] = 1;
+        for(ti = 2; ti <= 26; ti++){
+            tmp = n + 1;
+            for(j = 'a'; j <= 'z'; j++){
+                if(vis[j] == 0 && tmp >= nex[i][j - 'a']){
+                    tmp = nex[i][j - 'a'];
+                    ch1 = j;
+                }
+            }
+            vis[ch1] = 1;
+            st[i][ti] = tmp;
+        }
+        st[i][27] = n + 1;
+    }
+    pair<int, int> tp;
+
+    for(i = 1; i <= 26; i++){
+        sort(v[i].begin(), v[i].end());
+        make(1, n, 1, n + 1);
+        k = v[i].size() - 1;
+        for(j = n; j >= 1; j--){
+            if(st[j][i] - j + 1 <= st[j][i + 1] - 1 - j + 1){
+                update(1, st[j][i] - j + 1, st[j][i + 1] - 1 - j + 1, 1, n, j);
+            }
+            while(k >= 0 && v[i][k].F.F.F == j){
+
+                l = v[i][k].F.F.F;
+                r = v[i][k].F.F.S;
+                ind = v[i][k].F.S;
+                mil = v[i][k].S.F;
+                mal = v[i][k].S.S;
+
+                an = n + 1;
+                nu = n + 1;
+                query(1, mil, mal, 1, n);
+                if(an + nu - 1 <= r){
+                    ans[ind] = an;
+                    len[ind] = nu;
+                }
+                k--;
+            }
+        }
+    }
+    for(i = 1; i <= q; i++){
+        if(ans[i] == -1 && len[i] == -1){
+            printf("%d %d\n", len[i], ans[i]);
+        }
+        else {
+            printf("%d %d\n", ans[i] - 1, ans[i] + len[i] - 1 - 1);
+        }
+    }
+    return 0;
+}
+
+int main(){
+    int t = 1;
+    //freopen("in.txt", "r", stdin);
+    //freopen("out.txt", "w", stdout);
+    //cin>>t;
+    while(t--){
+        solve();
+    }
+    return 0;
+}

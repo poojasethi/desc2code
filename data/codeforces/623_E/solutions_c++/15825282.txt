@@ -1,0 +1,125 @@
+#include<stdio.h>
+#include<cstring>
+#include<algorithm>
+#include<cmath>
+#define U 30005
+#define M 100005
+using namespace std;
+struct data{
+  double x,y;
+  data operator + (const data &b){return (data){x+b.x,y+b.y};}
+  data operator - (const data &b){return (data){x-b.x,y-b.y};}
+  data operator * (const data &b){return (data){x*b.x-y*b.y,x*b.y+y*b.x};}
+}w[2][M],A[3][M],B[3][M],_[M];int rev[M];
+const double pi=acos(-1.);
+const int P=1e9+7;long long n;
+int fac[U],inv[U],two[U],F[U],G[U],tmp[U];
+int g[20][U],ret[U],L,i,j,k,ans,p,flag,N;
+int C(int n,int m){return 1ll*fac[n]*inv[m]%P*inv[n-m]%P;}
+int Pow(int a,int b){
+  int ret=1;
+  for (;b;b>>=1,a=1ll*a*a%P)
+    if (b&1) ret=1ll*ret*a%P;
+  return ret;
+}
+inline void up(int &x){if (x>=P) x-=P;}
+void FFT(data *a,int o){
+  for (int i=0;i<N;i++)
+    if (i<rev[i]) swap(a[i],a[rev[i]]);
+  for (int i=1;i<N;i<<=1)
+    for (int j=0,t=N/(i<<1);j<N;j+=i<<1)
+      for (int k=0,l=0;k<i;k++,l+=t){
+        data x=a[j+k+i]*w[o][l],y=a[j+k];
+        a[j+k+i]=y-x;
+        a[j+k]=y+x;
+      }
+  if (o) for (int i=0;i<N;i++)
+    a[i].x/=N;
+}
+inline void init(int n){
+  for (N=1;N<=n;N<<=1);N<<=1;
+  for (int i=0;i<N;i++){
+    int x=i,&y=rev[i];y=0;
+    for (int k=1;k<N;k<<=1,x>>=1)
+      (y<<=1)|=x&1;
+  }
+  for (int i=0;i<N;i++)
+    w[0][i]=w[1][i]=(data){cos(2*pi*i/N),sin(2*pi*i/N)},w[1][i].y=-w[1][i].y;
+}
+const int S=1000;
+void CONV(int *c,int *a,int *b){
+  for (int p=0;p<3;p++)
+    for (int i=0;i<N;i++) 
+      A[p][i].x=A[p][i].y=B[p][i].x=B[p][i].y=0;
+  for (int i=1;i<=L;i++) 
+    for (int xa=a[i],xb=b[i],p=0;p<3;p++)
+      A[p][i].x=xa%S,xa/=S,B[p][i].x=xb%S,xb/=S;
+  for (int p=0;p<3;p++)
+    FFT(A[p],0),FFT(B[p],0);
+  for (int i=1;i<=L;i++) c[i]=0;
+  int base=1;
+  for (int p=0;p<3;p++,base=1ll*base*S%P)
+    for (int _base=base,q=0;q<3;q++,_base=1ll*_base*S%P){
+      for (int i=0;i<N;i++)
+        _[i]=A[p][i]*B[q][i];
+      FFT(_,1);
+      for (int i=1;i<=L;i++){
+        int x=((long long)(_[i].x+0.499999))%P;
+        if (x<0) x+=P;
+        x=1ll*x*_base%P;
+        if ((c[i]+=x)>=P) c[i]-=P;
+      }
+    }
+  //printf("%d %d %d\n",c[L-1],c[L],c[L+1]);
+  //for (int i=1;i<=L;i++)
+    //printf("%d ",c[i]);puts("");
+}
+void Union(int *c,int *a,int *b,int m){
+  int Two=two[m],now=1;
+  F[0]=0;for (int i=1;i<=L;i++) 
+    now=1ll*now*Two%P,F[i]=1ll*a[i]*inv[i]%P*now%P;
+  G[0]=0;for (int i=1;i<=L;i++) 
+    G[i]=1ll*b[i]*inv[i]%P;
+  CONV(tmp,F,G);
+  for (int i=1;i<=L;i++) 
+    c[i]=1ll*tmp[i]*fac[i]%P;
+}
+/*void debug(){
+  init(2);
+  A[0].x=1;A[1].x=2;
+  B[0].x=3;B[1].x=4;
+  FFT(A,0);FFT(A,1);FFT(A,0);
+  FFT(B,0);FFT(B,1);FFT(B,0);
+  for (int i=0;i<N;i++)
+    A[i]=A[i]*B[i];
+  FFT(A,1);
+  for (int i=0;i<=2;i++)
+    printf("%.5f\n",A[i].x);
+}*/
+int main(){
+  //debug();return 0;
+  scanf("%I64d%d",&n,&L);init(L);
+  if (n>L) return puts("0"),0;
+  for (two[0]=i=1;i<=L;i++) two[i]=two[i-1]*2%P;
+  for (fac[0]=i=1;i<=L;i++) fac[i]=1ll*fac[i-1]*i%P;
+  inv[L]=Pow(fac[L],P-2);
+  for (i=L-1;i>=0;i--) inv[i]=1ll*inv[i+1]*(i+1)%P;
+  /*f[0][0]=1;
+  for (i=0;i<n;i++)
+    for (j=0;j<=L;j++)
+      if (f[i][j])
+        for (k=1;k+j<=L;k++)
+          up(f[i+1][j+k]+=1ll*f[i][j]*C[j+k][k]%P*two[j]%P);*/
+  for (i=1;i<=L;i++) g[0][i]=1;
+  for (p=1;(1<<p)<=n;p++)
+    Union(g[p],g[p-1],g[p-1],1<<(p-1));
+  flag=0;
+  for (--p;p>=0;p--)
+    if ((n>>p)&1){
+      if (!flag) memcpy(ret,g[p],sizeof(g[p]));
+      else Union(ret,ret,g[p],1<<p);flag=1;
+    }
+  for (i=1;i<=L;i++)
+    up(ans+=1ll*ret[i]*C(L,i)%P);
+  printf("%d\n",ans);
+}

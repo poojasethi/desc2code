@@ -1,0 +1,142 @@
+#include<cstdio>
+#include<iostream>
+#define MM 1250005
+#include<cassert>
+using namespace std;
+
+int N, R, C;
+char query[15];
+int codebook[52];
+
+struct DJS
+{
+    int r;//rep of node
+    int w;//number of nodes
+    int v;//number of voltage sources
+}jb[MM];
+
+void DJSInit()
+{
+    for(int i=0; i<MM; i++)
+    {
+        jb[i].r = i;
+        jb[i].w = 1;
+        jb[i].v = 0;
+    }
+}
+
+int DJSGet(int x)
+{
+   int a=x, b;
+   while(a!= jb[a].r)a = jb[a].r;
+   while(x!= jb[x].r)b = jb[x].r, jb[x].r = a, x= b;
+   return a;
+}
+
+void DJSUnion(int x, int y)
+{
+    int a=DJSGet(x), b = DJSGet(y);
+
+    if(a == b) return;
+
+    if(jb[a].w>jb[b].w)
+    {
+        jb[b].r = a;
+        jb[a].w+= jb[b].w;
+        jb[a].v+= jb[b].v;
+    }
+    else
+    {
+        jb[a].r = b;
+        jb[b].w+= jb[a].w;
+        jb[b].v+= jb[a].v;
+    }
+}
+
+int decode(char a, char b)
+{
+
+    int t1, t2;
+
+    if(a>'Z')t1 = codebook[26 + a - 'a'];
+    else t1 = codebook[a - 'A'];
+
+    if(b>'Z')t2 = codebook[26 + b - 'a'];
+    else t2 = codebook[b - 'A'];
+
+    int ans =52*t1 + t2;
+    assert(ans>=1 && ans<=2500);
+    return ans;
+}
+
+int conv(int x, int y)
+{
+    int ans = (x + C*y);
+    assert(ans>=0 && ans<=1249999);
+    return ans;
+}
+
+void solve()
+{
+  DJSInit();
+
+  for(int i=0; i<52; i++)
+        codebook[i] = i;
+
+  int x1, y1, x2, y2;
+
+  for(int i=0; i<N; i++)
+  {
+     scanf("%s", query);
+     if(query[0] == 'W' || query[0] == 'L')
+     {
+        x1 = decode(query[1], query[2])-1;
+        y1 = (decode(query[3], query[4])-1)/5;
+        x2 = decode(query[5], query[6])-1;
+        y2 = (decode(query[7], query[8])-1)/5;
+        //cout<<query[0]<<" "<<x1<<" "<<y1<<" "<<x2<<" "<<y2<<endl;
+
+        if(query[0] == 'W')
+        {
+            DJSUnion(conv(x1,y1), conv(x2,y2));
+        }
+        else
+        {
+            bool on = 1;
+            int a = DJSGet(conv(x1, y1)), b = DJSGet(conv(x2, y2));
+            if((jb[a].v >0 && jb[b].v >0) || (jb[a].v == 0 && jb[b].v == 0))on = 0;
+            printf("%s\n", on?"ON":"OFF");
+        }
+
+     }
+     else
+     {
+        x1 = decode(query[1], query[2])-1;
+        y1 = (decode(query[3], query[4])-1)/5;
+        //cout<<query[0]<<" "<<x1<<" "<<y1<<endl;
+
+        if(query[0] == 'V')
+        {
+            int a = DJSGet(conv(x1,y1));
+            jb[a].v++;
+        }
+        else
+        {
+            int a = DJSGet(conv(x1,y1));
+            jb[a].v--;
+        }
+
+     }
+ }
+}
+
+int main()
+{
+    #ifndef ONLINE_JUDGE
+    freopen("in.txt","r",stdin);
+  //freopen("output1.txt","w",stdout);
+    #endif
+    scanf("%d%d%d", &N, &R, &C);
+    solve();
+
+}

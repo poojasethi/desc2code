@@ -1,0 +1,70 @@
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+#define maxn 200005
+#define ll long long
+using namespace std;
+
+int S,tot,N,head[maxn],next[maxn*2],lk[maxn*2],w[maxn*2],fa[maxn],dfn[maxn],q[maxn],in[maxn],s[maxn],qw[maxn];
+ll W,f[maxn],g[maxn],ww[maxn];
+
+void add(int u,int v,int x,int t) {lk[t]=v,w[t]=x,next[t]=head[u],head[u]=t;}
+
+void init()
+{
+	scanf("%d",&N);
+	for (int i=1,u,v,w; i<=N; i++) scanf("%d%d%d",&u,&v,&w),add(u,v,w,i),add(v,u,w,i+N);
+}
+
+void loop(int u)
+{
+    dfn[u]=++tot;
+    for (int i=head[u],v; v=lk[i],i; i=next[i]) if (fa[u]!=v&&!dfn[v]) fa[v]=u,f[v]=w[i],loop(v);
+    for (int i=head[u],v; v=lk[i],i; i=next[i]) if (dfn[v]>dfn[u]&&fa[v]!=u)
+    {
+        for (int x=v; x!=u; x=fa[x]) q[++S]=x,qw[S]=f[x],in[x]=1;
+        q[++S]=u,qw[S]=w[i],in[u]=1;
+    }
+}
+
+void dfs1(int u,int fa)
+{
+	s[u]=1,f[u]=0;
+	for (int i=head[u],v; v=lk[i],i; i=next[i]) if (!in[v]&&v!=fa) dfs1(v,u),f[u]+=f[v]+1ll*s[v]*w[i],s[u]+=s[v];
+}
+
+void dfs2(int u,int fa,int bg)
+{
+	g[u]=g[fa]+f[fa]-f[u]+1ll*bg*(N-2*s[u]);
+	for (int i=head[u],v; v=lk[i],i; i=next[i]) if (v!=fa) dfs2(v,u,w[i]);
+}
+
+void doit()
+{
+	loop(1);
+	for (int i=1; i<=S; i++) fa[q[i]]=0,dfs1(q[i],0);
+	
+	for (int i=1; i<=S; i++) q[i+S]=q[i],qw[i+S]=qw[i],W+=qw[i];
+	for (int i=1; i<=2*S; i++) ww[i]=ww[i-1]+qw[i];
+	int SA=0,SB=0; ll A=0,B=0;
+	for (int i=2; i<=S; i++) SB+=s[q[i]],B+=f[q[i]]+(W-ww[i-1])*s[q[i]];
+	for (int i=1,j=2; i<=S; i++)
+	{
+		for (;ww[j-1]-ww[i-1]<=W-ww[j-1]+ww[i-1]; j++) SA+=s[q[j]],A+=f[q[j]]+(ww[j-1]-ww[i-1])*s[q[j]],SB-=s[q[j]],B-=f[q[j]]+(W-ww[j-1]+ww[i-1])*s[q[j]];
+		g[q[i]]=A+B,A-=1ll*qw[i]*SA+f[q[i+1]],SA-=s[q[i+1]],SB+=s[q[i]],B+=f[q[i]]+1ll*qw[i]*SB;
+	}
+	
+	for (int i=1; i<=S; i++)
+		for (int u=q[i],j=head[u],v; v=lk[j],j; j=next[j]) if (!in[v]) dfs2(v,u,w[j]);
+	for (int i=1; i<=N; i++) printf("%I64d%c",f[i]+g[i],i==N?'\n':' ');
+}
+
+int main()
+{
+	init();
+	doit();
+	return 0;
+}

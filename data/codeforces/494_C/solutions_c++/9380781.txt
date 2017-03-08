@@ -1,0 +1,59 @@
+#include <iostream>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+#include <cstdio>
+#include <stack>
+#include <vector>
+#define for(i,a,b) for(int i=(a);i<=(b);i++)
+#define ford(i,b,a) for(int i=b;i>=a;i--)
+using namespace std;
+const int qmax=5002,nmax=200001;
+struct segment{
+    int l,r;
+    double pob;
+};
+stack<int> st;
+vector<int> g[qmax];
+segment s[qmax];
+int a[nmax],n,q,mx[qmax],rmq[nmax][18];
+double dp[qmax][qmax],ans;
+bool cmp(segment x,segment y){return (x.l<y.l||(x.l==y.l&&x.r>y.r));}
+void solve(int i)
+{
+    int u=g[i].size()-1;
+    for(j,0,(int) g[i].size()-1) solve(g[i][j]);
+    for(j,0,q){
+        double u=1-s[i].pob,v=s[i].pob;
+        for(t,0,(int) g[i].size()-1){
+            u*=dp[g[i][t]][min(mx[i]+j-mx[g[i][t]],q)];
+            v*=dp[g[i][t]][min(mx[i]+j-mx[g[i][t]]-1,q)];
+        }
+        if (j!=0?dp[i][j]=u+v:dp[i][j]=u);
+    }
+}
+int main()
+{
+    //freopen("input.inp","r",stdin);
+    scanf("%d%d",&n,&q);
+    for(i,1,n) scanf("%d",&a[i]);
+    for(i,1,q) scanf("%d%d%lf",&s[i].l,&s[i].r,&s[i].pob);
+    q++;
+    s[q]={1,n,0};
+    sort(s+1,s+1+q,cmp);
+    for(i,1,n) rmq[i][0]=a[i];
+    for(j,1,16) for(i,1,n) rmq[i][j]=max(rmq[i][j-1],rmq[i+(1<<(j-1))][j-1]);
+    for(i,1,q){
+        int k=log2(s[i].r-s[i].l+1);
+        mx[i]=max(rmq[s[i].l][k],rmq[s[i].r-(1<<k)+1][k]);
+    }
+    for (i,1,q){
+        while (!st.empty()&&s[i].r>s[st.top()].r) st.pop();
+        if (!st.empty()) g[st.top()].push_back(i);
+        st.push(i);
+    }
+    solve(1);
+    ans=dp[1][0]*mx[1];
+    for(i,1,q) ans+=(dp[1][i]-dp[1][i-1])*(mx[1]+i);
+    printf("%.9lf",ans);
+}

@@ -1,0 +1,269 @@
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long ll;
+#define INF 1000000007
+#define MXN 200010
+
+int N, M, q_start, q_end, id=-1, si, sj;
+static int ans_list[30][3], ptr[MXN], pLB[MXN], pUB[MXN];
+ll INV=0;
+
+#define GETC getchar_unlocked()
+template <typename T> T read()
+{
+	T n = 0;
+	int sign = 1;
+	char ch = GETC;
+	while(ch < '0' or ch > '9'){if(ch == '-') sign = -1; ch = GETC;}	
+	while(ch >= '0' and ch <= '9')
+	{
+		n = n * 10 + ch - '0';
+		ch = GETC;
+	}
+	return n;
+}
+ 
+struct node
+{
+	int * arr, * ls, * rs;
+	int sz;
+} tree[MXN*4];
+ 
+// Function : Does an upper bound search for a value in the arr list of a Node in the segment tree
+int uSearch(int Node, int val)
+{
+	int lo = 0, hi = tree[Node].sz-1;
+
+	int mid;
+	while(lo <= hi)
+	{
+		mid = (lo+hi)>>1;
+		if(tree[Node].arr[mid] <= val)
+			lo = mid+1;
+		else
+			hi = mid-1;
+	}
+	return lo;
+}
+
+// Function : Does a lower bound search for a value in the arr list of a Node in the segment tree
+int lSearch(int Node, int val)
+{
+	int lo = 0, hi = tree[Node].sz - 1;
+	int mid;
+
+	while(lo <= hi)
+	{
+		mid = (lo+hi)>>1;
+
+		if(tree[Node].arr[mid] >= val)
+			hi = mid-1;
+		else
+			lo = mid+1;
+	}
+
+	return lo;
+}
+ 
+void cascade(int Node,int child, int code = 0)
+{
+	int i = 0, j = 0;
+	while(i < tree[Node].sz)
+	{
+		// Find the first position in child array where we will find arr[i] if we binary search for it in this array
+		while(tree[Node].arr[i] > tree[child].arr[j] and j < tree[child].sz)	j++;	
+		
+		if(!code)
+			tree[Node].ls[i++] = j;		// Fill up the array for the left-traversal
+		else
+			tree[Node].rs[i++] = j;		// Fill up the array for the right-traversal
+	}
+
+	if(!code)
+		tree[Node].ls[i] = tree[child].sz;
+	else
+		tree[Node].rs[i] = tree[child].sz;
+
+	return;
+}
+ 
+// Merger of two lists from children
+void merge(int Node, int lc, int rc)
+{
+	int i = 0, j = 0, k = 0;
+
+	while(i < tree[lc].sz and j < tree[rc].sz)
+	{
+		if(tree[lc].arr[i] > tree[rc].arr[j])
+		{
+			INV += (tree[lc].sz - i);
+			tree[Node].arr[k++] = tree[rc].arr[j++];
+		}
+		else
+		{
+			tree[Node].arr[k++] = tree[lc].arr[i++];
+		}
+	}
+
+	while(i < tree[lc].sz)
+		tree[Node].arr[k++] = tree[lc].arr[i++];
+
+	while(j < tree[rc].sz)
+		tree[Node].arr[k++] = tree[rc].arr[j++];
+
+	return;
+}
+ 
+// Builder
+void build(int Node, int l, int r)
+{
+	if(l == r)
+	{
+		tree[Node].arr = (int *) malloc (1 * sizeof(int));
+		tree[Node].sz = 1;
+		tree[Node].arr[0] = ptr[l];
+		return;
+	}
+
+	int left = 2 * Node, right = 2 * Node + 1, mid = (l+r)/2;
+
+	build(left, l, mid);	build(right, mid+1, r);
+
+	tree[Node].sz = r - l + 1;	// Determining the size
+	tree[Node].arr = (int * ) malloc ((r-l+3) * sizeof(int));
+	tree[Node].ls  = (int * ) malloc ((r-l+3) * sizeof(int));
+	tree[Node].rs  = (int * ) malloc ((r-l+3) * sizeof(int));
+
+	merge(Node, left, right);	// Creating the arr list for this node and also calculating the inversions
+			
+	cascade(Node, left, 0);		// Creating the ls list for this node
+	cascade(Node, right, 1);	// Creating the rs list for this node
+	
+	return;
+}
+ 
+static int cur[MXN], l[MXN], r[MXN], lb[MXN], ub[MXN];
+
+/*
+void query(int lower_bound, int upper_bound)
+{
+	int pt = 0, i = 0;
+	cur[pt] = 1; l[pt] = 0, r[pt] = N-1, lb[i] = lower_bound, ub[i] = upper_bound;
+	
+	while(i <= pt)
+	{
+		if(r[i]< q_start || q_end < l[i]) {i++; continue;}
+		if(q_start <= l[i] && r[i] <= q_end)
+		{
+			ans_list[++id][0] = lb[i], ans_list[id][1] = ub[i], ans_list[id][2] = tree[cur[i]].sz;
+			i++; continue;
+		}
+ 
+		int mid = (l[i] + r[i])>>1;
+ 
+		if(mid < q_start || q_end < l[i]);
+		else
+		cur[++pt] = 2 * cur[i], l[pt] = l[i], r[pt] = mid, lb[pt] = tree[cur[i]].ls[lb[i]], ub[pt] = tree[cur[i]].ls[ub[i]];
+		
+		if(r[i] < q_start || q_end < mid + 1);
+		else
+		cur[++pt] = 2 * cur[i] + 1, l[pt] = mid+1, r[pt]= r[i], lb[pt] = tree[cur[i]].rs[lb[i]], ub[pt] = tree[cur[i]].rs[ub[i]];
+		
+		i++;
+	}
+}
+*/
+void query(int lower_bound, int upper_bound)
+{
+	int pt = 0, i = 0;
+	cur[pt] = 1, l[pt] = 0, r[pt] = N-1;
+	lb[i] = lower_bound, ub[i] = upper_bound;
+
+	while(i <= pt)
+	{
+		if(r[i] < q_start or l[i] > q_end)
+		{ i++;	continue;  }
+
+
+		if(q_start <= l[i] and r[i] <= q_end)
+		{
+			// Now we update the ans_list
+			ans_list[++id][2] = tree[cur[i]].sz;	// Index 2 is storing the size of this segment
+			ans_list[id][0]   = lb[i];	// Index 0 will store the lower bound in this segment
+			ans_list[id][1]   = ub[i];	// Index 1 will store the upper bound in this segment
+		
+			i++;
+			continue;
+		}
+
+		int left = 2 * cur[i], right = 2 * cur[i] + 1, mid = (l[i] + r[i])/2;
+
+		if(mid < q_start or l[i] > q_end);
+		else
+			cur[++pt] = left, l[pt] = l[i], r[pt] = mid, lb[pt] = tree[cur[i]].ls[lb[i]], ub[pt] = tree[cur[i]].ls[ub[i]];
+
+		if(q_end < mid+1 or r[i] < q_start);
+		else
+			cur[++pt] = right, l[pt] = mid+1, r[pt] = r[i], lb[pt] = tree[cur[i]].rs[lb[i]], ub[pt] = tree[cur[i]].rs[ub[i]];
+
+		i++;
+	}
+	return;
+}
+
+ 
+int main()
+{
+	N = read<int>(), M = read<int>();
+	for(int i = 0; i < N; i++)
+		ptr[i] = read<int>();
+
+	build(1,0,N-1);
+
+	for(int i = 0; i < N; i++)
+	{
+		pLB[i] = lSearch(1, ptr[i]);	// Save the index for the lower bound search for ptr[i] in range (0,N)
+		pUB[i] = uSearch(1, ptr[i]);	// Save the index for the upper bound search for ptr[i] in range (0,N)
+	}
+
+	for(int i = 0; i < M; i++)
+	{
+		si = read<int>(), sj = read<int>();
+
+		si--, sj--;
+
+		ll ans = INV;
+
+		if(si > sj) swap(si, sj);
+
+		q_start = si+1;
+		q_end   = sj-1;
+
+		if	(ptr[si] > ptr[sj]) 		ans--;
+		else if	(ptr[sj] > ptr[si]) 		ans++;
+	
+		id = -1;
+		query(pLB[si], pUB[si]);
+
+		for(int j = 0; j <= id; j++)
+		{
+
+			ans += (ans_list[j][2] - ans_list[j][1]) - ans_list[j][0];	// For the q_start we have to add
+											// (Size - Upper_bound) - lower_bound in each list
+		}
+
+
+		id = -1;
+
+		query(pLB[sj], pUB[sj]);
+
+		for(int j = 0; j <= id; j++)
+		{
+			ans += ans_list[j][0] - (ans_list[j][2] - ans_list[j][1]);	// For the q_end we have to add
+											// Lower_bound - (Size - Upper bound) in each list
+		}	
+
+		cout << ans << "\n";
+	}
+	return 0;
+}

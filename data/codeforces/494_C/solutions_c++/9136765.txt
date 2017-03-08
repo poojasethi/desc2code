@@ -1,0 +1,117 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+#include <cmath>
+#define maxn 5005
+using namespace std;
+int n,m;
+double a[maxn][maxn];
+int M[100008][20],mx[maxn];
+int b[100009];
+vector<int>G[maxn];
+struct node
+{
+	int l,r;
+	double p;
+	bool operator<(const node &rhs)const
+	{
+		if(l!=rhs.l)
+			return l<rhs.l;
+		else
+			return r>rhs.r;
+	}
+}p[maxn];
+void dfs(int u)
+{
+	if((int)G[u].size()==0)
+	{
+		a[u][0]=1-p[u].p;
+		for(int i=1;i<=m;i++)
+			a[u][i]=1;
+		return;
+	}
+	int v;
+	for(int i=0;i<(int)G[u].size();i++)
+	{
+		v=G[u][i];
+			dfs(v);
+	}
+	for(int i=0;i<=m;i++)
+	{
+		double res1=1,res2=1;
+		for(int j=0;j<(int)G[u].size();j++)
+		{
+			v=G[u][j];
+			if(mx[u]-mx[v]+i<=m)
+				res2*=a[v][mx[u]-mx[v]+i];
+			if(mx[u]-mx[v]+i-1<0)
+				res1=0;
+			else if(mx[u]-mx[v]+i-1<=m)
+				res1*=a[v][mx[u]-mx[v]+i-1];
+		}
+		if(i==0)
+			a[u][i]=res2*(1-p[u].p);
+		else
+			a[u][i]=res1*p[u].p+res2*(1-p[u].p);
+	}
+}
+int rmq(int l,int r)
+{
+	int k=log2(r-l+1);
+	return max(M[l][k],M[r-(1<<k)+1][k]);
+}
+void init()
+{
+	for(int i=0;i<=n;i++)
+		M[i][0]=b[i];
+	for(int j=1;1<<j<=n;j++)
+		for(int i=0;i+(1<<j)-1<n;i++)
+			M[i][j]=max(M[i][j-1],M[i+(1<<(j-1))][j-1]);
+}
+bool in(int a,int b)
+{
+	return p[b].r>=p[a].r&&p[b].l<=p[a].l;
+}
+int main()
+{
+	scanf("%d%d",&n,&m);
+	for(int i=0;i<n;i++)
+	{
+		scanf("%d",&b[i]);
+	}
+	init();
+	for(int i=1;i<=m;i++)
+	{
+		scanf("%d%d%lf",&p[i].l,&p[i].r,&p[i].p);
+		p[i].l--;
+		p[i].r--;
+	}
+	sort(p+1,p+1+m);
+	m++;
+	p[0].l=0;p[0].r=n-1;p[0].p=0;
+	for(int i=1;i<m;i++)
+	{
+		for(int j=i-1;j>=0;j--)
+		{
+			if(in(i,j))
+			{
+				G[j].push_back(i);
+				break;
+			}
+		}
+	}
+	for(int i=0;i<m;i++)
+	{
+		mx[i]=rmq(p[i].l,p[i].r);
+	}
+	dfs(0);
+	double ans=a[0][0]*mx[0];
+	for(int i=1;i<=m;i++)
+	{
+		ans+=(a[0][i]-a[0][i-1])*(mx[0]+i);
+	}
+	printf("%.9f\n",ans);
+	//system("pause");
+	return 0;
+}

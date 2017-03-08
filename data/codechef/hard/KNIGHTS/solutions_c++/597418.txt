@@ -1,0 +1,129 @@
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <cstdlib>
+#include <cstring>
+#include <string>
+#include <vector>
+#include <queue>
+#include <stack>
+#include <set>
+#include <map>
+#include <cmath>
+#pragma comment(linker,"/STACK:16777216")
+#define inf 1000000000
+using namespace std;
+typedef long long L;
+typedef unsigned long long UL;
+int t,n,m;
+char A[52][52];
+vector<int> V[1001];
+int F[1001][1001],C[1001][1001],beg,end;
+queue<int> q;
+int P[1001],B[1001];
+
+void add(int r,int c,int dr,int dc){
+    int v=(r-1)*m+c,nv;
+    if(r+dr>=1&&r+dr<=n&&c+dc>=1&&c+dc<=m){
+        if(A[r+dr][c+dc]=='.'){
+            nv=(r+dr-1)*m+(c+dc);
+            V[v].push_back(nv);
+            V[nv].push_back(v);
+            C[v][nv]=1;
+            F[v][nv]=F[nv][v]=0;
+        }
+    }
+}
+
+bool haspath(){
+    int v=0,nv;
+    while(!q.empty())q.pop();
+    q.push(0);
+    memset(B,0,sizeof(B));
+    B[0]=1;
+    while(!q.empty()){
+        v=q.front();
+        q.pop();
+        for(int i=0;i<V[v].size();i++){
+            nv=V[v][i];
+            if(!B[nv]){
+            if(F[v][nv]>=0){
+                if(F[v][nv]<C[v][nv]){
+                    B[nv]=1; P[nv]=v; q.push(nv);
+                }
+            }
+            else{
+                B[nv]=1; P[nv]=v; q.push(nv);
+            }
+            }
+        }
+    }
+    return B[end];
+}
+
+void gopath(){
+    int v=end,aug=inf;
+    while(v!=beg){
+        if(F[P[v]][v]>=0)aug=min(aug,C[P[v]][v]-F[P[v]][v]);
+        else aug=min(aug,F[v][P[v]]);
+        v=P[v];
+    }
+
+    v=end;
+    while(v!=beg){
+        if(F[P[v]][v]>=0){F[P[v]][v]+=aug;F[v][P[v]]-=aug;}
+        else{F[P[v]][v]+=aug;F[v][P[v]]-=aug;}
+        v=P[v];
+    }
+}
+
+int main()
+{
+    beg=0;
+    end=1000;
+    cin>>t;
+    while(t--){
+        cin>>n>>m;
+        for(int j=1;j<=n;j++)
+            for(int k=1;k<=m;k++)
+                cin>>A[j][k];
+        for(int i=0;i<=1000;i++)V[i].clear();
+        //memset(F,0,sizeof(F));
+        memset(C,0,sizeof(C));
+        int col=0,at=0;
+        for(int i=1;i<=n;i++){
+            col=(i+1)%2;
+            for(int j=1;j<=m;j++){
+                if(A[i][j]=='.'){
+                    at++;
+                    int vn=(i-1)*m+j;
+                    if(col){
+                        V[vn].push_back(end);
+                        C[vn][end]=1;
+                        F[vn][end]=F[end][vn]=0;
+                    }
+                    else{
+                        V[beg].push_back(vn);
+                        C[beg][vn]=1;
+                        F[beg][vn]=F[vn][beg]=0;
+                        add(i,j,-2,-1); add(i,j,-1,-2);
+                        add(i,j,-1,2);  add(i,j,-2,1);
+                        add(i,j,1,2);   add(i,j,2,1);
+                        add(i,j,1,-2);  add(i,j,2,-1);
+                    }
+                }
+                col=1-col;
+            }
+        }
+
+        while(haspath())gopath();
+        int res=0;
+        for(int i=0;i<V[0].size();i++)res+=F[0][V[0][i]];
+
+        res=at-res;
+
+        cout<<res<<endl;
+    }
+
+    return 0;
+}

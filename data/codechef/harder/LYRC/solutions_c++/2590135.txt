@@ -1,0 +1,188 @@
+/***********Template Starts Here***********/
+#pragma comment (linker,"/STACK:16777216")
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+#include <map>
+#include <queue>
+#include <stack>
+#include <vector>
+#include <deque>
+#include <functional>
+#include <string>
+#include <iostream>
+#include <cctype>
+
+#define pb push_back
+#define nl puts ("")
+#define sp printf ( " " )
+#define phl printf ( "hello\n" )
+#define all(c) (c).begin(),(c).end()
+#define tr(container, it) for(typeof(container.begin()) it = container.begin(); it != container.end(); it++)
+#define sz(a) int((a).size())
+
+using namespace std;
+
+typedef long long vlong;
+typedef unsigned long long uvlong;
+typedef vector < int > vi;
+typedef pair < int, int > ii;
+typedef vector < ii > vii;
+
+
+const vlong inf = 2147383647;
+const double pi = 2 * acos ( 0.0 );
+const double eps = 1e-9;
+const vlong maxint = 2147483647;
+const vlong minint = -2147483648;
+
+/***********Template Ends Here***********/
+#define MAXW 505
+#define MAXP 5005
+#define MAXT 50005
+
+
+int AC[MAXW*MAXP][70], pos = 1;
+int fail[MAXW*MAXP], tail[MAXW], indeg[MAXW*MAXP];
+int cnt[MAXW*MAXP];
+
+int ID ( char c ) {
+    if ( c >= 'a' && c <= 'z' ) return c - 'a';
+    else if ( c >= 'A' && c <= 'Z' ) return c - 'A' + 26;
+    else if ( c >= '0' && c <= '9' ) return c - '0' + 52;
+    else return 62;
+}
+
+
+int insert ( char *s ) { //Insert string in trie tree
+    int len = strlen ( s );
+    int cur = 0, i;
+    //printf ( "%s\n", s );
+    for ( i = 0; i < len; i++ ) {
+        int cid = ID ( s[i] );
+        //printf ( "%d\n", cid );
+        if ( AC[cur][cid] == -1 ) { //Does not exist
+            //Before assigning a new node, clear it
+            for ( int j = 0; j < 70; j++ ) {
+                AC[pos][j] = -1;
+            }
+            AC[cur][cid] = pos++;
+        }
+        cur = AC[cur][cid];
+        //printf ( "%d\n", cur );
+    }
+    //printf ( "%d\n", cur );
+    return cur;
+
+}
+char buf[MAXT];
+int w;
+void build_trie () {
+    scanf ( "%d", &w );
+    //Root needs to be cleared
+    for ( int i = 0; i < 70; i++ ) {
+        AC[0][i] = -1; // -1 is null
+    }
+    //w pattern needs to be inserted
+    for ( int i = 0; i < w; i++ ) {
+        scanf ( "%s", buf );
+        //insert the string in the trie tree
+        tail[i] = insert ( buf );
+        //printf ( "%d %d\n", i, tail[i] );
+    }
+}
+
+void phase_one() {
+    fail[0] = 0;
+    indeg[0] = 1;
+    int next;
+    for ( int i = 0; i < 70; i++ ) {
+        next = AC[0][i];
+        if ( next > 0 ) {
+            fail[next] = 0;
+            indeg[0]++;
+        }
+        else {
+            AC[0][i] = 0; //Fail from this direction is zero
+        }
+    }
+}
+
+void make_trans() {
+    queue < int > q;
+    phase_one();
+    int i, j;
+    //Push all valid child of root to queue
+    for ( i = 0; i < 70; i++ ) {
+        if ( AC[0][i] > 0 ) {
+            q.push ( AC[0][i] );
+        }
+    }
+
+    while ( !q.empty() ) {
+        int cur = q.front(); q.pop();
+        //Calculate failure function of all it's child
+        for ( i = 0; i < 70; i++ ) {
+            int next = AC[cur][i];
+            if ( AC[cur][i] > 0 ) { //Valid edge exists
+                fail[next] = AC[fail[cur]][i];
+                indeg[fail[next]]++;
+                q.push ( next );
+            }
+            else {
+                AC[cur][i] = AC[fail[cur]][i];
+            }
+        }
+    }
+}
+
+void search() {
+    int n;
+    scanf ( "%d", &n );
+    while ( n-- ) {
+        scanf ( "%s", buf );
+
+        int cur = 0, i, len = strlen ( buf );
+        for ( i = 0; i < len; i++ ) {
+            int cid = ID ( buf[i] );
+            cur = AC[cur][cid];
+            cnt[cur]++;
+        }
+    }
+}
+
+void backtrack() {
+    queue < int > q;
+    int i;
+    for ( i = 0; i < pos; i++ ) {
+        if ( indeg[i] == 0 ) q.push ( i );
+    }
+
+    while ( !q.empty() ) {
+        int cur = q.front(); q.pop();
+        int prev = fail[cur];
+        cnt[prev] += cnt[cur];
+
+        indeg[prev]--;
+        if ( indeg[prev] == 0 ) {
+            q.push ( prev );
+        }
+    }
+}
+
+int main () {
+    //freopen ( "input.txt", "r", stdin );
+    //freopen ( "output.txt", "w", stdout );
+
+    build_trie();
+    make_trans();
+    search();
+    backtrack();
+    for ( int i = 0; i < w; i++ ) {
+        printf ( "%d\n", cnt[tail[i]] );
+    }
+
+
+    return 0;
+}

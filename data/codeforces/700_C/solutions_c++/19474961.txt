@@ -1,0 +1,137 @@
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+const int N=1010;
+const int M=30010;
+
+int times,ccnt1,ccnt2,top;
+int s[N],dfn[N],low[N],color1[N],color2[N],fa[N],b[N],w[N],pre[N],head[N];
+
+struct node
+{
+    int x,y,z;
+}a[M];
+
+struct edge
+{
+    int to,next;
+}e[2*M];
+
+int root(int x)
+{
+    if (x!=fa[x]) fa[x]=root(fa[x]);
+    return fa[x];
+}
+
+void push(int k,int x,int y)
+{
+    e[k].to=y;e[k].next=head[x];head[x]=k;
+}
+
+void dfs(int k,int fa,int x)
+{
+    dfn[k]=low[k]=++times;s[++top]=k;
+    int p=head[k];
+    while (p)
+    {
+        if (p/2==x||((p^1)==fa)) {p=e[p].next;continue;}
+        if (!color1[e[p].to])
+        {
+            color1[e[p].to]=color1[k];
+            dfs(e[p].to,p,x);
+            low[k]=min(low[k],low[e[p].to]);
+            if (dfn[e[p].to]==low[e[p].to])
+            {
+                color2[e[p].to]=++ccnt2;
+                while (s[top]!=e[p].to) color2[s[top--]]=ccnt2;
+                top--;
+                pre[ccnt2]=k;w[ccnt2]=p>>1;
+            }
+        }
+        else
+            low[k]=min(low[k],dfn[e[p].to]);
+        p=e[p].next;
+    }
+    if (fa==-1)
+    {
+        ++ccnt2;
+        while (top) color2[s[top--]]=ccnt2;
+    }
+}
+
+int main()
+{
+    #ifndef ONLINE_JUDGE
+        freopen("input.txt","r",stdin);
+        freopen("output.txt","w",stdout);
+    #endif
+    int n,m;scanf("%d%d",&n,&m);
+    int s,t;scanf("%d%d",&s,&t);
+    for (int i=1;i<=n;i++) fa[i]=i;
+    int cnt=0;
+    for (int i=1;i<=m;i++)
+    {
+        int x,y,z;scanf("%d%d%d",&x,&y,&z);
+        a[i].x=x;a[i].y=y;a[i].z=z;
+        x=root(x);y=root(y);
+        if (x!=y) {b[++cnt]=i;fa[x]=y;}
+    }
+    if (root(s)!=root(t))
+    {
+        puts("0");puts("0");return 0;
+    }
+    for (int i=1;i<=m;i++)
+    {
+        push(2*i,a[i].x,a[i].y);
+        push(2*i+1,a[i].y,a[i].x);
+    }
+    int ans=2000000001,len,c[3];
+    for (int i=1;i<=cnt;i++)
+    {
+        memset(color1+1,0,n*sizeof(int));
+        memset(color2+1,0,n*sizeof(int));
+        times=0;top=0;ccnt1=0;ccnt2=0;
+        color1[s]=++ccnt1;dfs(s,-1,b[i]);
+        for (int j=1;j<=n;j++)
+            if (!color1[j])
+            {
+                color1[j]=++ccnt1;
+                dfs(j,-1,b[i]);
+            }
+        //for (int j=1;j<=n;j++) printf("%d ",color1[j]);puts("");
+        //for (int j=1;j<=n;j++) printf("%d ",color2[j]);puts("");
+        //printf("%d %d %d\n",b[i],color1[s],color1[t]);
+        if (color1[s]!=color1[t])
+        {
+            if (a[b[i]].z<ans)
+            {
+                ans=a[b[i]].z;
+                len=1;
+                c[1]=b[i];
+            }
+            continue;
+        }
+        if (color2[s]==color2[t]) continue;
+        int j=0,p=color2[t];
+        while (p!=color2[s])
+        {
+            if (j==0||a[w[p]].z<a[j].z) j=w[p];
+            p=color2[pre[p]];
+        }
+        if (a[b[i]].z+a[j].z<ans)
+        {
+            ans=a[b[i]].z+a[j].z;
+            len=2;
+            c[1]=b[i];c[2]=j;
+        }
+    }
+    if (ans==2000000001) {puts("-1");return 0;}
+    printf("%d\n",ans);
+    printf("%d\n",len);
+    for (int i=1;i<=len;i++) printf("%d ",c[i]);
+    return 0;
+}

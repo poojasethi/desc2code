@@ -1,0 +1,351 @@
+#undef _GLIBCXX_DEBUG
+
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <ctime>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <list>
+#include <map>
+#include <numeric>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <valarray>
+#include <vector>
+
+using namespace std;
+
+#define foreach(iter,cont) for(typeof((cont).begin()) iter = (cont).begin(); iter != (cont).end(); ++iter)
+#define min3(a, b, c) min(a, min(b, c))
+#define max3(a, b, c) max(a, max(b, c))
+#define inf 1000000008
+#define eps 1.0e-10L
+#define divisible(a, b) (((a) / (b)) * (b) == (a))
+//static const long long p = 1000000007;
+__attribute__((unused)) static bool eq(long double a, long double b)  { return (a == b ? true : (a * b == 0 ? abs(a - b) < eps : abs(a - b) / (abs(a) + abs(b)) < eps));  }
+__attribute__((unused)) static long long modp(long long n, long long m) { long long r = n % m; return r >= 0 ? r : r + m; }
+__attribute__((unused)) static long long gcd(long long a, long long b) { return (a < 0 ? gcd(-a, b) : (b < 0 ? gcd(a, -b) : (!a && !b ? 1 : (b ? gcd(b, a % b) : a)))); }
+template<class T> static int len(const T& cont) { return (int) cont.size(); }
+
+// BEGIN CUT HERE
+template<class T, class U> ostream &operator<<(ostream &os, const pair<T, U> &p) { return os << "(" << p.first << ", " << p.second << ")"; }
+template<class T> ostream &operator<<(ostream& os, const vector<T> &vec) { os << "[ "; for(size_t i = 0; i < vec.size(); i++) { os << vec[i]; if(i != vec.size() - 1) { os << ", "; } } return os << " ]"; }
+template<class T> ostream &operator<<(ostream& os, const list<T> &l) { os << "[ "; bool first = true; for(typename list<T>::const_iterator lstIt = l.begin(); lstIt != l.end(); ++lstIt) { if(!first) { os << ", "; } first = false; os << *lstIt; } return os << " ]"; }
+template<class T> ostream &operator<<(ostream& os, const deque<T> &d) { os << "[ "; bool first = true; for(typename deque<T>::const_iterator dIt = d.begin(); dIt != d.end(); ++dIt) { if(!first) { os << ", "; } first = false; os << *dIt; } return os << " ]"; }
+template<class T> ostream &operator<<(ostream& os, const vector<vector<T> > &mat) { for(size_t i = 0; i < mat.size(); i++) { if(i) os << endl; os << mat[i]; } return os; }
+template<class T> ostream &operator<<(ostream &os, const set<T> &s) { os << "{ "; bool first = true; for(typename set<T>::const_iterator setIt = s.begin(); setIt != s.end(); ++setIt) { if(!first) { os << ", "; } first = false; os << *setIt; } return os << " }"; }
+template<class T, class U> ostream &operator<<(ostream &os, const map<T, U> &m) { os << "{ "; bool first = true; for(typename map<T, U>::const_iterator mapIt = m.begin(); mapIt != m.end(); ++mapIt) { if(!first) { os << ", "; } first = false; os << mapIt->first << " = " << mapIt->second; } return os << " }"; }
+enum CONSOLE_FG { FG_BLACK, FG_RED, FG_GREEN, FG_YELLOW, FG_BLUE, FG_MAGENTA, FG_CYAN, FG_WHITE };
+enum CONSOLE_STYLE { STYLE_NONE, STYLE_BOLD };
+ostream& operator<<(ostream &os, CONSOLE_FG color) { return os << "\x1b[" << ((int) color + 30) << "m"; }
+ostream& operator<<(ostream &os, CONSOLE_STYLE style) { return os << "\x1b[" << (style == STYLE_NONE ? 0 : 1) << "m"; }
+// END CUT HERE
+
+template<class T, class RangeInfo>
+struct SegTree {
+	
+	SegTree(int *data, int n) : data(data), n(n) {
+		int curN = n;
+		int logN = 0;
+		while(curN > 1) {
+			logN++;
+			curN /= 2;
+		}
+		
+		tree = new RangeInfo[1 << (logN + 2)];
+		dirty = new bool[1 << (logN + 2)];
+
+		fill_n(dirty, 1 << (logN + 2), true);
+	}
+	
+	RangeInfo queryRange(int l, int r, int queryParam) {
+		if(r <= l) {
+			return RangeInfo();
+		}
+		return query(0, 0, n, l, r, queryParam);
+	}
+	
+	void invalidateRange(int l, int r) {
+		if(r <= l) {
+			return;
+		}
+		invalidate(0, 0, n, l, r);
+	}
+	
+	void changeRange(int l, int r, int c) {
+		if(r <= l) {
+			return;
+		}
+		change(0, 0, n, l, r, c);
+	}
+	
+private:
+	void change(int nodeIdx, int l, int r, int workingL, int workingR, int c) {
+		int m = (l + r) / 2;
+		
+		if(min(r, workingR) <= max(l, workingL)) {
+			return;
+		}
+		
+		if(l >= workingL && r <= workingR) {
+			actualize(nodeIdx, l, r);
+			tree[nodeIdx].setChange(c);
+			return;
+		}
+		
+		dirty[nodeIdx] = true;
+		
+		if(tree[nodeIdx].change != 0) {
+			tree[2 * nodeIdx + 1].setChange(tree[nodeIdx].change);
+			tree[2 * nodeIdx + 2].setChange(tree[nodeIdx].change);
+		}
+		
+		tree[nodeIdx].change = 0;
+		
+		change(2 * nodeIdx + 1, l, m, workingL, workingR, c);
+		change(2 * nodeIdx + 2, m, r, workingL, workingR, c);
+	}
+	
+	void actualize(int nodeIdx, int l, int r) {
+		int m = (l + r) / 2;
+		if(dirty[nodeIdx]) {
+			if(r <= l + 1) {
+				tree[nodeIdx].init(data[l], l);
+			} else {
+				// Child nodes should never be dirty, so assume
+				// we have two children
+				actualize(2 * nodeIdx + 1, l, m);
+				actualize(2 * nodeIdx + 2, m, r);
+				
+				tree[nodeIdx].combine(tree[2 * nodeIdx + 1], tree[2 * nodeIdx + 2]);
+			}
+			dirty[nodeIdx] = false;
+			return;
+		}
+		
+		if(tree[nodeIdx].change != 0) {
+			tree[nodeIdx].applyChange();
+			
+			if(r > l + 1) {
+				tree[2 * nodeIdx + 1].setChange(tree[nodeIdx].change);
+				tree[2 * nodeIdx + 2].setChange(tree[nodeIdx].change);
+			}
+			
+			tree[nodeIdx].change = 0;
+		}
+	}
+	
+	RangeInfo query(int nodeIdx, int l, int r, int workingL, int workingR, int queryParam) {
+		if(tree[nodeIdx].change != 0) {
+			if(!dirty[nodeIdx]) {
+				tree[nodeIdx].applyChange();
+			}
+			
+			if(r > l + 1) {
+				tree[2 * nodeIdx + 1].setChange(tree[nodeIdx].change);
+				tree[2 * nodeIdx + 2].setChange(tree[nodeIdx].change);
+			}
+			tree[nodeIdx].change = 0;
+		}
+		
+		if(l >= workingL && r <= workingR) {
+			actualize(nodeIdx, l, r);
+			tree[nodeIdx].queryParam = queryParam;
+			tree[nodeIdx].query();
+			return tree[nodeIdx];
+		}
+		
+		int m = (l + r) / 2;
+		
+		bool lOverlaps = m > workingL;
+		bool rOverlaps = m < workingR;
+		
+		if(lOverlaps && !rOverlaps) {
+			return query(2 * nodeIdx + 1, l, m, workingL, workingR, queryParam);
+		} else if(rOverlaps && !lOverlaps) {
+			return query(2 * nodeIdx + 2, m, r, workingL, workingR, queryParam);
+		} else {
+			// Both overlap
+			RangeInfo ans;
+			ans.queryParam = queryParam;
+			ans.combine(query(2 * nodeIdx + 1, l, m, workingL, workingR, queryParam), 
+			            query(2 * nodeIdx + 2, m, r, workingL, workingR, queryParam));
+			return ans;
+		}
+	}
+	
+	void invalidate(int nodeIdx, int l, int r, int workingL, int workingR) {
+		if(min(r, workingR) <= max(l, workingL)) {
+			return;
+		}
+		
+		dirty[nodeIdx] = true;
+		tree[nodeIdx].change = 0;
+		
+		if(r > l + 1) {
+			int m = (l + r) / 2;
+			invalidate(2 * nodeIdx + 1, l, m, workingL, workingR);
+			invalidate(2 * nodeIdx + 2, m, r, workingL, workingR);
+		}
+	}
+	
+	int *data;
+	int n;
+	RangeInfo *tree;
+	bool *dirty;
+};
+
+int n, m, l, r, nums[100000];
+bool querying;
+
+template<class T>
+struct SortedRangeInfo {
+	
+	SortedRangeInfo() : vals(NULL), sums(NULL), change(0), l(-1), r(-1), ans(0), queryParam(-1) { }
+	
+	/**
+	 * Initialize this range to a single element
+	 */
+	void init(T val, int idx) {
+		vals = new int[1];
+		sums = new int[1];
+
+		vals[0] = val;
+		sums[0] = val;
+
+		l = idx;
+		r = idx + 1;
+	}
+	
+	/**
+	 * Destructively update by combining data from two child ranges
+	 */
+	void combine(const SortedRangeInfo& a, const SortedRangeInfo &b) {
+		if(queryParam != -1) {
+			ans = a.ans + b.ans;
+		} else {
+			l = min(a.l, b.l);
+			r = max(a.r, b.r);
+
+			int *n = new int[r - l];
+			memcpy(n, nums + l, (r - l) * sizeof(int));
+			sort(n, n + (r - l));
+			int total = 0;
+
+			if(vals) {
+				delete[] vals;
+			}
+
+			if(sums) {
+				delete[] sums;
+			}
+
+			vals = new int[r - l];
+			sums = new int[r - l];
+
+			numSums = 0;
+			for(int i = 0; i < (r - l); i++) {
+				total += n[i];
+
+				if(i > 0 && n[i] == n[i - 1]) {
+					sums[numSums - 1] += n[i];
+				} else {
+					vals[numSums] = n[i];
+					sums[numSums] = total;
+					numSums++;
+				}
+			}
+
+			delete[] n;
+		}
+	}		      
+	
+	void applyChange() {
+	}
+
+	void query() {
+		int low = 0;
+		int high = numSums;
+
+		while(low < high - 1) {
+			int m = (low + high) / 2;
+			if(vals[m] <= queryParam) {
+				low = m;
+			} else {
+				high = m;
+			}
+		}
+
+		if(low < r && vals[low] <= queryParam) {
+			ans = sums[low];
+		} else {
+			ans = 0;
+		}
+	}
+	
+	void setChange(int change) {
+		this->change = change;
+	}
+	
+	int *vals, *sums;
+	int change, l, r, ans, numSums, queryParam;
+};
+
+int brute(int l, int r) {
+	vector<int> n(nums + (l - 1), nums + r);
+	sort(n.begin(), n.end());
+
+	int ans = 1;
+	for(int i = 0; i < len(n); i++) {
+		if(n[i] <= ans) {
+			ans += n[i];
+		} else {
+			break;
+		}
+	}
+
+	return ans;
+}
+
+//#define BRUTE
+
+int main(__attribute__((unused)) int argc, __attribute__((unused)) char **argv) {
+	scanf("%d", &n);
+	for(int i = 0; i < n; i++) {
+		scanf("%d", &nums[i]);
+	}
+
+	querying = false;
+	SegTree<int, SortedRangeInfo<int> > st(nums, n);
+	//st.queryRange(0, n, -1);
+	querying = true;
+
+	scanf("%d", &m);
+
+	for(int q = 0; q < m; q++) {
+		scanf("%d %d", &l, &r);
+
+#ifdef BRUTE
+		printf("%d\n", brute(l, r));
+#else
+		int curN = 0;
+		while(true) {
+			int ans = st.queryRange(l - 1, r, curN + 1).ans;
+
+			if(ans == curN) {
+				break;
+			} else {
+				curN = ans;
+			}
+		}
+		printf("%d\n", curN + 1);
+#endif
+	}
+
+	return 0;
+}

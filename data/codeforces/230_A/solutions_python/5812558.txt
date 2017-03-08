@@ -1,0 +1,9 @@
+s,n = map(int, raw_input().split())
+for x,y in sorted([map(int, raw_input().split()) for i in range(n)]):
+    if(s > x):
+        s += y
+    else:
+        print "NO"
+        break;
+else:
+    print "YES"

@@ -1,0 +1,227 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define infinity (1000000007)
+#define pii pair<int,int>
+#define ppi pair<pii,int>
+#define ppp pair<pii,pii>
+#define pip pair<int,pii>
+#define ll long long
+
+const int mod=1000000007;
+long long pwr(long long a,long long b,long long mod)
+{
+  if(b==0)
+    return 1;
+  long long temp=pwr(a,b/2,mod);
+  temp=(temp*temp)%mod;
+  if(b&1)
+    temp=(temp*a)%mod;
+  return temp;
+}
+long long pwr(long long a,long long b)
+{
+  if(b==0)
+    return 1;
+  long long temp=pwr(a,b/2);
+  temp=(temp*temp);
+  if(b&1)
+    temp=(temp*a);
+  return temp;
+}
+long long gcd(long long a,long long b)
+{
+  return b==0?a:gcd(b,a%b);
+}
+long long lcm(long long a,long long b)
+{  
+  return (a/gcd(a,b))*b;
+}
+long long modularInverse(long long a,long long m)
+{
+      return pwr(a,m-2,m);
+}
+bool* isPrime;
+void generatePrimeSieve(const int lim)
+{
+  isPrime=(bool *)malloc(lim+1);
+  memset(isPrime,true,lim+1);
+  isPrime[0]=false;
+  isPrime[1]=false;
+  for(int i=2;i<=lim;++i)
+    if(isPrime[i])
+      for(int j=i+i;j<=lim;j+=i)
+        isPrime[j]=false;
+}
+#define matrix vector<vector<int> >
+matrix identityMatrix;
+matrix mul(const matrix &a,const matrix &b)
+{
+  int n=a.size();
+  matrix ans(n,vector<int> (n) );
+  for (int i = 0; i < n; ++i)
+  {
+    for (int j = 0; j < n; ++j)
+    {
+      for (int k = 0; k < n; ++k)
+      {
+        ans[i][j]+= ((long long)a[i][k]*b[k][j])%mod;
+        ans[i][j]%=mod;
+      }
+    }
+  }
+  return ans;
+} 
+matrix pwr(const matrix &a,long long n)
+{
+    if(n==0)
+    {
+      /*define identity */
+      assert(false);
+      return identityMatrix;
+    }
+    if(n==1)
+     return a;
+    matrix tmp=pwr(a,n/2);
+    tmp=mul(tmp,tmp);
+    if(n&1)
+      tmp=mul(a,tmp);
+    return tmp;
+}
+struct Edge
+{
+  int u,v,flow,capacity;
+  Edge()
+  {
+
+  }
+  Edge(int u,int v,int flow,int capacity)
+  {
+    this->u=u;
+    this->v=v;
+    this->flow=flow;
+    this->capacity=capacity;
+
+  }
+};  
+
+vector<Edge> e;
+vector<vector<int> > G;
+int n,m;
+int source,sink;
+int dist[5001];
+int ptr[5001];
+bool findPath()
+{
+
+  memset(dist,-1,sizeof(dist));
+  dist[source]=0;
+  queue<int> Q;
+  Q.push(source);
+  while(!Q.empty())
+  {
+    
+    int u=Q.front();
+    assert(dist[u]>=0);
+    // cout<<u<<endl;
+    Q.pop();
+
+    for (int i = 0; i < G[u].size(); ++i)    
+    {
+      int ID=G[u][i];
+      // assert(u==e[ID].u);
+      int v=e[ID].v;
+
+      if( (dist[v]==-1) && e[ID].flow<e[ID].capacity)
+      {
+        // cout<<v<<endl;
+        dist[v]=dist[u]+1;
+        // cout<<dist[v]<<endl;
+        Q.push(v);
+        if(v==sink)
+          return true;
+      }
+    }
+  }
+
+  return dist[sink]!=-1;
+}
+
+
+int dfs(int u,int flow)
+{ 
+  if(flow==0)
+    return 0;
+  if(u==sink)
+    return flow;
+  for(;ptr[u]<G[u].size();++ptr[u])
+  {
+    int ID=G[u][ptr[u]];
+    int v=e[ID].v;
+    
+    if(dist[v]!=dist[u]+1)
+      continue;
+    
+    int pushed=dfs(v,min(flow,e[ID].capacity-e[ID].flow));
+    if(pushed)
+    {
+      e[ID].flow    +=pushed;
+      e[ID^1].flow  -=pushed;
+      return pushed;
+    }
+  }
+  return 0;
+}
+ll dinics()
+{
+  ll flow=0;
+
+  for(int i=0;i<e.size();++i)
+  {
+    e[i].flow=0;
+  }
+  while(findPath())
+  {
+    memset(ptr,0,sizeof ptr);
+    while(int pushed=dfs(source,1e9))
+      flow+=pushed;
+  }
+  return flow;
+}
+void addEdge(int u,int v,int capacity)
+{
+    G[u].push_back(e.size());
+    e.push_back(Edge(u,v,0,capacity));
+    G[v].push_back(e.size());
+    e.push_back(Edge(v,u,0,0));
+}
+int main()
+{
+  std::ios::sync_with_stdio(false);
+  
+  int n,m;
+  cin>>n>>m;
+
+  G.resize(n+1);
+  for(int i=0;i<m;++i)
+  {
+    int u,v,w;
+    cin>>u>>v>>w;
+    addEdge(u,v,w);
+  }
+
+  int t;
+  cin>>t;
+  while(t--)
+  {
+    int u,v;
+    cin>>u>>v;
+    source=u;
+    sink=v;
+    cout<<dinics()<<"\n";
+  }
+
+
+
+
+  
+}

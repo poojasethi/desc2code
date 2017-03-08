@@ -1,0 +1,110 @@
+#include <string.h>
+#include <queue>
+#include <algorithm>
+#include <functional>
+#include <utility>
+#include <iostream>
+#include <vector>
+using namespace std;
+
+#define NMAX 10010
+#define MMAX 11000
+
+typedef unsigned long long LL;
+
+int N, M, K, S1, S2, T;
+struct Edge {
+  int u, v, len;
+  Edge* next;
+};
+Edge es[MMAX];
+int en;
+Edge* head[NMAX];
+
+LL d1[NMAX], d2[NMAX];
+int small[110], big[110];
+
+void Add(int u, int v, int len) {
+  Edge* p = &es[en++];
+  p->u = u;
+  p->v = v;
+  p->len = len;
+  p->next = head[u];
+  head[u] = p;
+}
+
+void Dijkstr(int s, int t, LL *dis) {
+  memset(dis, 0xff, NMAX * sizeof(LL));
+  priority_queue< pair<LL, int>, vector< pair<LL, int> >, greater< pair<LL, int> > > pri_queue;
+  dis[s] = 0;
+  pri_queue.push(make_pair(0LL, s));
+
+  while (!pri_queue.empty()) {
+    LL len = pri_queue.top().first;
+    int u = pri_queue.top().second;
+    pri_queue.pop();
+    if (len > dis[u]) {
+      continue;
+    }
+    for (Edge* p = head[u]; p != NULL; p = p->next) {
+      int v = p->v;
+      if (dis[v] > dis[u] + p->len) {
+        dis[v] = dis[u] + p->len;
+        pri_queue.push(make_pair(dis[v], v));
+      }
+    }
+  }
+}
+
+int main() {
+  cin.sync_with_stdio(false);
+
+  en = 0;
+  memset(head, 0, sizeof(head));
+
+  int i, j;
+  cin >> N >> M >> K >> S1 >> S2 >> T;
+  for (i = 0; i < M; ++i) {
+    int a, b, c;
+    cin >> a >> b >> c;
+    Add(a, b, c);
+  }
+  for (i = 0; i < K; ++i) {
+    int a, b, l, r;
+    cin >> a >> b >> l >> r;
+    small[i] = l;
+    big[i] = r;
+    Add(a, b, r);
+  }
+
+  bool flag = true;
+  while (flag) {
+    flag = false;
+    Dijkstr(S1, T, d1);
+    Dijkstr(S2, T, d2);
+
+    if (d1[T] < d2[T]) break;
+    for (i = 0; i < K; ++i) {
+      Edge* p = &es[M+i];
+      int u = p->u;
+      if (d1[u] < d2[u] && p->len != small[i]) {
+        flag = true;
+        p->len = small[i];
+      }
+    }
+  }
+
+  if (d1[T] < d2[T] || d1[T] == d2[T]) {
+    if (d1[T] < d2[T]) cout << "WIN" << endl;
+    else cout << "DRAW" << endl;
+    for (i = 0; i < K; ++i) {
+      cout << es[M+i].len;
+      if (i == K-1) cout << endl;
+      else cout << " ";
+    }
+  } else {
+    cout << "LOSE" << endl;
+  }
+
+  return 0;
+}

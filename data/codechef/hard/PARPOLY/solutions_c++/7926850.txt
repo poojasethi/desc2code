@@ -1,0 +1,75 @@
+#include <cstdio>
+#include <cstring>
+#include <complex>
+#include <cmath>
+#include <cassert>
+ 
+using namespace std;
+ 
+const int MOD = 1000000007;
+unsigned long long overflow_delta = 0;
+int n;
+ 
+inline void mult(int* a, int* b, int* c) {
+  for(int j = 0; j <= n; j++) {
+    long long tmp = 0;
+ 
+    for(int k = 0; k <= j; k++) {
+      tmp += (long long)a[k] * b[j-k];
+      if(tmp < 0) tmp += overflow_delta, assert(tmp >= 0);
+    }
+ 
+    c[j] = tmp%MOD;
+  }
+}
+ 
+int main() {
+  int t;
+  scanf("%d", &t);
+ 
+  // This ensures that the modulo remains meaningful in case of overflow
+  overflow_delta = (((1LL<<63)-1)%MOD - 
+		    ((1LL<<63)-1+MOD)%MOD + MOD)%MOD;
+ 
+  // And this will fix it so that it remains positive, so I know when to
+  // apply the first fix  
+  overflow_delta += ((1ULL<<63)+MOD)/MOD * MOD;
+ 
+  while(t--) {
+    int m, x;
+    int d, p[11];
+ 
+    scanf("%d %d %d %d", &m, &n, &x, &d);
+    for(int i = 0; i <= d; i++)
+      scanf("%d", &p[i]);
+ 
+    int mul = 0;
+    int pol[2][1024];
+    int cur[2][1024];
+    for(int i = 0; i <= n; i++) {
+      pol[0][i] = 0;
+      for(int j = d; j >= 0; j--)
+	pol[0][i] = ((long long)pol[0][i]*mul + p[j]) % MOD;
+      mul += x; if(mul >= MOD) mul -= MOD;
+    }
+ 
+    int *ccur = cur[0], *cpow = pol[0];
+    int *pcur = cur[1], *ppow = pol[1];
+ 
+    bool first = true;
+ 
+    while(m) {
+      if(m & 1) {
+	if(first) memcpy(pcur, cpow, sizeof(int) * 1024), first = false;
+	else mult(ccur, cpow, pcur);
+	swap(pcur, ccur);
+      }
+      if(m >>= 1) {
+		    mult(cpow, cpow, ppow);
+		    swap(ppow, cpow);
+      }
+    }
+ 
+    printf("%d\n", ccur[n]);
+  }
+}

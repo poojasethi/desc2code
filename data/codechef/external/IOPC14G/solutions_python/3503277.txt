@@ -1,0 +1,180 @@
+#include <bits/stdc++.h>
+using namespace std;
+//#define fi(x) scanf("%lld",x)
+#define MID ((l+r) >> 1)
+#define LT (nd << 1)
+#define RT ((nd << 1) | 1)
+#define MAX 1123
+typedef long long int LL;
+
+template <typename T>
+inline void fi(T *a)
+{
+ register char c=0;
+ while (c<33) c=getchar_unlocked();
+ *a=0;
+ int tmp = 0;
+ while (c>33)
+ {
+     if ( c == 45 ) tmp = 1;
+     else *a=*a*10+c-'0';
+     c=getchar_unlocked();
+ }
+ if ( tmp == 1 ) *a = 0-(*a);
+}
+
+struct node{
+    LL lsum,rsum,msum,sum;
+    node():lsum(0),rsum(0),msum(0),sum(0){}
+    node(LL v):lsum(v),rsum(v),msum(v),sum(v){}
+
+    void print(){
+        cout << "MAX: " << msum << " SUM : " << sum << " LMAX: " << lsum << " RMAX: " << rsum << endl;
+    }
+};
+
+node Merge(node left,node right){
+    node res;
+    res.sum = left.sum + right.sum;
+    res.lsum = max(left.lsum,left.sum+right.lsum);
+    res.rsum = max(right.rsum,right.sum+left.rsum);
+
+    res.msum = max(left.msum,right.msum);
+    res.msum = max(res.msum,left.rsum+right.lsum);
+    return res;
+}
+
+LL A[MAX],S,N,Q;
+node RQ[MAX][MAX];
+
+void compute(){
+    for(LL i = 0; i < S; ++i) RQ[i][i] = node(A[i]);
+    for(LL i = 1; i < S; ++i){
+        for(LL j = 0; j+i < S; ++j){
+            LL l = j, r = i+j;
+            RQ[j][j+i] = Merge(RQ[j][MID],RQ[MID+1][i+j]);
+        }
+    }
+}
+
+node Range(LL st,LL sz){
+    if (st+sz-1 < S) return RQ[st][st+sz-1];
+
+    node n1 = RQ[st][S-1],res;
+    sz -= (S-st);
+
+    if (sz <= S)
+        res = RQ[0][sz-1];
+    else {
+        LL d = sz/S;
+        sz = sz%S;
+        node fr = RQ[0][S-1];
+        res = fr;
+
+        res.sum = res.sum*d;
+        if (fr.sum > 0){
+            res.lsum += max(fr.sum*(d-1),(LL)0);
+            res.rsum += max(fr.sum*(d-1),(LL)0);
+            LL ans = LLONG_MIN;
+            if (d > 1)
+                ans = fr.lsum + fr.rsum + max(fr.sum*(d-2),(LL)0);
+            res.msum = max(res.msum,ans);
+        }
+
+        if (sz != 0)
+            res = Merge(res,RQ[0][sz-1]);
+    }
+
+    res = Merge(n1,res);
+    return res;
+}
+
+struct seg{
+    vector<node> v;
+    vector<LL> lazy;
+    LL sz;
+
+    seg():sz(0){}
+    void Resize(LL k){
+        sz = k;
+        v.resize(3*sz,node());
+        lazy.resize(3*sz,-1);
+    }
+
+    void pushdown(LL nd,LL l,LL r){
+        if (lazy[nd] == -1) return;
+        LL v1 = lazy[nd];
+        node res = Range(v1,r-l+1);
+        v[nd] = res;
+        if (l != r)
+            lazy[LT] = v1, lazy[RT] = (v1+MID-l+1)%S;
+        lazy[nd] = -1;
+    }
+
+    void update(LL nd,LL l,LL r,LL a,LL b,LL M){
+        pushdown(nd,l,r);
+        if (l > b || r < a) return;
+        if (l >= a && r <= b){
+            lazy[nd] = (M+l-a)%S;
+            pushdown(nd,l,r);
+            return;
+        }
+
+        update(LT,l,MID,a,b,M);
+        update(RT,MID+1,r,a,b,M);
+        v[nd] = Merge(v[LT],v[RT]);
+    }
+
+    void update(LL a,LL b,LL M){
+        update(1,0,sz-1,a,b,M);
+    }
+
+    node query(LL nd,LL l,LL r,LL a,LL b){
+        pushdown(nd,l,r);
+        if (l >= a && r <= b)
+            return v[nd];
+
+        if (MID < a) return query(RT,MID+1,r,a,b);
+        if (MID+1 > b) return query(LT,l,MID,a,b);
+
+        node n1 = query(LT,l,MID,a,b);
+        node n2 = query(RT,MID+1,r,a,b);
+        return Merge(n1,n2);
+    }
+
+    node query(LL a,LL b){
+        return query(1,0,sz-1,a,b);
+    }
+};
+
+void solve(){
+    fi(&S),fi(&N),fi(&Q);
+    for(int i = 0; i < S; ++i)
+        fi(&A[i]);
+    compute();
+
+    seg SG;
+    SG.Resize(N);
+
+    char ch[10];
+    LL a,b,c;
+    while(Q--){
+        scanf("%s",ch);
+        fi(&a),fi(&b),--a,--b;
+        if (ch[0] == 'U'){
+            fi(&c),--c;
+            c %= S;
+            SG.update(a,b,c);
+            continue;
+        }
+
+        node res = SG.query(a,b);
+        printf("%lld\n",res.msum);
+    }
+}
+
+int main()
+{
+    solve();
+    return 0;
+}

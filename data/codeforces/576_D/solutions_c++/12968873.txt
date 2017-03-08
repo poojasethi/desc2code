@@ -1,0 +1,78 @@
+#include<cstdio>
+#include<vector>
+#include<algorithm>
+#include<cstring>
+#include<bitset>
+#include<iostream>
+using namespace std;
+int n,m;
+struct edge{
+	int u,v,d;
+	bool operator<(const edge&rhs)const{
+		return d<rhs.d;
+	}
+}E[160];
+struct matrix{
+	bitset<160>v[160];
+	void clear(){
+		memset(v,0,sizeof v);
+	}
+	matrix operator*(const matrix B)const{
+		matrix tB,C;
+		C.clear();
+		tB.clear();
+		for(int i=1;i<=n;i++)
+			for(int j=1;j<=n;j++)
+				tB.v[i][j]=B.v[j][i];
+		for(int i=1;i<=n;i++)
+			for(int j=1;j<=n;j++)
+				C.v[i][j]=(v[i]&tB.v[j]).any();
+		return C;
+	}
+}gra,now,tmp;
+void mul(int times){
+	//now=now*gra^times;
+	tmp=gra;
+	for(;times;times>>=1,tmp=tmp*tmp)
+		if(times&1)now=now*tmp;
+}
+vector<matrix>V;
+void check(int step){
+	gra.clear();
+	gra.v[n][n]=1;
+	now.clear();
+	now.v[1][1]=1;
+	for(int i=1,ni;i<=m;i=ni){
+		if(E[i].d>=step)break;
+		matrix old=now;
+		for(ni=i;E[ni].d==E[i].d;ni++);
+		for(int j=i;j<ni;j++){
+			int u=E[j].u,v=E[j].v;
+			gra.v[u][v]=1;
+		}
+		if(ni>m||E[ni].d>=step){
+			mul(step-E[i].d);
+		}else mul(E[ni].d-E[i].d);
+		if(now.v[1][n]){
+			tmp=gra;
+			int ans=step,add=0;
+			for(int cnt=1;E[i].d+cnt<=step;cnt<<=1,tmp=tmp*tmp)V.push_back(tmp);
+			for(int cnt=(int)V.size()-1;cnt>=0;cnt--){
+				tmp=old*V[cnt];
+				if(tmp.v[1][n])
+					ans=min(ans,E[i].d+add+(1<<cnt));
+				else add+=(1<<cnt),old=tmp;
+			}printf("%d\n",ans);
+			return;
+		}
+	}
+	puts("Impossible");
+}
+int main(){
+	scanf("%d%d",&n,&m);
+	for(int i=1;i<=m;i++)
+		scanf("%d%d%d",&E[i].u,&E[i].v,&E[i].d);
+	sort(E+1,E+1+m);
+	if(E[1].d!=0)return puts("Impossible");
+	check(200+(int)1e9);
+}

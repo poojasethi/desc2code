@@ -1,0 +1,207 @@
+#include <cstdio>
+#include <cmath>
+#include <iostream>
+#include <set>
+#include <algorithm>
+#include <vector>
+#include <map>
+#include <cassert>
+#include <string>
+#include <cstring>
+ 
+using namespace std;
+ 
+#define rep(i,a,b) for(int i = a; i < b; i++)
+#define S(x) scanf("%d",&x)
+#define P(x) printf("%d\n",x)
+ 
+typedef long long int LL;
+const double eps = 1e-13;
+double A[4][4], B[4];
+ 
+double _pow(double x, int y) {
+	double res = 1.0;
+	rep(i,0,y)
+		res *= x;
+ 
+	return res;
+}
+ 
+void gaussElimination() {
+ 
+	rep(i,0,4) {
+ 
+		int idx = i;
+		rep(j,i+1,4) if(A[j][i] > A[idx][i])
+			idx = j;
+ 
+		if(idx != i) {
+			rep(j,0,4) swap(A[i][j], A[idx][j]);
+			swap(B[i], B[idx]);
+		}
+ 
+		rep(j,i+1,4) A[i][j] /= A[i][i];
+		B[i] /= A[i][i];
+		A[i][i] = 1.0;
+ 
+		rep(j,i+1,4) if(A[j][i]){
+ 
+			rep(k,i+1,4) {
+				A[j][k] /= A[j][i];
+				A[j][k] -= A[i][k];
+			}
+			B[j] /= A[j][i];
+			B[j] -= B[i];
+ 
+			A[j][i] = 0;
+ 
+		}
+ 
+	}
+ 
+	for(int i = 3; i > 0; i--) {
+ 
+		for(int j = i-1; j >= 0; j--) {
+			B[j] -= B[i] * A[j][i];
+			A[j][i] = 0;
+		}
+ 
+	}
+ 
+ 
+}
+ 
+double _tm;
+ 
+double integrate(double lo, double hi) {
+ 
+	double res = 0.0;
+	rep(i,0,4) {
+		res += (_pow(hi,4-i) - _pow(lo,4-i)) * B[i] / (4-i);
+	}
+ 
+	return abs(res);
+ 
+}
+ 
+double val(double t) {
+ 
+	double res = 0;
+	rep(i,0,4) {
+		res += _pow(t,3-i) * B[i];
+	}
+ 
+	return res;
+ 
+}
+ 
+double root(double lo, double hi) {
+ 
+	int sign = 1;
+	if(val(lo) < 0)
+		sign = -1;
+ 
+	double res = lo;
+	while(lo+eps <= hi) {
+		double mi = (lo + hi) * 0.5;
+		if(val(mi)*sign >= 0) {
+			lo = mi+eps;
+			res = mi;
+		} else {
+			hi = mi-eps;
+		}
+	}
+ 
+	return res;
+ 
+}
+ 
+double solve() {
+ 
+	gaussElimination();
+ 
+	double disc = 4.0*B[1]*B[1] - 4*3*B[0]*B[2];
+	double r;
+ 
+	if(disc <= 0) {
+		if(val(0)*val(_tm) < 0) {
+			r = root(0,_tm);
+			return integrate(0,r) + integrate(r,_tm);
+		}
+		return integrate(0,_tm);
+	}
+ 
+	double r1,r2;
+	r1 = (-2*B[1] - sqrt(disc)) / (6 * B[0]);
+	r2 = (-2*B[1] + sqrt(disc)) / (6 * B[0]);
+	// printf("r1:%lf r2:%lf\n",r1,r2);
+	if(r1 > r2) swap(r1,r2);
+	double prev = 0.0;
+	double ans = 0.0;
+	
+ 
+	if(_tm < r1)
+		r1 = _tm;
+	if(r1 < 0)
+		r1 = 0;
+	if(r2 > _tm)
+		r2 = _tm;
+	if(r2 < 0)
+		r2 = 0;
+ 
+	if(r1 > 0 && val(r1)*val(0) < 0) {
+		r = root(0,r1);
+		ans += integrate(0,r);
+		prev = r;
+ 
+	}
+ 
+	if(val(r1)*val(r2) < 0) {
+		r = root(r1,r2);
+		ans += integrate(prev,r);
+		prev = r;
+	}
+ 
+	if(_tm > r2 && val(r2)*val(_tm) < 0) {
+		r = root(r2,_tm);
+		ans += integrate(prev,r);
+		prev = r;
+	}
+ 
+	ans += integrate(prev, _tm);
+ 
+	// rep(i,1,_tm+1) {
+	// 	if(val(i)*val(i-1) <  0) {
+	// 		r = root(i-1, i);
+	// 		ans += integrate(i-1, r);
+	// 		ans += integrate(r, i);
+	// 	} else {
+	// 		ans += integrate(i-1, i);
+	// 	}
+	// }
+ 
+	return ans;
+ 
+}
+ 
+int main() {
+	int t;
+	S(t);
+	while(t--) {
+		
+		scanf("%lf\n",&_tm);
+		double TT[4];
+		rep(i,0,4) {
+			double ct,cv;
+			scanf("%lf%lf",&ct,&cv);
+			TT[i] = ct;
+			rep(j,0,4) A[i][j] = _pow(ct,3-j);
+			B[i] = cv;
+		}
+ 
+		printf("%0.12lf\n",solve());
+	}
+	
+ 
+	return 0;
+} 

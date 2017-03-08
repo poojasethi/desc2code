@@ -1,0 +1,223 @@
+#include <cstdlib>
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+#include <cassert>
+
+#define Fr(a,b,c) for(int a = b; a < c; ++a)
+#define dbg if(0)
+
+using namespace std;
+
+typedef long long ll;
+
+#define MAXN 1550100
+
+const int K = 27;
+struct S {
+	int len, link;
+	int next[K];
+} state[MAXN];
+int cnt;
+
+void init() {
+	cnt = 1;
+	state[0].link = -1;
+	memset(state[0].next, -1, sizeof(state[0].next));
+}
+
+void debug();
+
+int sa_extend(int node, int c) {
+//	if(state[node].next[c] != -1) return state[node].next[c];
+	int novo = cnt++;
+	state[novo].len = state[node].len + 1;
+	memset(state[novo].next, -1, sizeof(state[0].next));
+	int p;
+	for (p = node; p != -1 && state[p].next[c] == -1; p = state[p].link)
+		state[p].next[c] = novo;
+	
+	if (p == -1)
+		state[novo].link = 0;
+	else {
+		int q = state[p].next[c];
+		if (state[p].len + 1 == state[q].len) state[novo].link = q;
+		else {
+			state[cnt].len = state[p].len + 1;
+			memcpy(state[cnt].next, state[q].next, sizeof(state[0].next));
+			state[cnt].link = state[q].link;
+			for(; p != -1 && state[p].next[c] == q; p = state[p].link)
+				state[p].next[c] = cnt;
+			
+			state[q].link = state[novo].link = cnt;
+//			novo = cnt;
+			++cnt;
+		}
+	}
+	
+	return novo;
+}
+
+char str[MAXN], seq[30];
+ll k;
+int adj[MAXN], n;
+int to[MAXN], ant[MAXN], m;
+
+void add(int x, int y) {
+	to[m] = y, ant[m] = adj[x]; adj[x] = m++;
+}
+
+//Computa a suffix tree
+int pilha[MAXN], modo[MAXN], raiz[MAXN], pai[MAXN];
+void dfs(int x, int node) {
+	int pp = 0;
+	pilha[0] = x, modo[x] = 0, raiz[0] = 0, pai[x] = -2;
+	while(~pp) {
+		int mm = modo[pp], at = pilha[pp];
+		if(!mm) {
+			modo[pp] = 1;
+//			printf("adicionando %c to %d\n", str[at - 1], raiz[pp]);
+			int novo = sa_extend(raiz[pp], str[at - 1] - 'a');
+			dbg debug();
+			for(int i = adj[at]; ~i; i = ant[i]) {
+				if(to[i] != pai[at]) {
+					pai[to[i]] = at;
+					++pp;
+					pilha[pp] = to[i], modo[pp] = 0, raiz[pp] = novo;
+					assert(pp < MAXN);
+				}
+			}
+		} else --pp;
+	}
+}
+
+ll pd[MAXN];
+int lastEdge[MAXN];
+//Computa o número de substrings de cada nó
+//Incluindo substring vazia. Ex.: ""
+void calc(int node = 0) {
+	/*/
+	Fr(i,0,cnt) grau[i] = 0;
+	Fr(i,0,cnt) Fr(j,0,K) if(state[i].next[j] != -1)
+		++grau[ state[i].next[j] ];
+	Fr(i,0,cnt) printf("%d %d\n", i, grau[i]);
+	//*/
+
+	Fr(i,0,cnt) lastEdge[i] = -2;
+	int pp = 0;
+	pilha[0] = node, lastEdge[node] = 0;
+	while(~pp) {
+		int at = pilha[pp];
+		int &last = lastEdge[at];
+		if(last < K) {
+			dbg printf(" at %d\n", at);
+			for(int i = last; i < K; ++i) {
+				++last;
+				if(state[at].next[i] != -1) {
+					int u = state[at].next[i];
+					dbg printf(" next[%d] %d : ", i, u);
+					if(lastEdge[u] == -2) {
+						dbg printf(" add !\n");
+						++pp;
+						pilha[pp] = u, lastEdge[u] = 0;
+						break;
+					}
+					dbg printf("\n");
+				}
+			}
+			
+		} else {
+			dbg printf(" calc %d\n", at);
+			pd[at] = 1; // Me!
+			Fr(i,0,K) if(state[at].next[i] != -1) pd[at] += pd[ state[at].next[i] ];
+			--pp;
+		}
+	}
+	//*/
+	dbg debug();
+
+	/*
+	printf("PD\n");
+	for(int at = cnt - 1; ~at; --at) {
+		pd[at] = 1;
+		Fr(i,0,K) if(state[at].next[i] != -1)
+			pd[at] += pd[ state[at].next[i] ], printf(" sum[%d] += [%d] %lld\n", at, state[at].next[i], pd[state[at].next[i]]);
+		printf("pd[%d] %lld\n", at, pd[at]);
+	}
+	printf("\n");
+	//*/
+}
+
+//Mostra substrings geradas!
+#define pilha pilhaDeExibicaoDasSubstrings
+char pilha[MAXN];
+void busca(int node, int lvl  = 0) {
+	pilha[lvl] = '\0';
+	printf("%s\n", pilha);
+	
+	Fr(i,0,K) if(state[node].next[i] != -1)
+		pilha[lvl] = i + 'a', busca(state[node].next[i], lvl + 1);
+}
+#undef pilha
+
+void debug() {
+	printf("-------------\nSuffix Tree\n");
+	Fr(i,0,cnt) {
+		printf("node %d, len %d, link %d, pd %lld\n", i, state[i].len, state[i].link, pd[i]);
+		Fr(j,0,K) if(state[i].next[j] != -1) printf(" '%c' -> %d\n", j + 'a', state[i].next[j]);
+	}
+	printf("-------------\n\n");
+}
+
+
+char out[MAXN];
+int main() {
+	int q;
+	scanf("%d%d", &n, &q);
+	scanf("%s", str);
+	Fr(i,1,n+1) adj[i] = -1, pai[i] = -1;
+
+	m = 0;
+	Fr(i,1,n) {
+		int a, b;
+		scanf("%d%d", &a, &b);
+		add(a, b), add(b, a);
+	}
+
+	init(); // Inicializa a suffix tree
+	dfs(1, 0); // Constrói a suffix tree
+	calc(); // Calcula o número de substrings de cada nó
+	/*
+	debug(); // Mostra a suffix tree criada
+	busca(0); // Mostra as substrings da tree
+	//*/
+
+	printf("%lld\n", pd[0]);
+	Fr(i,0,q) {
+		scanf("%s%lld", seq, &k);
+		--k;
+		if(pd[0] <= k) printf("-1\n");
+		else {
+			int at = 0, u, po = 0;
+			while(--k >= 0) {
+//				printf("\n[at %d, k %lld]\n", at, k);
+				Fr(i,0,K) {
+					int j = seq[i] - 'a';
+					if(state[at].next[j] == -1) continue;
+					u = state[at].next[j];
+					if(pd[u] <= k) k -= pd[u];
+					else {
+						at = u;
+						out[po++] = seq[i];
+						break;
+					}
+				}
+			}
+
+			out[po] = '\0';
+			printf("%s\n", out);
+		}
+	}
+	
+	return 0;
+}

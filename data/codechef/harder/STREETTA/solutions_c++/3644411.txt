@@ -1,0 +1,434 @@
+/*#include <cstdio>
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <sstream>
+#include <iomanip>
+#include <cmath>
+#include <cstdlib>
+#include <cctype>
+#include <cstring>
+#include <string>
+#include <ctime>
+#include <cassert>
+#include <utility>
+
+using namespace std;
+
+#define INF 2000000000000000000LL
+#define MAXN 500050
+#define MAXAINT 1 << 20
+
+int N, M;
+int t, u, v, a, b, L, R;
+vector<int> Q[MAXN];
+set<int> S;
+int A[MAXN];
+long long qa, qb;
+
+long long Aint[4 * MAXN][2];
+//long long Bint[4 * MAXN][2];
+bool Uint[4 * MAXN];
+long long ans[MAXN];
+long long mval;
+bool any;
+
+void updateB(int k, int st, int dr) {
+    if(L <= st && dr <= R) {
+        Aint[k][0] += a;
+        Aint[k][1] += b - (long long)u * a;
+        return;
+    }
+    
+    int m = (st + dr) / 2;
+    if(L <= m)
+        updateB(2 * k, st, m);
+    if(R > m)
+        updateB(2 * k + 1, m + 1, dr);
+}
+
+void queryB(int k, int st, int dr) {
+    qa += Aint[k][0];
+    qb += Aint[k][1];
+    
+    if(st == dr)
+        return;
+    
+    int m = (st + dr) / 2;
+    if(L <= m)
+        queryB(2 * k, st, m);
+    else
+        queryB(2 * k + 1, m + 1, dr);
+}
+
+inline long long f(long long a, long long b, long long x) {
+    return a * x + b;
+}
+
+void updateA(int k, int st, int dr) {
+    if(L <= st && dr <= R) {
+        if(!Uint[k]) {
+            Uint[k] = true;
+            Aint[k][0] = a;
+            Aint[k][1] = b - (long long)u * a;
+            return;
+        }
+        else {
+            bool cst = f(a, b - (long long)u * a, A[st - 1]) >= f(Aint[k][0], Aint[k][1], A[st - 1]);
+            bool cdr = f(a, b - (long long)u * a, A[dr - 1]) >= f(Aint[k][0], Aint[k][1], A[dr - 1]);
+            if(cst == cdr) {
+                if(cst) {
+                    Aint[k][0] = a;
+                    Aint[k][1] = b - (long long)u * a;
+                }
+                return;
+            }
+        }
+    }
+    
+    int m = (st + dr) / 2;
+    if(L <= m)
+        updateA(2 * k, st, m);
+    if(R > m)
+        updateA(2 * k + 1, m + 1, dr);
+}
+
+void queryA(int k, int st, int dr) {
+    if(Uint[k]) {
+        mval = max(mval, Aint[k][0] * u + Aint[k][1]);
+        any = true;
+    }
+    
+    if(st == dr)
+        return;
+    
+    int m = (st + dr) / 2;
+    if(L <= m)
+        queryA(2 * k, st, m);
+    else
+        queryA(2 * k + 1, m + 1, dr);
+}
+
+int main() {
+	freopen("date.in", "r", stdin);
+	freopen("date.out","w", stdout);
+	
+	scanf("%d %d", &N, &M);
+	
+	for(int i = 0; i < M; i++) {
+        scanf("%d %d", &t, &u);
+        Q[i].push_back(t);
+        Q[i].push_back(u);
+        if(t < 3) {
+            scanf("%d %d %d", &v, &a, &b);
+            Q[i].push_back(v);
+            Q[i].push_back(a);
+            Q[i].push_back(b);
+        }
+        else {
+            S.insert(u);
+        }
+	}
+	
+	N = 0;
+	for(set<int> :: iterator it = S.begin(); it != S.end(); it++)
+        A[N++] = *it;
+	
+	for(int i = 0; i < M; i++) {
+        t = Q[i][0];
+        u = Q[i][1];
+        L = lower_bound(A, A + N, Q[i][1]) - A + 1;
+        if(t < 3) {
+            if(t == 2) {
+                v = Q[i][2];
+                R = upper_bound(A, A + N, Q[i][2]) - A - 1 + 1;
+                a = Q[i][3];
+                b = Q[i][4];
+                updateB(1, 1, N);
+            }
+        }
+        else {
+            qa = 0;
+            qb = 0;
+            queryB(1, 1, N);
+            long long sum = (long long)qa * u + qb;
+            ans[i] = sum;
+        }
+	}
+	
+	for(int i = 0; i < M; i++) {
+        t = Q[i][0];
+        u = Q[i][1];
+        L = lower_bound(A, A + N, Q[i][1]) - A + 1;
+        if(t < 3) {
+            if(t == 1) {
+                v = Q[i][2];
+                R = upper_bound(A, A + N, Q[i][2]) - A - 1 + 1;
+                a = Q[i][3];
+                b = Q[i][4];
+                updateA(1, 1, N);
+            }
+        }
+        else {
+            mval = -INF;
+            any = false;
+            queryA(1, 1, N);
+            
+            if(!any) {
+//                printf("NA\n");
+            }
+            else {
+                ans[i] += mval;
+//                printf("%lld\n", ans[i]);
+            }
+        }
+	}
+	
+	N = 1000000;
+	M = 100000;
+	srand(time(NULL));
+	printf("%d %d\n", N, 2 * M);
+	for(int i = 1; i <= M; i++) {
+        u = rand() + 1;
+        v = rand() + u;
+        a = rand();
+        b = rand();
+        t = (rand() & 1) + 1;
+        printf("%d %d %d %d %d\n", t, u, v, a, b);
+	}
+	for(int i = 1; i <= M; i++) {
+	    u = rand() + 1;
+	    printf("3 %d\n", u);
+	}
+	
+	return 0;
+}
+*/
+#pragma warning(disable:4786)
+#pragma warning(disable:4996)
+#include<list>
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+#include<vector>
+#include<set>
+#include<map>
+#include<functional>
+#include<string>
+#include<cstring>
+#include<cstdlib>
+#include<queue>
+#include<utility>
+#include<fstream>
+#include<sstream>
+#include<cmath>
+#include<stack>
+#include<assert.h>
+using namespace std;
+ 
+#define MEM(a, b) memset(a, (b), sizeof(a))
+#define CLR(a) memset(a, 0, sizeof(a))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define ABS(X) ( (X) > 0 ? (X) : ( -(X) ) )
+#define S(X) ( (X) * (X) )
+#define SZ(V) (int )V.size()
+#define FORN(i, n) for(i = 0; i < n; i++)
+#define FORAB(i, a, b) for(i = a; i <= b; i++)
+#define ALL(V) V.Begin(), V.end()
+#define IN(A, B, C)  ((B) <= (A) && (A) <= (C))
+ 
+typedef pair<int,int> PII;
+typedef pair<double, double> PDD;
+typedef vector<int> VI;
+typedef vector<PII > VP;
+ 
+#define AIN(A, B, C) assert(IN(A, B, C))
+ 
+//typedef int LL;
+typedef long long int LL;
+//typedef __int64 LL;
+typedef pair<LL,int> PLI;
+ 
+struct Node
+{
+	int left, right;
+	LL A, B;
+	int doll;
+} nodeSum[9000006], nodeMax[9000006];
+ 
+int nnodeSum, nnodeMax;
+ 
+LL QuerySum(int at, int left, int right, int u)
+{
+	if(at == 0) return 0;
+ 
+	LL ret = 0;
+	int mid = (left + right) / 2;
+	if(u <= mid) ret += QuerySum(nodeSum[at].left, left, mid, u);
+	else		 ret += QuerySum(nodeSum[at].right, mid + 1, right, u);
+	
+	ret += nodeSum[at].B + nodeSum[at].A * (u - left);
+ 
+	return ret;
+}
+ 
+void UpdateSum(int at, int left, int right, int L, int R, LL a, LL b)
+{
+	if(L <= left && right <= R)
+	{
+		nodeSum[at].A += a;
+		nodeSum[at].B += b + (left - L) * a;
+		return;
+	}
+ 
+	int mid = (left + right) / 2;
+	
+	if(L <= mid)
+	{
+		if(nodeSum[at].left == 0) nodeSum[at].left = ++nnodeSum;
+		UpdateSum(nodeSum[at].left, left, mid, L, R, a, b);
+	}
+ 
+	if(R > mid)
+	{
+		if(nodeSum[at].right == 0) nodeSum[at].right = ++nnodeSum;
+		UpdateSum(nodeSum[at].right, mid + 1, right, L, R, a, b);
+	}
+}
+ 
+LL INF = 1000000000LL;
+PLI QueryMax(int at, int left, int right, int u)
+{
+	if(at == 0) return PLI(-INF, 0);
+ 
+	PLI ret = PLI(-INF, 0), now;
+	if(nodeMax[at].doll) 
+		ret = PLI(nodeMax[at].B + (u - left) * nodeMax[at].A, 1);
+	
+	int mid = (left + right) / 2;
+	if(u <= mid) 
+		now = QueryMax(nodeMax[at].left, left, mid, u);
+	else 
+		now = QueryMax(nodeMax[at].right, mid + 1, right, u);
+	
+	if(now.second) ret.second = 1, ret.first = MAX(ret.first, now.first);
+ 
+	return ret;
+}
+ 
+void UpdateMax(int at, int left, int right, int L, int R, LL a, LL b)
+{
+	if(R < left || right < L) return;
+ 
+	if(L <= left && right <= R)
+	{
+		if(nodeMax[at].doll == 0)
+		{
+			nodeMax[at].doll = 1;
+			nodeMax[at].A = a;
+			nodeMax[at].B = b + (left - L) * a;
+			return;
+		}
+ 
+		if(b + (left - L) * a <= nodeMax[at].B && b + (right - L) * a <= nodeMax[at].B + (right - left) * nodeMax[at].A)
+			return;
+ 
+		if(b + (left - L) * a >= nodeMax[at].B && b + (right - L) * a >= nodeMax[at].B + (right - left) * nodeMax[at].A)
+		{
+			nodeMax[at].A = a;
+			nodeMax[at].B = b + (left - L) * a;
+			return;
+		}
+ 
+		LL a1 = a, b1 = b + (left - L) * a;
+		LL a2 = nodeMax[at].A, b2 = nodeMax[at].B;
+ 
+		if(b1 < b2) {swap(a1, a2); swap(b1, b2);}
+ 
+		if(nodeMax[at].left == 0) nodeMax[at].left = ++nnodeMax;
+		if(nodeMax[at].right == 0) nodeMax[at].right = ++nnodeMax;
+ 
+		int mid = (left + right) / 2;
+		nodeMax[at].doll = 0;
+ 
+		// b1 + (x - left) * a1 >= b2 + (x - left) * a2
+		// x * (a2 - a1) <= b1 + left(a2 - a1) - b2
+ 
+		LL x = (b1 - b2 + left * (a2 - a1)) / (a2 - a1);
+		UpdateMax(nodeMax[at].left, left, mid, left, x, a1, b1);
+		UpdateMax(nodeMax[at].right, mid + 1, right, left, x, a1, b1);
+		UpdateMax(nodeMax[at].left, left, mid, x + 1, right, a2, b2 + (x + 1 - left) * a2);
+		UpdateMax(nodeMax[at].right, mid + 1, right, x + 1, right, a2, b2 + (x + 1 - left) * a2);
+		return;
+	}
+ 
+	int mid = (left + right) / 2;
+	if(L <= mid)
+	{
+		if(nodeMax[at].left == 0) nodeMax[at].left = ++nnodeMax;
+		UpdateMax(nodeMax[at].left, left, mid, L, R, a, b);
+	}
+ 
+	if(R > mid)
+	{
+		if(nodeMax[at].right == 0) nodeMax[at].right = ++nnodeMax;
+		UpdateMax(nodeMax[at].right, mid + 1, right, L, R, a, b);
+	}
+}
+ 
+int main()
+{
+	INF *= INF;
+ 
+	int N, M;
+	int cmd, u, v, a, b;
+	PLI ans1;
+	LL ans2;
+ 
+	scanf("%d %d", &N, &M);
+	AIN(N, 1, 1000000000);
+	AIN(M, 1, 300000);
+ 
+	nnodeMax = nnodeSum = 1;
+ 
+	while(M--)
+	{
+		scanf("%d", &cmd);
+		AIN(cmd, 1, 3);
+ 
+		if(cmd == 1)
+		{
+			scanf("%d %d %d %d", &u, &v, &a, &b);
+			AIN(u, 1, v); AIN(v, u, N);
+			AIN(a, -1000000000, 1000000000); AIN(b, -1000000000, 1000000000);
+			UpdateMax(1, 1, N, u, v, a, b);
+		}
+		else if(cmd == 2)
+		{
+			scanf("%d %d %d %d", &u, &v, &a, &b);
+			AIN(u, 1, v); AIN(v, u, N);
+			AIN(a, -10000, 10000); AIN(b, -10000, 10000);
+			UpdateSum(1, 1, N, u, v, a, b);
+		}
+		else if(cmd == 3)
+		{
+			scanf("%d", &u);
+			AIN(u, 1, N);
+			PLI ans1 = QueryMax(1, 1, N, u);
+			LL ans2 = QuerySum(1, 1, N, u);
+			if(ans1.second == 0) printf("NA\n");
+			else printf("%lld\n", ans1.first + ans2);
+		}
+	}
+ 
+	return 0;
+}
+ 

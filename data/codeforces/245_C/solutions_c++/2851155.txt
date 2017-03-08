@@ -1,0 +1,23 @@
+#include<stdio.h>
+#include<algorithm>
+using namespace std;
+int main()
+{
+    int n,a[101],i,x=0;
+    scanf("%d",&n);
+    if(n%2==0||n==1)
+    {
+        printf("-1\n");
+        return 0;
+    }
+    for(i=1;i<=n;i++)
+    {
+        scanf("%d",a+i);
+    }
+    for(i=(n-1)/2;i>0;i--)
+    {
+        x+=max(a[2*i],a[2*i+1]);
+        a[i]=max(a[i]-max(a[2*i],a[2*i+1]),0);
+    }
+    printf("%d\n",x+a[1]);
+}

@@ -1,0 +1,118 @@
+#include <iostream>
+#include <cstring>
+#include <cstdio>
+#include <map>
+using namespace std;
+const int Maxn = 1e5 + 10;
+struct Node
+{
+	map<int, int>mp;
+	int deep, fail;
+	int next(int x)
+	{
+		if (deep == -1) return 1;
+		map<int, int> :: iterator it = mp.find(x);
+		if (it == mp.end()) return 0;
+		return it -> second;
+	}
+	void clear()
+	{
+		mp.clear();
+		deep = fail = 0;
+	}
+}node[Maxn << 1];
+int end, size;
+void init()
+{
+	node[0].clear();
+	node[0].deep = -1;
+	node[1].clear();
+	end = 1, size = 2;
+}
+void add(int c)
+{
+	int p = node[end].next(c);
+	if (!p) 
+	{
+		p = size++; node[p].clear(); node[p].deep = node[end].deep + 1;
+		for (; !node[end].next(c); end = node[end].fail)
+			node[end].mp[c] = p;
+		int p1 = node[end].next(c);
+		if (node[p1].deep == node[end].deep + 1) node[p].fail = p1;
+		else 
+		{
+			int p2 = size++; node[p2] = node[p1]; node[p2].deep = node[end].deep + 1;
+			node[p1].fail = node[p].fail = p2;
+			for (; node[end].next(c) == p1; end = node[end].fail)
+				node[end].mp[c] = p2;
+		}
+		end = p;
+	}		
+	else
+	{
+		if (node[p].deep != node[end].deep + 1)
+		{
+			int p1 = size++;
+			node[p1] = node[p]; node[p1].deep = node[end].deep + 1;
+			node[p].fail = p1;
+			for (; node[end].next(c) == p; end = node[end].fail)
+				node[end].mp[c] = p1;
+			p = p1;
+		}
+		end = p;
+	}
+	
+}
+int n;
+struct Edge
+{
+	int to, next;
+	Edge(){}
+	Edge(int to, int next) : to (to), next(next){}
+}edge[Maxn << 1];
+int box[Maxn], sizeEdge;
+int cnt[Maxn];
+void add(int from, int to)
+{
+	edge[sizeEdge] = Edge(to, box[from]);
+	box[from] = sizeEdge++;
+	cnt[from]++;
+}
+void dfs(int x, int l, int id)
+{
+	end = id;
+	//cout << end <<" " << cnt[x] << endl;
+	add(cnt[x]);
+	int newID = end;
+	for (int i = box[x]; i != -1; i = edge[i].next)
+	{
+		int x1 = edge[i].to;
+		if (x1 == l) continue;
+		dfs(x1, x, newID);
+	}
+}
+long long solve()
+{
+	long long ret = 0;
+	for (int i = 2; i < size; ++i)
+	{
+		ret += node[i].deep - node[node[i].fail].deep;
+	}
+	return ret;
+}
+int main()
+{
+	scanf("%d", &n);
+	memset(box, -1, sizeof(box)); sizeEdge = 0;
+	memset(cnt, 0, sizeof(cnt));
+	init();
+	for (int i = 1; i < n; ++i)
+	{
+		int x, y;
+		scanf("%d%d", &x, &y);
+		add(x, y), add(y, x);
+	}
+	dfs(1, -1, 1);
+	cout << solve() << endl;
+	return 0;
+}

@@ -1,0 +1,245 @@
+#include <cstdlib>
+#include <cctype>
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <iostream>
+#include <sstream>
+#include <map>
+#include <set>
+#include <queue>
+#include <stack>
+#include <fstream>
+#include <numeric>
+#include <iomanip>
+#include <bitset>
+#include <list>
+#include <stdexcept>
+#include <functional>
+#include <utility>
+#include <ctime>
+
+using namespace std;
+
+inline int readint() {
+        char c = getchar();
+        while (!isdigit(c)) c = getchar();
+        int x = 0;
+        while (isdigit(c)) {
+                x = x * 10 + c - '0';
+                c = getchar();
+        }
+        return x;
+}
+
+inline long long readlong() {
+        char c = getchar();
+        while (!isdigit(c)) c = getchar();
+        long long x = 0;
+        while (isdigit(c)) {
+                x = x * 10 + c - '0';
+                c = getchar();
+        }
+        return x;
+}
+
+#define FOR(i, n) for (int i = 0; i < (int)(n); i++)
+#define REP(i, a, b) for (int i = (int)(a); i <= (int)(b); i++)
+#define CIR(i, a, b) for (int i = (int)(b); i >= (int)(a); i--)
+#define ADJ(i, u) for (int i = hd[u]; i != -1; i = edge[i].nxt)
+#define ECH(i, v) for (__typeof((v).begin()) i = (v).begin(); i != (v).end(); ++ i)
+#define PII pair<int, int>
+#define FI first
+#define SE second
+#define MP make_pair
+#define PB push_back
+#define SZ(v) v.size()
+#define ALL(v) v.begin(), v.end()
+#define CLR(v, a) memset(v, a, sizeof(v))
+#define IT iterator
+#define LL long long
+#define DB double
+#define PI 3.1415926
+#define INF 1000000000
+
+#define N 50005
+
+vector<int> G[N];
+int n;
+int dep[N];
+int go[N][16];
+int dfn[N];
+int tdfn;
+queue<int> Q;
+bool inq[N];
+
+void init() {
+	CLR(go, -1);
+	tdfn = 1;
+	REP(i, 1, n) G[i].clear();
+}
+
+void addEdge(int u, int v) {
+	G[u].PB(v);
+	G[v].PB(u);
+}
+
+void dfs(int u, int fa) {
+	dfn[u] = tdfn++;
+	ECH(iter, G[u]) {
+		int v = *iter;
+		if (v == fa) continue;
+		dfs(v, u);	
+	}
+}
+
+void bfs() {
+	Q.push(1);
+	dep[1] = 0;
+
+	CLR(inq, 0);
+	inq[1] = 1;
+
+	while (!Q.empty()) {
+		int u = Q.front();
+		Q.pop();
+
+		for (int i = 0; go[u][i] != -1 && go[go[u][i]][i] != -1; i++) {
+			go[u][i + 1] = go[go[u][i]][i];
+		}
+
+		ECH(iter, G[u]) {
+			int v = *iter;
+			if (inq[v]) continue;
+			inq[v] = 1;
+			dep[v] = dep[u] + 1;
+			go[v][0] = u;
+			Q.push(v);
+		}	
+	}
+}
+
+int lca(int u, int v) {
+	if (dep[u] < dep[v]) swap(u, v);
+	
+	int d = dep[u] - dep[v];
+
+	FOR(i, 16) {
+		if ((d & (1 << i))) {
+			u = go[u][i];
+		}
+	}
+
+	if (u == v) return u;
+
+	CIR(i, 0, 15) {
+		if (go[u][i] != go[v][i]) {
+			u = go[u][i];
+			v = go[v][i];
+		}
+	}
+
+	return go[u][0];
+}
+
+int dist(int u, int v) {
+	return dep[u] + dep[v] - 2 * dep[lca(u, v)] + 1;
+}
+
+bool cmp(const int& a, const int& b) {
+	return dfn[a] < dfn[b];
+}
+
+vector<int> vec;
+
+int main() {
+	int m, test;
+	scanf("%d", &test);
+
+	FOR(cas, test) {
+		scanf("%d%d", &n, &m);
+		int a, b, c;
+
+		init();
+		FOR(i, n - 1) {
+			scanf("%d%d", &a, &b);
+			addEdge(a, b);
+		}	
+
+		dfs(1, -1);
+		bfs();
+
+		FOR(i, m) {
+			vec.clear();
+
+			int K;
+			scanf("%d", &K);
+
+			FOR(j, K) {
+				scanf("%d", &c);
+				vec.PB(c);
+			}
+
+			sort(ALL(vec), cmp);
+
+			if (K == 2) {
+				printf("%d\n", 	dist(vec[0], vec[1]) - 2);
+			}
+			else {
+				bool ok = 1;
+
+				int len = 0;
+
+				FOR(j, K) {
+					a = vec[j], b = vec[(j + 1) % K];
+					len += dep[a] + dep[b] - 2 * dep[lca(a, b)];		
+				}
+				len >>= 1;
+				len++;	
+				
+				int sum = 0;
+				
+				int a = lca(vec[0], vec[1]), b = lca(vec[1], vec[2]);
+				int c = lca(vec[2], vec[0]);
+
+				int d = a ^ b ^ c;
+				
+				FOR(j, K) {
+					sum += dep[vec[j]] + dep[d] - 2 * dep[lca(vec[j], d)];
+				}				
+
+				sum++;
+
+				bool flag = 1;
+
+				FOR(j, K) {
+					a = vec[j], b = vec[(j + 1) % K], c = vec[(j + 2) % K];
+					int t1 = dep[a] + dep[b] - 2 * dep[lca(a, b)];
+					t1 += dep[b] + dep[c] - 2 * dep[lca(b, c)];
+					t1 += dep[c] + dep[a] - 2 * dep[lca(a, c)];
+					
+					t1 >>= 1;
+					t1++;
+					
+					int t2 = dist(a, b);
+					t2 = max(t2, dist(b, c));
+					t2 = max(t2, dist(c, a));
+
+					if (t1 == t2) {
+						flag = 0;
+						break;
+					}					
+				}
+
+				if (sum == len && flag) 
+					puts("1");
+				else
+					puts("0");	
+			}	
+		}	
+	}
+	return 0;
+}

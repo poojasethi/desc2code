@@ -1,0 +1,190 @@
+#include <iostream>
+#include <cstring>
+#include <cmath>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+#define N 100050
+#define M 40000050
+#define P 1000000009
+struct Matrix
+ {int a[3];} Emp,Pow[N],Sum[N],I,E,val[M],_val[M];
+int fi[N],c[N*2][2],fa[N],rf[N],h[N],wei[N],sg[N],nd[N];
+int ne[M][2],bd[N],rt[N],Cnt[M],Now,ans,__Cnt,ss=1,st,n,m;
+inline int Read()
+ {
+ 	int x=0;char y;
+ 	do y=getchar(); while (y<'0'||y>'9');
+ 	do x=x*10+y-'0',y=getchar(); while (y>='0'&&y<='9');
+ 	return x;
+ }
+inline void Add(int &x,int y) {x=(x+y)%P;}
+Matrix operator* (const Matrix &x,const Matrix &y)
+ {
+ 	static Matrix z;
+ 	z.a[0]=(1LL*x.a[0]*y.a[0]+1LL*x.a[1]*y.a[1])%P;
+ 	z.a[1]=(1LL*x.a[0]*y.a[1]+1LL*x.a[1]*y.a[2])%P;
+ 	z.a[2]=(1LL*x.a[2]*y.a[2]+1LL*x.a[1]*y.a[1])%P;
+ 	return z;
+ }
+Matrix operator+ (const Matrix &x,const Matrix &y)
+ {
+ 	static Matrix z;z=Emp;
+ 	for (int i=0;i<3;i++) z.a[i]=(x.a[i]+y.a[i])%P;
+ 	return z;
+ }
+Matrix operator- (const Matrix &x,const Matrix &y)
+ {
+ 	static Matrix z;z=Emp;
+ 	for (int i=0;i<3;i++) z.a[i]=(x.a[i]-y.a[i]+P)%P;
+ 	return z;
+ }
+void Pretreat()
+ {
+ 	E.a[0]=E.a[1]=I.a[0]=I.a[2]=true;
+ 	Pow[1]=Sum[1]=E;
+ 	for (int i=2;i<N;i++) Sum[i]=Sum[i-1]+(Pow[i]=Pow[i-1]*E);
+ 	return;
+ }
+inline void Line(int x,int y)
+ {
+ 	c[++ss][0]=y;c[ss][1]=fi[x];fi[x]=ss;
+ 	c[++ss][0]=x;c[ss][1]=fi[y];fi[y]=ss;
+ 	return;
+ }
+void DFS(int x)
+ {
+ 	h[x]=h[fa[x]]+1;wei[x]=1;
+ 	for (int i=fi[x];i;i=c[i][1])
+ 	 if (c[i][0]!=fa[x])
+ 	   fa[c[i][0]]=x,DFS(c[i][0]),wei[x]+=wei[c[i][0]];
+ 	return;
+ }
+void DSF(int x,int y)
+ {
+ 	nd[sg[x]=++st]=x;int k=false;rf[x]=y;
+ 	for (int i=fi[x];i;i=c[i][1])
+ 	 if (c[i][0]!=fa[x]&&wei[c[i][0]]>wei[k]) k=c[i][0];
+ 	if (k) DSF(k,y);
+ 	for (int i=fi[x];i;i=c[i][1])
+ 	 if (c[i][0]!=fa[x]&&c[i][0]!=k) DSF(c[i][0],c[i][0]);
+ 	bd[x]=st;
+ 	return;
+ }
+int LCA(int x,int y)
+ {
+ 	while (rf[x]!=rf[y])
+ 	 {
+ 	 	if (h[rf[x]]<h[rf[y]]) swap(x,y);
+ 	 	x=fa[rf[x]];
+ 	 }
+ 	return h[x]<h[y]?x:y;
+ }
+inline Matrix sum(int x,int y)
+ {return !x?Sum[y]+I:Sum[y]-Sum[x-1];}
+int Query(int x,int y,int z,int o,int p)
+ {
+ 	if (x==o&&y==p) return Cnt[z];
+ 	int mid = x + y >> true;
+ 	int _Cnt = (val[z]*sum(o-x,p-x)).a[1];
+ 	Add(_Cnt, (_val[z]*sum(y-p,y-o)).a[1]);
+ 	if (o<=mid) Add(_Cnt,Query(x,mid,ne[z][0],o,min(mid,p)));
+ 	if (p>mid) Add(_Cnt,Query(mid+1,y,ne[z][1],max(mid+1,o),p));
+ 	return _Cnt;
+ }
+int __Query(int x,int y)
+ {
+ 	ans = false;
+ 	while (rf[x]!=rf[y])
+ 	 {
+ 	 	if (h[rf[x]]<h[rf[y]]) swap(x,y);
+ 	 	Add(ans,Query(1,n,Now,sg[rf[x]],sg[x]));
+ 	 	x=fa[rf[x]];
+ 	 }
+ 	if (h[x]>h[y]) swap(x,y);
+ 	Add(ans,Query(1,n,Now,sg[x],sg[y]));
+ 	return ans;
+ }
+int _Up(int x,int y)
+ {
+ 	int la = false;
+ 	while (rf[x]!=rf[y]) la=rf[x],x=fa[rf[x]];
+ 	return x!=y?nd[sg[y]+1]:la;
+ }
+int _Query(int y,int x)
+ {
+ 	if (x==y) return ans=Cnt[Now];
+ 	if (sg[y]<sg[x]||sg[y]>bd[x])
+ 	  ans=Query(1,n,Now,sg[x],bd[x]); else
+ 	 {
+ 	 	y=_Up(y,x);
+ 	 	ans=Query(1,n,Now,1,sg[y]-1);
+ 	 	if (bd[y]!=n) Add(ans,Query(1,n,Now,bd[y]+1,n));
+ 	 }
+ 	return ans;
+ }
+int Insert(int x,int y,int z,int o,int p,int u,bool flag)
+ {
+ 	int mid = x + y >> true, j = ++st;
+ 	ne[j][0]=ne[z][0];ne[j][1]=ne[z][1];
+ 	Cnt[j]=Cnt[z];val[j]=val[z];_val[j]=_val[z];
+ 	if (x==o&&y==p)
+ 	 {
+ 	 	if (flag) _val[j] = _val[j] + Pow[u]; else
+ 	 	  val[j] = val[j] + Pow[u];
+ 	 	Cnt[j] = (Cnt[j] + (sum(u,p-o+u)).a[1] ) %P;
+ 	 	return j;
+ 	 }
+ 	if (p<=mid) ne[j][0]=Insert(x,mid,ne[z][0],o,p,u,flag); else
+ 	 if (o>mid) ne[j][1]=Insert(mid+1,y,ne[z][1],o,p,u,flag); else
+ 	  if (!flag)
+ 	    ne[j][0]=Insert(x,mid,ne[z][0],o,mid,u,flag),
+ 	    ne[j][1]=Insert(mid+1,y,ne[z][1],mid+1,p,u+mid-o+1,flag); else
+ 	    ne[j][1]=Insert(mid+1,y,ne[z][1],mid+1,p,u,flag),
+ 	    ne[j][0]=Insert(x,mid,ne[z][0],o,mid,u+p-mid,flag);
+ 	Cnt[j]=((Cnt[ne[j][0]]+Cnt[ne[j][1]])%P+((val[j]+_val[j])*sum(0,y-x)).a[1])%P;
+ 	return j;
+ }
+bool Up(int x,int y,int z,bool flag)
+ {
+ 	while (rf[x]!=rf[y])
+ 	 {
+ 	 	if (flag)
+ 	 	  Now=Insert(1,n,Now,sg[rf[x]],sg[x],z-sg[x]+sg[rf[x]],!flag); else
+ 	 	  Now=Insert(1,n,Now,sg[rf[x]],sg[x],z,!flag);
+ 	 	z += (flag ? -1 : 1) * (h[x] - h[rf[x]] + 1);
+ 	 	x = fa[rf[x]];
+ 	 }
+ 	if (x!=y) if (flag)
+ 	  Now = Insert(1,n,Now,sg[y],sg[x],z-sg[x]+sg[y],!flag); else
+ 	  Now = Insert(1,n,Now,sg[y],sg[x],z,!flag);
+ 	return x==y;
+ }
+void Modify(int x,int y)
+ {
+ 	int k=LCA(x,y);bool flag = Up(x,k,true,false);
+ 	flag &= Up(y,k,h[y]+h[x]-2*h[k]+true,true);
+ 	if (flag) Now=Insert(1,n,Now,sg[k],sg[k],h[x]-h[k]+true,false);
+ 	return;
+ }
+int main()
+ {
+ 	/*int _size=64 << 20;
+ 	char *_p=(char*)malloc(_size)+_size;
+ 	__asm__("movl %0, %%esp\n"::"r"(_p));
+ 	freopen("input.txt","r",stdin);
+	freopen("output.txt","w",stdout);*/
+ 	n=Read();Pretreat();m=Read();
+ 	for (int i=1;i<n;i++) Line(Read(),Read());
+ 	DFS(1);DSF(1,1);st=false;
+ 	for (int T=1;T<=m;T++)
+ 	 {
+ 	 	static char ch[20];scanf("%s",ch+1);int k=Read()^ans;
+ 	 	if (ch[1]=='R') Now=rt[k]; else
+ 	 	if (ch[1]=='Q')
+ 	 	  printf("%d\n",ch[2]=='S'?_Query(k,Read()):__Query(k,Read())); else
+ 	 	  Modify(k,Read());
+ 	 	rt[T]=Now;
+ 	 }
+ 	return 0;
+ }

@@ -1,0 +1,135 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#define SIZE 100010
+using namespace std;
+typedef long long ll;
+// Disjoined set
+int prev[SIZE],H[SIZE],br[SIZE];
+ll pr[SIZE];
+void init(){
+  for(int i=0;i<SIZE;++i){prev[i]=i;H[i]=0;br[i]=1;pr[i]=0;}
+}
+int get(int w){
+  if(prev[w]==w)return w;
+  return (prev[w]=get(prev[w]));
+}
+void merge(int a,int b){
+  a=get(a);b=get(b);
+  if(H[a]>=H[b]){
+   prev[b]=a;br[a]+=br[b];pr[a]+=pr[b];
+   if(H[a]==H[b])H[a]++;
+                }
+  else{prev[a]=b;br[b]+=br[a];pr[b]+=pr[a];}
+}
+// LCA
+vector<int> fo[100000];
+vector<int> C[100000];
+int dp[100000][18],tin[100000],tout[100000],n,m,lgn,ct=0;
+bool used[100000];
+int pay[100000],T[100000],CC=0;
+void dfs(int vr,int par,int P){
+  T[vr]=CC++;
+  used[vr]=true;tin[vr]=++ct;
+  pay[vr]=P;
+  dp[vr][0]=par;
+  for(int i=1;i<=lgn;++i)dp[vr][i]=dp[dp[vr][i-1]][i-1];
+  for(int i=0;i<fo[vr].size();++i)
+   if(!used[fo[vr][i]])dfs(fo[vr][i],vr,C[vr][i]);
+  tout[vr]=++ct;
+  CC--;
+}
+bool is_par(int vr,int to){return(tin[vr]<tin[to]&&tout[to]<tout[vr]);}
+int lca(int a,int b){
+  if(is_par(a,b)||is_par(b,a))return(is_par(a,b)?a:b);
+  int D=lgn,V=a;
+  while(D>=0){
+   if(!is_par(dp[a][D],b))a=dp[a][D];
+   else --D;
+             }
+  return dp[a][0];
+}
+#define INF -100000000
+int min_r[100000][18];
+void init_minr(){
+  pay[0]=INF;
+  int i,l;
+  for(i=0;i<n;++i)min_r[i][0]=pay[i];
+  for(l=1;l<=lgn;++l)
+   for(i=0;i<n;++i)
+    min_r[i][l]=min(min_r[i][l-1],min_r[dp[i][l-1]][l-1]);
+}
+int get_edge(int f,int t){
+  int L=lca(f,t),E=INF;
+  int D=lgn,v=f,neo;
+  while(f!=L){
+   E=max(E,pay[f]);
+   f=dp[f][0];
+             }
+  while(t!=L){
+   E=max(E,pay[t]);
+   t=dp[t][0];
+             }
+  //while(D>=0&&L!=v){
+//   neo=dp[v][D];
+//   if(T[neo]>=T[L]){E=min(E,min_r[v][D]);v=dp[v][D];}
+//   else --D;
+//                   }
+//  D=lgn;v=t;
+//  while(D>=0&&L!=v){
+//   neo=dp[v][D];
+//   if(T[neo]>=T[L]){E=min(E,min_r[v][D]);v=dp[v][D];}
+//   else --D;
+//                   }
+  return E;
+} 
+// SOLUTION
+struct edge{
+  int f,t,w;
+  edge(int a=0,int b=0,int c=0){f=a;t=b;w=c;}
+  bool operator<(const edge& W)const{return (w<W.w);}
+};
+vector<edge> V;
+ll solve(int a,int b){
+  int oa=a,ob=b;
+  a=get(a);b=get(b);
+  if(a==b){
+   if(br[a]==n)return pr[a]-get_edge(oa,ob);
+   else return -1;
+          }
+  else{
+   if(br[a]+br[b]==n)return pr[a]+pr[b];
+   else return -1;
+      }
+}
+int main(){
+  int i,j,x,y,z;
+  //system("pause");
+  init();
+  scanf("%d%d",&n,&m);
+  lgn=0;while((1<<lgn)<n)++lgn;
+  for(i=0;i<m;++i){
+   scanf("%d%d%d",&x,&y,&z);
+   x--;y--;
+   V.push_back(edge(x,y,z));
+                  }
+  sort(V.begin(),V.end());
+  for(i=0;i<m;++i){
+   x=get(V[i].f);y=get(V[i].t);
+   if(x!=y){
+    merge(x,y);pr[get(x)]+=V[i].w;
+    fo[x].push_back(y);C[x].push_back(V[i].w);
+    fo[y].push_back(x);C[y].push_back(V[i].w);
+           }
+                  }
+  if(br[get(0)]==n){dfs(0,0,0);init_minr();}
+  scanf("%d",&z);
+  for(i=0;i<z;++i){
+   scanf("%d%d",&x,&y);
+   x--;y--;
+   cout<<solve(x,y)<<'\n';
+                  }
+  //system("pause");
+  return 0;
+}

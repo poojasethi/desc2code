@@ -1,0 +1,193 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+const int N = int(1e5 + 5);
+
+struct rc
+{
+	int l, r, s, f;
+	int p, q, u, v;
+	
+	void nega() { l = -l, r = -r, s = -s, f = -f; }
+	void reset(int P, int V) { p = q = u = v = P, l = r = s = f = V; }
+	
+}a[2][N<<2];
+
+int g[N<<2];
+int n, m, cnt, tot, ri[N];
+int ml[N], mr[N];
+
+void single(int x, int d, int p)
+{
+	a[0][x].reset(p, d);
+	a[1][x].reset(p, d);
+}
+
+void G0(rc &x, rc y, rc z)
+{
+	x.s = y.s + z.s;
+	
+	x.l = max(y.l, y.s + z.l);
+	x.p = (x.l == y.l) ? y.p : z.p;
+	
+	x.r = max(z.r, z.s + y.r);
+	x.q = (x.r == z.r) ? z.q : y.q;
+	
+	x.f = max(max(y.f, z.f), y.r + z.l);
+	if(x.f == y.f) x.u = y.u, x.v = y.v;
+	else if(x.f == z.f) x.u = z.u, x.v = z.v;
+	else x.u = y.q, x.v = z.p;
+}
+
+void G1(rc &x, rc y, rc z)
+{
+	x.s = y.s + z.s;
+	
+	x.l = min(y.l, y.s + z.l);
+	x.p = (x.l == y.l) ? y.p : z.p;
+	
+	x.r = min(z.r, z.s + y.r);
+	x.q = (x.r == z.r) ? z.q : y.q;
+	
+	x.f = min(min(y.f, z.f), y.r + z.l);
+	if(x.f == y.f) x.u = y.u, x.v = y.v;
+	else if(x.f == z.f) x.u = z.u, x.v = z.v;
+	else x.u = y.q, x.v = z.p;
+}
+
+void F(int x, int y, int z)
+{
+	G0(a[0][x], a[0][y], a[0][z]);
+	G1(a[1][x], a[1][y], a[1][z]);
+}
+
+void rev(int x)
+{
+	g[x] ^= 1;
+	
+	swap(a[0][x], a[1][x]);
+	
+	a[0][x].nega();
+	a[1][x].nega();
+}
+
+void downrev(int x)
+{
+	if(g[x]) rev(x+x), rev(x+x+1), g[x] = 0;
+}
+
+void construct(int x, int l, int r)
+{
+	cnt = max(cnt, x);
+	
+	if(l==r)
+	{
+		single(x, ri[l], l);
+		return;
+	}
+	
+	int md = (l + r) >> 1;
+	
+	construct(x+x, l, md);
+	construct(x+x+1, md+1, r);
+	
+	F(x, x+x, x+x+1);
+}
+
+void modify(int x, int l, int r, int p)
+{
+	if(l==r)
+	{
+		single(x, ri[p], p);
+		return;
+	}
+	
+	downrev(x);
+	
+	int md = (l + r) >> 1;
+	
+	if(p <= md) modify(x+x, l, md, p);
+	else modify(x+x+1, md+1, r, p);
+	
+	F(x, x+x, x+x+1);
+}
+
+void negative(int x, int l, int r, int p, int q)
+{
+	if(l==p && r==q)
+	{
+		rev(x);
+		return;
+	}
+	
+	downrev(x);
+	
+	int md = (l + r) >> 1;
+	if(q <= md) negative(x+x, l, md, p, q);
+	else if(p > md) negative(x+x+1, md+1, r, p, q);
+	else negative(x+x, l, md, p, md), negative(x+x+1, md+1, r, md+1, q);
+	
+	F(x, x+x, x+x+1);
+}
+
+int query(int x, int l, int r, int p, int q)
+{
+	if(l==p && r==q) return x;
+	
+	downrev(x);
+	
+	int md = (l + r) >> 1;
+	if(q <= md) return query(x+x, l, md, p, q);
+	if(p > md) return query(x+x+1, md+1, r, p, q);
+	F(++tot, query(x+x, l, md, p, md), query(x+x+1, md+1, r, md+1, q));
+	return tot;
+}
+
+int main()
+{
+	scanf("%d", &n);
+	for(int i=1; i<=n; i++) scanf("%d", &ri[i]);
+	
+	construct(1, 1, n);
+	
+	scanf("%d", &m);
+	for(int i=1, t, l, r, d; i<=m; i++)
+	{
+		scanf("%d", &t);
+		if(t)
+		{
+			scanf("%d%d%d", &l, &r, &d);
+			
+			int ans(0);
+			for(int j=1, ret; j<=d; j++)
+			{
+				tot = cnt;
+				ret = query(1, 1, n, l, r);
+				
+				if(a[0][ret].f < 0)
+				{
+					d = j-1;
+					break;
+				}
+				
+				ans += a[0][ret].f;
+				ml[j] = a[0][ret].u;
+				mr[j] = a[0][ret].v;
+				negative(1, 1, n, ml[j], mr[j]);
+			}
+			
+			printf("%d\n", ans);
+			
+			for(int j=1; j<=d; j++) negative(1, 1, n, ml[j], mr[j]);
+		}
+		else
+		{
+			scanf("%d%d", &l, &d), ri[l] = d;
+			modify(1, 1, n, l);
+		}
+	}
+	
+	return 0;
+}

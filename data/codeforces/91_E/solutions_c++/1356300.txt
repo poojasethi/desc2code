@@ -1,0 +1,80 @@
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+typedef long long LL;
+LL a[100005], b[100005];
+const int K = 800;
+vector<pair<long long, int> > r[100005/K+1];
+
+int srt[K+5];
+bool cmp(int x, int y) {
+	return b[x] < b[y] || (b[x]==b[y] && a[x] > a[y]);
+}
+void handle(int g, int L, int R) {
+	for(int i=L;i<R;i++) srt[i-L] = i;
+	sort(srt, srt+R-L, cmp);
+	for(int i=0;i<R-L;i++) {
+		if(i && b[srt[i]] ==b[srt[i-1]]) continue;
+		while(!r[g].empty() &&
+				r[g].back().first * b[r[g].back().second] + a[r[g].back().second]
+				<= a[srt[i]] + r[g].back().first * b[srt[i]]) {
+			r[g].pop_back();
+		}
+		if(r[g].empty()) { r[g].push_back(make_pair(0LL, srt[i])); }
+		else {
+			int x=r[g].back().second;
+			r[g].push_back(make_pair((a[x]-a[srt[i]]+b[srt[i]]-b[x]-1)/(b[srt[i]]-b[x]), srt[i]));
+		}
+	}
+	/*
+	printf("g=%d\n", g);
+	for(int i=0;i<(int)r[g].size();i++)
+		printf("%I64d %d\n", r[g][i].first, r[g][i].second);*/
+}
+
+int ask(int g, LL t) {
+	vector<pair<long long, int> >::iterator it;
+	it = lower_bound(r[g].begin(), r[g].end(), make_pair(t+1, 0));
+	--it;
+	return it->second;
+}
+int main(void) {
+	int n, q;
+	scanf("%d%d", &n, &q);
+	for(int i=0;i<n;i++)
+		scanf("%I64d%I64d", &a[i], &b[i]);
+	for(int i=0;i<n/K+1;i++)
+		handle(i, i*K, min((i+1)*K, n));
+	for(int i=0;i<q;i++) {
+		int ll, rr; LL tt;
+		scanf("%d%d%I64d", &ll, &rr, &tt);
+		--ll; --rr;
+		int gL=ll/K, gR=rr/K;
+		if(gL==gR) {
+			int bst=ll;
+			for(int j=ll;j<=rr;j++)
+				if(a[bst]+b[bst]*tt <= a[j]+b[j]*tt)
+					bst=j;
+			printf("%d\n", bst+1);
+		} else {
+			int bst=ll;
+			for(int j=ll;j<(gL+1)*K;j++)
+				if(a[bst]+b[bst]*tt <= a[j]+b[j]*tt)
+					bst=j;
+			for(int j=gR*K;j<=rr;j++)
+				if(a[bst]+b[bst]*tt <= a[j]+b[j]*tt)
+					bst=j;
+			for(int j=gL+1;j<gR;j++) {
+				int candidate = ask(j, tt);
+				if(a[bst]+b[bst]*tt <= a[candidate]+b[candidate]*tt)
+					bst=candidate;
+			}
+			printf("%d\n", bst+1);
+		}
+	}
+	return 0;
+}
+

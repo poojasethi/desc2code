@@ -1,0 +1,137 @@
+#include <iostream>
+#include <vector>
+#include <map>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+const int infinito=1000000001;
+
+vector<pair<int,int> > g[1000000];
+int dist[1000000];
+vector<pair<int,int> > lista[1000000];
+int pil[1000000];
+map<pair<int,int>,vector<pair<int,int> > > gg;
+map<pair<int,int>,int> cuantos;
+int llegan[1000000];
+
+int calculadist(int u,int p)
+{
+  dist[u]=-infinito;
+  if (pil[u])
+    dist[u]=0;
+  vector<pair<int,int> > &ar=g[u];
+  for (int i=0;i<int(ar.size());i++) {
+    int v=ar[i].first;
+    int c=ar[i].second;
+    if (v!=p) {
+      dist[u]=max(dist[u],c+calculadist(v,u));
+      if (dist[v]>=0)
+	lista[u].push_back(pair<int,int> (c+dist[v],v));
+    }
+  }
+  return dist[u];
+}
+
+void calculalista(int u,int p,int distp)
+{
+  vector<pair<int,int> > &lu=lista[u];
+  if (distp>0)
+    lu.push_back(pair<int,int> (distp,p));
+  sort(lu.begin(),lu.end());
+  /*
+  cout<<u;
+  for (int i=0;i<int(lu.size());i++)
+    cout<<"("<<lu[i].first<<","<<lu[i].second<<")";
+  cout<<endl;
+  */
+  vector<pair<int,int> > &ar=g[u];
+  for (int i=0;i<int(ar.size());i++) {
+    int v=ar[i].first;
+    int c=ar[i].second;
+    if (v!=p) {
+      int distu=distp;
+      if (pil[u])
+	distu=max(distu,0);
+      if (int(lu.size())>=1) {
+	if (lu.back().second!=v)
+	  distu=max(distu,lu.back().first);
+	else if (int(lu.size())>1)
+	  distu=max(distu,lu[int(lu.size())-2].first);
+      }
+      calculalista(v,u,distu+c);
+    }
+  }  
+  if (int(lu.size())==1) {
+    if (pil[u])
+      cuantos[pair<int,int> (u,lu[0].second)]=1;
+  } else if (int(lu.size())>=2) {
+    if (int(lu.size())==2) {
+      for (int i=0;i<2;i++)
+	gg[pair<int,int> (u,lu[i].second)].push_back(pair<int,int> (lu[1-i].second,u));
+    } else {
+      for (int i=0;i<int(lu.size());i++) {
+	int imax=int(lu.size())-1;
+	if (imax==i) imax--;
+	int imax2=imax-1;
+	if (imax2==i) imax2--;
+	if (lu[imax].first>lu[imax2].first)
+	  gg[pair<int,int> (u,lu[imax].second)].push_back(pair<int,int> (lu[i].second,u));
+      }
+    }
+    int imax=int(lu.size())-1;
+    int imax2=imax-1;
+    if (pil[u] and lu[imax].first>lu[imax2].first)
+      cuantos[pair<int,int> (u,lu[imax].second)]=1;
+  }
+}
+
+map<pair<int,int>,int> calculado;
+
+int computacuantos(pair<int,int> p)
+{
+  if (calculado[p]) return cuantos[p];
+  calculado[p]=1;
+  vector<pair<int,int> > &ar=gg[p];
+  for (int i=0;i<int(ar.size());i++)
+    cuantos[p]+=computacuantos(ar[i]);
+  //cout<<"("<<p.first<<","<<p.second<<")"<<cuantos[p]<<endl;
+  return cuantos[p];
+}
+
+int main()
+{
+  ios::sync_with_stdio(false);
+  int n,m;
+  cin>>n>>m;
+  for (int i=0;i<m;i++) {
+    int u;
+    cin>>u;
+    pil[u]=1;
+  }
+  for (int i=0;i<n-1;i++) {
+    int u,v,c;
+    cin>>u>>v>>c;
+    g[u].push_back(pair<int,int> (v,c));
+    g[v].push_back(pair<int,int> (u,c));
+  }
+  calculadist(1,0);
+  calculalista(1,0,-infinito);
+  int maximo=0;
+  for (int u=1;u<=n;u++) {
+    if (pil[u]==0) {
+      vector<pair<int,int> > &ar=g[u];
+      for (int i=0;i<int(ar.size());i++) {
+	int v=ar[i].first;
+	llegan[u]+=computacuantos(pair<int,int> (v,u));
+      }
+      maximo=max(maximo,llegan[u]);
+    }
+  }
+  int sol=0;
+  for (int u=1;u<=n;u++)
+    if (pil[u]==0 and maximo==llegan[u])
+      sol++;
+  cout<<maximo<<" "<<sol<<endl;
+}

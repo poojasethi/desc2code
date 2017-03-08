@@ -1,0 +1,95 @@
+#include <bits/stdc++.h>
+
+const int MAXN = 610001;
+const int MAXM = 610001;
+
+struct Edge{
+	int node, next, id;
+}e[MAXM];
+
+struct Road{
+	int x, y, c;
+}r[MAXM];
+
+int n, m, t, tot, nColor, a, b, h[MAXN], dfn[MAXN], low[MAXN], c[MAXN], f[MAXN];
+bool cut[MAXM], v[MAXN];
+
+void addEdge(int x, int y, int id) {
+	t++; e[t] = (Edge){y, h[x], id}; h[x] = t;
+	t++; e[t] = (Edge){x, h[y], id}; h[y] = t;
+}
+
+void tarjan(int x, int fa) {
+	dfn[x] = low[x] = ++tot;
+	for (int i = h[x]; i; i = e[i].next) {
+		if (e[i].id == fa) continue;
+		if (!dfn[e[i].node]) {
+			tarjan(e[i].node, e[i].id);
+			low[x] = std::min(low[x], low[e[i].node]);
+		} else {
+			low[x] = std::min(low[x], dfn[e[i].node]);
+		}
+		if (low[e[i].node] > dfn[x]) {
+			cut[e[i].id] = true;
+		}
+	}
+}
+
+void dfs(int x, int now) {
+	v[x] = true;
+	c[x] = now;
+	for (int i = h[x]; i; i = e[i].next) {
+		if (!v[e[i].node]) dfs(e[i].node, now);
+	}
+}
+
+void maketree(int x) {
+	for (int i = h[x]; i; i = e[i].next) {
+		if (e[i].node == f[x]) continue;
+		f[e[i].node] = x;
+		maketree(e[i].node);
+	}
+}
+
+int main() {
+	// freopen("input.txt", "r", stdin);
+	scanf("%d%d", &n, &m);
+	for (int i = 1; i <= m; i++) {
+		int x, y, c;
+		scanf("%d%d%d", &x, &y, &c);
+		r[i] = (Road){x, y, c};
+		addEdge(x, y, i);
+	}
+	scanf("%d%d", &a, &b);
+	for (int i = 1; i <= n; i++) {
+		if (!dfn[i]) tarjan(i, 0);
+	}
+	std::fill(h + 1, h + n + 1, t = 0);
+	for (int i = 1; i <= m; i++) {
+		if (!cut[i]) {
+			addEdge(r[i].x, r[i].y, i);
+		}
+	}
+	for (int i = 1; i <= n; i++) {
+		nColor++;
+		if (!v[i]) dfs(i, nColor);
+	}
+	std::fill(h + 1, h + n + 1, t = 0);
+	for (int i = 1; i <= m; i++) {
+		if (cut[i]) {
+			addEdge(c[r[i].x], c[r[i].y], i);
+		}
+	}
+	maketree(c[a]);
+	std::fill(v + 1, v + n + 1, 0);
+	for (int i = c[b]; i; i = f[i]) {
+		v[i] = true;
+	}
+	for (int i = 1; i <= m; i++) {
+		if (r[i].c == 1 && v[c[r[i].x]] && v[c[r[i].y]]) {
+			return puts("YES");
+		}
+	}
+	puts("NO");
+	return 0;
+}

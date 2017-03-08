@@ -1,0 +1,87 @@
+#! /Library/Frameworks/Python.framework/Versions/Current/bin/python
+
+P = 1000000007
+
+def eGCD(a,b):
+	r = a % b
+	if r == 0:
+		return [b,1,1 - a/b]
+	else:
+		nextIter = eGCD(b,r)
+		return [nextIter[0],nextIter[2],nextIter[1] - nextIter[2]*(a/b)]
+
+def invModP(x):
+	return eGCD(P,x)[2] % P
+
+fs = [1]
+
+def factorialModP(n):
+	global fs
+	if (len(fs) > n):
+		return fs[n]
+	else:
+		ans = fs[len(fs) - 1]
+		for i in range(len(fs),n+1):
+			ans *= i
+			ans %= P
+			fs += [ans]
+		return ans
+
+def ChooseModP(n,i):
+	ans = factorialModP(n)
+	ans *= invModP(factorialModP(i))
+	ans %= P
+	ans *= invModP(factorialModP(n-i))
+	ans %= P
+	return ans
+
+inp = raw_input().split()
+
+a = int(inp[0])
+b = int(inp[1])
+n = int(inp[2])
+
+minNum = a*n
+maxNum = b*n
+
+def countExcellentsForSum(s):
+	s -= minNum
+	if (s % (b-a) == 0):
+		numBs = s/(b-a)
+		return ChooseModP(n,numBs)
+	else:
+		return 0
+
+
+def get1xk(k):
+	if (k == 1):
+		return 1
+	else:
+		return get1xk(k-1)*10+1
+
+def getPowArr(k):
+	if (k == 1):
+		return [1]
+	else:
+		return [10**(k-1)] + getPowArr(k-1)
+
+finalSum = 0
+
+for l in range(1,8):
+	base = a * get1xk(l)
+	diffArr = getPowArr(l)
+	for i in range(l):
+		diffArr[i] *= (b - a)
+
+	for bitMask in range(2**l):
+		boolMask = [int(bitMask / (2**(l-1-i))) % 2 for i in range(l)]
+		addArr = [boolMask[i] * diffArr[i] for i in range(l)]
+		s = base
+		for i in range(l):
+			s += addArr[i]
+		if (minNum <= s) and (s <= maxNum):
+			finalSum += countExcellentsForSum(s)
+			finalSum %= P
+
+print finalSum
+

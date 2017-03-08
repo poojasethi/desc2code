@@ -1,0 +1,134 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+
+using namespace std;
+
+int N, K;
+
+vector<int> v[500];
+vector<int> num[500];
+
+bool visit[500];
+bool OK[500][500];
+int DP[500][500];
+int size[500];
+
+int E[500][500];
+int I[500][500], J[500][500];
+int M[500][500], L[500][500];
+int fa[500];
+
+vector<int> Ans;
+
+void DFS(int O)
+{
+    visit[O] = true; size[O] = 1;
+    DP[O][0] = 0; OK[O][0] = true;
+
+    int _DP[500]; bool _OK[500];
+
+    for(int Ni = 0; Ni <= N; Ni++) _OK[Ni] = false;
+
+    for(int vi = 0, vn = v[O].size(); vi < vn; vi++)
+    {
+        if( !visit[v[O][vi] ] )
+        {
+            int p = v[O][vi]; fa[p] = O;
+            DFS(p); size[O] += size[p];
+
+            for(int Ni = 0; Ni <= N; Ni++)
+            {
+                if( !OK[O][Ni] ) break;
+
+                for(int Nj = 0; Nj <= N; Nj++)
+                {
+                    if( !OK[p][Nj] ) break;
+
+                    if( !_OK[Ni+Nj] || _DP[Ni+Nj] > DP[O][Ni]+DP[p][Nj] )
+                    {
+                        _DP[Ni+Nj] = DP[O][Ni]+DP[p][Nj], _OK[Ni+Nj] = true;
+                        I[O][Ni+Nj] = O; J[O][Ni+Nj] = Ni;
+                        M[O][Ni+Nj] = p; L[O][Ni+Nj] = Nj;
+
+                    }
+
+                }
+            }
+
+            for(int Ni = 0; Ni <= N; Ni++)
+                if( _OK[Ni] )
+                {
+                    OK[O][Ni] = true;
+                    DP[O][Ni] = _DP[Ni];
+                }
+        }
+    }
+
+    OK[O][size[O] ] = true; I[O][size[O] ] = M[O][size[O] ] = O;
+    DP[O][size[O] ] = 1; J[O][size[O] ] = L[O][size[O] ] = size[O];
+
+    return;
+}
+
+void edge(int X, int Y)
+{
+    // printf("X Y %d %d\n", X, Y);
+    if( Y == 0 ) return;
+
+    if( I[X][Y] == X && J[X][Y] == Y )
+    {
+        Ans.push_back(E[X][fa[X] ] );
+        return;
+    }
+
+    edge(I[X][Y], J[X][Y]);
+    edge(M[X][Y], L[X][Y]);
+}
+
+int mn = 500;
+
+int main()
+{
+    scanf("%d %d", &N, &K);
+
+    for(int Ni = 1; Ni < N; Ni++)
+    {
+        int a, b;
+        scanf("%d %d", &a, &b);
+
+        v[a].push_back(b);
+        v[b].push_back(a);
+        E[a][b] = E[b][a] = Ni;
+    }
+
+    for(int Ni = 1; Ni <= N; Ni++)
+    {
+        fill(visit+1, visit+N+1, false);
+
+        for(int Nj = 1; Nj <= N; Nj++)
+        {
+            fill(OK[Nj], OK[Nj]+N+1, false);
+            num[Nj].clear();
+        }
+
+
+        DFS(Ni);
+        if( OK[Ni][N-K] && mn > DP[Ni][N-K] )
+        {
+            Ans.clear();
+            mn = DP[Ni][N-K];
+            edge(Ni, N-K);
+        }
+    }
+
+    printf("%d\n", mn);
+
+    for(int vi = 0, vn = Ans.size(); vi < vn; vi++)
+    {
+        if( vi ) printf(" ");
+        printf("%d", Ans[vi]);
+    }
+
+    puts("");
+}

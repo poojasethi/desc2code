@@ -1,0 +1,162 @@
+//
+//  main.cpp
+//  GTRIP
+//
+//  Created by Prakhar Jain on 17/08/13.
+//  Copyright (c) 2013 Prakhar Jain. All rights reserved.
+//
+
+#include <iostream>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <cctype>
+#include <climits>
+#include <ctime>
+#include <limits>
+#include <vector>
+#include <set>
+#include <stack>
+#include <queue>
+#include <string>
+#include <map>
+#include <list>
+#include <deque>
+#include <algorithm>
+
+#define LL  long long
+#define MOD 1000000007
+
+#define MAXN   2000
+
+using namespace std;
+
+typedef pair<int, int> pii;
+vector<pii> G[MAXN+10];
+int D[MAXN+10];
+int C[MAXN+10];
+bool visited[MAXN+10];
+
+void dijkstra(int s)
+{
+    for (int i = 0; i < MAXN+10; i++) {
+        D[i] = INT_MAX;
+        visited[i] = false;
+    }
+    D[s] = 0;
+    priority_queue< pii,vector<pii>,greater<pii> > Q;
+    Q.push(pii(0,s));
+    while (!Q.empty()) {
+        pii top = Q.top();
+        while (visited[top.second]) {
+            Q.pop();
+            if (Q.empty()) {
+                break;
+            }
+            top = Q.top();
+        }
+        if (Q.empty()) {
+            break;
+        }
+        int s = top.second;
+        int w = top.first;
+        D[s] = w;
+        visited[s] = true;
+        Q.pop();
+        for (vector<pii> :: iterator it = G[s].begin(); it != G[s].end(); it++) {
+            if (!visited[it->first]) {
+                Q.push(pii(D[s]+it->second,it->first));
+            }
+        }
+    }
+}
+void dijkstra2(int s)
+{
+    for (int i = 0; i < MAXN+10; i++) {
+        D[i] = INT_MAX;
+    }
+    D[s] = 0;
+    set<pii> Q;
+    Q.insert(pii(0,s));
+    while (!Q.empty()) {
+        int u = Q.begin()->second;
+        Q.erase(Q.begin());
+        for (vector<pii> :: iterator it = G[u].begin(); it != G[u].end(); it++) {
+            int v = it->first;
+            int w = it->second;
+            if (D[v] > D[u] + w) {
+                if (D[v] != INT_MAX) {
+                    Q.erase(Q.find(pii(D[v],v)));
+                }
+                D[v] = D[u] + w;
+                Q.insert(pii(D[v],v));
+            }
+        }
+    }
+}
+
+void chef(int s)
+{
+    for (int i = 0; i < MAXN+10; i++) {
+        C[i] = INT_MAX;
+        visited[i] = false;
+    }
+    C[s] = 0;
+    int curr = s;
+    stack<int> mystack;
+    mystack.push(curr);
+    while (!mystack.empty()) {
+        curr = mystack.top();
+        mystack.pop();
+        int minD = INT_MAX;
+        vector<int> index;
+        for (vector<pii> :: iterator it = G[curr].begin(); it != G[curr].end(); it++) {
+            if (!visited[it->first]) {
+                if (minD >= it->second) {
+                    if (minD == it->second)
+                        index.push_back(it->first);
+                    else {
+                        minD = it->second;
+                        index.clear();
+                        index.push_back(it->first);
+                    }
+                }
+            }
+        }
+        if (index.size() != 0) {
+            for (vector<int> :: iterator it = index.begin(); it != index.end(); it++) {
+                C[*it] = C[curr] + minD;
+                if (C[*it] == D[*it])
+                    mystack.push(*it);
+            }
+        }
+        visited[curr] = true;
+    }
+}
+
+int main(int argc, const char * argv[])
+{
+#ifndef ONLINE_JUDGE
+    freopen("input.txt", "r", stdin);
+    //freopen("output.txt", "w", stdout);
+#endif
+    int N, M, u, v, w;
+    scanf("%d %d", &N, &M);
+    for (int i = 0; i < M; i++) {
+        scanf("%d %d %d", &u, &v, &w);
+        if (u != v) {
+            G[u].push_back(pii(v,w));
+        }
+    }
+    int ans = 0;
+    for (int i = 1; i <= N; i++) {
+        dijkstra2(i);
+        chef(i);
+        for (int j = 1; j <= N; j++) {
+            ans += D[j] == C[j];
+        }
+    }
+    printf("%d\n", ans);
+    return 0;
+}

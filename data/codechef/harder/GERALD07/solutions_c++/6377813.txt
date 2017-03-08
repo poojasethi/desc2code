@@ -1,0 +1,104 @@
+#include <stdio.h>
+#include <vector>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+
+#define all(a) a.begin(), a.end()
+#define for_each(it, a) for (__typeof(a.begin()) it=a.begin(); it!=a.end(); it++)
+typedef pair<int, int> ii;
+const int N=200005, B=500;
+int n;
+int m, p[N], q[N]; 
+int t, ll[N], rr[N], Result[N], Naive[N];
+vector<int> b[N]; //
+
+struct disjoint_set {
+	int P[N];
+	vector<ii> Cache;
+	
+	void clear(int N)
+		{ for (int i=0; i<N; i++) P[i]=-1; Cache.clear(); }
+	disjoint_set()
+		{ clear(N); }
+	int at(int x)
+		{ while (P[x]>=0) x=P[x]; return x; }
+	
+	bool join(int x, int y) {
+		x=at(x), y=at(y);
+		if (x==y) return false;
+		if (P[x]<P[y]) swap(x, y);
+		Cache.push_back(ii(x, P[x]));
+		Cache.push_back(ii(y, P[y]));
+		P[y]+=P[x]; P[x]=y;
+		return true;
+	}
+	
+	void restore_all() {
+		for (int i=(int)Cache.size()-1; i>=0; i--)
+		P[Cache[i].first] = Cache[i].second;
+		Cache.clear();
+	}
+} Label; //
+
+int adjust(int L, int R) {
+	int Success = 0;
+	for (int i=L; i<=R; i++)
+	Success += Label.join(p[i], q[i]);
+	return Success;
+}
+
+bool as_rr(int p, int q)
+	{ return rr[p]<rr[q]; }
+
+main() {
+	int T=0; cin >> T;
+	while (T--) {
+		scanf("%d%d%d", &n, &m, &t);
+		
+		for (int i=1; i<=m; i++)
+			scanf("%d%d", &p[i], &q[i]);
+		//for (int i=1; i<=m; i++)
+		//	printf("%d %d\n", p[i]=rand()%n+1, q[i]=rand()%n+1);
+			
+		for (int i=1; i<=t; i++) {
+			scanf("%d%d", &ll[i], &rr[i]);
+			//ll[i]=rand()%m+1, rr[i]=rand()%m+1;
+			//if (ll[i] > rr[i]) swap(ll[i], rr[i]);
+			//printf("%d %d\n", ll[i], rr[i]);
+			
+			int L=ll[i]/B+1, R=rr[i]/B;
+			if (L>=R) {
+				Naive[i] = Result[i] = n-adjust(ll[i], rr[i]);
+				Label.restore_all();
+			} else {
+				b[L].push_back(i);
+				//Naive[i] = n-adjust(ll[i], rr[i]);
+				//Label.restore_all();
+			}
+		}
+		int MaxB = m/B+1;
+		for (int i=0; i<=MaxB; i++) if (b[i].size()) {
+			int L=i*B, R=L, Current=n;
+			Label.clear(n+1);
+			sort(all(b[i]), as_rr);
+			for_each(it, b[i]) {
+				Current -= adjust(R, rr[*it]);
+				Label.Cache.clear();
+				R = rr[*it]+1;
+				Result[*it] = Current - adjust(ll[*it], L-1);
+				Label.restore_all();
+			}
+		}
+		for (int i=1; i<=t; i++)
+			printf("%d\n", Result[i]);
+		/*for (int i=1; i<=t; i++) {
+			fprintf(stderr, "%d %d %s\n", Result[i], Naive[i], 
+			Result[i]==Naive[i] ? "OK" : "FAILED");
+			if (Result[i]!=Naive[i]) cin.ignore(1);
+		}*/
+		Label.clear(n+1);
+		for (int i=0; i<=MaxB; i++) 
+			b[i].clear();
+	}
+}

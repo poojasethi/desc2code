@@ -1,0 +1,17 @@
+#include<iostream>
+#include<algorithm>
+using namespace std;
+
+int n, m, a[5001];
+
+int main() {
+  cin >> n >> m;
+  for(int i = 0; i < n; i ++)
+    cin >> a[i];
+  sort(a, a+n);
+  int ans = 0;
+  for(int i = 0; i < n; i ++) if(a[i] != a[(i+n/2)%n]) ans += 1;
+  cout << ans << endl;
+  for(int i = 0; i < n; i ++) cout << a[i] << " " << a[(i+n/2)%n] << endl;
+  return 0;
+}

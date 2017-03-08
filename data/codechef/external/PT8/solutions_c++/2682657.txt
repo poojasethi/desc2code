@@ -1,0 +1,114 @@
+#include <cstdio>
+#include <iostream>
+
+using namespace std;
+
+#define for_inc(i,a,b,c) for(i = a; i < b; i+= c)
+#define inp_d(x) scanf("%d",&x)
+#define inp_c(x) scanf("%c",&x)
+#define inp_str(x) scanf("%s",x)
+#define out_d(x) printf("%d\n",x)
+#define MAX 1000000
+
+int tree[3*MAX][4];
+int lazy[3*MAX];
+char str[MAX];
+
+void assign(int arr[],int val){
+	int i;
+	for_inc(i,0,4,1) arr[i] = 0;
+	if (val == 4) arr[0] = 1;
+	else arr[3] = 1;
+}
+
+void p(int a[]){
+	int i;
+	for_inc(i,0,4,1)
+		cout << a[i] << " ";
+	cout << endl;
+}
+void merge(int a[],int a1[],int a2[]){
+	//cout << "merging \n";
+	//p(a1),p(a2);
+	//cout << "found\n";
+	a[0] = a1[0] + a2[0];
+	a[3] = a1[3] + a2[3];
+	a[1] = max(a1[0]+a2[1],max(a1[1]+a2[3],a1[0]+a2[3]));
+	a[2] = max(a1[2]+a2[0],max(a1[3]+a2[2],a1[3]+a2[0]));
+	
+	//p(a);
+}
+
+
+void invert(int a[]){
+	swap(a[0],a[3]);
+	swap(a[1],a[2]);
+}
+
+void print(int a[],int i,int j){
+	cout << "range is " << i << " " << j  << " array is " << endl;
+	int x;
+	for_inc(x,0,4,1) 
+		cout << a[x] << " ";
+	cout << endl;
+}
+
+void build(int n,int i,int j){
+	if (i == j){
+		assign(tree[n],str[i]-48);
+		//print(tree[n],i,j);
+		return;
+	}	
+	int mid = (i+j) >> 1, lt = n << 1 , rt = lt | 1;
+	build(lt,i,mid);
+	build(rt,mid+1,j);
+	merge(tree[n],tree[lt],tree[rt]);
+	//print(tree[n],i,j);
+}
+
+void update(int n,int i,int j,int a,int b){
+	int mid = (i+j) >> 1, lt = n << 1, rt = lt | 1;
+	if (lazy[n]){
+		if (lazy[n] & 1) { 
+			invert(tree[n]);
+			if (i != j) lazy[lt] += 1, lazy[rt] += 1;
+		}
+		lazy[n] = 0;
+	}
+	if (i > b || j < a) return;
+	if (i >= a && j <= b){
+		invert(tree[n]);
+		if (i != j) lazy[lt] += 1, lazy[rt] += 1;
+		return;
+	}
+	update(lt,i,mid,a,b);
+	update(rt,mid+1,j,a,b);
+	
+	merge(tree[n],tree[lt],tree[rt]); 
+}
+int main()
+{
+	int n,m,i,j;
+	inp_d(n),inp_d(m);
+	
+	for_inc(i,0,n,1) {
+		lazy[i] = 0;
+		for_inc(j,0,4,1) tree[i][j] = 0;
+	}
+	
+	inp_str(str);
+	build(1,0,n-1);
+	
+	char str1[10];
+	while(m--){
+		inp_str(str1);
+		if (str1[0] == 'c')
+			out_d(max(tree[1][0],max(tree[1][1],tree[1][3])));
+		else {
+			int a,b;
+			inp_d(a),inp_d(b);
+			update(1,0,n-1,a-1,b-1);
+		}
+	}
+	return 0;
+}

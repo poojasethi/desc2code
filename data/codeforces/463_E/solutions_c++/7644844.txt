@@ -1,0 +1,57 @@
+#include <iostream>
+#include <vector>
+#include <cstdio>
+#define N 100010
+using namespace std;
+
+int a[N];
+int p[N];
+vector<int> v[N];
+void dfs(int root, int fa) {
+    p[root] = fa;
+    for (int i = 0; i < v[root].size(); i++) {
+        int cur = v[root][i];
+        if (cur != fa)
+            dfs(cur, root);
+    }
+}
+int gcd(int c, int d) {
+    if (c > d)
+        swap(c, d);
+    while (c != 0) {
+        d %= c;
+        swap(c, d);
+    }
+    return d;    
+}
+int main() {
+    int n, q;
+    cin >> n >> q;
+    for (int i = 1; i <= n; i++)
+        scanf("%d", &a[i]);
+    for (int i = 1; i < n; i++) {
+        int c, d;
+        scanf("%d%d", &c, &d);
+        v[c].push_back(d);
+        v[d].push_back(c);
+    }
+    dfs(1, 0);
+    while (q--) {
+        int op, v, w;
+        scanf("%d%d", &op, &v);
+        if (op == 1) {
+            int fa = p[v];
+            while (fa && gcd(a[fa], a[v]) == 1)
+                fa = p[fa];
+            if (!fa)
+                printf("-1\n");
+            else
+                printf("%d\n", fa);
+        }
+        else {
+            scanf("%d", &w);
+            a[v] = w;
+        }
+    }
+    return 0;
+}

@@ -1,0 +1,122 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define rep(i,a,n) for (int i=a;i<n;i++)
+#define per(i,a,n) for (int i=n-1;i>=a;i--)
+#define pb push_back
+#define mp make_pair
+#define all(x) (x).begin(),(x).end()
+#define SZ(x) ((int)(x).size())
+#define fi first
+#define se second
+typedef vector<int> VI;
+typedef long long ll;
+typedef pair<int,int> PII;
+const ll mod=1000000007;
+ll powmod(ll a,ll b) {ll res=1;a%=mod;for(;b;b>>=1){if(b&1)res=res*a%mod;a=a*a%mod;}return res;}
+// head
+
+const int N=101000;
+struct info {
+	int ls,rs,as,sm,lp,rp,alp,arp;
+	info() {}
+	info(int v,int p) {
+		ls=rs=as=sm=v;
+		lp=rp=alp=arp=p;
+	}
+	void flip() {
+		ls*=-1; rs*=-1; as*=-1; sm*=-1;
+	}
+};
+info merge(const info &l, const info &r,bool ty) {
+	info c;
+	if ((l.ls<l.sm+r.ls)^ty) c.ls=l.ls,c.lp=l.lp;
+		else c.ls=l.sm+r.ls,c.lp=r.lp;	
+	if ((r.rs<r.sm+l.rs)^ty) c.rs=r.rs,c.rp=r.rp;
+		else c.rs=r.sm+l.rs,c.rp=l.rp;
+	c.sm=l.sm+r.sm;
+	c.as=l.rs+r.ls; c.alp=l.rp; c.arp=r.lp;
+	if ((l.as<c.as)^ty) c.as=l.as,c.alp=l.alp,c.arp=l.arp;
+	if ((r.as<c.as)^ty) c.as=r.as,c.alp=r.alp,c.arp=r.arp;
+	return c;
+}
+struct node {
+	info s[2];
+	bool rev;
+}nd[4*N];
+int a[N],n,m,l,r,k,ty;
+PII pos[40];
+void setc(int p) {
+	nd[p].rev^=1; swap(nd[p].s[0],nd[p].s[1]);
+	nd[p].s[0].flip(); nd[p].s[1].flip();
+}
+void push(int p) {
+	if (nd[p].rev) {
+		setc(p+p); setc(p+p+1);
+		nd[p].rev=0;
+	}
+}
+void modify(int p,int l,int r,int x,int w) {
+	if (l==r) nd[p].s[0]=nd[p].s[1]=info(w,x);
+	else {
+		push(p);
+		int md=(l+r)>>1;
+		if (x<=md) modify(p+p,l,md,x,w);
+		else modify(p+p+1,md+1,r,x,w);
+		rep(i,0,2) nd[p].s[i]=merge(nd[p+p].s[i],nd[p+p+1].s[i],i);
+	}
+}
+info query(int p,int l,int r,int tl,int tr) {
+	if (l==tl&&r==tr) return nd[p].s[1];
+	else {
+		push(p);
+		int md=(l+r)>>1;
+		if (tr<=md) return query(p+p,l,md,tl,tr);
+		else if (tl>md) return query(p+p+1,md+1,r,tl,tr);
+		else return merge(query(p+p,l,md,tl,md),query(p+p+1,md+1,r,md+1,tr),1);
+	}
+}
+void flip(int p,int l,int r,int tl,int tr) {
+	if (tl==l&&tr==r) setc(p);
+	else {
+		push(p);
+		int md=(l+r)>>1;
+		if (tr<=md) flip(p+p,l,md,tl,tr);
+		else if (tl>md) flip(p+p+1,md+1,r,tl,tr);
+		else flip(p+p,l,md,tl,md),flip(p+p+1,md+1,r,md+1,tr);
+		rep(i,0,2) nd[p].s[i]=merge(nd[p+p].s[i],nd[p+p+1].s[i],i);
+	}
+}
+void build(int p,int l,int r) {
+	if (l==r) nd[p].s[0]=nd[p].s[1]=info(a[l],l);
+	else {
+		int md=(l+r)>>1;
+		build(p+p,l,md);
+		build(p+p+1,md+1,r);
+		rep(i,0,2) nd[p].s[i]=merge(nd[p+p].s[i],nd[p+p+1].s[i],i);
+	}	
+}
+int main() {
+	scanf("%d",&n);
+	rep(i,1,n+1) scanf("%d",a+i);
+	build(1,1,n);
+	scanf("%d",&m);
+	rep(i,0,m) {
+		scanf("%d",&ty);
+		if (ty==0) {
+			scanf("%d%d",&l,&k);
+			modify(1,1,n,l,k);
+		} else {
+			scanf("%d%d%d",&l,&r,&k);
+			int ans=0;
+			rep(j,0,k) {
+				info rec=query(1,1,n,l,r);
+				if (rec.as<0) { k=j; break;}
+				ans+=rec.as;
+				pos[j]=mp(rec.alp,rec.arp);
+				flip(1,1,n,pos[j].fi,pos[j].se);
+			}
+			printf("%d\n",ans);
+			rep(j,0,k) flip(1,1,n,pos[j].fi,pos[j].se);
+		}
+	}
+}

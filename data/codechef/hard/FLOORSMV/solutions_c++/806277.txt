@@ -1,0 +1,158 @@
+#include <cstdio>
+#include <cmath>
+#include <cstring>
+#include <cstdlib>
+#include <ctime>
+#include <cassert>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <set>
+#include <map>
+#include <list>
+#include <complex>
+#pragma comment(linker, "/STACK:266777216")
+using namespace std;
+
+typedef long long LL;
+typedef unsigned long long ULL;
+typedef vector<int> VI;
+typedef vector<VI> VVI;
+typedef pair<int,int> PII;
+typedef vector<PII> VPII;
+typedef vector<double> VD;
+typedef pair<double,double> PDD;
+
+const int inf=1000000000;
+const LL INF=LL(inf)*inf;
+const double eps=1e-9;
+const double PI=2*acos(0.0);
+#define bit(n) (1<<(n))
+#define bit64(n) ((LL(1))<<(n))
+#define pb push_back
+#define sz size()
+#define mp make_pair
+#define cl clear()
+#define all(a) (a).begin(),(a).end()
+#define fill(ar,val) memset((ar),(val),sizeof (ar))
+inline void MIN(int &a,int b) {if((a)>(b)) (a)=(b);}
+#define MAX(a,b) {if((a)<(b)) (a)=(b);}
+#define sqr(x) ((x)*(x))
+#define X first
+#define Y second
+
+//clock_t start=clock();
+//fprintf(stderr,"time=%.3lfsec\n",0.001*(clock()-start));
+
+#define N 111
+#define M 111
+#define K 333
+
+LL sum(LL a,LL b)
+{
+	if(a>b) return 0;
+	return (a+b)*(b-a+1)/2;
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("3.in","r",stdin);
+#endif
+	int n,m,f;
+	while(scanf("%d%d%d",&n,&f,&m)>0)
+	{
+		int i,j,k,h,l;
+		int len=0;
+		PII p[K];
+		VI x[N];
+		for(i=1;i<=n;i++)
+		{
+			p[len++]=mp(i,1);
+			x[i].pb(1);
+			x[i].pb(f+1);
+		}
+		int b1[M],f1[M],T[M],b2[M],f2[M];
+		for(i=0;i<m;i++)
+		{
+			scanf("%d%d%d%d%d",b1+i,f1+i,T+i,b2+i,f2+i);
+			x[b1[i]].pb(f1[i]);
+			x[b2[i]].pb(f2[i]);
+			p[len++]=mp(b1[i],f1[i]);
+			p[len++]=mp(b2[i],f2[i]);
+		}
+		sort(p,p+len);
+		len=unique(p,p+len)-p;
+		int a[K][K];
+		for(i=0;i<=len;i++)
+			for(j=0;j<=len;j++)
+				a[i][j]=inf;
+		for(i=1;i<=n;i++)
+		{
+			sort(all(x[i]));
+			x[i].erase(unique(all(x[i])),x[i].end());
+			for(j=0;j<x[i].sz-2;j++)
+			{
+				int u=lower_bound(p,p+len,mp(i,x[i][j]))-p;
+				int v=lower_bound(p,p+len,mp(i,x[i][j+1]))-p;
+				int d=x[i][j+1]-x[i][j];
+				MIN(a[u][v],d);
+				MIN(a[v][u],d);
+			}
+		}
+		for(i=1;i<n;i++)
+		{
+			int u=lower_bound(p,p+len,mp(i,1))-p;
+			int v=lower_bound(p,p+len,mp(i+1,1))-p;
+			MIN(a[u][v],1);
+			MIN(a[v][u],1);
+		}
+		for(i=0;i<m;i++)
+		{
+			int u=lower_bound(p,p+len,mp(b1[i],f1[i]))-p;
+			int v=lower_bound(p,p+len,mp(b2[i],f2[i]))-p;
+			MIN(a[u][v],T[i]);
+			MIN(a[v][u],T[i]);
+		}
+		for(i=0;i<len;i++) a[i][i]=0;
+		for(k=0;k<len;k++)
+			for(i=0;i<len;i++)
+				for(j=0;j<len;j++)
+					MIN(a[i][j],a[i][k]+a[k][j]);
+		int q;
+		for(scanf("%d",&q);q--;)
+		{
+			scanf("%d%d",&i,&j);
+			for(k=0;k<x[i].sz;k++)
+				if(x[i][k]>j) break;
+			//x[i][k-1]<=j<x[i][k];
+			int i1=x[i][k-1],i2=x[i][k];
+			int u1=lower_bound(p,p+len,mp(i,i1))-p;
+			int u2=lower_bound(p,p+len,mp(i,i2))-p;
+			if(u2<0 || u2>=len || p[u2]!=mp(i,i2)) u2=len;
+			LL ans=0;
+			for(h=1;h<=n;h++) if(h!=i)
+				for(l=0;l<x[h].sz-1;l++)
+				{
+					int h1=x[h][l];
+					int h2=x[h][l+1];
+					int v1=lower_bound(p,p+len,mp(h,h1))-p;
+					int v2=lower_bound(p,p+len,mp(h,h2))-p;
+					if(v2<0 || v2>=len || p[v2]!=mp(h,h2)) v2=len;
+					int d1=min(abs(j-i1)+a[u1][v1],abs(j-i2)+a[u2][v1]);
+					int d2=min(abs(j-i1)+a[u1][v2],abs(j-i2)+a[u2][v2]);
+					ans+=d1;
+					int dh=h2-h1;
+					int kk=(d2+dh-d1)/2;
+					if(kk>=dh) kk=dh-1;
+					ans+=sum(d1+1,d1+kk);
+					ans+=sum(d2+1,d2+dh-kk-1);
+				}
+			printf("%lld\n",ans);
+		}
+	}
+	return 0;
+}

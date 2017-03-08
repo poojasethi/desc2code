@@ -1,0 +1,283 @@
+#include <iostream>
+#include <fstream>
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <cstdlib>
+#include <algorithm>
+#include <map>
+using namespace std;
+
+const int maxN = 300005;
+
+struct Tedge{
+	int v, next;
+}edge[2*maxN];
+int edges, dad[maxN];
+
+struct Te{
+	int u, v;
+}e[maxN];
+
+int n, m, q;
+
+void insertedge(int u, int v){
+	edges++;
+	edge[edges].v = v;
+	edge[edges].next = dad[u];
+	dad[u] = edges;
+}
+
+void Readln(){
+	scanf( "%d%d%d\n", &n, &m, &q );
+	for (int i=1; i<=m; i++){
+		int u, v;
+		scanf( "%d%d\n", &u, &v );
+		insertedge(u, v);
+		insertedge(v, u);
+		e[i].u = u; e[i].v = v;
+	}
+}
+
+int dfn[maxN], low[maxN];
+int tim;
+
+void dfs(int now, int Path){
+	dfn[now] = low[now] = ++tim;
+	for (int i=dad[now]; i!=0; i=edge[i].next)
+	if (Path == 0 || i != ((Path-1)^1)+1){
+		if (dfn[edge[i].v] != 0){
+			low[now] = min(low[now], dfn[edge[i].v]);
+			continue;
+		}
+		dfs(edge[i].v, i);
+		low[now] = min(low[now], low[edge[i].v]);
+	}
+}
+
+int lev[maxN];
+int up[maxN][20];
+int Lg[maxN];
+int bins;
+
+int LCA(int u, int v){
+	if (lev[u] < lev[v]) swap(u, v);
+	for (int i = lev[u] - lev[v]; i>0; i-=(i & (-i)))
+		u = up[u][Lg[i&(-i)]];
+	if (u == v) return u;
+	if (bins > 7 && up[u][7] == up[v][7]){
+		for (int i=6; i>=0; i--)
+		if (up[u][i] != up[v][i]){
+			u = up[u][i];
+			v = up[v][i];
+		}
+	}else{
+		for (int i=bins; i>=0; i--)
+		if (up[u][i] != up[v][i]){
+			u = up[u][i];
+			v = up[v][i];
+		}
+	}
+	return up[u][0];
+}
+
+int id[maxN];
+int findid(int now){
+	if (id[now] == now) return now;
+	return id[now] = findid(id[now]);
+}
+
+int t;
+int c[maxN], p[maxN], size[maxN];
+int sta[maxN];
+int rk[maxN];
+
+bool cmp(int A, int B){return c[A] < c[B];}
+
+void init(){
+	for (int i=1; i<=n; i++) if (!dfn[i]) dfs(i, 0);
+	for (int i=1; i<=n; i++) id[i] = i;
+	for (int i=1; i<=m; i++){
+		if (dfn[e[i].u] > dfn[e[i].v]) swap(e[i].u, e[i].v);
+		if (low[e[i].v] <= dfn[e[i].u]){
+			int fu = findid(e[i].u);
+			int fv = findid(e[i].v);
+			if (fv != fu) id[fv] = fu;
+		}
+	}
+	
+	
+	t = 0;
+	for (int i=1; i<=n; i++) id[i] = findid(id[i]); 
+	for (int i=1; i<=n; i++){
+		if (!rk[id[i]]) rk[id[i]] = ++t;
+		id[i] = rk[id[i]];
+	}
+	
+	for (int i=1; i<=t; i++) dad[i] = 0;
+	edges = 0;
+	for (int i=1; i<=m; i++)
+	if (low[e[i].v] == dfn[e[i].v]){
+		insertedge(id[e[i].u], id[e[i].v]);
+		insertedge(id[e[i].v], id[e[i].u]);
+	}
+	
+	for (int i=1; i<=t; i++) dfn[i] = low[i] = 0;
+	for (int i=1; i<=t; i++) if (!dfn[i]) dfs(i, 0);
+	for (int i=1; i<=t; i++) c[i] = dfn[i];
+	
+	for (int i=1; i<=t; i++){
+		for (int j=dad[i]; j!=0; j=edge[j].next)
+		if (c[edge[j].v] < c[i]) up[i][0] = edge[j].v;
+	}
+	
+	Lg[1] = 0;
+	for (int i=1; (1<<i) <= t; i++){
+		for (int j=1; j<=t; j++)
+			up[j][i] = up[up[j][i-1]][i-1];
+		Lg[(1<<i)] = i;
+		bins = i;
+	}
+	
+	for (int i=1; i<=t; i++) p[i] = i;
+	sort(p+1, p+1+t, cmp);
+	for (int i=1; i<=t; i++) c[p[i]] = i;
+	int tot = 0;
+	for (int i=1; i<=t; i++){
+		while (tot > 0 && up[p[i]][0] != sta[tot]){
+			if (tot > 1) size[sta[tot-1]] += size[sta[tot]];
+			tot--;
+		}
+		sta[++tot] = p[i];
+		size[p[i]] = 1;
+		lev[p[i]] = tot;
+	}
+	for (int i=tot; i>1; i--) size[sta[i-1]] += size[sta[i]];
+}
+
+int fa[maxN];
+int findfa(int now){
+	if (fa[now]==now) return now;
+	return fa[now] = findfa(fa[now]);
+}
+
+int s[maxN];
+int Turn[maxN];
+
+void init_p(int &ps){
+	sort(p+1, p+1+ps, cmp);
+	int tmp = ps;
+	ps = 1;
+	for (int i=2; i<=tmp; i++){
+		if (p[i] == p[ps]) continue;
+		p[++ps] = p[i];
+	}
+	
+	tmp = ps;
+	for (int i=1; i<tmp; i++){
+		p[++ps] = LCA(p[i], p[i+1]);
+		if (!p[ps]) ps--;
+	}
+	
+	sort(p+1, p+1+ps, cmp);
+	tmp = ps;
+	ps = 1;
+	for (int i=2; i<=tmp; i++){
+		if (p[i] == p[ps]) continue;
+		p[++ps] = p[i];
+	}	
+}
+
+void Solve(){
+	int ans = 0;
+	for (int i=1; i<=t; i++) fa[i] = i;
+	for (int _q=1; _q<=q; _q++){
+		int tn, tm;
+		scanf( "%d%d\n", &tn, &tm );
+		for (int i=1; i<=tn; i++){
+			scanf( "%d", &s[i] );
+			(s[i] += ans) %= n;
+			if (!s[i]) s[i] = n;
+			s[i] = id[s[i]];
+		}
+		for (int i=1; i<=tm; i++){
+			scanf( "%d%d\n", &e[i].u, &e[i].v );
+			(e[i].u += ans) %= n; if (!e[i].u) e[i].u = n;
+			(e[i].v += ans) %= n; if (!e[i].v) e[i].v = n;
+			e[i].u = id[e[i].u];
+			e[i].v = id[e[i].v];
+		}
+		
+		if (n == 1){
+			(ans += _q) %= n;
+			printf( "YES\n" );
+			continue;
+		}
+		
+		for (int i=1; i<=tn; i++) p[i] = s[i];
+		for (int i=1; i<=tm; i++){
+			p[tn+2*i-1] = e[i].u;
+			p[tn+2*i] = e[i].v;
+		}
+		
+		int ps = tn + 2*tm;
+		init_p(ps);
+				
+		for (int i=1; i<=ps; i++) Turn[p[i]] = i;
+		
+		edges = 0;
+		for (int i=1; i<=ps; i++) dad[i] = 0;
+
+		for (int i=1; i<=tm; i++){
+			e[i].u = Turn[e[i].u];
+			e[i].v = Turn[e[i].v];
+			insertedge(e[i].u, e[i].v);
+			insertedge(e[i].v, e[i].u);
+		}
+
+		int tot = 0;
+		for (int i=1; i<=ps; i++){
+			while (tot > 0 && c[sta[tot]] + size[sta[tot]] - 1 < c[p[i]]) tot--;
+			if (tot > 0){
+				tm++;
+				e[tm].u = Turn[sta[tot]];
+				e[tm].v = i;
+				insertedge(Turn[sta[tot]], i);
+				insertedge(i, Turn[sta[tot]]);
+			}
+			tot++;
+			sta[tot] = p[i];
+		}
+		
+		for (int i=1; i<=ps; i++) dfn[i] = low[i] = 0;
+		
+		tim = 0;
+		for (int i=1; i<=ps; i++)
+			if (!dfn[i]) dfs(i, 0);
+
+		for (int i=1; i<=ps; i++) fa[i] = i;
+		for (int i=1; i<=tm; i++){
+			if (dfn[e[i].u] > dfn[e[i].v]) swap(e[i].u, e[i].v);
+			if (low[e[i].v] <= dfn[e[i].u]){
+				int fu = findfa(e[i].u);
+				int fv = findfa(e[i].v);
+				if (fu != fv) fa[fv] = fu;
+			}
+		}
+		bool flag = false;
+		for (int i=2; i<=tn; i++)
+		if (findfa(Turn[s[1]]) != findfa(Turn[s[i]])){
+			flag = true; break;
+		}
+		if (flag){printf( "NO\n" ); continue;}
+		(ans += _q) %= n;
+		printf( "YES\n" );
+	}
+}
+
+int main(){
+	Readln();
+	init();
+	Solve();
+	return 0;
+}

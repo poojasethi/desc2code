@@ -1,0 +1,167 @@
+// In the name of God
+
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#include <cstring>
+#include <string>
+#include <set>
+#include <map>
+#include <complex>
+#include <cmath>
+#include <fstream>
+#include <iomanip>
+#include <queue>
+#define x first 
+#define y second
+
+using namespace std;
+
+typedef long long ll;
+typedef long double ld;
+typedef complex<ld> point;
+typedef pair<ll,ll> pii;
+typedef pair<ll,pii> ppii;
+
+const int maxn = 100 * 1000 + 2;
+
+vector<pii> t[maxn];
+vector<ppii> e;
+int par[maxn],vis[maxn];
+ll ind[maxn][20];
+ll Max[maxn][20];
+ll n,m;
+ll d[maxn];
+
+inline int FindPar(int id)
+{
+  if(par[id] == id)
+    return id;
+  return par[id] = FindPar(par[id]);
+}
+
+inline void MakeLca(int st)
+{
+  vis[st] = 1;
+  for(int i=0;i<t[st].size();++i){
+    int mask = t[st][i].x;
+    ll w = t[st][i].y;
+    if(vis[mask] == 0){
+      d[mask] = d[st] + 1;
+      ind[mask][0] = st;
+      Max[mask][0] = w;
+      for(int j=1;j<20;++j){
+	ind[mask][j] = ind[ind[mask][j - 1]][j - 1];
+	Max[mask][j] = max(Max[mask][j - 1],Max[ind[mask][j - 1]][j - 1]);
+      }
+      MakeLca(mask);
+    }
+  }
+}
+
+inline ll GetMax(int fi,int se)
+{
+  if(d[fi] < d[se])
+    swap(fi,se);
+
+  ll ret = 0;
+  int id = 19;
+  while(d[fi] > d[se]){
+    if(ind[fi][id] != 0 && d[ind[fi][id]] >= d[se]){
+      ret = max(ret,Max[fi][id]);
+      fi = ind[fi][id];
+    }
+    id--;
+  }
+
+  if(fi == se)
+    return ret;
+
+  id = 19;
+  while(ind[fi][0] != ind[se][0]){
+    if(ind[fi][id] != ind[se][id]){
+      ret = max(ret,max(Max[fi][id],Max[se][id]) );
+      fi = ind[fi][id];
+      se = ind[se][id];
+    }
+    id--;
+  }
+  id = 0;
+  ret = max(ret,max(Max[fi][id],Max[se][id]) );
+
+  return ret;
+}
+
+int main()
+{    
+  ios_base::sync_with_stdio(false);
+
+  cin >> n >> m;
+  for(int i=1;i<=m;++i){
+    ll fi,se,c;
+    cin >> fi >> se >> c;
+    e.push_back(ppii(c,pii(fi,se) ) );
+  }
+
+  for(int i=1;i<=n;++i)
+    par[i] = i;
+  sort(e.begin(),e.end() );
+
+  ll sum = 0;
+  for(int i=0;i<e.size();++i)
+    if(FindPar(e[i].y.x) != FindPar(e[i].y.y) ){
+      t[e[i].y.x].push_back(pii(e[i].y.y,e[i].x) );
+      t[e[i].y.y].push_back(pii(e[i].y.x,e[i].x) );
+      par[FindPar(e[i].y.x)] = FindPar(e[i].y.y);
+      sum += e[i].x;
+    }
+
+  for(int i=1;i<=n;++i)
+    par[i] = FindPar(i);
+  for(int i=1;i<=n;++i)
+    vis[par[i]] = 1;
+  int cnt = 0;
+  for(int i=1;i<=n;++i)
+    cnt += vis[i];
+
+  if(cnt > 2){
+    int q;
+    cin >> q;
+    for(int i=0;i<q;++i)
+      cout << -1 << endl;
+    return 0;
+  }
+
+  if(cnt == 2){
+    int q;
+    cin >> q;
+    for(int i=0;i<q;++i){
+      int fi,se;
+      cin >> fi >> se;
+      
+      if(FindPar(fi) == FindPar(se) )
+	cout << -1 << endl;
+      else
+	cout << sum << endl;
+    }
+    return 0;
+  }
+  
+  if(cnt == 1){
+    memset(vis,0,sizeof vis);
+    MakeLca(1);
+
+    int q;
+    cin >> q;
+    for(int i=0;i<q;++i){
+      int fi,se;
+      cin >> fi >> se;
+      
+      cout << sum - GetMax(fi,se) << endl;
+    }
+    return 0;
+  }
+
+  return 0;
+}

@@ -1,0 +1,162 @@
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<cstdlib>
+#include<map>
+#include<vector>
+#include<list>
+#include<set>
+#include<queue>
+#include<numeric>
+#include<sstream>
+#include<string>
+#include<cmath>
+#include<algorithm>
+using namespace std;
+
+#define inf 1001001010010010100ll
+#define pb		push_back
+#define mp 		make_pair
+#define EPS		1e-9
+#define ll long long
+#define vi vector<int>
+#define ma 1000000001
+int n,m,K;
+int cc[11][11],p8[11],p2[11],res[51],resf[51],c[51];
+ll dp[11][51],meo[11];
+int count(int x)
+{
+ int ans=0;
+ while(x)
+ {
+  if(x%10==4||x%10==7)ans++;
+  x/=10;
+ }
+ return ans;
+}
+ll luck1(int num,int f)
+{
+ if(f<0||f>num)return 0;
+ ll res=0;
+ res+=cc[num][f]*p2[f];
+ if(res>ma)res=ma;
+ res*=p8[num-f];
+ if(res>ma)res=ma;
+ return res;
+}
+ll luck2(int a,int f)
+{
+ int b[10],i=0,nf=0;
+ ll res=0;
+ while(a)
+ {
+  b[i++]=a%10;
+  a/=10;
+ }
+ for(--i;i>=0;i--)
+ for(int j=0;j<=b[i];j++)
+ {
+  if(j==b[i])
+  {
+   if(j==4||j==7)nf++;
+   break;
+  }
+  if(j==4||j==7)res+=luck1(i,f-nf-1);
+  else res+=luck1(i,f-nf);
+ }
+ res+=luck1(0,f-nf);
+ if(f==0)res--;
+ return res;
+}
+ll cal(int f,int depth)
+{
+ ll &res=dp[f][depth];
+ if(res!=-1)return res;
+ res=0;
+ if(depth==n-1)return res=1;
+ int i;
+ for(i=0;i<10;i++)
+ {
+  if(c[depth]==1&&f!=i)continue;
+  if(c[depth]==0&&f==i)continue;
+  res+=meo[i]*cal(i,depth+1);
+  if(res>ma){res=ma;break;}
+ }
+ return res;
+}
+ll luck3(int depth,int a,int ex)
+{
+ ll res=0,add;
+ for(int i=0;i<11;i++)
+ if(!((1<<i)&ex))
+ {
+  add=luck2(a,i);
+  if(add==0)continue;
+  add*=cal(i,depth);
+  res+=add;
+  if(res>=ma){res=ma;break;}
+ }
+ return res;
+}
+int main()
+{
+	//freopen("in.txt","r",stdin);
+	int T,i,j;
+	memset(cc,0,sizeof(cc));
+	for(i=0;i<11;i++)
+	{cc[i][0]=cc[i][i]=1;
+	for(j=1;j<i;j++)
+	{
+	 cc[i][j]=cc[i-1][j-1]+cc[i-1][j];
+	 if(cc[i][j]>ma)cc[i][j]=ma;
+	}
+	}
+	p2[0]=1;p8[0]=1;
+	for(i=1;i<11;i++)
+	{
+		p2[i]=p2[i-1]*2;
+		if(p2[i]>ma)p2[i]=ma;
+		p8[i]=p8[i-1]*8;
+		if(p8[i]>ma)p8[i]=ma;
+	}
+	scanf("%d",&T);
+	while(T--)
+	{
+	 scanf("%d%d%d",&n,&m,&K);K--;
+	 for(i=0;i<n-1;i++)scanf("%d",&c[i]);
+	 memset(dp,-1,sizeof(dp));
+	 for(i=0;i<11;i++)
+	 meo[i]=luck2(m,i);
+	 ll pat=luck3(0,m,0);
+	 if(K>=pat){puts("-1");continue;}
+	 int all=(1<<20)-1,mask;
+	 for(i=0;i<n;i++)
+	 {
+	  int l=1,h=m,mid;
+	  if(i==0)mask=0;
+	  else if(c[i-1]==0)mask=1<<resf[i-1];
+	  else if(c[i-1])mask=all^(1<<resf[i-1]);
+	  while(l<h)
+	  {
+	   mid=(l+h)>>1;
+	   pat=luck3(i,mid,mask);
+	   if(pat>K)h=mid;
+	   else l=mid+1;
+	  }
+	  K-=luck3(i,l-1,mask);int f;
+	  for(;;)
+	  {
+	   f=count(l);
+	   if(i==0)break;
+	   if(c[i-1]==1&&f==resf[i-1])break;
+	   if(c[i-1]==0&&f!=resf[i-1])break;
+	   l++;
+	  }
+	  res[i]=l;resf[i]=f;
+	 }
+	 for(i=0;i<n;i++)
+	 {if(i)putchar(' ');printf("%d",res[i]);}
+	 puts("");
+	}
+	return 0;
+}

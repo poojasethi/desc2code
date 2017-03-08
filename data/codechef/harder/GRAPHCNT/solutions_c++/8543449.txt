@@ -1,0 +1,111 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <algorithm>
+using namespace std;
+
+struct Dominator_tree
+{
+	#define Graph_n 100005
+	#define Graph_m 500005
+	
+	int n,m,i,j,tot,u,v,tmp;
+	int dfn[Graph_n],id[Graph_n];
+	int tfa[Graph_n],fa[Graph_n],semi[Graph_n],dom[Graph_n],Min[Graph_n];
+	int son[Graph_n],next[Graph_m],ed[Graph_m];
+	int lson[Graph_n],lnext[Graph_n],ltmp[Graph_n];
+	int edge_x[Graph_m],edge_y[Graph_m];
+	
+	void clear(int N){n=N;m=0;}
+	void add(int u,int v)
+	{
+		edge_x[++m]=u;edge_y[m]=v;
+		next[i]=son[u];son[u]=i;ed[i]=v;
+	}
+	
+	void dfs(int x)
+	{
+		dfn[x]=++tot;id[tot]=x;
+		for(int i=son[x];i;i=next[i])
+		if(!dfn[ed[i]])
+		{
+			tfa[ed[i]]=x;
+			dfs(ed[i]);
+		}
+	}
+	int get(int x)
+	{
+		if(fa[x]==x)return x;
+		int y=fa[x];get(y);
+		if(dfn[semi[Min[y]]]<dfn[semi[Min[x]]])Min[x]=Min[y];
+		return fa[x]=get(y);
+	}
+	
+	void work(int root)
+	{
+		tot=0;
+		for(i=1;i<=n;++i)son[i]=lson[i]=dfn[i]=tfa[i]=ltmp[i]=dom[i]=0,fa[i]=Min[i]=semi[i]=i;
+		for(i=1;i<=m;++i)
+		{
+			u=edge_x[i];v=edge_y[i];
+			next[i]=son[u];son[u]=i;ed[i]=v;
+		}
+		dfs(root);
+		for(i=1;i<=n;++i)son[i]=0;
+		for(i=1;i<=m;++i)
+		{
+			u=edge_y[i];v=edge_x[i];
+			next[i]=son[u];son[u]=i;ed[i]=v;
+		}
+		for(i=tot;i>=2;--i)
+		{
+			u=id[i];
+			tmp=1000000000;
+			for(j=son[u];j;j=next[j])
+			{
+				if(!dfn[v=ed[j]])continue;
+				get(v);
+				tmp=min(tmp,dfn[semi[Min[v]]]);
+			}
+			semi[u]=id[tmp];lnext[u]=lson[semi[u]];lson[semi[u]]=u;
+			for(j=lson[tfa[u]];j;j=lnext[j])
+			{
+				get(j);v=Min[j];
+				if(semi[v]==semi[j])dom[j]=semi[j];
+				else ltmp[j]=v;
+			}
+			fa[u]=tfa[u];lson[tfa[u]]=0;
+		}
+		for(i=2;i<=tot;++i)if(ltmp[id[i]])dom[id[i]]=dom[ltmp[id[i]]];
+		for(i=1;i<=n;++i)son[i]=0;
+		for(i=1;i<=n;++i)if(i!=root)u=dom[i],next[i]=son[u],son[u]=i;
+	}
+	
+	#undef Graph_n
+	#undef Graph_m
+}G;
+
+int n,m,i,j,k,u,v;
+int size[100005];
+long long ans;
+
+void dfs(int x)
+{
+	size[x]=1;
+	for(int i=G.son[x];i;i=G.next[i])dfs(i),size[x]+=size[i];
+}
+
+int main()
+{
+	scanf("%d%d",&n,&m);
+	G.clear(n);
+	for(;m;--m)
+	{
+		scanf("%d%d",&u,&v);
+		G.add(u,v);
+	}
+	G.work(1);
+	dfs(1);
+	k=0;ans=size[1]-1;
+	for(i=G.son[1];i;i=G.next[i])ans+=(long long)size[i]*k,k+=size[i];
+	printf("%lld\n",ans);
+}

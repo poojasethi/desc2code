@@ -1,0 +1,203 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <algorithm>
+#include <functional>
+#include <math.h>
+
+inline bool fastreadIsEndOfLine(int* a)
+{
+  register char c = 0;
+  while (c < 33)
+    c = getchar();
+  *a = 0;
+  while (c > 33)
+  {
+    *a = (*a <<1)+(*a<<3) + c - '0';
+    c = getchar();
+    if(c == '\r' || c == '\n')
+      return true;
+  }
+
+  return false;
+}
+
+inline void fastread(int* a)
+{
+  register char c = 0;
+  while (c < 33)
+    c = getchar();
+  *a = 0;
+  while (c > 33)
+  {
+    *a = (*a <<1)+(*a<<3) + c - '0';
+    c = getchar();
+  }
+}
+
+inline void fastreadNeg(int* a)
+{
+  register char c = 0;
+  while (c < 33)
+    c = getchar();
+  *a = 0;
+  bool neg = false;
+  if(c == '-')
+  {
+	  c = getchar();
+	  neg = true;
+  }
+  while (c > 33)
+  {
+    *a = (*a <<1)+(*a<<3) + c - '0';
+    c = getchar();
+  }
+
+  if(neg)
+	  *a = -*a;
+}
+
+int N, K, M;
+int T = 1;
+
+int A[10 + 1];
+
+int *Price = new int[1000000 + 5];
+int *Disc = new int[1000000 + 5];
+long long *Cache = new long long[1000000 + 5];
+
+long long Solve(int item, int shop, int discount)
+{
+	if(item >= N)
+		return 0;
+
+	const int index = item * N + shop;
+
+	long long price = Price[index] - discount;
+	if(price < 0)
+		price = 0;
+
+	long long &cache = Cache[index];
+	if(cache == -1)
+	{
+		cache = 0x7FFFFFFFFFFFFFFFLL; // max long long
+
+		for(int s = 0; s < M; ++s)
+		{
+			const long long paid = Solve(item + 1, s, (s == shop) ? Disc[index] : 0);
+			if(cache > paid)
+				cache = paid;
+		}
+	}
+
+	return price + cache;
+}
+
+long long Solve()
+{
+	long long answer = 0x7FFFFFFFFFFFFFFFLL;
+	for(int s = 0; s < M; ++s)
+	{
+		const long long paid = Solve(0, s, 0);
+		if(answer > paid)
+			answer = paid;
+	}
+
+	return answer;
+}
+
+int main()
+{
+#ifdef USE_DATA_TXT
+  freopen_s(&stream, "C:\\Projects\\TaskTemplate\\data.txt", "r", stdin);
+#endif
+#ifdef PRINT_PERF
+  auto start = std::chrono::high_resolution_clock::now();
+#endif
+
+  fastread(&T); // [1, 100000]
+
+  while(T--)
+  {
+    fastread(&N);
+    fastread(&M);
+
+	int *price = Price;
+    for(int i = 0; i < N; ++i) // items
+    {
+		for(int j = 0; j < M; ++j) // shops
+		{
+			fastreadNeg(price);
+			++price;
+		}
+    }
+
+	int *disc = Disc;
+    for(int i = 0; i < N; ++i) // items
+    {
+		for(int j = 0; j < M; ++j) // shops
+		{
+			fastreadNeg(disc);
+			++disc;
+		}
+    }
+
+	// Recursive
+	//memset(Cache, 0xFF, sizeof(long long) * M * N);
+	//printf("%lld\n", Solve());
+
+
+	// Dynamic programming, curse it!
+
+	// First set the 1st result column (item 0) as its price is the corresponding shop
+	long long prevMin = 0x7FFFFFFFFFFFFFFFLL;
+	for(int j = 0; j < M; ++j)
+	{
+		const int index = 0 * M + j;
+		const long long min = Price[index];
+		Cache[index] = min;
+		if(prevMin > min)
+			prevMin = min; // calculate min at the same time
+	}
+
+	// for every next item we compose a column of possible solutions based on the previous solution column
+	long long curMin = 0x7FFFFFFFFFFFFFFFLL;
+	for(int i = 1; i < N; ++i)
+	{
+		curMin = 0x7FFFFFFFFFFFFFFFLL;
+		for(int j = 0; j < M; ++j)
+		{
+			const int index = i * M + j;
+			int discounted = Price[index] - Disc[index - M];
+			if(discounted < 0)
+				discounted = 0;
+
+			// One option is buying in the same shop, have to stick with the previous
+			long long sameShop = discounted + Cache[index - M];
+			// The other is to stick with the previous minimum, so no discount
+			long long minCost = Price[index] + prevMin;
+			// Now do the same
+			const long long min = (sameShop < minCost) ? sameShop : minCost;
+			Cache[index] = min;
+			if(curMin > min)
+				curMin = min; // calculate min at the same time
+		}
+		prevMin = curMin;
+	}
+
+	printf("%lld\n", curMin);
+  }
+
+#ifdef PRINT_PERF
+  PrintResultPerf(start);
+#endif
+#ifdef USE_DATA_TXT
+  if(stream)
+  {
+    fclose(stream);
+    stream = NULL;
+  }
+#endif
+
+  return 0;
+}

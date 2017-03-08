@@ -1,0 +1,155 @@
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<cstdlib>
+#include<queue>
+#include<cmath>
+#include<set>
+#include<map>
+using namespace std;
+#define LL long long
+char s[1010101];
+int n,m;
+struct Node
+{
+	int st,ed,cnt[27];
+	int p;//区间变成p
+	Node *l,*r; 
+	Node(){
+		memset(cnt,0,sizeof(cnt));
+	}
+	Node(int _st,int _ed,int _p,Node *_l,Node *_r)
+	{
+		memset(cnt,0,sizeof(cnt));
+		st=_st;
+		ed=_ed;
+		p=_p;
+		l=_l;
+		r=_r;
+	}
+};
+void update(Node *now)
+{
+	for(int i=1;i<=26;i++)
+		now->cnt[i]=now->l->cnt[i]+now->r->cnt[i];
+}
+void down(Node *now)
+{
+	if(now->l&&now->p)
+	{
+		int p=now->p;
+		now->l->p=now->r->p=p;
+		for(int i=1;i<=26;i++)
+			now->l->cnt[i]=now->r->cnt[i]=0;
+		now->l->cnt[p]=now->l->ed-now->l->st+1;
+		now->r->cnt[p]=now->r->ed-now->r->st+1;
+		now->p=0;
+	}
+}
+Node *tree(int st,int ed)
+{
+	Node *x=new Node(st,ed,0,0,0);
+	if(st==ed)
+	{
+		x->cnt[s[st]-'a'+1]=1;
+		return x;
+	}
+	x->l=tree(st,(st+ed)/2);
+	x->r=tree((st+ed)/2+1,ed);
+	update(x);
+	return x;
+}
+void change(Node *now,int st,int ed,int v)
+{
+	down(now);
+	if(now->st>=st&&now->ed<=ed)
+	{
+		now->p=v;
+		for(int i=1;i<=26;i++)
+			now->cnt[i]=0;
+		now->cnt[v]=now->ed-now->st+1;
+		return;
+	}
+	if(now->l->ed>=st)
+		change(now->l,st,ed,v);
+	if(now->r->st<=ed)
+		change(now->r,st,ed,v);
+	update(now);
+}
+int get(Node *now,int st,int ed,int v)
+{
+	down(now);
+	if(now->st>=st&&now->ed<=ed)
+	{
+		return now->cnt[v];
+	}
+	int tmp=0;
+	if(now->l->ed>=st)
+		tmp+=get(now->l,st,ed,v);
+	if(now->r->st<=ed)
+		tmp+=get(now->r,st,ed,v);
+	return tmp;
+}
+Node *root;
+int c[101];
+void printans()
+{
+
+	for(int i=1;i<=n;i++)
+	{
+		for(int j=1;j<=26;j++)
+		{
+			if(get(root,i,i,j))
+			{
+				cout<<(char)('a'+j-1);
+				break;
+			}
+		}
+	}
+	cout<<endl;
+
+}
+int main()
+{
+	std::ios::sync_with_stdio(false);
+	freopen("input.txt","r",stdin);
+	freopen("output.txt","w",stdout);
+	cin>>n>>m;
+	cin>>s+1;
+	root=tree(1,n);
+	//printans();
+	for(int j=1;j<=m;j++)
+	{
+		int l,r;
+		cin>>l>>r;
+		for(int i=1;i<=26;i++)
+			c[i]=get(root,l,r,i);
+		int id=-1;
+		for(int i=1;i<=26;i++)
+			if(c[i]&1)
+			{
+				if(id==-1)
+					id=i;
+				else
+					id=-2;
+			}
+		if(id==-2)
+			continue;
+		for(int i=1;i<=26;i++)
+			if(c[i]>=2)
+			{
+				change(root,l,r,i);
+				l+=c[i]/2;
+				r-=c[i]/2;
+			}
+		if(id!=-1)
+			change(root,l,r,id);
+		//printans();
+	}
+	printans();
+	return 0;
+}
+
+
+

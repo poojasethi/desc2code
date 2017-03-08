@@ -1,0 +1,200 @@
+#include <stdio.h>
+#include <cstdlib>
+#include <iostream>
+#include <string>
+#include <cstring>
+#include <cmath>
+#include <ctime>
+#include <algorithm>
+#include <set>
+#include <map>
+#include <queue>
+#include <vector>
+
+#define REP(I,A,B) for(int I=(A),_END_=(B);I<=_END_;I++)
+#define REPD(I,A,B) for(int I=(A),_END_=(B);I>=_END_;I--)
+#define FOR(I,A,B) for(int I=(A),_END_=(B);I<_END_;I++)
+#define RI(X) scanf("%d",&X)
+#define RII(X,Y) RI(X),RI(Y)
+#define RIII(X,Y,Z) RI(X),RI(Y),RI(Z)
+#define RL(X) X=Readint()
+#define RLL(X,Y) RL(X),RL(Y)
+#define RLLL(X,Y,Z) RL(X),RL(Y),RL(Z)
+#define RS(X) scanf("%s",X)
+#define RD(X) scanf("%lf",&X)
+#define GCH getchar()
+#define PCH(X) putchar(X)
+#define MS(X,Y) memset(X,Y,sizeof(X))
+#define MC(X,Y,var,len) memcpy(X,Y,sizeof(var)*(len))
+#define debug(...) fprintf(stderr,__VA_ARGS__)
+#define pb(X) push_back(X)
+#define mp(A,B) make_pair(A,B)
+#define fr first
+#define sc second
+#define lch(p) (p+p)
+#define rch(p) (p+p+1)
+#define lowbit(X) ((X)&(-(X)))
+
+using namespace std;
+
+typedef pair<int,int> poi;
+typedef vector<int> vi;
+
+inline long long Readint()
+{
+	long long ret=0;
+	int f=1;
+	char ch;
+	do
+	{
+		ch=GCH;
+		if (ch=='-') f*=-1;
+	}while(ch>=0 && (ch<'0' || ch>'9'));
+
+	while ('0'<=ch && ch<='9')
+	{
+		ret=ret*10+ch-'0';
+		ch=GCH;
+	}
+	return ret*f;
+}
+
+void open()
+{
+	freopen("COUNTARI.in","r",stdin);
+	freopen("COUNTARI.out","w",stdout);
+}
+void close()
+{
+	fclose(stdin);
+	fclose(stdout);
+}
+
+struct com{
+	double x,y;
+	com(){}
+	com(double x,double y): x(x),y(y){}
+};
+com operator + (const com &a,const com &b){
+	return com(a.x+b.x,a.y+b.y);
+}
+com operator - (const com &a,const com &b){
+	return com(a.x-b.x,a.y-b.y);
+}
+com operator * (const com &a,const com &b){
+	return com(a.x*b.x-a.y*b.y,a.y*b.x+a.x*b.y);
+}
+com operator / (const com &a,const double &b){
+	return com(a.x/b,a.y/b);
+}
+
+const int MAXN =131313;
+const double pi = acos(-1);
+com A[MAXN];
+com B[MAXN];
+com w[2][MAXN];
+int rev[MAXN];
+int N;
+
+int pre[MAXN];
+int suf[MAXN];
+
+int a[MAXN];
+int bk,tt;
+int mx;
+int n;
+
+long long ans=0;
+
+void prepare_fft(){
+	int L=0;
+	while ( (1<<L)<=mx+mx+1 ) L++;
+	N=1<<L;
+	FOR(i,1,N) rev[i]=(rev[i>>1]>>1) | ( (i&1)<<(L-1) );
+	REP(i,0,N) w[1][N-i]=w[0][i]=com(cos(2*pi*i/N),sin(2*pi*i/N));
+}
+void fft(com *x,int N,int way){
+	FOR(i,1,N) if (rev[i]>i) swap(x[i],x[rev[i]]);
+
+	int step,l;
+	com *L,*R,*W,dt;
+	for (int i=2;i<=N;i<<=1)
+	{
+		l=i/2;
+		step=N/i;
+		for (int j=0;j<N;j+=i)
+		{
+			L=x+j;
+			R=x+j+l;
+			W=w[way];
+			FOR(k,0,l)
+			{
+				dt=(*R) * (*W);
+				*R=*L-dt;
+				*L=*L+dt;
+				L++;
+				R++;
+				W+=step;
+			}
+		}
+	}
+
+	if (way) FOR(i,0,N) x[i]=x[i]/N;
+}
+
+int count(int len){
+	return (int)(sqrt(len*log(n)/log(2))+0.5);
+}
+
+void init(){
+	RI(n);
+	FOR(i,0,n)
+	{
+		RI(a[i]);
+		mx=max(mx,a[i]);
+		suf[a[i]]++;
+	}
+	bk=max(count(mx),1);
+	tt=(n-1)/bk;
+}
+void work(){
+	int L,R,aim;
+
+	REP(i,0,tt)
+	{
+		L=i*bk;
+		R=min((i+1)*bk,n)-1;
+
+		REP(j,L,R) suf[a[j]]--;
+
+		FOR(j,0,N) A[j]=com(pre[j],0),B[j]=com(suf[j],0);
+		fft(A,N,0);
+		fft(B,N,0);
+		FOR(j,0,N) A[j]=A[j]*B[j];
+		fft(A,N,1);
+		REP(j,L,R) ans+=(long long)(A[2*a[j]].x+0.5);
+		REP(j,L,R)
+		{
+			REP(k,j+1,R)
+			{
+				aim=a[j]*2-a[k];
+				if (aim>=0)ans+=pre[aim];
+				aim=a[k]*2-a[j];
+				if (aim>=0)ans+=suf[aim];
+			}
+			pre[a[j]]++;
+		}
+	}
+
+	cout << ans << endl;
+}
+
+int main()
+{
+	int _=0;
+	init();
+	prepare_fft();
+	work();
+	close();
+	return 0;
+}

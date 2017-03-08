@@ -1,0 +1,24 @@
+#include <stdio.h>
+#include <iostream>
+#include <map>
+#include <string>
+using namespace std;
+map <string,int> mp;
+const int day[15]={0,31,28,31,30,31,30,31,31,30,31,30,31};
+int n=0,y,m,d,j;
+string str,v,x;
+int main()
+{
+	cin>>str;
+	for (int i=0;i+10<=str.length();i++)
+	{
+		x=str.substr(i,10);
+		if (sscanf((x+"*1").c_str(),"%2d-%2d-%4d*%d",&d,&m,&y,&j)!=4) continue ;
+		if (y<2013 || y>2015 || m<1 || m>12 || d<1 || d>day[m]) continue ;
+		mp[x]++;
+		if (n<mp[x]) n=mp[x],v=x;
+	}
+	cout<<v<<endl;
+	return 0;
+}
+

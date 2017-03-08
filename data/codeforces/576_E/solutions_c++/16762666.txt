@@ -1,0 +1,120 @@
+#include<algorithm>
+#include<cstdio>
+#include<cstring>
+#include<utility>
+#include<queue>
+#include<vector>
+#define rep(i,a,b) for(int i=a;i<=b;++i)
+#define erp(i,a,b) for(int i=a;i>=b;--i)
+#define fi first
+#define se second
+#define col first
+#define num second
+#define time second
+using namespace std;
+typedef pair<int,int> pii;
+const int MAXN = 500005;
+const int inf = 0x3f3f3f3f;
+
+template<typename T>
+inline void get(T&r) {
+	char c,f=0; r=0;
+	do c=getchar(),c=='-'&&(f=1); while(c<'0'||c>'9');
+	do r=r*10+c-'0',c=getchar(); while(c>='0'&&c<='9');
+	if (f) r = -r;
+}
+
+int N, M, K, Q;
+struct edge { int x, y; } e[MAXN];
+queue<pii> modi[MAXN];
+vector<pii> v[MAXN * 4];
+pii qua[MAXN];
+
+struct UFS;
+pair<UFS*, int> sta[MAXN * 4];
+int tp;
+int c[MAXN];
+struct UFS
+{
+	int fa[MAXN];
+	char rnk[MAXN], dis[MAXN];
+	int root(int x)
+	{
+		if(!fa[x]) return x;
+		return root(fa[x]);
+	}
+	int dist(int x)
+	{
+		if (!fa[x]) return 0;
+		return dis[x]^dist(fa[x]);
+	}
+	void unite(int x, int y)
+	{
+		int fx = root(x), fy = root(y);
+		if (fx==fy) return;
+		if (rnk[fx]>rnk[fy]) swap(fx,fy), swap(x,y);
+		if (rnk[fx]==rnk[fy]) ++rnk[fy], sta[++tp] = pair<UFS*,int>(this, -fy);
+		dis[fx]=dist(x)^dist(y)^1, fa[fx] = fy;
+		sta[++tp] = pair<UFS*,int>(this, fx);
+	}
+} dsu[51];
+
+void resume(int now)
+{
+	for (; tp>now; --tp)
+	{
+		if (sta[tp].se<0) sta[tp].fi->rnk[-sta[tp].se]--;
+		else sta[tp].fi->fa[sta[tp].se] = 0;
+	}
+}
+
+void ins(int p, int L, int R, int l, int r, pii val)
+{
+	int mid = (L+R)>>1;
+	if (L==l && R==r)
+	{
+		v[p].push_back(val);
+		return;
+	}
+	if (r<=mid) ins(p<<1, L, mid, l, r, val);
+	else if (l>mid) ins(p<<1|1, mid+1, R, l, r, val);
+	else ins(p<<1, L, mid, l, mid, val), ins(p<<1|1, mid+1, R, mid+1, r, val);
+}
+
+void solve(int p, int l, int r)
+{
+	int mid=(l+r)>>1, now=tp;
+	rep(i, 0, (int)v[p].size()-1)
+	{
+		int x = e[v[p][i].se].x;
+		int y = e[v[p][i].se].y, t = v[p][i].fi;
+		dsu[t].unite(x, y);
+	}
+	if (l==r)
+	{
+		UFS &t = dsu[qua[mid].col];
+		int x = e[qua[mid].num].x, y = e[qua[mid].num].y;
+		if (t.root(x) != t.root(y) || t.dist(x)^t.dist(y))
+			puts("YES"), c[qua[mid].num] = qua[mid].col;
+		else puts("NO");
+		modi[qua[mid].num].pop();
+		if (mid != Q)
+			ins(1, 1,Q, mid+1,modi[qua[mid].num].front().time, pii(c[qua[mid].num], qua[mid].num));
+	}
+	else solve(p<<1, l, mid), solve(p<<1|1, mid+1, r);
+	resume(now);
+}
+
+int main()
+{
+	get(N), get(M), get(K), get(Q);
+	rep(i, 1, M) get(e[i].x), get(e[i].y);
+	rep(i, 1, Q)
+	{
+		get(qua[i].num), get(qua[i].col);
+		modi[qua[i].num].push(pii(qua[i].col, i));
+	}
+	rep(i, 1, M) modi[i].push(pii(0, Q));
+	solve(1, 1, Q);
+	return 0;
+}

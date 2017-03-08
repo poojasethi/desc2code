@@ -1,0 +1,153 @@
+#include<iostream>
+#include<cmath>
+#include<cstdio>
+#include<cstdlib>
+
+using namespace std;
+
+#define gc getchar_unlocked
+int read_int() {
+  char c = gc();
+  while(c<'0' || c>'9') c = gc();
+  int ret = 0;
+  while(c>='0' && c<='9') {
+    ret = 10 * ret + c - 48;
+    c = gc();
+  }
+  return ret;
+}
+
+struct trie{
+	trie *left,*right;
+	//trie():left(NULL),right(NULL){};
+};
+
+inline trie * getnode(){
+	trie *temp=(trie*)malloc(sizeof(trie));
+	temp->left=temp->right=NULL;
+	return temp;
+}
+
+void insert(trie *root,int n,int index){
+	trie * ptr=root;	
+	for(int i=index;i>=0;i--){
+		int p=(n>>i)&1;
+		if(p){
+			if(ptr->right==NULL)
+				ptr->right=getnode();	
+			ptr=ptr->right;
+		}
+		else{
+			if(ptr->left==NULL)
+				ptr->left=getnode();	
+			ptr=ptr->left;
+		}
+	}
+}
+
+
+void remove(trie *root,int n,int index){
+	if(root==NULL || index==-1)
+		return;
+	int p=(n>>index)&1;
+	
+	if(p){
+		remove(root->right,n,index-1);
+		if(root->right->left==NULL && root->right->right==NULL){
+			free(root->right);
+			root->right=NULL;
+		}
+	}
+	else{
+		remove(root->left,n,index-1);
+		if(root->left->left==NULL && root->left->right==NULL){
+			free(root->left);
+			root->left=NULL;
+		}
+	}
+	
+		
+}
+
+int query(trie * root,int x,int index){
+	if(root==NULL || index==-1)
+		return 0;
+
+	int p=(x>>index)&1;
+
+	if(p){
+		if(root->left!=NULL)
+			return (1<<index)|query(root->left,x,index-1);
+		else
+			return query(root->right,x,index-1);
+	}
+	else{
+		if(root->right!=NULL)
+			return (1<<index)|query(root->right,x,index-1);
+		else
+			return query(root->left,x,index-1);
+	}
+}	
+			
+int query_iterative(trie *root,int x,int index){
+
+	trie * ptr=root;
+	int ans=0;
+	for(int i=index;i>=0;i--){
+		int p=(x>>i)&1;
+		if(p){
+			if(ptr->left!=NULL){
+				ans|=(1<<i);
+				ptr=ptr->left;
+			}
+			else
+				ptr=ptr->right;
+		}
+
+		else{
+			if(ptr->right!=NULL){
+				ans|=(1<<i);
+				ptr=ptr->right;
+			}
+			else
+				ptr=ptr->left;
+		}
+	}
+	return ans;
+}
+
+
+int main(){
+	int t,n;
+	cin>>t;
+	while(t--){
+		n=read_int();
+		int a[n];
+		int maxnum=0;
+		trie * root=getnode(); 
+		for(int i=0;i<n;i++){
+			a[i]=read_int();
+			maxnum=max(maxnum,a[i]);
+		}
+
+		int maxlevel=ceil(log2(maxnum));
+		//int maxlevel=30;
+
+	//	for(int i=0;i<n;i++)
+	//		insert(root,a[i],maxlevel);
+
+		int ans=0;
+		insert(root,a[0],maxlevel);
+		for(int i=1;i<n;i++){
+			for(int j=i+1;j<n;j++){
+				ans=max(ans,query_iterative(root,a[i]^a[j],maxlevel));
+			}
+			insert(root,a[i],maxlevel);
+		}
+		cout<<ans<<endl;
+
+	}
+	return 0;
+}
+		
+

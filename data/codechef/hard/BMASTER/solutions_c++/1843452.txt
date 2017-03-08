@@ -1,0 +1,343 @@
+/*Using map STL for associative array and precalculating bitmasks*/
+/*Learnt how to use bitmasks and bit operations to store state*/
+
+#include<bitset>
+#include<iostream>
+#include<cstdio>
+#include<vector>
+#include<map>
+
+using namespace std;
+
+typedef long long LL;
+map<LL, int>game;// stores current grid position and move number in which this grid occurs
+vector<LL>cnt; //stores count
+
+const LL HALF = (1<<17);
+
+LL cross[34][34];//stores precalculated bitmasks for all crosses to find F(i,j)
+LL move[34][34][6];//stores all new images locations due to current image at position (i,j) and when X is x
+int bitCnt[HALF];//stores precalculated bitcont for numbers less than 2^17
+int mod6[35];//precalculated % 6 values for all numbers upto 34
+LL p;//number of moves before repition occured
+LL q;//move number of previous occurence of grid
+
+/*input params*/
+int N;//number of rows
+int M;//number of cols
+int Q;//number of queries
+int P1[6], P2[6];
+int Sx, Sy;//initial location of blademaster
+LL T;//Move number which is queried
+
+/*functions to help debug*/
+/*print number in binary form*/
+void printbinform(LL x, int len)
+{
+    LL i, z=1, y;
+    for(i = len-1; i>=0; i--)
+    {
+        y = z<<i;
+        if((y&x) == 0)
+        cout<<0;
+        else
+        cout<<1;
+    }
+
+}
+
+void visualize(LL x)
+{
+    LL z, y=1;
+    int i, j;
+    for(i =0; i<N; i++ )
+    {
+
+        for(j =0; j<M; j++)
+        {
+            z = y<<(M*i + j);
+            if((z&x)==0)cout<<0<<" ";
+            else cout<<1<<" ";
+        }
+        cout<<endl;
+    }
+}
+/*essential functions*/
+
+/*returns bit cnt of any number less than 2^34*/
+int getbitCnt(LL x)
+{
+    int res;
+    LL bitmask_low = HALF -1;
+    LL bitmask_high = (bitmask_low << 17);
+    res = bitCnt[x & bitmask_low] + bitCnt[(x&bitmask_high)>>17];
+    return res;
+}
+void computecross()
+{
+    /*to calculate F(i,j)*/
+
+    /*Calculate cross for each i, j*/
+    int i, j;
+    LL grid ,one = 1,z;
+    int x, y;
+
+    for(i = 0; i<N; i++)
+    {
+        for(j=0; j<M; j++)
+        {
+            grid = 0;
+            for(x=0; x<N; x++)
+            {
+                    z = (one<<(M*x + j));
+                    grid|= z;
+
+            }
+            for(y=0; y<M ; y++)
+            {
+
+                    z = (one<<(M*i + y));
+                    grid|= z;
+
+            }
+            cross[i][j] = grid;
+
+        }
+    }
+}
+
+/*bit masks for various moves*/
+void computemove()
+{
+
+    int i, j;
+    LL grid ,one = 1,z;
+    int x, y;
+    int f;//X
+
+
+    for(i=0; i<N; i++)
+    {
+        for(j = 0; j<M; j++)
+        {
+            /*for X=0  D1 = U and D2 = D*/
+            grid = 0;
+            x = i- P1[0];
+            while(x >= 0)
+            {
+            z = (one<<(M*x + j));
+            grid|= z;
+            x-= P1[0];
+            }
+            x = i +P2[0];
+            while(x <N)
+            {
+            z = (one<<(M*x + j));
+            grid|= z;
+            x += P2[0];
+            }
+            move[i][j][0] = grid;
+
+            /*for X=1  D1 = L and D2 = R*/
+            grid = 0;
+            y = j- P1[1];
+            while(y >= 0)
+            {
+            z = (one<<(M*i + y));
+            grid|= z;
+            y-= P1[1];
+            }
+            y = j +P2[1];
+            while(y <M)
+            {
+            z = (one<<(M*i + y));
+            grid|= z;
+            y += P2[1];
+            }
+            move[i][j][1] = grid;
+
+            /*for X=2  D1 = U and D2 = R*/
+            grid = 0;
+            x = i- P1[2];
+            while(x >= 0)
+            {
+            z = (one<<(M*x + j));
+            grid|= z;
+            x-= P1[2];
+            }
+            y = j +P2[2];
+            while(y <M)
+            {
+            z = (one<<(M*i + y));
+            grid|= z;
+            y += P2[2];
+            }
+            move[i][j][2] = grid;
+
+            /*for X=3  D1 = R and D2 = D*/
+            grid = 0;
+            y = j + P1[3];
+            while(y <M)
+            {
+            z = (one<<(M*i + y));
+            grid|= z;
+            y+= P1[3];
+            }
+            x = i +P2[3];
+            while(x <N)
+            {
+            z = (one<<(M*x + j));
+            grid|= z;
+            x += P2[3];
+            }
+            move[i][j][3] = grid;
+
+            /*for X=4  D1 = D and D2 = L*/
+            grid = 0;
+            y = j - P2[4];
+            while(y >=0)
+            {
+            z = (one<<(M*i + y));
+            grid|= z;
+            y-= P2[4];
+            }
+            x = i +P1[4];
+            while(x <N)
+            {
+            z = (one<<(M*x + j));
+            grid|= z;
+            x += P1[4];
+            }
+            move[i][j][4] = grid;
+
+            /*for X=5  D1 = L and D2 = U*/
+            grid = 0;
+            y = j - P1[5];
+            while(y >=0)
+            {
+            z = (one<<(M*i + y));
+            grid|= z;
+            y-= P1[5];
+            }
+            x = i -P2[5];
+            while(x >=0)
+            {
+            z = (one<<(M*x + j));
+            grid|= z;
+            x -= P2[5];
+            }
+            move[i][j][5] = grid;
+
+        }
+    }
+}
+
+
+void precompute()
+{
+    LL i;
+    /*store bitcounts of all numbers from 0 to 2^17-1*/
+    for(i=0; i<HALF; i++)
+    {
+        bitset<17>num(i);
+        bitCnt[i] = num.count();
+    }
+    for(i=0; i<35; i++)
+    {
+        mod6[i] = i%6;
+    }
+    computecross();
+    computemove();
+}
+
+void process()
+{
+    cnt.push_back(1);
+    LL newgrid;
+    /*Put Loda on board*/
+    LL grid = 0;
+    LL one= 1;
+    LL z = one<<(Sx*M + Sy);
+
+    grid|= z;
+    game[grid] = 0;
+
+
+    int f;//F(i,j)
+    int X;
+
+    int mov = 1;
+    /*simulate game till position is repeated*/
+    while(1)
+    {
+        newgrid = grid;
+        for(int i=0; i<N; i++)
+        {
+            for(int j=0; j<M; j++)
+            {
+              z = one<<(M*i+ j);
+              if((grid&z)!=0)
+              {
+              f = getbitCnt(grid&cross[i][j]);
+              X = mod6[f];
+              newgrid^= move[i][j][X];
+              }
+            }
+        }
+
+
+         if(!game[newgrid])//check if position occured before
+         {
+            cnt.push_back(cnt[mov-1]+getbitCnt(newgrid));
+            game[newgrid]= mov++;
+            grid = newgrid;
+
+         }
+
+         else
+         {
+             q = game[newgrid]+1;//here i am worried if position repeated is the initial position ie mov 0 hence adding one extra move
+                                 //before using periodicity
+             p = mov+1;
+             cnt.push_back(cnt[mov-1]+getbitCnt(newgrid));
+             break;
+         }
+    }
+}
+
+void solve()
+{
+    scanf("%d%d%d", &N, &M, &Q);
+    scanf("%d%d", &Sx, &Sy);
+    Sx--,Sy--;
+
+    for(int i=0; i<6; i++)
+    {
+        scanf("%d%d", P1+i, P2+i);
+    }
+
+    precompute();
+    process();
+    LL ans;
+    for(int i=0; i<Q; i++)
+    {
+        scanf("%lld", &T);
+        if(T<p) ans = cnt[T];
+        else
+        {
+            LL r = (T-q+1)/(p-q);
+            ans = r*(cnt[p-1]- cnt[q-1])+cnt[T - r*(p-q)];
+        }
+        printf("%lld\n", ans);
+    }
+}
+
+int main()
+{
+    #ifndef ONLINE_JUDGE
+    freopen("in.txt","r",stdin);
+    freopen("out.txt","w",stdout);
+    #endif
+
+    solve();
+}

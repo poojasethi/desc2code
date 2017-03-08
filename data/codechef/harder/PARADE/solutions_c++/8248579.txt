@@ -1,0 +1,129 @@
+#include <cstdio>
+#include <algorithm>
+#include <queue>
+#include <iostream>
+#include <cstring>
+#define Rep(i,j,k) for (int i=(j); i<=(k); i++)
+using namespace std;
+#define inf (1000000000)
+ 
+int n, m, Q, S, T;
+int f[260][260], e[260][260], cost[260], d[1000], pre[1000], sum[1000], q[1000];
+bool inq[1000];
+ 
+struct Te{
+	int t, c, f, next;
+	Te(int _t=0, int _c=0, int _f=0, int _next=0):
+		t(_t), c(_c), f(_f), next(_next){}
+} E[300000];
+int Etot, g[1000];
+ 
+void builde(int s, int t, int c, int f){
+	E[Etot]=Te(t,c,f,g[s]);
+	g[s]=Etot++;
+	E[Etot]=Te(s,0,-f,g[t]);
+	g[t]=Etot++;	
+	//cout<<s<<"->"<<t<<" c:"<<c<<" f:"<<f<<endl;
+}
+ 
+int main(){
+	//freopen("input.txt","r",stdin);
+	//double tt=clock();
+	
+	cin>>n>>m>>Q;
+	
+	Rep(i,1,n) Rep(j,1,n) f[i][j]=inf, f[i][i]=0;
+	
+	while(m--){
+		int s,t,v;scanf("%d%d%d",&s,&t,&v);
+		f[s][t]=min(f[s][t],v);
+	}
+	
+	memcpy(e,f,sizeof f);	
+	Rep(k,1,n)
+		Rep(i,1,n) if (f[i][k]!=inf)
+			Rep(j,1,n) if (f[k][j]!=inf)
+				f[i][j]=min(f[i][k]+f[k][j],f[i][j]);
+				
+	memset(g,0xff,sizeof g);
+	S=2*n+1, T=S+1;
+	Rep(i,1,n){
+		builde(S,i,1,0);
+		builde(n+i,T,1,0);
+		Rep(j,1,n)
+			if (i!=j && e[i][j]!=inf)
+				Rep(k,1,n)
+					if (f[k][i]+e[i][j]==f[k][j]){
+						builde(i,j,inf,e[i][j]);
+						builde(i,n+j,1,e[i][j]);
+						break;
+					}
+	}
+	//cout<<clock()-tt<<endl;
+	
+	Rep(times,1,n){
+		if (d[T]!=inf){
+		
+		queue<int> Q;		
+		Rep(i,1,T) d[i]=inf;
+		
+		Q.push(S);
+		inq[S]=1;
+		d[S]=0;
+		
+		while(!Q.empty()){
+			int x=Q.front(); Q.pop();
+			for(int k=g[x]; k!=-1; k=E[k].next)
+				if (E[k].c){
+					int y=E[k].t, tmp=d[x]+E[k].f;
+					if (tmp<d[y] && tmp<d[T]){
+						d[y]=tmp;
+						pre[y]=k;
+						if (!inq[y]){
+							inq[y]=1;
+							Q.push(y);
+						}
+					}
+				}
+			inq[x]=0;
+		}
+		
+		}
+		
+		cost[times]=d[T];
+		sum[times]=min(inf,sum[times-1]+d[T]);
+		
+		if (d[T]==inf)
+			continue;
+		
+		int y=T;
+		while(y!=S){
+			//printf("%d ",y);
+			E[pre[y]].c--;
+			E[pre[y]^1].c++;
+			y=E[pre[y]^1].t;
+		}
+		//puts("");
+	}
+	
+	//Rep(i,1,n) printf("%d: %d\n",i,cost[i]);
+	//cout<<clock()-tt<<endl;
+	
+	while(Q--){
+		int C;
+		scanf("%d",&C);
+		int l=0, r=n;
+		while(l<r){
+			int mid=(l+r)/2+1;
+			if (cost[mid]<=C)
+				l=mid;
+			else
+				r=mid-1;
+		}
+		printf("%d\n",sum[l]+(n-l)*C);
+	}
+	//cout<<clock()-tt<<endl;
+	//cout<<Etot<<endl;
+ 
+    return 0;
+}

@@ -1,0 +1,200 @@
+#include <map>  
+#include <vector>  
+#include <cstdio>  
+#include <cstring>  
+#include <iostream>  
+#include <algorithm>  
+using namespace std ;  
+  
+typedef long long LL ;  
+  
+#define rep( i , a , b ) for ( int i = ( a ) ; i <  ( b ) ; ++ i )  
+#define For( i , a , b ) for ( int i = ( a ) ; i <= ( b ) ; ++ i )  
+#define rev( i , a , b ) for ( int i = ( a ) ; i >= ( b ) ; -- i )  
+#define clr( a , x ) memset ( a , x , sizeof a )  
+  
+const int MAXN = 50005 ;  
+const int MAXE = 100005 ;  
+  
+struct Node* null ;  
+struct Node {  
+    Node* c[2] ;  
+    Node* f ;  
+    LL cnt ;  
+    LL sum ;  
+    int val ;  
+    int siz ;  
+    int lazy ;  
+    int tree_siz ;  
+    inline void new_node () {  
+        sum = val = 0 ;  
+        c[0] = c[1] = f = null ;  
+        lazy = 0 ;  
+    }  
+    inline void add_siz ( int SIZE ) {  
+        if ( this == null ) return ;  
+        tree_siz += SIZE ;  
+        cnt += 2LL * siz * SIZE ;  
+        lazy += SIZE ;  
+    }  
+    inline void push_up () {  
+        sum = c[0]->sum + ( LL ) siz * val + c[1]->sum ;  
+    }  
+    inline void push_down () {  
+        if ( lazy ) {  
+            c[0]->add_siz ( lazy ) ;  
+            c[1]->add_siz ( lazy ) ;  
+            lazy = 0 ;  
+        }  
+    }  
+    inline bool is_root () {  
+        return f == null || f->c[0] != this && f->c[1] != this ;  
+    }  
+    inline void sign_down () {  
+        if ( !is_root () ) f->sign_down () ;  
+        push_down () ;  
+    }  
+    inline void setc ( Node* o , bool d ) {  
+        c[d] = o ;  
+        o->f = this ;  
+    }  
+    inline void rot ( bool d ) {  
+        Node* p = f ;  
+        Node* g = f->f ;  
+        p->setc ( c[d] , !d ) ;  
+        if ( !p->is_root () ) g->setc ( this , p == g->c[1] ) ;  
+        else f = g ;  
+        setc ( p , d ) ;  
+        p->push_up () ;  
+    }  
+    inline void splay () {  
+        sign_down () ;  
+        while ( !is_root () ) {  
+            if ( f->is_root () ) rot ( this == f->c[0] ) ;  
+            else {  
+                if ( f == f->f->c[0] ) {  
+                    if ( this == f->c[0] ) f->rot ( 1 ) , rot ( 1 ) ;  
+                    else rot ( 0 ) , rot ( 1 ) ;  
+                } else {  
+                    if ( this == f->c[1] ) f->rot ( 0 ) , rot ( 0 ) ;  
+                    else rot ( 1 ) , rot ( 0 ) ;  
+                }  
+            }  
+        }  
+        push_up () ;  
+    }  
+    inline void access () {  
+        Node* o = this ;  
+        Node* x = null ;  
+        while ( o != null ) {  
+            if ( x != null ) {  
+                while ( x->c[0] != null ) x = x->c[0] ;  
+                x->splay () ;  
+            }  
+            o->splay () ;  
+            o->siz = o->tree_siz - x->tree_siz ;//without splay_tree right_son tree_siz  
+            o->setc ( x , 1 ) ;  
+            o->push_up () ;  
+            x = o ;  
+            o = o->f ;  
+        }  
+        splay () ;  
+    }  
+} ;  
+  
+struct Edge {  
+    int v ;  
+    Edge* next ;  
+} ;  
+  
+Node pool[MAXN] ;  
+Node* node[MAXN] ;  
+Node* curN ;  
+Edge edge[MAXE] ;  
+Edge* H[MAXN] ;  
+Edge* curE ;  
+LL ans ;  
+int n , m ;  
+  
+void clear () {  
+    ans = 0 ;  
+    curE = edge ;  
+    curN = pool ;  
+    null = curN ++ ;  
+    null->new_node () ;  
+    null->cnt = null->tree_siz = null->siz = 0 ;  
+    clr ( H , 0 ) ;  
+}  
+  
+void addedge ( int u , int v ) {  
+    curE->v = v ;  
+    curE->next = H[u] ;  
+    H[u] = curE ++ ;  
+}  
+  
+void dfs ( int u ) {  
+    node[u]->cnt = node[u]->tree_siz = 1 ;  
+    for ( Edge* e = H[u] ; e ; e = e->next ) {  
+        int v = e->v ;  
+        dfs ( v ) ;  
+        node[u]->cnt += 2LL * node[u]->tree_siz * node[v]->tree_siz ;  
+        node[u]->tree_siz += node[v]->tree_siz ;  
+    }  
+    ans += node[u]->cnt * node[u]->val ;//calculate init ans  
+    node[u]->siz = node[u]->tree_siz ;  
+}  
+  
+void solve () {  
+    int x , y ;  
+    char op[2] ;  
+    double tot = ( double ) n * n ;  
+    clear () ;  
+    For ( i , 1 , n ) {  
+        node[i] = curN ++ ;  
+        node[i]->new_node () ;  
+    }  
+    For ( i , 2 , n ) {  
+        scanf ( "%d" , &x ) ;  
+        addedge ( x , i ) ;  
+        node[i]->f = node[x] ;  
+    }  
+    For ( i , 1 , n ) scanf ( "%d" , &node[i]->val ) ;  
+    dfs ( 1 ) ;  
+    printf ( "%.10f\n" , ans / tot ) ;  
+    scanf ( "%d" , &m ) ;  
+    while ( m -- ) {  
+        scanf ( "%s%d%d" , op , &x , &y ) ;  
+        if ( op[0] == 'P' ) {  
+            node[y]->access () ;  
+            node[x]->splay () ;  
+            if ( node[x]->f == null ) swap ( x , y ) ;  
+            //cut  
+            node[x]->access () ;  
+            Node* o = node[x]->c[0] ;  
+            ans -= 2LL * o->sum * node[x]->tree_siz ;  
+            o->add_siz ( -node[x]->tree_siz ) ;  
+            node[x]->c[0]->f = null ;  
+            node[x]->c[0] = null ;  
+            node[x]->push_up () ;  
+            o->push_up () ;  
+            //link  
+            node[y]->access () ;  
+            ans += 2LL * node[y]->sum * node[x]->tree_siz ;  
+            node[y]->add_siz ( node[x]->tree_siz ) ;  
+            node[y]->push_up () ;  
+            node[x]->f = node[y] ;  
+        } else {  
+            node[x]->access () ;  
+            ans += node[x]->cnt * ( y - node[x]->val ) ;  
+            node[x]->val = y ;  
+            node[x]->push_up () ;  
+        }  
+        printf ( "%.10f\n" , ans / tot ) ;  
+    }  
+}  
+  
+int main () {  
+    while ( ~scanf ( "%d" , &n ) ) solve () ;  
+    return 0 ;  
+}  
+     	  		 		 			 	 			  	 	

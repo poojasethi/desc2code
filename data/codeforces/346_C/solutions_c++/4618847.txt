@@ -1,0 +1,26 @@
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+
+int x[100010],a,b,n,ans;
+
+int main()
+{
+    scanf("%d",&n);
+    for(int i=1;i<=n;++i) scanf("%d",&x[i]);
+    scanf("%d%d",&b,&a);
+    sort(x+1,x+n+1);
+    n=unique(x+1,x+n+1)-x-1;
+    while(a<b){
+        int Mx=1;
+        for(int i=1;i<=n;++i)
+            if(b-b%x[i]>=a) Mx=max(Mx,b%x[i]);
+        b-=Mx;
+        while(n && b-b%x[n]<a) --n;
+        ++ans;
+    }
+    printf("%d\n",ans);
+    return 0;
+}

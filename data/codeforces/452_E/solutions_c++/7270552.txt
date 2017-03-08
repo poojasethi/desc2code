@@ -1,0 +1,104 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+#include <vector>
+#include <map>
+#include <queue>
+using namespace std;
+
+#define LL long long
+#define ULL unsigned long long
+#define mod 1000000007
+#define eps 1e-8
+#define MP make_pair
+#define REP(i,a,b) for(int i = a; i <= b; ++i)
+
+#define mxn 700000
+
+int son[mxn][30], pre[mxn], stp[mxn], last, tot, n;
+int l[mxn], r[mxn];
+LL dp[mxn][3];
+bool vis[mxn];
+char s[mxn];
+LL ans;
+
+inline void Extend( int x ){
+    stp[++tot] = stp[last] + 1;
+    int p = last, np = tot;
+    for( ; p != -1 && son[p][x] == 0; p = pre[p] )
+        son[p][x] = np;
+    if( p == -1 ) pre[np] = 0;
+    else {
+        int q = son[p][x];
+        if( stp[q] != stp[p] + 1 ){
+            stp[++tot] = stp[p] + 1;
+            int nq = tot;
+            memcpy( son[nq], son[q], sizeof(son[q]) );
+            pre[nq] = pre[q];
+            pre[q] = pre[np] = nq;
+            for( ; son[p][x] == q; p = pre[p] )
+                son[p][x] = nq;
+        }
+        else pre[np] = q;
+    }
+    last = np;
+}
+
+void dfs( int u ) {
+    if( vis[u] ) return ;
+    vis[u] = true;
+    for( int i = 0; i <= 2; ++i )
+        if( son[u][26+i] )
+            dp[u][i] = 1;
+    for( int i = 0; i < 26; ++i ) {
+        if( son[u][i] ) {
+            int v = son[u][i];
+            dfs( v );
+            for( int j = 0; j <= 2; ++j ) {
+                dp[u][j] += dp[v][j];
+                dp[u][j] %= mod;
+            }
+        }
+    }
+    if( u && dp[u][0] ) {
+        bool ok = true;
+        for( int i = 1; i <= 2; ++i )
+            if( dp[u][i] < l[i] || dp[u][i] > r[i] )
+                ok = false;
+        if( ok ) ans += stp[u] - stp[pre[u]];
+    }
+}
+
+LL sum[mxn];
+
+int main()
+{
+    pre[0] = -1;
+    int len;
+    scanf( "%s", s );
+    n = len = strlen(s);
+    for( int i = 0; i < len; ++i ) Extend( s[i] - 'a' );
+    Extend(26);
+    scanf( "%s", s );
+    len = strlen(s);
+    n = min(n, len);
+    for( int i = 0; i < len; ++i ) Extend( s[i] - 'a' );
+    Extend(27);
+    scanf( "%s", s );
+    len = strlen(s);
+    n = min(n, len);
+    for( int i = 0; i < len; ++i ) Extend( s[i] - 'a' );
+    Extend(28);
+    dfs(0);
+    REP(i,1,tot) {
+        LL p = dp[i][0] * dp[i][1] % mod * dp[i][2] % mod;
+        sum[stp[i]] = (sum[stp[i]] + p) % mod;
+        sum[stp[pre[i]]] = (sum[stp[pre[i]]] + mod - p) % mod;
+    }
+    for(int i = tot - 1; i >= 1; --i) sum[i] = (sum[i] + sum[i+1]) % mod;
+    REP(i,1,n) printf( "%I64d ", sum[i] );
+    return 0;
+}

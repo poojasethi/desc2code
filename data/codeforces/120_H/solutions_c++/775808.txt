@@ -1,0 +1,93 @@
+#include <stdio.h>
+#include <string.h>
+
+#define MAXN 210
+#define MAXM 200000
+
+struct Edge {
+	int v;
+	Edge *link;
+}edge[MAXM], *adj[MAXN];
+
+int totE;
+int n, l, curr;
+char str[20];
+int py[556976], px[300];
+int a[100];
+int used[556976];
+
+void addEdge(int u, int v) {
+	Edge *p = &edge[totE++];
+	p->v = v; p->link = adj[u]; adj[u] = p;
+}
+
+void dfs(int dep, int cnt) {
+	if(dep == l) {
+		if(cnt == 0) return;
+		int num = 0;
+		for(int i = 0, p = 1; i < cnt; ++i, p *= 27)
+			num += a[i] * p;
+		addEdge(curr, num);
+		return;
+	}
+	if(cnt < 4) {
+		a[cnt] = str[dep] - 'a' + 1;
+		dfs(dep + 1, cnt + 1);
+	}
+	dfs(dep + 1, cnt);
+}
+
+int updatePath(int u) {
+	Edge *p = adj[u];
+	while(p) {
+		if(used[p->v] != curr) {
+			used[p->v] = curr;
+			if(py[p->v] == -1 || updatePath(py[p->v])) {
+				py[p->v] = u;
+				px[u] = p->v;
+				return 1;
+			}
+		}
+		p = p->link;
+	}
+	return 0;
+}
+
+int maxMatch() {
+	memset(py, -1, sizeof(py));
+	memset(px, -1, sizeof(px));
+	memset(used, -1, sizeof(used));
+	curr = 0;
+	for(int i = 0; i < n; ++i) {
+		if(!updatePath(i)) return 0;
+		++curr;
+	}
+	return n;
+}
+
+int main() {
+	freopen("input.txt", "r", stdin);
+	freopen("output.txt", "w", stdout);
+	scanf("%d", &n);
+	for(int i = 0; i < n; ++i) {
+		curr = i;
+		scanf("%s", str);
+		l = strlen(str);
+		dfs(0, 0);
+	}
+	int res = maxMatch();
+	if(res != n) puts("-1");
+	else {
+		for(int i = 0; i < n; ++i) {
+			int temp = px[i];
+			int cnt = 0;
+			while(temp) {
+				a[cnt++] = temp % 27;
+				temp /= 27;
+			}
+			for(int i = 0; i < cnt; ++i) putchar('a' + a[i] - 1);
+			puts("");
+		}
+	}
+	return 0;
+}

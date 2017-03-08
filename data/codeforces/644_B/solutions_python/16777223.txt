@@ -1,0 +1,80 @@
+from __future__ import print_function
+
+import collections
+import fractions
+import sys
+
+Deque = collections.deque
+
+def calc(b, points):
+    N = len(points)
+    r = []
+    q = Deque()
+    num_in_queue = 0
+    next_server_time = 0
+
+    pos = 0
+
+    while next_server_time > 0 or pos < N:
+        if next_server_time == 0: # Idle
+            t, d = points[pos]
+            pos += 1
+            next_server_time = t + d
+        else:
+            if pos >= N or next_server_time <= points[pos][0]: # Server finishes.
+                # Output finished.
+                r.append(next_server_time)
+
+                next_d = -1
+                while q:
+                    next_d = q.popleft()
+                    if next_d > 0:
+                        assert num_in_queue > 0
+                        num_in_queue -= 1
+                        break
+                    else:
+                        # Output rejected.
+                        r.append(-1)
+
+                if next_d > 0:
+                    next_server_time += next_d
+                else:
+                    next_server_time = 0 # Set idle.
+            else: # Busy, try enqueue.
+                t, d = points[pos]
+                pos += 1
+                if num_in_queue < b:
+                    q.append(d)
+                    num_in_queue += 1
+                else:
+                    q.append(-1) # Reject.
+
+    assert len(q) == 0
+    assert num_in_queue == 0
+    assert len(r) == N
+
+    return r
+
+def main():
+    f = sys.stdin
+
+    if len(sys.argv) > 1:
+        f = open(sys.argv[1], "rt")
+
+    n, b = map(int, f.readline().strip().split())
+    points = []
+
+    for i in xrange(n):
+        t, d = map(int, f.readline().strip().split())
+        points.append((t, d))
+
+    r = calc(b, points)
+
+    for i, x in enumerate(r):
+        if i > 0:
+            print(' ', end='')
+        print(x, end='')
+    print('')
+
+if __name__ == '__main__':
+    main()

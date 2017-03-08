@@ -1,0 +1,186 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <deque>
+#include <queue>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <complex>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <cassert>
+using namespace std;
+
+#define FOR(it,a) for (__typeof((a).begin()) it = (a).begin(); it != (a).end(); ++it)
+
+const int maxn = 16;
+const int maxm = maxn * 2;
+
+int n, m;
+char input[maxn][maxn];
+int label[maxn][maxn];
+int ending[maxn][2];
+
+int vertices, edges;
+int src, dest;
+
+int length[maxm];
+vector<int> cover[maxn][maxn];
+vector<int> adjEdge[maxn];
+
+int crossEdge[maxm];
+set<int> S[maxn][maxn];
+
+struct State
+{
+    int pos;
+    int holdLen;
+    int mask;
+
+    State(int pos, int mask) : pos(pos), holdLen(0), mask(mask) { }
+    State(int pos, int hold, int mask) : pos(pos), holdLen(hold), mask(mask) { }
+
+    bool insert() const {
+        return S[pos][holdLen].insert(mask).second;
+    }
+};
+
+int main()
+{
+    int tests;
+    scanf("%d", &tests);
+    for (int cas = 1; cas <= tests; ++cas) {
+        scanf("%d%d", &n, &m);
+        for (int i = 0; i < n; i++) {
+            scanf("%s", input[i]);
+        }
+        vertices = edges = 0;
+        memset(label, -1, sizeof(label));
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                if (input[i][j] == 'S' || input[i][j] == 'E' || input[i][j] == 'B') {
+                    if (input[i][j] == 'B') {
+                        src = vertices;
+                    } else if (input[i][j] == 'E') {
+                        dest = vertices;
+                    }
+                    adjEdge[vertices].clear();
+                    label[i][j] = vertices ++;
+                }
+                cover[i][j].clear();
+            }
+        }
+        int initialEdges = 0;
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                if (label[i][j] < 0) {
+                    continue;
+                }
+                for (int k = 0; k < 2; k++) {
+                    int dx, dy;
+                    if (k == 0) {
+                        // right
+                        dx = 0, dy = 1;
+                    } else {
+                        // down
+                        dx = 1, dy = 0;
+                    }
+                    vector<pair<int,int> > path;
+                    int x = i + dx, y = j + dy, target = -1;
+                    while (x < n && y < m) {
+                        if (label[x][y] >= 0) {
+                            target = label[x][y];
+                            break;
+                        }
+                        path.push_back(make_pair(x, y));
+                        x += dx;
+                        y += dy;
+                    }
+                    if (target >= 0 && path.size()) {
+                        length[edges] = path.size() + 1;
+                        ending[edges][0] = label[i][j];
+                        ending[edges][1] = target;
+                        adjEdge[label[i][j]].push_back(edges);
+                        adjEdge[target].push_back(edges);
+                        FOR (it, path) {
+                            cover[it->first][it->second].push_back(edges);
+                        }
+                        char ch = input[path[0].first][path[0].second];
+                        if (k == 0 && ch == '-' || k == 1 && ch == '|') {
+                            initialEdges |= 1 << edges;
+                        }
+                        edges ++;
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < vertices; i++) {
+            for (int j = 0; j < maxn; j++) {
+                S[i][j].clear();
+            }
+        }
+        memset(crossEdge, 0, sizeof(crossEdge));
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                FOR (it, cover[i][j]) {
+                    FOR (jt, cover[i][j]) {
+                        crossEdge[*it] |= 1 << *jt;
+                    }
+                }
+            }
+        }
+        State startS(src, initialEdges);
+        startS.insert();
+        queue<pair<State,int> > Q;
+        Q.push(make_pair(startS, 0));
+        int ans = 0;
+        while (!Q.empty()) {
+            State p = Q.front().first;
+            int dist = Q.front().second;
+            Q.pop();
+            if (p.pos == dest) {
+                ans = dist;
+                break;
+            }
+            if (p.holdLen > 0) {
+                FOR (it, adjEdge[p.pos]) {
+                    if (length[*it] == p.holdLen && (crossEdge[*it] & p.mask) == 0) {
+                        // put down
+                        State q(p.pos, p.mask | 1 << *it);
+                        if (q.insert()) {
+                            Q.push(make_pair(q, dist + 1));
+                        }
+                    }
+                }
+            }
+            FOR (it, adjEdge[p.pos]) {
+                if (p.mask >> *it & 1) {
+                    if (p.holdLen == 0) {
+                        // pick up
+                        State q(p.pos, length[*it], p.mask & ~(1 << *it));
+                        if (q.insert()) {
+                            Q.push(make_pair(q, dist + 1));
+                        }
+                    }
+                    // move
+                    State q(ending[*it][0] ^ ending[*it][1] ^ p.pos, p.holdLen, p.mask);
+                    if (q.insert()) {
+                        Q.push(make_pair(q, dist + 1));
+                    }
+                }
+            }
+        }
+        printf("%d\n", ans);
+    }
+}

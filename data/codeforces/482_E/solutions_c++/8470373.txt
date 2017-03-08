@@ -1,0 +1,190 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
+#include <queue>
+#include <map>
+#include <set>
+#include <vector>
+#include <string>
+#include <stack>
+#include <bitset>
+#define INF 0x3f3f3f3f
+#define eps 1e-8
+#define FI first
+#define SE second
+using namespace std;
+typedef long long LL;
+const int maxn=5e4+5;
+vector <int> G[maxn];
+int n,w[maxn],sz[maxn];
+LL ans=0,sum=0;
+
+inline LL sqr(int x) {return 1LL*x*x;}
+struct Link_Cut_Tree
+{
+    int pre[maxn],ch[maxn][2],bef[maxn];
+    int vir[maxn],vsum[maxn],sz[maxn];
+    LL val[maxn],sum[maxn],virq[maxn];
+    inline void push_up(int x)
+    {
+        sz[x]=sz[ch[x][0]]+sz[ch[x][1]]+1;
+        vsum[x]=vsum[ch[x][0]]+vsum[ch[x][1]]+vir[x];
+        sum[x]=sum[ch[x][0]]+sum[ch[x][1]]+val[x];
+    }
+    inline void Rotate(int x,bool kind)
+    {
+        int y=pre[x];
+        ch[y][!kind]=ch[x][kind];
+        pre[ch[x][kind]]=y;
+        pre[x]=pre[y];
+        if(pre[x]) ch[pre[x]][ch[pre[x]][1]==y]=x;
+        ch[x][kind]=y;
+        pre[y]=x;
+        push_up(y);
+    }
+    inline void Splay(int x)
+    {
+        int rt;
+        for(rt=x;pre[rt];rt=pre[rt]);
+        if(rt!=x)
+        {
+            bef[x]=bef[rt];
+            bef[rt]=0;
+            while(pre[x])
+            {
+                if(ch[pre[x]][0]==x) Rotate(x,1);
+                else Rotate(x,0);
+            }
+        }
+        push_up(x);
+    }
+    inline void Access(int x)
+    {
+        int fa;
+        for(fa=0;x;x=bef[x])
+        {
+            Splay(x);
+            vir[x]+=sz[ch[x][1]]+vsum[ch[x][1]];
+            virq[x]+=sqr(sz[ch[x][1]]+vsum[ch[x][1]]);
+            vir[x]-=sz[fa]+vsum[fa];
+            virq[x]-=sqr(sz[fa]+vsum[fa]);
+            val[x]=1LL*(vir[x]+1)*w[x];
+            bef[ch[x][1]]=x;
+            bef[fa]=0;
+            pre[ch[x][1]]=0;
+            ch[x][1]=fa;
+            pre[fa]=x;
+            fa=x;
+            push_up(x);
+        }
+    }
+    inline bool IsFa(int u,int v)
+    {
+        Access(v);
+        Splay(v);
+        while(pre[u]) u=pre[u];
+        return u==v;
+    }
+    inline void Cut(int v)
+    {
+        Access(v);
+        Splay(v);
+        ans-=1LL*(vir[v]+1)*sum[ch[v][0]];
+        pre[ch[v][0]]=0;
+        ch[v][0]=0;
+        push_up(v);
+    }
+    inline void Link(int u,int v)
+    {
+        Access(u);
+        Splay(u);
+        ans+=1LL*(vir[v]+1)*sum[u];
+        pre[v]=u;
+        ch[u][1]=v;
+        push_up(u);
+    }
+    inline void Change(int u,int x)
+    {
+        Access(u);
+        Splay(u);
+        LL pairs=(sqr(vir[u])-virq[u])/2+vir[u];
+        ans-=pairs*w[u];
+        ans+=pairs*x;
+        w[u]=x;
+        val[u]=1LL*w[u]*(1+vir[u]);
+        push_up(u);
+    }
+    LL get_pair(int u)
+    {
+        Access(u);
+        Splay(u);
+        LL pairs=(sqr(vir[u])-virq[u])/2+vir[u];
+        return pairs;
+    }
+}lct;
+
+void dfs(int u)
+{
+    sz[u]=lct.sz[u]=1;
+    for(int i=0;i<(int)G[u].size();++i)
+    {
+        int v=G[u][i];
+        lct.bef[v]=u;
+        dfs(v);
+        ans+=1LL*sz[u]*sz[v]*w[u];
+        sz[u]+=sz[v];
+        lct.vir[u]+=sz[v];
+        lct.virq[u]+=sqr(sz[v]);
+    }
+    lct.vsum[u]=lct.vir[u];
+    lct.val[u]=lct.sum[u]=1LL*w[u]*(1+lct.vir[u]);
+}
+inline double cal() {return (ans*2.0+sum)/n/n;}
+
+int main()
+{
+    char op[3];
+    scanf("%d",&n);
+    for(int i=2;i<=n;++i)
+    {
+        int p;
+        scanf("%d",&p);
+        G[p].push_back(i);
+    }
+    for(int i=1;i<=n;++i) scanf("%d",w+i),sum+=w[i];
+    dfs(1);
+    printf("%.13f\n",cal());
+    int q;
+    scanf("%d",&q);
+    while(q--)
+    {
+        scanf("%s",op);
+        if(*op=='P')
+        {
+            int v,u;
+            scanf("%d%d",&v,&u);
+            if(lct.IsFa(v,u))
+            {
+                lct.Cut(u);
+                lct.Link(v,u);
+            }
+            else
+            {
+                lct.Cut(v);
+                lct.Link(u,v);
+            }
+        }
+        else
+        {
+            int u,t;
+            scanf("%d%d",&u,&t);
+            sum-=w[u]; sum+=t;
+            lct.Change(u,t);
+        }
+        printf("%.13f\n",cal());
+    }
+    return 0;
+}

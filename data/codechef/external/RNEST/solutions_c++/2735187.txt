@@ -1,0 +1,220 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <deque>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <limits>
+#include <string>
+#include <cassert>
+
+using namespace std;
+typedef long long LL;
+typedef pair<int,int> pii;
+
+#define forup(i,a,b) for(int i=a; i<b; ++i)
+#define fordn(i,a,b) for(int i=a; i>b; --i)
+#define rep(i,a) for(int i=0; i<a; ++i)
+
+#define dforup(i,a,b) for(i=a; i<b; ++i)
+#define dfordn(i,a,b) for(i=a; i>b; --i)
+#define drep(i,a) for(i=0; i<a; ++i)
+
+#define slenn(s,n) for(n=0; s[n]!='\0'; ++n)
+
+#define gi(x) scanf("%d",&x)
+#define gl(x) cin>>x
+#define gd(x) scanf("%lf",&x)
+#define gs(x) scanf("%s",x)
+
+#define pis(x) printf("%d ",x)
+#define pin(x) printf("%d\n",x)
+#define pls(x) cout<<x<<" "
+#define pln(x) cout<<x<<"\n"
+#define pds(x) printf("%.12f ",x)
+#define pdn(x) printf("%.12f\n",x)
+#define pnl() printf("\n")
+
+#define fs first
+#define sc second
+
+#define pb push_back
+
+const int inv=1000000000;
+const int minv=-inv;
+
+const int max_n=100010;
+const int max_sn=2*max_n;
+
+// Segment Tree Codechunk
+
+int slr[4*max_sn+10];
+int srr[4*max_sn+10];
+pii sQ[4*max_sn+10];
+
+struct ST
+{
+	int sn; //sn>0
+	
+	ST(){ sn=0; }
+	ST(int sn_){ sn=sn_; init(0,0,sn); }
+	
+	void init(int ix, int l, int r)
+	{
+		slr[ix]=l;
+		srr[ix]=r;
+		sQ[ix]=pii(-1,-1);
+		if(l+1<r)
+		{
+			int mid=(l+r)/2;
+			init(2*ix+1,l,mid);
+			init(2*ix+2,mid,r);
+		}
+	}
+	
+	void iupdate(int ix, int l, int r, pii val)
+	{
+		int lc=2*ix+1, rc=2*ix+2;
+		
+		if(l==slr[ix] and r==srr[ix])
+		{
+			sQ[ix]=val;
+			return;
+		}
+		else if(r<=srr[lc])
+			iupdate(lc,l,r,val);
+		else if(l>=slr[rc])
+			iupdate(rc,l,r,val);
+		else
+		{
+			iupdate(lc,l,srr[lc],val);
+			iupdate(rc,slr[rc],r,val);
+		}
+	}
+	
+	void update(int l, int r, pii val)
+	{
+		iupdate(0,l,r+1,val);
+	}
+
+	pii pquery(int ix, int pos)
+	{
+		int lc=2*ix+1, rc=2*ix+2;
+		if(slr[ix]+1==srr[ix]) return sQ[ix];
+
+		if(pos<srr[lc]) return max(sQ[ix],pquery(lc,pos));
+		else return max(sQ[ix],pquery(rc,pos));
+	}
+	
+	int query(int pos)
+	{
+		return pquery(0,pos).sc;
+	}
+};
+
+// End of Codechunk
+
+struct room
+{
+	int x1,x2;
+	int y1,y2;
+	room() {}
+	room(int x1_, int x2_, int y1_, int y2_) { x1=x1_; y1=y1_; x2=x2_; y2=y2_; }
+};
+room rooms[max_n];
+
+struct wall
+{
+	int ix;
+	int x;
+	int y1;
+	int y2;
+	char tp;
+	wall() {}
+	wall(int ix_, int x_, int y1_, int y2_, char tp_) { ix=ix_; x=x_; y1=y1_; y2=y2_; tp=tp_; }
+};
+struct less_wall : public binary_function <wall,wall,bool>
+{
+	bool operator() (const wall &a, const wall &b) { return ((a.x<b.x) or (a.x==b.x and a.ix<b.ix)); }
+};
+wall walls[2*max_n];
+
+int n;
+int res[max_n];
+
+int allxc[2*max_n];
+map<int,int> MX; int nMX=0;
+int allyc[2*max_n];
+map<int,int> MY; int nMY=0;
+
+int main()
+{
+	gi(n);
+
+	int cx1,cx2; int cy1,cy2;
+	rep(i,n)
+	{
+		gi(cx1); gi(cy1);
+		gi(cx2); gi(cy2);
+
+		allxc[2*i]=cx1; allxc[2*i+1]=cx2;
+		allyc[2*i]=cy1; allyc[2*i+1]=cy2;
+
+		rooms[i]=room(cx1,cx2,cy1,cy2);
+	}
+
+	sort(allxc,allxc+2*n);
+	MX[allxc[0]]=(nMX++);
+	forup(i,1,2*n)
+		if(allxc[i-1]!=allxc[i])
+			MX[allxc[i]]=(nMX++);
+
+	sort(allyc,allyc+2*n);
+	MY[allyc[0]]=(nMY++);
+	forup(i,1,2*n)
+		if(allyc[i-1]!=allyc[i])
+			MY[allyc[i]]=(nMY++);
+
+	rep(i,n)
+	{
+		rooms[i].x1=MX[rooms[i].x1];
+		rooms[i].x2=MX[rooms[i].x2];
+
+		rooms[i].y1=MY[rooms[i].y1];
+		rooms[i].y2=MY[rooms[i].y2];
+
+		walls[2*i]=wall(i,rooms[i].x1,rooms[i].y1,rooms[i].y2,'L');
+		walls[2*i+1]=wall(i,rooms[i].x2,rooms[i].y1,rooms[i].y2,'R');
+	}
+	sort(walls,walls+2*n,less_wall());
+
+	ST st(nMY);
+	rep(i,2*n)
+	{
+		if(walls[i].tp=='L')
+		{
+			res[walls[i].ix]=st.query(walls[i].y1);
+			st.update(walls[i].y1,walls[i].y2,pii(i,walls[i].ix));
+		}
+		else
+			st.update(walls[i].y1,walls[i].y2,pii(i,res[walls[i].ix]));
+	}
+
+	rep(i,n)
+		pin(res[i]);
+	
+	return 0;
+}

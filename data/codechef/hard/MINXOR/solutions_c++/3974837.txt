@@ -1,0 +1,139 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+// Uzumaki Naruto :)
+
+#define DB(a) cerr << __LINE__ << ": " << #a << " = " << (a) << endl
+#define dbg(A,sz) for(int i = 0; i < sz; ++i) cerr << A[i] << " "; cerr << "\n"
+#define pause() cin.get();cin.get();
+typedef long long LL;
+typedef pair<int,int> PII;
+typedef vector<int> VI;
+
+//Code for FAST INPUT :)
+template <typename T>
+inline void fi(T *a)
+{
+ register char c=0;
+ while (c<33) c=getchar_unlocked();
+ *a=0;
+ int tmp = 0;
+ while (c>33)
+ {
+     if ( c == 45 ) tmp = 1;
+     else *a=*a*10+c-'0';
+     c=getchar_unlocked();
+ }
+ if ( tmp == 1 ) *a = 0-(*a);
+}
+
+const int NN = 251234;
+const int SQ = 500, MB = 15;
+
+struct blocks{
+    struct node{
+        int p[2],ed;
+        node(){ p[0] = p[1] = -1; ed = 0; }
+    }t[SQ*17];
+
+    int K,L,R,cnt;
+    blocks(){ K = 0; cnt = 1; }
+    void reset(){
+        for(int i = 0; i <= cnt+10; ++i) t[i].ed = 0, t[i].p[0] = t[i].p[1] = -1;
+        K = 0; cnt = 1;
+    }
+
+    int addnode(){ return cnt++; }
+    void add(int num){
+        int st = 0;
+        for(int i = MB; i >= 0; --i){
+            int d = (num >> i) & 1;
+            st = (t[st].p[d] != -1) ? t[st].p[d] : (t[st].p[d] = addnode());
+        }
+        t[st].ed++;
+    }
+
+    int findMin(int &res){
+        int st = 0; res = 0;
+        for(int i = MB; i >= 0; --i){
+            int d = (K >> i) & 1;
+            if (t[st].p[d] != -1) st = t[st].p[d];
+            else st = t[st].p[d = d^1], res += (1 << i);
+        }
+        return t[st].ed;
+    }
+} seg[SQ+10];
+
+int Map[NN],A[NN],N,M;
+void update(int id,int L,int R,int K){
+    if (L == seg[id].L and R == seg[id].R){ seg[id].K ^= K; return; }
+    int k1 = seg[id].K;
+    seg[id].reset();
+
+    for(int i = seg[id].L; i <= seg[id].R; ++i){
+        A[i] ^= k1 ^ ((i >= L and i <= R) ? K : 0);
+        seg[id].add(A[i]);
+    }
+}
+
+void update(int L,int R,int K){
+    int id1 = Map[L], id2 = Map[R];
+    for(int i = id1; i <= id2; ++i)
+        update(i,max(L,seg[i].L),min(R,seg[i].R),K);
+}
+
+int query(int id,int L,int R,int &ans){
+    int cnt = 0,num;
+    if (L == seg[id].L and R == seg[id].R){
+        cnt = seg[id].findMin(ans);
+        return cnt;
+    }
+    ans = INT_MAX;
+    for(int i = L; i <= R; ++i){
+        num = A[i] ^ seg[id].K;
+        if (num < ans) ans = num, cnt = 1;
+        else if (num == ans) ++cnt;
+    }
+    return cnt;
+}
+
+int query(int L,int R,int &ans){
+    int id1 = Map[L], id2 = Map[R],res,f,cnt = 0;
+    ans = INT_MAX;
+    for(int i = id1; i <= id2; ++i){
+        f = query(i,max(L,seg[i].L),min(R,seg[i].R),res);
+        if (res < ans) ans = res, cnt = f;
+        else if (res == ans) cnt += f;
+    }
+    return cnt;
+}
+
+void solve(){
+    fi(&N),fi(&M);//cin >> N >> M;
+    for(int i = 0; i < N; ++i) fi(&A[i]);//cin >> A[i];
+
+    int sz = -1,cnt = 0;
+    for(int i = 0; i < N; ++i){
+        if (cnt >= SQ) cnt = 0;
+        if (!cnt) ++sz, seg[sz].L = i;
+        seg[sz].R = i, Map[i] = sz, ++cnt;
+    }
+    ++sz;
+    for(int k = 0; k < sz; ++k) for(int i = seg[k].L; i <= seg[k].R; ++i)
+        seg[k].add(A[i]);
+    while(M--){
+        int t,a,b,c,ans,cnt;
+        fi(&t),fi(&a),fi(&b);//cin >> t >> a >> b;
+        --a,--b;
+        if (t & 1)
+            cnt = query(a,b,ans),printf("%d %d\n",ans,cnt);// cout << ans << " " << cnt << endl;
+        else
+            fi(&c), update(a,b,c);
+    }
+}
+
+int main()
+{
+	solve();
+	return 0;
+}

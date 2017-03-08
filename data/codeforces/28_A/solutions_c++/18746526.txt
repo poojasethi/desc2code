@@ -1,0 +1,73 @@
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+using namespace std;
+
+struct Point
+{
+    int x, y;
+};
+
+const int MAXN = 500;
+Point nail[MAXN];
+int rod[MAXN];
+bool used[MAXN];
+int ans[MAXN];
+int n, m;
+
+int dist(Point a, Point b)
+{
+    return abs(a.x - b.x) + abs(a.y - b.y);
+}
+
+bool Work(int start)
+{
+    memset(used, 0, sizeof(bool) * m);
+    for(int i = start; i < n; i += 2)
+    {
+        int pre = (i + n - 1) % n;
+        int now = i;
+        int next = (i + 1) % n;
+        int len = dist(nail[pre], nail[now]) + dist(nail[now], nail[next]);
+        bool found = false;
+
+        for(int j = 0; j < m; j ++)
+        if(!used[j] && rod[j] == len)
+        {
+            ans[pre] = ans[next] = -1;
+            ans[now] = j + 1;
+            used[j] = true;
+            found = true;
+            break;
+        }
+
+        if(!found)
+            return false;
+    }
+
+    return true;
+}
+
+int main()
+{
+    // freopen("D:\\1.in", "r", stdin);
+    // freopen("D:\\1.out", "w", stdout);
+
+    scanf("%d%d", &n, &m);
+    for(int i = 0; i < n; i ++)
+        scanf("%d%d", &(nail[i].x), &(nail[i].y));
+
+    for(int i = 0; i < m; i ++)
+        scanf("%d", &(rod[i]));
+
+    if(Work(0) || Work(1))
+    {
+        printf("YES\n");
+        for(int i = 0; i < n; i ++)
+            printf("%d ", ans[i]);
+    }
+    else
+        printf("NO\n");
+
+	return 0;
+}

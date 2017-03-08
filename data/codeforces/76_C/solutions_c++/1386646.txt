@@ -1,0 +1,62 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <map>
+#include <set>
+#include <algorithm>
+#include <cmath>
+#include <ctime>
+#include <cstdlib>
+#include <queue>
+
+#define LL long long
+#define mp(x, y) make_pair(x, y)
+#define pb(x) push_back(x)
+#define PII pair<int, int>
+#define PID pair<int, double>
+
+using namespace std;
+
+const int maxn = 200010, maxk = 22;
+int n, k, T, cost[maxk][maxk], t[maxk];
+int f[1 << maxk], last[maxk], M[maxk], A;
+char s[maxn];
+
+int main(){
+	scanf("%d%d%d", &n, &k, &T);
+	scanf("%s", s);
+	for (int i = 0; i < k; i++) scanf("%d", t + i);
+	for (int i = 0; i < k; i++)
+		for (int j = 0; j < k; j++)
+			scanf("%d", &cost[i][j]);
+	
+	memset(last, -1, sizeof(last));
+	memset(M, 0, sizeof(M));
+	for (int i = 0; i < n; i++){
+		int now = s[i] - 'A';
+		for (int j = 0; j < k; j++)
+			if (last[j] >= 0){
+				f[M[j]] += cost[j][now];
+				f[M[j] | (1 << j)] -= cost[j][now];
+				f[M[j] | (1 << now)] -= cost[j][now];
+				f[M[j] | (1 << j) | (1 << now)] += cost[j][now];
+				M[j] |= 1 << now;
+			}
+		last[now] = i; M[now] = 0;
+		A |= 1 << now;
+	}
+
+	for (int i = 0; i < k; i++)
+		f[1 << i] += t[i];
+
+	for (int j = 0; j < k; j++)
+		for (int i = 0; i < (1 << k); i++)
+			if (~i & (1 << j))
+				f[i ^ (1 << j)] += f[i];
+
+	int ans = 0;
+	for (int i = 0; i < (1 << k); i++)
+		if (f[i] <= T && (i & A) == i) ans++;
+	printf("%d\n", ans - 1);
+}

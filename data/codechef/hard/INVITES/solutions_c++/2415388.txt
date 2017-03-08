@@ -1,0 +1,138 @@
+#ifdef _WIN32
+#  define LL "%I64d"
+#else
+#  define LL "%Ld"
+#endif
+
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <cstring>
+#include <ctime>
+#include <vector>
+#include <deque>
+#include <set>
+#include <map>
+#include <queue>
+#include <stack>
+#include <bitset>
+#include <string>
+#include <algorithm>
+#include <complex>
+#include <utility>
+using namespace std;
+#define null NULL
+#define mp make_pair
+#define pb(a) push_back(a)
+#define sz(a) ((int)(a).size())
+#define all(a) a.begin() , a.end()
+#define fi first
+#define se second
+#define relaxMin(a , b) (a) = min((a),(b))
+#define relaxMax(a , b) (a) = max((a),(b))
+#define SQR(a) ((a)*(a))
+typedef vector<int> vi;
+typedef pair<int,int> pii;
+typedef long long ll;
+#define MOD 1000000007LL
+#define MAXN 100010
+#define USED 0
+#define FREE 1
+int N , enemy[MAXN];
+vector<vi> cyc;
+bool used[MAXN] , in_cyc[MAXN];
+int cur_used[MAXN] , ust;
+// tree dp
+vi fo[MAXN];
+ll dp_free[MAXN] , dp_used[MAXN];
+ll eval_used(int vr);
+ll eval_free(int vr){
+  if(dp_free[vr] != -1)
+   return dp_free[vr];
+  ll& cur = dp_free[vr];
+  cur = 1;
+  if(sz(fo[vr]) == 0)return cur;
+  for(int i=0;i<sz(fo[vr]);++i)
+   cur = (cur * (eval_free(fo[vr][i]) +
+                 eval_used(fo[vr][i])  )) % MOD;
+  return cur;
+}
+ll eval_used(int vr){
+  if(dp_used[vr] != -1)
+   return dp_used[vr];
+  ll& cur = dp_used[vr];
+  cur = 1;
+  if(sz(fo[vr]) == 0)return cur;
+  for(int i=0;i<sz(fo[vr]);++i)
+   cur = (cur * (eval_free(fo[vr][i]))) % MOD;
+  return cur;
+}
+void go(int vr){
+  ++ust;
+  deque<int> vis;
+  for(;;){
+   vis.pb(vr);
+   cur_used[vr] = ust;
+   used[vr] = true;
+   vr = enemy[vr];
+   if(used[vr] && cur_used[vr] != ust)
+    return;
+   if(cur_used[vr] == ust){
+    while(vis[0] != vr)vis.pop_front();
+    break;
+                          }
+         }
+  for(int i=0;i<sz(vis);++i)
+   in_cyc[vis[i]] = true;
+  cyc.pb(vi(all(vis)));
+}
+void doit(){
+  scanf("%d" , &N);
+  memset(used , 0 , N*sizeof(bool));
+  memset(in_cyc , 0 , N*sizeof(bool));
+  for(int i=0;i<N;++i)
+   fo[i].clear();
+  cyc.clear();
+  for(int i=0;i<N;++i)
+   scanf("%d" , &enemy[i]),
+   --enemy[i];
+  for(int i=0;i<N;++i)
+   if(!used[i])go(i);
+  // doing trees
+  memset(dp_free , -1 , N*sizeof(ll));
+  memset(dp_used , -1 , N*sizeof(ll));
+  for(int i=0;i<N;++i)
+   if(!in_cyc[i])
+    fo[enemy[i]].pb(i);
+  // Solving
+  ll ans = 1;
+  for(int i=0;i<sz(cyc);++i){
+   vi& use = cyc[i];
+   vector<ll> f_free[2] = {vector<ll>(sz(use) , 0),vector<ll>(sz(use) , 0)},
+              f_used[2] = {vector<ll>(sz(use) , 0),vector<ll>(sz(use) , 0)};
+   f_free[FREE][0] = eval_free(use[0]);
+   f_used[USED][0] = eval_used(use[0]);
+   for(int j=1;j<sz(use);++j){
+    int cur = use[j];
+    f_free[FREE][j] = ((f_free[FREE][j-1] + f_free[USED][j-1]) *
+                       eval_free(cur) )%MOD;
+    f_free[USED][j] = (f_free[FREE][j-1] * eval_used(cur))%MOD;
+    f_used[FREE][j] = ((f_used[FREE][j-1] + f_used[USED][j-1]) *
+                       eval_free(cur) )%MOD;
+    f_used[USED][j] = (f_used[FREE][j-1] * eval_used(cur))%MOD;
+                             }
+   ll cur_br = (f_free[FREE].back() + f_free[USED].back() +
+                f_used[FREE].back() )%MOD;
+   ans = (ans * cur_br)%MOD;
+                            }
+  // out
+  printf("%d\n" , (int)ans);
+}
+int main(){
+  int Q;
+  scanf("%d" , &Q);
+  while(Q-- > 0)
+   doit();
+  return 0;
+}

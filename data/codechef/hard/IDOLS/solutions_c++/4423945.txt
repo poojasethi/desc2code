@@ -1,0 +1,173 @@
+#include <cstdio>
+#include <cmath>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <map>
+#include <queue>
+#include <set>
+
+using namespace std;
+
+#define _ ios_base::sync_with_stdio(0);cin.tie(0);
+#define S(x) scanf("%d",&x)
+#define all(c) (c).begin(),(c).end() 
+#define sz(c) int((c).size())
+#define pb push_back
+#define present(c,x) ((c).find(x) != (c).end()) 
+#define cpresent(c,x) (find(all(c),x) != (c).end())
+#define rep(i,x,y) for(int i = x; i < y; i++)
+#define foreach(c,itr) for(__typeof((c).begin()) itr=(c).begin();itr!=(c).end();itr++)
+
+typedef long long int LL;
+typedef vector<int> vi; 
+typedef vector<vi> vvi; 
+typedef pair<int,int> ii;
+typedef vector<ii> vii;
+
+const int MAX = 100001;
+int arr[MAX], par[MAX], depth[MAX], size[MAX]; 
+int chainHead[MAX], cnum, ptr, whichNode[MAX];
+int nodeChain[MAX], nodepos[MAX];
+vi g[MAX];
+
+struct node{int val, cnt;} tree[5*MAX];
+int dfs(int c)
+{
+	rep(i,0,sz(g[c])) if(g[c][i]!=par[c])
+	size[c] += dfs(g[c][i]);
+	return size[c];
+}
+
+node merge(node a, node b)
+{
+	if(a.val < b.val) return b;
+	if(a.val > b.val) return a;
+	node tmp = {a.val,a.cnt+b.cnt};
+	return tmp;
+}
+
+void build_tree(int cur, int l, int r)
+{
+	if(l == r){
+		tree[cur].val = arr[whichNode[l]] - depth[whichNode[l]];
+		tree[cur].cnt = 1;
+		return ;
+	}
+	int m = (l+r)>>1, L = cur << 1, R = L + 1;
+	build_tree(L,l,m); build_tree(R,m+1,r);
+	tree[cur] = merge(tree[L], tree[R]);
+}
+
+node query_tree(int cur, int l, int r, int x, int y)
+{
+	if(l == x && r == y){
+		//printf("%d... %d\n",tree[cur].val,tree[cur].cnt);
+		return tree[cur];
+	}
+	int m = (l+r)>>1, L = cur << 1, R = L + 1;
+	if(y <= m) return query_tree(L,l,m,x,y);
+	else if(x > m) return query_tree(R,m+1,r,x,y);
+	else return merge(query_tree(L,l,m,x,m),query_tree(R,m+1,r,m+1,y));
+}
+
+void update_tree(int cur, int l, int r, int x, int data)
+{
+	if(l == r){
+		tree[cur].val = data;
+		tree[cur].cnt = 1;
+		return ;
+	}
+	int m = (l+r)>>1, L = cur << 1, R = L + 1;
+	if(x <= m) update_tree(L,l,m,x,data);
+	else update_tree(R,m+1,r,x,data);
+	tree[cur] = merge(tree[L], tree[R]);
+}
+
+
+void hld(int c)
+{
+	if(chainHead[cnum] == 0) chainHead[cnum] = c;
+	nodeChain[c] = cnum;
+	nodepos[c] = ptr;
+	whichNode[ptr] = c; ptr++;
+
+	int id, mx = -1;
+	rep(i,0,sz(g[c]))if(g[c][i]!=par[c]){
+		if(mx < size[g[c][i]]){
+			mx = size[g[c][i]];
+			id = g[c][i];
+		}
+	}
+
+	if(mx != -1) hld(id);
+
+	rep(i,0,sz(g[c]))if(g[c][i]!=par[c] && g[c][i] != id){
+		cnum++;
+		hld(g[c][i]);
+	}
+}
+
+node query_up(int u)
+{
+	int uchain = nodeChain[u];
+	node ans = {-10000000,0};
+	while(1){
+		if(uchain == 0){
+			ans = merge(ans,query_tree(1,0,ptr-1,nodepos[1],nodepos[u]));
+			break;
+		}	
+		ans = merge(ans,query_tree(1,0,ptr-1,nodepos[chainHead[uchain]],nodepos[u]));
+		u = par[chainHead[uchain]];
+		uchain = nodeChain[u];
+		//printf("%d %d\n",ans.val,ans.cnt);
+	}
+	return ans;
+}
+
+
+int main()
+{
+	int n, q;
+	S(n); S(q);
+	rep(i,1,n+1){
+		S(arr[i]);
+		size[i] = 1;
+	}
+	par[1] = -1;
+	rep(i,2,n+1){
+		int x;
+		S(x);
+		par[i] = x;
+		depth[i] = depth[x]+1;
+		g[i].pb(x);
+		g[x].pb(i);
+	}
+
+	dfs(1);
+	hld(1);
+	build_tree(1,0,ptr-1);
+	//printf("%d\n",ptr);
+	// rep(i,1,n+1) printf("%d ",depth[i]);
+	// printf("\n");
+	// rep(i,1,n+1) printf("%d ",size[i]);
+	// printf("\n");
+	while(q--){
+		// rep(i,1,10) printf("%d %d\n",tree[i].val,tree[i].cnt);
+		// printf("\n");
+		int x, y, z;
+		S(x);
+		if(x == 0){
+			S(y); S(z);
+			update_tree(1,0,ptr-1,nodepos[y],z-depth[y]);
+		}
+		else{
+			S(y);
+			node tmp = query_up(y);
+			printf("%d %d\n",depth[y]+tmp.val,tmp.cnt);
+		}
+	}
+	return 0;
+}

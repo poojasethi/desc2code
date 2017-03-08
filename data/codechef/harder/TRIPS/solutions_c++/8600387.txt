@@ -1,0 +1,125 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <algorithm>
+using namespace std;
+
+int n,m,d,S,i,j,k,u,v,c,lca,sum;
+int son[100005],next[200005],ed[200005],cost[200005],tot;
+int dep[100005],deep[100005],fa[100005][20],fa2[100005][20],d1[100005],d2[100005];
+int st[100005],top,top2;
+int ans[100005];
+bool vis[100005];
+
+struct node
+{
+	int u,v,c,id;
+}t[100005];
+inline bool cmp(const node &a,const node &b){return a.c>b.c;}
+
+void dfs(int x)
+{
+	vis[x]=true;
+	if(deep[x]>d)d=deep[x];
+	for(int i=son[x];i;i=next[i])
+	if(!vis[ed[i]])
+	{
+		deep[ed[i]]=deep[x]+cost[i];
+		dep[ed[i]]=dep[x]+1;
+		dfs(ed[i]);
+	}
+	vis[x]=false;
+}
+
+void dfs2(int x)
+{
+	vis[x]=true;
+	for(int i=son[x];i;i=next[i])
+	if(!vis[ed[i]])
+	{
+		int j,y=ed[i];
+		fa[y][0]=x;
+		for(j=0;fa[y][j];++j)fa[y][j+1]=fa[fa[y][j]][j];
+		d1[y]=j-1;
+		dfs2(y);
+	}
+	vis[x]=false;
+}
+
+void dfs3(int x)
+{
+	int i,top_=top2;
+	for(st[++top]=x;deep[x]-deep[st[top2]]>c;++top2);
+	fa2[x][0]=st[top2];
+	for(i=0;fa2[x][i];++i)fa2[x][i+1]=fa2[fa2[x][i]][i];
+	d2[x]=i-1;
+	vis[x]=true;
+	for(i=son[x];i;i=next[i])if(!vis[ed[i]])dfs3(ed[i]);
+	vis[x]=false;
+	--top;top2=top_;
+}
+
+int LCA(int u,int v)
+{
+	int i,j;
+	if(dep[u]<dep[v])swap(u,v);
+	for(i=0,j=dep[u]-dep[v];j;++i,j>>=1)if(j&1)u=fa[u][i];
+	if(u==v)return u;
+	for(i=d1[u];i>=0;--i)if(fa[u][i]!=fa[v][i])u=fa[u][i],v=fa[v][i];
+	return fa[u][0];
+}
+
+int main()
+{
+	scanf("%d",&n);
+	for(i=1;i<n;++i)
+	{
+		scanf("%d%d%d",&u,&v,&c);
+		++tot;next[tot]=son[u];son[u]=tot;ed[tot]=v;cost[tot]=c;
+		++tot;next[tot]=son[v];son[v]=tot;ed[tot]=u;cost[tot]=c;
+	}
+	dep[1]=deep[1]=1;
+	dfs(1);
+	S=(int)sqrt(d+0.0001);
+	dfs2(1);
+	scanf("%d",&m);
+	for(i=1;i<=m;++i)scanf("%d%d%d",&t[i].u,&t[i].v,&t[i].c),t[i].id=i;
+	sort(t+1,t+m+1,cmp);
+	for(i=1,c=-1;i<=m;++i)
+	{
+		u=t[i].u;v=t[i].v;
+		lca=LCA(u,v);sum=0;
+		if(t[i].c>S)
+		{
+			c=t[i].c;
+			for(;deep[u]-deep[lca]>=c;u=k,++sum)
+			{
+				for(j=d1[k=u];j>=0;--j)
+				if(deep[u]-deep[fa[k][j]]<=c)
+				k=fa[k][j];
+				if(k==lca)break;
+			}
+			for(;deep[v]-deep[lca]>=c;v=k,++sum)
+			{
+				for(j=d1[k=v];j>=0;--j)
+				if(deep[v]-deep[fa[k][j]]<=c)
+				k=fa[k][j];
+				if(k==lca)break;
+			}
+			if(u!=lca||v!=lca)sum+=1+(deep[u]+deep[v]-2*deep[lca]>c);
+		}
+		else
+		{
+			if(t[i].c!=c)c=t[i].c,dfs3(1);
+			for(j=d2[u];j>=0;--j)
+			if(deep[fa2[u][j]]-deep[lca]>0)
+			u=fa2[u][j],sum+=1<<j;
+			for(j=d2[v];j>=0;--j)
+			if(deep[fa2[v][j]]-deep[lca]>0)
+			v=fa2[v][j],sum+=1<<j;
+			if(u!=lca||v!=lca)sum+=1+(deep[u]+deep[v]-2*deep[lca]>c);
+		}
+		ans[t[i].id]=sum;
+	}
+	for(i=1;i<=m;++i)printf("%d\n",ans[i]);
+}

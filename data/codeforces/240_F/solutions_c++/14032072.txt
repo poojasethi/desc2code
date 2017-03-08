@@ -1,0 +1,133 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+const int MAXN = 1e5 + 10;
+
+string s;
+int n, q, cnt[MAXN];
+
+struct segment{
+	int sum[4 * MAXN];
+	short int lazy[4 * MAXN];
+
+	segment()
+	{
+		memset(lazy, -1, sizeof(lazy));
+	}
+
+	void add(int x, int xl, int xr)
+	{
+		if(lazy[x] == -1)
+			return;
+		int xm = (xl + xr) / 2;
+		lazy[2 * x + 1] = lazy[x];
+		lazy[2 * x + 2] = lazy[x];
+		sum[2 * x + 1] = (xm - xl) * lazy[x];
+		sum[2 * x + 2] = (xr - xm) * lazy[x];
+		lazy[x] = -1;
+		return;
+	}
+
+	void update(int ql, int qr, int qv, int x = 0, int xl = 0, int xr = n)
+	{
+		if(xl >= qr || xr <= ql)
+			return;
+		if(xl >= ql && xr <= qr){
+			lazy[x] = qv;
+			sum[x] = (xr - xl) * qv;
+			return;
+		}
+		add(x, xl, xr);
+		int xm = (xl + xr) / 2;
+		update(ql, qr, qv, 2 * x + 1, xl, xm);
+		update(ql, qr, qv, 2 * x + 2, xm, xr);
+		sum[x] = sum[2 * x + 1] + sum[2 * x + 2];
+		return;
+	}
+
+	int getsum(int ql, int qr, int x = 0, int xl = 0, int xr = n)
+	{
+		if(xl >= qr || xr <= ql)
+			return 0;
+		if(xl >= ql && xr <= qr)
+			return sum[x];
+		add(x, xl, xr);
+		int xm = (xl + xr)/2, res = 0;
+		res += getsum(ql, qr, 2 * x + 1, xl, xm);
+		res += getsum(ql, qr, 2 * x + 2, xm, xr);
+		return res;
+	}
+};
+
+segment tree[26];
+
+void create(int x = 0, int l = 0, int r = n)
+{
+	if(r - l < 2)
+	{
+		int indx = int(s[l]) - int('a');
+		tree[indx].sum[x] = 1;
+		return;
+	}
+
+	int m = (l + r) / 2;
+	create(2 * x + 1, l, m);
+	create(2 * x + 2, m, r);
+
+	for(int i = 0; i < 26; i++)
+		tree[i].sum[x] = tree[i].sum[2 * x + 1] + tree[i].sum[2 * x + 2];
+
+	return;
+}
+
+int main()
+{
+	freopen("input.txt", "r", stdin);
+	freopen("output.txt", "w", stdout);
+	cin >> n >> q >> s;
+	create();
+	for(int i = 0; i < q; i++)
+	{
+		int l, r;
+		cin >> l >> r; l--;
+		int indx = 0, odd = 0;
+		for(int j = 0; j < 26; j++)
+		{
+			cnt[j] = tree[j].getsum(l, r);
+			if(cnt[j] & 1)
+			{
+				odd++;
+				indx = j;
+			}
+		}
+		if(odd > 1 || (odd == 1 && (r - l) % 2 == 0))
+			continue;
+		for(int j = 0; j < 26; j++)
+			tree[j].update(l, r, 0);
+		if(odd)
+		{
+			tree[indx].update(l + (r - l) / 2, l + (r - l + 1) / 2, 1);
+			cnt[indx]--;
+		}
+		for(int j = 0; j < 26; j++)
+		{
+			if(cnt[j] == 0)
+				continue;
+			tree[j].update(l, l + cnt[j] / 2, 1);
+			tree[j].update(r - cnt[j] / 2, r, 1);
+			r -= cnt[j] / 2;
+			l += cnt[j] / 2;
+		}
+	}
+	for(int i = 0; i < n; i++)
+	{
+		char c;
+		for(int j = 0; j < 26; j++)
+			if(tree[j].getsum(i, i + 1))
+				c = j + 'a';
+		cout << c;
+	}
+	return 0;
+}
+ 			  	  			 		  		   	 				 	

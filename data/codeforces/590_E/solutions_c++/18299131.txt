@@ -1,0 +1,270 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <cctype>
+#include <climits>
+#include <cassert>
+#include <ctime>
+#include <iostream>
+#include <algorithm>
+#include <functional>
+
+#define x first
+#define y second
+#define MP std::make_pair
+#define DEBUG(...) fprintf(stderr, __VA_ARGS__)
+#define DISP(x) std::cerr << #x " = " << x << std::endl
+
+typedef long long LL;
+typedef std::pair<int, int> Pii;
+
+const int oo = 0x3f3f3f3f;
+
+template<typename T> inline bool chkmax(T &a, T b) { return a < b ? a = b, true : false; }
+template<typename T> inline bool chkmin(T &a, T b) { return a > b ? a = b, true : false; }
+template<typename T> T read(T &x)
+{
+    int f = 1;
+    char ch = getchar();
+    for (; !isdigit(ch); ch = getchar())
+        if (ch == '-')
+            f = -1;
+    for (x = 0; isdigit(ch); ch = getchar())
+        x = 10 * x + ch - '0';
+    return x *= f;
+}
+template<typename T> void write(T x)
+{
+    if (x == 0) {
+        putchar('0');
+        return;
+    }
+    if (x < 0) {
+        putchar('-');
+        x = -x;
+    }
+    static char s[20];
+    int top = 0;
+    for (; x; x /= 10)
+        s[++top] = x % 10 + '0';
+    while (top)
+        putchar(s[top--]);
+}
+// EOT
+
+const int MAXN = 755, MAXL = 1e7 + 5;
+
+int N;
+char mempool[MAXL];
+char *S[MAXN];
+int len[MAXN];
+int G[MAXN][MAXN];
+
+namespace ACAutomata
+{
+
+const int SIZE = MAXL;
+const int SIGMA = 2;
+
+int size, ch[SIZE][SIGMA];
+int id[SIZE];
+int fail[SIZE], last[SIZE];
+
+inline void init()
+{
+    size = 1; // ERR#1: forgot current line
+}
+
+void insert(const char *s, int n, int id0)
+{
+    int u = 1;
+    for (int i = 0; i < n; ++i) {
+        int x = s[i] - 'a';
+        if (ch[u][x] == 0)
+            ch[u][x] = ++size;
+        u = ch[u][x];
+    }
+    id[u] = id0;
+}
+
+void build()
+{
+    static int q[SIZE];
+    int front = 0, rear = 0;
+
+    for (int i = 0; i < SIGMA; ++i) {
+        int u = ch[1][i];
+        if (u) {
+            fail[u] = 1;
+            q[rear++] = u;
+        }
+    }
+    while (front != rear) {
+        int u = q[front++];
+        for (int i = 0; i < SIGMA; ++i) {
+            int &v = ch[u][i];
+            if (v == 0)
+                v = ch[fail[u]][i];
+            else {
+                fail[v] = ch[fail[u]][i];
+                last[v] = id[fail[v]] ? fail[v] : last[fail[v]];
+                q[rear++] = v;
+            }
+        }
+    }
+}
+
+void getEdge(const char *s, int n, int cur)
+{
+    int u = 1;
+    for (int i = 0; i < n; ++i) {
+        int x = s[i] - 'a';
+        if (id[u])
+            G[id[u]][cur] = true;
+        for (int p = last[u]; p && !G[id[p]][cur]; p = last[p]) {
+            G[id[p]][cur] = true;
+        }
+        u = ch[u][x];
+    }
+    for (int p = last[u]; p && !G[id[p]][cur]; p = last[p]) {
+        G[id[p]][cur] = true;
+    }
+    // int u = 1;
+    // for (int i = 0; i < n; ++i) {
+    //     int x = s[i] - 'a';
+    //     if (id[u])
+    //         G[cur][id[u]] = true;
+    //     for (int p = last[u]; p && !G[cur][id[p]]; p = last[p]) {
+    //         G[cur][id[p]] = true;
+    //     }
+    //     u = ch[u][x];
+    // }
+    // for (int p = last[u]; p && !G[cur][id[p]]; p = last[p]) {
+    //     G[cur][id[p]] = true;
+    // }
+}
+
+}
+
+namespace Hungary
+{
+
+int match[MAXN];
+bool vis[MAXN], matx[MAXN];
+bool fx[MAXN], fy[MAXN];
+
+bool dfs(int u)
+{
+    for (int v = 1; v <= N; ++v) {
+        if (G[u][v] && !vis[v]) {
+            vis[v] = true;
+            if (match[v] == 0 || dfs(match[v])) {
+                match[v] = u;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void dfs0(int u)
+{
+    // printf("dfs0(%d)\n", u);
+    if (fx[u])
+        return;
+    fx[u] = true;
+    for (int v = 1; v <= N; ++v) {
+        if (G[u][v] && fy[v]) {
+            fy[v] = false;
+            if (match[v])
+                dfs0(match[v]);
+        }
+    }
+}
+
+int exec()
+{
+    int ret = 0;
+    for (int i = 1; i <= N; ++i) {
+        memset(vis, 0, sizeof(vis));
+        if (dfs(i)) {
+            matx[i] = true;
+            ++ret;
+        }
+    }
+    // for (int i = 1; i <= N; ++i) {
+    //     printf("match[%d]=%d\n", i, match[i]);
+    // }
+    memset(fx, 0, sizeof(fx));
+    std::fill(fy + 1, fy + N + 1, true);
+    for (int i = 1; i <= N; ++i) {
+        // printf("i=%d match[%d]=%d\n", i, i, match[i]);
+        if (!matx[i])
+            dfs0(i);
+    }
+    return ret;
+}
+
+}
+
+void input()
+{
+    read(N);
+    S[0] = mempool;
+    ACAutomata::init();
+    for (int i = 1; i <= N; ++i) {
+        S[i] = S[i - 1] + len[i - 1];
+        scanf("%s", S[i]);
+        len[i] = strlen(S[i]);
+        ACAutomata::insert(S[i], len[i], i);
+    }
+}
+
+void solve()
+{
+    ACAutomata::build();
+    for (int i = 1; i <= N; ++i) {
+        ACAutomata::getEdge(S[i], len[i], i);
+    }
+
+    // for (int i = 1; i <= N; ++i) {
+    //     for (int j = 1; j <= N; ++j) {
+    //         if (G[i][j])
+    //             printf("%d %d\n", i, N + j);
+    //         // printf("%d ", G[i][j]);
+    //     }
+    //     printf("\n");
+    // }
+
+    for (int k = 1; k <= N; ++k) {
+        for (int i = 1; i <= N; ++i) {
+            for (int j = 1; j <= N; ++j) {
+                G[i][j] |= G[i][k] & G[k][j];
+            }
+        }
+    }
+
+    int ans = N - Hungary::exec();
+
+    write(ans); putchar('\n');
+    for (int i = 1; i <= N; ++i) {
+        if (Hungary::fx[i] && Hungary::fy[i]) {
+            write(i); putchar(' ');
+        }
+    }
+    putchar('\n');
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+    freopen("tmp.in", "r", stdin);
+    freopen("tmp.out", "w", stdout);
+#endif
+
+    input();
+    solve();
+
+    return 0;
+}

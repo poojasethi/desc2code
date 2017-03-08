@@ -1,0 +1,88 @@
+#include<algorithm>
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<queue>
+#define rep(i,a,b) for(int i=a;i<=b;++i)
+#define erp(i,a,b) for(int i=a;i>=b;--i)
+#define LL long long
+using namespace std;
+const int MAXN = 50005;
+
+int N, x, dat[MAXN], dn, ops[MAXN], m;
+LL fns[MAXN], K;
+struct task {
+	int t, s, p, id;
+	bool operator < (const task&b) const { return t < b.t; }
+} a[MAXN];
+
+struct Node {
+	int rem, p, id;
+	Node(int a=0,int b=0,int c=0):rem(a),p(b),id(c){}
+	bool operator < (const Node&b) const { return p<b.p; }
+};
+
+LL cal(int p)
+{
+	rep(i, 1, N) if(a[i].id==x) {a[i].p=p;break;}
+	sort(a+1, a+N+1);
+	priority_queue<Node> Q;
+	LL las = 0;
+	rep(i, 1, N)
+	{
+		if (Q.empty() || las==a[i].t)
+		{
+			Q.push(Node(a[i].s, a[i].p, a[i].id));
+			las = a[i].t;
+			continue;
+		}
+		LL tmp = a[i].t - las;
+		while (!Q.empty() && tmp>0)
+		{
+			Node u = Q.top(); Q.pop();
+			if (tmp >= u.rem) fns[u.id] = las + u.rem, tmp-=u.rem;
+			else u.rem -= tmp, tmp = 0, Q.push(u);
+		}
+		las = a[i].t;
+		Q.push(Node(a[i].s, a[i].p, a[i].id));
+	}
+	while (!Q.empty())
+	{
+		las += Q.top().rem;
+		fns[Q.top().id] = las;
+		Q.pop();
+	}
+	return fns[x];
+}
+
+int main()
+{
+	freopen("input.txt","r",stdin);
+	freopen("output.txt","w",stdout);
+	scanf("%d", &N);
+	rep(i, 1, N)
+	{
+		scanf("%d%d%d", &a[i].t, &a[i].s, &a[i].p);
+		a[i].id = i;
+		if (~a[i].p) dat[++dn] = a[i].p;
+		if (a[i].p==-1) x = i;
+	}
+	scanf("%I64d", &K);
+	dat[++dn] = 0, dat[++dn] = 1000000001;
+	sort(dat+1, dat+dn+1);
+	dn = unique(dat+1, dat+dn+1)-dat-1;
+	rep(i, 1, dn-1) if (dat[i+1]-dat[i]>1) ops[++m] = dat[i]+1;
+	sort(ops+1, ops+m+1);
+	int l = 1, r = m, mid, ans;
+	while (l <= r)
+	{
+		mid = (l+r)>>1;
+		LL ret = cal(ops[mid]);
+		if (ret==K) { ans = ops[mid]; break; }
+		if (ret > K) l = mid + 1;
+		else r = mid - 1;
+	}
+	printf("%d\n", ans);
+	rep(i, 1, N) printf("%I64d%c", fns[i], i!=N?' ':'\n');
+	return 0;
+}

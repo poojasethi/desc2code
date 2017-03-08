@@ -1,0 +1,111 @@
+#include <iostream>
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
+#include <vector>
+#include <queue>
+#include <cstdio>
+#include <algorithm>
+#include <numeric>
+#include <climits>
+#include <sstream>
+#include <cstring>
+#include <cassert>
+#include <stack>
+#include <cmath>
+#include <map>
+#include <set>
+#include <utility>
+#include <memory.h>
+#include <time.h>
+#include <list>
+#include <deque>
+#include <functional>
+
+using namespace std;
+
+#define MX 800005
+#define INF 2100000000
+#define MN 200005
+
+struct Seg_T {
+	int ma[MX], mi[MX], opt[MX], chk1[MX], chk2[MX], t1[MX];
+	void build(int t, int l, int r) {
+		ma[t] = opt[t] = INF; t1[t] = l;
+		if (l == r) return;
+		int mid = (l + r) / 2;
+		build(t*2, l, mid), build(t*2+1, mid+1, r); 
+	}
+	void renew(int t, int v, int flag) {
+		if (flag) ma[t] = chk1[t] = v;
+		else      mi[t] = t1[t] - v, chk2[t] = v;
+		opt[t] = ma[t] + mi[t];	
+	}
+	void down(int t) {
+		if (chk1[t]) renew(t*2, chk1[t], 1), renew(t*2+1, chk1[t], 1), chk1[t] = 0;
+		if (chk2[t]) renew(t*2, chk2[t], 0), renew(t*2+1, chk2[t], 0), chk2[t] = 0;	
+	}
+	void up(int t) {
+		int l = t*2, r = t*2+1;
+		ma[t] = min(ma[l], ma[r]);
+		mi[t] = min(mi[l], mi[r]);
+		opt[t] = min(opt[l], opt[r]);
+	}
+	void update(int t, int l, int r, int a, int b, int v, int flag) {
+		if (l == a && r == b) {
+			renew(t, v, flag); return;
+		}
+		int mid = (l + r) / 2; down(t);
+		if (b <= mid) update(t*2, l, mid, a, b, v, flag);
+		else if(a > mid) update(t*2+1, mid+1, r, a, b, v, flag);
+		else {
+			update(t*2, l, mid, a, mid, v, flag);
+			update(t*2+1, mid+1, r, mid+1, b, v, flag);	
+		}
+		up(t); 
+	}			
+	int get(int t, int l, int r, int k) {
+		if (l == r) return opt[t] <= k?l:INF;
+		int mid = (l + r) / 2; down(t); 
+		return opt[t*2] <= k?get(t*2, l, mid, k):get(t*2+1, mid+1, r, k);	
+	} 
+}tree;
+
+int N, K, D;
+int a[MN], stk1[MN], stk2[MN];
+map<int, int> H;
+
+main() {
+	int i, j, k, last, rlt(0), top1(0), top2(0), st, en;
+	scanf("%d%d%d", &N, &K, &D);
+	for (i = 1; i <= N; i++) {
+		scanf("%d", a + i);
+		a[i] += 1000000000;
+	}
+	
+	last = 0;
+	tree.build(1, 1, N);	
+	if (!D) {
+		for (i = 1; i <= N; i++) {
+			if (i > 1 && a[i-1] != a[i]) last = i - 1;
+			if (rlt < i - last) rlt = i - last, st = last+1, en = i;	
+		}	
+	} else {
+		for (i = 1; i <= N; i++) { 
+			last = max(last, H[a[i]]); H[a[i]] = i;
+			if (i > 1 && a[i-1]%D != a[i]%D) last = i - 1;
+			
+			while (top1 && a[stk1[top1-1]] < a[i]) top1--;
+			while (top2 && a[stk2[top2-1]] > a[i]) top2--;
+			
+			tree.update(1, 1, N, stk1[top1-1]+1, i, a[i]/D, 1);
+			tree.update(1, 1, N, stk2[top2-1]+1, i, a[i]/D, 0);
+			if (last) tree.update(1, 1, N, 1, last, INF, 1);
+			
+			int p = tree.get(1, 1, N, K+i);
+			stk1[top1++] = stk2[top2++] = i;
+			if (i - p + 1 > rlt) rlt = i - p + 1, st = p, en = i;	
+		}		
+	}	
+	printf("%d %d\n", st, en);
+}

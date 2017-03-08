@@ -1,0 +1,67 @@
+#include <cstdio>
+
+#include <cstring>
+
+using namespace std;
+
+int N, K, B;
+
+#define BITCOUNT(mask) ( __builtin_popcount((mask)) )
+#define HIGHESTSETBIT(mask) ( sizeof(int)*8-1-__builtin_clz((mask)) )
+
+const int MOD = int(1e9 + 7);
+
+#define IS_SET(mask, k) (((mask) >> (k)) & 1)
+
+int gen_new_mask(int cur_eq_mask, int set_mask) {
+   int res = cur_eq_mask;
+   for (int k = K-1; k >= 0; --k) {
+      if ( !IS_SET(cur_eq_mask, k) ) continue;
+      if ( IS_SET(set_mask, k) ) {
+         if ( !IS_SET(set_mask, k+1) ) return -1;
+      }
+      else {
+         if ( IS_SET(set_mask, k+1) ) res &= ~(1<<k);
+      }
+   }
+   return res;
+}
+
+int memo[32][32][1<<7];
+int go(int bit_pos, int set_bits, int eq_mask) {
+   if (bit_pos < 0) return set_bits == 0 && eq_mask == 0;
+   if (set_bits < 0) return 0;
+   int& res = memo[bit_pos][set_bits][eq_mask];
+   if (res < 0) {
+      res = 0;
+      for (int set_mask = (1<<K)-1; set_mask >= 0; --set_mask) {
+          int b = BITCOUNT(set_mask) & 1;
+          int new_eq_mask = gen_new_mask( eq_mask,
+                                          set_mask | ( IS_SET(N, bit_pos) ? (1<<K) : 0 ) );
+          if (new_eq_mask >= 0) {
+             int add = go( bit_pos-1, set_bits-b, new_eq_mask );
+             res += add;
+             if (res >= MOD) res -= MOD;
+          }
+      }
+   }
+   return res;
+}
+
+int solve() {
+   N++;
+   if (K > N) return 0;
+   memset(memo, -1, sizeof(memo));
+   return go( HIGHESTSETBIT(N), B, (1<<K)-1 );
+}
+
+int main() {
+   int TC;
+   scanf("%d", &TC);
+   for (int tc = 1; tc <= TC; ++tc) {
+      scanf("%d %d %d", &N, &K, &B);
+      int res = solve();
+      printf("%d\n", res);
+   }
+   return 0;
+}

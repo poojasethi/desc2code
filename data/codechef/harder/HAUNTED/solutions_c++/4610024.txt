@@ -1,0 +1,128 @@
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+
+using namespace std;
+
+char maze[32][32];
+int ALL, m, n, c, k, l;
+int ghostx[10], ghosty[10], ghostpx[30][300], ghostpy[30][300], pathsize[30];
+int bitmaze[32], entryx, entryy, exitx, exity;
+
+void makepath (int x1, int y1, int x2, int y2, int ghost)
+{
+    while ((x1 != x2) || (y1 != y2))
+    {
+        ghostpx[ghost][pathsize[ghost]] = x1;
+        ghostpy[ghost][pathsize[ghost]] = y1;
+        pathsize[ghost]++;
+
+        if (x1 < x2)
+            x1++;
+        else
+        if (x1 > x2)
+            x1--;
+        else
+        if (y1 < y2)
+            y1++;
+        else
+        if (y1 > y2)
+            y1--;
+    }
+}
+
+int escape (int faint)
+{
+    int timer = 0, x, y, i, gpos[30] = {0};
+    int chef[32] = {0}, chef_[32] = {0};
+    chef[entryy] = (1 << entryx);
+    while (timer < faint)
+    {
+        for (i = 0; i <= m-1; i++)
+            chef_[i] = chef[i];
+
+        for (i = 0; i <= m-1; i++)
+        {
+            chef[i] |= (chef_[i] << 1);
+            chef[i] |= (chef_[i] >> 1);
+
+            if (i > 0)
+                chef[i] |= chef_[i-1];
+            if (i < m-1)
+                chef[i] |= chef_[i+1];
+
+            chef[i] &= bitmaze[i];
+        }
+
+        for (i = 0; i <= c-1; i++)
+        {
+            x = ghostpx[i][gpos[i]];
+            y = ghostpy[i][gpos[i]];
+            chef[y] &= ALL - (1 << x);
+
+            if (++gpos[i] == pathsize[i])
+                gpos[i] = 0;
+
+            x = ghostpx[i][gpos[i]];
+            y = ghostpy[i][gpos[i]];
+            chef[y] &= ALL - (1 << x);
+        }
+
+        timer++;
+
+        if (chef[exity] & (1 << exitx))
+        return timer;
+    }
+
+    return -1;
+}
+
+int main()
+{
+    int i, j, t;
+    scanf("%d", &t);
+    while (t)
+    {
+        scanf("%d%d%d%d", &m, &n, &c, &k);
+        ALL = (1 << n) - 1;
+        for (i = 0; i <= c-1; i++)
+        {
+            pathsize[i] = 0;
+            scanf("%d", &l);
+            for (j = 0; j <= l-1; j++)
+            {
+                cin >> ghostx[j] >> ghosty[j];
+                if (j > 0)
+                    makepath(ghostx[j-1], ghosty[j-1], ghostx[j], ghosty[j], i);
+            }
+            makepath(ghostx[l-1], ghosty[l-1], ghostx[0], ghosty[0], i);
+        }
+        for (i = 0; i<= m-1; i++)
+        {
+            bitmaze[i] = 0;
+            for (j = 0; j <= n-1; j++)
+            {
+                cin >> maze[i][j];
+
+                if (maze[i][j] != '#')
+                    bitmaze[i] |= (1 << j);
+
+                if (maze[i][j] == '@')
+                {
+                    entryx = j;
+                    entryy = i;
+                }
+
+                else
+                if (maze[i][j] == '$')
+                {
+                    exitx = j;
+                    exity = i;
+                }
+            }
+        }
+        printf("%d\n", escape(k));
+        t--;
+    }
+    return 0;
+}

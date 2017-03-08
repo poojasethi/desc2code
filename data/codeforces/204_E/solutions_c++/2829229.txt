@@ -1,0 +1,105 @@
+/*
+Author: LJQ
+PROG: Codeforces #129 Div1 E. Little Elephant and Strings
+DATE: 2012.12.26
+*/
+#include <set>
+#include <vector>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+#define ft first
+#define sd second
+#define mp make_pair
+#define pb push_back
+
+typedef long long LL;
+
+const int maxn = 200005;
+
+char st[maxn];
+int id[maxn], len[maxn];
+int a[maxn], rank[maxn << 1], sa[maxn], h[maxn];
+pair < pair <int, int>, int > c[maxn];
+int n, K, N;
+
+void init()
+{
+	scanf("%d%d", &n, &K);
+	for (int t = 1; t <= n; t ++){
+		scanf("%s", st); int Len = strlen(st), L = Len;
+		for (int i = 0; i < L; i ++)
+			id[N] = t, len[N] = Len --, a[N ++] = st[i] - 'a';
+		a[N ++] = t + 25;
+	}
+}
+
+void mk_sa()//O(n*logn*logn)
+{
+	for (int i = 0; i < N; i ++) rank[i] = a[i];
+	for (int d = 1; d < N; d <<= 1){
+		for (int i = 0; i < N; i ++) c[i] = mp(mp(rank[i], rank[i + d]), i);
+		sort(c, c + N);
+		int cnt = 0; rank[c[0].sd] = 0;
+		for (int i = 1; i < N; i ++){
+			if (c[i].ft != c[i-1].ft) cnt ++; rank[c[i].sd] = cnt;
+		}
+		if (cnt == N) break;
+	}
+	for (int i = 0; i < N; i ++) sa[rank[i]] = i;
+	for (int i = 0, k = 0; i < N; i ++){
+		if (rank[i]) for (int j = sa[rank[i] - 1]; a[j + k] == a[i + k]; k ++);
+		h[rank[i]] = k; if (k) k --;
+	}
+}
+
+multiset < int, greater <int> > H;
+int que[maxn << 1], S[maxn]; LL ans[maxn];
+vector <int> in[maxn], out[maxn];
+int f, g, b;
+
+inline int Fmin(int x, int y){
+	return x < y ? x : y;
+}
+
+inline void Add(int t){
+	int s = Fmin(len[sa[b]], f == g ? maxn * 10 : h[que[f]]);
+	in[b].pb(s); out[t].pb(s);
+}
+
+void work()
+{
+	mk_sa();
+	if (n < K) return;
+	int cnt = 0; b = -1;
+	for (int i = 0; !i || id[sa[i - 1]]; ){
+		while (cnt < K){
+			if (!(S[id[sa[i]]] ++)) cnt ++;
+			while (f < g && h[que[g - 1]] >= h[i]) g --;
+			que[g ++] = i ++; if (cnt != K && b != -1) Add(i);
+		}
+		if (f <= g){b ++; if (que[f] == b) f ++;}
+		Add(i); if (!(-- S[id[sa[b]]])) cnt --;
+	}
+	for (int i = 0; id[sa[i]]; i ++){
+		for (int j = 0; j < out[i].size(); j ++) H.erase(H.lower_bound(out[i][j]));
+		for (int j = 0; j < in[i].size(); j ++) H.insert(in[i][j]);
+		ans[id[sa[i]]] += *H.begin();
+	}
+}
+
+void print()
+{
+	for (int i = 1; i <= n; i ++) printf("%I64d ", ans[i]); puts("");
+}
+
+int main()
+{
+	init();
+	work();
+	print();
+	return 0;
+}

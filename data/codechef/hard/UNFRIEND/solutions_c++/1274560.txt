@@ -1,0 +1,230 @@
+// #includes {{{
+#include <algorithm>
+#include <numeric>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <queue>
+#include <deque>
+#include <stack>
+#include <set>
+#include <map>
+#include <cstdio>
+#include <cstdlib>
+#include <cassert>
+#include <cstring>
+#include <cmath>
+using namespace std;
+// }}}
+// pre-written code {{{
+#define REP(i,n) for(int i=0;i<(int)(n);++i)
+#define RREP(i,a,b) for(int i=(int)(a);i<(int)(b);++i)
+#define FOR(i,c) for(typeof((c).begin()) i=(c).begin();i!=(c).end();++i)
+//#define IFOR(i,it,c) for(__typeof((c).begin())it=(c).begin();it!=(c).end();++it,++i)
+#define ALL(c) (c).begin(), (c).end()
+#define MP make_pair
+
+#define EXIST(e,s) ((s).find(e)!=(s).end())
+
+#define RESET(a) memset((a),0,sizeof(a))
+#define SET(a) memset((a),-1,sizeof(a))
+#define PB push_back
+
+const int INF=0x3f3f3f3f;
+
+typedef long long Int;
+typedef unsigned long long uInt;
+typedef long double rn;
+
+typedef pair<int,int> pii;
+
+#ifdef DEBUG
+#include"debug.h"
+#include"print.h"
+#endif
+// }}}
+
+//{{{ Graph
+typedef int Weight;
+struct Edge {
+	int src, dst, rev;
+	Weight weight;
+	Edge(int src, int dst, Weight weight=1,int rev=-1) :
+		src(src), dst(dst), weight(weight), rev(rev) { }
+};
+bool operator < (const Edge &e, const Edge &f) {
+	return e.weight != f.weight ? e.weight > f.weight : // !!INVERSE!!
+		e.src != f.src ? e.src < f.src : e.dst < f.dst;
+}
+typedef vector<Edge> Edges;
+typedef vector<Edges> Graph;
+
+typedef vector<Weight> Array;
+typedef vector<Array> Matrix;
+
+//add bi-directional edge
+void addBiEdge(Graph &g,int from ,int to, Weight w=1){
+	while(g.size()<max(from,to)+1)g.push_back(Edges());
+	g[from].push_back(Edge(from,to,w,g[to].size()));
+	g[to].push_back(Edge(to,from,w,g[from].size()-1));
+}
+//add directional edge
+void addEdge(Graph &g,int from ,int to, Weight w=1){
+	while(g.size()<from+1)g.push_back(Edges());
+	g[from].push_back(Edge(from,to,w));
+}
+#ifdef DEBUG
+#include"graph/graphviz.h"
+#endif
+//}}}
+//{{{ io
+struct IO{ }io;//dummy
+#define endl "\n"
+IO& operator>>(IO &io,int &n){scanf("%d",&n);return io;}
+IO& operator>>(IO &io,unsigned int &n){scanf("%u",&n);return io;}
+IO& operator>>(IO &io,long long &n){scanf("%lld",&n);return io;}
+IO& operator>>(IO &io,unsigned long long &n){scanf("%llu",&n);return io;}
+IO& operator>>(IO &io,double &n){scanf("%lf",&n);return io;}
+IO& operator>>(IO &io,long double &n){scanf("%Lf",&n);return io;}
+IO& operator>>(IO &io,char *c){scanf("%s",c);return io;}
+
+IO& operator<<(IO &io,const int &n){printf("%d",n);return io;}
+IO& operator<<(IO &io,const unsigned int &n){printf("%u",n);return io;}
+IO& operator<<(IO &io,const long long &n){printf("%lld",n);return io;}
+IO& operator<<(IO &io,const unsigned long long &n){printf("%llu",n);return io;}
+IO& operator<<(IO &io,const double &n){printf("%lf",n);return io;}
+IO& operator<<(IO &io,const long double &n){printf("%Lf",n);return io;}
+IO& operator<<(IO &io,const char c[]){printf("%s",c);return io;}
+template<class T>
+IO& operator>>(IO&io,vector<T> &v){
+	int n;scanf("%d",&n);
+	REP(i,n){
+		T t;io>>t;
+		v.push_back(t);
+	}
+}
+//}}}
+
+#include<bitset>
+
+const int BS=201;
+//const int BS=6;
+typedef bitset<BS> B;
+int N,M,W;
+map<int,int> wp;
+Edges e;
+Graph g;
+
+vector<bool> vis;
+vector<int> result;
+
+bool dfs(int u,int d){
+	if(vis[u])return false;
+	vis[u]=true;
+	if(u==d)return true;
+	FOR(e,g[u]){
+		result.push_back(e->weight);
+		if(dfs(e->dst,d))return true;
+		result.pop_back();
+	}
+	return false;
+}
+
+vector<B> transpose(const vector<B> &A){
+	vector<B> A2(BS);
+	REP(i,A.size()){
+		REP(j,BS){
+			if(A[i].test(j))A2[j].set(i);
+		}
+	}
+	return A2;
+}
+
+void gauss_elim(vector<B> &A,int n,int m){
+	int r=0;
+	for(int j=0;j<m;j++){
+		int pivot=-1;
+		for(int i=r;i<n;i++){
+			if(A[i].test(j)){
+				pivot=i;
+				break;
+			}
+		}
+		if(pivot==-1)continue;
+		swap(A[r],A[pivot]);
+		REP(i,n){
+			if(i==r or !A[i].test(j))continue;
+			A[i]^=A[r];
+		}
+		r++;
+	}
+}
+
+void main2(){
+	e.clear();
+	io>>N>>M;
+	g.assign(N,Edges());
+	wp.clear();
+	REP(i,M){
+		int a,b;
+		io>>a>>b;
+		a--;b--;
+		e.push_back(Edge(a,b,i));
+	}
+	io>>W;
+	REP(i,W){
+		int a;
+		io>>a;
+		a--;
+		wp[a]=i;
+	}
+	vector<B> A;
+	REP(i,M){
+		result.clear();
+		vis.assign(N,false);
+		if(dfs(e[i].src,e[i].dst)){
+			result.push_back(i);
+//			cout<<result<<endl;
+			B b;
+			int c=0;
+			FOR(it,result){
+				int ei=*it;
+				if(EXIST(ei,wp)){
+					b.set(wp[ei]);
+				}else{
+					c^=1;
+				}
+			}
+			if(c){
+				b.set(wp.size());
+			}
+			A.push_back(b);
+		}
+		addBiEdge(g,e[i].src,e[i].dst,i);
+	}
+	gauss_elim(A,A.size(),wp.size());
+	REP(i,A.size()){
+		bool found=false;
+		REP(j,wp.size())if(A[i].test(j))found=true;
+		if(found)continue;
+		if(A[i].test(wp.size())){
+			printf("NO\n");
+			return;
+		}
+	}
+	printf("YES\n");
+	
+//	cout<<g.size()<<endl;
+//	graphviz(g);
+}
+
+//{{{ main function
+int main() {
+	int T;io>>T;
+	REP(ct, T){
+//		printf("Case %d: ",ct+1);
+		main2();
+	}
+	return 0;
+}
+//}}}

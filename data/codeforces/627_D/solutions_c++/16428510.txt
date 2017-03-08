@@ -1,0 +1,77 @@
+#include<bits/stdc++.h>
+#define M 200000
+#define fi first
+#define se second
+using namespace std;
+vector < int > E[M + 5];
+typedef pair < int , int > ii;
+int n , k , a[M + 5] , b[M + 5] , f[M + 5] , nc[M + 5];
+bool valid;
+void dfs(int u,int pre){
+	nc[u] = 1; f[u] = b[u];
+	int c = 0;
+	for(int i = 0 ; i < E[u].size() ; i++){
+		int v = E[u][i];
+		if(v == pre)	continue;
+		dfs(v , u);
+		nc[u] += nc[v];
+		if(f[v] == nc[v]) f[u] += b[u]*nc[v];
+		else c = max(c , f[v]);
+	}
+	f[u] += c*b[u];
+}
+void final_dfs(int u,int pre,int fpar){
+	ii id = ii(0 , 0); 
+	int ret = b[u];
+	for(int i = 0 ; i < E[u].size() ; i++){
+		int v = E[u][i];
+		if(v == pre)	continue;
+		if(f[v] == nc[v])	ret += b[u]*nc[v];
+		else{
+			if(f[id.fi] < f[v]){	id.se = id.fi ; id.fi = v; }
+			else if(f[id.se] < f[v]) id.se = v;
+		}
+	}
+	if(fpar == n - nc[u]) ret += b[u]*fpar;
+	ret += b[u]*max( f[id.fi] , (fpar != (n - nc[u]))*fpar );
+	if(ret >= k) valid = true;
+	for(int i = 0 ; i < E[u].size() ; i++){
+		int v = E[u][i];
+		int gpar = ret;
+		if(v == pre)	continue;
+		if(f[v] == nc[v])	gpar -= b[u]*nc[v];
+		else{
+			if(v == id.fi && f[v] > (fpar != (n - nc[u]))*fpar){
+				gpar -= b[u]*f[v]; gpar += b[u]*max((fpar != (n - nc[u]))*fpar , f[id.se]);
+			}
+		}
+		final_dfs(v , u , gpar);
+	}
+}
+bool ok(int mid){
+	for(int i = 1 ; i <= n ; i++)	b[i] = (a[i] >= mid);
+	valid = false;
+	dfs(1 , -1);
+	final_dfs(1 , -1 , 0);
+	return valid;
+}
+void loadtree(){
+	scanf("%d %d",&n,&k);
+	for(int i = 1 ; i <= n ; i++)	scanf("%d",&a[i]);
+	for(int i = 1 ; i < n ; i++){
+		int x , y;
+		scanf("%d %d",&x,&y);
+		E[x].push_back(y) ; E[y].push_back(x);
+	}	
+}
+main(){
+	//freopen("test.inp","r",stdin);
+	loadtree();
+	int lo = 1 , hi = 1e6;
+	while(lo < hi){
+		int mid = (lo + hi + 1)/2;
+		if(ok(mid))lo = mid;
+		else hi = mid - 1;
+	}
+	printf("%d",lo);
+}

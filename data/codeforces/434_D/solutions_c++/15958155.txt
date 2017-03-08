@@ -1,0 +1,100 @@
+#include<cstring>
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+#include<queue>
+#include<map>
+#define rep(i,l,r) for (int i=l;i<=r;i++)
+#define down(i,l,r) for (int i=l;i>=r;i--)
+#define clr(x,y) memset(x,y,sizeof(x))
+#define maxn 15009
+#define maxk 69
+#define inf int(1e9)
+#define ll long long
+#define mm 1000000007
+using namespace std;
+struct edge{int obj,pre,c;
+}e[400500];
+struct data{int a,b,c,l,r,s;
+}a[maxn];
+int n,m,tot,cnt,t;
+int head[maxn],uu[maxn],cur[maxn];
+int read(){
+	ll x=0,f=1; char ch=getchar();
+	while (!isdigit(ch)){if (ch=='-') f=-1; ch=getchar();}
+	while (isdigit(ch)){x=x*10+ch-'0'; ch=getchar();}
+	return x*f;
+}
+void insert(int x,int y,int z){
+	e[++tot].obj=y; e[tot].pre=head[x]; head[x]=tot; e[tot].c=z;
+	e[++tot].obj=x; e[tot].pre=head[y]; head[y]=tot; e[tot].c=0;
+}
+bool bfs(){
+	queue<int> q; q.push(0); clr(uu,-1); uu[0]=0;
+	while (!q.empty()){
+		int u=q.front(); q.pop(); 
+		for (int j=head[u];j;j=e[j].pre){
+			int v=e[j].obj;
+			if (uu[v]==-1&&e[j].c) {
+				uu[v]=uu[u]+1; q.push(v);
+			}
+		}
+	}
+	if (uu[t]==-1) return 0;
+	return 1;
+}
+int dfs(int x,int mx){
+	if (mx==0||x==t) return mx;
+	int used=0,w;
+	for (int j=cur[x];j;j=e[j].pre){
+		int v=e[j].obj;
+		if (uu[v]==uu[x]+1&&e[j].c){
+			w=dfs(v,min(mx-used,e[j].c));
+			if (w<=0) {uu[v]=-1; continue;}
+			used+=w; e[j].c-=w; e[j^1].c+=w;
+			cur[x]=j;
+			if (used==mx) return used;
+		}
+	}
+	return used;
+}
+int dinic(){
+	int ans=0;
+	while (bfs()){
+		rep(i,0,t) cur[i]=head[i]; 
+		ans+=dfs(0,inf);
+	}
+	return ans;
+}
+int fun(int x,int y){
+	int A=a[x].a,B=a[x].b,C=a[x].c;
+	return A*y*y+B*y+C;
+}
+int id(int x,int y){
+	return a[x].s+y-a[x].l;
+}
+int main(){
+//	freopen("in.txt","r",stdin);
+	n=read(); m=read();
+	rep(i,1,n) a[i].a=read(),a[i].b=read(),a[i].c=read();
+	cnt=0; tot=1;
+	int mx=0;
+	rep(i,1,n) {
+		a[i].l=read(); a[i].r=read();
+		a[i].s=cnt+1;
+		cnt+=a[i].r-a[i].l+2;
+		rep(j,a[i].l,a[i].r) mx=max(mx,fun(i,j));
+	}
+	t=cnt+1;
+	rep(i,1,n){
+		insert(0,id(i,a[i].l),inf);
+		rep(j,a[i].l,a[i].r) insert(id(i,j),id(i,j+1),mx-fun(i,j));
+		insert(id(i,a[i].r+1),t,inf);
+	}
+	rep(i,1,m){
+		int u=read(),v=read(),d=read();
+		rep(j,a[u].l,a[u].r) if (a[v].l<=j-d&&j-d<=a[v].r+1) insert(id(u,j),id(v,j-d),inf); 
+	}
+	printf("%d\n",mx*n-dinic());
+	return 0;
+}

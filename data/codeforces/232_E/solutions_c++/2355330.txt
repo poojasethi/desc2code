@@ -1,0 +1,127 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+#include<iostream>
+#include<vector>
+using namespace std;
+
+const int MAX=500+10;
+const int MAXQ=600001;
+const int NUM=20;
+const int SIZE=32;
+
+int n,m,Q;
+char g[MAX][MAX];
+int x[MAXQ],y[MAXQ],ans[MAXQ],hh[MAX],h[MAX];
+vector<int> quest[MAX][MAX];
+
+int dp1[NUM][MAX][MAX],dp2[NUM][MAX][MAX];
+
+void work(int a,int b)
+{
+	int mid=(a+b)/2,i,j,k,d,top=0;
+	d=1;
+	while(1)
+	{
+		++top;
+		for(i=1;i<=n;++i)
+			for(j=a;j<=b;++j)
+				dp1[top][i][j]=dp2[top][i][j]=0;
+		if(d>=n)break;
+		d+=SIZE;
+	}
+	int now=0;
+	for(i=1;i<=n;++i)
+	{
+		if(i%SIZE==1)
+			++now;
+		hh[i]=(1<<(i-(now-1)*SIZE-1));
+		h[i]=now;
+	}
+	for(i=n;i>=1;--i)
+		if(g[i][mid]!='#')
+		{
+			dp1[h[i]][i][mid]|=hh[i];
+			if(i!=n)
+			{
+				for(k=1;k<=top;++k)
+					dp1[k][i][mid]|=dp1[k][i+1][mid];
+			}
+		}
+	for(i=n;i>=1;--i)
+		for(j=mid-1;j>=a;--j)
+		{
+			if(g[i][j]=='#')continue;
+			if(i!=n)
+				for(k=1;k<=top;++k)
+					dp1[k][i][j]|=dp1[k][i+1][j];
+			for(k=1;k<=top;++k)
+				dp1[k][i][j]|=dp1[k][i][j+1];
+		}
+	for(i=1;i<=n;++i)
+		if(g[i][mid]!='#')
+		{
+			dp2[h[i]][i][mid]|=hh[i];
+			if(i!=1)
+			{
+				for(k=1;k<=top;++k)
+					dp2[k][i][mid]|=dp2[k][i-1][mid];
+			}
+		}
+	for(i=1;i<=n;++i)
+		for(j=mid+1;j<=b;++j)
+		{
+			if(g[i][j]=='#')continue;
+			if(i!=1)
+				for(k=1;k<=top;++k)
+					dp2[k][i][j]|=dp2[k][i-1][j];
+			for(k=1;k<=top;++k)
+				dp2[k][i][j]|=dp2[k][i][j-1];
+		}
+	for(i=1;i<=n;++i)
+		for(j=a;j<=mid;++j)
+		{
+			if(g[i][j]=='#')continue;
+			for(k=0;k<(int)quest[i][j].size();++k)
+			{
+				int now=quest[i][j][k];
+				int x2=x[now],y2=y[now];
+				if(y2<=b && y2>=mid)
+				{
+					for(int l=1;l<=top;++l)
+						if(dp1[l][i][j] & dp2[l][x2][y2])
+						{
+							ans[now]=1;
+							break;
+						}
+				}
+			}
+		}
+	if(a==b)return;
+	work(a,mid);work(mid+1,b);
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt","r",stdin);freopen("output.txt","w",stdout);
+#endif
+	int i,x1,x2,y1,y2;
+	scanf("%d%d",&n,&m);
+	for(i=1;i<=n;++i)
+		scanf("%s",g[i]+1);
+	scanf("%d",&Q);
+	for(i=1;i<=Q;++i)
+	{
+		scanf("%d %d %d %d",&x1,&y1,&x2,&y2);
+		quest[x1][y1].push_back(i);
+		x[i]=x2;y[i]=y2;
+	}
+	work(1,m);
+	for(i=1;i<=Q;++i)
+		if(ans[i])
+			printf("Yes\n");
+		else printf("No\n");
+	return 0;
+}

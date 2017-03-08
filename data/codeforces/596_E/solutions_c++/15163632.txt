@@ -1,0 +1,103 @@
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#include <cstring>
+#define MAX 205
+
+using namespace std;
+
+#define FOR(x, y, z) for (int x = (y); x < (z); x++)
+#define MP make_pair
+#define F first
+#define S second
+#define PB push_back
+typedef pair<int, int> ii;
+
+int n, m, q, a[MAX], b[MAX], comp[MAX][MAX], last[10];
+ii G[MAX][MAX];
+vector<ii> G_rev[MAX][MAX];
+char A[MAX][MAX], str[1000005];
+bool cycle[MAX][MAX], cycle_set[MAX*MAX+1][10], vis[MAX*MAX+1];
+
+bool valid(ii p) { return p.F >= 0 && p.F < n && p.S >= 0 && p.S < m; }
+
+int cx, cy;
+bool dfs1(int x, int y, int r) {
+   int i = G[x][y].F, j = G[x][y].S, ret = false;
+   comp[x][y] = r;
+   if (!valid(G[x][y])) return false;
+   if (!comp[i][j]) ret = dfs1(i, j, r);
+   else if (comp[i][j] == comp[x][y])
+      { cx = i; cy = j; ret = true; }
+   if (ret) cycle[x][y] = true;
+   return ret && !(x == cx && y == cy);
+}
+
+bool dfs2(int x, int y, char *str, int l) {
+   bool ret = false;
+   if (!l) return true;
+   if (!G_rev[x][y].size() && l == 1) return str[l-1] == A[x][y];
+   FOR (i, 0, G_rev[x][y].size()) {
+      int u = G_rev[x][y][i].F, v = G_rev[x][y][i].S;
+      if (!cycle[u][v]) {
+         if (str[l-1] == A[x][y]) ret |= dfs2(u, v, str, l-1);
+         else ret |= dfs2(u, v, str, l);
+         if (ret) return true;
+      }
+   }
+   return ret;
+}
+
+int main() {
+   scanf("%d%d%d", &n, &m, &q);
+   FOR (i, 0, n) scanf(" %s", A[i]);
+   FOR (i, 0, 10) scanf("%d%d", &a[i], &b[i]);
+   FOR (i, 0, n) FOR(j, 0, m) {
+      int t = A[i][j] - '0';
+      ii np = MP(i+a[t], j+b[t]);
+      G[i][j] = np;
+      if (valid(np)) G_rev[np.F][np.S].PB(MP(i, j));
+   }
+   int r = 1;
+   FOR (i, 0, n) FOR (j, 0, m)
+      if (!comp[i][j]) { cx = cy = -1; dfs1(i, j, r++); }
+   FOR (i, 0, n) FOR (j, 0, m)
+      if (cycle[i][j]) cycle_set[comp[i][j]][A[i][j]-'0'] = true;
+
+   FOR (x, 0, q) {
+      bool ans = false;
+      scanf(" %s", str);
+      int lstr = strlen(str);
+
+      FOR (i, 0, 10) last[i] = -1;
+      for (int i = lstr-1; i >= 0; i--)
+         last[str[i]-'0'] = max(last[str[i]-'0'], i);
+      
+      // Chains
+      int l = lstr;
+      while (l>1 && str[l-1] == str[l-2]) l--;
+      FOR (i, 0, n) FOR (j, 0, m) // chains
+         if (!valid(G[i][j])) // sink
+            if (ans = dfs2(i, j, str, l)) { i = n+1; j = m+1; }
+
+      if (!ans) {
+         FOR (i, 1, r+1) vis[i] = false; 
+         FOR (i, 0, n) FOR(j, 0, m) // cycles
+            if (!vis[comp[i][j]] && cycle[i][j]) {
+               vis[comp[i][j]] = true;
+               l = -1;
+               FOR (k, 0, 10) if (!cycle_set[comp[i][j]][k]) l = max(l, last[k]);
+               l++;
+
+               int x=i, y=j;
+               do {
+                  int t = x; x = G[x][y].F; y = G[t][y].S;
+                  if (ans = dfs2(x, y, str, l))
+                     { i = n + 1; j = m + 1; x = i; y = j; } // triple break;
+               } while (x != i || y != j);
+            }
+      }
+      printf("%s\n", ans ? "YES" : "NO");
+   }
+	return 0;
+}

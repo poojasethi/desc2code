@@ -1,0 +1,154 @@
+#include<cstdio>
+#include<cstdlib>
+#define MAXN 101000
+
+int n,m,Time,Ti[MAXN],WhichTime[MAXN],
+	a[MAXN],b[MAXN],r[MAXN],Y[MAXN],F[MAXN],
+	x[MAXN],y[MAXN],f[MAXN],T(2),s[MAXN],
+	Seq[2*MAXN],Seqt,_Seq[MAXN],R[2*MAXN],
+	c[40*MAXN][3],p[40*MAXN],t,d[MAXN],
+	Fat[MAXN][20];
+
+char Chr;
+
+void read(int&x)
+{
+	for(;(Chr=getchar())<'0';);
+	for(x=Chr-'0';(Chr=getchar())>='0';x=x*10+Chr-'0');
+}
+
+void IN(int a,int b){x[T]=f[a];y[T]=b;f[a]=T++;}
+
+void Add(int&x,int y,int k,int peo)
+{
+	int _(x);
+	x=++t;
+	c[x][0]=c[_][0];
+	c[x][1]=c[_][1];
+	p[x]=p[_]+peo;
+	if(k==-1)return;
+	if(y&(1<<k))Add(c[x][1],y,k-1,peo);
+		else Add(c[x][0],y,k-1,peo);
+}
+
+void Dfs(int Root)
+{
+	int i,l(0);
+	for(i=1;i<=n;i++)if(F[i])IN(F[i],i);
+	Seqt=1;
+	d[Seq[Seqt++]=Root]=1;
+	for(s[0]=Root;l>=0;)
+	if(!f[s[l]])
+	{
+		Seq[Seqt++]=-s[l];
+		l--;
+	}
+	else
+	{
+		Seq[Seqt++]=s[l+1]=y[f[s[l]]];
+		d[y[f[s[l]]]]=d[s[l]]+1;
+		f[s[l]]=x[f[s[l]]];
+		l++;
+	}
+	Ti[0]=Time+1;
+	for(i=0;i<Seqt;i++)
+	{
+		if(Seq[i]>0)_Seq[Seq[i]]=i;
+		R[i]=R[i-1];
+		Add(R[i],Ti[abs(Seq[i])],16,Seq[i]<0?-1:1);
+	}
+}
+
+int Sum(int x,int y,int k)
+{
+	if(!x)return 0;
+	if(k==-1)return p[x];
+	if(y&(1<<k))return p[c[x][0]]+Sum(c[x][1],y,k-1);
+	return Sum(c[x][0],y,k-1);
+}
+
+int Count(int I,int J,int Y)
+{
+	Y=WhichTime[Y];
+//printf("%d %d %d-- %d %d\n",I,J,Y,_Seq[I]-1,_Seq[J]);
+//printf("%d\n",Sum(R[_Seq[I]-1],Y,16)-Sum(R[_Seq[J]],Y,16));
+	return Sum(R[_Seq[I]-1],Y,16)-Sum(R[_Seq[J]],Y,16);
+}
+
+int GetLca(int A,int B)
+{
+	if(d[A]<d[B]){int C(A);A=B;B=C;}
+	for(int k=16;k>=0;k--)
+		if(d[Fat[A][k]]>=d[B])
+			A=Fat[A][k];
+	for(int k=16;k>=0;k--)
+		if(Fat[A][k]!=Fat[B][k])
+		{
+			A=Fat[A][k];
+			B=Fat[B][k];
+		}
+	return A==B?A:F[A];
+}
+
+int main()
+{
+	int i,j,k,C1,C2,C3,Lca,L;
+	read(n);
+	for(i=1;i<=n;i++)read(F[i]);
+	read(m);
+	for(i=0;i<m;i++)
+	{
+		read(j);
+		WhichTime[i]=Time;
+		if(j==1)
+		{
+			read(k);
+			Ti[k]=++Time;
+			r[i]=-1;
+		}
+		else
+		{
+			read(a[i]);
+			read(b[i]);
+			read(r[i]);
+			read(Y[i]);
+		}
+	}
+	WhichTime[m]=++Time;
+	for(i=1;i<=n;i++)if(!Ti[i])Ti[i]=Time;
+	for(i=1;i<=n;i++)if(!F[i])Dfs(i);
+	for(i=1;i<=n;i++)Fat[i][0]=F[i];
+	for(k=1;k<=16;k++)
+		for(i=1;i<=n;i++)
+			Fat[i][k]=Fat[Fat[i][k-1]][k-1];
+	for(i=0;i<m;i++)
+	if(r[i]!=-1)
+	{
+		Lca=GetLca(a[i],b[i]);
+		C1=Count(a[i],Lca,Y[i])+Count(a[i],Lca,m)-Count(a[i],Lca,i);
+		C2=Count(b[i],F[Lca],Y[i])+Count(b[i],F[Lca],m)-Count(b[i],F[Lca],i);
+		if(C1+C2<r[i]){printf("-1\n");continue;}
+		if(C1>=r[i])
+		{
+			L=a[i];
+			for(k=16;k>=0;k--)
+			if(d[Fat[L][k]]>=d[Lca])
+			{
+				C1=Count(a[i],Fat[L][k],Y[i])+Count(a[i],Fat[L][k],m)-Count(a[i],Fat[L][k],i);
+				if(C1<r[i])L=Fat[L][k];
+			}
+		}
+		else
+		{
+			L=b[i];
+			for(k=16;k>=0;k--)
+			if(d[Fat[L][k]]>=d[Lca])
+			{
+				C3=Count(b[i],Fat[L][k],Y[i])+Count(b[i],Fat[L][k],m)-Count(b[i],Fat[L][k],i);
+				if(C1+C2-C3>=r[i])L=Fat[L][k];
+			}
+		}
+		printf("%d\n",L);
+	}
+	return 0;
+}

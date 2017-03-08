@@ -1,0 +1,115 @@
+// in the name of God the Compationate and the Merciful
+# include <bits/stdc++.h>
+
+using namespace std;
+
+typedef long long int ll;
+typedef pair <ll,ll> pii;
+
+# define PB push_back
+# define MP make_pair
+# define L first
+# define R second
+
+const int maxn = 2e5 + 100;
+const int maxl = 20;
+
+vector <pair<pii,pii> > e;
+vector <pii> adj[maxn];
+
+ll pard[maxn], par[maxn][maxl], dp[maxn][maxl], h[maxn], ans[maxn];
+
+ll root(ll v) {return (pard[v] < 0 ? v : pard[v] = root(pard[v]));}
+
+bool same(ll v,ll u) {return ((v = root(v)) == (u = root(u)));}
+
+void merge(ll v,ll u){
+	v = root(v), u = root(u);
+	if(pard[v] > pard[u])
+		swap(v, u);
+	pard[v] += pard[u];
+	pard[u] = v;
+}
+
+void dfs(ll v){
+	for (int i = 1; i < maxl; i++)
+		if(par[v][i - 1] != -1){
+			par[v][i] = par[par[v][i - 1]][i - 1];
+			dp[v][i] = max(dp[par[v][i - 1]][i - 1], dp[v][i - 1]);
+		}
+
+	for (int i = 0; i < adj[v].size(); i++){
+		ll u = adj[v][i].L;
+		ll w = adj[v][i].R;
+		if(u - par[v][0]){
+			par[u][0] = v;
+			dp[u][0] = w;
+			h[u] = h[v] + 1;
+			dfs(u);
+		}
+	}
+}
+
+ll lca(ll v,ll u){
+	if(h[u] > h[v])
+		swap(v, u);
+	ll ret = 0;
+	for (int i = maxl - 1; i >= 0; i--)
+		if(par[v][i] != -1 && h[par[v][i]] >= h[u])
+			ret = max(ret, dp[v][i]), v = par[v][i];
+
+	if(v == u)
+		return ret;
+	
+	for (int i = maxl-1; i >= 0; i--)
+		if(par[v][i] != -1 && par[v][i] != par[u][i]){
+			ret = max(ret, dp[v][i]);
+			ret = max(ret, dp[u][i]);
+			v = par[v][i], u = par[u][i];
+		}
+	ret = max(ret, dp[v][0]);
+	ret = max(ret, dp[u][0]);
+	return ret;
+}
+
+int main(){
+	ios_base::sync_with_stdio(false);
+	cin.tie(0); cout.tie(0);
+	
+	int n, m;
+	cin >> n >> m;
+	for (int i = 0; i < m; i++){
+		int v, u, w;
+		cin >> v >> u >> w;
+		v--, u--;
+		e.PB(MP(MP(w, i), MP(v, u)));
+	}
+	sort(e.begin(), e.end());
+	
+	ll MST = 0;
+	memset (pard, -1, sizeof pard);
+	for (int i = 0; i < m; i++){
+		ll v = e[i].R.L, u = e[i].R.R;
+		ll w = e[i].L.L;
+
+		if(!same(v, u)){
+			merge(v, u);
+			adj[v].PB(MP(u, w));
+			adj[u].PB(MP(v, w));
+			MST += w;
+		}
+	}
+	memset (par, -1, sizeof par);
+	dfs(0);
+
+	for (int i = 0; i < e.size(); i++){
+		ll v = e[i].R.L, u = e[i].R.R;
+		ll idx = e[i].L.R, w = e[i].L.L;
+		ans[idx] = MST + w - lca(v, u);
+	}
+
+	for (int i = 0; i < m; i++)
+		cout << ans[i] << '\n';
+
+	return 0;
+}

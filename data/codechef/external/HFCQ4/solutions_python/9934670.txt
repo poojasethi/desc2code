@@ -1,0 +1,107 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define N 100005
+
+typedef long long LL;
+
+const int NN = N << 1;
+
+struct Node {
+  int len, mask, prv;
+  Node *ch[28], *fail;
+  void clear() {
+    len = mask = 0, fail = 0;
+    memset(ch, 0, sizeof ch);
+  }
+} pool[NN], *head, *last, *sz;
+
+void init() {
+  if (sz != pool) {
+    for (Node* p = pool; p < sz; p ++) p -> clear();
+  }
+  sz = pool;
+  head = last = sz ++;
+}
+
+void add(int c) {
+  Node *p = last, *np = sz ++;
+  last = np, np -> len = p -> len + 1;
+  for ( ; p && !p -> ch[c]; p = p -> fail) p -> ch[c] = np;
+  if (p) {
+    Node *q = p -> ch[c];
+    if (p -> len + 1 == q -> len) np -> fail = q;
+    else {
+      Node *nq = sz ++;
+      *nq = *q, nq -> mask = 0;
+      nq -> len = p -> len + 1;
+      q -> fail = np -> fail = nq;
+      for ( ; p && p -> ch[c] == q; p = p -> fail) p -> ch[c] = nq;
+    }
+  } else np -> fail = head;
+}
+
+int d[N];
+Node* ord[NN];
+
+LL bit[4][N];
+
+void add(int id, int p, int v) {
+  for (int i = p; i < N; i += i & -i) bit[id][i] += v;
+}
+
+LL query(int id, int p) {
+  LL rlt = 0;
+  for (int i = p; i; i -= i & -i) rlt += bit[id][i];
+  return rlt;
+}
+
+void build() {
+  for (int i = 0; i < N; i ++) d[i] = 0;
+  for (Node* p = pool; p < sz; p ++) d[p -> len] ++;
+  for (int i = 0; i < N; i ++) d[i] += d[i - 1];
+  for (Node* p = pool; p < sz; p ++) ord[-- d[p -> len]] = p;
+  for (int i = sz - pool - 1; i >= 0; i --) {
+    Node *p = ord[i];
+    for (int _ = 0; _ < 2; _ ++) {
+      if (p -> ch[26 + _]) {
+        p -> mask |= 1 << _;
+      }
+    }
+    for (int _ = 0; _ < 26; _ ++) {
+      if (p -> ch[_]) p -> mask |= p -> ch[_] -> mask;
+    }
+    if (p != head) {
+      int L = p -> fail -> len + 1;
+      int R = min(p -> len, p -> prv);
+      add(p -> mask, L, 1LL);
+      add(p -> mask, R + 1, -1LL);
+    }
+  }
+}
+
+char s[N];
+
+main() {
+  init();
+  for (int _ = 0; _ < 2; _ ++) {
+    scanf("%s", s);
+    for (int i = 0; s[i]; i ++) {
+      add(s[i] - 'a');
+      last -> prv = i + 1;
+    }
+    add(26 + _);
+    last -> prv = 0;
+  }
+  build();
+  int q;
+  for (scanf("%d", &q); q --; ) {
+    int D, K;
+    scanf("%d %d", &D, &K);
+    if (D == 1) printf("%lld\n", query(3, K));
+    else if (D == 2) printf("%lld\n", query(1, K));
+    else if (D == 3) printf("%lld\n", query(2, K));
+    else printf("%lld\n", query(1, K) + query(2, K));
+  }
+}

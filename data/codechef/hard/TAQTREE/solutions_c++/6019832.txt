@@ -1,0 +1,144 @@
+#include <cstdio>
+#include <cmath>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <map>
+#include <queue>
+#include <set>
+#include <cassert>
+
+using namespace std;
+
+#define _ ios_base::sync_with_stdio(0);cin.tie(0);
+#define S(x) 			scanf("%d",&x)
+#define all(c) 			(c).begin(),(c).end() 
+#define sz(c) 			int((c).size())
+#define pb 				push_back
+#define present(c,x) 	((c).find(x) != (c).end()) 
+#define rep(i,x,y) 		for(int i = x; i < y; i++)
+#define REV(i,x,y) 		for(int i = x; i >= y; i--)
+#define foreach(c,itr)	for(__typeof((c).begin()) itr=(c).begin();itr!=(c).end();itr++)
+#define FILL(a,v) 		memset(a,v,sizeof(a))
+#define DB(x)			cerr<<#x<<" = "<<x<<endl
+#define debugarr(A,a,b) cerr<<#A<<" : ";rep(i,a,b) cerr<<A[i]<<" ";cerr<<endl;
+//#define R(x) 			((rand()%x) + 1)
+
+typedef long long int LL;
+typedef vector<int> vi; 
+typedef vector<vi> vvi; 
+typedef pair<int,int> ii;
+typedef vector<ii> vii;
+typedef pair<ii,int> piii;
+
+/* ------------------------Main Code----------------------- */
+const int MAX = 100002;
+
+vii g[MAX];
+int vis[MAX], f[20][MAX], d[MAX];
+int tin[MAX], tout[MAX], tm, w[MAX];
+
+
+namespace BIT
+{
+	const int LIM = 2*MAX;
+	int BIT[LIM];
+	inline void update(int idx, int val)
+	{
+		while(idx < LIM){
+			BIT[idx] += val;
+			idx += idx & -idx;
+		}
+	}
+	inline int query(int idx)
+	{
+		int res = 0;
+		while(idx){
+			res += BIT[idx];
+			idx ^= idx & -idx;
+		}
+		return res;
+	}
+}
+
+void dfs(int p, int c, int l)
+{
+	f[0][c] = p; vis[c] = 1; d[c] = l;
+	tin[c] = tm++;
+	rep(i,0,sz(g[c])){
+		int u = g[c][i].first, v = g[c][i].second;
+		if(!vis[u]){
+			dfs(c,u,l+1);
+			w[u] = v;
+		} 
+	}
+	tout[c] = tm++;
+}
+
+namespace LCA
+{
+	void pre(int n)
+	{
+		rep(i,1,20){
+			rep(j,1,n+1) if(f[i-1][j] != -1){
+				f[i][j] = f[i-1][f[i-1][j]];
+			}
+		}
+	}
+
+	inline int lca(int x, int y)
+	{
+		//if(d[x] > d[y]) swap(x,y);
+		REV(i,19,0){
+			int u = f[i][x];
+			if(u != -1 && !(tin[u] < tin[y] && tout[u] > tout[y]) ){
+				x = u;
+			}
+		}
+		return tin[x] <= tin[y] && tout[x] >= tout[y] ? x : f[0][x];
+	}
+}
+
+piii e[MAX];
+using namespace BIT;
+using namespace LCA;
+int main()
+{
+	int n;
+	S(n);
+	FILL(f,-1);
+	rep(i,1,n){
+		int x, y, z;
+		S(x); S(y); S(z);
+		g[x].pb(ii(y,z));
+		g[y].pb(ii(x,z));
+		e[i] = piii(ii(x,y),z);
+	}
+	
+	dfs(-1,1,0);
+	pre(n);
+	rep(i,2,n+1){
+		update(tin[i],w[i]);
+		update(tout[i],-w[i]);
+	}
+
+	int q; S(q);
+	while(q--){
+		int type, x, y;
+		S(type); S(x); S(y);
+		if(type == 1){
+			int u = e[x].first.first, v = e[x].first.second;
+			int& z = e[x].second;
+			if(u != f[0][v]) swap(u,v);
+			update(tin[v],y-z); update(tout[v],z-y);
+			z = y;
+		}else{
+			int z = lca(x,y);
+			//DB(z);
+			printf("%d\n",query(tin[x]) + query(tin[y]) - 2*query(tin[z]));
+		}
+	}
+	return 0;
+}

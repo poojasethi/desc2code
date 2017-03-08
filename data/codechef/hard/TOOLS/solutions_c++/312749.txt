@@ -1,0 +1,115 @@
+#include <cstdio>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <set>
+#include <map>
+#include <vector>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+#include <queue>
+#include <cassert>
+using namespace std;
+#define PB push_back
+#define LL long long
+#define ULL unsigned LL
+#define LD long double
+
+const int inf = 1000000000;
+#define MR 66000
+#define MS 20
+
+struct vertex
+{
+	int x, y;
+	bool tool;
+}t[MR];
+int n, res, dp[MR][MS][3], pot[MS];
+
+int ileb(int x)
+{
+	int ile = 0;
+	while(x)
+	{
+		ile += x % 2;
+		x /= 2;
+	}
+	return ile;
+}//ileb
+
+int main()
+{
+	pot[0] = 1;
+	for(int i = 1; i < MS; i++)
+		pot[i] = 2*pot[i-1];
+	int tests;
+	scanf("%d", &tests);
+	for(int c = 0; c < tests; c++)
+	{
+		scanf("%d", &n);
+		for(int i = 0; i < n; i++)
+		{
+			scanf("%d%d%d%d", &t[i].x, &t[i].y, &t[n+i].x, &t[n+i].y);
+			t[i].tool = 0;
+			t[n+i].tool = 1;
+		}
+		int end = n;
+		n *= 2;
+		for(int i = 1; i < pot[n]; i++)
+		{
+			for(int j = 0; j < n; j++)	//wierzcholki, na ktorych sie konczy trasa
+				if(pot[j] & i)
+				{
+					//spr czy to nie singleton - trzeba do niego dojsc
+					if(ileb(i) == 1)
+					{
+						if(t[j].tool)
+						{
+							dp[i][j][1] = t[j].x + t[j].y;
+							dp[i][j][0] = dp[i][j][2] = inf;
+						}
+						else
+						{
+							dp[i][j][0] = t[j].x + t[j].y;
+							dp[i][j][1] = dp[i][j][2] = inf;
+						}
+						break;
+					}
+					dp[i][j][0] = dp[i][j][1] = dp[i][j][2] = inf;
+					//przechodz po kazdym wierzcholku ze zbioru
+					for(int k = 0; k < n; k++)
+						if(k != j && (pot[k] & i))
+						{
+							if(t[j].tool)
+							{
+								dp[i][j][1] = min(dp[i][j][1], dp[i-pot[j]][k][0]+abs(t[k].x-t[j].x)+abs(t[k].y-t[j].y));
+								dp[i][j][2] = min(dp[i][j][2], dp[i-pot[j]][k][1]+abs(t[k].x-t[j].x)+abs(t[k].y-t[j].y));
+								
+							}
+							else
+							{
+								if(i & pot[j+end])
+								{	//konczymy w kucharzu, majac jego narzedzia
+									dp[i][j][0] = min(dp[i][j][0], dp[i-pot[j]][k][1]+abs(t[k].x-t[j].x)+abs(t[k].y-t[j].y));
+									dp[i][j][1] = min(dp[i][j][1], dp[i-pot[j]][k][2]+abs(t[k].x-t[j].x)+abs(t[k].y-t[j].y));
+								}
+								else
+								{	//konczymy w kucharzu, nie majac jego narzedzi
+									dp[i][j][0] = min(dp[i][j][0], dp[i-pot[j]][k][0]+abs(t[k].x-t[j].x)+abs(t[k].y-t[j].y));
+									dp[i][j][1] = min(dp[i][j][1], dp[i-pot[j]][k][1]+abs(t[k].x-t[j].x)+abs(t[k].y-t[j].y));
+									dp[i][j][2] = min(dp[i][j][2], dp[i-pot[j]][k][2]+abs(t[k].x-t[j].x)+abs(t[k].y-t[j].y));
+								}
+								
+							}
+						}
+				}
+		}
+		int res = inf;		
+		for(int i = 0; i < end; i++)
+			res = min(res, dp[pot[n]-1][i][0] + t[i].x + t[i].y);
+		printf("%d\n", res);
+	}
+	return 0;
+}

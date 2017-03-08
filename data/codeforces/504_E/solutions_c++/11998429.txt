@@ -1,0 +1,205 @@
+#include <set>
+#include <map>
+#include <cmath>
+#include <ctime>
+#include <cctype>
+#include <cstdio>
+#include <vector>
+#include <cassert>
+#include <cstring>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#define fi first
+#define se second
+#define mk make_pair
+#define pb push_back
+#define For(i,a,n)  for(int i=(a);i<=(n);i++)
+#define Forn(i,a,n) for(int i=(a);i>=(n);i--)
+#define Rev(x) (2*n-(x)+1)
+using namespace std;
+typedef long long ll;
+typedef long double db;
+const int N=300005;
+
+int tot;
+int n,hev[N],dep[N],fa[N],top[N],sz[N],dfn[N];
+char st[N*2];
+struct edge{
+	int u,v,pre;
+}e[N*2];int dex,adj[N];
+char s[N*2];
+
+inline int IN(){
+	char ch=getchar(); int f=1,x=0;
+	while((ch<'0'||ch>'9')&&(ch!='-')) ch=getchar();
+	if(ch=='-') f=-1,ch=getchar();
+	while(ch>='0'&&ch<='9') x=(x<<1)+(x<<3)+ch-'0',ch=getchar();
+	return x*f;
+}
+
+void dfs(int x){
+	sz[x]=1;
+	for(int i=adj[x];i;i=e[i].pre){
+		int v=e[i].v;
+		if(v==fa[x])continue;
+		dep[v]=dep[fa[v]=x]+1;
+		dfs(v);
+		sz[x]+=sz[v];
+		if(sz[v]>sz[hev[x]]) hev[x]=v;
+	}
+}
+
+void build(int x){
+	st[dfn[x]=++tot]=s[x];
+	if(hev[x]){
+		top[hev[x]]=top[x];
+		build(hev[x]);
+	}
+	for(int i=adj[x];i;i=e[i].pre){
+		int v=e[i].v;
+		if(v==fa[x] || v==hev[x])continue;
+		top[v]=v;
+		build(v);
+	}
+}
+
+int lg[1050005],f[21][600005];
+int rank[N*4],trank[N*4],sa[N*2],tsa[N*2];
+int sum[N*2],h[N*2];
+struct Interval{
+	int l,r;
+}fr[N*2],bc[N*2],Fr[N*2],Bc[N*2];
+
+void worksa(int n){
+	for(int i=1;i<=n;i++) sum[st[i]-'a']++;
+	for(int i=1;i<=25;i++) sum[i]+=sum[i-1];
+	for(int i=n;i>=1;i--) sa[sum[st[i]-'a']--]=i;
+	rank[sa[1]]=1;
+	for(int i=2,p=1;i<=n;i++){
+		if(st[sa[i]]!=st[sa[i-1]]) p++;
+		rank[sa[i]]=p;
+	}
+	
+	for(int j=1;j<=n;j<<=1){
+		memset(sum,0,sizeof sum);
+		for(int i=1;i<=n;i++) sum[rank[i+j]]++;
+		for(int i=1;i<=n;i++) sum[i]+=sum[i-1];
+		for(int i=n;i>=1;i--) tsa[sum[rank[i+j]]--]=i;
+		memset(sum,0,sizeof sum);
+		for(int i=1;i<=n;i++) sum[rank[i]]++;
+		for(int i=1;i<=n;i++) sum[i]+=sum[i-1];
+		for(int i=n;i>=1;i--) sa[sum[rank[tsa[i]]]--]=tsa[i];
+		
+		trank[sa[1]]=1;
+		for(int i=2,p=1;i<=n;i++){
+			if(rank[sa[i]+j]!=rank[sa[i-1]+j] || rank[sa[i]]!=rank[sa[i-1]]) ++p;
+			trank[sa[i]]=p;
+		}
+		for(int i=1;i<=n;i++) rank[i]=trank[i];
+	}
+	
+	for(int i=1,j=0;i<=n;i++){
+		if(rank[i]==1)continue;
+		for(;st[i+j]==st[sa[rank[i]-1]+j];j++);
+		h[rank[i]]=j;
+		if(j)--j;
+	}
+	
+	for(int i=1;i<=n;i++) f[0][i]=0x3f3f3f3f;
+	for(int i=1,c=1;i<=n;i<<=1,c++){
+		for(int j=1;j<=n-i;j++) f[c][j]=min(f[c-1][j],min(f[c-1][j+i],h[j+i]));
+	}
+}
+
+int lcp(int x,int y){
+    if(x==y) return 2*n-x+1;
+	x=rank[x];y=rank[y];
+	if(x>y) swap(x,y);
+	int p=lg[y-x];
+	return min(h[y-(1<<p)+1],min(f[p][x],f[p][y-(1<<p)+1]));
+}
+
+int lu(int x,int y,Interval *A,Interval *B){
+	int tot=0,tot2=0;
+	while(top[x]!=top[y]){
+		if(dep[top[x]]>dep[top[y]]){
+			A[++tot]=(Interval){Rev(dfn[x]),Rev(dfn[top[x]])};
+			x=fa[top[x]];
+		}else{
+			B[++tot2]=(Interval){dfn[top[y]],dfn[y]};
+			y=fa[top[y]];
+		}
+	}
+	if(dep[x]<dep[y]){
+		A[++tot]=(Interval){dfn[x],dfn[y]};
+	}else{
+		B[++tot2]=(Interval){Rev(dfn[x]),Rev(dfn[y])};
+	}
+	for(;tot2;tot2--) A[++tot]=B[tot2];
+	return tot;
+}
+
+int main(){
+	scanf("%d",&n);
+	scanf("%s",s+1);
+	for(int i=1;i<n;i++){
+		int x,y;
+		scanf("%d%d",&x,&y);
+		e[++dex]=(edge){x,y,adj[x]};adj[x]=dex;
+		e[++dex]=(edge){y,x,adj[y]};adj[y]=dex;
+	}	dep[1]=top[1]=1;
+	dfs(1);
+	build(1);
+	For(i,1,n)	st[2*n-i+1]=st[i];
+	memset(lg,-1,sizeof lg);
+	for(int i=0;i<=20;i++) lg[1<<i]=i;
+	for(int i=1;i<=1048576;i++) if(lg[i]==-1) lg[i]=lg[i-1];
+	worksa(2*n);
+	
+	int Q;
+	scanf("%d",&Q);
+	while(Q--){
+		int A,B,C,D;
+		scanf("%d%d%d%d",&A,&B,&C,&D);
+		int na=lu(A,B,fr,bc);
+		int nb=lu(C,D,Fr,Bc);
+		int ans=0;
+		for(int x=fr[1].l,y=Fr[1].l,xx=1,yy=1;xx<=na && yy<=nb;){
+			int d1=fr[xx].r-x+1,d2=Fr[yy].r-y+1,z=lcp(x,y);
+			if(d1>d2){
+				if(z>=d2){
+					x+=d2;
+					ans+=d2;
+					yy++;
+					y=Fr[yy].l;
+				}else{
+					ans+=z;
+					break;
+				}
+			}else
+			if(d1==d2){
+				if(z>=d1){
+					ans+=d1;
+					xx++;yy++;
+					x=fr[xx].l;y=Fr[yy].l;
+				}else{
+					ans+=z;
+					break;
+				}
+			}else{
+				if(z>=d1){
+					y+=d1;
+					ans+=d1;
+					xx++;
+					x=fr[xx].l;
+				}else{
+					ans+=z;
+					break;
+				}
+			}
+		}
+		printf("%d\n",ans);
+	}
+	return 0;
+}

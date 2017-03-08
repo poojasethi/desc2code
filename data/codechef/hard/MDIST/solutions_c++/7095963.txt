@@ -1,0 +1,100 @@
+#include <cstdio>
+#include <algorithm>
+ 
+#define MAX 1600005
+#define INF 2000000009
+using namespace std;
+ 
+typedef long long int lli;
+ 
+pair<lli, lli> S[4][MAX];
+lli a[4][MAX], sign[4][2] = {{1,1}, {-1,1}, {1,-1}, {-1,-1}};
+ 
+void buildST(int node, int low, int high);
+pair<lli, lli> queryST(int node, int low, int high, int a, int b, int quad);
+void updateST(int node, int low, int high, int position);
+ 
+int main()
+{
+	int n,q,i,j,x,y;
+	lli ans;
+	char qt;
+	pair<lli, lli> temp;
+	scanf("%d",&n);
+	for(i=0;i<n;i++) {
+		scanf("%d%d",&x,&y);
+		for(j=0;j<4;j++) a[j][i] = sign[j][0]*x + sign[j][1]*y;
+	}
+	buildST(0, 0, n-1);
+	// for(i=0;i<4;i++) {
+	// 	printf("Quad %d\n",i);
+	// 	for(j=0;j<7;j++) printf("%d %d\n",S[i][j].first, S[i][j].second);
+	// 	printf("\n");
+	// }
+	scanf("%d",&q);
+	while(q--) {
+		scanf(" %c ",&qt);
+		if(qt == 'U') {
+			scanf("%d%d%d",&i,&x,&y);
+			for(j=0;j<4;j++) a[j][i] = sign[j][0]*x + sign[j][1]*y;
+			updateST(0, 0, n-1, i);
+			// for(i=0;i<4;i++) {
+			// 	printf("Quad %d\n",i);
+			// 	for(j=0;j<7;j++) printf("%d %d\n",S[i][j].first, S[i][j].second);
+			// 	printf("\n");
+			// }
+		}
+		else {
+			scanf("%d%d",&x,&y);
+			ans = -INF;
+			for(i=0;i<4;i++) {
+				temp = queryST(0, 0, n-1, x, y, i);
+				ans = max(ans, temp.first-temp.second);
+			}
+			printf("%lld\n",ans);
+		}
+	}
+	return 0;
+}
+ 
+void buildST(int node, int low, int high)
+{
+	int i,mid = (low+high)/2,lNode = 2*node + 1,rNode = 2*node + 2;
+	if(low == high) {
+		for(i=0;i<4;i++) S[i][node].first = S[i][node].second = a[i][low];
+		return;
+	}
+	buildST(lNode,low,mid);
+	buildST(rNode,mid+1,high);
+	for(i=0;i<4;i++) {
+		S[i][node].first = max(S[i][lNode].first, S[i][rNode].first);
+		S[i][node].second = min(S[i][lNode].second, S[i][rNode].second);
+	}
+}
+ 
+pair<lli, lli> queryST(int node, int low, int high, int a, int b, int quad)
+{
+	int mid = (low+high)/2,lNode = 2*node + 1,rNode = 2*node + 2;
+	pair<lli, lli> r1, r2;
+	if(a>high || b<low) return make_pair(-INF, INF);
+	if(a<=low && high<=b) return S[quad][node];
+ 
+	r1 = queryST(lNode, low, mid, a, b, quad);
+	r2 = queryST(rNode, mid + 1, high, a, b, quad);
+	return make_pair(max(r1.first, r2.first), min(r1.second, r2.second));
+}
+ 
+void updateST(int node, int low, int high, int position)
+{
+	int i,mid = (low+high)/2,lNode = 2*node + 1,rNode = 2*node + 2;
+	if(low == high) {
+		for(i=0;i<4;i++) S[i][node].first = S[i][node].second = a[i][low];
+		return;
+	}
+	else if(position <= mid) updateST(lNode, low, mid, position);
+	else updateST(rNode, mid+1, high, position);
+	for(i=0;i<4;i++) {
+		S[i][node].first = max(S[i][lNode].first, S[i][rNode].first);
+		S[i][node].second = min(S[i][lNode].second, S[i][rNode].second);
+	}
+} 

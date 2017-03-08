@@ -1,0 +1,249 @@
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <algorithm>
+using namespace std;
+const int N=512,C=1500000000;
+const long long M=1000000000000000020LL;
+inline int min(int a,int b) { return a<b?a:b; }
+
+struct node { long long v; int t; node() { } bool operator < (const node &o) const { return v<o.v; } };
+
+char itisp[100],wer[N];
+node in[N];
+int L,R,T,s,t;
+int adj[N][N],last[N],oth[N][N],cap[N][N],q[N],d[N];
+
+bool isprime(long long n);
+
+int ddfs(int i, int flo)
+{
+	// printf("DFS %d\n",i);
+	if(i==t)
+		return flo;
+	for(int &j=q[i];j>0;j--)
+	{
+		// printf("..Edge %d\n",adj[i][j-1]);
+		int cur=adj[i][j-1];
+		if(cap[i][cur]>0 && d[cur]==d[i]+1)
+		{
+			// printf("Caling %d %d\n",cur,yes[cur]);
+			int temp=ddfs(cur,min(flo,cap[i][cur]));
+			if(temp!=0)
+			{
+				cap[i][cur]-=temp;
+				cap[cur][i]+=temp;
+				// printf("R\n");
+				return temp;
+			}
+		}
+	}
+	// printf("R0\n");
+	return 0;
+}
+	
+long long dinic()
+{
+	long long ans=0;
+	int ed,cur,i,j,k,temp,mt;
+	while(1)
+	{
+		memset(d,-1,sizeof(d));
+		d[s]=0; ed=0;
+		q[ed++]=s;
+		for(i=0;i<ed;i++)
+			for(cur=q[i],j=0;j<last[cur];j++)
+				if(d[(k=adj[cur][j])]==-1 && cap[cur][k]>0)
+				{
+					d[k]=d[cur]+1;
+					q[ed++]=k;
+				}
+		 // for(i=0;i<T;printf("%d ",d[i++])); printf("\n");
+		memcpy(q,last,sizeof(int)*T);
+		mt=0;
+		while(1)
+		{
+			temp=0;
+			// printf("CALLING dfs %d\n",s);
+			temp=ddfs(s,C);
+			// printf("%d ",temp);
+			 // printf("temp %d\n",temp);
+			if(temp==0) break;
+			ans+=temp;
+			mt=1;
+		}
+		if(mt==0) return ans;
+	}
+}
+	
+void dfs(int ii,int flag)
+{
+	if(wer[ii]!=0) return;
+	
+	if(!flag) L++;
+	else R++;
+	
+	wer[ii]=1+flag;
+	
+	for(int i=0;i<last[ii];i++)
+	if(wer[adj[ii][i]]==0)
+		dfs(adj[ii][i],1-flag);
+}
+	
+int main()
+{
+	int i,j,k,n;
+	long long lfull=0;
+	itisp[0]=itisp[1]=1;
+	for(i=2;i<11;i++)
+		if(!itisp[i])
+		for(j=i+i;j<100;j+=i)
+			itisp[j]=1;
+	
+	scanf("%d",&n);
+	for(i=0;i<n;i++)
+		scanf("%lld%d",&in[i].v,&in[i].t);
+	sort(in,in + n);
+	
+	for(i=0;i<n;i++)
+		for(j=i+1;j<n;j++)
+		if(((in[j].v % in[i].v)==0) && isprime(in[j].v/in[i].v))
+		{
+			adj[i][last[i]++]=j;
+			adj[j][last[j]++]=i;
+		}
+			
+	for(i=0;i<n;i++)
+		dfs(i,0);
+		
+	T=2+n;
+	s=n;
+	t=n+1;
+	 // for(i=0;i<n;printf("%d ",wer[i++])); printf("\n");
+
+	for(i=0;i<n;i++)
+		if(wer[i]==1)
+		{
+			lfull+=in[i].t;
+			cap[s][i]=in[i].t;
+			for(j=0;j<last[i];j++)
+			cap[i][adj[i][j]]=C;
+		}
+		else
+		{
+			adj[t][last[t]++]=i;
+			adj[i][last[i]++]=t;
+			lfull+=in[i].t;
+			cap[i][t]=in[i].t;
+		}
+	// for(printf("LF=%lld RF=%lld\n",lfull,rfull),i=0;i<T;printf("\n"),i++) for(j=0;j<T;printf("%d ",cap[i][j++]));
+
+	memcpy(oth,cap,sizeof(cap));
+	long long flow=0,cur;
+	long long lmin=M,rmin=M;
+	for(i=n-1;i>=0;i--)
+	if(wer[i]==1)
+	{
+		adj[s][last[s]++]=i;
+		adj[i][last[i]++]=s;
+		cur=dinic();
+		// printf("%d %lld %lld\n",i,in[i].v,cur);
+		if(cur!=in[i].t)
+		lmin=in[i].v;
+		flow+=cur;
+	}
+	// printf("s %lld %lld %lld\n",flow,lfull,lmin);
+	if(flow*2==lfull) {
+		printf("Tyrion");
+		return 0;
+	}
+	memcpy(cap,oth,sizeof(oth));
+	for(i=0;i<last[t];i++)
+	last[adj[t][i]]--;
+	last[t]=0;
+	for(i=n-1;i>=0;i--)
+	if(wer[i]==2)
+	{
+		adj[t][last[t]++]=i;
+		adj[i][last[i]++]=t;
+		cur=dinic();
+		// printf("%lld %lld\n",in[i].v,cur);
+		if(cur!=in[i].t)
+		rmin=in[i].v;
+	}
+	printf("Bran %lld",lmin<rmin?lmin:rmin);
+	return 0;
+}
+
+long long mulmod(long long a,long long b,long long m)
+{
+	if(a==0 || b==0) return 0;
+	if(a<C && b<C) return (a*b)%m;
+	
+	long long x=0;
+	while(b)
+	{
+		if(b & 1) {
+			x+=a;
+			if(x>=m) x-=m;
+		}
+		a<<=1;
+		if(a>=m) a-=m;
+		b>>=1;
+	}
+	return x;
+}
+	
+long long expmod(long long a,long long b,long long m)
+{
+	long long x=1,y=a;
+	while(b>0)
+	{
+		if(b & 1) x=mulmod(x,y,m);
+		y=mulmod(y,y,m);
+		b>>=1;
+	}
+	return x;
+}
+	
+bool rabin_miller(long long n,int times)
+{
+	if(n==2) return true;
+	if(n < 5) return false;
+	if(!(n & 1)) return false;
+	
+	long long a,x,d=n-1;
+	int s=0;
+	
+	while(!(d & 1))
+	{
+		d>>=1;
+		s++;
+	}
+	
+	while(times--)
+	{
+		a=(((long long)rand())%(n-1))+1;
+		x=expmod(a,d,n);
+		if( x!=1 && x!=(n-1))
+		{
+			int flag=1;
+			for(int i=1;i<=s && flag;i++)
+			{
+				x=mulmod(x,x,n);
+				if(x==1) return false;
+				if(x == n-1) flag=0;
+			}
+			if(flag) return false;
+		}
+	}
+	return true;
+}
+	
+bool isprime(long long n)
+{
+	if(n<100) return !itisp[n];
+	for(int i=2;i<100;i++)
+		if(!itisp[i] && n%i==0) return false;
+	return rabin_miller(n,1);
+}

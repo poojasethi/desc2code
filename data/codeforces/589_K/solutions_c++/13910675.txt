@@ -1,0 +1,115 @@
+#include <cstdio>
+#include <cstdlib>
+#include <vector>
+#include <algorithm>
+
+#define fst first
+#define snd second
+
+typedef long long i64;
+
+const int N = 100000 + 10, S = 300;
+
+int n, l[N], t[N];
+
+struct Point {
+  i64 x, y;
+  explicit Point(i64 _x = 0, i64 _y = 0): x(_x), y(_y) {}
+  inline bool operator< (const Point &rhs) const {
+    return x < rhs.x || (x == rhs.x && y < rhs.y);
+  }
+} point[N];
+
+inline Point operator- (const Point &lhs, const Point &rhs) {
+  return Point(lhs.x - rhs.x, lhs.y - rhs.y);
+}
+
+inline i64 operator^ (const Point &lhs, const Point &rhs) {
+  return lhs.x * rhs.y - lhs.y * rhs.x;
+}
+
+inline i64 calc(i64 t, int p) { return t * point[p].x + point[p].y; }
+
+bool check(i64 t, int a, int b) {
+  i64 d = calc(t, a) - calc(t, b);
+  return d ? (d < 0) : (a < b);
+}
+
+class Block {
+  std::vector<int> all, opt;
+  bool comp(int o, int a, int b) {
+    Point p(point[a] - point[o]), q(point[b] - point[o]);
+    if (p.x == q.x) return false;
+    i64 c = p ^ q;
+    if (c) return c < 0;
+    return (a - o) * q.x > (b - o) * p.x;
+  }
+  void build() {
+    opt.clear();
+    for (int i = 0; i < all.size(); ++i) {
+      while (opt.size() > 1 && comp(opt[opt.size() - 2], opt.back(), all[i])) {
+        opt.pop_back();
+      }
+      opt.push_back(all[i]);
+    }
+  }
+
+ public:
+  inline void insert(int cur) {
+    all.push_back(cur);
+    build();
+  }
+  inline int query(i64 t) {
+    if (opt.empty()) return 0;
+    //    for (int i = 0; i < opt.size(); ++i) printf("%d\n", opt[i]);
+    while (opt.size() > 1 && check(t, opt[opt.size() - 2], opt.back())) opt.pop_back();
+    return opt.back();
+  }
+  inline void erase(int x) {
+    for (int i = 0; i < all.size(); ++i) {
+      if (all[i] == x) {
+        all.erase(all.begin() + i);
+        break;
+      }
+    }
+    build();
+  }
+} block[N / S + 10];
+
+inline bool comp(int lhs, int rhs) {
+  bool u = point[lhs] < point[rhs], v = point[rhs] < point[lhs];
+  if (u || v) return u;
+  return lhs < rhs;
+}
+
+i64 ans[N];
+
+void query(i64 &t) {
+  int k = 0, p = 0;
+  for (int i = 0; i <= n / S; ++i) {
+    int j = block[i].query(t);
+    if (j && (!k || check(t, j, k))) k = j, p = i;
+  }
+      fprintf(stderr, "%d\n", k);
+  ans[k] = (t += l[k]);
+  block[p].erase(k);
+}
+
+int main() {
+  scanf("%d", &n);
+  for (int i = 1; i <= n; ++i) {
+    scanf("%d%d", l + i, t + i);
+    point[i] = Point(2 * t[i], l[i] - (i64)t[i] * t[i]);
+  }
+  static int order[N];
+  for (int i = 1; i <= n; ++i) order[i] = i;
+  std::sort(order + 1, order + n + 1, comp);
+  i64 cur = 0;
+  for (int i = 1, j = 1; i <= n; ++i) {
+    cur = std::max<i64>(cur, t[order[i]]);
+    for (; j <= n && t[order[j]] <= cur; ++j) block[order[j] / S].insert(order[j]);
+    query(cur);
+  }
+  for (int i = 1; i <= n; ++i) printf("%I64d%c", ans[i], i == n ? '\n' : ' ');
+  return 0;
+}

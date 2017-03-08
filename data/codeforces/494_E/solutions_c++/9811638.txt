@@ -1,0 +1,78 @@
+#pragma comment(linker, "/STACK:100000000")
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cctype>
+#include <cmath>
+#include <ctime>
+#include <string>
+#include <map>
+#include <set>
+#include <vector>
+#include <queue>
+#include <algorithm>
+#include <iostream>
+using namespace std;
+#define int64 long long
+#define ldb long double
+#define pb push_back
+#define mp make_pair
+#define fs first
+#define sc second
+#define sz(a) ((int) (a).size())
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
+#define taskname "task_e"
+#define y1 __LOVE__
+const ldb pi = acos(-1.0);
+const int N = 2 * 55555;
+int n, m, k, res, rmq[4 * N], upd[4 * N], x1[N], y1[N], x2[N], y2[N];
+vector<int> ally;
+vector< pair< pair<int, int>, pair<int, int> > > e;
+
+void update(int t, int l, int r, int x, int y, int delta) {
+	if ((y <= l) || (r <= x)) return;
+	if ((x <= l) && (r <= y)) {
+		rmq[t] = (l == r - 1) ? 0 : (rmq[t * 2 + 1] + rmq[t * 2 + 2]);
+		if ((upd[t] += delta) > 0) rmq[t] = ally[r] - ally[l];
+	} else {
+		int m = (l + r) / 2;
+		update(t * 2 + 1, l, m, x, y, delta);
+		update(t * 2 + 2, m, r, x, y, delta);
+		rmq[t] = rmq[t * 2 + 1] + rmq[t * 2 + 2];
+		if (upd[t] > 0) rmq[t] = ally[r] - ally[l];
+	}
+}
+
+int main() {
+	//assert(freopen(taskname".in", "r", stdin));
+	//assert(freopen(taskname".out", "w", stdout));
+	scanf("%d%d%d", &n, &m, &k);
+	for (int i = 0; i < m; ++i)
+		scanf("%d%d%d%d", &x1[i], &y1[i], &x2[i], &y2[i]), x2[i]++, y2[i]++;
+	for (int size = 1; size <= k; size *= 2) {
+		ally.clear();
+		e.clear();
+		for (int i = 0; i < m; ++i) {
+			int xl = (x1[i] + size - 1) / size, xr = (x2[i] + size - 1) / size, yl = (y1[i] + size - 1) / size, yr = (y2[i] + size - 1) / size;
+			ally.pb(yl), ally.pb(yr);
+			e.pb(mp(mp(xl, +1), mp(yl, yr)));
+			e.pb(mp(mp(xr, -1), mp(yl, yr)));
+		}
+		ally.pb(n + 1);
+		sort(ally.begin(), ally.end());
+		ally.resize(unique(ally.begin(), ally.end()) - ally.begin());
+		sort(e.begin(), e.end());
+		int64 sum = 0;
+		for (int i = 0; i < sz(e); ++i) {
+			int l = lower_bound(ally.begin(), ally.end(), e[i].sc.fs) - ally.begin();
+			int r = lower_bound(ally.begin(), ally.end(), e[i].sc.sc) - ally.begin();
+			update(0, 0, sz(ally), l, r, e[i].fs.sc);
+			if (i != sz(e) - 1) sum += rmq[0] * (e[i + 1].fs.fs - e[i].fs.fs);
+		}
+		if (sum & 1) res ^= (size ^ (size / 2)); 
+	}
+	printf(res ? "Hamed\n" : "Malek\n");
+	return 0;
+}
+

@@ -1,0 +1,126 @@
+#include<cstdio>
+#include<algorithm>
+using namespace std;
+#define maxn 210
+#define mod 1000000007
+int nxt[maxn][22],val[maxn],tot=1,fa[maxn],n,sg,totpow;
+int sta[maxn],l[maxn],r[maxn],ndd[maxn][maxn],valndd[maxn];
+long long f[maxn][maxn][510],g[maxn];
+bool v[maxn][maxn][510];
+long long predp(int cur,int lft,int pow)
+{
+	if(pow<0) return 0;
+	if(v[cur][lft][pow]) return f[cur][lft][pow];
+	v[cur][lft][pow]=true;
+	if(lft==0) {f[cur][lft][pow]=1; return 1;}
+	long long &nowdp=f[cur][lft][pow];
+	for(int i=0; i<sg; i++)
+	{
+		int now=nxt[cur][i];
+		nowdp=nowdp+predp(now,lft-1,pow-val[now]);
+		if(nowdp>mod) nowdp-=mod;
+	}
+	return nowdp;
+}
+long long work(int *l)
+{
+	long long ans=0;
+	for(int kk=2; kk<=l[0]; kk++) //the starting point
+	{
+	int cur=1,usdpow=0;
+	for(int i=1; i<sg; i++)
+	{
+		int now=nxt[cur][i];
+		if(totpow-usdpow-val[now]>=0)
+			ans=(ans+f[now][l[0]-kk][totpow-usdpow-val[now]])%mod;
+	}
+	}
+	int cur=1,usdpow=0;
+	for(int i=1; i<=l[0]; i++)
+	{
+		usdpow+=val[cur];
+		if(totpow<usdpow) break;
+		//consider every other methods
+		for(int j=0; j<l[i]; j++)
+		{
+			if(j==0 && i==1) continue;
+			int now=nxt[cur][j];
+			if(totpow-usdpow-val[now]>=0)
+				ans=(ans+f[now][l[0]-i][totpow-usdpow-val[now]])%mod;
+		}
+		//go into this
+		//usdpow+=val[cur];
+		cur=nxt[cur][l[i]];
+	}
+	usdpow+=val[cur];
+	if(usdpow<=totpow) ans++;
+
+	return ans%mod;
+}
+int main()
+{
+	scanf("%d%d%d",&n,&sg,&totpow);
+	scanf("%d",&l[0]); for(int i=1; i<=l[0]; i++) scanf("%d",&l[i]);
+	scanf("%d",&r[0]); for(int i=1; i<=r[0]; i++) scanf("%d",&r[i]);
+	for(int i=1; i<=n; i++)
+	{
+		scanf("%d",&ndd[i][0]);
+		for(int j=1; j<=ndd[i][0]; j++) scanf("%d",&ndd[i][j]);
+		scanf("%d",&valndd[i]);
+	}
+	//step 1: build trie
+	for(int i=1; i<=n; i++)
+	{
+		int cur=1;
+		for(int j=1; j<=ndd[i][0]; j++)
+		{
+			if(!nxt[cur][ndd[i][j]]) nxt[cur][ndd[i][j]]=++tot;
+			cur=nxt[cur][ndd[i][j]];
+		}
+		val[cur]+=valndd[i];
+	}
+	int fr=0,ta=1;
+	sta[1]=1; fa[1]=1;
+	for(int i=0; i<sg; i++)
+		if(nxt[1][i])
+		{
+			int cur=nxt[1][i];
+			fa[cur]=1;
+			sta[++fr]=cur;
+		}
+		else nxt[1][i]=1;
+	while(ta<=fr)
+	{
+		int np=sta[ta++];
+		for(int i=0; i<sg; i++)
+			if(nxt[np][i])
+			{
+				int cur=nxt[np][i];
+				fa[cur]=nxt[fa[np]][i];
+				val[cur]=(val[cur]+val[fa[cur]])%mod;
+				sta[++fr]=cur;
+			}
+			else nxt[np][i]=nxt[fa[np]][i];
+	}
+	long long lans=0;
+	int cur=1;
+	for(int i=1; i<=l[0]; i++)
+	{
+		lans=lans+val[cur];
+		cur=nxt[cur][l[i]];
+	}
+	if(lans>totpow) lans=0; else lans=1;
+	int mxlen=max(l[0],r[0])+1;
+	for(int i=1; i<=tot; i++)
+		for(int j=0; j<=mxlen; j++)
+			for(int k=0; k<=totpow; k++)
+				if(!v[i][j][k])
+					predp(i,j,k);
+	long long clans=work(l);
+	clans-=lans;
+	long long rans=work(r);
+	printf("%I64d\n",(rans-clans+mod)%mod);
+	fclose(stdin);
+	fclose(stdout);
+	return 0;
+}

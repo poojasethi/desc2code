@@ -1,0 +1,198 @@
+#include <cstdio>
+#include <set>
+#include <algorithm>
+#define MAXN 100007
+#define INF 1000000000000000000LL
+#define PB push_back
+#define MP make_pair
+#define ST first
+#define ND second
+
+#define REP(i,n) for(int i=0;i<(n);i++)
+#define FOR(a,b,c) for(int a=b;a<=(c);a++)
+#define FORD(a,b,c) for (int a=b;a>=(c);a--)
+#define VAR(v,n) __typeof(n) v=(n)
+#define ALL(c) c.begin(),c.end()
+#define FOREACH(i,c) for(VAR(i,(c).begin());i!=(c).end();i++)
+
+using namespace std;
+
+typedef long long LL; 
+
+multiset<LL> secik;
+multiset<LL>::iterator it;
+int n,l,p,s, koniec_akt;
+int wyn[MAXN];
+LL t[MAXN];
+pair<LL,int> kraw[MAXN];
+bool czy_skok[MAXN];
+
+void siekaj_rozwa(int start, int koniec) {
+	//printf("robimy %d %d\n",start,koniec);
+	int ile = 0, ile_kraw = 0;
+	int ile_kon = n-2;
+	FOR(i,0,n) czy_skok[i] = false;
+	
+	int ile_l = l;
+	int ile_na_prawo = koniec == n-1 ? 0 : 1;
+	
+	if (ile_l > start) { 
+		ile_l -= start;
+		FORD(i,start-1,0) wyn[ile++] = i;
+	}
+	else {
+		FORD(i,ile_l-ile_na_prawo-1,0) wyn[ile++] = i;
+		FOR(i,ile_l-ile_na_prawo,s-1) wyn[ile++] = i;
+		ile_l = ile_na_prawo;
+	}
+	
+	if (ile_l > n-1-koniec) {
+		ile_l -= (n-1-koniec);
+		FOR(i,koniec,n-1) wyn[ile_kon--] = i;
+	}
+	else {
+		REP(i,ile_l) wyn[ile_kon--] = koniec+i;
+		FORD(i,n-1,koniec+ile_l) wyn[ile_kon--] = i;
+		ile_l = 0;
+	}
+	
+	FOR(i,s+1,koniec-2) kraw[ile_kraw++] = MP(t[i+1]-t[i],i);
+	sort(kraw,kraw+ile_kraw);
+	
+	REP(i,ile_l) czy_skok[kraw[i].ND] = true;
+	
+	int wsk = start+1;
+	while (wsk < koniec) {
+		if (czy_skok[wsk]) {
+			int pom = wsk;
+			while (czy_skok[pom]) ++pom;
+			FORD(i,pom,wsk) 
+				wyn[ile++] = i;
+			wsk = pom+1;
+		}
+		else
+			wyn[ile++] = wsk++;
+	}
+	//printf("%d %d\n",ile,ile_kon);
+	//REP(i,n-1) printf("%d ",wyn[i]+1); puts("");
+}
+
+LL siekaj_na_prawo() {
+	secik.clear();
+	if (s == n-1 || p == 0) return INF;
+	if (l == 0) {
+		if (s == 0) {
+			koniec_akt =  n-1;
+			return t[n-1]-t[0];
+		}
+		return INF;
+	}
+	
+	//s nie jest na samym koncu, i mamy conajmniej jeden ruch w prawo i w lewo, wiec n > 2
+	LL res = INF;
+	LL sum = t[n-1]-t[0]+t[s]-t[0];
+		
+	if (l == 1) {
+		koniec_akt = n-1;
+		if (s == 0) {
+			LL najm_kr = INF;
+			FOR(i,1,n-3) najm_kr = min(najm_kr,t[i+1]-t[i]);
+			
+			if (t[n-1]-t[n-2] < 2*najm_kr) 
+				koniec_akt = n-2;
+				
+			res = sum+min(t[n-1]-t[n-2],2*najm_kr);
+		}
+		else 
+			res = sum;
+		return res;
+	}
+	if (p == 1) {
+		res = min(res,sum+t[n-1]-t[s+1]);
+		koniec_akt = s+1;
+		return res;
+	}
+	
+	//s nie jest na samym koncu, i mamy conajmniej dwa ruchy w prawo i dwa w lewo, wiec n > 4
+	
+	LL sum_secik = 0;
+	int ile_l = max(0,l - s);
+	int kon = n-1;
+	FOR(i,s+1,kon-2) {
+		if (i-s <= ile_l) {
+			secik.insert(t[i+1]-t[i]);
+			sum_secik += t[i+1]-t[i];
+		}
+		else if (!secik.empty()) {
+			it = secik.end(); --it;
+			if (*it > t[i+1]-t[i]) {
+				sum_secik -= *it-t[i+1]+t[i];
+				secik.erase(it);
+				secik.insert(t[i+1]-t[i]);
+			}
+		}
+	}
+				
+	while (ile_l) {
+		if (res > sum+2*sum_secik) {
+			res = sum+2*sum_secik;
+			koniec_akt = kon;
+		}
+		sum += t[kon]-t[kon-1];
+		--kon;
+		--ile_l;
+					
+		it = secik.find(t[kon]-t[kon-1]);
+		if (it != secik.end()) { 
+			secik.erase(it);
+			sum_secik -= t[kon]-t[kon-1];
+		}
+		else {
+			it = secik.end(); --it;
+			sum_secik -= *it;
+			secik.erase(it);
+		}
+	}
+	
+	if (res > sum+2*sum_secik) {
+		res = sum+2*sum_secik;
+		koniec_akt = kon;
+	}	
+	return res;
+}
+
+
+int main() {
+	LL res = INF;
+	scanf("%d%d%d",&n,&l,&s); --s;
+	p = n-1-l;
+	REP(i,n) scanf("%lld",&t[i]);
+	
+	//przypadek na ze koniec jest na prawo od s
+	res = siekaj_na_prawo();
+	siekaj_rozwa(s,koniec_akt);
+	
+	//odwracamy
+	swap(l,p);
+	s = n-1-s;	
+	REP(i,n) t[i] = t[n-1] - t[i];
+	REP(i,n/2) swap(t[i],t[n-1-i]);
+	
+	//printf("%d %d %d\n",l,p,s);
+	//REP(i,n) printf("%lld ",t[i]); puts("");
+	
+	LL pom = siekaj_na_prawo();
+	if (res > pom) {
+		siekaj_rozwa(s,koniec_akt);
+		REP(i,n-1) wyn[i] = n-1-wyn[i];
+		res = pom;
+	}
+	
+	if (res == INF) 
+		puts("-1");
+	else {
+		printf("%lld\n",res);
+		REP(i,n-1) printf("%d ",wyn[i]+1); puts("");
+	}
+	return 0;
+}

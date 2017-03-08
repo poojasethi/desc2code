@@ -1,0 +1,148 @@
+#include <iostream>
+#include <map>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+const int infinito=2000000001;
+const int tope=1<<18;
+const int primero=1<<17;
+
+int cuantos[tope];
+int maximo[tope];
+
+void insertac(int pos)
+{
+  pos+=primero;
+  cuantos[pos]++;
+  while (pos>1) {
+    pos/=2;
+    cuantos[pos]++;
+  }
+}
+
+int cuantosentre(int pos0,int pos1)
+{
+  pos0+=primero;
+  pos1+=primero;
+  if (pos0==pos1) return cuantos[pos0];
+  int c=cuantos[pos0]+cuantos[pos1];
+  while (pos0+1<pos1) {
+    if (pos0%2==0) c+=cuantos[pos0+1];
+    pos0/=2;
+    if (pos1%2==1) c+=cuantos[pos1-1];
+    pos1/=2;
+  }
+  return c;
+}
+
+void insertam(int pos,int val)
+{
+  pos+=primero;
+  maximo[pos]=max(maximo[pos],val);
+  while (pos>1) {
+    pos/=2;
+    maximo[pos]=max(maximo[2*pos],maximo[2*pos+1]);
+  }
+}
+
+int maximoentre(int pos0,int pos1)
+{
+  if (pos0>pos1) return 0;
+  pos0+=primero;
+  pos1+=primero;
+  if (pos0==pos1) return maximo[pos0];
+  int maxi=max(maximo[pos0],maximo[pos1]);
+  while (pos0+1<pos1) {
+    if (pos0%2==0) maxi=max(maxi,maximo[pos0+1]);
+    pos0/=2;
+    if (pos1%2==1) maxi=max(maxi,maximo[pos1-1]);
+    pos1/=2;
+  }
+  return maxi;
+}
+
+const int limite=100001;
+
+int n,k;
+int r[limite],a[limite],lidera[limite];
+int q;
+int solq[limite];
+int x[limite],y[limite];
+int indq[limite];
+
+bool compara(int i1,int i2)
+{
+  return r[y[i1]]<r[y[i2]];
+}
+
+int main()
+{
+  ios::sync_with_stdio(false);
+  cin>>n>>k;
+  map<int,vector<int> > mapa;
+  for (int i=1;i<=n;i++) {
+    cin>>r[i];
+    mapa[r[i]].push_back(i);
+  }
+  map<int,int> posi;
+  posi[-infinito];
+  posi[infinito];
+  for (int i=1;i<=n;i++) {
+    cin>>a[i];
+    posi[a[i]];
+  }
+  {
+    int i=0;
+    for (map<int,int>::iterator it=posi.begin();it!=posi.end();it++,i++)
+      it->second=i;
+  }
+  for (map<int,vector<int> >::iterator it=mapa.begin();it!=mapa.end();it++) {
+    //int resp=it->first;
+    vector<int> &v=it->second;
+    for (int i=0;i<int(v.size());i++) {
+      int ind=v[i];
+      insertac(posi[a[ind]]);
+    }
+    for (int i=0;i<int(v.size());i++) {
+      int ind=v[i];
+      int pos0=(posi.lower_bound(a[ind]-k))->second;
+      int pos1=(--posi.upper_bound(a[ind]+k))->second;
+      lidera[ind]=cuantosentre(pos0,pos1);
+    }
+  }
+  cin>>q;
+  for (int i=0;i<q;i++) {
+    cin>>x[i]>>y[i];
+    if (r[y[i]]<r[x[i]]) swap(x[i],y[i]);
+    indq[i]=i;
+  }
+  sort(indq,indq+q,compara);
+  reverse(indq,indq+q);
+  map<int,vector<int> >::reverse_iterator it=mapa.rbegin();
+  for (int i=0;i<q;i++) {
+    int ind=indq[i];
+    int mini=max(a[x[ind]],a[y[ind]])-k;
+    int maxi=min(a[x[ind]],a[y[ind]])+k;
+    if (mini>maxi) {
+      solq[ind]=-1;
+      continue;
+    }
+    int resp=r[y[ind]];
+    while (it!=mapa.rend() and it->first>=resp) {
+      vector<int> v=it->second;
+      for (int i=0;i<int(v.size());i++) {
+	int ind2=v[i];
+	insertam(posi[a[ind2]],lidera[ind2]);
+      }
+      it++;
+    }
+    int pos0=(posi.lower_bound(mini))->second;
+    int pos1=(--posi.upper_bound(maxi))->second;
+    solq[ind]=maximoentre(pos0,pos1);
+    if (solq[ind]==0) solq[ind]=-1;
+  }
+  for (int i=0;i<q;i++)
+    cout<<solq[i]<<endl;
+}

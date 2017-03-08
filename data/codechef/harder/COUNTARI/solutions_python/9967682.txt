@@ -1,0 +1,74 @@
+#include<cstdio>
+#include<cstring>
+#include<cmath>
+#include<algorithm>
+#define maxn 100010
+#define pi M_PI
+typedef long long ll;
+using namespace std;
+int n, blo, a[maxn], acnt[maxn], ccnt[maxn], lcnt[maxn], rcnt[maxn];
+ll ans;
+struct cpx{
+	double r, i;
+	cpx(){}
+	cpx(double _r, double _i){r = _r; i = _i;}
+	cpx operator + (const cpx &b){return cpx(r + b.r, i + b.i);}
+	cpx operator - (const cpx &b){return cpx(r - b.r, i - b.i);}
+	cpx operator * (const cpx &b){return cpx(r * b.r - i * b.i, r * b.i + i * b.r);}
+}A[maxn], B[maxn];
+void fft(cpx *a, int n, int on)
+{
+	for (int i = 0, j = 0; i < n; ++ i){
+		if (i > j) swap(a[i], a[j]);
+		for (int l = n / 2; (j ^= l) < l; l >>= 1);
+	}
+	cpx w, wm, u, t;
+	for (int m = 2; m <= n; m <<= 1){
+		wm = cpx(cos(2 * pi * on / m), sin(2 * pi * on / m));
+		for (int j = 0; j < n; j += m){
+			w = cpx(1, 0);
+			for (int k = j; k < j + m / 2; ++ k){
+				u = a[k]; t = a[k + m / 2] * w;
+				a[k] = u + t; a[k + m / 2] = u - t;
+				w = w * wm;
+			}
+		}
+	}
+	if (on == -1) for (int i = 0; i < n; ++ i) a[i].r /= n;
+}
+void gn(int &x)
+{
+	x = 0; char ch = getchar();
+	while (ch < '0' || ch > '9') ch = getchar();
+	while (ch >= '0' && ch <= '9')
+		x = x * 10 + ch - '0', ch = getchar();
+}
+int main()
+{
+	gn(n); blo = int(ceil(sqrt(1.0 * n * log2(1.0 * n))));
+	int len = (1 << 16);
+	for (int i = 1; i <= n; ++ i) gn(a[i]), ++ ccnt[a[i]];
+	for (int L = 1; L <= n; L += blo){
+		int R = min(L + blo - 1, n);
+		for (int i = L; i <= R; ++ i){
+			-- ccnt[a[i]];
+			for (int j = L; j < i; ++ j)
+				if (2 * a[i] - a[j] >= 0) 
+					ans += ccnt[2 * a[i] - a[j]];
+			for (int j = i + 1; j <= R; ++ j)
+				if (2 * a[i] - a[j] >= 0)
+					ans += acnt[2 * a[i] - a[j]];
+		}
+		for (int i = 0; i < len; ++ i) A[i] = cpx(acnt[i], 0);
+		for (int i = 0; i < len; ++ i) B[i] = cpx(ccnt[i], 0);
+		fft(A, len, 1); fft(B, len, 1);
+		for (int i = 0; i < len; ++ i) A[i] = A[i] * B[i];
+		fft(A, len, -1);
+		for (int i = L; i <= R; ++ i) ans += ll(round(A[2 * a[i]].r));
+		for (int i = L; i <= R; ++ i) ++ acnt[a[i]];
+	}
+	printf("%lld\n", ans);
+	return 0;
+}
+
+

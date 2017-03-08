@@ -1,0 +1,141 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#include <complex>
+#include <cstring>
+#include <cstdlib>
+#include <string>
+#include <cmath>
+#include <cassert>
+#include <queue>
+#include <set>
+#include <map>
+#include <valarray>
+#include <bitset>
+#include <stack>
+#include <iomanip>
+#include <fstream>
+using namespace std;
+
+#define REP(i,n) for(int i=0;i<(int)(n);++i)
+#define FOR(i,c) for(__typeof((c).begin())i=(c).begin();i!=(c).end();++i)
+#define ALL(c) (c).begin(), (c).end()
+#define valid(y,x,h,w) (0<=y&&y<h&&0<=x&&x<w)
+const int INF = 1<<29;
+const double EPS = 1e-8;
+const double PI = acos(-1);
+typedef long long ll;
+typedef pair<int,int> pii;
+
+inline void chmax(double &a, double b) {
+  if (a < b) a = b;
+}
+double dp[101][101][6];
+double sum[102][102][7];
+int va,vb,sa,sb,ma;
+
+double sub(double x, int i, int j, int k) {
+  double A = 0;
+  for (int i1=0; i1<=sb; ++i1) {
+    for (int j1=0; j1<=sa; ++j1) {
+      if (i1||j1) {
+        if (i-i1<=0 && j-j1<=0) {
+          A += x;
+        } else if (i-i1<=0) {
+        } else if (j-j1<=0) {
+          A += 1;
+        } else {
+          A += dp[i-i1][j-j1][k];
+        }
+      }
+    }
+  }
+  double K = (sa+1)*(sb+1);
+  return A / (K-1);
+}
+
+inline double sub2(double x, int i, int j, int k, bool f) {
+  double sumsum;
+  if (f) {
+    assert(sum[i+1][j+1][k]);
+    sumsum = sum[i+1][j+1][k];
+  } else {
+    sumsum = sum[i+1][j][k] + sum[i][j+1][k] - sum[i][j][k];
+  }
+  
+  double A = 0;
+  int ni = max(0,sb-i+1);
+  int nj = max(0,sa-j+1);
+  A += x * ni * nj;
+  A += (sb-ni+1) * nj;
+  A += sumsum - sum[max(0,i-sb)][j+1][k] - sum[i+1][max(0,j-sa)][k] + sum[max(0,i-sb)][max(0,j-sa)][k];
+  
+  double K = (sa+1)*(sb+1);
+  if (f) {
+    A /= K;
+  } else {
+    A /= K-1;
+  }
+
+  return A;
+}
+
+
+bool solve(double x) {
+  memset(sum,0,sizeof(sum));
+  memset(dp,0,sizeof(dp));
+  REP(i,va+1) {
+    REP(j,vb+1) {
+      if (i==0||j==0) continue;
+      REP(k,ma+1) {
+        chmax(dp[i][j][k], sub2(x,i,j,k,0));
+        if (k) {
+          chmax(dp[i][j][k], sub2(x,(i+1)/2,(j+1)/2,k-1,1));
+          chmax(dp[i][j][k], dp[(i+1)/2][(j+1)/2][k-1]);
+        }
+        // int ii = i, jj = j;
+        // REP(l,k) {
+        //   ii = (ii+1) / 2;
+        //   jj = (jj+1) / 2;
+        //   chmax(dp[i][j][k], sub2(x,ii,jj,k-1-l,1));
+        // }
+        sum[i+1][j+1][k] = dp[i][j][k] + sum[i+1][j][k] + sum[i][j+1][k] - sum[i][j][k];
+      }
+    }
+  }
+  // REP(i,va+1) {
+  //   REP(j,vb+1) {
+  //     cout << sum[i+1][j+1][0] << " ";
+  //   }
+  //   cout << endl;
+  // }
+  // cout << endl;
+  // REP(i,va+1) {
+  //   REP(j,vb+1) {
+  //     cout << dp[i][j][0] << " ";
+  //   }
+  //   cout << endl;
+  // }
+  // cout << x << " " << dp[va][vb][ma] << endl;
+  return x < dp[va][vb][ma];
+}
+
+
+int main() {
+  while(cin>>va>>vb>>sa>>sb>>ma) {
+    // solve(0.5); break;
+    double low = 0, high = 1;
+
+    while(high-low>=1e-7) {
+      double mid = (low+high)/2;
+      if (solve(mid)) {
+        low = mid;
+      } else {
+        high = mid;
+      }
+    }
+
+    printf("%.10f\n", low);
+  }
+}

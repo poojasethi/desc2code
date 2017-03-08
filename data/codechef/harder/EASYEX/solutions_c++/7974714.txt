@@ -1,0 +1,134 @@
+#include <stdio.h>
+ 
+#define USE_BRUTE_FORCE 0
+#define MOD 2003
+#define FMAX 1001
+#define PMAX 50010
+ 
+int RaiseToPow(int X, int Y) {
+	if (Y == 0) return 1;
+	int Z = RaiseToPow(X, Y >> 1);
+	Z = ((long long) Z * (long long) Z) % MOD;
+	if ((Y & 1) == 1) Z = ((long long) Z * (long long) X) % MOD;
+	return Z;
+}
+ 
+int Kinvpow[PMAX], number_of_ways[FMAX][FMAX], Kinv;
+ 
+void ComputeNumberOfWays(int F) {
+	int i, j;
+	for (i = 1; i <= F; i++) {
+		number_of_ways[i][1] = 1;
+		for (j = 2; j <= i; j++)
+			number_of_ways[i][j] = (number_of_ways[i - 1][j] * j + number_of_ways[i - 1][j - 1]) % MOD;
+	}
+}
+ 
+int poly[2][PMAX], np[2], c, p;
+ 
+void RaisePolynomialToPower(int F, int L) {
+	int i, j, k;
+	poly[0][0] = 0;
+	np[0] = F;
+	for (j = 1; j <= F; j++)
+		poly[0][j] = number_of_ways[F][j];
+	c = 0;
+	for (i = 2; i <= L; i++) {
+		p = c;
+		c = 1 - c;
+		np[c] = np[p] + F;
+		// Since MOD is small (2003), we only need up to MOD coefficients.
+		if (np[c] > MOD) np[c] = MOD;
+		for (j = 0; j <= np[c]; j++) poly[c][j] = 0;
+		for (j = 1; j <= np[p]; j++)
+			for (k = 1; k <= F && j + k <= np[c]; k++)
+				poly[c][j + k] = (poly[c][j + k] + poly[p][j] * number_of_ways[F][k]) % MOD;
+	}
+}
+ 
+void ComputeKinvPowers(int P) {
+	Kinvpow[0] = 1;
+	Kinvpow[1] = Kinv;
+	for (int i = 2; i <= P; i++)
+		Kinvpow[i] = (Kinvpow[i - 1] * Kinv) % MOD;
+}
+ 
+namespace BRUTE_FORCE {
+ 
+#define BFMAX 30
+int a[BFMAX], BFN, BFK, BFL, BFF;
+double bfans;
+ 
+void BKT(int idx) {
+	if (idx > BFN) {
+		int i, product = 1, sum = 0;
+		for (i = 1; i <= BFL; i++) {
+			product *= a[i];
+			sum += a[i];
+		}
+		if (product == 0) return;
+		int prodf = 1;
+		for (i = 1; i <= BFF; i++)
+			prodf *= product;
+		double cvalue = prodf;
+		for (i = 1; i <= sum; i++)
+			cvalue /= BFK;
+		for (i = sum + 1; i <= BFN; i++)
+			cvalue = (cvalue * (BFK - BFL)) / BFK;
+		bfans += cvalue;
+		return;
+	}
+	for (int value = 1; value <= BFL; value++) {
+		a[value]++;
+		BKT(idx + 1);
+		a[value]--;
+	}
+	if (BFL < BFK) BKT(idx + 1);
+}
+ 
+void BruteForce(int N, int K, int L, int F) {
+	BFN = N; BFK = K; BFL = L; BFF = F;
+	bfans = 0.0;
+	BKT(1);
+	fprintf(stderr, "bfans=%lf\n", bfans);
+}
+}
+ 
+int main() {
+	int T, N, K, L, F, M, i, ans, cans, arrang;
+	scanf("%d", &T);
+	while (T--) {
+		scanf("%d %d %d %d", &N, &K, &L, &F);
+		if (USE_BRUTE_FORCE) BRUTE_FORCE::BruteForce(N, K, L, F);
+		Kinv = RaiseToPow(K, MOD - 2);
+		if (F == 1) {
+			// Special formula for F=1 (not necessarily needed - the "else" case handles F=1 correctly and efficiently, too).
+			for (M = 1, i = 0; i < L; i++)
+				M = ((long long) M * (long long) (N - i)) % MOD;
+			printf("%d\n", ((long long) M * (long long) RaiseToPow(Kinv, L)) % MOD);
+		} else {
+			ComputeNumberOfWays(F);
+			RaisePolynomialToPower(F, L);
+			ComputeKinvPowers(L * F);
+			for (arrang = 1, M = 0; M < L; M++) arrang = ((long long) arrang * (long long) (N - M)) % MOD;
+			double rans = 0.0, crans;
+			for (ans = 0, M = L; M <= L * F && arrang > 0; M++) {				
+				cans = (arrang * Kinvpow[M]) % MOD;
+				cans = (cans * poly[c][M]) % MOD;
+				ans += cans;
+				if (ans >= MOD) ans -= MOD;
+				fprintf(stderr, "M=%d arrang=%d Kinvpow=%d poly=%d cans=%d ans=%d\n", M, arrang, Kinvpow[M], poly[c][M], cans, ans);
+				if (USE_BRUTE_FORCE) {
+					crans = arrang * poly[c][M];
+					for (int j = 1; j <= M; j++)
+						crans /= K;
+					rans += crans;
+				}
+				arrang = ((long long) arrang * (long long) (N - M)) % MOD;
+			}
+			printf("%d\n", ans);
+			if (USE_BRUTE_FORCE) fprintf(stderr, "rans=%lf\n", rans);
+		}
+	}
+	return 0;
+} 

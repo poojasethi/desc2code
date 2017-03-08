@@ -1,0 +1,16 @@
+#include<cstdio>
+#include<cstring>
+#define rep(i,n) for (int i=0;i<n;i++)
+int n,d,j,a[100005]; long long ans;
+int main()
+{
+	scanf("%d%d",&n,&d);
+	rep(i,n) scanf("%d",a+i);
+	rep(i,n){
+		if (j<i) j++;
+		while (j<n && a[j]-a[i]<=d) j++;
+		ans+=1LL*(j-i-1)*(j-i-2)/2;
+		}
+	printf("%I64d\n",ans);
+	return 0;
+}

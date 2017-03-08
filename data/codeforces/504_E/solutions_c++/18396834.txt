@@ -1,0 +1,226 @@
+#pragma comment(linker, "/STACK:10240000,10240000")
+#include <stdio.h>
+#include <cstring>
+#include <string>
+#include <cmath>
+#include <ctime>
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <iomanip>
+#include <algorithm>
+#include <set>
+#include <complex>
+#include <map>
+#include <bitset>
+#define LL long long
+#define ULL unsigned long long
+#define Mod 1000000007 
+#define PII pair<int,int>
+#define mk make_pair
+#define Min(a,b) ((a)>(b)?(b):(a))
+#define Max(a,b) ((a)<(b)?(b):(a))
+using namespace std;
+const double PI=acos(-1.0);
+const double EPS=1e-10;
+
+inline int read() {
+  static char ch;
+  bool sgn = false;
+  while (ch = getchar(), ch < '0' || ch > '9') if (ch == '-') sgn = true;
+  int res = ch - 48;
+  while (ch = getchar(), ch >= '0' && ch <= '9') res = res * 10 + ch - 48;
+  return sgn ? -res : res;
+}
+
+const int N=6e5+5;
+
+int son[N],fa[N],top[N],mark[N],size[N],dep[N],mark1[N];
+int n,m,tot,d[N<<1],pre[N<<1],en[N<<1];
+int f[N][30],dd[30],Log[N];
+int wa[N],wb[N],wss[N],wv[N];
+int Rank[N],lcp[N],sa[N];
+char ch[N],s[N];
+vector<PII> v1,v2,v3;
+
+void addedge(int x,int y) { 
+	tot++;
+	pre[tot]=d[x];
+	d[x]=tot;
+	en[tot]=y;	
+}
+
+void dfs1(int x,int f) {  
+	size[x]=1; fa[x]=f;
+	dep[x]=dep[f]+1;
+	int m=0;
+	for(int i=d[x];i;i=pre[i]) {
+		int u=en[i];
+		if(f!=u) {
+			dfs1(u,x);
+			size[x]+=size[u];
+			if(size[u]>size[m]) m=u;
+		}
+	}	
+	son[x]=m;
+}
+
+void dfs2(int x,int f) {
+	if(son[x]!=0) {
+		tot++;
+		top[son[x]]=top[x];
+		mark[son[x]]=tot;
+		dfs2(son[x],x);
+	}	
+	for(int i=d[x];i;i=pre[i]) {
+		int u=en[i];
+		if(u!=f&&u!=son[x]) {
+			tot++;
+			top[u]=u;
+			mark[u]=tot;
+			dfs2(u,x);
+		}
+	}
+}
+
+int cmp(int *r,int a,int b,int l){
+    return (r[a]==r[b]) && (r[a+l]==r[b+l]);
+}
+
+void da(char *r,int *sa,int n,int m){ 
+    int i,j,p,*x=wa,*y=wb,*t;
+    for(i=0;i<m;i++) wss[i]=0;
+    for(i=0;i<n;i++) wss[x[i]=r[i]]++;
+    for(i=1;i<m;i++) wss[i]+=wss[i-1];
+    for(i=n-1;i>=0;i--) sa[--wss[x[i]]]=i; 
+    for(j=1,p=1;p<n;j*=2,m=p) 
+    {
+        for(p=0,i=n-j;i<n;i++) y[p++]=i; 
+        for(i=0;i<n;i++) if(sa[i]>=j) y[p++]=sa[i]-j;
+        for(i=0;i<n;i++) wv[i]=x[y[i]];
+        for(i=0;i<m;i++) wss[i]=0;
+        for(i=0;i<n;i++) wss[wv[i]]++;
+        for(i=1;i<m;i++) wss[i]+=wss[i-1];    
+        for(i=n-1;i>=0;i--) sa[--wss[wv[i]]]=y[i];  
+        for(t=x,x=y,y=t,p=1,x[sa[0]]=0,i=1;i<n;i++)
+            x[sa[i]]=cmp(y,sa[i-1],sa[i],j)?p-1:p++;  
+    }
+    for(i=1;i<=n;i++) Rank[sa[i]]=i;  
+}
+
+void LCP(char *S,int n,int *sa) {
+	int h=0;
+	lcp[0]=0;
+	for(int i=0;i<n;i++) {
+		int j=sa[Rank[i]-1];
+		if(h>0) h--;
+		for(;j+h<n&&i+h<n;h++) {
+			if(S[j+h]!=S[i+h]) break;
+		}
+		lcp[Rank[i]-1]=h;
+	}
+}
+
+void RMQ(int n,int *a) {
+	for(int i=1;i<=n;i++) f[i][0]=a[i];
+	for(int j=1;j<=20;j++)
+		for(int i=1;i<n;i++)
+			if(i+dd[j]-1<=n)	{
+				f[i][j]=min(f[i][j-1],f[i+dd[j-1]][j-1]);
+			}
+}
+
+int Query_rmq(int x,int y) {
+	if(x==y) return N;
+	if(x>y) swap(x,y); y--;
+	int k=Log[y-x+1];  
+	return min(f[x][k],f[y-dd[k]+1][k]);
+}
+
+void work(int a,int b,int c,int d) {
+	v1.clear(); v2.clear(); v3.clear();
+	int f1,f2;
+	f1=top[a]; f2=top[b];
+	while(f1!=f2) {
+		if(dep[f1]<dep[f2]) {
+			v3.push_back(mk(mark[f2],mark[b]));
+			b=fa[f2];
+		} else {
+			v1.push_back(mk(mark1[a],mark1[f1]));
+			a=fa[f1];
+		}
+		f1=top[a]; f2=top[b];
+	}
+	if(dep[a]<dep[b]) v1.push_back(mk(mark[a],mark[b])); else v1.push_back(mk(mark1[a],mark1[b]));
+	for(int i=v3.size()-1;i>=0;i--) v1.push_back(v3[i]);
+	v3.clear();
+	a=c; b=d;
+	f1=top[a]; f2=top[b];
+	while(f1!=f2) {
+		if(dep[f1]<dep[f2]) {
+			v3.push_back(mk(mark[f2],mark[b]));
+			b=fa[f2];
+		} else {
+			v2.push_back(mk(mark1[a],mark1[f1]));
+			a=fa[f1];
+		}
+		f1=top[a]; f2=top[b];
+	}
+	if(dep[a]<dep[b]) v2.push_back(mk(mark[a],mark[b])); else v2.push_back(mk(mark1[a],mark1[b]));
+	for(int i=v3.size()-1;i>=0;i--) v2.push_back(v3[i]);
+	int ans=0,t1=0,t2=0,T1=v1.size(),T2=v2.size(),l;
+	PII p,q;
+	while(t1<T1&&t2<T2) {  
+		p=v1[t1];
+		q=v2[t2]; 
+		l=Query_rmq(Rank[p.first],Rank[q.first]);
+		if(l<min(p.second-p.first+1,q.second-q.first+1)) {
+			ans+=l;
+			break;
+		}
+		l=min(p.second-p.first+1,q.second-q.first+1);
+		if(p.second-p.first==q.second-q.first) {
+			ans+=p.second-p.first+1;
+			t1++; t2++;
+		} else 
+		if(p.second-p.first<q.second-q.first) {
+			ans+=p.second-p.first+1;
+			t1++;
+			v2[t2]=mk(q.first+l,q.second);
+		} else {
+			ans+=q.second-q.first+1;
+			t2++;
+			v1[t1]=mk(p.first+l,p.second);
+		}
+	}
+	printf("%d\n",ans);
+}
+
+int main() {
+	dd[0]=1;
+	for(int i=1;i<30;i++) dd[i]=dd[i-1]*2;
+	for(int i=2;i<N;i++) Log[i]=Log[i>>1]+1;
+	n=read();
+	for(int i=1;i<=n;i++) ch[i]=getchar();
+	for(int i=2;i<=n;i++) {
+		int x=read(),y=read();
+		addedge(x,y);
+		addedge(y,x);
+	}  
+	dfs1(1,0);
+	top[1]=1; tot=1; mark[1]=1;
+	dfs2(1,0);  
+	for(int i=1;i<=n;i++) mark1[i]=2*n+1-mark[i];
+	for(int i=1;i<=n;i++) {
+		s[mark[i]]=ch[i];
+		s[mark1[i]]=ch[i];
+	} 
+	da(s,sa,2*n+2,128); 
+  LCP(s,2*n+2,sa);
+  RMQ(2*n+2,lcp);
+  m=read();
+  while(m--) {
+  	int a=read(),b=read(),c=read(),d=read();
+  	work(a,b,c,d);
+	}
+}

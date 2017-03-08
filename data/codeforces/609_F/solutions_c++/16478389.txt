@@ -1,0 +1,124 @@
+#include<bits/stdc++.h>
+#define MAXN 400009
+#define INF 2147483647
+#define LLINF 1000000000000000007
+#define mp(x,y) make_pair(x,y)
+#define wr cout<<"Continue Debugging!!!"<<endl;
+#define ff first
+#define ss second
+#define all(x) x.begin(),x.end()
+#define pb(x) push_back(x)
+#define ppb() pop_back()
+#define tr(i, c) for(typeof((c).begin()) i = (c).begin(); i!=(c).end(); i++)
+using namespace std;
+typedef long long ll;
+typedef pair<int,int> PII;
+template<class T> bool umin(T& a, T b) { if(a > b){ a = b;return 1;}return 0;}
+template<class T> bool umax(T& a, T b) { if(a < b){ a = b;return 1;}return 0;}
+//freopen(".in", "r", stdin);
+//freopen(".out", "w", stdout);
+PII frog[MAXN],s[MAXN<<2],mosq[MAXN];
+set<int>sg;
+multiset<PII>onmosq;
+set<PII>in[MAXN];
+map<int,int>pm;
+int ans[MAXN];
+int dsbul(int k){
+	int son=*(--sg.end());
+	if(*sg.begin()>k)
+		return -1;
+	if(son<k)
+		return son;
+	return *(--sg.upper_bound(k));		
+}
+void upd(int p,int v,int ind,int nd,int x,int y){
+	if(x==y){
+		in[x].insert(mp(v,ind));
+		umin(s[nd],mp(v,ind));
+		return;
+	}
+	int mid=(x+y)>>1;
+	if(p<=mid)
+		upd(p,v,ind,nd<<1,x,mid);
+	else
+		upd(p,v,ind,nd<<1|1,mid+1,y);
+	s[nd]=min(s[nd<<1],s[nd<<1|1]);		
+}
+PII tap(int l,int r,int nd,int x,int y){
+	if(l>y or x>r)
+		return mp(INF,-1);
+	if(l<=x and y<=r)
+		return s[nd];
+	int mid=(x+y)>>1;
+	PII i1=tap(l,r,nd<<1,x,mid);
+	PII i2=tap(l,r,nd<<1|1,mid+1,y);
+	return min(i1,i2);	
+}
+void poz(int p,int v,int ind,int nd,int x,int y){
+	if(x==y){
+		PII nn;
+		in[x].erase(in[x].find(mp(v,ind)));
+		if(in[x].size()==0)
+			nn=mp(INF,-1);
+		else
+			nn=*in[x].begin();
+		s[nd]=nn;	
+		return;
+	}
+	int mid=(x+y)>>1;
+	if(p<=mid)
+		poz(p,v,ind,nd<<1,x,mid);
+	else
+		poz(p,v,ind,nd<<1|1,mid+1,y);
+	s[nd]=min(s[nd<<1],s[nd<<1|1]);	
+}
+int main(){
+	for(int i=0;i<MAXN<<2;i++)
+		s[i]=mp(INF,-1);
+	int n,m,c=1;
+	scanf("%d%d",&n,&m);
+	for(int i=1;i<=n;i++){
+		int posf,lent;
+		scanf("%d%d",&posf,&lent);
+		frog[i]=mp(posf,lent);
+	}
+	for(int i=1;i<=m;i++){
+		int posm,szm;
+		scanf("%d%d",&posm,&szm);
+		mosq[i]=mp(posm,szm);
+		pm[posm]=1;sg.insert(posm);
+	}
+	tr(it,pm)
+		it->ss=++c;
+	pm[-1]=1;	
+	for(int i=1;i<=n;i++){
+		int where=frog[i].ff+frog[i].ss;
+		upd(pm[dsbul(where)],frog[i].ff,i,1,1,c);	
+	}
+	for(int i=1;i<=m;i++){
+		PII k=tap(pm[mosq[i].ff],c,1,1,c);
+		if(k.ss==-1 or k.ff>mosq[i].ff){
+			onmosq.insert(mosq[i]);
+			continue;
+		}
+		poz(pm[dsbul(frog[k.ss].ff+frog[k.ss].ss)],frog[k.ss].ff,k.ss,1,1,c);
+		frog[k.ss].ss+=mosq[i].ss;
+		upd(pm[dsbul(frog[k.ss].ff+frog[k.ss].ss)],frog[k.ss].ff,k.ss,1,1,c);
+		ans[k.ss]++;
+		while(onmosq.size()>0){
+			if((*(--onmosq.end())).ff<frog[k.ss].ff)
+				break;
+			PII it=*onmosq.lower_bound(mp(frog[k.ss].ff,-1));
+			if(it.ff-frog[k.ss].ff>frog[k.ss].ss)
+				break;
+			poz(pm[dsbul(frog[k.ss].ff+frog[k.ss].ss)],frog[k.ss].ff,k.ss,1,1,c);	
+			frog[k.ss].ss+=it.ss;	
+			upd(pm[dsbul(frog[k.ss].ff+frog[k.ss].ss)],frog[k.ss].ff,k.ss,1,1,c);
+			ans[k.ss]++;
+			onmosq.erase(onmosq.find(it));
+		}
+	}
+	for(int i=1;i<=n;i++)
+		printf("%d %d\n",ans[i],frog[i].ss);
+	return 0;
+}

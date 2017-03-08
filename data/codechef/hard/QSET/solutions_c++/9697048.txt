@@ -1,0 +1,103 @@
+#include <iostream>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <vector>
+#include <string>
+#include <map>
+#include <set>
+#include <queue>
+#include <algorithm>
+#define lli long long int
+#define pb push_back
+#define mod 1000000007
+#define pii pair<int,int>
+
+using namespace std;
+struct node{
+    int sum;
+    int cnt[3];
+};
+
+node seg[400000];
+string str;
+
+void init(struct node &a){
+    a.sum=0;
+    a.cnt[0]=0;
+    a.cnt[1]=0;
+    a.cnt[2]=0;
+}
+void merge(struct node &x , struct node &a , struct node &b){
+    x.sum = (a.sum + b.sum)%3 ;
+    for(int i=0;i<3;i++){
+        x.cnt[i] += a.cnt[i];
+        x.cnt[(i+a.sum)%3]+= b.cnt[i];
+    }
+}
+void build(int n,int b,int e){
+    if(b==e){
+        init(seg[n]);
+        seg[n].sum=(str[b-1]-'0')%3;
+        seg[n].cnt[seg[n].sum]++;
+        return ;
+    }
+    int mid=(b+e)/2;
+    build(2*n , b,mid);
+    build(2*n+1,mid+1,e);
+
+    init(seg[n]);
+    merge(seg[n] , seg[2*n] , seg[2*n+1]);
+}
+void update(int n,int b,int e,int pos,int val){
+    if(b==e){
+        if(b==pos){
+            init(seg[n]);
+            seg[n].sum=val%3;
+            seg[n].cnt[seg[n].sum]++;
+        }
+        return;
+    }
+    int mid=(b+e)/2;
+    if(pos <= mid)update(2*n , b,mid,pos,val);
+    else update(2*n+1,mid+1,e,pos,val);
+
+    init(seg[n]);
+    merge(seg[n],seg[2*n],seg[2*n+1]);
+}
+struct node query(int n,int b,int e,int i,int j){
+    struct node res = {0,{0,0,0}};
+    if( j < b || i > e )return res;
+    else if(b>=i && e<=j)return seg[n];
+
+    int mid=(b+e)/2;
+    struct node lft = query(2*n ,b,mid,i,j);
+    struct node rt = query(2*n+1,mid+1,e,i,j);
+
+    merge(res,lft,rt);
+    return res;
+}
+int main()
+{
+    int n,m,i,j,a,b,c,typ;
+    cin>>n>>m;
+    cin>>str;
+    build(1,1,n);
+    while(m--){
+        cin>>typ>>a>>b;
+        if(typ==1){
+            update(1,1,n,a,b);
+        }
+        else {
+            struct node res = query(1,1,n,a,b);
+            res.cnt[0]++;
+            lli ans =0;
+            for(i=0;i<3;i++){
+                lli temp=res.cnt[i];
+                ans+=(temp*(temp-1))/2;
+            }
+            printf("%lld\n",ans);
+        }
+    }
+    return 0;
+}

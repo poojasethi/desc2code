@@ -1,0 +1,137 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <deque>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+ 
+using namespace std;
+ 
+const int N = 500;
+const double eps = 1e-14;
+double a[N][N], b[N], x[N];
+void gauss(int n)
+{
+	int uV[N] = {0};
+	int uE[N] = {0};
+	int i, j, k;
+	for(i = 0; i < n; i++)
+	{
+		for(j = 0; j < n; j++)
+			if (!uV[j])
+			{
+				for(k = 0; k < n; k++)
+					if (!uE[k] && fabs(a[k][j]) > eps)
+						break;
+				if (k < n) break;
+			}
+		if (j == n) throw 1;
+		int var = j;
+		int eq = k;
+		uV[var] = i + 1;
+		uE[eq] = i + 1;
+		for(j = 0; j < n; j++)
+			if (!uE[j] && fabs(a[j][var]) > eps)
+			{
+				double coef = a[j][var] / a[eq][var];
+				for(k = 0; k < n; k++)
+					a[j][k] -= a[eq][k] * coef;
+				b[j] -= b[eq] * coef;
+			}
+	}
+ 
+	for(i = n - 1; i >= 0; i--)
+	{
+		int eq, var;
+		for(eq = 0; eq < n; eq++)
+			if (uE[eq] == i + 1)
+				break;
+		for(var = 0; var < n; var++)
+			if (uV[var] == i + 1)
+				break;
+		x[var] = b[eq] / a[eq][var];
+		for(j = 0; j < n; j++)
+			if (uE[j] <= i)
+				b[j] -= a[j][var] * x[var];
+	}
+}
+ 
+int main()
+{
+	//freopen("input.txt", "r", stdin);
+	int n, m, i, j, k, s;
+	int f[30];
+	bool flowered[30] = {0};
+	int con[30][30] = {0};
+	int deg[30] = {0};
+ 
+	cin >> n >> m >> s;
+	for(i = 0; i < s; i++)
+	{
+		cin >> f[i];
+		--f[i];
+		flowered[f[i]] = true;
+	}
+ 
+	while(m--)
+	{
+		cin >> i >> j;
+		con[i - 1][j - 1]++;
+		deg[i - 1]++;
+	}
+ 
+	pair<int,int> ver[N]; // v[i] = <current vertice, last flowered vertice> for Xi
+	int sz = 0;
+	for(i = 0; i < n; i++)
+	{
+		if (flowered[i])
+			ver[sz++] = make_pair(i, i);
+		else
+		{
+			ver[sz++] = make_pair(i, -1);
+			for(j = 0; j < s; j++)
+				ver[sz++] = make_pair(i, f[j]);
+		}
+	}
+ 
+	for(i = 0; i < sz; i++)
+	{
+		a[i][i] = -1.;
+		for(j = 0; j < sz; j++)
+		{
+			if (deg[ver[j].first] == 0 || ver[j].first == n - 1)
+				continue;
+			if (ver[i].second == ver[j].second ||
+				ver[i].first == ver[i].second)
+				a[i][j] += 1. * con[ver[j].first][ver[i].first] / deg[ver[j].first];
+		}
+	}
+	b[0] = -1.;
+	gauss(sz);
+ 
+	double p = 0.0;
+	for(i = 0; i < sz; i++)
+		if (ver[i].first == n - 1)
+			p += x[i];
+ 
+	for(i = 0; i < sz; i++)
+		if (ver[i].first == n - 1 && ver[i].second > -1)
+			printf("%.8lf\n", x[i] / p);
+ 
+ 
+ 
+	return 0;
+} 

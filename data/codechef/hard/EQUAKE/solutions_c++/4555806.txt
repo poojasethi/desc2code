@@ -1,0 +1,153 @@
+#include <cstdio>
+#include <cmath>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <map>
+#include <queue>
+#include <set>
+
+using namespace std;
+
+#define _ ios_base::sync_with_stdio(0);cin.tie(0);
+#define S(x) scanf("%d",&x)
+#define all(c) (c).begin(),(c).end() 
+#define sz(c) int((c).size())
+#define pb push_back
+#define present(c,x) ((c).find(x) != (c).end()) 
+#define cpresent(c,x) (find(all(c),x) != (c).end())
+#define rep(i,x,y) for(int i = x; i < y; i++)
+#define foreach(c,itr) for(__typeof((c).begin()) itr=(c).begin();itr!=(c).end();itr++)
+
+typedef long long int LL;
+typedef vector<int> vi; 
+typedef vector<vi> vvi; 
+typedef pair<int,int> ii;
+typedef vector<ii> vii;
+
+const int MAX = 800001, mod = 12;
+
+int arr[MAX];
+struct node{
+	int REV[12], flag;
+} tree[5*MAX];
+
+node merge(node a, node b)
+{
+	node tmp;
+	rep(i,0,12){
+		tmp.REV[i] = max(a.REV[i],b.REV[i]);
+	}
+	tmp.flag = 0;
+	return tmp;
+}
+
+void make(node& a, int id)
+{
+	int x = arr[id], A[4] = {0}, j = 0, s;
+	while(x){
+		A[j++] = x % 10;
+		x /= 10;
+	}
+	int lo = 0, hi = j - 1;
+	while(lo < hi){
+		swap(A[lo],A[hi]);
+		lo++; hi--;
+	}
+	s = j;
+	j = 0;
+	rep(i,0,12){
+		x = 0;
+		rep(l,j,s+j)
+			x = 10*x + A[l%s];
+		//printf("%d = %d\n",arr[id],x);
+		a.REV[i] = x;
+		j++; 
+	}
+}
+
+void change(node& a, int val)
+{
+	int tmp[12];
+	rep(i,0,12) tmp[i] = a.REV[i];
+	rep(i,0,12) a.REV[i] = tmp[(i+val)%mod];
+}
+
+void unflag(int cur, int L, int R)
+{
+	int f = tree[cur].flag;
+	if(f){
+		change(tree[L],f);
+		change(tree[R],f);
+		tree[L].flag = (tree[L].flag + f) % mod;
+		tree[R].flag = (tree[R].flag + f) % mod;
+		tree[cur].flag = 0;
+	}
+}
+
+void update(int cur, int l, int r, int x, int y, int val)
+{
+	if(l == x && r == y){
+		change(tree[cur],val);
+		tree[cur].flag = (tree[cur].flag + val) % mod;
+		//printf("%d\n",tree[cur].pos);
+		return; 
+	}
+	int m = (l+r) >> 1, L = cur << 1, R = L + 1;
+	unflag(cur,L,R);
+	if(y <= m) update(L,l,m,x,y,val);
+	else if(x > m) update(R,m+1,r,x,y,val);
+	else {update(L,l,m,x,m,val); update(R,m+1,r,m+1,y,val);}
+	tree[cur] = merge(tree[L],tree[R]);
+}
+
+int query(int cur, int l, int r, int x, int y)
+{
+	if(l == x && r == y)
+		return tree[cur].REV[0];
+	int m = (l+r) >> 1, L = cur << 1, R = L + 1;
+	unflag(cur,L,R);
+	if(y <= m)return query(L,l,m,x,y);
+	else if(x > m) return query(R,m+1,r,x,y);
+	else return max(query(L,l,m,x,m), query(R,m+1,r,m+1,y));
+}
+
+void build_tree(int cur, int l, int r)
+{
+	if(l == r){
+		make(tree[cur],l);
+		return;
+	}
+	int m = (l+r) >> 1, L = cur << 1, R = L + 1;
+	build_tree(L,l,m); build_tree(R,m+1,r);
+	tree[cur] = merge(tree[L], tree[R]);
+}
+
+int main()
+{
+	int n, m;
+	S(n);
+	rep(i,1,n+1) S(arr[i]);
+	build_tree(1,1,n);
+	// rep(i,0,12) printf("%d ",tree[1].REV[i]);
+	// printf("\n");
+	// rep(i,1,16) printf("%d ",tree[i].mx);
+	// printf("\n");
+	S(m);
+	while(m--){
+		int f,x, y, z; S(f);
+		if(f){
+			S(x); S(y);
+			printf("%d\n",query(1,1,n,x+1,y+1));
+		}
+		else{
+			S(x); S(y); S(z);
+			update(1,1,n,x+1,y+1,z%mod);
+		}
+		// rep(i,1,16) printf("%d ",tree[i].mx);
+		// printf("\n");
+	}
+	return 0;
+}

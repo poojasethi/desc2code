@@ -1,0 +1,144 @@
+//Pranet Verma
+#include <bits/stdc++.h>
+using namespace std;
+int a[440],b[440];
+struct MaxFlow
+{
+    typedef int Flow;
+    struct Edge
+    {
+        int u,v;
+        Flow f,c;
+        Edge(int u,int v,Flow f,Flow c):u(u),v(v),f(f),c(c){}
+    };
+    vector<vector<int> > g;
+    vector<Edge> e;
+    int *ptr,*dist,*q,n,source,sink;
+    MaxFlow(int n):n(n)
+    {
+        dist=(int*)malloc(sizeof(int)*n);
+        q=(int*)malloc(sizeof(int)*n);
+        ptr=(int*)malloc(sizeof(int)*n);
+        g.resize(n);
+    }
+    ~MaxFlow()
+    {
+        free(dist);
+        free(ptr);
+        free(q);
+        g.clear();
+        e.clear();
+    }   
+    void add(int u,int v,Flow c,Flow rc=0)
+    {
+        g[u].push_back(e.size());
+        e.push_back(Edge(u,v,0,c));
+        g[v].push_back(e.size());
+        e.push_back(Edge(v,u,0,rc));                
+    }
+    Flow flow(int source,int sink)
+    {
+        this->source=source;
+        this->sink=sink;
+        Flow res=0;
+        while(bfs())
+        {
+            memset(ptr,0,sizeof(int)*n);
+            while(Flow pushed=dfs(source,1e9))
+                res+=pushed;
+        }     
+        return res;
+    }
+    bool bfs()
+    {
+        memset(dist,63,sizeof(int)*n);
+        int st=0,en=0;
+        q[en++]=source;
+        dist[source]=0;
+        while(st<en)
+        {
+            int u=q[st++];
+            for(int i=0;i<(int)g[u].size();++i)
+            {
+                int id=g[u][i];
+                int v=e[id].v;
+                if(dist[v]>dist[u]+1 && e[id].f<e[id].c)
+                {
+                    dist[v]=dist[u]+1;
+                    q[en++]=v;
+                    if(v==sink)
+                        return 1;
+                }
+            }
+        }
+        return 0;
+    }
+    Flow dfs(int u,Flow flow)
+    {
+        if(u==sink || flow==0)
+            return flow;
+        for(int &i=ptr[u];i<(int)g[u].size();++i)
+        {
+            int id=g[u][i];
+            int v=e[id].v;
+            Flow pushed;
+            if(dist[v]==dist[u]+1 && (pushed=dfs(v,min(flow,e[id].c-e[id].f))) )
+            {
+                e[id].f+=pushed;
+                e[id^1].f-=pushed;
+                return pushed;
+            }
+        }
+        return 0;
+    }
+};   
+int main()
+{
+    std::ios::sync_with_stdio(false);
+    cin.tie(0);
+    int t;
+    cin>>t;
+    while(t--)
+    {
+        int n;
+        cin>>n;
+        map<int,int> s1,s2;
+        for(int i=0;i<n;++i)
+            cin>>a[i];
+        for(int i=0;i<n;++i)
+            cin>>b[i];
+        for(int i=0;i<n;++i)
+            for(int j=0;j<n;++j)
+            {
+                if(b[j]>a[i] && __gcd(a[i],b[j])!=1)
+                    s1[__gcd(a[i],b[j])]++;
+                if(b[i]<a[j] && __gcd(b[i],a[j])!=1)
+                    s2[__gcd(b[i],a[j])]++;
+            }
+        int offset=s1.size();
+
+        MaxFlow mf(s1.size()+s2.size()+2);
+        int source=s1.size()+s2.size();
+        
+        int sink=source+1;
+        int res=0;
+        for(map<int,int>::iterator i=s1.begin();i!=s1.end();++i)
+            mf.add(source,res++,i->second);
+        for(map<int,int>::iterator i=s2.begin();i!=s2.end();++i)
+            mf.add(res++,sink,i->second);
+        res=0;
+
+        for(map<int,int>::iterator i=s1.begin();i!=s1.end();++i)
+        {
+            int res2=offset;
+            for(map<int,int>::iterator j=s2.begin();j!=s2.end();++j)
+            {
+                if(__gcd(i->first,j->first)!=1)
+                    mf.add(res,res2,1e9);
+                ++res2;
+            }
+            ++res;
+        }
+        cout<<mf.flow(source,sink)<<"\n";
+    } 
+}

@@ -1,0 +1,158 @@
+#include<stdio.h>
+#include<string.h>
+#include<stdlib.h>
+#include<math.h>
+#include<algorithm>
+#include<set>
+#include<map>
+#include<utility>
+#include<vector>
+#include<string>
+#include<stack>
+#include<queue>
+using namespace std;
+#define MAXS 2500006
+#define MAXN 506
+#define MAXNL 5006
+#define MAXL 50006
+#define MAXALPHA 64
+char str[MAXL],pat[MAXNL];
+int TRIE[MAXS][MAXALPHA],trsz;
+int ends[MAXN];
+int acfail[MAXS];
+long long cnt[MAXS];
+vector < int > VQ;
+int findidx(char ch)
+{
+    if (ch >= 'a' && ch <= 'z') return ch - 'a';
+    if (ch >= 'A' && ch <= 'Z') return ch - 'A' + 26;
+    if (ch == '-') return 52;
+    if (ch >= '0' && ch <= '9') return ch - '0' + 53;
+    return -1;
+}
+void trinsert(char *str, int idx)
+{
+    int cur = 0;
+    char *s = str;
+    char ch;
+    while (*s)
+    {
+        ch = findidx(*s);
+        if (TRIE[cur][ch] == -1)
+        {
+            ++trsz;
+            TRIE[cur][ch] = trsz;
+            cnt[trsz] = 0;
+        }
+        cur = TRIE[cur][ch];
+        ++s;
+    }
+    ends[idx] = cur;
+}
+void acprep()
+{
+    int ch,nxt,now,f;
+    memset(acfail, 0, sizeof(acfail));
+    VQ.clear();
+    queue < int > Q;
+    for (ch = 0; ch < MAXALPHA; ++ch)
+    {
+        nxt = TRIE[0][ch];
+        if (nxt == -1) continue;
+        Q.push(nxt);
+        VQ.push_back(nxt);
+    }
+    while (!Q.empty())
+    {
+        now = Q.front();
+        Q.pop();
+        for (ch = 0; ch < MAXALPHA; ++ch)
+        {
+            nxt = TRIE[now][ch];
+            if (nxt == -1) continue;
+            f = acfail[now];
+            while (f != 0 && TRIE[f][ch] == -1) f = acfail[f];
+            if (TRIE[f][ch] != -1) f = TRIE[f][ch];
+            acfail[nxt] = f;
+            Q.push(nxt);
+            VQ.push_back(nxt);
+        }
+    }
+    reverse(VQ.begin(), VQ.end());
+}
+void actrav(char *s)
+{
+    int cur = 0,f;
+    int ch;
+    while (*s)
+    {
+        ch = findidx(*s);
+        if (ch == -1)
+        {
+            cur = 0;
+            ++s;
+            continue;
+        }
+        if (TRIE[cur][ch] == -1)
+        {
+            f = cur;
+            while (f != 0 && TRIE[f][ch] == -1)
+            {
+                f = acfail[f];
+                //++cnt[f];
+            }
+            if (TRIE[f][ch] != -1)
+            {
+                f = TRIE[f][ch];
+                ++cnt[f];
+            }
+            cur = f;
+            //printf("%d ", cur);
+        }
+        else
+        {
+            cur = TRIE[cur][ch];
+            ++cnt[cur];
+            //printf("%d ", cur);
+        }
+        ++s;
+    }
+    //puts("");
+}
+void calc()
+{
+    int i,nxt,now;
+    for (i=0; i<VQ.size(); ++i)
+    {
+        nxt = VQ[i];
+        now = acfail[nxt];
+        if (now) cnt[now] += cnt[nxt];
+    }
+}
+int main()
+{
+    //freopen("data.txt", "r", stdin);
+    int t,T;
+    int N,M,i;
+    while (scanf("%d", &N) != EOF)
+    {
+        memset(TRIE, -1, sizeof(TRIE));
+        cnt[0] = trsz = 0;
+        for (i=0; i<N; ++i)
+        {
+            scanf("%s", pat);
+            trinsert(pat,i);
+        }
+        acprep();
+        scanf("%d", &M);
+        gets(str);
+        while (M--)
+        {
+            gets(str);
+            actrav(str);
+        }
+        calc();
+        for (i=0; i<N; ++i) printf("%lld\n", cnt[ends[i]]);
+    }
+    return 0;
+}

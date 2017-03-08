@@ -1,0 +1,82 @@
+/*
+Author: LJQ
+PROG: Codeforces ABBYY Cup 2.0 - Final B. Military Trainings
+DATE: 2012.12.27
+*/
+#include <cmath>
+#include <cstdio>
+
+using namespace std;
+
+const int maxd = 18;
+const int maxn = 500005;
+
+int lat[maxn][maxd];
+int rmq[maxn][maxd];//rmq[i][j]: max(k - rad[k]), k in (i .. i + 2^j - 1)
+int rad[maxn], best[maxn];
+int n, N; long long ret;
+
+inline int getint()
+{
+	int ret = 0; char ch;
+	while ((ch = getchar()) && (ch < '0' || ch > '9')) ;
+	ret = ch - '0';
+	while ((ch = getchar()) && ch >= '0' && ch <= '9')
+		ret = ret * 10 + ch - '0';
+	return ret;
+}
+
+void init()
+{
+	n = getint(); N = n + n;
+	for (int i = 0; i < n; i ++) rad[i] = getint(), rad[i + n] = rad[i];
+}
+
+void work()
+{
+	for (int i = 0; i < N; i ++) best[i] = i - rad[i], rmq[i][0] = i;
+	for (int i = N-1; i >= 0; i --)
+		for (int d = 1; d < maxd && (1 << d) <= n; d ++){
+			if (best[rmq[i][d - 1]] < best[rmq[i + (1 << (d - 1))][d - 1]])
+				rmq[i][d] = rmq[i][d - 1];
+			else 
+				rmq[i][d] = rmq[i + (1 << (d - 1))][d - 1];
+		}
+	for (int i = 0; i < N; i ++){
+		int v = best[i];
+		if (v <= 0){
+			lat[i][0] = 0; continue;
+		}
+		int d = (int)log2(i - v + 1);
+		if (best[rmq[v][d]] < best[rmq[i - (1 << d) + 1][d]])
+			lat[i][0] = rmq[v][d];
+		else
+			lat[i][0] = rmq[i - (1 << d) + 1][d];
+	}
+	for (int i = 0; i < N; i ++)
+		for (int j = 1; j < maxd; j ++)
+			lat[i][j] = lat[lat[i][j-1]][j-1];
+	ret = 0;
+	for (int i = n; i < N; i ++){
+		ret ++;//first step
+		if (best[i] <= i - n + 1) continue;
+		int u = i;
+		for (int j = maxd-1; j >= 0; j --)
+			if (best[lat[u][j]] > i - n + 1)
+				u = lat[u][j], ret += 1 << j;
+		ret ++;//last step
+	}
+}
+
+void print()
+{
+	printf("%I64d\n", ret);
+}
+
+int main()
+{
+	init();
+	work();
+	print();
+	return 0;
+}

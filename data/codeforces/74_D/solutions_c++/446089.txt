@@ -1,0 +1,107 @@
+#include<cstdio>
+#include<cstring>
+#include<set>
+#include<map>
+#define MAXQ 100010
+using namespace std;
+struct segment{
+    int len;
+    int s,t;
+    segment(){}
+    segment(int _s,int _t):s(_s),t(_t){  len=t-s+1; }
+    bool operator<(const segment &that)const {
+        return len>that.len || (len==that.len && t>that.t);
+    }
+};
+set<segment> seg;
+set<int> pt;
+map<int,int> hash,mid_pos;
+int n,q,nhash;
+int query[MAXQ][2],nq;
+int s[MAXQ*2];
+int task_sta[MAXQ];
+void insert(int x,int val)
+{
+    while(x<=nhash)
+    {
+        s[x]+=val;
+        x+=(x & (-x));
+    }
+}
+int get(int x)
+{
+    int ret=0;
+    while(x){
+        ret+=s[x];
+        x-=(x & (-x));
+    }
+    return ret;
+}
+int main()
+{
+    while(scanf("%d%d",&n,&q)!=EOF)
+    {
+        seg.clear();
+        seg.insert(segment(1,n));
+        pt.insert(0); pt.insert(n+1);
+        for(int i=0;i<q;i++)
+        {
+            int num,x,y;
+            scanf("%d",&num);
+            if(num){
+                segment lft,rig;
+                int mid;
+                query[i][0]=num;
+                if(mid_pos.count(num)){ //delete
+                    task_sta[i]=2;
+                    query[i][1]=mid=mid_pos[num];
+                    x=(*(--pt.lower_bound(mid)))+1;
+                    y=(*pt.upper_bound(mid))-1;
+                    pt.erase(mid);
+                    mid_pos.erase(num);
+                    seg.erase(segment(x,mid-1));
+                    seg.erase(segment(mid+1,y));
+                    seg.insert(segment(x,y));
+                 }else{//insert
+                    task_sta[i]=1;
+                    segment tm=*seg.begin();
+                        seg.erase(seg.begin());
+                        if(tm.len&1) mid=(tm.s+tm.t)/2;
+                        else  mid=(tm.s+tm.t)/2+1;
+                            lft=segment(tm.s,mid-1);
+                            rig=segment(mid+1,tm.t);
+                            seg.insert(lft);  seg.insert(rig);
+                            mid_pos[num]=mid;
+                            query[i][1]=mid;
+                            pt.insert(mid); 
+                            hash[mid]=0;
+                }
+            }else{
+                task_sta[i]=0;
+                scanf("%d%d",&x,&y);
+                query[i][0]=x;  query[i][1]=y;
+                hash[x]=hash[y]=0;
+            }
+        }
+        
+        nhash=0;
+        for(map<int,int>::iterator it=hash.begin();it!=hash.end();it++)
+            it->second=++nhash;
+        memset(s,0,sizeof(s));
+        for(int i=0;i<q;i++)
+        {
+            int x,y;
+            if(task_sta[i]==0){
+                x=hash[query[i][0]],y=hash[query[i][1]];
+                printf("%d\n",get(y)-get(x-1));
+            }else if(task_sta[i]==1){
+                x=hash[query[i][1]];
+                insert(x,1);
+            }else{
+                x=hash[query[i][1]];
+                insert(x,-1);
+            }
+        }
+    }
+    return 0;
+}

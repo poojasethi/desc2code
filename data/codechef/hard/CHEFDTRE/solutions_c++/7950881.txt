@@ -1,0 +1,168 @@
+#include <cassert>
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <cstdlib>
+#include <ctime>
+
+using namespace std;
+
+/*
+ A treap node.
+ */
+
+struct node {
+    int key, prior;
+    int cnt;
+    node *l, *r;
+    node () { }
+    node (int key, int prior) : key(key), prior(prior), l(NULL), r(NULL), cnt(1) { }
+};
+
+typedef node * pnode;
+
+/*
+ Standard treap class.
+ */
+
+class treap {
+private:
+
+    pnode root;
+
+    int cnt (pnode t) {
+        if (t != NULL)
+            return t->cnt;
+        else
+            return 0;
+    }
+
+    void upd_cnt (pnode t) {
+        if (t != NULL)
+            t->cnt = 1 + cnt(t->l) + cnt(t->r);
+    }
+
+    void split (pnode t, int key, pnode &l, pnode &r) {
+        upd_cnt(t);
+        upd_cnt(l);
+        upd_cnt(r);
+        if (t == NULL)
+            l = r = NULL;
+        else
+            if (key < t->key)
+                split(t->l, key, l, t->l), r = t;
+            else
+                split(t->r, key, t->r, r), l = t;
+        upd_cnt(t);
+        upd_cnt(l);
+        upd_cnt(r);
+    }
+
+    void merge (pnode &t, pnode l, pnode r) {
+        upd_cnt(t);
+        upd_cnt(l);
+        upd_cnt(r);
+        if (l == NULL || r == NULL)
+            t = l ? l : r;
+        else
+            if (l->prior > r->prior)
+                merge (l->r, l->r, r), t = l;
+            else
+                merge (r->l, l, r->l), t = r;
+        upd_cnt(t);
+        upd_cnt(l);
+        upd_cnt(r);
+    }
+
+    int getkth (pnode t, int k) {
+        upd_cnt(t);
+        if (cnt(t->l) + 1 == k)
+            return t->key;
+        if (cnt(t->l) >= k)
+            return getkth(t->l, k);
+        return getkth(t->r, k - 1 - cnt(t->l));
+    }
+
+    void insert (pnode &t, pnode me) {
+        upd_cnt(t);
+        upd_cnt(me);
+        if (t == NULL)
+            t = me;
+        else
+            if (me->prior > t->prior)
+                split(t, me->key, me->l, me->r), t = me;
+            else
+                insert(me->key < t->key ? t->l : t->r, me);
+        upd_cnt(t);
+        upd_cnt(me);
+    }
+
+    void add_all (pnode t, treap &you) {
+        if (t ==  NULL)
+            return ;
+        you.insert(you.root, new node(t->key, t->prior));
+        if (t->l != NULL)
+            add_all(t->l, you);
+        if (t->r != NULL)
+            add_all(t->r, you);
+    }
+
+public:
+
+    int size () {
+        upd_cnt(root);
+        return cnt(root);
+    }
+
+    int getkth (int k) {
+        return getkth(root, k);
+    }
+
+    void create (int k) {
+        int prior = 0;
+        for(int i = 0; i < 10; i++)
+            prior = (10LL * prior + rand() % 10) % 1000000000;
+        root = new node(k, prior);
+    }
+
+    void add_all (treap &you) {
+        add_all(root, you);
+    }
+
+};
+
+/*
+ Join the smallest treap to the largest one in order to obtain O(N log^2 N) time in the worst case.
+ */
+
+void unite (treap &rest, treap &a, treap &b) {
+    if (a.size() < b.size())
+        swap(a, b);
+    rest = a;
+    b.add_all(rest);
+}
+
+const int MAXN = 2e5+5;
+
+int n, tn, x, y, del[MAXN];
+treap se[MAXN];
+string qt;
+
+int main(int argc, const char * argv[]) {
+
+    ios_base::sync_with_stdio(false);
+    cin >> n >> tn;
+    for(int i = 1; i <= n; i++)
+        se[i].create(i);
+    while (tn--) {
+        cin >> qt >> x >> y;
+        if (qt == "GET") {
+            cout << se[x].getkth(y) << endl;
+        } else {
+            ++n;
+            unite(se[n], se[x], se[y]);
+            del[x] = del[y] = 1;
+        }
+    }
+    return 0;
+}

@@ -1,0 +1,132 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#define maxn 810
+#define maxm 10010100
+using namespace std;
+
+int done[maxn];
+int d[maxn][maxn],ne[maxn],pas[maxn],park[maxn],mark[maxn];
+int n,ans,head,top;
+int que[maxm];
+int nex[maxm][2],fail[maxm],anc[maxm];
+char *s[maxn],pool[maxm];
+
+struct str { char *s; int len; } dot[maxn];
+
+bool cmp(const str &a, const str &b) {
+	return (a.len < b.len);
+}
+
+bool path(int u) {
+	for (int i = 1; i <= n; i++) {
+		if (!d[u][i] || done[i]) continue;
+		done[i] = 1;
+		if (!ne[i] || path(ne[i])) {
+			ne[i] = u;
+			return true;
+		}
+	}
+	return false;
+}
+
+void hungary() {
+	for (int i = 1; i <= n; i++) {
+		memset(done,0,sizeof(done));
+		if (path(i)) ans++;
+	}
+	printf("%d\n",n - ans);
+}
+
+void paint(int u) {
+	park[u] = 1;
+	for (int i = 1; i <= n; i++) {
+		if (!d[u][i] || done[i]) continue;
+		mark[i] = 1; done[i] = 1;
+		if (ne[i] && ne[i] != u) paint(ne[i]);
+	}
+	return;
+}
+
+void paint_() {
+	for (int i = 1; i <= n; i++) pas[ne[i]] = i;
+	for (int i = 1; i <= n; i++) {
+		memset(done,0,sizeof(done));
+		if (!pas[i]) paint(i);
+	}
+	for (int i = 1; i <= n; i++)
+		if (!mark[i] && park[i]) printf("%d ",i);
+}
+
+void add(int u,char *s, int k) {
+	for (; *s; s++) {		
+		u = nex[u][*s - 'a'];
+		if (anc[u]) d[anc[u]][k] = 1;
+		//while (fail[u] != 1 && !anc[fail[u]]) fail[u] = fail[fail[u]];
+		if (anc[fail[u]]) d[anc[fail[u]]][k] = 1;
+	}
+}
+
+void build(int u,char *s,int k) {
+	for (; *s; s++) {
+		if (!nex[u][*s - 'a']) nex[u][*s - 'a'] = ++top;
+		u = nex[u][*s - 'a'];
+	}
+	anc[u] = k;
+}
+
+void prepare() {
+	int L = 0, R = 0; que[++R] = head;
+	fail[head] = 1;
+	while (L < R) {
+		int u = que[++L];
+		for (int i = 0; i < 2; i++) {
+			if (!nex[u][i]) continue;
+			que[++R] = nex[u][i];
+			int v = fail[u];
+			for (; v != head && !nex[v][i]; v = fail[v]);
+			if (nex[v][i] && nex[v][i] != nex[u][i])
+				fail[nex[u][i]] = nex[v][i];
+			else fail[nex[u][i]] = head;
+		}
+	}
+	L = 0, R = 0; que[++R] = head;
+	fail[head] = 1;
+	while (L < R) {
+		int u = que[++L];
+		for (int i = 0; i < 2; i++) {
+			if (!nex[u][i]) continue;
+			que[++R] = nex[u][i];
+		}
+		while (fail[u] != 1 && !anc[fail[u]]) fail[u] = fail[fail[u]];
+	}
+	return;
+}
+
+int main() {
+	scanf("%d",&n);
+	s[1] = pool;
+	for (int i = 1; i <= n; i++) {
+		while (*s[i]) s[i]++; s[i]++;
+		scanf("%s",s[i]);
+	    s[i + 1] = s[i];
+		dot[i].s = s[i];
+		dot[i].len = strlen(s[i]);
+	}
+	//sort(dot + 1,dot + n + 1,cmp);
+	head = top = 1;
+	for (int i = 1; i <= n; i++)
+		build(head,dot[i].s,i);
+	prepare();
+	for (int i = 1; i <= n; i++) {
+		add(head,dot[i].s,i);
+	}
+	for (int k = 1; k <= n; k++)
+		for (int i = 1; i <= n; i++)
+			for (int j = 1; j <= n; j++)
+				d[i][j] |= (d[i][k] & d[k][j]);
+	for (int i = 1; i <= n; i++) d[i][i] = 0;
+	hungary();
+	paint_();
+	return 0;
+}

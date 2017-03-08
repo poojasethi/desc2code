@@ -1,0 +1,148 @@
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <vector>
+#include <algorithm>
+#include <queue>
+#include <list>
+#include <set>
+#include <limits.h>
+#include <string.h>
+#include <assert.h>
+#include <math.h>
+#include <map>
+using namespace std;
+
+#define pb push_back
+#define MAXN 100000
+#define MOD 1000000007
+#define OFFSET 4000000
+#define LL long long int
+
+const LL INF = LONG_MAX;
+
+int cIndex = -1;
+LL sumPopulation, minCost;
+vector <int> G[MAXN + 5];
+int population[MAXN + 5], pw[50];
+bool visited[MAXN + 5];
+pair <bool, LL> ph[MAXN + 5];
+pair <LL, LL> cmp[MAXN + 5];
+pair <LL, LL> L[(1 << 17)];
+LL maxProfit[(1<<17)];
+
+void dfs(int u) {
+	sumPopulation += population[u];
+	if (ph[u].first){ // update only if u is powerhouse city
+		minCost = min(minCost, ph[u].second);
+	}
+
+	visited[u] = true;
+	for (unsigned int i = 0; i < G[u].size(); i++) {
+		int v = G[u][i];
+
+		if (!visited[v]) {
+			dfs(v);
+		}
+	}
+}
+
+bool comp(pair<LL, LL> a, pair<LL, LL> b){
+	if (a.first != b.first){
+		return a.first < b.first;
+	}
+	return a.second > b.second;
+}
+
+LL doKnapsack(LL M){
+	LL x, xx, ans;
+	int nL = cIndex / 2;
+	int nR = cIndex - nL;
+
+	for (int mask = 0; mask < (1 << nL); mask++){
+		for (int i = 0; i < nL; i++){
+			if (mask & (1 << i)){
+				L[mask].first += cmp[i].second;
+				L[mask].second += cmp[i].first;
+			}
+		}
+	}
+	sort(L, L + (1 << nL), comp);
+
+	maxProfit[0] = L[0].second;
+	for (int i = 1; i < (1 << nL); i++){
+		maxProfit[i] = max(maxProfit[i - 1], L[i].second);
+	}
+
+	ans = 0;
+	for (int mask = 0; mask < (1 << nR); mask++){
+		x = xx = 0;
+		for (int i = 0; i < nR; i++){
+			if (mask & (1 << i)){
+				x += cmp[nL + i].second;
+				xx += cmp[nL + i].first;
+			}
+		}
+		int indx = upper_bound(L, L + (1 << nL), make_pair(M - x, -1), comp) - L;
+		if (indx != 0){
+			ans = max(ans, maxProfit[indx - 1] + xx);
+		}
+	}
+	return ans;
+}
+
+int main() {
+	int N, E, K, X, u, v, c;
+	LL M;
+
+	scanf("%d %d %d", &N, &E, &K);
+
+	for (int i = 0; i < E; i++){
+		scanf("%d %d", &u, &v);
+
+		G[u].push_back(v);
+		G[v].push_back(u);
+	}
+
+	for (int i = 1; i <= N; i++){
+		scanf("%d", &population[i]);
+	}
+
+	for (int i = 0; i < K; i++){
+		scanf("%d", &pw[i]);
+	}
+
+	for (int i = 0; i < K; i++){
+		scanf("%d", &c);
+		ph[pw[i]].first = true;
+		ph[pw[i]].second = c;
+	}
+
+	scanf("%d %lld", &X, &M);
+	for (int i = 0; i < X; i++){
+		scanf("%d", &u);
+		M += ph[pw[u - 1]].second;
+	}
+
+	for (int i = 1; i <= N; i++){
+		if (!visited[i]){
+			cIndex++;
+			sumPopulation = 0;
+			minCost = INF;
+
+			dfs(i);
+
+			if (minCost != INF){ // component contains a power house
+				cmp[cIndex].first = sumPopulation;
+				cmp[cIndex].second = minCost;
+			}
+			else{
+				cIndex--;
+			}
+		}
+	}
+	cIndex++;
+	printf("%lld\n", doKnapsack(M));
+
+	return 0;
+}

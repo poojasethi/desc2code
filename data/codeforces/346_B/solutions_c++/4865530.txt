@@ -1,0 +1,93 @@
+#include <cstdio>
+#include <cstring>
+typedef unsigned int uint;
+
+struct state
+{
+	int n:24;
+	int c:8;
+	state const *prev;
+};
+state b[128][128][128]={};
+
+
+void print(state const &s)
+{
+	if(s.n)
+	{
+		state const &p=*s.prev;
+		print(p);
+		if(p.n<s.n)
+			printf("%c",s.c);
+	}
+}
+
+main()
+{
+	char s1[128];
+	char s2[128];
+	char sv[128];
+	scanf("%s%s%s",s1,s2,sv);
+	uint n1=strlen(s1);
+	uint n2=strlen(s2);
+	uint nv=strlen(sv);
+
+	uint fail[128]={};
+	for(uint i=1,j=0; i<nv;)
+		if(sv[i]==sv[j])
+			fail[i++]=1+j++;
+		else if(0<j)
+			j=fail[j-1];
+		else fail[i++]=0;
+
+	b[0][0][0].n=0;
+	for(uint i=1; i<=nv; ++i)
+		b[0][0][i].n=-4200;
+	for(uint i=1; i<=n1; ++i)
+	{
+		for(uint j=1; j<=n2; ++j)
+		{
+			for(uint k=0; k<nv; ++k)
+			{
+				b[i][j][k]=b[i-1][j][k];
+				if(b[i][j][k].n<b[i][j-1][k].n)
+					b[i][j][k]=b[i][j-1][k];
+			}
+			if(s1[i-1]==s2[j-1])
+			{
+				for(uint k=0; k<nv; ++k)
+				{
+					uint v=k;
+					while(1)
+					{
+						if(s1[i-1]==sv[v])
+						{
+							++v;
+							break;
+						}
+						if(0<v)
+							v=fail[v-1];
+						else break;
+					}
+					if(b[i][j][v].n<b[i-1][j-1][k].n+1)
+					{
+						b[i][j][v].n=b[i-1][j-1][k].n+1;
+						b[i][j][v].c=s1[i-1];
+						b[i][j][v].prev=&b[i-1][j-1][k];
+					}
+				}
+			}
+		}
+	}
+	uint v=0;
+	for(uint i=1; i<nv; ++i)
+		if(b[n1][n2][v].n<b[n1][n2][i].n)
+			v=i;
+	if(0<b[n1][n2][v].n)
+	{
+		print(b[n1][n2][v]);
+		printf("\n");
+	}
+	else printf("0\n");
+}
+

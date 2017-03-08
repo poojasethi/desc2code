@@ -1,0 +1,101 @@
+#include <stdio.h>
+#include <map>
+#include <hash_map>
+#include <vector>
+#include <set>
+#include <algorithm>
+using namespace std;
+
+#define TEST_PRINT //
+
+typedef struct _PRICEQUAL
+{
+	unsigned int price, qual;
+	
+	_PRICEQUAL(int p, int q) : price(p), qual(q)
+	{
+	}
+	
+	bool operator <(const _PRICEQUAL &rhs) const
+	{
+		return qual > rhs.qual || price < rhs.price;
+	}
+} PriceQual;
+
+void walk(char chosen, unsigned int T, vector<	vector<PriceQual> > &prods, unsigned int cur_qual, unsigned int &best_qual, int pos = 0)
+{
+	if (pos == 6)
+	{
+		best_qual = cur_qual;
+		return;
+	}
+	
+	if (chosen & (1 << pos))
+	{
+		walk(chosen, T, prods, cur_qual, best_qual, pos + 1);
+		return;
+	}
+	
+	for (int j = 0; j < prods[pos].size(); j++)
+	{
+		const PriceQual &pq = prods[pos][j];
+		
+		if (pq.qual < best_qual)
+			continue;
+			
+		if (pq.price > T)
+			continue;
+
+		walk(chosen | (1 << pos), T - pq.price, prods, min(cur_qual, pq.qual), best_qual, pos + 1);
+	}
+}
+
+int main(int argc, char *argv[])
+{
+	unsigned int num, T;
+	
+	scanf("%d %d\n", &num, &T);
+	
+	vector<	vector<PriceQual> > prods(6);
+	
+	for (int i = 0; i < num; i++)
+	{
+		unsigned int t, p, q;
+		
+		scanf("%u %u %u\n", &t, &p, &q);
+		
+		prods[t - 1].push_back(PriceQual(p, q));
+	}
+	
+	char chosen = 0;
+	unsigned int quality = 1000000;
+	
+	for (int t = 0; t < 6; t++)
+	{
+		if (prods[t].empty())
+		{
+			printf("0\n");
+			return 0;
+		}
+		
+		if (prods[t].size() == 1)
+		{
+			if (T < prods[t][0].price)
+			{
+				printf("0\n");
+				return 0;
+			}
+			
+			chosen |= (1 << t);
+			quality = min(quality, prods[t][0].qual);
+			T -= prods[t][0].price;
+		}
+		
+		sort(prods[t].begin(), prods[t].end(), less<PriceQual>());
+	}
+	
+	unsigned int best_qual = 0;
+	walk(chosen, T, prods, quality, best_qual);
+	
+	printf("%d\n", best_qual);
+}

@@ -1,0 +1,132 @@
+#include <algorithm>
+#include <iostream>
+#include <cassert>
+#include <cstdio>
+#include <vector>
+#include <set>
+using namespace std;
+
+#define		LL			long long
+#define		S(x)			scanf("%d",&x)
+#define		SL(x)			scanf("%lld",&x)
+#define		INC(i,a,b)		for(int i=a;i<b;++i)
+#define		REP(i,n)		INC(i,0,n)
+#define		mp			make_pair
+#define		FF			first
+#define		SS			second
+#define		tri(a,b,c)		mp(a,mp(b,c)
+#define		XX			FF
+#define		YY			SS.FF
+#define		ZZ			SS.SS
+#define		pb			push_back
+#define		SZ(arr)			((int)(arr.size()))
+
+struct overtake {
+  LL d, s;
+  int a, b; // a is overtaken by b (not true ID)
+};
+
+inline bool operator< (const overtake &x, const overtake &y) {
+  if(x.d*y.s < x.s*y.d) return true;
+  else if(x.d*y.s==x.s*y.d) {
+    if(x.a<y.a || (x.a==y.a && x.b<y.b)) return true;
+  }
+  return false;
+}
+
+typedef pair<LL,LL> PLL;
+typedef pair<LL,PLL> TRI;
+typedef vector<int> VI;
+
+const int MAX_N = 1e5+7;
+int n, q, L[MAX_N];
+VI F;
+TRI H[MAX_N];
+set<overtake> O;
+
+void begin();
+void repeat();
+void answer(LL);
+bool check(int,LL);
+
+int main() {
+  int t; S(t);
+  while(t--) {
+    begin();
+    repeat();
+    REP(i,q) {
+      LL pos; SL(pos);
+      answer(pos);
+    }
+  }
+  return 0;
+}
+
+void begin() {
+  F.clear();
+  O.clear();
+  S(n); S(q);
+  REP(i,n) {
+    SL(H[i].XX); SL(H[i].YY); H[i].ZZ = i; // (distance, speed, ID)
+  }
+  sort(H,H+n,greater<TRI>()); // Sort in order of distance
+  REP(i,n) L[i] = i-1; // Linked list
+  F.pb(0); // First in race
+  
+  // Add values to overtake set, and discard useless ones
+  INC(i,1,n) {
+    TRI curr = H[i];
+    TRI prev = H[L[i]]; // The horse just ahead
+    
+    if(curr.YY<=prev.YY) {
+      L[i+1] = L[i];
+    }
+    else {
+      overtake temp;
+      temp.s = curr.YY-prev.YY; temp.d = prev.XX-curr.XX;
+      temp.a = L[i]; temp.b = i;
+      O.insert(temp);
+      
+    }
+  }
+}
+void repeat() {
+  while(!O.empty()) {
+    overtake top = *O.begin();
+    O.erase(O.begin());
+    L[top.b] = L[top.a];
+    if(L[top.a]!=-1) {
+      overtake temp;
+      temp.a = L[top.a]; temp.b = top.a;
+      temp.s = H[temp.b].YY-H[temp.a].YY; temp.d = H[temp.a].XX-H[temp.b].XX;
+      assert(temp.s>0 && temp.d>0);
+      O.erase(O.find(temp));
+
+      temp.a = L[top.a]; temp.b = top.b;
+      temp.s = H[temp.b].YY-H[temp.a].YY; temp.d = H[temp.a].XX-H[temp.b].XX;
+      assert(temp.s>0 && temp.d>0); // b will eventually overtake a, necessarily
+      O.insert(temp);
+    }
+    else F.pb(top.b);
+  }
+}
+void answer(LL tm) {
+  int l=0,r=SZ(F);
+  while(r-l>1) {
+    int d = (r+l)/2;
+    if(check(d,tm)) l=d;
+    else r=d;
+  }
+  printf("%lld\n",H[F[l]].ZZ);
+}
+bool check(int h, LL tm) {
+  if(h==0) return true;
+  int curr = F[h];
+  int prev = F[h-1];
+  
+  LL dcurr = H[curr].XX + (H[curr].YY*tm);
+  LL dprev = H[prev].XX + (H[prev].YY*tm);
+  
+  if(dcurr>=dprev) return true;
+  return false;
+}

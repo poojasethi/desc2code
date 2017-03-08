@@ -1,0 +1,118 @@
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+using namespace std;
+typedef long long ll;
+const int N=100004,M=400004,oo=1000000000;
+vector <int> wait[N],on[N];
+struct rec {int num,s,f; ll t;} p[N];
+int n,m,size[N],up,down;
+int qx,qv,ql,qr,Max[M],Min[M];
+ll ans[N];
+bool operator <(rec a,rec b) {return a.t<b.t;}
+void chkmin(int &a,int b) {if (b<a) a=b;}
+void chkmax(int &a,int b) {if (b>a) a=b;}
+void build(int o,int l,int r)
+{
+	Min[o]=oo; Max[o]=0;
+	if (l==r) return;
+	int m=(l+r)/2;
+	build(o*2,l,m); build(o*2+1,m+1,r);
+}
+void update(int o,int l,int r)
+{
+	if (l==r)
+	{
+		if (!qv) Min[o]=oo,Max[o]=0;
+		else Min[o]=Max[o]=l;
+		return;
+	}
+	int m=(l+r)/2;
+	if (qx<=m) update(o*2,l,m); else update(o*2+1,m+1,r);
+	Min[o]=Min[o*2]; chkmin(Min[o],Min[o*2+1]);
+	Max[o]=Max[o*2]; chkmax(Max[o],Max[o*2+1]);
+}
+int queryMin(int o,int l,int r)
+{
+	if (l>=ql) return Min[o];
+	int m=(l+r)/2,ret=oo;
+	if (ql<=m) chkmin(ret,queryMin(o*2,l,m));
+	chkmin(ret,queryMin(o*2+1,m+1,r));
+	return ret;
+}
+int queryMax(int o,int l,int r)
+{
+	if (r<=qr) return Max[o];
+	int m=(l+r)/2,ret=0;
+	if (qr>m) chkmax(ret,queryMax(o*2+1,m+1,r));
+	chkmax(ret,queryMax(o*2,l,m));
+	return ret;
+}
+void addon(int x,int now)
+{
+	on[p[x].f].push_back(x);
+	size[p[x].f]++;
+	if (p[x].f<now) down++; else up++;
+	qx=p[x].f; qv=1; update(1,1,m);
+}
+void process(ll &t,int &now,ll T)
+{
+	while (t<T)
+	{
+		if ((!up)&&(!down)) return;
+		if (up>=down)
+		{
+			ql=now+1; int x=queryMin(1,1,m);
+			if (t+x-now>T) {now+=T-t; return;}
+			t+=x-now; now=x;
+			up-=size[x];
+		}
+		else
+		{
+			qr=now-1; int x=queryMax(1,1,m);
+			if (t+now-x>T) {now-=T-t; return;}
+			t+=now-x; now=x;
+			down-=size[x];
+		}
+		size[now]=0;
+		int tot=on[now].size();
+		for (int i=0;i<tot;i++) ans[p[on[now][i]].num]=t;
+		on[now].clear();
+		tot=wait[now].size();
+		for (int i=0;i<tot;i++) addon(wait[now][i],now);
+		wait[now].clear();
+		qx=now; qv=0; update(1,1,m);
+	}
+}
+void addwait(int x,int now)
+{
+	if (p[x].s==now)
+	{
+		addon(x,now);
+		return;
+	}
+	wait[p[x].s].push_back(x);
+	size[p[x].s]++;
+	if (p[x].s<now) down++; else up++;
+	qx=p[x].s; qv=1; update(1,1,m);
+}
+int main()
+{
+	int i; scanf("%d%d",&n,&m);
+	for (i=1;i<=n;i++) scanf("%I64d%d%d",&p[i].t,&p[i].s,&p[i].f),p[i].num=i;
+	sort(p+1,p+n+1);
+	p[n+1].t=1000000000000LL;
+	for (i=1;i<=m;i++) wait[i].clear(),on[i].clear(),size[i]=0;
+	build(1,1,m);
+	up=down=0; i=1;
+	ll t=0; int now=1;
+	while (i<=n)
+	{
+		t=p[i].t; addwait(i,now);
+		while ((i<=n)&&(p[i+1].t==t)) i++,addwait(i,now);
+		process(t,now,p[i+1].t);
+		i++;
+	}
+	for (i=1;i<=n;i++) printf("%I64d\n",ans[i]);
+	return 0;
+}

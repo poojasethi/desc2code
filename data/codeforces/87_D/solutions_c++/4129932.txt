@@ -1,0 +1,86 @@
+//بسم الله العلی العظیم
+//و بذکر ولیه القائم...
+//In the name of God
+#include <algorithm>
+#include <iostream>
+#include <vector>
+using namespace std;
+
+const int N = 1e5 + 10;
+typedef pair<int, int> pii;
+typedef long long ll;
+
+struct edge {
+    int v, u, w, name;
+} e[N];
+
+int n, par[N];
+ll dp[N], beauty[N], size[N];
+bool ans[N], mark[N];
+vector<pii> adj[N];
+
+int find_par(int v) {
+    return v == par[v]? v: par[v] = find_par(par[v]);
+}
+bool cmp(edge x, edge y) { return x.w < y.w; }
+void dfs1(int v) {
+    mark[v] = true;
+    for (int i = 0; i < adj[v].size(); i++) {
+        int u = adj[v][i].first;
+        if (!mark[u]) {
+            dfs1(u);
+            size[v] += size[u];
+        }
+    }
+    mark[v] = false;
+}
+void dfs2(int v, int root = -1) {
+    if (root == -1)
+        root = v;
+    par[v] = root;
+    mark[v] = true;
+    for (int i = 0; i < adj[v].size(); i++) {
+        int u = adj[v][i].first, t = adj[v][i].second;
+        if (!mark[u]) {
+            beauty[e[t].name] = (size[root] - size[u]) * size[u] * 2;
+            dfs2(u, root);
+        }
+    }
+    adj[v].clear();
+}
+int main() {
+    ios_base::sync_with_stdio(false);
+    cin >> n;
+    for (int i = 0; i < n; i++)
+        par[i] = i, size[i] = 1;
+    for (int i = 0; i < n - 1; i++) {
+        cin >> e[i].u >> e[i].v >> e[i].w;
+        e[i].u--, e[i].v--;
+        e[i].name = i;
+    }
+    sort(e, e + n - 1, cmp);
+    int p1 = 0, p2 = 0;
+    fill(beauty, beauty + n - 1, -1);
+    while (p1 < n - 1) {
+        while (p2 < n - 1 && e[p2].w == e[p1].w) {
+            mark[find_par(e[p2].u)] = mark[find_par(e[p2].v)] = false;
+            adj[par[e[p2].u]].push_back(pii(par[e[p2].v], p2));
+            adj[par[e[p2].v]].push_back(pii(par[e[p2].u], p2));
+            p2++;
+        }
+        while (p1 < p2) {
+            if (!mark[par[e[p1].u]]) {
+                dfs1(par[e[p1].u]);
+                dfs2(par[e[p1].u]);
+            }
+            p1++;
+        }
+    }
+    ll mx = *max_element(beauty, beauty + n - 1);
+    cout << mx << ' ' << count(beauty, beauty + n - 1, mx) << '\n';
+    for (int i = 0; i < n - 1; i++)
+        if (beauty[i] == mx)
+            cout << i + 1 << ' ';
+    cout << '\n';
+    return 0;
+}

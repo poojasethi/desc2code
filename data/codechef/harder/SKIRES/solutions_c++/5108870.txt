@@ -1,0 +1,234 @@
+#include <queue>
+#include <vector>
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+
+int h, w;
+
+int sx, sy, tx, ty;
+
+const int N = 55;
+int id[N][N];
+
+int e[N][N];
+
+const int NN = N * N * 5, M = NN * 40;
+
+#define next NEXT
+int tot, head[NN], next[M], to[M], c[M];
+
+inline void addedge(const int &u, const int &v, const int &cap) {
+    to[tot] = v, next[tot] = head[u], c[tot] = cap, head[u] = tot++;
+}
+
+const int INF = 200005 * 5;
+const int dx[4] = {1, -1, 0, 0}, dy[4] = {0, 0, 1, -1};
+
+int top;
+
+bool reach[N][N], reach2[N][N];
+
+void build() {
+    memset(reach2, 0, sizeof(reach2));
+    vector<pair<int, int> > q;
+    q.push_back(make_pair(tx, ty));
+    reach2[tx][ty] = true;
+    for (int _ = 0; _ < (int)q.size(); ++_) {
+        int i = q[_].first, j = q[_].second;
+        for (int d = 0; d < 4; ++d) {
+            int x = i + dx[d], y = j + dy[d];
+            if (x >= 0 && y >= 0 && x < h && y < w) {
+                if (e[x][y] >= e[i][j] && !reach2[x][y]) {
+                    reach2[x][y] = true;
+                    q.push_back(make_pair(x, y)); 
+                }
+            }
+        }
+    }
+    top = 0;
+    tot = 0;
+    memset(reach, 0, sizeof(reach));
+    q.clear();
+    q.push_back(make_pair(sx, sy));
+    reach[sx][sy] = true;
+    for (int _ = 0; _ < (int)q.size(); ++_) {
+        int i = q[_].first, j = q[_].second;
+        head[top] = -1;
+        id[i][j] = top++;
+        for (int d = 0; d < 4; ++d) {
+            int x = i + dx[d], y = j + dy[d];
+            if (x >= 0 && y >= 0 && x < h && y < w) {
+                if (e[i][j] >= e[x][y] && reach2[x][y] && !reach[x][y]) {
+                    reach[x][y] = true;
+                    q.push_back(make_pair(x, y)); 
+                }
+            }
+        }
+    }
+    for (int _ = 0; _ < (int)q.size(); ++_) {
+        int i = q[_].first, j = q[_].second;
+        if (i == sx && j == sy) {
+            continue;
+        }
+        if (i == tx && j == ty) {
+            for (int d = 0; d < 4; ++d) {
+                int x = i + dx[d], y = j + dy[d];
+                if (x >= 0 && y >= 0 && x < h && y < w) {
+                    if (reach[x][y] && e[x][y] >= e[i][j]) {
+                        addedge(id[x][y], id[i][j], INF);
+                        addedge(id[i][j], id[x][y], 0);
+                    }
+                }
+            }
+        } else {
+            vector<int> es;
+            for (int d = 0; d < 4; ++d) {
+                int x = i + dx[d], y = j + dy[d];
+                if (x >= 0 && y >= 0 && x < h && y < w) {
+                    if (reach[x][y] && e[x][y] >= e[i][j]) {
+                        es.push_back(e[x][y]);
+                    }
+                }
+            }
+            if (es.size() == 0) {
+                continue;
+            }
+            sort(es.begin(), es.end());
+            es.erase(unique(es.begin(), es.end()), es.end());
+            vector<int> num;
+            for (int k = 0; k < (int)es.size(); ++k) {
+                head[top] = -1;
+                num.push_back(top++);
+                int delta = es[k] - e[i][j] + 1;
+                if (k) {
+                    int last = es[k - 1] - e[i][j] + 1;
+                    delta -= last;
+                    addedge(num[k], num[k - 1], last);
+                    addedge(num[k - 1], num[k], 0);
+                }
+                addedge(num[k], id[i][j], delta);
+                addedge(id[i][j], num[k], 0);
+            }
+            for (int d = 0; d < 4; ++d) {
+                int x = i + dx[d], y = j + dy[d];
+                if (x >= 0 && y >= 0 && x < h && y < w) {
+                    if (reach[x][y] && e[x][y] >= e[i][j]) {
+                        int pos = lower_bound(es.begin(), es.end(), e[x][y]) - es.begin();
+                        addedge(id[x][y], num[pos], INF);
+                        addedge(num[pos], id[x][y], 0);
+                    }
+                }
+            }
+        }
+    }
+}
+
+int source, target;
+
+int dis[NN], gap[NN];
+
+bool over;
+
+int go(const int &u, const int &delta) {
+    if (u == target) {
+        return delta;
+    }
+
+    int t = delta, tmp;
+
+    for (int j = head[u]; ~j; j = next[j]) {
+        if (c[j]) {
+            int v = to[j];
+            if (dis[v] == dis[u] - 1) {
+                tmp = min(t, c[j]);
+                tmp = go(v, tmp);
+                t -= tmp, c[j] -= tmp, c[j ^ 1] += tmp;
+                if (t == 0 || over) {
+                    return delta - t;
+                }
+            }
+        }
+    }
+
+    if (--gap[dis[u]] == 0) {
+        over = true;
+    }
+    ++gap[++dis[u]];
+
+    return delta - t;
+}
+
+bool vis[NN];
+
+void BFS() {
+    for (int i = 0; i < top; ++i) {
+        dis[i] = top;
+    }
+    queue<int> q;
+    memset(vis, 0, sizeof(bool) * top);
+    q.push(id[tx][ty]);
+    dis[q.front()] = 0;
+    vis[q.front()] = true;
+    while (q.size()) {
+        int u = q.front();
+        q.pop();
+        for (int i = head[u]; ~i; i = next[i]) {
+            if (c[i ^ 1]) {
+                int v = to[i];
+                if (!vis[v]) {
+                    q.push(v);
+                    vis[v] = true;
+                    dis[v] = dis[u] + 1;
+                }
+            }
+        }
+    }
+}
+
+int flow() {
+    BFS();
+    for (int i = 0; i <= top + 1; ++i) {
+        gap[i] = 0;
+    }
+    for (int i = 0; i < top; ++i) {
+        ++gap[dis[i]];
+    }
+    over = false;
+    int ret = 0;
+    
+    while (!over && dis[source] < top) {
+        ret += go(source, INF * 10);
+    }
+    return ret;
+}
+
+int main() {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+        scanf("%d%d", &h, &w);
+        scanf("%d%d%d%d", &sx, &sy, &tx, &ty);
+        --sx, --sy, --tx, --ty;
+        for (int i = 0; i < h; ++i) {
+            for (int j = 0; j < w; ++j) {
+                scanf("%d", &e[i][j]);
+            }
+        }
+        if (abs(sx - tx) + abs(sy - ty) == 1 && e[sx][sy] >= e[tx][ty]) {
+            printf("-1\n");
+            continue;
+        }
+        build();
+        if (!reach[tx][ty]) {
+            printf("0\n");
+            continue;
+        }
+        source = id[sx][sy], target = id[tx][ty];
+        printf("%d\n", flow());
+    }
+    return 0;
+}
+

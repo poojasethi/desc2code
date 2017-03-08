@@ -1,0 +1,91 @@
+#include<vector>
+#include<queue>
+#include<cstdio>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+#define u first
+#define v second
+#define col first
+#define idx second
+#define time second
+#define pii pair<int,int>
+using namespace std;
+pii query[500010],edge[500010];
+int n,m,k,q,top,color[500010];
+queue<pii>mo[500010];
+vector<pii>v[2000010];
+struct union_find_set;
+pair<union_find_set*,int>sta[2000010];
+struct union_find_set{
+	int fa[500010];
+	char rnk[500010],dis[500010];
+	int find(int x)
+	{
+		if(!fa[x])return x;
+		return find(fa[x]);
+	}
+	int getdis(int x)
+	{
+		if(!fa[x])return 0;
+		return dis[x]^getdis(fa[x]);
+	}
+	void unite(int u,int v)
+	{
+		int fau=find(u),fav=find(v);
+		if(fau==fav)return;
+		if(rnk[fau]>rnk[fav])swap(fau,fav),swap(u,v);
+		if(rnk[fau]==rnk[fav])++rnk[fav],sta[++top]=pair<union_find_set*,int>(this,-fav);
+		dis[fau]=getdis(u)^getdis(v)^1;
+		fa[fau]=fav,sta[++top]=pair<union_find_set*,int>(this,fau);
+	}
+}dsu[51];
+void recover(int bottom)
+{
+	while(top>bottom)
+	{
+		if(sta[top].second<0)sta[top].first->rnk[-sta[top].second]--;
+		else sta[top].first->fa[sta[top].second]=0;
+		--top;
+	}
+}
+void insert(int p,int l,int r,int L,int R,pii val)
+{
+	int mid=l+r>>1;
+	if(l==L&&r==R)
+	{
+		v[p].push_back(val);
+		return;
+	}
+	if(R<=mid)insert(p<<1,l,mid,L,R,val);
+	else if(L>mid)insert(p<<1|1,mid+1,r,L,R,val);
+	else insert(p<<1,l,mid,L,mid,val),insert(p<<1|1,mid+1,r,mid+1,R,val);
+}
+void cdq(int p,int l,int r)
+{
+	int mid=l+r>>1,bottom=top;
+	for(int i=0;i<v[p].size();++i)dsu[v[p][i].col].unite(edge[v[p][i].idx].u,edge[v[p][i].idx].v);
+	if(l==r)
+	{
+		union_find_set &dsu=::dsu[query[mid].col];
+		int u=edge[query[mid].idx].u,v=edge[query[mid].idx].v;
+		if(dsu.find(u)!=dsu.find(v)||dsu.getdis(u)^dsu.getdis(v))puts("YES"),color[query[mid].idx]=query[mid].col;
+		else puts("NO");
+		mo[query[mid].idx].pop();
+		if(mid!=q)insert(1,1,q,mid+1,mo[query[mid].idx].front().time,pii(color[query[mid].idx],query[mid].idx));
+	}
+	else cdq(p<<1,l,mid),cdq(p<<1|1,mid+1,r);
+	recover(bottom);
+}
+int main()
+{
+	scanf("%d%d%d%d",&n,&m,&k,&q);
+	for(int i=1;i<=m;++i)scanf("%d%d",&edge[i].u,&edge[i].v);
+	for(int i=1;i<=q;++i)
+	{
+		scanf("%d%d",&query[i].idx,&query[i].col);
+		mo[query[i].idx].push(pii(query[i].col,i));
+	}
+	for(int i=1;i<=m;++i)mo[i].push(pii(0,q));
+	cdq(1,1,q);
+}

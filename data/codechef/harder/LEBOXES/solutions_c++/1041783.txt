@@ -1,0 +1,165 @@
+#include <cstdio>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <map>
+#include <string>
+using namespace std;
+ 
+#define fo(i,n) for(int i=0;i<n;i++)
+ 
+int boxes, gifts;
+int V[32], DollarsRequired[32], DiamondsRequired[32];
+double P[32];
+ 
+const int inf = 1000000000;
+int minDollars[32][32];
+ 
+void setMin(int& cur, int c) {
+  if(cur > c) cur = c;
+}
+ 
+typedef struct state{
+  double p; // probability of this cost
+  int diamonds;
+  int dollars;
+ 
+  state() {
+    diamonds = dollars = p = 0;
+  }
+  string printString() {
+    char buf[100];
+    sprintf(buf, "state(p = %.6f, diamonds = %d, dollars = %d, cumP = %.6f", p, diamonds, dollars, p);
+    return string(buf);
+  }
+} state;
+ 
+map<int,vector<state> > getCostProbabilities(int dx, int n) {
+  map<int, vector<state> > ret;
+  for(int i=0;i<(1<<n);i++) {
+    state S = state();
+    S.p = 1;
+    for(int j=0;j<n;j++) if( i & (1<<j)) {
+      S.dollars += V[j + dx];
+      S.p *= P[j + dx];
+    } else {
+      S.p *= (1 - P[j + dx]);
+      S.diamonds++;
+    }
+    vector<state>& v = ret[S.diamonds];
+    v.push_back(S);
+  }
+  return ret;
+}
+ 
+bool operator<(const state& A, const state& B) {
+  return A.dollars < B.dollars;
+}
+ 
+void compose(double& EV, int diamonds, vector<state>& v1, vector<state>& v2) {
+//  printf("Composing: %d\n", diamonds);
+//  printf("v1: "); fo(i,v1.size()) //cout<<v1[i].printString()<<", "; //cout<<endl;
+//  printf("v2: "); fo(i,v2.size()) //cout<<v2[i].printString()<<", "; //cout<<endl;
+ 
+  for(int i=0;i<v1.size();i++) {
+    int curDollars = v1[i].dollars;
+    double p = v1[i].p;
+    double q = 0;
+    for(int j=1; j<= gifts; j++) {
+      // prob (v2[i].dollars + v1[i].dollars >= minDollars[diamonds][j])
+      int requiredDollars = minDollars[diamonds][j] - v1[i].dollars;
+      state S = state();
+      S.dollars = requiredDollars;
+      int idx = lower_bound(v2.begin(), v2.end(), S) - v2.begin();
+      q += v2[idx].p;
+//      printf("gifts = %d, curDollars = %d, p = %.4f, requiredDollars = %d, q = %.4f\n", j, curDollars, p, requiredDollars, q);
+    }
+    EV += p*q;
+  }
+}
+ 
+ 
+void preprocess(vector<state>& v, bool accumulate) {
+  sort(v.begin(), v.end());
+  if(!accumulate) return;
+ 
+  state S = state();
+  S.p = 0;
+  S.dollars = inf;
+  S.diamonds = 0;
+  v.push_back(S);
+ 
+  for(int i=v.size()-2;i>=0;i--){
+    v[i].p += v[i+1].p;
+  }
+}
+ 
+void solveCase() {
+  cin>>boxes>>gifts;
+  fo(i,boxes) {
+    cin>>V[i];
+    cin>>P[i];
+    P[i] /= 100.0;
+  }
+  fo(i,gifts) {
+    cin>>DollarsRequired[i]>>DiamondsRequired[i];
+  }
+  for(int i=0;i<=boxes;i++)
+  for(int j=0;j<=gifts;j++)
+    minDollars[i][j] = inf * (i!=0 || j!=0);
+ 
+  long long start = clock();
+  fo(k, gifts) {
+    int dollars = DollarsRequired[k];
+    int diamonds = DiamondsRequired[k];
+    for(int i=boxes;i>=0;i--)
+    for(int j=gifts;j>=0;j--) {
+      int ni = i + diamonds;
+      int nj = j + 1;
+      if(ni <= boxes && nj <= gifts) {
+        setMin(minDollars[ni][nj], minDollars[i][j] + dollars);
+      }
+    }
+    for(int i=0;i<=boxes;i++)
+    for(int j=gifts;j>=0;j--) {
+      if(i-1 >= 0) setMin(minDollars[i][j], minDollars[i-1][j]);
+      if(j+1 <= gifts) setMin(minDollars[i][j], minDollars[i][j+1]);
+    }
+  }
+  long long end = clock();
+  //cout<<"Time in minDollars = "<<(end-start)/(CLOCKS_PER_SEC/1000)<<endl;
+ 
+  int A = boxes/2, B = boxes - A;
+  int maxA = 11;
+  if(A>maxA) {
+    A = maxA;
+    B = boxes - A;
+  }
+  double ret = 0;
+  
+  start = clock();
+  map<int, vector<state> > MA = getCostProbabilities(0, A);
+  map<int, vector<state> > MB = getCostProbabilities(A, B);
+  end = clock();
+  //cout<<"Time in getProbs = "<<(end-start)/(CLOCKS_PER_SEC/1000)<<endl;
+  start = clock();
+  for(int i=0;i<=A;i++) if(MA.count(i)) preprocess(MA[i], false);
+  for(int i=0;i<=B;i++) if(MB.count(i)) preprocess(MB[i], true);
+  end = clock();
+  //cout<<"Time in preprocess probs = "<<(end-start)/(CLOCKS_PER_SEC/1000)<<endl;
+ 
+ 
+  start = clock();
+  for(int i=0; i<= A; i++) if(MA.count(i))
+  for(int j=0; j<= B; j++) if(MB.count(j)) {
+    compose(ret, i + j, MA[i], MB[j]);
+  }
+  end = clock();
+  //cout<<"Time in compose = "<<(end-start)/(CLOCKS_PER_SEC/1000)<<endl;
+  printf("%.4f\n",ret);
+}
+ 
+main() {
+  int cases; cin>>cases;
+  while(cases--) solveCase();
+}

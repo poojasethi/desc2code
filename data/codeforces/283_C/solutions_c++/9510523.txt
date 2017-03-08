@@ -1,0 +1,35 @@
+#include<bits/stdc++.h>
+#define mod 1000000007
+#define maxx 333
+using namespace std;
+int a[maxx],f[maxx],in[maxx],dp[111111]={1};
+int main(){
+    int i,j,n,q,t,b,c;
+    cin>>n>>q>>t;
+    for(i=1;i<=n;i++) cin>>a[i];
+    for(i=1;i<=q;i++){
+        cin>>b>>c;
+        f[b]=c;
+        in[c]++;
+    }
+    for(i=0;i<q;i++){
+        int pos=0;
+        for(j=1;j<=n;j++){
+            if(f[j]&&!in[j]){
+                pos=j;
+                break;
+            }
+        }
+        if(!pos){puts("0");return 0;}
+        int pre=f[pos];
+        f[pos]=0;
+        in[pre]--;
+        t-=a[pos];
+        if(t<0){puts("0");return 0;}
+        a[pre]+=a[pos];
+    }
+    for(i=1;i<=n;i++)
+            for(j=a[i];j<=t;j++)
+                dp[j]=(dp[j]+dp[j-a[i]])%mod;
+    cout<<dp[t]<<endl;
+}

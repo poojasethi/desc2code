@@ -1,0 +1,169 @@
+#include <iostream>
+using namespace std;
+
+
+struct RelationCount {
+    int m_N;
+    long long m_NonEmptySets;   // Total number of non-empty sets in B.
+    long long m_SubsetRelation; // Number of pairs in the relation { (x,y} : x subset of y, x non-empty }
+    long long m_R1Relation;     // Number of pairs in the R1 relation
+    long long m_R2Relation;     // Number of pairs in the R2 relation
+    
+    RelationCount(void)
+    : m_N(0),
+      m_NonEmptySets(0),
+      m_SubsetRelation(0),
+      m_R1Relation(0),
+      m_R2Relation(0)
+    {}
+ 
+    inline void Modulo(void)
+    {
+        static const int modbase = 100000007;
+        m_NonEmptySets %= modbase;
+        m_SubsetRelation %= modbase;
+        m_R1Relation %= modbase;
+        m_R2Relation %= modbase;
+    }
+    
+    inline int SumProd(const int nonEmptySetWt,
+        const int subsetWt,
+        const int r1Wt,
+        const int r2Wt)
+    {
+        const int sum
+        = nonEmptySetWt * m_NonEmptySets
+        + subsetWt * m_SubsetRelation
+        + r1Wt * m_R1Relation
+        + r2Wt * m_R2Relation;
+        return sum;
+    }
+    
+    void Combine(const RelationCount& c1, const RelationCount& c2)
+    {
+        m_N = c1.m_N + c2.m_N;
+        m_NonEmptySets = c1.m_NonEmptySets + c2.m_NonEmptySets
+        + c1.m_NonEmptySets * c2.m_NonEmptySets
+        ;
+        m_SubsetRelation = c1.m_SubsetRelation + c2.m_SubsetRelation
+        + c1.m_SubsetRelation * c2.m_SubsetRelation
+        + c1.m_SubsetRelation * c2.m_NonEmptySets * 2
+        + c2.m_SubsetRelation * c1.m_NonEmptySets * 2
+        + c1.m_NonEmptySets * c2.m_NonEmptySets * 2
+        ;
+        m_R1Relation = c1.m_R1Relation + c2.m_R1Relation
+        + c1.m_R1Relation * c2.m_R1Relation * 2
+        + c1.m_R1Relation * c2.m_NonEmptySets * 2
+        + c2.m_R1Relation * c1.m_NonEmptySets * 2
+        + c1.m_NonEmptySets * c2.m_NonEmptySets
+        ;
+        m_R2Relation = c1.m_R2Relation + c2.m_R2Relation
+        + c1.m_R2Relation * c2.m_R2Relation * 2
+        + c1.m_R2Relation * (c2.m_NonEmptySets * 3 + (c2.m_SubsetRelation + c2.m_R1Relation) * 2)
+        + c2.m_R2Relation * (c1.m_NonEmptySets * 3 + (c1.m_SubsetRelation + c1.m_R1Relation) * 2)
+        + c1.m_R1Relation * (c2.m_NonEmptySets + c2.m_SubsetRelation * 2)
+        + c2.m_R1Relation * (c1.m_NonEmptySets + c1.m_SubsetRelation * 2)
+        + c1.m_SubsetRelation * c2.m_NonEmptySets
+        + c2.m_SubsetRelation * c1.m_NonEmptySets
+        + c1.m_SubsetRelation * c2.m_SubsetRelation
+        ;
+        // PrintFull();
+        Modulo();
+    }
+    
+    void Print(void) const
+    {
+        cout << m_R1Relation << " " << m_R2Relation << endl;
+    }
+
+    void PrintFull(void) const
+    {
+        cout << m_N
+        << " " << m_NonEmptySets
+        << " " << m_SubsetRelation
+        << " " << m_R1Relation
+        << " " << m_R2Relation
+        << "\n";
+    }
+
+};
+
+// For each N, calculate the number of pairs in each relation using a recurrence relation.
+// For each of the relations, we consider which relation would contain 
+// the resulting pair if you were to add N to x, y, or both.
+// Adding N to neither set always results in an element of the same relation.
+// Non-empty Set:
+//   (N, x) -> R1
+//   (N, x U N) -> Subset
+//   (x, x U N) -> Subset
+// SubsetRelation:
+//   (x, y) -> Subset
+//   (x U N, y) -> R2
+//   (x, y U N) -> Subset
+//   (x U N, y U N) -> Subset
+// R1Relation:
+//   (x, y) -> R1
+//   (x U N, y) -> R1
+//   (x, y U N) -> R1
+//   (x U N, y U N) -> R2
+// R2Relation:
+//   (x, y) -> R2
+//   (x U N, y) -> R2
+//   (x, y U N) -> R2
+//   (x U N, y U N) -> R2
+void
+CountRelations(const long long N, RelationCount& currentCounts)
+{
+    for (long long i = 1; i <= N; ++i) {
+      RelationCount nextCounts;
+      nextCounts.m_N = i;
+      nextCounts.m_NonEmptySets = (1 + currentCounts.SumProd(2,0,0,0));
+      nextCounts.m_SubsetRelation =    currentCounts.SumProd(2,3,0,0);
+      nextCounts.m_R1Relation     =    currentCounts.SumProd(1,0,3,0);
+      nextCounts.m_R2Relation     =    currentCounts.SumProd(0,1,1,4);
+      nextCounts.Modulo();
+      currentCounts = nextCounts;
+    }
+    // currentCounts.PrintFull();
+}
+
+void
+CountRelationsR(const long long N, RelationCount& currentCounts, const RelationCount& count1)
+{
+    if (N == 1) {
+        currentCounts = count1;
+        return;
+    }
+    if (N > 1) {
+        RelationCount halfCount;
+        CountRelationsR(N/2, halfCount, count1);
+        currentCounts.Combine(halfCount, halfCount);
+        // currentCounts.PrintFull();
+    }
+    if (N % 2 == 1) {
+        RelationCount tmp = currentCounts;
+        currentCounts.Combine(tmp, count1);
+        // currentCounts.PrintFull();
+    }
+}
+
+int main() {
+	// your code goes here
+	int count;
+	cin >> count;
+	RelationCount count1;
+	CountRelations(1, count1);
+	for (int i = 0; i < count; ++i) {
+	  long long N;
+	  cin >> N;
+	  const bool recursive = true;
+	  RelationCount result;
+	  if (recursive) {
+	      CountRelationsR(N, result, count1);
+	  } else {
+	      CountRelations(N, result);
+	  }
+      result.Print();
+	}
+	return 0;
+}

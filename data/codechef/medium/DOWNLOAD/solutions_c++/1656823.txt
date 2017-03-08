@@ -1,0 +1,326 @@
+#include<iostream>
+#include<cstdlib>
+#include<cstdio>
+#include<map>
+#include<cassert>
+#include<utility>
+#include<algorithm>
+using namespace std;
+
+//data structure of fenwick tree to store integers
+struct intFenwickTree
+{
+  int size;   //highest integer in the tree (may not use up all the memory)
+  int memory; //max mem allocated to the tree
+  int *data;
+};
+
+//functions on fenwick tree
+
+//to allocate memory for tree t
+intFenwickTree intFenwickTreeNew(int mem)
+{
+   intFenwickTree res;
+   res.memory =mem;
+   res.data = new int[mem];
+   return res;
+}
+//to initialize the tree t
+void intFenwickTreeInit(intFenwickTree* t, int size)
+{
+    t->size = size;
+   for(int i=0; i<size; i++)
+   t->data[i] = 0;
+}
+//to delete the tree t
+void intFenwickTreeDelete(intFenwickTree *t)
+{
+    free(t->data);
+}
+
+//read cumulative frequency at index idx of tree t
+//concept used isolate last nonzero digit of idx = (idx & -idx)
+int intFenwickTreeGet(intFenwickTree* t, int idx)
+{
+  int sum =0;
+  int k= idx+1;
+  while(k>0)
+  {
+      sum+= t->data[k-1];
+      k -=  k & -k;
+  }
+  return sum;
+}
+
+//to add value val to the tree  t at index k
+void intFenwickTreeAdd(intFenwickTree* t, int k, int val)
+{
+int p =k+1;
+ while(p<= t->size)
+ {
+     t->data[p-1]+= val;
+   p += p& -p;
+ }
+}
+
+//to find sum of frequencies between [a,b] in tree t
+int intFenwickTreeRange(intFenwickTree* t, int a, int b)
+{
+    return intFenwickTreeGet(t, b)- intFenwickTreeGet(t, a-1);
+}
+
+//sorting functions
+//helper functions
+void swap(int* a, int* b)
+{
+    int tmp;
+    tmp = *a;
+    *a= *b;
+    *b= tmp;
+}
+
+void print(int d[], int size )
+{
+    for(int i=0; i<size; i++)
+    cout<<d[i]<<" ";
+    cout<<endl;
+}
+
+//sorting array d. values in array m are linked to values in array d. for eg start and end time of meetings
+void intIntSort(int d[], int m[], int s)
+{
+    int i=-1, j=s, k;
+
+    if(s<=1) return; //if no element or one element than no need to sort just return the item
+
+    k = (d[0] + d[s-1])/2; //pivot value
+
+    while(1)
+    {
+        while(d[++i]<k);//reach min index whose value greater than pivot
+        while(d[--j]>k);// reach max index whose value less than pivot
+
+        if(i>=j) break; //everything in order as per current pivot, that is elements smaller than pivot lie before pivot and elements greater than pivot lie after pivot
+
+        swap(&d[i], &d[j]); // swap if order wrong as per pivot
+        swap(&m[i], &m[j]);
+    }
+
+        intIntSort(d,m,i); //sort bot half
+        intIntSort(d+j+1, m+j+1, s-j-1); //sort top half
+
+}
+void intIntIntSort(int d[], int m1[], int m2[], int s)
+{
+    int i=-1, j=s, k;
+
+    if(s<=1) return; //if no element or one element than no need to sort just return the item
+
+    k = (d[0] + d[s-1])/2; //pivot value
+
+    while(1)
+    {
+        while(d[++i]<k);//reach min index whose value greater than pivot
+        while(d[--j]>k);// reach max index whose value less than pivot
+
+        if(i>=j) break; //everything in order as per current pivot, that is elements smaller than pivot lie before pivot and elements greater than pivot lie after pivot
+
+        swap(&d[i], &d[j]); // swap if order wrong as per pivot
+        swap(&m1[i], &m1[j]);
+        swap(&m2[i], &m2[j]);
+    }
+
+        intIntIntSort(d,m1, m2,i); //sort bot half
+        intIntIntSort(d+j+1, m1+j+1, m2+j+1, s-j-1); //sort top half
+
+}
+//some constants
+const int maxN = 100000;
+const int maxT = 1000000000;
+const int maxQ = 5000;
+const int maxK = 20;
+//global variables
+
+//to store show start and end times
+/*int start[maxN+1], end[maxN+1]; //slack of 1
+int val[2*maxN+1];
+int ind[2*(maxQ*(maxK+1))+1];//index
+
+//to store visit times
+int K[maxQ+1];//tho max is only maxQ
+int t[maxQ+1][maxK + 1];
+int st[maxQ*(maxK+1)+1], ed[maxQ*(maxK +1)+1], ss;
+//for answer
+int res[maxQ+1];*/
+int start[100000], end[100000];
+int t[100000][20], K[100000];
+int st[2200000], ed[2200000], ind[2200000], ss;
+int res[100000];
+
+int val[210000];
+
+int main()
+{
+//variables
+int i,j, a, b, c, mx;
+int N, Q;
+//some containers
+map<int, int>::iterator it;
+map<int, int> m;
+intFenwickTree ft = intFenwickTreeNew(4*maxN+10);
+
+//start taking input. assert makes sure that correct input is given
+assert(scanf("%d", &N)==1);
+assert(1<=N && N<= maxN);
+
+for(int i=0; i<N; i++)
+{
+    assert (scanf("%d%d", start+i, end+i)==2);
+    assert( 1 <= start[i] && start[i] < end[i] && end[i] <= maxT);
+}
+//test
+//print(start, N);
+//print(end, N);
+
+//compress time and sort show times
+for(int i=0; i<N; i++)
+{
+    //val array stores alternate start and end times
+    //ind array stores value of index of that element
+    val[2*i] = start[i], ind[2*i] = 2*i;
+    val[2*i+1]= end[i], ind[2*i+1] = 2*i +1;
+}
+
+//test
+//print(val, 2*N);
+//print(ind, 2*N);
+
+//to sort val array keeping val ind relation constant
+intIntSort(val, ind, 2*N);
+//odd index means end time even index means start time
+
+
+//test
+//print(val, 2*N);
+//print(ind, 2*N);
+
+a=-1;
+for(int i=0; i<2*N; i++)
+{
+    if(i ==0 || val[i]!= val[i-1])
+    {
+        a+=2;
+        m[val[i]] = a;
+    }
+    if(ind[i]%2 == 0) start[ind[i]/2] = a;
+    else              end[ind[i]/2] = a;
+
+}
+mx = a+ 2;
+//start and end contain only odd indices now
+//index decide their respective order greater index means greater value
+//even indices reserved for visit times in between
+
+//test
+//print(start, N);
+//print(end, N);
+
+assert(scanf("%d", &Q)== 1);
+for(int i=0; i<Q; i++)
+{
+    assert(scanf("%d", K + i)== 1);
+    assert(1<= K[i] && K[i]<= 20);
+    for(int j=0; j<K[i]; j++)
+    {
+        assert(scanf("%d", t[i]+j)==1);
+        assert(1<= t[i][j] && t[i][j]<= maxT);
+    }
+
+sort(t[i], t[i]+K[i]);//sorting all Q lines of visit timesi in non-descending order
+//test
+//print(t[i], K[i]);
+}
+//t[i][j] contains sorted arrival times of aliens t[i][] contains for ith case 0<=i<Q
+intIntSort(start, end, N);
+//test
+//print(start, N);
+//print(end, N);
+
+ss = 0;
+for(int i=0; i<Q; i++)
+{
+   res[i] = N; //result array initialised to all N
+   for(int j=0; j<K[i]; j++)
+   {
+       it = m.lower_bound(t[i][j]); //gets pointer to iterator such that its key val>=t[i][j]
+       if(it->first == t[i][j])//t[i][j] coincides with a start or end time
+       {
+           t[i][j] = it->second;//t[i][j] same index as start/end
+           continue;
+       }
+       if(it == m.end())//t[i][j] greater than any start or end time
+       {
+           t[i][j] = mx-1;//t[i][j] gets higher index than start/end (max index was a, and mx = a+2)
+           continue;
+       }
+       t[i][j] = it->second - 1;//t[i][j] between start/end time so its index is 1 less than the start/end time just greater than it. (t at even s/e at odd)
+   }
+   //test
+   //print(t[i], K[i]);
+  if(t[i][0] != 0)
+  {
+      st[ss] = 0;
+      ed[ss] = t[i][0];
+      ind[ss++] = i;
+  }
+  if(t[i][K[i]-1] != mx - 1)
+  {
+      st[ss] = t[i][K[i]- 1];
+      ed[ss] = mx - 1;
+      ind[ss++]= i;
+  }
+  for(int j=1; j<K[i]; j++)
+  {
+      if(t[i][j-1] != t[i][j])
+      {
+         st[ss] = t[i][j-1];
+      ed[ss] = t[i][j];
+      ind[ss++] = i;
+      }
+
+  }
+
+}
+intIntIntSort(st, ed, ind, ss);
+//cout<<"ss is "<<ss<<endl;
+//print(st, ss);
+  //print(ed, ss);
+  //print(ind, ss);
+intFenwickTreeInit(&ft, mx);
+
+
+//calculate answer to each query in logN time
+
+a= N-1;
+for(i = ss-1; i>=0; i--)
+{
+    while(a>= 0 && start[a] > st[i])
+    {
+        intFenwickTreeAdd(&ft, end[a], 1);
+        a--;
+    }
+    res[ind[i]] -= intFenwickTreeRange(&ft, st[i]+1, ed[i]-1);
+
+}
+for(int i=0; i<Q; i++)
+{
+     printf("%d\n",res[i]);
+}
+//test intervl check
+/*for(int i=0; i<ss; i++)
+{
+    cout<<i<<" "<<st[i]<<" "<<ed[i]<<endl;
+}*/
+return 0;
+
+}

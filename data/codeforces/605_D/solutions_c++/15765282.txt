@@ -1,0 +1,98 @@
+#include <bits/stdc++.h>
+using namespace std;
+const int N = 1e5+5;
+int pos=0,maxi=0;
+map<int,int> hash;
+int x[N],y[N],c[N],d[N],tree[N*2];
+bool comp(int a,int b){
+	return x[a]<x[b];
+}
+int mini(int a,int b){
+	if(a==-1 || b==-1){
+		if(a==-1 && b==-1)return -1;
+		if(a!=-1)return a;
+		else return b;
+	}
+	if(y[a]<y[b])return a;
+	return b;
+}
+vector<pair<int,int> > Y[N];
+void modify(int p,int v){
+	p+=maxi+1;
+	for(tree[p]=v;p>1;p>>=1)
+		tree[p>>1]= mini(tree[p],tree[p^1]);
+}
+int query(int l,int r){
+	int res=-1;++r;
+	for(l+=maxi+1,r+=maxi+1;l<r;l>>=1,r>>=1){
+		if(l&1)res= mini(res,tree[l++]);
+		if(r&1)res= mini(res,tree[--r]);
+	}
+	return res;
+}
+int par[N];
+int main(){
+	int id,n,i,j;cin>>n;
+	memset(tree,-1,sizeof(tree));
+	vector<int> r;
+	for(i=1;i<=n;++i){
+		cin>>x[i]>>y[i]>>c[i]>>d[i];
+		hash[x[i]];
+		r.push_back(i);
+	}
+	pos=0,maxi=0;
+	for(map<int,int>::iterator it= hash.begin();it!=hash.end();++it)
+		it->second=pos++;
+	sort(r.begin(),r.end(),comp);
+	for(i=0;i<r.size();++i){
+		id = r[i];
+		Y[hash[x[id]]].push_back(make_pair(y[id],id));
+		maxi = max(maxi,hash[x[id]]);
+	}
+	for(i=0;i<=maxi;++i)
+		if(Y[i].size()>0){
+			sort(Y[i].begin(),Y[i].end(),greater<pair<int,int> >()),modify(i,Y[i].back().second),Y[i].pop_back();
+		}
+	queue<int> q;q.push(0);
+	int cur,a,b,next,mm;
+	map<int,int>::iterator it;
+	memset(par,-1,sizeof(par));
+	while(!q.empty()){
+		id = q.front();
+		q.pop();
+		a= c[id],b= d[id];
+		if(x[n]<=a && y[n]<=b){
+			par[n]= id;break;
+		}
+		if(!hash.count(a+1))
+			hash[a+1]=0;
+		it = hash.find(a+1);
+		--it;
+		cur = it->second;
+		if(hash[a+1]==0)
+			hash.erase(a+1);
+		while(true){
+			next= query(0,cur);
+			if(next==-1 )break;
+			if(y[next]>b)break;
+			mm = hash[x[next]];
+			if( Y[mm].empty())
+				modify(mm,-1);
+			else
+				modify(mm,Y[mm].back().second),Y[mm].pop_back();
+			q.push(next);
+			par[next]= id;
+		}
+	}
+	if(par[n]==-1){
+		cout<<-1<<endl;
+	}
+	else{
+		vector<int> ret;
+		while(n>0)
+			ret.push_back(n),n= par[n];
+		cout<<ret.size()<<endl;
+		for(i=ret.size()-1;i>=0;--i)cout<<ret[i]<<" ";
+		cout<<endl;
+	}
+}

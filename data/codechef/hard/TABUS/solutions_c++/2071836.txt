@@ -1,0 +1,111 @@
+#include <iostream>
+#include <set>
+#include <vector>
+#include <algorithm>
+
+#define MAXBUSES 100005
+#define MAXSTATIONS 50005
+
+typedef struct Bus
+{
+	int ss, es, st, et;
+	Bus(int a, int b, int c, int d)
+	{
+		ss = a;
+		es = b;
+		st = c;
+		et = d;
+	}
+} Bus;
+
+struct compare
+{
+	bool operator()(const Bus& lhs, const Bus& rhs)
+	{
+		if(lhs.et != rhs.et)
+			return lhs.et < rhs.et;
+		return lhs.st < rhs.st;
+	}
+};
+/*
+bool compare(const Bus& lhs, const Bus& rhs)
+	{
+		if(lhs.et != rhs.et)
+			return lhs.et < rhs.et;
+		return lhs.st < rhs.st;
+	}
+*/
+int g_Stations, g_TimeLimit, g_Buses, g_ActualBuses;
+typedef std::set<Bus,compare> Type_Buses;
+//typedef std::vector<Bus> Type_Buses;
+Type_Buses buses;
+
+std::vector<int> stations[MAXSTATIONS];
+std::vector<int>::iterator it_stations;
+
+bool IsPossible(int leastWaitTime)
+{
+	for (int i = 0; i <= g_Stations ; ++i)
+		stations[i].clear();
+
+	stations[1].push_back(0);
+	Type_Buses::iterator buses_it;
+	Type_Buses::iterator buses_end = buses.end();
+	for ( buses_it = buses.begin() ; buses_it != buses_end; ++buses_it)
+	{
+		int ss = (*buses_it).ss;
+		int es = (*buses_it).es;
+		int st = (*buses_it).st;
+		int et = (*buses_it).et;
+		//from all the arrival times at ss, 
+		//find the earlies of such times
+		//which is greater than leastArrivalTime
+		int leastArrivalTime = st - leastWaitTime;
+		it_stations = std::lower_bound(stations[ss].begin(), stations[ss].end(),
+			leastArrivalTime);
+
+		if ( it_stations != stations[ss].end() && *it_stations <= st)
+		{
+			stations[es].push_back(et);
+			if (es == g_Stations) return true;
+		}
+
+	}
+	return false;
+}
+
+int main()
+{
+	std::cin >> g_Stations >> g_TimeLimit >> g_Buses;
+
+	for	(int i = 0; i < g_Buses ; i++)
+	{	
+		int ss, es, st, et;
+		std::cin >> ss >> es >> st >> et;
+		if ( et > g_TimeLimit) continue;
+		buses.insert(Bus(ss,es,st,et));
+	}
+
+	//g_ActualBuses = buses.size();
+	
+	//std::sort(buses.begin(), buses.end(), compare);
+	int ans = -1;
+	int lowerlimit = 0;
+	int upperlimit = g_TimeLimit;
+
+	while(lowerlimit <= upperlimit)
+	{
+		int wt = (lowerlimit + upperlimit) /2;
+		if(IsPossible(wt))
+		{
+			ans = wt;
+			upperlimit = wt - 1;
+		}
+		else
+			lowerlimit = wt + 1;
+	}
+
+	std::cout << ans << std::endl;
+	return 0;
+}
+

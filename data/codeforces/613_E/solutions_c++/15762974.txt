@@ -1,0 +1,124 @@
+#include<cstdio>
+#include<algorithm>
+#include<cstring>
+#define maxn 2020
+#define base 151
+#define mod 1000000007
+using namespace std;
+typedef unsigned long long ui64;
+char str[3][maxn];
+ui64 has[3][maxn],bhas[3][maxn],pw[maxn];
+int ans,dp[3][maxn][maxn],len[3];
+void rev(int id,int s,int e)
+{
+	while(s < e)
+	{
+		swap(str[id][s],str[id][e]);
+		s ++;
+		e --;
+	}
+}
+
+void hash_init()
+{
+	pw[0]= 1;
+	for(int i = 1; i <= len[1] ;i ++ ) 
+		pw[i] = pw[i-1] * base;
+	
+	for(int id = 0; id <= 2 ; id ++ )
+	{
+		for(int i = 1 ; i <= len[id] ; i ++ )
+			has[id][i] = has[id][i-1] *base + str[id][i];
+		if(id==2) continue;
+		for(int i = len[id] ; i >= 1 ; i -- )
+			bhas[id][i] = bhas[id][i+1] * base + str[id][i];
+	}
+}
+
+ui64 gethash(int id,int l,int r)
+{
+	return has[id][r] - has[id][l-1]*pw[r-l+1];
+}
+
+ui64 getbhash(int id,int l,int r)
+{
+	return bhas[id][l] - bhas[id][r+1]*pw[r-l+1];
+}
+
+void solve()
+{
+	hash_init();
+	for(int i = 0 ; i <= 1 ; i ++ )
+		for(int j = 0 ; j <= len[1]+1; j ++ )
+			for(int k = 0 ; k <= len[2] ; k ++ )
+				dp[i][j][k] = 0;
+	dp[0][len[0]+1][0] = 1;
+	dp[1][len[1]+1][0] = 1;
+	for(int i = len[0] ; i >=  1; i -- )
+	{
+		dp[0][i][0] = 1;
+		dp[1][i][0] = 1;
+		if(str[0][i] == str[2][len[2]]) dp[0][i][1] = 1;
+		if(str[1][i] == str[2][len[2]]) dp[1][i][1] = 1;
+		for(int k = 2; k <= len[2] ; k ++ )
+		{
+			if( (len[0]-i + 1) *2 < k ) break;
+			if(str[0][i] == str[2][len[2]-k+1]){
+				if(str[1][i] == str[2][len[2]-k+2])
+					dp[0][i][k] = (1LL*dp[1][i+1][k-2] + dp[0][i][k])%mod;
+				dp[0][i][k] = (1LL*dp[0][i][k] + dp[0][i+1][k-1])%mod;
+				if(k > 2 && k%2 == 0 )
+					if( gethash(0,i, i + k/2 - 1) == gethash(2,len[2]-k+1,len[2]-k+k/2)
+						&& getbhash(1,i,i+k/2-1) == gethash(2,len[2]-k+k/2+1,len[2]) )
+							dp[0][i][k] = (1LL*dp[0][i][k] + 1) %mod;
+			}
+			if(str[1][i] == str[2][len[2]-k+1]){
+				if(str[0][i] == str[2][len[2]-k+2])
+					dp[1][i][k] = (1LL*dp[1][i][k] + dp[0][i+1][k-2])%mod;
+				dp[1][i][k] = (1LL*dp[1][i][k] + dp[1][i+1][k-1])%mod;
+				if(k > 2 && k %2 == 0 )
+					if(gethash(1,i,i+k/2-1) == gethash(2,len[2]-k+1,len[2]-k+k/2)
+						&&getbhash(0,i,i+k/2-1) == gethash(2,len[2]-k + k/2+1,len[2]))
+							dp[1][i][k] = (1LL*dp[1][i][k] + 1)%mod;					
+			}
+		}
+		for(int k = 1 ; k <= len[2] ; k ++ )
+		{
+				if(k == len[2]) ans = ( 1LL*ans + dp[0][i][k] + dp[1][i][k] ) %mod;
+				int x = len[2] - k;
+				if(2*(i-1) >= x && x>2&&x%2 == 0)
+				{
+					if(gethash(0,i- x/2,i-1) == gethash(2,x/2+1,x)
+						&& getbhash(1,i-x/2,i-1) == gethash(2,1,x/2) )
+							ans = (1LL*ans + dp[0][i][k])%mod;
+					if(gethash(1,i- x/2,i-1) == gethash(2,x/2 + 1,x)
+						&& getbhash(0,i-x/2,i-1) == gethash(2,1,x/2) )
+							ans = (1LL*ans + dp[1][i][k])%mod;
+				}	
+		}
+	}
+}
+
+int main()
+{
+	scanf("%s%s%s",str[0]+1,str[1]+1,str[2]+1);
+	len[0] = len[1] = strlen(str[0]+1);
+	len[2] = strlen(str[2]+1);
+	solve();
+	if(len[2]!=1){
+		
+		rev(0,1,len[0]);
+		rev(1,1,len[1]);
+		solve();
+	}
+	if(len[2] == 2)
+	{
+		for(int i = 1 ; i <= len[1] ; i ++ ){
+			if(str[0][i] == str[2][1] && str[1][i] == str[2][2]) ans --;
+			if(str[1][i] == str[2][1] && str[0][i] == str[2][2]) ans --;
+		}
+	}
+	ans = (1LL*ans + mod)%mod;
+	printf("%d",ans);
+}
+

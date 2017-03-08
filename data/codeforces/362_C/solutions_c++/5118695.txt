@@ -1,0 +1,20 @@
+#include <stdio.h>
+const int N=5050;
+int n,t,v=-1,w,p[N],c[N],d[N],l[N];
+void U(int x,int*y){for(int u=x+1;u<=n;u+=u&-u)++y[u];}
+int Q(int x,int*y){
+  int s=0;
+  while(x>0)s+=y[x],x-=x&-x;
+  return s;
+}
+main(){
+  scanf("%d",&n);
+  for(int i=0,s;i<n&&1==scanf("%d",&p[i]);++i)s=Q(p[i],c),l[i]=s,t+=i-s,U(p[i],c);
+  for(int i=0;i<n;U(p[i++],d))
+    for(int j=i+1,a=0,b;j<n;++j)if(p[j]<p[i]){
+      b=l[j]-Q(p[j],d);
+      if(a-b>v)v=a-b,w=1;else if(a-b==v)++w;
+      ++a;
+    }
+  printf("%d %d\n",t-v-v-1,w);
+}

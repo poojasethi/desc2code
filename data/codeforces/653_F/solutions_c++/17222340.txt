@@ -1,0 +1,89 @@
+#include<cstdio>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+#include<cstdlib>
+using namespace std;
+int sum[1000005],n;
+char s[1000005];
+struct DATA
+{
+	int next[1000005][2],l[1000005],fa[1000005],r[1000005];
+	int cnt,last;
+	void add(int x,int ch)
+	{
+		int p=last,np=++cnt;
+		l[np]=l[p]+1;last=np;r[np]=ch;
+		while(p!=-1&&!next[p][x])next[p][x]=np,p=fa[p];
+		if(p==-1)fa[np]=0;
+		else
+		{
+			int q=next[p][x];
+			if(l[p]+1==l[q])fa[np]=q;
+			else
+			{
+				int nq=++cnt;l[nq]=l[p]+1;r[nq]=ch;
+				memcpy(next[nq],next[q],sizeof(next[q]));
+				fa[nq]=fa[q];
+				fa[q]=fa[np]=nq;
+				while(next[p][x]==q)next[p][x]=nq,p=fa[p];
+			}
+		}
+	}
+}sam;
+struct SEG
+{
+	int p,v,vis;
+	bool operator<(const SEG &a)const{
+		return p<a.p;
+	}
+}t[2000005];
+int num,cnt[2000005];
+int c[2000004],firstpos[1000005];
+void add(int pos,int val)
+{
+	for(int i=pos;i<=n*2+1;i+=i&(-i))
+	  c[i]=min(c[i],val);
+}
+int ask(int pos)
+{
+	int ans=2000000000;
+	for(int i=pos;i;i-=i&(-i))
+	  ans=min(ans,c[i]);
+	return ans;
+}
+int main()
+{
+	scanf("%d",&n);scanf("%s",s+1);
+	sam.fa[0]=-1;
+	for(int i=1;i<=n;++i)sum[i]=sum[i-1]+(s[i]=='('?1:-1);
+	for(int i=n;i>=1;--i)sam.add((s[i]=='('?0:1),n-i+1);
+	memset(c,0x3f,sizeof(c));
+	for(int i=n;i>=1;--i)
+	{
+		add(sum[i]+n+1,i);
+		firstpos[i]=ask(sum[i-1]-1+n+1);
+	}
+	for(int i=1;i<=sam.cnt;++i)
+	{
+		int l=sam.r[i]-sam.l[i]+1,r=sam.r[i]-sam.l[sam.fa[i]],g=sam.r[i];//�����������׵ĳ���+1 
+		//cout<<l<<" "<<r<<" "<<g<<endl;
+		l=n-l+1,r=n-r+1;swap(l,r);g=n-g+1;
+		r=min(firstpos[g]-1,r);
+		 
+		if(l>r)continue;
+		//cout<<g<<" "<<l<<" "<<r<<" "<<endl;
+		t[++num]=(SEG){r,sum[g-1],1};
+		t[++num]=(SEG){l-1,sum[g-1],-1};
+	}
+	sort(t+1,t+num+1);
+	long long ans=0;
+	int j=0;//����ֵ�� 
+	for(int i=1;i<=num;++i)
+	{
+		for(;j<=n&&j<=t[i].p;++j)cnt[sum[j]+n]++;
+		ans+=(long long)t[i].vis*cnt[t[i].v+n];
+	}
+	printf("%I64d\n",ans);
+	return 0;
+}

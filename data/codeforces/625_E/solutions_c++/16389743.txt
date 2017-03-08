@@ -1,0 +1,134 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <queue>
+
+using namespace std;
+
+typedef long long int ll;
+
+const int limite=200000;
+
+int n,m;
+int next[limite];
+int prev[limite];
+int vivo[limite];
+ll tiempo[limite];
+int posicion[limite];
+ll a[limite];
+
+void elimina(int id)
+{
+  //cout<<"elimina "<<id<<endl;
+  next[prev[id]]=next[id];
+  prev[next[id]]=prev[id];
+  vivo[id]=0;
+}
+
+int computapos(int id,ll t)
+{
+  //cout<<"computapos "<<id<<" "<<t<<" "
+  //<<(posicion[id]+a[id]*(t-tiempo[id]))%m<<endl;
+  return (posicion[id]+a[id]*(t-tiempo[id]))%m;
+}
+
+// devuelve -1 si no mata.
+ll cuandomatabis(int id1)
+{
+  if (not vivo[id1] or next[id1]==id1) return -1;
+  int id2=next[id1];
+  {
+    if (tiempo[id1]<tiempo[id2] and id1>id2) {
+      ll pos1=computapos(id1,tiempo[id2]-1);
+      ll pos2=posicion[id2];
+      if (pos2<pos1) pos2+=m;
+      pos1+=a[id1];
+      if (pos1>=pos2) return tiempo[id2]-1;
+    }
+  }
+  ll t=max(tiempo[id1],tiempo[id2]);
+  ll pos1=computapos(id1,t);
+  ll pos2=computapos(id2,t);
+  if (pos2<pos1) pos2+=m;
+  if (id1<id2) {
+    pos1+=a[id1];
+    if (pos1>=pos2) return t;
+    if (a[id2]>=a[id1]) return -1;
+    ll dist=pos2-pos1;
+    ll recorte=a[id1]-a[id2];
+    return t+dist/recorte+(dist%recorte!=0);
+  }
+  if (a[id2]>=a[id1]) return -1;
+  ll dist=pos2-pos1;
+  ll recorte=a[id1]-a[id2];
+  return t+dist/recorte+(dist%recorte!=0)-1;
+}
+
+ll cuandomata(int id1)
+{
+  ll c=cuandomatabis(id1);
+  //cout<<"cuandomata "<<id1<<" "<<c<<endl;
+  return c;
+}
+
+int main()
+{
+  ios::sync_with_stdio(false);
+  cin>>n>>m;
+  vector<pair<int,int> > lista;
+  for (int i=0;i<n;i++) {
+    cin>>posicion[i]>>a[i];
+    posicion[i]--;
+    lista.push_back(pair<int,int> (posicion[i],i));
+    vivo[i]=1;
+  }
+  sort(lista.begin(),lista.end());
+  priority_queue<pair<ll,ll>,
+		 vector<pair<ll,ll> >,
+		 greater<pair<ll,ll> > > q;
+  for (int i=0;i<int(lista.size());i++) {
+    int id1=lista[i].second;
+    int id2=lista[(i+1)%(int(lista.size()))].second;
+    next[id1]=id2;
+    prev[id2]=id1;
+    int turno=cuandomata(id1);
+    if (turno>=0)
+      q.push(pair<ll,ll> (turno,id1));
+  }
+  while (not q.empty()) {
+    pair<ll,ll> p=q.top();
+    q.pop();
+    ll turno=p.first;
+    int id=p.second;
+    //cout<<"pila "<<id<<" "<<turno<<endl;
+    if (vivo[id] and cuandomata(id)==turno) {
+      //cout<<"mata"<<endl;
+      int numelim=0;
+      while (next[id]!=id and cuandomata(id)==turno) {
+	elimina(next[id]);
+	numelim++;
+      }
+      posicion[id]=computapos(id,turno+1);
+      tiempo[id]=turno+1;
+      a[id]-=numelim;
+      //cout<<"reasignamos "<<id<<" "<<posicion[id]<<" "<<tiempo[id]<<" "<<a[id]<<endl;
+      // Nueva informacion a la cola:
+      turno=cuandomata(id);
+      if (turno>=0)
+	q.push(pair<ll,ll> (turno,id));
+      turno=cuandomata(prev[id]);
+      if (turno>=0)
+	q.push(pair<ll,ll> (turno,prev[id]));
+    }
+  }
+  vector<int> sol;
+  for (int i=0;i<n;i++)
+    if (vivo[i])
+      sol.push_back(i);
+  cout<<int(sol.size())<<endl;
+  for (int i=0;i<int(sol.size());i++) {
+    if (i>0) cout<<" ";
+    cout<<sol[i]+1;
+  }
+  cout<<endl;
+}

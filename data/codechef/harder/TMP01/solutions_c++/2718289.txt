@@ -1,0 +1,210 @@
+#include <iostream>
+#include <memory.h>
+#include <vector>
+#include <queue>
+#include <cstdio>
+#include <algorithm>
+#define MX 1000005
+#define MOD 1000000007
+using namespace std;
+
+struct Node {
+	int l, r, pardp, chdnum;
+	Node *par, *sLink, *chd[26];
+	
+	Node() {
+		l = r = pardp = chdnum = 0;
+		par = sLink = NULL;
+		for (int i = 0; i < 26; i++) chd[i] = NULL;
+	}
+	
+	int len() {
+		return r - l;
+	}
+	
+	int depth() {
+		return pardp + len();
+	}
+	
+	bool inEdge(int pos) {
+		return pos >= pardp && pos < depth();
+	}
+	
+	void setEdge(Node *child, int l, int r, char *S) {
+		chd[S[l] - 'a'] = child;
+		chdnum++;
+		child -> par = this;
+		child -> pardp = depth();
+		child -> l = l, child -> r = r;
+	}
+};
+
+struct STree {
+	Node *cur, *root, *needSLink;
+	
+	int size, jj, m;
+	char *S;
+	long long substr;
+	vector <Node> nodes;
+	queue <Node *> leaves;
+	
+	bool needWalk;
+	
+	STree(char *str) {
+		S = str;
+		m = strlen(S);
+		size = 0;
+		nodes.reserve(m * 2 + 10);
+		jj = substr = 1;
+		root = newNode();
+		cur = newNode();
+		root -> setEdge(cur, 0, m, S);
+		leaves.push(cur);
+		needWalk = true;
+		needSLink = NULL;
+		
+	}
+	
+	Node *newNode() {
+		nodes.push_back(Node());
+		return &nodes[size++];
+	}
+	
+	Node *walk_down(Node *c, int j, int i) {
+		if (i - j + 1 > 0) {
+			for (int h = j + c -> depth(); !c -> inEdge(i - j); h += c -> len()) 
+			c = c -> chd[S[h] - 'a'];
+		}
+		return c;
+	}
+	
+	void addSLink(Node *c) {
+		if (needSLink) {
+			needSLink -> sLink = c;
+			needSLink = NULL;
+		}
+	}
+	
+	void extend(int i) {
+		int k, pos;
+		char c = S[i + 1];
+		Node *leaf, *split;
+		
+		for (; jj <= i + 1; jj++) {
+			if (needWalk) {
+				if (!cur-> sLink && cur -> par) cur = cur -> par;
+				cur = (cur -> sLink) ? cur -> sLink : root;
+				cur = walk_down(cur, jj, i);
+			}
+			needWalk = true;
+			
+			k = i + 1 - jj;
+			if (k == cur-> depth()) {
+				addSLink(cur);
+				if (cur -> chd[c - 'a']) {
+					cur = cur -> chd[c - 'a'];
+					needWalk = false;
+					break;
+				}
+				else {
+					leaf = newNode();
+					cur -> setEdge(leaf, i + 1, m, S);
+					leaves.push(leaf);
+				}
+			}
+			else {
+				pos = cur -> l + k - cur -> pardp;
+				
+				if (S[pos] == c) {
+					if (cur -> chdnum || pos != i + 1) {
+						needWalk = false;
+						break;
+					}
+				}
+				else {
+					leaf = newNode();
+					split = newNode();
+					
+					cur -> par -> setEdge(split, cur -> l, pos, S);
+					cur -> par -> chdnum--;
+					
+					split -> setEdge(cur, pos, cur-> r, S);
+					split -> setEdge(leaf, i + 1, m, S);
+					leaves.push(leaf);
+					addSLink(split);
+					if (split -> depth() == 1) split -> sLink = root;
+					else needSLink = split;
+					cur = split;
+				}
+			}
+		}
+		substr += leaves.size();
+	}
+		
+	void erase (int i) {
+		
+		Node *tmp = leaves.front();
+		leaves.pop();
+		while (!tmp -> chdnum) 
+		if (tmp != cur) {
+			tmp -> par -> chd[S[tmp -> l] - 'a'] = NULL;
+			tmp -> par -> chdnum--;
+			substr -= min(i + 1, tmp -> r) - tmp -> l;
+			tmp = tmp -> par;
+		}
+		else {
+			int k = i + 1 - jj - cur -> pardp;
+			
+			substr -= min(i + 1, tmp -> r) - tmp -> l - k;
+			tmp -> l = i + 1 - k;
+			tmp -> r = m;
+			leaves.push(tmp);
+			break;
+		}
+		
+		if (!tmp -> chdnum) {
+			cur = cur -> par;
+			cur = (cur -> sLink) ? cur -> sLink : root;
+			cur = walk_down(cur, ++jj, i);
+			needWalk = false;
+		}
+	}
+	
+};
+
+char str[MX];
+bool op[MX];
+
+main() {
+	
+//	freopen("in.txt", "r", stdin);
+//	freopen("out.txt", "w", stdout);
+	
+	int Q, i, k, n = 0;
+	long long rlt = 1;
+	scanf("%d", &Q);
+	char tmp[2];
+	for (i = 0; i < Q; i++) {
+		scanf("%s", tmp);
+		if (tmp[0] == '+') {
+			op[i] = true;
+			scanf("%s", tmp);
+			str[n++] = tmp[0];
+		}
+	}
+	str[n] = 0;
+	STree tree(str);
+	
+	for (i = 1, k = 0; i < Q; i++) {
+		if (op[i]) tree.extend(k++);
+		else tree.erase(k);
+		rlt = (rlt + tree.substr) % MOD;
+	}
+	
+	cout << rlt << endl;
+}
+
+		
+		
+	
+		

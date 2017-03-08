@@ -1,0 +1,247 @@
+#include <stdio.h>
+#include <iostream>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <stdlib.h>
+#include <math.h>
+#include <cstring>
+#include <algorithm>
+#include <map>
+#include <set>
+ 
+using namespace std;
+ 
+#define fi first
+#define sc second
+#define ff first.first
+#define fs first.second
+#define sf second.first
+#define ss second.second
+#define pb push_back
+#define mp make_pair
+#define ll long long
+#define dl double
+#define ison(a,b) (a&(1<<b))
+#define bitcnt __builtin_popcount
+#define MOD 1000000007 
+ 
+typedef pair<int,int> ii;
+typedef pair<int,ii> iii;
+typedef vector<int> vi;
+typedef vector<ii> vii;
+typedef vector<iii> wadj;
+
+const int N=1e5+5;
+const int LN=18;
+int parent[N],sub_size[N],depth[N];
+int chead[N],cind[N];
+int cno,ptr=1,pib[N],bsa[N],changes,cur_ver,n,m;
+ll ans;
+vi adj[N];
+
+struct st
+{
+  ll c,d,sum;
+  st *lc,*rc;
+}*root[N],null[30000000],*ns=null;
+
+st *New() { return ++ns; }
+
+int nlca(int x,int y)
+{
+  while(chead[cind[x]]!=chead[cind[y]])
+  {
+  if(depth[chead[cind[x]]]>depth[chead[cind[y]]])
+    x=parent[chead[cind[x]]];
+  else
+    y=parent[chead[cind[y]]];
+  }
+  if(depth[x]>depth[y])
+    return y;
+  else
+    return x;
+}
+
+void insert(st* &x,int l,int r,int a,int b,ll &c,ll &d)
+{
+  st *temp=New();
+  *temp=*x;
+  x=temp;
+  if(l>=a&&r<=b)
+    x->c+=c,x->d+=d;
+  else
+  {
+    a=max(a,l),b=min(b,r);
+    x->sum+=c*(a+b)*(b-a+1)/2+d*(b-a+1);
+    int mid=(l+r)>>1;
+    if(a<=mid)insert(x->lc,l,mid,a,b,c,d);
+    if(b>mid)insert(x->rc,mid+1,r,a,b,c,d);
+  }
+
+}
+
+ll query(st* x,int l,int r,int a,int b,ll c=0,ll d=0)
+{
+  c+=x->c;d+=x->d;
+  if(l>=a&&r<=b)
+  return x->sum+c*(l+r)*(r-l+1)/2+d*(r-l+1);
+  int mid=(l+r)>>1;
+  ll rr=0;
+  if(a<=mid)
+  rr+=query(x->lc,l,mid,a,b,c,d);
+  if(b>mid)
+  rr+=query(x->rc,mid+1,r,a,b,c,d);
+  return rr;
+}
+
+void modify(st* &rt,int a,int b,ll c,ll d)
+{
+  if(a>b)
+  {
+    //printf("in swap a %d b %d c %lld d %lld\n",a,b,c,d);
+    swap(a,b),d+=c*(b-a+2),c=-c;
+    //printf("after swap a %d b %d c %lld d %lld\n",a,b,c,d);
+  }
+  d-=c*(a-1);
+  //printf("Before Insert a %d b %d c %lld d %lld\n",a,b,c,d);
+  insert(rt,1,n,a,b,c,d);
+}
+
+
+void update(st* &x,int a,int b,ll c,ll d)
+{
+  int l=0,r=depth[a]+depth[b]-2*depth[nlca(a,b)];
+  while(chead[cind[a]]!=chead[cind[b]])
+  {
+    if(depth[chead[cind[a]]]>depth[chead[cind[b]]])
+    {
+      modify(x,pib[a],pib[chead[cind[a]]],c,d+c*l);
+      l+=depth[a]-depth[chead[cind[a]]]+1;
+      a=parent[chead[cind[a]]];
+    }
+    else
+    {
+      r-=depth[b]-depth[chead[cind[b]]];
+      modify(x,pib[chead[cind[b]]],pib[b],c,d+c*r);
+      r--;
+      b=parent[chead[cind[b]]];
+    }
+  }
+  modify(x,pib[a],pib[b],c,d+c*l);
+}
+
+ll query_up(st* x,int a,int b)
+{
+  ll s=0;
+  while(chead[cind[a]]!=chead[cind[b]])
+  {
+    if(depth[chead[cind[a]]]<depth[chead[cind[b]]])
+    swap(a,b);
+      s+=query(x,1,n,pib[chead[cind[a]]],pib[a]);
+      a=parent[chead[cind[a]]];
+  }
+  
+  if(depth[a]>depth[b])
+    swap(a,b);
+  s+=query(x,1,n,pib[a],pib[b]);
+  return s;
+}
+
+
+void dfs(int u1,int p)
+{
+  parent[u1]=p;
+  sub_size[u1]=1;
+  for(int i=0;i<adj[u1].size();i++)
+  {
+    int v=adj[u1][i];
+    if(v!=p)
+    {
+      depth[v]=depth[u1]+1;
+      dfs(v,u1);
+      sub_size[u1]+=sub_size[v];
+    }
+  }
+}
+
+
+void hld(int u,int p)
+{
+  if(chead[cno]==0)
+  chead[cno]=u;
+  cind[u]=cno;
+  pib[u]=ptr++;
+  int sc=-1,nc;
+  for(int i=0;i<adj[u].size();i++)
+  if(adj[u][i]!=p)
+  {
+    if(sc==-1||sub_size[sc]<sub_size[adj[u][i]])
+    {
+      sc=adj[u][i];
+    }
+  }
+  if(sc!=-1)
+  hld(sc,u);
+  for(int i=0;i<adj[u].size();i++)
+  if(adj[u][i]!=sc&&adj[u][i]!=p)
+  {
+    cno++;
+    hld(adj[u][i],u);
+  }
+}
+
+void pre()
+{
+  depth[1]=0;
+  dfs(1,0);
+  cno=ptr=1;
+  hld(1,0);
+  null->lc=null->rc=null;root[0]=null;
+}
+int main(int argc, char const *argv[])
+{
+//freopen("inp.txt","r",stdin);
+ cin>>n>>m;
+ for(int i=1;i<n;i++)
+ {
+  int a,b;
+  scanf("%d%d",&a,&b);
+  adj[a].pb(b);
+  adj[b].pb(a);
+ }
+ pre();
+
+ while(m--)
+ {
+  char c;
+  int x,y,a,b;
+  cin>>c;
+  if(c=='c')
+  {
+    scanf("%d%d%d%d",&x,&y,&a,&b);
+    root[++changes]=root[cur_ver];
+    cur_ver=changes;
+    x=(x+ans)%n+1;
+    y=(y+ans)%n+1;
+    update(root[cur_ver],x,y,b,a-b);
+  }
+  else if(c=='q')
+  {
+    scanf("%d%d",&x,&y);
+    x=(x+ans)%n+1;
+    y=(y+ans)%n+1;
+    ans=query_up(root[cur_ver],x,y);
+    printf("%lld\n",ans);
+  }
+  else
+  {
+    scanf("%d",&x);
+    x=(x+ans)%(changes+1);
+    cur_ver=x;
+  }
+ }
+ 
+    return 0;
+}
+ 

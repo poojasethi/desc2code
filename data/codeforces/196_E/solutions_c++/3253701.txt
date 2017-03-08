@@ -1,0 +1,82 @@
+//By momo
+#include <queue>
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+#define N 100010
+#define F first
+#define S second
+#define LL long long
+#define MP make_pair
+#define PB push_back
+#define FOR(it, c) for(__typeof((c).begin())it=(c).begin();it!=(c).end();it++)
+
+using namespace std;
+typedef pair<LL,LL> PII;
+
+LL s, n, m, port[N];
+LL u[N], v[N], w[N], ans;
+
+struct edge{
+	LL t, c; edge(){}
+	edge(LL _t, LL _c){ t = _t, c = _c; }
+};
+vector<edge> G[N];
+
+priority_queue<PII> q;
+LL sh_port[N], dis[N];
+
+void weird_dijk(){
+	fill(dis, dis+n+1, 1ll<<62);
+	for(LL i = 0; i < s; i++){
+		sh_port[port[i]] = port[i];
+		q.push(MP(dis[port[i]] = 0, port[i]));
+	}
+	while(!q.empty()){
+		PII p = q.top(); q.pop(); p.F *= -1;
+		if(p.F > dis[p.S]) continue;
+		FOR(it, G[p.S]){
+			if(dis[it->t] > p.F + it->c){
+				dis[it->t] = p.F + it->c;
+				sh_port[it->t] = sh_port[p.S];
+				q.push(MP(-dis[it->t], it->t));
+			}
+		}
+	}
+}
+
+struct Kedge{ LL a, b, c; }e[N];
+bool comp(Kedge a, Kedge b){ return a.c < b.c; }
+
+LL fa[N];
+LL  find(LL x){ return fa[x] = (fa[x]==x?x:find(fa[x])); }
+void unio(LL a, LL b){ fa[find(a)] = find(b); }
+
+void super_mst(){
+	weird_dijk();
+	for(LL i = 0; i < m; i++){
+		e[i].a = sh_port[u[i]];
+		e[i].b = sh_port[v[i]];
+		e[i].c = w[i]+dis[u[i]]+dis[v[i]];
+	}
+	sort(e, e + m, comp);
+	for(LL i = 1; i <= n; i++) fa[i] = i;
+	for(LL i = 0; i < m; i++){
+		if(find(e[i].a) == find(e[i].b)) continue;
+		ans += e[i].c; unio(e[i].a, e[i].b);
+	}
+}
+
+int main (){
+	cin >> n >> m;
+	for(LL i = 0; i < m; i++){
+		cin >> u[i] >> v[i] >> w[i];
+		G[u[i]].PB(edge(v[i], w[i]));
+		G[v[i]].PB(edge(u[i], w[i]));
+	}
+	cin >> s;
+	for(LL i = 0; i < s; i++) cin >> port[i];
+	super_mst();
+	cout << ans + dis[1] << endl;
+}

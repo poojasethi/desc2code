@@ -1,0 +1,139 @@
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <utility>
+using namespace std;
+
+#define FOR(i, a, b) for (int i = (a); i < (b); i++)
+#define REP(i, n) for (int i = 0; i < (n); i++)
+
+int ri()
+{
+  int x;
+  scanf("%d", &x);
+  return x;
+}
+
+const int N = 5000000;
+char a[2*N+1], x[N+1], y[N+1];
+int z[2*N+1], c[N], d[N];
+
+void prefixes(int n)
+{
+  z[0] = n;
+  for (int f = 0, g = 0, i = 1; i < n; i++)
+    if (i < g && z[i-f] != g-i)
+      z[i] = min(z[i-f], g-i);
+    else {
+      f = i;
+      g = max(g, f);
+      for (; g < n && a[g] == a[g-f]; g++);
+      z[i] = g-f;
+    }
+}
+
+int duval(int n)
+{
+  int m = 0, s = 0;
+  while (s < n) {
+    int i = s, j = s+1;
+    while (j < n && a[i] <= a[j]) {
+      if (a[i] < a[j])
+        i = s;
+      else
+        i++;
+      j++;
+    }
+    c[m] = s;
+    d[m++] = j-i;
+    s += (j-s)/(j-i)*(j-i);
+  }
+  return m;
+}
+
+bool cmp(int i, int j)
+{
+  for (; i < --j && a[i] == a[j]; i++);
+  return a[i] <= a[j];
+}
+
+void print(int i, int j)
+{
+  if (cmp(i, j))
+    while (i < j)
+      putchar(a[i++]);
+  else
+    while (i < j)
+      putchar(a[--j]);
+}
+
+void cp(int n, int j, char x[])
+{
+  if (cmp(0, j))
+    copy(a, a+j, x+n-j);
+  else
+    reverse_copy(a, a+j, x+n-j);
+}
+
+int main()
+{
+  gets(a);
+  int n = strlen(a), k = ri();
+  if (k == 1)
+    print(0, n);
+  else {
+    if (k > 2) {
+      REP(i, n)
+        c[a[i]-'a']++;
+      n = 0;
+      REP(i, 26) {
+        fill_n(x+n, c[i], 'a'+i);
+        n += c[i];
+      }
+      int p = mismatch(a, a+n, x).first - a;
+      if (p) {
+        k--;
+        print(0, p);
+        copy(a+p, a+n, a);
+        n -= p;
+      }
+    }
+
+    reverse(a, a+n);
+    int m = duval(n);
+    for (; k > 2 && m; k--) {
+      print(c[--m], n);
+      n = c[m];
+    }
+    if (m == 1)
+      print(0, n);
+    else if (m > 1) {
+      copy(a+c[m-1], a+n, x);
+      cp(n, c[m-1], x);
+      x[n] = '\0';
+      copy(a+c[m-2], a+n, y);
+      cp(n, c[m-2], y);
+      if (strcmp(y, x) < 0)
+        strcpy(x, y);
+      a[n] = '\0';
+      reverse_copy(a, a+n, a+n+1);
+      prefixes(2*n+1);
+      int opt = 0;
+      FOR(i, 1, n-1) {
+        int mis = z[2*n-i]; 
+        if (mis < i-opt) {
+          if (a[mis] < a[2*n-(i-mis)])
+            opt = i;
+        } else {
+          mis = z[i-opt];
+          if (mis < opt+1 && a[i-opt+mis] < a[mis])
+            opt = i;
+        }
+      }
+      reverse_copy(a+opt+1, a+n, y);
+      copy(a, a+opt+1, y+n-opt-1);
+      printf("%s", strcmp(y, x) < 0 ? y : x);
+    }
+  }
+  puts("");
+}

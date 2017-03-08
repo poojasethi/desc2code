@@ -1,0 +1,374 @@
+#include <cstring>
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <deque>
+#include <stack>
+#include <queue>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>          //cout<<fixed<<setprecision(10);
+//#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+//#include <memory.h>
+#include <cassert>
+
+#define SZ(X) ((int)(X).size())
+#define ALL(X) (X).begin(), (X).end()
+#define REP(I, A, B) for (int I = (A); I < (B); ++I)
+#define RI(X) scanf("%d", &(X))
+#define RII(X, Y) scanf("%d%d", &(X), &(Y))
+#define RIII(X, Y, Z) scanf("%d%d%d", &(X), &(Y), &(Z))
+#define DRI(X) int (X); scanf("%d", &X)
+#define DRII(X, Y) int X, Y; scanf("%d%d", &X, &Y)
+#define DRIII(X, Y, Z) int X, Y, Z; scanf("%d%d%d", &X, &Y, &Z)
+#define RS(X) scanf("%s", (X))
+#define CASET int ___T, case_n = 1; scanf("%d ", &___T); while (___T-- > 0)
+#define MP make_pair
+#define PB push_back
+#define MS0(X) memset((X), 0, sizeof((X)))
+#define MS1(X) memset((X), -1, sizeof((X)))
+#define LEN(X) ((int)strlen(X))
+#define F first
+#define S second
+#define IOS ios_base::sync_with_stdio(0)
+#ifdef ONLINE_JUDGE
+#define FILEIO(name) \
+    freopen(name".in", "r", stdin); \
+    freopen(name".out", "w", stdout);
+#else
+#define FILEIO(name)
+#endif
+
+using namespace std;
+
+typedef long long ll;
+typedef long double ld;
+typedef pair<int,int> ii;
+typedef pair<ll,ll> pll;
+/*#include<complex>
+typedef complex<double> cd;
+#define X real()
+#define Y imag()*/
+
+int L[800],N;
+bitset<800> EE[800];
+
+const int maxn = 1600 + 10;
+const int INF = 1000000000;
+
+struct Edge {
+  int from, to, cap, flow;
+};
+
+bool operator < (const Edge& a, const Edge& b) {
+  return a.from < b.from || (a.from == b.from && a.to < b.to);
+}
+
+struct ISAP {
+  int n, m, s, t;
+  vector<Edge> edges;
+  vector<int> G[maxn];   //鄰接表，G[i][j]表示節點i的第j條邊在e數組中的序號
+  bool vis[maxn];        //BFS使用
+  int d[maxn];           //從起點到i的距離
+  int cur[maxn];        //當前弧指針
+  int p[maxn];          //可增廣路上的一條弧
+  int num[maxn];        //距離標號計數
+
+  void AddEdge(int from, int to, int cap) {
+    edges.push_back((Edge){from, to, cap, 0});
+    edges.push_back((Edge){to, from, 0, 0});
+    m = edges.size();
+    G[from].push_back(m-2);
+    G[to].push_back(m-1);
+  }
+
+  bool BFS() {
+    memset(vis, 0, sizeof(vis));
+    queue<int> Q;
+    Q.push(t);
+    vis[t] = 1;
+    d[t] = 0;
+    while(!Q.empty()) {
+      int x = Q.front(); Q.pop();
+      for(int i = 0; i < G[x].size(); i++) {
+        Edge& e = edges[G[x][i]^1];
+        if(!vis[e.from] && e.cap > e.flow) {
+          vis[e.from] = 1;
+          d[e.from] = d[x] + 1;
+          Q.push(e.from);
+        }
+      }
+    }
+    return vis[s];
+  }
+
+  void ClearAll(int n) {
+    this->n = n;
+    for(int i = 0; i < n; i++){
+      G[i].clear();
+      d[i]=INF;
+    }
+    edges.clear();
+  }
+
+  void ClearFlow() {
+    for(int i = 0; i < edges.size(); i++) edges[i].flow = 0;
+  }
+
+  int Augment() {
+    int x = t, a = INF;
+    while(x != s) {
+      Edge& e = edges[p[x]];
+      a = min(a, e.cap-e.flow);
+      x = edges[p[x]].from;
+    }
+    x = t;
+    while(x != s) {
+      edges[p[x]].flow += a;
+      edges[p[x]^1].flow -= a;
+      x = edges[p[x]].from;
+    }
+    return a;
+  }
+
+  int Maxflow(int s, int t) {
+    this->s = s; this->t = t;
+    int flow = 0;
+    BFS();
+    if(d[s]>=n)return 0;
+    memset(num, 0, sizeof(num));
+    memset(p, 0, sizeof(p));
+    for(int i = 0; i < n; i++)if(d[i]<INF) num[d[i]]++;
+    int x = s;
+    memset(cur, 0, sizeof(cur));
+    while(d[s] < n) {
+      if(x == t) {
+        flow += Augment();
+        x = s;
+      }
+      int ok = 0;
+      for(int i = cur[x]; i < G[x].size(); i++) {
+        Edge& e = edges[G[x][i]];
+        if(e.cap > e.flow && d[x] == d[e.to] + 1) { //Advance
+          ok = 1;
+          p[e.to] = G[x][i];
+          cur[x] = i; //注意
+          x = e.to;
+          break;
+        }
+      }
+      if(!ok) { //Retreat
+        int m = n-1; //初值注意
+        for(int i = 0; i < G[x].size(); i++) {
+          Edge& e = edges[G[x][i]];
+          if(e.cap > e.flow) m = min(m, d[e.to]);
+        }
+        if(--num[d[x]] == 0) break;
+        num[d[x] = m+1]++;
+        cur[x] = 0; //注意
+        if(x != s) x = edges[p[x]].from;
+      }
+    }
+    return flow;
+  }
+
+  vector<int> Mincut() { // call this after maxflow
+    BFS();
+    vector<int> ans;
+    for(int i = 0; i < edges.size(); i++) {
+      Edge& e = edges[i];
+      if(!vis[e.from] && vis[e.to] && e.cap > 0) ans.push_back(i);
+    }
+    return ans;
+  }
+
+  void Reduce() {
+    for(int i = 0; i < edges.size(); i++) edges[i].cap -= edges[i].flow;
+  }
+
+  void print() {
+    printf("Graph:\n");
+    for(int i = 0; i < edges.size(); i++)
+      printf("%d->%d, %d, %d\n", edges[i].from, edges[i].to , edges[i].cap, edges[i].flow);
+  }
+
+  bool reach[maxn];
+  void dfs_reach(int x){
+    if(reach[x])return;
+    reach[x]=true;
+    REP(i,0,SZ(G[x])){
+        if(edges[G[x][i]].cap)dfs_reach(edges[G[x][i]].to);
+    }
+  }
+}flow;
+
+//const int SIGMA_SIZE = 2;
+const int MAXN = 755 ;
+const int MAXS = 1e7 + 5 ;
+
+struct Node
+{
+    Node* nxt[2] ;
+    Node* fail ;
+    int val ;
+} ;
+
+struct AhoCorasickAutomata
+{
+    Node nodepool[MAXS] , *ntp , *root;
+    queue<Node*> q;
+    Node* newnode ()
+    {
+        ntp->nxt[0] = ntp->nxt[1] = ntp->fail = NULL ;
+        ntp->val = -1 ;
+        return ntp ++ ;
+    }
+
+    void init ()
+    {
+        for ( int i = 0 ; i < N ; ++ i )
+        {
+            EE[i].reset () ;
+        }
+        ntp = nodepool ;
+        root = newnode () ;
+    }
+
+    bool insert ( char s[] , int n , int idx )
+    {
+        Node* now = root ;
+        for ( int i = 0 ; i < n ; ++ i )
+        {
+            int x = s[i] - 'a' ;
+            if ( now->nxt[x] == NULL ) now->nxt[x] = newnode () ;
+            now = now->nxt[x] ;
+        }
+        if ( now->val == -1 ){now->val = idx ;return true;}
+        else return false;
+    }
+
+    void getFail ()
+    {
+        root->fail = root ;
+        for ( int i = 0 ; i < 2 ; ++ i )
+       {
+            if ( root->nxt[i] == NULL )
+            {
+                root->nxt[i] = root ;
+            }
+            else
+            {
+                root->nxt[i]->fail = root ;
+                q.push(root->nxt[i]) ;
+            }
+        }
+        while ( !q.empty() )
+        {
+            Node* now = q.front() ;q.pop();
+            if ( now->val == -1 ) now->val = now->fail->val ;
+            for ( int i = 0 ; i < 2 ; ++ i )
+            {
+                if ( now->nxt[i] == NULL )
+                {
+                    now->nxt[i] = now->fail->nxt[i] ;
+                }
+                else
+                {
+                    now->nxt[i]->fail = now->fail->nxt[i] ;
+                    q.push(now->nxt[i]) ;
+                }
+            }
+        }
+    }
+
+    void find ( char s[] , int n , int idx )
+    {
+        Node* now = root ;
+        for ( int i = 0 ; i < n ; ++ i )
+        {
+            now = now->nxt[s[i] - 'a'] ;
+            int x = now->fail->val ;
+            int y = now->val ;
+            if ( i == n - 1 && x != -1 ) EE[x][idx] = 1 ;
+            if ( i <  n - 1 && y != -1 ) EE[y][idx] = 1 ;
+        }
+    }
+} ac;
+
+void floyd ()
+{
+    for ( int k = 0 ; k < N ; ++ k )
+    {
+        for ( int i = 0 ; i < N ; ++ i ) if ( EE[i][k] )
+            {
+                EE[i] |= EE[k] ;
+            }
+    }
+}
+
+char str[10001000];
+bitset<800> same;
+vector<int> start;
+
+int main()
+{
+    flow.ClearAll(1600);
+    ac.init();
+    RI(N);
+    int now=0;
+    REP(i,0,N){
+        RS(str+now);
+        start.PB(now);
+        L[i]=LEN(str+now);
+        if(!ac.insert(str+now,L[i],i))same[i]=1;
+        now+=L[i]+1;
+    }
+    ac.getFail();
+    //REP(i,0,SZ(start))cout<<str+start[i]<<endl;
+    REP(i,0,N){
+        ac.find(str+start[i],L[i],i);
+        //puts("");
+        if(!same[i]){
+            flow.AddEdge(N+N,i,1);
+            flow.AddEdge(N+i,N+N+1,1);
+        }
+    }
+    //REP(i,0,N)cout<<EE[i]<<endl;
+    floyd();
+    REP(i,0,N){
+        REP(j,0,N){
+            //if(EE[i][j])cout<<i+1<<' '<<j+1<<endl;
+            if(EE[i][j]&&L[i]<L[j]){
+                flow.AddEdge(i,j+N,1);
+            }
+        }
+    }
+    flow.Maxflow(N+N,N+N+1);
+    flow.Reduce();
+    flow.dfs_reach(N+N);
+    vector<int> ans;
+    REP(i,0,N){
+        //if(flow.edges[i].from==N+N&&flow.edges[i].flow==0)same[flow.edges[i].to]=1;
+        //if(flow.edges[i].to==N+N+1&&flow.edges[i].flow==1)same[flow.edges[i].from-N]=1;
+        //if(flow.edges[i].from==N+N)cout<<"FROM: "<<flow.edges[i].to<<' '<<flow.edges[i].flow<<endl;
+        //if(flow.edges[i].to==N+N+1)cout<<"TO: "<<flow.edges[i].from-N<<' '<<flow.edges[i].flow<<endl;
+        if(!flow.reach[i]||flow.reach[i+N])same[i]=1;
+    }
+    /*REP(i,0,N){
+        if(!flow.vis[i]||flow.vis[i+N])same[i]=1;
+    }*/
+    REP(i,0,N)if(!same[i])ans.PB(i+1);
+    printf("%d\n",SZ(ans));
+    REP(i,0,SZ(ans))printf("%d ",ans[i]);
+    puts("");
+    return 0;
+}

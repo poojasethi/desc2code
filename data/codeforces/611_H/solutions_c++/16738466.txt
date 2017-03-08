@@ -1,0 +1,258 @@
+#include <iostream>
+#include <string>
+#include <cstring>
+#include <cstdlib>
+#include <cmath>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+const int INF = (int)1e9;
+const int M = 200000 + 33;
+const int N = M;
+int n,m,sta,end,tot,size = 1;
+struct code{
+	int st,ed,pos,type;
+	bool change;
+}e[M];
+int num[7][7],fa[7];
+int first[N],to[N * 6],flow[N * 6],next[N * 6],dis[N],p[N],siz;
+int fir[50],toa[N],tob[N],nex[N];
+int lw[10],up[10],vv[10],stay[50];
+bool vis[7];
+int get_int()
+{
+	int ret = 0;char ks = getchar();
+	for(;(ks < '0' || ks > '9');ks = getchar());
+	for(;ks <= '9' && ks >= '0';ks = getchar())
+		ret = ret * 10 + ks - '0';
+	return ret;
+}
+int cal(int x)
+{
+	int ret = 0;
+	while(x > 0){ret ++ ,x /= 10;}
+	return ret;
+}
+void init()
+{
+	lw[1] = 1;up[6] = 999999;
+	lw[2] = 10;up[5] = 99999;
+	lw[3] = 100;up[4] = 9999;
+	lw[4] = 1000;up[3] = 999;
+	lw[5] = 10000;up[2] = 99;
+	lw[6] = 100000;up[1] = 9;
+	for(int i = 1;i <= 6;i ++) vv[i] = lw[i] + 1;
+	n = get_int();
+	for(int i = 1;i < n;i ++){
+		char c = getchar();
+		while(c != '?') c = getchar();
+		while(c == '?'){
+			c = getchar();
+			e[i].st ++;
+		}
+		while(c != '?') c = getchar();
+		while(c == '?'){
+			c = getchar();
+			e[i].ed ++;
+		}
+		if(e[i].st > e[i].ed) swap(e[i].st,e[i].ed),e[i].change = true;
+		num[e[i].st][e[i].ed] ++;
+		if(e[i].ed != e[i].st)num[e[i].ed][e[i].st] ++;
+		e[i].pos = i;
+		e[i].type = e[i].st * 6 + e[i].ed;
+	}
+	m = cal(n);
+}
+void build(int x,int y,int f)
+{
+	size ++;
+	next[size] = first[x];
+	first[x] = size;
+	to[size] = y;
+	flow[size] = f;
+}
+void bfs()
+{
+	int head = 0,tail = 0;
+	memset(dis,-1,sizeof(dis));
+	p[++ tail] = sta;
+	dis[sta] = 0;
+	while(head ^ tail){
+		++ head;
+		for(int i = first[p[head]];i;i = next[i]){
+			if(flow[i] && dis[to[i]] == -1){
+				dis[to[i]] = dis[p[head]] + 1;
+				p[++ tail] = to[i];
+				if(to[i] == end) return;
+			}
+		}
+	}
+}
+int delt(int x,int flownow)
+{
+	if(x == end){
+		return flownow;
+	}
+	else{
+		int ret = 0;
+		for(int i = first[x];i && flownow;i = next[i]){
+			if(flow[i] && dis[to[i]] == dis[x] + 1){
+				int tmp = delt(to[i],min(flownow,flow[i]));
+				flow[i] -= tmp;
+				flow[i ^ 1] += tmp;
+				ret += tmp;
+				flownow -= tmp;
+			}
+		}
+		if(!ret) dis[x] = -1;
+		return ret;
+	}
+}
+int dinic()
+{
+	int ret = 0;
+	while(1){
+		bfs();
+		if(dis[end] == -1) break;
+		while(1){
+			int minf = delt(sta,INF);
+			if(minf == 0) break;
+			ret += minf;
+		}
+	}
+	return ret;
+}
+bool check()
+{
+	int root = 0;
+	for(int i = 1;i <= m;i ++){
+		if(!fa[i]){
+			root = i;
+			break;
+		}
+	}
+	for(int i = 1;i <= m;i ++) vis[i] = false;
+	for(int i = 1;i <= m;i ++)if(!fa[i] && i != root) return false;
+	for(int i = 1;i <= m;i ++){
+		for(int j = 1;j <= m;j ++) vis[j] = false;
+		vis[i] = true;
+		int f = i;
+		while(1){
+			f = fa[f];
+			if(!f) break;
+			if(vis[f]) return false;
+			vis[f] = true;
+		}
+	}
+	size = 1;
+	memset(first,0,sizeof(first));
+	memset(next,0,sizeof(next));
+	sta = 6 + 6 * 6 + 1;
+	end = sta + 1;
+	up[m] = n;
+	for(int i = 1;i <= m;i ++){
+		build(sta,i,up[i] - lw[i]);
+		build(i,sta,0);
+	}
+	tot = 6;
+	for(int i = 1;i <= 6;i ++){
+		for(int j = 1;j <= 6;j ++){
+			tot ++;
+			if(i <= j){
+				build(tot,end,num[i][j]);
+				build(end,tot,0);
+				build(i,tot,INF);
+				build(tot,i,0);
+				build(j,tot,INF);
+				build(tot,j,0);
+			}
+		}
+	}
+	int ck = dinic();
+	if(ck + m == n) return true;
+	return false;
+}
+void insert(int x,int a,int b)
+{
+	siz ++;
+	nex[siz] = fir[x];
+	fir[x] = siz;
+	if(a > b) swap(a,b);
+	toa[siz] = a;
+	tob[siz] = b;
+}
+void print()
+{
+	for(int i = 1;i <= m;i ++){
+		for(int j = first[i];j;j = next[j]){
+			if(to[j] != sta && flow[j ^ 1]){
+				int a = (to[j] - 1) / 6;
+				int b = to[j] % 6;
+				if(!b) b = 6;
+				int typenow = to[j];
+				if(a == i){
+					for(int k = 1;k <= flow[j ^ 1];k ++){
+						insert(typenow,vv[i],lw[b]);
+						vv[i] ++;
+					}
+				}
+				else{
+					for(int k = 1;k <= flow[j ^ 1];k ++){
+						insert(typenow,lw[a],vv[b]);
+						vv[b] ++;
+					}
+				}
+			}
+		}
+	}
+	for(int i = 1;i <= m;i ++){
+		if(fa[i]){
+			int a = i,b = fa[i];
+			if(a > b) swap(a,b);
+			int typenow = a * 6 + b;
+			insert(typenow,lw[a],lw[b]);
+		}
+	}
+	for(int i = 1;i <= 49;i ++)
+		stay[i] = fir[i];
+	for(int i = 1;i < n;i ++){
+		int x = e[i].type;
+		if(e[i].change){
+			cout<<tob[stay[x]]<<" "<<toa[stay[x]]<<endl;
+		}
+		else{
+			cout<<toa[stay[x]]<<" "<<tob[stay[x]]<<endl;
+		}
+		stay[x] = nex[stay[x]];
+	}
+}
+void dfs(int x)
+{
+	if(x == m + 1){
+		if(check()){
+			print(); 
+			exit(0);
+		}
+		return;
+	}
+	for(int i = 0;i <= m;i ++){
+		if(!i || num[i][x]){
+			num[i][x] --;
+			if(x != i) num[x][i] --;
+			fa[x] = i;
+			dfs(x + 1);
+			num[i][x] ++;
+			if(x != i) num[x][i] ++;
+		}
+	}
+}
+int main()
+{
+	
+	init();
+	dfs(1);
+	cout<<"-1"<<endl;
+	
+	return 0;
+}

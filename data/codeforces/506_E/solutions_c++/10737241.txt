@@ -1,0 +1,108 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+const int N = 205;
+const int M = 405;
+const int MD = 10007;
+
+int n, m;
+int a[N];
+
+int dp[N][N][N];
+int cnt[N][2];
+
+void fido()
+{
+	dp[1][n][0] = 1;
+	for(int siz=n-1; siz>=0; siz--)
+	for(int i=1, j; i<=n-siz+1; i++)
+	for(int k=0; k<=n-siz; k++) if(dp[i][j=i+siz][k])
+	{
+		if(a[i]==a[j]) (dp[i+1][j-1][k+1] += dp[i][j][k]) %= MD;
+		else (dp[i+1][j][k+1] += dp[i][j][k]) %= MD, (dp[i][j-1][k+1] += dp[i][j][k]) %= MD;
+	}
+	for(int i=0; i<=n; i++) for(int k=0; k<=n; k++) (cnt[k][0] += dp[i+1][i][k]) %= MD, (cnt[k][1] += dp[i+2][i][k]) %= MD;
+}
+
+int og[M][M], sz, rp, bp;
+int f[M][M], g[M][M];
+long long tt[M][M];
+
+void sqr()
+{
+	for(int i=1; i<=sz; i++) for(int j=i; j<=sz; j++)
+	{
+		tt[i][j] = 0;
+		for(int k=i; k<=j; k++) tt[i][j] += f[i][k] * f[k][j];
+	}
+	for(int i=1; i<=sz; i++) for(int j=1; j<=sz; j++) f[i][j] = tt[i][j] % MD;
+}
+
+void sig()
+{
+	for(int i=1; i<=sz; i++) for(int j=i; j<=sz; j++)
+	{
+		tt[i][j] = 0;
+		for(int k=i; k<=j; k++) tt[i][j] += f[i][k] * og[k][j];
+	}
+	for(int i=1; i<=sz; i++) for(int j=1; j<=sz; j++) f[i][j] = tt[i][j] % MD;
+}
+
+void mat(int m)
+{
+	if(m==1) {memcpy(f, og, sizeof f); return;}
+	mat(m>>1), sqr();
+	if(m&1) sig();
+}
+
+void sedo()
+{
+	rp = n-1, bp = (n+1)/2, sz = rp + bp + bp;
+	
+	for(int i=1; i<=rp; i++) og[i][i] = 24;
+	for(int i=rp+1; i<=rp+bp; i++) og[i][i] = 25;
+	for(int i=rp+bp+1; i<=sz; i++) og[i][i] = 26;
+	
+	for(int i=1; i<rp+bp; i++) og[i][i+1] = 1;
+	for(int i=rp+1; i<=rp+bp; i++) og[i][i+bp] = 1;
+}
+
+void read(int *s)
+{
+	int c;
+	while(c=getchar(), c<=' ');
+	s[s[0]=1]=c;
+	while(c=getchar(), c>' ') s[++s[0]]=c;
+}
+
+int main()
+{
+	read(a), scanf("%d", &m), n = a[0], m += n;
+	
+	fido();
+	sedo(), mat((m+1)/2);
+	
+	int ans(0);
+	for(int i=0, j; i<n; i++)
+	{
+		j = (n-i+1)/2;
+		if(i+j+j==n) (ans += (f[n-i][n+j-1+bp] * cnt[n-j][0]) % MD) %= MD;
+		else (ans += (f[n-i][n+j-1+bp] * cnt[n-j+1][1]) % MD) %= MD;
+	}
+	
+	if(m&1)
+	{
+		mat((m-1)/2);
+		for(int i=0, j; i<n; i++)
+		{
+			j = (n-i+1)/2;
+			if(i+j+j==n) (ans -= (f[n-i][n+j-1] * cnt[n-j][0]) % MD) %= MD;
+		}
+	}
+	
+	printf("%d\n", (ans + MD) % MD);
+	
+	return 0;
+}

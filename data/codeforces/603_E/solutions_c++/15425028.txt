@@ -1,0 +1,160 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define pb push_back
+#define asdqew (k + k + 1)
+#define dsaqew (k + k)
+#define left asdqew
+#define mid ((l + r) / 2)
+#define right dsaqew
+#define endl '\n'
+#define foreach(i,x) for(type(x)i=x.begin();i!=x.end();i++)
+#define FOR(ii,aa,bb) for(int ii=aa;ii<=bb;ii++)
+#define ROF(ii,aa,bb) for(int ii=aa;ii>=bb;ii--)
+#define mp make_pair
+#define nd second
+#define st first
+#define type(x) __typeof(x.begin())
+
+typedef pair < int ,int > pii;
+
+typedef long long ll;
+
+const long long linf = 1e18+5;
+const int mod = (int) 1e9 + 7;
+const int logN = 17;
+const int inf = 1e9;
+const int N = 1e6 + 5;
+
+int wh[N], n, m, x, y, z, ans[N];
+pair< pii , int > edge[N];
+pii ord[N]; 
+
+class data {
+	
+	public:
+	
+	vector< vector< pii > > backup_root, backup_size;
+	vector< int > root, size;
+	vector< int > cnt;
+	int odd, ans;
+	
+	void init() { 
+		root.resize(n + 1, 0);
+		size.resize(n + 1, 1);
+		FOR(i, 1, n) root[i] = i;
+		odd = n; cnt.pb(0);
+	}
+	
+	int findset(int node) {
+		while(root[node] != node) { 
+			node = root[node];
+		}
+		return node;		
+	}
+
+	void merge(int x, int y, int value) {
+		x = findset(x);
+		y = findset(y);
+		if(x == y) return ;
+		if(size[x] < size[y])  swap(x, y);
+		if((size[x] & 1) && (size[y] & 1)) cnt.back() += 2, odd -= 2;
+		backup_size.back().pb(mp(x, size[x])); size[x] += size[y];
+		backup_root.back().pb(mp(y, root[y])); root[y] = x;
+	}
+
+	void backup() {
+		while(backup_root.back().size()) {
+			size[backup_size.back().back().st] = backup_size.back().back().nd;	
+			root[backup_root.back().back().st] = backup_root.back().back().nd;	
+			backup_size.back().pop_back();	
+			backup_root.back().pop_back();	
+		}
+		backup_size.pop_back();	
+		backup_root.pop_back();	
+		odd += cnt.back(); cnt.pop_back();
+	}
+	
+	void make_new_backup() {
+		vector< pii > v;
+		backup_root.pb(v);
+		backup_size.pb(v);
+		cnt.pb(0);
+	}
+
+
+} dsu;
+
+void solve(int k, int l, int r, int optL, int optR) {
+	
+	if(l > r) return ;
+	
+	int opt = 0;
+
+	dsu.make_new_backup();
+
+	FOR(i, l, mid)
+		if(edge[i].nd < optL)
+			dsu.merge(edge[i].st.st, edge[i].st.nd, edge[i].nd);
+
+	FOR(i, optL, optR) {
+		if(ord[i].nd <= mid) {
+			dsu.merge(edge[ord[i].nd].st.st, edge[ord[i].nd].st.nd, edge[ord[i].nd].nd);
+			if(dsu.odd == 0) {
+				opt = i; 
+				break;
+			}
+		}
+	} 
+
+	dsu.backup();
+
+	if(opt != 0) {
+		dsu.make_new_backup();
+		FOR(i, optL, opt-1)
+			if(ord[i].nd < l)
+				dsu.merge(edge[ord[i].nd].st.st, edge[ord[i].nd].st.nd, edge[ord[i].nd].nd);
+		ans[mid] = ord[opt].st;
+		solve(left, l, mid-1, opt, optR);
+		dsu.backup();
+	} else opt = optR;
+
+
+	dsu.make_new_backup();
+
+	FOR(i, l, mid)
+		if(edge[i].nd < optL)
+			dsu.merge(edge[i].st.st, edge[i].st.nd, edge[i].nd);
+
+	//cout << " added " << l << ' ' << mid << ' ' << " smalled opt " << optL << endl;
+
+	solve(right, mid+1, r, optL, opt); dsu.backup();
+}
+
+int main() {
+
+	scanf("%d %d", &n, &m);
+
+	FOR(i, 1, m) {
+		scanf("%d %d %d", &x, &y, &z);
+		edge[i] = mp(mp(x, y), z);
+		ord[i] = mp(z, i);
+	} dsu.init();
+
+	sort(ord+1, ord+m+1);
+
+	FOR(i, 1, m) {
+		wh[i] = ord[i].st;
+		edge[ord[i].nd].nd = i;
+	}
+
+	memset(ans, -1, sizeof ans);
+
+	solve(1, 1, m, 1, m);
+
+	FOR(i, 1, m)
+		printf("%d\n", ans[i]);
+
+	return 0;
+}

@@ -1,0 +1,89 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+const int N = 300050, sqN = 700;
+
+struct block_t {
+private:
+	int cnt_cache[sqN * 2];
+public:
+	int l, r, len, *cnt, val[sqN], sum;
+	void modify (int x, int nv)
+	{
+		static int tmp[sqN];
+		fill(cnt - len - 100, cnt + len + 100, 0);
+		val[x = x - l + 1] = nv; tmp[0] = 0;
+		for (int i = 1; i <= len; ++i)
+			cnt[tmp[i] = tmp[i - 1] + val[i]] ++;
+		sum = tmp[len];
+	}
+	inline int count (int x) {
+		if (x < -len || x > len) return 0;
+		return cnt[x];
+	}
+	block_t () { cnt = cnt_cache + sqN; }
+} B[sqN], *block[N];
+
+int n, perm[N], pos[N], tim[N], sqn;
+
+inline int getnval (int x)
+{
+	bool tx = tim[x - 1] && perm[x - 1] < perm[x],
+		 ty = tim[x + 1] && perm[x + 1] < perm[x];
+	if (tx && ty) return -1;
+	if (tx || ty) return 0;
+	return 1;
+}
+inline void update (int x) {
+	block[perm[x]]->modify(perm[x], getnval(x));
+}
+inline int calc_cur ()
+{
+	int cv = 0, res = 0;
+	for (block_t *i = block[1]; i <= block[n]; ++i)
+	{
+		res += i->count(2 - cv) + i->count(1 - cv);
+		cv += i->sum;
+	} return res - 1;
+}
+
+int main ()
+{
+#ifdef LOCAL
+	freopen("in", "r", stdin);
+#endif
+	scanf("%d", &n);
+
+	for (sqn = 1; sqn * sqn <= n; ++sqn) ;
+	block[0] = &B[0];
+	for (int i = 1; i <= n; ++i)
+		if (i % sqn == 1)
+		{
+			block[i - 1]->r = i - 1;
+			block[i - 1]->len = block[i - 1]->r - block[i - 1]->l + 1;
+			block[i] = block[i - 1] + 1;
+			block[i]->l = i;
+		} else block[i] = block[i - 1];
+	block[n]->r = n; block[n]->len = n - block[n]->l + 1;
+
+	for (int i = 1; i <= n; ++i)
+		scanf("%d", perm + i), pos[perm[i]] = i;
+
+	long long res(0);
+	for (int i = n; i >= 1; --i)
+	{
+		tim[pos[i]] = 1;
+		update(pos[i]);
+		if (perm[pos[i] + 1] > perm[pos[i]]) update(pos[i] + 1);
+		if (perm[pos[i] - 1] > perm[pos[i]]) update(pos[i] - 1);
+		int cur = calc_cur();
+#ifdef LOCAL
+		printf("%d\n", cur);
+#endif
+		res += cur;
+	}
+	printf("%I64d\n", res);
+	return 0;
+}
+

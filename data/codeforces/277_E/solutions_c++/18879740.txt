@@ -1,0 +1,102 @@
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+#include <queue>
+#include <algorithm>
+using namespace std;
+struct ed
+{
+	double cost;
+	int c, to, nx;
+}es[400 * 400 * 3];
+int x[444], y[444];
+int hd[808], head[808], ne, S = 807, T = 806;
+int vd[808], nv;
+double d[808];
+int in[808];
+double dis(int a, int b)
+{
+	return sqrt((x[a] - x[b]) * (x[a] - x[b]) + (y[a] - y[b]) * (y[a] - y[b]));
+}
+bool spfa()
+{
+	for (int i = 0; i < 808; i++)
+		d[i] = 1e10;
+	d[S] = 0;
+	nv++;
+	queue<int> q;
+	q.push(S);
+	bool ret = 0;
+	while (!q.empty())
+	{
+		int nw = q.front();
+		q.pop();
+		ret |= nw == T;
+		in[nw] = 0;
+		vd[nw] = nv;
+		for (int i = hd[nw]; i != -1; i = es[i].nx)
+			if (es[i].c && es[i].cost + d[nw] + 1e-8 < d[es[i].to])
+			{
+				d[es[i].to] = es[i].cost + d[nw];
+				if (!in[es[i].to])
+					in[es[i].to] = 1, q.push(es[i].to);
+			}
+	}
+	memcpy(head, hd, sizeof(hd));
+	return ret;
+}
+double cost;
+int dinic(int c, int nw)
+{
+	if (nw == T)
+		return c;
+	int cc = c;
+	vd[nw] = 0;
+	for (int &i = head[nw]; i != -1; i = es[i].nx)
+		if (es[i].c && vd[es[i].to] == nv && fabs(d[es[i].to] - es[i].cost - d[nw]) < 1e-8)
+		{
+			int t = dinic(min(c, es[i].c), es[i].to);
+			es[i].c -= t;
+			es[i ^ 1].c += t;
+			cost += t * es[i].cost;
+			c -= t;
+			if (!c)
+				return cc;
+		}
+	return cc - c;
+}
+void ae(int f, int t, int c, double cost)
+{
+	es[ne].to = t;
+	es[ne].c = c;
+	es[ne].cost = cost;
+	es[ne].nx = hd[f];
+	hd[f] = ne++;
+	es[ne].to = f;
+	es[ne].c = 0;
+	es[ne].cost = -cost;
+	es[ne].nx = hd[t];
+	hd[t] = ne++;
+}
+int main()
+{
+	int n;
+	memset(hd, -1, sizeof(hd));
+	scanf("%d", &n);
+	for (int i = 0; i < n; i++)
+		scanf("%d%d", x + i, y + i);
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < n; j++)
+			if (y[i] > y[j])
+				ae(i, j + n, 1, dis(i, j));
+	for (int i = 0; i < n; i++)
+		ae(S, i, 2, 0), ae(i + n, T, 1, 0);
+	int x = 0;
+	while (spfa())
+		x += dinic(101010, S);
+	if (x != n - 1)
+		printf("-1");
+	else
+		printf("%.8f", cost);
+	return 0;
+}

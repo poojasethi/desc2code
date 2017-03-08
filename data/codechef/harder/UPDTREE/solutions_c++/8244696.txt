@@ -1,0 +1,185 @@
+#include<cstdio>
+#include<algorithm>
+#include<vector>
+#include<cstring>
+#include<cstdlib>
+#include<queue>
+#include<cstdio>
+#include <ctime>
+#include<cctype>
+#include<cassert>
+#include<iostream>
+
+using namespace std;
+
+#define MEM(a,b) memset(a,(b),sizeof(a))
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
+#define MIN(a,b)  ((a) < (b) ? (a) : (b))
+
+#define MP make_pair
+#define pb push_back
+#define inf 1000000000
+
+#define maxn 500000
+#define maxl 19
+
+
+typedef vector<int> vi;
+typedef pair<int,int> pi;
+
+typedef long long  LL;
+
+
+
+
+vi E[maxn+5];
+int L[maxn+5],P[maxl][maxn+5],n;
+int visited=0;
+LL C[maxn+5],S[maxn+5];
+int start[maxn+5],finish[maxn+5],now;
+
+void dfs1(int u,int p)
+{
+    L[u] = p!=-1 ? L[p]+1 : 1;
+    P[0][u]= p ;
+    start[u]=++now; // discovered time
+
+    for(int j=1;j<maxl;j++)
+    {
+        int x=P[j-1][u];
+        if(x<0) break;
+        P[j][u]=P[j-1][x];
+    }
+    ++visited;
+
+    for(int i=0;i<E[u].size();i++)
+    {
+        int v=E[u][i];
+        if(v==p) continue;
+        dfs1(v,u);
+    }
+    finish[u]=++now; // finishing time
+}
+
+bool isAncestor(int u,int a)  // is node u an ancestor of node a
+{
+    if(u==a) return true;
+    if(start[u]<start[a] && finish[u]>finish[a]) return true;
+    return false;
+}
+
+void dfs2(int u,int p) // updates the value of each edge
+{
+    for(int i=0;i<E[u].size();i++)
+    {
+        int v=E[u][i];
+        if(v==p) continue;
+        dfs2(v,u);
+        C[u] += C[v];
+    }
+}
+
+void dfs3(int u,int p) // updates the cumulative sum of values from root to a particular node
+{
+    for(int i=0;i<E[u].size();i++)
+    {
+        int v=E[u][i];
+        if(v==p) continue;
+        S[v] = S[u] + C[v];
+        dfs3(v,u);
+    }
+}
+
+int lca(int p, int q)
+{
+	int log, i;
+	if (L[p] < L[q]) swap(p,q);
+	for (log = 1; (1 << log) <= L[p]; log++);log--;
+	for (i = log; i >= 0; i--)
+          if (L[p] - (1 << i) >= L[q]) p = P[i][p];
+    if (p == q) return p;
+    for (i = log; i >= 0; i--)
+        if (P[i][p] != -1 && P[i][p] != P[i][q]) p = P[i][p], q = P[i][q];
+	return P[0][p];
+}
+
+
+pi getCommonPath(int u,int a,int v,int b) // common path between u->a and v->b
+{
+    if(!isAncestor(v,a)) return MP(0,0); // v has to be an ancestor of a to have any common path
+    int x=lca(a,b);
+
+    if(L[v]<L[u]) // v is an ancestor of u, so the beginning of common path should be from u
+    {
+        if(isAncestor(u,x)) // if u is not an ancestor of x no common path exists
+                return MP(u,x);// u->x is the common path
+    }
+    else // u is an ancestor of v, so the beginning of common path should be from v
+    {
+        if(isAncestor(v,x)) // if v is not an ancestor of x no common path exists
+            return MP(v,x);// v->x is the common path
+    }
+    return MP(0,0);
+}
+
+
+
+
+int main()
+{
+	int i,j,k,m1,m2;
+
+    scanf("%d%d%d",&n,&m1,&m2);
+    assert(n>=1 && n<=maxn/5 && m1>=1 && m1<=maxn && m2>=1 && m2<=maxn);
+
+	for(i=1;i<n;i++)
+	{
+		int a,b;
+		scanf("%d%d",&a,&b);
+		
+		assert(1<=a && a<=n && 1<=b && b<=n && a!=b);
+		E[a].push_back(b);
+		E[b].push_back(a);
+	}
+
+	dfs1(1,-1);
+	assert(visited==n);
+
+
+
+	for(i=0;i<m1;i++)
+	{
+	    int a,b,c,d;
+	    scanf("%d%d%d%d",&a,&b,&c,&d);
+        
+		assert(1<=a && a<=n && 1<=b && b<=n && 1<=c && c<=n && 1<=d && d<=n);
+		assert(a!=b && a!=c && a!=d && b!=c && b!=d && c!=d);
+
+	    int u=lca(a,b),v=lca(c,d);  // splits both paths in two chains from lca to one node
+	
+        C[a]++; C[b]++; C[u]-=2; // to ensure only the edges between lca and one node is increased by 1
+        pi X;
+		// if p->q is the common path, edges on that should be decreased by 1 since they were increased before
+        X=getCommonPath(u,a,v,c); C[X.second]--; C[X.first]++;
+        X=getCommonPath(u,a,v,d); C[X.second]--; C[X.first]++;
+        X=getCommonPath(u,b,v,c); C[X.second]--; C[X.first]++;
+        X=getCommonPath(u,b,v,d); C[X.second]--; C[X.first]++;
+	}
+
+    dfs2(1,-1);
+    dfs3(1,-1);
+
+
+	for(i=0;i<m2;i++)
+	{
+	    int a,b;
+	    scanf("%d%d",&a,&b);
+		assert(1<=a && a<=n && 1<=b && b<=n && a!=b);
+		int c=lca(a,b);
+		LL ans = S[a]+ S[b]-2*S[c];
+		printf("%lld\n",ans);
+	}
+
+
+	return 0;
+}

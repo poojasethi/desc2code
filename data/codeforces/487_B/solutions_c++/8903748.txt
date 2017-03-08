@@ -1,0 +1,36 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+const int N=(int)1e5+5,inf=(int)1e9+7;
+int n,s,l,a[N],pre[N],head,tail,q[N],v[N],f[N];
+void get(){
+	tail=0;
+	for(int i=1;i<=n;i++){
+		while(tail&&v[tail-1]>=a[i]) tail--;
+		q[tail]=i;
+		v[tail]=a[i];
+		tail++;
+		int j=lower_bound(v,v+tail,a[i]-s)-v;
+		if(j) pre[i]=max(pre[i],q[j-1]);
+	}
+}
+int main(){
+	scanf("%d%d%d",&n,&s,&l);
+	for(int i=1;i<=n;i++) scanf("%d",&a[i]);
+	get();
+	for(int i=1;i<=n;i++) a[i]*=-1;
+	get();
+	head=tail=0;
+	for(int i=1,b=0;i<=n;i++){
+		b=max(b,pre[i]);
+		while(head<tail&&q[head]<b) head++;
+		if(b<=i-l){
+			while(head<tail&&v[tail-1]>=f[i-l]) tail--;
+			q[tail]=i-l;
+			v[tail]=f[i-l];
+			tail++;
+		}
+		f[i]=head<tail?v[head]+1:inf;
+	}
+	printf("%d\n",f[n]>=inf?-1:f[n]);
+}

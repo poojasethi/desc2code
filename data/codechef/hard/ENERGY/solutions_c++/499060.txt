@@ -1,0 +1,124 @@
+#include<cstdio>
+#include<vector>
+#include<cstring>
+#include<algorithm>
+
+#define	pb			push_back
+#define	rep(i,n)	for(int i=0;i<(n);i++)
+
+using namespace std;
+
+typedef	vector<bool>	vb;
+typedef	vector<int>		vi;
+typedef	vector<vi>		vvi;
+
+int hall[2][200];	// whether person is in hall
+
+enum {IN=0,OUT=1};
+struct Event{
+	int t,id,io,sex;
+	Event(){}
+	Event(int T,int ID,int IO,int S):t(T),id(ID),io(IO),sex(S){}
+	bool operator<(const Event &e)const{
+		if(t!=e.t)	return t<e.t;
+		return io<e.io;
+	}
+};
+
+template<class T> struct Edge{
+	int u,v;
+	T w;
+	Edge(){}
+	Edge(int U,int V,T W):u(U),v(V),w(W){}
+	bool operator<(const Edge &e)const{ return w<e.w; }
+};
+
+template<class T>
+struct AdjList:public vector< vector< Edge<T> > >{
+	AdjList(){}
+	AdjList(int n,const vector< Edge<T> > &v=vector< Edge<T> >()):vector< vector< Edge<T> > >(n,v){}
+	template<class U> AdjList(U b,U e):vector< vector< Edge<T> > >(b,e){}
+};
+
+bool augment(int u,vb &visited,const AdjList<int> &adj,vi match[2]){
+	if(u==-1)	return true;
+	if(!hall[0][u])	return false;
+
+	rep(i,adj[u].size()){
+		int v=adj[u][i].v;
+		if(hall[1][v] && !visited[v]){
+			visited[v]=true;
+			if(augment(match[1][v],visited,adj,match)){
+				match[0][u]=v;
+				match[1][v]=u;
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+bool augment(const AdjList<int> &adj,vi match[2]){
+	int L=match[0].size(),R=match[1].size();
+	vb visited(R);
+	rep(u,L)if(match[0][u]==-1){
+		if(augment(u,visited,adj,match))	return true;
+	}
+	return false;
+}
+
+int main(){
+	int T;	scanf("%d",&T);
+	while(T--){
+		int ngirl,nboy,tend;	scanf("%d%d%d",&nboy,&ngirl,&tend);
+		int n=nboy+ngirl;
+
+		vector<Event> events;
+		static bool love[2][200][200];
+		memset(love,0,sizeof(love));
+		rep(i,2)rep(u,i?ngirl:nboy){
+			int tin,tout,m;	scanf("%d%d%d",&tin,&tout,&m);
+			events.pb(Event(tin ,u,IN ,i));
+			events.pb(Event(tout,u,OUT,i));
+			rep(j,m){
+				int v;	scanf("%d",&v);
+				love[i][u][v]=true;
+			}
+		}
+		sort(events.begin(),events.end());
+
+		AdjList<int> adj(nboy);
+		rep(u,nboy)rep(v,ngirl){
+			if(love[0][u][v] && love[1][v][u])	adj[u].pb(Edge<int>(u,v,1));
+		}
+
+		vi match[2];
+		match[0].assign(nboy,-1);
+		match[1].assign(ngirl,-1);
+
+		memset(hall,0,sizeof(hall));
+		int ans[201]={},nmatch=0,tpre=0;
+		rep(k,events.size()){
+			Event e=events[k];
+			int u=e.id,t=e.t,sex=e.sex,io=e.io;
+			hall[sex][u]=(io==IN);
+
+			ans[nmatch]+=t-tpre;
+			tpre=t;
+
+			if(io==OUT && ~match[sex][u]){	// remove a matching
+				int partner=match[sex][u];
+				match[sex][u]=match[!sex][partner]=-1;
+				nmatch--;
+			}
+
+			if(augment(adj,match))	nmatch++;
+		}
+		ans[nmatch]+=tend-tpre;
+
+		rep(i,min(nboy,ngirl)+1)	printf("%d%c",ans[i],i<min(nboy,ngirl)?' ':'\n');
+	}
+
+	return 0;
+}

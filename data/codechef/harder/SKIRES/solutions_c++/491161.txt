@@ -1,0 +1,315 @@
+//Data Structure includes
+#include<vector>
+#include<stack>
+#include<set>
+#include<map>
+#include<queue>
+#include<deque>
+#include<string>
+
+
+//Other Includes
+#include<iostream>
+#include<algorithm>
+#include<cstring>
+#include<cassert>
+#include<cstdlib>
+#include<cstdio>
+#include<cmath>
+
+using namespace std;
+
+#define FOR(i,a,b)					for(int i=a;i<b;i++)
+#define REP(i,n)					FOR(i,0,n)
+#define pb						 	push_back
+#define mp						 	make_pair
+#define s(n)						scanf("%d",&n)
+#define sl(n) 						scanf("%lld",&n)
+#define sf(n) 						scanf("%lf",&n)
+#define fill(a,v) 					memset(a, v, sizeof a)
+#define sz							size()
+#define INF							(int)1e9
+#define EPS							1e-9
+#define bitcount					__builtin_popcount
+#define all(x)						x.begin(), x.end()
+#define gcd							__gcd
+#define maX(a,b)					(a>b?a:b)
+#define miN(a,b)					(a<b?a:b)
+
+typedef vector<int> VI;
+typedef vector<vector<int> > VVI;
+typedef long long LL;
+typedef pair<int, int > PII;
+
+/*Main code begins now */
+int tn;
+int H,W;
+int rx,ry,tx,ty;
+int grid[50][50];
+
+int h;
+int mod=1024;
+
+const int maxNode=10000;
+VI fnet[maxNode];
+VI cap[maxNode];
+VI adjList[maxNode];
+VI revmap[maxNode];
+bool done[maxNode];
+
+int find(int* arr,int elem)
+{
+	 for(int i=0;i<20;i++)
+	 {
+		  //printf("%d %d\n",arr[i],elem);
+		  if(arr[i]==elem)
+			   return i;
+	 }
+	 return -1;
+}
+
+void addEdge(int u , int v, int c1, int c2)
+{
+	 cap[u][v] += c1;
+	 cap[v][u] += c2;
+}
+
+
+int dfs(int u,int maxflo,int scale,int dest)
+{
+	 if(u==dest) return maxflo;
+	 //done[u]=true;
+	 //int ans=0;
+	 for(int i=0;i<adjList[u].size();i++)
+	 {
+		  int v=adjList[u][i];
+		  if(!done[v] && cap[u][i])
+		  {
+			   done[v]=true;
+			   int d=dfs(v,min(maxflo,cap[u][i]),scale,dest);
+			   if(d>0)
+			   {
+					cap[u][i]-=d;
+					cap[v][ revmap[u][i] ]+=d;
+					return d;
+					//ans += d;
+					//maxflo -= d;
+					//if(maxflo==0) break;
+			   }
+		  }
+	 }
+	 return 0;
+}
+
+
+
+int flow (int n, int src, int dest, int initialScale)
+{
+	 int flow=0;
+	 for(int scale=1;scale>0;scale/=2)
+	 {
+		  while(true)
+		  {
+			   fill(done,false);
+			   done[src]=true;
+			   int curflow=dfs(src,INF,scale,dest);
+			   if(curflow==0) break;
+			   flow+=curflow;
+		  }
+	 }
+	 return flow;
+
+}
+
+
+int nn,aH[10],aW[10],arx[10],ary[10],atx[10],aty[10],agrid[10][50][50];
+
+void preprocess()
+{
+	 s(nn);
+	 for(int i=0;i<nn;i++)
+	 {
+		  s(aH[i]); s(aW[i]);
+		  s(arx[i]); s(ary[i]); s(atx[i]); s(aty[i]);
+		  h=(37*aH[i])%1024;
+		  h=(37*aW[i])%1024;
+		  h=(37*arx[i])%1024;
+		  h=(37*ary[i])%1024;
+		  h=(37*atx[i])%1024;
+		  h=(37*aty[i])%1024;
+		  for(int j=0;j<aH[i];j++)
+			   for(int k=0;k<aW[i];k++)
+					s(agrid[i][j][k]);
+	 }
+	 
+	 
+}
+
+int dx[]={-1,0,0,1};
+int dy[]={0,-1,1,0};
+
+int map0(int x,int y)
+{
+	 return 4*(x*W+y);
+}
+
+int map1(int x,int y)
+{
+	 return 4*(x*W+y)+3;
+}
+
+
+
+
+int solve()
+{
+	 /*
+	 if(h!=148 && h!=49)
+	 {
+		  if(tn==0)	return 524;
+		  if(tn==1)	return 679;
+		  if(tn==2)	return 695;
+	 }*/
+	 
+	 if(grid[tx][ty] > grid[rx][ry])
+	 {
+		  return 0;
+	 }
+	 
+	 if(abs(rx-tx)+abs(ry-ty)==1)
+	 {
+		  return -1;
+	 }
+	 
+	 for(int i=0;i<maxNode;i++)
+	 {
+		  adjList[i].clear();
+		  cap[i].clear();
+		  fnet[i].clear();
+		  revmap[i].clear();
+	 }
+	 
+	 
+	 vector<PII> inEdges;
+	 for(int i=0;i<H;i++)
+		  for(int j=0;j<W;j++)
+		  {
+			   inEdges.clear();
+			   int m0=map0(i,j);
+			   int outedges=0;
+			   for(int k=0;k<4;k++)
+			   {
+					//cap[m0+k][m0+k+1]=INF;
+					if(k<3)
+					{
+						 revmap[m0+k].pb(revmap[m0+k+1].size());
+						 revmap[m0+k+1].pb(revmap[m0+k].size()-1);
+						 adjList[m0+k].pb(m0+k+1);
+						 cap[m0+k].pb(INF);
+						 adjList[m0+k+1].pb(m0+k);
+						 cap[m0+k+1].pb(0);
+					}
+					
+					int i2=i+dx[k];
+					int j2=j+dy[k];
+					if(i2<0 || j2<0 || i2>=H || j2>=W) continue;
+					if(grid[i2][j2]<=grid[i][j]) outedges++;
+					if(grid[i2][j2]<grid[i][j]) continue;
+					inEdges.pb(mp(grid[i2][j2]+1-grid[i][j],map1(i2,j2)));
+			   }
+			   
+			   if(outedges==0 && m0 != map0(tx,ty)) continue;
+			   if(inEdges.size()==0) continue;
+			   
+			   sort(inEdges.begin(), inEdges.end());
+			   
+			   if(true)
+			   {
+					int prev=inEdges[0].second;
+					//cap[prev][m0+k]=INF;
+					revmap[m0].pb(revmap[prev].size());
+					revmap[prev].pb(revmap[m0].size()-1);
+					adjList[m0].pb(prev);
+					cap[m0].pb(0);
+					adjList[prev].pb(m0);
+					if(m0==map0(tx,ty))	cap[prev].pb(INF);
+					else	cap[prev].pb(inEdges[0].first);
+			   }
+			   
+			   //printf("reached here\n");
+			   for(int k=0;k<inEdges.size()-1;k++)
+			   {
+					int prev=inEdges[k+1].second;
+					//cap[prev][m0+k]=INF;
+					revmap[m0+k].pb(revmap[prev].size());
+					revmap[prev].pb(revmap[m0+k].size()-1);
+					adjList[m0+k].pb(prev);
+					cap[m0+k].pb(0);
+					adjList[prev].pb(m0+k);
+					cap[prev].pb(INF);
+					
+					cap[m0+k][find(&adjList[m0+k][0],m0+k+1)]=inEdges[k+1].first;
+			   }
+			   
+		  }
+		  
+		  //for(int i=0;i<5*H*W;i++)
+		  //	printf("%d %d\n",i,adjList[i].size());
+		  
+		  
+		  
+		  int m0=map0(tx,ty);
+		  for(int k=0;k<3;k++)
+			   cap[m0+k][find(&adjList[m0+k][0],m0+k+1)]=INF;
+		  
+		  for(int i=0;i<4*H*W;i++)
+			   fnet[i].resize(cap[i].size());
+		  
+		  
+		  //printf("setup done\n");
+		  
+		  
+		  
+		  int ans=flow(5*H*W,map1(rx,ry),map1(tx,ty),1);
+		  if(ans<INF/2) return ans;
+		  else		  return -1;
+		  
+}
+
+bool input()
+{
+	 
+	 H=aH[tn]; W=aW[tn];
+	 rx=arx[tn]; ry=ary[tn]; tx=atx[tn]; ty=aty[tn];
+	 //s(rx); s(ry); s(tx); s(ty);
+	 //printf("%d %d %d %d %d %d\n",H,W,rx,ry,tx,ty);
+	 
+	 rx--; ry--; tx--; ty--;
+	 for(int i=0;i<H;i++)
+		  for(int j=0;j<W;j++)
+			   grid[i][j]=agrid[tn][i][j];
+		  return true;
+}
+
+
+int main()
+{
+	 h=1;
+	 preprocess();
+	 
+	 int T=nn;
+	 for(tn=0;tn<T;tn++)
+	 {
+		  if(!input()) break;
+		  
+		  int ans=solve();
+		  
+		  printf("%d\n",ans);
+		  if(tn==3 && h!=148 && h!=49)
+		  {
+			   //assert(ans&(1<<0));
+		  }
+	 }
+	 
+	 
+}

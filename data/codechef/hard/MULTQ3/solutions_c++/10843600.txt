@@ -1,0 +1,268 @@
+#include <cstdio>
+#include <iostream>
+#include <cstring>
+#include <cstdlib>
+#include <string>
+#include <stack>
+#include <queue>
+#include <deque>
+#include <vector>
+#include <map>
+#include <set>
+#include <utility>
+#include <algorithm>
+#include <cmath>
+#include <climits>
+#ifdef DEBUG
+	#include <ctime>
+#endif
+using namespace std;
+
+// template
+
+// abbreviations
+#define vi vector<int>
+#define vl vector<long long>
+#define vb vector<bool>
+#define vs vector<string>
+#define ii pair<int, int>
+#define a first
+#define b second
+#define vii vector<ii>
+#define mii map<ii>
+#define que queue
+#define pque priority_queue
+#define stk stack
+#define pub push_back
+#define pob pop_back
+#define puf push_front
+#define pof pop_front
+#define pu push
+#define po pop
+#define mp make_pair
+#define rep(it, n) for(int it = 0; it < n; ++it)
+#define rep1(it, n) for(int it = 1; it <= n; ++it)
+#define loop(it, from, to) for(int it = (from); it <= (to); ++it)
+#define reverse_iterate(it, cont) for(__typeof((cont).rend()) it = (cont).rbegin(); it != (cont).rend(); ++it)
+#define iterate(it, cont) for(__typeof((cont).begin()) it = (cont).begin(); it != (cont).end(); ++it)
+#define all(cont) (cont).begin(), (cont).end()
+
+typedef unsigned long long ull;
+typedef long long ll;
+
+const int INF = INT_MAX;
+const int NINF = INT_MIN;
+const ll INF_LL = LLONG_MAX;
+const ll NINF_LL = LLONG_MIN;
+const double PI = acos(-1);
+
+#ifdef DEBUG
+	#define debug(fmt, args...) printf("Line %d, in %s\t: " fmt, __LINE__, __FUNCTION__, ##args)
+	#define rep_rt() printf("[Run time: %.3fs]\n",((double)clock())/CLOCKS_PER_SEC)
+#else
+	#define debug(...)
+#endif
+
+// end of template
+
+#ifdef __WIN32 
+	#define gc getchar
+	#define pc putchar
+#else
+	#define gc getchar_unlocked
+	#define pc putchar_unlocked
+#endif
+#define MAX_DIGIT_int 10
+#define MAX_DIGIT_ll 19
+#define FS_INT_TYPE(type) \
+	void fsi(type &inp) { \
+		register char c = gc(), prev = '+'; \
+		for (; !isdigit(c); c = gc()) prev = c; \
+		inp = 0; \
+		for (; isdigit(c); c = gc()) { \
+			inp = (inp << 3)+(inp << 1)+(c-'0'); \
+		} \
+		if (prev == '-') \
+			inp = -inp; \
+	} \
+	void fso(type val) { \
+		if (!val) { \
+			pc('0'); \
+			return; \
+		} \
+		char buff[MAX_DIGIT_ ##type]; \
+		if (val < 0) { \
+			pc('-'); \
+			val = -val; \
+		} \
+		register int i; \
+		for (i = 0; val; ++i, val /= 10) { \
+			buff[i] = (val%10)+'0'; \
+		} \
+		while (i--) { \
+			pc(buff[i]); \
+		} \
+	}
+FS_INT_TYPE(int)
+FS_INT_TYPE(ll)
+
+void fsi(char *str) {
+	register char c = gc();
+	for (; c <= 32; c = gc());
+	register int idx = 0;
+	for (; c > 32; c = gc()) {
+		str[idx++] = c;
+	}
+	str[idx] = 0;
+}
+
+#define PRINT(str_var, length) \
+	register int idx = 0, len = length; \
+	while (idx != len) pc(str_var[idx++]);
+
+void fso(const char *str) {
+	PRINT(str, strlen(str));
+}
+
+void fso(char *str) {
+	PRINT(str, strlen(str));
+}
+
+void fso(string &str) {
+	PRINT(str, str.length());
+}
+#undef gc
+#undef putchar
+
+// WARNING: Output doesn't work for minimum value
+
+#define LEFT (k << 1)
+#define RIGHT (LEFT+1)
+#define MID ((range.a+range.b) >> 1)
+
+int c_temp[3];
+
+struct Node {
+	ii range;
+	int c[3];
+	int dirty;
+	Node() {
+		c[0] = c[1] = c[2] = 0;
+		dirty = 0;
+	}
+};
+Node tree[1 << 18];
+
+void init(ii range, int k = 1) {
+	Node &node = tree[k];
+	node.range = range;
+	
+	if (range.a != range.b) {
+		init(mp(range.a, MID), LEFT);
+		init(mp(MID+1, range.b), RIGHT);
+
+		node.c[0] = tree[LEFT].c[0] + tree[RIGHT].c[0];
+		return;
+	}
+	node.c[0] = 1;
+}
+
+void update(ii f_range, int k = 1) {
+	Node &node = tree[k];
+	ii &range = node.range;
+
+	if (f_range == range) {
+		rep(idx, 3) {
+			c_temp[(idx+1) % 3] = node.c[idx];
+		}
+		rep(idx, 3) {
+			node.c[idx] = c_temp[idx];
+		}
+		if (range.a != range.b) {
+			node.dirty = (node.dirty+1) % 3;
+		}
+		return;
+	}
+
+	while (node.dirty) {
+		update(mp(range.a, MID), LEFT);
+		update(mp(MID+1, range.b), RIGHT);
+		node.dirty--;
+	}
+
+	if (f_range.b <= MID) {
+		update(f_range, LEFT);
+	} else if (f_range.a > MID) {
+		update(f_range, RIGHT);
+	} else {
+		update(mp(f_range.a, MID), LEFT);
+		update(mp(MID+1, f_range.b), RIGHT);
+	}
+	rep(idx, 3) {
+		node.c[idx] = tree[LEFT].c[idx] + tree[RIGHT].c[idx];
+	}
+}
+
+int get(ii f_range, int k = 1) {
+	Node &node = tree[k];
+	ii &range = node.range;
+	if (range == f_range) {
+		return node.c[0];
+	}
+
+	while (node.dirty) {
+		update(mp(range.a, MID), LEFT);
+		update(mp(MID+1, range.b), RIGHT);
+		node.dirty--;
+	}
+	
+	if (f_range.b <= MID) {
+		return get(f_range, LEFT);
+	} else if (MID < f_range.a) {
+		return get(f_range, RIGHT);
+	}
+
+	int ret_l = get(mp(f_range.a, MID), LEFT), ret_r = get(mp(MID+1, f_range.b), RIGHT);
+	int ret = ret_l + ret_r;
+	return ret;
+}
+
+#undef LEFT
+#undef RIGHT
+#undef MID
+
+int main() {
+#ifdef DEBUG
+	freopen("MULTQ3.in", "r", stdin);
+#endif
+    
+    int n, q;
+    // scanf("%d %d", &n, &q);
+    // fsi(n, q);
+    fsi(n);
+    fsi(q);
+
+    init(mp(1, n));
+
+    while (q--) {
+    	int com, a, b;
+    	// scanf("%d %d %d", &com, &a, &b);
+    	// fsi(com, a, b);
+    	fsi(com);
+    	fsi(a);
+    	fsi(b);
+    	++a, ++b;
+    	if (com == 0) {
+    		update(mp(a, b));
+    	} else {
+    		// printf("%d\n", get(mp(a, b)));
+    		fso(get(mp(a, b)));
+    		fso("\n");
+    	}
+    }
+
+#ifdef DEBUG
+    rep_rt();
+#endif
+    return 0;
+}

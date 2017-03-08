@@ -1,0 +1,98 @@
+// written by lonerdude(dvdreddy)
+// all rights reserved
+//the template by dvdreddy
+#include <vector>
+#include <queue>
+#include <deque>
+#include <map>
+#include <iostream>
+#include <cstring>
+#include <string>
+#include <math.h>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+
+using namespace std;
+
+#define s(x) scanf("%d",&x)
+#define sll(x) scanf("%lld",&x)
+#define sf(x) scanf("%lf",&x)
+#define ss(x) scanf("%s",&x)
+
+#define f(i,a,b) for(int i=a;i<b;i++)
+#define fr(i,n)  f(i,0,n)
+
+typedef long long ll;
+
+ll mod = 1000000007;
+
+ll fast_exp(ll x, ll p){
+  ll res = 1;
+  x %= mod;
+  while (p){
+    if (p & 1){
+      res = res * x;
+      res %= mod;
+    }
+    x = x * x;
+    x %= mod;
+    p >>= 1;
+  }
+  return res;
+}
+
+ll fact[101];
+ll inv_fact[101];
+
+ll fact_prepro(){
+  fact[0] = 1;
+  inv_fact[0] = 1;
+  f (i, 1, 101){
+    fact[i] = fact[i - 1] * (ll) i;
+    fact[i] %= mod;
+    inv_fact[i] = fast_exp(fact[i], mod - 2);
+  }
+}
+
+ll dp[101][101];
+
+ll a[2][101];
+
+int main(){
+  fact_prepro();
+  
+  fr (i, 101){
+    a[0][i] = 0;
+  }
+  a[0][0] = 1;
+
+  int cur = 1;
+
+  f (i, 2, 101){
+    for (int j = 0; j < 101 ; j += i){
+      for (int k = 0; k < 101 - j; k++){
+	a[cur][k + j] += (((a[cur ^ 1][k] * fast_exp(inv_fact[i] * fact[i - 1],(ll) (j / i))) % mod) * inv_fact[j / i]) % mod;
+	a[cur][k + j] %= mod;
+      }
+    }
+    for (int j = i; j < 101; j++){
+      dp[j][i] = (a[cur][j] * fact[j]) % mod;
+    }
+    cur = cur ^ 1;
+    fr (j, 101){
+      a[cur][j] = 0;
+    }
+  }
+
+  
+
+  int t;
+  s(t);
+  while (t--){
+    int n, k;
+    s(n); s(k);
+    printf("%lld\n", dp[n][k]);
+  }
+  return 0;
+}

@@ -1,0 +1,179 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define FOR(i,a,b) for(int i = a; i < b; i++)
+#define FORR(i,b) FOR(i, 0, b)
+#define sz(e) (int)e.size()
+#define CLR(x,v) memset (x, v, sizeof x)
+#define pb push_back
+#define all(e) e.begin(), e.end()
+
+typedef long long ll;
+typedef pair<int, int> ii;
+
+const int MAXN = 2005;
+const int INF = 1000000000;
+const int MOD = INF+7;
+
+ii operator - (ii i1, ii i2) {
+	return ii(i1.first-i2.first, i1.second-i2.second);
+}
+
+ii operator + (ii i1, ii i2) {
+	return ii(i1.first+i2.first, i1.second+i2.second);
+}
+
+ii maior (ii i1, ii i2) {
+	ii c1 = i1, c2 = i2;
+	
+	int dm = min (i1.first, i2.first), tm = min(i1.second, i2.second);
+	i1.first -= dm, i2.first -= dm;
+	i1.second -= tm, i2.second -= tm;
+	
+	if (i1.first==0 && i1.second ==0) return c2;
+	if (i2.first==0 && i2.second ==0) return c1;
+	if (i1.first==0) swap (i1, i2), swap(c1, c2);
+	
+	int dois = i1.first-i2.first, tres = i2.second-i1.second;
+	if (tres>=(log(2.)/log(3.)) * dois) return c2;
+	return c1;
+}
+
+//normal cross
+ii linha[MAXN][MAXN]; 
+ii coluna[MAXN][MAXN];
+
+int CE[MAXN][MAXN], CD[MAXN][MAXN];
+int CC[MAXN][MAXN], CB[MAXN][MAXN];
+
+int mat[MAXN][MAXN];
+int allright[MAXN][MAXN];
+
+ii solve (int n) {
+	CLR (CE, 0);
+	CLR (CD, 0);
+	CLR (CB, 0);
+	CLR (CC, 0);
+	FORR (i, n+1) FORR (j, n+1) linha[i][j] = coluna[i][j] = ii(0,0);
+
+	FORR (i, n+1) linha[i][0] = ii(0, 0), CE[i][0] = CD[i][n+1] = 0;
+	FORR (i, n+1) coluna[0][i] = ii(0, 0), CC[0][i] = CB[n+1][i] = 0;
+		
+	FOR (i, 1, n+1) {
+		FOR (j, 1, n+1) {
+			int c = mat[i-1][j-1];
+			CC[i][j] = CC[i-1][j] + 1;
+			if (c==0) CC[i][j] = 0;
+		}
+	}	
+	for (int i = n; i>=0; i--) {
+		FOR (j, 1, n+1) {
+			int c = mat[i-1][j-1];
+			CB[i][j] = CB[i+1][j] + 1;
+			if (c==0) CB[i][j] = 0;
+		}
+	}
+	
+	FOR (i, 1, n+1) {
+		FOR (j, 1, n+1) {
+			int c = mat[i-1][j-1];
+			CE[i][j] = CE[i][j-1] + 1;
+			if (c==0) CE[i][j] = 0;
+		}
+	}	
+	
+	
+	FOR (i, 1, n+1) {
+		for (int j = n; j>=0; j--) {
+			int c = mat[i-1][j-1];
+			CD[i][j] = CD[i][j+1] + 1;
+			if (c==0) CD[i][j] = 0;
+		}
+	}
+	
+	FOR (i, 1, n+1) {
+		FOR (j, 1, n+1) {
+			int c = mat[i-1][j-1]; 
+			linha[i][j] = linha[i][j-1];
+			coluna[i][j] = coluna[i-1][j];
+			if (c==2) {
+				linha[i][j].first++;
+				coluna[i][j].first++;
+			} else if (c==3) {
+				linha[i][j].second++;
+				coluna[i][j].second++;				
+			}	
+		}
+	}
+	
+	ii max1;
+	FOR (i, 1, n+1) {
+		FOR (j, 1, n+1) {
+			int mm = min (min (CD[i][j], CE[i][j]), min (CC[i][j], CB[i][j])); mm--;
+			ii aux = linha[i][j+mm]-linha[i][j-mm-1] + coluna[i+mm][j]-coluna[i-mm-1][j];
+			if (!allright[i-1][j-1]) continue;
+			int c = mat[i-1][j-1]; 
+			if (c==0) continue;
+			if (c==2) aux.first--;
+			if (c==3) aux.second--;
+			
+			max1 = maior (max1, aux);
+		}
+	}	
+	
+	return max1;
+}
+
+string inp[MAXN], inp2[MAXN];
+
+int main() {
+	int n;
+	while (cin>>n) {
+		FORR (i, n) cin>>inp2[i];
+		inp[0] = "00"; FORR (i, n) inp[0] += '0';
+		FORR (i, n+1) inp[i+1] = inp[0];
+		FORR (i, n) FORR (j, n) inp[i+1][j+1] = inp2[i][j];
+		n+=2;
+		
+		int tudozero = 0;
+		
+		CLR (allright, 0);
+		FORR (i, n) {
+			FORR (j, n) {
+				if (inp[i][j]!='0') tudozero = 1;
+				mat[i][j] = inp[i][j]-'0';
+				allright[i][j] = 1;
+			}
+		}
+		ll ans = 1;
+		if (tudozero==0) ans = 0;
+		
+		ii r1 = solve (n+1);
+		
+		CLR (allright, 0);
+		FORR (i, MAXN) FORR (j, MAXN) mat[i][j] = 1;
+		
+		FORR (i, n) {
+			FORR (j, n) {
+				int idx1 = i+j, idx2 = j-i+n-1;
+				mat[idx1][idx2] = inp[i][j]-'0';
+				allright[idx1][idx2] = 1;
+			}
+		}
+		
+		ii r2 = solve (2*n-1);
+		r1 = maior (r1, r2);
+
+		FORR (i, r1.first) {
+			ans *= 2;
+			ans %= MOD;
+		}			
+		FORR (i, r1.second) {
+			ans *= 3;
+			ans %= MOD;
+		}
+		
+		cout << ans << endl;
+	}
+}

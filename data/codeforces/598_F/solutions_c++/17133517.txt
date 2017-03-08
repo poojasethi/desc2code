@@ -1,0 +1,91 @@
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <vector>
+#include <queue>
+#include <map>
+#include <algorithm>
+#include <iostream>
+#include <sstream>
+#include <complex>
+#define EPS 1e-10
+using namespace std;
+typedef  complex<long double> P;
+typedef P Vector;
+typedef vector<P> Polygon;
+
+int dcmp(long double a){
+	return (a>EPS)-(a<-EPS);
+}
+
+long double dot(P a,P b){
+	return a.real()*b.real()+a.imag()*b.imag();
+}
+long double cross(P a,P b){
+	return a.real()*b.imag()-a.imag()*b.real();
+}
+
+
+long double get(const P &p,const Vector &v,const P &q,const Vector &w){
+	Vector u=p-q;
+	return cross(w,u)/cross(v,w);
+}
+
+vector<pair<long double,long double> > vec;
+
+void getSegmentInter(const P &p,const Vector &v,const P &q,const Vector &w){
+	if(dcmp(cross(v,w))==0){
+		if(!dcmp(cross(v,q-p))){
+			long double l=dot(v,q-p)/dot(v,v);
+			long double r=dot(v,q+w-p)/dot(v,v);
+			if(l>r)swap(l,r);
+			vec.push_back(make_pair(l,-1.0));
+			vec.push_back(make_pair(r,1.0));
+		}
+	}else{
+		int num=0;
+		long double tmp=get(q,w,p,v);
+		if(dcmp(tmp)>=0 && dcmp(tmp-1)<=0){
+			long double rate=1;
+			if(dcmp(tmp)==0 || dcmp(tmp-1.0)==0)rate=0.5;
+			tmp=get(p,v,q,w);
+			vec.push_back(make_pair(tmp,dcmp(cross(w,v))>0?-rate:rate));
+		}
+	}
+}
+
+long double solve(Polygon &g,P s,P t){
+	int n=g.size();
+	vec.clear();
+	for(int i=0;i<n;i++){
+		getSegmentInter(s,t-s,g[i],g[(i+1)%n]-g[i]);
+	}
+	sort(vec.begin(),vec.end());
+	long double sum=0.0;
+	long double cnt=0.0;
+	for(int i=0;i<vec.size();i++){
+		cnt+=vec[i].second;
+		if(dcmp(cnt))sum+=vec[i+1].first-vec[i].first;
+	}
+	sum*=abs(t-s);
+	return sum;
+}
+
+int main(void){
+	int n,m;
+	scanf("%d%d",&n,&m);
+	Polygon p;
+	for(int i=0;i<n;i++){
+		long double x,y;
+		cin >> x >> y;
+		p.push_back(P(x,y));
+	}
+	for(int i=0;i<m;i++){
+		long double sx,sy,tx,ty;
+		cin >> sx >> sy >> tx >> ty;
+		P s=P(sx,sy);
+		P t=P(tx,ty);
+		printf("%.10f\n",(double)solve(p,s,t));
+	}
+	return 0;
+}

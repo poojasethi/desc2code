@@ -1,0 +1,98 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+const int MAXN = 200005;
+
+typedef pair<int,int> P;
+
+vector<P> Out[10][10];
+char S[MAXN];
+int V[10],Cur[10],C[10][10],Q[MAXN][2],Esiz[1 << 10],N;
+
+void Modify(int u,int v,int p)
+{
+	int s = ((1 << (u - 1)) | (1 << (v - 1)));
+	for(int s1 = s;s1 < (1 << 7);s1 ++)
+		if ((s1 & s) == s) Esiz[s1] += p;
+}
+
+bool Test(int u,int v)
+{
+	V[u] --,C[u][v] = (-- C[v][u]);
+	Modify(u,v,-1);
+	if (V[u] < 0 || C[u][v] < 0) return 0;
+	for(int i = 1;i < 7;i ++)
+		if (!V[i])
+			for(int j = 1;j < 7;j ++) if (C[i][j]) return 0;
+	for(int s = (1 << 7) - 1;s;s --)
+	{
+		static int Stk[10];
+		int cnt = 0,vsiz = 0,esiz = 0;
+		for(int p = s;p;p -= p & -p) Stk[++ cnt] = __builtin_ctz(p) + 1,vsiz += V[Stk[cnt]];
+		if (!vsiz) continue;
+		if (vsiz <= Esiz[s]) return 0;
+	}
+	return 1;
+}
+
+bool Print(int u,int v,int sig)
+{
+	int n = Out[u][v].size();
+	if (!n) return 0;
+	if (!sig) printf("%d %d\n", Out[u][v][n - 1].first,Out[u][v][n - 1].second); else
+		printf("%d %d\n", Out[u][v][n - 1].second,Out[u][v][n - 1].first);
+	Out[u][v].pop_back();
+	return 1;
+}
+
+int main()
+{
+      scanf("%d", &N);
+      for(int i = 1;i < N;i ++)
+      {
+      	scanf("%s", S);
+      	int u = strlen(S);
+      	scanf("%s", S);
+      	int v = strlen(S);
+      	C[u][v] = (++ C[v][u]);
+      	Modify(u,v,1);
+      	Q[i][0] = u,Q[i][1] = v;
+      }
+      for(int i = 1;i <= N;i ++)
+      {
+      	int cur = 0;
+      	for(int p = i;p;p /= 10,++ cur);
+      	V[cur] ++;
+      	Cur[cur] = max(Cur[cur],i);
+      }
+      int ed = N - 1;
+      for(;ed;)
+      {
+      	bool Get = 0;
+	      for(int i = 1;i < 7;i ++)
+	      	if (V[i])
+	      		for(int j = 1;j < 7;j ++)
+	      			if (V[j])
+	      			{
+	      				for(;ed && Test(i,j);ed --)
+	      					Get = 1,Out[i][j].push_back(P(Cur[i] --,Cur[j]));
+						V[i] ++,C[i][j] = (++ C[j][i]);
+						Modify(i,j,1);
+	      			}
+	      if (!Get) break;
+	}
+      if (ed) printf("-1\n"); else
+      {
+      	for(int i = 1;i < N;i ++)
+      	{
+      		int u = Q[i][0],v = Q[i][1];
+      		if (!Print(u,v,0)) Print(v,u,1);
+      	}
+      }
+      return 0;
+}
+

@@ -1,0 +1,49 @@
+#include <cstdio>
+#include <cstring>
+inline unsigned int getuint(){
+	char w=getchar();
+	while (w<'0'||'9'<w) w=getchar();
+	unsigned int ans=0;
+	for (;'0'<=w&&w<='9';w=getchar()) ans=ans*10+w-'0';
+	return ans;
+}
+int n;
+char str[100005];
+struct Suffix_AutoMaton{
+	struct node{
+		node *s[26], *p;
+		int maxlen, cnt;
+	} pool[100005<<1], *poolnow, *root;
+	node *insert(node *p, int f){
+		node *np=poolnow++;np->maxlen=p->maxlen+1;
+		for (;p&&!p->s[f];p=p->p) p->s[f]=np;
+		if (p)
+			if (p->s[f]->maxlen!=p->maxlen+1){
+				node *q=p->s[f], *nq=poolnow++;
+				memcpy(nq->s, q->s, sizeof(q->s)), nq->p=q->p, nq->maxlen=p->maxlen+1, q->p=np->p=nq;
+				for (;p&&p->s[f]==q;p=p->p) p->s[f]=nq;
+			} else np->p=p->s[f];
+		else np->p=root;
+		return np;
+	}
+	int c[100005];
+	node *a[100005<<1];
+	void solve(){
+		root=(poolnow=pool)++;
+		node *last=root;
+		for (int i=1;i<=n;i++) (last=insert(last, str[i]-'a'))->cnt=1;
+		for (node *p=pool;p!=poolnow;p++) c[p->maxlen]++;
+		for (int i=1;i<=n;i++) c[i]+=c[i-1];
+		for (node *p=pool;p!=poolnow;p++) a[c[p->maxlen]--]=p;
+		for (int i=poolnow-pool;i>1;i--) a[i]->p->cnt+=a[i]->cnt;
+		root->cnt=0;
+		long long ans=0;
+		for (node *p=pool+1;p!=poolnow;p++) ans+=(p->cnt+1ll)*p->cnt*(p->maxlen-p->p->maxlen);
+		printf("%I64d\n", ans>>1);
+	}
+} SAM;
+int main(){
+	//freopen("ex.in", "r", stdin);
+	scanf("%s", str+1), n=strlen(str+1), SAM.solve();
+	return 0;
+}

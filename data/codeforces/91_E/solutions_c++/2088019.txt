@@ -1,0 +1,99 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<vector>
+#include<algorithm>
+using namespace std;
+
+const double eps = 1e-13;
+int n, q;
+int a[100010], b[100010];
+
+struct SegTree
+{
+	int l, r;
+	vector<int> line;
+} tr[400010];
+
+bool cmp(int t1, int t2)
+{
+	if (b[t1] != b[t2]) return (b[t1] < b[t2]);
+	return (a[t1] > a[t2]);
+}
+
+double intersect(int t1, int t2)
+{
+	return ((double)(a[t1] - a[t2]) / (double)(b[t2] - b[t1]));
+}
+
+void build(int v, int l, int r)
+{
+	tr[v].l = l; tr[v].r = r;
+	tr[v].line.clear();
+	
+	vector<int> tmp;
+	tmp.clear();
+	for (int i = l; i <= r; ++i) tmp.push_back(i);
+	sort(tmp.begin(), tmp.end(), cmp);
+	
+	int size = tmp.size();
+	for (int i = 0; i < size; ++i)
+		if (tr[v].line.size() == 0 || b[tr[v].line.back()] != b[tmp[i]])
+		{
+			while (tr[v].line.size() >= 2 && intersect(tr[v].line[tr[v].line.size() - 2], tmp[i]) >= 
+			                                 intersect(tr[v].line[tr[v].line.size() - 1], tmp[i]))
+				tr[v].line.pop_back();
+			tr[v].line.push_back(tmp[i]);
+		}
+	
+	if (l < r)
+	{
+		int mid = (l + r) >> 1;
+		build(v << 1, l, mid);
+		build((v << 1) + 1, mid + 1, r);
+	}
+}
+
+int findmax(int t1, int t2, int t)
+{
+	long long y1 = (long long)a[t1] + (long long)b[t1] * (long long)t;
+	long long y2 = (long long)a[t2] + (long long)b[t2] * (long long)t;
+	return ((y1 > y2) ? (t1) : (t2));
+}
+
+int query(int v, int l, int r, int t)
+{
+	if (l <= tr[v].l && r >= tr[v].r)
+	{
+		int ll = 0, rr = tr[v].line.size() - 1, mid;
+		while (ll < rr)
+		{
+			mid = (ll + rr + 1) >> 1;
+			if (intersect(tr[v].line[mid - 1], tr[v].line[mid]) <= t) ll = mid; else rr = mid - 1;
+		}
+		return tr[v].line[ll];
+	} else
+	{
+		if (l > tr[v << 1].r) return query((v << 1) + 1, l, r, t);
+		if (r <= tr[v << 1].r) return query(v << 1, l, r, t);
+		return (findmax(query(v << 1, l, r, t), query((v << 1) + 1, l, r, t), t));
+	}
+}
+
+int main()
+{
+	// freopen("e.in","r",stdin);
+	scanf("%d%d",&n,&q);
+	for (int i = 1; i <= n; ++i)
+		scanf("%d%d",&a[i],&b[i]);
+	
+	build(1, 1, n);
+	
+	int l, r, t;
+	for (int i = 1; i <= q; ++i)
+	{
+		scanf("%d%d%d",&l,&r,&t);
+		printf("%d\n",query(1, l, r, t));
+	}
+	return 0;
+}

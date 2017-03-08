@@ -1,0 +1,391 @@
+// -*- C++ -*-
+// File: a.cpp
+// Copyright (C) 2013
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <queue>
+#include <iostream>
+#include <cmath>
+#include <sstream>
+#include <map>
+#include <set>
+#include <numeric>
+#include <memory.h>
+#include <cstdio>
+#include <assert.h>
+//#include <complex>
+
+using namespace std;
+
+#define pb push_back
+#define INF 1011111111
+#define FOR(i,a,b) for (int _n(b), i(a); i < _n; i++)
+#define rep(i,n) FOR(i,0,n)
+#define CL(a,v) memset((a),(v),sizeof(a))
+#define mp make_pair
+#define X first
+#define Y second
+#define all(c) (c).begin(), (c).end()
+#define SORT(c) sort(all(c))
+
+typedef long long ll;
+typedef vector<int> VI;
+typedef pair<int,int> pii;
+
+/*** TEMPLATE CODE ENDS HERE */
+
+//typedef complex<double> base;
+
+struct complex {
+	typedef double DOUBLE;
+	DOUBLE im, re;
+	complex() : re(0), im(0) {}
+	complex(DOUBLE re) : re(re), im(0) {}
+	complex(DOUBLE re, DOUBLE im) : re(re), im(im) {}
+	complex operator+(const complex &a) {
+		return complex(re+a.re,im+a.im);
+	}
+	complex operator-(const complex &a) {
+		return complex(re-a.re,im-a.im);
+	}
+	complex operator*(const complex &a) {
+		return complex(re*a.re-im*a.im, re*a.im+im*a.re);
+	}
+	complex& operator*=(const complex &a) {
+		DOUBLE r = re*a.re-im*a.im, i = re*a.im+im*a.re;
+		re = r;
+		im = i;
+		return *this;
+	}
+	complex& operator/=(double a) {
+		re /= a;
+		im /= a;
+		return *this;
+	}
+	DOUBLE real() const { return re; }
+};
+
+typedef complex base;
+
+
+int rev(int i, int lg_n) {
+	int j = 0;
+	int res = 0;
+	while(i) {
+		if(i&1) res |= 1<<(lg_n-1-j);
+		++j;
+		i>>=1;
+	}
+	return res;
+}
+
+void fft(vector<base> &a, bool inverse) {
+	const int n = (int)a.size();
+	int lg_n = 0;
+	while((1<<lg_n)<n) ++ lg_n;
+	
+	for(int i = 0; i < n; ++i)
+		if(i < rev(i, lg_n))
+			swap(a[i], a[rev(i,lg_n)]);
+	
+	for(int len = 2; len <= n; len <<= 1) {
+		double angle = 2*M_PI/len * (inverse ? -1 : 1);
+		base delta(cos(angle), sin(angle));
+		for(int i = 0; i < n; i += len) {
+			base root(1,0);
+			for(int j = 0; j < len/2; ++j) {
+				base u = a[i+j];
+				base v = a[i+j+len/2]*root;
+				a[i+j] = u + v;
+				a[i+j+len/2] = u - v;
+				root *= delta;
+			}
+		}
+	}
+	
+	if(inverse)
+		for(int i = 0; i < n; ++i) a[i] /= n;
+}
+
+//typedef complex Mod;
+const int NN = 1<<22;
+base tmp[NN];
+
+void fft(base *v, int sh, int n, base w) {
+  if(n==1) return;
+  base w2 = w*w;
+  int n2 = n/2;
+  fft(&v[0], sh+1, n2, w2);
+  fft(&v[1<<sh], sh+1, n2, w2);
+  
+  base wx = 1;
+//------------------------
+//  for(int i=0;i<n2;++i) {
+//    base A = v[i<<(sh+1)];
+//    base B = v[(i<<(sh+1))+(1<<sh)];
+//    base wxB = wx*B;
+//    tmp[i] = A + wxB;
+//    tmp[n2+i] = A - wxB;
+//    wx *= w;
+//  }
+//------------------------
+	for(int i = 0; i < n2; ++i) {
+		base A = v[i<<(sh+1)];
+		base B = v[(i<<(sh+1))+(1<<sh)];
+		base wxv = wx * B;
+		tmp[i] = A + wxv;
+		tmp[n2+i] = A - wxv;
+		wx *= w; 
+	}	
+//------------------------
+
+
+  rep(i,n) v[i<<sh] = tmp[i];
+}
+
+base b[1<<22];
+
+void fft2(base *a, int shift, const int n, base w) {
+	
+	if(n==1) return;
+	
+	int n2 = n / 2;
+	base w2 = w*w;
+	
+	fft(&a[0],shift+1,n2,w2);
+	fft(&a[1<<shift],shift+1,n2,w2);
+	
+	base wx = 1;
+	//double angle = 2*M_PI/n * (inverse ? -1 : 1);
+	//base delta(cos(angle), sin(angle));
+	
+	for(int i = 0; i < n2; ++i) {
+		base u = a[i<<(shift+1)];
+		base v = a[(i<<(shift+1))+(i<<shift)];
+		base wxv = wx * v;
+		b[i] = u + wxv;
+		b[n2+i] = u - wxv;
+		wx *= w; 
+	}	
+	for(int i = 0; i < n; ++i) a[i<<shift] = b[i]; //{
+		//a[i<<shift] = b[i];
+		//if(inverse) a[i<<shift] /= 2;
+	//}
+}
+
+int N;
+ll A[1<<18];
+
+ll solve_small() { //number of sub-arrays <= 2,001,000; S <= 4*10^10; N <= 2000
+	ll *s = new ll[2010];
+    ll *t = new ll[2001000];        
+    rep(i,N) s[i] = (i?s[i-1]:0) + A[i];
+    int k = 0;    
+	rep(i,N) rep(j,i+1) t[k++] = s[i] - (j?s[j-1]:0ll);
+    sort(t,t+k);
+    int res = unique(t,t+k)-t;
+    delete[] s;
+    delete[] t;
+    return res;
+}
+
+ll solve_medium() { //number of sub-arrays <= 200,010,000; S <= 20,000,000; 2000 < N <= 20,000
+	vector<ll> s(20010,0);
+	bool *was = new bool[20000010];
+	//memset(was,0,20000010ll * sizeof(bool));
+	assert(N<20000010);
+	rep(i,N) s[i] = (i?s[i-1]:0ll) + A[i];
+	rep(i,N) rep(j,i+1) was[ s[i] - (j?s[j-1]:0ll) ] = true;
+	ll ans = 0;
+	rep(i,20000010) if(was[i]) ++ans;	
+	delete [] was;
+	return ans;
+}
+
+//--------------------------------------------------
+
+  // returns x from 1 to m-1 such that m divides a*x-1
+  // precondition gcd(a, m) = 1
+  ll inv(ll a, ll m) {
+    ll x0 = 1, x1 = 0;
+    ll b = m;
+    while (b > 0) {
+
+      ll q = a / b;
+
+      // (a; b) := (b; a - q * b)
+      ll c = a - q * b;
+      a = b;
+      b = c;
+
+      // (x0; x1) := (x1; x0 - q * x1)
+      ll x = x0 - q * x1;
+      x0 = x1;
+      x1 = x;
+    }
+    return x0 < 0 ? x0 + m : x0;
+  }
+  
+    // returns A^N mod M
+  // exponentiation by squaring
+  int powmod(int A, int N, int M) {
+    int res = 1;
+    while (N > 0) {
+      if (N % 2 == 1) {
+        res = (ll)res * A % M;
+      }
+      N /= 2;
+      if (N > 0) {
+        A = (ll)A * A % M;
+      }
+    }
+    return res;
+  }
+
+const int mod = 2130706433;
+const int root = 3;
+const int root_1 = inv(root, mod);
+const int root_pw = 1<<20;
+ 
+void fft (vector<int> & a, bool invert) {
+	int n = (int) a.size();
+ 
+	for (int i=1, j=0; i<n; ++i) {
+		int bit = n >> 1;
+		for (; j>=bit; bit>>=1)
+			j -= bit;
+		j += bit;
+		if (i < j)
+			swap (a[i], a[j]);
+	}
+	
+	int lg_n = 0;
+	while((1<<lg_n)<n) ++ lg_n;
+	
+	// g will now have order 2^h in Zp as needed for DFT
+    int g = powmod(root, (mod-1) >> lg_n, mod);
+	if(invert) g = inv(g, mod);
+ 
+    // w[] will contain powers of g
+//    w[0] = 1;
+//    for(int i = 1; i < n; i++) {
+//      w[i] = (ll)w[i - 1] * g % mod;
+//    }
+ 
+	for (int len=2; len<=n; len<<=1) {
+		//int wlen = invert ? root_1 : root;
+		int wlen = g;
+		for (int i=len; i<root_pw; i<<=1)
+			wlen = int (wlen * 1ll * wlen % mod);
+		for (int i=0; i<n; i+=len) {
+			int w = 1;
+			for (int j=0; j<len/2; ++j) {
+				int u = a[i+j],  v = int (a[i+j+len/2] * 1ll * w % mod);
+				a[i+j] = u+v < mod ? u+v : u+v-mod;
+				a[i+j+len/2] = u-v >= 0 ? u-v : u-v+mod;
+				w = int (w * 1ll * wlen % mod);
+			}
+		}
+	}
+	if (invert) {
+		int nrev = inv (n, mod);
+		for (int i=0; i<n; ++i)
+			a[i] = int (a[i] * 1ll * nrev % mod);
+	}
+}
+//---------------------------------------------------------------
+
+ll solve_large() { // number of sub-arrays <= 20,000,100,000; S <= 2,000,000; 20,000 < N ≤ 200,000
+	
+	const int S = accumulate(A,A+N,0ll);
+	
+	assert(S <= 2000000);
+	
+	int n = 1;
+	while(n < (S+1)) n <<= 1;
+	n <<= 1;
+		
+	vector<base> xx(n), yy(n);	
+//	vector<int> xx(n), yy(n);	
+	int s = 0;
+	
+	rep(i,N+1) {
+		xx[s] = base(1,0);
+		yy[S-s] = base(1,0);
+		s += A[i];
+	}
+	
+	double angle = 2*M_PI/n;
+	base delta(cos(angle), sin(angle));
+		
+	fft(&xx[0],0,n,delta);
+	fft(&yy[0],0,n,delta);	
+	
+	rep(i,n) xx[i] *= yy[i];
+	angle = -angle;
+	delta = base(cos(angle), sin(angle));
+	
+	fft(&xx[0],0,n,delta);
+	rep(i,n) xx[i] /= n;
+
+//	rep(i,N+1) {
+//		x[s] = 1;
+//		y[S-s] = 1;
+//		s += A[i];
+//	}
+//
+//	convolution(S+1,S+1);
+//    int res=0;
+//    for(int i=0;i<S;i++) if(c[i]) res++;
+//	return res;
+
+//	rep(i,N+1) {
+//		xx[s] = 1;
+//		yy[S-s] = 1;
+//		s += A[i];
+//	}
+//	
+//	fft(xx,false);
+//	fft(yy,false);	
+//	rep(i,n) xx[i] = int(xx[i] * 1ll * yy[i] % mod);
+//	fft(xx,true);
+	
+	int ans = 0;
+	
+	rep(i,S) {
+		ll t = ll(xx[i].real()+0.5);
+		//int t = x[i];
+		if(t>0) ++ans;
+	}
+
+	return ans;
+}
+
+int main() {
+#ifdef LOCAL_HOST
+    freopen("input.txt","r",stdin);
+    //freopen("output.txt","w",stdout);
+#endif
+
+    ios_base::sync_with_stdio(false);
+	
+	cin >> N;
+	rep(i,N) cin >> A[i];
+	
+	if(N <= 2000) {
+		cout << solve_small()-1 << endl;
+	}
+	else if(N <= 20000) {
+		cout << solve_medium()-1 << endl;
+	}
+	else {
+		cout << solve_large()-1 << endl;
+	}
+
+#ifdef LOCAL_HOST
+    printf("TIME: %.3lf\n",double(clock())/CLOCKS_PER_SEC);
+#endif
+
+    return 0;
+}

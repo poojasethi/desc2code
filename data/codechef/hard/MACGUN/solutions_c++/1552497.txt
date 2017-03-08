@@ -1,0 +1,305 @@
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <ctime>
+#include <algorithm>
+#include <vector>
+#include <stack>
+#include <queue>
+#include <iostream>
+typedef unsigned long long int ull;
+typedef long long int ll;
+
+
+int Y=0, X=0;
+char C[701][701];
+size_t ix[700][700];
+
+
+struct pos
+{
+	pos(): x(), y() {}
+	pos(int _x, int _y): x(_x), y(_y) {}
+	pos &operator+= (pos const &d) { x+=d.x; y+=d.y; return *this; }
+	pos operator+ (pos const &rhs) const { return pos(x+rhs.x,y+rhs.y); }
+	pos operator- (pos const &rhs) const { return pos(x-rhs.x,y-rhs.y); }
+	pos operator* (int m) const { return pos(x*m,y*m); }
+	friend pos operator* (int m, pos const &rhs) { return pos(rhs.x*m,rhs.y*m); }
+	friend std::ostream& operator<< (std::ostream &o, pos const &p) { o << "(" << p.x << "," << p.y << ")"; return o; }
+	void rot_ccw90() { int m=y; y=x; x=-m; }
+	void rot_cw90() { int m=y; y=-x; x=m; }
+	int x, y;
+};
+
+/*
+// http://code.google.com/p/menglin-icpc-code-library/source/browse/icpcLibrary/BiGraph_Match_Hopcroft_Karp.cpp
+const int maxn = 700*700/8;
+const int maxm = 700*700/8*4;
+struct max_bipartite_matching_hopcroft_karp
+{
+	struct EDGE
+	{
+		int a, b;
+		int next;
+	};
+
+	int nx, ny, m;
+	EDGE edge[maxm];
+	int edge_num;
+	int first[maxn];
+	int cx[maxn], cy[maxn];
+	int distx[maxn], disty[maxn];
+	int que[maxn];
+	int head, tail;
+	int ans;
+
+	void Init()
+	{
+		int i, j;
+		std::fill_n ( cx, maxn, -1 );
+		std::fill_n ( cy, maxn, -1 );
+		std::fill_n ( first, maxn, -1 );
+		edge_num = 0;
+		ans = 0;
+	}
+
+	void AddEdge ( int a, int b )
+	{
+		edge[edge_num].a = a;
+		edge[edge_num].b = b;
+		edge[edge_num].next = first[a];
+		first[a] = edge_num++;
+	}
+
+	bool BFS ( void )
+	{
+		int i, j, k;
+		bool flag ( 0 );
+		int h, t;
+		std::fill_n ( distx, maxn, 0 );
+		std::fill_n ( disty, maxn, 0 );
+		head = tail = 0;
+		for ( i = 1; i <= nx; i++ )
+		{
+			if ( cx[i] == -1 ) que[tail++] = i;
+		}
+		while ( head != tail )
+		{
+			for ( h = head, t = tail; h != t; h = ( h + 1 ) % maxn )
+			{
+				i = que[h];
+				for ( k = first[i]; k != -1; k = edge[k].next )
+				{
+					j = edge[k].b;
+					if ( !disty[j] )
+					{
+						disty[j] = distx[i] + 1;
+						if ( cy[j] == -1 ) flag = 1;
+						else
+						{
+							distx[cy[j]] = disty[j] + 1;
+							que[tail] = cy[j];
+							tail = ( tail + 1 ) % maxn;
+						}
+					}
+				}
+			}
+			head = t;
+		}
+		return flag;
+	}
+
+	bool DFS ( int i )
+	{
+		int j, k;
+		for ( k = first[i]; k != -1; k = edge[k].next )
+		{
+			j = edge[k].b;
+			if ( disty[j] == distx[i] + 1 )
+			{
+				disty[j] = 0;
+				if ( cy[j] == -1 || DFS ( cy[j] ) )
+				{
+					cx[i] = j, cy[j] = i;
+					return 1;
+				}
+			}
+		}
+		return 0;
+	}
+
+	int Hopcroft_Karp()
+	{
+		int i, j;
+		while ( BFS() )
+		{
+			for ( i = 1; i <= nx; i++ )
+			{
+				if ( cx[i] == -1 && DFS ( i ) ) ans++;
+			}
+		}
+		return ans;
+	}
+} wat;
+*/
+
+
+// http://zobayer.blogspot.hu/2010/05/maximum-matching.html
+#define MAX (701*701/8)
+#define NIL 0
+#define INF (1<<28)
+struct faszom
+{
+	int Gl[MAX];
+	int G[MAX][4];
+	int n, m;
+	int dist[MAX];
+	int match[MAX];
+
+	// n: number of nodes on left side, nodes are numbered 1 to n
+	// m: number of nodes on right side, nodes are numbered n+1 to n+m
+	// G = NIL[0] ∪ G1[G[1---n]] ∪ G2[G[n+1---n+m]]
+
+	bool bfs() {
+		int i, u, v, len;
+		std::queue< int > Q;
+		for(i=1; i<=n; i++) {
+			if(match[i]==NIL) {
+				dist[i] = 0;
+				Q.push(i);
+			}
+			else dist[i] = INF;
+		}
+		dist[NIL] = INF;
+		while(!Q.empty()) {
+			u = Q.front(); Q.pop();
+			if(u!=NIL) {
+				len = Gl[u];
+				for(i=0; i<len; i++) {
+					v = G[u][i];
+					if(dist[match[v]]==INF) {
+						dist[match[v]] = dist[u] + 1;
+						Q.push(match[v]);
+					}
+				}
+			}
+		}
+		return (dist[NIL]!=INF);
+	}
+
+	bool dfs(int u) {
+		int i, v, len;
+		if(u!=NIL) {
+			len = Gl[u];
+			for(i=0; i<len; i++) {
+				v = G[u][i];
+				if(dist[match[v]]==dist[u]+1) {
+					if(dfs(match[v])) {
+						match[v] = u;
+						match[u] = v;
+						return true;
+					}
+				}
+			}
+			dist[u] = INF;
+			return false;
+		}
+		return true;
+	}
+
+	int hopcroft_karp() {
+		int matching = 0, i;
+		// match[] is assumed NIL for all vertex in G
+		while(bfs())
+			for(i=1; i<=n; i++)
+				if(match[i]==NIL && dfs(i))
+					matching++;
+		return matching;
+	}
+} wat;
+
+
+size_t solve(int m)
+{
+	// index every node in this group
+	size_t n1=0, n2=0;
+	for(pos p(0,0); p.y<Y; ++p.y)
+		for(p.x=0; p.x<X; ++p.x)
+			if((p.x+p.y/2*2)%4+p.y%2*4==m && C[p.y][p.x]=='F')
+			{
+				if(p.x/2%2)
+					ix[p.y][p.x]=n1++;
+				else ix[p.y][p.x]=n2++;
+			}
+	wat.n=n1;
+	wat.m=n2;
+	for(size_t i=0; i<=n1+n2; ++i)
+	{
+		wat.match[i]=0;
+		wat.Gl[i]=0;
+	}
+
+	// connect nodes in group
+	for(pos p(0,0); p.y<Y; ++p.y)
+		for(p.x=0; p.x<X; ++p.x)
+			if((p.x+p.y/2*2)%4+p.y%2*4==m && C[p.y][p.x]=='F')
+				if(p.x/2%2)
+				{
+					size_t i=ix[p.y][p.x];
+					pos d(1,1);
+					for(size_t rot=0; rot<4; ++rot)
+					{
+						pos p1=p+d;
+						pos p2=p1+d;
+						if(0<=p2.x && p2.x<X && 0<=p2.y && p2.y<Y
+							&& C[p2.y][p2.x]=='F' && C[p1.y][p1.x]!='P')
+						{
+							wat.G[i+1][wat.Gl[i+1]++]=1+n1+ix[p2.y][p2.x];
+						}
+						d.rot_ccw90();
+					}
+				}
+
+	// max cardinality matching
+	size_t c=wat.hopcroft_karp();
+	return n1+n2-c;
+}
+
+
+int main()
+{
+	while(1)
+	{
+		scanf("%d %d", &Y, &X);
+		if(X==0 || Y==0)
+			break;
+
+		for(int y=0; y<Y; ++y)
+			scanf("%s", C[y]);
+		for(pos p(0,0); p.y<Y; ++p.y)
+			for(p.x=0; p.x<X; ++p.x)
+				if(C[p.y][p.x]=='G')
+				{
+					pos d(1,1);
+					for(size_t rot=0; rot<4; ++rot)
+					{
+						pos p1=p+d;
+						pos p2=p1+d;
+						if(0<=p2.x && p2.x<X && 0<=p2.y && p2.y<Y
+							&& C[p1.y][p1.x]!='P' && C[p2.y][p2.x]=='F')
+						{
+							C[p2.y][p2.x]='X';
+						}
+						d.rot_ccw90();
+					}
+				}
+
+		size_t r=0;
+		for(int m=0; m<8; ++m)
+			r+=solve(m);
+		printf("%zu\n", r);
+	}
+	return 0;
+}
+

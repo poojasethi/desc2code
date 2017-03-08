@@ -1,0 +1,103 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#define mp(x, y) make_pair((x), (y))
+
+typedef long long ll;
+
+int n, m;
+int c[400005];
+vector<int> next[400005];
+int beg[400005], end[400005];
+
+int cnt=1;
+
+void dfs(int v, int f=-1)
+{
+	beg[v]=cnt++;
+	for(int i=0; i<next[v].size(); i++) {
+		int s=next[v][i];
+		if(s==f) continue;
+		dfs(s, v);
+	}
+	end[v]=cnt-1;
+}
+
+int bits(ll k)
+{
+	int ans=0;
+	while(k) {
+		ans+=(k&1);
+		k>>=1;
+	}
+	return ans;
+}
+
+ll tree[1048576], update[1048576];
+
+void upd(int from, int to, ll c, int a=1, int b=524288, int where=1)
+{
+	if(from<=a && b<=to) {
+		tree[where]=c;
+		update[where]=c;
+		return;
+	}
+	if(to<a || b<from) return;
+	if(update[where]) {
+		tree[2*where]=update[where];
+		tree[2*where+1]=update[where];
+		update[2*where]=update[where];
+		update[2*where+1]=update[where];
+		update[where]=0;
+	}
+	upd(from, to, c, a, a+(b-a)/2, 2*where);
+	upd(from, to, c, a+(b-a)/2+1, b, 2*where+1);
+	tree[where]=tree[2*where]|tree[2*where+1];
+}
+
+ll find(int from, int to, int a=1, int b=524288, int where=1)
+{
+	if(from<=a && b<=to) return tree[where];
+	if(to<a || b<from) return 0;
+	if(update[where]) {
+		tree[2*where]=update[where];
+		tree[2*where+1]=update[where];
+		update[2*where]=update[where];
+		update[2*where+1]=update[where];
+		update[where]=0;
+	}
+	return find(from, to, a, a+(b-a)/2, 2*where)|find(from, to, a+(b-a)/2+1, b, 2*where+1);
+}
+
+int main()
+{
+	scanf("%d%d", &n, &m);
+	for(int i=0; i<n; i++) scanf("%d", &c[i]);
+	for(int i=0; i<n-1; i++) {
+		int u, v;
+		scanf("%d%d", &u, &v);
+		u--; v--;
+		next[u].push_back(v);
+		next[v].push_back(u);
+	}
+	dfs(0);
+	for(int i=0; i<n; i++) tree[524287+beg[i]]=1LL<<c[i];
+	for(int i=524287; i>=1; i--) tree[i]=tree[2*i]|tree[2*i+1];
+	for(int i=0; i<m; i++) {
+		int t;
+		scanf("%d", &t);
+		if(t==1) {
+			int v, c;
+			scanf("%d%d", &v, &c);
+			v--;
+			upd(beg[v], end[v], 1LL<<c);
+		} else {
+			int v;
+			scanf("%d", &v);
+			v--;
+			printf("%d\n", bits(find(beg[v], end[v])));
+		}
+	}
+
+	return 0;
+}

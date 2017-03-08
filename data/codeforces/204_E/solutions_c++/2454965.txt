@@ -1,0 +1,121 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+#include<vector>
+using namespace std;
+const int inf=123456789,N=201000;
+int n,len=0,K;
+int a[N],b[N],u[N],r[N+N],sa[N],ht[N],H[N],d[N];
+pair <pair<int,int>,int> c[N];
+char s[N];
+void init()
+{
+	scanf("%d",&n);
+	for(int i=1,l;i<=n;++i)
+	{
+		u[i]=0;
+		scanf("%s",s+1);
+		l=strlen(s+1);
+		for(int j=1;j<=l;++j)
+			a[++len]=s[j]-'a'+1,b[len]=i,r[len]=a[len],d[len]=l-j+1;
+		++len,r[len]=a[len]=-i,b[len]=0;
+	}
+}
+void suffix()
+{
+	for(int i=1;i<=len;++i) r[len+i]=-inf;
+	for(int p=1,q=0;p<len && q<len;p<<=1)
+	{
+		for(int i=1;i<=len;++i) c[i]=make_pair(make_pair(r[i],r[i+p]),i);
+		sort(c+1,c+1+len);
+		r[c[1].second]=q=1;
+		for(int i=2;i<=len;++i)
+		{
+			if ( c[i].first!=c[i-1].first ) ++q;
+			r[c[i].second]=q;
+		}
+	}
+	for(int i=1;i<=len;++i) sa[r[i]]=i;
+	sa[0]=0,a[0]=inf;
+	for(int k=0,i=1,j;i<=len;++i)
+	{
+		if ( k>0 ) --k;
+		j=sa[r[i]-1];
+		while ( a[j+k]==a[i+k] ) ++k;
+		H[r[i]]=k;
+	}
+}
+int f[N],re[N],L[N<<2],R[N<<2],cnt[N<<2],w[N];
+long long ans[N];
+void build(const int x,const int y,const int z)
+{
+	L[z]=x,R[z]=y,cnt[z]=0;
+	if ( x==y ) { w[x]=z; return;}
+	int mid=(x+y)>>1;
+	build(x,mid,z<<1),build(mid+1,y,z*2+1);
+}
+void change(const int x,const int y,const int z,const int C)
+{
+	if ( C<=cnt[z] )  return;
+	if ( x==L[z] && y==R[z] ) 
+	{
+		cnt[z]=C;
+		return;
+	}
+	int mid=(L[z]+R[z])>>1;
+	if ( y<=mid ) change(x,y,z<<1,C);
+	else if ( x>mid ) change(x,y,1+(z<<1),C);
+	else change(x,mid,z<<1,C),change(mid+1,y,1+(z<<1),C);
+}
+int ask(const int x)
+{
+	int i=w[x],p=0;
+	while ( i>0 ) 
+	{
+		if ( cnt[i]>p ) p=cnt[i] ;
+		i>>=1;
+	}
+	return p;
+}
+void Gans()
+{
+	build(1,len,1);
+	int now=0;
+	int h=1,t=0;
+	memset(re,0,sizeof(re));
+	memset(ans,0,sizeof(ans));
+	for(int i=n+1,j=n,q;i<=len;++i)
+	{
+		while ( now<K && j<len)
+		{
+			++j;
+			if ( u[b[sa[j]]]==0 ) ++now;
+			++u[b[sa[j]]];
+			while ( t>=h && H[f[t]]>=H[j] ) --t;
+			f[++t]=j;
+		}
+		if ( now<K )  break;
+		if ( f[h]==i ) ++h;
+		q=(h<=t?H[f[h]]:d[sa[i]]);
+		re[j+1]=max(re[j+1],q);
+		change(i,j,1,q);
+		--u[b[sa[i]]];
+		if ( u[b[sa[i]]]==0 ) --now;
+	}
+	for(int i=n+1,p=0;i<=len;++i)
+	{
+		p=min(H[i],max(re[i],p));
+		ans[b[sa[i]]]+=max(ask(i),p);
+	}
+	for(int i=1;i<n;++i ) printf("%I64d ",ans[i]);
+	printf("%I64d\n",ans[n]);
+}
+int main()
+{
+	scanf("%d%d",&n,&K);
+	init();suffix();
+	Gans();
+	return 0;
+}

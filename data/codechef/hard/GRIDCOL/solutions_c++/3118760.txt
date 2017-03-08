@@ -1,0 +1,93 @@
+#include <algorithm>
+#include <string.h>
+#include <stdio.h>
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+typedef long long ll;
+
+const int N = 2010;
+const int mod = 1e9 + 7;
+
+ll dpL[N][N], dpC[N][N], p[N], C[N][N];
+
+ll dfsL(int a, int b){
+	if(a < 0) return 0;
+	if(b == 0) return 1;
+	if(a == 1 && b == 1) return 1;
+	ll &ret = dpL[a][b];
+	if(ret + 1) return ret;
+	ret = (dfsL(a - 2, b - 1) + dfsL(a - 1, b)) % mod;
+}
+
+ll dfsC(int a, int b){
+	if(a < 0) return 0;
+	if(b == 0) return 1;
+	ll &ret = dpC[a][b];
+	if(ret + 1) return ret;
+	ret = (dfsL(a - 3, b - 1) + dfsL(a - 1, b)) % mod;
+	return ret;
+}
+
+int A[N], B[N], n;
+
+int main(){
+	int ca;
+	p[0] = 1;
+	for(int i = 1; i < N; i++)
+		p[i] = p[i - 1] * i % mod;
+	for(int i = 0; i < N; i++){
+		C[i][0] = C[i][i] = 1;
+		for(int j = 1; j < i; j++)
+			C[i][j] = C[i - 1][j - 1] + C[i - 1][j], C[i][j] %= mod;
+	}
+	memset(dpL, -1, sizeof(dpL));
+	memset(dpC, -1, sizeof(dpC));
+	for(scanf("%d", &ca); ca--;){
+		scanf("%d", &n);
+		for(int i = 1; i <= n; i++)
+			scanf("%d", &A[i]);
+		for(int i = 1; i <= n; i++)
+			scanf("%d", &B[A[i]]);
+		int vis[N] = {};
+		vector<int> cycle;
+		for(int i = 1; i <= n; i++){
+			if(vis[i]) continue;
+			int t = i, cnt = 0;
+			while(vis[t] == 0){
+				cnt++;
+				vis[t] = 1;
+				t = B[t];
+			}
+			cycle.push_back(cnt);
+		}
+		int dp[N] = {};
+		dp[0] = 1;
+		for(int k = 0; k < cycle.size(); k++){
+			for(int i = n; i >= 0; i--){
+				if(dp[i] == 0) continue;
+				for(int j = cycle[k]; j >= 1; j--){
+					if(i + j > n) continue;
+					dp[i + j] += dp[i] * dfsC(cycle[k] * 2, j) % mod;
+					dp[i + j] %= mod;
+				}
+			}
+		}
+		//for(int i = 0; i <= n; i++)
+			//cout << dp[i] << " " << dfsC(8, i) << endl;
+		int ans[N] = {};
+		for(int i = n; i >= 0; i--){
+			ans[i] = dp[i] * p[n - i] % mod;
+			for(int j = i + 1; j <= n; j++){
+				ans[i] -= C[j][i] * ans[j] % mod;
+				ans[i] %= mod;
+			}
+			ans[i] += mod;
+			ans[i] %= mod;
+		}
+		cout << ans[0] << endl;
+	}
+	return 0;
+}

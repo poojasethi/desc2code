@@ -1,0 +1,195 @@
+#include <stdio.h>
+#include <stdlib.h>
+#define p 1000000009
+using namespace std;
+
+int n,m,i,j,k,u,v,lca,ll,rr,ans;
+int son[100005],next[200005],ed[200005],tot;
+int size[100005],deep[100005];
+int fa[100005],heavy[100005],head[100005];
+int id[100005],st[100005],en[100005],cnt;
+int al[105],ar[105],atot;
+int a,b,A,B,sqrt5,sqrt5_inv;
+int powA[100005],powB[100005],sumA[100005],sumB[100005];
+char opt;
+
+struct node
+{
+	int l,r,sum;
+	int al,bl,ar,br;
+}t[30000005];
+int root[100005],now;
+
+void add(int &a,int b){a+=b;if(a>=p)a-=p;}
+int Power(int a,int b)
+{
+	int ans=1;
+	for(;b;b>>=1,a=(long long)a*a%p)if(b&1)ans=(long long)ans*a%p;
+	return ans;
+}
+
+int LCA(int u,int v)
+{
+	for(;head[u]!=head[v];)
+	if(deep[head[u]]>deep[head[v]])u=fa[head[u]];
+	else v=fa[head[v]];
+	if(deep[u]<deep[v])return u;
+	return v;
+}
+
+void dfs1(int x)
+{
+	size[x]=1;
+	for(int i=son[x];i;i=next[i])
+	if(!size[ed[i]])
+	{
+		fa[ed[i]]=x;
+		deep[ed[i]]=deep[x]+1;
+		dfs1(ed[i]);
+		size[x]+=size[ed[i]];
+		if(size[ed[i]]>size[heavy[x]])heavy[x]=ed[i];
+	}
+}
+
+void dfs2(int x)
+{
+	st[x]=++cnt;id[cnt]=x;
+	if(!head[x])head[x]=x;
+	if(heavy[x])head[heavy[x]]=head[x],dfs2(heavy[x]);
+	for(int i=son[x];i;i=next[i])
+	if(!head[ed[i]])dfs2(ed[i]);
+	en[x]=cnt;
+}
+
+void update(int x,int l)
+{
+	t[x].sum=t[t[x].l].sum+t[t[x].r].sum;if(t[x].sum>=p)t[x].sum-=p;
+	add(t[x].sum,(long long)(t[x].al+t[x].ar)*sumA[l]%p);
+	add(t[x].sum,p-(long long)(t[x].bl+t[x].br)*sumB[l]%p);
+}
+
+void Cl(int &x,int l,int r)
+{
+	t[++tot]=t[x];x=tot;
+	if(l>=ll&&r<=rr)
+	{
+		add(t[x].al,a);
+		add(t[x].bl,b);
+		a=(long long)a*powA[r-l+1]%p;
+		b=(long long)b*powB[r-l+1]%p;
+		update(x,r-l+1);
+		return;
+	}
+	int mid=l+r>>1;
+	if(rr<=mid)Cl(t[x].l,l,mid);
+	else if(ll>mid)Cl(t[x].r,mid+1,r);
+		else Cl(t[x].l,l,mid),Cl(t[x].r,mid+1,r);
+	update(x,r-l+1);
+}
+
+void Cr(int &x,int l,int r)
+{
+	t[++tot]=t[x];x=tot;
+	if(l>=ll&&r<=rr)
+	{
+		add(t[x].ar,a);
+		add(t[x].br,b);
+		a=(long long)a*powA[r-l+1]%p;
+		b=(long long)b*powB[r-l+1]%p;
+		update(x,r-l+1);
+		return;
+	}
+	int mid=l+r>>1;
+	if(rr<=mid)Cr(t[x].l,l,mid);
+	else if(ll>mid)Cr(t[x].r,mid+1,r);
+		else Cr(t[x].r,mid+1,r),Cr(t[x].l,l,mid);
+	update(x,r-l+1);
+}
+
+void Q(int x,int l,int r,int al,int bl,int ar,int br)
+{
+	if(l>=ll&&r<=rr)
+	{
+		add(ans,t[x].sum);
+		add(ans,(long long)(al+ar)*sumA[r-l+1]%p);
+		add(ans,p-(long long)(bl+br)*sumB[r-l+1]%p);
+		return;
+	}
+	int mid=l+r>>1;
+	add(al,t[x].al);add(bl,t[x].bl);
+	add(ar,t[x].ar);add(br,t[x].br);
+	if(rr<=mid)Q(t[x].l,l,mid,al,bl,(long long)ar*powA[r-mid]%p,(long long)br*powB[r-mid]%p);
+	else if(ll>mid)Q(t[x].r,mid+1,r,(long long)al*powA[mid-l+1]%p,(long long)bl*powB[mid-l+1]%p,ar,br);
+		else Q(t[x].l,l,mid,al,bl,(long long)ar*powA[r-mid]%p,(long long)br*powB[r-mid]%p),
+			 Q(t[x].r,mid+1,r,(long long)al*powA[mid-l+1]%p,(long long)bl*powB[mid-l+1]%p,ar,br);
+}
+
+void Al(int L,int R){ll=L;rr=R;Cl(root[now],1,n);}
+void Ar(int L,int R){ll=L;rr=R;Cr(root[now],1,n);}
+void calc(int L,int R){ll=L;rr=R;Q(root[now],1,n,0,0,0,0);}
+
+int main()
+{
+	scanf("%d%d",&n,&m);
+	sqrt5=383008016;sqrt5_inv=Power(sqrt5,p-2);
+	A=(long long)(1+sqrt5)*Power(2,p-2)%p;
+	B=(long long)(1+p-sqrt5)*Power(2,p-2)%p;
+	for(i=powA[0]=1;i<=n;++i)powA[i]=(long long)powA[i-1]*A%p;
+	for(i=powB[0]=1;i<=n;++i)powB[i]=(long long)powB[i-1]*B%p;
+	for(i=1;i<=n;++i)sumA[i]=(sumA[i-1]+powA[i])%p,sumB[i]=(sumB[i-1]+powB[i])%p;
+	for(i=1;i<n;++i)
+	{
+		scanf("%d%d",&u,&v);
+		++tot;next[tot]=son[u];son[u]=tot;ed[tot]=v;
+		++tot;next[tot]=son[v];son[v]=tot;ed[tot]=u;
+	}
+	dfs1(1);dfs2(1);
+	for(tot=0;m;--m)
+	{
+		++now;root[now]=root[now-1];
+		for(opt=getchar();opt!='A'&&opt!='S'&&opt!='C'&&opt!='R';opt=getchar());
+		if(opt=='A')
+		{
+			scanf("%d%d",&u,&v);u^=ans;
+			lca=LCA(u,v);a=b=1;
+			for(;head[u]!=head[lca];u=fa[head[u]])Ar(st[head[u]],st[u]);
+			Ar(st[lca],st[u]);
+			for(;head[v]!=head[lca];v=fa[head[v]])al[++atot]=st[head[v]],ar[atot]=st[v];
+			if(lca!=v)al[++atot]=st[lca]+1,ar[atot]=st[v];
+			for(;atot;--atot)Al(al[atot],ar[atot]);
+		}
+		if(opt=='S')
+		{
+			scanf("%d%d",&u,&v);u^=ans;
+			ans=0;
+			if(u==v)calc(1,n);
+			else if(!(st[v]<=st[u]&&en[v]>=en[u]))calc(st[v],en[v]);
+			else
+			{
+				for(;head[u]!=head[v]&&fa[u]!=v;)
+				if(head[u]==u)u=fa[u];else u=head[u];
+				if(fa[u]!=v)u=id[st[v]+1];
+				if(st[u]!=1)calc(1,st[u]-1);
+				if(en[u]!=n)calc(en[u]+1,n);
+			}
+			ans=(long long)sqrt5_inv*ans%p;
+			printf("%d\n",ans);
+		}
+		if(opt=='C')
+		{
+			scanf("%d%d",&u,&v);u^=ans;
+			lca=LCA(u,v);ans=0;
+			for(;head[u]!=head[lca];u=fa[head[u]])calc(st[head[u]],st[u]);
+			calc(st[lca],st[u]);
+			for(;head[v]!=head[lca];v=fa[head[v]])calc(st[head[v]],st[v]);
+			if(lca!=v)calc(st[lca]+1,st[v]);
+			ans=(long long)sqrt5_inv*ans%p;
+			printf("%d\n",ans);
+		}
+		if(opt=='R')
+		{
+			scanf("%d",&u);u^=ans;
+			root[now]=root[u];
+		}
+	}
+}

@@ -1,0 +1,168 @@
+#include <cstdio>
+#include <cmath>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <map>
+#include <queue>
+#include <set>
+#include <cassert>
+
+using namespace std;
+
+#define _ ios_base::sync_with_stdio(0);cin.tie(0);
+#define S(x) 			scanf("%d",&x)
+#define SS(x,y)         scanf("%d%d",&x,&y)
+#define all(c) 			(c).begin(),(c).end() 
+#define sz(c) 			int((c).size())
+#define pb 				push_back
+#define present(c,x) 	((c).find(x) != (c).end()) 
+#define rep(i,x,y) 		for(int i = x; i <= y; i++)
+#define REV(i,x,y) 		for(int i = x; i >= y; i--)
+#define foreach(c,itr)	for(__typeof((c).begin()) itr=(c).begin();itr!=(c).end();itr++)
+#define FILL(a,v) 		memset(a,v,sizeof(a))
+#define DB(x)			cerr<<#x<<" = "<<x<<endl
+#define debugarr(A,a,b) cerr<<#A<<" : ";rep(i,a,b) cerr<<A[i]<<" ";cerr<<endl;
+//#define R(x) 			((rand()%x) + 1)
+
+typedef long long int LL;
+typedef vector<int> vi; 
+typedef vector<vi> vvi; 
+typedef pair<int,int> ii;
+typedef vector<ii> vii;
+
+/* ------------------------Main Code----------------------- */
+const int MAX = 2000001;
+
+int trie[26][MAX];
+int end[MAX], val[MAX];
+vector<int> v[MAX];
+vector<int> rv[MAX];
+int nxt;
+//insertion reverse
+
+void calcFailure(string s, vector<int>& y)
+{
+	int len = sz(s);
+	string tmp = s;
+	reverse(all(tmp));
+	s += tmp;
+	vector<int> f(sz(s)+1);
+	f[0] = -1;
+	rep(i,0,sz(s)-1){
+		int x = f[i];
+		while(x >= 0 && s[x] != s[i]) x = f[x];
+		f[i+1] = x+1;
+	}
+
+	rep(i,0,len) y.pb(0);
+
+	int x = f[sz(s)];
+
+	//debugarr(f,0,sz(s));
+	while(x > len) x = f[x];
+	while(x >= 0){
+		y[x] = 1;
+		x = f[x];
+	}
+}
+
+void insert(string& s, vector<int>& x)
+{
+	//DB(s);
+	int cur = 0;
+	REV(i,sz(s)-1,0){
+		int a = s[i]-'a';
+		if(trie[a][cur] == 0) trie[a][cur] = ++nxt;
+		cur = trie[a][cur];
+		val[cur] += x[i];
+		/*DB(cur);
+		DB(nxt);*/
+	}
+	//DB(cur);
+	end[cur]++;
+}
+
+LL query(string& s, vector<int>& x)
+{
+	LL res = 0;
+	int cur = 0;
+	//debugarr(x,0,sz(x)-1);
+	rep(i,0,sz(s)-1){
+		int a = s[i]-'a';
+		cur = trie[a][cur];
+		if(cur == 0) break;
+		if(x[i+1] && i != sz(s)-1) res += end[cur];
+	}
+	//DB(res); DB(cur);
+	return res + val[cur];
+}
+
+void init(int n)
+{
+	//trie
+	nxt++;
+	while(nxt--){
+		rep(i,0,26){
+			trie[i][nxt] = 0;
+		}
+		end[nxt] = 0;
+		val[nxt] = 0;
+	}
+	nxt = 0;
+	rep(i,0,n){
+		v[i].clear();
+		rv[i].clear();
+	}
+}
+
+string words[MAX];
+int vis[MAX];
+void dfs(int c)
+{
+	vis[c] = 1;
+	
+	printf("%d\n",end[c]);
+	rep(i,0,25){
+		int x = trie[i][c];
+		if(!vis[x]){
+			printf("%c\n",'a'+i);
+			dfs(x);
+		}
+	}
+}
+
+int main()
+{
+	int t;
+	S(t);
+	while(t--){
+		int n; S(n);
+
+		init(n);
+
+		rep(i,0,n-1){
+			cin >> words[i];
+			calcFailure(words[i],v[i]);
+			string tmp = words[i];
+			reverse(all(tmp));
+			calcFailure(tmp,rv[i]);
+			reverse(all(rv[i]));
+			insert(words[i],v[i]);
+			//debugarr(v[i],0,sz(v[i]));
+			//DB(sz(v[i]));
+			/*rep(j,0,sz(v[i])-1) printf("%d ",v[i][j]);
+			printf("\n");*/
+		}
+		//dfs(0);
+		LL ans = 0;
+		rep(i,0,n-1){
+			ans += query(words[i],rv[i]) - (v[i][sz(words[i])] ? 1 : 0);
+			//DB(ans);
+		}
+		printf("%lld\n",ans);
+	}
+	return 0;
+}

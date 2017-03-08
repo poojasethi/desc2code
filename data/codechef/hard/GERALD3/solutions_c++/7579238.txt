@@ -1,0 +1,267 @@
+#include<bits/stdc++.h>
+using namespace std;
+#define N 100011
+#define ll long long
+int str[N]; //input
+int rank1[N], pos1[N]; //output
+int cnt[N], nxt[N]; //internal
+bool bh[N], b2h[N];
+//rank[i] 'i' in unsorted and rank[i] in sorted
+//pos[i] 'i' in sorted and pos[i] in unsorted
+// Compares two suffixes according to their first characters
+bool smaller_first_char(int a, int b)
+{
+    return str[a] < str[b];
+}
+
+void suffixSort(int n,int rank[],int pos[])
+{
+    //sort suffixes according to their first characters
+    for (int i=0; i<n; ++i)
+    {
+        pos[i] = i;
+    }
+    sort(pos, pos + n, smaller_first_char);
+    //{pos contains the list of suffixes sorted by their first character}
+
+    for (int i=0; i<n; ++i)
+    {
+        bh[i] = i == 0 || str[pos[i]] != str[pos[i-1]];
+        b2h[i] = false;
+    }
+
+    for (int h = 1; h < n; h <<= 1)
+    {
+        //{bh[i] == false if the first h characters of pos[i-1] == the first h characters of pos[i]}
+        int buckets = 0;
+        for (int i=0, j; i < n; i = j)
+        {
+            j = i + 1;
+            while (j < n && !bh[j]) j++;
+            nxt[i] = j;
+            buckets++;
+        }
+        if (buckets == n) break; // We are done! Lucky bastards!
+        //{suffixes are separted in buckets containing strings starting with the same h characters}
+
+        for (int i = 0; i < n; i = nxt[i])
+        {
+            cnt[i] = 0;
+            for (int j = i; j < nxt[i]; ++j)
+            {
+                rank[pos[j]] = i;
+            }
+        }
+
+        cnt[rank[n - h]]++;
+        b2h[rank[n - h]] = true;
+        for (int i = 0; i < n; i = nxt[i])
+        {
+            for (int j = i; j < nxt[i]; ++j)
+            {
+                int s = pos[j] - h;
+                if (s >= 0)
+                {
+                    int head = rank[s];
+                    rank[s] = head + cnt[head]++;
+                    b2h[rank[s]] = true;
+                }
+            }
+            for (int j = i; j < nxt[i]; ++j)
+            {
+                int s = pos[j] - h;
+                if (s >= 0 && b2h[rank[s]])
+                {
+                    for (int k = rank[s]+1; !bh[k] && b2h[k]; k++) b2h[k] = false;
+                }
+            }
+        }
+        for (int i=0; i<n; ++i)
+        {
+            pos[rank[i]] = i;
+            bh[i] |= b2h[i];
+        }
+    }
+    for (int i=0; i<n; ++i)
+    {
+        rank[pos[i]] = i;
+    }
+//  for(int i=0;i<n;i++)
+//    printf("%d ",rank[i]);
+//printf("\n");
+//  for(int i=0;i<n;i++)
+//    printf("%d ",pos[i]);
+//printf("\n");
+
+
+}
+
+int height1[N];
+// height[i] = length of the longest common prefix of suffix pos[i] and suffix pos[i-1]
+// height[0] = 0
+void getHeight(int n,int height[],int rank[],int pos[])
+{
+    for (int i=0; i<n; ++i) rank[pos[i]] = i;
+    height[n-1] = 0;
+    for (int i=0, h=0; i<n; ++i)
+    {
+        if (rank[i] < n-1)
+        {
+            int j = pos[rank[i]+1];
+            while (i + h < n && j + h < n && str[i+h] == str[j+h]) h++;
+            height[rank[i]] = h;
+            if (h > 0) h--;
+        }
+    }
+//  for(int i=0;i<n;i++)
+//    printf("%d ",height[i]);
+//printf("\n");
+}
+struct node
+{
+    int l,r,ind;
+};
+node q[100011];
+ll ans[N];
+ll answer;
+int n;
+set<int>mo;
+int rmq[20][110011],logtable[100021];
+bool cmp(node a,node b)
+{
+    if(a.l/500!=b.l/500)
+        return a.l/500<b.l/500;
+    return a.r<b.r;
+}
+int func(int x,int y)
+{
+    if(y<x)
+        swap(x,y);
+    assert(y>=0&&x>=0&&y-x+1>0);
+    int l=logtable[y-x+1];
+    return min(rmq[l][x],rmq[l][y-(1<<l)+1]);
+}
+void ladd(int i)
+{
+    assert(i>=0&&i<n);
+    i=rank1[i];
+    set<int>::iterator it=mo.lower_bound(i);
+    int prev=-1,nxt=-1;
+    if(it!=mo.end())
+        nxt=*it;
+    if(it!=mo.begin())
+    {
+        it--;
+        prev=*it;
+    }
+    if(prev!=-1&&nxt!=-1)
+        answer-=(ll)(func(prev,nxt-1));
+    if(prev!=-1)
+        answer+=(ll)(func(prev,i-1));
+    if(nxt!=-1)
+        answer+=(ll)(func(i,nxt-1));
+    mo.insert(i);
+//    printf("%d %d %lld\n",i,pos1[i],answer);
+//    it=mo.begin();
+//    while(it!=mo.end()){
+//        cout<<*it<<" ";
+//        it++;}
+//    cout<<endl;
+}
+void lremove(int i)
+{
+    assert(i>=0&&i<n);
+    i=rank1[i];
+    set<int>::iterator it=mo.lower_bound(i);
+    int prev=-1,nxt=-1;
+    set<int>::iterator cur=it;
+    cur++;
+    if(cur!=mo.end())
+        nxt=*cur;
+    if(it!=mo.begin())
+    {
+        it--;
+        prev=*it;
+    }
+    if(prev!=-1&&nxt!=-1)
+        answer+=(ll)(func(prev,nxt-1));
+    if(prev!=-1)
+        answer-=(ll)(func(prev,i-1));
+    if(nxt!=-1)
+        answer-=(ll)(func(i,nxt-1));
+    assert(mo.find(i)!=mo.end());
+    mo.erase(i);
+}
+ll cal(ll a,ll b)
+{
+    return (((b*(b+1))/2)-((a*(a-1))/2));
+}
+int main()
+{
+//    freopen("input.txt","r",stdin);
+//    freopen("output.txt","w",stdout);
+    int t;
+    logtable[1]=0;
+    for(int i=2;i<=100011;i++)
+        logtable[i]=logtable[i/2]+1;
+    scanf("%d",&t);
+    while(t--)
+    {
+        string s;
+        cin>>s;
+        n=s.size();
+        for(int i=0;i<=n+10;i++)
+            height1[i]=pos1[i]=rank1[i]=cnt[i]=nxt[i]=0;
+        for(int i=0;i<=15;i++)
+            for(int j=0;j<=n+10;j++)
+                rmq[i][j]=0;
+        for(int i=0; i<n; i++)
+            str[i]=s[i];
+        suffixSort(n,rank1,pos1);
+        getHeight(n,height1,rank1,pos1);
+        int m,i;
+        mo.clear();
+        scanf("%d",&m);
+        for(i=0; i<m; i++)
+        {
+            scanf("%d %d",&q[i].l,&q[i].r);
+            q[i].l--;
+            q[i].r--;
+            q[i].ind=i;
+        }
+        answer=0LL;
+        for(i=0;(1<<i)<=n;i++)
+        {
+            for(int j=0;j+(1<<i)<=n;j++)
+            {
+                if(i==0)
+                    rmq[i][j]=height1[j];
+                else
+                    rmq[i][j]=min(rmq[i-1][j],rmq[i-1][j+(1<<(i-1))]);
+            }
+        }
+        sort(q,q+m,cmp);
+        for(i=q[0].l; i<=q[0].r; i++)
+            ladd(i);
+        i=0;
+        //printf("%lld %d %d\n",answer,q[i].l,q[i].r);
+        ans[q[i].ind]=((ll)n*(ll)(q[i].r-q[i].l+1))-(cal((ll)q[i].l,(ll)q[i].r))-answer;
+        int cl=q[0].l,cr=q[0].r;
+        for(i=1; i<m; i++)
+        {
+            //printf("%lld %d %d\n",answer,q[i].l,q[i].r);
+
+            while(cr<q[i].r)ladd(cr+1),cr++;
+            while(cl>q[i].l)ladd(cl-1),cl--;
+            while(cl<q[i].l)lremove(cl),cl++;
+            while(cr>q[i].r)lremove(cr),cr--;
+
+
+
+            ans[q[i].ind]=((ll)n*(ll)(q[i].r-q[i].l+1))-(cal((ll)q[i].l,(ll)q[i].r))-answer;
+        }
+        for(i=0; i<m; i++)
+            printf("%lld\n",ans[i]);
+    }
+    return 0;
+}

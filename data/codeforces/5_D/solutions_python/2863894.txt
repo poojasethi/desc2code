@@ -1,0 +1,74 @@
+from math import sqrt
+
+def float_cmp(x, y = 0, tol = 1e-9):
+    return (-1 if x + tol < y else 0) if x <= y + tol else 1
+
+def velocity_at_d(k):
+    det = 2*a * (2*k - d)
+    return sqrt(det)    if det >= 0 else    0
+
+def velocity_at_d_vm(k):
+    det = v**2 - 2*a*(d-k)
+    return sqrt(det)    if det >= 0 else    0
+
+def binary_search(low, high, f, y):
+    while float_cmp(low, high) != 0:
+        x = (low + high) / 2
+        fx = f(x)
+
+        # print "(%.2f - %.2f) : f(%.2f) = %.2f vs. %2f" % (low, high, x, fx, y)
+        
+        if float_cmp(fx, y) < 0:
+            low = x
+        elif float_cmp(fx, y) > 0:
+            high = x
+        else:
+            return x
+        
+    return x
+
+
+a, v = map(float, raw_input().split())
+l, d, w = map(float, raw_input().split())
+
+td = sqrt(2 * d/a)  # time to get to sign
+vd = a * td         # speed at sign
+
+if float_cmp(min(v, vd), w) <= 0:
+    # car's limit speed is le. than sign speed
+    # or speed at sign is le. than sign speed
+
+    if float_cmp(v, sqrt(2*a*l)) >= 0:
+        # limit speed is greater than achievable speed
+        time = sqrt(2 * l/a)
+    else:
+        time = v/a    # time to get to limit speed
+        distance = a/2 * time**2
+        time += (l - distance) / v
+
+else:
+    k = binary_search(0, d, velocity_at_d, w)
+    vk = sqrt(2*a*k)
+
+    if float_cmp(vk, v) <= 0:
+        # we can reach the peak
+        time = sqrt(2 * k/a) + (vk - w) / a
+    else:
+        # get as close as the peak as we can
+        time = v/a    # time to get to limit speed
+        distance = a/2 * time**2
+
+        k = binary_search(distance, d, velocity_at_d_vm, w)
+        time += (k - distance) / v + (v - w) / a
+
+    t = (v - w) / a    # time to get to limit speed
+    distance = a/2 * t**2 + w * t
+
+    if float_cmp(d + distance, l) <= 0:
+        # we reach top velocity before arriving
+        time += t + (l - d - distance) / v
+    else:
+        # we reach top velocity after arriving
+        time += (-w + sqrt(w**2 - 2*a*(d-l)))/a
+
+print time

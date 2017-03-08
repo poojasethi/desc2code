@@ -1,0 +1,97 @@
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#define rint register int
+#define ll long long
+#define ld long double
+#define For(i, a, b) for (int i = a, __end = b; i <= __end; ++i)
+#define Ford(i, a, b) for (int i = a, __end = b; i >= __end; --i)
+using namespace std;
+
+const int MaxN = 22, inf = 1 << 30;
+int Map[MaxN][MaxN], N, val[2][MaxN][MaxN], ans, pre[MaxN];
+
+void augment(int u, int pl[], int pr[]) {
+    while (u) {
+        int v = pl[pre[u]];
+        pr[u] = pre[u];
+        pl[pre[u]] = u;
+        u = v;
+    }
+}
+
+void KM(int ind, int labl[], int labr[], int pl[], int pr[]) {
+    static int Q[MaxN], slack[MaxN];
+    static bool vis[MaxN];
+    memset(slack, 63, sizeof(slack));
+    memset(vis, 0, sizeof(vis));
+    int l = 0, r = 0;
+    Q[++r] = ind;
+    vis[ind] = 1;
+    while (1) {
+        while (l != r) {
+            int u = Q[++l];
+            For(v, 1, N)
+                if (!vis[pr[v]]) {
+                    if (labl[u] + labr[v] == Map[u][v]) {
+                        pre[v] = u;
+                        if (!pr[v]) return augment(v, pl, pr);
+                        vis[pr[v]] = 1;
+                        Q[++r] = pr[v];
+                    } else if (slack[v] > labl[u] + labr[v] - Map[u][v]) {
+                        slack[v] = labl[u] + labr[v] - Map[u][v];
+                        pre[v] = u;
+                    }
+                }
+        }
+        int delta = inf;
+        For(i, 1, N)
+            if (!vis[pr[i]]) delta = min(delta, slack[i]);
+        For(i, 1, N) {
+            if (vis[i]) labl[i] -= delta;
+            if (vis[pr[i]]) labr[i] += delta;
+            else slack[i] -= delta;
+        }
+        For(i, 1, N)
+            if (!vis[pr[i]] && !slack[i]) {
+                if (!pr[i]) return augment(i, pl, pr);
+                Q[++r] = pr[i];
+                vis[pr[i]] = 1;
+            }
+    }
+}
+
+void Dfs(int ind, int arr[4][MaxN], int cnt) {
+    if (ind == N + 1) {
+        int tmp = 0;
+        For(i, 1, N) tmp += arr[0][i] + arr[1][i];
+        ans = max(ans, tmp);
+        return;
+    }
+    for (int k = 0; k != 2; k++) {
+        if ((cnt + k > N / 2) || (cnt + k + (N - ind) < N / 2)) continue;
+        int narr[4][MaxN];
+        memcpy(narr, arr, sizeof(narr));
+        For(i, 1, N) {
+            Map[ind][i] = val[k][i][ind];
+            narr[0][ind] = max(narr[0][ind], Map[ind][i]);
+        }
+        KM(ind, narr[0], narr[1], narr[2], narr[3]);
+        Dfs(ind + 1, narr, cnt + k);
+    }
+}
+
+int main()
+{
+    scanf("%d", &N);
+    For(k, 0, 1)
+        For(i, 1, N)
+            For(j, 1, N) scanf("%d", &val[k][i][j]);
+    int arr[4][MaxN] = {};
+    Dfs(1, arr, 0);
+    cout << ans << endl;
+    return 0;
+}

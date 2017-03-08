@@ -1,0 +1,408 @@
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <cassert>
+
+#define REP(i, n) for (int i = 0; i < n; ++i)
+
+#define PB push_back
+#define MP make_pair
+
+using namespace std;
+
+const int maxn = 99666,
+          maxint = 0x7f7f7f7f;
+
+unsigned inline int bgcd(unsigned int u, unsigned int v)
+{
+  int shift;
+
+  /* GCD(0,v) == v; GCD(u,0) == u, GCD(0,0) == 0 */
+  if (u == 0) return v;
+  if (v == 0) return u;
+
+  /* Let shift := lg K, where K is the greatest power of 2
+        dividing both u and v. */
+  for (shift = 0; ((u | v) & 1) == 0; ++shift) {
+         u >>= 1;
+         v >>= 1;
+  }
+
+  while ((u & 1) == 0)
+    u >>= 1;
+
+  /* From here on, u is always odd. */
+  do {
+       /* remove all factors of 2 in v -- they are not common */
+       /*   note: v is not zero, so while will terminate */
+       while ((v & 1) == 0)  /* Loop X */
+           v >>= 1;
+
+       /* Now u and v are both odd. Swap if necessary so u <= v,
+          then set v = v - u (which is even). For bignums, the
+          swapping is just pointer movement, and the subtraction
+          can be done in-place. */
+       if (u > v) {
+         unsigned int t = v; v = u; u = t;}  // Swap u and v.
+       v = v - u;                       // Here v >= u.
+     } while (v != 0);
+
+  /* restore common factors of 2 */
+  return u << shift;
+}
+
+inline int gcd(int x, int y)
+{
+    if (x<0) x = -x;
+    if (y<0) y = -y;
+    return bgcd(x, y);
+}
+
+struct SegTree
+{
+    int val[maxn*8], g[maxn*8];
+    void build(int l, int r, int p)
+    {
+        if (l == r)
+            g[p] = val[l];
+        else
+        {
+            int mid = (l + r) >> 1;
+            build(l, mid, p*2);
+            build(mid+1, r, p*2+1);
+            push_up(p);
+        }
+    }
+
+    inline void push_up(int p)
+    {
+        g[p] = gcd(g[p*2], g[p*2+1]);
+    }
+
+    void modify(int left, int right, int x, int p, int v)
+    {
+        assert(x >= left && x <= right);
+
+        if (left == right)
+        {
+            g[p] += v;
+            return;
+        }
+
+        int mid = (left + right) >> 1;
+        if (x <= mid) modify(left, mid, x, p*2, v);
+        else modify(mid+1, right, x, p*2+1, v);
+        push_up(p);
+    }
+
+    int getGCD(int left, int right, int l, int r, int p)
+    {
+        if (r < l) return 0;
+        if (l <= left && r >= right)
+            return g[p];
+        int mid = (left + right) >> 1, ret = 0;
+        if (l <= mid) ret = getGCD(left, mid, l, r, p*2);
+        if (1 == ret) return 1;
+        if (r > mid) ret = gcd(getGCD(mid+1, right, l, r, p*2+1), ret);
+        return ret;
+    }
+};
+
+struct SegTree2
+{
+    int val[maxn*8], delta[maxn*8];
+    void build(int l, int r, int p)
+    {
+        if (l == r)
+            delta[p] = val[l];
+        else
+        {
+            delta[p] = 0;
+            int mid = (l + r) >> 1;
+            build(l, mid, p*2);
+            build(mid+1, r, p*2+1);
+        }
+    }
+
+    inline void down(int p)
+    {
+        if (!delta[p]) return;
+        delta[p*2] += delta[p];
+        delta[p*2+1] += delta[p];
+        delta[p] = 0;
+    }
+
+    void modify(int left, int right, int l, int r, int p, int v)
+    {
+        assert(l <= r);
+        if (l <= left && r >= right)
+        {
+            delta[p] += v;
+            return;
+        }
+    //    down(p);
+        int mid = (left + right) >> 1;
+        if (l <= mid) modify(left, mid, l, r, p*2, v);
+        if (r > mid) modify(mid+1, right, l, r, p*2+1, v);
+    }
+
+    int get(int left, int right, int x, int p)
+    {
+        assert(x >= left && x <= right);
+        if (left == right)
+            return delta[p];
+
+     //   down(p);
+        int mid = (left + right) >> 1;
+        if (x <= mid) return get(left, mid, x, p*2)+delta[p];
+        return get(mid+1, right, x, p*2+1)+delta[p];
+    }
+};
+
+int n;
+
+struct HeavyLightTree
+{
+    int roots, total;
+    vector<int> e[maxn];
+    int father[maxn], sz[maxn], stand[maxn], child[maxn], num[maxn],
+        pre[maxn], depth[maxn], pos[maxn], cost[maxn];
+    SegTree st;
+    SegTree2 val;
+
+    void init()
+    {
+        for (int i = 0;i < n;++i) e[i].clear();
+    }
+
+    void buildTree(int u, int fa)
+    {
+        father[u] = fa;
+        sz[u] = 1;
+        child[u] = -1;
+        int nowmax = 0;
+        vector<int> &v = e[u];
+        for (int i = 0; i < v.size(); ++i)
+            if (v[i] != fa)
+            {
+                buildTree(v[i], u);
+                if (sz[v[i]] > nowmax)
+                {
+                    nowmax = sz[v[i]];
+                    child[u] = v[i];
+                }
+                sz[u] += sz[v[i]];
+            }
+        /*
+        child[u] = -1;
+        for (int i = 0; i < v.size(); ++i)
+            if (v[i] != fa && sz[v[i]]*2>=sz[u])
+                child[u] = v[i];
+        */
+    }
+
+    void go(int u, int fa, int last, int dep, int value = 0)
+    {
+        if (last == -1)
+            last = u;
+        pre[u] = last;
+
+        if (last == -1)
+            st.val[total] = 0;
+        else st.val[total] = num[u] - num[fa];
+        val.val[total] = num[u];
+
+        stand[total] = u;
+        pos[u] = total++;
+        depth[u] = dep;
+        if (child[u] != -1)
+            go(child[u], u, last, dep, cost[child[u]]);
+
+        vector<int> &v = e[u];
+        for (int i = 0; i < v.size(); ++i)
+            if (v[i] != fa && v[i] != child[u])
+                go(v[i], u, -1, dep+1);
+    }
+
+    void buildHeavyLightTree()
+    {
+        total = 0;
+        buildTree(0,-1);
+        go(0,-1,-1,0);
+        assert(total == n);
+        st.build(0,n-1,1);
+        val.build(0,n-1,1);
+    }
+
+    int getLCA(int u, int v)
+    {
+        if (depth[u] > depth[v])
+            swap(u, v);
+        int ret = 0, count = 0;
+        while (depth[v] > depth[u])
+        {
+            v = father[pre[v]];
+            assert(++count<100);
+        }
+        while (pre[u] != pre[v])
+        {
+            v = father[pre[v]];
+            u = father[pre[u]];
+            assert(++count<100);
+        }
+        return stand[min(pos[u], pos[v])];
+    }
+
+    int getSeg(int lca, int u)
+    {
+        int ret = 0, count = 0;
+        while (depth[u] > depth[lca])
+        {
+            ret = gcd(ret, st.getGCD(0, n-1, pos[pre[u]]+1, pos[u], 1));
+            ret = gcd(ret, val.get(0, n-1, pos[pre[u]], 1));
+            if (1 == ret) return 1;
+            u = father[pre[u]];
+            assert(++count<100);
+        }
+
+        ret = gcd(ret, st.getGCD(0, n-1, pos[lca]+1, pos[u], 1));
+        ret = gcd(ret, val.get(0, n-1, pos[lca], 1));
+
+        return ret;
+    }
+
+    void addSeg(int lca, int u, int d, bool addroot = false)
+    {
+        int count = 0;
+        while (depth[u] > depth[lca])
+        {
+            if (child[u] != -1)
+                st.modify(0, n-1, pos[child[u]], 1, -d);
+
+            val.modify(0, n-1, pos[pre[u]], pos[u], 1, d);
+            u = father[pre[u]];
+            assert(++count<100);
+        }
+
+        if (addroot)
+        {
+            if (u == lca) return;
+            lca = child[lca];
+        }
+
+        if (child[u] != -1)
+            st.modify(0, n-1, pos[child[u]], 1, -d);
+
+        if (lca != pre[lca])
+            st.modify(0, n-1, pos[lca], 1, d);
+
+        val.modify(0, n-1, pos[lca], pos[u], 1, d);
+    }
+
+    int getGCD(int u, int v)
+    {
+       // cout << "getGCD(" << u << "," << v << ")\n";
+        int lca = getLCA(u, v);
+        int x = getSeg(lca, u);
+        if (1 == x) return 1;
+        return gcd(x, getSeg(lca, v));
+    }
+
+    void setVal(int u, int v, int d)
+    {
+        int lca = getLCA(u, v);
+        if (lca == u)
+        {
+            addSeg(u, v, d);
+            return;
+        }
+        if (lca == v)
+        {
+            addSeg(v, u, d);
+            return;
+        }
+        addSeg(lca, u, d);
+        addSeg(lca, v, d, true);
+    }
+
+} ht;
+
+char cmd[20];
+
+inline int next_int() {
+    int c; c = getchar();
+    while (c < '0' || c > '9') c = getchar();
+    int n = 0;
+    while (c >= '0' && c <= '9') n *= 10, n += c - '0', c = getchar();
+    return n;
+}
+
+int main()
+{
+    /*
+    int T;
+    cin >> T;
+    while (T--)
+    {
+        scanf("%d",&n);
+        ht.init();
+        Edge.resize(n-1);
+        int a,b,c;
+        for (int i = 0; i < n-1; ++i)
+        {
+            scanf("%d%d%d",&a,&b,&c);
+            --a, --b;
+            ht.e[a].PB(MP(b,c));
+            ht.e[b].PB(MP(a,c));
+            Edge[i] = MP(a,b);
+        }
+        ht.buildHeavyLightTree();
+        while (scanf("%s",cmd) != EOF)
+        {
+            if (cmd[0] == 'D') break;
+            scanf("%d%d", &a, &b);
+            if (cmd[0] == 'Q')
+                printf("%d\n",ht.getMax(a-1,b-1));
+            if (cmd[0] == 'C')
+                ht.modify(Edge[a-1].first, Edge[a-1].second, b);
+        }
+    }
+    */
+   // ios::sync_with_stdio(false);
+   // cin >> n;
+    n = next_int();
+    ht.init();
+    int a, b, c;
+    char s[20];
+    REP(i, n-1)
+    {
+        a = next_int();
+        b = next_int();
+        ht.e[b].PB(a);
+        ht.e[a].PB(b);
+    }
+    REP(i, n) scanf("%d", &ht.num[i]);
+    ht.buildHeavyLightTree();
+    int q = next_int();
+   // if (n > 45000 && q > 45000) return 0;
+    while (q--)
+    {
+        scanf("%s", s);
+        if (s[0] == 'F')
+        {
+            a = next_int();
+            b = next_int();
+            cout << abs(ht.getGCD(a, b)) << endl;
+        }
+        else
+        {
+            a = next_int();
+            b = next_int();
+            c = next_int();
+            ht.setVal(a, b, c);
+        }
+    }
+	return 0;
+}

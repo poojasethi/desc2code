@@ -1,0 +1,8 @@
+from sys import stdin,stdout
+t = int(stdin.readline())
+for _ in xrange(t):
+	n = int(stdin.readline())
+	if n < 10:
+		stdout.write("What an obedient servant you are!\n")
+	else:
+		stdout.write("-1\n")

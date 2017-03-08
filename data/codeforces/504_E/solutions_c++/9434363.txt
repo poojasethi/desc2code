@@ -1,0 +1,154 @@
+#include<cstdio>
+#include<iostream>
+#include<algorithm>
+#include<cstring>
+#include<bitset>
+#include<vector>
+using namespace std;
+const int maxn=303333;
+long long hash[maxn]={0};
+long long exhash[maxn]={0};
+long long val[maxn]={0};
+const long long mod=1000000007;
+char s[maxn];
+int ind[maxn]={0};
+int nex[maxn<<1]={0};
+int point[maxn<<1]={0};
+int f[maxn]={0};
+int top[maxn]={0};
+int deep[maxn]={0};
+int size[maxn]={0};
+int son[maxn]={0};
+int zh[maxn]={0};
+int n,m,th,inde;
+typedef vector<pair<int,int> > master;
+void addedge(int x,int y){
+th++;
+point[th]=y;
+nex[th]=ind[x];
+ind[x]=th;
+}
+void DFS1(int x,int fa){
+	size[x]=1;
+	int mm=0;
+	for(int i=ind[x];i;i=nex[i]){
+		int y=point[i];
+		if(y==fa)continue;
+		DFS1(y,x);
+		size[x]+=size[y];
+		if(size[y]>mm)mm=size[y],son[x]=y;
+	}
+}
+void DFS2(int x,int fa,int to,int de){
+	zh[x]=++inde;
+	exhash[zh[x]]=hash[zh[x]]=s[x]-'a';
+	f[zh[x]]=zh[fa];
+	deep[zh[x]]=de;
+	top[zh[x]]=to;
+	if(son[x])DFS2(son[x],x,to,de+1);
+	for(int i=ind[x];i;i=nex[i]){
+		int y=point[i];
+		if(y==fa||y==son[x])continue;
+		DFS2(y,x,inde+1,de+1);
+	}
+}
+void input(){
+	val[0]=1;
+	for(int i=1;i<maxn;i++)
+		val[i]=val[i-1]*1145143%mod;
+	scanf("%d",&n);
+	scanf("%s",s+1);
+	int x,y;
+	for(int i=1;i<n;i++){
+		scanf("%d%d",&x,&y);
+		addedge(x,y);
+		addedge(y,x);
+	}
+	DFS1(1,0);
+	DFS2(1,1,1,1);
+	for(int i=n;i>=1;i--)hash[i]=(hash[i+1]*1145143+hash[i])%mod;
+	for(int i=1;i<=n;i++)exhash[i]=(exhash[i-1]*1145143+exhash[i])%mod;
+	scanf("%d",&m);
+}
+void find(int x,int y,master &q){
+	master _;
+	int xx=top[x],yy=top[y];
+	while(1){
+	if(xx==yy){
+	q.push_back(make_pair(x,y));
+	break;
+	}
+	if(deep[xx]>deep[yy]){
+	q.push_back(make_pair(x,xx));
+	xx=top[x=f[xx]];
+	}
+	else {
+	_.push_back(make_pair(yy,y));
+	yy=top[y=f[yy]];
+	}
+	}
+	if(_.size())for(int i=_.size()-1;i>=0;i--)q.push_back(_[i]);
+	//for(int i=0;i<q.size();i++)printf("%d %d\n",q[i].first,q[i].second);
+}
+unsigned long long gethash(int l,int r){
+	if(l<=r)return ((hash[l]-hash[r+1]*val[r-l+1])%mod+mod)%mod;
+	return ((exhash[l]-exhash[r-1]*val[l-r+1])%mod+mod)%mod;
+}
+int sign(int k){
+	if(k<0)return -1;
+	return 1;
+}
+int lcp(int x,int xx,int y,int yy,int len){
+	if(gethash(x,x)!=gethash(y,y))return 0;
+int l=1,r=len,mid;
+while(l!=r){
+	mid=l+r>>1;
+	if(gethash(x,x+mid*xx-xx)!=gethash(y,y+mid*yy-yy))r=mid;
+	else {
+		if(l+1==r){
+			if(gethash(x,x+r*xx-xx)==gethash(y,y+r*yy-yy))l=r;
+			else r=l;
+		}
+		else l=mid;
+	}
+
+}
+
+return l;
+}
+int main(){
+	
+	input();
+	//for(int i=1;i<=n;i++)printf("%d\n",zh[i]);
+	//cout<<exhash[2]<<endl;
+
+	//printf("%llu %llu\n",gethash(2,1),gethash(2,3));
+	int a,b,c,d;
+	while(m--){
+	scanf("%d%d%d%d",&a,&b,&c,&d);
+	a=zh[a],b=zh[b],c=zh[c],d=zh[d];
+	master p;
+	master q;
+	find(a,b,p);
+	find(c,d,q);
+	//cout<<11111<<endl;
+	int i=0,j=0,ans=0;
+	while(i<p.size()&&j<q.size()){
+	int mm=min(abs(p[i].second-p[i].first),abs(q[j].second-q[j].first))+1;
+	int k1=sign(p[i].second-p[i].first);
+	int k2=sign(q[j].second-q[j].first);
+	int k=lcp(p[i].first,k1,q[j].first,k2,mm);
+	ans+=k;
+	if(k!=mm)break;
+	if(abs(p[i].second-p[i].first)+1==k)i++;
+	else p[i].first+=k1*k;
+	if(abs(q[j].second-q[j].first)+1==k)j++;
+	else q[j].first+=k2*k;
+	}
+
+	printf("%d\n",ans);
+	}
+
+
+	return 0;
+}

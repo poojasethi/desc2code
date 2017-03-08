@@ -1,0 +1,149 @@
+#include<bits/stdc++.h>
+using namespace std;
+ 
+#define LL long long int
+#define ULL unsigned LL
+#define PII pair<int,int>
+#define PB push_back
+#define MP make_pair
+#define INF 1000000000
+#define MOD 1000000007
+#define MAXN 100005
+#define LOGMAXN 21
+vector<int> v[MAXN];
+int T[MAXN];
+int L[MAXN];
+int P[MAXN][LOGMAXN];
+int N;
+
+void dfs(int cnode, int par = -1, int lev = 0) {
+    L[cnode] = lev;
+    T[cnode] = par;
+    int i;
+    for (i = 0; i < (int)v[cnode].size(); i++) {
+        if (v[cnode][i] == par)
+            continue;
+        dfs(v[cnode][i], cnode, lev + 1);
+    }
+}
+void process3() {
+    int i, j;
+    for (i = 0; i < N; i++)
+        for (j = 0; 1 << j < N; j++)
+            P[i][j] = -1;
+    for (i = 0; i < N; i++)
+        P[i][0] = T[i];
+    for (j = 1; 1 << j < N; j++)
+        for (i = 0; i < N; i++)
+            if (P[i][j - 1] != -1)
+                P[i][j] = P[P[i][j - 1]][j - 1];
+}
+
+int query(int p, int q) {
+    int tmp, log, i;
+    if (L[p] < L[q])
+        tmp = p, p = q, q = tmp;
+    for (log = 1; 1 << log <= L[p]; log++);
+    log--;
+    for (i = log; i >= 0; i--)
+        if (L[p] - (1 << i) >= L[q])
+            p = P[p][i];
+    if (p == q)
+        return p;
+    for (i = log; i >= 0; i--)
+        if (P[p][i] != -1 && P[p][i] != P[q][i])
+            p = P[p][i], q = P[q][i];
+
+    return T[p];
+}
+LL vals[100003];
+vector<int> tvals[100003];
+int dfs2(int cnode, int par = -1) {
+    int i;
+    for (i = 0; i < (int)v[cnode].size(); i++) {
+        if (v[cnode][i] == par) {
+            tvals[cnode].PB(0);
+            continue;
+        }
+        int ret = dfs2(v[cnode][i], cnode);
+        tvals[cnode].PB(ret);
+        vals[cnode] += ret;
+    }
+    return vals[cnode];
+}
+void dfs3(int cnode, int par = -1, LL clen = 0) {
+    int i;
+    vals[cnode] = clen;
+    for (i = 0; i < (int)v[cnode].size(); i++) {
+        if (v[cnode][i] == par) continue;
+        dfs3(v[cnode][i], cnode, clen + tvals[cnode][i]);
+    }
+}
+int main() {
+    int i, m1, m2, n;
+    int A, B, C, D, E, F;
+    scanf("%d %d %d", &n, &m1, &m2);
+    for (i = 1; i < n; i++) {
+        scanf("%d %d", &A, &B);
+        A --;
+        B --;
+        v[A].PB(B);
+        v[B].PB(A);
+    }
+    dfs(0);
+    N = n;
+    process3();
+    PII lst[3];
+    while (m1--) {
+        scanf("%d %d %d %d", &A, &B, &C, &D);
+        A --;
+        B --;
+        C --;
+        D --;
+        if (L[A] < L[B])
+            swap(A, B);
+        if (L[C] < L[D])
+            swap(C, D);
+        vals[A] ++;
+        vals[B] ++;
+        int lca_ab = query(A, B);
+        vals[lca_ab] -= 2;
+        int lca_ca = query(C, A);
+        int lca_cb = query(C, B);
+        int lca_da = query(D, A);
+        int lca_db = query(D, B);
+        int lca_cd = query(C, D);
+        if (query(lca_cd, A) == A)
+            continue;
+        if (lca_ab != B && query(B, lca_cd) == B)
+            continue;
+        if (L[lca_ca] > L[lca_cb])
+            lst[0] = MP(L[lca_ca], lca_ca);
+        else
+            lst[0] = MP(L[lca_cb], lca_cb);
+        if (L[lca_da] > L[lca_db])
+            lst[1] = MP(L[lca_da], lca_da);
+        else
+            lst[1] = MP(L[lca_db], lca_db);
+        lst[2] = MP(L[lca_ab], lca_ab);
+        sort(lst, lst + 3);
+        if (lst[2].second == lca_ab)
+            continue;
+        A = lst[1].second;
+        B = lst[2].second;
+        vals[A] --;
+        vals[B] --;
+        lca_ab = query(A, B);
+        vals[lca_ab] += 2;
+    }
+    dfs2(0);
+    dfs3(0);
+    while (m2--) {
+        scanf("%d %d", &E, &F);
+        E --;
+        F --;
+        printf("%Ld\n", vals[E] + vals[F] - 2 * vals[query(E, F)]);
+    }
+    return 0;
+}
+

@@ -1,0 +1,122 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <iostream>
+#include <cmath>
+using namespace std;
+typedef long long ll;
+const double pi = acos(-1);
+int i,j,k,n,m,s,t,ans,size,num,N,nn;
+int begin[30005];
+int end[30005];
+struct comp
+{
+	double x,y;
+};
+comp operator + (comp a,comp b)
+{
+	return (comp){a.x+b.x,a.y+b.y};
+}
+comp operator - (comp a,comp b)
+{
+	return (comp){a.x-b.x,a.y-b.y};
+}
+comp operator * (comp a,comp b)
+{
+	return (comp){a.x*b.x-a.y*b.y,a.y*b.x+a.x*b.y};
+}
+comp A[400005];
+comp a[400005];
+comp b[400005];
+int sum[400005];
+int L[400005];
+int R[400005];
+int c[400005];
+void rever(comp *a,int s,int d,int len,int loc)
+{
+	if (len==1)
+	{
+		A[loc] = a[s];
+		return;
+	}
+	rever(a,s,d<<1,len>>1,loc);
+	rever(a,s+d,d<<1,len>>1,loc+(len>>1));
+}
+void FFT(comp *a,int n,int x)
+{
+	rever(a,0,1,n,0);
+	for (int m=2;m<=n;m<<=1)
+	{
+		comp w = (comp){cos(2*pi*x/m),sin(2*pi*x/m)};
+		for (int j=0;j<n;j+=m)
+		{
+			comp t = (comp){1,0};
+			for (int k=j;k<j+(m>>1);k++)
+			{
+				comp u = A[k];
+				comp v = t*A[k+(m>>1)];
+				A[k] = u+v;
+				A[k+(m>>1)] = u-v;
+				t = t*w;
+			}
+		}
+	}
+	for (int i=0;i<n;i++) a[i] = A[i];
+}
+int main()
+{
+	while (scanf("%d",&n)!=EOF)
+	{
+		N = 0;
+		for (int i=1;i<=n;i++) 
+		{
+		    scanf("%d",&c[i]);
+		    N = max(N,c[i]);
+		}
+		ll ans = 0;
+		N++;
+		nn = 1;
+		while (nn<=N+N) nn <<= 1;
+		size = sqrt((double)nn*log(nn)/log(2)*10);
+        size = 2000;
+		num = 0;
+		for (int i=1;i<=n;i+=size)
+		{
+			begin[++num] = i;
+			end[num] = min(n,i+size-1);
+		}
+		for (int i=0;i<nn;i++) L[i] = R[i] = 0;
+		for (int i=1;i<=n;i++) R[c[i]]++;
+		for (int i=1;i<=num;i++)
+		{
+			for (int j=begin[i];j<=end[i];j++) R[c[j]]--;
+			for (int j=0;j<nn;j++) 
+			{
+			    a[j] = (comp){L[j],0};
+			    b[j] = (comp){R[j],0};
+			}
+			FFT(a,nn,1);
+			FFT(b,nn,1);
+			for (int j=0;j<nn;j++) a[j] = a[j]*b[j];
+			FFT(a,nn,-1);
+			for (int j=begin[i];j<=end[i];j++) ans += (ll)(a[2*c[j]].x/nn+0.5);
+			for (int j=begin[i];j<=end[i]-1;j++)
+			for (int k=j+1;k<=end[i];k++)
+			{
+				if (2*c[k]>=c[j]) ans += R[2*c[k]-c[j]];
+				if (2*c[j]>=c[k]) ans += L[2*c[j]-c[k]];
+			}
+			for (int j=0;j<nn;j++) sum[j] = 0;
+			for (int j=begin[i];j<=end[i];j++) sum[c[j]]++;
+			for (int j=begin[i];j<=end[i];j++)
+			{
+				sum[c[j]]--;
+				for (int k=begin[i];k<=j-1;k++)
+				if (2*c[j]>=c[k]) ans += sum[2*c[j]-c[k]];
+			}
+			for (int j=begin[i];j<=end[i];j++) L[c[j]]++;
+		}
+		printf("%lld\n",ans);
+	}
+	return 0;
+}

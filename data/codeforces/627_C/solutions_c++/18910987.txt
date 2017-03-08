@@ -1,0 +1,58 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<cctype>
+#include<ctime>
+#include<cstdlib>
+#include<string>
+#include<queue>
+#include<cmath>
+#include<set>
+#include<map>
+#define Rep(x,a,b) for (int x=a;x<=b;x++)
+#define Drp(x,a,b) for (int x=a;x>=b;x--)
+#define Cross(x,a) for (int x=head[a];~x;x=next[x])
+#define ll long long
+#define oo (1<<29)
+using namespace std;
+inline int IN(){
+	int x=0,ch=getchar(),f=1;
+	while (!isdigit(ch)&&(ch!='-')&&(ch!=EOF)) ch=getchar();
+	if (ch=='-'){f=-1;ch=getchar();}
+	while (isdigit(ch)){x=(x<<1)+(x<<3)+ch-'0';ch=getchar();}
+	return x*f;
+}
+inline void Out(ll x){
+	if (x<0) putchar('-'),x=-x;
+	if (x>=10) Out(x/10),putchar(x%10+'0');
+		else putchar(x+'0');
+}
+const int M=200005;
+struct Stat{
+	int x,p;
+	bool operator <(const Stat&w)const{return x<w.x;}
+}a[M];
+int d,n,m,sml[M];
+int main(){
+	d=IN(),n=IN(),m=IN();
+	Rep(i,1,m) a[i].x=IN(),a[i].p=IN();
+	a[0].x=0;a[m+1].x=d;a[m+1].p=0;
+	sort(a+1,a+m+1);
+	sml[m]=m+1;
+	Drp(i,m-1,1){
+		int now=i+1;
+		while (a[now].p>a[i].p) now=sml[now];
+		sml[i]=now;
+	}
+	ll Ans=0,gas=n;
+	Rep(i,1,m+1){
+		gas-=a[i].x-a[i-1].x;
+		if (gas<0) return puts("-1"),0;
+		int Min=min(n,a[sml[i]].x-a[i].x);
+		if (gas<Min){
+			Ans+=1ll*(Min-gas)*a[i].p;
+			gas=Min;
+		}
+	}
+	printf("%I64d\n",Ans);
+}

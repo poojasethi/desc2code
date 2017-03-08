@@ -1,0 +1,289 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+#include <iostream>
+
+using namespace std;
+
+int N;
+int Q;
+int A[300010]={0};
+char ch[300010]="\0";
+int LogN=0;
+
+struct bian_
+{
+	int to;
+	int next;
+}bian[600010]={{0,0}};
+int First[300010]={0};
+int F[22][300010]={{0}};
+int Size[300010]={0};
+int wtop[300010]={0};
+int wson[300010]={0};
+int dfn[300010]={0};
+int dfsp=0;
+int In[300010]={0};
+const long long Mod=998244353;
+const int base=29;
+long long Hash1[300010]={0};
+long long Hash2[300010]={0};
+long long power[300010]={0};
+int depth[300010]={0};
+
+struct Stack_
+{
+	int l,r;
+	int fx;
+	Stack_()
+	{l=r=fx=0;}
+	Stack_(int l_,int r_,int fx_)
+	{l=l_,r=r_,fx=fx_;}
+}Stack1[300010],Stack2[300010],help[300010];
+int Sp1=0;
+int Sp2=0;
+int hp=0;
+
+void Add(int p,int q,int k)
+{
+	bian[k].to=q;
+	bian[k].next=First[p];
+	First[p]=k;
+	return;
+}
+
+void dfs(int cnt,int fa)
+{
+	depth[cnt]=depth[fa]+1;
+	F[0][cnt]=fa;
+	Size[cnt]=1;
+	for(int i=First[cnt];i!=0;i=bian[i].next)
+	{
+		int u=bian[i].to;
+		if(u==fa) continue;
+		dfs(u,cnt);
+		Size[cnt]+=Size[u];
+		if(Size[u]>Size[wson[cnt]])
+			wson[cnt]=u;
+	}
+	return;
+}
+
+void dfs2(int cnt,int fa)
+{
+	dfn[++dfsp]=cnt;
+	In[cnt]=dfsp;
+	if(wson[cnt]!=0)
+	{
+		wtop[wson[cnt]]=wtop[cnt];
+		dfs2(wson[cnt],cnt);
+	}
+	for(int i=First[cnt];i!=0;i=bian[i].next)
+	{
+		int u=bian[i].to;
+		if(u==fa || u==wson[cnt]) continue;
+		wtop[u]=u;
+		dfs2(u,cnt);
+	}
+	return;
+}
+
+void Pre()
+{
+	for(int i=1;i<=LogN;i++)
+		for(int j=1;j<=N;j++)
+			F[i][j]=F[i-1][F[i-1][j]];
+	power[0]=1;
+	for(int i=1;i<=N;i++)
+		power[i]=power[i-1]*base%Mod;
+	
+	for(int i=1;i<=N;i++)
+		Hash1[i]=(Hash1[i-1]*base+A[dfn[i]])%Mod;
+	for(int i=N;i>=1;i--)
+		Hash2[i]=(Hash2[i+1]*base+A[dfn[i]])%Mod;
+	return;
+}
+
+inline long long getHash1(int l,int r)
+{
+	long long ret=0;
+	if(l>r) swap(l,r);
+	ret=(Hash1[r]-Hash1[l-1]*power[r-l+1]%Mod+Mod)%Mod;
+	return ret;
+}
+
+inline long long getHash2(int l,int r)
+{
+	long long ret=0;
+	if(l>r) swap(l,r);
+	ret=(Hash2[l]-Hash2[r+1]*power[r-l+1]%Mod+Mod)%Mod;
+	return ret;
+}
+
+inline int Up(int p,int k)
+{
+	for(int i=LogN;i>=0;i--)
+		if(k>=(1<<i))
+			p=F[i][p],k-=1<<i;
+	return p;
+}
+
+int getLca(int p,int q)
+{
+	if(depth[p]>depth[q]) p=Up(p,depth[p]-depth[q]);
+	else q=Up(q,depth[q]-depth[p]);
+	for(int i=LogN;i>=0;i--)
+	{
+		if(F[i][p]!=F[i][q])
+			p=F[i][p],q=F[i][q];
+	}
+	if(p!=q)
+		p=F[0][p],q=F[0][q];
+	return p;
+}
+
+void Divide(int p,int q,struct Stack_ *Stack,int &Sp)
+{
+	Sp=0;
+	hp=0;
+	int Lca=getLca(p,q);
+	int cnt=p;
+	for(;depth[cnt]>=depth[Lca];)
+	{
+		int x=wtop[cnt];
+		if(depth[x]<depth[Lca])
+			x=Lca;
+		Stack[++Sp]=Stack_(In[cnt],In[x],-1);
+		cnt=F[0][x];
+	}
+	cnt=q;
+	for(;depth[cnt]>depth[Lca];)
+	{
+		int x=wtop[cnt];
+		if(depth[x]<=depth[Lca])
+			x=Up(cnt,depth[cnt]-depth[Lca]-1);
+		help[++hp]=Stack_(In[x],In[cnt],1);
+		cnt=F[0][x];
+	}
+	for(;hp>0;hp--)
+		Stack[++Sp]=help[hp];
+	return;
+}
+
+int getsame(int l1,int r1,int fx1,int l2,int r2,int fx2)
+{
+	long long H1,H2;
+	if(fx1==-1)
+		H1=getHash2(l1,r1);
+	else H1=getHash1(l1,r1);
+	if(fx2==-1)
+		H2=getHash2(l2,r2);
+	else H2=getHash1(l2,r2);
+	if(H1==H2) return (r1-l1)*fx1+1;
+	int ret=0;
+	for(int l=1,r=(r1-l1)*fx1;l<=r;)
+	{
+		int mid=(l+r)>>1;
+		if(fx1==-1)
+			H1=getHash2(l1,l1+mid*fx1-fx1);
+		else H1=getHash1(l1,l1+mid*fx1-fx1);
+		if(fx2==-1)
+			H2=getHash2(l2,l2+mid*fx2-fx2);
+		else H2=getHash1(l2,l2+mid*fx2-fx2);
+		if(H1==H2)
+		{
+			ret=mid;
+			l=mid+1;
+		}
+		else r=mid-1;
+	}
+	return ret;
+}
+
+inline void read(int &x)
+{
+	x=0;
+	char ch=getchar();
+	for(;ch<'0' || ch>'9';ch=getchar());
+	for(;ch>='0' && ch<='9';ch=getchar())
+		x=x*10+ch-'0';
+	return;
+}
+
+int main()
+{
+	cin>>N;
+	LogN=log(N)/log(2)+1;
+	scanf("%s",ch+1);
+	for(int i=1;i<=N;i++)
+		A[i]=ch[i]-'a';
+	for(int i=1;i<N;i++)
+	{
+		int p,q;
+		read(p),read(q);
+		Add(p,q,(i<<1)-1);
+		Add(q,p,i<<1);
+	}
+	dfs(1,0);
+	wtop[1]=1;
+	dfs2(1,0);
+	Pre();
+	cin>>Q;
+	for(;Q>0;Q--)
+	{
+		int p,q,u,v;
+		read(p),read(q),read(u),read(v);
+		int Lca1=getLca(p,q),Lca2=getLca(u,v);
+		if(depth[p]+depth[q]-depth[Lca1]*2>depth[u]+depth[v]-depth[Lca2]*2)
+			swap(p,u),swap(q,v),swap(Lca1,Lca2);
+		int Len=depth[p]+depth[q]-depth[Lca1]*2+1;
+		if(Len<=depth[u]-depth[Lca2]+1)
+			v=Up(u,Len-1);
+		else v=Up(v,depth[u]+depth[v]-depth[Lca2]*2+1-Len);
+		Divide(p,q,Stack1,Sp1);
+		Divide(u,v,Stack2,Sp2);
+		int cnt1=1,cnt2=1;
+		int p1=Stack1[cnt1].l,p2=Stack2[cnt2].l;
+		int Ans=0;
+		for(;;)
+		{
+			int L1=(Stack1[cnt1].r-p1)*Stack1[cnt1].fx+1,L2=(Stack2[cnt2].r-p2)*Stack2[cnt2].fx+1;
+			if(cnt1==Sp1 && cnt2==Sp2)
+			{
+				Ans+=getsame(p1,Stack1[cnt1].r,Stack1[cnt1].fx,p2,Stack2[cnt2].r,Stack2[cnt2].fx);
+				break;
+			}
+			else if(L1<L2)
+			{
+				int Add=getsame(p1,Stack1[cnt1].r,Stack1[cnt1].fx,p2,p2+Stack2[cnt2].fx*L1-Stack2[cnt2].fx,Stack2[cnt2].fx);
+				Ans+=Add;
+				if(Add==L1)
+				{
+					cnt1++;
+					p1=Stack1[cnt1].l;
+					p2+=L1*Stack2[cnt2].fx;
+				}
+				else break;
+			}
+			else
+			{
+				int Add=getsame(p1,p1+Stack1[cnt1].fx*L2-Stack1[cnt1].fx,Stack1[cnt1].fx,p2,Stack2[cnt2].r,Stack2[cnt2].fx);
+				Ans+=Add;
+				if(Add==L2)
+				{
+					cnt2++;
+					p2=Stack2[cnt2].l;
+					if(L1==L2)
+						cnt1++,p1=Stack1[cnt1].l;
+					else p1+=L2*Stack1[cnt1].fx;
+				}
+				else break;
+			}
+		}
+		printf("%d\n",Ans);
+	}
+	return 0;
+}
+                                                                                                                                                                                                                                                          

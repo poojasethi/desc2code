@@ -1,0 +1,126 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <cstring>
+#include <vector>
+#include <string>
+#include <algorithm>
+
+#define LL long long
+#define SF scanf
+#define PF printf
+#define MOD 25013
+#define BASE 26
+ 
+using namespace std;
+ 
+LL mod (LL num)
+{
+    return ((num%MOD + MOD)%MOD);
+}
+
+LL power(LL base, LL exp)
+{
+    LL res = 1;
+    while(exp>0)
+    {
+		if(exp%2 == 1)
+			res = (res*base)%MOD;
+		base = (base*base)%MOD;
+		exp /= 2;
+	}
+    return (res%MOD);
+}
+
+int * rolling_hash(char * str, int len, int size)
+{
+	int num = len - size + 1;
+    int * hash = (int *)calloc(num, sizeof(int));
+    LL temp_ll = 0;
+	for(int i=0; i<size; i++)
+	{
+		temp_ll = mod(temp_ll * BASE);
+		temp_ll = mod(temp_ll + str[i]);
+	}
+	hash[0] = temp_ll;
+	LL temp = power(BASE, size-1);
+    for(int i=size; i<len; i++)
+    {
+		temp_ll = mod(str[i-size] * temp);
+		temp_ll = mod(hash[i-size] - temp_ll);
+		temp_ll = mod(temp_ll * BASE);
+		temp_ll = mod(temp_ll + str[i]);
+		hash[i-size+1] = temp_ll;
+	}
+    return hash;
+}
+
+int common_substr (char * str1, int len1, char * str2, int len2, int size)
+{
+	int * hash1 = rolling_hash(str1, len1, size);
+	vector<int> vec[MOD];
+	int num1 = len1 - size + 1;
+	for(int i=0; i<num1; i++)
+	{
+		vec[hash1[i]].push_back(i);
+	}
+	free(hash1);
+	int * hash2 = rolling_hash(str2, len2, size);
+	int num2 = len2 - size + 1;
+	for(int i=0; i < num2; i++)
+	{
+		int hash = hash2[i];
+		int vec_size = vec[hash].size();
+		if(vec_size != 0)
+		{
+			for(int j=0; j<vec_size; j++)
+			{
+				int p = vec[hash][j];
+				int q = i;
+				int r;
+				for(r=0; r<size; r++, p++, q++)
+				{
+					if(str1[p] != str2[q])
+						break;
+				}
+				if(r == size)
+					return i;
+			}
+		}
+	}
+	free(hash2);
+	return -1;
+}
+int main()
+{
+    char str1[250001], str2[250001];
+    SF("%s%s", str1, str2);
+    
+    int len1 = strlen(str1), len2 = strlen(str2);
+	
+	int lo = 1, hi = len2 + 1, mid, index = -1, temp_index;
+    while(lo < hi)
+    {
+		mid = lo + (hi - lo)/2;
+		temp_index = common_substr(str1, len1, str2, len2, mid);
+		if(temp_index >= 0)
+		{
+			lo = mid + 1;
+			index = temp_index;
+		}
+		else
+		{
+			hi = mid;
+		}
+	}
+	lo--;
+	if(lo > 0 && index != -1)
+	{
+		for(int i = 0; i<lo; i++)
+			PF("%c", str2[i + index]);
+		PF("\n");
+	}
+	printf("%d\n", lo);
+	
+    return 0;
+}

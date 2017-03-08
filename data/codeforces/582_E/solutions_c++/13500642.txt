@@ -1,0 +1,182 @@
+//Template
+
+// By Anudeep :)
+//Includes
+#include <vector> 
+#include <queue>
+#include <map> 
+#include <set>
+#include <utility> //Pair
+#include <algorithm>
+#include <sstream> // istringstream>> ostring stream<<
+#include <iostream> 
+#include <iomanip> 
+//setbase - cout << setbase (16); cout << 100 << endl; Prints 64
+//setfill -   cout << setfill ('x') << setw (5); cout << 77 << endl; prints xxx77
+//setprecision - cout << setprecision (4) << f << endl; Prints x.xxxx
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <cstring>
+#include <limits>
+using namespace std;
+
+//M lazy ;)
+typedef long long ll;
+typedef vector <int> vi;
+typedef pair< int ,int > pii;
+typedef istringstream iss;
+typedef ostringstream oss;
+#define pb push_back
+#define mp make_pair
+#define ff first
+#define ss second
+#define sz size()
+#define ln length()
+#define rep(i,n) for(int i=0;i<n;i++)
+#define fu(i,a,n) for(int i=a;i<=n;i++)
+#define fd(i,n,a) for(int i=n;i>=a;i--)
+#define all(a)  a.begin(),a.end() 
+#define ESP (1e-9)
+
+#define gi(n) scanf("%d",&n)
+#define gl(n) cin >> n
+#define pi(n) printf("%d",n)
+#define pl(n) cout << n
+#define ps printf(" ")
+#define pn printf("\n")
+#define dg(n,s); printf("%s %d",s,n)
+#define imax numeric_limits<int>::max()
+#define imin numeric_limits<int>::min()
+#define lmax numeric_limits<ll>::max()
+#define lmin numeric_limits<ll>::min()
+
+#define V 4
+#define F (1 << V)
+#define S (1 << F)
+#define N 500
+#define MOD 1000000007
+
+int dp[N][S], tdp[2][S];
+string s;
+int curptr = 0;
+
+int getMask(int j, int req) {
+	int mask = 0;
+	for (int i=0; i<F; i++) {
+		if (((i >> j) & 1) == req) mask |= (1 << i);
+	}
+	return mask;
+}
+
+void rev(int *p) {
+	reverse(p, p+S);
+}
+
+void add(int &a, int b) {
+	a += b;
+	if ( a >= MOD ) a -= MOD;
+}
+void sub(int &a, int b) {
+	a -= b;
+	if (a < 0) a += MOD;
+}
+void mul(int &a, int b) {
+	long long x = a;
+	x *= b;
+	a = (x % MOD);
+}
+
+int s1[S], s2[S];
+void eAndD(int *t1, int *t2, int *ans) {
+	for (int i=0; i<S; i++) {
+		s1[i] = t1[i];
+		s2[i] = t2[i];
+		ans[i] = 1;
+	}
+	for (int j=0; j<F; j++) {
+		for (int i=0; i<S; i++) if ((i >> j) & 1) {
+			add(s1[i], s1[i - (1<<j)]);
+			add(s2[i], s2[i - (1<<j)]);
+		}
+	}
+	for (int i=0; i<S; i++) {
+		mul(ans[i], s1[i]);
+		mul(ans[i], s2[i]);
+	}
+	for (int j=0; j<F; j++) {
+		for (int i=0; i<S; i++) if ((i >> j) & 1) {
+			sub(ans[i], ans[i - (1<<j)]);
+		}
+	}
+}
+
+int f(int &ptr) {
+
+	if (s[ptr] != '(') {
+		// base case
+		char v = s[ptr++];
+		int cur = curptr++;
+		if (v == '?') {
+			for (int i=0; i<V; i++) {
+				dp[cur][getMask(i, 1)] = 1;
+				dp[cur][getMask(i, 0)] = 1;
+			}
+		}
+		else if (v >= 'A' && v <= 'D') {
+			dp[cur][getMask(v-'A', 1)] = 1;
+		} else {
+			dp[cur][getMask(v-'a', 0)] = 1;
+		}
+		return cur;
+	}
+
+	int cur = curptr++;
+	int l = f(++ptr); // consume (
+	ptr++; // consume )
+	char op = s[ptr++]; // consume operator
+	// cout << op << endl;
+	int r = f(++ptr); // consume (
+	ptr++; // consume )
+
+	eAndD(dp[l], dp[r], tdp[0]);
+	rev(dp[l]);
+	rev(dp[r]);
+	eAndD(dp[l], dp[r], tdp[1]);
+	rev(tdp[1]);
+	rev(dp[l]);
+	rev(dp[r]);
+
+	if (op == '?' || op == '|')
+		for (int i=0; i<S; i++) add(dp[cur][i], tdp[0][i]);
+	if (op == '?' || op == '&')
+		for (int i=0; i<S; i++) add(dp[cur][i], tdp[1][i]);
+
+	return cur;
+}
+
+int main() {
+	cin >> s;
+	int ptr = 0;
+	int pp = f(ptr);
+	int n;
+	cin >> n;
+	int req[F];
+	rep (i, F) req[i] = -1;
+	rep (i, n) {
+		int mask = 0, x;
+		rep (j, 4) {
+			cin >> x;
+			if (x) mask |= ( 1 << j );
+		}
+		cin >> req[mask];
+	}
+	int ans = 0;
+	rep (i, S) {
+		bool ok = true;
+		rep (j, F) if (req[j] != -1 && (((i >> j) & 1) != req[j])) ok = false;
+		if (ok) add(ans, dp[pp][i]);
+	}
+	cout << ans << endl;
+}

@@ -1,0 +1,29 @@
+#include<cstdio>
+
+float W[177][177];
+float A[177][177];
+float B[177][177];
+
+int n;
+
+int main()
+{
+	scanf("%d", &n);
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < n; j++)
+			scanf("%f", &W[i][j]);
+	
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++) {
+			A[i][j] = (W[i][j] + W[j][i]) / 2;
+			B[i][j] = (W[i][j] - W[j][i]) / 2;
+		}
+	}
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < n; j++)
+			printf("%f%s", A[i][j], (j < n - 1) ? " " : "\n");
+	for (int i = 0; i < n; i++)
+		for (int j = 0; j < n; j++)
+			printf("%f%s", B[i][j], (j < n - 1) ? " " : "\n");
+	return 0;
+}

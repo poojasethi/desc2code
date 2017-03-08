@@ -1,0 +1,92 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cmath>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+using namespace std;
+
+int n,m,node,x,head[505],ans[505],pt[505],dist[505][505],num,color[505];
+struct edge {
+	int to,next,w;
+} e[1005];
+double a[505][505];
+inline void pivot(int l,int i) {
+	double t;
+	swap(ans[l+n],ans[i]);
+	t=-a[l][i]; a[l][i]=-1;
+	for (int j=0;j<=n;j++) a[l][j]/=t;
+	for (int j=0;j<=m;j++) if (a[j][i]&&j!=l) {
+		t=a[j][i]; a[j][i]=0;
+		for (int k=0;k<=n;k++) a[j][k]+=t*a[l][k];
+	}
+}
+inline double simplex() {
+	double t;
+	while (1) {
+		int l=0; t=-1e-8;
+		for (int j=1;j<=m;j++) if (a[j][0]<t) t=a[l=j][0];
+		if (!l) break;
+		int i=0;
+		for (int j=1;j<=n;j++) if (a[l][j]>1e-8) {
+			i=j; break;
+		}
+		if (!i) return 1e100;
+		pivot(l,i);
+	}
+	while (1) {
+		int i=0; t=1e-8;
+		for (int j=1;j<=n;j++) if (a[0][j]>t) t=a[0][i=j];
+		if (!i) break;
+		int l=0;
+		t=1e30;
+		for (int j=1;j<=m;j++) if (a[j][i]<-1e-8) {
+			double tmp;
+			tmp=-a[j][0]/a[j][i];
+			if (t>tmp) t=tmp,l=j;
+		}
+		if (!l) return puts("Unbounded");
+		pivot(l,i);
+	}
+	return a[0][0];
+}
+inline void init() {
+	for (int i=1;i<=m;i++)
+		for (int j=1;j<=n;j++) a[i][j]=-a[i][j];
+	for (int i=1;i<=n;i++) ans[i]=i;
+}
+inline void insert(int u,int v,int w) {
+	e[++num].to=v; e[num].next=head[u]; e[num].w=w; head[u]=num;
+	e[++num].to=u; e[num].next=head[v]; e[num].w=w; head[v]=num;
+}
+void dfs(int st,int now,int fa,int d) {
+	d=min(d,x+1);
+	dist[st][now]=d;
+	for (int i=head[now];i;i=e[i].next) if (e[i].to!=fa) dfs(st,e[i].to,now,d+e[i].w);
+}
+int main() {
+	scanf("%d%d",&node,&x);
+	n=node; m=node+1;
+	int all=0;
+	for (int i=1;i<=node;i++) {
+		scanf("%d",&color[i]);
+		all+=color[i];
+		if (color[i]==0) a[0][i]=-1;
+	}
+	for (int i=1;i<node;i++) {
+		int u,v,w;
+		scanf("%d%d%d",&u,&v,&w);
+		insert(u,v,w);
+	}
+	for (int i=1;i<=node;i++) dfs(i,i,0,0);
+	for (int i=1;i<=node;i++) {
+		a[i][0]=-1;
+		for (int j=1;j<=node;j++) if (dist[i][j]<=x) a[i][j]=-1;
+	}
+	for (int i=1;i<=node;i++) a[node+1][i]=1;
+	a[node+1][0]=(double)all;
+	init();
+	double ans=simplex();
+	if (ans>=1e100) puts("-1"); else printf("%d\n",(int)(-ans+0.5));
+	return 0;
+}

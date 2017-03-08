@@ -1,0 +1,85 @@
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <algorithm>
+#include <set>
+#include <vector>
+using namespace std;
+
+#define pb push_back
+#define mp make_pair
+const int inf = 1e9;
+const long long INF = 1e18;
+typedef pair<int, int> PII;
+
+const int maxn = 10010;
+
+int n, m, k, s0, s1, t;
+int L[110], R[110], res[110], c[maxn];
+long long d[maxn];
+vector<PII> G[maxn], G_[maxn];
+set<PII> S;
+
+void relax(int t, long long val, int flag)
+{
+	if (val < d[t]) {
+		S.erase(mp(d[t], t));
+		S.insert(mp(val, t));
+		d[t] = val; c[t] = 0;
+	}
+	if (val <= d[t]) c[t] |= flag;
+}
+int Calc(int flag)
+{
+	S.clear();
+	for (int i = 0; i < n; i++) d[i] = INF;
+	d[s0] = d[s1] = 0;
+	c[s0] = 1; c[s1] = 2; c[t] = 2;
+	S.insert(mp(0, s0));
+	S.insert(mp(0, s1));
+	while (! S.empty()) {
+		int t = S.begin()->second;
+		S.erase(S.begin());
+		for (int i = 0; i < G[t].size(); i++) relax(G[t][i].first, d[t]+G[t][i].second, c[t]);
+		for (int i = 0; i < G_[t].size(); i++) {
+			int ret = G_[t][i].second;
+			if (c[t] == 2 || (c[t] == 3 && flag)) res[ret] = R[ret];
+			if (c[t] == 1 || (c[t] == 3 && ! flag)) res[ret] = L[ret];
+			relax(G_[t][i].first, d[t]+res[ret], c[t]);
+		}
+	}
+	return flag ? (c[t] == 1) : (c[t] == 1 || c[t] == 3);
+}
+int main()
+{
+	//freopen("input.txt", "r", stdin);
+	scanf("%d%d%d%d%d%d", &n, &m, &k, &s0, &s1, &t); s0--; s1--; t--;
+	for (int i = 0; i < m; i++) {
+		int u, v, w;
+		scanf("%d%d%d", &u, &v, &w); u--; v--;
+		G[u].pb(mp(v, w));
+	}
+	for (int i = 0; i < k; i++) {
+		int u, v;
+		scanf("%d%d%d%d", &u, &v, &L[i], &R[i]); u--; v--;
+		res[i] = L[i];
+		G_[u].pb(mp(v, i));
+	}
+	if (s0 == s1) {
+		puts("DRAW");
+		for (int i = 0; i < k; i++) {
+			printf("%d", res[i]);
+			i+1 == k ? puts("") : printf(" ");
+		}
+		return 0;
+	}
+	if (Calc(1)) puts("WIN");
+	else if (Calc(0)) puts("DRAW");
+	else { puts("LOSE"); return 0; }
+	for (int i = 0; i < k; i++) {
+		printf("%d", res[i]);
+		i+1 == k ? puts("") : printf(" ");
+	}
+	return 0;
+}
+

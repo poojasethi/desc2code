@@ -1,0 +1,148 @@
+#include <iostream>
+#include <vector>
+using namespace std;
+const int MAX = 500005;
+struct DSU
+{
+	int par[MAX], size[MAX], x[MAX];
+	vector<int> history;
+	DSU()
+	{
+		for (int i = 0; i < MAX; i++)
+		{
+			par[i] = i;
+			size[i] = 1;
+			x[i] = 0;
+		}
+	}
+	int find(int v)
+	{
+		if (par[v] == v)
+			return v;
+		return find(par[v]);
+	}
+	int color(int v)
+	{
+		if (par[v] == v)
+			return x[v];
+		return x[v] ^ color(par[v]);
+	}
+	void merge(int u, int v)
+	{
+		int cu = color(u);
+		int cv = color(v);
+		u = find(u);
+		v = find(v);
+		if (u == v)
+		{
+			history.push_back(-1);
+			return;
+		}
+		if (size[u] < size[v])
+			swap(u, v);
+		if (x[u])
+			x[v] ^= 1;
+		if (cu == cv)
+			x[v] ^= 1;
+		par[v] = u;
+		size[u] += size[v];
+		history.push_back(v);
+	}
+	bool can(int u, int v)
+	{
+		int cu = color(u);
+		int cv = color(v);
+		u = find(u);
+		v = find(v);
+		if (u == v)
+			return (cu != cv);
+		return true;
+	}
+	void undo()
+	{
+		int v = history.back();
+		history.pop_back();
+		if (v != -1)
+		{
+			size[par[v]] -= size[v];
+			par[v] = v;
+		}
+	}
+} dsu[50];
+struct edge
+{
+	int from, to, color, ptr;
+	vector<int> times;
+	edge()
+	{
+		from = to = ptr = 0;
+		color = -1;
+	}
+} e[MAX];
+int tc[MAX], id[MAX];
+vector<pair<int, int> > seg[4 * MAX];
+void add(int l, int r, int id, int color, int v, int s, int e)
+{
+	if (l <= s && e <= r)
+	{
+		seg[v].push_back(make_pair(id, color));
+		return;
+	}
+	if (e <= l || r <= s)
+		return;
+	int mid = (s + e) / 2;
+	add(l, r, id, color, 2 * v, s, mid);
+	add(l, r, id, color, 2 * v + 1, mid, e);
+}
+int n, m, k, q;
+void dfs(int v, int s, int e)
+{
+	for (int i = 0; i < (int)seg[v].size(); i++)
+		dsu[seg[v][i].second].merge(::e[seg[v][i].first].from, ::e[seg[v][i].first].to);
+	if (e - s < 2)
+	{
+		if (e == q + 1)
+			return;
+		int id = ::id[e];
+		if (dsu[tc[e]].can(::e[id].from, ::e[id].to))
+		{
+			cout << "YES\n";
+			::e[id].color = tc[e];
+		}
+		else
+			cout << "NO\n";
+		::e[id].ptr++;
+		if (::e[id].color != -1)
+			add(e, ::e[id].times[::e[id].ptr], id, ::e[id].color, 1, 0, q + 1);
+		for (int i = (int)seg[v].size() - 1; i >= 0; i--)
+			dsu[seg[v][i].second].undo();
+		return;
+	}
+	int mid = (s + e) / 2;
+	dfs(2 * v, s, mid);
+	dfs(2 * v + 1, mid, e);
+	for (int i = (int)seg[v].size() - 1; i >= 0; i--)
+		dsu[seg[v][i].second].undo();
+}
+int main()
+{
+	ios::sync_with_stdio(false);
+	cin >> n >> m >> k >> q;
+	for (int i = 0; i < m; i++)
+	{
+		cin >> e[i].from >> e[i].to;
+		e[i].from--;
+		e[i].to--;
+	}
+	for (int i = 1; i <= q; i++)
+	{
+		cin >> id[i] >> tc[i];
+		id[i]--;
+		tc[i]--;
+		e[id[i]].times.push_back(i);
+	}
+	for (int i = 0; i < m; i++)
+		e[i].times.push_back(q + 1);
+	dfs(1, 0, q + 1);
+	return 0;
+}

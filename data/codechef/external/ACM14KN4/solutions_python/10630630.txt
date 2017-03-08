@@ -1,0 +1,117 @@
+#include <bits/stdc++.h>
+#define N 500005
+using namespace std;
+typedef long long int lli;
+typedef struct{
+	lli mx, sm;
+	bool inc, dec;
+}seg;
+
+seg m[N];
+lli a[N];
+
+void buildTree(int node, int start, int end){
+	if(start > end) return;
+	if(start == end){
+		m[node].mx = a[start];
+		m[node].sm = a[start];
+		m[node].inc = 1;
+		m[node].dec = 1;
+		return;
+	}
+	int mid = (start + end) / 2;
+	buildTree(2*node, start, mid);
+	buildTree(2*node+1, mid+1, end);
+	m[node].mx = max(m[2*node].mx, m[2*node+1].mx);
+	m[node].sm = m[2*node].sm + m[2*node+1].sm;
+	m[node].inc = (m[2*node].inc && m[2*node+1].inc && a[mid] <= a[mid+1]);
+	m[node].dec = (m[2*node].dec && m[2*node+1].dec && a[mid] >= a[mid+1]);
+}
+
+void updateTree(int node, int start, int end, int index){
+	if(start > end) return;
+	if(start > index || end < index) return;
+	if(start == end && start == index){
+		m[node].mx = a[index];
+		m[node].sm = a[index];
+		m[node].inc = true;
+		m[node].dec = true;
+		return;
+	}
+	int mid = (start + end) / 2;
+	updateTree(2*node, start, mid, index);
+	updateTree(2*node+1, mid+1, end, index);
+	m[node].mx = max(m[2*node].mx, m[2*node+1].mx);
+	m[node].sm = m[2*node].sm + m[2*node+1].sm;
+	m[node].inc = (m[2*node].inc && m[2*node+1].inc && a[mid] <= a[mid+1]);
+	m[node].dec = (m[2*node].dec && m[2*node+1].dec && a[mid] >= a[mid+1]);
+}
+
+lli getMax(int node,int start,int end,int s, int e){
+	if(end < s || start > e || start > end) return 0;
+	if(s<=start && e>=end) return m[node].mx;
+	int mid = (start+end) / 2;
+	return max(getMax(2*node, start, mid, s, e), getMax(2*node+1, mid+1, end, s ,e));
+}
+
+lli getSum(int node,int start,int end,int s, int e){
+	if(end < s || start > e || start > end) return 0;
+	if(s<=start && e>=end) return m[node].sm;
+	int mid = (start+end) / 2;
+	return getSum(2*node, start, mid, s, e) + getSum(2*node+1, mid+1, end, s ,e);
+}
+
+bool getInc(int node,int start,int end,int s, int e){
+	if(end < s || start > e || start > end) return 1;
+	if(s<=start && e>=end) return m[node].inc;
+	int mid = (start+end) / 2;
+	lli x = getInc(2*node, start, mid, s, e);
+	lli y = getInc(2*node+1, mid+1, end, s ,e);
+	if(s <= mid && mid+1 <= e) return (x && y && a[mid] <= a[mid+1]);
+	else return (x && y);
+}
+
+bool getDec(int node,int start,int end,int s, int e){
+	if(end < s || start > e || start > end) return 1;
+	if(s<=start && e>=end) return m[node].dec;
+	int mid = (start+end) / 2;
+	lli x = getDec(2*node, start, mid, s, e);
+	lli y = getDec(2*node+1, mid+1, end, s ,e);
+	if(s <= mid && mid+1 <= e) return (x && y && a[mid] >= a[mid+1]);
+	else return (x && y);
+}
+int main() {
+	int n, m, index, s, e, qtype;
+	char c;
+	lli newval;
+	scanf("%d%d", &n, &m);
+	for(int i = 0 ; i < n;  i++)
+		scanf("%lld", &a[i]);
+	buildTree(1, 0, n-1);
+	for(int i = 0 ; i < m ; i++){
+		c = getchar();
+		scanf("%c", &c);
+		if(c == 'U'){
+			scanf("%d%lld", &index, &newval);
+			index--;
+			a[index] = newval;
+			updateTree(1, 0, n-1, index);
+		}
+		else{
+			scanf("%d%d", &s, &e);
+			s--;
+			e--;
+			switch(c){
+				case 'M': printf("%lld\n", getMax(1, 0, n-1, s, e));
+						break;
+				case 'S': printf("%lld\n", getSum(1, 0, n-1, s, e));
+						break;
+				case 'I': printf("%d\n", getInc(1, 0, n-1, s, e));
+						break;
+				case 'D': printf("%d\n", getDec(1, 0, n-1, s, e));
+						break;
+			}
+		}
+	}
+	return 0;
+} 

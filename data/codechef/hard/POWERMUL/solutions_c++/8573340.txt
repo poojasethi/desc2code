@@ -1,0 +1,129 @@
+#include <iostream>
+#include <iomanip>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <cmath>
+#include <memory.h>
+#include <sstream>
+#include <stack>
+#include <fstream>
+#include <cstdio>
+#include <map>
+#include <list>
+#include <stdlib.h>
+#include <queue>
+#include <set>
+using namespace std;
+
+/*
+*/
+
+int mod(int a, int b) {
+  return ((a%b)+b)%b;
+}
+
+// returns d = gcd(a,b); finds x,y such that d = ax + by
+int extended_euclid(int a, int b, int &x, int &y) {  
+  int xx = y = 0;
+  int yy = x = 1;
+  while (b) {
+    int q = a/b;
+    int t = b; b = a%b; a = t;
+    t = xx; xx = x-q*xx; x = t;
+    t = yy; yy = y-q*yy; y = t;
+  }
+  return a;
+}
+
+// computes b such that ab = 1 (mod n), returns -1 on failure
+int mod_inverse(int a, int n) {
+  int x, y;
+  int d = extended_euclid(a, n, x, y);
+  if (d > 1) return -1;
+  return mod(x,n);
+}
+
+long long pwF(long long a, long long p, long long mod)
+{
+	if (p == 0) return 1;
+	if (p%2==0)
+	{
+		long long r = pwF(a, p/2, mod);
+		return (r*r) % mod;
+	}
+	else
+	{
+		long long r = pwF(a, p/2, mod);
+		r *= r;
+		r %= mod;
+		return (a*r) % mod;
+	}
+}
+
+int main()
+{
+	int T;
+	scanf("%d", &T);
+	while (T--)
+	{
+		int n,m,q;
+		scanf("%d %d %d", &n, &m, &q);
+		int m2 = m;
+		vector<int> fac;
+		for (int i = 2; i <= n && i <= m; i++)
+		{
+			if (m2%i == 0) {
+				fac.push_back(i);
+				while (m2%i==0) m2/=i; 
+			}
+		}
+		
+		vector<vector<long long> > pw(fac.size(), vector<long long> (n+1, 0));
+		vector<int> rel(n+1, 0);
+		
+		for (int i = 1; i <= n; i++)
+		{
+			int x = i;
+			for (int j = 0; j < fac.size(); j++)
+			{
+				while (x % fac[j] == 0)
+				{
+					x/= fac[j];
+					pw[j][i]++;
+				}
+				pw[j][i] *=i;
+			}
+			rel[i] = pwF(x, i, m);
+		}
+		
+		for (int i = 2; i <= n; i++)
+		{
+			rel[i] = (1ll*rel[i-1]*rel[i]) % m;
+			for (int j = 0; j < fac.size(); j++)
+			{
+				pw[j][i] += pw[j][i-1];
+			}
+		}
+		while (q--)
+		{
+			int r;
+			scanf("%d", &r);
+			if (m == 1)
+			{
+				printf("0\n");
+			}
+			long long res = 1;
+			res = (((1ll*rel[n] * mod_inverse(rel[r], m))% m) * 1ll*mod_inverse(rel[n-r], m)) % m;
+			
+			for (int i = 0; i < fac.size(); i++)
+			{
+				res *= pwF(fac[i], pw[i][n] - pw[i][r] - pw[i][n-r],m);
+				res %= m;
+			}
+			
+			int ri = res;
+			printf("%d\n", ri);
+		}
+	}
+}

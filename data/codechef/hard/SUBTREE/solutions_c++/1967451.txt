@@ -1,0 +1,292 @@
+/**
+ * March 2013 Long Challenge at Codechef
+ *
+ * Problem:     SUBTREE - Festivals
+ * Author:      Anton Lunyov (Tester)
+ * Complexity:  O(N * log N + sum(Ki) * log N)
+ * Timing:      0.24 out of 1.00
+ */
+#include <cstdio>
+#include <vector>
+using namespace std;
+
+typedef vector<int> VI;
+
+const int maxN = 100000;
+const int maxH = 17; // 2^maxH > maxN
+const int maxC = 10000; // the maximal length of the edge
+
+int LOG2[maxN]; // LOG2[n] is the maximal h such that 2^h <= n
+// representation of tree
+// for each edge (u,v,c) we have (v,c) in a[u], and (u,c) in a[v]
+vector<pair<int, int> > a[maxN+1];
+int d[maxN+1]; // d[u] is the depth of the vertex
+int dist[maxN+1]; // dist[u] is the distance between root and u
+int in[maxN+1]; // in[u] is the time when dfs enters to u
+int in_time; // the time counter for enters to dfs
+int out[maxN+1]; // out[u] is the time when dfs exits from u
+int out_time; // the time counter for exits from dfs
+
+// p[u][h] is such ancestor v of u for which d[u]-d[v]=2^h
+// p[u][h] = 0 if such v does not exist, i.e., if d[u] < 2^h
+// p[u][0] is the direct parent of u
+int p[maxN+1][maxH];
+// minc[u][h] is the length of the shortest edge on the path from u to p[u][h]
+int minc[maxN+1][maxH];
+
+void dfs(int u) {
+	in[u] = ++in_time; // set enter time for u and increase counter
+	// loop over adjacent vertexes
+	for (int i = 0; i < a[u].size(); ++i) {
+		int v = a[u][i].first; // the adjacent vertex
+		if (v == p[u][0]) {
+			// skip v if it direct parent of u
+			continue;
+		}
+		p[v][0] = u; // otherwise set u as a direct
+		int c = a[u][i].second; // the length of the edge (u,v)
+		minc[v][0] = c;
+		d[v] = d[u] + 1; // depth of v is one more than for u
+		dist[v] = dist[u] + c;
+		dfs(v); // run dfs for v
+	}
+	out[u] = ++out_time; // set exit time for u and increase counter
+}
+
+// checks where u is ancestor of v
+bool is_ancestor(int u, int v) {
+	// the O(1) condition for this, check any graph theory textbook for proof
+	return in[u] <= in[v] && out[u] >= out[v];
+}
+
+// returns ancestor v of u such that d[u]-d[v]=k
+int ancestor(int u, int k) {
+	// for this we represent k in binary as
+	// k = 2^h1 + 2^h2 + ... + 2^hs
+	// and change u to p[u][h] for each h=hi
+	// since p[u][h] exactly 2^h vertexes up from u
+	for (int h = 0; (1 << h) <= k; ++h) {
+		if (k & 1 << h) {
+			u = p[u][h];
+		}
+	}
+	return u;
+}
+
+// returns the least common ancestor of u and v
+int LCA(int u,int v) {
+	// check whether one of u and v is ancestor of another
+	if (is_ancestor(u, v)) {
+		return u;
+	}
+	if (is_ancestor(v, u)) {
+		return v;
+	}
+	// make u to be more deep vertex
+	if (d[u] < d[v]) {
+		swap(u, v);
+	}
+	// replace u by its ancestor to make d[u]=d[v]
+	// for this we need to lift u up by d[u]-d[v] vertexes
+	u = ancestor(u, d[u] - d[v]);
+
+	// standard technique to find LCA by some kind of binary search
+	for (int h = LOG2[d[u]]; h >= 0; --h) {
+		if (p[u][h] != p[v][h]) {
+			u = p[u][h];
+			v = p[v][h];
+		}
+	}
+	return p[u][0];
+}
+
+// return the length of the path between u and v
+int get_dist(int u, int v) {
+	// the path is u-w-v, where w is LCA of u and v
+	// u-w part has length d[u]-d[w]
+	// v-w part has length d[v]-d[w]
+	int w = LCA(u, v);
+	return dist[u] + dist[v] - 2 * dist[w];
+}
+
+// return the length of the minimum edge
+// on the path from u to v, when v is ancestor of u
+int get_min_easy(int u, int v) {
+	// when u=v there no edges between so min = INF
+	if (u == v) {
+		return maxC + 1;
+	}
+	// otherwise we find the vertex w on the path u-v
+	// such that d[w]-d[v] = 2^h and d[u]-d[w]<=2^h
+	// then minimum on u-v is minimum between u-p[u][h] and w-v
+	int x = d[u] - d[v];
+	int h = LOG2[x];
+	int w = ancestor(u, x - (1 << h));
+	return min(minc[u][h], minc[w][h]);
+}
+
+// return the length of the minimum edge - general case
+int get_min(int u,int v) {
+	// we divide the path as u-w-v where w is LCA u and v
+	// so that w is ancestor of u and v and we can use get_min_easy
+	int w = LCA(u, v);
+	return min(get_min_easy(u, w), get_min_easy(v, w));
+}
+
+// returns the furthest distance from u to any vertex of U
+// and save the distance to mx
+int getFurthest(int u, const VI &U, int &mx) {
+	int res = u;
+	mx = -1;
+	for (int i = 0; i < U.size(); ++i) {
+		int d = get_dist(u, U[i]);
+		if (mx < d)  {
+			mx = d;
+			res = U[i];
+		}
+	}
+	return res;
+}
+
+// return LCA of all vertexes in U
+int LCA(const VI &U) {
+	int lca = U[0];
+	for (int i = 1; i < U.size(); ++i) {
+		lca = LCA(lca, U[i]);
+	}
+	return lca;
+}
+
+// check whether u is ancestor of some vertex in U
+bool is_ancestor(int u, const vector<int> &U) {
+	for (int i = 0; i < U.size(); ++i) {
+		if (is_ancestor(u, U[i])) {
+			return true;
+		}
+	}
+	return false;
+}
+
+// the minimum edge belonging to each path u-U[i]
+int get_min(int u, const vector<int> &U) {
+	int res = maxC + 1;
+	for (int h = LOG2[d[u]]; h >= 0; --h) {
+		if (!p[u][h] || is_ancestor(p[u][h], U)) {
+			continue;
+		}
+		res = min(res, minc[u][h]);
+		u = p[u][h];
+	}
+	res = min(res, minc[u][0]);
+	return res;
+}
+
+int main() {
+	// precalc of LOG2[n]
+	for (int h = 0; (1 << h) < maxN; ++h) {
+		for (int n = 1 << h; n < maxN && n < (1 << (h + 1)); ++n) {
+			LOG2[n] = h;
+		}
+	}
+
+	// input tree
+	int n;
+	scanf("%d" ,&n);
+	for (int u = 1; u <= n; ++u) {
+		a[u].clear();
+	}
+	for (int i = 0; i < n - 1; ++i) {
+		int u, v, c;
+		scanf("%d%d%d", &u, &v, &c);
+		a[u].push_back(make_pair(v, c));
+		a[v].push_back(make_pair(u, c));
+	}
+
+	// dfs to find parent of each vertex, in and out time and so on
+	// all global variables are initialized by zeros so no need to initialize them
+	dfs(1);
+
+	// binary lifting for parents and minimums
+	/*
+	for (int h = 0; (1 << (h + 1)) < n; ++h) {
+		for (int u = 1; u <= n; ++u) {
+			int pu = p[u][h];
+			p[u][h + 1] = p[pu][h];
+			minc[u][h + 1] = min(minc[u][h], minc[pu][h]);
+		}
+	}
+	*/
+
+//	for(int h=0;(h+1)<=LOG2[n];h++)
+	for(int h=0;(1<<(h+1)<n);h++)
+	{
+		for(int i=2;i<=n;i++)
+		{
+	//		if(!p[p[i][h]][h])
+				p[i][h+1]=p[p[i][h]][h];
+	//		if(!p[i][h+1])
+				minc[i][h+1]=min(minc[i][h],minc[p[i][h]][h]);
+		}
+	}
+
+	int Q;
+	scanf("%d", &Q);
+	for (int q = 0; q < Q; ++q) {
+		int K;
+		scanf("%d", &K);
+		VI F(K);
+		for (int i = 0; i < K; ++i) {
+			scanf("%d", &F[i]);
+		}
+		int mx;
+		int u1 = getFurthest(F[0], F, mx);
+		int u2 = getFurthest(u1, F, mx);
+		// u1 and u2 are two furthest vertexes among given K
+		// and mx is the gistance between them
+		printf("%d ", mx);
+
+		// U1 is the set of vertexes in F for which dist to u2 is mx
+		// U2 is the set of vertexes in F for which dist to u1 is mx
+		// u1 will belong to U1, u2 will belong to U2
+		bool noB = false;
+		VI U1, U2;
+		for (int i = 0; i < K; ++i) {
+			int cnt = 0;
+			if (get_dist(u1, F[i]) == mx) {
+				U2.push_back(F[i]);
+				++cnt;
+			}
+			if (get_dist(u2, F[i]) == mx) {
+				U1.push_back(F[i]);
+				++cnt;
+			}
+			if (cnt == 2) {
+				noB = true;
+			}
+		}
+		// if for some vertex Fi dist to both u1 and u2 = mx
+		// there is no common edge at ideal paths
+		if (noB) {
+			printf("-1\n");
+			continue;
+		}
+
+		// otherwise we find lca of all U1 and also of all U2
+		int lca1 = LCA(U1);
+		int lca2 = LCA(U2);
+		// and do some analysis
+		int min_edge;
+		// if one of lca1, lca2 is ancestor of another
+		// then we apply get_min for vertex and list
+		if (is_ancestor(lca1, lca2)) {
+			min_edge = get_min(lca2, U1);
+		} else if (is_ancestor(lca2, lca1)) {
+			min_edge = get_min(lca1, U2);
+		} else {
+			// in this case the path lca1 - lca2 is the intersection of all ideal path
+			min_edge = get_min(lca1, lca2);
+		}
+		printf("%d\n", min_edge);
+	}
+	return 0;
+}

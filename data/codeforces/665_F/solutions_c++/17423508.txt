@@ -1,0 +1,74 @@
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long LL;
+
+const int N = (int) 4e5 + 10;
+const int M = (int) 1e9 + 7;
+const LL  P = 1ll << 63;
+
+bool p[N];
+int cnt, prime[N];
+map<LL, LL> phi[N];
+
+void Sieve() {
+    memset(p, true, sizeof p); p[0] = p[1] = false;
+    for (int i = 2; i * i < N; ++i) if (p[i])
+        for (int j = i * i; j < N; j += i) p[j] = false;
+    for (int i = 2; i < N; ++i)
+        if (p[i]) prime[++cnt] = i;
+}
+
+LL Power(LL a, LL k, LL M = P) {
+    LL ans = 1;
+    while (k) {
+        if (k & 1) ans = ans * a % M;
+        a = a * a % M;
+        k >>= 1;
+    }
+    return ans;
+}
+
+LL Root(LL n, LL k) {
+    LL x = pow(n, 1.0 / k);
+    while (Power(x, k) % M == Power(x, k, M) && Power(x, k) < n) x++;
+    while (Power(x, k) % M != Power(x, k, M) || Power(x, k) > n) x--;
+    return x;
+}
+
+LL Phi(LL x, int a) {
+    if (phi[a].count(x)) return phi[a][x];
+    if (a == 1) return (x + 1) / 2;
+    LL ans = Phi(x, a - 1) - Phi(x / prime[a], a - 1);
+    return phi[a][x] = ans;
+}
+
+LL CountPrime(LL x) {
+    if (x < N) return upper_bound(prime + 1, prime + cnt + 1, x) - prime - 1;
+    LL a = CountPrime(Root(x, 4));
+    LL b = CountPrime(Root(x, 2));
+    LL c = CountPrime(Root(x, 3));
+    LL f = Phi(x, a) + (b + a - 2) * (b - a + 1) / 2;
+    for (int i = a + 1; i <= b; ++i) f -= CountPrime(x / prime[i]);
+    for (int i = a + 1; i <= c; ++i) {
+        LL bi = CountPrime(Root(x / prime[i], 2));
+        for (int j = i; j <= bi; ++j) f -= CountPrime(x / prime[i] / prime[j]) - (j - 1);
+    }
+    return f;
+}
+
+int main() {
+    #ifdef LOCAL
+        //freopen("Data.inp", "r", stdin);
+        //freopen("Data.out", "w", stdout);
+    #endif
+
+    LL n;
+    cin >> n;
+
+    LL ans = 0; Sieve();
+    for (int i = 1; (LL)prime[i] * prime[i] * (LL)prime[i] <= n; ++i) ans++;
+    for (int i = 1; (LL)prime[i] * prime[i] <= n; ++i) ans += CountPrime(n / prime[i]) - i;
+
+    cout << ans;
+    return 0;
+}

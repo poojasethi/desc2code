@@ -1,0 +1,134 @@
+#include<stdio.h>
+#include<string.h>
+#include<iostream>
+#include<algorithm>
+#include<vector>
+#include<queue>
+#include<stack>
+using namespace std;
+#define INF 1000000000
+struct edge
+{
+    int to;
+    int cap;
+    int rav;
+};
+vector<edge> G[20005];
+void add_edge(int from,int to,int cap)
+{
+    //cout<<from<<" "<<to<<" "<<cap<<endl;
+    G[from].push_back((edge){to,cap,G[to].size()});
+    G[to].push_back((edge){from,0,G[from].size()-1});
+}
+int level[20005];
+int iter[20005];
+int dfs(int u,int t,int f)
+{
+    if(u==t) return f;
+    for(int &i=iter[u];i<G[u].size();i++)
+    {
+        edge &v=G[u][i];
+        if(v.cap>0&&level[v.to]>level[u])
+        {
+            int d=dfs(v.to,t,min(f,v.cap));
+            if(d>0)
+            {
+                v.cap-=d;
+                G[v.to][v.rav].cap+=d;
+                return d;
+            }
+        }
+    }
+    return 0;
+}
+void bfs(int s)
+{
+    queue<int> q;
+    memset(level,-1,sizeof(level));
+    q.push(s);
+    level[s]=0;
+    while(!q.empty())
+    {
+        int u=q.front();
+        q.pop();
+        //cout<<u<<endl;
+        for(int i=0;i<G[u].size();i++)
+        {
+            edge &v=G[u][i];
+            if(v.cap>0&&level[v.to]<0)
+            {
+                level[v.to]=level[u]+1;
+                q.push(v.to);
+            }
+        }
+    }
+}
+int max_flow(int s,int t)
+{
+    int res=0;
+    while(1)
+    {
+        //cout<<res<<endl;
+        bfs(s);
+        if(level[t]==-1) break;
+        memset(iter,0,sizeof(iter));
+        int f;
+        while((f=dfs(s,t,INF))>0)
+            res+=f;
+    }
+    return res;
+}
+struct P
+{
+    int a,b,c;
+    int l,r;
+}k[55];
+int p[55];
+int fx(P d,int x)
+{
+    return d.a*x*x+d.b*x+d.c;
+}
+int id(int q,int x)
+{
+    return p[q]+x-k[q].l;
+}
+int main()
+{
+    int n,m;
+    scanf("%d%d",&n,&m);
+    for(int i=0;i<n;i++)
+        scanf("%d%d%d",&k[i].a,&k[i].b,&k[i].c);
+    memset(p,0,sizeof(p));
+    int cnt=0;
+    int max1=1000000;
+    for(int i=0;i<n;i++)
+    {
+        scanf("%d%d",&k[i].l,&k[i].r);
+        p[i]=cnt+1;
+        cnt+=k[i].r-k[i].l+2;
+    }
+    for(int i=0;i<n;i++)
+    {
+        add_edge(0,p[i],INF);
+        for(int j=k[i].l;j<=k[i].r;j++)
+            add_edge(id(i,j),id(i,j+1),max1-fx(k[i],j));
+        add_edge(id(i,k[i].r+1),cnt+1,INF);
+    }
+    while(m--)
+    {
+        int u,v,d;
+        scanf("%d%d%d",&u,&v,&d);
+        u--;v--;
+        for(int i=k[u].l;i<=k[u].r;i++)
+        {
+            if(i-d>=k[v].l&&i-d<=k[v].r+1)
+            {
+                add_edge(id(u,i),id(v,i-d),INF);
+            }
+        }
+    }
+   // cout<<"!!!"<<endl;
+    int ans=max_flow(0,cnt+1);
+    //cout<<ans<<endl;
+    printf("%d\n",n*max1-ans);
+}

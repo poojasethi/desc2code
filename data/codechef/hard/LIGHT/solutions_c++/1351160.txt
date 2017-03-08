@@ -1,0 +1,154 @@
+#include <math.h>
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+
+#define MAX_SIZE 1000 
+using namespace std;
+
+const double PI = 2.0 * acos(0.0);
+const double EPS = 1e-9;
+const double EPS2 = 1e-7;
+
+struct PT{
+	double x, y;
+	int id;
+	double length() {
+		return sqrt(x * x + y * y);
+	}
+	int normalize(){
+		double l = length();
+		if(fabs(l) < EPS)
+			return -1;
+		x /= l;
+		y /= l;
+		return 0;
+	}
+	PT operator - (PT a){
+		PT r;
+		r.x = x - a.x;
+		r.y = y - a.y;
+		return r;
+	}
+	PT operator + (PT a){
+		PT r;
+		r.x = x + a.x;
+		r.y = y + r.y;
+		return r;
+	}
+	PT operator * (double sc){
+		PT r;
+		r.x = x * sc;
+		r.y = y * sc;
+		return r;
+	}
+};
+
+bool operator < (const PT &a, const PT &b){
+	if(fabs(a.x - b.x) < EPS) return a.y < b.y;
+	return a.x < b.x;
+}
+
+int intersection (PT p1, PT p2, PT p3, PT p4, PT &r){
+	double d = (p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
+	if(fabs(d) < EPS)
+		return -1;
+	double ua;
+	ua = (p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x);
+	ua /= d;
+	r = p1 + (p2 - p1) * ua;
+	return 0;
+}
+
+bool operator == (const PT &a,const PT &b)
+{
+	return (fabs(a.x-b.x)<EPS && fabs(a.y-b.y)<EPS);
+}
+
+struct evnt{
+	PT p;
+	int type,id;
+	bool operator <(const evnt &e) const
+	{
+		if(p==e.p)
+			return type<e.type;
+		return p<e.p;
+	}
+};
+
+vector <PT> lights;
+evnt events[120000];
+vector <double> angs;
+
+int main(){
+	int N,i,j,k,evsize;
+	PT tmp;
+	double tmpang,LB,RB;
+	while(cin>>N>>LB>>RB)
+	{
+		evsize=0;
+		lights.clear();
+		angs.clear();
+		for(i=0;i<N;i++)
+		{
+			cin>>tmp.x>>tmp.y>>tmpang;
+			lights.push_back(tmp);
+			angs.push_back(PI*tmpang/180.0);
+		}
+		
+
+		double U=1000.5,D=0.0,M=1000.0;
+		evnt e;
+		while(!(fabs(U-D)<EPS2))
+		{
+			M=(U+D)/2.0;
+			evsize=0;
+			for(i=0;i<N;i++)
+			{
+				if(!((M-lights[i].y)<EPS || M<lights[i].y))
+					continue;
+				e.p.y=M;
+				e.p.x=(M-lights[i].y)/tan(((-PI)/2.0)-angs[i]);
+				e.p.x+=lights[i].x;
+				e.type=1;
+				events[evsize++]=e;
+
+				e.p.x=(M-lights[i].y)/tan(((-PI)/2.0)+angs[i]);
+				e.p.x+=lights[i].x;
+				e.type=2;
+				events[evsize++]=e;
+
+			}
+			if(!evsize)
+			{
+				U=M;
+				continue;
+			}
+			sort(events,events+evsize);
+			if((!(fabs(LB-events[0].p.x)<EPS || LB>events[0].p.x)) || (!(fabs(RB-events[evsize-1].p.x)<EPS || RB<events[evsize-1].p.x)))
+			{
+				U=M;
+				continue;
+			}
+			int evcnt=1;
+			for(i=1;i<evsize;i++)
+			{
+				if(events[i].type==2)
+					evcnt--;
+				else
+					evcnt++;
+				if(!evcnt &&  (fabs(events[i].p.x-LB)<EPS || events[i].p.x>LB) && (fabs(events[i].p.x-RB)<EPS || events[i].p.x<RB))
+					break;
+			}
+			if(i==evsize)
+				D=M;
+			else
+				U=M;
+		}
+		
+		cout.setf(ios::fixed);
+		cout.precision(7);
+		cout<<M<<endl;
+	}
+}

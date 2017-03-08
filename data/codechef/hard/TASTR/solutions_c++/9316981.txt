@@ -1,0 +1,327 @@
+#include <cstdio>
+#include <iostream>
+#include <algorithm>
+typedef unsigned int uint;
+typedef unsigned long long int ull;
+ 
+enum endl_faszom { endl };
+template <size_t max_input_size,size_t max_output_size>
+struct fast_io
+{
+	fast_io(): input_size(0), s(input), d(output)
+	{
+		read();
+	}
+	~fast_io()
+	{
+		write();
+	}
+	void read()
+	{
+		input_size=fread(input,1,max_input_size,stdin);
+		input[input_size]=0;
+		s=input;
+	}
+	void write()
+	{
+		fwrite(output,1,d-output,stdout);
+		d=output;
+	}
+	void skip_blank()
+	{
+		while(0<*s && *s<=32)
+			++s;
+	}
+	uint read_uint()
+	{
+		uint r=0;
+		while('0'<=*s && *s<='9')
+			r=r*10+ *s++ -'0';
+		return r;
+	}
+	ull read_ull()
+	{
+		ull r=0;
+		while('0'<=*s && *s<='9')
+			r=r*10+ *s++ -'0';
+		return r;
+	}
+	int read_int()
+	{
+		int r=0;
+		bool neg=0;
+		if(*s=='-' || *s=='+')
+			neg=*s++=='-';
+		while('0'<=*s && *s<='9')
+			r=r*10+ *s++ -'0';
+		return neg?-r:r;
+	}
+	template <typename T>
+	uint read_string(T *buf)
+	{
+		char const *b=s;
+		while(32<*s)
+			*buf++=*s++;
+		return s-b;
+	}
+	fast_io& operator>> (uint &r)
+	{
+		skip_blank();
+		r=read_uint();
+		return *this;
+	}
+	fast_io& operator>> (ull &r)
+	{
+		skip_blank();
+		r=read_ull();
+		return *this;
+	}
+	fast_io& operator>> (int &r)
+	{
+		skip_blank();
+		r=read_int();
+		return *this;
+	}
+	fast_io& operator<< (uint x)
+	{
+		char buf[32],*e=buf+32,*p=e;
+		while(*--p='0'+x%10,x/=10,x);
+		while(p!=e)
+			*d++=*p++;
+		return *this;
+	}
+	fast_io& operator<< (ull x)
+	{
+		char buf[32],*e=buf+32,*p=e;
+		while(*--p='0'+x%10,x/=10,x);
+		while(p!=e)
+			*d++=*p++;
+		return *this;
+	}
+	fast_io& operator<< (int x)
+	{
+		if(x<0)
+		{
+			*d++='-';
+			return operator<< (uint(-x));
+		}
+		else return operator<< (uint(x));
+	}
+	fast_io& operator<< (endl_faszom x)
+	{
+		*d++='\n';
+		return *this;
+	}
+	fast_io& operator>> (char &r)
+	{
+		r=*s++;
+		return *this;
+	}
+	fast_io& operator<< (char c)
+	{
+		*d++=c;
+		return *this;
+	}
+	fast_io& operator<< (char const *p)
+	{
+		while(*p)
+			*d++=*p++;
+		return *this;
+	}
+	size_t input_size;
+	char input[max_input_size+1];
+	char const *s;
+	char output[max_output_size+1];
+	char *d;
+};
+fast_io<2*128*1024,256> io;
+ 
+// https://sites.google.com/site/indy256/algo_cpp/suffix_array_lcp
+unsigned char mask[] = { 0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01 };
+#define tget(i) ( (t[(i)/8]&mask[(i)%8]) ? 1 : 0 )
+#define tset(i, b) t[(i)/8]=(b) ? (mask[(i)%8]|t[(i)/8]) : ((~mask[(i)%8])&t[(i)/8])
+#define isLMS(i) (i>0 && tget(i) && !tget(i-1))
+ 
+// find the start or end of each bucket
+void getBuckets(int *s, int *bkt, int n, int K, bool end)
+{
+    int i, sum = 0;
+    for (i = 0; i <= K; i++)
+        bkt[i] = 0; // clear all buckets
+    for (i = 0; i < n; i++)
+        bkt[s[i]]++; // compute the size of each bucket
+    for (i = 0; i <= K; i++) {
+        sum += bkt[i];
+        bkt[i] = end ? sum : sum - bkt[i];
+    }
+}
+// compute SAl
+void induceSAl(unsigned char *t, int *SA, int *s, int *bkt, int n, int K, bool end) {
+    int i, j;
+    getBuckets(s, bkt, n, K, end); // find starts of buckets
+    for (i = 0; i < n; i++) {
+        j = SA[i] - 1;
+        if (j >= 0 && !tget(j))
+            SA[bkt[s[j]]++] = j;
+    }
+}
+// compute SAs
+void induceSAs(unsigned char *t, int *SA, int *s, int *bkt, int n, int K, bool end) {
+    int i, j;
+    getBuckets(s, bkt, n, K, end); // find ends of buckets
+    for (i = n - 1; i >= 0; i--) {
+        j = SA[i] - 1;
+        if (j >= 0 && tget(j))
+            SA[--bkt[s[j]]] = j;
+    }
+}
+ 
+// find the suffix array SA of s[0..n-1] in {1..K}^n
+// require s[n-1]=0 (the sentinel!), n>=2
+// use a working space (excluding s and SA) of at most 2.25n+O(1) for a constant alphabet
+void SA_IS(int *s, int *SA, int n, int K) {
+    int i, j;
+    unsigned char *t = (unsigned char *) malloc(n / 8 + 1); // LS-type array in bits
+    // Classify the type of each character
+    tset(n-2, 0);
+    tset(n-1, 1); // the sentinel must be in s1, important!!!
+    for (i = n - 3; i >= 0; i--)
+        tset(i, (s[i]<s[i+1] || (s[i]==s[i+1] && tget(i+1)==1))?1:0);
+    // stage 1: reduce the problem by at least 1/2
+    // sort all the S-substrings
+    int *bkt = (int *) malloc(sizeof(int) * (K + 1)); // bucket array
+    getBuckets(s, bkt, n, K, true); // find ends of buckets
+    for (i = 0; i < n; i++)
+        SA[i] = -1;
+    for (i = 1; i < n; i++)
+        if (isLMS(i))
+            SA[--bkt[s[i]]] = i;
+    induceSAl(t, SA, s, bkt, n, K, false);
+    induceSAs(t, SA, s, bkt, n, K, true);
+    free(bkt);
+    // compact all the sorted substrings into the first n1 items of SA
+    // 2*n1 must be not larger than n (proveable)
+    int n1 = 0;
+    for (i = 0; i < n; i++)
+        if (isLMS(SA[i]))
+            SA[n1++] = SA[i];
+    // find the lexicographic names of all substrings
+    for (i = n1; i < n; i++)
+        SA[i] = -1; // init the name array buffer
+    int name = 0, prev = -1;
+    for (i = 0; i < n1; i++) {
+        int pos = SA[i];
+        bool diff = false;
+        for (int d = 0; d < n; d++)
+            if (prev == -1 || s[pos+d] != s[prev+d] || tget(pos+d) != tget(prev+d)) {
+                diff = true;
+                break;
+            } else if (d > 0 && (isLMS(pos+d) || isLMS(prev+d)))
+                break;
+        if (diff) {
+            name++;
+            prev = pos;
+        }
+        pos = (pos % 2 == 0) ? pos / 2 : (pos - 1) / 2;
+        SA[n1 + pos] = name - 1;
+    }
+    for (i = n - 1, j = n - 1; i >= n1; i--)
+        if (SA[i] >= 0)
+            SA[j--] = SA[i];
+    // stage 2: solve the reduced problem
+    // recurse if names are not yet unique
+    int *SA1 = SA, *s1 = SA + n - n1;
+    if (name < n1)
+        SA_IS(s1, SA1, n1, name-1);
+    else
+        // generate the suffix array of s1 directly
+        for (i = 0; i < n1; i++)
+            SA1[s1[i]] = i;
+    // stage 3: induce the result for the original problem
+    bkt = (int *) malloc(sizeof(int) * (K + 1)); // bucket array
+    // put all left-most S characters into their buckets
+    getBuckets(s, bkt, n, K, true); // find ends of buckets
+    for (i = 1, j = 0; i < n; i++)
+        if (isLMS(i))
+            s1[j++] = i; // get p1
+    for (i = 0; i < n1; i++)
+        SA1[i] = s1[SA1[i]]; // get index in s
+    for (i = n1; i < n; i++)
+        SA[i] = -1; // init SA[n1..n-1]
+    for (i = n1 - 1; i >= 0; i--) {
+        j = SA[i];
+        SA[i] = -1;
+        SA[--bkt[s[j]]] = j;
+    }
+    induceSAl(t, SA, s, bkt, n, K, false);
+    induceSAs(t, SA, s, bkt, n, K, true);
+    free(bkt);
+    free(t);
+}
+ 
+const int maxn=200042;
+int pos_fos[maxn];
+int *pos=pos_fos+1;
+int lcp[maxn];
+int rank[maxn];
+int s[maxn];
+ 
+void calc_lcp(int const *s, uint n) {
+    for (int i = 0; i < n; i++)
+        rank[pos_fos[i]] = i;
+    for (int i = 0, h = 0; i < n; i++) {
+        if (rank[i] < n - 1) {
+            for (int j = pos_fos[rank[i] + 1]; s[i + h] == s[j + h]; ++h)
+                ;
+            lcp[rank[i]] = h;
+            if (h > 0)
+                --h;
+        }
+    }
+}
+ 
+void build(int *s, uint n, uint K)
+{
+	s[n]=0;
+	SA_IS(s,pos_fos,n+1,K);
+	calc_lcp(s,n+1);
+}
+// --
+ 
+main()
+{
+	uint A=0;
+	while(32<*io.s)
+		s[A++]=*io.s++-'a'+2;
+	build(s,A,27);
+	ull ra=0;
+	for(uint i=0; i<A; ++i)
+	{
+		//std::cout << pos[i] << " " << s+pos[i] << " " << lcp[i] << std::endl;
+		ra+=A-pos[i]-lcp[i];
+	}
+ 
+	io.skip_blank();
+	uint B=0;
+	while(32<*io.s)
+		s[A+1+B++]=*io.s++-'a'+2;
+	build(s+1+A,B,27);
+	ull rb=0;
+	for(uint i=0; i<B; ++i)
+	{
+		//std::cout << pos[i] << " " << s+1+A+pos[i] << " " << lcp[i] << std::endl;
+		rb+=B-pos[i]-lcp[i];
+	}
+ 
+	s[A]=1;
+	build(s,A+1+B,27);
+	ull rab=0;
+	for(uint i=1; i<A+1+B; ++i)
+	{
+		uint e=pos[i]<A?A:A+1+B;
+		rab+=e-pos[i]-lcp[i];
+	}
+	ull c=ra+rb-rab;
+	//std::cout << ra << "," << rb << "," << c << "," << rab << std::endl;
+	io << rab-c << endl;
+}

@@ -1,0 +1,107 @@
+#include <cstdio>
+#include <tr1/unordered_set>
+#include <cstdlib>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cassert>
+
+using namespace std;
+
+//using unordered set as it gives us O(1) amortized look-up time.
+//knowing this compromises on ordering
+using tr1::unordered_set;
+
+//the set where we store the dictionary elements
+unordered_set<string> uset;
+
+//D-size of dictionary, T-testcases, r-rows, c-columns, k=r*c i.e. the size of the board.
+int D, T, r, c, k;
+
+//g is the board, pos[i] says whether the word with the positions of bits set in i, is a valid dictionary word or not.
+char s[40], g[40][40], pos[1<<16];
+
+//dp array used for memoization.
+int dp[1<<16];
+
+string tmp;
+
+inline int go(int ac) {
+	//ac signifies the current active state.
+	if(dp[ac]!=-1) //memoization.
+		return dp[ac];
+	//op will contain number of set bits in ac
+	//ones will contain the indices of set bits in ac.
+	int op = 0, ones[22];
+	for(int i=0; i<k;i++) {
+		if((ac&(1<<i))>0) {
+			ones[op++] = i;
+		}
+	}
+	//iteraring through all possible words than can be made from current active board.
+	for(int i=1; i<(1<<op);i++) {
+		int mask = 0;
+		for(int j=0; j<op;j++) {
+			if(i&(1<<j)) {
+				mask |= (1<<ones[j]);
+			}
+		}
+		//mask is the current choice of word to be made from active set.
+		if(pos[mask]) {
+			//next is the next possible board configuration, if mask is the chosen word.
+			int next = go(ac ^ mask);
+			//as mask will be inactive in the future, ac^mask, will set the bits set in mask to 0 in ac.
+			if(next == 0) { //found a losing pos
+				return dp[ac] = 1;//hence ac is a winning position.
+			}
+		}
+	}
+	//as we found no losing position from ac, hence ac is a losing position in itself, hence dp[ac] = 0
+	return dp[ac] = 0;
+}
+
+int main() {
+	scanf("%d", &D);
+	//Input - Dictionary
+	while(D--) {
+		scanf("%s", s);
+		tmp = s;
+		//Inserting the word in sorted form for look-up.
+		sort(tmp.begin(), tmp.end());
+		uset.insert(tmp);
+	}
+	//Input
+	scanf("%d%d", &r, &c);
+	k = r*c;
+	scanf("%d",&T);
+	while(T--) {
+		//resetting the dp array
+		memset(dp, -1, sizeof(dp));
+		//All letters of the board being inactive is a losing position hence dp[0] = 0.
+		//dp[i] represents the result for the board when the set bits are the only active letters
+		//"0" indicates, losing, "1" indicates winning, "-1" indicates not visited yet.
+		dp[0] = 0;
+		int i, j;
+		//scanning the board
+		for(i=0;i<r;i++)
+			scanf("%s", g[i]);
+		//filling the pos array
+		for(i=0;i<(1<<k);i++) {
+			tmp = "";
+			for(j=0;j<k;j++) {
+				if(i&(1<<j)) {
+					int x = j%c, y=j/c;
+					tmp += g[y][x];
+				}
+			}
+			//here tmp contains the word with only active bits in 'i'
+			//sorting tmp.
+			sort(tmp.begin(), tmp.end());
+			//if i is found then pos[i] = true, else pos[i] = false.
+			pos[i] = (uset.find(tmp)!=uset.end());
+		}
+		//(1<<k - 1) contains all k bits set to 1 ensuring that all letters of the board are initially active.
+		puts(go((1<<k)-1)?"Alice":"Bob");
+	}
+	return 0;
+}

@@ -1,0 +1,151 @@
+#include <iostream>
+#include <cstring>
+#include <cmath>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+#define N 200050
+#define INF 0x7f7f7f7f
+int ln[N][2],qu[N][2],sg[N],Cnt[N*4],Ans[N],t,n,m,p;
+struct Node
+ {
+ 	Node *c[2],*fa,*rf;int mi,val;bool fz;
+ } a[N*2],*emp,Emp;
+inline int Read()
+ {
+ 	int x=0;char y;
+ 	do y=getchar(); while (y<'0'||y>'9');
+ 	do x=x*10+y-'0',y=getchar(); while (y>='0'&&y<='9');
+ 	return x;
+ }
+void Set_up(int x,int y,int z)
+ {
+ 	int mid = x + y >> true, j = z << true;Cnt[z] = false;
+ 	if (x!=y) Set_up(x,mid,j),Set_up(mid+1,y,j+1);
+ 	return;
+ }
+void Modify(int x,int y,int z,int o,int p)
+ {
+ 	int mid = x + y >> true, j = z << true;Cnt[z] += p;
+ 	if (x!=y) if (o<=mid) Modify(x,mid,j,o,p); else
+ 	  Modify(mid+1,y,j+1,o,p);
+ 	return;
+ }
+int Query(int x,int y,int z,int o,int p)
+ {
+ 	int mid = x + y >> true, j = z <<true;
+ 	if (x==o&&y==p) return Cnt[z]; else
+ 	 if (p<=mid) return Query(x,mid,j,o,p); else
+ 	  if (o>mid) return Query(mid+1,y,j+1,o,p); else
+ 	    return Query(x,mid,j,o,mid)+Query(mid+1,y,j+1,mid+1,p);
+ }
+inline void GetNew(Node* x)
+ {
+ 	x->c[0]=x->c[1]=x->fa=x->rf=emp;
+ 	x->mi=x->val=INF;x->fz=false;
+ 	return;
+ }
+void Update(Node* x)
+ {x->mi=min(x->val,min(x->c[0]->mi,x->c[1]->mi));}
+inline void fzj(Node* x)
+ {
+ 	if (!x->fz||x==emp) return;
+ 	swap(x->c[0],x->c[1]);x->fz=false;
+ 	x->c[0]->fz=!x->c[0]->fz;
+ 	x->c[1]->fz=!x->c[1]->fz;
+ 	return;
+ }
+void Rotate(Node* x)
+ {
+ 	Node *i=x->fa,*j=i->fa;bool flag = i->c[0]==x;
+ 	if (j==emp) x->rf=i->rf,i->rf=emp; else
+ 	  j->c[j->c[1]==i]=x;
+ 	if (x->c[flag]!=emp) x->c[flag]->fa=i;
+ 	i->c[!flag]=x->c[flag];i->fa=x;
+ 	x->c[flag]=i;x->fa=j;Update(i);
+ 	return;
+ }
+void Up(Node* x)
+ {if (x->fa!=emp) Up(x->fa);fzj(x);fzj(x->c[0]);fzj(x->c[1]);}
+void Splay(Node* x)
+ {
+ 	Up(x);
+ 	while (x->fa!=emp)
+ 	 {
+ 	 	if (x->fa->fa!=emp)
+ 	 	  Rotate((x->fa->fa->c[0]==x->fa)^(x->fa->c[0]==x)?
+ 	 	  	x:x->fa);
+ 	 	Rotate(x);
+ 	 }
+ 	Update(x);
+ 	return;
+ }
+void Access(Node* x)
+ {
+ 	Node* k=emp;
+ 	while (x!=emp)
+ 	 {
+ 	 	Splay(x);
+ 	 	x->c[1]->rf=k->fa=x;
+ 	 	x->c[1]->fa=k->rf=emp;
+ 	 	x->c[1]=k;Update(x);
+ 	 	k=x;x=x->rf;
+ 	 }
+ 	return;
+ }
+void Cg_Rt(Node* x)
+ {Access(x);Splay(x);x->fz = true;Up(x);return;}
+void Line(Node* x,Node* y,int z)
+ {
+ 	GetNew(&a[z]);Cg_Rt(x);Cg_Rt(y);
+ 	a[z].val=a[z].mi=z-n;x->rf=y->rf=&a[z];
+ 	return;
+ }
+Node* Get(Node* x)
+ {return x->mi==x->val?x:Get(x->c[x->c[0]->mi>x->c[1]->mi]);}
+void Delete(Node* x,Node* y)
+ {
+ 	Cg_Rt(x);Cg_Rt(y);
+ 	y->c[1]=emp;x->fa=emp;Update(y);
+ 	return;
+ }
+inline bool cmp(int x,int y) {return qu[x][1]<qu[y][1];}
+int main()
+ {
+ 	t=Read();
+ 	emp=&Emp;emp->c[0]=emp->c[1]=emp->fa=emp->rf=emp;
+ 	emp->mi=emp->val=INF;
+ 	while (t--)
+ 	 {
+ 	 	n=Read();m=Read();p=Read();
+ 	 	for (int i=1;i<=n;i++) GetNew(&a[i]);
+ 	 	for (int i=1;i<=m;i++)
+ 	 	  ln[i][0]=Read(),ln[i][1]=Read();
+ 	 	for (int i=1;i<=p;i++)
+ 	 	  qu[i][0]=Read(),qu[i][1]=Read(),sg[i]=i;
+ 	 	sort(sg+1,sg+p+1,cmp);Set_up(1,m,1);
+ 	 	int Now=true;
+ 	 	for (int i=1;i<=m&&Now<=p;i++)
+ 	 	 {
+ 	 	 	if (ln[i][0]!=ln[i][1])
+ 	 	 	 {
+ 	 	 	 	Cg_Rt(&a[ln[i][0]]);Cg_Rt(&a[ln[i][1]]);
+ 	 	 	 	if (a[ln[i][0]].fa!=emp)
+ 	 	 	 	 {
+ 	 	 	 	 	Node* k=Get(&a[ln[i][1]]);
+ 	 	 	 	 	Modify(1,m,1,k->val,-1);
+ 	 	 	 	 	Delete(k,&a[ln[k->val][0]]);
+ 	 	 	 	 	Delete(k,&a[ln[k->val][1]]);
+ 	 	 	 	 }
+ 	 	 	 	Line(&a[ln[i][0]],&a[ln[i][1]],i+n);
+ 	 	 	 	Modify(1,m,1,i,1);
+ 	 	 	 }
+ 	 	 	while (Now<=p&&qu[sg[Now]][1]==i)
+ 	 	 	  Ans[sg[Now]]=n-
+ 	 	 	   Query(1,m,1,qu[sg[Now]][0],qu[sg[Now]][1]),
+ 	 	 	  Now++;
+ 	 	 }
+ 	 	for (int i=1;i<=p;i++) printf("%d\n",Ans[i]);
+ 	 }
+ 	return 0;
+ }

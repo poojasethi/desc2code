@@ -1,0 +1,132 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <algorithm>
+#define inf 1e200
+using namespace std;
+
+int T,C,K,S,i,j,k;
+long long N[10];
+double f[1005][35],g[1005][10],V;
+double fac[55],B[55],H[1000005];
+
+struct node
+{
+	long long P;
+	double S,T,X;
+}c[1005];
+inline bool cmp(const node &a,const node &b){return a.X<b.X;}
+
+double Pow(double a,long long b)
+{
+	if(a>1e-9)return exp(b*log(1-a));
+	return exp(b*-(a+a*a/2));
+}
+
+double calc1(long long n)
+{
+	if(n<1000000)return H[n];
+	return log((double)n+1)+0.5772156649015328606;
+}
+
+double calc2(long long n,long long k)
+{
+	double ans;
+	if((k+1)/n<2)
+	{
+		ans=(double)n/(k+1)+0.5;
+		double tmp=(double)k/n;
+		for(int i=2;i<=20&&i<=k;i+=2)
+		{
+			ans+=B[i]*tmp;
+			tmp*=(double)(k-i)*(k-i+1)/n/n;
+		}
+	}
+	else
+	{
+		ans=1;
+		for(int i=1;i<=10&&i<=n;++i)ans+=Pow((double)i/n,k);
+	}
+	return ans;
+}
+
+//calc3(n,k)=calc2(n,k)-calc(n,k+1)
+double calc3(long long n,long long k)
+{
+	double ans;
+	if((k+1)/n<2)
+	{
+		ans=(double)n/(k+1)/(k+2);
+		double tmp=(double)1/n;
+		for(int i=2;i<=20&&i<=k;i+=2)
+		{
+			ans-=B[i]*tmp*(i-1);
+			tmp*=(double)(k-i+1)*(k-i+2)/n/n;
+		}
+	}
+	else
+	{
+		ans=0;
+		for(int i=1;i<=10&&i<=n;++i)ans+=Pow((double)i/n,k)*i/n;
+	}
+	return ans;
+}
+
+double calc(long long N,long long P,double S,double T)
+{
+	long long l=1,r=P-1,mid,aim=0;
+	double lim=S/T;
+	while(l<=r)
+	{
+		mid=l+r>>1;
+		if(lim<=mid*calc3(N,mid))aim=mid,l=mid+1;
+		else r=mid-1;
+	}
+	return S*calc1(aim)+T*calc2(N,aim+1);
+}
+
+int main()
+{
+	fac[0]=B[0]=1;
+	for(i=1;i<=50;++i)fac[i]=fac[i-1]*i;
+	for(i=1;i<50;++i)
+	for(j=0;j<i;++j)
+	B[i]-=B[j]/fac[i+1-j];
+	for(i=1;i<=1000000;++i)H[i]=H[i-1]+1/(double)i;
+	
+	scanf("%d",&T);
+	for(;T;--T)
+	{
+		scanf("%d%d%lf",&C,&K,&V);
+		for(i=1;i<=K;++i)scanf("%lld",&N[i]);
+		for(i=1;i<=C;++i)scanf("%lld%lf%lf%lf",&c[i].P,&c[i].S,&c[i].T,&c[i].X);
+		sort(c+1,c+C+1,cmp);
+		for(i=1;i<=C;++i)
+		for(j=1;j<=K;++j)
+		g[i][j]=calc(N[j],c[i].P,c[i].S,c[i].T);
+		
+		S=1<<K;
+		for(i=0;i<=C;++i)
+		for(j=0;j<S;++j)
+		f[i][j]=inf;
+		f[0][0]=0;
+		for(i=1;i<=C;++i)
+		{
+			for(j=0;j<S;++j)
+			for(k=1;k<=K;++k)
+			if((j&(1<<k-1))==0&&f[i-1][j]+g[i][k]<f[i][j+(1<<k-1)])
+			f[i][j+(1<<k-1)]=f[i-1][j]+g[i][k];
+			if(c[i].X<0)
+			{
+				for(k=0;k<K;++k)
+				f[i][1<<k]+=-2*c[i].X/V;
+			}
+			else
+			{
+				f[i][S-1]+=2*c[i].X/V;
+			}
+			for(j=0;j<S;++j)if(f[i-1][j]<f[i][j])f[i][j]=f[i-1][j];
+		}
+		printf("%.20lf\n",f[C][S-1]);
+	}
+}

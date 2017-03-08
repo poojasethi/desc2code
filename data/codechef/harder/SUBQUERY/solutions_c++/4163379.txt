@@ -1,0 +1,130 @@
+#include <string.h>
+#include <stdio.h>
+#include <algorithm>
+#include <set>
+#include <queue>
+#include <math.h>
+#include <iostream>
+#define ll long long
+using namespace std;
+const int N=2e5+9,M=5e5+9;
+struct node
+{
+	int next[26],fail,dep;
+	int dp;
+	void clear()
+	{
+		memset(next,0,sizeof(next));
+		fail=dep=0;
+	}
+}a[N<<1];
+int sz,en;
+void init()
+{
+	fill(a[0].next,a[0].next+26,1);
+	a[0].dep=-1;
+	sz=en=1;
+	a[sz++].clear();
+}
+void build(char s[])
+{
+	init();
+	for(int i=0;s[i];i++)
+	{
+		int k=s[i]-'a',p=sz++;
+		a[p].clear();
+		a[p].dp=1;
+		a[p].dep=a[en].dep+1;
+		while(!a[en].next[k]) a[en].next[k]=p,en=a[en].fail;
+		int p1=a[en].next[k];
+		if(a[p1].dep==a[en].dep+1) a[p].fail=p1;
+		else 
+		{
+			int p2=sz++;
+			a[p2]=a[p1];
+			a[p2].dp=0;
+			a[p2].dep=a[en].dep+1;
+			a[p].fail=a[p1].fail=p2;
+			while(a[en].next[k]==p1) a[en].next[k]=p2,en=a[en].fail;
+		}
+		en=p;
+	}
+}
+vector<int> to[N<<1];
+char str[N];
+void dfs(int x)
+{
+	for(int i=0;i<to[x].size();i++)
+	{
+		int t=to[x][i];
+		dfs(t);
+		a[x].dp+=a[t].dp;
+	}
+}
+struct Q
+{
+	int l,p,id,ans;
+	void read(){scanf("%d%d",&l,&p);}
+	bool operator <(const Q &o) const
+	{
+		return p<o.p||p==o.p&&l<o.l;
+	}
+}q[M];
+int m;
+int ar[M];
+void add(int i,int v){for(;i<=m;ar[i]+=v,i+=-i&i);}
+void _add(int s,int t,int v)
+{
+	add(s,v);
+	add(t+1,-v);
+}
+int sum(int i)
+{
+	int r=0;
+	for(;i;r+=ar[i],i-=-i&i);return r;
+}
+bool cmp(Q a,Q b)
+{
+	return a.id<b.id;
+}
+int main()
+{
+	scanf("%s",str);
+	//cout<<str<<endl;
+	build(str);
+	for(int i=2;i<sz;i++)
+	{
+		to[a[i].fail].push_back(i);
+	}
+	dfs(1);
+	//for(int i=2;i<sz;i++) printf("%d: s=%d t=%d\n",a[i].dp,a[a[i].fail].dep+1,a[i].dep);
+	
+	scanf("%d",&m);
+	for(int i=1;i<=m;i++) q[i].read(),q[i].id=i;
+	sort(q+1,q+m+1);
+	for(int i=2;i<sz;i++)
+	{
+		Q now;now.p=a[i].dp;
+		now.l=a[a[i].fail].dep+1;
+		int is=lower_bound(q+1,q+m+1,now)-q;
+		if(is>m) continue;
+		if(q[is].p!=now.p) continue;
+		now.l=a[i].dep;
+		int it=upper_bound(q+1,q+m+1,now)-q;
+		if(it==1) continue;
+		it--;
+		if(is>it) continue;
+		_add(is,it,1);
+	}
+	for(int i=1;i<=m;i++) q[i].ans=sum(i);
+	sort(q+1,q+1+m,cmp);
+	for(int i=1;i<=m;i++) printf("%d\n",q[i].ans);
+	return 0;
+
+}
+
+
+
+
+
+

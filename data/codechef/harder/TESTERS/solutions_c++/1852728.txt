@@ -1,0 +1,329 @@
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <set>
+#include <queue>
+#include <map>
+#include <cstdio>
+#include <iomanip>
+#include <sstream>
+#include <iostream>
+#include <cstring>
+#define REP(i,x,v)for(int i=x;i<=v;i++)
+#define REPD(i,x,v)for(int i=x;i>=v;i--)
+#define FOR(i,v)for(int i=0;i<v;i++)
+#define FORE(i,t) for (typeof(t.begin()) i=t.begin(); i!=t.end(); i++)
+#define REMIN(x,y) (x)=min((x),(y))
+#define REMAX(x,y) (x)=max((x),(y))
+#define pb push_back
+#define sz size()
+#define mp make_pair
+#define fi first
+#define se second
+#define ll long long
+#define IN(x,y) ((y).find((x))!=(y).end())
+#define un(v) v.erase(unique(ALL(v)),v.end())
+#define LOLDBG
+#ifdef LOLDBG
+#define DBG(vari) cerr<<#vari<<" = "<<vari<<endl;
+#define DBG2(v1,v2) cerr<<(v1)<<" - "<<(v2)<<endl;
+#else
+#define DBG(vari)
+#define DBG2(v1,v2)
+#endif
+#define CZ(x) scanf("%d",&(x));
+#define CZ2(x,y) scanf("%d%d",&(x),&(y));
+#define CZ3(x,y,z) scanf("%d%d%d",&(x),&(y),&(z));
+#define ALL(x) (x).begin(),(x).end()
+#define tests int dsdsf;cin>>dsdsf;while(dsdsf--)
+#define testss int dsdsf;CZ(dsdsf);while(dsdsf--)
+using namespace std;
+typedef pair<int,int> pii;
+typedef vector<int> vi;
+template<typename T,typename TT> ostream &operator<<(ostream &s,pair<T,TT> t) {return s<<"("<<t.first<<","<<t.second<<")";}
+template<typename T> ostream &operator<<(ostream &s,vector<T> t){s<<"{";FOR(i,t.size())s<<t[i]<<(i==t.size()-1?"":",");return s<<"}"<<endl; }
+
+namespace bitll
+{
+	ll bit[1000008];
+	int maxval;
+	// BIT obsluguje przedzial [1..maxval-1]
+	
+	void czysc(int mxv)
+	{
+	    maxval=mxv;
+	    FOR(i,mxv+1) bit[i]=0;
+	}
+	
+	void dodaj(int ind, int war)
+	{
+		ind++;
+	    while(ind<maxval)
+	    {
+	        bit[ind]+=war;
+	        ind+=(ind & -ind);
+	    }
+	}
+	
+	ll suma(int ind)//[1..ind]
+	{
+		ind++;
+	    ll sm=0;
+	    while(ind>0)
+	    {
+	        sm+=bit[ind];
+	        ind-=(ind & -ind);
+	    }
+	    return sm;
+	}
+	
+	ll suma(int ind1,int ind2)
+	{
+	    return suma(ind2)-suma(ind1-1);
+	}
+}
+
+namespace bit
+{
+	int bit[1000008];
+	int maxval;
+	// BIT obsluguje przedzial [1..maxval-1]
+	
+	void czysc(int mxv)
+	{
+	    maxval=mxv;
+	    FOR(i,mxv+1) bit[i]=0;
+	}
+	
+	void dodaj(int ind, int war)
+	{
+		ind++;
+	    while(ind<maxval)
+	    {
+	        bit[ind]+=war;
+	        ind+=(ind & -ind);
+	    }
+	}
+	
+	int suma(int ind)//[1..ind]
+	{
+	    int sm=0;
+	    ind++;
+	    while(ind>0)
+	    {
+	        sm+=bit[ind];
+	        ind-=(ind & -ind);
+	    }
+	    return sm;
+	}
+	
+	int suma(int ind1,int ind2)
+	{
+	    return suma(ind2)-suma(ind1-1);
+	}
+}
+
+#define MAXN 300002
+struct graf
+{
+	int N;
+	vector<vi> kr;
+	vi lab;
+};
+
+graf rG;
+graf G;
+
+int relab_dfs(graf& G,int u,int par)
+{
+	int nr=rG.N++;
+	rG.kr.pb(vi());
+	rG.lab.pb(G.lab[u]);
+	FORE(it,G.kr[u])
+	{
+		if (*it!=par)
+		{
+			int y=relab_dfs(G,*it,u);
+			rG.kr[nr].pb(y);
+			rG.kr[y].pb(nr);
+		}
+	}
+	return nr;
+}
+
+graf relabel(graf& G,int u,int par)
+{
+	rG.N=0;
+	rG.kr.clear();
+	rG.lab.clear();
+	relab_dfs(G,u,par);
+	return rG;
+}
+int gstackh=0;
+graf gstack[100];
+
+int wiel[MAXN];
+int splitting_vertex;
+
+int dfs_split(int u,int par,int GN)
+{
+	FORE(it,G.kr[u])
+	{
+		if (*it!=par)
+		{
+			if (wiel[*it]*2>GN) return dfs_split(*it,u,GN);
+		}
+	}
+	return u;
+}
+
+void dfs_size(int u,int par)
+{
+	wiel[u]=1;
+	FORE(it,G.kr[u]) if (*it!=par) {dfs_size(*it,u);wiel[u]+=wiel[*it];}
+}
+
+
+int find_splitting(int u)
+{
+	dfs_size(u,u);
+	return dfs_split(u,u,wiel[u]);
+}
+vector<pii> to_add;//(suma,dl)
+ll wyn;
+
+void dfs(int u,int par,int suma,int dl,int GN)
+{
+	wiel[u]=1;
+	suma+=G.lab[u];
+	dl++;
+	wyn+=bitll::suma(GN-suma,2*GN);
+	//DBG(bitll::suma(G.N-suma,2*G.N));
+	wyn+=dl*1LL*bit::suma(GN-suma,2*GN);
+	to_add.pb(mp(suma,dl));
+	FORE(it,G.kr[u]) if (*it!=par) {dfs(*it,u,suma,dl,GN);wiel[u]+=wiel[*it];}
+}
+
+void wywal_kr(int a,int b)
+{
+	FOR(i,G.kr[a].sz)
+	{
+		if (G.kr[a][i]==b)
+		{
+			swap(G.kr[a][i],G.kr[a].back());
+			G.kr[a].pop_back();
+			break;
+		}
+	}
+	/*FOR(i,G.kr[b].sz)
+	{
+		if (G.kr[b][i]==a)
+		{
+			swap(G.kr[b][i],G.kr[b].back());
+			G.kr[b].pop_back();
+			break;
+		}
+	}*/
+}
+
+ll go(int u,int GN)
+{
+	//DBG(u);
+	//DBG(GN);
+	if (GN==1)
+	{
+		if (G.lab[u]==1) return 1;
+		return 0;
+	}
+	int s=find_splitting(u);
+	//DBG(s);
+	int N=GN;
+	bit::czysc(2*N+3);
+	bitll::czysc(2*N+3);
+	bit::dodaj(N+G.lab[s],1);
+	bitll::dodaj(N+G.lab[s],1);
+	wyn=(G.lab[s]==1);
+	FORE(it,G.kr[s])
+	{
+		//DBG(*it);
+		to_add.clear();
+		dfs(*it,s,0,0,GN);
+		//DBG(*it);
+		FORE(it,to_add)
+		{
+			bitll::dodaj(N+(it->fi+G.lab[s]),it->se+1);
+			bit::dodaj(N+(it->fi+G.lab[s]),1);
+		}
+		//DBG(*it);
+	}
+	ll wyncopy=wyn;
+	//DBG(wyncopy);
+	FORE(it,G.kr[s])
+	{
+		wywal_kr(*it,s);
+		wyncopy+=go(*it,wiel[*it]);
+	}
+	
+	return wyncopy;
+}
+
+#define M 1500000
+int F[M+2];
+
+#include <sys/resource.h>
+int main()
+{
+const rlim_t kStackSize = 256L * 1024L * 1024L;
+struct rlimit rl;
+ 
+getrlimit(RLIMIT_STACK, &rl);
+rl.rlim_cur = kStackSize;
+setrlimit(RLIMIT_STACK, &rl);
+
+    F[1]=1;
+    REP(j,2,M)
+    {
+		if (F[j])
+		{
+			int p=F[j];
+			int cnt=0;
+			int J=j;
+			while(J%p==0)
+			{
+				J/=p;
+				cnt++;
+			}
+			if (p>2 && cnt%2) F[j]=0;
+			else F[j]=F[J];
+		}
+		else
+		{
+			if (j==2) F[j]=1;
+			else F[j]=0;
+			for(int i=2*j;i<=M;i+=j) F[i]=j;
+		}
+	}
+	int n;CZ(n);
+	//n=300000;
+	G.N=n;
+	G.kr.resize(n);
+	G.lab.resize(n);
+	FOR(i,n-1)
+	{
+		int a,b;CZ2(a,b);a--;b--;
+		//a=i;
+		//b=i+1;
+		G.kr[a].pb(b);
+		G.kr[b].pb(a);
+	}
+	FOR(i,n)
+	{
+		int x;CZ(x);
+		//x=1+rand()%3;
+		G.lab[i]=F[x]?1:-1;
+	}
+	cout<<go(0,n);
+    
+    return 0;
+}

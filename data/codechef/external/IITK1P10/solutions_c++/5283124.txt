@@ -1,0 +1,88 @@
+#include<cstdio>
+#include<cstring>
+#include<cmath>
+#include<algorithm>
+#include<vector>
+using namespace std ;
+
+const int MAXN = 1e5;
+
+vector<vector<int> > G;
+int dfsNum[MAXN + 5];
+int sz[MAXN + 5];
+int tree[1 << 18 | 5];
+long long arr[MAXN+5];
+int n;
+int tim = 0;
+
+void dfs(int u, int p) {
+    dfsNum[u] = tim++;
+    for (int c=0;c<G[u].size();c++) {
+        int v = G[u][c];
+        if (v == p)continue;
+        dfs(v, u);
+    }
+    sz[u] = tim - dfsNum[u];
+}
+void update(int node, int s, int e, int i, int val) {
+    if (i > e || i < s) return ;
+    if (s == e && i == s) {
+        arr[s] += val;
+        if (arr[s] == 0)
+            tree[node] = 1;
+        else tree[node] = 0;
+        return ;
+    }
+    int mid = (s + e) >> 1;
+    update(node << 1, s, mid, i, val);
+    update(node << 1 | 1, mid + 1, e, i, val);
+    tree[node] = tree[node << 1] + tree[node << 1 | 1];
+    return ;
+}
+
+int query(int node, int s, int e, int st, int en) {
+    if (s > en || e < st) return 0;
+    if (s >= st && e <= en) return tree[node];
+    int mid = (s + e) >> 1;
+    return query(node << 1, s, mid, st, en) + query(node << 1 | 1, mid + 1, e, st, en);
+}
+
+
+
+int main() {
+    //freopen("tree.in","r",stdin);
+    int c,c2;
+    int qs;
+    scanf("%d%d",&n,&qs);
+    G.resize(n);
+    for (c=0;c+1<n;c++) {
+        int u,v;
+        scanf("%d%d",&u,&v);
+        u--;v--;
+        G[u].push_back(v);
+        G[v].push_back(u);
+    }
+    tim = 0;
+    dfs(0, -1);
+    for (c=0;c<n;c++) {
+        int x;
+        scanf("%d",&x);
+        update(1, 0, n-1, dfsNum[c], x);
+    }
+    for (c=0;c<qs;c++) {
+        char ch;
+        int u, val;
+        scanf(" %c %d",&ch, &u);
+        u--;
+        if (ch == 'U') {
+            scanf("%d",&val);
+            update(1, 0, n-1, dfsNum[u], val);
+        } else {
+            int i1 = dfsNum[u];
+            int i2 = dfsNum[u] + sz[u] - 1;
+            printf("%d\n",query(1, 0, n-1, i1, i2));
+        }
+    }
+    
+    return 0;
+}

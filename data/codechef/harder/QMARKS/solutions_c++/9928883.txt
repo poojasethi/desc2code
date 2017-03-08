@@ -1,0 +1,161 @@
+#include <bits/stdc++.h>
+#define sz(n) n.size()
+#define SD(n) scanf("%d", &n)
+#define SS(n) scanf("%s", n)
+#define SDD(n,m) scanf("%d%d", &n,&m)
+#define FOR(i, n) for(int i = 0; i < n; i++)
+#define FAB(i, a,b) for(int i = a; i < b; i++)
+#define mp make_pair
+#define pb push_back
+#define zero(n) memset(n, 0, sizeof(n))
+#define mone(n) memset(n, -1, sizeof(n))
+using namespace std;
+#define endl '\n'
+typedef long long ll;
+typedef vector<int> vi;
+typedef pair<int,int> pii;
+
+
+#define N 1004
+#define MN 1004
+#define ALF 26
+int term[MN], ac[MN][ALF], fail[MN], fr[MN], node[N], siz, termina[MN], dist[MN], padre[MN], reach[MN];
+vector<int> order;
+const int INF = 1e9;
+int conv(char c) {
+        return c-'a';
+}
+void init() {
+        for (int i = 0; i <= siz; i++) {
+                memset(ac[i], 0, sizeof(ac[i]));
+                term[i] = 0;
+        }
+        siz = 1;
+}
+void build() {
+        order.clear();
+        fail[1] = 1;
+        queue<int> Q;
+        for (int i = 0; i < ALF; i++)
+                if (ac[1][i]) {
+                        fail[ac[1][i]] = 1;
+                        Q.push(ac[1][i]);
+                } else
+                        ac[1][i] = 1;
+        while (!Q.empty()) {
+                int u = Q.front();
+                Q.pop();
+                order.push_back(u);
+                term[u] |= term[fail[u]];
+                for (int i = 0; i < ALF; i++) {
+                        int v = ac[u][i];
+                        if (v) {
+                                fail[v] = ac[fail[u]][i];
+                                Q.push(v);
+                        } else {
+                                ac[u][i] = ac[fail[u]][i];
+                        }
+                }
+        }
+}
+void insert(char *S, int id) {
+        int nod = 1;
+        int len = strlen(S);
+        for (int i = 0; i < len; i++) {
+                int c = conv(S[i]);
+                if (!ac[nod][c])
+                        ac[nod][c] = ++siz;
+                nod = ac[nod][c];
+        }
+        termina[nod]++;
+        node[id] = nod;
+        term[nod] = 1;
+}
+
+char text[1004];
+char cad[1004];
+int dp[2004][2004];
+
+void FUN(int len)
+{
+    for(int i = 1; i <= siz; i++)
+    {
+        reach[i]+=termina[i];
+        for(int u = fail[i]; u != 1; u= fail[u])
+        {
+            reach[i]+=termina[u];
+        }
+    }
+    for(int i = 0; i <= len+2; i++)
+    {
+        for(int j = 0; j <= siz+2; j++)
+        {
+            dp[i][j] = -1e9;
+        }
+    }
+    for(int i = 1; i <= siz; i++)
+    {
+        dp[len][i] = reach[i];
+    }
+    for(int i = len-1; i >= 0; i--)
+    {
+        for(int j = 1; j <= siz; j++)
+        {
+            if(text[i]!='?')dp[i][j]=dp[i+1][ac[j][conv(text[i])]]+reach[j];
+            else{
+                for(int k = 0; k < ALF; k++)
+                {
+                    dp[i][j] = max(dp[i][j], dp[i+1][ac[j][k]] + reach[j]);
+                }
+            }
+        }
+    }
+}
+
+int t;
+int n, m;
+
+int main()
+{
+    SD(t);
+    while(t--)
+    {
+        SDD(n,m);
+        init();
+        zero(reach);
+        zero(termina);
+        zero(dp);
+        scanf("%s", text);
+        FOR(i, m)
+        {
+            scanf("%s", cad);
+            insert(cad, i);
+        }
+        int len = strlen(text);
+        build();
+        FUN(len);
+        printf("%d\n", dp[0][1]);
+        int nodo = 1;
+        for(int i = 1; i <= len; i++)
+        {
+            int actual = conv(text[i-1]);
+            int temp = 0;
+            int maxi = -1e9;
+            for(int j = 0; j < ALF; j++)
+            {
+                if(text[i-1]!='?' && (j!=conv(text[i-1]))) continue;
+                int auxi = ac[nodo][j];
+                if(dp[i][auxi]>maxi)
+                {
+                    maxi = dp[i][auxi];
+                    actual = j;
+                    temp = auxi;
+                }
+            }
+            nodo = temp;
+            printf("%c", actual+'a');
+        }
+        printf("\n");
+    }
+    return 0;
+}

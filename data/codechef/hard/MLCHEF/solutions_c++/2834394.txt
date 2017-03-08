@@ -1,0 +1,203 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<assert.h>
+#include<ctype.h>
+#include<string.h>
+#include<math.h>
+#include<string>
+#include<deque>
+#include<iostream>
+#include<set>
+#include<map>
+#include<vector>
+#include<algorithm>
+#include<bitset>
+#include<stack>
+#include<queue>
+#include<sstream>
+
+#define MODM 1000000007
+#define MAXM 2147483647
+#define MAXML 9223372036854775807LL
+#define Pi 3.14159265358979323846264338327950288419716939937510582
+#define EPS 1e-10
+
+#define ff first
+#define ss second
+#define pb push_back
+#define pf push_front
+#define ppb pop_back
+#define ppf pop_front
+#define mp make_pair
+#define L(x) x.length()
+#define B(x) x.begin()
+#define E(x) x.end()
+#define F(x) x.front()
+#define SZ(x) x.size()
+#define CLR(x) x.clear()
+#define SORT(x) sort(x.begin(),x.end())
+#define REV(x) reverse(x.begin(),x.end())
+#define FOR(i,x,y) for(int i=x;i<y;i++)
+#define S(x) scanf("%d",&x)
+#define SL(x) scanf("%lld",&x)
+#define SD(x) scanf("%lf",&x)
+#define SC(x) scanf("%1s",&x)
+#define SS(x) scanf("%s",x)
+#define DUM() scanf("%c",&dum)
+#define READ(x) freopen(x,"r",stdin)
+#define WRITE(x) freopen(x,"w",stdout)
+#define FILL(x,y) memset(x,y,sizeof(x))
+#define IT iterator
+
+using namespace std;
+typedef long long int lli;
+typedef unsigned long long int llu;
+typedef pair<int,int> P;
+typedef vector<int> VI;
+typedef vector< VI > VVI;
+typedef vector< P > VP;
+typedef vector< VP > VVP;
+typedef vector<string> VS;
+typedef vector< VS> VVS;
+typedef map<int,int> MAP;
+
+struct qry{
+	int t,al,ar,q;
+	qry(){};
+	qry(int T,int AL,int AR,int Q):t(T),al(AL),ar(AR),q(Q){}
+};
+
+int to_answer=0,answered=0;
+int n,q,treeInd;
+int h[100005],rev[100005],bit[100005];
+int l[100005],r[100005],ans[100005];
+
+VVI edge;
+VVP poison;
+vector<qry>query;
+
+bool cmp2(const qry&a,const qry&b){
+	return a.q<b.q;
+}
+void update(int ind,int val){
+	for(int i=ind;i<=100001;i+=i&-i){
+		bit[i]+=val;
+	}
+}
+int query_bit(int ind){
+	int res=0;
+	for(int i=ind;i>0;i-=i&-i){
+		res+=bit[i];
+	}
+	return res;
+}	
+int get_death_index(int i){
+	int b=1,e=q,m,v=-1,val;
+	while(b<=e){
+		m=(b+e)/2;
+		val=query_bit(m);
+		if(val>=h[rev[i]]){
+			v=m;
+			e=m-1;
+		}
+		else b=m+1;
+	}
+	if(v==-1) return q+1;
+	return v;
+}
+void poison_the_chefs(){
+	
+	int dies_at;
+	FILL(bit,0);
+	
+	for(int i=1;i<=n;i++){
+		for(int j=0;j<SZ(poison[i]);j++){
+			update(poison[i][j].ss,poison[i][j].ff);
+		}
+		dies_at=get_death_index(i);
+		
+		//printf("%d %d\n",i,dies_at);
+		query.pb(qry(1,i,i,dies_at));
+	}
+}
+void make_tree(int u){
+	rev[treeInd++]=u;
+	if(SZ(edge[u])==0){
+		l[u]=-1;
+		return ;
+	}
+	l[u]=treeInd;
+	FOR(i,0,SZ(edge[u])){
+		make_tree(edge[u][i]);
+	}
+	r[u]=treeInd-1;
+}
+void solve_queries(){
+	
+	int val;
+	FILL(bit,0);
+	sort(B(query),E(query),cmp2);
+	FOR(i,0,SZ(query)){
+		
+		if(query[i].t==1){
+			update(query[i].al,1);
+		}
+		else{
+			val=query_bit(query[i].ar)-query_bit(query[i].al);
+			ans[query[i].q]=query[i].ar-query[i].al-val;
+		}
+	}
+	FOR(i,1,q+1){
+		if(ans[i]!=-1){
+			printf("%d\n",ans[i]);
+			answered++;
+		}
+	}
+	assert(to_answer==answered);
+}
+int main(){
+	
+	#ifndef ONLINE_JUDGE
+	READ("read.txt");
+	WRITE("write1.txt");
+	#endif
+	
+	int a,x,type,par;
+	S(n);
+	edge=VVI(n+5);
+	poison=VVP(n+5);
+	FOR(i,1,n+1){
+		S(h[i]),S(par);
+		edge[par].pb(i);
+	}
+	
+	treeInd=0;
+	make_tree(0);
+	
+	FILL(ans,-1);
+	S(q);
+	FOR(i,1,q+1){
+		
+		S(type);
+		if(type==1){
+			S(a),S(x);
+			if(l[a]!=-1){
+				poison[l[a]].pb(mp(x,i));
+				poison[r[a]+1].pb(mp(-x,i));
+			}
+		}
+		
+		else{
+			S(a);
+			to_answer++;
+			if(l[a]!=-1){
+				query.pb(qry(2,l[a]-1,r[a],i));
+			}
+			else ans[i]=0;
+		}
+	}
+	poison_the_chefs(); //:D
+	solve_queries();
+	return 0;
+}
+

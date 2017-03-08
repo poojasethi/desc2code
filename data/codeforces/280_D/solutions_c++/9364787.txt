@@ -1,0 +1,212 @@
+#include <cstdio>
+#include <algorithm>
+
+using namespace std;
+
+const int N = 100010;
+const int MAXD = N << 2;
+const int inf = 2e9;
+
+int n, m, a[N];
+
+struct data1
+{
+	int l, r, v;
+};
+struct data2
+{
+	int p, v;
+};
+struct node
+{
+	int sum;
+	data1 ms[2];
+	data2 ls[2], rs[2];
+} f[MAXD];
+bool rev[MAXD];
+
+node foo;
+bool flag;
+
+template<typename T>
+void mswap(T &a, T &b)
+{
+	swap(a, b);
+	a.v = -a.v;
+	b.v = -b.v;
+}
+void markrev(int d)
+{
+	f[d].sum *= -1;
+	mswap(f[d].ms[0], f[d].ms[1]);
+	mswap(f[d].ls[0], f[d].ls[1]);
+	mswap(f[d].rs[0], f[d].rs[1]);
+	rev[d] ^= 1;
+}
+void push(int d)
+{
+	int l = d << 1, r = l ^ 1;
+	if (rev[d])
+	{
+		markrev(l);
+		markrev(r);
+		rev[d] = 0;
+	}
+}
+void set_leaf(int d, int i, int val)
+{
+	f[d].sum = val;
+	for (int t = 0; t < 2; ++t)
+	{
+		f[d].ms[t] = (data1) {i, i, val};
+		f[d].ls[t] = f[d].rs[t] = (data2) {i, val};
+	}
+}
+bool cmp(int v1, int v2, bool t)
+{
+	if (!t)
+		return v2 > v1;
+	else
+		return v2 < v1;
+}
+template<typename T>
+void update(T &a, const T &b, bool t)
+{
+	if (cmp(a.v, b.v, t))
+		a = b;
+}
+data1 merge(const data2& a, const data2& b)
+{
+	return (data1) {a.p, b.p, a.v + b.v};
+}
+node merge(const node& a, const node& b)
+{
+	node c;
+	c.sum = a.sum + b.sum;
+	for (int t = 0; t < 2; ++t)
+	{
+		int orig = !t? -inf: inf;
+
+		c.ms[t].v = orig;
+		update(c.ms[t], a.ms[t], t);
+		update(c.ms[t], b.ms[t], t);
+		update(c.ms[t], merge(a.rs[t], b.ls[t]), t);
+
+		c.ls[t].v = orig;
+		update(c.ls[t], a.ls[t], t);
+		update(c.ls[t], (data2) {b.ls[t].p, a.sum + b.ls[t].v}, t);
+
+		c.rs[t].v = orig;
+		update(c.rs[t], b.rs[t], t);
+		update(c.rs[t], (data2) {a.rs[t].p, b.sum + a.rs[t].v}, t);
+	}
+	return c;
+}
+void update(int d)
+{
+	f[d] = merge(f[d << 1], f[d << 1 ^ 1]);
+}
+void build(int d, int lt, int rt)
+{
+	if (lt == rt)
+	{
+		set_leaf(d, lt, a[lt]);
+		return;
+	}
+	int md = lt + rt >> 1;
+	build(d << 1, lt, md);
+	build(d << 1 ^ 1, md + 1, rt);
+	update(d);
+}
+void setval(int d, int lt, int rt, int w, int val)
+{
+	if (lt == rt)
+	{
+		set_leaf(d, lt, val);
+		return;
+	}
+	push(d);
+	int md = lt + rt >> 1;
+	if (w <= md)
+		setval(d << 1, lt, md, w, val);
+	else
+		setval(d << 1 ^ 1, md + 1, rt, w, val);
+	update(d);
+}
+void revert(int d, int lt, int rt, int lq, int rq)
+{
+	if (lq <= lt && rt <= rq)
+	{
+		markrev(d);
+		return;
+	}
+	push(d);
+	int md = lt + rt >> 1;
+	if (lq <= md)
+		revert(d << 1, lt, md, lq, rq);
+	if (md < rq)
+		revert(d << 1 ^ 1, md + 1, rt, lq, rq);
+	update(d);
+}
+void query(int d, int lt, int rt, int lq, int rq)
+{
+	if (lq <= lt && rt <= rq)
+	{
+		if (!flag)
+			foo = f[d], flag = 1;
+		else
+			foo = merge(foo, f[d]);
+		return;
+	}
+	push(d);
+	int md = lt + rt >> 1;
+	if (lq <= md)
+		query(d << 1, lt, md, lq, rq);
+	if (md < rq)
+		query(d << 1 ^ 1, md + 1, rt, lq, rq);
+}
+int main()
+{
+	scanf("%d", &n);
+	for (int i = 1; i <= n; ++i)
+		scanf("%d", a + i);
+	build(1, 1, n);
+
+	scanf("%d", &m);
+	for (int im = 1; im <= m; ++im)
+	{
+		int cmd;
+		scanf("%d", &cmd);
+		if (cmd == 0)
+		{
+			int i, val;
+			scanf("%d %d", &i, &val);
+			setval(1, 1, n, i, val);
+		}
+		else
+		{
+			int l, r, k;
+			scanf("%d %d %d", &l, &r, &k);
+			int sv[22][2], svt = 0;
+			int ans = 0;
+			for (int kk = 1; kk <= k; ++kk)
+			{
+				flag = 0;
+				query(1, 1, n, l, r);
+				int ll = foo.ms[0].l, rr = foo.ms[0].r, vv = foo.ms[0].v;
+				ans += max(vv, 0);
+				++svt;
+				sv[svt][0] = ll;
+				sv[svt][1] = rr;
+				revert(1, 1, n, ll, rr);
+				if (vv < 0) break;
+			}
+			while (svt)
+			{
+				revert(1, 1, n, sv[svt][0], sv[svt][1]);
+				--svt;
+			}
+			printf("%d\n", ans);
+		}
+	}
+}

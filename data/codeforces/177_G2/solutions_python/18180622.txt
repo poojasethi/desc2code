@@ -1,0 +1,142 @@
+#include<iostream>
+#include<cstring>
+#include<string>
+#include<cstdio>
+using namespace std;
+#define LL long long
+#define MOD 1000000007
+#define SIZE 4
+#define MAXN 30
+#define MAXS 1000010
+#define MAXSS 100010
+  
+template<class T>
+struct Matrix {
+    int r, c;
+    T a[SIZE][SIZE];
+    Matrix() {
+        memset(a, 0, sizeof a);
+    }
+    Matrix(int si) {
+        memset(a, 0, sizeof a);
+        r = c = si;
+        for(int i = 0; i < si; i++)
+            a[i][i] = 1;
+    }
+    Matrix operator * (const Matrix &rhs) {
+        Matrix<T> ret;
+        ret.r = r;
+        ret.c = rhs.c;
+        for(int k = 0; k < c; ++k)
+            for(int i = 0; i < ret.r; ++i)
+                for(int j = 0; j < ret.c; ++j)
+                    ret.a[i][j] = (ret.a[i][j] + (LL)a[i][k] * rhs.a[k][j]) % MOD;
+        return ret;
+    }
+    Matrix operator ^ (LL b) {
+        Matrix<T> ret, base = *this;
+        int setret = 0;
+        while(b) {
+            if(b & 1) ret = (setret ? ret*base : base), setret = 1;
+            base = base * base;
+            b >>= 1;
+        }
+        return ret;
+    }
+};
+  
+int Next[MAXSS];
+char fs[MAXN][MAXS];
+int fib[MAXN];
+  
+void getNext(char* str){
+    //memset(Next,0,sizeof(Next));
+    int len2=strlen(str);
+    for(int i = 1, j = 0;i<len2;++i){
+        while(j && str[i]!=str[j]) j=Next[j];
+        if(str[i]==str[j])++j;
+        Next[i+1]=j;
+    }
+}
+  
+int KMP(char* txt,char* str) {
+    int len1=strlen(txt);
+    int len2=strlen(str);
+    int ret = 0;
+    for(int i = 0, j = 0;i<len1;++i){
+        while(j && txt[i]!=str[j]) j=Next[j];
+        if(txt[i]==str[j])++j;
+        if(j==len2) ++ret,j=Next[j];
+    }
+    return ret;
+}
+  
+char instr[MAXSS];
+char A[MAXS], B[MAXS];
+char temp[MAXS];
+  
+int main() {
+    Matrix<int> M;//BA=A,B,AB,BB
+  
+    M.r = M.c = 4;
+    M.a[0][1] = M.a[0][2] = M.a[1][0] = M.a[1][1] = M.a[2][3] = M.a[3][2] = 1;
+  
+    fib[1] = fib[2] = 1;
+    strcpy(fs[1],"a");
+    strcpy(fs[2],"b");
+    for(int i = 3; i < 30; ++i) {
+        fib[i] = fib[i - 1] + fib[i - 2];
+        strcpy(fs[i], fs[i - 1]);
+        strcat(fs[i], fs[i - 2]);
+    }
+    for(int i = 1; i < 30; ++i) fs[i][fib[i]] = '\0';
+  
+    LL k;
+    int m;
+  
+    scanf("%I64d%d",&k,&m);
+    while(m--) {
+        scanf("%s", instr);
+        int len = strlen(instr);
+        getNext(instr);
+        if(k < 30) {
+            printf("%d\r\n",KMP(fs[k],instr));
+            continue;
+        }
+  
+  
+        int I;
+        for(int i = 1; i < 30; i++) {
+            if(fib[i] >= len) {
+                strcpy(B, fs[i + 1]);
+                strcpy(A, fs[i]);
+                I = i;
+                break;
+            }
+        }
+  
+  
+  
+        LL CA = KMP(A,instr);
+        LL CB = KMP(B,instr);
+  
+        strcpy(temp,B);
+        LL CBA = KMP(strcat(temp , A),instr) - CB - CA;
+  
+        strcpy(temp,A);
+        LL CAB = KMP(strcat(temp , B),instr) - CA - CB;
+  
+        strcpy(temp,B);
+        LL CBB = KMP(strcat(temp , B),instr) - CB - CB;
+  
+        Matrix<int> cnt;
+        cnt.r = 1;
+        cnt.c = 4;
+        cnt.a[0][1] = 1;
+        cnt = cnt * (M ^ (k - I - 1));
+  
+        LL ans = (cnt.a[0][0] * (CBA + CA) + cnt.a[0][1] * CB + cnt.a[0][2] * CAB + cnt.a[0][3] * CBB) % MOD;
+        printf("%d\r\n",ans);
+    }
+    return 0;
+}

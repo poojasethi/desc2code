@@ -1,0 +1,61 @@
+#include<cstdio>
+#include<iostream>
+#include<algorithm>
+using namespace std;
+int start,m,cnt,a[7][7],n,x[101],y[101],d[7],s[202],v[101];
+
+void DFS(int x){
+	for(int y=0;y<=6;y++)
+		if(a[x][y]){
+		    a[x][y]--;
+		    a[y][x]--;
+		    DFS(y);
+		}
+	s[m--]=x;
+}
+
+int main(){
+	cin>>n;m=n+1;
+	for(int i=1;i<=n;i++)
+	{
+		scanf("%d%d",&x[i],&y[i]);
+		a[x[i]][y[i]]++;a[y[i]][x[i]]++;d[x[i]]++;d[y[i]]++;
+	}
+
+	start=x[1];
+
+	for(int i=0;i<=6;i++){
+        if(d[i]&1){
+            cnt++;
+            start=i;
+        }
+	}
+	if( cnt > 2 ){
+	    printf("No solution");
+	    return 0;
+	}
+
+	DFS(start);
+
+	if( m > 0 ){
+	    printf("No solution");
+	    return 0;
+    }
+
+	for(int i=1;i<=n;i++){
+		for(int j=1;j<=n;j++){
+		    if(!v[j]){
+                if(s[i]==x[j]&&s[i+1]==y[j]){
+                    printf("%d +\n",j);
+                    v[j]=1;
+                    break;
+                }else if(s[i]==y[j]&&s[i+1]==x[j]){
+                    printf("%d -\n",j);
+                    v[j]=1;
+                    break;
+                }
+		    }
+		}
+	}
+	return 0;
+}

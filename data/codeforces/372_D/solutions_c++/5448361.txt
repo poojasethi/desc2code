@@ -1,0 +1,60 @@
+#include <set>
+#include <cmath>
+#include <cstdio>
+#include <algorithm>
+#define maxn 100005
+using namespace std;
+
+int N,K,L,tot,head[maxn],lk[maxn*2],next[maxn*2],fa[maxn][20],p[maxn],d[maxn],dfn[maxn];
+typedef set<int> Set;
+typedef Set::iterator it;
+Set F;
+
+void add(int u,int v,int t) {lk[t]=v,next[t]=head[u],head[u]=t;}
+
+void dfs(int u)
+{
+	dfn[++tot]=u,p[u]=tot;
+	for (int i=1; i<=L; i++) fa[u][i]=fa[fa[u][i-1]][i-1];
+	for (int i=head[u],v; v=lk[i],i; i=next[i]) if (v!=fa[u][0]) fa[v][0]=u,d[v]=d[u]+1,dfs(v);
+}
+
+int lca(int x,int y)
+{
+	if (d[x]<d[y]) swap(x,y);
+	for (int i=L; i>=0; i--)
+	{
+		if (d[fa[x][i]]>=d[y]) x=fa[x][i];
+		if (x==y) return x;
+	}
+	for (int i=L; i>=0; i--) if (fa[x][i]!=fa[y][i]) x=fa[x][i],y=fa[y][i];
+	return fa[x][0];
+}
+
+int ins(int u)
+{
+	if (F.empty()) return 1;
+	it x=F.lower_bound(p[u]),y=x--;
+	if (y==F.begin()||y==F.end()) x=F.begin(),y=F.end(),y--;
+	int l=dfn[*x],r=dfn[*y];
+	int t=d[u]-d[lca(l,u)]-d[lca(r,u)]+d[lca(l,r)];
+	return t;
+}
+
+int main()
+{
+	scanf("%d%d",&N,&K),L=log2(N);
+	for (int i=1,u,v; i<N; i++) scanf("%d%d",&u,&v),add(u,v,i),add(v,u,i+N-1);
+	d[1]=1,dfs(1);
+	int ans=0;
+	for (int i=1,j=0,s=0; i<=N; i++)
+	{
+		for (;j<=N;)
+		{
+			int x=ins(++j);
+			if (j>N||s+x<=K) s+=x,F.insert(p[j]); else break;
+		}
+		F.erase(p[i]),s-=ins(i),ans=max(ans,j-i),j--;
+	}
+	printf("%d\n",ans);
+}

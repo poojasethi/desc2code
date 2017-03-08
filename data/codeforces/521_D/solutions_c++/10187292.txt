@@ -1,0 +1,87 @@
+
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <queue>
+#include <vector>
+using namespace std;
+
+typedef long long lld;
+
+struct big{
+	lld s, m; 
+	big(){s=m=0;}
+	big(lld a,lld b):s(a),m(b){}
+};
+
+bool operator<(const big&A, const big&B) {return A.s*B.m<A.m*B.s;}
+struct pli {
+	big v;
+	int t, cur, id;
+	bool operator<(const pli&B) const{return v<B.v;}
+};
+
+priority_queue<pli> Heap;
+
+vector<pair<int,int> > upgrade[100000+7];
+
+int N, M, K;
+lld A[100000+7];
+lld ass[100000+7][2];
+int Type[100000+7];
+
+int Ans[100000+7];
+int Cmp(const int&A,const int&B)
+{
+	return Type[A]<Type[B]||(Type[A]==Type[B]&&A<B);
+}
+int main()
+{
+	scanf("%d %d %d", &K, &N, &M);
+	for (int i=1; i<=K; i++)
+		scanf("%d", A+i);
+	for (int d=1; d<=N; d++)
+	{
+		int t, i, b;
+		scanf("%d %d %d", &t, &i, &b);
+		Type[d]=t;
+		if (t==1) 
+		{
+			if (b>A[i]&&b>ass[i][0]) ass[i][0]=b, ass[i][1]=d;
+		}
+		else if (t==2) upgrade[i].push_back(make_pair(b, d));
+		else Heap.push((pli){big(b-1, 1), 0, 0, d});
+	}
+	for (int i=1; i<=K; i++)
+		if (ass[i][1])
+		   upgrade[i].push_back(make_pair(ass[i][0]-A[i], ass[i][1]));
+	for (int i=1; i<=K; i++)
+	{
+		if (upgrade[i].empty()) continue;
+		
+		std::sort(upgrade[i].begin(), upgrade[i].end());
+		std::reverse(upgrade[i].begin(), upgrade[i].end());
+
+		Heap.push((pli){big(upgrade[i][0].first, A[i]), i, 0, upgrade[i][0].second});
+		A[i]+=upgrade[i][0].first;
+	}
+	for (int d=1; d<=M&&!Heap.empty(); d++)
+	{
+		pli u=Heap.top();
+		Heap.pop();
+		Ans[++Ans[0]]=u.id;
+		if (u.t)
+		{
+			int v=u.t, cnt=u.cur;
+			if (cnt+1==upgrade[v].size()) continue;
+			Heap.push((pli){big(upgrade[v][cnt+1].first, A[v]), v, cnt+1, upgrade[v][cnt+1].second});
+			A[v]+=upgrade[v][cnt+1].first;
+		}
+	}
+	printf("%d\n", Ans[0]);
+	std::sort(Ans+1, Ans+Ans[0]+1, Cmp);
+	for (int i=1; i<=Ans[0]; i++)
+		printf("%d ", Ans[i]);
+	puts("");
+	return 0;
+}

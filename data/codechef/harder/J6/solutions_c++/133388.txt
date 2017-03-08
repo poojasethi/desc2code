@@ -1,0 +1,240 @@
+#include <stdio.h>
+#include <string.h>
+
+const int BufSize = 4096;
+int bufPos = 0, bufLen = 0;
+char buffer[BufSize];
+
+inline char ReadChar()
+{
+	if(bufPos==bufLen){
+		bufLen=fread(buffer,1,BufSize,stdin);
+		bufPos=0;
+		if(bufLen==0)
+			return '\n';
+	}
+	return buffer[bufPos++];
+}
+
+int ReadInt()
+{
+	int t;
+	int s=1;
+	if(bufLen-bufPos>10){
+		while(true){
+			char c=buffer[bufPos++];
+			if(c=='-')
+				s=-1;
+			else if(c>='0'&&c<='9'){
+				t=(c-'0');
+				break;
+			}
+		}
+		while(true){
+			char c=buffer[bufPos++];
+			if(c>='0'&&c<='9')
+				t=t*10+(c-'0');
+			else
+				return s*t;
+		}
+	}else{
+		while(true){
+			char c=ReadChar();
+			if(c=='-')
+				s=-1;
+			else if(c>='0'&&c<='9'){
+				t=(c-'0');
+				break;
+			}
+		}
+		while(true){
+			char c=ReadChar();
+			if(c>='0'&&c<='9')
+				t=t*10+(c-'0');
+			else
+				return s*t;
+		}
+	}
+}
+
+#define SendMessage(x) 0
+
+inline int abs(int x) { return (x<0)?(-x):(x); }
+inline void minimize(int &a,int b) { if(a>b) a=b; }
+
+const int MAX_N = 100001;
+const int MAX_M = 300001;
+
+int current, cn, vn, ven, vsn, vkn;
+
+int _vd[2*MAX_N+1], _vc[2*MAX_N+1], _vi[2*MAX_N+1], _vl[2*MAX_N+1], _ve[2*MAX_N+1];
+
+// (Strongly Connected) Components
+int cx[2*MAX_N]; // Component.example vertex
+
+// Vertices
+int *const vd = _vd+MAX_N; // Vertex.done (on stack)
+int *const vc = _vc+MAX_N; // Vertex.component
+int *const vi = _vi+MAX_N; // Vertex.index
+int *const vl = _vl+MAX_N; // Vertex.lowlink
+int *const ve = _ve+MAX_N; // Vertex.first edge
+int veb[2*MAX_M], vep[2*MAX_M]; // Component edges
+int vs[2*MAX_N+MAX_M]; // Vertex stack
+int vk[MAX_N+1]; // Vertex.known, fixed labelling
+
+void AddEdge(int a, int b)
+{
+	veb[ven]=b;
+	vep[ven]=ve[a];
+	ve[a]=ven++;
+}
+
+bool Tarjan(int v)
+{
+	vi[v]=vl[v]=current++;
+	vs[vsn++]=v;
+	vd[v]=1;
+	for(int i=ve[v]; i!=-1; i=vep[i]){
+		int v1=veb[i];
+		// If v1 has a fixed labelling, it must be in another SCC
+		if(vk[abs(v1)]){
+		}else if(vi[v1]==-1){
+			if(Tarjan(v1))
+				return true;
+			minimize(vl[v],vl[v1]);
+		}else if(vd[v1]){
+			minimize(vl[v],vi[v1]);
+		}
+	}
+	if(vl[v]==vi[v]){
+		cx[cn]=v;
+		int v1;
+		do{
+			v1=vs[--vsn];
+			if(v1==-v)
+				return true;
+			vd[v1]=0;
+			vc[v1]=cn;
+		}while(v1!=v);
+		cn++;
+	}
+	return false;
+}
+
+bool ReadData()
+{
+	int m;
+	vn=ReadInt();
+	m=ReadInt();
+	memset(vk+1,0,sizeof(int)*vn);
+	memset(vi-vn,-1,sizeof(int)*(2*vn+1));
+	memset(vl-vn,-1,sizeof(int)*(2*vn+1));
+	memset(vc-vn,-1,sizeof(int)*(2*vn+1));
+	memset(ve-vn,-1,sizeof(int)*(2*vn+1));
+	memset(vd-vn,0,sizeof(int)*(2*vn+1));
+	ven=vsn=vkn=0;
+	bool conflict = false;
+	for(int ie=0; ie<m; ++ie){
+		int a, b;
+		a=ReadInt();
+		b=ReadInt();
+		if(b==a)
+		{
+			int &k=vk[abs(a)];
+			if(k==0){
+				vs[vsn++]=a;
+				++vkn;
+				k=a;
+			}else if(k==-a)
+				conflict=true;
+			//AddEdge(-a,a);
+		}
+		else if(b!=-a && !conflict)
+		{
+			AddEdge(-a,b);
+			AddEdge(-b,a);
+		}
+	}
+	return conflict;
+}
+
+bool AddKnowns()
+{
+	while(vsn){
+		int v=vs[--vsn];
+		for(int ie=ve[v]; ie!=-1; ie=vep[ie]){
+			int b=veb[ie];
+			int ab=abs(b);
+			int &k=vk[ab];
+			if(k==0){
+				k=b;
+				vs[vsn++]=b;
+				++vkn;
+			}else if(k==-b)
+				return true;
+		}
+	}
+	return false;
+}
+
+int Search()
+{
+	SendMessage("Read Data");
+	if( ReadData() )
+		return 0;
+	SendMessage("Follow implications of knowns");
+	if( AddKnowns() )
+		return 0;
+	if( vkn==vn )
+		return 1;
+	SendMessage("Find strongly connected components, checking for unsatisfiability");
+	current=cn=vsn=0;
+	for(int iv=-vn; iv<=vn; ++iv)
+		if(iv && vk[abs(iv)]==0 && vc[iv]==-1)
+			if(Tarjan(iv))
+				return 0;
+	SendMessage("Satisfiable. Check for an SCC A, where Not A -> A");
+	for(int iv=-vn; iv<=vn; ++iv){
+		if(iv && !vk[abs(iv)])
+		{
+			int c=vc[iv];
+			for(int i=ve[iv]; i!=-1; i=vep[i]){
+				int v1=veb[i];
+				int &k1=vk[abs(v1)];
+				if(!k1){
+					int c1=vc[v1];
+					if(vc[-cx[c1]]==c)
+					{
+						vs[vsn++]=v1;
+						k1=v1;
+						++vkn;
+						AddKnowns();
+						if(vn==vkn){
+							SendMessage("Complete solution found");
+							return 1;
+						}
+						break;
+					}
+				}
+			}
+		}
+	}
+	SendMessage("No complete solution found");
+	return 2;
+}
+
+int main(int argc, char **argv)
+{
+	int t;
+	t=ReadInt();
+	for(int it=0; it<t; ++it){
+		int found = Search();
+		if( found == 0 )
+			printf("CONFLICT\n");
+		else if( found == 1 )
+			printf("UNIQUE\n");
+		else
+			printf("MULTIPLE\n");
+	}
+	return 0;
+}

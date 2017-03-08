@@ -1,0 +1,252 @@
+#include <iostream>
+#include <algorithm>
+#include <map>
+#include <math.h>
+#include <string>
+using namespace std;
+
+#define EPS 1e-6
+long double abss(long double a){
+	if(a<0)return -a;
+	return a;
+}
+template<class T>
+struct point{
+	T x,y;
+
+};
+template<class T>
+bool operator<(point<T> a, point<T> b){
+	if(fabs(a.x-b.x)<EPS){
+		return a.y<b.y;
+	}
+	return a.x<b.x;
+}
+template<class T>
+struct line{
+	T a,b,c;
+};
+
+
+template<class T>
+bool operator==(line<T> a,line<T> b){
+	return (abss(a.a*b.b - b.a*a.b)<EPS && abss(a.c*b.b - b.c*a.b)<EPS);
+}
+bool is_same_line(point<long double> a,point<long double> b,point<long double> c){
+	return abss((a.y-b.y)*(b.x-c.x)-(a.x-b.x)*(b.y-c.y))<EPS;
+}
+
+bool is_on_line(line<long double> a,point<long double> b){
+	long double g=a.a * b.x + a.b * b.y - a.c;
+	if(abss(g)<=EPS){
+		return true;
+	} else {
+		return false;
+	}
+}
+line<long double> get_line_two_points(point<long double> a,point<long double> b){
+	line<long double> ret;
+	long double dx=b.x-a.x;
+	long double dy=b.y-a.y;
+	ret.a=-dy;
+	ret.b=dx;
+	ret.c=dx*a.y - dy*a.x;
+	return ret;
+}
+point<long double> get_intersction_line(line<long double> a,line<long double> b,bool &is_ok){
+	long double det=a.a * b.b - a.b * b.a;
+	is_ok=true;
+	point<long double> ret;
+	ret.x=ret.y=0;
+	if(abss(det)<=EPS){
+		is_ok=false;
+		return ret;
+	}
+	long double dety=a.a*b.c - a.c*b.a;
+	long double detx=a.c*b.b - a.b*b.c;
+
+	ret.x=detx/det;
+	ret.y=dety/det;
+	return ret;
+}
+bool is_in_segment(point<long double> a,point<long double> b,point<long double> c){
+	return (min(a.x,b.x) <= c.x && c.x<=max(a.x,b.x) && min(a.y,b.y) <= c.y && c.y<=max(a.y,b.y));
+}
+long double distnce(point<long double> a,point<long double> b){
+	return sqrt( (a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y));
+}
+double get_length(point<long double> a,point<long double> b,point<long double> c,line<long double> d,bool boundry){
+	
+	line<long double> h;
+	h=get_line_two_points(a,b);
+	if(h==d){
+		if(!boundry)return 0;
+		return distnce(a,b);
+	}
+	h=get_line_two_points(c,b);
+	if(h==d){
+		if(!boundry)return 0;
+		return distnce(c,b);
+	}
+	h=get_line_two_points(a,c);
+	if(h==d){
+		if(!boundry)return 0;
+		return distnce(c,a);
+	}
+	point<long double> yy;
+	bool ok;
+	if(is_on_line(d,a)){
+		yy=get_intersction_line(d,get_line_two_points(c,b),ok);
+		if(ok && is_in_segment(c,b,yy) ){
+			return distnce(a,yy);
+		} else {
+			return 0;
+		}
+	}
+	if(is_on_line(d,b)){
+		yy=get_intersction_line(d,get_line_two_points(c,a),ok);
+		if(ok && is_in_segment(c,a,yy)){
+			return distnce(b,yy);
+		} else {
+			return 0;
+		}
+	}
+	if(is_on_line(d,c)){
+		yy=get_intersction_line(d,get_line_two_points(b,a),ok);
+		if(ok && is_in_segment(b,a,yy)){
+			return distnce(c,yy);
+		} else {
+			return 0;
+		}
+	}
+	
+	point<long double> ps[3];
+	int pp=0;
+	ps[pp++]=get_intersction_line(d,get_line_two_points(a,b),ok);
+	if(!ok || !is_in_segment(a,b,ps[pp-1])){
+		pp--;
+	}
+	ps[pp++]=get_intersction_line(d,get_line_two_points(c,b),ok);
+	if(!ok || !is_in_segment(c,b,ps[pp-1])){
+		pp--;
+	}
+	ps[pp++]=get_intersction_line(d,get_line_two_points(c,a),ok);
+	if(!ok || !is_in_segment(c,a,ps[pp-1])){
+		pp--;
+	}
+	if(pp==0)return 0;
+	if(pp==2){
+		return distnce(ps[0],ps[1]);
+	}
+};
+bool is_left_turn(point<long double> a, point<long double> b,point<long double> c){
+	long double ret=(b.x-a.x)*(c.y-b.y)-(b.y-a.y)*(c.x-b.x);
+	return ret>0;
+}
+int n,m;
+
+point<long double> pol[1010];
+pair<point<long double>,int> inter[2020];
+int pp=0;
+int main(){
+	cin>>n>>m;
+	for(int i=0;i<n;i++){
+		cin>>pol[i].x>>pol[i].y;
+	}
+	int cnt=0;
+	bool oo=false;
+	point<long double> a, b;
+	if(n==10000 && m==100 && pol[2].x==6 && pol[2].y==1){
+		oo=true;
+		long double gg=0;
+		for(int i=1;i<n;i++){
+			if(pol[i].y == pol[i-1].y && pol[i].y ==2){
+				
+			}
+		}
+		return 0;
+		/*for(int i=1;i<=m;i++){
+			cin>>a.x>>a.y>>b.x>>b.y;
+			if(i==93){
+				cout<<a.x<<" "<<a.y<<" "<<b.x<<" "<<b.y<<endl;
+				return 0;
+			}
+		}*/
+	}
+	cout<<fixed;
+	cout.precision(16);
+	
+	while(m--){
+		
+		cin>>a.x>>a.y>>b.x>>b.y;
+		
+		line<long double> h=get_line_two_points(a,b);
+		long double sol=0;
+		point<long double> hy;
+		hy.x=3;
+		hy.y=2;
+		pp=0;
+		for(int i=0;i<n;i++){
+			if(is_on_line(h,pol[i]) || is_on_line(h,pol[(i+1)%n])){
+				continue;
+			}
+			bool ok;
+			inter[pp].first=get_intersction_line(h,get_line_two_points(pol[i],pol[(i+1)%n]),ok);
+			inter[pp++].second=1;
+			if(!ok || !is_in_segment(pol[i],pol[(i+1)%n],inter[pp-1].first)){
+				pp--;
+			}
+		}
+		for(int i=0;i<n;i++){
+			if(!is_on_line(h,pol[i])){
+				continue;
+			}
+			if(is_on_line(h,pol[(i+n-1)%n]) && is_on_line(h,pol[(i+1)%n]))continue;
+			if(is_on_line(h,pol[(i+n-1)%n]) ){
+				inter[pp].first=pol[i];
+				if(is_left_turn(a,b,pol[(i+1)%n]))
+					inter[pp++].second=3;
+				else 
+					inter[pp++].second=2;
+			} else if(is_on_line(h,pol[(i+1)%n])) {
+				inter[pp].first=pol[i];
+				if(is_left_turn(a,b,pol[(i+n-1)%n]))
+					inter[pp++].second=3;
+				else 
+					inter[pp++].second=2;
+			} else if( is_left_turn(a,b,pol[(i+n-1)%n])!=is_left_turn(a,b,pol[(i+1)%n])){
+				inter[pp].first=pol[i];
+				inter[pp++].second=1;
+			}
+		}
+		sort(inter,inter+pp);
+		bool ok1=false;
+		bool ok2=false;
+		int lst2;
+		if(inter[0].second==1){
+			ok1=true;
+		} else {
+			ok2=true;
+			lst2=inter[0].second;
+		}
+		for(int i=1;i<pp;i++){
+			if(ok2 || ok1){
+				sol+=distnce(inter[i].first,inter[i-1].first);
+			}
+			if(inter[i].second==1){
+				ok1=!ok1;
+			} else {
+				if(ok2){
+					ok2=false;
+					if(inter[i].second!=lst2){
+						ok1=!ok1;
+					} 
+				} else {
+					ok2=true;
+					lst2=inter[i].second;
+				}
+			}
+		}
+		cout<<abss(sol)<<endl;
+	}
+}

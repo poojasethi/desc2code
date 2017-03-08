@@ -1,0 +1,77 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+#define N 5005
+#define mo 1000000007
+#define For(i,l,r) for(int i=l;i<=r;i++)
+#define Dor(i,r,l) for(int i=r;i>=l;i--)
+using namespace std;
+char s[N];
+int F[N][N],LCP[N][N],n;
+bool large(int i,int j,int k){
+    if(LCP[i][j]>=k) return 0;
+    k=LCP[i][j];
+    return s[i+k]>s[j+k];
+}
+int calc(int i,int j){
+//  printf("i j %d %d\n",i,j);
+    int ret=0;
+    For(k,i,i+j-1){
+        ret=ret*2+(s[k]=='1');
+        ret%=mo;
+    }
+//  printf("ret %d\n",ret);
+    return ret;
+}
+int main(){
+    
+    scanf("%s",s+1); n=strlen(s+1);
+    
+    Dor(i,n,1) Dor(j,n,1) LCP[i][j]=(s[i]==s[j]?LCP[i+1][j+1]+1:0);
+//  For(i,1,n) For(j,1,n) printf("LCP[%d][%d] -> %d\n",i,j,LCP[i][j]);
+
+    F[1][1]=1;
+    For(i,1,n){
+        For(j,1,n-i+1) F[i][j]=(F[i][j]+F[i][j-1])%mo;
+        For(j,1,n-i+1) if(F[i][j] && s[i+j]=='1'){
+            int k=j;
+            if( large(i,i+j,k) ) k++;
+            if( i+j+k-1>n ) continue;
+            F[i+j][k]=(F[i+j][k]+F[i][j])%mo;
+//          printf("update (%d,%d) -> (%d,%d)\n",i,j,i+j,k);
+        }
+    }
+    int Ans=0;
+    For(i,1,n) For(j,1,n) if(i+j-1==n && F[i][j]){
+//      printf("i j %d %d F %d\n",i,j,F[i][j]);
+        Ans=(Ans+F[i][j])%mo;
+    }
+    printf("%d\n",Ans);
+    
+    memset(F,0x7f,sizeof(F));
+    F[1][1]=1;
+    For(i,1,n){
+        For(j,1,n-i+1) F[i][j]=min(F[i][j],F[i][j-1]);
+        For(j,1,n-i+1) if(F[i][j] && s[i+j]=='1'){
+            int k=j;
+            if( large(i,i+j,k) ) k++;
+            if( i+k>n ) continue;
+            F[i+j][k]=min(F[i+j][k],F[i][j]+1);
+        }
+    }
+    
+//  For(i,1,n) For(j,1,n) if(F[i][j]) printf("F[%d][%d] -> %d\n",i,j,F[i][j]);
+    
+    
+    Ans=mo-1;
+    For(i,1,n) For(j,1,min(n,12)) if(i+j-1==n && F[i][j]!=0x7f7f7f7f){
+        Ans=min(Ans,calc(i,j)+F[i][j]);
+    }
+    if(Ans==mo-1){
+        For(i,1,n) For(j,13,n)if(i+j-1==n && F[i][j]!=0x7f7f7f7f){
+            Ans=calc(i,j)+F[i][j]; break;
+        }
+    }
+    printf("%d\n",Ans%mo);
+}

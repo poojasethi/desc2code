@@ -1,0 +1,173 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <deque>
+#include <queue>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <cctype>
+#include <string>
+#include <cstring>
+#include <ctime>
+#include <string.h>
+ 
+using namespace std;
+ 
+typedef unsigned int uint;
+typedef long long int64;
+typedef unsigned long long uint64;
+#define two(X) (1<<(X))
+#define twoL(X) (((int64)(1))<<(X))
+#define contain(S,X) (((S)&two(X))!=0)
+#define containL(S,X) (((S)&twoL(X))!=0)
+const double pi=acos(-1.0);
+const double eps=1e-11;
+template<class T> inline void checkmin(T &a,T b){if(b<a) a=b;}
+template<class T> inline void checkmax(T &a,T b){if(b>a) a=b;}
+template<class T> inline T sqr(T x){return x*x;}
+typedef pair<int,int> ipair;
+#define SIZE(A) ((int)A.size())
+#define LENGTH(A) ((int)A.length())
+#define MP(A,B) make_pair(A,B)
+#define PB(X) push_back(X)
+ 
+const int maxn=200000+10;
+const int maxsize=1<<21;
+const int oo=100000000;
+ 
+int n,w[maxn];
+uint va[maxn],vb[maxn];
+int a[maxn],b[maxn];
+int r[maxn],lca[maxn],z[maxn];
+int tree[maxsize],first[maxsize],last[maxsize];
+ 
+int gettree(int p,int s,int t,int l,int r)
+{
+	if (l<=s && r>=t) return tree[p];
+	int ret=oo;
+	int m=(s+t)/2;
+	if (l<=m) checkmin(ret,gettree(p*2+1,s,m,l,r));
+	if (m<r) checkmin(ret,gettree(p*2+2,m+1,t,l,r));
+	return ret;
+}
+void updatetree(int p,int s,int t,int key,int d)
+{
+	if (s==t) { tree[p]=d; return; }
+	int m=(s+t)/2;
+	if (key<=m) updatetree(p*2+1,s,m,key,d);
+	else updatetree(p*2+2,m+1,t,key,d);
+	tree[p]=min(tree[p*2+1],tree[p*2+2]);
+}
+int findp(int p,int s,int t,int &w)
+{
+	if (last[p]>w) return 0;
+	if (first[p]<w) { w=last[p]; return tree[p]; }
+	int m=(s+t)/2;
+	int r=findp(p*2+1,s,m,w);
+	if (w==last[p*2+1] && last[p*2+2]<w)
+		r+=tree[p]-tree[p*2+1],w=last[p*2+2];
+	else
+		r+=findp(p*2+2,m+1,t,w);
+	return r;
+}
+int getp(int p,int s,int t,int key,int &w)
+{
+	if (s==t) { w=last[p]; return 1; }
+	int m=(s+t)/2;
+	if (key>m) return getp(p*2+2,m+1,t,key,w);
+	int r=getp(p*2+1,s,m,key,w);
+	r+=findp(p*2+2,m+1,t,w);
+	return r;
+}
+int solve(int key)
+{
+	int w;
+	return getp(0,0,n-1,key,w);
+}
+void update(int p,int s,int t,int key,int d,int w)
+{
+	if (s==t)
+	{
+		if (d) tree[p]=0,first[p]=last[p]=oo;
+		else tree[p]=1,first[p]=last[p]=w;
+		return;
+	}
+	int m=(s+t)/2;
+	int x=p*2+1,y=p*2+2;
+	if (key<=m)
+		update(x,s,m,key,d,w);
+	else
+		update(y,m+1,t,key,d,w);
+	if (tree[x]==0 && tree[y]==0)
+		tree[p]=0,first[p]=last[p]=oo;
+	else if (tree[x]==0)
+		tree[p]=tree[y],first[p]=first[y],last[p]=last[y];
+	else
+	{
+		first[p]=first[x];
+		last[p]=last[x];
+		tree[p]=tree[x]+findp(y,m+1,t,last[p]);
+	}
+}
+ 
+int main()
+{
+#ifdef _MSC_VER
+	freopen("input.txt","r",stdin);
+#endif
+	std::ios_base::sync_with_stdio(false);
+	cin>>n;
+	for (int i=0;i<n;i++)
+	{
+		cin>>w[i]>>va[i];
+		if (w[i]!=1) cin>>vb[i];
+	}
+	set<uint> sa,sb;
+	for (int i=0;i<n;i++) if (w[i]==0) { sa.insert(va[i]); sb.insert(vb[i]); }
+	vector<uint> ha(sa.begin(),sa.end());
+	vector<uint> hb(sb.begin(),sb.end());
+	reverse(hb.begin(),hb.end());
+	map<uint,int> ma,mb;
+	for (int i=0;i<SIZE(ha);i++) ma[ha[i]]=i;
+	for (int i=0;i<SIZE(hb);i++) mb[hb[i]]=i;
+	for (int i=0;i<n;i++) if (w[i]==0 || w[i]==1) a[i]=ma[va[i]];
+	for (int i=0;i<n;i++) if (w[i]==0) b[i]=mb[vb[i]];
+	for (int i=0;i<n;i++) if (w[i]==2) a[i]=ma[va[i]],b[i]=ma[vb[i]];
+	for (int i=0;i<maxsize;i++) tree[i]=oo;
+	for (int i=0;i<n;i++)
+		if (w[i]==0)
+			updatetree(0,0,n-1,a[i],b[i]),z[b[i]]=a[i];
+		else if (w[i]==1)
+			updatetree(0,0,n-1,a[i],oo);
+		else
+			lca[i]=z[gettree(0,0,n-1,min(a[i],b[i]),max(a[i],b[i]))];
+	for (int i=0;i<n;i++) if (w[i]==2) r[i]=0;
+	for (int rev=0;rev<2;rev++)
+	{
+		for (int i=0;i<maxsize;i++) tree[i]=0;
+		for (int i=0;i<maxsize;i++) first[i]=oo;
+		for (int i=0;i<maxsize;i++) last[i]=oo;
+		for (int i=0;i<n;i++) 
+			if (w[i]==0 || w[i]==1)
+				update(0,0,n-1,rev?(n-1-a[i]):a[i],w[i],b[i]);
+			else
+			{
+				r[i]-=solve(rev?(n-1-lca[i]):lca[i])*2;
+				r[i]+=solve(rev?(n-1-a[i]):a[i]);
+				r[i]+=solve(rev?(n-1-b[i]):b[i]);
+			}
+	}
+	for (int i=0;i<n;i++) if (w[i]==2) printf("%d\n",r[i]);
+	return 0;
+}

@@ -1,0 +1,138 @@
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+#include <string>
+#include <vector>
+using namespace std;
+
+typedef long long LL;
+
+#define FMT "%I64d"
+#define SZ(v) ((int)((v).size()))
+#define PSS pair<string, string>
+#define MP make_pair
+
+const int MAXN = 20;
+const int MAXL = 8;
+const int INF = 0x3f3f3f3f;
+
+struct State
+{
+  State(){}
+  State(int l0, int l1, int i, int j, int k, int u):l0(l0),l1(l1),i(i),j(j),k(k),u(u){}
+  void dump() {
+    printf("%d %d %d %d %d\n", l0, l1, i, j, k, u);
+  }
+  int l0, l1, i, j, k, u;
+};
+
+string si, sj, sk;
+vector< pair<State, PSS > > que[2];
+bool vis[MAXN][MAXN][MAXL][MAXL][MAXL][2];
+
+string result;
+int best_len;
+
+void init()
+{
+  cin >> si;
+  int pidx = si.find_first_of("+");
+  int didx = si.find_first_of("=");
+  sk = si.substr(didx+1, SZ(si) - didx - 1);
+  sj = si.substr(pidx+1, didx - pidx - 1);
+  si.erase(pidx, SZ(si)-pidx);
+
+  reverse(si.begin(), si.end());
+  reverse(sj.begin(), sj.end());
+  reverse(sk.begin(), sk.end());
+}
+
+inline void trans(int a, int b, int l, State& ss, PSS& pp )
+{
+  int flag = 0;
+  int u, d;
+  if (a) {
+    pp.first = string(1, a+'0') + string(l - ss.l0 - 1, '0') + pp.first;
+    ss.l0 = l;
+  }
+  if (b) {
+    pp.second = string(1, b+'0') + string(l - ss.l1 - 1, '0') + pp.second;
+    ss.l1 = l;
+  }
+
+  if (ss.i < SZ(si) && '0' + a == si[ss.i]) ++ss.i, flag = 1;
+  if (ss.j < SZ(sj) && '0' + b == sj[ss.j]) ++ss.j, flag = 1;
+  d = (a + b + ss.u)%10;
+  u = (a + b + ss.u)/10;
+  if (ss.k < SZ(sk) && '0' + d == sk[ss.k]) ++ss.k, flag = 1;
+  ss.u = u;
+
+  if (!flag) ss.l0 = INF;
+}
+
+inline void up_result(const PSS& pp)
+{
+  char buf[50];
+  int len;
+  LL a = 0, b = 0, c;
+  for (int i = 0; i < SZ(pp.first); ++i) a = a*10 + pp.first[i]-'0';
+  for (int i = 0; i < SZ(pp.second); ++i) b = b*10 + pp.second[i]-'0';
+  
+  c = a + b;
+  sprintf(buf, FMT "+" FMT "=" FMT, a, b, c);
+  len = strlen(buf);
+  if (len < best_len) {
+    best_len = len;
+    result = buf;
+  }
+}
+
+void solve()
+{
+  State s, ss;
+  PSS p, pp;
+  int w = 0;
+  
+  result.clear();
+  best_len = INF;
+
+  que[w].clear();
+  que[w].push_back(MP(State(0, 0, 0, 0, 0, 0), MP(string(""), string(""))));
+  vis[0][0][0][0][0][0] = 1;
+  
+  for (int l = 1; !que[w].empty(); ++l) {
+    que[w^1].clear();
+    for (int i = 0; i < SZ(que[w]); ++i) {
+      s = que[w][i].first;
+      p = que[w][i].second;
+      for (int a = 0; a < 10; ++a) {
+	for (int b = 0; b < 10; ++b) {
+	  ss = s;
+	  pp = p;
+	  trans(a, b, l, ss, pp);
+	  if (ss.i == SZ(si) && ss.j == SZ(sj) && ss.k == SZ(sk) && ss.u == 0) {
+	    up_result(pp);
+	  } else {
+	    if (2+ss.l0+ss.l1+max(ss.l0,ss.l1)+(SZ(si)-ss.i)+(SZ(sj)-ss.j)+(SZ(sk)-ss.k) >= best_len) continue;
+	    if (vis[ss.l0][ss.l1][ss.i][ss.j][ss.k][ss.u]) continue;
+	    vis[ss.l0][ss.l1][ss.i][ss.j][ss.k][ss.u] = 1;
+	    que[w^1].push_back(MP(ss, pp));
+	  }
+	}
+      }
+    }
+    w ^= 1;
+  }
+
+  cout << result << endl;
+}
+
+int main()
+{
+  init();
+  solve();
+  return 0;
+}
+
+

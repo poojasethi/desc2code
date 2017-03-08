@@ -1,0 +1,111 @@
+#include <bits/stdc++.h>
+
+#define mp make_pair
+#define st first
+#define nd second
+#define pb push_back
+
+using namespace std;
+
+typedef long long ll;
+typedef pair< ll,ll > pll;
+typedef pair< int,int > pii;
+
+const int inf = 1000000000, N = 100000, LOGN = 17;
+
+int n, suf[N+5], order[N+5], lcp[N+5], p[N+5], size[N+5];
+ll cnt;
+char s[N+5];
+
+int findSet(int x) {
+	if (x != p[x])
+		return p[x] = findSet(p[x]);
+
+	return x;
+}
+
+void unionSet(int x, int y) {
+	x = findSet(x);	
+	y = findSet(y);
+	
+	if (x == y)
+		return;
+
+	cnt -= (ll) size[x] * (size[x] + 1) / 2;
+	cnt -= (ll) size[y] * (size[y] + 1) / 2;
+
+	p[x] = y;
+	size[y] += size[x];
+
+	cnt += (ll) size[y] * (size[y] + 1) / 2;
+}
+
+int main()
+{
+	scanf(" %s", s+1);
+	n = strlen(s+1);
+	
+	vector< pair<pii, int> > v;
+	
+	for (int i = 1; i <= n; i++)
+		v.pb( mp(mp(s[i], 0), i) );
+
+	for (int l = 0; l <= LOGN; l++) {
+		sort(v.begin(), v.end());
+
+		suf[v[0].nd] = 1;
+		for (int i = 1; i < n; i++)
+			suf[v[i].nd] = suf[v[i-1].nd] + (v[i].st != v[i-1].st);
+		
+		v.clear();
+		for (int i = 1; i <= n; i++) {
+			if (i + (1 << l) <= n)
+				v.pb( mp(mp(suf[i], suf[i + (1 << l)]), i) );
+			else
+				v.pb( mp(mp(suf[i], 0), i) );
+		}
+	}
+
+	for (int i = 1; i <= n; i++)
+		order[suf[i]] = i;
+
+	int j = 0;
+
+	for (int i = 1; i <= n; i++) {
+		if (suf[i] == n)
+			continue;
+
+		while (i + j <= n && order[suf[i] + 1] + j <= n && s[i + j] == s[order[suf[i] + 1] + j])
+			j++;
+
+		lcp[suf[i]] = j;
+
+		if (j > 0)
+			j--;
+	}
+
+	vector< pair<int, pii> > edges;
+
+	for (int i = 1; i < n; i++)
+		edges.pb( mp(lcp[i], mp(i, i+1)) );
+	
+	sort(edges.begin(), edges.end());
+	reverse(edges.begin(), edges.end());
+
+	ll ans = 0;
+
+	for (int i = n, j = 0; i >= 1; i--) {
+		p[suf[n-i+1]] = suf[n-i+1];
+		size[suf[n-i+1]] = 1;
+		cnt++;
+
+		for (; j < edges.size() && edges[j].st >= i; j++)
+			unionSet(edges[j].nd.st, edges[j].nd.nd);
+
+		ans += cnt;		
+	}
+
+	cout << ans << endl;
+
+	return 0;
+}

@@ -1,0 +1,260 @@
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+
+const int maxn = 3e5 + 20;
+
+typedef unsigned long long ull;
+typedef long long ll;
+
+const ull base = 31;
+const ll mbase = 37;
+const ll mod = 272855129;
+
+int n, m;
+char s[maxn];
+std::vector<int> G[maxn];
+
+int son[maxn];
+int size[maxn];
+int top[maxn];
+int ind[maxn], dl;
+int dfn[maxn];
+int dep[maxn];
+int Fa[maxn];
+ull pwbase[maxn];
+ll pwm[maxn];
+
+int arrow[2][maxn];
+
+struct Data
+{
+	ull a;
+	ll b;
+	
+	Data(ull a = 0,ll b = 0):a(a), b(b) { }
+	
+	friend Data operator + (Data t,char c)
+	{
+		return (Data){ t.a * base + c - 'a' + 1, (t.b * mbase + c - 'a' + 1) % mod };
+	}
+	friend bool operator == (const Data &a,const Data &b)
+	{
+		return a.a == b.a && a.b == b.b;
+	}
+};
+
+Data pre[maxn], sur[maxn];
+
+void dfs(int a,int fa)
+{
+	Fa[a] = fa;
+	dep[a] = dep[fa] + 1;
+	size[a] = 1;
+	
+	for(int i = 0; i < (int) G[a].size(); i++)
+		if(G[a][i] != fa)
+		{
+			dfs(G[a][i], a);
+			
+			if(size[G[a][i]] > size[son[a]])
+				son[a] = G[a][i];
+			
+			size[a] += size[G[a][i]];
+		}
+}
+void build(int a,int fa)
+{
+	ind[a] = ++dl;
+	dfn[dl] = a;
+	
+	if(son[fa] == a)
+		top[a] = top[fa];
+	else
+		top[a] = a;
+
+	if(son[a]) build(son[a], a);
+	
+	for(int i = 0; i < (int) G[a].size(); i++)
+		if(G[a][i] != fa && G[a][i] != son[a])
+		{
+			build(G[a][i], a);
+		}
+}
+void init()
+{
+	scanf("%d", &n);
+	scanf("%s", s + 1);
+
+	for(int i = 1, u, v; i < n; i++)
+	{
+		scanf("%d%d", &u, &v);
+		G[u].push_back(v);
+		G[v].push_back(u);
+	}	
+}
+void prework()
+{
+	dfs(1, 0), build(1, 0);
+	
+	pwbase[0] = 1, pwm[0] = 1;
+	
+	for(int i = 1; i <= n; i++)
+	{
+		pwbase[i] = pwbase[i - 1] * base;
+		pwm[i] = pwm[i - 1] * mbase % mod;
+	}
+	
+	for(int i = 1; i <= n; i++)
+		pre[i] = pre[i - 1] + s[dfn[i]];
+	
+	for(int i = n; i >= 1; i--)
+		sur[i] = sur[i + 1] + s[dfn[i]];
+}
+
+std::pair<int,int> P[2][maxn];
+int pl[2];
+
+std::pair<int,int> A[maxn], B[maxn];
+int al, bl;
+
+int getd(int p,int t)
+{
+	return abs(p - t) + 1;
+}
+Data getData(int s,int t,int l)
+{
+	if(t == 1) return Data(pre[s + l - 1].a - pre[s - 1].a * pwbase[l], (pre[s + l - 1].b - pre[s - 1].b * pwm[l] % mod + mod) % mod);
+	else return Data(sur[s - l + 1].a - sur[s + 1].a * pwbase[l], (sur[s - l + 1].b - sur[s + 1].b * pwm[l] % mod + mod) % mod);
+}
+int divide(int a,int ar,int b,int br,int l)
+{
+	int L = 0, R = l;
+	
+	while(L + 1 != R)
+	{
+		int mid = (L + R) >> 1;
+		
+		if(getData(a, ar, mid) == getData(b, br, mid))
+		{
+			L = mid;
+		}
+		else
+		{
+			R = mid;
+		}
+	}
+	
+	return L;
+}
+void getseq(int u,int v,int t)
+{
+	pl[t] = al = bl = 0;
+	
+	while(top[u] != top[v])
+	{
+		if(dep[top[u]] > dep[top[v]])
+		{
+			A[++al] = std::make_pair(ind[u], ind[top[u]]);
+			u = Fa[top[u]];
+		}
+		else
+		{
+			B[++bl] = std::make_pair(ind[top[v]], ind[v]);
+			v = Fa[top[v]];
+		}
+	}
+	
+	if(dep[u] > dep[v])
+	{
+		A[++al] = std::make_pair(ind[u], ind[v]);
+	}
+	else
+	{
+		B[++bl] = std::make_pair(ind[u], ind[v]);
+	}
+	
+	for(int i = 1; i <= al; i++) P[t][++pl[t]] = A[i];
+	for(int i = bl; i >= 1; i--) P[t][++pl[t]] = B[i]; 
+	
+	for(int i = 1; i <= pl[t]; i++)
+	{
+		if(P[t][i].first <= P[t][i].second)
+			arrow[t][i] = 1;
+		else
+			arrow[t][i] = -1;
+	}
+}
+bool in(int x,int l,int r)
+{
+	if(l > r) std::swap(l, r);
+	
+	return l <= x && x <= r;
+}
+int query()
+{
+	int res = 0;
+	
+	int i = 1, j = 1;
+	int si = -1, sj = -1;
+	
+	while(i <= pl[0] && j <= pl[1])
+	{
+		if(si == -1) si = P[0][i].first;
+		if(sj == -1) sj = P[1][j].first;
+		
+		int d = std::min(getd(si, P[0][i].second), getd(sj, P[1][j].second));
+				
+		if(getData(si, arrow[0][i], d) == getData(sj, arrow[1][j], d))
+		{
+			si += d * arrow[0][i], sj += d * arrow[1][j], res += d;
+			
+			if(!in(si, P[0][i].first, P[0][i].second)) i++, si = -1;
+			if(!in(sj, P[1][j].first, P[1][j].second)) j++, sj = -1;
+		}
+		else
+		{
+			res += divide(si, arrow[0][i], sj, arrow[1][j], d);
+			break;
+		}
+	}
+	
+	return res;
+}
+void solve()
+{
+	int a, b, c, d;
+	
+	scanf("%d", &m);
+	
+	while(m--)
+	{
+		scanf("%d%d%d%d", &a, &b, &c, &d);
+		
+		getseq(a, b, 0), getseq(c, d, 1);
+		
+		printf("%d\n", query());
+	}
+}
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt","r",stdin);
+	freopen("output.txt","w",stdout);
+#endif
+
+	init();
+	
+	prework();
+	
+	solve();
+
+#ifndef ONLINE_JUDGE
+	fclose(stdin);
+	fclose(stdout);
+#endif
+	return 0;	
+}
+                      

@@ -1,0 +1,149 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+struct trie
+{
+	int id;
+	bool flag;
+	trie *fail,*next[10];
+};
+int cnt = 0;
+trie *root,*q[2010],e[2010];
+
+void init(int n)
+{
+	e[n].id = n;
+	e[n].flag = false;
+	e[n].fail = NULL;
+	for(int i = 0; i < 10; i ++) e[n].next[i] = NULL;
+}
+
+void init()
+{
+	root = NULL;
+	for(int i = 0; i < cnt; i ++) {
+		e[i].fail = NULL;
+		e[i].flag = false;
+		e[i].id = 0;
+		for(int j = 0; j < 10; j ++)
+			e[i].next[j] = NULL;
+	}
+	cnt = 0;
+	init(0);
+	root = &e[cnt ++];
+}
+char s[110];
+
+void insert()
+{
+	trie *p = root;
+	int i = 0,idx;
+	while(s[i]) {
+		idx = s[i ++] - '0';
+		if(!p->next[idx]) {
+			init(cnt);
+			p->next[idx] = &e[cnt ++];
+		}
+		p = p->next[idx];
+	}
+	p->flag = true;
+}
+
+void build_ac_automation()
+{
+	root->fail = root;
+	int top = 0,tail = 1;
+	q[0] = root;
+	while(top < tail) {
+		trie *p = q[top ++];
+		p->flag |= p->fail->flag;
+		for(int i = 0; i < 10; i ++)
+			if(p->next[i]) {
+				if(p == root) p->next[i]->fail = root;
+				else p->next[i]->fail = p->fail->next[i];
+				q[tail ++] = p->next[i];
+			}
+			else {
+				if(p == root) p->next[i] = root;
+				else p->next[i] = p->fail->next[i];
+			}
+	}
+}
+
+long long dp[20][2010][3];
+
+long long solve(long long n)
+{
+	long long bit[25];
+	int len = 0;
+	if(n == 0) return 0LL;
+	long long tmp = n;
+	while(n) {
+		bit[++ len] = n % 10LL;
+		n /= 10LL;
+	}
+	reverse(bit + 1,bit + len + 1);
+	memset(dp,0,sizeof(dp));
+	for(int i = 1; i <= 9; i ++)
+		if(e[0].next[i]->flag) continue;
+		else {
+			if(i < bit[1]) dp[1][e[0].next[i]->id][0] ++;
+			else if(i > bit[1]) dp[1][e[0].next[i]->id][2] ++;
+			else dp[1][e[0].next[i]->id][1] ++;
+		}
+	for(int i = 1; i < len; i ++) {
+		for(int j = 0; j < cnt; j ++) {
+			for(int k = 0; k < 10; k ++) {
+				if(e[j].next[k]->flag) continue;
+				dp[i + 1][e[j].next[k]->id][2] += dp[i][j][2];
+				dp[i + 1][e[j].next[k]->id][0] += dp[i][j][0];
+				if(k == bit[i + 1]) dp[i + 1][e[j].next[k]->id][1] += dp[i][j][1];
+				else if(k > bit[i + 1]) dp[i + 1][e[j].next[k]->id][2] += dp[i][j][1];
+				else dp[i + 1][e[j].next[k]->id][0] += dp[i][j][1];
+			}
+		}
+	}
+	long long ans = 0;
+	for(int i = 1; i <= len; i ++)
+		if(i < len) {
+			for(int j = 0; j < cnt; j ++)
+				ans += dp[i][j][0] + dp[i][j][1] + dp[i][j][2];
+		}
+		else {
+			for(int j = 0; j < cnt; j ++)
+				ans += dp[i][j][0] + dp[i][j][1];
+		}
+	return tmp - ans;
+}
+
+int main()
+{
+	long long n,m,r,t;
+	while(scanf("%lld%lld%lld%lld",&n,&m,&r,&t) != EOF) {
+		init();
+		while(t --) {
+			scanf("%s",s);
+			insert();
+		}
+		build_ac_automation();
+		long long ansx = solve(n - 1);
+		long long ans = -1,lt = n,rt = m,mid;
+		while(lt <= rt) {
+			mid = (lt + rt) / 2LL;
+			long long ansy = solve(mid);
+			if(ansy - ansx >= r) {
+				rt = mid - 1;
+				ans = mid;
+			}
+			else lt = mid + 1;
+		}
+		if(ans == -1) printf("no such number\n");
+		else printf("%lld\n",ans);
+	}
+	return 0;
+}
+
+

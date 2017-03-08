@@ -1,0 +1,147 @@
+#include <iostream>
+#include <string>
+#include <cstdlib>
+
+using namespace std;
+
+typedef long long int ll;
+
+ll modulo=1e9+7;
+
+void anyade(ll &a,ll b)
+{
+  a=(a+b)%modulo;
+}
+
+ll sol=0;
+int n;
+int k;
+int input[2][2005];
+ll w[2005];
+int coincidele[2005][2][2005];
+int coincideri[2005][2][2005];
+
+bool cierrale(int i,int j,int iw)
+{
+  int o=1-i;
+  if (iw%2!=0 or iw<4) return false;
+  iw/=2;
+  if (j-iw+1<1) return false;
+  return coincidele[1][i][j]>=iw and
+    coincideri[iw+1][o][j-iw+1]>=iw;
+  /*
+  for (int d=0;d<iw;d++)
+    if (w[1+d]!=input[i][j-d] or w[1+iw+d]!=input[o][j-iw+1+d])
+      return false;
+  return true;
+  */
+}
+
+bool cierrari(int i,int j,int iw)
+{
+  //cout<<"cierrari "<<i<<" "<<j<<" "<<iw<<endl;
+  int o=1-i;
+  int len=k-iw+1;
+  if (len%2!=0 or len<2) return false;
+  len/=2;
+  if (j+len-1>n) return false;
+  return coincideri[k-len-len+1][i][j]>=len and
+    coincidele[k-len+1][o][j+len-1]>=len;
+  /*
+  for (int d=0;d<len;d++)
+    if (w[k-len-len+1+d]!=input[i][j+d] or w[k-len+1+d]!=input[o][j+len-1-d])
+      return false;
+  */
+  //cout<<"si"<<endl;
+  return true;
+}
+
+void escribe(ll maneras[2005][2][2005],int iw)
+{
+  cout<<"paso "<<iw<<endl;
+  for (int i=0;i<=1;i++) {
+    for (int j=1;j<=n;j++)
+      cout<<maneras[iw][i][j]<<",";
+    cout<<endl;
+  }
+  cout<<endl;
+}
+
+void calcula(ll maneras[2005][2][2005])
+{
+  for (int iw=k;iw>=1;iw--) {
+    for (int i=0;i<=1;i++) {
+      for (int j=1;j<=n;j++) {
+	coincideri[iw][i][j]=w[iw]==input[i][j]?1+coincideri[iw+1][i][j+1]:0;
+	coincidele[iw][i][j]=w[iw]==input[i][j]?1+coincidele[iw+1][i][j-1]:0;
+      }
+    }
+  }
+  for (int i=0;i<=1;i++) {
+    for (int j=1;j<=n;j++) {
+      maneras[1][i][j]=input[i][j]==w[1];
+      if (cierrari(i,j,1))
+	anyade(sol,1);
+    }
+  }
+  //escribe(maneras,1);
+  for (int iw=2;iw<=k;iw++) {
+    char c=w[iw];
+    for (int i=0;i<=1;i++) {
+      for (int j=1;j<=n;j++) {
+	if (input[i][j]==c) {
+	  int o=1-i;
+	  ll &mem=maneras[iw][i][j];
+	  anyade(mem,maneras[iw-1][i][j-1]);
+	  if (input[i][j-1]==w[iw-1])
+	    anyade(mem,maneras[iw-2][o][j-1]);
+	  if (cierrale(o,j-1,iw-1))
+	    anyade(mem,1);
+	  if (iw==k or cierrari(i,j,iw))
+	    anyade(sol,mem);
+	}
+      }
+    }
+    //escribe(maneras,iw);
+  }
+}
+
+ll maneras[2][2005][2][2005];
+
+int main()
+{
+  string s;
+  for (int i=0;i<=1;i++) {
+    cin>>s;
+    n=int(s.size());
+    for (int j=1;j<=n;j++)
+      input[i][j]=s[j-1];
+  }
+  cin>>s;
+  k=int(s.size());
+  for (int iw=1;iw<=k;iw++)
+    w[iw]=s[iw-1];
+  if (k==1) {
+    for (int i=0;i<=1;i++)
+      for (int j=1;j<=n;j++)
+	sol+=input[i][j]==w[1];
+  } else if (k==2) {
+    for (int i=0;i<=1;i++) {
+      for (int j=1;j<n;j++) {
+	sol+=input[i][j]==w[1] and input[i][j+1]==w[2];
+	sol+=input[i][j]==w[2] and input[i][j+1]==w[1];
+      }
+    }
+    for (int j=1;j<=n;j++) {
+      sol+=input[0][j]==w[1] and input[1][j]==w[2];
+      sol+=input[0][j]==w[2] and input[1][j]==w[1];
+    }
+  } else {
+    calcula(maneras[0]);
+    for (int i=0;i<=1;i++)
+      for (int j1=1,j2=n;j1<j2;j1++,j2--)
+	swap(input[i][j1],input[i][j2]);
+    calcula(maneras[1]);
+  }
+  cout<<sol<<endl;
+}

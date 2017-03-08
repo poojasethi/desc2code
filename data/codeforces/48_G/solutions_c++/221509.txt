@@ -1,0 +1,219 @@
+/*
+ * File:   G.cpp
+ * Author: yzq110abc
+ *
+ * Created on 2010年12月14日, 下午7:12
+ */
+
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <cstdio>
+#include <vector>
+using namespace std;
+
+const int MAXN = 220000;
+int n;
+
+struct Edge{
+    int e, v, wh;
+    Edge(){};
+    Edge(int a, int b, int c){e = a; v = b; wh = c;}
+};
+
+vector <Edge> v[MAXN];
+
+int ins[MAXN];
+int oncir[MAXN];
+int used[MAXN];
+vector < pair <int, int> > circle;
+
+typedef vector<Edge>::iterator VEpoint;
+typedef vector< pair<int, int> >::iterator VPpoint;
+
+int Dfs(int pos, int val){
+
+    circle.push_back( make_pair(pos, val));
+    if (ins[pos] == 1)
+        return 0;
+    ins[pos] = 1;
+    for (vector<Edge>::iterator it = v[pos].begin(); it != v[pos].end(); it++){
+        if (used[it->wh] == 1) continue;
+        used[it->wh] = 1;
+        if (Dfs(it->e, it->v) == 0) return 0;
+    }
+    circle.erase(circle.end() - 1);
+    ins[pos] = 0;
+    return 1;
+}
+
+int Find_Circle(){
+
+    memset(ins, 0, sizeof(ins));
+    memset(used, 0, sizeof(used));
+    Dfs(1, 0);
+    reverse(circle.begin(), circle.end());
+    for (VPpoint it = circle.end() - 1; ; it--){
+        if (it->first == circle[0].first){
+            circle.erase(it, circle.end());
+            break;
+        }
+    }
+    for (VPpoint it = circle.begin(); it != circle.end(); it++)
+        oncir[it->first] = 1;
+    return 0;
+}
+
+int son[MAXN];
+long long ans[MAXN];
+
+int Dfs2(int pos, long long &val, long long len){
+
+    son[pos]++;
+    val += len;
+    ins[pos] = 1;
+    for (VEpoint it = v[pos].begin(); it != v[pos].end(); it++){
+        if (ins[it->e] == 1) continue;
+        if (oncir[it->e] == 1) continue;
+        son[pos] += Dfs2(it->e, val, len + it->v);
+    }
+    ins[pos] = 0;
+    return son[pos];
+}
+
+int Dfs3(int pos, long long val, int tot){
+
+    ans[pos] = val;
+    ins[pos] = 1;
+    for (VEpoint it = v[pos].begin(); it != v[pos].end(); it++){
+        if (ins[it->e] == 1) continue;
+        if (oncir[it->e] == 1) continue;
+        Dfs3(it->e, val + (tot - son[it->e] - son[it->e]) * it->v, tot);
+    }
+    ins[pos] = 0;
+    return 0;
+}
+
+int Cal(int pos){
+
+    long long val = 0;
+    Dfs2(pos, val, 0);
+    Dfs3(pos, val, son[pos]);
+    return 0;
+}
+
+int Calculate(){
+
+    memset(ins, 0, sizeof(ins));
+    for (int i = 1; i <= n; i++)
+        if (oncir[i] == 1) Cal(i);
+    return 0;
+}
+
+int Dfs4(int pos, long long val, int num, long long len){
+    ans[pos] += val + len * num;
+    ins[pos] = 1;
+    for (VEpoint it = v[pos].begin(); it != v[pos].end(); it++){
+        if (oncir[it->e] == 1) continue;
+        if (ins[it->e] == 1) continue;
+        Dfs4(it->e, val, num, len + it->v);
+    }
+    ins[pos] = 0;
+    return 0;
+}
+
+int Ad(int pos, long long val, int num){
+    Dfs4(pos, val, num, 0);
+    return 0;
+}
+
+int Gocircle(){
+
+    long long totlen = 0;
+    int tot = 0;
+    for (VPpoint it = circle.begin(); it != circle.end(); it++){
+        tot += it->second;
+        totlen += ans[it->first];
+    }
+    int lp = 0, rp = 0;
+    long long llen = 0, rlen = 0;
+    long long lval = 0, rval = 0;
+    int lsum = 0, rsum = 0;
+    for (int i = 0; i < (int)circle.size(); i++){
+        rval += rlen * son[ circle[i].first ];
+        rsum += son[ circle[i].first ];
+        if ((rlen + circle[i].second) * 2 > tot){
+            rp = i;
+            break;
+        }
+        rlen += circle[i].second;
+    }
+
+    rsum -= son[ circle[0].first ];
+
+    lp = rp + 1;
+
+    for (int i = (int)circle.size() - 1; i >= lp; i--){
+        llen += circle[i].second;
+        lval += llen * son[ circle[i].first ];
+        lsum += son[ circle[i].first ];
+    }
+    lp %= (int)circle.size();
+
+//    for (int i = 0; i < (int)circle.size(); i++)
+//        printf("%d\n", circle[i].first);
+    for (int i = 0; i < (int)circle.size(); i++){
+        Ad(circle[i].first, lval + rval + totlen - ans[circle[i].first], n - son[circle[i].first]);
+        lsum += son[ circle[i].first ];
+        lval += lsum * circle[i].second;
+        llen += circle[i].second;
+        rval -= rsum * circle[i].second;
+        rsum -= son[ circle[(i + 1) % (int)circle.size()].first ];
+        rlen -= circle[i].second;
+//        puts("lp, lsum, lval, llen");
+//        cout << lp << " " << lsum << " " << lval << " " << llen << endl;
+//        puts("rp, rsum, rval, rlen");
+//        cout << rp << " " << rsum << " " << rval << " " << rlen << endl;
+        while ((circle[rp].second + rlen) * 2 <= tot){
+
+            rlen += circle[rp].second;
+            rp++;
+            if(rp == (int)circle.size()) rp = 0;
+            rval += rlen * son[ circle[rp].first ];
+            rsum += son[ circle[rp].first ];
+
+            lval -= llen * son[ circle[lp].first ];
+            llen -= circle[lp].second;
+            lsum -= son[ circle[lp].first ];
+            lp ++;
+            if (lp == (int)circle.size()) lp = 0;
+        }
+    }
+    return 0;
+}
+
+int main() {
+
+//    freopen("in", "r", stdin);
+    memset(oncir, 0, sizeof(oncir));
+    memset(ans, 0, sizeof(ans));
+    memset(son, 0, sizeof(son));
+    scanf("%d", &n);
+    for (int i = 1; i <= n; i++){
+        int a, b, c;
+        scanf("%d %d %d", &a, &b, &c);
+        v[a].push_back(Edge(b, c, i));
+        v[b].push_back(Edge(a, c, i));
+    }
+    Find_Circle();
+    Calculate();
+//    for (int i  = 1; i <= n; i++){
+//        cout << son[i] << endl;
+//    }
+    Gocircle();
+    for (int i = 1; i <= n; i++){
+ //       cout << ans[i] << (char)(i == n ? 10 : 32);
+        printf("%I64d%c", ans[i], i == n ? 10 : 32);
+    }
+    return 0;
+}

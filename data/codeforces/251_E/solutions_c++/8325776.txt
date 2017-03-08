@@ -1,0 +1,192 @@
+#include<cstdio>
+#include<cstring>
+using namespace std;
+
+const int N = 100005 , mod = 1000000007;
+
+#define fo(i , st , en) for (int i = st; i <= en; i++)
+#define fd(i , st , en) for (int i = st; i >= en; i--)
+#define Me(x , y) memset(x , y , sizeof(x))
+#define Abs(x) ((x) > 0 ? (x) : -(x))
+
+struct _two{
+    int a , b;
+}edge[N * 4];
+
+struct _three{
+    int a , b , c;
+}To[N * 4];
+
+int n , tot;
+int st[N + N] , indeer[N + N] , qu[N * 4];
+int f[N * 4] , s[N * 4];
+
+void Init(){
+    scanf("%d" , &n); int x , y; tot = 1; n += n;
+    fo (i , 1 , n - 1){   
+        scanf("%d%d" , &x , &y); indeer[x]++; indeer[y]++;
+        edge[++tot] = (_two){y , st[x]}; st[x] = tot;
+        edge[++tot] = (_two){x , st[y]}; st[y] = tot; 
+    }
+}
+
+void Calc_s(int x){
+    if (s[x]) return;
+    s[x] = 1;
+    for (int i = st[edge[x].a]; i; i = edge[i].b)
+        if (i != (x ^ 1)){
+            Calc_s(i); s[x] += s[i];
+        }
+}
+
+int Next(int x){
+    for (int i = st[edge[x].a]; i; i = edge[i].b)
+        if ((i ^ 1) != x) return i;
+}
+
+void dfs(int x);
+
+int Calc(int p1 , int p2){
+    _three t1 = To[p1] , t2 = To[p2]; int ret = 0;
+    if (!t1.b && !t2.b && t1.a == t2.a) ret++;
+    if (!t1.b && t2.a > t1.a){
+        int px = qu[To[p2].c + t1.a];
+        dfs(px); ret = (ret + f[px]) % mod;
+    }
+    if (!t2.b && t1.a > t2.a){
+        int px = qu[To[p1].c + t2.a];
+        dfs(px); ret = (ret + f[px]) % mod;
+    }
+    return ret;
+}
+
+void dfs(int x){
+    if (f[x] != -1) return;
+    f[x] = 0;
+    if (s[x] & 1) return;
+    if (indeer[edge[x].a] == 2){
+        int i = Next(x);
+        if (!To[i].b){
+            f[x] = (f[x] + s[x] / 2) % mod;
+        }
+        else{
+            bool flag = 0; _three t1 , t2; int p1 , p2;
+            for (int j = st[edge[To[i].b].a]; j; j = edge[j].b)
+                if ((j ^ 1) != To[i].b){
+                    if (flag){
+                        t1 = To[j]; p1 = j;
+                    }
+                    else{
+                        t2 = To[j]; p2 = j; flag = 1;
+                    }
+                }
+            if (!t1.b){
+                if (Abs(To[i].a - t1.a) == 1){
+                    dfs(p2);
+                    f[x] = (f[x] + f[p2]) % mod;
+                }
+            }
+            else
+                if (t1.a == 1 && indeer[edge[t1.b].a] == 3){
+                    int pp1 , pp2; bool flag = 0;
+                    for (int j = st[edge[t1.b].a]; j; j = edge[j].b)
+                        if ((j ^ 1) != t1.b)
+                            if (flag)
+                                pp1 = j;
+                            else{
+                                pp2 = j; flag = 1;
+                            }
+                    if (To[pp1].a == To[i].a && !To[pp1].b)
+                        f[x] = (f[x] + Calc(pp2 , p2)) % mod;
+                    if (To[pp2].a == To[i].a && !To[pp2].b)
+                        f[x] = (f[x] + Calc(pp1 , p2)) % mod;
+                }
+            if (!t2.b){
+                if (Abs(To[i].a - t2.a) == 1){
+                    dfs(p1);
+                    f[x] = (f[x] + f[p1]) % mod;
+                }
+            }
+            else
+                if (t2.a == 1 && indeer[edge[t2.b].a] == 3){
+                    int pp1 , pp2; bool flag = 0;
+                    for (int j = st[edge[t2.b].a]; j; j = edge[j].b)
+                        if ((j ^ 1) != t2.b)
+                            if (flag)
+                                pp1 = j;
+                            else{
+                                pp2 = j; flag = 1;
+                            }
+                    if (To[pp1].a == To[i].a && !To[pp1].b)
+                        f[x] = (f[x] + Calc(pp2 , p1)) % mod;
+                    if (To[pp2].a == To[i].a && !To[pp2].b)
+                        f[x] = (f[x] + Calc(pp1 , p1)) % mod;
+                }
+            if (To[i].a > 1){
+                int j = Next(i); dfs(j); f[x] = (f[x] + f[j]) % mod;
+            }
+        }
+    }
+    else{
+        bool flag = 0; int p1 , p2;
+        for (int i = st[edge[x].a]; i; i = edge[i].b)
+            if ((i ^ 1) != x)
+                if (flag)
+                    p1 = i;
+                else{
+                    p2 = i; flag = 1;
+                }
+        if (indeer[edge[p1].a] == 1){
+            dfs(p2); f[x] = (f[x] + f[p2]) % mod;
+        }
+        else
+            if (indeer[edge[p1].a] == 2)
+                f[x] = (f[x] + Calc(Next(p1) , p2)) % mod;
+        if (indeer[edge[p2].a] == 1){
+            dfs(p1); f[x] = (f[x] + f[p1]) % mod;
+        }
+        else
+            if (indeer[edge[p2].a] == 2)
+                f[x] = (f[x] + Calc(Next(p2) , p1)) % mod;
+    }
+}
+
+void Find(int x){
+    qu[To[x].c = ++tot] = x;
+    if (indeer[edge[x].a] == 1){
+        To[x].a = 1; To[x].b = 0;
+    }
+    if (indeer[edge[x].a] == 3){
+        To[x].a = 1; To[x].b = x;
+    }
+    if (indeer[edge[x].a] == 2){
+        int i = Next(x); Find(i);
+        To[x].a = To[i].a + 1; To[x].b = To[i].b;
+    }
+}
+
+void Work(){
+    fo (i , 1 , n)
+        if (indeer[i] > 3){
+            puts("0"); return;
+        }
+    tot = 0;
+    fo (i , 1 , n)
+        if (indeer[i] != 2)
+            for (int j = st[i]; j; j = edge[j].b)
+                Find(j);
+    int ans = 0; Me(f , -1);
+    fo (i , 1 , n)
+        if (indeer[i] < 3){
+            f[1] = -1; edge[1].a = i; s[1] = 0;
+            indeer[i]++; Calc_s(1); dfs(1); indeer[i]--;
+            ans = (ans + f[1]) % mod;
+        }
+    printf("%d\n" , ans);
+}
+
+int main(){
+    Init();
+    Work();
+    return 0;
+}

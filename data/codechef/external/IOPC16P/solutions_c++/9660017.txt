@@ -1,0 +1,140 @@
+#include <bits/stdc++.h>
+using namespace std;
+typedef long long ll;
+#define N 200010
+ll ar[N + 1];
+ ll inf = -1ll*4*pow(10,13) - 5;
+map <ll,vector<int> > mp;
+struct query
+{
+    ll x;
+    int id,l,r;
+}querys[N + 10];
+
+ll ans[N + 10];
+bool compare(query a,query b)
+{
+    return a.x < b.x;
+}
+struct seg
+{
+    ll maxsum,sum,psum,ssum;
+}segs[10*N + 10];
+
+seg mergesegs(seg x,seg y)
+{
+    seg temp;
+    temp.sum = x.sum + y.sum;
+    temp.psum = max(x.psum,x.sum+y.psum);
+    temp.ssum = max(x.ssum+y.sum,y.ssum);
+    temp.maxsum = max(x.ssum+y.psum,max(x.maxsum,y.maxsum));
+    return temp;
+}
+
+void Update(int nod,int b,int e,int x,ll v)
+{
+    if(b == e)
+    {
+        segs[nod].maxsum = v;
+        segs[nod].sum = v;
+        segs[nod].psum = v;
+        segs[nod].ssum = v;
+    }
+    else
+    {
+        int mid = (b+e)/2;
+        if(x<=mid) Update(2*nod+1,b,mid,x,v);
+        else Update(2*nod+2,mid+1,e,x,v);
+        segs[nod] = mergesegs(segs[2*nod+1],segs[2*nod+2]);
+    }
+}
+
+seg Query(int nod,int b,int e,int l,int r)
+{
+    if(l<=b && e<=r)
+    {
+        return segs[nod];
+    }
+    else
+    {
+        int mid = (b+e)/2;
+        if(r <= mid) return Query(2*nod+1,b,mid,l,r);
+        else if(l > mid) return Query(2*nod+2,mid+1,e,l,r);
+        else return mergesegs(Query(2*nod+1,b,mid,l,r),Query(2*nod+2,mid+1,e,l,r));
+    }
+}
+
+
+void Build(int nod,int b,int e)
+{
+    if(b == e)
+    {
+        segs[nod].maxsum = inf;
+        segs[nod].sum = inf;
+        segs[nod].psum = inf;
+        segs[nod].ssum = inf;
+    }
+    else
+    {
+        int mid = (b+e)/2;
+        Build(2*nod+1,b,mid);
+        Build(2*nod+2,mid+1,e);
+        segs[nod] = mergesegs(segs[2*nod+1],segs[2*nod+2]);
+    }
+}
+
+int main()
+{
+    int n,q;
+
+    cin>>n>>q;
+
+    for(int i = 1 ; i<=n ; i++)
+    {
+       cin>>ar[i];
+        mp[ar[i]].push_back(i);
+    }
+    Build(0,1,n);
+
+    for(int i = 1 ; i<=q ; i++)
+    {
+        scanf("%d %d %lld",&querys[i].l,&querys[i].r,&querys[i].x);
+        querys[i].id = i;
+    }
+
+    sort(querys+1,querys+q+1,compare);
+
+    int j = 1;
+    for(map <ll,vector <int> > :: iterator it = mp.begin() ; it != mp.end() ; it++)
+    {
+        ll x = (*it).first;
+        while(j<=q && querys[j].x < x)
+        {
+            ans[querys[j].id] = Query(0,1,n,querys[j].l,querys[j].r).maxsum;
+            j++;
+        }
+        vector <int> &vec = (*it).second;
+        int sz = vec.size();
+        for(int i = 0 ; i<sz ; i++)
+        {
+            Update(0,1,n,vec[i],x);
+        }
+    }
+    while(j<=q)
+    {
+        ans[querys[j].id] = Query(0,1,n,querys[j].l,querys[j].r).maxsum;
+        j++;
+    }
+    for(int j = 1 ; j<=q ; j++)
+    {
+        if(ans[j] <= inf)
+        {
+            printf("xx\n");
+        }
+        else
+        {
+            printf("%lld\n",ans[j]);
+        }
+    }
+
+}

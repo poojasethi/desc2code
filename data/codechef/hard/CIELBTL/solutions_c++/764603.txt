@@ -1,0 +1,143 @@
+#pragma comment(linker,"/STACK:300000000")
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <cmath>
+#include <map>
+#include <set>
+#include <iomanip>
+#include <memory.h>
+#include <cstdio>
+#include <sstream>
+#include <deque>
+#include <bitset>
+#include <numeric>
+#include <ctime>
+#include <queue>
+
+using namespace std;
+
+#define show(x) cout << #x << " = " << (x) << endl;
+#define fori(i,n) for(int i = 0; i < (n); i++)
+#define forab(i,a,b) for(int i = (a); i <= (b); i++)
+#define sz(v) int((v).size())
+#define all(v) (v).begin(),(v).end()
+const double pi = 3.1415926535897932384626433832795;
+template<class T> T abs(const T &a) { return a >= 0 ? a : -a; };
+template<class T> T sqr(const T &x) { return x * x; }
+typedef pair<int,int> ii;
+typedef long long ll;
+///////////////////////////////////////
+
+double dp[200][200][10]; // our hp, his hp, mana
+double sum[200][200][10];
+
+int va, sa, vb, sb, m;
+
+double getSum(int i, int j, int mana, double ans)
+{
+	double s = sum[i][j-1][mana] + sum[i-1][j][mana] - sum[i-1][j-1][mana];
+	int tx = i-sb;
+	int ty = j-sa;
+
+	int x = max(tx,0);
+	int y = max(ty,0);
+
+	if(x)
+		s -= sum[x-1][j][mana];
+	if(y)
+		s -= sum[i][y-1][mana];
+	if(x && y)
+		s += sum[x-1][y-1][mana];
+
+	tx = max(0,-tx);
+	ty = max(0,-ty);
+
+	int ones = ty*(i-max(x,1)+1);
+	s += ones;
+	if(y == 0 && x == 0)
+		s += ((tx+1)*(ty+1)-1)*ans;
+
+	return s;
+}
+
+double f(double ans)
+{
+	fori(mana,m+1)
+	{
+		dp[0][0][mana] = ans;
+		sum[0][0][mana] = ans;
+		for(int i = 1; i <= va; i++)
+		{
+			dp[i][0][mana] = 1;
+			sum[i][0][mana] = 1+sum[i-1][0][mana];
+		}
+		for(int j = 1; j <= vb; j++)
+		{
+			dp[0][j][mana] = 0;
+			sum[0][j][mana] = ans;
+		}
+	}
+	fori(mana,m+1)
+		for(int i = 1; i <= va; i++)
+			for(int j = 1; j <= vb; j++)
+			{
+				dp[i][j][mana] = 0;
+				if(mana)
+					dp[i][j][mana] = dp[(i+1)/2][(j+1)/2][mana-1];
+				double area = (sa+1)*(sb+1) - 1;
+				double b = getSum(i,j,mana,ans);				
+				b /= area;
+				dp[i][j][mana] = max(dp[i][j][mana],b);
+
+				sum[i][j][mana] = dp[i][j][mana] + 
+					sum[i-1][j][mana]+sum[i][j-1][mana]
+					-sum[i-1][j-1][mana];
+			}
+
+	/*cout.setf(ios::fixed);
+	cout.precision(2);
+	for(int i = 0; i <= va; i++)
+	{
+		for(int j = 0; j <= vb; j++)
+			cout << dp[i][j][0] << ' ';
+		cout << endl;
+	}/**/
+
+	return dp[va][vb][m];
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+    freopen("input.txt","r",stdin);
+    freopen("output.txt","w",stdout);
+#endif
+	cin >> va >> vb >> sa >> sb >> m;
+
+	/*double ans;
+	cin >> ans;	
+	double res = f(ans);
+	cout.setf(ios::fixed);
+	cout.precision(8);
+	cout << res;
+	return 0;
+	/**/
+
+	double l = 0, r = 1;
+	while(r-l > 1e-8)
+	{
+		double m = (r+l)/2;
+		double test = f(m);
+		if(test < m)
+			r = m;
+		else
+			l = m;
+	}
+	cout.setf(ios::fixed);
+	cout.precision(8);
+	cout << l;
+}

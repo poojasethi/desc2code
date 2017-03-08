@@ -1,0 +1,103 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+const int N = 200005;
+
+vector < int > G[N] , V[N];
+stack < int > dfs_stack;
+
+int timer, no_scc, need;
+int low[N], disc[N], in_set[N], scc[N], seen[N];
+
+void Tarjan(int u, int parent){
+    disc[u] = low[u] = ++timer;
+    dfs_stack.push(u); in_set[u] = 1;
+    bool directed = 0;
+    for(int i = 0;i < (int)G[u].size(); ++i){
+        int v = G[u][i];
+        if(v == parent && directed == 0){
+            directed = 1;
+            continue;
+        }
+        if(low[v] == -1){
+            Tarjan(v, u);
+            low[u] = min(low[u] , low[v]);
+        }else if(in_set[v] == 1){
+            low[u] = min(low[u] , disc[v]);
+        }
+    }
+    if(disc[u] == low[u]){
+        no_scc++;
+        while(!dfs_stack.empty()){
+            int x = dfs_stack.top();
+            dfs_stack.pop();
+            scc[x] = no_scc;
+            in_set[x] = 0;
+            if(x == u) break;
+        }
+    }
+}
+
+void dfs(int u){
+    seen[u] = 1;
+    bool yes = false;
+    for(int i = 0;i < (int)V[u].size(); ++i){
+        int v = V[u][i];
+        if(!seen[v]){
+            yes = true;
+            dfs(v);
+        }
+    }
+    if(!yes) need++;
+}
+
+int main(){
+    int n, m;
+    while(scanf("%d %d",&n,&m) == 2){
+        for(int i = 0;i < m; ++i){
+            int u, v; scanf("%d %d",&u,&v);
+            G[u].push_back(v);
+            G[v].push_back(u);
+        }
+        for(int i = 0;i <= n; i++){
+            low[i] = -1; disc[i] = -1;
+            in_set[i] = 0; scc[i] = 0;
+        }
+
+        timer = 0; no_scc = 0;
+        for(int i = 1;i <= n; i++){
+            if(low[i] == -1){
+                Tarjan(i, -1);
+            }
+        }
+
+        //cout << no_scc << '\n';
+
+        if(no_scc == 1){
+            printf("YES\n");
+        }else{
+            int a = 0, b = 0;
+            for(int i = 1;i <= n; ++i){
+                for(int j = 0;j < (int)G[i].size(); j++){
+                    int u = i, v = G[i][j];
+                    if(scc[u] != scc[v]){
+                        //in[scc[v]]++; out[scc[u]]++;
+                        V[ scc[u] ].push_back(scc[v]);
+                        V[ scc[v] ].push_back(scc[u]);
+                    }
+                }
+            }
+
+            need = 0;
+            memset(seen, 0, sizeof seen);
+            dfs(1);
+
+            if(need <= 1) printf("YES\n");
+            else printf("NO\n");
+        }
+
+        for(int i = 0;i <= n; i++) G[i].clear();
+        while(!dfs_stack.empty()) dfs_stack.pop();
+    }
+    return 0;
+}

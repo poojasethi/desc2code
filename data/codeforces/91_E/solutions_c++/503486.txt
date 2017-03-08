@@ -1,0 +1,106 @@
+#include <cstdio>
+#include <cmath>
+#include <cstring>
+#include <algorithm>
+#define INF (1<<30)
+#define LLD long long int
+#define N 100005
+using namespace std;
+
+struct node{
+	int *a;
+	int x, y, p, l;
+};
+
+struct query{
+	int x, y, t, r;
+	bool operator < (query const &T) const{return t < T.t;}
+};
+
+int n, m, a[N], b[N], temp[N], deq[N], ret[N];
+node T[N*4];
+query q[N];
+
+bool cmp(int x, int y){
+	if (b[x] != b[y]) return b[x] < b[y];
+	return a[x] < a[y];
+}
+
+bool Cross(int x, int y, int z){
+	return (LLD)(a[x]-a[y]) * (LLD)(b[z]-b[y]) >= (LLD)(a[y]-a[z]) * (LLD)(b[y]-b[x]);
+}
+
+void build(int d, int x, int y){
+
+	int size = y - x + 1, cnt;
+
+	T[d].x = x;
+	T[d].y = y;
+
+	for (int i=x; i<=y; i++) temp[i-x] = i;
+	sort(temp, temp + size, cmp);
+	
+	T[d].l = 0;
+	for (int i=0; i<size; i++){
+
+		while ((T[d].l>0 && a[temp[i]] >= a[deq[T[d].l-1]]) || (T[d].l>1 && Cross(deq[T[d].l-2], deq[T[d].l-1], temp[i]))) T[d].l--;
+		
+		deq[T[d].l++] = temp[i];
+	}
+	
+	
+	T[d].a = (int*) malloc(sizeof(int) * T[d].l);
+	for (int i=0; i<T[d].l; i++) T[d].a[i] = deq[i];
+	T[d].p = 0;
+
+	if (y > x){
+		build(d*2, x, (x+y)/2);
+		build(d*2+1, (x+y)/2+1, y);
+	}
+	
+}
+
+LLD height(int x, int t){
+	if (x == -1) return 0;
+	return (LLD)a[x] + (LLD)b[x] * (LLD)t;
+}
+
+int query(int d, int x, int y, int t){
+
+	if (x <= T[d].x && y >= T[d].y){
+		while (T[d].p+1 < T[d].l && height(T[d].a[T[d].p+1], t) >= height(T[d].a[T[d].p], t)) T[d].p++;
+		return T[d].a[T[d].p];
+	}
+	
+	else{
+
+		int l, r;
+		l = r = -1;
+		if (x <= T[d<<1].y) l = query(d*2, x, y, t);
+		if (y > T[d<<1].y) r = query(d*2+1, x, y, t);
+		
+		if (height(l, t) > height(r, t)) return l;
+		return r;
+	}
+
+}
+
+
+int main(){
+
+	scanf("%d%d", &n, &m);
+	for (int i=1; i<=n; i++) scanf("%d%d", &a[i], &b[i]);
+	
+	build(1, 1, n);
+	
+	for (int i=0; i<m; i++){
+		scanf("%d%d%d", &q[i].x, &q[i].y, &q[i].t);
+		q[i].r = i;
+	}
+	sort(q, q + m);
+	
+	for (int i=0; i<m; i++) ret[q[i].r] = query(1, q[i].x, q[i].y, q[i].t);
+	for (int i=0; i<m; i++) printf("%d\n", ret[i]);
+
+	return 0;
+}

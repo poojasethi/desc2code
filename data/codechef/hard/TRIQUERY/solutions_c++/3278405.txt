@@ -1,0 +1,91 @@
+#include <cstdio>
+#include <algorithm>
+
+using namespace std;
+
+#define MAXN 300000
+#define MAXQ 200000
+
+int N,Q,M;
+int x[MAXN],y[MAXN];
+int qx[MAXQ],qy[MAXQ],d[MAXQ],ans[MAXQ];
+
+struct event{
+    int sum,id,type;
+    
+    event(){}
+    
+    event(int _sum, int _id, int _type):
+        sum(_sum), id(_id), type(_type){}
+    
+    bool operator < (event X)const{
+        return sum < X.sum;
+    }
+}e[2 * MAXQ];
+
+pair<int, int> p[MAXN];
+int bitl[900001],bitd[900001];
+
+void update(int bit[], int idx){
+    for(int x = idx;x <= 900000;x += x & -x)
+        ++bit[x];
+}
+
+int query(int bit[], int idx){
+    int ret = 0;
+    
+    for(int x = idx;x > 0;x -= x & -x)
+        ret += bit[x];
+    
+    return ret;
+}
+
+int main(){
+    scanf("%d %d",&N,&Q);
+    
+    for(int i = 0;i < N;++i){
+        scanf("%d %d",&x[i],&y[i]);
+        p[i] = make_pair(x[i] + y[i],i);
+    }
+    
+    sort(p,p + N);
+    
+    M = 2 * Q;
+    
+    for(int i = 0,pos = 0;i < Q;++i){
+        scanf("%d %d %d",&qx[i],&qy[i],&d[i]);
+        e[pos++] = event(qx[i] + qy[i] - 2,i,0);
+        e[pos++] = event(qx[i] + qy[i] + d[i],i,1);
+    }
+    
+    sort(e,e + M);
+    
+    for(int p1 = 0,p2 = 0;p1 < N || p2 < M;){
+        int cur = 900000;
+        
+        if(p1 < N) cur = p[p1].first;
+        if(p2 < M) cur = min(cur,e[p2].sum);
+        
+        while(p1 < N && p[p1].first == cur){
+            update(bitl,x[ p[p1].second ]);
+            update(bitd,y[ p[p1].second ]);
+            ++p1;
+        }
+        
+        while(p2 < M && e[p2].sum == cur){
+            int id = e[p2].id;
+            
+            if(e[p2].type == 0)
+                ans[id] += query(bitl,qx[id] - 1) + query(bitd,qy[id] - 1) - p1;
+            else
+                ans[id] += p1 - query(bitl,qx[id] - 1) - query(bitd,qy[id] - 1);
+            
+            ++p2;
+        }
+    }
+    
+    for(int i = 0;i < Q;++i)
+        printf("%d\n",ans[i]);
+    
+    return 0;
+}

@@ -1,0 +1,186 @@
+// C/C++ File
+// AUTHOR:   suraj
+// FILE:     thegame.c
+// ROLE:     TODO (some explanation)
+// CREATED:  2015-09-12 12:00:08
+// MODIFIED: 2015-09-16 00:42:04
+ 
+#include <stdio.h>
+#include <iostream>
+#include <map>
+#define gc getchar
+ 
+using namespace std;
+struct point
+{
+    int presentValue;
+    int nextValue;
+};
+ 
+struct classComp{
+    bool operator() (struct point x, struct point y)
+    {
+        return  (x.presentValue <y.presentValue) || ((x.presentValue == y.presentValue) && (x.nextValue < y.nextValue));
+    }
+};
+int read_int() {
+    char c = gc();
+    while((c < '0' || c > '9') && c != '-') c = gc();
+    int ret = 0, neg = 0;
+    if (c == '-') neg = 1, c = gc();
+    while(c >= '0' && c <= '9') {
+        ret = 10 * ret + c - 48;
+        c = gc();
+    }
+    return neg ? -ret : ret;
+}
+ 
+double result = 0;
+int nIndependentSet = 0;
+int A[25000];
+short int input[50001];
+void setIndependentSetId(int index, int rowId, int colId)
+{
+    input[index] = nIndependentSet;
+    A[nIndependentSet] ++;
+    int row = index / colId;
+    int col = index % colId;
+    //check for left , right and down
+    if(col >0)
+    {
+        if(input[index-1] == -1)
+            setIndependentSetId(index-1, rowId, colId);
+    }
+    if(col < colId-1)
+    {
+        if(input[index+1] == -1)
+            setIndependentSetId(index+1, rowId, colId);
+    }
+    if(row < rowId -1)
+    {
+        if(input[index + colId] == -1)
+            setIndependentSetId(index + colId, rowId, colId);
+    }
+    if(row > 0)
+    {
+        if(input[index - colId] == -1)
+            setIndependentSetId(index - colId, rowId, colId);
+    }
+ 
+}
+ 
+ 
+void calculateExpectedNumberOfClicks(int *a, double currentProbability,  int sum, int currentPosition, int end)
+{
+//    printf("Expected Clicks = %d * %lf * %d / %d = %f\n",currentPosition, currentProbability, a[0], sum, currentPosition * currentProbability* a[0] / ((double)sum));
+    result += currentPosition * currentProbability* a[0] / ((double)sum);
+    if(currentPosition == end)
+        return;
+ 
+    int i;
+    map<struct point, double, classComp>mymap;
+    for(i=currentPosition; i<end; i++)
+    {
+        struct point frequencyPair = {a[currentPosition], a[i]};
+        map<struct point, double, classComp> :: iterator it = mymap.find(frequencyPair);
+        if(it != mymap.end())
+        {
+            result += it->second;
+        }
+        else
+        {
+ 
+            //swap current position with ith position
+            double tempResult = result;
+            int temp1 = a[i];
+            a[i] = a[currentPosition] ;
+            a[currentPosition] = temp1;
+            //       printf("probability = %lf * %d / %d = %f\n", currentProbability, a[currentPosition], sum, currentProbability * a[currentPosition] / sum);
+            calculateExpectedNumberOfClicks(a, currentProbability * a[currentPosition] / sum, sum - a[currentPosition] ,currentPosition+1, end);
+            int temp2 = a[i];
+            a[i] = a[currentPosition] ;
+            a[currentPosition] = temp2;
+            mymap.insert(pair<struct point, double>(frequencyPair, result - tempResult));
+        }
+ 
+    }
+    mymap.erase ( mymap.begin(), mymap.end() );
+}
+int main()
+{
+    //int n;
+    int t;
+    scanf("%d",&t);
+    while(t--)
+    {
+        int i;
+        int j;
+ 
+        int r, c;
+        char charInput[50001];
+        scanf("%d%d",&r,&c);
+        for(i=0; i<r; i++)
+            scanf("%s", charInput + i*c);
+ 
+        for(i=0; i<r*c; i++)
+        {
+            if(charInput[i] == 'o')
+                input[i] = -1;
+            else
+                input[i] = -2;
+        }
+            
+ 
+ 
+ 
+        int sum = 0;
+        nIndependentSet = 0;
+        result = 0;
+        for(i=0; i<r*c; i++)
+        {
+            if(input[i] == -1)
+            {
+                A[nIndependentSet] = 0;
+                setIndependentSetId(i, r, c);
+                sum += A[nIndependentSet];
+ 
+                nIndependentSet ++;
+            }
+        }
+        /*
+        // print the read value
+        for(i=0; i<r; i++)
+        {
+        for(j=0; j<c; j++)
+        fprintf(stderr, "%d ", input[ i*c + j]);
+ 
+        fprintf(stderr, "\n");
+        }
+ 
+        for(i=0; i<nIndependentSet; i++)
+        {
+        fprintf(stderr, "%d ", A[i]);
+        }
+        printf("\n");
+        getchar();
+        */
+        /*
+           scanf("%d",&n);
+ 
+           for(i=0; i<n; i++)
+           {
+           scanf("%d", &A[i]);
+           sum += A[i];
+           }
+           */
+        result = 1;
+        for(i=1; i<nIndependentSet; i++)
+            result += (double (A[i]) / (A[0] + A[i]));
+        //calculateExpectedNumberOfClicks(A, 1.0,  sum, 1, nIndependentSet);
+        //    printf(" Expected Number of Clicks = %lf\n", result);
+        printf("%lf\n",result);
+    }
+ 
+    return 0;
+}
+ 

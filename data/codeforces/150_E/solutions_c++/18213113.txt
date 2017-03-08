@@ -1,0 +1,109 @@
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+#define Rep(i, x, y) for (int i = x; i <= y; i ++)
+#define Dwn(i, x, y) for (int i = x; i >= y; i --)
+#define RepE(i, x) for (int i = pos[x]; i; i = g[i].nex)
+#define v g[i].y
+using namespace std;
+typedef long long ll;
+typedef double db;
+const int N = 100005;
+int n, L, R, pos[N], sz, rt, s[N], f[N], q[N], hd, tl, m = N, a1, a2;
+int a[N], b[N], az, bz, res, siz, p[N], d[N], dz, ax[N], bx[N], w[N];
+bool don[N];
+struct edge { int y, nex, z; } g[N * 2];
+void init(int x, int y, int z) { g[++ sz] = (edge) { y, pos[x], z }, pos[x] = sz; }
+bool cmp(int x, int y) { return s[x] < s[y]; }
+void find(int x, int fa) {
+	s[x] = 1;
+	RepE(i, x) {
+		if (v != fa && !don[v]) find(v, x), s[x] += s[v];
+	}
+}
+void get(int x, int fa) {
+	f[x] = 0;
+	RepE(i, x) {
+		if (v != fa && !don[v]) get(v, x), f[x] = max(f[x], s[v]);
+	}
+	f[x] = max(f[x], siz - s[x]);
+	if (f[rt] > f[x]) rt = x;
+}
+void dfs(int x, int fa, int l, int z) {
+//	cout <<x<<"     "<< l <<" "<<z<<endl;
+	bz = max(bz, l);
+	if (b[l] < z) b[l] = z, bx[l] = x;
+	RepE(i, x) {
+		if (v != fa && !don[v]) dfs(v, x, l + 1, z + (g[i].z >= p[m] ? 1 : -1));
+	}
+}
+void check() {
+	hd = 1, tl = 0;
+	Dwn(i, min(az, R), L) {
+		while (hd <= tl && a[i] > a[ q[tl] ]) tl --;
+		q[++ tl] = i;
+	}
+	Rep(i, 1, bz) {
+		if (i + az >= L && i <= L) {
+			int k = L - i;
+			while (hd <= tl && a[k] > a[ q[tl] ]) tl --;
+			q[++ tl] = k;
+		}
+		if (hd <= tl && q[hd] + i > R) hd ++;
+		if (hd <= tl && a[ q[hd] ] + b[i] >= 0) {
+			a1 = ax[ q[hd] ], a2 = bx[i]; res = 1;
+			// cout << a1 <<" "<<a2<<" "<<b[i]<<endl;
+		}
+	}
+	Rep(i, 1, bz) {
+		if (a[i] < b[i]) a[i] = b[i], ax[i] = bx[i];
+		b[i] = -n;
+	}
+	az = max(az, bz); bz = 0;
+}
+void work(int x) {
+//	cout << x <<" --------------"<<endl;
+	don[x] = 1;
+	ax[0] = x;
+	Rep(i, 1, az) a[i] = -n;
+	az = dz = 0;
+	RepE(i, x) if (!don[v]) {
+		find(v, x);
+		d[++ dz] = v, w[v] = (g[i].z >= p[m] ? 1 : -1);
+	}
+	sort(d + 1, d + dz + 1, cmp);
+	Rep(i, 1, dz) {
+		dfs(d[i], x, 1, w[ d[i] ]);
+		check();
+	}
+	RepE(i, x) {
+		if (don[v]) continue ;
+		siz = s[v], get(v, rt = 0); work(rt);
+	}
+}
+int main()
+{
+//	freopen("worldtree.in", "r", stdin);
+//	freopen("worldtree.out", "w", stdout);
+	scanf ("%d%d%d", &n, &L, &R);
+	Rep(i, 1, n - 1) {
+		int x, y, z;
+		scanf ("%d%d%d", &x, &y, &z);
+		init(x, y, z), init(y, x, z);
+		p[i] = z;
+	}
+	sort(p + 1, p + n);
+	int l = 1, r = n - 1;
+	f[0] = n + 1;
+	while (l < r || l < m) {
+		m = (l + r + 1) >> 1;
+		// cout << m << endl;
+		res = 0, siz = n;
+		Rep(i, 1, n) don[i] = 0, b[i] = -n, a[i] = -n;
+		find(1, 0), get(1, rt = 0), work(rt);
+		if (res) l = m; else r = m - 1;
+	}
+	printf("%d %d\n", a1, a2);
+	return 0;
+}

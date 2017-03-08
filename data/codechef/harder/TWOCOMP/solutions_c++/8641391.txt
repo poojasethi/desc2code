@@ -1,0 +1,131 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <algorithm>
+using namespace std;
+
+#define inf 1000000000
+struct Dinic_maximum_flow
+{
+	#define Graph_vertex 1405
+	#define Graph_edge 1000005
+	#define flow_value int
+	
+	int son[Graph_vertex],next[Graph_edge],ed[Graph_edge],d[Graph_vertex],q[Graph_vertex],ll,rr;
+	flow_value flow[Graph_edge],sum,tmp;
+	int n,S,T,tot,i,u,v;
+	bool vis[Graph_vertex];
+	
+	inline void clear(int N){for(n=N,tot=1,i=0;i<=n;++i)son[i]=0;}
+	inline void add(int u,int v,flow_value c)
+	{
+		next[++tot]=son[u];son[u]=tot;ed[tot]=v;flow[tot]=c;
+		next[++tot]=son[v];son[v]=tot;ed[tot]=u;flow[tot]=0;
+	}
+	flow_value find(int now,flow_value Flow)
+	{
+		if(now==T||!Flow)return Flow;
+		flow_value tmp,w=0;
+		for(int i=son[now];i&&w<Flow;i=next[i])
+		if(flow[i]&&d[now]+1==d[ed[i]])
+		{
+			tmp=find(ed[i],min(Flow-w,flow[i]));
+			flow[i]-=tmp;flow[i^1]+=tmp;w+=tmp;
+		}
+		if(!w)d[now]=inf;
+		return w;
+	}
+	bool bfs()
+	{
+		for(i=0;i<=n;++i)vis[i]=false;
+		q[rr=1]=S;vis[S]=true;
+		for(ll=0;ll<rr&&!vis[T];)
+		{
+			u=q[++ll];
+			for(i=son[u];i;i=next[i])
+			if(flow[i]&&!vis[ed[i]])
+			{
+				v=ed[i];
+				q[++rr]=v;
+				d[v]=d[u]+1;
+				vis[v]=true;
+			}
+		}
+		return vis[T];
+	}
+	flow_value dinic(int s,int t)
+	{
+		S=s;T=t;
+		for(sum=d[S]=0;bfs();)sum+=find(S,inf);
+		return sum;
+	}
+	
+	#undef Graph_vertex
+	#undef Graph_edge
+	#undef flow_value
+}G;
+
+int S,T,n,m1,m2,i,j,k,u,v,c,ans;
+int son[100005],next[200005],ed[200005],tot;
+int fa[100005][20],deep[100005],st[100005],en[100005];
+int u1[705],u2[705],v1[705],v2[705],lca1[705],lca2[705];
+bool vis[100005];
+
+void dfs(int x)
+{
+	vis[x]=true;
+	st[x]=++tot;
+	for(int i=son[x];i;i=next[i])
+	if(!vis[ed[i]])
+	{
+		int j,y=ed[i];
+		deep[y]=deep[x]+1;
+		fa[y][0]=x;
+		for(j=0;fa[y][j];++j)fa[y][j+1]=fa[fa[y][j]][j];
+		dfs(y);
+	}
+	en[x]=tot;
+}
+
+int LCA(int u,int v)
+{
+	int i,j;
+	if(deep[u]<deep[v])swap(u,v);
+	for(i=0,j=deep[u]-deep[v];j;++i,j>>=1)if(j&1)u=fa[u][i];
+	if(u==v)return u;
+	for(i=17;i>=0;--i)if(fa[u][i]!=fa[v][i])u=fa[u][i],v=fa[v][i];
+	return fa[u][0];
+}
+
+bool check(int x,int y,int z){return (st[x]>=st[z]&&en[x]<=en[z])&&(st[y]>=st[x]&&en[y]<=en[x]);}
+
+int main()
+{
+	scanf("%d%d%d",&n,&m1,&m2);
+	S=0;T=m1+m2+1;G.clear(T);
+	for(i=1;i<n;++i)
+	{
+		scanf("%d%d",&u,&v);
+		++tot;next[tot]=son[u];son[u]=tot;ed[tot]=v;
+		++tot;next[tot]=son[v];son[v]=tot;ed[tot]=u;
+	}
+	tot=0;dfs(1);
+	for(i=1;i<=m1;++i)scanf("%d%d%d",&u1[i],&v1[i],&c),G.add(S,i,c),ans+=c,lca1[i]=LCA(u1[i],v1[i]);
+	for(i=1;i<=m2;++i)scanf("%d%d%d",&u2[i],&v2[i],&c),G.add(i+m1,T,c),ans+=c,lca2[i]=LCA(u2[i],v2[i]);
+	for(i=1;i<=m1;++i)
+	for(j=1;j<=m2;++j)
+	if(check(u1[i],v2[j],lca2[j])
+	 ||check(v1[i],v2[j],lca2[j])
+	 ||check(lca1[i],v2[j],lca2[j])
+	 ||check(u1[i],u2[j],lca2[j])
+	 ||check(v1[i],u2[j],lca2[j])
+	 ||check(lca1[i],u2[j],lca2[j])
+	 ||check(u2[j],v1[i],lca1[i])
+	 ||check(v2[j],v1[i],lca1[i])
+	 ||check(lca2[j],v1[i],lca1[i])
+	 ||check(u2[j],u1[i],lca1[i])
+	 ||check(v2[j],u1[i],lca1[i])
+	 ||check(lca2[j],u1[i],lca1[i]))
+	G.add(i,m1+j,inf);
+	ans-=G.dinic(S,T);
+	printf("%d\n",ans);
+}

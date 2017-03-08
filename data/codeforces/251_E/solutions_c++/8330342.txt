@@ -1,0 +1,238 @@
+#include <cmath>
+#include <map>
+#include <vector>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <set>
+#include <bitset>
+#include <memory.h>
+#include <functional>
+#include <queue>
+#include <fstream>
+#include <ctime>
+#include <deque>
+#include <utility>
+#include <stack>
+#include <sstream>
+#include <list>
+#include <cctype> 
+#include <numeric> 
+#include <iomanip>
+#include <assert.h>
+using namespace std;
+#define sqr(_) ((_)*(_))
+
+typedef pair<int, int> Pii;
+#define x first
+#define y second
+#define mp make_pair
+#define pb push_back
+#define SZ(x) ((int)(x).size())
+
+typedef long long LL;
+
+const int MAXN = (int)3e5 + 10, MOD = (int)1e9 + 7;
+
+struct Graph
+{
+	int id, next, f, dis, tar;
+	bool vis;
+}g[MAXN * 2];
+int n, st[MAXN], d[MAXN], Tohka;
+
+void Add(int tot, int x, int y)
+{
+	g[tot].id = y, g[tot].next = st[x], st[x] = tot;
+}
+void Plus(int &a, int b)
+{
+	a += b;
+	if (a >= MOD) a -= MOD;
+}
+int Get(int e)
+{
+	for (int i = st[g[e].id]; i != -1; i = g[i].next)
+		if ((i ^ 1) != e)
+			return i;
+	return -1;
+}
+void DFS(int x)
+{
+	if (g[x].dis) return ;
+	if (d[g[x].id] != 2)
+	{
+		g[x].dis = 1, g[x].tar = x;
+		return ;
+	}
+	int i = Get(x);
+//	for (int i = st[g[x].id]; i != -1; i = g[i].next)
+//		if ((i ^ 1) != x)
+	DFS(i),
+	g[x].dis = g[i].dis + 1, g[x].tar = g[i].tar;
+}
+void Get(int &a, int &b, int x)
+{
+	int v = g[x].id;
+	for (int i = st[v]; i != -1; i = g[i].next)
+		if ((i ^ 1) != x)
+			((!a) ? (a) : (b)) = i;
+	if (d[g[g[a].tar].id] == 1)
+		swap(a, b);
+	if (d[g[g[a].tar].id] == 1 && d[g[g[b].tar].id] == 1)
+		if (g[a].dis < g[b].dis)
+			swap(a, b);
+	if (d[g[g[a].tar].id] == 3 && d[g[g[b].tar].id] == 3)
+		if (g[a].dis > g[b].dis)
+			swap(a, b);
+}
+int Push(int x, int d)
+{
+	for (; d; x = Get(x), --d);
+	return x;
+}
+void Dp(int x);
+int Calc(int a, int b)
+{
+	if (d[g[g[a].tar].id] == 1 && d[g[g[b].tar].id] == 1 && g[a].dis == g[b].dis)
+		return 1;
+	if (g[a].dis > g[b].dis)
+		swap(a, b);
+	if (g[a].dis < g[b].dis && d[g[g[a].tar].id] == 1)
+	{
+		int c = Push(b, g[a].dis);
+		Dp(c);
+		return g[c].f;
+	}
+	return 0;
+}
+void Dp(int x)
+{
+	if (g[x].vis) return ;
+	g[x].vis = 1;
+	if (d[g[g[x].tar].id] == 1)
+	{
+		g[x].f = (g[x].dis & 1) ? 0 : (g[x].dis / 2);
+		return ;
+	}
+	if (d[g[x].id] == 3)
+	{
+		int a = 0, b = 0;
+		Get(a, b, x);
+		if (d[g[g[a].tar].id] == 3 && d[g[g[b].tar].id] == 3)
+		{
+			g[x].f = 0;
+			return ;
+		}
+		if (g[a].dis == g[b].dis + 1 && d[g[g[a].tar].id] == 1 && d[g[g[b].tar].id] == 1)
+			Plus(g[x].f, 1);
+		if (g[a].dis > g[b].dis + 1)
+		{
+			int c = Push(a, g[b].dis + 1);
+			Dp(c);
+			Plus(g[x].f, g[c].f);
+		}
+		if (g[a].dis >= g[b].dis)
+		{
+			int c = Push(a, g[b].dis - 1);
+			Dp(c);
+			Plus(g[x].f, g[c].f);
+		}
+		return ;
+	}
+	if (g[x].dis > 2)
+	{
+		int c = Push(x, 2);
+		Dp(c);
+		Plus(g[x].f, g[c].f);
+	}
+	int t[2] = {0, 0};
+	Get(t[0], t[1], g[x].tar);
+	Dp(t[0]), Dp(t[1]);
+	for (int i = 0; i < 2; ++i)
+	{
+		if (g[t[i]].dis == g[x].dis && d[g[g[t[i]].tar].id] == 1)
+			Plus(g[x].f, g[t[i ^ 1]].f);
+		if (g[t[i]].dis == g[x].dis - 2 && d[g[g[t[i]].tar].id] == 1)
+			Plus(g[x].f, g[t[i ^ 1]].f);
+	}
+	
+	int a = t[0], b = t[1];
+	if (d[g[a].id] == 3)
+	{
+		int c = 0, e = 0;
+		Get(c, e, a);
+		Dp(c), Dp(e);
+		if (g[c].dis == g[x].dis - 1 && d[g[g[c].tar].id] == 1)
+			Plus(g[x].f, Calc(b, e));
+		if (g[e].dis == g[x].dis - 1 && d[g[g[e].tar].id] == 1)
+			Plus(g[x].f, Calc(b, c));
+	}
+}
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt", "r", stdin), freopen("output.txt", "w", stdout);
+#endif
+	
+	scanf("%d", &n);
+	if (n == 1) puts("2"), exit(0);
+	n *= 2; 
+	memset(st, -1, sizeof(st));
+	for (int i = 1; i < n; ++i)
+	{
+		int x, y;
+		scanf("%d%d", &x, &y);
+		++d[x], ++d[y];
+		Add(i * 2, x, y), Add(i * 2 + 1, y, x);
+		if (d[x] > 3 || d[y] > 3)
+			puts("0"), exit(0);
+	}
+	for (int i = 1; i < n; ++i)
+		DFS(i * 2), DFS(i * 2 + 1);
+	for (int i = 2; i < n * 2; ++i)
+		Dp(i);
+	for (int i = 1; i <= n; ++i)
+		if (d[i] == 1)
+		{
+			int a = st[i], b = Push(a, 1);
+			if (d[g[g[a].tar].id] == 1)
+				Plus(Tohka, 2);
+			else
+			{
+				int x = 0, y = 0;
+				Get(x, y, g[a].tar);
+				if (d[g[g[x].tar].id] == 1 && g[a].dis + 1 == g[x].dis)
+					Plus(Tohka, g[y].f * 2 % MOD);
+				if (d[g[g[y].tar].id] == 1 && g[a].dis + 1 == g[y].dis)
+					Plus(Tohka, g[x].f * 2 % MOD);
+				
+				if (d[g[x].id] == 3)
+				{
+					int c = 0, e = 0;
+					Get(c, e, x);
+					if (g[c].dis == g[a].dis && d[g[g[c].tar].id] == 1)
+						Plus(Tohka, Calc(y, e));
+					if (g[e].dis == g[a].dis && d[g[g[e].tar].id] == 1)
+						Plus(Tohka, Calc(y, c));
+				}
+			}
+			if (d[g[a].id] == 3) continue ;
+			for (; ; )
+			{
+				Plus(Tohka, g[b].f * 2 % MOD);
+				if (d[g[b].id] != 2) break;
+				b = Get(b);
+				if (d[g[b].id] != 2) break;
+				b = Get(b);
+				a = Get(a);
+			}
+		}
+	cout << Tohka << endl;
+	
+	fclose(stdin);
+	fclose(stdout);
+	return 0;
+}

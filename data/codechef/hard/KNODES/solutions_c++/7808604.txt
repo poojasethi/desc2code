@@ -1,0 +1,140 @@
+#include <bits/stdc++.h>
+#define sz 112345
+using namespace std;
+
+vector<int> graph[sz];
+int n, k, lca[sz][20], parent[sz];
+int start[sz], finish[sz], level[sz], tim;
+int arr[sz], vis[sz];
+
+void lcaPreProcess() {
+	memset(lca, -1, sizeof lca);
+	for(int i=0; i < n; i++) lca[i][0] = parent[i];
+	for(int j = 1; (1<<j) < n; j++) {
+		for(int i = 0; i < n; i++) {
+			if(lca[i][j-1] != -1) {
+				lca[i][j] = lca[lca[i][j-1]][j-1];
+			}
+		}
+	}
+}
+
+int Lca(int l, int r) {
+	int log;
+	if(level[l] < level[r]) swap(l, r);
+	for(log = 1; (1<<log) <= level[l]; log++);
+	log--;
+	for(int i = log; i >= 0; i--) {
+		if(level[l]-(1<<i) >= level[r]) l = lca[l][i];
+	}
+	if(l == r) return l;
+	for(int i = log; i >= 0; i--) {
+		if(lca[l][i] != -1 && lca[l][i] != lca[r][i]) {
+			l = lca[l][i]; r = lca[r][i];
+		}
+	}
+	return parent[l];
+}
+
+void dfs(int node, int lev) {
+	level[node] = lev;
+	start[node] = tim;
+	tim++;
+	for(int i=0;i<graph[node].size();i++) {
+		if(start[graph[node][i]] == 0) {
+			parent[graph[node][i]] = node;
+			dfs(graph[node][i], lev+1);
+		}
+	}
+	finish[node] = tim;
+	tim++;
+}
+
+void init() {
+	for(int i=0;i<n;i++) graph[i].clear();
+}
+
+int main() {
+	int t;
+	scanf("%d", &t);
+	while(t--) {
+		scanf("%d", &n);
+		init();
+		for(int i=0;i<n-1;i++) {
+			int a, b;
+			scanf("%d%d", &a, &b);
+			a--; b--;
+			graph[a].push_back(b);
+			graph[b].push_back(a);
+			start[a] = start[b] = 0;
+		}
+		tim = 1;
+		dfs(0, 0);
+		lcaPreProcess();
+		int q;
+		scanf("%d", &q);
+		while(q--) {
+			int flag = false;
+			scanf("%d", &k);
+			for(int i=0;i<k;i++) {
+				scanf("%d", &arr[i]);
+				arr[i]--;
+				vis[i] = 0;
+			}
+			int near, far, near_level = INT_MAX, far_level = INT_MIN, cnt = 0;
+			for(int i=0;i<k;i++) {
+				int l = level[arr[i]];
+				if(l > far_level) {
+					far = arr[i];
+					far_level = l;
+				}
+				if(l < near_level) {
+					near = arr[i];
+					near_level = l;
+				}
+			}
+			//cout<<"nearest "<<near<<endl;
+			//cout<<"first farthest "<<far<<endl;
+			for(int i=0; i<k; i++) {
+				if(start[arr[i]] <= start[far] && finish[arr[i]] >= finish[far]) {
+					cnt++;
+					vis[i] = 1;
+				}
+			}
+			if(cnt == k) {
+				flag = true;
+			} else {
+				int last_far = far;
+				far_level = INT_MIN;
+				for(int i=0;i<k;i++) {
+					if(!vis[i]) {
+						int l = level[arr[i]];
+						if(l > far_level) {
+							far = arr[i];
+							far_level = l;
+						}
+					}
+				}
+				//cout<<"second farthest "<<far<<endl;
+				for(int i=0;i<k;i++) {
+					if(!vis[i]) {
+						if(start[arr[i]] <= start[far] && finish[arr[i]] >= finish[far]) {
+							cnt++;
+							vis[i] = 1;
+						}
+					}
+				}
+				if(cnt == k) {
+					int ancestor = Lca(last_far, far);
+					//cout<<"lca "<<ancestor<<endl;
+					if(!(start[near] < start[ancestor] && finish[near] > finish[ancestor])) {
+						flag = true;
+					}
+				}
+			}
+			if(flag) printf("Yes\n");
+			else printf("No\n");
+		}
+	}
+	return 0;
+}

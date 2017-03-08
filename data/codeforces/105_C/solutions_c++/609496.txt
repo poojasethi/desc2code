@@ -1,0 +1,137 @@
+#include<string>
+#include<vector>
+#include<iostream>
+#include<algorithm>
+
+#define rep(i,n) for(int i=0;i<(n);i++)
+
+using namespace std;
+
+const string CLS[3]={"weapon","armor","orb"};
+const string TYPE[3]={"gladiator","sentry","physician"};
+
+struct Item{
+    string name,cls;
+    int prm,capa;
+};
+
+struct Resident{
+    string name,type,home;
+    int bonus;
+};
+
+int n,m;
+Item itm[100];
+Resident resi[1000];
+
+bool can_move(){
+    int sum=0;
+    rep(i,n) sum+=itm[i].capa;
+    return m<sum;
+}
+
+vector<Item> listup(const string &cls){
+    vector<Item> ret;
+    rep(i,n) if(itm[i].cls==cls) ret.push_back(itm[i]);
+    return ret;
+}
+
+int k_cmp;
+bool cmp(const Resident &r1,const Resident &r2){
+    int a1=(r1.type==TYPE[k_cmp]?r1.bonus:0);
+    int a2=(r2.type==TYPE[k_cmp]?r2.bonus:0);
+    return a1>a2;
+}
+
+void remove_resident(const string &name){
+    rep(i,m) if(resi[i].name==name) {
+        swap(resi[i],resi[m-1]);
+        m--;
+        break;
+    }
+}
+
+int main(){
+    cin>>n;
+    rep(i,n){
+        int dmy1,dmy2;
+        cin>>itm[i].name>>itm[i].cls;
+        if(itm[i].cls==CLS[0]) cin>>itm[i].prm>>dmy1>>dmy2;
+        if(itm[i].cls==CLS[1]) cin>>dmy1>>itm[i].prm>>dmy2;
+        if(itm[i].cls==CLS[2]) cin>>dmy1>>dmy2>>itm[i].prm;
+        cin>>itm[i].capa;
+    }
+    cin>>m;
+    rep(i,m) cin>>resi[i].name>>resi[i].type>>resi[i].bonus>>resi[i].home;
+
+    if(!can_move()){
+        rep(k,3){
+            int sum=-1;
+            string name;
+            vector<string> ls;
+            rep(i,n) if(itm[i].cls==CLS[k]) {
+                int _sum=itm[i].prm;
+                vector<string> _ls;
+                rep(j,m) if(resi[j].home==itm[i].name) {
+                    int bonus=(resi[j].type==TYPE[k]?resi[j].bonus:0);
+                    _sum+=bonus;
+                    _ls.push_back(resi[j].name);
+                }
+                if(sum<_sum){
+                    sum=_sum;
+                    name=itm[i].name;
+                    ls=_ls;
+                }
+            }
+
+            cout<<name<<' '<<ls.size();
+            rep(j,ls.size()) cout<<' '<<ls[j];
+            cout<<endl;
+        }
+
+        return 0;
+    }
+
+    int capa[3];
+    string name[3];
+    vector<string> ls[3];
+    rep(k,3){
+        k_cmp=k;
+        vector<Item> sub=listup(CLS[k]);
+
+        int sum=-1;
+        sort(resi,resi+m,cmp);
+        rep(i,sub.size()){
+            int _sum=sub[i].prm;
+            int _capa=sub[i].capa;
+            vector<string> _ls;
+            rep(j,min(m,_capa)){
+                int bonus=(resi[j].type==TYPE[k]?resi[j].bonus:0);
+                if(bonus==0) break;
+                _sum+=bonus;
+                _ls.push_back(resi[j].name);
+            }
+            if(sum<_sum){
+                sum=_sum;
+                capa[k]=_capa;
+                name[k]=sub[i].name;
+                ls[k]=_ls;
+            }
+        }
+
+        rep(i,ls[k].size()) remove_resident(ls[k][i]);
+    }
+
+    rep(k,3){
+        while(min(m,capa[k]-(int)ls[k].size())>0){
+            ls[k].push_back(resi[0].name);
+            remove_resident(resi[0].name);
+        }
+
+        cout<<name[k]<<' '<<ls[k].size();
+        rep(i,ls[k].size()) cout<<' '<<ls[k][i];
+        cout<<endl;
+    }
+
+    return 0;
+}

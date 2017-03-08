@@ -1,0 +1,78 @@
+#include <cstdio>
+#include <cstring>
+#include <climits>
+
+#define L 5010
+#define min(a, b) ((a) < (b) ? (a) : (b))
+
+typedef __int64 LL;
+
+const int MOD = 1000000007;
+
+char s[L];
+short int lcp[L][L];
+int f[L][L], F[L][L];
+short int g[L][L], G[L][L];
+bool can[L][L], Can[L][L];
+
+main() {
+//	freopen("D.in", "r", stdin);
+    scanf("%s", s + 1);
+    int n = strlen(s + 1);
+
+    for (int i = n; i; i --) {
+    	for (int j = n; j; j --) if (s[i] == s[j]) {
+    		lcp[i][j] = lcp[i + 1][j + 1] + 1;
+    	}
+	}
+
+	for (int i = 1; i <= n; i ++) if (s[i + 1] == '1' || i == n) {
+		f[i][0] = 1;
+		g[i][0] = 1;
+		can[i][0] = 1;
+		for (int j = 1; j < i; j ++) {
+			if (s[j + 1] == '1') {
+				int k = j * 2 - i;
+				if (0 <= k) {
+					int cur = k + 1;
+					if (s[cur] == '1') {
+						int len = lcp[cur][j + 1];
+						if (len >= i - j || s[cur + len] < s[j + 1 + len]) {
+							cur --;
+							if (!can[j][cur]) cur ++;
+						}
+					}
+					f[i][j] = F[j][cur];
+					g[i][j] = G[j][cur] + 1;
+					can[i][j] = Can[j][cur];
+				} else {
+					f[i][j] = F[j][0];
+					g[i][j] = G[j][0] + 1;
+					can[i][j] = 1;
+				}
+			}
+		}
+		F[i][i] = 0;
+		G[i][i] = n + 1;
+		Can[i][i] = 0;
+		for (int j = i - 1; j >= 0; j --) {
+			Can[i][j] = Can[i][j + 1] | can[i][j];
+			if (can[i][j]) {
+				F[i][j] = F[i][j + 1] + f[i][j];
+				if (F[i][j] >= MOD) F[i][j] -= MOD;
+				G[i][j] = min(G[i][j + 1], g[i][j]);
+			} else G[i][j] = G[i][j + 1], F[i][j] = F[i][j + 1];
+		}
+	}
+	int cur = 0;
+	int P = 1, rlt = INT_MAX;
+	for (int i = n - 1; i >= 0; i --) {
+		cur += P * (s[i + 1] - '0') % MOD; if (cur >= MOD) cur -= MOD;
+		if (can[n][i]) {
+			if (rlt > cur + g[n][i]) rlt = cur + g[n][i];
+			if (n - i >= 15) break;
+		}
+		P = P * 2 % MOD;
+	}
+	printf("%d\n%d", F[n][0], rlt % MOD);
+}

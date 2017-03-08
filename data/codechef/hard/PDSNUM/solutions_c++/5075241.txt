@@ -1,0 +1,232 @@
+#include<cstdio>
+#include<iostream>
+#include<vector>
+#include<map>
+#include<set>
+#include<stack>
+#include<queue>
+#include<algorithm>
+#include<cmath>
+#include<string>
+#include<cstdlib>
+#include<climits>
+#include<cstring>
+using namespace std;
+#define PB push_back
+#define INF 1000000000
+#define MOD 1000000007
+
+int dp[90][90][90][5];
+int ans[145000];
+long long f(int total,int curpro,int cursum,int rem)
+{
+	long long ans=0;
+	int i,temp;
+	if(curpro>=total)
+	{
+		curpro%=total;
+	}
+	if(cursum>total)
+		return 0;
+	if(dp[total][curpro][cursum][rem]==-1)
+	{
+		if(rem==0)
+		{
+			if(curpro%cursum==0&&total==cursum)
+				ans=1;
+			else
+				ans=0;
+		}
+		else
+		{
+			i=0;
+			for(;i<=9;i++)
+			{
+				temp=curpro*i;
+				if(temp>=total)
+					temp%=total;
+				ans+=f(total,temp,cursum+i,rem-1);
+			}
+		}
+		dp[total][curpro][cursum][rem]=ans;
+//		printf("total=%d curpro=%d cursum=%d rem=%d first=%d and ans is %lld\n",total,curpro,cursum,rem,first,dp[total][curpro][cursum][rem][first]);
+	}
+	return dp[total][curpro][cursum][rem];
+}
+int gsum[2000100],gpro[2001000];
+void precompute(void)
+{
+	memset(dp,-1,sizeof(dp));
+	int i,j,sum,pro,temp,nums;
+	for(i=0;i<=2000000;i++)
+	{
+		if(i<10)
+		{
+			temp=i;
+			sum=0;
+			pro=1;
+		}
+		else
+		{
+			temp=i%10;
+			sum=gsum[i/10];
+			pro=gpro[i/10];
+			if(temp==0)
+				pro=0;
+		}
+		while(temp>0)
+		{
+			sum+=(temp%10);
+			pro*=(temp%10);
+			temp/=10;
+		}
+		gsum[i]=sum;
+		gpro[i]=pro;
+	}
+	ans[0]=4008;
+	for(i=1;i<=144000;i++)
+	{
+	/*	if(i>1000)
+		{
+			temp=i;
+			sum=gsum[temp/1000];
+			pro=gpro[temp/1000];
+			temp%=1000;
+			if(temp<100)
+			{
+				pro=0;
+			}
+		}
+		else
+			temp=i;
+		while(temp>0)
+		{
+			sum+=(temp%10);
+			pro*=(temp%10);
+			temp/=10;
+		}*/
+		sum=gsum[i];
+		pro=gpro[i];
+		nums=0;
+		for(j=sum;j<90;j++)
+		{
+			nums+=f(j,pro,sum,4);
+		}
+		ans[i]=nums+ans[i-1];
+	}
+	return;
+}
+
+
+int ispds(long long x)
+{
+	long long sum,pro;
+	if(x>1000)
+	{
+		int y=x/1000;
+		sum=gsum[y];
+		pro=gpro[y];
+		x%=1000;
+		if(x<100)
+		{
+			return 1;
+		}
+		else
+		{
+			sum+=gsum[x];
+			pro*=gpro[x];
+		}
+	}
+	else
+	{
+		sum=gsum[x];
+		pro=gpro[x];
+	}
+	if(pro==0||pro%sum==0)
+		return 1;
+	return 0;
+	while(x>0)
+	{
+		sum+=(x%10);
+		pro*=(x%10);
+		x/=10;
+		if(pro==0)
+			return 1;
+	}
+}
+
+long long findnth(long long s,int ind)
+{
+	while(ind>=0)
+	{
+		if(ispds(s))
+		{
+			if(ind==0)
+				return s;
+			ind--;
+			s++;
+		}
+		else
+			s++;
+	}
+	return s;
+}
+
+int main()
+{
+	precompute();
+	int n,cur=0,x;
+	pair < int , int > tempp;
+	vector < pair < int , int > > nums(10000);
+	int final[10010];
+	while(fscanf(stdin,"%d",&n)!=EOF)
+	{
+		if(n==0)
+			break;
+	/*	x=lower_bound(ans,ans+144000,n)-ans;
+		if(x==0)
+		{
+			printf("%lld\n",findnth(1,n-1));
+		}
+		else
+		{
+			x--;
+		//	printf("%d %lld\n",x,ans[x]);
+			printf("%lld\n",findnth((x+1)*10000,n-ans[x]-1));
+	*///	}
+//		continue;
+		tempp.first=n;
+		tempp.second=cur;
+		nums[cur]=tempp;
+		cur++;
+	}
+	sort(nums.begin(),nums.begin()+cur);
+	x=cur;
+//	x=(int)nums.size();
+	cur=0;
+	int pre,prenum,preind;
+	pre=-1;
+	for(int i=0;i<x;i++)
+	{
+		while(nums[i].first>ans[cur])
+		{
+			cur++;
+		}
+		if(cur==pre)
+		{
+			final[nums[i].second]=findnth(prenum,nums[i].first-preind);
+		}
+		else
+		{
+			if(cur==0)
+				final[nums[i].second]=findnth(1,nums[i].first-1);	
+			else
+				final[nums[i].second]=findnth((cur)*10000,nums[i].first-ans[cur-1]-1);
+			prenum=final[nums[i].second];
+			preind=nums[i].first;
+		}
+	}
+	for(int i=0;i<x;i++)
+		printf("%d\n",final[i]);
+	return 0;
+}

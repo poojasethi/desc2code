@@ -1,0 +1,140 @@
+// Motorbike.cpp : Defines the entry point for the console application.
+//
+
+#include <stdio.h>
+#include <vector>
+#include <algorithm>
+
+static int readint()
+{
+	int result = 0, c;
+	do { c = getc(stdin); }
+	while (c == ' ' || c == '\n');
+	while (('0' <= c) && (c <= '9'))
+	{
+		result *= 10;
+		result += c - '0';
+		c = getc(stdin);
+	}
+	return result;
+}
+
+static void writeint(int a)
+{
+	if (a==0)
+	{
+		putc('0', stdout);
+		return;
+	}
+	char tmp[10];
+	int tp = 0;
+	while (a) {tmp[tp++]=a%10;a/=10;}
+	while (tp--) putc(tmp[tp]+'0', stdout);
+}
+
+struct bike
+{
+	int index;
+	int v;
+	int x;
+	long long currPos;
+
+	bike() {}
+	bike(int i, int vel, int pos) : index(i), v(vel), x(pos) {}
+	void calcPos(long long t) { currPos = x + v * t; }
+
+	inline bool operator < (const bike& b2) const
+	{
+		if (currPos == b2.currPos)
+			return index < b2.index;
+		return currPos > b2.currPos;
+	}
+};
+
+struct query
+{
+	int i, t, k, result;
+
+	query(int index, int time, int pos) : i(index), t(time), k(pos) {}
+	inline bool operator < (const query& rhs) const
+	{
+		return t<rhs.t || (t==rhs.t && k<rhs.k);
+	}
+};
+
+inline bool Qpred (const query& q1, const query& q2)
+{
+	return q1.i < q2.i;
+}
+
+void doTestCase()
+{
+	bike bikes[20000];
+	std::vector<query> queries;
+
+	int nBikes = readint();
+	for (int j = 0; j < nBikes; ++j)
+	{
+		bikes[j].index = j;
+		bikes[j].v = readint();
+		bikes[j].x = readint();
+	}
+
+	int nQueries;
+	nQueries = readint();
+	queries.reserve(nQueries);
+	for (int i = 0; i < nQueries; ++i)
+	{
+		int t, pos;
+		t = readint();
+		pos = readint();
+		queries.push_back(query(i, t, pos));
+	}
+
+	sort(queries.begin(), queries.end());
+	bool stop = false;
+	for (int i = 0; i < nQueries; ++i)
+	{
+		int thisPos = queries[i].k - 1;
+		if (!stop)
+		{
+			long long time = queries[i].t;
+			for (int j = 0; j < nBikes; ++j)
+			{
+				bikes[j].calcPos(time);
+			}
+
+			if (time <= 100000)
+				std::nth_element(bikes, bikes + thisPos, bikes + nBikes);
+			else
+			{
+				std::sort(bikes, bikes + nBikes);
+				stop = true;
+			}
+		}
+		queries[i].result = bikes[thisPos].index + 1;
+	}
+		
+	sort(queries.begin(), queries.end(), Qpred);
+	for (int i = 0; i < nQueries; ++i)
+	{
+		writeint(queries[i].result);
+		putc('\n', stdout);
+	}
+	putc('\n', stdout);
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt","r",stdin);
+	freopen("output.txt","w",stdout);
+#endif
+
+	int nTests = readint();
+	for (int i = 0; i < nTests; ++i)
+		doTestCase();
+
+	return 0;
+}
+

@@ -1,0 +1,144 @@
+#include<map>
+#include<ctime>
+#include<cmath>
+#include<queue>
+#include<vector>
+#include<cstdio>
+#include<string>
+#include<cassert>
+#include<cstring>
+#include<numeric>
+#include<sstream>
+#include<iostream>
+#include<algorithm>
+using namespace std;
+typedef long long LL;
+#define MM(a, x) memset(a, x, sizeof(a))
+#define P(x) cout << #x << " = " << x << endl;
+
+int N;
+string s[65];
+map<string, int> stateID;
+string prefix[1500];
+vector<string> vs;
+int ID;
+int nextStateID[1500][10];
+LL dp[2][1500][2][2];
+
+void init() {
+	ID = 0;
+	for(int i = 0; i < N; i++)
+		for(int j = 0; j <= s[i].length(); j++) {
+			string p = s[i].substr(0, j);
+			if(stateID.count(p) == 0) {
+				stateID[p] = ID;
+				prefix[ID] = p;
+				ID++;
+			}
+		}
+	for(int i = 0; i < ID; i++) {
+		for(int j = 0; j < 10; j++) {
+			string p = prefix[i] + char(j + '0');
+			for(int k = 0; k < p.length(); k++){
+				if(binary_search(vs.begin(), vs.end(), p.substr(k))){
+					nextStateID[i][j] = -1;
+					break;
+				}
+			}
+			if(nextStateID[i][j] != -1){
+				while(stateID.count(p) == 0) p = p.substr(1);
+				nextStateID[i][j] = stateID[p];
+			}
+		}
+	}
+}
+
+LL F(LL x) {
+	vector<int> D;
+	while(x) {
+		D.push_back(x % 10);
+		x /= 10;
+	}
+	reverse(D.begin(), D.end());
+	int n = D.size();
+	MM(dp, 0);
+	dp[0][0][1][0] = 1;
+	for(int used = 0; used < n; used++) {
+		int from = used & 1;
+		int to = 1 - from;
+		memset(dp[to], 0, sizeof(dp[to]));
+		for(int id = 0; id < ID; id++)
+			for(int tight = 0; tight < 2; tight++)
+				for(int beauty = 0; beauty < 2; beauty++) {
+					LL t = dp[from][id][tight][beauty];
+					if(t == 0) continue;
+					if(tight) {
+						for(int add = 0; add <= D[used]; add++) {
+							int ntStateID = nextStateID[id][add];
+							if(ntStateID == -1) {
+								dp[to][0][add == D[used]][1] += t;
+							} else {
+								dp[to][ntStateID][add == D[used]][beauty] += t;
+							}
+						}
+					} else {
+						for(int add = 0; add < 10; add++) {
+							int ntStateID = nextStateID[id][add];
+							if(ntStateID == -1) {
+								dp[to][0][0][1] += t;
+							} else {
+								dp[to][ntStateID][0][beauty] += t;
+							}
+						}
+					}
+				}
+	}
+	LL r = 0;
+	for(int i = 0; i < ID; i++)
+		for(int tight = 0; tight < 2; tight++)
+			r += dp[n & 1][i][tight][1];
+	return r;
+}
+
+LL Count(LL L, LL x) {
+	return F(x) - F(L - 1);
+}
+
+int main() {
+	LL L, R, K;
+	cin >> L >> R >> K >> N;
+	for(int i = 0; i < N; i++) cin >> s[i], vs.push_back(s[i]);
+	sort(vs.begin(), vs.end());
+	init();
+	LL l = L, r = R;
+	while(l < r) {
+		LL m = (l + r) / 2;
+		LL t = Count(L, m);
+		if(t >= K) {
+			r = m;
+		} else {
+			l = m + 1;
+		}
+	}
+	if(Count(L, l) == K) cout << l << endl;
+	else {
+		cout << "no such number" << endl;
+	}
+#ifdef _DEBUG
+	system("pause");
+#endif
+	return 0;
+}
+/*
+12341 109213411234312112
+41542511234 6
+41234  6431234 23124 6863 1236 12341293
+
+12341 109213411234312112
+415425112411234 6
+41234  6431234 234 68763 12236 12341293
+
+1 1000000000000000000
+1000000000000000000 9
+1 2 3 4 5 6 7 8 9
+*/

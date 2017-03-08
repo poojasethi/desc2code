@@ -1,0 +1,161 @@
+#include<bits/stdc++.h>
+using namespace std;
+#define MAX 800005
+#define gc getchar
+int a[MAX];
+struct node{
+	int shift[12];
+	int shifts;
+};
+node tree[4*MAX +10];
+int lazy[4*MAX+10];
+int q[6];
+int read() {
+  char c = gc();
+  int sign = 1;
+  while((c<'0' || c>'9') && c!='-') c = gc();
+  if(c=='-') {
+    sign = -1;
+    c = gc();
+  }
+  int ret = 0;
+  while(c>='0' && c<='9' ) {
+    ret = 10 * ret + c - 48;
+    c = gc();
+  }
+  return ret*sign;
+}
+int make_shift(int value, int shift)
+{
+	int temp= value;int l=0;
+	int res=0;
+	while(temp>0){temp/=10;l++;}
+	temp=value;
+	for(int i=l-1;i>=0;i--)
+	{
+		q[i]= temp%10; temp/=10;
+	}
+	for(int i=shift;i<shift+l;i++)
+	{
+		res = res*10 + q[i%l]; 
+	}
+	return res;
+}
+void calculate(int node)
+{
+	for(int i=0;i<12;i++)
+	{
+		tree[node].shift[(i+tree[node].shifts)%12]= max(tree[2*node].shift[(i+tree[2*node].shifts)%12],tree[2*node+1].shift[(i+tree[2*node+1].shifts)%12]);
+	}
+}
+void initialize(int node, int b , int e)
+{
+	if(b>e )return;
+	if(b==e)
+	{
+		//tree[node].shift[0]=a[b];
+		for(int i=0;i<12;i++)
+		{
+			tree[node].shift[i]= make_shift(a[b],i);
+			//cout<<tree[node].shift[i]<<" ";
+		}
+		//cout<<endl;
+		return;
+	}
+	int mid = (b+e)/2;
+	initialize(2*node, b,mid);
+	initialize(2*node+1, mid+1, e);
+	calculate(node);	
+}
+void update(int node, int b, int e, int i, int j, int f)
+{
+	if(lazy[node]!=0)
+	{
+		tree[node].shifts += lazy[node];
+		tree[node].shifts %= 12;
+		if(b!=e)
+		{
+			lazy[2*node] += lazy[node];
+			lazy[2*node] %= 12;
+			lazy[2*node +1] += lazy[node];
+			lazy[2*node +1] %= 12;
+		}
+		lazy[node] =0;
+	}
+	if(b>e || i>e || j<b )return;
+	if(i<=b && e<=j)
+	{
+		tree[node].shifts += f;
+		tree[node].shifts %=12;
+		if(b!=e)
+		{
+			lazy[2*node]   += f;
+			lazy[2*node]   %= 12;
+			lazy[2*node+1] += f;
+			lazy[2*node+1] %= 12;
+		}
+		return;
+	}
+	int mid= (b+e)/2;
+	update(2*node, b, mid, i,j,f);
+	update(2*node +1 , mid+1, e , i,j , f);
+	calculate(node);
+}
+int query(int node, int b, int e, int i, int j)
+{
+  if(b>e || i>e || j<b)return 0;
+  if(lazy[node]!=0)
+  {
+  	tree[node].shifts += lazy[node];
+  	tree[node].shifts %= 12;
+  	if(b!=e)
+  	{
+  		lazy[2*node] += lazy[node];
+  		lazy[2*node] %=12;
+  		lazy[2*node+1] += lazy[node];
+  		lazy[2*node+1] %=12;
+  	}
+  	lazy[node]=0;
+  }
+  if(i<=b && j>=e)
+  {
+  	return tree[node].shift[tree[node].shifts];
+  }
+  int mid= (b+e)/2;
+  int q1= query(2*node, b, mid, i, j);
+  int q2 = query(2*node+1, mid+1, e, i, j);
+  return max(q1,q2);
+  	
+}
+
+int main()
+{
+	int n;
+	//scanf("%d",&n);
+	n= read();
+	for(int i=1;i<=n;i++)
+	 a[i]=read();
+	 //scanf("%d",&a[i]);
+	initialize(1,1,n);
+    int m;
+    m=read();
+    //scanf("%d",&m);
+    for(int i=1;i<=m;i++)
+    {
+    	int type, l,r,f;
+    	//cin>>type>>l>>r;
+    	type= read(),l=read(),r=read();
+    	if(type==0)
+    	{
+    	    f=read();
+    		//cin>>f;
+    		update(1,1,n,l+1,r+1,f);
+    	}
+    	else
+    	{
+    	   int ans = query(1,1,n,l+1,r+1);
+    	   cout<<ans<<endl;
+    	}
+    	
+    }
+}

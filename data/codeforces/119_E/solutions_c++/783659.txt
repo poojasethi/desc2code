@@ -1,0 +1,131 @@
+#include <stdio.h>
+#include <math.h>
+#include <algorithm>
+#define MaxN 1010
+#define SQR(v) ((v)*(v))
+
+const double eps = 1e-8;
+
+int sgn(double x)
+{
+    return (x > eps) - (x < -eps);
+}
+
+struct Point
+{
+    double x, y, z;
+    Point() {}
+    Point(double x, double y, double z):x(x),y(y),z(z) {}
+    Point operator + (const Point& a) const
+    {
+        return Point(x + a.x, y + a.y, z + a.z);
+    }
+    Point operator - (const Point& a) const
+    {
+        return Point(x - a.x, y - a.y, z - a.z);
+    }
+    Point operator / (const double a) const
+    {
+        return Point(x / a, y / a, z / a);
+    }
+    Point operator * (const double a) const
+    {
+        return Point(x * a, y * a, z * a);
+    }
+    Point operator * (const Point& a) const
+    {
+        return Point(y*a.z-z*a.y, z*a.x-x*a.z, x*a.y-y*a.x);
+    }
+    double operator & (const Point& a) const
+    {
+        return x*a.x + y*a.y + z*a.z;
+    }
+    void input()
+    {
+        scanf("%lf%lf%lf", &x, &y, &z);
+    }
+    void output()
+    {
+        printf("%.10f %.10f %.10f\n", x, y, z);
+    }
+} p[MaxN], tp[MaxN],q[MaxN];
+
+int np, nq;
+
+struct Sphere
+{
+    Point o;
+    double r2;
+    Sphere() {}
+    Sphere(Point o, double r2):o(o),r2(r2) {}
+} ans;
+
+double dist(Point a, Point b)
+{
+    return sqrt(SQR(a.x-b.x) + SQR(a.y-b.y) + SQR(a.z-b.z));
+}
+
+bool inside(const Sphere s, const Point p)
+{
+    return sgn(dist(s.o, p) - s.r2) <= 0;
+}
+
+//3 plane inter: (n1*n2*d3+n2*n3*d1+n3*n1*d2)/(n1&(n2*n3))
+void solve4(const Point p[],Sphere &s)
+{
+    Point n1=p[1]-p[0],n2=p[2]-p[0],n3=p[3]-p[0];
+    double d1=n1&(p[0]+p[1])/2,d2=n2&(p[0]+p[2])/2,d3=n3&(p[0]+p[3])/2;
+    s.o=(n1*n2*d3+n2*n3*d1+n3*n1*d2)/(n1&(n2*n3));
+    s.r2=dist(s.o,p[0]);
+}
+
+void solve3(const Point p[],Sphere &s)
+{
+    Point n1=p[1]-p[0],n2=p[2]-p[0],n3=n1*n2;
+    double d1=n1&(p[0]+p[1])/2,d2=n2&(p[0]+p[2])/2,d3=n3&p[0];
+    s.o=(n1*n2*d3+n2*n3*d1+n3*n1*d2)/(n1&(n2*n3));
+    s.r2=dist(s.o,p[0]);
+}
+
+bool miniSphere(Point p[],int np,Point q[],int nq,Sphere &res)
+{
+    if(np==0)
+    {
+        if(nq==0) return false;
+        else if(nq==1) res=Sphere(q[0],0);
+        else if(nq==2) res=Sphere((q[0]+q[1])/2,dist(q[0],q[1])/2);
+        else if(nq==3) solve3(q,res);
+        return true;
+    }
+    std::swap(p[rand()%np],p[np-1]);
+    if(miniSphere(p,np-1,q,nq,res)&&inside(res,p[np-1])) return true;
+    q[nq++]=p[np-1];
+    if(nq<=3) miniSphere(p,np-1,q,nq,res);
+    else solve4(q,res);
+    return true;
+}
+int main()
+{
+    int n,m;
+    while (scanf("%d%d",&n,&m)==2)
+    {
+        for (int i=0; i<n; i++)
+            scanf("%lf%lf%lf",&p[i].x,&p[i].y,&p[i].z);
+        for (int i=0; i<m; i++)
+        {
+            double a,b,c;
+            scanf("%lf%lf%lf",&a,&b,&c);
+            for (int j=0; j<n; j++)
+            {
+                double tnum=a*p[j].x+b*p[j].y+c*p[j].z;
+                double delta=tnum/(a*a+b*b+c*c);
+                tp[j]=p[j]-Point(delta*a,delta*b,delta*c);
+            }
+            np=n;
+            nq=0;
+            miniSphere(tp,np,q,nq,ans);
+            printf("%.10f\n",ans.r2);
+        }
+    }
+    return 0;
+}

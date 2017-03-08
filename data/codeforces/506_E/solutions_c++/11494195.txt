@@ -1,0 +1,144 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<iostream>
+#define REP(i,n) for(int i=0;i<(n);i++)
+#define FOR(i,l,r) for(int i=(l);i<=(r);i++)
+using namespace std;
+
+typedef long long LL;
+const int maxn=410,MOD=10007;
+
+char s[maxn];
+int n,m,mat_s;
+
+typedef LL Mat[maxn][maxn];
+
+void print(Mat A) {
+    REP(i,mat_s) {
+        REP(j,mat_s) {
+            cout<<A[i][j]<<" ";
+        }
+        cout<<endl;
+    }
+    cout<<endl;
+}
+
+void mat_mul(Mat A,Mat B,Mat res) {
+    static Mat C;
+    memset(C,0,sizeof(C));//因为是个上三角阵，所以只有第一维<=第二维的才可能不为0
+    REP(i,mat_s)FOR(k,i,mat_s-1)FOR(j,k,mat_s-1) {
+        C[i][j]+=A[i][k]*B[k][j];
+    }
+    REP(i,mat_s)REP(j,mat_s) {
+        C[i][j]%=MOD;
+    }
+    memcpy(res,C,sizeof(C));
+}
+
+void mat_pow(Mat A,LL k,Mat res) {
+    static Mat a,r;
+    memcpy(a,A,sizeof(a));
+    memset(r,0,sizeof(r));
+    REP(i,mat_s)r[i][i]=1;
+    while(k) {
+        if(k&1) {
+            mat_mul(r,a,r);
+        }
+        if(!(k>>=1)) {
+            break;
+        }
+        mat_mul(a,a,a);
+    }
+    memcpy(res,r,sizeof(r));
+}
+
+int dp[210][210][210];
+
+int rec(int l,int r,int n24) {//n24是左右不相同的转移方案
+    int& res=dp[l][r][n24];//返回将[l,r]用n24次转移到达的方案数
+    if(~res) {//一旦n24定了n25也就定了
+        return res;
+    }
+    if(l==r) {
+        return res=!n24;//最后一发用的是n25的名额
+    }
+    if(s[l]==s[r]) {
+        if(l+1==r) {
+            return res=!n24;
+        }
+        return res=rec(l+1,r-1,n24);
+    } else {
+        if(n24>0) {
+            return res=(rec(l+1,r,n24-1)+rec(l,r-1,n24-1))%MOD;
+        } else {
+            return res=0;
+        }
+    }
+}
+
+int n24,n25,n26,times;
+
+int mat_at(Mat A,int c24,int c25) {
+    int i24=n24-c24;
+    int i25=n24+c25-1;
+    int i26=i25+n25;
+    return A[i24][i26];
+}
+
+int main() {
+    scanf("%s%d",s,&n);
+    m=strlen(s);
+    n+=m;
+    times=(n+1)>>1;
+    n24=m-1;
+    n26=n25=(m+1)>>1;//最后一次转移必定左右相同
+    mat_s=n24+n25+n26;
+    static Mat A,B;
+    REP(i,mat_s) {
+        if(i<n24) {
+            A[i][i]=24;
+            A[i][i+1]=1;
+        } else if(i<n24+n25) {
+            A[i][i]=25;
+            if(i+1<n24+n25) {
+                A[i][i+1]=1;
+            }
+            A[i][i+n25]=1;
+        } else {
+            A[i][i]=26;
+        }
+    }
+    //print(A);
+    mat_pow(A,times-1,B);//B转移了times-1次，A转移了times次
+    mat_mul(B,A,A);
+    //print(A);
+    /*
+       构造一个长的像24->24->24->...->25->25->25->...->25
+                       |   |   |        |
+                       v   v   v        v
+                      26  26  26  ...  26
+    的自动机，就可以拼出任意一个x*24+(m-x)/2*25+26的自动机了
+       */
+    int ans=0;
+    memset(dp,-1,sizeof(dp));
+    REP(c24,m) {
+        int c25=(m-c24+1)>>1;
+        if(times-c24-c25<0) {
+            continue;//走了times次还没到26上
+        }
+        int ways=rec(0,m-1,c24);
+        ans=(ans+ways*mat_at(A,c24,c25))%MOD;
+        if((n&1)&&(!((m-c24)&1))) {//总串长为奇数，最中间的那个字符l和r是同一个下标
+            //并且串经过c24次的变换后剩下的串长度为偶数
+            //最后一发应该用n25的名额，并且只消除一个字符
+            //但是这样的话最后一发就消除了偶数个字符
+            //所以把两个字符看成一个，有n-1个字符
+            ans=(ans+MOD-ways*B[n24-c24][n24+c25-1]%MOD)%MOD;//减去n-1步走到最后一个25节点的方案数
+            //最后一步不能从最后一个25走到26,因为不能两个一起消
+            //n是奇数，所以最后一发只有一个字符
+        }
+    }
+    printf("%d\n",ans);
+    return 0;
+}

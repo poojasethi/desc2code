@@ -1,0 +1,67 @@
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+using namespace std;
+#define f(i) f[(i)&1]
+
+const int N = 55;
+
+int g[N][N], best[N], worst[N];
+long long f[2][N][N];
+int n, m, g1, g2, s1, s2;
+
+long long solve(int gID, int bID)
+{
+        memset(f(0), 0, sizeof(f(0)));
+        f(0)[0][0] = 1;
+        for (int i = 1; i <= n; ++i) {
+                memset(f(i), 0, sizeof(f(i)));
+                bool cang = false, cans = false, canb = false;
+                if (i == gID)
+                        cang = true;
+                else if (i == bID)
+                        canb = true;
+                else {
+                        if (best[i] <= best[gID]) cang = true;
+                        if (worst[i] >= worst[bID]) canb = true;
+                        for (int j = 1; j <= n; ++j) if (i != j && g[i][j] > best[gID] && g[i][j] < worst[bID]) {cans = true; break;}
+                }
+                for (int j = 0; j <= n; ++j) for (int k = 0; k <= n; ++k) {
+                        if (f(i - 1)[j][k] == 0) continue;
+                        if (cang) f(i)[j + 1][k] += f(i - 1)[j][k];
+                        if (cans) f(i)[j][k + 1] += f(i - 1)[j][k];
+                        if (canb) f(i)[j][k] += f(i - 1)[j][k];
+                }
+        }
+        long long ret = 0;
+        for (int j = g1; j <= g2; ++j) for (int k = s1; k <= s2; ++k) ret += f(n)[j][k];
+        //cout << gID << " " << bID << " " << ret << endl;
+        return ret;
+}
+
+int main()
+{
+        //freopen("H.in", "r", stdin);
+        scanf("%d%d", &n, &m);
+        memset(g, 0x3f, sizeof(g));
+        for (int i = 1; i <= m; ++i) {
+                int x, y, z;
+                scanf("%d%d%d", &x, &y, &z);
+                g[x][y] = g[y][x] = z;
+        }
+        scanf("%d%d%d%d", &g1, &g2, &s1, &s2);
+        for (int k = 1; k <= n; ++k) for (int i = 1; i <= n; ++i) if (i != k)
+                for (int j = 1; j <= n; ++j) if (j != k && j != i && g[i][k] + g[k][j] < g[i][j]) g[i][j] = g[i][k] + g[k][j];
+        for (int i = 1; i <= n; ++i) for (int j = 1; j <= n; ++j) if (i != j) g[i][j] = g[i][j] * 60 + i;
+        for (int i = 1; i <= n; ++i) {
+                best[i] = 0x3f3f3f3f;
+                worst[i] = 0;
+                for (int j = 1; j <= n; ++j) if (i != j) {
+                        if (g[i][j] < best[i]) best[i] = g[i][j];
+                        if (g[i][j] > worst[i]) worst[i] = g[i][j];
+                }
+        }
+        long long ans = 0;
+        for (int gID = 1; gID <= n; ++gID) for (int bID = 1; bID <= n; ++bID) if (gID != bID) ans += solve(gID, bID);
+        cout << ans << endl;
+}

@@ -1,0 +1,147 @@
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <string>
+using namespace std;
+
+int n, q, a, b;
+string type;
+
+struct Node{
+	int id, sz, h;
+	Node *lef, *rig;
+	Node() : id(0), sz(1), h(1), lef(NULL), rig(NULL) {}
+};
+vector <Node*> th;
+vector <bool> avail;
+
+void up(Node *& root);
+
+void rotateLef(Node *& root){
+	Node *tmp = root->lef->rig;
+	root->lef->rig = root;
+	root = root->lef;
+	root->rig->lef = tmp;
+
+	up(root->lef);
+	up(root->rig);
+	up(root);
+}
+
+void rotateRig(Node *& root){
+	Node *tmp = root->rig->lef;
+	root->rig->lef = root;
+	root = root->rig;
+	root->lef->rig = tmp;
+
+	up(root->lef);
+	up(root->rig);
+	up(root);
+}
+
+void up(Node *& root){
+	if (root == NULL)
+		return;
+	int lef, rig;
+	lef = (root->lef == NULL ? 0 : root->lef->sz);
+	rig = (root->rig == NULL ? 0 : root->rig->sz);
+	root->sz = lef + rig + 1;
+
+	lef = (root->lef == NULL ? 0 : root->lef->h);
+	rig = (root->rig == NULL ? 0 : root->rig->h);
+	root->h = max(lef, rig) + 1;
+
+	if (lef == rig + 2){
+		lef = (root->lef->lef == NULL ? 0 : root->lef->lef->h);
+		rig = (root->lef->rig == NULL ? 0 : root->lef->rig->h);
+		if (lef + 1 == rig)
+			rotateRig(root->lef);
+		rotateLef(root);
+	}
+	else
+	if (lef + 2 == rig){
+		lef = (root->rig->lef == NULL ? 0 : root->rig->lef->h);
+		rig = (root->rig->rig == NULL ? 0 : root->rig->rig->h);
+		if (lef == rig + 1)
+			rotateLef(root->rig);
+		rotateRig(root);
+	}
+}
+
+void push(Node *& root, Node *& add){
+	if (root == NULL)
+		root = add;
+	else
+	if (add->id <= root->id)
+		push(root->lef, add);
+	else
+		push(root->rig, add);
+
+	up(root);
+}
+
+void erase(Node *root){
+	if (root == NULL)
+		return;
+	erase(root->lef);
+	erase(root->rig);
+	delete root;
+}
+
+void visit(Node *& root){
+	if (root == NULL)
+		return;
+	visit(root->lef);
+	visit(root->rig);
+	root->lef = root->rig = NULL;
+	push(th[a], root);
+}
+
+void merge(){
+	visit(th[b]);
+	avail.push_back(true);
+	th.push_back(th[a]);
+
+	avail[a] = avail[b] = false;
+}
+
+int find(Node *& root, const int& pos){
+	int lef = (root->lef == NULL ? 0 : root->lef->sz);
+	if (pos == lef + 1)
+		return root->id;
+
+	if (pos <= lef)
+		return find(root->lef, pos);
+	else
+		return find(root->rig, pos - lef - 1);
+}
+
+int main(){
+	ios_base::sync_with_stdio(0);
+	cin >> n >> q;
+
+	avail.push_back(false);
+	th.push_back(NULL);
+	for (int i = 1; i <= n; ++i){
+		avail.push_back(true);
+		th.push_back(new Node);
+		th[i]->id = i;
+	}
+
+	while (q--){
+		cin >> type >> a >> b;
+		if (type == "UNION"){
+			if (th[a]->sz < th[b]->sz)
+				swap(a, b);
+			merge();
+		}
+		else
+			cout << find(th[a], b) << endl;
+	}
+
+	for (int i = 1; i < th.size(); ++i)
+	if (avail[i])
+		erase(th[i]);
+
+	return 0;
+}

@@ -1,0 +1,213 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+#include <iostream>
+
+using namespace std;
+
+int T;
+int N;
+
+struct bian_
+{
+	int to;
+	int next;
+}bian[200010]={{0,0}};
+int First[100010]={0};
+
+struct Tree
+{
+	int fas,fax;
+	int son[2];
+	int Min;
+}tree[100010]={{0,0,{0},0}};
+
+struct SegTree
+{
+	long long Sum;
+	long long add;
+}segtree[400010]={{0,0}};
+
+int St[100010]={0},En[100010]={0};
+int dfsp=0;
+
+void Add(int p,int q,int k)
+{
+	bian[k].to=q;
+	bian[k].next=First[p];
+	First[p]=k;
+	return;
+}
+
+void Merge(int x)
+{
+	tree[x].Min=x;
+	if(tree[x].son[0]!=0)
+		tree[x].Min=tree[tree[x].son[0]].Min;
+	return;
+}
+
+void Rotate(int x)
+{
+	int Fa=tree[x].fas;
+	swap(tree[x].fax,tree[Fa].fax);
+	tree[x].fas=tree[Fa].fas;
+	if(tree[Fa].fas!=0)
+	{
+		int g=(tree[tree[Fa].fas].son[1]==Fa);
+		tree[tree[Fa].fas].son[g]=x;
+	}
+	tree[Fa].fas=x;
+	int g=(tree[Fa].son[1]==x);
+	tree[Fa].son[g]=tree[x].son[g^1];
+	if(tree[x].son[g^1]!=0)
+		tree[tree[x].son[g^1]].fas=Fa;
+	tree[x].son[g^1]=Fa;
+	Merge(Fa);Merge(x);
+	return;
+}
+
+void Splay(int x)
+{
+	for(;tree[x].fas!=0;)
+	{
+		int Fa=tree[x].fas;
+		if(tree[Fa].fas!=0)
+		{
+			int g1=(tree[tree[Fa].fas].son[1]==Fa);
+			int g2=(tree[Fa].son[1]==x);
+			if(g1==g2)
+				Rotate(Fa);
+			else Rotate(x);
+		}
+		Rotate(x);
+	}
+	return;
+}
+
+void update(int l,int r,int k,long long c)
+{
+	segtree[k].add+=c;
+	segtree[k].Sum+=c*(r-l+1);
+	return;
+}
+
+void pushdown(int l,int r,int k)
+{
+	int mid=(l+r)>>1;
+	update(l,mid,k<<1,segtree[k].add);
+	update(mid+1,r,k<<1|1,segtree[k].add);
+	segtree[k].add=0;
+	return;
+}
+
+void Change(int l,int r,int k,int al,int ar,long long c)
+{
+	if(al<=l && r<=ar)
+	{
+		update(l,r,k,c);
+		return;
+	}
+	pushdown(l,r,k);
+	int mid=(l+r)>>1;
+	if(al<=mid) Change(l,mid,k<<1,al,ar,c);
+	if(ar>mid) Change(mid+1,r,k<<1|1,al,ar,c);
+	segtree[k].Sum=segtree[k<<1].Sum+segtree[k<<1|1].Sum;
+	return;
+}
+
+long long Query(int l,int r,int k,int al,int ar)
+{
+	if(al<=l && r<=ar) return segtree[k].Sum;
+	pushdown(l,r,k);
+	long long ret=0;
+	int mid=(l+r)>>1;
+	if(al<=mid) ret+=Query(l,mid,k<<1,al,ar);
+	if(ar>mid) ret+=Query(mid+1,r,k<<1|1,al,ar);
+	return ret;
+}
+
+void cut(int x,int g)
+{
+	if(tree[x].son[g]==0) return;
+	int Son=tree[x].son[g];
+	tree[x].son[g]=0;
+	swap(tree[Son].fax,tree[Son].fas);
+	Change(1,N,1,St[tree[Son].Min],En[tree[Son].Min],1);
+	return;
+}
+
+void Link(int x,int y)
+{
+	tree[x].son[1]=y;
+	swap(tree[y].fas,tree[y].fax);
+	Change(1,N,1,St[tree[y].Min],En[tree[y].Min],-1);
+	return;
+}
+
+void access(int x)
+{
+	Splay(x);
+	cut(x,1);
+	for(;tree[x].fax!=0;)
+	{
+		Splay(tree[x].fax);
+		cut(tree[x].fax,1);
+		Link(tree[x].fax,x);
+		Splay(x);
+	}
+	return;
+}
+
+void buildtree(int cnt,int fa)
+{
+	St[cnt]=++dfsp;
+	tree[cnt].Min=cnt;
+	for(int i=First[cnt];i!=0;i=bian[i].next)
+	{
+		int u=bian[i].to;
+		if(u==fa) continue;
+		tree[u].fax=cnt;
+		buildtree(u,cnt);
+		Change(1,N,1,St[u],En[u],1);
+	}
+	En[cnt]=dfsp;
+	return;
+}
+
+int main()
+{
+	cin>>T;
+	for(;T>0;T--)
+	{
+		cin>>N;
+		memset(First,0,sizeof(First));
+		memset(tree,0,sizeof(tree));
+		memset(segtree,0,sizeof(segtree));
+		dfsp=0;
+		for(int i=1;i<N;i++)
+		{
+			int p,q;
+			scanf("%d%d",&p,&q);
+			p++,q++;
+			Add(p,q,(i<<1)-1);
+			Add(q,p,i<<1);
+		}
+		buildtree(1,0);
+		int Q;
+		cin>>Q;
+		for(;Q>0;Q--)
+		{
+			char ch[20]="\0";
+			int x;
+			scanf("%s%d",ch,&x);
+			x++;
+			if(ch[0]=='O')
+				access(x);
+			else printf("%.10lf\n",Query(1,N,1,St[x],En[x])*1.0/(En[x]-St[x]+1));
+		}
+	}
+	return 0;
+}

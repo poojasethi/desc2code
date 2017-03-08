@@ -1,0 +1,142 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define rep(i, a, b) for(int i = (a); i < (b); i++)
+#define repd(i, a, b) for(int i = (a); i > (b); i--)
+#define forIt(it, a) for(__typeof((a).begin()) it = (a).begin(); it != (a).end(); it++)
+#define ll long long
+#define fi first
+#define se second
+#define mk make_pair
+#define pb push_back
+#define sz(a) (a).size()
+typedef vector<int> vi;
+typedef pair<int, int> ii;
+typedef pair<ii, int> iii;
+typedef vector<ii> vii;
+const int N = 2e5 + 7;
+const int M = 1001;
+const int inf = 1e9 + 7;
+const double pi = acos(-1);
+
+
+int x[N], p[N], b[N];
+int id[N];
+ll t[N];
+map<ll, int> st;
+int n, m, k;
+
+int a[N * 4];
+
+bool cmp(int i, int j) {
+    return x[i] < x[j];
+}
+
+void update(int i, int l, int r, int u, int v, int val) {
+    if (l == u && r == v) {
+        a[i] = min(a[i], val);
+        return;
+    }
+    int g = (l + r) >> 1, nxt = i << 1;
+    if (u <= g)
+        update(nxt, l, g, u, min(g, v), val);
+    if (g < v)
+        update(nxt + 1, g + 1, r, max(u, g + 1), v, val);
+}
+
+int kq;
+
+void get(int i, int l, int r, int pos) {
+    kq = min(kq, a[i]);
+    if (l == r) return;
+    int g = (l + r) >> 1, nxt = i << 1;
+    if (pos <= g)
+        get(nxt, l, g, pos);
+    else get(nxt + 1, g + 1, r, pos);
+}
+
+int get(int pos) {
+    kq = inf;
+    get(1, 1, k, pos);
+    return kq;
+}
+
+set<pair<ll, int> > rev;
+int cnt[N];
+int inv[N];
+
+void update(int i) {
+    int u, v;
+    map<ll, int>::iterator it = st.lower_bound(x[i]);
+    if (it == st.end()) return;
+    u = it->second;
+    it = st.upper_bound(x[i] + t[i]);
+    if (it == st.begin()) return;
+    v = (--it)->second;
+    //cout << i << " " << u << " " << v << " " << inv[i] << "\n";
+    if (u <= v) update(1, 1, k, u, v, inv[i]);
+}
+
+vii c;
+
+void solve() {
+    cin >> n >> m;
+    rep(i, 0, n){
+        scanf("%d%d", x + i, t + i);
+        id[i] = i;
+    }
+    sort(id, id + n, cmp);
+    rep(i, 0, n) inv[id[i]] = i;
+
+    rep(i, 0, m) {
+        scanf("%d%d", p + i, b + i);
+        st[p[i]] = 0;
+    }
+    k = 0;
+    forIt(it, st)
+        it->second = ++k;
+
+
+    rep(i, 0, 4 * N) a[i] = inf;
+
+    rep(i, 0, n) update(i);
+
+    rep(i, 0, m) {
+        int cur = get(st[p[i]]);
+        if (cur != inf) {
+            int u = id[cur];
+            cnt[u]++;
+            //cout << "this " << u << " " << i << "\n";
+            ll len = b[i];
+            while (!rev.empty()) {
+                bool found = false;
+                __typeof(rev.begin()) it = rev.lower_bound(mk(x[u], 0));
+                if (it != rev.end()) {
+                    int j = it->second;
+                    if (p[j] <= x[u] + t[u] + len) {
+                        cnt[u]++;
+                        len += b[j];
+                        //cout << "this " << u << " " << j << "\n";
+                        found = true;
+                        rev.erase(it);
+                    }
+                }
+                if (!found) break;
+            }
+            t[u] += len;
+            update(u);
+        } else {
+            rev.insert(mk(p[i], i));
+        }
+    }
+
+    rep(i, 0, n) {
+        printf("%d %I64d\n", cnt[i], t[i]);
+    }
+}
+
+int main() {
+#ifndef ONLINE_JUDGE
+    freopen("in.txt", "r", stdin); //freopen("out.txt", "w", stdout);
+#endif
+    solve();
+}

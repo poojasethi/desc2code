@@ -1,0 +1,170 @@
+/**
+ * February 2013 Cook-Off
+ *
+ * Problem:     CHEFHCK2 - End Of The World 2
+ * Author:      Anton Lunyov (Problem-Setter)
+ * Complexity:  O(K + N * log K), where K = 3141^(5/3)
+ * Timing:      0.26 out of 1.5
+ *
+ * Description:
+ * We store all non-square powers in sorted array pws.
+ * For this we iterate over all numbers up to K that are not squares.
+ * The cube of each such number is added to the list of cubes pw3,
+ * while other odd powers added to another list pw5.
+ * Then we sort list pw5 which requires only O(K^(3/5) log K) = o(K) operations.
+ * Then we merge each lists pw3 and pw5 in O(K) time and unique this list.
+ * Now having this list we could process each password X in O(log K) time.
+ * For this find the number of squares <= X as y = floor(sqrt(X))
+ * and number j of other powers < X using binary search for the list pws.
+ * This information also needed to check whether X is power.
+ * If yes then we return j+y (or +-1 - see code :))
+ * Otherwise we calculate index Z of X in the list A[1], A[2], ...
+ * And apply binary search as described in the problem statement.
+ * However analyzing binary form of Z we can calculate
+ * the number of tries in this case in O(1) time (see code).
+ */
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+using namespace std;
+
+typedef long long LL;
+
+const LL maxK = 305731144433251701LL; // 3141^5
+
+// returns floor(sqrt(x))
+// do a careful check since double precision could be not enough for this
+int my_sqrt(LL x) {
+	LL y = sqrt(double(x));
+	// y should satisfy y^2 <= x < (y+1)^2
+	while (y * y > x) {
+		--y;
+	}
+	while ((y + 1) * (y + 1) <= x) {
+		++y;
+	}
+	return y;
+}
+
+// will contain all non-square powers
+vector<LL> pws;
+
+// precalculate all non-square powers
+void precalc() {
+	vector<LL> pw3; // will contain x^3 for non-square x
+	// reserve() is needed to speed up the series of push_back operations to vector
+	pw3.reserve(700000);
+	// we iterate over numbers x up to maxK^(1/3)
+	// to generate cubes
+	for (int x = 2; ; ++x) {
+		int y = my_sqrt(x);
+		if (y * y == x) {
+			// skip squares
+			continue;
+		}
+		LL pw = LL(x) * x * x;
+		if (pw > maxK) {
+			// break when even x^3 > maxK
+			break;
+		}
+		// add x^3 to the list of non-square cubes
+		pw3.push_back(pw);
+	}
+	// pw3 is already sorted
+
+	vector<LL> pw5; // will contains x^5, x^7, x^9, ... for non-square x
+	pw5.reserve(30000);
+	// now we iterate over numbers x up to 3141
+	// to generate other odd powers
+	for (int x = 2; x <= 3141; ++x) {
+		int y = my_sqrt(x);
+		if (y * y == x) {
+			// skip squares
+			continue;
+		}
+		LL pw = LL(x) * x * x * x * x; // x^5
+		while (true) {
+			// add pw = x^(2*k+1) to pw5
+			pw5.push_back(pw);
+			// we multiply pw by x^2 to iterate over odd powers
+			// the safe way to check that pw * x * x > maxK
+			if (pw > maxK / x / x) {
+				break;
+			}
+			pw *= x * x;
+		}
+	}
+	// but pw5 is not sorted so we sort it
+	sort(pw5.begin(), pw5.end());
+
+	// now we merge and unique pw3 and pw5 to pws
+	// for this allocate enough space to perform a merge
+	pws.resize(pw3.size() + pw5.size());
+	// we merge sorted vectors pw3 and pw5 and store the result in pws
+	// the size of merge equals exactly to the sum of sizes of pw3 and pw5
+	merge(pw3.begin(), pw3.end(), pw5.begin(), pw5.end(), pws.begin());
+	// delete repetitions from pws
+	// unique() returns iterator to the end of the resulting list
+	// so we erase not-needed part of the vector
+	pws.erase(unique(pws.begin(), pws.end()), pws.end());
+}
+
+// needed to speed up the log2() routine
+double ln2 = log(2.);
+
+// returns the minimal non-negative k such that z <= 2^k
+int log2(LL z) {
+	// we subtrack 1e-9 since when z is power of two
+	// the value ln z / ln 2 is integer and due precision issues
+	// it could be represented as 5.0000000000000001 in double
+	// causing incorrect ceil value
+	return ceil(log(double(z)) / ln2 - 1e-9);
+}
+
+// the number of iterations in binary search depends only 
+// on lowest and highest bits of the number
+int bin_search(LL z) {
+	// z & -z equals to the largest 2^k for which 2^k divides z
+	if (z == (z & -z)) {
+		// z is power of two
+		return log2(z);
+	}
+	return 2 * log2(z) - log2(z & -z) - 1;
+}
+
+int calc(LL x) {
+	if (x <= 1) {
+		// 2 for 0 and 1 for 1
+		return 2 - x;
+	}
+	LL y = my_sqrt(x);
+	bool is_square = (LL(y) * y == x);
+	int j = lower_bound(pws.begin(), pws.end(), x) - pws.begin();
+	// the case of power password
+	if (is_square || (j < pws.size() && pws[j] == x)) {
+		return y + j - is_square;
+	}
+	// now y-1 is the # of z^2 < x, with z>=2
+	// and j is the number of non-s	square powers < x
+	// x+1 is the index of x in the list 0,1,...,x,...
+	// hence the index of x in the list A[1], A[2], ...
+	// is exactly x+1-(y-1)-j
+	return bin_search(x + 1 - (y - 1) - j);
+}
+
+int main() {
+	// calculation of all non-square powers
+	precalc();
+
+	int N;
+	scanf("%d", &N); // we use scanf for faster input
+	for (int n = 1; n <= N; ++n) {
+		LL password;
+		scanf("%lld", &password);
+		int tries = calc(password);
+		// the neat way to write spaces and newlines properly without annoying ifs :)
+		printf("%d%c", tries, n < N ? ' ' : '\n');
+	}
+	return 0;
+}

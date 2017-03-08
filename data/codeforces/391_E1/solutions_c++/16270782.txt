@@ -1,0 +1,92 @@
+#include<stdio.h>
+#include<vector>
+#include<iostream>
+#define M 100000
+#define fi first
+#define se second
+using namespace std;
+struct tree{
+	vector < int > E[M + 5];
+	int h[M + 5] , nc[M + 5] , n;
+	long long sum_val , dist[M + 5];
+	void dfs(int u,int pre){
+		nc[u] = 1;
+		for(int i = 0 ; i < E[u].size() ; i++){
+			int v = E[u][i];
+			if(v == pre)	continue;
+			h[v] = h[u] + 1;
+			dfs(v , u); nc[u] += nc[v];
+		}
+	}
+	void dfs_2(int u,int pre){
+		for(int i = 0 ; i < E[u].size() ; i++){
+			int v = E[u][i];
+			if(v == pre)	continue;
+			dist[v] = dist[u] + (n - 2*nc[v]);
+			dfs_2(v , u);
+		}
+	}
+	void load(){
+		for(int i = 1 ; i < n ; i++){
+			int u , v;
+			scanf("%d %d",&u,&v);
+			E[u].push_back(v) ; E[v].push_back(u);
+		}
+		h[1] = 1; dfs(1 , -1);
+		for(int i = 1 ; i <= n ; i++) dist[1] += (h[i] - 1);
+		dfs_2(1 , -1);
+		for(int i = 1 ; i <= n ; i++)	sum_val += dist[i]; sum_val /= 2;
+	}	
+};
+tree tr[3];
+long long ans , inf = 1e15 , ret;
+int sz[3] , _a , _b , _c;
+typedef pair < int , int> ii;
+long long fb[M + 5] , fc[M + 5];
+long long getb(int x){
+	return tr[_a].dist[x]*tr[_b].n + 1ll*tr[_a].h[x]*tr[_b].n*tr[_c].n;
+}
+long long getc(int x){
+	return tr[_a].dist[x]*tr[_c].n + 1ll*tr[_a].h[x]*tr[_b].n*tr[_c].n;
+}
+void last_dfs(int u,int pre){
+	ii idb , idc; idb = ii(0 , 0) ; idc = ii(0 , 0);
+	fb[u] = getb(u); fc[u] = getc(u);
+	idb = ii(0 , 0); idc = ii(0 , 0);  
+	for(int i = 0 ; i < tr[_a].E[u].size() ; i++){
+		int v = tr[_a].E[u][i]; if(v == pre)	continue; last_dfs(v , u);
+		fb[u] = max(fb[u] , fb[v]) ; fc[u] = max(fc[u] , fc[v]);
+		if(fb[v] > fb[idb.fi]){	idb.se = idb.fi ; idb.fi = v; }
+		else if(fb[v] > fb[idb.se])	idb.se = v;
+		if(fc[v] > fc[idc.fi]){	idc.se = idc.fi ; idc.fi = v; }
+		else if(fc[v] > fc[idc.se])	idc.se = v;	
+	}
+	long long dec = 2ll*tr[_a].h[u]*tr[_b].n*tr[_c].n;
+	if(idb.fi != idc.fi) ret = max(ret , ans + fb[idb.fi] + fc[idc.fi] - dec);
+	ret = max(ret , ans + fb[idb.se] + fc[idc.fi] - dec);
+	ret = max(ret , ans + fb[idb.fi] + fc[idc.se] - dec);
+	ret = max(ret , ans + fb[idb.fi] + getc(u) - dec);
+	ret = max(ret , ans + fc[idc.fi] + getb(u) - dec);
+	ret = max(ret , ans + getb(u) + getc(u) - dec);
+}
+void solve(int a,int b,int c){
+	ans = 0; _a = a ; _b = b ; _c = c; fb[0] = -inf ; fc[0] = -inf;
+	ans += tr[_a].sum_val; ans += tr[_b].sum_val ; ans += tr[_c].sum_val;
+	long long curr = 0;
+	for(int i = 1 ; i <= tr[b].n ; i++) curr = max(curr , tr[b].dist[i]*(tr[a].n + tr[c].n));	ans += curr;
+	curr = 0;
+	for(int i = 1 ; i <= tr[c].n ; i++)	curr = max(curr , tr[c].dist[i]*(tr[a].n + tr[b].n));   ans += curr;
+	ans += 1ll*tr[a].n*(tr[b].n + tr[c].n); ans += 1ll*2*tr[b].n*tr[c].n;
+	last_dfs(1 , -1);
+}
+main(){
+//	freopen("test.inp","r",stdin);
+	scanf("%d %d %d",&sz[0],&sz[1],&sz[2]);
+	for(int t = 0 ; t < 3 ; t++){
+		tr[t].n = sz[t];
+		tr[t].load();
+	}
+	
+	solve(0 , 1 , 2) ; solve(1 , 0 , 2) ; solve(2 , 0 , 1);
+	cout<<ret;
+}

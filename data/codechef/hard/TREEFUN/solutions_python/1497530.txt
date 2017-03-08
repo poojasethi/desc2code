@@ -1,0 +1,134 @@
+#include<set>
+#include<stack>
+#include<cstdio>
+#include<vector>
+#include<algorithm>
+
+#define rep(i,n) for(int i=0;i<(n);i++)
+
+using namespace std;
+
+int n;
+vector<int> T[50001];
+
+// LCA
+int parent[17][100000],depth[100000];
+
+// void dfs_lca(int v,int p,int d){
+	// parent[0][v]=p;
+	// depth[v]=d;
+	// rep(i,T[v].size()) if(T[v][i]!=p) dfs_lca(T[v][i],v,d+1);
+// }
+
+void init(int V){
+	// dfs_lca(0,-1,0); // stack overflow...?
+
+	stack< pair<pair<int,int>,int> > S;
+	S.push(make_pair(make_pair(0,-1),0));
+	while(!S.empty()){
+		int v=S.top().first.first,p=S.top().first.second,d=S.top().second; S.pop();
+		parent[0][v]=p;
+		depth[v]=d;
+		rep(i,T[v].size()) if(T[v][i]!=p) S.push(make_pair(make_pair(T[v][i],v),d+1));
+	}
+
+	rep(k,16) rep(v,V) {
+		if(parent[k][v]<0) parent[k+1][v]=-1;
+		else parent[k+1][v]=parent[k][parent[k][v]];
+	}
+}
+
+int lca(int u,int v){
+	if(depth[u]>depth[v]) swap(u,v);
+	rep(k,17){
+		if((depth[v]-depth[u])>>k&1){
+			v=parent[k][v];
+		}
+	}
+	if(u==v) return u;
+	for(int k=16;k>=0;k--){
+		if(parent[k][u]!=parent[k][v]){
+			u=parent[k][u];
+			v=parent[k][v];
+		}
+	}
+	return parent[0][u];
+}
+
+int up(int u,int t){
+	for(int k=16;k>=0;k--) if(t>>k&1) u=parent[k][u];
+	return u;
+}
+
+bool check(int k,const int *a,int n,const vector<int> *T,int tar){
+	set<int> Nei;
+	int d=0;
+	rep(i,k){
+		if(a[i]==tar) return false;
+		if(depth[a[i]]<=depth[tar] || up(a[i],depth[a[i]]-depth[tar])!=tar) d++;
+		int j=up(a[i],depth[a[i]]-depth[tar]-1);
+		if(Nei.count(j)>0) return false;
+		Nei.insert(j);
+	}
+	return d<2;
+/*
+	if(tar==a[0] || tar==a[1] || tar==a[2]) return false;
+
+	int m=0;
+	set<int> Nei; // a[i] から tar へ向かうパス上の頂点で tar と隣接しているもの
+	rep(i,k){
+		int v=lca(a[i],tar);
+		int u;
+		if(v!=tar){
+			u=parent[0][tar];
+		}
+		else{
+			u=a[i];
+			for(int j=16;j>=0;j--){
+				if(depth[tar]+(1<<j)<depth[u]){
+					u=parent[j][u];
+				}
+			}
+// if(depth[tar]==depth[u]-1); else for(;;);
+		}
+		if(Nei.count(u)>0) return false;
+		Nei.insert(u);
+	}
+	return true;
+*/
+}
+
+void solve(){
+	int q; scanf("%d%d",&n,&q);
+	rep(u,n) T[u].clear();
+	rep(i,n-1){
+		int u,v; scanf("%d%d",&u,&v); u--; v--;
+		T[u].push_back(v);
+		T[v].push_back(u);
+	}
+
+	init(n);
+
+	while(q--){
+		int k; scanf("%d",&k);
+		static int a[50000];
+		rep(i,k) scanf("%d",a+i), a[i]--;
+
+		if(k>2){
+			int w[3];
+			w[0]=lca(a[0],a[1]);
+			w[1]=lca(a[1],a[2]);
+			w[2]=lca(a[2],a[0]);
+
+			bool ok=false;
+			rep(i,3) if(check(k,a,n,T,w[i])) { ok=true; break; }
+			puts(ok?"1":"0");
+		}
+		else{ // k==2
+			int w=lca(a[0],a[1]);
+			printf("%d\n",depth[a[0]]+depth[a[1]]-2*depth[w]-1);
+		}
+	}
+}
+
+int main(){ int T; scanf("%d",&T); while(T--) solve(); return 0; }

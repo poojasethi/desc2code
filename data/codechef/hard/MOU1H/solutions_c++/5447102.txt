@@ -1,0 +1,106 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define MAX 100009
+#define MOD 1000000009
+int SA[200009] , rank[20][MAX] , lcp[MAX];
+struct tuple
+{
+	int left , right , pos;
+};
+bool compare(const tuple &a , const tuple &b)
+{
+	return a.left == b.left ? a.right < b.right : a.left < b.left;
+}
+void counting_sort(tuple t[] , long long n)
+{
+	int count[MAX+9];
+	tuple temp[n + 9];
+	memset(count , 0 , sizeof count);
+
+	for(int i = 0 ;i < n ; i++)
+		count[t[i].right + 1]++;
+
+	for(int i = 1 ; i  < MAX ; i++)
+		count[i] += count[i-1];
+
+	for(int i = 0 ; i<n ; i++)
+	{
+		temp[count[t[i].right +1] - 1] = t[i];
+		count[t[i].right + 1]--;
+	}	
+
+	memset(count , 0 , sizeof count);
+
+	for(int i = 0 ; i < n ; i ++)
+		count[t[i].left + 1] ++;
+
+	for(int i = 1 ; i<MAX ; i++)
+		count[i] += count[i-1];
+
+	for(int i = n- 1; i>=0 ; i--)
+	{
+		t[count[temp[i].left + 1] - 1] = temp[i];
+		count[temp[i].left + 1]--;
+	}
+}
+void suffixArray(int s[] ,int  n)
+{
+	tuple t[n+9];
+	for(int i = 0 ; i<n ; i++)
+		rank[0][i] = s[i] + 101;
+	for(int stp = 1 , cnt = 1 ; (cnt>>1) < n ; cnt<<=1 , stp++)
+	{
+		for(int i = 0 ; i< n ;i++)
+		{
+			t[i].left = rank[stp-1][i];
+			t[i].right = i + cnt < n ? rank[stp - 1][i+cnt] : -1;
+			t[i].pos = i;
+		}
+		//counting_sort(t,n);
+		sort(t , t+n , compare);
+		for(int i = 0 ; i < n ; i ++)
+			rank[stp][t[i].pos] = i>0 && t[i].left == t[i-1].left && t[i].right == t[i-1].right ? rank[stp][t[i-1].pos] : i;
+	}
+	int pos = ceil(log(n) / log(2));
+	for(int i = 0 ; i<n ; i++)
+		SA[rank[pos][i]] = i;
+}
+long long LCP(int s[] , long long n)
+{
+        int k=0;
+        long long sum = 0;
+        vector<int> ran(n,0);
+        for(int i=0; i<n; i++) ran[SA[i]]=i;
+                lcp[0] = 0;
+        for(int i=0; i<n; i++, k?k--:0)
+        {
+                if(ran[i]==n-1) {k=0; continue;}
+                int j=SA[ran[i]+1];
+                while(i+k<n && j+k<n && s[i+k]==s[j+k]) k++ ;
+                sum = (sum + k)%MOD;
+        }
+        return sum;
+}
+int main()
+{
+	int test ; 
+	cin>>test;
+	while(test--)
+	{
+		int n ; 
+		scanf("%d",&n);
+		int arr[n+9] , a[n+9];
+		for(int i = 0 ; i < n ; i ++)
+			scanf("%d",&a[i]);
+		for(int i = 1 ; i < n ; i++)
+			arr[i-1] = a[i] - a[i-1];
+		memset(SA,0,sizeof SA);
+		memset(rank , 0 , sizeof(rank[0][0])*20*MAX);
+		memset(lcp , 0 , sizeof lcp);
+		n--;
+		suffixArray(arr , n);
+		long long temp = n;
+		cout<<((temp*(temp+1))/2 - LCP(arr , n))%MOD<<endl;
+	}
+	return 0 ;
+}

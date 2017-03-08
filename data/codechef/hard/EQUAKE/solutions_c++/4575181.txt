@@ -1,0 +1,208 @@
+#include <cstdio>
+#define max(a,b) (a)>(b)?(a):(b)
+#define min(a,b) (a)<(b)?(a):(b)
+#define MAX 3200000
+#define minf  int(-1000000)
+int shift[10005][13];
+struct node{
+    int ar[12];
+    int p;
+}tree[MAX];
+int a[800005];
+inline int isSpaceChar(char c)
+{
+return c == ' ' || c == '\n' || c == '\r' || c == '\t' || c == -1;
+}
+
+
+inline int FAST_IO()
+{
+    char ch;
+    int val=0;
+    ch=getchar_unlocked();
+    while(isSpaceChar(ch))
+    ch=getchar_unlocked();
+    val=0;
+    while(!isSpaceChar(ch))
+    {
+    val=(val*10)+(ch-'0');
+    ch=getchar_unlocked();
+    }
+    return val;
+}
+
+int rotat(int i,int v)
+{
+    int j,c=0,r,d,num,p[6];
+    num=i;
+    while(num!=0)
+    {
+        d=num%10;
+        p[c++]=d;
+        num/=10;
+    }
+
+    num=0;
+    for(j=c-v-1;j>=0;j--)num=num*10+p[j];
+
+    for(j=c-1;j>c-v-1;j--)num=num*10+p[j];
+
+
+    return num;
+}
+
+void build_tree(int node,int s,int e)
+{
+   if(s>e)
+    return;
+   tree[node].p=0;
+    int i;
+    if(s==e)
+    {
+        for(i=0;i<12;i++)
+            tree[node].ar[i]=shift[a[s]][i];
+        return;
+    }
+
+    int mid=(s+e)>>1;
+    build_tree(2*node+1,s,mid);
+    build_tree(2*node+2,mid+1,e);
+
+    for(i=0;i<12;i++)
+        tree[node].ar[i]=max(tree[2*node+1].ar[i],tree[2*node+2].ar[i]);
+}
+
+void update(int node,int value)
+{
+    int i;
+    value%=12;
+    int t[15];
+    for(i=0;i<12;i++)
+        t[i]=tree[node].ar[(i+value)%12];
+
+    for(i=0;i<12;i++)
+        tree[node].ar[i]=t[i];
+}
+
+
+void update_tree(int node,int s,int e,int qs,int qe,int value)
+{
+  // cout<<"up "<<s<<" "<<e<<endl;
+    if(tree[node].p!=0)
+    {
+         update(node,tree[node].p);
+         if(s!=e)
+         {
+             tree[2*node+1].p+=tree[node].p;
+             tree[2*node+1].p%=12;
+             tree[2*node+2].p+=tree[node].p;
+             tree[2*node+2].p%=12;
+         }
+         tree[node].p=0;
+    }
+
+    if((s>e) || (s>qe) || (e<qs))
+        return;
+
+    if(s>=qs && e<=qe)
+    {
+        update(node,value);
+
+         if(s!=e)
+         {
+             tree[2*node+1].p+=value;
+             tree[2*node+1].p%=12;
+             tree[2*node+2].p+=value;
+             tree[2*node+2].p%=12;
+         }
+         return;
+    }
+
+    int mid=(s+e)>>1;
+
+    update_tree(2*node+1,s,mid,qs,qe,value);
+    update_tree(2*node+2,mid+1,e,qs,qe,value);
+
+    for(int i=0;i<12;i++)
+        tree[node].ar[i]=max(tree[2*node+1].ar[i],tree[2*node+2].ar[i]);
+}
+
+
+int query(int node,int s,int e,int qs,int qe)
+{
+ //   cout<<"qe "<<s<<" "<<e<<endl;
+    if((s>e) || (s>qe) || (e<qs))
+        return minf;
+
+         if(tree[node].p!=0)
+    {
+         update(node,tree[node].p);
+         if(s!=e)
+         {
+             tree[2*node+1].p+=tree[node].p;
+            tree[2*node+1].p%=12;
+             tree[2*node+2].p+=tree[node].p;
+             tree[2*node+2].p%=12;
+         }
+         tree[node].p=0;
+    }
+
+     if(s>=qs && e<=qe)
+    {
+       return tree[node].ar[0];
+    }
+
+    int mid=(s+e)>>1;
+
+    int l=query(2*node+1,s,mid,qs,qe);
+    int r=query(2*node+2,mid+1,e,qs,qe);
+
+    return max(l,r);
+}
+
+
+int main(void)
+{
+    int n,m,t,x,i,j,d,num,y,z;
+    n=FAST_IO();
+    for(i=0;i<n;i++)
+        a[i]=FAST_IO();
+
+    m=FAST_IO();
+
+    for(i=1;i<=9999;i++)
+    {
+         num=i;
+         d=0;
+         while(num!=0)
+         {
+             d++;
+             num/=10;
+         }
+         for(j=0;j<d;j++)
+            shift[i][j]=rotat(i,j);
+         for(j=d;j<12;j++)
+            shift[i][j]=shift[i][j%d];
+    }
+
+    build_tree(0,0,n-1);
+    while(m--)
+    {
+        x=FAST_IO();
+        y=FAST_IO();
+        z=FAST_IO();
+        if(x==0)
+        {
+            t=FAST_IO();
+
+            update_tree(0,0,n-1,y,z,t);
+
+        }
+        else
+        {
+            printf("%d\n",query(0,0,n-1,y,z));
+        }
+
+    }
+    return 0;
+}

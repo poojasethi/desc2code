@@ -1,0 +1,113 @@
+#include<cstdio>
+#include<iostream>
+#include<cstring>
+#include<cmath>
+#include<cstdlib>
+#include<algorithm>
+#include<string>
+#include<iostream>
+#include<map>
+#include<vector>
+#include<stack>
+#include<queue>
+
+using namespace std;
+
+typedef pair< int, int > P;
+typedef pair< P, int > TRI;
+#define first( a ) ( (a).first.first )
+#define second( a ) ( (a).first.second )
+#define third( a ) ( (a).second )
+
+#define MOD 1000000007
+#define INF 1000000000
+#define MAX 100000
+#define left( i ) ( 2*(i) + 1 )
+#define  right( i ) ( 2*(i) + 2 )
+#define mod( a ) ( ( (a) + MOD)%MOD )
+
+int tree_max[3*MAX+10]; // index
+int tree_min[3*MAX+10];
+int A[MAX+10];
+long long RS = 0; int N;
+
+void build( int idx, int start, int end ){
+    if( start == end ){
+        tree_max[idx] = tree_min[idx] = start;
+        return;
+    }
+    build( left( idx ), start, ( start + end )/2 );
+    build( right( idx ), ( start + end )/2 + 1, end );
+    if( A[ tree_max[ left(idx) ] ] > A[ tree_max[ right(idx) ] ] )
+        tree_max[idx] = tree_max[ left(idx) ];
+    else
+        tree_max[idx] = tree_max[ right(idx) ];
+    if( A[ tree_min[ left(idx) ] ] < A[ tree_min[ right(idx) ] ] )
+        tree_min[idx] = tree_min[ left(idx) ];
+    else
+        tree_min[idx] = tree_min[ right(idx) ];
+}
+
+//returns the index
+int find_max( int idx, int start, int end, int i, int j ){
+    if( i > end || j < start )
+        return -1;
+    if( start >= i && end <= j )
+        return tree_max[idx];
+    int L = find_max( left(idx), start, (start + end)/2, i, j ), R = find_max( right(idx), (start + end)/2 + 1, end, i, j ) ;
+    if( L == -1 )
+        return R;
+    if( R == -1 )
+        return L;
+    return A[L] > A[R] ? L : R;
+}
+
+int find_min( int idx, int start, int end, int i, int j ){
+    if( i > end || j < start )
+        return -1;
+    if( start >= i && end <= j )
+        return tree_min[idx];
+    int L = find_min( left(idx), start, (start + end)/2, i, j ), R = find_min( right(idx), (start + end)/2 + 1, end, i, j ) ;
+    if( L == -1 )
+        return R;
+    if( R == -1 )
+        return L;
+    return A[L] < A[R] ? L : R;
+}
+
+long long power( long long base, long long index ){
+    long long result = 1;
+    while( index > 0 ){
+        if( index%2 )
+            result = mod( result * base );
+        base = mod( base * base );
+        index /= 2;
+    }
+    return result;
+}
+
+void eval( int i, int j ){
+    if( i >= j )
+        return;
+    int min_idx = find_min( 0, 0, N - 1, i, j );
+    eval( i, min_idx - 1 );
+    eval( min_idx + 1, j );
+    while( j > i ){
+        int max_idx = find_max( 0, 0, N - 1, i, j );
+        long long diff = A[ max_idx ] - A[ min_idx ], L = min( min_idx, max_idx ) - i + 1, R = j - max( min_idx, max_idx ) + 1;
+        //printf( "For (%d, %d), diff : %lld, R : %lld, L : %lld : %lld\n", i, j, diff, R, L, power( diff, R*L ) );
+        RS = mod( RS*power( diff, R*L ) );
+        min_idx < max_idx ? j = max_idx - 1 : i = max_idx + 1;
+    }
+}
+
+int main(){
+    scanf( "%d", &N );
+    for( int i=0; i<N; i++ )
+        scanf( "%d", A + i );
+    build( 0, 0, N - 1 );
+    RS = 1;
+    eval( 0, N - 1 );
+    printf( "%lld\n", RS );
+    return 0;
+}

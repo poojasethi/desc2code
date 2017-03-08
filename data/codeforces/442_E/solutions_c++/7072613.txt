@@ -1,0 +1,197 @@
+#include<iostream>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<cmath>
+#include<algorithm>
+#include<set>
+#define eps 1e-10
+#define maxn 1010
+using namespace std;
+int dcmp(double p)
+{
+    if(abs(p)<eps)
+        return 0;
+    return p>eps?1:-1;
+}
+struct Point
+{
+    double x,y;
+    Point() {}
+    Point(double x,double y): x(x),y(y) {}
+    friend Point operator + (Point a,Point b)
+    {
+        return Point(a.x+b.x,a.y+b.y);
+    }
+    friend Point operator - (Point a,Point b)
+    {
+        return Point(a.x-b.x,a.y-b.y);
+    }
+    friend Point operator * (Point a,double p)
+    {
+        return Point(a.x*p,a.y*p);
+    }
+    friend Point operator / (Point a,double p)
+    {
+        return Point(a.x/p,a.y/p);
+    }
+    friend bool operator == (Point a,Point b)
+    {
+        return !dcmp(a.x-b.x)&&!dcmp(a.y-b.y);
+    }
+    friend bool operator != (Point a,Point b)
+    {
+        return dcmp(a.x-b.x)||dcmp(a.y-b.y);
+    }
+    friend bool operator < (const Point &a,const Point &b)
+    {
+        return dcmp(a.x-b.x)<0||(!dcmp(a.x-b.x)&&dcmp(a.y-b.y)<0);
+    }
+    void Read()
+    {
+        cin>>x>>y;
+    }
+}p[maxn];
+set<Point> Hash;
+typedef Point Vector;
+double Cross(Vector a,Vector b)
+{
+    return a.x*b.y-a.y*b.x;
+}
+double Dot(Vector a,Vector b)
+{
+    return a.x*b.x+a.y*b.y;
+}
+double Len(Vector a)
+{
+    return sqrt(Dot(a,a));
+}
+struct Line
+{
+    Point p;
+    Vector v;
+    double rad;
+    Line() {}
+    Line(Point p,Vector v): p(p),v(v)
+    {
+        rad=atan2(v.y,v.x);
+    }
+    friend bool operator < (const Line &a,const Line &b)
+    {
+        return a.rad<b.rad;
+    }
+}L[maxn];
+double W,H,ans;
+int n;
+Point getinter(Line a,Line b)
+{
+    Vector v=a.p-b.p;
+    double t=Cross(b.v,v)/Cross(a.v,b.v);
+    return a.p+a.v*t;
+}
+bool Left(Point p,Line L)
+{
+    return dcmp(Cross(L.v,p-L.p))>0;
+}
+void read()
+{
+    cin>>W>>H>>n;
+    for(int i=1;i<=n;++i)
+        p[i].Read(),Hash.insert(p[i]);
+}
+double work(Point P)
+{
+    double min1=1e100,min2=1e100;
+    for(int i=1;i<=n;++i)
+    {
+        double len=Dot(P-p[i],P-p[i]);
+        if(dcmp(min1-len)>=0)
+            min2=min1,min1=len;
+        else if(dcmp(min2-len)>=0)
+            min2=len;
+    }
+    return sqrt(min2);
+}
+void halfplane(Line *L,int n,Point *a,int &m,int type)
+{
+    static Line queue[maxn];
+    static Point inter[maxn];
+    sort(L+1,L+n+1);
+    int front=1,rear=1;
+    queue[1]=L[1];
+    for(int i=2;i<=n;++i)
+    {
+        while(front<rear&&!Left(inter[rear-1],L[i]))
+            --rear;
+        while(front<rear&&!Left(inter[front],L[i]))
+            ++front;
+        queue[++rear]=L[i];
+        if(!dcmp(Cross(L[i].v,queue[rear-1].v))&&Left(L[i].p,queue[--rear]))
+            queue[rear]=L[i];
+        if(front<rear)
+            inter[rear-1]=getinter(queue[rear-1],queue[rear]);
+    }
+    while(rear>front&&!Left(inter[rear-1],queue[front]))
+        --rear;
+    inter[rear]=getinter(queue[front],queue[rear]);
+    for(int i=front;i<=rear;++i)
+    {
+        ans=max(ans,work(inter[i]));
+        if(!type)
+            a[++m]=queue[i].p;
+    }
+}
+void work()
+{
+    Point A(W,H),B(0,H),C(0,0),D(W,0);
+    static Point tmp[maxn];
+    for(int i=1;i<=n;++i)
+    {
+        int m=0;
+        L[++m]=Line(A,Vector(-1,0));
+        L[++m]=Line(B,Vector(0,-1));
+        L[++m]=Line(C,Vector(1,0));
+        L[++m]=Line(D,Vector(0,1));
+        for(int j=1;j<=n;++j)
+            if(p[i]!=p[j])
+            {
+                Point P=(p[i]+p[j])/2;
+                Vector v=p[j]-p[i];
+                L[++m]=Line(P,Vector(-v.y,v.x));
+            }
+        int cnt=0;
+        halfplane(L,m,tmp,cnt,0);
+        int tot=0;
+        for(int j=1;j<=cnt;++j)
+        {
+            tmp[j]=tmp[j]*2-p[i];
+            if(Hash.count(tmp[j]))
+                tmp[++tot]=tmp[j];
+        }
+        cnt=tot;
+        for(int j=1;j<=cnt;++j)
+        {
+            m=0;
+            L[++m]=Line(A,Vector(-1,0));
+            L[++m]=Line(B,Vector(0,-1));
+            L[++m]=Line(C,Vector(1,0));
+            L[++m]=Line(D,Vector(0,1));
+            for(int k=1;k<=cnt;++k)
+                if(j!=k)
+                {
+                    Point P=(tmp[j]+tmp[k])/2;
+                    Vector v=tmp[k]-tmp[j];
+                    L[++m]=Line(P,Vector(-v.y,v.x));
+                }
+            int ncnt=0;
+            halfplane(L,m,tmp,ncnt,1);
+        }
+    }
+}
+int main()
+{
+    read();
+    work();
+    printf("%.20f\n",ans);
+    return 0;
+}

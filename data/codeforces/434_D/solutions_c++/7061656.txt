@@ -1,0 +1,133 @@
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+using namespace std;
+const int maxn=15000;
+#define inf 1<<30
+int level[maxn],que[maxn];
+int head[maxn],lon;
+int aa[70],bb[70],cc[70];
+int l[70],r[70];
+int start[70];
+struct edge
+{
+    int next,to,c;
+}e[500000];
+void edgeini()
+{
+    memset(head,-1,sizeof(head));
+    lon=-1;
+}
+void edgemake(int from,int to,int c)
+{
+    e[++lon].c=c;
+    e[lon].to=to;
+    e[lon].next=head[from];
+    head[from]=lon;
+}
+void make(int from,int to,int c)
+{
+    edgemake(from,to,c);
+    edgemake(to,from,0);
+}
+
+bool makelevel(int s,int t)
+{
+    memset(level,0,sizeof(level));
+    int front=1,end=0;
+    que[++end]=s;
+    level[s]=1;
+    while(front<=end)
+    {
+        int u=que[front++];
+        if(u==t) return true;
+        for(int k=head[u];k!=-1;k=e[k].next)
+        {
+            int v=e[k].to;
+            if(!level[v]&&e[k].c)
+            {
+                que[++end]=v;
+                level[v]=level[u]+1;
+            }
+        }
+    }
+    return false;
+}
+
+int dfs(int now,int t,int maxf)
+{
+    if(now==t||maxf==0) return maxf;
+    int ret=0;
+    for(int k=head[now];k!=-1;k=e[k].next)
+    {
+        int u=e[k].to;
+        if(level[u]==level[now]+1&&e[k].c)
+        {
+            int f=dfs(u,t,min(e[k].c,maxf-ret));
+            e[k].c-=f;
+            e[k^1].c+=f;
+            ret+=f;
+            if(ret==maxf) return ret;
+        }
+    }
+    if(ret==0) level[now]=0;
+    return ret;
+}
+
+int maxflow(int s,int t)
+{
+    int ret=0;
+    while(makelevel(s,t))
+    {
+        ret+=dfs(s,t,inf);
+    }
+    return ret;
+}
+int fun(int p,int x)
+{
+    return aa[p]*x*x+bb[p]*x+cc[p];
+}
+int id(int p,int x)
+{
+    return start[p]+x-l[p];
+}
+int main()
+{
+    int n,m;
+    int i,j;
+    scanf("%d%d",&n,&m);
+    edgeini();
+    int MAX=-inf;
+    int cnt=0;
+    for(i=1;i<=n;i++)
+        scanf("%d%d%d",&aa[i],&bb[i],&cc[i]);
+    for(i=1;i<=n;i++)
+    {
+        scanf("%d%d",&l[i],&r[i]);
+        start[i]=cnt+1;
+        cnt=cnt+r[i]-l[i]+2;
+        for(j=l[i];j<=r[i];j++)
+            MAX=max(MAX,fun(i,j));
+    }
+    for(i=1;i<=n;i++)
+    {
+        make(0,start[i],inf);
+        for(j=l[i];j<=r[i];j++)
+            make(id(i,j),id(i,j+1),MAX-fun(i,j));
+        make(id(i,r[i]+1),cnt+1,inf);
+    }
+    int u,v,d;
+    while(m--)
+    {
+        scanf("%d%d%d",&u,&v,&d);
+        for(i=l[u];i<=r[u];i++)
+        {
+            if(i-d>=l[v]&&i-d<=r[v]+1)
+                make(id(u,i),id(v,i-d),inf);
+        }
+    }
+    int ans=maxflow(0,cnt+1);
+    printf("%d\n",MAX*n-ans);
+    return 0;
+}

@@ -1,0 +1,140 @@
+#include<bits/stdc++.h>
+using namespace std;
+
+#define LL long long int
+#define ULL unsigned LL
+#define PII pair<int,int>
+#define PB push_back
+#define MP make_pair
+#define INF 1000000000
+#define MOD 1000000007
+
+struct node {
+    node *lft, *rgt;
+    int mn;
+    node() {
+        lft = rgt = NULL;
+        mn = INF;
+    }
+} pool[60000000];
+int pused = 0;
+
+class seg {
+    int upd(node *pcur, node *&cur, int cl, int cr, int ql, int qr, int val) {
+        if (cl > qr || ql > cr) {
+            cur = pcur;
+            return cur->mn;
+        }
+        if (cur == NULL) {
+            cur = &pool[pused++];
+        }
+        if (cl >= ql && cr <= qr) {
+            cur->lft = cur;
+            cur->rgt = cur;
+            cur->mn = val;
+            return cur->mn;
+        }
+        int mid = (cl + cr) / 2;
+        return cur->mn = min(
+                upd(pcur->lft, cur->lft, cl, mid, ql, qr, val),
+                upd(pcur->rgt, cur->rgt, mid + 1, cr, ql, qr, val)
+                );
+    }
+    int query(node *cur, int cl, int cr, int ql, int qr) {
+        if (cl > qr || ql > cr)
+            return INF;
+        if (cur == NULL)
+            return INF;
+        if (ql <= cl && cr <= qr) {
+            return cur->mn;
+        }
+        int mid = (cl + cr) / 2;
+        return min(
+                query(cur->lft, cl, mid, ql, qr),
+                query(cur->rgt, mid + 1, cr, ql, qr)
+                );
+    }
+    public:
+    int  N;
+    node *top[100003];
+    node *dummy;
+    seg(int N) {
+        this->N = N;
+        dummy = new node();
+        dummy->lft = dummy;
+        dummy->rgt = dummy;
+        memset(top, 0, sizeof(top));
+    }
+    void U(int ptree, int ctree, int l, int r, int val) {
+        top[ctree] = NULL;
+        if (ptree == -1) {
+            upd(dummy, top[ctree], 0, N, l, r, val);
+        } else {
+            upd(top[ptree], top[ctree], 0, N, l, r, val);
+        }
+    }
+    int Q(int tnum, int ql, int qr) {
+        return query(top[tnum], 0, N, ql, qr);
+    }
+};
+seg *sg[26];
+string s;
+int st[26][100004];
+int en[26][100005];
+int nxt[27];
+int tnxt[27];
+int n;
+int main() {
+    cin >> s;
+    int i;
+    n = s.size();
+    for (i = 0; i < 26; i++) 
+        sg[i] = new seg(n + 1);
+    memset(st, -1, sizeof(st));
+    memset(en, -1, sizeof(en));
+    for (i = 0; i <= 26; i++)
+        nxt[i] = n;
+    for (i = n - 1; i >= 0; i--) {
+        nxt[s[i] - 'a'] = i;
+        for (int j = 0; j <= 26; j++)
+            tnxt[j] = nxt[j];
+        sort(tnxt, tnxt + 27);
+        for (int j = 0; j < 26; j++) {
+            if (tnxt[j] <= tnxt[j + 1] - 1) {
+                st[j][i] = tnxt[j];
+                en[j][i] = tnxt[j + 1] - 1; 
+            }
+        }
+    }
+    for (i = 0; i < 26; i++) {
+        sg[i]->U(-1, n, n + 1, n + 1, INF);
+        for (int j = n - 1; j >= 0; j--){
+            if (st[i][j] != -1) {
+                sg[i]->U(j + 1, j, st[i][j] - j + 1, en[i][j] - j + 1, j);
+            } else {
+                sg[i]->U(j + 1, j, n + 1, n + 1, INF);
+            }
+        }
+    }
+    int q;
+    scanf("%d", &q);
+    while (q--) {
+        int x, minl, maxl, l, r;
+        scanf("%d %d %d %d %d", &x, &minl, &maxl, &l, &r);
+        x--;
+        int fst = sg[x]->Q(l, minl, maxl);
+        if (fst == INF) {
+            printf("-1 -1\n");
+            continue;
+        }
+        int en = fst + minl - 1;
+        en = max(en, st[x][fst]);
+        if (en <= r)
+            printf("%d %d\n", fst, en);
+        else
+            printf("-1 -1\n");
+    }
+
+    return 0;
+}
+

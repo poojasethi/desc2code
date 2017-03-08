@@ -1,0 +1,142 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+const int maxn = 1e5 + 5 , inf = 1e9;
+
+int n,q,bgn[maxn],end[maxn],a[maxn],dad[maxn][20],dp[maxn][2];
+vector < int > way[maxn],go[maxn];
+bool imp[maxn];
+
+void dfs( int node ){
+	static int time = 0;
+	bgn[node] = ++time;
+	for( int i = 0 ; i < (int)way[node].size() ; i++ ){
+		int adj = way[node][i];
+		if( !bgn[adj] ){
+			dad[adj][0] = node;
+			dfs(adj);
+		}
+	}
+	end[node] = time;
+}
+
+bool comp( const int &a , const int &b ){
+	return bgn[a] < bgn[b];
+}
+
+bool anc( int a , int b ){
+	return bgn[a] <= bgn[b] and end[b] <= end[a];
+}
+
+int lca( int a , int b ){
+	if( anc(a , b) ) return a;
+	if( anc(b , a) ) return b;
+	for( int i = 19 ; i >= 0 ; i-- )
+		if( !anc(dad[a][i] , b) )
+			a = dad[a][i];
+	return dad[a][0];
+}
+
+void solve( int node ){
+	dp[node][0] = imp[node] ? inf : 0;
+	dp[node][1] = 0;
+	
+	for( int i = 0 ; i < (int)go[node].size() ; i++ ){
+		int adj = go[node][i];
+		solve(adj);
+		int dp0 = min(inf , min(dp[node][0] + dp[adj][0] , dp[node][0] + dp[adj][1] + 1));
+		int dp1 = min(min(inf , dp[node][0] + dp[adj][1]) , min(dp[node][1] + dp[adj][0] , dp[node][1] + dp[adj][1] + 1));
+		dp[node][0] = dp0;
+		dp[node][1] = dp1;
+	}
+	
+	if( !imp[node] ){
+		int dp0 = 1;
+		for( int i = 0 ; i < (int)go[node].size() ; i++ ){
+			int adj = go[node][i];
+			dp0 = min(inf , dp0 + dp[adj][1]);
+		}
+		dp[node][0] = min(dp[node][0] , dp0);
+	}
+	dp[node][1] = min(dp[node][1] , dp[node][0]);
+}
+
+int main(){
+	
+	scanf("%d",&n);
+	
+	for( int i = 1,x,y ; i < n ; i++ ){
+		scanf("%d%d",&x,&y);
+		way[x].push_back(y);
+		way[y].push_back(x);
+	}
+	bgn[0] = -1 , end[0] = n + 1;
+	dfs(1);
+	
+	for( int i = 1 ; i < 20 ; i++ )
+		for( int j = 1 ; j <= n ; j++ )
+			dad[j][i] = dad[dad[j][i - 1]][i - 1];
+	
+	scanf("%d",&q);
+	
+	for( int qq = 1,k ; qq <= q ; qq++ ){
+		scanf("%d",&k);
+		vector < int > nodes;
+		
+		for( int i = 1 ; i <= k ; i++ ){
+			scanf("%d",&a[i]);
+			imp[a[i]] = 1;
+			nodes.push_back(a[i]);
+		}
+		
+		bool cant = 0;
+		for( int i = 1 ; i <= k ; i++ )
+			if( imp[dad[a[i]][0]] )
+				cant = 1;
+			
+		if( cant ){
+			puts("-1");
+			for( int i = 1 ; i <= k ; i++ )
+				imp[a[i]] = 0;
+			continue;
+		}
+		
+		//~ for( int i = 1 ; i <= n ; i++ )
+			//~ printf("---> %d %d\n",i,imp[i]);
+		
+		sort(a + 1 , a + k + 1 , comp);
+		
+		for( int i = 1 ; i < k ; i++ ){
+			nodes.push_back(lca(a[i] , a[i + 1]));
+			//~ printf("++ %d %d %d\n",a[i] , a[i + 1] , lca(a[i] , a[i + 1]));
+		}
+		
+		sort(nodes.begin() , nodes.end() , comp);
+		nodes.resize(unique(nodes.begin() , nodes.end()) - nodes.begin());
+		
+		//~ for( int i = 0 ; i < (int)nodes.size() ; i++ )
+			//~ printf("%d ",nodes[i]);
+		//~ puts("");
+		
+		vector < int > st;
+		for( int i = 0 ; i < (int)nodes.size() ; i++ ){
+			while( !st.empty() and !anc(st.back() , nodes[i]) )
+				st.pop_back();
+			if( !st.empty() )
+				go[st.back()].push_back(nodes[i]);
+			st.push_back(nodes[i]);
+		}
+		
+		solve(st[0]);
+		
+		printf("%d\n",dp[st[0]][1]);
+		
+		for( int i = 0 ; i < (int)nodes.size() ; i++ )
+			go[nodes[i]].clear();
+		
+		for( int i = 1 ; i <= k ; i++ )
+			imp[a[i]] = 0;
+	}
+	
+	return 0;
+}

@@ -1,0 +1,117 @@
+#include <bits/stdc++.h>
+#define N 500005
+using namespace std;
+typedef long long int lli;
+typedef struct{
+	lli maxm, sum;
+	bool inc, dec;
+}seg;
+
+seg st[N];
+lli a[N];
+
+void build(int start, int end, int node){
+	if(start > end) return;
+	if(start == end){
+		st[node].maxm = a[start];
+		st[node].sum = a[start];
+		st[node].inc = 1;
+		st[node].dec = 1;
+		return;
+	}
+	int mid = (start + end) / 2;
+	build(start, mid, 2*node);
+	build(mid+1, end, 2*node+1);
+	st[node].maxm = max(st[2*node].maxm, st[2*node+1].maxm);
+	st[node].sum = st[2*node].sum + st[2*node+1].sum;
+	st[node].inc = (st[2*node].inc && st[2*node+1].inc && a[mid] <= a[mid+1]);
+	st[node].dec = (st[2*node].dec && st[2*node+1].dec && a[mid] >= a[mid+1]);
+}
+
+void update(int start, int end, int node, int index){
+	if(start > end) return;
+	if(start > index || end < index) return;
+	if(start == end && start == index){
+		st[node].maxm = a[index];
+		st[node].sum = a[index];
+		st[node].inc = true;
+		st[node].dec = true;
+		return;
+	}
+	int mid = (start + end) / 2;
+	update(start, mid, 2*node, index);
+	update(mid+1, end, 2*node+1, index);
+	st[node].maxm = max(st[2*node].maxm, st[2*node+1].maxm);
+	st[node].sum = st[2*node].sum + st[2*node+1].sum;
+	st[node].inc = (st[2*node].inc && st[2*node+1].inc && a[mid] <= a[mid+1]);
+	st[node].dec = (st[2*node].dec && st[2*node+1].dec && a[mid] >= a[mid+1]);
+}
+
+lli getmax(int s, int e, int start, int end, int node){
+	if(end < s || start > e || start > end) return 0;
+	if(s<=start && e>=end) return st[node].maxm;
+	int mid = (start+end) / 2;
+	return max(getmax(s, e, start, mid, 2*node), getmax(s, e, mid+1, end, 2*node+1));
+}
+
+lli getsum(int s, int e, int start, int end, int node){
+	if(end < s || start > e || start > end) return 0;
+	if(s<=start && e>=end) return st[node].sum;
+	int mid = (start+end) / 2;
+	return getsum(s, e, start, mid, 2*node) + getsum(s, e, mid+1, end, 2*node+1);
+}
+
+bool getinc(int s, int e, int start, int end, int node){
+	if(end < s || start > e || start > end) return 1;
+	if(s<=start && e>=end) return st[node].inc;
+	int mid = (start+end) / 2;
+	lli x = getinc(s, e, start, mid, 2*node);
+	lli y = getinc(s, e, mid+1, end, 2*node+1);
+	if(s <= mid && mid+1 <= e) return (x && y && a[mid] <= a[mid+1]);
+	else return (x && y);
+}
+
+bool getdec(int s, int e, int start, int end, int node){
+	if(end < s || start > e || start > end) return 1;
+	if(s<=start && e>=end) return st[node].dec;
+	int mid = (start+end) / 2;
+	lli x = getdec(s, e, start, mid, 2*node);
+	lli y = getdec(s, e, mid+1, end, 2*node+1);
+	if(s <= mid && mid+1 <= e) return (x && y && a[mid] >= a[mid+1]);
+	else return (x && y);
+}
+int main() {
+	int n, m, index, s, e, qtype;
+	char c;
+	lli newval;
+	scanf("%d%d", &n, &m);
+	for(int i = 0 ; i < n;  i++)
+		scanf("%lld", &a[i]);
+	build(0, n-1, 1);
+	for(int i = 0 ; i < m ; i++){
+		c = getchar();
+		scanf("%c", &c);
+		if(c == 'U'){
+			scanf("%d%lld", &index, &newval);
+			index--;
+			a[index] = newval;
+			update(0, n-1, 1, index);
+		}
+		else{
+			scanf("%d%d", &s, &e);
+			s--;
+			e--;
+			switch(c){
+				case 'M': printf("%lld\n", getmax(s, e, 0, n-1, 1));
+						break;
+				case 'S': printf("%lld\n", getsum(s, e, 0, n-1, 1));
+						break;
+				case 'I': printf("%d\n", getinc(s, e, 0, n-1, 1));
+						break;
+				case 'D': printf("%d\n", getdec(s, e, 0, n-1, 1));
+						break;
+			}
+		}
+	}
+	return 0;
+} 

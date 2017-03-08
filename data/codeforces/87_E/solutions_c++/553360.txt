@@ -1,0 +1,131 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <set>
+#include <map>
+#include <vector>
+#include <string>
+#include <cmath>
+#include <cstring>
+#include <queue>
+#include <stack>
+#include <algorithm>
+using namespace std;
+
+struct point {
+	long long x, y;
+	void read() {
+		int xx, yy;
+		scanf("%d%d", &xx, &yy);
+		x = xx, y = yy;
+	}
+};
+
+int n[3], N, start[3], pos[3], p1[3], p2[3];
+point a[3][500005];
+point b[2000005];
+
+long long area(point a, point b, point c) {
+	return (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y);
+}
+
+void add(point p) {
+	if (N >= 2 && area(b[N - 2], b[N - 1], p) == 0) N--;
+	b[N++] = p;
+}
+
+void Construct_Minkowski_Sum() {
+	int i, j, k;
+	for (i = 0; i < 3; ++i) {
+		int ld = 0;
+		for (j = 1; j < n[i]; ++j) {
+			if (a[i][j].y < a[i][ld].y || (a[i][j].y == a[i][ld].y && a[i][j].x < a[i][ld].x)) ld = j;
+		}
+		start[i] = ld;
+	}
+	
+	while (pos[0] < n[0] || pos[1] < n[1] || pos[2] < n[2]) {
+		for (i = 0; i < 3; ++i) {
+			p1[i] = (start[i] + pos[i]) % n[i];
+			p2[i] = (p1[i] + 1) % n[i];
+		}
+		add({a[0][p1[0]].x + a[1][p1[1]].x + a[2][p1[2]].x, a[0][p1[0]].y + a[1][p1[1]].y + a[2][p1[2]].y});
+		
+		int next = -1;
+		int dx = 0, dy = 0;
+		for (i = 0; i < 3; ++i) if (pos[i] < n[i]) {
+			int dx2 = a[i][p2[i]].x - a[i][p1[i]].x;
+			int dy2 = a[i][p2[i]].y - a[i][p1[i]].y;
+			int cmp = (dy > 0 || (dy == 0 && dx > 0)) ? 0 : 1;					
+			int cmp2 = (dy2 > 0 || (dy2 == 0 && dx2 > 0)) ? 0 : 1;
+			bool ok = false;
+			if (next == -1) ok = true;
+			if (cmp > cmp2) ok = true;
+			if (cmp == cmp2) {
+				if (0LL + dx2 * dy - dy2 * dx > 0LL) ok = true;	
+			}							
+			if (ok) {
+				dx = dx2;
+				dy = dy2;
+				next = i;
+			}
+		}	
+		pos[next]++;	
+	}
+}
+
+long long inprod(point a, point b, point p) {
+	return (b.x - a.x) * (p.x - a.x) + (b.y - a.y) * (p.y - a.y);
+}
+
+bool on(point a, point b, point p) {
+	if (area(a, b, p) != 0) return 0;
+	if (inprod(a, b, p) >= 0 && inprod(b, a, p) >= 0) return 1;
+	return 0;
+}
+
+bool inside(point a, point b, point c, point p) {
+	long long sa = abs(area(a, b, p));
+	long long sb = abs(area(b, c, p));
+	long long sc = abs(area(c, a, p));
+	long long ss = abs(area(a, b, c));
+	if (sa != 0 && sb != 0 && sc != 0 && sa + sb + sc == ss) return 1;
+	if (on(a, b, p) || on(b, c, p) || on(c, a, p)) return 1;
+	return 0;
+}
+
+bool Centroid(int x, int y) {
+	x *= 3, y *= 3;
+	point p = {x, y};
+	if (area(b[0], b[1], p) < 0) return 0;
+	if (area(b[0], b[N - 1], p) > 0) return 0;
+	int l = 1, r = N - 1;
+	while (r - l > 1) {
+		int mid = (r + l) / 2;
+		if (area(b[0], b[mid], p) < 0) r = mid;
+		else l = mid;
+	}	
+	return inside(b[0], b[l], b[r], p);
+}
+
+int main() {
+	int i, j, k, m;
+	for (i = 0; i < 3; ++i) {
+		scanf("%d", &n[i]);
+		for (j = 0; j < n[i]; ++j)
+			a[i][j].read();
+	}
+	Construct_Minkowski_Sum();
+	
+	scanf("%d", &m);
+	for (i = 0; i < m; ++i) {
+		int x, y;
+		scanf("%d%d", &x, &y);
+		if (Centroid(x, y)) 
+			puts("YES");
+		else
+			puts("NO");			
+	}
+	return 0;		
+}
+

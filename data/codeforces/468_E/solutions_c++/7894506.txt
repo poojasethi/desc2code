@@ -1,0 +1,121 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define rep(i,a,n) for (int i=a;i<n;i++)
+#define mp make_pair
+#define pb push_back
+#define SZ(x) ((int)(x).size())
+#define TWO(x) (1<<(x))
+typedef long long ll;
+typedef vector<int> VI;
+
+const int K=110,N=201000;
+const int mod=1000000007;
+
+ll fac[N];
+int n,k;
+int l,r,ans,a[K][K],cp[K];
+VI dp[K][K];
+
+inline void upd(int &a,ll b) { a=(a+b)%mod;}
+
+int pos[K],p[K],od[K],id[K][K];
+ll cost[K];
+vector<int> _e[K],pnt[K];
+ll calc(int t=0) {
+	rep(i,0,l+r) pos[p[i]]=i,cost[i]=1;
+	rep(i,0,l+r) {
+		int ms=i;
+		rep(j,0,SZ(_e[p[i]])) ms=max(ms,pos[_e[p[i]][j]]);
+		rep(j,i,ms+1) cost[j]*=2;
+	}
+	ll ret=0;
+	rep(i,0,l+r) ret+=cost[i];
+	return ret;
+}
+void solve() {
+	rep(i,0,l+r) _e[i].clear();
+	rep(i,0,l) rep(j,0,r) if (a[i][j]!=1) _e[i].pb(j+l), _e[j+l].pb(i);
+	rep(i,0,l+r) p[i]=i,od[i]=i;
+	ll ans=calc();
+	rep(k,0,100000) {
+		int u=rand()%(l+r),v=rand()%(l+r);
+		rep(i,0,l+r) p[i]=od[i];
+		swap(p[u],p[v]);
+		ll c=calc();
+		if (c<ans) {
+			ans=c;
+			rep(i,0,l+r) od[i]=p[i];
+		}
+	}
+	int cl=0,cr=0;
+	rep(i,0,l+r) p[i]=od[i],pnt[i].clear();;
+	rep(i,0,l+r) pos[p[i]]=i;
+	rep(i,0,l+r) rep(j,0,l+r) id[i][j]=-1;
+	rep(i,0,l+r) {
+		int ms=i;
+		rep(j,0,SZ(_e[p[i]])) ms=max(ms,pos[_e[p[i]][j]]);
+		rep(j,i,ms+1) pnt[j].pb(i);
+	}
+	rep(i,0,l+r) rep(j,0,SZ(pnt[i])) id[i][pnt[i][j]]=j;
+	dp[0][0].clear();
+	dp[0][0].resize(2); dp[0][0][0]=1;
+	if (p[0]<l) cl++; else cr++;
+	rep(i,1,l+r) {
+		int u=p[i];
+		rep(k,0,min(cl,cr)+2) {
+			dp[i][k].clear();
+			dp[i][k].resize(TWO(SZ(pnt[i])));
+		}
+		rep(oS,0,TWO(SZ(pnt[i-1]))) {
+			int S=0,pl=cl,pr=cr;
+			rep(w,0,SZ(pnt[i-1])) if (oS&TWO(w)) {
+				int ps=id[i][pnt[i-1][w]];
+				if (ps!=-1) S|=1<<ps;
+			}
+			rep(w,0,SZ(pnt[i])-1) if (!(S&TWO(w))) {
+				int v=p[pnt[i][w]];
+				if (v<l) pl--; else pr--;
+			}
+			rep(k,0,min(cl,cr)+1) if (dp[i-1][k][oS]) {
+				ll ret=dp[i-1][k][oS];
+				upd(dp[i][k][S],ret);
+				rep(w,0,SZ(pnt[i])-1) if (!(S&TWO(w))) {
+					int v=p[pnt[i][w]];
+					if (((u<l)^(v<l))==0) continue;
+					upd(dp[i][k+1][S|TWO(SZ(pnt[i])-1)|TWO(w)],ret*((u<l)?a[u][v-l]:a[v][u-l]));
+				}
+				if (u<l) upd(dp[i][k+1][S|TWO(SZ(pnt[i])-1)],ret*(pr-k));
+				else upd(dp[i][k+1][S|TWO(SZ(pnt[i])-1)],ret*(pl-k));
+			}
+		}
+		if (p[i]<l) cl++; else cr++;
+	}
+	rep(j,0,min(cl,cr)+1) rep(k,0,TWO(SZ(pnt[l+r-1]))) upd(cp[j],dp[l+r-1][j][k]);
+}
+map<int,int> vecr,vecc;
+int x,y,w;
+ll perm(int a,int b) {
+	ll s=1;
+	rep(j,1,b+1) s=s*(a+1-j)%mod;
+	return s;
+}
+int main() {
+	scanf("%d%d",&n,&k);
+	fac[0]=1;
+	rep(i,1,n+1) fac[i]=fac[i-1]*i%mod;
+	vecr.clear(); vecc.clear();
+	rep(i,0,k) rep(j,0,k) a[i][j]=1;
+	l=0;r=0;
+	rep(i,0,k) {
+		scanf("%d%d%d",&x,&y,&w);
+		if (!vecr.count(x)) vecr[x]=l++;
+		if (!vecc.count(y)) vecc[y]=r++;
+		a[vecr[x]][vecc[y]]=w;
+	}
+	solve();
+	for (int j=0;j<=l&&j<=r;j++) {
+		if (l+r-j>n) continue;
+		upd(ans,1ll*cp[j]*perm(n-r,l-j)%mod*perm(n-l,r-j)%mod*fac[n-r-l+j]%mod);
+	}
+	printf("%d\n",ans);
+}

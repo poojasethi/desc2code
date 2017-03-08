@@ -1,0 +1,153 @@
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#include <cassert>
+#include <complex>
+
+using namespace std;
+#define s(n) scanf("%d", &n)
+#define sz	size() 
+typedef long long LL;
+
+
+#define double long double
+const double PI = acos(-1.0);
+struct CP {
+	 double x, y;
+	 CP(double x = 0, double y = 0) : x(x), y(y) {}
+	 CP operator+(const CP &a) { return CP(x + a.x, y + a.y); }
+	 CP operator*(const CP &a) { return CP(x * a.x - y * a.y, x * a.y + y * a.x); }
+};
+ostream &operator<<(ostream &os, const CP &a) { os << "(" << a.x << ", " << a.y << ")"; return os; }
+void FFTmakeg(int n, vector<CP> &g) {
+	 double th;
+	 for (int i = 0; i < n; ++i) {
+		  th = PI * 2.0 * i / n;
+		  g[i] = CP(cos(th), sin(th));
+	 }
+}
+void FFT(int n, vector<CP> &z, vector<CP> &g, bool inv) {
+	 int i, j, k, l, m;
+	 CP x, y;
+	 for (i = 1, j = 0; i < n; ++i) {
+		  for (k = n >> 1; (j ^= k) < k; k >>= 1);
+		  if (i < j) swap(z[i], z[j]);
+	 }
+	 for (l = k = 1, m = __builtin_ctz(n); m--; l |= k <<= 1) {
+		  for (i = 0; i < n; ++i) if (i < (j = i ^ k)) {
+			   x = z[i] + z[j] * g[(i & l) << m];
+			   y = z[i] + z[j] * g[(j & l) << m];
+			   z[i] = x;
+			   z[j] = y;
+		  }
+	 }
+	 if (inv) {
+		  for (i = 0; i < n; ++i) z[i] = z[i] * (1.0 / n);
+	 }
+}
+
+
+typedef complex<double> base;
+void fft (vector<base> & a, bool invert) {
+	 int n = (int) a.size();
+	 if (n == 1)  return;
+	 
+	 vector<base> a0 (n/2),  a1 (n/2);
+	 for (int i=0, j=0; i<n; i+=2, ++j) {
+		  a0[j] = a[i];
+		  a1[j] = a[i+1];
+	 }
+	 fft (a0, invert);
+	 fft (a1, invert);
+	 
+	 double ang = 2*PI/n * (invert ? -1 : 1);
+	 base w (1),  wn (cos(ang), sin(ang));
+	 for (int i=0; i<n/2; ++i) {
+		  a[i] = a0[i] + w * a1[i];
+		  a[i+n/2] = a0[i] - w * a1[i];
+		  if (invert)
+			   a[i] /= 2,  a[i+n/2] /= 2;
+		  w *= wn;
+	 }
+}
+
+
+void multiply (const vector<long long> & a, const vector<long long> & b, vector<long long> & res)
+{
+	 
+	 vector<CP> fa (a.begin(), a.end()),  fb (b.begin(), b.end());
+	 size_t n = 1;
+	 while (n < max (a.size(), b.size()))  n <<= 1;
+	 n <<= 1;
+	 fa.resize (n),  fb.resize (n);
+	 for(int i=0;i<a.size();i++)
+		  assert(fa[i].x==a[i] && fa[i].y == 0);
+	 
+	 for(int i=0;i<b.size();i++)
+		  assert(fb[i].x==b[i] && fb[i].y == 0);
+
+	 vector<CP> gs(n);
+	 FFTmakeg(n,gs);
+	 FFT(n,fa,gs,0);
+	 FFT(n,fb,gs,0);
+	 for (size_t i=0; i<n; ++i)
+		  fa[i] = fa[i] * fb[i];
+	 reverse(gs.begin()+1, gs.end());
+	 FFT(n,fa,gs,1);
+	 
+	 res.resize (n);
+	 for (size_t i=0; i<n; ++i)
+		  res[i] = (long long) (fa[i].x + 0.5);
+}
+
+const int maxn = 20005;
+
+
+void print(vector<LL>&v,const string s)
+{
+	 cout << "Vector : " << s <<" is as follows :-\n";
+	 for(int i = 0; i <v.size(); i++)
+		  if(v[i]>0)
+			   printf("%d : %lld\n",i, v[i]);
+	 cout << endl;
+}
+LL A[maxn];
+
+int main()
+{
+
+	 
+	 int N;
+	 s(N);
+	 for(int i = 0; i < N; i++)
+	 {
+		int a; s(a);
+		A[a+10000] ++;
+	 }
+	 
+	 vector<LL> p1(A,A+maxn);
+	 vector<LL> p2(2*maxn,0);
+	 vector<LL> p3(3*maxn,0);
+
+	 
+	 for(int i = 0; i < maxn; i++)
+	 {
+		  p2[2*i] = 3*p1[i];
+		  p3[3*i] = 2*p1[i];
+	 }
+
+	 vector<LL> Q1,Q2,Q3,ans;
+	 multiply(p1,p1,ans);
+	 multiply(p1,ans,ans);
+	 multiply(p2,p1,Q3);
+	 
+	 for(int i=0;i<3*maxn;i++)
+		  ans[i] = ans[i] - Q3[i] + p3[i];
+	
+	 for(int i = 0; i < ans.size(); i++)
+		  if( ans[i])
+			   printf("%d : %lld\n", i-30000 , ans[i] / 6);
+
+		  
+}

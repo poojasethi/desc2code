@@ -1,0 +1,94 @@
+#include <algorithm>
+#include <bitset>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <deque>
+#include <fstream>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <string>
+#include <utility>
+#include <vector>
+using namespace std;
+
+string maze[32];
+int m,n,numGhost,maxTime,T;
+pair<int,int> ghostPath[32][332];
+int sz[32];
+pair<int,int> start,finish;
+
+int answer() {
+    int chefPos[32] = {0};
+    int mazePos[32] = {0};
+    int pos[32] = {0};
+
+    for (int i = 0; i < m; i++)
+      for (int j = 0; j < n; j++) if (maze[i][j] == '@') {
+          start = make_pair(i,j);
+          chefPos[i] = 1 << j;
+      }
+      else if (maze[i][j] == '$') finish = make_pair(i,j);
+      else if (maze[i][j] == '#') mazePos[i] |= (1 << j);
+    for (int i = 0; i < m; i++) mazePos[i] = (1 << n) - 1 - mazePos[i];
+
+    for (int tick = 1; tick <= maxTime; tick++) {
+        int newChefPos[32] = {0};
+        for (int i = 0; i < m; i++) {
+            newChefPos[i] |= chefPos[i];  // stand here
+            if (i < m - 1) newChefPos[i] |= chefPos[i + 1];  // move up
+            if (i) newChefPos[i] |= chefPos[i - 1];  // move down
+            newChefPos[i] |= (chefPos[i] >> 1); // move left
+            newChefPos[i] |= (chefPos[i] << 1); // move right
+            newChefPos[i] &= mazePos[i];
+        }
+        for (int i = 0; i < numGhost; i++) {
+            pair<int,int> cur = ghostPath[i][pos[i]];
+            newChefPos[cur.first] &= ~(1 << cur.second);
+            pos[i]++;
+            if (pos[i] == sz[i]) pos[i] = 0;
+            cur = ghostPath[i][pos[i]];
+            newChefPos[cur.first] &= ~(1 << cur.second);
+        }
+        if (newChefPos[finish.first] & (1 << finish.second)) return tick;
+        for (int i = 0; i < m; i++) chefPos[i] = newChefPos[i];
+    }
+    return -1;
+}
+
+int main() {
+    //freopen("haunted.in.1","r",stdin);
+    scanf("%d", &T);
+    while (T--) {
+        scanf("%d %d %d %d", &m, &n, &numGhost, &maxTime);
+        for (int i = 0; i < numGhost; i++) {
+            int numPoint;
+            scanf("%d", &numPoint);
+            vector< pair<int,int> > path(numPoint + 1);
+            for (int j = 0; j < numPoint; j++) scanf("%d %d", &path[j].second, &path[j].first);
+            path[numPoint] = path[0];
+            sz[i] = 0;
+
+            for (int j = 0; j < numPoint; j++) {
+                pair<int,int> cur = path[j],next = path[j + 1];
+                while (cur != next) {
+                    ghostPath[i][sz[i]++] = cur;
+                    if (cur.first > next.first) cur.first--;
+                    else if (cur.first < next.first) cur.first++;
+                    else if (cur.second > next.second) cur.second--;
+                    else if (cur.second < next.second) cur.second++;
+                }
+            }
+        }
+        for (int i = 0; i < m; i++) cin >> maze[i];
+        printf("%d\n", answer());
+    }
+}

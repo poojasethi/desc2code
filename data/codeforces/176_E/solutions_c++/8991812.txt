@@ -1,0 +1,153 @@
+#include <iostream>
+#include <set>
+#include <vector>
+#include <string>
+using namespace std;
+
+
+int n;
+int k;
+const int max_n = 100010;
+vector<int>adj[max_n];
+vector<long long>val[max_n];
+set <pair<int,int> >s;
+set <pair<int,int > > :: iterator it,it1;
+int l[max_n];
+int p[max_n][24];
+long long  d[max_n][24];
+int start[max_n];
+pair<int,int>b;
+pair<int,int>c;
+long long res = 0;
+void dfs(int par,int v)
+{
+	l[v] = l[par]+1;
+	k++;
+	start[v] = k;
+	for(int i=0;i<adj[v].size();i++)
+	{
+		int u = adj[v][i];
+		int dis = val[v][i];
+		if(u!=par)
+		{
+			d[u][0] = dis;
+			p[u][0] = v;
+			dfs(v,u);
+		}
+	}
+}
+void init()
+{
+	dfs(0,1);
+	for(int i=1;i<=n;i++)
+		for(int j=1;(1<<j)<n;j++)
+			p[i][j] = -1;
+	p[1][0] = -1;
+	for(int j=1;(1<<j)<n;j++)
+		for(int i=1;i<=n;i++)
+			if(p[i][j-1]!=-1)
+			{
+				p[i][j] = p[p[i][j-1]][j-1];
+				d[i][j] = d[i][j-1]+d[p[i][j-1]][j-1];
+			}
+}
+long long  lca(int u,int v)
+{
+	if(l[v]>l[u])
+		swap(u,v);
+	long long ans = 0;
+	for(int i=23;i>=0;i--)
+		if(l[u] - (1<<i)>=l[v])
+		{
+			ans+=d[u][i];
+			u = p[u][i];
+		}
+	if(u==v)
+		return ans;
+	for(int i=23;i>=0;i--)
+		if(p[u][i]!=-1&&p[u][i]!=p[v][i])
+		{
+			ans+=d[u][i];
+			ans+=d[v][i];
+			u = p[u][i];
+			v = p[v][i];
+		}
+	ans+=d[u][0];
+	ans+=d[v][0];
+	return ans;
+}
+void rec(int x,long long sign)
+{
+	if(sign==1)
+	{
+		s.insert(make_pair(start[x],x));
+	}
+	it = s.find(make_pair(start[x],x));
+	int pos ,pos1 ,  u, v;
+	if(it!=s.begin())
+	{
+		it--;
+		v = (*it).second;
+		res+=lca(x,v)*sign;
+		it++;
+	}
+	else 
+	{
+		it1 = s.end();
+		it1--;
+		v = (*it1).second;
+		res+=lca(x,v)*sign;
+	}
+	it++;
+	if(it!=s.end())
+	{
+		u = (*it).second;
+		res+=lca(x,u)*sign;
+	}
+	else 
+	{
+		it1 = s.begin();
+		u = (*it1).second;
+		res+=lca(x,u)*sign;
+	}
+	res+=lca(u,v)*sign*(-1);
+	if(sign == -1)
+		s.erase(s.find(make_pair(start[x],x)));
+}
+int main()
+{
+	ios_base::sync_with_stdio(false);
+	cin>>n;
+	for(int i=0;i<n-1;i++)
+	{
+		int u,v,dis;
+		cin>>u>>v>>dis;
+		adj[v].push_back(u);
+		adj[u].push_back(v);
+		val[v].push_back(dis);
+		val[u].push_back(dis);
+	}
+	init();
+	int q;
+	cin>>q;
+	for(int i=0;i<q;i++)
+	{
+		string str;
+		cin>>str;
+		int x;
+		if(str=="+")
+		{
+			cin>>x;
+			rec(x,1ll);
+		}
+		else if(str=="-")
+		{
+			cin>>x;
+			if(s.find(make_pair(start[x],x))!=s.end())
+				rec(x,-1ll);
+		}
+		else 
+			cout<<res/2<<endl;
+	}
+	return 0;
+}

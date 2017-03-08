@@ -1,0 +1,102 @@
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+int N,Q;
+vector<pair<int,int> > adj[400013];
+bool visited[400013];
+int h[400013];
+long long depth[400013];
+int ancestor[400013][19];
+
+void dfs(int x) {
+    visited[x] = 1;
+    for (int i=0;i<adj[x].size();i++) {
+        if (!visited[adj[x][i].first]) {
+            h[adj[x][i].first] = h[x]+1;
+            depth[adj[x][i].first] = depth[x]+adj[x][i].second;
+            dfs(adj[x][i].first);
+            ancestor[adj[x][i].first][0] = x;
+        }
+    }
+    ancestor[x][0] = -1;
+}
+
+int findkth(int x, int k) {
+    int where = x;
+    for (int i=17;i>=0;i--) if (k&(1<<i)) where = ancestor[where][i];
+    return where;
+}
+
+int lca(int a, int b) {
+    if (h[a]>h[b]) swap(a,b);
+    b = findkth(b,h[b]-h[a]);
+    if (a==b || b==-1) return a;
+    for (int i=17;i>=0;i--) {
+        if (h[a]<(1<<i)) continue;
+        int na = ancestor[a][i];
+        int nb = ancestor[b][i];
+        if (na!=nb) a = na, b = nb;
+    }
+    return ancestor[a][0];
+}
+
+int main() {
+    int T = 0;
+    scanf("%d",&T);
+    for (int t=0;t<T;t++) {
+        scanf("%d",&N);
+        for (int i=0;i<N;i++) {
+            adj[i].clear();
+            visited[i] = 0;
+            h[i] = 0;
+            depth[i] = 0;
+            for (int j=0;j<18;j++) ancestor[i][j] = 0;
+        }
+        for (int i=1;i<N;i++) {
+            int u = 0,v = 0,c = 0;
+            scanf("%d%d%d",&u,&v,&c);
+            u-=1; v-=1;
+            adj[u].push_back(make_pair(v,c));
+            adj[v].push_back(make_pair(u,c));
+        }
+        dfs(0);
+        for (int i=1;i<=17;i++) {
+            for (int j=0;j<N;j++) {
+                if (h[j]<(1<<i)) ancestor[j][i] = -1;
+                else ancestor[j][i] = ancestor[ancestor[j][i-1]][i-1];
+            }
+        }
+        scanf("%d",&Q);
+        for (int q=0;q<Q;q++) {
+            int a = 0,b = 0;
+            long long para = 0;
+            scanf("%d%d%lld",&a,&b,&para);
+            a-=1; b-=1;
+            int l = lca(a,b);
+            if (l==-1) {
+                printf("NO\n");
+                continue;
+            }
+            long long dist = depth[a]+depth[b]-2*depth[l];
+            long long looking = dist/2;
+            if (depth[a]-depth[l]<depth[b]-depth[l]) swap(a,b);
+            int where = a;
+            for (int i=17;i>=0;i--) {
+                if (ancestor[where][i]==-1) continue;
+                if (h[ancestor[where][i]]<h[l]) continue;
+                if (depth[a]-depth[ancestor[where][i]]<=looking) where = ancestor[where][i];
+            }
+            int ok = 0;
+            if (abs((depth[a]-depth[where])-(dist-(depth[a]-depth[where])))<=para) ok = 1;
+            where = ancestor[where][0];
+            if (where!=-1 && abs((depth[a]-depth[where])-(dist-(depth[a]-depth[where])))<=para) ok = 1;
+            if (ok) printf("YES\n");
+            else printf("NO\n");
+        }
+    }
+
+    return 0;
+}

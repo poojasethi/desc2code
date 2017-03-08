@@ -1,0 +1,87 @@
+#include <cstdio>
+#include <set>
+#include <algorithm>
+
+using namespace std;
+
+typedef long long ll;
+const int MaxN = 100005;
+const int MaxE = MaxN * 2;
+const int MaxK = 18;
+
+struct Edge {
+	int to, w;
+	Edge* next;
+} memo[MaxE], *cur, *g[MaxN];
+int N, DP[MaxN][MaxK], dep[MaxN];
+int ax[MaxN], idx[MaxN], K;
+ll len[MaxN];
+
+void addEdge(int u, int v, int w) {
+	cur->to = v, cur->w = w;
+	cur->next = g[u], g[u] = cur++;
+}
+
+void DFS(int u) {
+	int v;
+	dep[u] = dep[DP[u][0]] + 1;
+	ax[idx[u] = ++K] = u;
+	for (int i = 1; i < MaxK; i++) DP[u][i] = DP[DP[u][i - 1]][i - 1];
+	for (Edge* it = g[u]; it && (v = it->to); it = it->next)
+		if (v != DP[u][0]) {
+			DP[v][0] = u, len[v] = len[u] + it->w;
+			DFS(v);
+		}
+}
+
+int getA(int u, int v) {
+	if (dep[u] < dep[v]) swap(u, v);
+	for (int i = MaxK - 1; i >= 0; i--)
+		if (dep[u] - dep[v] >= (1 << i)) u = DP[u][i];
+	if (u == v) return u;
+	for (int i = MaxK - 1; i >= 0; i--)
+		if (DP[u][i] != DP[v][i]) u = DP[u][i], v = DP[v][i];
+	return DP[u][0];
+}
+
+set<int> st;
+
+int main() {
+#ifdef __FISH__
+	freopen("in.txt", "r", stdin);
+#endif
+	int u, v, w, Q;
+	ll ret = 0;
+	char op[5];
+	set<int>::iterator it, pre, next;
+	int vP, vN, fd;
+	
+	scanf("%d", &N);
+	cur = memo;
+	for (int i = 1; i < N; i++) {
+		scanf("%d%d%d", &u, &v, &w);
+		addEdge(u, v, w);
+		addEdge(v, u, w);
+	}
+	DFS(1);
+	
+	scanf("%d", &Q);
+	while (Q--) {
+		scanf("%s", op);
+		if (op[0] == '?') {
+			printf("%I64d\n", ret);
+		} else {
+			scanf("%d", &u);
+			fd = op[0] == '+' ? 1 : -1;
+			it = pre = next = st.insert(idx[u]).first;
+			if (pre-- == st.begin()) pre = --st.end();
+			if (++next == st.end()) next = st.begin();	// end: WA # 9
+			vP = ax[*pre];
+			vN = ax[*next];
+			ret += fd * (len[getA(vP, vN)] - len[getA(vP, u)] - len[getA(vN, u)] + len[u]);
+			if (fd == -1) st.erase(it);	// WA #3
+		}
+	}
+
+	return 0;
+}

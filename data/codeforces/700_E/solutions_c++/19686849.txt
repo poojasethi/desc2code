@@ -1,0 +1,176 @@
+#include <cstdio>
+#include <algorithm>
+#include <set>
+#include <cstring>
+#include <vector>
+//#define fprintf(...) 
+using namespace std;
+
+const int N = 200010;
+const int S = N*2;
+const int P = 18;
+
+struct Node {
+//	set<int> st;
+	vector<int> vc;
+	Node *ls, *rs;
+}pool[S*2], *tail=pool, *root;
+
+int n;
+int son[S][26], len[S], par[S], key[S], ntot, last_node;
+int in[S], out[S], rpos[S], one_pos[S], idc;
+int head[S], dest[S], last[S], etot;
+int anc[S][P+1];
+int dep[S];
+int ans = 0;
+vector<int> g[S];
+char str[N];
+int fat[S];
+int qu[S], bg, ed;
+int dpval[S], dpmax[S];
+
+void init() {
+	len[0] = 0;
+	par[0] = -1;
+	key[0] = false;
+	ntot = last_node = 0;
+	memset( son[0], 0, sizeof(son[0]) );
+}
+void adde( int u, int v ) {
+	etot++;
+	dest[etot] = v;
+	last[etot] = head[u];
+	head[u] = etot;
+}
+void append( int c ) {
+	int p = last_node;
+	int np = ++ntot;
+
+	memset( son[np], 0, sizeof(son[np]) );
+	key[np] = true;
+	len[np] = len[p] + 1;
+
+	while( p != -1 && !son[p][c] )
+		son[p][c]=np, p=par[p];
+	if( p==-1 ) {
+		par[np] = 0;
+	} else {
+		int q = son[p][c];
+		if( len[q] == len[p]+1 ) {
+			par[np] = q;
+		} else {
+			int nq = ++ntot;
+			memcpy( son[nq], son[q], sizeof(son[nq]) );
+			key[nq] = false;
+			len[nq] = len[p]+1;
+			par[nq] = par[q];
+			par[q] = par[np] = nq;
+			while( p!=-1 && son[p][c]==q )
+				son[p][c] = nq, p = par[p];
+		}
+	}
+	last_node = np;
+}
+void dfs( int u ) {
+	for( int p=1; p<=P; p++ )
+		anc[u][p] = anc[anc[u][p-1]][p-1];
+	++idc;
+	in[u] = idc;
+	rpos[idc] = key[u] ? len[u] : 0;
+	one_pos[u] = rpos[idc];
+	for( int t=head[u]; t; t=last[t] ) {
+		int v=dest[t];
+		anc[v][0] = u;
+		dfs(v);
+		if( one_pos[v] ) one_pos[u] = one_pos[v];
+	}
+	out[u] = idc;
+}
+Node *build( int lf, int rg ) {
+	Node *nd = ++tail;
+	for( int i=lf; i<=rg; i++ ) {
+		nd->vc.push_back( rpos[i] );
+	}
+	sort( nd->vc.begin(), nd->vc.end() );
+	if( lf==rg ) return nd;
+	int mid=(lf+rg)>>1;
+	nd->ls = build( lf, mid );
+	nd->rs = build( mid+1, rg );
+	return nd;
+}
+bool query( Node *nd, int lf, int rg, int L, int R, int ll, int rr ) {
+	if( L<=lf && rg<=R ) {
+		int il, ir;
+		il = lower_bound( nd->vc.begin(), nd->vc.end(), ll ) - nd->vc.begin();
+		ir = upper_bound( nd->vc.begin(), nd->vc.end(), rr ) - nd->vc.begin();
+		return il!=ir;
+	}
+	int mid=(lf+rg)>>1;
+	if( R<=mid )
+		return query( nd->ls, lf, mid, L, R, ll, rr );
+	else if( L>mid )
+		return query( nd->rs, mid+1, rg, L, R, ll, rr );
+	else
+		return query( nd->ls, lf, mid, L, R, ll, rr )
+			|| query( nd->rs, mid+1, rg, L, R, ll, rr );
+}
+bool check( int p, int u ) {
+	if( p==0 ) return true;
+	int rr = one_pos[u];
+	int ll = rr - len[u] + len[p];
+	rr--;
+	return query(root,1,idc,in[p],out[p],ll,rr);
+}
+void dfs2( int u ) {
+	ans = max( ans, dep[u] );
+	for( int t=0; t<(int)g[u].size(); t++ ) {
+		int v=g[u][t];
+		dep[v] = dep[u]+1;
+		dfs2(v);
+	}
+}
+void finish() {
+	for( int u=1; u<=ntot; u++ ) 
+		adde( par[u], u );
+	for( int p=0; p<=P; p++ )
+		anc[0][p] = 0;
+	dfs(0);
+	root = build( 1, idc );
+	for( int u=1; u<=ntot; u++ ) {
+		int uu = u;
+		for( int p=P; p>=0; p-- ) {
+			if( !check(anc[uu][p],u) )
+				uu = anc[uu][p];
+		}
+		uu = anc[uu][0];
+		g[uu].push_back(u);
+		fat[u] = uu;
+	}
+	qu[bg=ed=1] = 0;
+	while( bg<=ed ) {
+		int u = qu[bg++];
+		for( int t=0; t<(int)g[u].size(); t++ ) {
+			int v=g[u][t];
+			qu[++ed] = v;
+		}
+	}
+	memset( dpval, -1, sizeof(dpval) );
+	memset( dpmax, -1, sizeof(dpmax) );
+	dpval[0] = dpmax[0] = 0;
+	for( int i=2; i<=ed; i++ ) {
+		int u = qu[i];
+		int p = fat[u];
+		dpval[u] = dpmax[p]+1;
+		ans = max( ans, dpval[u] );
+		dpmax[u] = max( dpval[u], dpmax[anc[u][0]] );
+	}
+}
+int main() {
+	scanf( "%d", &n );
+	scanf( "%s", str+1 );
+	init();
+	for( int i=1; i<=n; i++ ) 
+		append( str[i]-'a' );
+	finish();
+	printf( "%d\n", ans );
+}

@@ -1,0 +1,103 @@
+#include<cstdio>
+#include<cassert>
+#include<iostream>
+#include<algorithm>
+#define maxn 303030
+#define mod 1000000007
+#define N 101010
+#define TN 1<<18
+#define inf 1000000007
+typedef long long ll;
+using namespace std;
+int lcm[maxn],mulfac[maxn];
+int amax[TN],amin[TN],pending[TN];
+bool isPrime[maxn];
+int qleft,qright;
+
+void sieve(){
+      isPrime[0]=isPrime[1]=false;isPrime[2]=true;
+      for(int i=3;i<maxn;i+=2)isPrime[i]=true;
+      for(int i=4;i<maxn;i+=2)isPrime[i]=false;
+      fill(mulfac,mulfac+maxn,1);
+      int j1=1;
+      do{
+            j1=j1<<1;
+            mulfac[j1]=(mulfac[j1]<<1)%mod;           //assert(0<j1 && j1<maxn);
+      }while(j1<maxn/2);
+
+      for(int i=3;i<maxn;i+=2){
+           if(isPrime[i]){
+                  for(int j=2*i+i;j<maxn;j+=2*i){
+                      isPrime[j]=false;
+                  }
+                  int j=1;
+                  do{
+                      j=j*i;
+                      mulfac[j]=(ll(mulfac[j])*i)%mod;      //assert(0<j && j<maxn);
+                  }while(j<maxn/i);
+           }
+      }
+
+      lcm[0]=0;lcm[1]=1;
+      for(int i=2;i<maxn;i++)
+               lcm[i]=(ll(lcm[i-1])*mulfac[i])%mod;
+
+}
+
+int maxquerry(int node,int left,int right,int accupend){
+     if(qright<left || right<qleft){return -inf;}
+     if(qleft<=left && right<=qright){return amax[node]+pending[node]+accupend;}
+     return max(maxquerry(2*node,left,(left+right)/2,accupend+pending[node]),maxquerry(2*node+1,1+(left+right)/2,right,accupend+pending[node]));
+}
+
+int minquerry(int node,int left,int right,int accupend){
+     if(qright<left || right<qleft){return inf;}
+     if(qleft<=left && right<=qright ){return amin[node]+pending[node]+accupend;}
+     return min(minquerry(2*node,left,(left+right)/2,accupend+pending[node]),minquerry(2*node+1,1+(left+right)/2,right,accupend+pending[node]));
+}
+
+void build(int node,int left,int right){
+     pending[node]=0;
+     if(left==right){scanf("%d",&amin[node]);amax[node]=amin[node];return;}
+     build(2*node,left,(left+right)/2);
+     build(2*node+1,(left+right)/2+1,right);
+     amin[node]=min(amin[2*node],amin[2*node+1]);
+     amax[node]=max(amax[2*node],amax[2*node+1]);
+     return;
+}
+
+void update(int node,int left,int right,int p){
+     if(qright<left || right<qleft){return;}
+     if(qleft<=left && right<=qright){pending[node]+=p;return;}
+     update(2*node,left,(left+right)/2,p);
+     update(2*node+1,(left+right)/2+1,right,p);
+     amin[node]=min(amin[2*node]+pending[2*node],amin[2*node+1]+pending[2*node+1]);
+     amax[node]=max(amax[2*node]+pending[2*node],amax[2*node+1]+pending[2*node+1]);
+}
+
+int main(){
+     sieve();
+     int n,m;
+     scanf("%d%d",&n,&m);//   for(int i=0;i<n;i++) scanf("%d",&a[i]);
+     build(1,0,n-1);
+     while(m--){
+        int type,t;
+        scanf("%d%d%d",&type,&qleft,&qright);
+        switch(type){
+           case 0:
+                 int p;
+                 scanf("%d",&p);
+                 update(1,0,n-1,p);
+                 break;
+           case 1:
+                 t=maxquerry(1,0,n-1,0);// assert(0<=t && t<maxn);//
+                 printf("%d\n",lcm[t]);
+                 break;
+           case 2:
+                 t=minquerry(1,0,n-1,0);// assert(0<=t && t<maxn);//
+                 printf("%d\n",lcm[t]);
+        }
+     }
+//   system("PAUSE");
+     return 0;
+}

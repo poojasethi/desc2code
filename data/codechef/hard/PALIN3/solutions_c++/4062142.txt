@@ -1,0 +1,74 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define dbg(a,sz) for(int i = 0; i < sz; ++i) cerr << a[i] << " ";cerr <<"\n"
+#define INT(ch) ((int)ch-48)
+typedef long long LL;
+const int NN = 1123456;
+
+int Len[2][NN],st[2],en[2],sum[NN],zero[NN],N;
+LL dp[3][NN];
+char str[NN];
+
+void Manacher(){
+    st[0] = st[1] = 0;
+    en[0] = en[1] = -1;
+    for(int i = 0; i < N; ++i) for(int p = 0; p < 2; ++p){
+        int dR = en[p]-i+!p;
+        int sz = (i > en[p] ? 0 : min(dR,Len[p][st[p]+dR])) + 1;
+        while(i+sz-!p < N and i-sz >= 0 and str[i+sz-!p] == str[i-sz]) ++sz;
+        Len[p][i] = --sz;
+        if (i+sz-!p > en[p])
+            en[p] = i+sz-!p, st[p] = i-sz;
+    }
+}
+
+LL Count(int st,int en,int mod3){
+    LL ans = dp[mod3][st];
+    int add = sum[st] - sum[en];
+    while (add < 0) add += 3;
+    for(int i = 0; i < 3; ++i) if ((add+i)%3 == mod3)
+        ans -= dp[i][en];
+    return ans;
+}
+
+LL substrCount(){
+    LL ans = 0LL,v;
+    for(int p = 0; p < 2; ++p) for(int i = 0; i < N; ++i){
+        int sz = Len[p][i], v = ( p ? INT(str[i]) : 0);
+        sz = max(0,sz-zero[i+sz-!p]);
+
+        if (p) ans += (v%3 == 0);
+        for(int k = 0; k < 3;++k) if ((2*k+v)%3 == 0)
+            ans += Count(i+p,i+sz+p,k);
+    }
+    return ans;
+}
+
+void solve(){
+    scanf("%s",str);
+    N = (int)strlen(str);
+    Manacher();
+
+    sum[N] = 0;
+    zero[0] = (!INT(str[0]));
+    for(int i = 1; i < N; ++i)
+        if (!INT(str[i])) zero[i] = 1 + zero[i-1];
+
+    for(int i = N-1; i >= 0; --i){
+        int add = INT(str[i]);
+        sum[i] = (add + sum[i+1])%3;
+        if (add != 0) dp[add%3][i] += 1LL;
+        for(int k = 0; k < 3; ++k)
+            dp[(k+add)%3][i] += dp[k][i+1];
+    }
+    LL ans = substrCount();
+    printf("%lld\n",ans);
+}
+
+int main()
+{
+    ios_base::sync_with_stdio(0);
+    cin.tie(NULL);
+    solve();
+    return 0;
+}

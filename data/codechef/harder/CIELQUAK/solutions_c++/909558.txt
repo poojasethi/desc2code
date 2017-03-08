@@ -1,0 +1,234 @@
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <vector>
+using namespace std;
+
+typedef long long LL;
+typedef pair<int,int> PII;
+typedef vector<int> VI;
+typedef vector<PII> VPII;
+
+inline int bit(int n) { return 1<<n; }
+
+const int maxT = 50;
+double ans[maxT];
+
+const int maxD = 4;
+const int minP = 1000;
+const int maxP = 10000;
+
+const int maxN = 8;
+const int maxS = 330000; // >= maxN! * maxN
+const int S = 3500; // the real number of states
+
+int fct[maxN+1]={1};
+int cnt;
+int ind[maxS];
+char whatn[maxS];
+int state_by_ind[S];
+int trans[S][maxN][3]; // 0 - no road, 1 - vertial road, 2 - both roads.
+// horizontal road always lead to the same state
+double F[S],G[S],*f=F,*g=G;
+
+int n; // current number of columns
+
+VI conv(int state) // a[n] - is a component of (0,0)
+{
+	VI a(n+1);
+	for(int i=0;i<n;i++)
+		a[i]=state/fct[i]%(i+1);
+	a[n]=state/fct[n];
+	return a;
+}
+
+int normalize(VI &a)
+{
+	int state=0;
+	int cnt=0;
+	int ind[maxN+1]={0};
+	for(int i=0;i<n;i++)
+	{
+		if(!ind[a[i]]) ind[a[i]]=++cnt;
+		a[i]=ind[a[i]]-1;
+		state+=fct[i]*a[i];
+	}
+	if(!ind[a[n]]) return -1;
+	a[n]=ind[a[n]]-1;
+	state+=fct[n]*a[n];
+	return state;
+}
+
+int isolate(VI a,int r)
+{
+	a[r]=n;
+	return normalize(a);
+}
+
+int move(VI a,int r)
+{
+	a[r]=a[r-1];
+	return normalize(a);
+}
+
+int join(VI a,int r)
+{
+	int ar=a[r];
+	for(int i=0;i<=n;i++)
+		if(a[i]==ar) a[i]=a[r-1];
+	return normalize(a);
+}
+
+void dfs(int state)
+{
+	if(whatn[state]==n) return;
+	int u=++cnt;
+	ind[state]=u;
+	state_by_ind[u]=state;
+	whatn[state]=n;
+	memset(trans[u],0,sizeof trans[u]);
+	VI a=conv(state);
+	for(int r=0;r<n;r++)
+	{
+		int next=isolate(a,r);
+		if(next>=0)
+		{
+			dfs(next);
+			trans[u][r][0]=ind[next];
+		}
+		if(r>0)
+		{
+			if(a[r]!=a[r-1])
+			{
+				next=move(a,r);
+				if(next>=0)
+				{
+					dfs(next);
+					trans[u][r][1]=ind[next];
+				}
+				next=join(a,r);
+				if(next>=0)
+				{
+					dfs(next);
+					trans[u][r][2]=ind[next];
+				}
+			}
+			else
+			{
+				trans[u][r][1]=trans[u][r][2]=u;
+			}
+		}
+	}
+}
+
+struct test
+{
+	int p;
+	LL m;
+	int t;
+	test(){}
+	test(int p_,LL m_,int t_){p=p_;m=m_;t=t_;}
+};
+
+int main()
+{
+	for(n=1;n<=maxN;n++) fct[n]=n*fct[n-1];
+	int T;
+	scanf("%d",&T);
+	vector<test> ms[maxN+1];
+	for(int t=0;t<T;t++)
+	{
+		LL m;
+		double p_;
+		scanf("%d %lld %lf",&n,&m,&p_);
+		if(n>m){ int t=n;n=m;m=t;}
+		int p=10000*p_+0.5;
+		if(n==1 || m==1) ans[t]=pow(1-1.*p/maxP,n-1+m-1.); else
+		if(p==maxP) ans[t]=0.; else
+			ms[n].push_back(test(p,m,t));
+	}
+	for(n=2;n<=maxN;n++) if(ms[n].size())
+	{
+		cnt=0;
+		VPII init;
+		for(int mask=0;mask<bit(n-1);mask++)
+		{
+			int state=0;
+			int cmp=0;
+			for(int i=1;i<n;i++)
+			{
+				if(mask & bit(i-1)) cmp++;
+				state+=fct[i]*cmp;
+			}
+			dfs(state);
+			init.push_back(PII(ind[state],cmp));
+		}
+		for(int it=0;it<ms[n].size();it++)
+		{
+			int p_=ms[n][it].p;
+			LL M=ms[n][it].m;
+			int t=ms[n][it].t;
+			int q_=maxP-p_;
+			double p=1.*p_/maxP;
+			double q=1.*q_/maxP;
+			double pp=1.*p_*p_/(maxP*maxP);
+			double pq=1.*p_*q_/(maxP*maxP);
+			double qq=1.*q_*q_/(maxP*maxP);
+			int u;
+			memset(f,0,sizeof(double)*(cnt+1));
+			for(int i=init.size();i--;)
+			{
+				int k=init[i].second;
+				f[init[i].first]=pow(p,k)*pow(q,n-1-k);
+			}
+			int m0,m;
+			double P[222];
+			for(int j=0;;j++)
+			{
+				int r=j%n;
+				if(r==0)
+				{
+					double res=0;
+					for(u=1;u<=cnt;u++)
+					{
+						int state=state_by_ind[u];
+						if(state/fct[n]==state/fct[n-1]%n)
+							res+=f[u];
+					}
+					m=j/n+1;
+					P[m]=res;
+					if(m==M || m>35 || P[m]<1e-6 || fabs(P[m]/P[m-1]-P[m-1]/P[m-2])<1e-13) break;
+				}
+				memset(g,0,sizeof(double)*(cnt+1));
+				double cur;
+				for(u=1;u<=cnt;u++)
+				{
+					cur=f[u];
+					if(r==0)
+					{
+						g[u]+=q*cur;
+						g[trans[u][0][0]]+=p*cur;
+					}
+					else
+					{
+						int *b=trans[u][r];
+						g[u]+=pq*cur;
+						g[b[0]]+=pp*cur;
+						g[b[1]]+=pq*cur;
+						g[b[2]]+=qq*cur;
+					}
+				}
+				swap(f,g);
+			}
+			if(m==M) ans[t]=P[m]; else
+			{
+				m0=m-1;
+				double coef=P[m0+1]/P[m0];
+				ans[t]=P[m0]<1e-6?0.:P[m0]*pow(coef,M-m0+0.);
+			}
+		}
+	}
+	for(int t=0;t<T;t++)
+		printf("%.15lf\n",ans[t]);
+	return 0;
+}

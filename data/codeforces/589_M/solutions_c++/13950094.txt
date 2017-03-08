@@ -1,0 +1,125 @@
+#define _USE_MATH_DEFINES
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <cstdio>
+#include <algorithm>
+#include <map>
+#include <vector>
+#include <iostream>
+#include <set>
+#include <cmath>
+#include <cstring>
+#include <bitset>
+#include <deque>
+using namespace std;
+
+typedef long long ll;
+typedef vector<int> vi;
+typedef vector<vi> vvi;
+typedef vector<string> vs;
+typedef pair<int, int> pii;
+typedef vector<pii> vpii;
+
+#define bpc(a) __builtin_popcount(a)
+#define debug(x) { cerr<<#x<<" = "<<(x)<<endl; }
+
+const int mod = 1e9 + 7;
+const int inf = 1e9;
+
+ll powm(ll a,ll p,ll m){ll r=1 % m;while(p){if(p&1)r=r*a%m;p>>=1;a=a*a%m;}return r;}
+
+int w, l, n, vmax, vp, xs[102], ys[102], maps[101][101], g[102][102], di[] = {1,-1,0,0}, dj[] = {0,0,1,-1};
+double a, max_speed[102], real_speed[102], t[102];
+
+double get_t(double va, double vb, double d, double &speed)
+{
+    double t1 = (vb - va) / a;
+    double l1 = va * t1 + a * t1 * t1 / 2;
+    //cout << "1: " << t1 << ' ' << l1 << ' ' << speed << endl;
+    if(l1 >= d)
+    {
+        t1 = (-va + sqrt(va * va + 2 * a * d)) / a;
+        speed = va + a * t1;
+        return t1;
+    }
+    d = (d - l1) / 2;
+    double t2 = (vmax - vb) / a;
+    double l2 = vb * t2 + a * t2 * t2 / 2;
+    //cout << "2: " << t2 << ' ' << l2 << ' ' << speed << endl;
+    speed = vb;
+    if(l2 >= d)
+        return t1 + 2 * (-vb + sqrt(vb * vb + 2 * a * d)) / a;
+    return t1 + 2 * t2 + 2 * (d - l2) / vmax;
+}
+
+int main()
+{
+    scanf("%d%d%d%lf%d%d", &w, &l, &n, &a, &vmax, &vp);
+    scanf("%d%d%d%d", xs, ys, xs + n + 1, ys + n + 1);
+    max_speed[n + 1] = vmax;
+    t[n + 1] = inf;
+    memset(maps, -1, sizeof(maps));
+    maps[xs[0]][ys[0]] = 0;
+    maps[xs[n + 1]][ys[n + 1]] = n + 1;
+    for(int i = 1; i <= n; ++i)
+    {
+        scanf("%d%d", xs + i, ys + i);
+        maps[xs[i]][ys[i]] = i;
+        max_speed[i] = min(vmax, vp);
+        t[i] = inf;
+    }
+    for(int i = 0; i < n + 2; ++i)
+    {
+        vpii cur(1, make_pair(xs[i], ys[i]));
+        int dist[101][101] = {};
+        dist[xs[i]][ys[i]] = 1;
+        for(int s = 2; cur.size(); ++s)
+        {
+            vpii next;
+            for(vpii::iterator it = cur.begin(); it != cur.end(); ++it)
+                for(int k = 0; k < 4; ++k)
+                {
+                    int nx = it->first + di[k];
+                    int ny = it->second + dj[k];
+                    if(nx < 0 || nx > w || ny < 0 || ny > l || dist[nx][ny])
+                        continue;
+                    dist[nx][ny] = s;
+                    if(maps[nx][ny] == -1)
+                        next.push_back(make_pair(nx, ny));
+                    else
+                        g[i][maps[nx][ny]] = s - 1;
+                }
+            swap(cur, next);
+        }
+    }
+    int uses[102] = {};
+    for(int i = 0; i < n + 2; ++i)
+    {
+        int next = -1;
+        for(int j = 0; j < n + 2; ++j)
+            if(!uses[j] && (next == -1 || t[j] < t[next]))
+                next = j;
+        uses[next] = 1;
+        //cout << i << ' ' << next << ' ' << t[next] << endl;
+        for(int j = 0; j < n + 2; ++j)
+            if(g[next][j] && !uses[j])
+            {
+                double speed;
+                double nt = get_t(real_speed[next], max_speed[j], g[next][j], speed);
+                if(t[j] > t[next] + nt)
+                {
+                    //cout << '\t' << next << ' ' << j << ' ' << nt << ' ' << speed << endl;
+                    t[j] = t[next] + nt;
+                    real_speed[j] = speed;
+                }
+            }
+    }
+    printf("%0.9lf\n", t[n + 1]);
+    /*for(int i = 0; i < n + 2; ++i)
+    {
+        for(int j = 0; j < n + 2; ++j)
+            printf("%d ", g[i][j]);
+        cout << endl;
+    }*/
+    return 0;
+} 

@@ -1,0 +1,181 @@
+#include<iostream>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+#include<cmath>
+#include<queue>
+#include<set>
+#include<stack>
+#include<map>
+#include<vector>
+#include<bitset>
+#define fi first
+#define se second
+#define pb push_back
+#define mk make_pair
+using namespace std;
+typedef long long ll;
+typedef unsigned long long ull;
+int read()
+{
+    char ch=getchar();int x=0,f=1;
+    while(ch<'0'||ch>'9')
+    {
+        if(ch=='-') f=-1;
+        ch=getchar();
+    }
+    x=ch-'0';
+    while(1)
+    {
+        ch=getchar();
+        if(ch<'0'||ch>'9') break;
+        x=x*10+ch-'0';
+    }
+    return x*f;
+}
+const int maxn=500100;
+set<pair<int,int> >s;
+set<pair<int,int> > :: iterator it;
+int n,m,a[maxn],f[maxn],son[maxn][2],Max[maxn],rev[maxn],w[maxn],top,u[maxn],v[maxn],d[maxn],size[maxn],sum[maxn],cnt;
+int L(int x) {return son[x][0];}
+int R(int x) {return son[x][1];}
+bool ok(int x)
+{
+    return L(f[x])==x||R(f[x])==x;
+}
+void update(int x)
+{
+    Max[x]=x;size[x]=(x<=n);
+    if(a[Max[L(x)]]>a[Max[x]]) Max[x]=Max[L(x)];
+    if(a[Max[R(x)]]>a[Max[x]]) Max[x]=Max[R(x)];
+    size[x]+=size[L(x)]+size[R(x)]+sum[x];
+}
+void rot(int x)
+{
+    swap(son[x][0],son[x][1]);
+    rev[x]^=1;
+}
+void push(int x)
+{
+    if(!rev[x]) return;
+    rot(L(x));rot(R(x));
+    rev[x]=0;
+}
+void rotate(int x)
+{
+    int fa=f[x],ff=f[fa],s,k=0;
+    if(L(fa)==x) k=1;
+    s=son[x][k],f[x]=ff;
+    f[fa]=x,son[x][k]=fa,f[s]=fa,son[fa][k^1]=s;
+    if(L(ff)==fa) son[ff][0]=x;
+    else if(R(ff)==fa) son[ff][1]=x;
+    update(fa),update(x);
+}
+void splay(int x)
+{
+    top=0;
+    for(int i=x;i;i=f[i])
+    {
+        w[++top]=i;
+        if(!ok(i)) break;
+    }
+    for(int i=top;i>=1;i--)
+        push(w[i]);
+    while(ok(x)) rotate(x);
+}
+int access(int x)
+{
+    int v=0;
+    while(x)
+    {
+        splay(x);
+        sum[x]+=size[R(x)];
+        sum[x]-=size[v];
+        son[x][1]=v;
+        update(x);
+        v=x,x=f[x];
+    }
+    return v;
+}
+void link(int x,int y)
+{
+    access(x),splay(x),rot(x);
+    splay(x);
+    f[x]=y;sum[y]+=size[x];
+}
+void cut(int x,int y)
+{
+    access(x),splay(x),rot(x);
+    access(y),splay(x);
+    son[x][1]=f[y]=0;update(x);
+}
+int path(int x,int y)
+{
+    access(x),splay(x),rot(x);
+    access(y);splay(x);
+    return Max[x];
+}
+int find(int x)
+{
+    access(x);splay(x);
+    while(L(x)) x=L(x);
+    return x;
+}
+int check(int t)
+{
+    access(t),splay(t),rot(t);
+    return size[t];
+}
+void Link(int t)
+{
+    link(u[t],t+n);link(v[t],t+n);
+    s.insert(mk(-a[t+n],t+n));
+}
+void Cut(int t)
+{
+    cut(u[t],t+n);cut(v[t],t+n);
+    s.erase(mk(-a[t+n],t+n));
+}
+bool solve(int x)
+{
+    Cut(x);
+    if((check(u[x])&1)&&(check(v[x])&1))    {Link(x);return false;}
+    return true;
+}
+void insert(int t)
+{
+    int zlr; a[t+n]=d[t];
+    if(find(u[t])!=find(v[t]))
+    {
+        if((check(u[t])&1)&&(check(v[t])&1)) cnt-=2;
+        Link(t);
+      }
+    else
+    {
+        zlr=path(u[t],v[t])-n;
+        if(d[zlr]>d[t])
+        Cut(zlr),Link(t);
+    }
+    if(cnt){ printf("-1\n"); return ;}
+    while(s.begin()!=s.end())
+    {
+        zlr = (*(s.begin())).second-n;
+        if(!solve(zlr)) break;
+    }
+    zlr=-(*(s.begin())).first;
+    printf("%d\n",zlr);
+}
+int main()
+{
+  //  freopen("E.in","r",stdin);
+  //  freopen("E.out","w",stdout);
+    n=read(),m=read();cnt=n;
+    for(int i=1;i<=n;i++)
+        size[i]=1;
+    for(int i=1;i<=m;i++)
+        u[i]=read(),v[i]=read(),d[i]=read(),insert(i);
+  //  fclose(stdin);
+   // fclose(stdout);
+    return 0;
+}

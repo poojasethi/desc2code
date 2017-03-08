@@ -1,0 +1,114 @@
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <vector>
+#include <set>
+
+using namespace std;
+
+typedef pair<int,int> pii;
+typedef long long ll;
+
+int MinDivi[111111];
+int Prime[111111];
+int PCnt = 0;
+
+int era(int N)
+{
+	for(int i = 2;i <= N;i++)
+	{
+		if(!MinDivi[i])
+		{
+			Prime[PCnt++] = i;
+			MinDivi[i] = i;
+		}
+		for(int j = 0;j < PCnt && Prime[j] <= MinDivi[i] && i*Prime[j] <= N;j++)
+		{
+			MinDivi[i*Prime[j]] = Prime[j];
+		}
+	}
+	return 0;
+}
+
+int A[111111];
+vector<pii> ofFactor[111111];
+vector<int> ofMaximal[111111][17];
+vector<int> ofAppear[111111];
+
+inline int __builtin_clz(unsigned int x)
+{
+	for(int i = 31;i >= 0;i--) if(x & (1U<<i)) return 31-i;
+	return 32;
+}
+
+int queryMaximal(int g,int l,int r)
+{
+	// convert
+	l = lower_bound(ofFactor[g].begin(),ofFactor[g].end(),pii(l,-1))-ofFactor[g].begin();
+	r = upper_bound(ofFactor[g].begin(),ofFactor[g].end(),pii(r,~0U>>1))-ofFactor[g].begin()-1;
+	if(l > r) return -1;
+
+	int half = 31-__builtin_clz(r-l+1);
+	return max(ofMaximal[g][half][l],ofMaximal[g][half][r-(1<<half)+1]);
+}
+
+int main(void)
+{
+	era(100233);
+
+	int N = 0;
+	int M = 0;
+	scanf("%d %d",&N,&M);
+	for(int i = 0;i < N;i++) scanf("%d",&A[i]);
+
+	for(int i = 0;i < N;i++)
+	{
+		int x = A[i];
+		ofAppear[x].push_back(i);
+		while(x != 1)
+		{
+			int t = MinDivi[x];
+			while(x % t == 0) x /= t;
+			ofFactor[t].push_back(pii(i,A[i]));
+		}
+	}
+
+	for(int i = 2;i < 100233;i++)
+	{
+		if(MinDivi[i] != i) continue;
+
+		int cnt = ofFactor[i].size();
+		for(int j = 0;j < 17;j++) ofMaximal[i][j].resize(cnt);
+		for(int j = 0;j < cnt;j++) ofMaximal[i][0][j] = ofFactor[i][j].second;
+		for(int p = 1;p < 17;p++)
+		{
+			for(int j = 0;j < cnt;j++)
+			{
+				if(j+(1<<(p-1)) < cnt) ofMaximal[i][p][j] = max(ofMaximal[i][p-1][j],ofMaximal[i][p-1][j+(1<<(p-1))]);
+				else ofMaximal[i][p][j] = ofMaximal[i][p-1][j];
+			}
+		}
+	}
+
+	while(M--)
+	{
+		int G = 0;
+		int x = 0;
+		int y = 0;
+		scanf("%d %d %d",&G,&x,&y); x--; y--;
+
+		int ans = -1;
+		while(G != 1)
+		{
+			int t = MinDivi[G];
+			while(G % t == 0) G /= t;
+			ans = max(ans,queryMaximal(t,x,y));
+		}
+		int cnt = -1;
+		if(ans != -1) cnt = upper_bound(ofAppear[ans].begin(),ofAppear[ans].end(),y)-lower_bound(ofAppear[ans].begin(),ofAppear[ans].end(),x);
+		printf("%d %d\n",ans,cnt);
+	}
+	while(getchar() != EOF);
+	return 0;
+}
+

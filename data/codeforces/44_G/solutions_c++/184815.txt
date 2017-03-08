@@ -1,0 +1,211 @@
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#include <map>
+#include <iostream>
+#include <cmath>
+#include <set>
+#include <sstream>
+#include <cstring>
+#include <queue>
+#include <stack>
+
+#define EPS 1e-10
+#define EQ(a,b) (abs(b)<EPS?abs(a-b)<EPS:abs(a/b-1)<EPS)
+
+using namespace std;
+
+struct Node
+{
+	int val;
+	int qP;
+	struct Node *p1, *p2, *p3, *p4, *par;
+};
+
+const int base=(1<<24);
+Node *root;
+
+struct Data
+{
+	int x1, y1, x2, y2, z, ind;
+	bool operator < (const Data &a) const
+	{
+		return z<a.z;
+	}
+};
+
+int n;
+Data data[100000];
+int ans[100000];
+queue <int> q[99999];
+int qN;
+int m;
+
+void init(Node *tar, Node *par)
+{       
+	tar->val=tar->qP=-1;
+	tar->p1=tar->p2=tar->p3=tar->p4=NULL;
+	tar->par=par;
+	return;
+}
+
+void insert(Node *cur, int x1, int x2, int y1, int y2, int tx, int ty, int tar);
+void getVal(Node *cur, int x1, int x2, int y1, int y2, int tsx, int tex, int tsy, int tey);
+void remove(Node *tar);
+
+Node *trash;
+
+Node* getLeaf(int val, Node *cur);
+
+int g_val;
+Node *g_node;
+
+int main(void)
+{
+	trash=(Node*)malloc(sizeof(Node));
+	init(trash, NULL);
+
+	scanf("%d", &n);
+	for(int i=0;i<n;i++)
+	{
+		data[i].ind=i;
+		scanf("%d %d %d %d %d", &data[i].x1, &data[i].x2, &data[i].y1, &data[i].y2, &data[i].z);
+	}
+
+	sort(data, data+n);
+
+	root=(Node*)malloc(sizeof(Node));
+	init(root, NULL);
+
+	scanf("%d", &m);
+	for(int i=0;i<m;i++)
+	{
+		int x, y;
+		scanf("%d %d", &x, &y);
+		insert(root, 0, base, 0, base, x, y, i+1);
+	}
+
+	for(int i=0;i<n;i++)
+	{
+		g_val=m+1;
+		g_node=NULL;
+		getVal(root, 0, base, 0, base, data[i].x1, data[i].x2+1, data[i].y1, data[i].y2+1);
+
+		if(g_val<m+1)
+		{
+			ans[g_val-1]=data[i].ind+1;
+			remove(getLeaf(g_val, g_node));
+		}
+	}
+
+	for(int i=0;i<m;i++) printf("%d\n", ans[i]);
+
+	return 0;
+}
+
+void remove(Node *tar)
+{
+	int next=m+1;
+	if(tar->qP!=-1 && q[tar->qP].size())
+	{
+		next=q[tar->qP].front();
+		q[tar->qP].pop();
+	}
+
+	while(tar)
+	{
+		if(tar->p1) next=min(next, tar->p1->val);
+		if(tar->p2) next=min(next, tar->p2->val);
+		if(tar->p3) next=min(next, tar->p3->val);
+		if(tar->p4) next=min(next, tar->p4->val);
+
+		tar->val=next;
+		tar=tar->par;
+	}
+
+	return;
+}
+
+Node* getLeaf(int val, Node *cur)
+{
+	if(!cur->p1 && !cur->p2 && !cur->p3 && !cur->p4) return cur;
+	if(cur->p1 && cur->p1->val==val) return getLeaf(val, cur->p1);
+	if(cur->p2 && cur->p2->val==val) return getLeaf(val, cur->p2);
+	if(cur->p3 && cur->p3->val==val) return getLeaf(val, cur->p3);
+	if(cur->p4 && cur->p4->val==val) return getLeaf(val, cur->p4);
+}
+
+void getVal(Node *cur, int x1, int x2, int y1, int y2, int tsx, int tex, int tsy, int tey)
+{
+	if(x1>=x2 || y1>=y2 || tsx>=tex || tsy>=tey) return;
+	if(x1>=tex || tsx>=x2 || y1>=tey || tsy>=y2) return;
+	if(x1==tsx && x2==tex && y1==tsy && y2==tey) 
+	{
+		if(cur->val<g_val) { g_val=cur->val; g_node=cur; }
+		return;
+	}
+
+	int hx=(x1+x2)/2, hy=(y1+y2)/2;
+	if (cur->p1) getVal(cur->p1, hx, x2, hy, y2, max(hx, tsx), tex, max(hy, tsy), tey);
+	if (cur->p2) getVal(cur->p2, x1, hx, hy, y2, tsx, min(hx, tex), max(hy, tsy), tey);
+	if (cur->p3) getVal(cur->p3, x1, hx, y1, hy, tsx, min(hx, tex), tsy, min(hy, tey));
+	if (cur->p4) getVal(cur->p4, hx, x2, y1, hy, max(hx, tsx), tex, tsy, min(hy, tey));
+
+	return;
+}
+
+void insert(Node *cur, int x1, int x2, int y1, int y2, int tx, int ty, int tar)
+{
+	if(cur->val==-1) cur->val=tar;
+	else
+	{
+		if(x1+1==x2 && y1+1==y2)
+		{
+			if(cur->qP==-1) cur->qP=qN++;
+			q[cur->qP].push(tar);
+		}
+	}
+
+	if(x1+1==x2 && y1+1==y2) return;
+
+	int hx=(x1+x2)/2;
+	int hy=(y1+y2)/2;
+	if(tx>=hx && ty>=hy)
+	{
+		if(cur->p1==NULL) 
+		{
+			cur->p1=(Node*)malloc(sizeof(Node));
+			init(cur->p1, cur);
+		}
+		insert(cur->p1, hx, x2, hy, y2, tx, ty, tar);
+	}
+	else if(tx<hx && ty>=hy)
+	{
+		if(cur->p2==NULL) 
+		{
+			cur->p2=(Node*)malloc(sizeof(Node));
+			init(cur->p2, cur);
+		}
+		insert(cur->p2, x1, hx, hy, y2, tx, ty, tar);
+	}
+	else if(tx<hx && ty<hy)
+	{
+		if(cur->p3==NULL) 
+		{
+			cur->p3=(Node*)malloc(sizeof(Node));
+			init(cur->p3, cur);
+		}
+		insert(cur->p3, x1, hx, y1, hy, tx, ty, tar);
+	}
+	else if(tx>=hx && ty<hy)
+	{
+		if(cur->p4==NULL) 
+		{
+			cur->p4=(Node*)malloc(sizeof(Node));
+			init(cur->p4, cur);
+		}
+		insert(cur->p4, hx, x2, y1, hy, tx, ty, tar);
+	}
+
+	return;
+} 

@@ -1,0 +1,128 @@
+#include <map>
+#include <set>
+#include <cmath>
+#include <stack>
+#include <queue>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <sstream>
+#include <stdio.h>
+#include <string.h>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+#define li       	long long int
+#define rep(i,to)	for(li i=0;i<((li)(to));i++)
+#define pb       	push_back
+#define sz(v)    	((li)v.size())
+#define bit(n)   	(1ll<<(li)(n))
+
+
+
+//  UNION_N
+
+#define UNION_N 100005
+li union_parent[UNION_N];
+void union_init(){
+	rep(i,UNION_N) union_parent[i]=i;
+}
+li union_find(li a){
+	if(union_parent[a]==a) return a;
+	return union_parent[a]=union_find(union_parent[a]);
+}
+void union_union(li a,li b){
+	union_parent[union_find(a)]=union_find(b);
+	return ;
+}
+
+#define INF (bit(60)/MAX)
+#define MAX UNION_N
+vector<pair<li,li> > E[MAX];
+vector<pair<li,pair<li,li> > > edges;
+li parent2[MAX][17];
+li maxi[MAX][17];
+li depth[MAX];
+li kruskal(){
+	li res=0;
+	sort(edges.begin(),edges.end());
+	rep(i,sz(edges)){
+		li a=edges[i].second.first;
+		li b=edges[i].second.second;
+		if(union_find(a)!=union_find(b)){
+			union_union(a,b);
+			res+=edges[i].first;
+			E[a].pb(make_pair(b,edges[i].first));
+			E[b].pb(make_pair(a,edges[i].first));
+		}
+	}
+	return res;
+}
+
+void recur(li pos=0,li d=0,li parent=-1){
+	depth[pos]=d;
+	rep(i,17){
+		if(i==0) parent2[pos][i]=parent;
+		else parent2[pos][i]=parent2[parent2[pos][i-1]][i-1];
+		if(parent2[pos][i]==-1) break;
+		if(i) maxi[pos][i]=max(maxi[pos][i-1],maxi[parent2[pos][i-1]][i-1]);
+	}
+	rep(i,sz(E[pos]))if(E[pos][i].first!=parent){
+		maxi[E[pos][i].first][0]=E[pos][i].second;
+		recur(E[pos][i].first,d+1,pos);
+	}
+}
+
+li cal(li a,li b){
+	li pos0=a,pos1=b;
+	li d=min(depth[pos0],depth[pos1]);
+	li tmp;
+	tmp=depth[pos0]-d;
+	rep(i,17)if(tmp&bit(i)) pos0=parent2[pos0][i];
+	tmp=depth[pos1]-d;
+	rep(i,17)if(tmp&bit(i)) pos1=parent2[pos1][i];
+	for(li i=17-1;0<=i;i--)if(parent2[pos0][i]!=parent2[pos1][i]){
+		pos0=parent2[pos0][i];
+		pos1=parent2[pos1][i];
+	}
+	if(pos0!=pos1){
+		pos0=parent2[pos0][0];
+		pos1=parent2[pos1][0];
+	}
+	d=depth[pos0];
+	li res=0;
+	tmp=depth[a]-d;
+	for(li i=17-1;0<=i;i--)if(tmp&bit(i)){
+		res=max(res,maxi[a][i]);
+		a=parent2[a][i];
+	}
+	tmp=depth[b]-d;
+	for(li i=17-1;0<=i;i--)if(tmp&bit(i)){
+		res=max(res,maxi[b][i]);
+		b=parent2[b][i];
+	}
+	return res;
+}
+		
+int main(){
+	rep(i,MAX)rep(j,17) parent2[i][j]=-1;
+	union_init();
+	li n,m,k;
+	scanf("%I64d%I64d",&n,&m);
+	rep(i,n-1) edges.pb(make_pair(INF,make_pair(i,i+1)));
+	rep(i,m){
+		li a,b,c;
+		scanf("%I64d%I64d%I64d",&a,&b,&c);
+		edges.pb(make_pair(c,make_pair(a-1,b-1)));
+	}
+	li sum=kruskal();
+	recur();
+	scanf("%I64d",&k);
+	rep(j,k){
+		li a,b;
+		scanf("%I64d%I64d",&a,&b);
+		li tmp=cal(a-1,b-1);
+		if(INF<=sum-tmp) cout<<"-1"<<endl;
+		else cout<<sum-tmp<<endl;
+	}
+}

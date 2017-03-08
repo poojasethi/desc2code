@@ -1,0 +1,144 @@
+/*
+ID:huangta3
+PROG:
+LANG:C++
+*/
+#include <iostream>
+#include <cstring>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cmath>
+#include <list>
+#include <queue>
+#include <vector>
+#include <ctime>
+#include <set>
+#include <bitset>
+#include <deque>
+#include <fstream>
+#include <stack>
+#include <map>
+#include <utility>
+#include <cassert>
+#include <string>
+#include <iterator>
+#include <cctype>
+using namespace std;
+const int maxn=600,L=4;
+const double eps=1e-8;
+int T,n,tot=0;
+double sum;
+inline int sig(double x){return fabs(x)<=eps?0:(x>eps?1:-1);}
+struct Tpoint
+{
+    double x,y;
+    Tpoint(){}
+    Tpoint(double _x,double _y){x=_x,y=_y;}
+    inline Tpoint operator +(const Tpoint &b)const{return Tpoint(x+b.x,y+b.y);}
+    inline Tpoint operator -(const Tpoint &b)const{return Tpoint(x-b.x,y-b.y);}
+    inline double operator *(const Tpoint &b)const{return x*b.y-y*b.x;}
+    inline double operator ^(const Tpoint &b)const{return x*b.x+y*b.y;}
+    inline Tpoint operator *(double a)const{return Tpoint(x*a,y*a);}
+}p[maxn][L];
+struct data
+{
+    double rate;int bracket;
+    data(){}
+    data(double _r,int _b){rate=_r,bracket=_b;}
+    bool operator <(const data &b)const{return rate<b.rate||(sig(rate-b.rate)==0&&bracket<b.bracket);}
+}a[maxn*L];
+inline int get()
+{
+    int f=0,v=0;char ch;
+    while(!isdigit(ch=getchar()))if(ch=='-')break;
+    if(ch=='-')f=1;else v=ch-48;
+    while(isdigit(ch=getchar()))v=v*10+ch-48;
+    if(f==1)return -v;else return v;
+}
+inline double getd()
+{
+    double d=0,d2=0,d3=1; char ch; bool flag=0;
+    while(!isdigit(ch=getchar()))if(ch=='-')break;
+    if(ch=='-')flag=true;else d=ch-48;
+	while(isdigit(ch=getchar()))d=d*10+ch-48;
+    if(ch=='.')
+    {
+        while(isdigit(ch=getchar()))d2=d2*10+ch-48,d3=d3*0.1;
+        d+=d3*d2;
+    }
+    if(flag)return -d;else return d;
+}
+
+void init()
+{
+    n=get();
+    for(int i=1;i<=n;i++)
+    { 
+        for(int j=0;j<L;j++)p[i][j].x=getd(),p[i][j].y=getd();
+        for(int j=1;j<L-1;j++)
+        {
+            double area=(p[i][j]-p[i][j-1])*(p[i][j+1]-p[i][j]);
+            int tp=sig(area);
+            if(tp==0)continue;
+            if(tp<0)reverse(p[i],p[i]+L),area*=-1;
+            sum+=area;
+            break;
+        }
+    }
+}
+
+Tpoint intersect(const Tpoint &a,const Tpoint &b,const Tpoint &c,const Tpoint &d)
+{
+    double ta=(b-c)*(a-c),tb=(a-d)*(b-d);
+    Tpoint tp=(d-c)*(ta/(ta+tb))+c;
+    return tp;
+}
+
+void add(Tpoint s,Tpoint t,Tpoint p,int v)
+{
+    double rate=sig(t.x-s.x)?(p.x-s.x)/(t.x-s.x):(p.y-s.y)/(t.y-s.y);
+    a[++tot]=data(rate,v);
+}
+
+double work()
+{
+    double ans=0;
+    for(int i=1;i<=n;i++)
+    {
+        for(int x=0;x<L;x++)
+        {
+            a[tot=1]=data(0,1),a[++tot]=data(1,-1);
+            Tpoint S=p[i][x],T=p[i][x+1==L?0:x+1],ST=T-S;
+            for(int j=1;j<=n;j++)
+            {
+                if(i==j)continue;
+                for(int y=0;y<L;y++)
+                {
+                    int pre=y==0?L-1:y-1,suc=y+1==L?0:y+1;
+                    int p0=sig(ST*(p[j][pre]-S)),p1=sig(ST*(p[j][y]-S)),p2=sig(ST*(p[j][suc]-S));
+                    if(p1*p2<0)add(S,T,intersect(S,T,p[j][y],p[j][suc]),p2);
+                    else if(!p1&&p0*p2<0)add(S,T,p[j][y],p2);
+                    else if(p1==0&&p2==0&&i>j&&sig(ST^(p[j][suc]-p[j][y]))>0)add(S,T,p[j][y],-1),add(S,T,p[j][suc],1);
+                }
+            }
+            sort(a+1,a+1+tot);
+            int cnt=0;double Trate=0,pre=0;
+            for(int j=1;j<=tot;j++)
+            {
+                cnt+=a[j].bracket;
+                if(cnt==0&&a[j].bracket==-1)Trate+=a[j].rate-pre;
+                pre=a[j].rate;
+            }
+            ans+=S*T*Trate;
+        }
+    }
+    return ans/2.;
+}
+
+int main()
+{
+    init();
+    printf("%.10lf\n",sum/work());
+    return 0;
+}

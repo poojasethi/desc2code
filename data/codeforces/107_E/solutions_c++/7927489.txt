@@ -1,0 +1,134 @@
+/**
+ * Copyright (c) 2014 Authors. All rights reserved.
+ * 
+ * FileName: J.cpp
+ * Author: Beiyu Li <sysulby@gmail.com>
+ * Date: 2014-09-23
+ */
+// #include <bits/stdc++.h>
+#include <iostream>
+#include <iomanip>
+#include <string>
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <cctype>
+#include <vector>
+#include <list>
+#include <queue>
+#include <stack>
+#include <set>
+#include <map>
+#include <bitset>
+#include <complex>
+#include <cassert>
+
+using namespace std;
+
+#define REP(i,n) for (int i = 0; i < (n); ++i)
+#define FOR(i,s,t) for (int i = (s); i <= (t); ++i)
+#define FOREACH(i,c) for (__typeof(c.begin()) i = c.begin(); i != c.end(); ++i)
+
+typedef long long LL;
+typedef pair<int, int> Pii;
+
+const int inf = 0x3f3f3f3f;
+const LL infLL = 0x3f3f3f3f3f3f3f3fLL;
+
+const double eps = 1e-8;
+int sgn(double x) { return x < -eps? -1: x > eps; }
+
+typedef complex<double> Point;
+typedef complex<double> Vector;
+#define X real()
+#define Y imag()
+bool zero(Vector v) { return !sgn(v.X) && !sgn(v.Y); }
+double dot(Vector u, Vector v) { return u.X * v.X + u.Y * v.Y; }
+double cross(Vector u, Vector v) { return u.X * v.Y - u.Y * v.X; }
+Vector unit(Vector v) { return v / abs(v); }
+Vector normal(Vector v) { return Vector(-v.Y, v.X); } 
+Vector rotate(Vector v, double a) { return v * polar(1.0, a); }
+Vector proj(Vector u, Vector v) { return v * dot(u, v) / norm(v); }
+Vector reflect(Vector u, Vector v) { return proj(u, v) * 2.0 - u; }
+
+typedef vector<Point> Polygon;
+
+double polygon_area(const Polygon &g)
+{
+        double res = 0;
+        for (int i = 1; i < (int)g.size() - 1; ++i)
+                res += cross(g[i] - g[0], g[i+1] - g[0]);
+        return res / 2;
+}
+
+void polygon_union(Polygon g[], int n, double area[])
+{
+        for (int i = 0; i <= n; ++i) area[i] = 0;
+        for (int u = 0; u < n; ++u)
+                for (int i = 0; i < (int)g[u].size(); ++i) {
+                        vector< pair<double, int> > vec;
+                        Point a = (i? g[u][i-1]: g[u].back()), b = g[u][i];
+                        for (int v = 0; v < n; ++v) if (v != u)
+                                for (int j = 0; j < (int)g[v].size(); ++j) {
+                                        Point c = (j? g[v][j-1]: g[v].back()),
+                                              d = g[v][j];
+                                        int c1 = sgn(cross(b - a, c - a)),
+                                            c2 = sgn(cross(b - a, d - a)),
+                                            d1 = sgn(dot(b - a, d - c));
+                                        if (c1 || c2) {
+                                                if ((c1 ^ c2) >= 0) continue;
+                                                double s1 = cross(d - c, a - c),
+                                                       s2 = cross(d - c, b - c);
+                                                double k = s1 / (s1 - s2);
+                                                int t = (c1 >= 0? 1: -1);
+                                                vec.push_back(make_pair(k, t));
+                                        } else if (u < v && d1 > 0) {
+                                                double k;
+                                                k = ((c - a) / (b - a)).X;
+                                                vec.push_back(make_pair(k, 1));
+                                                k = ((d - a) / (b - a)).X;
+                                                vec.push_back(make_pair(k, -1));
+                                        }
+                                }
+                        vec.push_back(make_pair(0.0, 0));
+                        vec.push_back(make_pair(1.0, 0));
+                        sort(vec.begin(), vec.end());
+                        double s = 0.5 * cross(a, b),
+                               p = min(max(vec[0].first, 0.0), 1.0);
+                        int k = vec[0].second;
+                        for (int j = 1; j < (int)vec.size(); ++j) {
+                                double q = min(max(vec[j].first, 0.0), 1.0);
+                                area[k] += s * (q - p);
+                                p = q;
+                                k += vec[j].second;
+                        }
+                }
+}
+
+const int maxn = 500 + 5;
+
+int n;
+Polygon g[maxn];
+double area[maxn];
+
+int main()
+{
+        scanf("%d", &n);
+        REP(i,n) {
+                REP(j,4) {
+                        int x, y;
+                        scanf("%d%d", &x, &y);
+                        g[i].push_back(Point(x, y));
+                }
+                double tmp = polygon_area(g[i]);
+                if (sgn(tmp) < 0) reverse(g[i].begin(), g[i].end());
+        }
+        polygon_union(g, n, area);
+        double res = 0;
+        FOR(i,1,n) res += (area[i-1] - area[i]) * i;
+        printf("%.10f\n", res / area[0]);
+
+        return 0;
+}
+		 			 		 		 									       	

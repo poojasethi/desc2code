@@ -1,0 +1,233 @@
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+#include <cmath>
+#include <vector>
+
+using namespace std;
+
+#ifdef WIN32
+	#define LL "%I64d"
+#else
+	#define LL "%lld"
+#endif
+
+#ifdef Lightning
+	#define debug(orz...) printf(orz)
+	const int DEBUG = 1;
+#else
+	#define debug(...)
+	const int DEBUG = 0;
+#endif
+
+#define file_able if (0)
+#define setfile(pro_name) freopen(pro_name".in", "r", stdin), freopen(pro_name".out", "w", stdout)
+#define closefile() fclose(stdin), fclose(stdout)
+
+#define cmax(_x, _y) (_x < (_y) ? _x = _y : 0)
+#define cmin(_x, _y) (_x > (_y) ? _x = _y : 0)
+#define gmax(_x, _y) ((_x) > (_y) ? (_x) : (_y))
+#define gmin(_x, _y) ((_x) < (_y) ? (_x) : (_y))
+
+namespace defs
+{
+	// #define getc() (S == T && (T = (S = B) + fread(B, 1, 1 << 15, stdin), S == T) ? EOF : *S++)
+	
+	// char B[1 << 15], *S = B, *T = B;
+	
+	#define getc() getchar()
+
+	template <class Type> Type read()
+	{
+		Type aa;
+		int bb = 1, ch;
+		while (ch = getc(), (ch < '0' || ch > '9') && ch != '-');
+		ch == '-' ? aa = 0, bb = -1 : aa = ch - '0';
+		while (ch = getc(), ch >= '0' && ch <= '9') aa = aa * 10 + ch - '0';
+		return bb == 1 ? aa : -aa;
+	}
+
+	const unsigned int rand_x = 11309;
+	const unsigned int rand_y = 1000000019;
+	
+	unsigned int rand_cur;
+
+	unsigned int rand_int()
+	{
+		return rand_cur = rand_cur * rand_x + rand_y;
+	}
+
+	const int inf = 1071026353;
+	const int mod = 1000000007;
+	const int modx = 998244353;
+}
+
+namespace geo
+{
+	struct P
+	{
+		long long x, y;
+		
+		P operator -(const P &p) const
+		{
+			return (P) {x - p.x, y - p.y};
+		}
+		
+		P operator +(const P &p) const
+		{
+			return (P) {x + p.x, y + p.y};
+		}
+		
+		long long operator *(const P &p) const
+		{
+			return x * p.y - y * p.x;
+		}
+		
+		bool operator <(const P &p) const
+		{
+			return x < p.x || (x == p.x && y < p.y);
+		}
+	};
+	
+	P tmp[300010];
+	
+	void gethull(int &n, P *p)
+	{
+		sort(p + 1, p + n + 1);
+		int top = 0;
+		for (int i = 1; i <= n; ++i)
+		{
+			while (top > 1 && (tmp[top] - tmp[top - 1]) * (p[i] - tmp[top]) >= 0) --top;
+			tmp[++top] = p[i];
+		}
+		for (int i = 1; i <= top; ++i)
+		{	
+			p[i] = tmp[i];
+		}
+		n = top;
+	}
+	
+	void query(int n, P *p, int q, long long &ans)
+	{
+		int l = 1, r = n;
+		while (l + 2 < r)
+		{
+			int mid = l + r >> 1;
+			long long z = p[mid].y + q * p[mid].x;
+			long long z2 = p[mid + 1].y + q * p[mid + 1].x;
+			if (z < z2) l = mid + 1;
+			else r = mid;
+		}
+		for (int i = l; i <= r; ++i)
+		{
+			long long z = p[i].y + q * p[i].x;
+			cmax(ans, z);
+		}
+	}
+}
+
+namespace st
+{
+	geo::P p[300010], tmp[300010];
+	
+	vector<int> node[1200000];
+	
+	int que[300010], vis[300010];
+	long long ans[300010];
+	
+	void insert(int i, int l, int r, int il, int ir, int _p)
+	{
+		if (il <= l && ir >= r)
+		{
+			node[i].push_back(_p);
+			return;
+		}
+		int mid = l + r >> 1;
+		if (il <= mid) insert(i << 1, l, mid, il, ir, _p);
+		if (ir > mid) insert(i << 1 | 1, mid + 1, r, il, ir, _p);
+	}
+	
+	void solve(int i, int l, int r)
+	{
+		int siz = node[i].size();
+		for (int j = 0; j < siz; ++j)
+			tmp[j + 1] = p[node[i][j]];
+		geo::gethull(siz, tmp);
+		for (int j = l; j <= r; ++j)
+			if (vis[j]) geo::query(siz, tmp, que[j], ans[j]);
+		if (l == r) return;
+		int mid = l + r >> 1;
+		solve(i << 1, l, mid);
+		solve(i << 1 | 1, mid + 1, r);
+	}
+}
+
+namespace lightningwork
+{
+	// my space
+
+	int (*read)() = defs::read<int>;
+
+	struct pair
+	{
+		int x, y, v;
+	};
+
+	pair p[300010];
+
+	void work()
+	{
+		int n = read();
+		for (int i = 1; i <= n; ++i)
+		{
+			int opt = read();
+			if (opt == 1)
+			{
+				p[i].x = read();
+				p[i].y = read();
+				p[i].v = 1;
+			} else if (opt == 2)
+			{
+				int l = read();
+				st::p[l].x = p[l].x;
+				st::p[l].y = p[l].y;
+				st::insert(1, 1, n, l, i, l);
+				p[l].v = 0;
+			} else
+			{
+				st::que[i] = read();
+				st::vis[i] = 1;
+			}
+		}
+		for (int i = 1; i <= n; ++i)
+		{
+			if (p[i].v)
+			{
+				st::p[i].x = p[i].x;
+				st::p[i].y = p[i].y;
+				st::insert(1, 1, n, i, n, i);
+			}
+		}
+		memset(st::ans, 180, sizeof st::ans);
+		st::solve(1, 1, n);
+		for (int i = 1; i <= n; ++i)
+		{
+			if (st::vis[i])
+			{
+				if (st::ans[i] == st::ans[0])
+					puts("EMPTY SET");
+				else printf("%lld\n", st::ans[i]);
+			}
+		}
+	}
+}
+
+int main()
+{
+	file_able setfile("work");
+	lightningwork::work();
+	file_able closefile();
+	return 0;
+}
+

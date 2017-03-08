@@ -1,0 +1,245 @@
+#include <cstdio>
+
+#define N 100100
+#define SZ (N << 1)
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
+
+int R;
+int n;
+int head[N], next[N], to[N];
+
+int cur[N], p[N];
+int arr[SZ], cnt;
+int dp[SZ];
+
+void DFT(int rt) {
+	for (int i = 1; i <= n; i ++) cur[i] = head[i];
+	arr[cnt = 1] = rt;
+	for (int x = rt, v, i; x; ) {
+		i = cur[x], cur[x] = next[i];
+		if (!i) arr[++ cnt] = x + n, x = p[x];			//finish time
+		else p[v = to[i]] = x, arr[++ cnt] = x = v;		//discover time
+	}
+}
+
+int Q[N], h, t;
+
+void DP(int rt) {
+	Q[h = t = 1] = rt;
+	while (h <= t) {
+		int u = Q[h ++];
+		dp[u] = dp[u + n] = dp[p[u]] + 1;
+		for (int i = head[u]; i; i = next[i]) {
+			int v = to[i];
+			Q[++ t] = v;
+		}
+	}
+}
+
+inline void AddEdge(int s, int e, int m) {
+	to[m] = e;
+	next[m] = head[s];
+	head[s] = m;
+}
+
+int S2T[SZ], T2S[SZ];
+int size[SZ];
+int son[SZ][2], pa[SZ];
+int addv[SZ], val[SZ], min[SZ], max[SZ];
+int root, tot;
+
+int new_node(int pos) {
+	size[++ tot] = 1;
+	son[tot][0] = son[tot][1] = pa[tot] = 0;
+	addv[tot] = 0;
+	val[tot] = min[tot] = max[tot] = dp[arr[pos]];
+
+	S2T[tot] = arr[pos];
+	T2S[arr[pos]] = tot;
+
+	return tot;
+}
+
+template <class T> inline void chkmin(T &a, T b) { if (a > b) a = b; }
+template <class T> inline void chkmax(T &a, T b) { if (a < b) a = b; }
+
+void push_up(int t) {
+	size[t] = 1;
+	min[t] = max[t] = val[t];
+
+	if (son[t][0]) {
+		size[t] += size[son[t][0]];
+		chkmin(min[t], min[son[t][0]]);
+		chkmax(max[t], max[son[t][0]]);
+	}
+	if (son[t][1]) {
+		size[t] += size[son[t][1]];
+		chkmin(min[t], min[son[t][1]]);
+		chkmax(max[t], max[son[t][1]]);
+	}
+}
+
+void updateAdd(int t, int v) {
+	if (t) {
+		val[t] += v;
+		min[t] += v;
+		max[t] += v;
+		addv[t] += v;
+	}
+}
+
+inline void Set(int p, int x, int d) {
+	if (p) son[p][d] = x;
+	if (x) pa[x] = p;
+}
+
+inline int Dir(int x) { return x == son[pa[x]][1]; }
+
+void push_down(int t) {
+	if (addv[t]) {
+		updateAdd(son[t][0], addv[t]);
+		updateAdd(son[t][1], addv[t]);
+		addv[t] = 0;
+	}
+}
+
+int build(int l, int r) {
+	if (l > r) return 0;
+	int m = (l + r) >> 1;
+	int t = new_node(m);
+	Set(t, build(l, m - 1), 0);
+	Set(t, build(m + 1, r), 1);
+	push_up(t);
+	return t;
+}
+
+void rot(int x) {
+	int p = pa[x];
+
+	push_down(p);
+	push_down(x);
+
+	bool d = Dir(x);
+	Set(p, son[x][!d], d);
+	Set(pa[p], x, Dir(p));
+	Set(x, p, !d);
+
+	push_up(p);
+	if (p == root) root = x;
+}
+
+void splay(int x, int p = 0) {
+	while (pa[x] != p) {
+		if (pa[pa[x]] == p) rot(x);
+		else {
+			Dir(x) == Dir(pa[x]) ? rot(pa[x]) : rot(x);
+			rot(x);
+		}
+	}
+	push_up(x);
+}
+
+int pred(int node) {
+	splay(node);
+	for (node = son[node][0]; son[node][1]; node = son[node][1]);
+	return node;
+}
+
+int succ(int node) {
+	splay(node);
+	for (node = son[node][1]; son[node][0]; node = son[node][0]);
+	return node;
+}
+
+int Find(int rt, int h) {
+	while (1) {
+		push_down(rt);
+		int ls = son[rt][0], rs = son[rt][1];
+		if (min[rs] <= h && h <= max[rs]) rt = son[rt][1];
+		else if (val[rt] == h) return rt;
+		else rt = son[rt][0];
+	}
+	return -1;
+}
+
+int dtime(int u) {
+	u = T2S[u];
+	splay(u);
+	return size[son[root][0]] + 1;
+}
+
+int updateP(int x, int h) {
+	int st = T2S[x], en = T2S[x + n];
+	splay(st);
+	int ph = val[st] - h;
+	int newP = Find(son[st][0], ph);
+	int pre = pred(st), nxt = succ(en);
+	splay(pre), splay(nxt, root);
+	int fuck = son[nxt][0];
+	Set(nxt, 0, 0);
+	push_up(nxt), push_up(root);
+	newP = T2S[S2T[newP] + n];
+	int P = pred(newP);
+	splay(P), splay(newP, root);
+	Set(newP, fuck, 0);
+	updateAdd(fuck, 1 - h);
+	push_up(newP), push_up(root);
+}
+
+int Dist(int u, int v) {
+	int su = dtime(u), eu = dtime(u + n);
+	int sv = dtime(v), ev = dtime(v + n);
+
+	if (su > sv) {
+		u ^= v ^= u ^= v;
+		su ^= sv ^= su ^= sv;
+		eu ^= ev ^= eu ^= ev;
+	}
+	int x = T2S[u], y = T2S[v + n];
+	if (eu >= ev) return val[y] - val[x];
+
+	splay(x), splay(y, root);
+	int LCAdp = min[son[y][0]] - 1;
+	return val[x] + val[y] - 2 * LCAdp;
+}
+
+int chd[N];
+
+int main() {
+	int q;
+//	freopen ("e.in", "r", stdin);
+//	freopen ("out.txt", "w", stdout);
+	scanf("%d %d", &n, &q);
+	for (int i = 1, m = 0; i <= n; i ++) {
+		int sz, j;
+		scanf("%d", &sz);
+		for (int j = 1; j <= sz; j ++) scanf("%d", chd + j);
+		for (int j = sz; j; j --) AddEdge(i, chd[j], ++ m);
+	}
+
+	DFT(1);
+	DP(1);
+	arr[0] = 0, arr[cnt + 1] = cnt + 1;
+	dp[0] = dp[cnt + 1] = 0;
+	tot = 0;
+	root = build(0, cnt + 1);
+	while (q --) {
+		int bf;
+		R ++;
+		scanf("%d", &bf);
+		if (bf == 1) {
+			int u, v;
+			scanf("%d %d", &u, &v);
+			printf("%d\n", Dist(u, v));
+		} else if (bf == 2) {
+			int u, h;
+			scanf("%d %d", &u, &h);
+			updateP(u, h);
+		} else {
+			int k;
+			scanf("%d", &k);
+			int node = Find(root, k + 1);
+			printf("%d\n", S2T[node] - n);
+		}
+	}
+}

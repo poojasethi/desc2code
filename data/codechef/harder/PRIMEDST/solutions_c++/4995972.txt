@@ -1,0 +1,109 @@
+#include <algorithm>
+#include <stdio.h>
+#include <vector>
+#define  fi        first
+#define  se        second
+#define  maxn      50001
+#define  pb        push_back
+using	 namespace std;
+typedef  pair<int,int> pi;
+
+int n,p,dc,ans;
+pi cnt[maxn];
+pi sum[maxn];
+bool mark[maxn];
+bool markpr[maxn];
+vector<int>pr;
+vector<int>dist;
+vector<int>adj[maxn];
+
+int query(int x)
+{
+  if(x<=0)          return 0;
+  if(sum[x].se==dc) return sum[x].fi;
+  sum[x]=pi(0,dc);
+  return 0;
+}
+
+void update(int x)
+{
+  if(sum[x].se==dc) sum[x].fi++;
+  else              sum[x]=pi(1,dc);
+}
+
+void dfs3(int node , int dad , int lvl)
+{
+  dist.pb(lvl);
+  int sz=adj[node].size();
+  for(int i=0 ; i<sz ; i++)
+    if(!mark[adj[node][i]] && adj[node][i]!=dad)
+      dfs3(adj[node][i],node,lvl+1);
+}
+
+int dfs2(int node , int dad , int tree)
+{
+  int sz=adj[node].size();
+  for(int i=0 ; i<sz ; i++)
+    if(!mark[adj[node][i]] && adj[node][i]!=dad && cnt[adj[node][i]].fi>tree/2)
+      return dfs2(adj[node][i],node,tree);
+  return node;
+}
+
+int dfs1(int node , int dad)
+{
+  cnt[node]=pi(1,dc);
+  int sz=adj[node].size();
+  for(int i=0 ; i<sz ; i++)
+    if(!mark[adj[node][i]] && adj[node][i]!=dad)
+      cnt[node].fi+=dfs1(adj[node][i],node);
+  return cnt[node].fi;
+}
+
+void dfs(int root)
+{
+  dc++;
+  int tree=dfs1(root,0);
+  root=dfs2(root,0,tree);
+  mark[root]=true;
+  int sz=adj[root].size();
+  for(int i=0 ; i<sz ; i++)
+    if(!mark[adj[root][i]])
+    {
+	  dist.clear();
+	  dfs3(adj[root][i],root,1);
+	  int dsz=dist.size();
+	  for(int j=0 ; j<dsz ; j++)
+	    for(int k=0 ; k<p && pr[k]<tree ; k++)
+	      ans+=query(pr[k]-dist[j]);
+	  for(int j=0 ; j<dsz ; j++)
+	    update(dist[j]);
+	}
+  for(int i=0 ; i<p && pr[i]<tree ; i++)
+    ans+=query(pr[i]);
+  for(int i=0 ; i<sz ; i++)
+    if(!mark[adj[root][i]])
+      dfs(adj[root][i]);
+}
+
+int main()
+{
+  for(int i=2 ; i<maxn ; i++)
+    if(!markpr[i])
+    {
+	  pr.pb(i);
+	  for(int j=i ; j<maxn ; j+=i)
+	    markpr[j]=true;
+	}
+  p=pr.size();
+  scanf("%d",&n);
+  for(int i=1,x,y ; i<n ; i++)
+  {
+    scanf("%d%d",&x,&y);
+    adj[x].pb(y);
+    adj[y].pb(x);
+  }
+  dfs(1);
+  double all=(double)n*(double)(n-1)/(double)2;
+  printf("%.8lf\n",(double)ans/all);
+  return 0;
+}

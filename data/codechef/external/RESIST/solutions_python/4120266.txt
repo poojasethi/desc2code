@@ -1,0 +1,167 @@
+#!/usr/bin/python
+# coding=utf8
+import sys
+import math
+from time import time
+from itertools import permutations, combinations
+import collections
+import functools
+from fractions import gcd, Fraction
+import string
+
+class memoized(object):
+    def __init__(self, func):
+        self.func = func
+        self.cache = {}
+    def __call__(self, *args):
+        if not isinstance(args, collections.Hashable):
+            return self.func(*args)
+        if args in self.cache:
+            return self.cache[args]
+        else:
+            value = self.func(*args)
+            self.cache[args] = value
+            return value
+    def __repr__(self):
+        return self.func.__doc__
+    def __get__(self, obj, objtype):
+        return functools.partial(self.__call__, obj)
+
+
+class timed(object):
+    def __init__(self, func):
+        self.func = func
+    def __call__(self, *args):
+        t1 = time()
+        ret = self.func(*args)
+        dif_time = time() - t1
+        print "%s: returned %s in %f seconds" % (self.func.__name__, ret, dif_time)
+        return ret
+
+
+def comp(f1, f2, *args):
+    t1 = time()
+    r1 = f1(*args)
+    t2 = time()
+    r2 = f2(*args)
+    t3 = time()
+    res = "%5s: %s in %f\n%5s: %s in %f" % (f1.__name__, r1, t2 - t1, f2.__name__, r2, t3 - t2)
+    if r1 != r2:
+        dr = "!! DIFFERENT RESULTS !!"
+        res = dr + "\n" + res + "\n" + dr
+    print res
+
+
+def alg(N, M):
+    # manuel
+
+    res = Fraction(1, 1)
+    for i in xrange(0, N - 1):
+        res = Fraction(1, 1) + res
+        res = Fraction(1, Fraction(1, 1) + Fraction(1, res))
+    return "%d/%d" % (res.numerator % M, res.denominator % M)
+
+
+def alg2(N, M):
+    # manuel
+
+    # R(i+1) = 1 / (1 / (R + 1) + 1/1)
+    # 1/(r+1) + 1/1 = 1/(r+1) + (r+1)/(r+1) = (r+2)/(r+1)
+    # R(i+1) = (r+1)/(r+2)
+
+    num_res, den_res = 1, 1
+    for i in xrange(0, N - 1):
+        num_res += den_res
+        den_res += num_res
+        num_res %= M
+        den_res %= M
+
+    return "%d/%d" % (num_res, den_res)
+
+
+def alg3(N, M):
+    # manuel
+
+    # R(i+1) = 1 / (1 / (R + 1) + 1/1)
+    # 1/(r+1) + 1/1 = 1/(r+1) + (r+1)/(r+1) = (r+2)/(r+1)
+    # R(i+1) = (r+1)/(r+2)
+
+    # Ni = N(i-1) + D(i-1)
+    # Di = Ni + D(i-1)
+
+    # N0 = 1
+    # D0 = 1
+
+    # N1 = 1 + 1 = 2 = 2 * i
+    # D1 = 1 + 1 + 1 = 3 = 3 * i
+
+    # N2 = 1 + 1 + 1 + 1 + 1 = 5
+    # D2 = 5 + 3 = 8
+
+    num_res, den_res = 1, 1
+    for i in xrange(0, N - 1):
+        num_res += den_res
+        den_res += num_res
+        num_res %= M
+        den_res %= M
+
+    return "%d/%d" % (num_res, den_res)
+
+
+def mat_mul(m1, m2, modulo):
+    x = len(m1)
+    y = len(m2[0])
+    result = [list([0] * x) for i in xrange(y)]
+    for i in range(len(m1)):
+        for j in range(len(m2[0])):
+            for k in range(len(m2)):
+                result[i][j] += (m1[i][k] * m2[k][j]) % modulo
+    return result
+
+
+def mat_exp(m, exp, modulo):
+    if exp == 0:
+        return [[1, 0], [0, 1]]
+    elif exp == 1:
+        return m
+    elif exp % 2 == 0:
+        return mat_exp(mat_mul(m, m, modulo), exp / 2, modulo)
+    else:
+        return mat_mul(m, mat_exp(mat_mul(m, m, modulo), (exp - 1) / 2, modulo), modulo)
+
+def alg4(N, M):
+
+    @memoized
+    def fib(n):
+        if n == 0:
+            return 0
+        fib_matrix = [[0, 1], [1, 1]]
+        m = fib_matrix
+        m = mat_exp(m, n - 1, M)
+        #for i in xrange(n - 2):
+        #    m = mat_mul(m, fib_matrix)
+        return m[1]
+
+    f = fib(2*N)
+    return "%d/%d" % (f[0] % M, f[1] % M)
+
+
+def main():
+    data = sys.stdin
+    #comp(alg3, alg4, 1000000, 1073741824)
+    #comp(alg, alg2, 500, 10000000)
+    #for i in xrange(1, 10):
+    #    comp(alg3, alg4, i, 10000)
+    nb = int(data.readline())
+    #a, b = map(int,data.readline().split())
+    for icase in xrange(nb):
+        N, M = map(int, data.readline().split())
+        #lfloat = map(float, data.readline().split())
+        #lstring = data.readline().split()
+        #s= data.readline().strip()
+        res = alg4(N, M)
+        print res
+
+
+if __name__ == "__main__":
+    main()

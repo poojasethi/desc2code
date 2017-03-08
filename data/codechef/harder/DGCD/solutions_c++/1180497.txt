@@ -1,0 +1,270 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <cstdio>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <cstring>
+#include <algorithm>
+#include <set>
+#include <map>
+#include <deque>
+#include <queue>
+#include <vector>
+#include <cmath>
+#include <ctime>
+#include <cassert>
+#include <iomanip>
+
+#pragma comment(linker, "/STACK:150000000")
+using namespace std;
+
+
+typedef long long ll;
+typedef unsigned long long ull;
+
+template<typename T> int size(T & a) {return (int)a.size();}
+template<typename T> T sqr(T a) {return a * a;}
+
+#define pb push_back
+#define mp make_pair
+#define vi vector<int>
+#define vvi vector<vi>
+#define pii pair<int, int>
+#define _(a, b) memset((a), (b), sizeof(a))
+#define REP(i, a, b) for(int i=(a); i<(b); ++i)
+#define REPD(i, a, b) for(int i=(b) - 1; i >= (a); --i)
+#define all(a) a.begin(),a.end()
+
+
+char buf[1<<20];
+const int MAXE = 100000;
+
+int val[MAXE];
+int head[MAXE], to[MAXE], nxt[MAXE];
+int edge;
+int parent[MAXE], pathId[MAXE], depth[MAXE], sum[MAXE], order[MAXE];
+int start[MAXE];
+
+int gcd(int a, int b){
+	if(a<0)return gcd(-a,b);
+	if(b<0)return gcd(a,-b);
+	if(a==0)return b;
+	return gcd(b%a,a);
+}
+struct entry {
+	int l, r, first, last, add, f, tail;
+	bool leaf;
+	entry(int l=0,int r=0,int first=0,int last=0,int add=0, int f=0, bool leaf=false, int tail=0):
+	l(l), r(r), first(first), last(last), add(add), f(f), leaf(leaf), tail(tail){}
+};
+
+
+struct tree {
+	entry* data;
+	int N, dataSize;
+	tree(){
+	}
+	tree(vector<int> v) {
+		dataSize = size(v) * 4 + 10;
+		N=size(v);
+		data = new entry[dataSize];
+		build(0,N-1,v,1);
+	}
+	void build(int l, int r,vector<int> &v,int u) {
+		if(l==r){
+			data[u] = entry(l, r, val[v[l]], val[v[l]], 0, val[v[l]],true,0);
+		} else {
+			build(l, (l + r) / 2, v, 2 * u);
+			build((l + r) / 2 + 1, r, v, 2 * u + 1);
+			data[u] = merge(data[2 * u], data[2 * u + 1]);
+		}
+	}
+	static entry merge(entry l, entry r){
+		return entry(l.l, r.r, l.first, r.last, 0, 
+			gcd(l.f, r.f),false, 
+			gcd(l.tail, gcd(r.tail, r.first - l.last)));
+	}
+	void push (int u) {
+		if (!data[u].leaf) {
+			int by = data[u].add;
+			data[2 * u].add += by;
+			data[2 * u].first += by;
+			data[2 * u].last += by;
+			data[2 * u].f = gcd(data[2 * u].first, data[2 * u].tail);
+		
+			data[2 * u + 1].add += by;
+			data[2 * u + 1].first += by;
+			data[2 * u + 1].last += by;
+			data[2 * u + 1].f = gcd(data[2 * u + 1].first, data[2 * u + 1].tail);
+		}
+		data[u].add=0;
+	}
+	void adding(int l, int r, int u, int by) {
+		push (u);
+		if (data[u].l > r || data[u].r < l || l>r) return;
+		if (l <= data[u].l && data[u].r <= r) {
+			data[u].add += by;
+			data[u].first += by;
+			data[u].last += by;
+			data[u].f = gcd(data[u].first, data[u].tail);
+		} else {
+			adding (l, r, 2 * u, by);
+			adding (l, r, 2 * u + 1, by);
+			data[u] = merge(data[2 * u], data[2 * u + 1]);
+		}
+	}
+	int get_gcd(int l, int r, int u) {
+		push (u);
+		if (data[u].l > r || data[u].r < l || l>r) return 0;
+		if (l <= data[u].l && data[u].r <= r) {
+			return data[u].f;
+		} else {
+			return gcd(get_gcd(l, r, 2 * u),
+				get_gcd(l, r, 2 * u + 1));
+		}
+	}
+};
+struct path {
+	int id;
+	vector<int> down;
+	tree t;
+	path() {}
+	path (int id, vector<int> down) {
+		this->id = id;
+		this->down = down;
+		t = tree(down);
+	}
+};
+
+
+
+
+
+void init() {
+	edge=0;
+	_(head, 255);
+}
+void ae(int u, int v) {
+	to[edge] = v;
+	nxt[edge] = head[u];
+	head[u] = edge++;
+}
+
+
+int degrees(int v, int par){
+	int res = 1;
+	for(int e=head[v];e>=0;e=nxt[e])
+		if (to[e] != par) res += degrees(to[e], v);
+	return sum[v] = res;
+}
+
+path Paths[50000];
+int curId = 0;
+
+void dfs(int v, int par, int depth, path *  p) {
+	::depth[v]=depth;
+	parent[v] = par;
+	if (p == NULL) {
+		p = &Paths[curId ++];
+		p->down.push_back(v);
+		p->id = curId-1;
+		pathId[v] = p->id;
+		order[v] = size(p->down) - 1;
+		start[curId-1] = v;
+	}
+	for(int e=head[v];e>=0;e=nxt[e]){
+		if (to[e]==par)continue;
+		if (sum[to[e]]*2 >= sum[v]) {
+			p->down.push_back(to[e]);
+			pathId[to[e]]=p->id;
+			order[to[e]] = size(p->down)-1;
+			dfs(to[e],v, depth+1, p);
+		} else {
+			dfs(to[e],v, depth+1, NULL);
+		}
+	}
+}
+void buildHL(){
+	degrees(0, 0);
+	dfs(0,0,0,NULL);
+	REP(i, 0, curId)
+		Paths[i] = path (Paths[i].id, Paths[i].down);
+}
+
+void processAdd(int l, int r, int by) {
+	if (depth[l] > depth[r])
+		processAdd(r, l, by);
+	else if (pathId[l] == pathId[r]) {
+		Paths[pathId[l]].t.adding(order[l], order[r], 1, by);
+	} else{
+		int d1 = (start[pathId[l]] == 0 || l == 0 ? -1 : depth[parent[start[pathId[l]]]]);
+		int d2 = (start[pathId[r]] == 0 || r == 0 ? -1 : depth[parent[start[pathId[r]]]]);
+		if (d1 < d2){
+			swap(l, r);
+		}
+		Paths[pathId[l]].t.adding(0, order[l], 1, by);
+		processAdd(parent[start[pathId[l]]], r, by);
+	}
+}
+int processGet(int l, int r) {
+	if (depth[l] > depth[r])
+		return processGet(r, l);
+	else if (pathId[l] == pathId[r]) {
+		return Paths[pathId[l]].t.get_gcd(order[l], order[r], 1);
+	} else{
+		int d1 = (start[pathId[l]] == 0 || l == 0 ? -1 : depth[parent[start[pathId[l]]]]);
+		int d2 = (start[pathId[r]] == 0 || r == 0 ? -1 : depth[parent[start[pathId[r]]]]);
+		if (d1 < d2){
+			swap(l, r);
+		}
+		return gcd(Paths[pathId[l]].t.get_gcd(0, order[l], 1),
+			processGet(parent[start[pathId[l]]], r));
+	}
+}
+
+int main() {
+#ifdef air
+	freopen("input.txt", "r", stdin);
+	freopen("output.txt", "w", stdout);
+#endif
+
+	ios_base::sync_with_stdio(false);	
+	
+	int n;
+	gets(buf);
+	sscanf(buf, "%d", &n);
+	init();
+	REP(i, 0, n-1){
+		int x, y;
+		gets(buf);
+		sscanf(buf, "%d%d", &x, &y);
+		ae(x, y);
+		ae(y, x);
+	}
+	gets(buf);
+	string str(buf);
+	istringstream iss(str);
+	REP(i,0,n){
+		iss >> val[i];
+	}
+	buildHL();
+
+	gets(buf);
+	int q;
+	sscanf(buf, "%d", &q);
+	REP(i, 0 ,q) {
+		gets(buf);
+		int l, r, d;
+		char oper;
+		if (sscanf(buf, "%c%d%d%d", &oper, &l, &r, &d) == 4) {
+			processAdd(l, r, d);
+		} else {
+			sscanf(buf, "%c%d%d", &oper, &l, &r);
+			int res = processGet(l, r);
+			printf("%d\n", res);
+		}
+	}
+#ifdef air
+	printf("\n\nexec time = %.2lf seconds\n", clock() *1.0 / CLOCKS_PER_SEC);
+#endif
+}

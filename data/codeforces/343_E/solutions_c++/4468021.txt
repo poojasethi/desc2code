@@ -1,0 +1,104 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <queue>
+#define FOR(i,s,e) for (int i=(s); i<(e); i++)
+#define FOE(i,s,e) for (int i=(s); i<=(e); i++)
+#define FOD(i,s,e) for (int i=(s)-1; i>=(e); i--)
+#define CLR(a,x) memset(a, x, sizeof(a))
+#define EXP(i,l) for (int i=(l); i; i=qn[i])
+#define N 205
+#define M 2005
+using namespace std;
+
+struct node{
+	int x, s;
+	bool operator < (node const &T) const{return s < T.s;}
+};
+
+int n, m, ed, x, y, z, S, T, V;
+int v[N], g[N], p[N], l[N];
+int qd[M], qn[M], qc[M], qr[M];
+int flow[N][N], Tree[N][N];
+priority_queue<node> q;
+
+void bd(int x, int y, int c){
+	qd[++ed] = y, qn[ed] = l[x], l[x] = ed, qc[ed] = qr[ed] = c;
+}
+
+int ISAP(int x, int y){
+	int mn = V - 1, F = 0, R = y, t;
+	if (x == T) return y;
+	for (int i=l[x]; i; i=qn[i]){
+		if (qc[i] > 0){
+			if (v[x] == v[qd[i]]+1){
+				t = ISAP(qd[i], min(qc[i], R));
+				qc[i] -= t;
+				qc[i^1] += t;
+				R -= t;
+				F += t;
+				if (v[S] >= V) return F;
+				if (!R) break;
+			}
+			mn = min(mn, v[qd[i]]);
+		}
+	}
+	if (!F){
+		g[v[x]]--;
+		if (!g[v[x]]) v[S] = V;
+		v[x] = mn+1;
+		g[v[x]]++;
+	}
+	return F;
+}
+
+int MaxFlow(){
+	FOE(i,1,ed) qc[i] = qr[i];
+	memset(v, 0, sizeof(v));
+	memset(g, 0, sizeof(g));
+	int ret = 0;
+	g[0] = V;
+	while (v[S] < V) ret += ISAP(S, 1<<30);
+	return ret;
+}
+
+void FC(int x){
+	v[x] = 1;
+	EXP(i,l[x]) if (qc[i] && !v[qd[i]]) FC(qd[i]);
+}
+
+void solve(){
+	int ret = 0;
+	FOE(i,1,n) p[i] = 1;
+	FOE(i,2,n){
+		for (int j=2; j<=ed; j++) qc[j] = qr[j];
+		S = i, T = p[i], V = n;
+		int F = MaxFlow();
+		CLR(v, 0);
+		FC(i);
+		for (int j=i+1; j<=n; j++)
+			if (v[j] && p[j] == p[i]) p[j] = i;
+		Tree[p[i]][i] = F;
+		ret += F;
+	}
+	
+	printf("%d\n", ret);
+	CLR(v, 0);
+	printf("1 ");
+	v[1] = 1;
+	FOE(i,1,n) if (Tree[1][i]) q.push((node){i, Tree[1][i]});
+	while (!q.empty()){
+		node t = q.top(); q.pop();
+		printf("%d ", t.x);
+		v[t.x] = 1;
+		FOE(i,1,n) if (Tree[t.x][i] && !v[i]) q.push((node){i, Tree[t.x][i]});
+	}
+}
+
+int main(){
+	scanf("%d%d", &n, &m);
+	ed = 1;
+	while (m--) scanf("%d%d%d", &x, &y, &z), bd(x, y, z), bd(y, x, z);
+	solve();
+	return 0;
+}

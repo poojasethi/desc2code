@@ -1,0 +1,168 @@
+#include<iostream>
+#include<cstdio>
+#include<vector>
+#include<limits>
+#include<queue>
+
+using namespace std;
+
+const int max_n=110;
+const int max_m=110;
+const int max_cc=10000000;
+const int max_A=10000000;
+
+//Maxflow Codechunk
+
+const int inv=numeric_limits<int>::max();
+const int max_v=max_n+2*max_m+2;
+
+int s,t;
+int v;
+vector<int> adjl[max_v];
+
+int c[max_v][max_v];
+int f[max_v][max_v];
+
+bool visited[max_v];
+int par[max_v];
+int aug[max_v];
+queue<int> Q;
+int augval;
+ 
+bool augmentingpath()
+{
+  fill(visited, visited+v, false);
+  while(!Q.empty())
+    Q.pop();
+	
+  visited[s]=true;
+  par[s]=s;
+  Q.push(s);
+  aug[s]=inv;
+  
+  int vt,vtnbr;
+  while(!Q.empty())
+  {
+    vt=Q.front();
+    Q.pop();
+    
+    for(int i=0; i<adjl[vt].size(); ++i)
+    {
+      vtnbr=adjl[vt][i];
+      if((not visited[vtnbr]) and (c[vt][vtnbr]-f[vt][vtnbr]>0))
+      {
+        visited[vtnbr]=true;
+        Q.push(vtnbr);
+        par[vtnbr]=vt;
+		aug[vtnbr]=min(aug[vt],c[vt][vtnbr]-f[vt][vtnbr]);
+      }
+    }
+  }
+  
+  augval=aug[t];
+  return visited[t];  
+}
+ 
+void augmentflow(int vt)
+{
+  if(par[vt]!=vt)
+  {
+    f[par[vt]][vt]+=augval;
+    f[vt][par[vt]]-=augval;
+    augmentflow(par[vt]);
+  }
+}
+
+int findmaxflow()
+{
+	int maxflow=0;
+    while(augmentingpath())
+    {
+      maxflow+=augval;
+      augmentflow(t);
+    }
+	return maxflow;
+}
+
+//-----------------
+
+int T;
+int n,m,k,cc;
+int A[max_n][max_m];
+
+bool enough(int tm)
+{
+	// Construct Graph :: 0:Source [1,n]:Hobbits [n+1,n+m]:HolesCopy1 [n+m+1,n+2m]:HolesCopy2 n+2m+1:Sink
+	
+	s=0; t=n+2*m+1; v=n+2*m+2;
+	
+	for(int i=0; i<v; ++i)
+		adjl[i].resize(0);
+	for(int i=0; i<v; ++i)
+		for(int j=0; j<v; ++j)
+		{
+			c[i][j]=0;
+			f[i][j]=0;
+		}
+	
+	for(int i=1; i<=n; ++i)
+	{
+		adjl[0].push_back(i);
+		adjl[i].push_back(0);
+		c[0][i]=1;
+	}	
+	for(int i=0; i<n; ++i)
+		for(int j=0; j<m; ++j)
+		{
+			if(A[i][j]<=tm)
+			{
+				adjl[i+1].push_back(n+j+1);
+				adjl[n+j+1].push_back(i+1);
+				c[i+1][n+j+1]=1;
+			}
+			if(A[i][j]+cc<=tm)
+			{
+				adjl[i+1].push_back(n+m+j+1);
+				adjl[n+m+j+1].push_back(i+1);
+				c[i+1][n+m+j+1]=1;
+			}
+		}	
+	for(int i=n+1; i<=n+2*m; ++i)
+	{
+		adjl[i].push_back(n+2*m+1);
+		adjl[n+2*m+1].push_back(i);
+		c[i][n+2*m+1]=1;
+	}
+	
+	return(findmaxflow()>=k);
+}
+
+int binsrc(int l, int r) //(l,r]
+{
+	if(l+1==r)
+		return r;
+	else
+	{
+		int mid=(l+r)/2;
+		if(enough(mid))
+			return binsrc(l,mid);
+		else
+			return binsrc(mid,r);
+	}
+}
+
+int main()
+{
+	scanf("%d",&T);
+	
+	for(int z=0; z<T; ++z)
+	{
+		scanf("%d%d%d%d",&n,&m,&k,&cc);
+		
+		for(int i=0; i<n; ++i)
+			for(int j=0; j<m; ++j)
+				scanf("%d",&A[i][j]);
+		
+		printf("%d\n",binsrc(-1,max_cc+max_A));
+	}
+}

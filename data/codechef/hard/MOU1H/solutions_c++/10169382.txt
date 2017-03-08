@@ -1,0 +1,91 @@
+#include<iostream>
+#include<map>
+#include<cstring>
+#define MAXN 100005
+#define MOD 1000000009
+using namespace std;
+
+struct state{
+	map<int,int> next;//transition edges for the this state
+	int length;			//length of longest string in this equivilence class
+	int suffix_link;	//suffix link of this state
+};
+
+int total=1;
+int last=0;
+state automata[2*MAXN];
+int d[2*MAXN];
+
+void initializeAutomata(state automata[]){
+	for(int i=0;i<total;i++)
+		automata[i].next.clear();
+	automata[0].length=0;
+	automata[0].suffix_link=-1;
+	total=1;
+	last=0;
+}
+
+void extendAutomata(int c){
+	int cur=total++;
+
+	//update lenght of cur : len(cur) = len(last) + 1  
+	automata[cur].length=automata[last].length+1;
+
+	int p;
+	//Follow suffix link until p==-1 or state with transition as char c is encounterd
+	for(p=last;p!=-1&&!(automata[p].next.count(c));p=automata[p].suffix_link)
+		automata[p].next[c]=cur;
+	if(p==-1)
+		automata[cur].suffix_link=0;
+	else{
+		int q=automata[p].next[c];
+		if(automata[q].length==automata[p].length+1)
+			automata[cur].suffix_link=q;
+		else{
+			int clone=total++;
+			automata[clone].length=automata[p].length+1;
+			automata[clone].next=automata[q].next;
+			automata[clone].suffix_link=automata[q].suffix_link;
+
+			for(;p!=-1 && automata[p].next[c]==q;p=automata[p].suffix_link)
+				automata[p].next[c]=clone;
+			automata[q].suffix_link=automata[cur].suffix_link=clone;
+		}
+	}
+	last=cur;
+
+}
+
+int count_substr(int cur){ 
+	if(d[cur])
+		return d[cur];
+
+	d[cur]=1;
+
+	for(map<int,int>::iterator it=automata[cur].next.begin();it!=automata[cur].next.end();it++)
+		d[cur]=((long long)d[cur]+(long long)count_substr(it->second))%MOD;
+
+	return d[cur];
+}
+	
+
+int main(){
+	int t,n,a,b;
+	cin>>t;
+	while(t--){
+		cin>>n;
+		cin>>a;
+
+		initializeAutomata(automata);
+		for(int i=1;i<n;i++){
+			cin>>b;
+			extendAutomata(b-a);
+			a=b;
+		}
+
+		memset(d,0,sizeof(d));
+		cout<<count_substr(0)-1<<endl;
+
+	}
+	return 0;
+}

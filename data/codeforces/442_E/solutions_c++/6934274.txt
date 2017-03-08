@@ -1,0 +1,105 @@
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <vector>
+#include <set>
+#include <map>
+#include <algorithm>
+#include <cmath>
+using namespace std;
+
+#define pi 3.1415926535897932384626
+struct Point {
+	int x, y;
+	long double dist(long double x1, long double y1) {
+		return sqrt((x - x1) * (x - x1) + (y - y1) * (y - y1));
+	}
+	long double dist(Point &t) {
+		return dist(t.x, t.y);
+	}
+} p[1100];
+struct T {
+	long double x;
+	int y;
+} q[11000];
+
+int w, h, n, len;
+long double ans, P[1100][1100];
+
+bool cmp(T x, T y) {
+	if (x.x != y.x)	return x.x < y.x;
+	return x.y > y.y;
+}
+
+void push1(long double l, long double r, int t) {
+	len++;
+	q[len].x = l;
+	q[len].y = t;
+	len++;
+	q[len].x = r;
+	q[len].y = -t;
+}
+
+void push(long double l, long double r, int t) {
+	if (l < 0) {
+		push1(l + 2 * pi, 2 * pi, t);
+		push1(0, r, t);
+	}else	if (r > 2 * pi) {
+		push1(l, 2 * pi, t);
+		push1(0, r - 2 * pi, t);
+	}else	push1(l, r, t);
+}
+
+bool can(int t, long double R) {
+	len = 0;
+	if (p[t].x - R < 0)	push(pi - acos(p[t].x / R), pi + acos(p[t].x / R), 2);
+	if (p[t].x + R > w)	push(-acos((w - p[t].x) / R), acos((w - p[t].x) / R), 2);
+	if (p[t].y - R < 0)	push(pi / 2 * 3 - acos(p[t].y / R), pi / 2 * 3 + acos(p[t].y / R), 2);
+	if (p[t].y + R > h)	push(pi / 2 - acos((h - p[t].y) / R), pi / 2 + acos((h - p[t].y) / R), 2);
+	for (int i = 1; i <= n; i++) {
+		if (i == t)	continue;
+		if (p[i].x == p[t].x && p[i].y == p[t].y)	continue;
+		long double l = p[i].dist(p[t]);
+		if (l >= 2 * R)	continue;
+		long double al = P[i][t];
+		if (al < 0)	al += 2 * pi;
+		push(al - acos(l / 2 / R), al + acos(l / 2 / R), 1);
+	}
+	sort(q + 1, q + len + 1, cmp);
+	if (q[1].x > 1e-11 || q[len].x < 2 * pi - 1e-11)	return true;
+	int sum = 0;
+	for (int i = 1; i <= len; i++) {
+		sum += q[i].y;
+		if (i < len && abs(q[i].x - q[i + 1].x) > 1e-11 && sum <= 1)	return true;
+	}
+	return false;
+}
+
+void check(double x, double y) {
+	long double mi = sqrt(1.0 * w * w + 1.0 * h * h);
+	for (int i = 1; i <= n; i++)	mi = min(mi, p[i].dist(x, y));
+	ans = max(ans, mi);
+}
+
+int main() {
+	scanf("%d%d%d", &w, &h, &n);
+	for (int i = 1; i <= n; i++)	scanf("%d%d", &p[i].x, &p[i].y);
+	for (int i = 1; i <= n; i++)	swap(p[i], p[rand() % i + 1]);
+	for (int i = 1; i <= n; i++)
+		for (int j = 1; j <= n; j++)
+			P[i][j] = atan2(p[i].y - p[j].y, p[i].x - p[j].x);
+	check(0, 0);
+	check(0, h);
+	check(w, 0);
+	check(w, h);
+	for (int i = 1; i <= n; i++) if (can(i, ans + 1e-9)) {
+		long double l = ans, r = sqrt(1.0 * w * w + 1.0 * h * h), mid;
+		for (int j = 1; j <= 50; j++) {
+			mid = (l + r) / 2;
+			if (can(i, mid))	l = mid;
+			else	r = mid;
+		}
+		ans = l;
+	}
+	printf("%.14lf\n", (double) ans);
+}

@@ -1,0 +1,39 @@
+/* bhupkas */
+
+using namespace std;
+
+#include "bits/stdc++.h"
+
+const int SIZE = 10005;
+
+int phi[SIZE];
+
+void pre()
+{
+	phi[1] = 1;
+	for(int i=2 ; i<SIZE; i++)
+	{
+		if(!phi[i])
+		{
+			phi[i] = i-1;
+			for(int j=(i<<1); j<SIZE; j+=i)
+			{
+				if(!phi[j]) phi[j] = j;
+				phi[j] = phi[j]/i*(i-1);
+			}
+		}
+	}
+}
+
+int main()
+{
+	pre();
+	int t,n;
+	cin >> t;
+	while(t--)
+	{
+		cin >> n;
+		cout << phi[n] << endl;
+	}
+	return 0;
+}

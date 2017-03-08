@@ -1,0 +1,311 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <list>
+#include <queue>
+#include <stack>
+#include <map>
+#include <set>
+#include <utility>
+#include <climits>
+#include <cfloat>
+#include <cassert>
+using namespace std;
+
+#define readint(n)      scanf("%d",&n)
+#define readull(n)      scanf("%llu",&n)
+#define readll(n)       scanf("%lld",&n)
+#define readf(n)        scanf("%f",&n)
+#define readlf(n)       scanf("%lf",&n)
+#define init(mem)       memset(mem,0,sizeof(mem))
+#define ull             unsigned long long int
+#define ll              long long int
+#define setmax(a,b)     a=max(a,b)
+#define setmin(a,b)     a=min(a,b)
+
+inline ll gcd(ll a,ll b){return b==0?a:gcd(b,a%b);}
+
+struct frac{
+    ll n,d;
+    frac(){}
+    frac(ll n1,ll d1){
+        n=n1;
+        d=d1;
+        ll g=gcd(n,d);
+        n/=g;
+        d/=g;
+    }
+};
+
+inline frac getcommonroot(frac a,frac b){
+    //printf("%lld %lld %lld %lld\n",a.n,a.d,b.n,b.d);
+    if(a.n*b.d>a.d*b.n) swap(a,b);
+    if(a.n==1 and a.d==1) return b;
+    if((b.n*a.d)%(b.d*a.n)!=0) return a;
+    return getcommonroot(a,frac(b.n*a.d,b.d*a.n));
+}
+
+int t,n;
+ll arr[10001];
+bool apmarked[10001];
+bool gpmarked[10001];
+
+
+bool testAP(int ind1,int ind2){
+    init(apmarked);
+    init(gpmarked);
+    int markcnt=0;
+    apmarked[ind1]=1;
+    apmarked[ind2]=1;
+    markcnt=2;
+
+    ll diff=arr[ind2]-arr[ind1];
+    int ptr=ind2+1;
+    ll next=arr[ind2]+diff;
+
+    while(ptr<n){
+        if(arr[ptr]==next){
+            apmarked[ptr]=1;
+            markcnt++;
+            next+=diff;
+            if(next>arr[n-1]) break;
+        }
+        ptr++;
+    }
+
+    if(markcnt==n or markcnt==n-1){
+        int unmarked=0;
+        for(int i=0;i<n;i++){
+            if(!apmarked[i]){
+                unmarked=i;
+                break;
+            }
+        }
+        for(int i=0;i<n;i++){
+            if(apmarked[i]){
+                printf("%lld ",arr[i]);
+            }
+        }
+        printf("\n");
+        if(unmarked==n-1){
+            printf("%lld %lld\n",arr[unmarked-1],arr[unmarked]);
+        }
+        else{
+            printf("%lld %lld\n",arr[unmarked],arr[unmarked+1]);
+        }
+        return true;
+    }
+
+    if(markcnt==n-2){
+        for(int i=0;i<n;i++){
+            if(apmarked[i]){
+                printf("%lld ",arr[i]);
+            }
+        }
+        printf("\n");
+        for(int i=0;i<n;i++){
+            if(!apmarked[i]){
+                printf("%lld ",arr[i]);
+            }
+        }
+        printf("\n");
+        return true;
+    }
+
+    int prevunmarked=0;
+    while(apmarked[prevunmarked]) prevunmarked++;
+    frac ratio(1,1);
+    for(int i=prevunmarked+1;i<n;i++){
+        if(!apmarked[i]){
+            ratio=getcommonroot(ratio,frac(arr[i],arr[prevunmarked]));
+            prevunmarked=i;
+        }
+    }
+
+    ptr=0;
+    while(apmarked[ptr]) ptr++;
+    gpmarked[ptr]=true;
+    markcnt++;
+
+    if((arr[ptr]*ratio.n)%ratio.d==0){
+        next=(arr[ptr]*ratio.n)/ratio.d;
+        ptr++;
+        while(ptr<n){
+            if(next>arr[n-1]) break;
+            if(arr[ptr]==next){
+                gpmarked[ptr]=true;
+                if(!apmarked[ptr]) markcnt++;
+                if((arr[ptr]*ratio.n)%ratio.d!=0) break;
+                next=(arr[ptr]*ratio.n)/ratio.d;
+            }
+            ptr++;
+        }
+
+        if(markcnt==n){
+            for(int i=0;i<n;i++){
+                if(apmarked[i]){
+                    printf("%lld ",arr[i]);
+                }
+            }
+            printf("\n");
+            for(int i=0;i<n;i++){
+                if(gpmarked[i]){
+                    printf("%lld ",arr[i]);
+                }
+            }
+            printf("\n");
+            return true;;
+        }
+    }
+    return false;
+}
+
+
+bool testGP(int ind1,int ind2){
+    init(apmarked);
+    init(gpmarked);
+    int markcnt=0;
+    gpmarked[ind1]=1;
+    gpmarked[ind2]=1;
+    markcnt=2;
+
+    bool justcheckap=false;
+    frac ratio(arr[ind2],arr[ind1]);
+
+    if(((arr[ind2]*ratio.n)%ratio.d)!=0){
+        justcheckap=true;
+    }
+
+    ll ptr=ind2+1,next=(arr[ind2]*ratio.n)/ratio.d;
+
+    if(!justcheckap){
+        while(ptr<n){
+            if(next>arr[n-1]) break;
+            if(arr[ptr]==next){
+                gpmarked[ptr]=true;
+                if(((next*ratio.n)%ratio.d)!=0) break;
+                next=(next*ratio.n)/ratio.d;
+                markcnt++;
+            }
+            ptr++;
+        }
+    }
+
+    if(markcnt==n or markcnt==n-1){
+        int unmarked=0;
+        for(int i=0;i<n;i++){
+            if(!gpmarked[i]){
+                unmarked=i;
+                break;
+            }
+        }
+
+        if(unmarked==n-1){
+            printf("%lld %lld\n",arr[unmarked-1],arr[unmarked]);
+        }
+        else{
+            printf("%lld %lld\n",arr[unmarked],arr[unmarked+1]);
+        }
+
+        for(int i=0;i<n;i++){
+            if(gpmarked[i]){
+                printf("%lld ",arr[i]);
+            }
+        }
+        printf("\n");
+        return true;
+    }
+
+    if(markcnt==n-2){
+        // printing
+        for(int i=0;i<n;i++){
+            if(!gpmarked[i]){
+                printf("%lld ",arr[i]);
+            }
+        }
+        printf("\n");
+        for(int i=0;i<n;i++){
+            if(gpmarked[i]){
+                printf("%lld ",arr[i]);
+            }
+        }
+        printf("\n");
+        return true;
+    }
+
+    int prevunmarked=0;
+    while(gpmarked[prevunmarked]) prevunmarked++;
+    ll diff=0;
+
+    for(int i=prevunmarked+1;i<n;i++){
+        if(!gpmarked[i]){
+            diff=gcd(diff,arr[i]-arr[prevunmarked]);
+            prevunmarked=i;
+        }
+    }
+
+    ptr=0;
+    while(gpmarked[ptr]) ptr++;
+    apmarked[ptr]=1;     // AP starter
+
+    next=arr[ptr]+diff;
+    while(ptr<n){
+        if(next>arr[n-1]) break;
+        if(arr[ptr]==next){
+            apmarked[ptr]=1;
+            next+=diff;
+        }
+        ptr++;
+    }
+
+    markcnt=0;
+    for(int i=0;i<n;i++){
+        if(gpmarked[i] or apmarked[i]) markcnt++;
+    }
+
+    if(markcnt==n){
+        for(int i=0;i<n;i++){
+            if(apmarked[i]){
+                printf("%lld ",arr[i]);
+            }
+        }
+        printf("\n");
+        for(int i=0;i<n;i++){
+            if(gpmarked[i]){
+                printf("%lld ",arr[i]);
+            }
+        }
+        printf("\n");
+        return true;
+    }
+    return false;
+}
+
+int main(){
+    readint(t);
+    while(t--){
+        readint(n);
+        for(int i=0;i<n;i++){
+            readll(arr[i]);
+        }
+
+        if(n==2){
+            printf("%lld %lld\n",arr[0],arr[1]);
+            printf("%lld %lld\n",arr[0],arr[1]);
+            continue;
+        }
+
+        if(testAP(0,1)) continue;
+        if(testGP(0,1)) continue;
+        if(testAP(0,2)) continue;
+        if(testGP(0,2)) continue;
+        if(testAP(1,2)) continue;
+        if(testGP(1,2)) continue;
+        assert(false);
+    }
+    return 0;
+}

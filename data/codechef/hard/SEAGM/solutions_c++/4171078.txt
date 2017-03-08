@@ -1,0 +1,154 @@
+#include <stdio.h>
+#include <vector>
+using namespace std;
+
+const int N=100;
+vector<int> prime;
+char sieve[N+1];
+
+vector<int> pfactor[N+1];
+int a[10][N];
+int size[10];
+int mobius[N+1];
+double bin[N+1][N+1];
+
+void find_mobius(int p, int start, int sign)
+{
+    for(int i=start;i<prime.size();i++)
+    {
+        int nextp=p*prime[i];
+        if(nextp>N) break;
+        mobius[nextp]=sign;
+        find_mobius(nextp,i+1, -sign);
+    }
+}
+
+int get_gcd(int a, int b)
+{
+    int remain=1;
+    while(remain)
+    {
+        remain = b%a;
+        b = a;
+        a = remain;
+    }
+    return b;
+}
+
+int main(int argc, char* argv[])
+{
+	int i, j, k, t, n;
+	scanf("%d", &t);
+	for(i=0;i<t;i++)
+	{
+		scanf("%d", &n);
+		size[i]=n;
+		for(j=0;j<n;j++)
+		{
+			scanf("%d", &a[i][j]);
+		}
+	}
+	for(i=2;i<=N;i++)
+	{
+		if(!sieve[i])
+		{
+			prime.push_back(i);
+			for(j=i+i;j<=N;j=j+i)
+			{
+				sieve[j]=1;
+			}
+		}
+	}
+	for(i=0;i<prime.size();i++)
+	{
+		for(j=prime[i];j<=N;j=j+prime[i])
+		{
+			pfactor[j].push_back(prime[i]);
+		}
+	}
+	mobius[1]=1;
+	find_mobius(1,0,-1);
+	bin[0][0]=1;
+	for(i=1;i<=N;i++)
+	{
+		bin[i][0]=1;
+		bin[i][i]=1;
+		for(j=1;j<i;j++)
+		{
+			bin[i][j]=bin[i-1][j]+bin[i-1][j-1];
+		}
+	}
+	for(i=0;i<t;i++)
+	{
+		int dnum[N+1]={0};
+		int number[N+1]={0};
+		int gcd=a[i][0];
+		for(j=0;j<size[i];j++)
+		{
+			number[a[i][j]]++;
+			if(j)
+			{
+				gcd=get_gcd(gcd, a[i][j]);
+			}
+		}
+		for(j=2;j<=N;j++)
+		{
+			for(k=j;k<=N;k=k+j)
+			{
+				dnum[j]+=number[k];
+			}
+		}
+		bool wining=false;
+		if(gcd==1)
+		{
+			for(j=0;j<size[i];j++)
+			{
+				int n=a[i][j];
+				bool got_it=(n==1) ? false : true;
+				for(k=0;k<pfactor[n].size();k++)
+				{
+					if(!(dnum[pfactor[n][k]]&1))
+					{
+						got_it=false;
+						break;
+					}
+				}
+				if(got_it)
+				{
+					wining=true;
+					break;
+				}
+			}
+		}
+		else
+		{
+			wining=(size[i]&1) ? true : false;
+		}
+		printf("%d ",  wining);
+		double prob[N+1]={0}; // for the probability of gcd(...)=1
+		for(j=1;j<=size[i];j++)
+		{
+			double d=bin[size[i]][j];
+			double numerator=d;
+			for(k=2;k<=N;k++)
+			{
+				if(mobius[k])
+				{
+					if(dnum[k]>=j)
+					{
+						numerator+=mobius[k]*bin[dnum[k]][j];
+					}
+				}
+			}
+			prob[j]=numerator/d;
+		}
+		double losing_prob=0;
+		for(j=1;j<=size[i];j=j+2)
+		{
+			losing_prob+=prob[j]-prob[j-1];
+		}
+		double wining_prob=(gcd==1) ? 1.0-losing_prob : wining;
+		printf("%.4f\n", wining_prob);
+	}
+	return 0;
+}

@@ -1,0 +1,188 @@
+#include <bits/stdc++.h>
+ 
+using namespace std;
+ 
+typedef long long ll;
+typedef pair <int,int> pii;
+typedef vector <int> vi;
+ 
+#define rep(i, n) for(int i = 0; i < (n); ++i)
+ 
+#define pb push_back
+#define mp make_pair
+#define ff first
+#define ss second
+#define all(c) c.begin(), c.end()
+#define mset(a, v) memset(a, v, sizeof(a))
+#define sz(a) ((int)a.size())
+ 
+ 
+const int maxN = 101;
+const int maxM = 101;
+ 
+ 
+ 
+struct Edge
+{
+  int u,v,flow,capacity;
+  Edge()
+  {
+ 
+  }
+  Edge(int u,int v,int flow,int capacity)
+  {
+    this->u=u;
+    this->v=v;
+    this->flow=flow;
+    this->capacity=capacity;
+ 
+  }
+};  
+ 
+vector<Edge> e;
+vector<vector<int> > G;
+int source,sink;
+int dist[5001];
+int ptr[5001];
+ 
+ 
+bool findPath()
+{
+  memset(dist,-1,sizeof(dist));
+  dist[source]=0;
+  queue<int> Q;
+  Q.push(source);
+  while(!Q.empty())
+  {
+    
+    int u=Q.front();
+    assert(dist[u]>=0);
+    // cout<<u<<endl;
+    Q.pop();
+ 
+    for (int i = 0; i < G[u].size(); ++i)    
+    {
+      int ID=G[u][i];
+      // assert(u==e[ID].u);
+      int v=e[ID].v;
+ 
+      if( (dist[v]==-1) && e[ID].flow<e[ID].capacity)
+      {
+        // cout<<v<<endl;
+        dist[v]=dist[u]+1;
+        // cout<<dist[v]<<endl;
+        Q.push(v);
+        // if(v==sink)
+        //   return true;
+      }
+    }
+  }
+ 
+  return dist[sink]!=-1;
+}
+ 
+ 
+int dfs(int u,int flow)
+{ 
+  if(flow==0)
+    return 0;
+  if(u==sink)
+    return flow;
+  for(;ptr[u]<G[u].size();++ptr[u])
+  {
+    int ID=G[u][ptr[u]];
+    int v=e[ID].v;
+    
+    if(dist[v]!=dist[u]+1)
+      continue;
+    
+    int pushed=dfs(v,min(flow,e[ID].capacity-e[ID].flow));
+    if(pushed)
+    {
+      e[ID].flow    +=pushed;
+      e[ID^1].flow  -=pushed;
+      return pushed;
+    }
+  }
+  return 0;
+}
+ll dinics()
+{
+  ll flow=0;
+  while(findPath())
+  {
+    memset(ptr,0,sizeof ptr);
+    while(int pushed=dfs(source,1e9))
+      flow+=pushed;
+  }
+  return flow;
+}
+void addEdge(int u,int v,int capacity)
+{
+    G[u].push_back(e.size());
+    e.push_back(Edge(u,v,0,capacity));
+    G[v].push_back(e.size());
+    e.push_back(Edge(v,u,0,0));
+}
+ 
+int main() {
+    
+    int t;
+    cin>>t;  
+ 
+    // int st[maxN], en[maxN];
+    // int b[maxM], e[maxM], req[maxM];
+    int s[221],e[221];
+    while(t--){
+        int n,m;
+        cin>>n>>m;
+        source=0;
+        sink=5000;
+        ::e.clear();
+        G.clear();
+        G.resize(5001);
+          
+        vector<int> times;
+        
+        for(int i=1;i<=n;++i){
+        cin>>s[i]>>e[i];
+        times.push_back(s[i]);
+        times.push_back(e[i]);
+        addEdge(source,i,1e9);
+        }
+        
+        ll req=0;
+        for(int i=1;i<=m;++i)
+        {
+          int r;
+          cin>>s[n+i]>>e[n+i]>>r;
+          times.push_back(s[n+i]);
+          times.push_back(e[n+i]);
+          addEdge(n+i,sink,r);
+          req+=r;
+        }
+          
+        sort(times.begin(),times.end());
+        times.erase(unique(times.begin(),times.end()),times.end());
+
+        for(int i=1;i<=n;++i){
+ 
+            rep (j, sz(times) - 1) {
+                if (times[j] >= s[i] and times[j + 1] <= e[i]) {
+                    addEdge(i , n + 1 + m + j, (times[j + 1] - times[j]));
+                }
+            }
+        }
+        for(int i=1;i<=m;++i){
+            rep (j, sz(times) - 1) {
+                if (times[j] >= s[n+i] and times[j + 1] <= e[n+i]) {
+                    addEdge(n + 1 + m + j, n  + i, (times[j + 1] - times[j]));
+                }
+            }
+        }
+
+        cout<<(dinics()==req?"YES\n":"NO\n");
+    }
+ 
+    return 0;
+}  

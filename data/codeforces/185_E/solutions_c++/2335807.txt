@@ -1,0 +1,210 @@
+#include<cstdio>
+#include<algorithm>
+using namespace std;
+const int M = 1<< 18; 
+const int inf = 1<< 30;
+const int MC = M*18;
+const int maxn = 101011;
+
+int dis[maxn],n,k,first_,last_,half_;
+/*---------------------------------------------------------------------------*/
+struct square {
+       int x0,y0,x1,y1;
+       square() {x0=y0=x1=y1=0;}
+       square(int a, int b, int c, int d) {x0=a,y0=b,x1=c,y1=d;}
+};
+void intersect(square &a, const square b) {
+     a.x0 = max(a.x0, b.x0);
+     a.x1 = min(a.x1, b.x1);
+     a.y0 = max(a.y0, b.y0);
+     a.y1 = min(a.y1, b.y1);
+}
+struct point {
+       int x,y; 
+       void trun() {x = x+y; y = x-y-y;}
+       point() {x=y=0;}
+       point(int a,int b) {x=a,y=b;}
+}dwa[maxn],sub[maxn],dist[maxn];
+bool cmpx(const point a, const point b) {return a.x<b.x||a.x==b.x&&a.y<b.y;}
+bool cmpy(const point a, const point b) {return a.y<b.y||a.y==b.y&&a.x<b.x;}
+/*-------------------------------LiSan---------------------------------------*/
+int lxn,lyn,lx[maxn],ly[maxn];
+void lisan(point *s, int l) {
+     for (int i = 1; i <= l; ++i) lx[i]=s[i].x,ly[i]=s[i].y;
+     sort(lx + 1, lx + l + 1); sort(ly + 1, ly + l + 1);
+     lxn = unique(lx + 1, lx + l + 1) -lx - 1;
+     lyn = unique(ly + 1, ly + l + 1) -ly - 1;
+}
+/*---------------------------------------------------------------------------*/
+struct nod_ {
+       int a[2];
+       nod_() {;}
+       nod_(int x,int y) {a[0] = x; a[1] = y;}
+};
+class tree {
+      public :
+             tree() {flash();N = M>> 1;}
+             void flash() {fill(c, c + M, nod_(inf,inf));}
+             void ins(int x, int k, int d);
+             int gmin(int l, int r, int d);
+      private :
+              int N,ret;
+              nod_ c[M];
+};
+void tree:: ins(int x, int k, int d) 
+{
+     for (x += N; x && c[x].a[d]>k; x >>= 1)
+         c[x].a[d] = k;
+}
+int tree:: gmin(int l, int r, int d)
+{
+     l += N-1; r += N+1;
+     for (ret = inf;l^r^1; l>>= 1, r>>= 1) {
+         if (~l & 1) ret = min(ret, c[l^1].a[d]);
+         if (r & 1) ret = min(ret, c[r^1].a[d]);
+     }
+     return ret;
+}
+/*---------------------------------------------------------------------------*/
+struct chair_node {
+       chair_node *c[2];
+       int key;
+       chair_node(chair_node *a) {c[0]=c[1]=a;key =0;}
+       chair_node() {;}
+}empty, *nul;
+class ChairMan {                 // the site is X, get "<=y" counter
+      public :
+             ChairMan();
+             void build(point *s, int l);
+             int gmins(chair_node *p, int l, int r,int x, int y);      // get <= counter
+             
+             chair_node *h[maxn];
+      private :
+              int tot;
+              chair_node w[MC];
+              void ins(chair_node *p, int l, int r, int x, int k);
+};
+
+ChairMan:: ChairMan() {
+           nul = &empty; tot = 0;
+           fill(w, w + MC, chair_node(nul));
+           fill(h, h + maxn , nul);
+           empty = chair_node(nul);
+}
+void ChairMan:: ins(chair_node *p, int l, int r, int x, int k) {
+     if (l == r) {
+        p->key += k;
+        return;
+     }
+     int mid = (l + r)>> 1;
+     if (x <= mid) {
+           w[++tot] = *p->c[0];
+           ins(p->c[0]= w + tot, l, mid, x, k);
+     }else {
+           w[++tot] = *p->c[1];
+           ins(p->c[1]= w + tot, mid+1, r, x, k);
+     }
+     p->key = p->c[0]->key + p->c[1]->key;
+}
+void ChairMan:: build(point *s, int l) {      
+     for (int i = 1; i <= l; ++i) {
+         s[i].x = lower_bound(lx+1, lx+lxn+1, s[i].x) - lx;
+         s[i].y = lower_bound(ly+1, ly+lyn+1, s[i].y) - ly;
+     }
+     sort(s + 1, s + l + 1, cmpy);
+     for (int i = 1; i <= l; ++i) {
+         if (h[s[i].y] == nul) {
+            h[s[i].y] = w + ++tot;
+            w[tot] = *h[s[i].y-1];
+         }
+         ins(h[s[i].y], 1, lxn, s[i].x, 1);
+     }
+}
+int ChairMan:: gmins(chair_node *p, int l, int r, int x, int y) {
+    if (l >= x && r <= y) return p->key;
+    int mid = (l + r)>> 1,t = 0;
+    if (x <= mid) t = gmins(p->c[0], l, mid, x, y);
+    if (y > mid) t += gmins(p->c[1], mid+1, r, x, y);
+    return t;
+}
+
+/*---------------------------------------------------------------------------*/
+tree T;
+ChairMan U;
+
+/*------------------------------Object define--------------------------------*/
+void getnear() {
+     lisan(sub, k);
+     T.flash();
+     int i,j,t;
+     for (i = 1,j = 1; i <= n; ++i) {
+         for (; j <=k &&sub[j].x <= dwa[i].x; ++j) {
+             t = lower_bound(ly + 1, ly + lyn + 1, sub[j].y) - ly ;
+             T.ins(t, -sub[j].x-sub[j].y, 0);
+             T.ins(t, -sub[j].x+sub[j].y, 1);
+         }
+         t = upper_bound(ly + 1, ly + lyn + 1, dwa[i].y) - ly;
+         dis[i] = inf;
+         if (t > 1) dis[i] = T.gmin(1, t-1, 0) + dwa[i].x + dwa[i].y;
+         if (t <= lyn) dis[i] = min(dis[i], T.gmin(t , lyn,1) + dwa[i].x - dwa[i].y);
+     }
+
+     T.flash();
+     for (i = n,j = k; i; --i) {
+         for (; j &&sub[j].x >= dwa[i].x; --j) {
+             t = lower_bound(ly + 1, ly + lyn + 1, sub[j].y) - ly ;
+             T.ins(t, sub[j].x-sub[j].y, 0);
+             T.ins(t, sub[j].x+sub[j].y, 1);
+         }
+         t = upper_bound(ly + 1, ly + lyn + 1, dwa[i].y) - ly;
+         if (t > 1) dis[i] = min(dis[i], T.gmin(1, t-1, 0) - dwa[i].x + dwa[i].y);
+         if (t <= lyn) dis[i] = min(dis[i], T.gmin(t, lyn,1) - dwa[i].x - dwa[i].y);
+     }
+}
+
+bool check(int d) {
+     square tmp(dwa[1].x-d,dwa[1].y-d,dwa[1].x+d,dwa[1].y+d), t;
+     for (int i = 2; i <= n; ++i) 
+         intersect(tmp, square(dwa[i].x-d,dwa[i].y-d,dwa[i].x+d,dwa[i].y+d));
+     if (tmp.x0 <= tmp.x1 && tmp.y0<= tmp.y1) return 1;
+     
+     tmp = square(-inf,-inf,inf,inf);
+     for (int p = n,l,i; p; --p) {
+         i=dist[p].x;
+         if (dist[p].y <= d){
+            l = d- dis[i];
+            t.y0 = (lower_bound(ly + 1, ly + lyn + 1, tmp.y0-l) - ly) - 1;
+            t.y1 = upper_bound(ly + 1, ly + lyn + 1, tmp.y1+l) - ly - 1;
+            t.x0 = lower_bound(lx + 1, lx + lxn + 1, tmp.x0-l) - lx;
+            t.x1 = upper_bound(lx + 1, lx + lxn + 1, tmp.x1+l) - lx - 1;
+            if (t.x0<=t.x1 && U.gmins(U.h[t.y1],1,lxn,t.x0,t.x1) > 
+                            U.gmins(U.h[t.y0],1,lxn,t.x0,t.x1)) return 1;
+         }
+         intersect(tmp,square(dwa[i].x-d,dwa[i].y-d,dwa[i].x+d,dwa[i].y+d));
+         if (tmp.x0 > tmp.x1 || tmp.y0 > tmp.y1) return 0;
+     }
+     return 0;
+}
+int main() {
+    scanf("%d%d", &n, &k);
+    for (int i = 1; i <= n; ++i) scanf("%d%d", &dwa[i].x, &dwa[i].y);
+    for (int i = 1; i <= k; ++i) scanf("%d%d", &sub[i].x, &sub[i].y);
+    sort(dwa + 1, dwa + n + 1, cmpx);
+    sort(sub + 1, sub + k + 1, cmpx);
+    getnear();
+    for (int i = 1; i <= n; ++i) dwa[i].trun();
+    for (int i = 1; i <= k; ++i) sub[i].trun();
+    lisan(sub, k);
+    U.build(sub, k);
+    
+    for (int i = 1; i <= n; ++i) dist[i] = point(i,dis[i]);
+    sort(dist + 1, dist + n + 1, cmpy);
+    first_ = 0; last_ = 210000000;
+    while (first_ < last_) {
+          half_ = (first_ + last_ ) >> 1;
+          if (check(half_)) last_ = half_;
+          else first_ = half_ + 1;
+    }
+    printf("%d\n", first_);
+    return 0;
+}

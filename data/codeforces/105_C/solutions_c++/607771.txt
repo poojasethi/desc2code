@@ -1,0 +1,166 @@
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <iostream>
+#include <math.h>
+#include <assert.h>
+#include <vector>
+#include <string>
+#include <map>
+#include <string>
+
+using namespace std;
+typedef long long ll;
+typedef unsigned int uint;
+typedef unsigned long long ull;
+static const double EPS = 1e-9;
+static const double PI = acos(-1.0);
+
+#define REP(i, n) for (int i = 0; i < (int)(n); i++)
+#define FOR(i, s, n) for (int i = (s); i < (int)(n); i++)
+#define FOREQ(i, s, n) for (int i = (s); i <= (int)(n); i++)
+#define FORIT(it, c) for (__typeof((c).begin())it = (c).begin(); it != (c).end(); it++)
+#define MEMSET(v, h) memset((v), h, sizeof(v))
+
+struct Item {
+  string name;
+  int type;
+  int value;
+  int size;
+  vector<string> residentName;
+  bool operator<(const Item &rhs) const {
+    return value < rhs.value;
+  }
+};
+
+struct Resident {
+  string name;
+  int type;
+  int value;
+  bool operator<(const Resident &rhs) const {
+    return value < rhs.value;
+  }
+};
+
+int n, m;
+//map<string, int> itemMapto;
+//map<int, string> itemRevMapto;
+//map<string, int> residentMapto;
+//map<int, string> residentRevMapto;
+vector<Item> items[3];
+vector<Resident> residents[3];
+map<string, int> mapto;
+
+void PrintItem(const Item item) {
+  cout << item.name << " " << item.residentName.size();
+  FORIT(it, item.residentName) {
+    cout << " " << *it;
+  }
+  cout << endl;
+}
+
+int main() {
+  mapto["weapon"] = 0;
+  mapto["armor"] = 1;
+  mapto["orb"] = 2;
+  mapto["gladiator"] = 0;
+  mapto["sentry"] = 1;
+  mapto["physician"] = 2;
+
+  while (cin >> n) {
+    //itemMapto.clear();
+    //itemRevMapto.clear();
+    //residentMapto.clear();
+    //residentRevMapto.clear();
+
+    REP(i, 3) {
+      items[i].clear();
+      residents[i].clear();
+    }
+
+    int totalSize = 0;
+    REP(i, n) {
+      string name, type;
+      int size;
+      int value[3];
+      cin >> name >> type >> value[0] >> value[1] >> value[2] >> size;
+      totalSize += size;
+
+      Item item;
+      item.name = name;
+      item.type = mapto[type];
+      item.value = value[item.type];
+      item.size = size;
+      items[item.type].push_back(item);
+    }
+
+    cin >> m;
+    vector<Resident> r;
+    REP(i, m) {
+      string name, type, from;
+      int value;
+      cin >> name >> type >> value >> from;
+      Resident resident;
+      resident.name = name;
+      resident.type = mapto[type];
+      resident.value = value;
+      residents[resident.type].push_back(resident);
+      r.push_back(resident);
+
+      if (totalSize == m) {
+        REP(j, 3) {
+          FORIT(it, items[j]) {
+            if (it->name == from) {
+              if (resident.type == j) {
+                it->value += value;
+              }
+              it->residentName.push_back(name);
+              goto next;
+            }
+          }
+        }
+      }
+next:;
+    }
+
+    if (totalSize == m) {
+      REP(i, 3) {
+        Item cand = items[i][0];
+        FORIT(it, items[i]) {
+          cand = max(cand, *it);
+        }
+        PrintItem(cand);
+      }
+    } else {
+      Item cand[3] = { items[0][0], items[1][0], items[2][0] };
+      REP(i, 3) {
+        sort(residents[i].rbegin(), residents[i].rend());
+        FORIT(it, items[i]) {
+          it->residentName.clear();
+          REP(j, min(it->size, (int)residents[i].size())) {
+            it->value += residents[i][j].value;
+            it->residentName.push_back(residents[i][j].name);
+          }
+          cand[i] = max(cand[i], *it);
+        }
+      }
+      REP(index, m) {
+        bool used = false;
+        REP(i, 3) {
+          FORIT(it, cand[i].residentName) {
+            if (*it == r[index].name) { used = true; }
+          }
+        }
+        if (used) { continue; }
+        REP(i, 3) {
+          if (cand[i].size == (int)cand[i].residentName.size()) { continue; }
+          cand[i].residentName.push_back(r[index].name);
+          break;
+        }
+      }
+      REP(i, 3) {
+        PrintItem(cand[i]);
+      }
+    }
+  }
+}

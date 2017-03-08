@@ -1,0 +1,240 @@
+#include <stdio.h>
+#include <string.h>
+ 
+int childrenCount, bedCount, caseCount;
+ 
+struct Grid
+{
+   char c[100];
+   char b[100];
+   char bc[100][100];
+};
+ 
+void ClearCell(Grid & g, int const b, int const c, int &bCount, int &cCount)
+{
+   g.bc[b][c] = 0;
+   g.b[b] = 0;
+   g.c[c] = 0;
+   --bCount;
+   --cCount;
+ 
+   for (int ii = 0; ii < bedCount; ++ii)
+   {
+      if (g.bc[ii][c])
+      {
+         g.bc[ii][c] = 0;
+         --(g.b[ii]);
+         if (g.b[ii] == 0)
+         {
+            --bCount;
+         }
+      }
+   }
+ 
+   for (int ii = 0; ii < childrenCount; ++ii)
+   {
+      if (g.bc[b][ii])
+      {
+         g.bc[b][ii] = 0;
+         --(g.c[ii]);
+         if (g.c[ii] == 0)
+         {
+            --cCount;
+         }
+      }
+   }
+}
+
+int GetTheOnes (Grid &g, int &bCount, int &cCount)
+{
+   int ii, jj, kk;
+   int happy = 0;
+ 
+   for (ii = 0; ii < bedCount; ++ii)
+   {
+      if (g.b[ii] == 1)
+      {
+         ++happy;
+
+         for (jj = 0; !(g.bc[ii][jj]); ++jj);
+         g.c[jj] = 0;
+         --cCount;
+
+         for (kk = 0; kk < bedCount; ++kk)
+         {
+            if (g.bc[kk][jj])
+            {
+               g.bc[kk][jj] = 0;
+               --(g.b[kk]);
+               if (g.b[kk] == 1 && kk < ii)
+               {
+                  ii = kk - 1;
+               }
+               else if (g.b[kk] == 0)
+               {
+                  --bCount;
+               }
+            }
+         }
+      }
+   }
+
+   for (ii = 0; ii < childrenCount; ++ii)
+   {
+      if (g.c[ii] == 1)
+      {
+         ++happy;
+
+         for (jj = 0; !(g.bc[jj][ii]); ++jj);
+         g.b[jj] = 0;
+         --bCount;
+
+         for (kk = 0; kk < childrenCount; ++kk)
+         {
+            if (g.bc[jj][kk])
+            {
+               g.bc[jj][kk] = 0;
+               --(g.c[kk]);
+               if (g.c[kk] == 1 && kk < ii)
+               {
+                  ii = kk - 1;
+               }
+               else if (g.c[kk] == 0)
+               {
+                  --cCount;
+               }
+            }
+         }
+      }
+   }
+
+   return happy;
+}
+
+int Tree (Grid g, int const b, int const c, int bCount, int cCount);
+ 
+inline int FindHappy(int const minHappy, int const maxHappy, int const bCount, int const cCount, Grid const &g)
+{
+   int happy = minHappy;
+   
+   for (int ii = 0; ii < bedCount; ++ii)
+   {
+      for (int jj = 0; jj < childrenCount; ++jj)
+      {
+         if (g.bc[ii][jj])
+         {
+            int t = Tree(g, ii, jj, bCount, cCount) + minHappy;
+            if (t > happy)
+            {
+               happy = t;
+ 
+               if (maxHappy == happy)
+               {
+                  return happy;
+               }
+            }
+         }
+      }
+   }
+ 
+   return happy;
+}
+ 
+int Tree (Grid g, int const b, int const c, int bCount, int cCount)
+{
+   g.bc[b][c] = 0;
+   g.b[b] = 0;
+   g.c[c] = 0;
+   --bCount;
+   --cCount;
+ 
+   for (int ii = 0; ii < bedCount; ++ii)
+   {
+      if (g.bc[ii][c])
+      {
+         g.bc[ii][c] = 0;
+         --(g.b[ii]);
+         if (g.b[ii] == 0)
+         {
+            --bCount;
+         }
+      }
+   }
+ 
+   for (int ii = 0; ii < childrenCount; ++ii)
+   {
+      if (g.bc[b][ii])
+      {
+         g.bc[b][ii] = 0;
+         --(g.c[ii]);
+         if (g.c[ii] == 0)
+         {
+            --cCount;
+         }
+      }
+   }
+   
+   int minHappy = GetTheOnes(g, bCount, cCount) + 1;
+
+   int maxHappy = (bCount <= cCount) ? bCount : cCount;
+   if (maxHappy == 0)
+   {
+      return minHappy;
+   }
+   maxHappy += minHappy;
+   
+   return FindHappy(minHappy, maxHappy, bCount, cCount, g);
+}
+
+int TreeRoot (Grid &g, int bCount, int cCount)
+{ 
+   int minHappy = GetTheOnes(g, bCount, cCount);
+   
+   int maxHappy = (bCount <= cCount) ? bCount : cCount;
+   if (maxHappy == 0)
+   {
+      return minHappy;
+   }
+   maxHappy += minHappy;
+   
+   return FindHappy(minHappy, maxHappy, bCount, cCount, g);
+} 
+ 
+int main()
+{
+   int tcCount, ii;
+   Grid g;
+   scanf("%d", &tcCount);
+ 
+   for (ii = 0; ii < tcCount; ++ii)
+   {
+      scanf("%d %d", &childrenCount, &bedCount);
+      if (childrenCount > 100 || bedCount > 100) return -1; 
+ 
+      memset(&g, 0, sizeof(struct Grid));
+ 
+      int bCount = 0;
+      int cCount = 0;
+   
+      while (1)
+      {
+         int b, c;
+ 
+         scanf("%d %d", &c, &b);
+ 
+         if (b == 0 && c == 0) break;
+         --b;
+         --c;
+ 
+         g.bc[b][c] = 1;
+         if(!(g.b[b])) ++bCount;
+         ++(g.b[b]);
+         if(!(g.c[c])) ++cCount;
+         ++(g.c[c]);
+      }
+ 
+      printf("%d\n", TreeRoot(g, bCount, cCount));
+   }
+ 
+   return 0;
+}

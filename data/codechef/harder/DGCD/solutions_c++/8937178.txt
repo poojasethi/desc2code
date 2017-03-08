@@ -1,0 +1,128 @@
+#include <cmath>
+#include <stdio.h>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define n	50005
+#define For(i,a,b)	for(int i=a;i<=b;i++)
+
+#define CH	(ch=getchar())
+int		IN(){
+		int x=0,ch;
+		for	(;CH<'0'||ch>'9';);
+		for	(;ch>='0'&&ch<='9';CH)	(x*=10)+=ch-'0';
+		return	x;
+}
+int		gcd_(int a,int b)	{return	!b?a:gcd_(b,a%b);}
+int		gcd(int a,int b)	{return	gcd_(abs(a),abs(b));}
+
+int		N,Q,A[n],B[n],Gcd[n<<2],Add[n<<2];
+int		F[n],Dep[n],Top[n],son[n],par[n],Dfn[n],Seq[n];
+char	s[5];
+
+void	Modify1(int u,int l,int r,int x,int k){
+		if	(l==r)	{
+			Gcd[u]+=k;	return;
+		}	int Mid=l+r>>1;
+
+		if	(x<=Mid)Modify1(u<<1,l,Mid,x,k);
+			else	Modify1(u<<1|1,Mid+1,r,x,k);
+		Gcd[u]=gcd(Gcd[u<<1],Gcd[u<<1|1]);
+}
+void	Modify2(int u,int l,int r,int x,int y,int k){
+		if	(x<=l&&r<=y)	{
+			Add[u]+=k;	return;
+		}	int Mid=l+r>>1;
+
+		if	(x<=Mid)	Modify2(u<<1,l,Mid,x,y,k);
+		if	(y>Mid)		Modify2(u<<1|1,Mid+1,r,x,y,k);
+};
+
+int		Query1(int u,int l,int r,int x,int y){
+		if	(x<=l&&r<=y)	return	Gcd[u];	int Mid=l+r>>1;
+		if	(y<=Mid)	return	Query1(u<<1,l,Mid,x,y);
+		if	(x>Mid)		return	Query1(u<<1|1,Mid+1,r,x,y);
+		return	gcd(Query1(u<<1,l,Mid,x,y),Query1(u<<1|1,Mid+1,r,x,y));
+}
+int		Query2(int u,int l,int r,int x){
+		if	(l==r)	return	Add[u];	int Mid=l+r>>1;
+		if	(x<=Mid)return	Add[u]+Query2(u<<1,l,Mid,x);
+		return	Add[u]+Query2(u<<1|1,Mid+1,r,x);
+}
+
+void	Build(int u,int l,int r){
+		if	(l==r)	{
+			Gcd[u]=B[Seq[l]];	Add[u]=A[Seq[l]];	return;
+		}	int Mid=l+r>>1;
+		Build(u<<1,l,Mid);	Build(u<<1|1,Mid+1,r);
+		Gcd[u]=gcd(Gcd[u<<1],Gcd[u<<1|1]);
+}
+
+namespace	Tree{
+		int		C,D,st[n],siz[n];
+		struct	Lin{int v,next;}E[n<<1];
+
+		void	Link(int u,int v){
+			E[++D]=(Lin){v,st[u]};	st[u]=D;
+			E[++D]=(Lin){u,st[v]};	st[v]=D;
+		}
+
+		void	DFS1(int u,int f){
+			Dep[u]=Dep[F[u]=f]+1;
+			for	(int i=st[u],v;i;i=E[i].next)
+			if	((v=E[i].v)!=f)	{
+				DFS1(v,u);	siz[u]+=siz[v];
+				if	(siz[v]>siz[son[u]])	son[u]=v;
+			}	siz[u]++;
+		}
+		void	DFS2(int u,int f,int c){
+			Dfn[u]=++C;	Seq[C]=u;	Top[u]=c;
+			if	(par[u])	B[u]=A[u]-A[par[u]];
+			if	(son[u])	par[son[u]]=u,DFS2(son[u],u,c);
+			for	(int i=st[u],v;i;i=E[i].next)
+				if	((v=E[i].v)!=son[u]&&v!=f)	DFS2(v,u,v);
+		}
+
+		void	Main(){
+			N=IN();
+			For(i,2,N)	Link(IN()+1,IN()+1);
+			For(i,1,N)	A[i]=IN();
+			DFS1(1,0);	DFS2(1,0,1);
+		}
+};
+
+void	Work1(int u,int v){
+		int ret=0;
+		for	(;Top[u]!=Top[v];){
+			if	(Dep[Top[u]]<Dep[Top[v]])	swap(u,v);
+			if	(par[u])	ret=gcd(ret,Query1(1,1,N,Dfn[Top[u]]+1,Dfn[u]));
+			int x=Query2(1,1,N,Dfn[Top[u]]),y=Query2(1,1,N,Dfn[F[Top[u]]]);
+			ret=gcd(ret,x-y);	u=F[Top[u]];
+		}
+		if	(Dep[u]>Dep[v])	swap(u,v);
+		if	(Dfn[u]<Dfn[v])	ret=gcd(ret,Query1(1,1,N,Dfn[u]+1,Dfn[v]));
+		ret=gcd(ret,Query2(1,1,N,Dfn[u]));
+		printf("%d\n",ret);
+}
+
+void	Work2(int u,int v,int c){
+		for	(;Top[u]!=Top[v];){
+			if	(Dep[Top[u]]<Dep[Top[v]])	swap(u,v);
+			if	(son[u])	Modify1(1,1,N,Dfn[son[u]],-c);
+			Modify2(1,1,N,Dfn[Top[u]],Dfn[u],c);	u=F[Top[u]];
+		}
+		if	(Dep[u]>Dep[v])	swap(u,v);
+		if	(par[u])	Modify1(1,1,N,Dfn[u],c);
+		if	(son[v])	Modify1(1,1,N,Dfn[son[v]],-c);
+		Modify2(1,1,N,Dfn[u],Dfn[v],c);
+}
+
+int		main(){
+		Tree::Main();	Build(1,1,N);
+		for	(int Q=IN(),u,v;Q--;){
+			scanf("%s",s);	u=IN()+1,v=IN()+1;
+			if	(s[0]=='F')	Work1(u,v);
+				else	Work2(u,v,IN());
+		}
+}

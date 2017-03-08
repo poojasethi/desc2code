@@ -1,0 +1,111 @@
+#include <stdio.h>
+#include <vector>
+
+using namespace std;
+
+int n,k, t;
+int v[30];
+char string[300000];
+
+int a[30][30];
+
+int masks[10000000];
+#include <string.h>
+#include <algorithm>
+
+
+void compute() {
+    int ultimoIndice[30];
+    vector<int> aux;
+    memset(ultimoIndice,-1,sizeof(ultimoIndice));
+    
+    for(int i=0;i<n;i++){
+        int atual = string[i]-'A';
+        aux.clear();
+        for (int j=0;j<k;j++){
+            if (ultimoIndice[j]!=-1) {
+                aux.push_back(ultimoIndice[j]);
+            }
+        }
+        std::sort(aux.begin(),aux.end());
+
+        int mask = 0;
+        for(int j=aux.size()-1;j>=0;j--){
+            int indice = string[aux[j]] - 'A';
+            // indice e atual
+            //printf("considerando %c e %c\n",'A'+indice,'A'+atual);
+            masks[mask] += a[indice][atual];
+            masks[mask | (1<<atual)] -= a[indice][atual];
+            masks[mask | (1<<indice)] -= a[indice][atual];
+            masks[mask | (1<<indice) | (1<<atual)] += a[indice][atual];
+            mask |= (1<<indice);
+            if (indice == atual) break;
+        }
+
+        ultimoIndice[atual] = i;
+    }
+    
+}
+
+void print(int x) {
+    if (x==0)printf("0");
+    vector<int> aux;
+    while(x>0){
+        aux.push_back(x%2);
+        x/=2;
+    }
+    for (int i=aux.size()-1;i>=0;i--){
+        printf("%d",aux[i] );
+    }
+}
+
+int main() {
+    scanf("%d %d %d", &n, &k, &t);
+    scanf("%s",string);
+    
+    for(int i=0;i<k;i++) {
+        scanf("%d",&v[i]);
+    }
+    
+    for(int i=0;i<k;i++) {
+        for(int j=0;j<k;j++) {
+            scanf("%d",&a[i][j]);
+        }
+    }
+
+    memset(masks,0,sizeof(masks));
+    compute();
+    
+    for (int i=0;i<k;i++){
+        for(int mask=0;mask!=(1<<k);mask++){
+            if (mask & (1<<i)){
+                masks[mask] += (masks[mask & (~(1<<i))]);
+            }
+        }
+    } 
+
+    // caras que nao existem
+    int naoexistem = 0;
+    for(int i=0;i<k;i++)naoexistem|=(1<<i);
+    for (int i=0;i<n;i++){
+        int atual = string[i]-'A';
+        naoexistem &= (~(1<<atual));
+    }
+
+    int ans = 0;
+    for(int mask=0;mask!=(1<<k);mask++){
+        if (mask & naoexistem)continue;
+        if(__builtin_popcount(mask | naoexistem) == k )continue;
+        for (int i=0;i<k;i++){
+            if (mask & (1<<i)){
+                masks[mask] += v[i];
+            }   
+        }
+        
+        if (masks[mask] <= t) {
+            ans++;
+        }
+
+    }
+    printf("%d\n", ans);
+}

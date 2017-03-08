@@ -1,0 +1,101 @@
+#include<iostream>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<cmath>
+#include<algorithm>
+#define maxn 410
+#define maxm maxn*2
+using namespace std;
+int n,m,father[maxn];
+int dp[maxn][maxn],size[maxn],trans[maxm][maxn];
+int nEdge=1,to[maxm],next[maxm],start[maxn];
+void make(int a,int b)
+{
+    ++nEdge,to[nEdge]=b,next[nEdge]=start[a],start[a]=nEdge;
+}
+void read()
+{
+    cin>>n>>m;
+    for(int i=2,x,y;i<=n;++i)
+    {
+        cin>>x>>y;
+        make(x,y),make(y,x);
+    }
+}
+void Tree_Dp(int p)
+{
+    size[p]=1;
+    fill(dp[p]+2,dp[p]+n+1,1<<29);
+    for(int i=start[p];i;i=next[i])
+        if(father[p]!=to[i])
+        {
+            int q=to[i];
+            father[q]=p;
+            Tree_Dp(q),size[p]+=size[q];
+            for(int j=size[p];j>=1;--j)
+            {
+                int val=dp[p][j]+1;
+                for(int k=1;k<=size[q]&&k<j;++k)
+                    if(val>dp[p][j-k]+dp[q][k])
+                        val=dp[p][j-k]+dp[q][k],trans[i][j]=k;
+                dp[p][j]=val;
+            }
+        }
+}
+void print(int p,int m)
+{
+    for(int i=start[p];i;i=next[i])
+        if(father[p]!=to[i])
+        {
+            if(trans[i][m]==0)
+                printf("%d ",i/2);
+            else
+            {
+                print(to[i],trans[i][m]);
+                m-=trans[i][m];
+            }
+        }
+}
+void print()
+{
+    int minv=dp[1][m];
+    for(int i=2;i<=n;++i)
+        minv=min(minv,dp[i][m]+1);
+    static int num[maxn];
+    for(int i=1;i<=n;++i)
+    {
+        int cnt=0;
+        for(int j=start[i];j;j=next[j])
+            num[++cnt]=j;
+        start[i]=num[cnt];
+        for(int j=cnt;j>=1;--j)
+            next[num[j]]=num[j-1];
+    }
+    printf("%d\n",minv);
+    if(dp[1][m]==minv)
+    {
+        print(1,m);
+        printf("\n");
+    }
+    else
+    {
+        for(int i=2;i<=n;++i)
+            if(dp[i][m]==minv-1)
+            {
+                print(i,m);
+                int x=father[i];
+                for(int j=start[x];j;j=next[j])
+                    if(to[j]==i)
+                        printf("%d\n",j/2);
+                return ;
+            }
+    }
+}
+int main()
+{
+    read();
+    Tree_Dp(1);
+    print();
+    return 0;
+}

@@ -1,0 +1,145 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#define rREP(i,n) for(int i = (n)-1; i >= 0; i--)
+#define REP(i,n) for(int i = 0; i < (n); i++)
+#define rFOR(i,a,b) for(int i = (a); i >= (b); i--)
+#define FOR(i,a,b) for(int i = (a); i <= (b); i++)
+#define itr iterator
+
+typedef long long lint;
+typedef pair<int, int> ii;
+typedef vector<int> vi;
+typedef vector<ii> vii;
+typedef vector<vii> vvii;
+typedef vector<vi> vvi;
+
+
+
+char str[300000];
+int cost[(1<<22)+10];
+int sum[300000][23];
+int prev[300000][23];
+int lastseen[23];
+int risk[35];
+int mat[30][30];
+int n, k, t, len;
+
+
+void printBin(int i){
+    REP(j, k){
+        printf("%d", (i&(1<<j))?1:0);
+    }
+    printf("\n");
+}
+
+
+void updtMasks(int idx){
+    /*vector<int> aux;      
+    int lidx = str[idx] - 'A';
+    REP(i,k) {
+        if (lastseen[i]!=-1)aux.push_back(lastseen[i]);
+    }
+    sort(aux.begin(), aux.end());
+    int mask=0;
+
+    for(int i=aux.size()-1;i>=0;i--) {
+
+        int lant = str[aux[i]] - 'A';
+        cost[mask] += mat[lant][lidx];
+        cost[mask | (1<<lidx)] -= mat[lant][lidx];
+        cost[mask | (1<<lant)] -= mat[lant][lidx];
+        cost[mask | (1<<lidx) | (1<<lant)] += mat[lant][lidx];
+
+        mask |= (1 << lant);
+        if(str[aux[i]] == str[idx])break;
+    }
+    return; */
+    REP(i, k){
+        int ant = prev[idx][i];
+        int lidx = str[idx] - 'A';
+        int lant = str[ant] - 'A';
+        if(ant != -1){
+            int mask = 0;
+            REP(j, k){
+                if(sum[idx-1][j]-sum[ant][j] > 0){
+                    mask |= (1<<j);
+                }
+            }
+            //printf("%d a %d. str[%d] = %c, str[%d] = %c\n", ant, idx, ant, str[ant], idx, str[idx]);
+            //printBin(mask);
+            if(((mask & (1<<(lidx))) == 0) && ((mask & (1<<(lant))) == 0)){
+                cost[mask] += mat[lant][lidx];
+                cost[mask | (1<<lidx)] -= mat[lant][lidx];
+                cost[mask | (1<<lant)] -= mat[lant][lidx];
+                cost[mask | (1<<lidx) | (1<<lant)] += mat[lant][lidx];
+                //printf("somei %d a ", mat[str[idx]-'A'][str[ant]-'A']);
+                //printBin(mask);
+            }
+        }
+
+            
+    }
+}
+
+int main(){
+    scanf("%d %d %d %s", &n, &k, &t, str+1);
+    REP(i, k)
+        scanf("%d", &risk[i]);
+    REP(i, k)
+        REP(j, k)
+            scanf("%d", &mat[i][j]);
+
+    REP(i, (1<<k))
+        cost[i] = 0;
+
+    len = 0;
+    REP(i, k)
+        lastseen[i] = -1;
+
+    while(str[len+1] != '\0'){
+        len++;
+
+        REP(i, k){
+            sum[len][i] = sum[len-1][i];
+            prev[len][i] = lastseen[i];
+        }
+
+        sum[len][str[len]-'A']++;
+
+        updtMasks(len);
+        lastseen[str[len]-'A'] = len;
+    }
+
+    for(int i = 0; i < k; i++){
+        for(int mask = 1; mask < (1<<k); mask++)
+            if(mask & (1<<i)){
+                cost[mask] += cost[mask & (~(1<<i))];
+            }
+    }
+
+    int ans = 0;
+    int nexist= 0;
+    REP(i, k){
+        if(lastseen[i] == -1)
+            nexist |= (1<<i);
+    }
+    REP(i, (1<<k)){
+        if((i & nexist) != 0 || k == __builtin_popcount(nexist | i))
+            continue;
+        else{
+            int r = 0;
+            REP(j, k){
+                if(i & (1<<j)){
+                    r += risk[j];
+                }
+            }
+            if(cost[i] + r <= t){
+                ans++;
+            }
+        }
+    }
+    //printBin(nexist);
+    printf("%d\n", ans);
+    return 0;
+}

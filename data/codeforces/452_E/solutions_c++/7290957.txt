@@ -1,0 +1,105 @@
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <queue>
+#include <vector>
+#include <set>
+
+using namespace std;
+
+const int N = 600010;
+
+const int mod = 1000000007;
+
+typedef long long LL;
+
+struct State {
+    State *child[29], *father;
+    int step, c[3];
+} states[N * 2], *cur, *last;
+
+State * maken (int step) {
+    cur ++;
+    cur->step = step;
+    return cur;
+}
+
+void extend (int x) {
+    State *p = last, *np = maken(p->step + 1);
+    last = np;
+    for (;p && !p->child[x]; p = p->father)
+        p->child[x] = np;
+    if (!p) np->father = states;
+    else if(p->child[x]->step == p->step + 1)
+        np->father = p->child[x];
+    else {
+        State *q = p->child[x], *nq = maken(p->step + 1);
+        nq->father = q->father;
+        for (int i = 0; i < 29; ++ i)
+            nq->child[i] = q->child[i];
+        np->father = q->father = nq;
+        for (;p && p->child[x] == q; p = p->father)
+            p->child[x] = nq;
+    }
+}
+
+bool vis[N];
+
+void dfs (State *p) {
+    if (vis[p-states])
+        return;
+    vis[p-states] = true;
+    for (int i = 0; i < 3; ++ i)
+        if (p->child[26 + i])
+            p->c[i] ++;
+    for (int i = 0; i < 26; ++ i)
+        if (p->child[i]) {
+            dfs (p->child[i]);
+            for (int j = 0; j < 3; ++ j)
+                p->c[j] += p->child[i]->c[j];
+        }
+}
+
+char str[N];
+LL ans[N];
+
+int main () {
+    cur = last = states;
+    int totl = 2, ml = N;
+    
+    scanf("%s", str);
+    totl += strlen(str);
+    ml = min(ml, (int)strlen(str));
+    for (int i = 0; str[i]; ++ i)
+        extend(str[i]-'a');
+    extend(26);
+    scanf("%s", str);
+    totl += strlen(str);
+    ml = min(ml, (int)strlen(str));
+    for (int i = 0; str[i]; ++ i)
+        extend(str[i]-'a');
+    extend(27);
+    scanf("%s", str);
+    totl += strlen(str);
+    ml = min(ml, (int)strlen(str));
+    for (int i = 0; str[i]; ++ i)
+        extend(str[i]-'a');
+    extend(28);
+    
+    dfs(states);
+    for (State *p = states; ; p++) {
+        if (p->step == 0) continue;
+        LL tmp = 1LL*p->c[0]*p->c[1]*p->c[2]%mod;
+        ans[ p->step ] += tmp;
+        ans[ p->father->step ] -= tmp;
+        if (p == cur) break;
+    }
+    for (int i = ml; i >= 1; -- i)
+        ans[i] = (ans[i] + ans[i+1]) % mod;
+    for (int i = 1; i <= ml; ++ i)  {
+        if (ans[i] < 0) ans[i] += mod;
+        printf("%d%c", (int)ans[i], i==ml?'\n':' ');
+    }
+    return 0;
+}

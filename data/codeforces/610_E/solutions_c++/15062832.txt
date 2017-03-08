@@ -1,0 +1,81 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define REP(i, l, r) for(int i = (l); i <= (r); i++)
+#define FOR(i, n) for(int i = 0; i < (n); i++)
+#define MEM(a) memset(a, 0, sizeof a)
+
+const int N = 200000 + 5;
+const int K = 10 + 1;
+int rk[K], s[N * 4][K][K], tag[N * 4], lc[N * 4], rc[N * 4], a[N], k;
+
+void make(int x, int c, int len){
+	MEM(s[x]);
+	s[x][c][c] += len - 1;
+	lc[x] = rc[x] = tag[x] = c;
+}
+
+void pushdown(int x, int l, int r){
+	if (tag[x] > -1){
+		int mid = (l + r) >> 1;
+		make(x << 1, tag[x], mid - l + 1);
+		make(x << 1 | 1, tag[x], r - mid);
+		tag[x] = -1;
+	}
+}
+
+void update(int x){
+	int l = x << 1, r = x << 1 | 1;
+	FOR(i, k) FOR(j, k)
+		s[x][i][j] = s[l][i][j] + s[r][i][j];
+	s[x][rc[l]][lc[r]]++;
+	lc[x] = lc[l], rc[x] = rc[r];
+}
+
+void build(int x, int l, int r){
+	tag[x] = -1;
+	if (l == r){lc[x] = rc[x] = a[l]; return;}
+	int mid = (l + r) >> 1;
+	build(x << 1, l, mid);
+	build(x << 1 | 1, mid + 1, r);
+	update(x);
+}
+
+void modify(int x, int l, int r, int p, int q, int d){
+	if (l > q || r < p) return;
+	if (l >= p && r <= q){make(x, d, r - l + 1); return;}
+	pushdown(x, l, r);
+	int mid = (l + r) >> 1;
+	modify(x << 1, l, mid, p, q, d);
+	modify(x << 1 | 1, mid + 1, r, p, q, d);
+	update(x);
+}
+
+int main(){
+	int n, m;
+	char ch;
+	scanf("%d%d%d", &n, &m, &k);
+	REP(i, 1, n){
+		scanf(" %c", &ch);
+		a[i] = ch - 'a';
+	}
+	build(1, 1, n);
+	REP(i, 1, m){
+		int c, l, r;
+		scanf(" %d", &c);
+		if (c == 1){
+			scanf("%d%d %c", &l, &r, &ch);
+			modify(1, 1, n, l, r, ch - 'a');
+		} else {
+			FOR(i, k){
+				scanf(" %c", &ch);
+				rk[ch - 'a'] = i;
+			}
+			int ans = 0;
+			FOR(i, k) FOR(j, k){
+				if (rk[i] >= rk[j]) ans += s[1][i][j];
+			}
+			printf("%d\n", ans + 1);
+		}
+	}
+	return 0;
+}

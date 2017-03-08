@@ -1,0 +1,94 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+using namespace std;
+
+struct E {
+    int a,b,c,id;
+} e[100005];
+
+int n,p[100005],sz[100005];
+long long mx = 0;
+int ret[100005],cntr = 0;
+int prt[100005];
+vector<pair<int,int> > te[100005];
+
+int fp(int at) {
+    if (p[at] == at) return at;
+    p[at] = fp(p[at]);
+    return p[at];
+}
+
+void uni(int a,int b) {
+    p[a] = b;
+    sz[b] += sz[a];
+}
+
+int dfs(int at,int par) {
+    int tot = sz[at];
+    for (int i=0; i<te[at].size(); i++) {
+        if (te[at][i].first != par) {
+            prt[te[at][i].second] = dfs(te[at][i].first,at);
+            tot += prt[te[at][i].second];
+        }
+    }
+    return tot;
+}
+
+bool cmp(E a,E b) {
+    return a.c<b.c;
+}
+
+int main() {
+    scanf("%d",&n);
+    for (int i=0; i<n-1; i++) {
+        scanf("%d%d%d",&e[i].a,&e[i].b,&e[i].c);
+        e[i].id = i+1;
+    }
+    sort(e,e+n-1,cmp);
+    for (int i=1; i<=n; i++) {
+        p[i] = i;
+        sz[i] = 1;
+    }
+    int st = 0, val = e[0].c;
+    memset(prt,-1,sizeof(prt));
+    for (int i=0; i<n; i++) {
+        if (i==n-1 || val!=e[i].c) {
+            for (int j=st; j<i; j++) {
+                int pa = fp(e[j].a),pb = fp(e[j].b);
+                te[pa].push_back(make_pair(pb,j));
+                te[pb].push_back(make_pair(pa,j));
+            }
+
+            for (int j=st; j<i; j++) {
+                int pa = fp(e[j].a),pb = fp(e[j].b);
+                if (prt[j] == -1) dfs(pa,-1);
+                uni(pa,pb);
+            }
+
+            for (int j=st; j<i; j++) {
+                int par = fp(e[j].a);
+                te[par].clear();
+                if ( (sz[par]-prt[j])*1LL*prt[j] > mx) {
+                     mx = (sz[par]-prt[j])*1LL*prt[j];
+                     cntr = 0;
+                }
+                if ( (sz[par]-prt[j])*1LL*prt[j] == mx) {
+                    ret[cntr] = e[j].id;
+                    cntr++;
+                }
+            }
+            st = i;
+            val = e[i].c;
+        }
+    }
+    printf("%I64d %d\n",mx*2,cntr);
+    sort(ret,ret+cntr);
+    for (int i=0; i<cntr; i++) {
+        if (i>0) printf(" ");
+        printf("%d",ret[i]);
+    }
+    printf("\n");
+}

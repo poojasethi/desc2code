@@ -1,0 +1,179 @@
+#include <stdio.h>
+#include <memory.h>
+typedef long long ll;
+const int sigma = 27;
+const int inf=100000000;
+const int MOD=1000000007;
+#define M 2000001
+#define char2num(c) ((c) ? (c) <= 'Z' ? (c) - 'A' : (c) - 'a' : 0)
+ 
+struct suftree {
+	int ini, fin;//label of edge from parent to this (start end)
+	suftree *hijo[sigma];//childs
+	suftree *fail;//suffix link
+	suftree *parent;
+	suftree(int a = 0, int b = 0, suftree *f = 0) : ini(a), fin(b), fail(f) {
+		parent=0;
+		memset(hijo, 0, sizeof(hijo));
+	}
+};
+ 
+char ss[M];
+suftree *root = new suftree(), *s = root, *r;
+suftree *first;
+int ini, nleaf, st, en;
+ll res, wei;
+ 
+inline void canonize(const char *cad, suftree*& s, int &ini, int fin) {
+    while (ini < fin) {
+		suftree *sp = s->hijo[char2num(cad[ini])];
+		if (sp->fin - sp->ini > fin - ini) break;
+		s = sp;
+		ini += s->fin - s->ini;
+    }
+}
+ 
+ 
+void insert(char *cad, int i){
+	suftree *ant = root;
+	int letra = char2num(cad[i]);
+	for (;;) {
+		r = s;
+		if (ini < i) {
+			int l = char2num(cad[ini]);
+			suftree *sp = s->hijo[l];
+			int k = sp->ini + i - ini;
+			if (cad[i] == cad[k]) break;//extension rule 3 applies.
+			r = new suftree(sp->ini, k);//extension rule 2 applies.(internal node)
+ 
+ 
+			r->hijo[char2num(cad[k])] = sp;
+			sp->parent=r;
+			sp->ini = k;
+ 
+			s->hijo[l] = r;
+			r->parent=s;
+		} else if (s->hijo[letra]) break;//  extension rule 3 applies.
+		suftree * H=new suftree(i, inf);
+		if(!first) first=H;
+ 
+		r->hijo[letra] = H;//extension rule 2(leaf)
+		H->parent=r;
+		++nleaf;
+		if (ant != root){
+			ant->fail = r;
+		}
+		ant = r;
+		if (s->fail) s = s->fail;
+		else if (ini++ == i) break;//in case j==i, that is, all extensions have been finished
+		canonize(cad, s, ini, i);
+	}
+	if (ant != root){
+		ant->fail = r;
+	}
+	canonize(cad, s, ini, i + 1);
+	wei+=nleaf;
+	res+=wei;
+	//printf("%d %d\n", ini, i);
+}
+ 
+suftree *find_next(suftree *d){
+	suftree *s=d->parent;
+	int in=d->ini;
+	if(s->fail){
+		s=s->fail;
+	}else in++;
+	canonize(ss, s, in, en);
+	return s->hijo[char2num(ss[in])];
+}
+ 
+void del(){
+	suftree *p=first->parent;
+	suftree *nxt=find_next(first);
+	int in=ini;
+	suftree *h=s;
+	int P=0;
+	while(in<en){
+		if(++P>100) break;
+		if(h==p) break;
+		if(h->fail) h=h->fail;
+		else if(in+1==en) break;
+		else in++;
+		canonize(ss, h, in, en);
+	}
+	//puts("ERR");
+	if(h==p && in<en && ss[in]==ss[first->ini]){
+		wei-=in-first->ini;
+		first->ini=in;
+		if(s==p && in==ini){
+			if(s==root) ++ini;
+			else s=s->fail;
+			canonize(ss, s, ini, en);
+		}
+	}else{
+		nleaf--;
+		wei-=en-first->ini;
+		p->hijo[char2num(ss[first->ini])]=0;
+		int cnt=0;
+		suftree *ch;
+		for(int i=0; i<sigma; i++){
+			if(p->hijo[i]) ++cnt, ch=p->hijo[i];
+		}
+		if(cnt==1 && p!=root){
+			suftree *pp=p->parent;
+			pp->hijo[char2num(ss[p->ini])]=ch;
+			ch->parent=pp;
+			ch->ini-=p->fin-p->ini;
+			if(p==s){
+				ini-=p->fin-p->ini;
+				s=pp;
+			}
+		}
+	}
+	first=nxt;
+	res+=wei;
+}
+ 
+void displaytree(suftree *root){
+	printf("%d\n", root);
+	for(int i=0; i<26; i++){
+		suftree *a=root->hijo[i];
+		if(a){
+			printf("%.*s %d\n", a->fin-a->ini, ss+a->ini, a);
+		}
+	}
+	for(int i=0; i<26; i++){
+		suftree *a=root->hijo[i];
+		if(a) displaytree(a);
+	}
+}
+int main(){
+	//freopen("in1.txt", "r", stdin);
+	//freopen("out.txt", "w", stdout);
+	int n;
+	char a[2], b[2];
+	scanf("%d", &n);
+	//n=60;
+ 
+	while(n--){
+		//printf("%d\n", n);
+		//printf("\n\n turn %d\n", n);
+		b[0]=0;
+		scanf("%s", a);
+		//printf("operation %s %s\n", a, b);
+		if(a[0]=='+'){
+			scanf("%s", b);
+			ss[en++]=b[0];
+			insert(ss, en-1);
+		}else{
+			del();
+			st++;
+		}
+		//printf("%d\n", wei);
+		//printf("ini=%d s=%d\n", ini, s);printf("display tree\n");displaytree(root);printf("first %d\n", first);
+		//printf("%.*s %d %d\n", en-st, ss+st, en, st);
+	}
+	printf("%lld\n", res%MOD);
+	//fprintf(stderr, "%d\n", res);
+	return 0;
+} 

@@ -1,0 +1,211 @@
+#include <algorithm>
+#include <cassert>
+#include <cctype>
+#include <cstdio>
+#include <cstring>
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <queue>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+using namespace std;
+
+const int INPUT_MAXCHARS = 1<<16;
+char buffer[INPUT_MAXCHARS];
+struct FastReader {
+    char *p;
+    bool dead;
+
+    FastReader(): p(buffer), dead(false) {
+        size_t cnt = fread(buffer, 1, sizeof buffer, stdin);
+        if (cnt < sizeof buffer) {
+            assert(feof(stdin));
+            dead = true;
+            buffer[cnt] = '\n';
+        }
+    }
+    int next_int() {
+        return int(next_ll());
+    }
+    long long next_ll() {
+        upd();
+        long long sgn = 1;
+        while (*p < '0') {
+            if (*p++ == '-') {
+                sgn = -1;
+                break;
+            }
+        }
+        long long val = 0;
+        while (*p >= '0') {
+            val = val*10 + (*p - '0');
+            ++p;
+        }
+        return sgn*val;
+    }
+    void next_line(string &s) {
+        while (1) {
+            upd();
+            while (p-buffer<INPUT_MAXCHARS) {
+                if (*p!='0' && *p!='1') {
+                    ++p; // skip '\n'
+                    return;
+                }
+                assert(*p=='0' || *p=='1');
+                s += *p++;
+            }
+        }
+    }
+    void skip_line() {
+        while (1) {
+            upd();
+            while (p-buffer<INPUT_MAXCHARS) {
+                assert(*p);
+                if (*p == '\n') {
+                    ++p; // skip '\n'
+                    return;
+                }
+            }
+        }
+    }
+
+    private:
+    void upd() {
+        int remchars = INPUT_MAXCHARS - (p-buffer);
+        if (remchars < 25) {
+            memcpy(buffer, p, remchars);
+            size_t cnt = fread(buffer+remchars, 1, sizeof buffer - remchars, stdin);
+            if (remchars + cnt < sizeof buffer) { // assume EOF
+                assert(feof(stdin));
+                assert(!dead);
+                dead = true;
+                buffer[remchars + cnt] = '\n'; // make the value determinite
+            }
+            p = buffer;
+        }
+    }
+};
+
+// assert(cnt == (n>>1)+((bc[n]&1)==0 || (n&1)==1));
+const int MAXN = 1<<20;
+const int mod = 1000000007;
+int modadd(int a, int b) {
+    a += b;
+    return a>=mod ? a-mod : a;
+}
+int modsub(int a, int b) {
+    a -= b;
+    return a>=0 ? a : a+mod;
+}
+int p2[MAXN+1];
+int p2sum[MAXN+2];
+
+typedef pair<int, int> pii;
+struct Tournament {
+    int n, l, r;
+    int origsz;
+    vector<pii> T;
+    vector<char> flipped;
+    Tournament(string number): origsz(number.size()) {
+        for (n=1; n<(int)number.size(); n*=2) ;
+        T.assign(2*n, pii(0, 0));
+        flipped.assign(2*n, 0);
+        for (int i=0; i<(int)number.size(); ++i) {
+            if (number[i] == '1') {
+                T[i+n].first = p2[i];
+                T[i+n].second = 1;
+            }
+        }
+        for (int x=n-1; x>0; --x) {
+            int left = 2*x;
+            int right = left + 1;
+            T[x].first = modadd(T[left].first, T[right].first);
+            T[x].second = T[left].second + T[right].second;
+        }
+    }
+
+    int query(int lowbit) {
+        int sol = T[1].first + (((T[1].second+lowbit)&1)==0 || (lowbit==1));
+        return sol%mod;
+    }
+
+    void flip(int a, int b) {
+        l = a;
+        r = b;
+        flip(1, 0, n);
+    }
+    void flip(int x, int a, int b) {
+        if (a>=r || b<=l) return;
+        if (l<=a && b<=r) {
+            flip_local(x, a, b);
+        } else {
+            const int left = 2*x;
+            const int right = left + 1;
+            if (flipped[x]) {
+                flip_local(left, a, (a+b)/2);
+                flip_local(right, (a+b)/2, b);
+                flipped[x] = 0;
+            }
+            flip(left, a, (a+b)/2);
+            flip(right, (a+b)/2, b);
+            T[x].first = modadd(T[left].first, T[right].first);
+            T[x].second = T[left].second + T[right].second;
+        }
+    }
+
+    void flip_local(int x, int l, int r) {
+        if (l >= origsz) {
+            return;
+        }
+        T[x].first = modsub(modsub(p2sum[r], p2sum[l]), T[x].first);
+        T[x].second = min(r, origsz) - l - T[x].second;
+        assert(T[x].second >= 0);
+        flipped[x] = char(1-flipped[x]);
+    }
+};
+
+int main() {
+    ios::sync_with_stdio(false);
+    FastReader reader;
+    string number;
+    reader.next_line(number);
+    int n = number.size();
+    int lowbit = (number[n-1]-'0');
+    number.resize(n-1);
+    reverse(number.begin(), number.end());
+
+    p2[0] = 1;
+    for (int i=1; i<n-1; ++i) { // larger must be 0 for the tournament to work properly
+        p2[i] = modadd(p2[i-1], p2[i-1]);
+    }
+    p2sum[0] = 0;
+    for (int i=1; i<=MAXN+1; ++i) {
+        p2sum[i] = modadd(p2sum[i-1], p2[i-1]);
+    }
+
+    Tournament T(number);
+    printf("%d\n", T.query(lowbit));
+
+    int Q = reader.next_int();
+    while (Q--) {
+        int ll = reader.next_int()-1;
+        int rr = reader.next_int()-1;
+        if (rr == n-1) {
+            lowbit = 1-lowbit;
+            rr = n-2;
+        }
+        int l = n-2-rr;
+        int r = n-2-ll;
+        if (l <= r) {
+            T.flip(l, r+1);
+        }
+        printf("%d\n", T.query(lowbit));
+    }
+
+	return 0;
+}

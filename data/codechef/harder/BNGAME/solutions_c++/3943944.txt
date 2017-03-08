@@ -1,0 +1,81 @@
+// BNGAME, Setter's solution
+
+#include <iostream>
+#include <set>
+#include <cstdio>
+#include <queue>
+#include <algorithm>
+using namespace std;
+
+#define maxn 1000000 + 5
+
+struct cell {
+	int a, b, index;
+	bool operator < (const cell & you) const {
+		return a < you.a;
+	}
+} board[maxn];
+
+set<int> points, differences; // points if the set of non-prohibited cells, differences is a set of pairwise differences
+priority_queue<pair<int, int> > pq; // pq is non-prohibited cells, sorted by b
+int prev, next, diffs[maxn], n, m, i, j, ret = 2000000000; 
+
+void add_pnt (int t) { // adding the cell
+	points.insert(t); // adding it to the set of non-prohibited ones
+	set<int>::iterator it = points.find(t);
+	--it;
+	prev = *it; // finding the previous one
+	++it; ++it;
+	next = *it; // and the next one
+	// recalculating differences:
+	if (--diffs[next - prev] == 0) differences.erase(next - prev);
+	if (++diffs[t - prev] == 1) differences.insert(t - prev);
+	if (++diffs[next - t] == 1) differences.insert(next - t);
+}
+
+void del_pnt (int t) { // deleting the cell
+	set<int>::iterator it = points.find(t);
+	--it;
+	prev = *it; // finding the previous one
+	++it; ++it;
+	next = *it; // and the next one
+	points.erase(points.find(t)); // deleting the point
+	// recalculating differences:
+	if (--diffs[t - prev] == 0) differences.erase(t - prev);
+	if (--diffs[next - t] == 0) differences.erase(next - t);
+	if (++diffs[next - prev] == 1) differences.insert(next - prev);
+}
+
+int max_difference () { // finding the maximal difference (if less or equal to K, we can complete the game)
+	set<int>::iterator it = differences.end();
+	return *(--it);
+}
+
+int main (int argc, char * const argv[]) {
+	scanf("%d %d", &n, &m);
+	for(i = 1; i <= n; i++) {
+		board[i].index = i;
+		scanf("%d %d", &board[i].a, &board[i].b);
+	}
+	points.insert(0); // adding fictive 0
+	points.insert(n + 1); // adding fictive n + 1
+	differences.insert(n + 1);
+	++diffs[n + 1];
+	sort(board + 1, board + n + 1);
+	for(i = 1, j = 1; i <= 32000; i++) {
+		while (j <= n && board[j].a == i) { // adding points with A = i
+			add_pnt(board[j++].index);
+			pq.push(make_pair(board[j - 1].b, board[j - 1].index));
+		}
+		while (max_difference() <= m && pq.size() > 0) { // trying to delete some points
+			del_pnt(pq.top().second);
+			if (max_difference() <= m) pq.pop(); else {
+				add_pnt(pq.top().second);
+				break;
+			}
+		}
+		if (max_difference() <= m) ret = min(ret, pq.top().first * i); // if the game can be completed, calculate the answer
+	}
+	printf("%d\n", ret);
+    return 0;
+}

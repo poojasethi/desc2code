@@ -1,0 +1,37 @@
+#include<cstdio>
+#include<cstring>
+#include<cstdlib>
+#include<iostream>
+#include<cmath>
+using namespace std;
+#define rep(i,u,v) for (int i=u;i<=v;i++)
+#define dto(i,u,v) for (int i=u;i>=v;i--)
+#define N 100010
+int n,ans,a[N];
+double b;
+int main()
+{
+    scanf("%d",&n);
+	 rep(i,1,n)scanf("%d",&a[i]);
+	 if (n==1)printf("0\n");
+	 else if (n==2){
+		  if (a[1]==0&&a[2]!=0)printf("1\n");
+		  else printf("0\n");
+	 }
+	 else {
+	 	  ans=3;
+          rep(i,1,2)
+              rep(j,i+1,3)
+              {
+			       if (a[i]==0&&a[j]!=0)continue;
+				   if (a[i]==0)b=0;else b=(double)a[j]/(double)a[i]; 
+				   int k=j;int jilu=0;
+				   if (!(i==1&&j==2))jilu++;
+				   rep(l,j+1,n)
+				      if ((double)a[k]*b-(double)a[l]==0)k=l;else jilu++;
+	               ans=min(ans,jilu);
+              }
+          if (ans>2)ans=2;
+		  printf("%d\n",ans);
+	 }
+}

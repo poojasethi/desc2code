@@ -1,0 +1,34 @@
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+
+using namespace std;
+const int N = 1005;
+const int INF = 0x3f3f3f3f;
+int n, num[N];
+
+void solve () {
+	int ans = INF, s, d;
+	for (int i = 0; i <= 20000; i++) {
+		int l = INF, r = -INF;
+		for (int j = 0; j < n; j++) {
+			r = max(r, i * j - num[j]);
+			l = min(l, i * j - num[j]);
+		}	
+		int tmp = (r - l + 1)/2;
+		if (ans > tmp) {
+			ans = tmp;
+			s = -r + tmp;
+			d = i;
+		}
+	}
+	printf("%d\n%d %d\n", ans, s, d);
+}
+
+int main () {
+	scanf("%d", &n);
+	for (int i = 0; i < n; i++) scanf("%d", &num[i]);
+	sort(num, num + n);
+	solve();
+	return 0;
+}

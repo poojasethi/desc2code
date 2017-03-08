@@ -1,0 +1,81 @@
+# include <cstdio>
+# include <algorithm>
+
+using namespace std;
+# define REP(i, n) for (int i = 1; i <= n; ++ i)
+# define REP_D(i, n) for (int i = n; i >= 1; -- i)
+# define REP_G(i, x) for (int i = pos[x]; i; i = g[i].frt)
+# define FOR(i, a, b) for (int i = a; i <= b; ++ i)
+# define NR 101000
+typedef long long ll;
+typedef pair <int, int> pii;
+
+struct Edge { int y, frt, val; void set (int yr, int fr, int vl) { y = yr, frt = fr, val = vl; } } g[NR << 1];
+int pos[NR], gsz, ta[NR], sz[NR], len, n, L, W, t[NR << 1], tot, root;
+bool vis[NR];
+ll ans;
+pii li[NR];
+void AE (int x, int y, int z) { g[++ gsz].set (y, pos[x], z), pos[x] = gsz; }
+void inc (int x) { for (++ x; x <= n + 5; x += x & -x) ++ t[x]; }
+void dec (int x) { for (++ x; x <= n + 5; x += x & -x) -- t[x]; }
+ll sum (int x) { ll s = 0; for (++ x; x; x -= x & -x) s += t[x]; return s; }
+
+# define v g[i].y
+# define w0 first
+# define w1 second
+
+inline void rlxx (int &x, int y) { if (x < y) x = y; }
+
+void get_pair (int x, int fa, int d, int w) {
+	//printf ("p: %d %d\n", x, fa);
+	if (d > L || w > W) return ;
+	li[++ len] = pii (w, d);
+	REP_G (i, x) {
+	
+	if (v != fa && !vis[v]) //printf ("e: %d %d\n", x, v); 
+	get_pair (v, x, d + 1, w + g[i].val);
+	}
+}
+
+void get_sz (int x, int fa) {
+	sz[x] = 1, ta[x] = 0;
+	REP_G (i, x) if (v != fa && !vis[v]) get_sz (v, x), sz[x] += sz[v], rlxx (ta[x], sz[v]);
+	rlxx (ta[x], tot - sz[x]);
+	if (ta[x] < ta[root]) root = x;
+}
+
+ll upd_ans () {
+	sort (li + 1, li + len + 1);
+	int j = 1; ll res = 0;
+	REP_D (i, len) {
+		//printf ("bef: %d %d\n", i, j);
+		while (j < i && li[i].w0 + li[j].w0 <= W) inc (li[j ++].w1);
+		//printf ("bef: %d %d %d\n", i, j, L - li[i].w1);
+		while (j > i) dec (li[-- j].w1);
+		res += sum (L - li[i].w1);
+	}
+	while (j > 1) dec (li[-- j].w1);
+	return res;
+}
+
+int get_centre (int x) { return ta[root = 0] = n + 2, tot = sz[x], get_sz (x, 0), root; }
+
+void solve (int x) {
+	vis[x] = true; //printf ("cen: %d\n", x);
+	li[len = 1] = pii (0, 0);
+	REP_G (i, x) if (!vis[v]) get_pair (v, 0, 1, g[i].val);	
+	//printf ("cen: %d\n", x);
+	ans += upd_ans ();
+	
+	REP_G (i, x) if (!vis[v]) len = 0, get_pair (v, 0, 1, g[i].val), ans -= upd_ans ();
+	REP_G (i, x) if (!vis[v]) solve (get_centre (v));
+}
+
+int main () {
+	//freopen ("293E.in", "r", stdin);
+	scanf ("%d%d%d", &n, &L, &W); int t1, t2;
+	FOR (i, 2, n) scanf ("%d%d", &t1, &t2), AE (t1, i, t2), AE (i, t1, t2);
+	sz[1] = n, solve (get_centre (1));
+	printf ("%I64d\n", ans);
+	return 0;
+}

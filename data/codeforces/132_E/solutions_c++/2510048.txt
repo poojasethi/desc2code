@@ -1,0 +1,110 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <queue>
+using namespace std;
+
+int n, m, seq[333], ans;
+int x[1111111], c[1111111], w[1111111], Nxt[1111111], head[1111], Cnt(1);
+int s, t, S, T;
+char o[555][55];
+
+inline void link(int A, int B, int C, int D)
+{
+	x[++Cnt] = B;
+	c[Cnt] = C;
+	w[Cnt] = D;
+	Nxt[Cnt] = head[A];
+	head[A] = Cnt;
+}
+
+#define LINK(A, B, C, D) link(A, B, C, D), link(B, A, 0, -D)
+
+void init()
+{
+	scanf("%d%d", &n, &m);
+	for (int i = 1; i <= n; ++i)
+		scanf("%d", &seq[i]);
+	s = n + n + 1, t = s + 1, S = t + 1, T = S + 1;
+	for (int i = 1; i <= n; ++i)
+	{
+		LINK(s, i, 1, __builtin_popcount(seq[i]));
+		LINK(i, T, 1, 0);
+		LINK(i + n, t, 1, 0);
+		LINK(S, i + n, 1, 0);
+	}
+	for (int i = 1; i < n; ++i)
+		for (int j = i + 1; j <= n; ++j)
+			LINK(i + n, j, 1, (seq[i] == seq[j] ? 0 : __builtin_popcount(seq[j])));
+	LINK(t, s, m, 0);
+}
+
+int d[1111], p[1111];
+bool inq[1111];
+
+bool SPFA()
+{
+	queue<int> q;
+	memset(d, 70, sizeof(d));
+	memset(inq, 0, sizeof(inq));
+	d[S] = 0; inq[S] = 1; q.push(S);
+	while (q.size())
+	{
+		int u = q.front(); q.pop(); inq[u] = 0;
+		for (int i = head[u]; i; i = Nxt[i])
+			if (c[i])
+			{
+				int v = x[i];
+				if (d[u] + w[i] < d[v])
+				{
+					d[v] = d[u] + w[i];
+					p[v] = i;
+					if (!inq[v])
+						q.push(v), inq[v] = 1;
+				}
+			}
+	}
+	if (d[T] == d[0])
+		return 0;
+	int flow = 0x7fffffff;
+	for (int u = T; u != S; u = x[p[u]^1])
+		flow = min(flow, c[p[u]]);
+	for (int u = T; u != S; u = x[p[u]^1])
+		c[p[u]] -= flow, c[p[u]^1] += flow;
+	ans += flow * d[T];
+	return 1;
+}
+
+int tot, var[333], cv;
+bool ty[333];
+
+void work()
+{
+	while (SPFA());
+	for (int i = head[s]; i; i = Nxt[i])
+		if (c[i] == 0 && x[i] >= 1 && x[i] <= n)
+			var[x[i]] = cv++, ty[x[i]] = 1, tot += 2;
+	for (int i = 1; i <= n; ++i)
+		for (int j = head[i+n]; j; j = Nxt[j])
+			if (c[j] == 0 && x[j] > i && x[j] <= n)
+			{
+				var[x[j]] = var[i];
+				ty[x[j]] = (seq[i] != seq[x[j]]);
+				tot += ty[x[j]] + 1;
+				break;
+			}
+	printf("%d %d\n", tot, ans);
+	for (int i = 1; i <= n; ++i)
+	{
+		if (ty[i])
+			printf("%c=%d\n", 'a' + var[i], seq[i]);
+		printf("print(%c)\n", 'a' + var[i]);
+	}
+}
+
+int main()
+{
+	init();
+	work();
+	return 0;
+}

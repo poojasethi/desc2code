@@ -1,0 +1,144 @@
+#include <bits/stdc++.h>
+#define filein(t) freopen(t, "r", stdin)
+#define fileout(t) freopen(t, "w", stdout)
+#define mp make_pair
+#define f first
+#define s second
+#define N 100005
+#define NN 100005
+#define BIT(i, j) ((j >> i) & 1)
+#define ll long long
+#define oo 1000000007
+#define ln 2000000001
+#define Line pair < pair <ll, ll>, ll >
+#define Pi pair < Pa, Pa >
+#define Pa pair < int, int >
+
+using namespace std;
+
+typedef bitset < 2005 > Bit;
+Bit Tree[4*N], Prime, Full, Empty;
+int ok[N], n, m, L[N], R[N], Count, Pos[N], Val[N], q, Add[4*N];
+vector < int > a[N];
+
+void Plus(int &x, int y)
+{
+    x += y;
+    if(x >= m)  x -= m;
+}
+
+
+void DFS(int u, int pre)
+{
+    L[u] = ++Count;
+    Pos[Count] = u;
+    for(int i=0; i<a[u].size(); i++)
+    {
+        int v = a[u][i];
+        if(v == pre)    continue;
+        DFS(v, u);
+    }
+    R[u] = Count;
+}
+
+void Build(int node, int l, int r)
+{
+    if(l == r)
+    {
+        Tree[node][Val[Pos[l]]] = 1;
+        return;
+    }
+    int g = (l + r) / 2;
+    Build(node*2, l, g);
+    Build(node*2+1, g+1, r);
+    Tree[node] = Tree[2*node] | Tree[2*node+1];
+    //cout << Tree[node] << endl;
+}
+
+void Update(Bit &P, int x)
+{
+    P = ((P << x) & Full) | (P >> (m - x));
+}
+
+void Down(int node)
+{
+    Plus(Add[2*node], Add[node]);
+    Plus(Add[2*node+1] , Add[node]);
+    Update(Tree[2*node], Add[node]);
+    Update(Tree[2*node+1], Add[node]);
+    Add[node] = 0;
+}
+
+void Up(int node, int l, int r, int d, int c, int x)
+{
+    if(l > c || r < d)  return;
+    if(d <= l && r <= c)
+    {
+        Update(Tree[node], x);
+        Plus(Add[node], x);
+        return;
+    }
+    Down(node);
+    int g = (l + r) / 2;
+    Up(node*2, l, g, d, c, x);
+    Up(node*2+1, g+1, r, d, c, x);
+    Tree[node] = Tree[2*node] | Tree[2*node+1];
+}
+
+Bit Get(int node, int l, int r, int d, int c)
+{
+    if(r < d || l > c)  return Empty;
+    if(d <= l && r <= c)    return Tree[node];
+    Down(node);
+    int g = (l + r) / 2;
+    return Get(node*2, l, g, d, c) | Get(node*2+1, g+1, r, d, c);
+}
+
+int main()
+{
+    ios_base::sync_with_stdio(0);
+    //filein("inp.txt");  fileout("out.txt");
+    int u, v, x, type;
+    cin >> n >> m;
+    for(int i=0; i<=m; i++)
+        Full[i] = 1;
+    for(int i=2; i<m; i++)
+    {
+        if(ok[i])   continue;
+        Prime[i] = 1;
+        for(int j=i; j<m; j+=i)
+            ok[j] = 1;
+    }
+    for(int i=1; i<=n; i++)
+    {
+        cin >> Val[i];
+        Val[i] %= m;
+    }
+    for(int i=1; i<n; i++)
+    {
+        cin >> u >> v;
+        a[u].push_back(v);
+        a[v].push_back(u);
+    }
+    DFS(1, 0);
+    Build(1, 1, n);
+    cin >> q;
+    //cout << Prime << endl;
+  //  cout << Tree[1] << endl;
+    while(q--)
+    {
+        cin >> type >> u;
+        if(type == 1)
+        {
+            cin >> x;
+            x %= m;
+            Up(1, 1, n, L[u], R[u], x);
+        }
+        else
+        {
+            Bit res = Get(1, 1, n, L[u], R[u]);
+            res = res & Prime;
+            cout << res.count() << endl;
+        }
+    }
+}

@@ -1,0 +1,87 @@
+#include <algorithm>
+#include <assert.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct {
+	double x, y;
+} point_t;
+
+int N;
+point_t points[123456];
+double dists[123456];
+int order[123456];
+point_t midline;
+
+double sqr(double x)
+{
+	return x*x;
+}
+
+double dist2(const point_t *p)
+{
+	double dot = p->x*midline.x + p->y*midline.y;
+	point_t proj = { dot*midline.x, dot*midline.y };
+	return sqr(proj.x-p->x) + sqr(proj.y-p->y);
+}
+
+bool is_left(const point_t *p)
+{
+	double cross = p->x*midline.y - p->y*midline.x;
+	return cross < 0.0;
+}
+
+int main(void)
+{
+	double lo = 0.0, hi = 0.0, mid;
+
+	scanf("%d", &N);
+	for (int i = 0; i < N; ++i) {
+		int x, y;
+		scanf("%d %d", &x, &y);
+		points[i].x = x + 10;
+		points[i].y = y;
+		order[i] = i;
+		double speed = points[i].y / points[i].x;
+		if (speed > hi)
+			hi = speed;
+	}
+
+	for (int i = 0; i < 30; ++i) {
+		mid = (lo+hi) / 2.0;
+		double len = hypot(mid, 1.0);
+		midline.x = 1.0 / len;
+		midline.y = mid / len;
+		for (int j = 0; j < N; ++j) {
+			dists[j] = dist2(&points[j]);
+			if (is_left(&points[j]))
+				dists[j] *= -1.0;
+		}
+		std::sort(dists, dists+N);
+
+		bool possible = true;
+		for (int a = 0, b = N-1; possible && a < b; a += 1, b -= 1) {
+			bool left_a = dists[a] <= 0.0;
+			bool left_b = dists[b] <= 0.0;
+			if (left_a && left_b)
+				continue;
+			if (!left_a && !left_b) {
+				possible = false;
+				break;
+			}
+			assert(left_a && !left_b);
+			possible = fabs(dists[a]) > fabs(dists[b]);
+		}
+
+		if (possible)
+			lo = mid;
+		else
+			hi = mid;
+	}
+
+	printf("%0.7lf\n", mid);
+
+	return 0;
+}

@@ -1,0 +1,79 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+const int MAXN = 112345;
+struct seg{
+    int esq, dir, q_esq, q_dir, tam, resp;
+} tree[4*MAXN];
+int W, v[MAXN];
+
+seg merge(seg a, seg b) {
+    seg c;
+    if (a.q_esq == a.tam && b.esq == a.esq) {
+        c.q_esq = a.tam+b.q_esq;
+        c.esq = a.esq;
+    }
+    else {
+        c.esq = a.esq;
+        c.q_esq = a.q_esq;
+    }
+    if (b.q_dir == b.tam && a.dir == b.dir) {
+        c.q_dir = b.tam+a.q_dir;
+        c.dir = b.dir;
+    }
+    else {
+        c.dir = b.dir;
+        c.q_dir = b.q_dir;
+    }
+    c.resp = a.resp+b.resp;
+    if (a.dir == b.esq) {
+        int x = a.q_dir, y = b.q_esq;
+        x = min(x,W-1);
+        y = min(y,W-1);
+        c.resp += max(0, y+x-W+1);
+    }
+    c.tam = a.tam+b.tam;
+    return c;
+}
+
+seg build(int idx, int ini, int fim) {
+    if (ini == fim) {
+        tree[idx].esq = tree[idx].dir = v[ini];
+        tree[idx].q_esq = tree[idx].q_dir = 1;
+        if (W == 1) tree[idx].resp = 1;
+        else tree[idx].resp = 0;
+        tree[idx].tam = 1;
+        return tree[idx];
+    }
+    int mid = (ini+fim)/2;
+    return tree[idx] = merge(build(2*idx,ini,mid),build(2*idx+1,mid+1,fim));
+}
+
+seg update(int idx, int ini, int fim, int x, int cor) {
+    if (ini > x || fim < x) return tree[idx];
+    if (ini == fim) {
+        tree[idx].esq = tree[idx].dir = cor;
+        return tree[idx];
+    }
+    int mid = (ini+fim)/2;
+    return tree[idx] = merge(update(2*idx,ini,mid,x,cor),update(2*idx+1,mid+1,fim,x,cor));
+}
+
+int main() {
+    int T, N;
+    scanf("%d",&T);
+    while (T--) {
+        scanf("%d %d",&N,&W);
+        for (int i=1; i<=N; i++) scanf("%d",&v[i]);
+        build(1,1,N);
+        int Q, x, cor;
+        scanf("%d",&Q);
+        while (Q--) {
+            scanf("%d %d",&x,&cor);
+            update(1,1,N,x,cor);
+            printf("%d\n",tree[1].resp);
+        }
+    }
+    return 0;
+}

@@ -1,0 +1,115 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+using namespace std;
+typedef long long LL;
+const int Maxn=1005,MaxN=Maxn*Maxn,inf=999999999+208;
+int n,vx,vy,tot=0;
+int th[MaxN*2],N=0;
+
+inline int get() {
+	bool f=false; char ch;
+	while (!isdigit(ch=getchar())) f|=ch=='-';
+	int v=ch-48;
+	while (isdigit(ch=getchar())) v=v*10+ch-48;
+	return f?-v:v;
+}
+
+struct info{
+	int p,s,t,h;
+	info(){}
+	info(int p,int s,int t,int h):p(p),s(s),t(t),h(h){}
+	bool operator <(const info &rhs)const{
+		return p<rhs.p;
+	}
+}q[MaxN];
+
+inline void gmin(info &q,int x,int y) {
+	static int t;
+	t=x*vy-y*vx;
+	q.p=min(q.p,x*vx+y*vy);
+	q.s=min(q.s,t);
+	q.t=max(q.t,t);
+}
+
+struct node{
+	node *lc,*rc;
+	int minv,flag;
+	void modify(int v) {
+		if (minv<v) minv=v,flag=v;
+	}
+	void push_down() {
+		if (flag) {
+			lc->modify(flag);
+			rc->modify(flag);
+			flag=0;
+		}
+	}
+	void update() {
+		minv=lc->minv<rc->minv?lc->minv:rc->minv;
+	}
+}po[MaxN*4],*pn=po;
+
+class Segment_Tree{
+	node *root;
+	int res;
+	void build(node *&x,int l,int r) {
+		x=++pn;
+		if (l<r) {
+			int mid=(l+r)>>1;
+			build(x->lc,l,mid);
+			build(x->rc,mid+1,r);
+		}
+	}
+	void ins(node *x,int l,int r,int s,int t,int v) {
+		if (s<=l&&t>=r) {
+			res>x->minv?res=x->minv:0;
+			x->modify(v);
+			return;
+		}
+		int mid=(l+r)>>1;
+		x->push_down();
+		if (s<=mid) ins(x->lc,l,mid,s,t,v);
+		if (t>mid) ins(x->rc,mid+1,r,s,t,v);
+		x->update();
+	}
+	public:
+		void build() {
+			build(root,1,N);
+		}
+		int ins(int s,int t,int v) {
+			res=inf;
+			ins(root,1,N,s,t,v);
+			return res;
+		}
+}tr;
+
+int main() {
+	n=get(); vx=get(); vy=get();
+	for (int i=1;i<=n;i++)
+		for (int j=1;j<=n;j++) {
+			q[++tot]=info(inf,inf,-inf,get());
+			gmin(q[tot],i-1,j-1);
+			gmin(q[tot],i-1,j);
+			gmin(q[tot],i,j-1);
+			gmin(q[tot],i,j);
+			th[++N]=q[tot].s;
+			th[++N]=q[tot].t;
+		}
+	sort(q+1,q+tot+1);
+	sort(th+1,th+N+1);
+	N=unique(th+1,th+N+1)-th-1;
+	tr.build();
+	LL ans=0;
+	for (int i=1;i<=tot;i++) {
+		int s=lower_bound(th+1,th+N+1,q[i].s)-th,
+			t=lower_bound(th+1,th+N+1,q[i].t)-th-1;
+		ans+=max(0,q[i].h-tr.ins(s,t,q[i].h));
+	}
+	cout<<ans<<endl;
+	return 0;
+}

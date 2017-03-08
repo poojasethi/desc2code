@@ -1,0 +1,114 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+const int maxn = 100005;
+struct Tedge { int v; Tedge *p; };
+struct Tnode { Tnode *lc, *rc; int l, r, m, s; };
+Tedge *head[maxn], edbuf[maxn], *edptr = edbuf;
+Tnode *rot[maxn], buf[maxn * 50], *ptr = buf, *old, *now;
+int fa[maxn][20], ld[maxn], rd[maxn], dep[maxn], ruin[maxn];
+int n, m, tot, mdep, root;
+
+void dfs(int u) {
+    ld[u] = ++tot; mdep = max(mdep, dep[u]);
+    for (Tedge *p = head[u]; p; p = p->p) {
+        dep[p->v] = dep[u] + 1; dfs(p->v);
+    }
+    rd[u] = tot;
+}
+
+int getlca(int u, int v) {
+    if (dep[u] > dep[v]) swap(u, v);
+    for (int i = m; i >= 0; --i)
+        if (dep[fa[v][i]] >= dep[u]) v = fa[v][i];
+    if (u == v) return u;
+    for (int i = m; i >= 0; --i)
+        if (fa[u][i] != fa[v][i])
+            u = fa[u][i], v = fa[v][i];
+    return fa[u][0];
+}
+
+Tnode *build(int l, int r) {
+    Tnode *p = ptr++; p->l = l; p->r = r;
+    if (l + 1 == r) return p;
+    p->m = (l + r) >> 1;
+    p->lc = build(l, p->m);
+    p->rc = build(p->m, r);
+    return p;
+}
+
+Tnode *add(Tnode *pt, int x, int v) {
+    Tnode *p = ptr++; *p = *pt; p->s += v;
+    if (p->l + 1 == p->r) return p;
+    if (x < p->m) p->lc = add(pt->lc, x, v);
+    else p->rc = add(pt->rc, x, v);
+    return p;
+}
+
+int get(Tnode *p, int x) {
+    return x <= p->l ? 0 :
+            x >= p->r ? p->s :
+            x < p->m ? get(p->lc, x) :
+            p->lc->s + get(p->rc, x);
+}
+
+int calc(int u, int v) {
+    if (!v) return dep[u] - get(now, ld[u]) + get(old, ld[u]);
+    return dep[u] - get(now, ld[u]) + get(old, ld[u]) -
+            (dep[v] - get(now, ld[v]) + get(old, ld[v]));
+}
+
+int find(int u, int v, int s) {
+    int k, t, x;
+    for (k = m; k >= 0; --k) 
+        if (dep[fa[u][k]] >= dep[v]) {
+            x = fa[u][k]; t = calc(u, x);
+            if (t < s) s -= t, u = x;
+        }
+    return u;
+}
+
+int solve(int u, int v, int k, int f) {
+    int lca, t, ans; ans = -1; k += ruin[u] <= f;
+    lca = getlca(u, v); t = calc(u, fa[lca][0]);
+    if (k <= t) ans = find(u, lca, k);
+    else {
+        k = k - t + (ruin[lca] <= f); t = calc(v, fa[lca][0]);
+        if (k > t) ans = -1; else ans = find(v, lca, t - k + 1);
+    }
+    if (ans == u || ans == v) ans = -1;
+    return ans;
+}
+
+int main() {
+    int i, k, q, cmd, u, v, f;
+    scanf("%d", &n);
+    for (i = 1; i <= n; ++i) {
+        scanf("%d", fa[i]);
+        if (fa[i][0]) {
+            *edptr = (Tedge){i, head[fa[i][0]]};
+            head[fa[i][0]] = edptr++;
+        } else root = i;
+    }
+    dep[root] = 1; dfs(root);
+    for (m = 0; (1 << m) < mdep; ++m) ;
+    for (k = 1; k <= m; ++k)
+        for (i = 1; i <= n; ++i)
+            fa[i][k] = fa[fa[i][k - 1]][k - 1];
+    rot[0] = build(0, n);
+    for (scanf("%d", &q), i = 1; i <= q; ++i) {
+        if (scanf("%d", &cmd), cmd == 1) {
+            scanf("%d", &u); ruin[u] = i;
+            rot[i] = add(rot[i - 1], ld[u] - 1, 1);
+            if (rd[u] < n) rot[i] = add(rot[i], rd[u], -1);
+        } else {
+            scanf("%d%d%d%d", &u, &v, &k, &f);
+            rot[i] = rot[i - 1]; now = rot[i]; old = rot[f];
+            printf("%d\n", solve(u, v, k, f));
+        }
+    }
+    return 0;
+}

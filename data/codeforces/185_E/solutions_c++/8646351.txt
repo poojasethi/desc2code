@@ -1,0 +1,304 @@
+#include <iostream>
+#include <algorithm>
+#include <cmath>
+#include <vector>
+#include <map>
+#include <cstdlib>
+
+using namespace std;
+
+int absolut(int x)
+{
+  if (x<0) return -x;
+  return x;
+}
+
+int distancia(int x1,int y1,int x2,int y2)
+{
+  return max(absolut(x1-x2),absolut(y1-y2));
+}
+
+const int limite=100001;
+const int infinito=1000000000;
+
+struct elem {
+  int id,x,y,x2;
+  elem() {
+  }
+  elem(int inid,int inx,int iny) {
+    id=inid;x=inx;y=iny;x2=1000;
+  }
+  elem(int inid,int inx,int iny,int inx2) {
+    id=inid;x=inx;y=iny;x2=inx2;
+  }
+};
+
+bool operator<(elem e1,elem e2) {
+  return e1.y>e2.y or (e1.y==e2.y and e1.id<e2.id);
+}
+
+void limpiar(map<int,int> &mapa,int x)
+{
+  map<int,int>::iterator it=mapa.find(x);
+  int y=it->second;
+  for (;;) {
+    map<int,int>::iterator it2=it;
+    it2++;
+    if (it2==mapa.end()) break;
+    int x2=it2->first;
+    int y2=it2->second;
+    if (absolut(x2-x)<=absolut(y2-y)) mapa.erase(it2);
+    else break;
+  }
+  for (;it!=mapa.begin();) {
+    map<int,int>::iterator it2=it;
+    it2--;
+    int x2=it2->first;
+    int y2=it2->second;
+    if (absolut(x2-x)<=absolut(y2-y)) mapa.erase(it2);
+    else break;
+  }
+}
+
+void computadist(vector<elem> &ve,vector<int> &dist,int divi)
+{
+  sort(ve.begin(),ve.end());
+  map<int,int> mapa;
+  for (int i=0;i<int(ve.size());i++) {
+    elem &e=ve[i];
+    int id=e.id;
+    int x=e.x;
+    int y=e.y;
+    if (id==-1) {
+      mapa[x]=y;
+      limpiar(mapa,x);
+    } else {
+      {
+	map<int,int>::iterator it=mapa.lower_bound(x);
+	if (it!=mapa.end()) dist[id]=min(dist[id],(absolut(x-it->first)+absolut(y-it->second))/divi);
+      }
+      {
+	map<int,int>::iterator it=mapa.lower_bound(x);
+	if (it!=mapa.begin()) {
+	  it--;
+	  dist[id]=min(dist[id],(absolut(x-it->first)+absolut(y-it->second))/divi);
+	}
+      }
+    }
+  }
+}
+
+void computadistext(vector<elem> &ve,vector<int> &dist,int divi)
+{
+  computadist(ve,dist,divi);
+  for (int i=0;i<int(ve.size());i++)
+    ve[i].y*=-1;
+  computadist(ve,dist,divi);
+}
+
+const int tope=1<<20;
+const int primero=1<<19;
+
+int minimo[tope];
+
+void inserta(int pos,int val)
+{
+  pos+=primero;
+  minimo[pos]=val;
+  while (pos>1) {
+    pos/=2;
+    minimo[pos]=min(minimo[2*pos],minimo[2*pos+1]);
+  }
+}
+
+int minimoentre(int pos0,int pos1)
+{
+  pos0+=primero;
+  pos1+=primero;
+  if (pos0==pos1) return minimo[pos0];
+  int mini=min(minimo[pos0],minimo[pos1]);
+  while (pos0+1<pos1) {
+    if (pos0%2==0) mini=min(mini,minimo[pos0+1]);
+    pos0/=2;
+    if (pos1%2==1) mini=min(mini,minimo[pos1-1]);
+    pos1/=2;
+  }
+  return mini;
+}
+
+void computalinea(vector<elem> &ve,vector<int> &dist)
+{
+  for (int i=0;i<tope;i++)
+    minimo[i]=infinito;
+  map<int,int> posicion;
+  for (int i=0;i<int(ve.size());i++) {
+    posicion[ve[i].x];
+    if (ve[i].id!=-1)
+      posicion[ve[i].x2];
+  }
+  {
+    int i=0;
+    for (map<int,int>::iterator it=posicion.begin();it!=posicion.end();it++,i++)
+      it->second=i;
+  }
+  sort(ve.begin(),ve.end());
+  for (int i=0;i<int(ve.size());i++) {
+    elem &e=ve[i];
+    if (e.id==-1) {
+      inserta(posicion[e.x],e.y);
+    } else {
+      dist[e.id]=min(dist[e.id],minimoentre(posicion[e.x],posicion[e.x2])-e.y);
+    }
+  }
+}
+
+void computalineaext(vector<elem> &ve,vector<int> &dist)
+{
+  computalinea(ve,dist);
+  for (int i=0;i<int(ve.size());i++)
+    ve[i].y*=-1;
+  computalinea(ve,dist);
+}
+
+int n,m;
+
+int xd[limite],yd[limite],xs[limite],ys[limite];
+int indice[limite];
+int dd[limite];
+
+void transforma(int &x,int &y)
+{
+  int nextx=2*(x-y);
+  int nexty=2*(x+y);
+  x=nextx;
+  y=nexty;
+}
+
+bool compara(int i1,int i2)
+{
+  return dd[i1]<dd[i2];
+}
+
+void versionfacil()
+{
+  int xmax=-infinito,xmin=infinito,ymax=-infinito,ymin=infinito;
+  for (int i=0;i<n;i++) {
+    cin>>xd[i]>>yd[i];
+    transforma(xd[i],yd[i]);
+    xmax=max(xmax,xd[i]);
+    xmin=min(xmin,xd[i]);
+    ymax=max(ymax,yd[i]);
+    ymin=min(ymin,yd[i]);
+  }
+  int sol=distancia(xmax,ymax,xmin,ymin)/2;
+  cout<<(sol+1)/2<<endl;
+  exit(0);
+}
+
+void escribe(vector<elem> &ve)
+{
+  for (int i=0;i<int(ve.size());i++)
+    cout<<"("<<ve[i].id<<","<<ve[i].x<<","<<ve[i].y<<","<<ve[i].x2<<")";
+  cout<<endl;
+}
+
+int main()
+{
+  ios::sync_with_stdio(false);
+  cin>>n>>m;
+  if (m==0) versionfacil();
+  vector<elem> vesimple;
+  vector<elem> vehor;
+  vector<elem> vever;
+  {
+    vector<elem> ve;
+    for (int i=0;i<n;i++) {
+      cin>>xd[i]>>yd[i];
+      ve.push_back(elem(i,xd[i],yd[i]));
+      transforma(xd[i],yd[i]);
+    }
+    for (int i=0;i<m;i++) {
+      cin>>xs[i]>>ys[i];
+      ve.push_back(elem(-1,xs[i],ys[i]));
+      vesimple.push_back(elem(-1,4*xs[i],4*ys[i]));
+      transforma(xs[i],ys[i]);
+      vehor.push_back(elem(-1,xs[i],ys[i]));
+      vever.push_back(elem(-1,ys[i],xs[i]));
+      indice[i]=i;
+    }
+    vector<int> dist(n,infinito);
+    computadistext(ve,dist,1);
+    for (int i=0;i<n;i++)
+      dd[i]=2*dist[i];
+    for (int i=0;i<n;i++)
+      indice[i]=i;
+    sort(indice,indice+n,compara);
+  }
+  /*
+  for (int i=0;i<n;i++)
+    cout<<dd[i]<<",";
+  cout<<endl;
+  */  
+  int sol=dd[indice[n-1]];
+  {
+    int xmax=-infinito,xmin=infinito,ymax=-infinito,ymin=infinito;
+    for (int i=n-1;i>=0;i--) {
+      int id=indice[i];
+      xmax=max(xmax,xd[id]);
+      xmin=min(xmin,xd[id]);
+      ymax=max(ymax,yd[id]);
+      ymin=min(ymin,yd[id]);
+      int dis=distancia(xmin,ymin,xmax,ymax);
+      int xinf=xmax-dis/2;
+      int xsup=xmin+dis/2;
+      int yinf=ymax-dis/2;
+      int ysup=ymin+dis/2;
+      vesimple.push_back(elem(i,xinf+yinf,yinf-xinf));
+      vesimple.push_back(elem(i,xsup+ysup,ysup-xsup));
+      if (xinf!=xsup) vehor.push_back(elem(i,xinf,yinf,xsup));
+      if (yinf!=ysup) vever.push_back(elem(i,yinf,xinf,ysup));
+    }
+    sol=min(sol,distancia(xmin,ymin,xmax,ymax)/2);
+  }
+  /*  
+  cout<<sol<<endl;
+
+  escribe(vesimple);
+  escribe(vehor);
+  escribe(vever);
+  */
+  vector<int> dist(n,infinito);
+  computadistext(vesimple,dist,2);
+  vector<int> disthor(n,infinito);
+  computalineaext(vehor,dist);
+  vector<int> distver(n,infinito);
+  computalineaext(vever,dist);
+  /*  
+  for (int i=0;i<n;i++)
+    cout<<dist[i]<<",";
+  cout<<endl;
+
+  for (int i=0;i<n;i++)
+    cout<<disthor[i]<<",";
+  cout<<endl;
+
+  for (int i=0;i<n;i++)
+    cout<<distver[i]<<",";
+  cout<<endl;
+  */
+  int xmax=-infinito,xmin=infinito,ymax=-infinito,ymin=infinito;
+  for (int i=n-1;i>0;i--) {
+    int id=indice[i];
+    xmax=max(xmax,xd[id]);
+    xmin=min(xmin,xd[id]);
+    ymax=max(ymax,yd[id]);
+    ymin=min(ymin,yd[id]);
+    int dis=distancia(xmin,ymin,xmax,ymax);
+    int draya=dist[i];
+    int tiempo=dd[indice[i-1]];
+    if (tiempo+draya<=dis/2) sol=min(sol,dis/2);
+    else if (draya+dis/2<=tiempo) sol=min(sol,tiempo);
+    else sol=min(sol,(tiempo+draya+dis/2)/2);
+  }
+  cout<<(sol+1)/2<<endl;
+}

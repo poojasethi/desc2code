@@ -1,0 +1,304 @@
+
+#include <vector> 
+
+
+ #include <algorithm> 
+
+ #include <iostream> 
+
+ #include <cstdio> 
+
+ #include <cmath> 
+
+ #include <cstdlib> 
+
+
+
+ #include <cstring> 
+
+  
+
+ using namespace std; 
+
+  
+
+ typedef long long ll; 
+
+ typedef pair<int, int> pii;
+
+  
+
+ #define INF 1000000000
+
+ #define pb push_back 
+
+ #define itr iterator 
+
+ #define sz size() 
+
+ #define mp make_pair
+
+  
+
+ char N[1000];
+
+ char prevpref[1000];
+
+ int mod = 1000000007;
+
+ long long nmod;
+
+ int len;
+
+  
+
+ int pd[110][10][2][2];
+
+ int pd2[110][10][2][2][2];
+
+  
+
+ int calc_incr(int cur, int want, bool before_nine, bool nonzero, bool eq) {
+
+ 	if (cur == len-1) {
+
+ 		return !before_nine && !eq;
+
+ 	}
+
+  
+
+ 	int& ans = pd2[cur][want][before_nine][nonzero][eq];
+
+ 	if (ans == -1) {
+
+ 		ans = 0;
+
+ 		for (int dig = 0; dig <= 9; dig++) {
+
+ 			if (eq && dig > N[cur]) break;
+
+ 			if (dig == want && !(want == 0 && !nonzero)) continue;
+
+ 			
+ 			bool new_bef9 = (before_nine && dig == 9) || (dig + 1) % 10 == want;
+
+ 			
+ 			ans += calc_incr(cur+1, want, new_bef9, nonzero || dig, eq && N[cur]==dig);
+
+ 			if (ans >= mod) ans -= mod;
+
+ 		}
+
+ 	}
+
+  
+
+ 	return ans;
+
+ }
+
+  
+
+ int calc(int cur, int want, bool nonzero, bool eq) {
+
+ 	if (cur == len-1) {
+
+ 		return 1;
+
+ 	}
+
+  
+
+ 	int& ans = pd[cur][want][nonzero][eq];
+
+ 	if (ans == -1) {
+
+ 		ans = 0;
+
+ 		for (int dig = 0; dig <= 9; dig++) {
+
+ 			if (eq && dig > N[cur]) break;
+
+ 			if (dig == want && !(want == 0 && !nonzero)) continue;
+
+  
+
+ 			ans += calc(cur+1, want, nonzero || dig, eq && N[cur]==dig);
+
+ 			if (ans >= mod) ans -= mod;
+
+ 		}
+
+ 	}
+
+  
+
+ 	return ans;
+
+ }
+
+  
+
+ int main() {
+
+ 	scanf("%s", N);
+
+ 	memset(pd,-1,sizeof(pd));
+
+ 	memset(pd2,-1,sizeof(pd2));
+
+  
+
+ 	len = strlen(N);
+
+ 	for (int i = 0; i < len; i++) {
+
+ 		N[i] -= '0';
+
+ 		nmod = (nmod * 10 + N[i]) % mod;
+
+ 	}
+
+  
+
+ 	if (len > 1) {
+
+ 		for (int i = 0; i < len-1; i++) prevpref[i] = N[i];
+
+ 		prevpref[len-2]--;
+
+  
+
+ 		for (int i = len-2; i >= 0; i--) {
+
+ 			if (prevpref[i] < 0) {
+
+ 				prevpref[i] += 10;
+
+ 				prevpref[i-1]--;
+
+ 			}
+
+ 		}
+
+ 	}
+
+  
+
+ 	long long tot = ((nmod)*(nmod-1))%mod;
+
+ 	tot = (tot*500000004) % mod;
+
+ 	tot = (tot + nmod) % mod;
+
+ 	tot = (tot * 10) % mod;
+
+ 	for (int i = 0; i < 10; i++) {
+
+ 		long long bef = tot;
+
+ 		long long rem = calc(0, i, 0, 1);
+
+ 		
+ 		rem = rem * ( (i*(i+1)/2) + ((9-i)*(10-i)/2) );
+
+ 		if (i != 0) rem = (rem - i) % mod;
+
+ 		tot = (((tot - rem) % mod) + mod) % mod;
+
+ 		bool found = false;
+
+ 		for (int k = 0; k < len-1; k++) {
+
+ 			if (N[k] == i) found = true;
+
+ 		}
+
+ 		if (!found) {
+
+ 			long long rem = ( (i*(i+1)/2) + ((9-i)*(10-i)/2) );
+
+ 			if (len == 1 && i != 0) rem = (rem - i) % mod;
+
+  
+
+ 			int sm = min(i-1, (int)N[len-1]);
+
+ 			long long rl = (sm+1)*(sm+2)/2;
+
+ 			if (len == 1 && sm != -1) rl = (rl - sm - 1) % mod;
+
+  
+
+ 			int big = min(9, max(i, (int)N[len-1]));
+
+ 			rl += (big-i)*(big+1-i) / 2;
+
+  
+
+ 			//printf("fix %lld - %lld = %lld\n", rem, rl, rem - rl);
+
+ 			tot += rem - rl;
+
+ 			tot %= mod;
+
+ 		} 
+
+ 		
+ 		
+  
+
+ 		rem = calc_incr(0, i, 0, 0, 1);
+
+ 		rem = rem * i * (9-i);
+
+ 		tot = (((tot - rem) % mod) + mod) % mod;
+
+   		if (len > 1) {
+
+ 			bool found = false;
+
+ 			for (int k = 0; k < len-1; k++) {
+
+ 				if (prevpref[k] == i) found = true;
+
+ 			}
+
+ 			for (int k = 0; k < len-1; k++) {
+
+ 				if (N[k] == i) found = true;
+
+ 			}
+
+ 			if (!found) {
+
+ 				long long inc = i * (9-i);
+
+ 				int sm = min(i-1, (int)N[len-1]);
+
+ 				long long rl = (sm+1) * (9-i);
+
+  
+
+ 				tot += inc - rl;
+
+ 				tot %= mod;
+
+ 			} 
+
+ 		}
+
+  
+
+ 		 	}
+
+  
+
+ 	printf("%lld\n", tot);
+
+ } 
+
+
+
+

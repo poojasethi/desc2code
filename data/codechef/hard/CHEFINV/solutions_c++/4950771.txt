@@ -1,0 +1,169 @@
+#include <algorithm>
+#include <iostream>
+#include <cassert>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+
+#define NMAX 200010
+#define TMAX (1<<19)
+
+using namespace std;
+
+typedef long long lli;
+
+class segment_tree{
+private:
+
+	int *tree[TMAX];
+	int *lpos[TMAX];
+	int *rpos[TMAX];
+	int sz[TMAX];
+
+	inline int left(int x){ return (x+1)*2-1; }
+	inline int right(int x){ return (x+1)*2; }
+
+	int N;
+
+	lli tree_init(int node, int s, int e, int *A){
+		if(s == e){
+			tree[node] = new int[1];
+			lpos[node] = new int[1];
+			rpos[node] = new int[1];
+			tree[node][0] =  A[s];
+			sz[node] = 1;
+			return 0;
+		}
+
+		int l,r;
+		lli inv;
+
+		l = left(node), r= right(node);
+		inv = tree_init(l,s,(s+e)/2,A);
+		inv += tree_init(r,(s+e)/2+1,e,A);
+
+		sz[node] = e-s+1;
+		tree[node] = new int [e-s+4];
+		lpos[node] = new int [e-s+4];
+		rpos[node] = new int [e-s+4];
+
+		int i,j,k;
+
+		i = 0, j = 0, k = 0;
+
+		while((i < sz[l]) ||  (j < sz[r])){
+			lpos[node][k] = i;
+			rpos[node][k] = j;
+			if(i < sz[l] && ((j >= sz[r]) || (tree[l][i] <= tree[r][j]))){
+				tree[node][k++] = tree[l][i++];
+				continue;
+			}
+			inv += (sz[l]-i);
+			tree[node][k++] = tree[r][j++];
+		}
+		lpos[node][k] = i;
+		rpos[node][k] = j;
+
+		return inv;
+	}
+
+
+	int tree_query(int node, int s, int e, int i, int j, int p1, int p2, int n1, int n2){
+		if(s > j || e < i) return 0;
+
+		if(s >= i && e <= j){
+			return p1+p2-n1-n2;
+		}
+		int l = left(node),r = right(node);
+		return tree_query(l,s,(s+e)/2,i,j,lpos[node][p1],lpos[node][p2],lpos[node][n1],lpos[node][n2])+\
+				tree_query(r,(s+e)/2+1,e,i,j,rpos[node][p1], rpos[node][p2],rpos[node][n1],rpos[node][n2]);
+	}
+
+	int upper[NMAX];
+	int lower[NMAX];
+public:
+
+	lli init(int n, int *A){
+		N = n;
+		lli inv = tree_init(0,0,N-1,A);
+
+		while(n--){
+			lower[n] = lower_bound(tree[0],tree[0]+sz[0],A[n])-tree[0];
+		}
+
+		int i = 0;
+		n = 0;
+
+		for(i = 0; i < N; ++i){
+			while(n < N && tree[0][i] == tree[0][n]) ++n;
+			upper[i] = n;
+		}
+
+		return inv;
+	}
+
+	int query(int i, int j, int idx1, int idx2){
+		int p1,p2,n1,n2;
+		p1 = lower[idx1];
+		n2 = lower[idx2];
+		p2 = upper[p1];
+		n1 = upper[n2];
+
+
+		return tree_query(0,0,N-1,i,j,p1,p2,n1,n2);
+	}
+};
+
+
+segment_tree T;
+int N;
+
+
+int query(int i, int j, int idx1, int idx2){
+	return T.query(i,j,idx1,idx2);
+}
+
+
+int A[NMAX];
+
+
+int M;
+
+int main(){
+	int i,j;
+
+	scanf("%d%d",&N,&M);
+
+	for(i =0 ; i < N; ++i) scanf("%d",&A[i]);
+
+	lli inv = T.init(N,A),tmp;
+	tmp = inv;
+
+	while(M--){
+		scanf("%d%d",&i,&j);
+
+		--i,--j;
+
+		if(!(A[i]^A[j])){
+			printf("%lld\n",inv);
+			continue;
+		}
+
+
+		if(i > j) swap(i,j);
+//		inv -= query(i+1,j-1,A[j],1);
+//		inv += query(i+1,j-1,A[j],0);
+//		inv -= query(i+1,j-1,A[i],0);
+//		inv += query(i+1,j-1,A[i],1);
+
+		inv += query(i+1,j-1,j,i);
+
+		inv += ((A[i]<A[j]) ? 1 : -1);
+
+		printf("%lld\n",inv);
+		inv = tmp;
+	}
+
+
+	return 0;
+}

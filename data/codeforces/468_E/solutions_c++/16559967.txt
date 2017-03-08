@@ -1,0 +1,239 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <map>
+#include <vector>
+
+using namespace std;
+
+const int MAXN = 305,Mo = int(1e9) + 7;
+
+vector<int> Lk[MAXN],E[MAXN];
+map<int,int> Hash;
+bool Walk[MAXN];
+int Els[MAXN][3],Pos[MAXN];
+int T[MAXN],Ref[MAXN],Col[MAXN],H[MAXN],Block[MAXN][3],W[MAXN][MAXN],Self[MAXN],Edge,N,K,cnt,c,tot;
+
+void Link(int u,int v)
+{
+	Lk[u].push_back(v),Lk[v].push_back(u);
+}
+
+void Extract(int S)
+{
+	static int Pre[MAXN];
+	for(int i = 1;i <= cnt;i ++) Pre[i] = 0,E[i].clear(),Self[i] = 0;
+	c = 0;
+	tot = 0;
+	Edge = 0;
+	static int Q[MAXN];
+	Q[1] = S;
+	Ref[S] = (c = 1);
+	Pos[1] = S;
+	Walk[S] = 1;
+	Col[S] = 0;
+	for(int fi = 1,en = 1;fi <= en;fi ++)
+	{
+		int u = Q[fi];
+		for(int i = 0;i < Lk[u].size();i ++)
+		{
+			if (!Walk[Lk[u][i]])
+			{
+				Self[u] ++;
+				Edge ++;
+				Ref[Lk[u][i]] = ++ c;
+				Pre[Lk[u][i]] = u;
+				Pos[c] = Lk[u][i];
+				Walk[Lk[u][i]] = 1;
+				Col[Lk[u][i]] = (Col[u] ^ 1);
+				E[Ref[u]].push_back(Ref[Lk[u][i]]);
+				Q[++ en] = Lk[u][i];
+			} else
+				if (Lk[u][i] > u && Lk[u][i] != Pre[u])
+					Self[u] ++,Edge ++,Els[++ tot][0] = Ref[u],Els[tot][1] = Ref[Lk[u][i]],Els[tot][2] = W[u][Lk[u][i]];
+		}
+	}
+}
+
+void Dp()
+{
+	int c = 0,tag = 0;
+	static int All[MAXN],Siz[2];
+	memset(Siz,0,sizeof Siz);
+	for(int i = 1;i <= cnt;i ++)
+		if (Ref[i]) Siz[Col[i]] ++;
+	if (Siz[0] < Siz[1]) 
+	{
+		for(int i = 1;i <= cnt;i ++)
+			if (Ref[i] && Col[i] == 0) All[i] = (c ++);
+		tag = 1;
+	} else
+	{
+		tag = 0;
+		for(int i = 1;i <= cnt;i ++)
+			if (Ref[i] && Col[i]) All[i] = (c ++);
+	}
+	static int G[2][1 << 21];
+	c = (1 << c);
+	for(int i = 0;i < c;i ++) G[1][i] = 0;
+	G[1][0] = 1;
+	int cr = 0;
+	for(int i = 1;i <= cnt;i ++)
+		if (Ref[i] && Col[i] == tag)
+		{
+			cr ^= 1;
+			for(int j = 0;j < c;j ++) G[cr ^ 1][j] = G[cr][j];
+			for(int j = 0;j < c;j ++)
+				if (G[cr][j])
+				{
+					for(int k = 0;k < Lk[i].size();k ++)
+					{
+						int v = Lk[i][k];
+						if (j & (1 << All[v])) continue;
+						int nj = (j | (1 << All[v]));
+						G[cr ^ 1][nj] = (G[cr ^ 1][nj] + G[cr][j] * 1ll * W[i][v] % Mo) % Mo;
+					}
+				}
+		}
+	cr ^= 1;
+	memset(H,0,sizeof H);
+	for(int j = 0;j < c;j ++)
+	{
+		int v = 0;
+		for(int tmp = j;tmp;tmp >>= 1) v += (tmp & 1);
+		H[v] = (H[v] + G[cr][j]) % Mo;
+	}
+}
+
+bool Ch[MAXN];
+int G[MAXN][MAXN],F[MAXN][MAXN],Siz[MAXN],Max[MAXN];
+
+void Dfs(int Now)
+{
+	Siz[Now] = Edge;
+	for(int i = 0;i < E[Now].size();i ++)
+		Dfs(E[Now][i]);
+	for(int i = 0;i <= Siz[Now];i ++) F[Now][i] = G[Now][i] = 0;
+	F[Now][0] = 1;
+	for(int i = 0,cr = 0;i < E[Now].size();i ++)
+	{
+		int v = E[Now][i];
+		for(int j = Siz[Now];j + 1;j --)
+			if (F[Now][j])
+				for(int k = 1;k <= Max[v] && k + j <= Edge;k ++)
+					if ((G[v][k] + F[v][k]))
+						F[Now][j + k] = (F[Now][j + k] + F[Now][j] * 1ll * ((G[v][k] + F[v][k]) % Mo)) % Mo;
+	}
+	if (!Ch[Now])
+	{
+		static int Cur[MAXN],Suf[MAXN][MAXN],Pre[MAXN];
+		Suf[0][0] = 1;
+		int ch = 1;
+		for(int i = E[Now].size() - 1,cr = 0;i + 1;i --,ch ++)
+		{
+			int v = E[Now][i];
+			for(int j = 0;j <= Siz[Now];j ++) Suf[ch][j] = Suf[ch - 1][j];
+			for(int j = Siz[Now];j + 1;j --)
+				if (Suf[ch][j]) 
+					for(int p = 1;p <= Max[v] && p + j <= Edge;p ++)
+						if ((F[v][p] + G[v][p]))
+							Suf[ch][j + p] = (Suf[ch][j + p] + Suf[ch][j] * 1ll * ((F[v][p] + G[v][p]) % Mo) % Mo) % Mo;
+		}
+		for(int i = 0;i <= Edge;i ++) Pre[i] = 0;
+		Pre[0] = 1;
+		ch --;
+		for(int i = 0,cr = 0;i < E[Now].size();i ++,ch --)
+		{
+			int v = E[Now][i];
+			if (!Ch[v])
+			{
+				static int Bak[MAXN];
+				for(int p = 0;p <= Siz[Now];p ++) Bak[p] = Pre[p];
+				for(int p = Siz[Now];p + 1;p --)
+					if (Bak[p])
+						for(int q = 1;q <= Max[v] && q + p <= Siz[Now];q ++)
+							if (F[v][q])
+								Bak[p + q] = (Bak[p + q] + Bak[p] * 1ll * F[v][q]) % Mo;
+				for(int p = 0;p <= Siz[Now];p ++)
+					if (Bak[p])
+						for(int q = 0;p + q + 1 <= Siz[Now];q ++)
+							if (Suf[ch - 1][q])
+								G[Now][p + q + 1] = (G[Now][p + q + 1] + Bak[p] * 1ll * Suf[ch - 1][q] % Mo * W[Pos[Now]][Pos[v]] % Mo) % Mo;
+			}
+			for(int p = Siz[Now];p + 1;p --)
+				if (Pre[p])
+					for(int q = 1;q <= Max[v] && q + p <= Siz[Now];q ++)
+						if ((F[v][q] + G[v][q]))
+							Pre[p + q] = (Pre[p + q] + Pre[p] * 1ll * (F[v][q] + G[v][q]) % Mo) % Mo;
+			cr += Siz[v];
+		}
+	}
+	Max[Now] = 0;
+	for(int i = 0;i <= Edge;i ++) if (F[Now][i] + G[Now][i]) Max[Now] = i;
+}
+
+void Tree()
+{
+	memset(H,0,sizeof H);
+	for(int i = 0;i < (1 << tot);i ++)
+	{
+		int cr = 1,ch = 0,f = 0;
+		for(int j = 1;j <= c;j ++) Ch[j] = 0;
+		for(int j = 0;j < tot;j ++)
+			if (i & (1 << j))
+			{
+				if (Ch[Els[j + 1][0]] || Ch[Els[j + 1][1]]) {f = 1;break;}
+				Ch[Els[j + 1][0]] = Ch[Els[j + 1][1]] = 1;
+				cr = cr * 1ll * Els[j + 1][2] % Mo;
+				ch ++;
+			}
+		if (f) continue;
+		Dfs(1);
+		for(int i = 0;i <= Edge - ch;i ++)
+			H[i + ch] = (H[i + ch] + cr * 1ll * ((F[1][i] + G[1][i]) % Mo) % Mo) % Mo;
+	}
+}
+
+
+void Work(int S)
+{
+	Extract(S);
+	if (c / 2 <= Edge - c) Dp(); else
+		Tree();
+	for(int i = K;i;i --)
+		for(int j = 1;j <= i;j ++)
+			T[i] = (T[i] + T[i - j] * 1ll * H[j] % Mo) % Mo;
+	memset(Ref,0,sizeof Ref);
+}
+
+int main()
+{
+	static int Fac[100005];
+	//freopen("data.in","r",stdin),freopen("data.out","w",stdout);
+	scanf("%d%d", &N, &K);
+	for(int i = 1;i <= K;i ++) scanf("%d%d%d", &Block[i][0], &Block[i][1], &Block[i][2]);
+	for(int i = 1;i <= K;i ++)
+	{ 
+		if (!Hash[Block[i][0]]) Hash[Block[i][0]] = ++ cnt;
+		Block[i][0] = Hash[Block[i][0]];
+	}
+	Hash.clear();
+	for(int i = 1;i <= K;i ++) if (!Hash[Block[i][1]]) Hash[Block[i][1]] = ++ cnt;
+	for(int i = 1;i <= K;i ++)
+	{
+		Block[i][1] = Hash[Block[i][1]];
+		Link(Block[i][0],Block[i][1]);
+		W[Block[i][0]][Block[i][1]] = W[Block[i][1]][Block[i][0]] = (Block[i][2] - 1 + Mo) % Mo;
+	}
+	T[0] = 1;
+	for(int i = 1;i <= cnt;i ++)
+		if (!Walk[i])
+			Work(i);
+	Fac[0] = 1;
+	for(int i = 1;i <= N;i ++) Fac[i] = Fac[i - 1] * 1ll * i % Mo;
+	int ans = 0;
+	for(int i = 0;i <= K;i ++)
+		ans = (ans + Fac[N - i] * 1ll * T[i] % Mo) % Mo;
+	printf("%d\n", ans);
+	return 0;
+}

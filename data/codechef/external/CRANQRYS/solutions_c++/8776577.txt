@@ -1,0 +1,78 @@
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+const int MaxN = 1e6+1;
+const int MaxT = 5e7+1;
+
+int N, a[MaxN], total, root[MaxN], pos[MaxN];
+int link[MaxT][2], key[MaxT];
+
+void Enter() {
+    scanf("%d", &N);
+    for (int i = 1; i <= N; i++)
+        scanf("%d", &a[i]);
+}
+
+void UnZip() {
+    vector <int> zip;
+    for (int i = 1; i <= N; i++) zip.push_back(a[i]);
+    sort(zip.begin(), zip.end());
+    zip.resize(unique(zip.begin(), zip.end()) - zip.begin());
+    for (int i = 1; i <= N; i++)
+        a[i] = lower_bound(zip.begin(), zip.end(), a[i]) - zip.begin() + 1;
+}
+
+int Add(int _key, int _L, int _R) {
+    total++;
+    key[total] = _key;
+    link[total][0] = _L;
+    link[total][1] = _R;
+    return total;
+}
+
+int Modify(int prev, int L, int R, int pos, int val) {
+    if ( L == R ) return Add(key[prev]+val, 0, 0);
+    int mid = (L + R) >> 1;
+    if ( mid < pos )
+        return Add(key[prev]+val, link[prev][0], Modify(link[prev][1], mid+1, R, pos, val));
+    else
+        return Add(key[prev]+val, Modify(link[prev][0], L, mid, pos, val), link[prev][1]);
+}
+
+int Request(int a, int L, int R, int _L, int _R) {
+    if ( _L <= L && R <= _R ) return key[a];
+    int mid = (L + R) >> 1;
+    if ( mid < _L ) return Request(link[a][1], mid+1, R, _L, _R);
+    if ( mid > _R - 1 ) return Request(link[a][0], L, mid, _L, _R);
+    return Request(link[a][0], L, mid, _L, _R) + Request(link[a][1], mid+1, R, _L, _R);
+}
+
+void Build() {
+    for (int i = 1; i <= N; i++) {
+        if (pos[a[i]])
+            root[i] = Modify(Modify(root[i-1], 1, N, pos[a[i]], -1), 1, N, i, +1);
+        else
+            root[i] = Modify(root[i-1], 1, N, i, +1);
+        pos[a[i]] = i;
+    }
+}
+
+void Solve() {
+    int Q, x, r, k = 0;
+    scanf("%d", &Q);
+    while (Q--) {
+        scanf("%d%d", &x, &r);
+        k = Request(root[r], 1, N, x+k, r);
+        printf("%d\n", k);
+    }
+}
+
+int main() {
+    Enter();
+    UnZip();
+    Build();
+    Solve();
+    return 0;
+}

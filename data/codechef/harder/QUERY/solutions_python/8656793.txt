@@ -1,0 +1,237 @@
+#include <iostream>
+#include <fstream>
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <cstdlib>
+#include <algorithm>
+#include <map>
+using namespace std;
+
+const int maxN = 100005;
+struct Tedge{
+	int v, next;
+}edge[2*maxN];
+int edges, dad[maxN];
+
+struct Tnode{
+	long long A, B, sum;
+	Tnode *lef, *rig;
+}tree[maxN * 20 * 20], *root[maxN], *nul;
+
+struct Interval{
+	int L, R;
+}Region[maxN];
+
+int trees;
+int n, m;
+int que[maxN], lev[maxN];
+int fa[maxN];
+int id[maxN], p[maxN], rk[maxN], top[maxN];
+int adds, add[maxN];
+int size[maxN];
+
+Tnode *newnode(){
+	trees ++;
+	tree[trees].lef = tree[trees].rig = nul;
+	return tree + trees;
+}
+
+void insertedge(int u, int v){
+	edges++;
+	edge[edges].v = v;
+	edge[edges].next = dad[u];
+	dad[u] = edges;
+}
+
+void Readln(){
+	scanf( "%d%d\n", &n, &m );
+	for (int i=1; i<n; i++){
+		int u, v;
+		scanf( "%d%d\n", &u, &v );
+		insertedge(u, v);
+		insertedge(v, u);
+	}
+}
+
+void init(){
+	int head = 1, tail = 1;
+	que[head] = 1;
+	lev[1] = 1;
+	while (head <= tail){
+		int now = que[head];
+		head++;
+		for (int i=dad[now]; i!=0; i=edge[i].next)
+		if (lev[edge[i].v] == 0){
+			lev[edge[i].v] = lev[now] + 1;
+			tail++;
+			que[tail] = edge[i].v;
+			fa[edge[i].v] = now;
+		}
+	}
+	
+	for (int j=n; j>0; j--){
+		int now = que[j];
+		size[now] = 1;
+		for (int i=dad[now]; i!=0; i=edge[i].next)
+		if (lev[edge[i].v] == lev[now] + 1){
+			size[now] += size[edge[i].v];
+		}
+	}
+	
+	int ids = 1;
+	id[1] = 1;
+	Region[1].L = 1;
+	Region[1].R = 1;
+	p[1] = 1;
+	for (int j=1; j<=n; j++){
+		int now = que[j];
+		int maxI = 0;
+		for (int i=dad[now]; i!=0; i=edge[i].next)
+		if (lev[edge[i].v] == lev[now] + 1){
+			if (maxI == 0 || size[edge[i].v] > size[maxI]) maxI = edge[i].v;
+		}
+		if (maxI == 0) continue;
+		p[maxI] = p[now] + 1;
+		id[maxI] = id[now];
+		Region[id[now]].R = p[maxI];
+		int tot = size[maxI];
+		for (int i=dad[now]; i!=0; i=edge[i].next)
+		if (lev[edge[i].v] == lev[now] + 1 && maxI != edge[i].v){
+			ids++;
+			id[edge[i].v] = ids;
+			p[edge[i].v] = p[now] + tot + 1;
+			tot += size[edge[i].v];
+			Region[ids].L = Region[ids].R = p[edge[i].v];
+		}
+	}
+	for (int i=1; i<=n; i++) rk[p[i]] = i;
+	nul = newnode();
+	nul -> lef = nul -> rig = nul;
+	root[0] = nul;
+	for (int i=1; i<=n; i++) top[i] = rk[Region[id[i]].L];
+}
+
+int LCA(int u, int v){
+	for (;;){
+		if (id[u] == id[v]){
+			if (lev[u] < lev[v]) return u;
+				return v;
+		}
+		if (lev[top[u]] < lev[top[v]]) swap(u, v);
+		u = fa[top[u]];
+	}
+}
+
+void down(Tnode *root, int lef, int rig){
+	if (root -> A == 0 && root -> B == 0) return;
+	int mid = (lef + rig) >> 1;
+	long long LenL = mid - lef + 1, LenR = rig - mid;
+	long long A = root -> A, B = root -> B;
+	Tnode *Lnode = newnode(); *Lnode = *root -> lef; root -> lef = Lnode;
+	Tnode *Rnode = newnode(); *Rnode = *root -> rig; root -> rig = Rnode;
+	root -> lef -> A += A;
+	root -> lef -> B += B;
+	root -> lef -> sum += A * LenL + (LenL - 1) * LenL * B / 2LL;
+	root -> rig -> A += A + LenL * B;
+	root -> rig -> B += B;
+	root -> rig -> sum += (A + LenL * B) * LenR + (LenR - 1) * LenR * B / 2LL;
+	root -> A = root -> B = 0;
+}
+
+void inserttree(Tnode *root1, Tnode *&root2, int lef, int rig, int lo, int hi, long long A, long long B){
+	if (rig < lo || hi < lef) {root2 = root1; return;}
+	root2 = newnode();
+	down(root1, lef, rig);
+	*root2 = *root1;
+	if (lo <= lef && rig <= hi) {
+		int Len = rig - lef + 1;
+		root2 -> A += A + 1LL * (lef - lo) * B;
+		root2 -> B += B;
+		root2 -> sum += 1LL * (A + B * (lef - lo)) * Len + 1LL * B * (Len - 1) * Len / 2LL;
+		return;
+	}
+	int mid = (lef + rig) >> 1;
+	inserttree(root1 -> lef, root2 -> lef, lef, mid, lo, hi, A, B);
+	inserttree(root1 -> rig, root2 -> rig, mid+1, rig, lo, hi, A, B);
+	root2 -> sum = root2 -> lef -> sum + root2 -> rig -> sum;
+}
+
+long long asktree(Tnode *root, int lef, int rig, int lo, int hi){
+	if (rig < lo || hi < lef) return 0;
+	if (lo <= lef && rig <= hi) return root -> sum;
+	down(root, lef, rig);
+	int mid = (lef + rig) >> 1;
+	return asktree(root -> lef, lef, mid, lo, hi)
+		+ asktree(root -> rig, mid+1, rig, lo, hi);
+}
+
+void Solve(){
+	long long ans = 0;
+	for (int i=1; i<=m; i++){
+		char ch;
+		scanf( "%c", &ch );
+		root[i] = root[i-1];
+		if (ch == 'c'){
+			int u, v, A, B;
+			scanf( "%d%d%d%d\n", &u, &v, &A, &B );
+			u = (u + ans) % n + 1;
+			v = (v + ans) % n + 1;
+			int lca = LCA(u, v);
+			int Length = lev[u] + lev[v] - 2*lev[lca] + 1;
+			int pu = 1, pv = Length;
+			A -= B;
+			for (;;){
+				if (id[u] == id[v]){
+					if (lev[u] < lev[v]) 
+						inserttree(root[i], root[i], 1, n, p[u], p[v], A + pu * B, B);
+						else inserttree(root[i], root[i], 1, n, p[v], p[u], A + pv * B, -B);
+					break;
+				}
+				if (lev[top[u]] > lev[top[v]]){
+					pu += lev[u] - lev[top[u]];
+					inserttree(root[i], root[i], 1, n, p[top[u]], p[u], A + pu * B, -B);
+					pu ++;
+					u = fa[top[u]];
+				}else{
+					pv -= lev[v] - lev[top[v]];
+					inserttree(root[i], root[i], 1, n, p[top[v]], p[v], A + pv * B, B);
+					pv --;
+					v = fa[top[v]];
+				}
+			}
+			add[++adds] = i;
+		}
+		if (ch == 'q'){
+			int u, v;
+			scanf( "%d%d\n", &u, &v );
+			u = (u + ans) % n + 1;
+			v = (v + ans) % n + 1;
+			ans = 0;
+			for (;;){
+				if (id[u] == id[v]){
+					if (lev[u] > lev[v]) swap(u, v);
+					ans += asktree(root[i], 1, n, p[u], p[v]);
+					break;
+				}
+				if (lev[top[u]] < lev[top[v]]) swap(u, v);
+				ans += asktree(root[i], 1, n, p[top[u]], p[u]);
+				u = fa[top[u]];
+			}
+			printf( "%lld\n", ans );
+		}
+		if (ch == 'l'){
+			int u; 
+			scanf( "%d\n", &u );
+			u = (u + ans) % (adds + 1);
+			root[i] = root[add[u]];
+		}
+	}
+}
+
+int main(){
+	Readln();
+	init();
+	Solve();
+	return 0;
+}

@@ -1,0 +1,126 @@
+#include <iostream>
+#include <bitset>
+#include <string>
+#include <sstream>
+
+#define SEED_SIEVE_SIZE 1000000
+
+using namespace std;
+
+bitset<SEED_SIEVE_SIZE> generate_seed_sieve();
+void increment_candidate(long long &candidate, const string &pattern);
+long long generate_pattern_prime(const string &pattern, const bitset<SEED_SIEVE_SIZE> &sieve);
+
+int main()
+{
+	int t;
+	char s[13];
+
+	bitset<SEED_SIEVE_SIZE> seed_sieve = generate_seed_sieve();
+
+	scanf("%d", &t);
+	
+	for (int i = 0; i < t; i++)
+	{
+		scanf("%s", &s);
+
+		printf("%lld\n", generate_pattern_prime(string(s), seed_sieve));
+	}
+}
+
+bitset<SEED_SIEVE_SIZE> generate_seed_sieve()
+{
+	bitset<SEED_SIEVE_SIZE> seed_sieve;
+
+	seed_sieve.set();
+	seed_sieve.reset(0);
+	seed_sieve.reset(1);
+
+	for (unsigned int i = 2; i * i < seed_sieve.size(); i++)
+	{
+		if (seed_sieve.test(i))
+		{
+			for (unsigned int j = i * i; j < seed_sieve.size(); j += i)
+			{
+				seed_sieve.reset(j);
+			}
+		}
+	}
+
+	return seed_sieve;
+}
+
+long long generate_pattern_prime(const string &pattern, const bitset<SEED_SIEVE_SIZE> &seed_sieve)
+{
+	long long candidate;
+	
+	if (pattern.at(0) == '?')
+	{
+		candidate = 1;
+	}
+	else
+	{
+		candidate = pattern.at(0) - '0';
+	}
+	
+	for (unsigned int i = 1; i < pattern.size(); i++)
+	{
+		candidate *= 10;
+		
+		if (isdigit(pattern.at(i)))
+		{
+			candidate += pattern.at(i) - '0';
+		}
+	}
+	
+	bool prime_candidate = false;
+
+	while (!prime_candidate)
+	{
+		prime_candidate = true;
+		
+		for (int i = 2; (long long) i * (long long) i <= candidate; i++)
+		{
+			if (seed_sieve.test(i) && (candidate % i == 0))
+			{
+				prime_candidate = false;
+				increment_candidate(candidate, pattern);
+
+				break;
+			}
+		}		
+	}
+
+	return candidate;
+}
+
+void increment_candidate(long long &candidate, const string &pattern)
+{
+	stringstream ss;
+	string candidate_string;
+	
+	ss << candidate;
+	ss >> candidate_string;
+
+	for (int i = candidate_string.size() - 1; i >= 0; i--)
+	{
+		if (pattern.at(i) == '?')
+		{
+			if (candidate_string.at(i) == '9')
+			{
+				candidate_string.at(i) = '0';
+			}
+			else
+			{
+				candidate_string.at(i)++;
+
+				break;
+			}
+		}
+	}
+	
+	ss.clear();
+
+	ss << candidate_string;
+	ss >> candidate;
+}

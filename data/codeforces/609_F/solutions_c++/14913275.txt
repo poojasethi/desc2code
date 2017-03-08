@@ -1,0 +1,113 @@
+#include <bits/stdc++.h>
+//Practice makes perfect
+
+using namespace std;
+
+typedef long long ll;
+typedef pair<ll, ll> pii;
+
+const ll MAXN = 2e5 + 100;
+
+ll x[MAXN], t[MAXN], p[MAXN], b[MAXN], cnt[MAXN];
+ll tid[MAXN * 3], tsz, maxend, INF;
+ll seg[MAXN * 12];
+ll ans[MAXN];
+
+inline ll getid(ll x){
+	return upper_bound(tid, tid + tsz, x) - tid - 1;
+}
+
+inline ll mmin(ll a, ll b){
+	if (a == INF && b == INF) return INF;
+	if (a == INF) return b;
+	if (b == INF) return a;
+
+	if (x[b] < x[a] ) return b;
+	else return a;
+}
+
+inline ll smin(ll &a, ll b){
+	return a = mmin(a, b);
+}
+
+void upd(ll x, ll xl, ll xr, ll ql, ll qr, ll id){
+	if (xl >= qr || xr <= ql) return;
+
+	if (xl >= ql && xr <= qr){
+		smin(seg[x], id);
+		return;
+	}
+
+	ll mid = (xl + xr) / 2, l = 2 * x, r = l + 1;
+
+	upd(l, xl, mid, ql, qr, id);
+	upd(r, mid, xr, ql, qr, id);
+}
+
+ll getval(ll x, ll xl, ll xr, ll ind){
+	if (ind >= xr || ind < xl) return INF;
+
+	if (xr - xl == 1) return seg[x];
+
+	ll mid = (xl + xr) / 2, l = 2 * x, r = l + 1;
+	return mmin(mmin(getval(l, xl, mid, ind), getval(r, mid, xr, ind)), seg[x]);
+}
+
+int main(){
+	ios::sync_with_stdio( false );
+	cout.tie(0); cin.tie(0);
+
+	memset(seg, 63, sizeof seg);
+	INF = seg[0];
+
+	ll n, m; scanf("%I64d%I64d", &n, &m);
+
+	ll tN = 0;
+	for (ll i = 0; i < n; i++){
+		scanf("%I64d%I64d", &x[i], &t[i]);
+		ans[i] = t[i];
+		t[i] += x[i];
+		tid[tN++] = x[i];
+		tid[tN++] = t[i];
+	}
+
+	for (ll i = 0; i < m; i++){
+		scanf("%I64d%I64d", &p[i], &b[i]);
+		tid[tN++] = p[i];		
+	}
+
+	sort(tid, tid + tN);
+	tsz = unique(tid, tid + tN) - tid;
+	maxend = tid[tsz - 1];
+	tid[tsz] = INF;
+
+	for (ll i = 0; i < n; i++){
+		t[i] = min(t[i], maxend);
+		upd(1, 0, tsz, getid(x[i]), getid(t[i]) + 1, i);
+
+	}
+
+
+	set<pii> s;
+	for (ll i = 0; i < m; i++){
+		ll id = getid(p[i]); pii temp = pii(id, i);
+		s.insert( temp );
+
+		ll u, v; set<pii> :: iterator iter;
+		while( (iter = s.lower_bound( pii(id, -1) )) != s.end() && (u = getval(1, 0, tsz, v = iter->first)) != INF ){
+			v = iter->second;
+
+			t[u] = min(maxend, t[u] + b[v]);
+			ans[u] += b[v];
+			cnt[u]++;
+
+			upd(1, 0, tsz, getid(x[u]), getid(t[u]) + 1, u);
+			s.erase(iter);
+		}
+
+	}
+
+	for (ll i = 0; i < n; i++)
+		printf("%I64d %I64d\n", cnt[i], ans[i]);
+
+}

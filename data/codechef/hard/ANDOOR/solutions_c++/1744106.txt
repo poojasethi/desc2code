@@ -1,0 +1,242 @@
+#include <stdio.h>
+#include <cstdlib>
+#include <iostream>
+#include <set>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <memory.h>
+#include <map>
+#define _USE_MATH_DEFINES
+#include <math.h>
+#include <list>
+#include <fstream>
+#include <time.h>
+#include <iomanip>
+#include <queue>
+#include <stack>
+#include <assert.h>
+using namespace std;
+
+#define For(i,a,b,d) for (int i = (a); i != (b); i += d)
+#define FORD(i,a,b) for (int i = (a); i >= b; i--)
+#define FOR(i,a,b) for (int i = (a); i <= (b); i++)
+#define REPD(i,n) for (int i = (n - 1); i >= 0; i--)
+#define REP(i,n) for (int i = 0; i < (n); i++)
+#define CLR(a,x) memset(a,x,sizeof(a))
+#define pb push_back
+#define mp make_pair
+#define eps 10e-9
+#define Inf 1000000000
+#define Mi 1000000007
+#define N 1015
+#define K 1000
+
+typedef double ld;
+typedef long long ll;
+typedef int i;
+typedef vector<i> vi;
+typedef vector<vi> vvi;
+typedef pair<int, int> pii;
+typedef pair<double, char> pdc;
+typedef enum {heavy, light} lbl;
+
+const int mx[4] = {1, -1, 0, 0};
+const int my[4] = {0, 0, 1, -1};
+
+inline int Abs (int x) { return x < 0 ? -x : x;}
+inline ll Abs (ll x) { return x < 0 ? -x : x;}
+inline ll sqr (ll a) { return a*a; }
+inline ld sqr (ld a) { return a*a; }
+inline ll gcd (ll a, ll b){ return (!b ? a : gcd (b, a % b)); }
+ll maxx (ll a, ll b) { return a < b ? b : a; }
+
+const ld PI = 2 * acos(0.0);
+
+#define maxR 1000
+#define maxY 1000
+#define maxX 1000
+#define maxT 1000
+#define maxW 1000
+#define maxH 1000
+#define maxN 1000
+#define maxSumN 5000
+
+struct Point
+{
+	ld x, y;
+	Point () {}
+	Point (ld _x, ld _y): x(_x), y(_y) {}
+};
+
+struct circle
+{
+	Point o;
+	ld r;
+};
+
+struct Segment
+{
+	Point s, f;
+	Segment() {}
+	Segment (Point a, Point b) : s (a), f(b) {}
+	bool in (Point a);
+};
+
+bool Segment::in (Point a)//checks does point belongs to segment or not
+{
+	return a.x >= min (s.x, f.x) - eps && a.x <= max (s.x, f.x) + eps &&
+		a.y >= min (s.y, f.y) - eps && a.y <= max (s.y, f.y) + eps;
+}
+//distance between two points
+ld dist (Point a, Point b)
+{
+	return sqrt (sqr(a.x - b.x) + sqr (a.y - b.y));
+}
+//contains angle and is it beginning of some arc or ending
+struct arc
+{
+	ld ang;
+	char wh;
+	arc () {}
+	arc (ld a, char q) : ang(a), wh(q) {}
+};
+//compares two structures. for sorting by angle. if angles are same - first will be all beginnings, and then endings
+bool cmp (arc a, arc b)
+{
+	if (a.ang < b.ang - eps) return true;
+	if (a.ang > b.ang + eps) return false;
+	if (a.wh == b.wh) return a.ang < b.ang;
+	return a.wh == 'l';
+}
+
+ld W, H;
+int n;
+circle A[N];//all circles
+vector<arc> B[N];//for each circle contains arc, which other circles cuts from it
+
+void add_arc (ld la, ld ra, int i)//cur arc from angle la to angle ra from circle number i
+{
+	if (ra > PI * 2)
+		ra -= PI * 2, la -= PI * 2;
+	if (ra < la) ra += 2 * PI;//all circle will be from 0 to 2*PI
+	if (la < 0 && ra > 0)//if arc goes throung zero we divide it on two parts
+	{
+		B[i].push_back(arc(0, 'l')); B[i].push_back(arc(ra, 'r'));
+		B[i].push_back(arc(la + 2*PI, 'l')); B[i].push_back(arc(2*PI, 'r'));
+	} else
+	if (la < 0)
+	{
+		B[i].push_back(arc(la + 2 * PI, 'l'));
+		B[i].push_back(arc(ra + 2 * PI, 'r'));
+	} else
+	{
+		B[i].push_back(arc(la, 'l'));
+		B[i].push_back(arc(ra, 'r'));
+	}
+}
+
+//#define DEBUG_MODE
+//#define ONLINE_JUDGE
+int main ()
+{
+    #ifndef ONLINE_JUDGE
+        freopen ("in.txt", "r", stdin);
+        //freopen ("output.txt", "w", stdout);
+    #endif
+	int T;
+	cin >> T;
+	assert (T > 0 && T <= maxT);
+	int sumN = 0;
+	REP(_t, T)
+	{
+		cin >> W >> H;
+		assert (W >= 1 && W <= maxW);
+		assert (H >= 1 && H <= maxH);
+		cin >> n;
+		sumN += n;
+		assert(sumN > 0 && sumN <= maxSumN);
+		assert (n > 0 && n <= maxN);
+		REP(i, n)
+		{
+			cin >> A[i].o.x >> A[i].o.y >> A[i].r;
+			assert (A[i].o.x >= 0 && A[i].o.x <= maxX);
+			assert (A[i].o.y >= 0 && A[i].o.y <= maxY);
+			assert (A[i].r > 0 && A[i].r <= maxR);
+		}
+		REP(i, N) B[i].clear();
+		REP(i, n)
+		{
+			REP(j, n) if (i != j)//for each circle i we try to intersect it with all possible circles
+			{//now with j
+				ld dst = dist (A[i].o, A[j].o);
+				if (!(dst + A[i].r <= A[j].r + eps) && !(dst + A[j].r <= A[i].r + eps) && !(dst >= A[i].r + A[j].r - eps))//if they intersects
+				{
+					ld an = atan2(A[j].o.y - A[i].o.y, A[j].o.x - A[i].o.x);//get angle from center of i-th circle to j-th center
+					ld dt = acos((sqr(A[i].r) + sqr(dst) - sqr(A[j].r)) / (2 * dst * A[i].r));//finds delta of angle
+					ld la = an - dt, ra = an + dt;//r1^2 - x ^ 2 = r2^2 - (dst - x), where x - distance from i-th center to intersection segment.
+					add_arc(la, ra, i);
+				} else
+				if (dst + A[i].r < A[j].r + eps)//if circle i is inside circle j
+					add_arc(0, 2 * PI, i);
+			}
+			//intersection with boundary
+			//left side
+			if (fabs(A[i].o.x) <= A[i].r - eps)
+			{
+				ld x = sqrt (sqr(A[i].r) - sqr(A[i].o.x));
+				Point A1(0, A[i].o.y + x), A2(0, A[i].o.y - x);
+				add_arc(atan2(A1.y - A[i].o.y, A1.x - A[i].o.x), atan2(A2.y - A[i].o.y, A2.x - A[i].o.x), i);
+			} else
+				if (A[i].o.x + A[i].r <= eps)//if outside of rectangle
+					add_arc(0, 2*PI, i);
+			//right side
+			if (fabs(A[i].o.x - W) <= A[i].r - eps)
+			{
+				ld x = sqrt (sqr(A[i].r) - sqr(W - A[i].o.x));
+				Point A1(W, A[i].o.y + x), A2(W, A[i].o.y - x);
+				add_arc(atan2(A2.y - A[i].o.y, A2.x - A[i].o.x), atan2(A1.y - A[i].o.y, A1.x - A[i].o.x), i);
+			} else
+				if (A[i].o.x - A[i].r >= W - eps)
+					add_arc(0, 2*PI, i);
+			//down side
+			if (fabs(A[i].o.y) <= A[i].r - eps)
+			{
+				ld x = sqrt (sqr(A[i].r) - sqr(A[i].o.y));
+				Point A1(A[i].o.x + x, 0), A2(A[i].o.x - x, 0);
+				add_arc(atan2(A2.y - A[i].o.y, A2.x - A[i].o.x), atan2(A1.y - A[i].o.y, A1.x - A[i].o.x), i);
+			} else
+				if (A[i].o.y + A[i].r <= eps)
+					add_arc(0, 2*PI, i);
+			//up side
+			if (fabs(A[i].o.y - H) <= A[i].r - eps)
+			{
+				ld x = sqrt (sqr(A[i].r) - sqr(H - A[i].o.y));
+				Point A1(A[i].o.x + x, H), A2(A[i].o.x - x, H);
+				add_arc(atan2(A1.y - A[i].o.y, A1.x - A[i].o.x), atan2(A2.y - A[i].o.y, A2.x - A[i].o.x), i);
+			} else
+				if (A[i].o.y - A[i].r >= H - eps)
+					add_arc(0, 2*PI, i);
+		}
+		REP(i, n)//for each circle sorts all ends
+			sort (B[i].begin(), B[i].end(), &cmp);
+		ld ans = 0;
+		REP(j, n)
+		{
+			ld cur = 0;
+			int bal = 0;
+			ld st;//scan line
+			REP(i, B[j].size())
+			{
+				if (!bal) st = B[j][i].ang;
+				if (B[j][i].wh == 'l')
+					++bal;
+				else --bal;
+				if (!bal) cur += B[j][i].ang - st;
+			}
+			ans += (2 * PI - cur) * A[j].r;
+		}
+		printf ("%0.7lf\n", ans);
+	}
+    return 0;
+}

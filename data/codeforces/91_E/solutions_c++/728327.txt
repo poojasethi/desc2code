@@ -1,0 +1,103 @@
+#include <map>
+#include <set>
+#include <cmath>
+#include <stack>
+#include <queue>
+#include <string>
+#include <vector>
+#include <bitset>
+#include <fstream>
+#include <sstream>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+#define li       	long long int
+#define rep(i,to)	for(li i=0;i<((li)(to));i++)
+#define pb       	push_back
+#define sz(v)    	((li)v.size())
+#define bit(n)   	(1ll<<(li)(n))
+
+
+
+#define MAX 100005
+li a[MAX*4],b[MAX*4],N;
+vector<li> st[MAX*4];
+
+bool comp(const li &t0,const li &t1){
+	if(a[t0]==a[t1]) return b[t0]<b[t1];
+	return a[t0]<a[t1];
+}
+
+void make(li left,li right,li v){
+	if(left+1==right){
+		if(a[left]!=-1) st[v].pb(left);
+		return ;
+	}
+	li mid=(left+right)/2;
+	make(left,mid,v*2);
+	make(mid,right,v*2+1);
+	vector<li> vec;
+	rep(i,sz(st[v*2])) vec.pb(st[v*2][i]);
+	rep(i,sz(st[v*2+1])) vec.pb(st[v*2+1][i]);
+	sort(vec.begin(),vec.end(),comp);
+	vector<li> vv(sz(vec),-1);
+	li pos=0;
+	rep(i,sz(vec)){
+		while(0<pos){
+			bool ok=false;
+			if(b[vv[pos-1]]<=b[vec[i]]) ok=true;
+			if(1<pos && !ok){
+				li da=a[vv[pos-2]]-a[vec[i]];
+				li db=b[vec[i]]-b[vv[pos-2]];
+				li p1=vv[pos-1];
+				li p2=vv[pos-2];
+				if(a[p1]*db+b[p1]*da>=a[p2]*db+b[p2]*da) ok=true;
+			}
+			if(!ok) break;
+			pos--;
+		}
+		vv[pos++]=vec[i];
+	}
+	rep(i,pos) st[v].pb(vv[i]);
+}
+
+li search(li left,li right,li l,li r,li v,li t){
+	if(r<=left || right<=l) return -1;
+	if(l<=left && right<=r){
+		li low=0,high=sz(st[v]);
+		while(low+1<high){
+			li mid=(low+high)/2;
+			li t0=a[st[v][mid-1]]+b[st[v][mid-1]]*t;
+			li t1=a[st[v][mid]]+b[st[v][mid]]*t;
+			if(t0<t1) low=mid;
+			else high=mid;
+		}
+		return st[v][low];
+	}
+	li mid=(left+right)/2;
+	li res0=search(left,mid,l,r,v*2,t);
+	li res1=search(mid,right,l,r,v*2+1,t);
+	if(res0==-1) return res1;
+	if(res1==-1) return res0;
+	if(a[res0]+b[res0]*t<a[res1]+b[res1]*t) return res1;
+	return res0;
+}
+
+int main(){
+	li n,m,N;
+	N=1;
+	while(N<MAX) N*=2;
+	memset(a,-1,sizeof(a));
+	memset(b,-1,sizeof(b));
+	cin>>n>>m;
+	rep(i,n) cin>>a[i]>>b[i];
+	make(0,N,1);
+	rep(i,m){
+		li t0,t1,t;
+		cin>>t0>>t1>>t;
+		cout<<search(0,N,t0-1,t1,1,t)+1<<endl;
+	}
+}

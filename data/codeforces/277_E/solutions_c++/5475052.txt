@@ -1,0 +1,74 @@
+#include<algorithm>
+#include<iostream>
+#include<numeric>
+#include<cstring>
+#include<iomanip>
+#include<cassert>
+#include<cstdio>
+#include<limits>
+#include<cmath>
+using namespace std;
+
+const int N = 400, INF = 1e7, V = 2 * N;
+const double EPS = 1e-9;
+double d[V][V], fx[V], fy[V];
+int n, x[N], y[N], my[V];
+bool vx[V], vy[V];
+
+double slack(int u, int v) {
+	return d[u][v] - fx[u] - fy[v];
+}
+
+bool dfs(int u) {
+	vx[u] = true;
+	for(int v = 0; v < 2 * n; ++v)
+		if(slack(u, v) < EPS && !vy[v]) {
+			vy[v] = true;
+			if(my[v] == -1 || dfs(my[v]))
+				return my[v] = u, true;
+		}
+	return false;
+}
+
+int main() {
+#ifndef ONLINE_JUDGE
+	assert(freopen("277E.in", "r", stdin));
+#endif
+	ios::sync_with_stdio(false);
+	cin >> n;
+	int maxY = 0;
+	for(int i = 0; i < n; ++i) {
+		cin >> x[i] >> y[i];
+		maxY = max(maxY, y[i]);
+	}
+	for(int i = 0; i < 2 * n; ++i)
+		for(int j = 0; j < 2 * n; ++j)
+			d[i][j] = INF;
+	for(int i = 0; i < n; ++i)
+		for(int j = 0; j < n; ++j)
+			if(y[i] < y[j])
+				d[i][j] = d[i][j + n] = hypot(x[i] - x[j], y[i] - y[j]);
+	for(int i = 0; i < n; ++i)
+		fx[i] = *min_element(d[i], d[i] + 2 * n);
+	memset(my, -1, sizeof my);
+	int maxMatch = 0;
+	for(int i = 0; i < n; ++i) if(y[i] != maxY) {
+		memset(vx, 0, sizeof vx);
+		memset(vy, 0, sizeof vy);
+		while(!dfs(i)) {
+			double delta = numeric_limits<double>::max();
+			for(int i = 0; i < n; ++i) if(vx[i])
+				for(int j = 0; j < 2 * n; ++j) if(!vy[j])
+					delta = min(delta, slack(i, j));
+			for(int i = 0; i < n; ++i) if(vx[i]) fx[i] += delta, vx[i] = false;
+			for(int i = 0; i < 2 * n; ++i) if(vy[i]) fy[i] -= delta, vy[i] = false;
+		}
+		++maxMatch;
+	}
+	if(maxMatch != n - 1) return cout << -1, 0;
+	for(int i = 0; i < 2 * n; ++i)
+		if(my[i] != -1 && d[my[i]][i] == INF)
+			return cout << -1, 0;
+	cout << fixed << setprecision(12) << accumulate(fx, fx + n, 0.) + accumulate(fy, fy + 2 * n, 0.) - INF;
+	return 0;
+}

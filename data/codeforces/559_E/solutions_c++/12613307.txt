@@ -1,0 +1,96 @@
+#include<cmath>
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+
+using namespace std;
+
+const int N=310;
+
+struct node
+{
+	int pos,len;
+	bool operator <(node a)const {return pos<a.pos;}
+}b[N];
+
+int pos[N],len[N],a[N],lpos[N],rpos[N],g[N][N],f[N/3][N/3][N],dp[N][N];
+
+int find(int x,int r)
+{
+	int l=1;
+	while (l<=r)
+	{
+		int mid=(l+r)>>1;
+		if (x==a[mid]) return mid;
+		if (x<a[mid]) r=mid-1; else l=mid+1;
+	}
+}
+
+int main()
+{
+	#ifdef waltz
+		freopen("input.txt","r",stdin);
+		freopen("output.txt","w",stdout);
+	#endif
+	int n;scanf("%d",&n);
+	for (int i=1;i<=n;i++)
+	{
+		scanf("%d%d",&b[i].pos,&b[i].len);
+		a[3*i-2]=b[i].pos-b[i].len;
+		a[3*i-1]=b[i].pos;
+		a[3*i]=b[i].pos+b[i].len;
+	}
+	sort(a+1,a+3*n+1);
+	sort(b+1,b+n+1);
+	int m=1;
+	for (int i=2;i<=3*n;i++) if (a[i]!=a[i-1]) a[++m]=a[i];
+	for (int i=1;i<=n;i++)
+	{
+		lpos[i]=find(b[i].pos-b[i].len,m);
+		rpos[i]=find(b[i].pos+b[i].len,m);
+		pos[i]=find(b[i].pos,m);
+	}
+	for (int i=1;i<=m;i++)
+	{
+		int l=1;
+		while (l<=n&&pos[l]<i) l++;
+		for (int j=l;j<=n;j++)
+		{
+			for (int p=j-1;p<=n;p++)
+				for (int q=i;q<=m;q++)
+					g[p][q]=-1;
+			g[j-1][i]=0;
+			for (int p=j;p<=n;p++)
+				for (int q=i;q<=m;q++)
+					if (g[p-1][q]!=-1)
+						if (q<pos[p])
+						{
+							g[p][q]=max(g[p][q],max(g[p-1][q],rpos[p]));
+							if (lpos[p]<=q) {int t=max(g[p-1][q],pos[p]);g[p][t]=max(g[p][t],t);}
+						}
+						else
+						{
+							int t=max(rpos[p],q);
+							g[p][t]=max(g[p][t],t);
+						}
+			for (int p=j;p<=n;p++)
+			{
+				f[j][p][i]=i;
+				for (int q=m;q>i;q--) if (g[p][q]!=-1) {f[j][p][i]=q;break;}
+			}
+		}
+	}
+	for (int i=1;i<=m;i++) dp[n+1][i]=0;
+	int ans=0;
+	for (int i=n;i>=1;i--)
+		for (int j=1;j<=pos[i];j++)
+		{
+			dp[i][j]=0;
+			for (int k=i;k<=n;k++)
+				for (int q=f[i][k][j];q<=m;q++)
+					dp[i][j]=max(dp[i][j],dp[k+1][q]+a[f[i][k][j]]-a[j]);
+			ans=max(ans,dp[i][j]);
+		}
+	printf("%d\n",ans);
+	return 0;
+}

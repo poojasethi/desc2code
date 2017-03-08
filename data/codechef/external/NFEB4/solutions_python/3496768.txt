@@ -1,0 +1,17 @@
+t=int(input())
+while(t>0):
+	n=int(input())
+	a=map(int,raw_input().split(" "))
+	i=n-1
+	m=a[i]
+	ans=0
+	i=n-2
+	while(i>=0):
+		if(m>a[i]):
+			ans+=m-a[i]
+		elif(m<a[i]):
+			m=a[i]
+		i-=1
+	print ans
+			
+	t-=1

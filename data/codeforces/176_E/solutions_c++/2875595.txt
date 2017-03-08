@@ -1,0 +1,70 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+#define N 100005
+#define tree int t,int l,int r
+#define left t*2,l,mid
+#define right t*2+1,mid+1,r
+#define M int mid=(l+r)/2
+int L[N*4],R[N*4],S[N],w[N],dep[N],f[N][18],next[N*2],ed[N*2],data[N*2],son[N];
+int n,m,x,y,z,Q,flag,len;
+char opr[5]; long long d[N],ans;
+void modify(tree,int x,int v)
+{
+	if (l==r) {L[t]=v>0?x:n+1,R[t]=v>0?x:0; return;}
+	M; x<=mid?modify(left,x,v):modify(right,x,v);
+	L[t]=min(L[t*2],L[t*2+1]),R[t]=max(R[t*2],R[t*2+1]);
+}
+int findL(tree,int x)
+{
+	if (l==r) return R[t]; M;
+	return x<=mid?findL(left,x):max(R[t*2],findL(right,x));
+//	int tmp=x<=mid?findL(left,x):max(R[t*2],findL(right,x));
+//	printf("%d %d %d  %d\n",l,mid,r,tmp); return tmp;
+}
+int findR(tree,int x)
+{
+	if (l==r) return L[t]; M;
+	return x<=mid?min(L[t*2+1],findR(left,x)):findR(right,x);
+}
+void dfs(int x)
+{
+	w[++m]=x; S[x]=m;
+	for (int p=son[x];p;p=next[p]){
+		int y=ed[p];
+		if (!dep[y]) dep[y]=dep[x]+1,d[y]=d[x]+data[p],*f[y]=x,dfs(y);
+		}
+}
+int lca(int x,int y)
+{
+	if (dep[x]<dep[y]) swap(x,y);
+	for (int i=17,k=dep[x]-dep[y];i>=0;i--) if (k&1<<i) x=f[x][i];
+	for (int i=17;i>=0;i--) if (f[x][i]!=f[y][i]) x=f[x][i],y=f[y][i];
+	return x==y?x:*f[x];
+}
+int main()
+{
+	scanf("%d",&n); memset(L,6,sizeof(L));
+	for (int i=1;i<n;i++) scanf("%d%d%d",&x,&y,&z),
+		ed[++len]=y,data[len]=z,next[len]=son[x],son[x]=len,
+		ed[++len]=x,data[len]=z,next[len]=son[y],son[y]=len;
+	dep[1]=1; dfs(1); scanf("%d",&Q);
+	for (int j=0;j<17;j++)
+		for (int i=1;i<=n;i++) f[i][j+1]=f[f[i][j]][j];
+//	for (int i=1;i<=n;i++) printf("%d ",w[i]); puts("");
+//	for (int i=1;i<=n;i++) printf("%d ",d[i]); puts("");
+	while (Q--){
+		scanf("%s",opr); if (*opr=='?') {printf("%I64d\n",ans); continue;}
+		scanf("%d",&x),flag=*opr=='+'?1:-1;
+		if (flag<0) modify(1,1,n,S[x],-1);
+		int l=findL(1,1,n,S[x]),r=findR(1,1,n,S[x]);
+//		printf("!%d %d\n",l,r);
+		if (!l) l=findL(1,1,n,n); if (r>n) r=findR(1,1,n,1);
+		if (l) l=w[l],r=w[r],ans+=(d[x]-d[lca(l,x)]-d[lca(x,r)]+d[lca(l,r)])*flag;
+		if (flag>0) modify(1,1,n,S[x],1);
+//		printf("%d %d %d %I64d %I64d %I64d\n",x,l,r,d[lca(l,x)],d[lca(x,r)],ans);
+//		printf("%d %d %d  !%d  %I64d\n",x,l,r,lca(l,x),ans);
+		}
+	return 0;
+}

@@ -1,0 +1,267 @@
+/*
+ * Author: Gatevin
+ * Created Time:  2015/11/24 10:26:00
+ * File Name: Sakura_Chiyo.cpp
+ */
+#include<iostream>
+#include<sstream>
+#include<fstream>
+#include<vector>
+#include<list>
+#include<deque>
+#include<queue>
+#include<stack>
+#include<map>
+#include<set>
+#include<bitset>
+#include<algorithm>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<cctype>
+#include<cmath>
+#include<ctime>
+#include<iomanip>
+using namespace std;
+const double eps(1e-8);
+typedef long long lint;
+
+const double PI = acos(-1.0);
+
+#define maxn 50010
+
+bool isPrime[maxn];
+bool check[maxn];
+
+void getPrime()
+{
+    check[1] = 1;
+    for(int i = 2; i < maxn; i++)
+    {
+        if(check[i]) continue;
+        isPrime[i] = 1;
+        for(int j = i; j < maxn; j += i)
+            check[j] = 1;
+    }
+}
+
+struct Complex
+{
+    double real, image;
+    Complex(double _real, double _image)
+    {
+        real = _real;
+        image = _image;
+    }
+    Complex(){}
+};
+
+Complex operator + (const Complex &c1, const Complex &c2)
+{
+    return Complex(c1.real + c2.real, c1.image + c2.image);
+}
+
+Complex operator - (const Complex &c1, const Complex &c2)
+{
+    return Complex(c1.real - c2.real, c1.image - c2.image);
+}
+
+Complex operator * (const Complex &c1, const Complex &c2)
+{
+    return Complex(c1.real*c2.real - c1.image*c2.image, c1.real*c2.image + c1.image*c2.real);
+}
+
+int rev(int id, int len)
+{
+    int ret = 0;
+    for(int i = 0; (1 << i) < len; i++)
+    {
+        ret <<= 1;
+        if(id & (1 << i)) ret |= 1;
+    }
+    return ret;
+}
+
+Complex A[1 << 19];
+void FFT(Complex *a, int len, int DFT)
+{
+    for(int i = 0; i < len; i++)
+        A[rev(i, len)] = a[i];
+    for(int s = 1; (1 << s) <= len; s++)
+    {
+        int m = (1 << s);
+        Complex wm = Complex(cos(DFT*2*PI/m), sin(DFT*2*PI/m));
+        for(int k = 0; k < len; k += m)
+        {
+            Complex w = Complex(1, 0);
+            for(int j = 0; j < (m >> 1); j++)
+            {
+                Complex t = w*A[k + j + (m >> 1)];
+                Complex u = A[k + j];
+                A[k + j] = u + t;
+                A[k + j + (m >> 1)] = u - t;
+                w = w*wm;
+            }
+        }
+    }
+    if(DFT == -1) for(int i = 0; i < len; i++) A[i].real /= len, A[i].image /= len;
+    for(int i = 0; i < len; i++) a[i] = A[i];
+    return;
+}
+
+Complex poly[1 << 17];//左右两颗子树对应的距离的多项式
+
+
+int n;
+struct Edge
+{
+    int u, v, nex;
+    Edge(int _u, int _v, int _nex)
+    {
+        u = _u, v = _v, nex = _nex;
+    }
+    Edge(){}
+};
+
+Edge edge[maxn << 1];
+int head[maxn];
+int tot;
+
+void add_Edge(int u, int v)
+{
+    edge[++tot] = Edge(u, v, head[u]);
+    head[u] = tot;
+}
+
+int del[maxn];
+int root;
+int st, ed;
+int mx[maxn];
+int size[maxn];
+int mi;
+int dis[maxn];
+
+void dfs_size(int now, int father)
+{
+    size[now] = 1;
+    mx[now] = 0;
+    for(int i = head[now]; i + 1; i = edge[i].nex)
+    {
+        int v = edge[i].v;
+        if(v != father && !del[v])
+        {
+            dfs_size(v, now);
+            size[now] += size[v];
+            if(size[v] > mx[now]) mx[now] = size[v];
+        }
+    }
+}
+
+void dfs_root(int r, int now, int father)
+{
+    if(size[r] - size[now] > mx[now]) mx[now] = size[r] - size[now];
+    if(mx[now] < mi) mi = mx[now], root = now;
+    for(int i = head[now]; i != -1; i = edge[i].nex)
+    {
+        int v = edge[i].v;
+        if(v != father && !del[v]) dfs_root(r, v, now);
+    }
+}
+
+void dfs_dis(int now, int father, int deep)
+{
+    dis[ed++] = deep;
+    for(int i = head[now]; i + 1; i = edge[i].nex)
+    {
+        int v = edge[i].v;
+        if(v != father && !del[v]) dfs_dis(v, now, deep + 1);
+    }
+}
+
+lint ans;//质数路径条数
+
+void sum(int st, int ed, int flag, lint &tmpAns)
+{
+    int maxDeep = 0;
+    for(int i = st; i < ed; i++)
+        maxDeep = max(maxDeep, dis[i]);
+    int len = 1;
+    while(len <= maxDeep) len <<= 1;
+    len <<= 1;
+    for(int i = 0; i < len; i++)
+        poly[i].real = poly[i].image = 0;
+    for(int i = st; i < ed; i++)
+        poly[dis[i]].real += 1.0;
+    FFT(poly, len, 1);
+    for(int i = 0; i < len; i++) poly[i] = poly[i]*poly[i];
+    FFT(poly, len, -1);
+    for(int i = 0; i < len && i < n; i++)
+        if(isPrime[i])
+        {
+            if(flag == 1) tmpAns += (lint)(poly[i].real + 0.5);
+            else tmpAns -= (lint)(poly[i].real + 0.5);
+        }
+}
+
+void calc(int root)
+{
+    st = ed = 0;
+    lint tmpAns = 0;
+    for(int i = head[root]; i + 1; i = edge[i].nex)
+    {
+        int v = edge[i].v;
+        if(!del[v])
+        {
+            dfs_dis(v, root, 1);
+            for(int j = st; j < ed; j++)//从root出发的向子树的路径
+                if(isPrime[dis[j]]) ans++;
+            sum(st, ed, -1, tmpAns);//除掉两个都来自同一子树的链形成的路径
+            st = ed;
+        }
+    }
+    sum(0, ed, 1, tmpAns);//任取两条起始于该root结点的链形成质数路径的条数
+    ans += tmpAns / 2LL;
+}
+
+void dfs(int now)
+{
+    mi = n;
+    dfs_size(now, 0);
+    dfs_root(now, now, 0);
+    calc(root);
+    del[root] = 1;
+    for(int i = head[root]; i + 1; i = edge[i].nex)
+    {
+        int v = edge[i].v;
+        if(!del[v])
+            dfs(v);
+    }
+};
+    
+
+void solve()
+{
+    ans = 0;
+    dfs(1);
+    printf("%.9f\n", ans*2./(n*1.*(n - 1)));
+}
+
+int main()
+{
+    getPrime();
+    while(scanf("%d", &n) != EOF)
+    {
+        memset(head, -1, sizeof(head));
+        tot = 0;
+        memset(del, 0, sizeof(del));
+        int u, v;
+        for(int i = 1; i < n; i++)
+        {
+            scanf("%d %d", &u, &v);
+            add_Edge(u, v);
+            add_Edge(v, u);
+        }
+        solve();
+    }
+    return 0;
+}

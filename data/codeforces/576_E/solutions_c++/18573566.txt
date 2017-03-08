@@ -1,0 +1,276 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <cctype>
+#include <climits>
+#include <cassert>
+#include <ctime>
+#include <iostream>
+#include <algorithm>
+#include <functional>
+
+#define x first
+#define y second
+#define MP std::make_pair
+#define DEBUG(...) fprintf(stderr, __VA_ARGS__)
+#define DISP(x) std::cerr << #x " = " << x << std::endl
+
+typedef long long LL;
+typedef std::pair<int, int> Pii;
+
+const int oo = 0x3f3f3f3f;
+
+template<typename T> inline bool chkmax(T &a, T b) { return a < b ? a = b, true : false; }
+template<typename T> inline bool chkmin(T &a, T b) { return a > b ? a = b, true : false; }
+template<typename T> T read(T &x)
+{
+    int f = 1;
+    char ch = getchar();
+    for (; !isdigit(ch); ch = getchar())
+        if (ch == '-')
+            f = -1;
+    for (x = 0; isdigit(ch); ch = getchar())
+        x = 10 * x + ch - '0';
+    return x *= f;
+}
+// EOT
+
+const int MAXN = 5e5 + 5;
+const int MAXM = 5e5 + 5;
+const int MAXQ = 5e5 + 5;
+const int MAXK = 51;
+
+struct Edge {
+    int u, v;
+};
+
+struct Query {
+    int e;
+    int c;
+    int next;
+
+    Query(): e(0), c(0), next(+oo) { }
+};
+
+int N, M, K, Q;
+Edge E[MAXM];
+Query QRY[MAXQ];
+int bnd;
+int val[MAXM];
+
+namespace LCT
+{
+
+const int SIZE = MAXN * MAXK + MAXM;
+
+int ch[SIZE][2], fa[SIZE];
+bool size[SIZE];
+int min[SIZE];
+bool rev[SIZE];
+
+#define LOC(u) (ch[fa[u]][1] == (u))
+#define ISRT(u) (ch[fa[u]][0] != (u) && ch[fa[u]][1] != (u))
+
+void setRev(int u)
+{
+    rev[u] ^= 1;
+    std::swap(ch[u][0], ch[u][1]);
+}
+
+void pushdown(int u)
+{
+    if (rev[u]) {
+        if (ch[u][0])
+            setRev(ch[u][0]);
+        if (ch[u][1])
+            setRev(ch[u][1]);
+        rev[u] = 0; // ERR#1: forgot current line
+    }
+}
+
+void pushup(int u)
+{
+    size[u] = size[ch[u][0]] ^ size[ch[u][1]] ^ (u > bnd);
+    min[u] = u > bnd ? val[u - bnd] : +oo;
+    if (ch[u][0])
+        chkmin(min[u], min[ch[u][0]]);
+    if (ch[u][1])
+        chkmin(min[u], min[ch[u][1]]);
+}
+
+void rotate(int u)
+{
+    int v = fa[u];
+    int d = LOC(u);
+
+    ch[v][d] = ch[u][d ^ 1];
+    if (ch[v][d])
+        fa[ch[v][d]] = v; // ERR#3: "ch[v][d]" instead of "v"
+    if (!ISRT(v)) // ERR#4: "fa[v]" instead of "!ISRT(v)"
+        ch[fa[v]][LOC(v)] = u;
+    fa[u] = fa[v];
+    ch[u][d ^ 1] = v;
+    fa[v] = u;
+
+    pushup(v);
+}
+
+void splay(int u)
+{
+    static int anc[SIZE];
+    int top = 0;
+
+    for (int v = u; ; v = fa[v]) {
+        anc[++top] = v;
+        if (ISRT(v))
+            break;
+    }
+    while (top > 0) {
+        pushdown(anc[top--]);
+    }
+
+    while (!ISRT(u)) {
+        int v = fa[u];
+        if (!ISRT(v))
+            rotate(LOC(u) ^ LOC(v) ? u : v);
+        rotate(u);
+    }
+    pushup(u);
+}
+
+void access(int u)
+{
+    for (int v = 0; u; u = fa[u]) {
+        splay(u);
+        ch[u][1] = v;
+        pushup(v = u);
+    }
+}
+
+void makeroot(int u)
+{
+    access(u); splay(u);
+    setRev(u);
+}
+
+void link(int u, int v)
+{
+    makeroot(u);
+    fa[u] = v;
+}
+
+void cut(int u)
+{
+    access(u); splay(u);
+    fa[ch[u][0]] = 0; // ERR#2: forgot current line
+    ch[u][0] = 0;
+    pushup(u);
+}
+
+bool together(int u, int v)
+{
+    if (u == v)
+        return true;
+    makeroot(u);
+    access(v); splay(v);
+    return fa[u];
+}
+
+void link3(int u, int v, int e, int val0)
+{
+    val[e] = val0;
+    link(e + bnd, u);
+    link(e + bnd, v);
+}
+
+void cut3(int u, int v, int e)
+{
+    makeroot(e + bnd);
+    cut(u);
+    cut(v);
+}
+
+}
+
+void input()
+{
+    read(N); read(M); read(K); read(Q);
+    for (int i = 1; i <= M; ++i) {
+        read(E[i].u); read(E[i].v);
+    }
+    for (int i = 1; i <= Q; ++i) {
+        read(QRY[i].e); read(QRY[i].c);
+    }
+}
+
+void solve()
+{
+    static int last[MAXM];
+
+    for (int i = 1; i <= Q; ++i) {
+        if (last[QRY[i].e])
+            QRY[last[QRY[i].e]].next = i;
+        last[QRY[i].e] = i;
+    }
+
+    static int color[MAXM];
+
+    bnd = N * (K + 1);
+    for (int i = 1; i <= Q; ++i) {
+        int e = QRY[i].e;
+        int c = QRY[i].c, c0 = color[e];
+        int next = QRY[i].next;
+        int u = E[e].u + N * c, v = E[e].v + N * c;
+        int u0 = E[e].u + N * c0, v0 = E[e].v + N * c0;
+        bool valid = true;
+
+        if (LCT::together(u, v)) {
+            if (LCT::size[v]) {
+                if (c != c0 && LCT::together(bnd + e, u0)) // ERR#5: forgot "c != c0"
+                    LCT::cut3(u0, v0, e);
+                LCT::makeroot(u);
+                LCT::access(v); LCT::splay(v);
+                int min = LCT::min[v];
+                if (min < next) {
+                    int t = QRY[min].e;
+                    LCT::cut3(E[t].u + N * c, E[t].v + N * c, t);
+                    LCT::link3(u, v, e, next);
+                }
+            } else {
+                valid = false;
+                if (LCT::together(u0, v0)) {
+                    int min = LCT::min[v0];
+                    if (min < next) {
+                        int t = QRY[min].e;
+                        LCT::cut3(E[t].u + N * c0, E[t].v  + N * c0, QRY[min].e);
+                        LCT::link3(u0, v0, e, next);
+                    }
+                }
+            }
+        } else {
+            if (LCT::together(bnd + e, u0)) {
+                LCT::cut3(u0, v0, e);
+            }
+            LCT::link3(u, v, e, next);
+        }
+
+        if (valid)
+            color[e] = c;
+
+        puts(valid ? "YES" : "NO");
+    }
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+    freopen("tmp.in", "r", stdin);
+    freopen("tmp.out", "w", stdout);
+#endif
+
+    input();
+    solve();
+
+    return 0;
+}

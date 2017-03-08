@@ -1,0 +1,101 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+const int MAXN = 2 * 200000;
+const int MAXM = 199999 * 2 * 2 + 200000 * 2;
+
+int n, m, a, b;
+string s[2];
+int dsu[MAXN];
+int to[MAXM], head[MAXN], nxt[MAXM], E;
+int p[MAXN][19];
+int d[MAXN];
+int tin[MAXN], tout[MAXN], timer;
+
+inline int root(int x) {
+  return ~dsu[x] ? dsu[x] = root(dsu[x]) : x;
+}
+
+inline void merge(int a, int b) {
+  dsu[root(a)] = root(b);
+}
+
+inline void addEdge(int a, int b) {
+  to[E] = b; nxt[E] = head[a]; head[a] = E++;
+  to[E] = a; nxt[E] = head[b]; head[b] = E++;
+  merge(a, b);
+}
+
+void dfs(int v, int par, int dist = 0) {
+  tin[v] = ++timer;
+  p[v][0] = par;
+  d[v] = dist;
+  for (int i = 1; i < 19; ++i)
+    p[v][i] = p[p[v][i - 1]][i - 1];
+  for (int i = head[v]; ~i; i = nxt[i]) {
+    if (to[i] != par) {
+      dfs(to[i], v, dist + 1);
+    }
+  }
+  tout[v] = ++timer;
+}
+
+bool ancestor(int a, int b) {
+  return tin[a] <= tin[b] && tout[a] >= tout[b];
+}
+
+int lca(int a, int b) {
+  if (ancestor(a, b)) return a;
+  if (ancestor(b, a)) return b;
+  for (int i = 18; i > -1; --i)
+    if (!ancestor(p[a][i], b))
+      a = p[a][i];
+  return p[a][0];
+}
+
+int Distance(int a, int b) {
+  int c = lca(a, b);
+  return d[a] + d[b] - 2 * d[c];
+}
+
+int dist(int a, int b) {
+  if (root(a) != root(b))
+    return -1;
+  int d1, d2;
+  d1 = Distance(a, b);
+  if (b < n)
+    d2 = Distance(a, b + n);
+  else d2 = Distance(a, b - n);
+  return min(d1, d2 + 1);
+}
+
+int main() {
+  //freopen("input.txt", "r", stdin);
+  ios_base::sync_with_stdio(false);
+  memset(dsu, 0xff, sizeof dsu);
+  memset(head, 0xff, sizeof head);
+  cin >> n >> m;
+  cin >> s[0] >> s[1];
+  for (int i = 0; i < n; ++i) {
+    if (s[0][i] == '.') {
+      if (s[1][i] == '.' && (i + 1 == n ||
+			     max(s[0][i + 1], s[1][i + 1]) == 'X'))
+	addEdge(i, n + i);
+      if (i + 1 != n && s[0][i + 1] == '.')
+	addEdge(i, i + 1);
+    }
+    if (s[1][i] == '.' && i + 1 != n && s[1][i + 1] == '.')
+      addEdge(n + i, n + i + 1);
+  }
+  for (int i = 0; i < 2 * n; ++i)
+    if (root(i) == i)
+      dfs(i, i);
+  while (m --> 0) {
+    cin >> a >> b;
+    --a, --b;
+    if (a % n > b % n)
+      swap(a, b);
+    cout << dist(a, b) << '\n';
+  }
+  return 0;
+}

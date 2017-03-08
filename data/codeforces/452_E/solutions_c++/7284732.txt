@@ -1,0 +1,84 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef unsigned long long ull;
+typedef long long ll;
+typedef pair<int,int> pii;
+
+const ull P = 1000000007;
+const int MAXN = 300010;
+const int N = 300005;
+string s[3];
+ull p[MAXN], pre[3][MAXN] = {};
+ll n, t[3][3 * MAXN] = {}, res;
+vector<pii> sa;
+vector<int> spl[MAXN];
+set<int> cur;
+
+ull h(int i, int x, int l){
+  return (pre[i][x + l + 1] - pre[i][x]) * p[N - x];
+}
+
+int diff(pii a, pii b){
+  int ai = a.first, bi = b.first;
+  int ax = a.second, bx = b.second;
+  int al = s[ai].size() - ax, bl = s[bi].size() - bx;
+  int lo = -1, hi = min(al, bl), mid = (lo + hi) / 2;
+  while(lo < mid){
+    if(h(ai, ax, mid) == h(bi, bx, mid)) lo = mid;
+    else hi = mid;
+    mid = lo + (hi - lo) / 2;
+  }
+  return hi;
+}
+
+bool comp(pii a, pii b){
+  int ai = a.first, bi = b.first;
+  int ax = a.second, bx = b.second;
+  int al = s[ai].size() - ax, bl = s[bi].size() - bx;
+  int d = diff(a, b);
+  if(d == min(al, bl)) return al < bl;
+  return s[ai][ax + d] < s[bi][bx + d];
+}
+
+void init(){
+  cin >> s[0] >> s[1] >> s[2];
+  p[0] = 1;
+  for(int i = 0; i <= N; i++) p[i + 1] = p[i] * P;
+  for(int i = 0; i < 3; i++){
+    for(int j = 0; j < s[i].size(); j++){
+      pre[i][j + 1] = pre[i][j] + s[i][j] * p[j];
+      sa.push_back(pii(i, j));
+    }
+  }
+  sort(sa.begin(), sa.end(), comp);
+  for(int i = 0; i < sa.size(); i++){
+    if(i > 0) spl[diff(sa[i - 1], sa[i])].push_back(i);
+    for(int j = 0; j < 3; j++){
+      t[j][i + 1] = t[j][i] + (j == sa[i].first);
+    }
+  }
+  n = min(s[0].size(), min(s[1].size(), s[2].size()));
+}
+
+ll get(int a, int b){
+  return (t[0][b] - t[0][a]) * (t[1][b] - t[1][a]) * (t[2][b] - t[2][a]);
+}
+
+int main(){
+  ios::sync_with_stdio(0);
+  cin.tie(0);
+  init();
+  cur.insert(0);
+  cur.insert(sa.size());
+  res = get(0, sa.size());
+  for(int i = 0; i < n; i++){
+    for(int j = 0; j < spl[i].size(); j++){
+      int lo = *--cur.lower_bound(spl[i][j]);
+      int hi = *cur.lower_bound(spl[i][j]);
+      res += get(lo, spl[i][j]) + get(spl[i][j], hi) - get(lo, hi);
+      cur.insert(spl[i][j]);
+    }
+    cout << res % P << ' ';
+  }
+}

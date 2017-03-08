@@ -1,0 +1,173 @@
+#include <cstdio>
+#include <cassert>
+#include <utility>
+#include <algorithm>
+using namespace std;
+
+const int N = int(1e5) + 50;
+
+struct interval {
+	int l, r, v;
+	interval () {}
+	interval (int _l, int _r, int _v) : l(_l), r(_r), v(_v) {}
+	interval operator+ (const interval &b) const {
+		if (l == -1) return b;
+		if (b.l == -1) return *this;
+		assert(r + 1 == b.l);
+		return interval(l, b.r, v + b.v);
+	}
+	bool operator< (const interval &b) const {
+		return v < b.v;
+	}
+	bool operator> (const interval &b) const {
+		return v > b.v;
+	}
+	inline void flip () { v = -v; }
+};
+
+struct info {
+	interval lmin, rmin, gmin, lmax, rmax, gmax, s;
+	info () {}
+
+	void flip () {
+		swap(lmin, lmax);
+		swap(rmin, rmax);
+		swap(gmin, gmax);
+		lmin.flip(); lmax.flip(); rmin.flip(); rmax.flip();
+		gmin.flip(); gmax.flip(); s.flip();
+	}
+
+	static info new_leaf (int v, int p) {
+		info ret;
+		ret.s = interval(p, p, abs(v));
+		ret.lmax = ret.rmax = ret.gmax = ret.s;
+		ret.lmin = ret.rmin = ret.gmin = interval(-1, -1, 0);
+		if (v < 0) ret.flip();
+		return ret;
+	}
+};
+
+info operator+ (const info &l, const info &r) {
+	info ret;
+	ret.lmin = min(l.lmin, l.s + r.lmin);
+	ret.lmax = max(l.lmax, l.s + r.lmax);
+	ret.rmin = min(r.rmin, l.rmin + r.s);
+	ret.rmax = max(r.rmax, l.rmax + r.s);
+	ret.gmin = min(min(l.gmin, r.gmin), l.rmin + r.lmin);
+	ret.gmax = max(max(l.gmax, r.gmax), l.rmax + r.lmax);
+	ret.s = l.s + r.s;
+	return ret;
+}
+
+struct tree {
+	tree *lc, *rc;
+	int l, r, neg;
+	info i;
+
+	tree (int _l, int _r, int dt[]) {
+		l = _l, r = _r; neg = 0;
+		lc = rc = (tree*)0x0;
+		if (l == r) i = info::new_leaf(dt[l], l);
+		else {
+			int m = (l + r) >> 1;
+			lc = new tree(l, m, dt);
+			rc = new tree(m + 1, r, dt);
+			i = lc->i + rc->i;
+		}
+	}
+	
+	inline void negate () {
+		neg ^= 1;
+		i.flip();
+	}
+	inline void push_down () {
+		if (neg) {
+			neg = 0;
+			lc->negate();
+			rc->negate();
+		}
+	}
+
+	info query (int ql, int qr) {
+		if (ql <= l && r <= qr) return i;
+		push_down();
+		int m = (l + r) >> 1;
+		if (ql <= m && qr <= m) return lc->query(ql, qr);
+		if (ql > m) return rc->query(ql, qr);
+		return lc->query(ql, qr) + rc->query(ql, qr);
+	}
+
+	void negate (int ql, int qr) {
+		if (ql <= l && r <= qr)
+			this->negate();
+		else {
+			push_down();
+			int m = (l + r) >> 1;
+			if (ql <= m) lc->negate(ql, qr);
+			if (qr > m) rc->negate(ql, qr);
+			i = lc->i + rc->i;
+		}
+	}
+
+	void modify (int p, int v) {
+		if (l == r) i = info::new_leaf(v, l);
+		else {
+			push_down();
+			((p <= ((l + r) >> 1)) ? lc : rc)->modify(p, v);
+			i = lc->i + rc->i;
+		}
+	}
+} *root;
+
+namespace parser {
+
+	int dt[N], n, m;
+
+	void solve () {	
+		scanf("%d", &n);
+		
+		for (int i = 1; i <= n; ++i)
+			scanf("%d", &dt[i]);
+
+		root = new tree(1, n, dt);
+
+		scanf("%d", &m);
+
+		for (int _ = 1; _ <= m; ++_) {
+			int o, l, r, v;
+			scanf("%d", &o);
+			if (o == 0) { // modify
+				scanf("%d%d", &l, &v);
+				root->modify(l, v);
+			}
+			else if (o == 1) { // query
+				interval buf[30];
+				int res = 0;
+				scanf("%d%d%d", &l, &r, &v);
+				for (int i = 0; i < v; ++i) {
+					info ret = root->query(l, r);
+					buf[i] = ret.gmax;
+			//		printf("\tIt%d : (%d, %d, %d)\n", i, buf[i].l, buf[i].r, buf[i].v);
+					if (buf[i].v <= 0) {
+						v = i;
+						break;
+					}
+					res += buf[i].v;
+					root->negate(buf[i].l, buf[i].r);
+				}
+				for (int i = 0; i < v; ++i) {
+					root->negate(buf[i].l, buf[i].r);
+				}
+				printf("%d\n", res);
+			}
+		}
+	}
+}
+int main () {
+#ifdef LOCAL
+	freopen("in", "r", stdin);
+#endif
+	parser::solve();
+	return 0;
+}
+

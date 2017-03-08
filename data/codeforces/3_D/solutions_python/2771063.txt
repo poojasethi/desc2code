@@ -1,0 +1,95 @@
+#!/usr/bin/env python
+import sys
+from heapq import heappush, heappop
+
+def result(item):
+    result = ''
+    while item[5] is not None:
+        if item[4] > item[5][4]:
+            result = '(' + result
+        else:
+            result = ')' + result
+        item = item[5]
+    return result
+        
+def main():
+    S = sys.stdin.readline().strip()
+    n = len(S)
+    cost = [[int(x) for x in line.split()] for line in sys.stdin]
+    C = [(0,0)] * n
+    H = [0] * n
+    j = 0
+    for i, c in enumerate(S):
+        if c == '?':
+            C[i] = cost[j]
+            j += 1
+    H[n-1] = min(C[n-1][0], C[n-1][1])
+    for i in xrange(n-2, -1, -1):
+        H[i] = H[i+1] + min(C[i][0], C[i][1])
+    H.append(0)
+    
+    D = {}
+    Q = [(H[0], 0, 0, 0, 0, None)]  # total, cost, index, stack, back-pointer
+    while len(Q) > 0:
+        top = heappop(Q)
+        t, _, c, i, s, last = top
+        #print t, c, i, s, result(top)
+        if s < 0 or s > n - i:
+            continue
+        if i == n:
+            if s == 0:
+                print c
+                print result(top)
+                sys.exit()
+            else:
+                continue
+        if (i,s) in D:
+            continue
+        else:
+            D[(i,s)] = c
+        if S[i] == '(':
+            heappush(Q, (c+H[i+1], -(i+1), c, i+1, s+1, top))
+        elif S[i] == ')' and s > 0:
+            heappush(Q, (c+H[i+1], -(i+1), c, i+1, s-1, top))
+        elif S[i] == '?':
+            heappush(Q, (c+C[i][0]+H[i+1], -(i+1), c+C[i][0], i+1, s+1, top))
+            if s > 0:
+                heappush(Q, (c+C[i][1]+H[i+1], -(i+1), c+C[i][1], i+1, s-1, top))
+    print -1
+
+def main2():
+    S = sys.stdin.readline().strip()
+    n = len(S)
+    C = [[int(x) for x in line.split()] for line in sys.stdin]
+    Q = []
+    s = 0
+    j = 0
+    p = []
+    cost = 0
+    for i, c in enumerate(S):
+        if c == '(':
+            s += 1
+            p += '('
+        elif c == '?' or c == ')':
+            s -= 1
+            p += ')'
+            if c == '?':
+                cost += C[j][1]
+                heappush(Q, (C[j][0] - C[j][1], i))
+                j += 1
+            while len(Q) > 0 and s < 0:
+                d, k = heappop(Q)
+                p[k] = '('
+                cost += d
+                s += 2
+            if s < 0:
+                print -1
+                return
+    if s == 0:
+        print cost
+        print ''.join(p)
+    else:
+        print -1
+
+if __name__ == '__main__':
+    main2()

@@ -1,0 +1,94 @@
+#include <algorithm>
+#include <bitset>
+#include <cctype>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <numeric>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <string>
+#include <utility>
+#include <vector>
+using namespace std;
+
+#define SIZE(v) ((int)(v).size())
+#define CLEAR(v) memset((v),0,sizeof(v))
+#define BEGIN(v) ((v).begin())
+#define END(v) ((v).end())
+#define ALL(v) BEGIN(v),END(v)
+#define SORT(v) sort(ALL(v))
+#define UNIQUE(v) SORT(v);(v).erase(unique(ALL(v)),END(v))
+#define INDEX(v,x) lower_bound(ALL(v),x)-BEGIN(v)
+
+#define FOR(i,l,r) for(int i=(l);i<(r);i++)
+#define FOREACH(i,v) for(typeof((v).begin()) i=(v).begin();i!=(v).end();i++)
+#define PRINTLF(l,v) cout<<setprecision(l)<<fixed<<v
+
+const int MAXN = 30000 + 1;
+const int INF = 1012345678;
+
+int n, k, a[MAXN], dpStart[2][2][2][MAXN], dpEnd[2][2][MAXN];
+
+void init(int t) {
+  FOR(last, 0, 2) FOR(i, 0, n) {
+    FOR(current, 0, 2) dpStart[t][last][current][i] = -INF;
+    dpEnd[t][last][i] = -INF;
+  }
+}
+
+int getValue(int last, int current, int idx, int v) {
+  if (0 < idx && idx < k - 1) {
+    if (last == current) return 0;
+    return (current == 1 ? -v : v) * 2;
+  } else if (idx == 0) {
+    return current == 1 ? -v : v;
+  } else {
+    return last == 1 ? v : -v;
+  }
+}
+
+int calc() {
+  int t = 0;
+  FOR(i, 0, n) {
+    dpEnd[t][0][i] = dpEnd[t][1][i] = 0;
+  }
+  FOR(idx, 0, k) {
+    init(t ^ 1);
+    FOR(i, idx, n) {
+      FOR(last, 0, 2) {
+        FOR(current, 0, 2) {
+          dpStart[t ^ 1][last][current][i] = getValue(last, current, idx, a[i])
+              + max(
+                  i > 0 ? dpStart[t ^ 1][last][current][i - 1] : -INF,
+                  i > 0 ? dpEnd[t][last][i - 1] : 0);
+        }
+      }
+    }
+    FOR(i, idx, n) {
+      FOR(current, 0, 2) {
+        dpEnd[t ^ 1][current][i] = max(max(
+            i > 0 ? dpEnd[t ^ 1][current][i - 1] : -INF,
+            dpStart[t ^ 1][0][current][i]),
+            dpStart[t ^ 1][1][current][i]);
+      }
+    }
+    t ^= 1;
+  }
+  int res = -INF;
+  FOR(current, 0, 2) FOR(i, 0, n) res = max(res, dpEnd[t][current][i]);
+  return res;
+}
+
+int main() {
+  scanf("%d%d", &n, &k);
+  FOR(i, 0, n) scanf("%d", &a[i]);
+  printf("%d\n", calc());
+  return 0;
+}

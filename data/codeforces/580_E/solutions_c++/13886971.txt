@@ -1,0 +1,67 @@
+#include <cstdio>
+const int mod = 1000000007;
+const int z = 8939;
+char s[100010];
+const int N = 1 << 17;
+long long b[N+N], acc[N+10], lz[N+N], a[N];
+void push(int L, int R, int p) {
+	if (lz[p] == -1) return;
+	b[p] = (acc[R] - acc[L] + mod) * lz[p] % mod;
+	if (p < N) {
+		lz[p+p] = lz[p];
+		lz[p+p+1] = lz[p];
+	}
+	lz[p] = -1;
+}
+void upd(int l, int r, int d, int L = 0, int R = N, int p = 1) {
+	push(L, R, p);
+	if (r <= L || R <= l) return;
+	if (l <= L && R <= r) {
+		lz[p] = d;
+		push(L, R, p);
+		return;
+	}
+	upd(l, r, d, L, (L+R)/2, p+p);
+	upd(l, r, d, (L+R)/2, R, p+p+1);
+	b[p] = (b[p+p] + b[p+p+1]) % mod;
+}
+long long f(int l, int r, int L = 0, int R = N, int p = 1) {
+	push(L, R, p);
+	if (r <= L || R <= l) return 0;
+	if (l <= L && R <= r) {
+		return b[p];
+	}
+	long long res = f(l, r, L, (L+R)/2, p+p);
+	res += f(l, r, (L+R)/2, R, p+p+1);
+	return res % mod;
+}
+int main() {
+	int n, m, k, t, l, r, d;
+	scanf("%d%d%d", &n, &m, &k);
+	m += k;
+	scanf("%s", s);
+	a[0] = 1;
+	for (int i = 0; i < N; i++) {
+		a[i+1] = a[i] * z % mod;
+		acc[i+1] = (acc[i] + a[i]) % mod;
+	}
+	for (int i = 0; i < 2 * N; i++) {
+		lz[i] = -1;
+	}
+	for (int i = 0; i < n; i++) {
+		b[i+N] = (s[i] - '0') * a[i] % mod;
+	}
+	for (int i = N - 1; i > 0; i--) {
+		b[i] = (b[i+i] + b[i+i+1]) % mod;
+	}
+	while (m--) {
+		scanf("%d%d%d%d", &t, &l, &r, &d);
+		--l;
+		if (t == 1) {
+			upd(l, r, d);
+		} else {
+			puts(f(l, r - d) * a[d] % mod == f(l + d, r) ? "YES" : "NO");
+		}
+	}
+	return 0;
+}

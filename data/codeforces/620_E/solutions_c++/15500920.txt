@@ -1,0 +1,118 @@
+#include<stdio.h>
+#include<string.h>
+#include<iostream>
+#include<algorithm>
+#include<vector>
+#include<map>
+using namespace std;
+typedef __int64 ll;
+#define pii pair<int,int> 
+#define lson l,m,rt<<1
+#define rson m+1,r,rt<<1|1
+const int N = 4*1e5 +10;
+vector<int> g[N];
+int beg[N],en[N],col[N];
+ll tree[N<<2],color[N<<2];
+int n,a[N],q;
+
+void dfs(int u,int &time,int f){
+	int i,j;
+	beg[u]=++time;
+	col[time]=u;
+	for(i=0;i<g[u].size();i++){
+		if(f==g[u][i]) continue;
+		int v=g[u][i];
+		dfs(v,time,u);
+	}
+	en[u]=time;
+}
+
+void pushup(int rt){
+	tree[rt]=tree[rt<<1]|tree[rt<<1|1];
+}
+
+void build(int l,int r,int rt){
+	if(l==r){
+		color[rt]=0;
+		tree[rt]=1LL<<(a[col[l]]-1);
+		return;
+	}
+	int m=l+r>>1;
+	build(lson); build(rson);
+	pushup(rt);
+}
+
+void pushdown(int rt){
+	if(color[rt]){
+		color[rt<<1]=color[rt<<1|1]=color[rt];
+		tree[rt<<1]=tree[rt<<1|1]=color[rt];
+		color[rt]=0;
+	}
+}
+
+void update(int L,int R,ll val,int l,int r,int rt){
+	if(L<=l && r<=R){
+		tree[rt]=val;
+		color[rt]=val;
+		return;
+	}
+	int m=l+r>>1;
+	pushdown(rt);
+	if(L<=m) update(L,R,val,lson);
+	if(R>m) update(L,R,val,rson);
+	pushup(rt);
+}
+
+ll query(int L,int R,int l,int r,int rt){
+	if(L<=l && r<=R) return tree[rt];
+	int m=l+r>>1;
+	pushdown(rt);
+	ll ans=0;
+	if(L<=m) ans|=query(L,R,lson);
+	if(R>m) ans|=query(L,R,rson);
+	return ans;
+}
+
+int cal(ll x){
+	int ans=0;
+	while(x){
+		ans+=x&1;
+		x>>=1;
+	}
+	return ans;
+}
+
+int main(void){
+	int i,j;
+	while(~scanf("%d%d",&n,&q)){
+		for(i=1;i<=n;i++){
+			scanf("%d",&a[i]);
+			g[i].clear();
+		}
+		for(i=1;i<n;i++){
+			int u,v;
+			scanf("%d%d",&u,&v);
+			g[u].push_back(v);
+			g[v].push_back(u);
+		}
+		int time=0;
+		dfs(1,time,-1);
+		build(1,time,1);
+		while(q--){
+			int op,col,sub; scanf("%d",&op);
+			if(op==1){
+				scanf("%d%d",&sub,&col);
+				update(beg[sub],en[sub],1LL<<(col-1),1,time,1);
+				//for(i=1;i<=13;i++)
+				//printf("i %d tree %I64d\n",i,tree[i]);
+			}
+			else{
+				scanf("%d",&sub);
+				ll ans=query(beg[sub],en[sub],1,time,1);
+				printf("%d\n",cal(ans));
+			}
+		}
+	}
+	return 0; 
+}
+

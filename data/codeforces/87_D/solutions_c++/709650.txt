@@ -1,0 +1,98 @@
+#include<cstdio>
+#include<vector>
+#include<cstring>
+//                               Last Change:  2011-09-20 21:26:58
+#include<algorithm>
+#include<iostream>
+using namespace std;
+int n,fa[100003],cnt[100003],vis[100003],now,total;
+struct edge{
+	int x,y,v,id;
+	edge(){}
+	edge(int x,int y,int v,int id):x(x),y(y),v(v),id(id){}
+	bool operator <(const edge &a)const{
+		return v<a.v;
+	}
+};
+edge e[100003];
+vector< pair<int,int> > g[100003];
+int find(int x){
+	return fa[x]==x?x:fa[x]=find(fa[x]);
+}
+void Union(int x,int y){
+	fa[x]=y;
+	cnt[y]+=cnt[x];
+}
+int countNode(int father,int u){
+	int ret=cnt[u];
+	for(int i=0;i<g[u].size();++i){
+		if(e[g[u][i].second].v!=now)continue;
+		if(g[u][i].first!=father)
+			ret+=countNode(u,g[u][i].first);
+	}
+	return ret;
+}
+long long ans=0;
+vector<int> an;
+int DFS(int father,int u){
+	int ret=cnt[u];
+	vis[u]=now;
+	for(int i=0;i<g[u].size();++i){
+		if(e[g[u][i].second].v!=now)continue;
+		if(g[u][i].first!=father){
+			int p1=DFS(u,g[u][i].first);
+			ret+=p1;
+			int p2=total-p1;
+			if(1LL*p1*p2>ans){
+				an.clear();
+				ans=1LL*p1*p2;
+				an.push_back(e[g[u][i].second].id);
+			}
+			else if(1LL*p1*p2==ans)
+				an.push_back(e[g[u][i].second].id);
+		}
+	}
+	return ret;
+}
+int main(){
+	scanf("%d",&n);
+	for(int i=1;i<n;++i){
+		int x,y,v;
+		scanf("%d%d%d",&x,&y,&v);
+		e[i]=edge(x,y,v,i);
+	}
+	for(int i=1;i<=n;++i)fa[i]=i,cnt[i]=1;
+	stable_sort(e+1,e+n);
+	for(int i=1;i<n;){
+		int ii=i;
+		now=e[i].v;
+		while(i<=n&&e[i+1].v==now)++i;
+		for(int j=ii;j<=i;++j){
+			int x=find(e[j].x);
+			int y=find(e[j].y);
+			g[x].push_back(make_pair(y,j));
+			g[y].push_back(make_pair(x,j));
+		}
+		for(int j=ii;j<=i;++j){
+			int x=find(e[j].x);
+			if(vis[x]!=now){
+				total=countNode(0,x);
+				DFS(0,x);
+			}
+		}
+		for(int j=ii;j<=i;++j){
+			int x=find(e[j].x);
+			int y=find(e[j].y);
+			Union(x,y);
+		}
+		++i;
+	}
+	cout<<ans*2<<" "<<an.size()<<endl;
+	stable_sort(an.begin(),an.end());
+	for(int i=0;i<an.size();++i){
+		printf("%d",an[i]);
+		if(i!=an.size()-1)putchar(' ');
+		else puts("");
+	}
+	return 0;
+}

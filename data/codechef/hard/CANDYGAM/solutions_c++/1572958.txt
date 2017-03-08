@@ -1,0 +1,65 @@
+#include <iostream>
+#include <vector>
+#include <cstring>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+typedef long long int64;
+int data[51][51];
+int T,N,M;
+int64 sum_row[51][51][51],sum_column[51][51][51];
+int64 dp[51][51][51][51];
+
+void preprocess()
+{
+	for(int i=1;i<=N;++i)for(int j=1;j<=M;++j)for(int k=j;k<=M;++k)sum_row[i][j][k]=sum_row[i][j][k-1]+data[i][k];
+	for(int i=1;i<=M;++i)for(int j=1;j<=N;++j)for(int k=j;k<=N;++k)sum_column[i][j][k]=sum_column[i][j][k-1]+data[k][i];
+}
+
+void alice_move(int r0,int c0,int r1,int c1,int &d1,int &d2,int &d3,int &d4)
+{
+	int64 t1=sum_row[r0][c0][c1];
+	int64 t2=sum_row[r1][c0][c1];
+	int64 t3=sum_column[c0][r0][r1];
+	int64 t4=sum_column[c1][r0][r1];
+	int64 t=min(min(t1,t2),min(t3,t4));
+	if(t1==t)d1++;
+	else if(t2==t)d2--;
+	else if(t3==t)d3++;
+	else d4--;
+}
+int64 solve(int r0,int c0,int r1,int c1)
+{
+	if(r0>r1 || c0>c1)return 0;
+	if(dp[r0][r1][c0][c1]>=0)return dp[r0][r1][c0][c1];
+	int dx1=0,dx2=0,dy1=0,dy2=0;
+	alice_move(r0,c0,r1,c1,dx1,dx2,dy1,dy2);
+	r0+=dx1,r1+=dx2,c0+=dy1,c1+=dy2;
+	if(r0>r1 || c0>c1)return 0;
+	int64 res=max(max(sum_row[r0][c0][c1]+solve(r0+1,c0,r1,c1),
+		                       sum_row[r1][c0][c1]+solve(r0,c0,r1-1,c1)),
+						   max(sum_column[c0][r0][r1]+solve(r0,c0+1,r1,c1),
+							   sum_column[c1][r0][r1]+solve(r0,c0,r1,c1-1)));
+	r0-=dx1,r1-=dx2,c0-=dy1,c1-=dy2;
+	dp[r0][r1][c0][c1]=res;
+	return dp[r0][r1][c0][c1];
+}
+
+int main()
+{
+	//freopen("in.txt","r",stdin);
+	//freopen("out.txt","w",stdout);
+	for(scanf("%d",&T);T>0;--T)
+	{
+		scanf("%d%d",&N,&M);
+		int64 sum=0;
+		for(int i=1;i<=N;++i)for(int j=1;j<=M;++j)scanf("%d",&data[i][j]),sum+=data[i][j];
+		preprocess();
+		memset(dp,-1,sizeof(dp));
+		int64 ans=solve(1,1,N,M);
+		if(ans+ans==sum)ans=ans<<1;
+		else if(ans+ans<sum)ans=sum-ans;
+		printf("%lld\n",ans);
+	}
+	return 0;
+}

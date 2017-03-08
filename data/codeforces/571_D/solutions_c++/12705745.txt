@@ -1,0 +1,144 @@
+//--------------------------------
+//Sriram Narayanan - itisalways42
+//--------------------------------
+#include<bits/stdc++.h>
+#define pb push_back
+#define mp make_pair
+#define ff first
+#define ss second
+#define all(a) a.begin(), a.end()
+#define mod 1000000007
+#define endl "\n"
+
+using namespace std;
+typedef long long LL;
+typedef vector<LL> VI;
+typedef vector< vector<int> > VVI;
+typedef pair< LL, LL > PII;
+const int MAXN = 500010;
+
+LL N,m,uniid[MAXN],milid[MAXN],dorm[MAXN],raidtime[MAXN],updtime[MAXN];
+VI move[MAXN],moveid[MAXN],uni[MAXN],mil[MAXN];
+char qc[MAXN];
+PII Q[MAXN];
+
+void init()
+{
+	for(int i=0; i<MAXN; i++)
+	{
+		uniid[i] = i;
+		milid[i] = i;
+		dorm[i] = 0;
+		uni[i].clear(); uni[i].pb(i);
+		mil[i].clear(); mil[i].pb(i);
+	}
+}
+
+struct BIT
+{
+	LL sz;
+	VI bit;
+	void init(int idx)
+	{
+		sz = move[idx].size()+1;
+		bit.resize(sz);
+		for(int i=0; i<move[idx].size(); i++)
+			update(i+1,move[idx][i]);
+	}
+	void add(LL val)
+	{
+		//sz++;
+		val += query(sz-1)-query(sz-(sz&(-sz)));
+		sz++;
+		bit.pb(val);
+	}
+	void update(int x, LL val)
+	{
+		while(x<sz){ bit[x] += val; x += x&(-x); }
+	}
+	LL query(int x)
+	{
+		LL ret=0;
+		while(x>0){ ret += bit[x]; x -= x&(-x); }
+		return ret;
+	}
+};
+BIT T[MAXN];
+
+void update(int x, int currtime)
+{
+	int a,b,l,r;
+	a = uniid[x]; b = milid[x];
+	if(raidtime[b] > updtime[x]) {dorm[x] = 0; updtime[x] = raidtime[b];}
+	l = upper_bound(moveid[a].begin(),moveid[a].end(),updtime[x]) - moveid[a].begin();
+	r = upper_bound(moveid[a].begin(),moveid[a].end(),currtime) - moveid[a].begin();
+	dorm[x] += T[a].query(r) - T[a].query(l);
+	updtime[x] = currtime;
+}
+
+void U(int x, int y, int currtime, bool flag=false)
+{
+	x = uniid[x]; y = uniid[y];
+	if(x==y) return;
+	if(uni[x].size() < uni[y].size()) swap(x,y);
+	for(int i=0; i<uni[y].size(); i++)
+	{
+		if(flag) update(uni[y][i],currtime);
+		uniid[uni[y][i]] = x;
+		uni[x].pb(uni[y][i]);
+	}
+}
+
+void M(int x, int y, int currtime, bool flag=false)
+{
+	x = milid[x]; y = milid[y];
+	if(x==y) return;
+	if(mil[x].size() < mil[y].size()) swap(x,y);
+	for(int i=0; i<mil[y].size(); i++)
+	{
+		if(flag) update(mil[y][i],currtime);
+		milid[mil[y][i]] = x;
+		mil[x].pb(mil[y][i]);
+	}
+}
+
+void A(int x, int currtime)
+{
+	x = uniid[x];
+	move[x].pb(uni[x].size());
+	moveid[x].pb(currtime);
+	T[x].add(uni[x].size());
+}
+
+void Z(int x, int currtime)
+{
+	x = milid[x];
+	raidtime[x] = currtime;
+}
+
+LL query(int x, int currtime)
+{
+	update(x,currtime);
+	return dorm[x];
+}
+
+int main()
+{
+	cin>>N>>m;
+	init();
+	for(int i=1; i<=N; i++) T[i].init(i);
+	for(int i=1; i<=m; i++)
+	{
+		char inp[10]; scanf("%s",inp);
+		qc[i] = inp[0];
+		if(qc[i]=='U' || qc[i]=='M') scanf("%lld %lld",&Q[i].ff,&Q[i].ss);
+		else scanf("%lld",&Q[i].ff);
+		if(qc[i]=='U') U(Q[i].ff,Q[i].ss,i,true);
+		if(qc[i]=='M') M(Q[i].ff,Q[i].ss,i,true);
+		if(qc[i]=='A') A(Q[i].ff,i);
+		if(qc[i]=='Z') Z(Q[i].ff,i);
+		if(qc[i]=='Q') printf("%lld\n",query(Q[i].ff,i));
+	}
+	return 0;
+}
+

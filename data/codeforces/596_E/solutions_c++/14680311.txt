@@ -1,0 +1,106 @@
+#include<bits/stdc++.h>
+using namespace std;
+
+#define sc(n) scanf("%d",&n)
+#define scl(n) scanf("%lld",&n)
+#define ll long long
+#define lop(i,n) for(int i=0;i<n;++i)
+typedef pair<int, int> ii;
+typedef pair<ll, ll>  pll;
+
+const int maxN = 205;
+vector<ii> adjList[maxN][maxN];
+int grid[maxN][maxN], vis[maxN][maxN], n, m, q, a[15], b[15];
+int onCycle[maxN][maxN], qn;
+char x[1000100];
+bool has[maxN][maxN][12];
+bool isvalid(int i, int j){
+	return i >= 0 && j >= 0 && i<n&&j<m;
+}
+ii pr;
+bool dfs1(int i, int j){
+	if(vis[i][j]==1)return 0;
+	if (vis[i][j] == -1){
+		pr = ii(i, j);
+		onCycle[i][j] = 1;
+		has[i][j][grid[i][j]] = 1;
+		return 1;
+	}
+	vis[i][j] = -1;
+	lop(z, adjList[i][j].size()){
+		if (dfs1(adjList[i][j][z].first, adjList[i][j][z].second)){
+			lop(y, 10)has[i][j][y] |= has[adjList[i][j][z].first][adjList[i][j][z].second][y];
+			has[i][j][grid[i][j]] = 1;
+			onCycle[i][j] = 1;
+			return 1;
+		}
+	}
+	vis[i][j] = 1;
+	return 0;
+}
+void dfs2(int i, int j){
+	if (!onCycle[i][j] || vis[i][j] == 2)return;
+	vis[i][j] = 2;
+	lop(y, 10)has[i][j][y] = has[pr.first][pr.second][y];
+	lop(z, adjList[i][j].size())
+		dfs2(adjList[i][j][z].first, adjList[i][j][z].second);
+}
+int fr[12];
+bool solve(int i, int j, int idx){
+	if (onCycle[i][j]){
+		int bst = qn-1;
+		lop(z,10)if(fr[z]!=-1&&!has[i][j][z])bst=min(bst,fr[z]-1);
+		idx = bst + 1;
+	}
+	else if (grid[i][j] == x[idx] - '0')++idx;
+	if (idx == qn)return 1;
+	lop(z, adjList[i][j].size()){
+		int ti = adjList[i][j][z].first;
+		int tj = adjList[i][j][z].second;
+		if (!onCycle[ti][tj] && solve(ti, tj, idx))return 1;
+	}
+	return 0;
+}
+int main(){
+#ifndef ONLINE_JUDGE
+	freopen("i.txt", "r", stdin);
+#endif
+	sc(n), sc(m), sc(q);
+	lop(i, n){
+		lop(j, m){
+			char k; scanf(" %c", &k);
+			grid[i][j] = k - '0';
+		}
+	}
+	lop(i, 10)sc(a[i]), sc(b[i]);
+	lop(i, n)lop(j, m)
+	if (isvalid(i + a[grid[i][j]], j + b[grid[i][j]]))
+		adjList[i + a[grid[i][j]]][j + b[grid[i][j]]].push_back(ii(i, j));
+	else adjList[i][j].push_back(ii(i, j));
+
+	lop(i, n)lop(j, m){
+		if (!vis[i][j]){
+			if (dfs1(i, j))
+				dfs2(i, j);
+		}
+	}
+
+	lop(z, q){
+		scanf(" %s", &x);
+		qn = strlen(x);
+		reverse(x, x + qn);
+		memset(fr,-1,sizeof fr);
+		lop(i, qn)
+			if(fr[x[i]-'0']==-1)fr[x[i]-'0']=i;
+
+		bool found = 0;
+		lop(i, n)lop(j, m){
+			if (onCycle[i][j])
+				found = solve(i, j, 0);
+			if (found)goto next;
+		}
+	next:
+		if (found)puts("YES");
+		else puts("NO");
+	}
+}

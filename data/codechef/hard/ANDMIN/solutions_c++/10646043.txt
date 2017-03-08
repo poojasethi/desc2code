@@ -1,0 +1,118 @@
+#include <iostream>
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+#define INT_MAX 1000000001
+using namespace std;
+int minimum(int a,int b)
+{
+    if(a<b)
+        return a;
+    return b;
+}
+class segtree{
+    int sz;
+    int *t,*l;
+public:
+    segtree(void)
+    {
+        sz=0;
+        t=0;
+    }
+    segtree(int n)
+    {
+        int i=1;
+        while(i<n)
+            i*=2;
+        sz=2*i-1;
+        t=new int[sz];
+        l=new int[sz];
+        for(i=0;i<sz;i++)
+        {
+            t[i]=INT_MAX;
+            l[i]=0;
+        }
+    }
+    void build(int *p,int low,int high,int pos)
+    {
+        if(low==high)
+        {
+            t[pos]=p[low];
+            l[pos]=p[low];
+            return;
+        }
+        else
+        {
+            int mid=(low+high)/2;
+            build(p,low,mid,2*pos+1);
+            build(p,mid+1,high,2*pos+2);
+            l[pos]=l[pos*2+1]|l[pos*2+2];
+            t[pos]=minimum(t[2*pos+1],t[2*pos+2]);
+        }
+    }
+    void display(void)
+    {
+        for(int i=0;i<sz;i++)
+            cout << t[i] << " ";
+        cout << endl;
+    }
+    void update(int left,int right,int v,int low,int high,int pos)
+    {
+        if(low>high)
+            return;
+        if(left>high || right<low)
+            return;
+        if((~v)&l[pos])
+        {
+            l[pos]&=v;
+            if(low==high)
+                t[pos]&=v;
+            else
+            {
+                int mid=(low+high)/2;
+                update(left,right,v,low,mid,2*pos+1);
+                update(left,right,v,mid+1,high,2*pos+2);
+                l[pos]=l[pos*2+1]|l[pos*2+2];
+                t[pos]=minimum(t[2*pos+1],t[2*pos+2]);
+            }
+        }
+    }
+    int rmq(int left,int right,int low,int high,int pos)
+    {
+        if(low>high)
+            return INT_MAX;
+        if(left>high || right<low)
+            return INT_MAX;
+        if(left<=low&&right>=high)
+        {
+            return t[pos];
+        }
+        int mid=(low+high)/2;
+        return minimum(rmq(left,right,low,mid,2*pos+1),rmq(left,right,mid+1,high,2*pos+2));
+    }
+};
+int main()
+{
+    int n,q,z,l,r,x;
+    cin >> n >> q;
+    segtree t1(n);
+    int a[n];
+    for(int i=0;i<n;i++)
+        scanf("%d",&a[i]);
+    t1.build(a,0,n-1,0);
+    for(int i=0;i<q;i++)
+    {
+        scanf("%d",&z);
+        if(z)
+        {
+            scanf("%d %d %d",&l,&r,&x);
+            t1.update(l-1,r-1,x,0,n-1,0);
+        }
+        else
+        {
+            scanf("%d %d",&l,&r);
+            printf("%d\n",t1.rmq(l-1,r-1,0,n-1,0));
+        }
+    }
+    return 0;
+}

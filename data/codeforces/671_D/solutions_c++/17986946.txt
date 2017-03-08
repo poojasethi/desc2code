@@ -1,0 +1,104 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cmath>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+#include<vector>
+#define lch(x) ((x)<<1)
+#define rch(x) ((x)<<1|1)
+using namespace std;
+
+typedef long long int64;
+const int64 inf=1LL<<50;
+int n,m,head[300005],num,cost[300005],dfn[300005][2],tot,id[300005];
+int64 f[300005],ans;
+vector<int> add[300005],del[300005];
+struct edge {
+	int to,next;
+} e[600005];
+struct node {
+	int64 tag,mink;
+} t[1200005];
+inline void insert(int u,int v) {
+	e[++num].to=v; e[num].next=head[u]; head[u]=num;
+	e[++num].to=u; e[num].next=head[v]; head[v]=num;
+}
+void dfs(int now,int fa) {
+	dfn[now][0]=tot+1;
+	for (int i=0;i<add[now].size();i++) id[add[now][i]]=++tot;
+	for (int i=head[now];i;i=e[i].next) if (e[i].to!=fa) dfs(e[i].to,now);
+	dfn[now][1]=tot;
+	if (dfn[now][0]>dfn[now][1]) {
+		puts("-1");
+		exit(0);
+	}
+}
+inline void update(int now) {
+	if (t[now].tag) {
+		t[lch(now)].tag+=t[now].tag; t[lch(now)].mink+=t[now].tag;
+		t[rch(now)].tag+=t[now].tag; t[rch(now)].mink+=t[now].tag;
+		t[now].tag=0;
+	}
+}
+void change(int now,int l,int r,int pos,int64 d) {
+	if (l==r) {
+		t[now].mink=d; return;
+	}
+	update(now);
+	int mid=(l+r)>>1;
+	if (pos<=mid) change(lch(now),l,mid,pos,d); else change(rch(now),mid+1,r,pos,d);
+	t[now].mink=min(t[lch(now)].mink,t[rch(now)].mink);
+}
+void inc(int now,int l,int r,int ql,int qr,int64 d) {
+	if (l>=ql&&r<=qr) {
+		t[now].mink+=d; t[now].tag+=d; return;
+	}
+	update(now);
+	int mid=(l+r)>>1;
+	if (ql<=mid) inc(lch(now),l,mid,ql,qr,d);
+	if (qr>mid) inc(rch(now),mid+1,r,ql,qr,d);
+	t[now].mink=min(t[lch(now)].mink,t[rch(now)].mink);
+}
+int64 query(int now,int l,int r,int ql,int qr) {
+	if (l>=ql&&r<=qr) return t[now].mink;
+	update(now);
+	int64 ans=inf;
+	int mid=(l+r)>>1;
+	if (ql<=mid) ans=min(ans,query(lch(now),l,mid,ql,qr));
+	if (qr>mid) ans=min(ans,query(rch(now),mid+1,r,ql,qr));
+	return ans;
+}
+void calc(int now,int fa) {
+	int64 sum=0;
+	for (int i=head[now];i;i=e[i].next) if (e[i].to!=fa) {
+		calc(e[i].to,now);
+		sum+=f[e[i].to];
+	}
+	if (now==1) {
+		f[1]=sum; return;
+	}
+	for (int i=0;i<add[now].size();i++) change(1,1,tot,id[add[now][i]],sum+cost[add[now][i]]);
+	for (int i=0;i<del[now].size();i++) change(1,1,tot,id[del[now][i]],inf);
+	for (int i=head[now];i;i=e[i].next) if (e[i].to!=fa) inc(1,1,tot,dfn[e[i].to][0],dfn[e[i].to][1],sum-f[e[i].to]);
+	f[now]=query(1,1,tot,dfn[now][0],dfn[now][1]);
+}
+int main() {
+	scanf("%d%d",&n,&m);
+	for (int i=1;i<n;i++) {
+		int u,v;
+		scanf("%d%d",&u,&v);
+		insert(u,v);
+	}
+	for (int i=1;i<=m;i++) {
+		int u,v,w;
+		scanf("%d%d%d",&u,&v,&w);
+		add[u].push_back(i);
+		del[v].push_back(i);
+		cost[i]=w;
+	}
+	dfs(1,0);
+	calc(1,0);
+	printf("%I64d\n",f[1]>=inf?-1:f[1]);
+	return 0;
+}

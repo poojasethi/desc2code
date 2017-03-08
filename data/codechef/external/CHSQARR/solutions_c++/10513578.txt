@@ -1,0 +1,147 @@
+#include <iostream>
+#include <climits>
+
+using namespace std;
+
+#define FIO std::ios_base::sync_with_stdio(false);cin.tie(0);cout.tie(0);
+#define fin freopen("in.txt","r",stdin)
+
+const int SIZE = 1001;
+const int log2SIZE = 10;
+
+int P[SIZE][SIZE];
+int n,m;
+int q;
+
+//2D Range Maximum Query
+int M[log2SIZE][log2SIZE][SIZE][SIZE];
+int logTable[SIZE];
+
+inline void preprocessrmq(int n, int m){
+
+    logTable[1] = 0;
+    logTable[0] = -INT_MAX;
+    logTable[2] = 1;
+    int maxl = max(n,m);
+    for (int i = 1; i <= maxl; i++) {
+        while ((1 << (logTable[i] + 1)) <= i)
+            logTable[i]++;
+    }
+
+	for(int i = 0; (1<<i)<=n; i++){
+		for(int j = 0; (1<<j)<=m; j++){
+			for(int x = 0; x+(1<<i)-1<n; x++){
+				for(int y = 0; y+(1<<j)-1<m; y++){
+                    int x2 = x+(1<<(i-1));
+                    int y2 = y+(1<<(j-1));
+
+					if(i == 0 && j == 0)
+						M[i][j][x][y] = P[x][y];
+
+					else if (i == 0)
+						M[i][j][x][y] = max(M[i][j-1][x][y], M[i][j-1][x][y2]);
+
+					else if (j == 0)
+						M[i][j][x][y] = max(M[i-1][j][x][y], M[i-1][j][x2][y]);
+
+					else
+						M[i][j][x][y] = max(M[i-1][j-1][x][y], max(M[i-1][j-1][x2][y],max(M[i-1][j-1][x][y2], M[i-1][j-1][x2][y2])));
+
+                }
+            }
+        }
+    }
+}
+
+inline int findmax(int x, int y, int x1, int y1){
+	int k = logTable[x1-x+1];
+	int l = logTable[y1-y+1];
+	int x2 = x1-(1<<k)+1;
+	int y2 = y1-(1<<l)+1;
+	return max(M[k][l][x][y],max(M[k][l][x2][y],max(M[k][l][x][y2],M[k][l][x2][y2])));
+}
+
+//Sub Matrix Sum Query
+int s[SIZE][SIZE];
+inline void preprocess_smq(int n,int m){
+    for(int i= 0; i<n; i++){
+        for(int j= 0; j<m; j++){
+            if(i==0 && j==0){
+                s[i][j]=P[i][j];
+            }
+            else if(i==0){
+                s[i][j] = s[i][j-1] + P[i][j];
+            }
+            else if(j==0){
+                s[i][j] = s[i-1][j] + P[i][j];
+            }
+            else{
+                s[i][j] = s[i-1][j] + s[i][j-1] - s[i-1][j-1] + P[i][j];
+            }
+        }
+    }
+}
+
+inline int submatrixsum(int x, int y, int x1, int y1){
+    if(x ==0 && y ==0){
+        return s[x1][y1];
+    }
+    else if(x==0){
+        return s[x1][y1] - s[x1][y-1];
+    }
+    else if(y==0){
+        return s[x1][y1] - s[x-1][y1];
+    }
+    else{
+        return s[x1][y1] - s[x-1][y1] - s[x1][y-1] + s[x-1][y-1];
+    }
+}
+
+inline int findmin(int x,int y){
+
+    int minsum = 1e9;
+    int xy = x*y;
+
+    for(int i = 0; i+x-1 <n; i++){
+        for(int j= 0; j+y-1 <m; j++){
+            int endx = i+x-1;
+            int endy = j+y-1;
+
+            int maxima = findmax(i,j,endx,endy);
+            int allsum = submatrixsum(i,j,endx,endy);
+            int diff = xy*maxima - allsum;
+
+            minsum = min(minsum,diff);
+        }
+        if(minsum<=0)
+            break;
+    }
+
+    return minsum;
+}
+
+int main()
+{
+    //fin;
+    cin>>n>>m;
+
+    for(int i= 0; i<n; i++){
+        for(int j= 0; j<m; j++){
+            cin>>P[i][j];
+        }
+    }
+
+    preprocessrmq(n,m);
+    preprocess_smq(n,m);
+
+    cin>>q;
+
+    while(q--){
+
+        int x,y;
+        cin>>x>>y;
+        cout<<findmin(x,y)<<"\n";
+    }
+
+    return 0;
+}

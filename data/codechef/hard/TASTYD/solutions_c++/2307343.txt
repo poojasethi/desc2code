@@ -1,0 +1,64 @@
+#include <cstdio>
+#include <algorithm>
+#define fitl(x) (x >= k ? x - k : x)
+#define fitr(x) (x < 0 ? x + k : x)
+using namespace std;
+typedef long long ll;
+
+const int N = 200005;
+int n, k, top = 0, a[N], s[N], ay[N];
+pair<int, int> b[N];
+ll ans = 0;
+
+inline int mw(int x, int y) {return ay[x] < ay[y] ? x : y;} 
+namespace seg {
+	int a[524289], tsz;
+	void B(int n) {
+		for (++n, tsz=1; tsz<=n; tsz<<=1);
+		for (int i=1; i<n; ++i) a[i | tsz] = i;
+		for (int i=tsz-1; i; --i) a[i] = mw(a[i<<1], a[(i<<1)|1]);
+	}
+	int Q(int l, int r) {
+		int ans = 0;
+		l = (l-1) | tsz, r = (r+1) | tsz;
+		for (; (l^r)>1; l>>=1, r>>=1) {
+			if (!(l & 1)) ans = mw(ans, a[l ^ 1]);
+			if (  r & 1 ) ans = mw(ans, a[r ^ 1]);
+		}
+		return ans;
+	}
+}
+inline int cnt(int l, int r, int key) {
+	return upper_bound(b, b+n+2, make_pair(key, r))
+		 - lower_bound(b, b+n+2, make_pair(key, l));
+}
+void solve(int l, int r) {
+	int w = seg::Q(l, r);
+	if (w - l <= r - w) {
+		for (int i=l; i<=w; ++i)
+			ans += cnt(w, r, fitl(a[w] + s[i-1]));
+	}
+	else {
+		for (int i=w; i<=r; ++i)
+			ans += cnt(l-1, w-1, fitr(s[i] - a[w]));
+	}
+	--ans;
+	if (l < w-1) solve(l, w-1);
+	if (w+1 < r) solve(w+1, r);
+}
+int main() {
+	scanf("%d%d", &n, &k);
+	s[0] = 0; ay[0] = 1 << 30;
+	for (int i=1; i<=n; ++i) {
+		scanf("%d", &a[i]); ay[i] = a[i]; a[i] %= k;
+		s[i] = (s[i-1] + a[i]) % k;
+		b[i] = make_pair(s[i], i);
+	}
+	sort(b+1, b+n+1);
+	b[0] = make_pair(0, 0);
+	b[n+1] = make_pair(k, 0);
+	seg::B(n);
+	solve(1, n);
+	printf("%lld\n", ans);
+	return 0;
+}

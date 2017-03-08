@@ -1,0 +1,338 @@
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#include <list>
+#include <string>
+
+#define forit(it, S) for(typeof((S).begin()) it = (S).begin(); (it) != (S).end(); (it)++)
+
+using namespace std;
+
+vector < list<int> > prof;
+
+// A = A \setminus B
+// supoe que ambos estão ordenados
+void diff(list<int> &A, list<int> &B)
+{
+  list<int>::iterator i = A.begin(), j = B.begin(), k;
+  while(i != A.end() && j != B.end()){
+    if(*i == *j){
+      k = i;
+      i++; j++;
+      A.erase(k);
+    } else if(*i < *j){
+      i++;
+    } else{
+      j++;
+    }
+  }
+}
+
+// devolve A \cap B
+// supoe que ambos estao ordenados
+list<int> inter(list<int> &A, list<int> &B)
+{
+  list<int>::iterator i = A.begin(), j = B.begin();
+  list<int> C;
+  while(i != A.end() && j != B.end()){
+    if(*i == *j){
+      C.push_back(*i);
+      i++; j++;
+    } else if(*i < *j){
+      i++;
+    } else{
+      j++;
+    }
+  }
+  return C;
+}
+
+int contar(const list< list<int> > &ord,
+	   list< list<int> >::iterator start,
+	   list< list<int> >::iterator end)
+{
+  int c = 0;
+  while(start != end){
+    start++;
+    c++;
+  }
+  return c;
+}
+
+int contido_em_qual(list< list<int> > &v, list<int> &S)
+{
+  int i = 0;
+  forit(it, v){
+    if((int)inter(*it, S).size() != 0)
+      return i;
+    i++;
+  }
+  return -1;
+}
+/*
+void imprime_set(set<int> &S)
+{
+  forit(i, S){
+    printf("%d ", *i);
+  }
+  printf("\n");
+}
+
+void imprime_groups(list< set<int> > &ord, set<int> sob, string s)
+{
+  printf("---\n%s:\n", s.c_str());
+  forit(it, ord){
+    printf(".");
+    imprime_set(*it);
+  }
+  printf("*");
+  imprime_set(sob);
+  printf("---\n");
+}
+*/
+
+vector<int> go(list<int> sobrando, int ini, int fim)
+{
+  if(ini > fim)
+    return vector<int> (sobrando.begin(), sobrando.end());
+
+
+  int p = ini;
+  for(int i = ini+1; i <= fim; i++)
+    if(prof[i].size() > prof[p].size())
+      p = i;
+  swap(prof[p], prof[ini]);
+
+  list< list<int> > ord;
+  ord.push_back(prof[ini]);
+  diff(sobrando, prof[ini]);
+
+  ini++;
+  bool para = false;
+  while(!para){
+    para = true;
+
+    for(int i = ini; i <= fim; i++){
+
+      list< list<int> >::iterator start = ord.end();
+      list< list<int> >::iterator end = ord.end();
+
+
+      forit(it, ord){
+
+	list<int> S = inter(*it, prof[i]);
+	int t = (int)S.size();
+
+	if(t == 0){
+	  if(start != ord.end() && end == ord.end())
+	    end = it;
+	  continue;
+	}
+
+	if(start == ord.end()){
+	  start = it;
+	  continue;
+	}
+
+	if(end != ord.end()){
+	  return vector<int> (0);
+	}
+
+	if(t < (int)(*it).size()){
+	  end = it;
+	  end++;
+	}
+      }
+
+      int c = contar(ord, start, end);
+      list<int> isobra = inter(prof[i], sobrando);
+
+
+      if(c == 0 || (c == 1 && (int)isobra.size() == 0))
+	continue;
+
+      end--;
+      list<int> istart = inter(prof[i], *start);
+      list<int> iend   = inter(prof[i], *end);
+      list<int> &first = *start;
+      list<int> &last = *end;
+      end++;
+
+
+      bool inseri_fim = false;
+      if((int)isobra.size() != 0){
+	if(end == ord.end()){
+	  if(c >= 2 && iend.size() != last.size()){
+	    return vector<int> (0);
+	  } else{
+	    ord.push_back(isobra);
+	    inseri_fim = true;
+	  }
+	} else if(start == ord.begin()){
+	  if(c >= 2 && istart.size() != first.size()){
+	    return vector<int> (0);
+	  }
+	  else
+	    ord.push_front(isobra);
+	} else{
+	  return vector<int> (0);
+	}
+	diff(sobrando, isobra);
+      }
+
+      if(c >= 2){
+	if(istart.size() != (*start).size()){
+	  start++;
+	  ord.insert(start, istart);
+	  start--;
+	  start--;
+	  diff(*start, istart);
+	}
+
+	if(iend.size() != last.size()){
+	  end--;
+	  ord.insert(end, iend);
+	  end++;
+	  diff(last, iend);
+	}
+      }
+
+      if(c == 1){
+	if(istart.size() != (*start).size()){
+	  ord.insert(start, istart);
+	  diff(*start, istart);
+	  if(inseri_fim){
+	    list < list<int> >::iterator it = start;
+	    it--;
+	    swap(*it, *start);
+	  }
+	}
+      }
+
+
+      swap(prof[ini], prof[i]);
+      ini++;
+      para = false;
+    }
+  }
+
+  // chamar recursivamente e montar a resposta
+  vector< pair<int, list<int> > > grupos (fim-ini + 1);
+  for(int i = ini; i <= fim; i++){
+    grupos[i-ini] = make_pair(contido_em_qual(ord, prof[i]), prof[i]);
+  }
+
+  sort(grupos.begin(), grupos.end());
+  for(int i = ini; i <= fim; i++)
+    prof[i] = grupos[i-ini].second;
+
+    
+  int j = ini;
+  while(j <= fim && grupos[j-ini].first == -1)
+    j++;
+
+  vector<int> resp;
+
+  if((int)sobrando.size() > 0 && j > ini){
+    resp = go(sobrando, ini, j-1);
+    if((int)resp.size() == 0)
+      return resp;
+  } else{
+    forit(jt, sobrando){
+      resp.push_back(*jt);
+    }
+  }
+
+  int i = j, k = 0;
+  forit(it, ord){
+    i = j;
+    if(i <= fim && grupos[i-ini].first == k){
+      while(j <= fim && grupos[j-ini].first == k)
+	j++;
+
+      vector<int> v = go(*it, i, j-1);
+      if((int)v.size() == 0)
+	return v;
+      forit(jt, v){
+	resp.push_back(*jt);
+      }
+    } else{
+      forit(jt, *it){
+	resp.push_back(*jt);
+      }
+    }
+    k++;
+  }
+
+  return resp;
+}
+/*
+int main()
+{
+  int N, M;
+  while(scanf(" %d %d", &N, &M) == 2){
+    prof = vector< list<int> > (M);
+    for(int i = 0; i < M; i++){
+      int j, k;
+      scanf(" %d", &k);
+      while(k--){
+	scanf(" %d", &j);
+	prof[i].push_back(j);
+      }
+      prof[i].sort();
+    }
+    list<int> sobrando;
+    for(int i = 1; i <= N; i++)
+      sobrando.push_back(i);
+
+    vector<int> resp = go(sobrando, 0, M-1);
+    if(resp.size() == 0){
+      printf("impossivel\n");
+    } else{
+      printf("%d", resp[0]);
+      for(int i = 1; i < N; i++){
+	printf(" %d", resp[i]);
+      }
+      printf("\n");
+    }
+  }
+  return 0;
+}
+*/
+
+
+//Se quiser rodar no codeforces, comente a rotina main e descomente esse bloco
+char mat[510][510];
+int main()
+{
+  int N;
+  scanf(" %d", &N);
+  prof = vector< list<int> > (N);
+
+  for(int i = 0; i < N; i++){
+    scanf(" %s", mat[i]);
+    for(int j = 0; j < N; j++){
+      if(mat[i][j] == '1')
+	prof[i].push_back(j);
+    }
+  }
+
+  list<int> sobrando;
+  for(int i = 0; i < N; i++)
+    sobrando.push_back(i);
+
+  vector<int> resp = go(sobrando, 0, N-1);
+
+  if(resp.size() == 0){
+      printf("NO\n");
+  } else{
+    printf("YES\n");
+    for(int i = 0; i < N; i++){
+      for(int j = 0; j < N; j++)
+	printf("%c", mat[i][resp[j]]);
+      printf("\n");
+    }
+  }
+  return 0;
+}
+

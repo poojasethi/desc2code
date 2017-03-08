@@ -1,0 +1,101 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define EPS 1e-8
+#define Vector Point
+
+struct Point {
+    double x, y;
+    Point(){}
+    Point(double a, double b) { x = a; y = b; }
+};
+
+bool operator ==(const Point &a, const Point &b) {
+    return abs(a.x - b.x) < EPS && abs(a.y - b.y) < EPS;
+}
+bool operator <(const Point &a, const Point &b) {
+    if(abs(a.x - b.x) > EPS) return a.x < b.x;
+    return a.y + EPS < b.y;
+}
+
+Point operator +(const Point &a, const Point &b) { return Point(a.x + b.x, a.y + b.y); }
+Point operator -(const Point &a, const Point &b) { return Point(a.x - b.x, a.y - b.y); }
+Point operator /(const Point &a, double k) { return Point(a.x/k, a.y/k); }
+Point operator *(const Point &a, double k) { return Point(a.x*k, a.y*k); }
+
+double dist(const Point &A, const Point &B)    { return hypot(A.x - B.x, A.y - B.y); }
+double cross(const Vector &A, const Vector &B) { return A.x * B.y - A.y * B.x; }
+
+bool between(const Point* A, const Point* B, const Point* P) {
+    return  P->x >= min(A->x, B->x) && P->x <= max(A->x, B->x) &&
+            P->y <= B->y;
+}
+
+bool pointInPoly(Point P[], int n, const Point* A) {
+    int cnt = 0;
+    for(int i=0; i < n; i++) {
+        const Point* pinf = P + i;
+        const Point* psup = pinf + 1;
+        
+        if(pinf->y > psup->y) swap(pinf, psup);
+        
+        double aa = cross(*pinf - *A, *psup - *A);
+        
+        if(pinf->y <= A->y) {
+            if(aa > EPS && A->y < psup->y) cnt++;
+            else if(abs(aa) < EPS && between(pinf, psup, A)) return true;
+        }
+    }
+    return cnt & 1;
+}
+
+double f(const Point &A, const Point &B, Point P[], int n) {
+    vector <Point> v;
+    
+    for(int i=0; i < n; i++) {
+        Point P1 = P[i], P2 = P[i+1];
+        
+        double cp1 = cross(B - A, P2 - P1);
+        double cp2 = cross(P1 - A, P2 - P1);
+        if(cp1 != 0) {
+            Point Q = A + (B - A) * (cp2 / cp1);
+            v.push_back(Q);
+        } else if(cp2 == 0) {
+            v.push_back(P1);
+            v.push_back(P2);
+        }
+    }
+    
+    sort(v.begin(), v.end());
+    int L = unique(v.begin(), v.end()) - v.begin() - 1;
+    assert(L <= 1000);
+    
+    double ans = 0;
+    for(int i=0; i < L; i++) {
+        Point X = (v[i] + v[i+1]) / 2;
+        
+        if(pointInPoly(P, n, &X))
+            ans += dist(v[i], v[i+1]);
+    }
+    return ans;
+}
+
+int main() {
+    int n, m;
+    scanf("%d %d", &n, &m);
+    
+    Point P[n + 1];
+    for(int i=0; i<n; i++)
+        scanf("%lf %lf", &P[i].x, &P[i].y);
+    P[n] = P[0];
+    
+    for(int i=0; i<m; i++) {
+        Point A, B;
+        scanf("%lf %lf %lf %lf", &A.x, &A.y, &B.x, &B.y);
+        
+        printf("%.10lf\n", f(A, B, P, n));
+    }
+    
+    return 0;
+}

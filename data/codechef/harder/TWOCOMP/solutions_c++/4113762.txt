@@ -1,0 +1,345 @@
+#include <iostream>
+#include <sstream> 
+#include <cstdio>
+#include <deque>
+#include <queue>
+#include <set>
+#include <map>
+#include <list>
+#include <utility>
+#include <bitset>
+#include <algorithm>
+#include <cmath>
+#include <cstdlib> 
+#include <ctime>
+#include <cassert>
+#include <cstring>
+#include <string>
+#include <vector>
+
+using namespace std;
+
+typedef long long ll;
+typedef long double ld;
+template<typename T> T ABS(const T& val) { return val < 0 ? -val : val; }
+
+const int MAXN = 1e5 + 11;
+const int LOGMAXN = 18;
+const int INF = 1e9;
+
+const int MAXM = 703;
+const int MAXV = 1 + MAXM + MAXM;
+
+int N;
+int M[2];
+
+vector<vector<int> > edges;
+int rfrom[2][MAXM];
+int rto[2][MAXM];
+int rcost[2][MAXM];
+
+char used[MAXN];
+
+int CAPSZ;
+int near[MAXV][MAXM];
+int csz[MAXV];
+int reflow[MAXV][MAXV];
+
+char trans[2][MAXM][MAXM];
+
+int tin[MAXN];
+int tout[MAXN];
+int parent[MAXN][LOGMAXN];
+int dep[MAXN];
+
+int time_mark = 0;
+
+inline void dfs_parents(int u, int par, int deep)
+{
+    if (used[u])
+        return;
+    tin[u] = ++time_mark;
+    used[u] = true;
+    dep[u] = deep;
+    parent[u][0] = par;
+
+    for (int j = 1; j < LOGMAXN; ++j) {
+        parent[u][j] = parent[parent[u][j - 1]][j - 1];
+    }
+
+    for (int i = 0; i < edges[u].size(); ++i) {
+        dfs_parents(edges[u][i], u, deep + 1);
+    }
+
+    tout[u] = ++time_mark;
+}
+
+bool above(int low, int up)
+{
+    return low == up || (tin[low] > tin[up] && tout[low] < tout[up]);
+}
+
+inline int get_lca(int one, int two)
+{
+    if (dep[one] < dep[two])
+        swap(one, two);
+
+    int step = LOGMAXN - 1;
+    while (!above(one, two)) {
+        while (step && above(one, parent[two][step])) {
+            --step;
+        }
+        two = parent[two][step];
+    }
+
+    return two;
+}
+
+inline void lca_mark()
+{
+    memset(tin, 0, sizeof(tin));
+    memset(tout, 0, sizeof(tout));    
+    memset(parent, 0, sizeof(parent));
+    memset(used, 0, sizeof(used));
+    memset(trans, 0, sizeof(trans));
+    time_mark = 0;
+    dfs_parents(0, 0, 0);
+
+    int lca_cache[2][MAXM];
+    for (int iter = 0; iter < 2; ++iter) {
+        for (int i = 0; i < M[iter]; ++i) {
+            lca_cache[iter][i] = get_lca(rfrom[iter][i], rto[iter][i]);
+        }
+    }
+
+    for (int iter = 0; iter < 2; ++iter) {
+        for (int i = 0; i < M[iter]; ++i) {
+            int a = rfrom[iter][i], b = rto[iter][i];
+            int cab = lca_cache[iter][i];
+
+            for (int j = 0; j < M[1 - iter]; ++j) {
+                if (trans[iter][i][j])
+                    continue;
+                int ccd = lca_cache[1 - iter][j];
+
+                if (above(ccd, cab) && (above(a, ccd) ||
+                                        above(b, ccd)))
+                {
+                    trans[iter][i][j] = true;
+                    trans[1 - iter][j][i] = true;
+                }
+
+            }
+        }
+    }
+}
+
+
+inline bool lift(int u, vector<int>& h)
+{
+    int d = INF;
+    bool ok = false;
+
+    for (int i = 0; i < csz[u]; ++i) {
+        int v = near[u][i];
+        if (reflow[u][v] > 0 && d > h[v] + 1) {
+            d = h[v] + 1;
+            ok = d < h[u];
+        }
+    }
+
+    if (d == INF)
+        return false;
+
+    h[u] = d;
+    return ok;
+}
+
+inline bool push(int u, vector<int>& h, vector<int>& e)
+{
+    bool pushed = false;
+
+    for (int i = 0; i < csz[u] && e[u]; ++i) {
+        int v = near[u][i];
+
+        if (reflow[u][v] > 0 && h[u] == h[v] + 1) {
+            pushed = true;
+            int addf = min(reflow[u][v], e[u]);
+            reflow[u][v] -= addf;
+            reflow[v][u] += addf;
+            e[u] -= addf;
+            e[v] += addf;
+        }
+    }
+
+    return pushed;
+}
+
+int preflow_push_maxh(int start, int targ)
+{
+    int n = CAPSZ, v, up, change = true, u = -1;
+    vector<int> e(n), h(n);
+    h[start] = n - 1;
+
+    for (int i = 0; i < csz[0]; ++i) {
+        v = near[start][i];
+        up = reflow[0][v];
+        reflow[0][v] = 0;
+        reflow[v][0] = up;
+        e[v] = up;
+    }
+
+    while (change) {
+        for (u = 1, change = false; u + 1 < CAPSZ; ++u) {
+            while (lift(u, h) || (e[u] > 0 && push(u, h, e))) {
+                change = true;
+            }
+        }
+    }
+
+    int res = 0;
+    for (int i = 1; i < 1 + M[0]; ++i) {
+        res += reflow[i][0];
+    }
+
+    return res;
+}
+
+int preflow_push_ord(int start, int targ)
+{
+    int n = CAPSZ;;
+    vector<int> e(n);
+    vector<int> h(n);
+    h[start] = n - 1;
+
+    for (int i = 0; i < csz[0]; ++i) {
+        int v = near[start][i];
+        int up = reflow[0][v];
+        reflow[0][v] = 0;
+        reflow[v][0] = up;
+        e[v] = up;
+    }
+
+    bool pushed = true;
+    vector<int> maxh(n, 0);
+    int len = 0;
+
+    while (true) {
+        for (int u = 1; u + 1 < CAPSZ; ++u) {
+            if (e[u] > 0) {
+                if (len && h[u] > h[maxh[0]])
+                    len = 0;
+                if (!len || h[u] == h[maxh[0]])
+                    maxh[len++] = u;
+            }
+        }
+
+        if (!len)
+            break;
+
+        while (len) {
+            int u = maxh[len - 1];
+            pushed = false;
+
+            while (e[u]) {
+                if (!pushed) {
+                    lift(u, h);
+
+                    if (h[u] > h[maxh[0]]) {
+                        len = 0;
+                        break;
+                    }
+                }
+
+                pushed = push(u, h, e);
+                if (e[u] == 0)
+                    --len;
+            }
+
+
+            if (len) {
+                lift(u, h);
+                if (h[u] > h[maxh[0]]) {
+                    len = 0;
+                    break;
+                }
+            }
+        }
+    }
+
+    int res = 0;
+    for (int i = 1; i < 1 + M[0]; ++i) {
+        res += reflow[i][0];
+    }
+
+    return res;
+}
+
+
+
+
+int main ()
+{
+    while (scanf("%d %d %d", &N, &M[0], &M[1]) > 0) {
+        edges.assign(N, vector<int>());
+        for (int i = 0; i < N - 1; ++i) {
+            int u, v;
+            scanf("%d %d", &u, &v);
+            --u;
+            --v;
+            edges[u].push_back(v);
+            edges[v].push_back(u);
+        }
+
+        for (int iter = 0; iter < 2; ++iter) {
+            for (int i = 0; i < M[iter]; ++i) {
+                scanf("%d %d %d", &rfrom[iter][i], &rto[iter][i], &rcost[iter][i]);
+                --rfrom[iter][i];
+                --rto[iter][i];
+            }
+        }
+
+        lca_mark();
+
+        CAPSZ = 2 + M[0] + M[1];
+        memset(near, 0, sizeof(near));
+        memset(csz, 0, sizeof(csz));
+        memset(reflow, 0, sizeof(reflow));
+
+        int total = 0;
+        int start = 0;
+        int targ = 1 + M[0] + M[1];
+
+        for (int i = 1; i <= M[0]; ++i) {
+            near[start][csz[start]++] = i;
+            reflow[start][i] = rcost[0][i - 1];
+            near[i][csz[i]++] = start;
+            reflow[i][start] = 0;
+            total += rcost[0][i - 1];
+
+            for (int j = 1 + M[0]; j < 1 + M[0] + M[1]; ++j) {
+                if (i == 1) {
+                    near[j][csz[j]++] = targ;
+                    reflow[j][targ] = rcost[1][j - (1 + M[0])];
+                    near[targ][csz[targ]++] = j;
+                    reflow[targ][j] = 0;
+                    total += rcost[1][j - (1 + M[0])];
+                }
+
+                bool found = trans[0][i - 1][j - (1 + M[0])];
+                if (found) {
+                    near[i][csz[i]++] = j;
+                    reflow[i][j] = INF;
+                    near[j][csz[j]++] = i;
+                    reflow[j][i] = 0;
+                }
+            }
+        }
+
+        int ans = total - preflow_push_maxh(start, targ);
+        printf("%d\n", ans);
+    }
+
+
+    return 0;
+}

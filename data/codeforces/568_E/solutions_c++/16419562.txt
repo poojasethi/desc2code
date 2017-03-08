@@ -1,0 +1,93 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+const int INF = (1 << 30);
+const int MAXN = 100005;
+
+int Li[MAXN],Ri[MAXN],Ans[MAXN],Pr[MAXN];
+int A[MAXN],B[MAXN],C[MAXN],Lis[MAXN],Po[MAXN],Pre[MAXN],Gap[MAXN],Cnt[MAXN],N,M,K,L;
+
+bool cmp(int a,int b) {return a > b;}
+
+int main()
+{
+	//freopen("data.in","r",stdin),freopen("data.out","w",stdout);
+	scanf("%d", &N);
+	for(int i = 1;i <= N;i ++) scanf("%d", &A[i]);
+	scanf("%d", &M);
+	for(int i = 1;i <= M;i ++) scanf("%d", &B[i]);
+	sort(B + 1,B + M + 1,cmp);
+	A[0] = -INF,A[++ N] = INF - 1;
+	for(int i = 1,p = 0;i <= N;i ++)
+	{
+		Pr[i] = p; 
+		Gap[i] = Gap[i - 1] + (A[i] == -1);
+		if (A[i] == -1) p = i;
+	}
+	C[L = 1] = INF;
+	for(int i = 0;i <= N;i ++)
+		if (A[i] != -1)
+		{
+			int tmp = 0;
+			for(int l = 1,r = L,mid;l <= r;)
+			{
+				mid = l + r >> 1;
+				if (A[i] <= C[mid]) tmp = mid,r = mid - 1; else l = mid + 1;
+			}
+			Po[tmp] = i;
+			Pre[i] = Po[tmp - 1];
+			if (tmp == L) C[L] = A[i],C[++ L] = INF; else C[tmp] = A[i];
+			Lis[i] = tmp;
+		} else
+		{
+			for(int j = 1,l = L;j <= M;j ++)
+			{
+				for(;l && B[j] <= C[l];l --);
+				int tmp = l + 1;
+				Po[tmp] = -1;
+				if (tmp == L) C[L] = B[j],C[++ L] = INF; else C[tmp] = B[j];
+			}
+		}
+	reverse(B + 1,B + M + 1);
+	int tot = 1;
+	Cnt[1] = 1;
+	for(int i = 2;i <= M;i ++)
+		if (B[i] != B[tot]) B[++ tot] = B[i],Cnt[tot] = 1; else ++ Cnt[tot];
+	M = tot;
+	for(int i = 0;i <= N;i ++)
+		if (A[i] != -1)
+		{
+			Li[i] = lower_bound(B + 1,B + M + 1,A[i]) - B - 1;
+			Ri[i] = upper_bound(B + 1,B + M + 1,A[i]) - B;
+		}
+	L = 0;
+	for(int p = N;p;)
+	{
+		if (Pre[p] != -1) p = Pre[p]; else
+		{
+			for(int i = p - 1,tmp = 0;i >= 0;i --)
+				if (A[i] != -1 && A[i] < A[p] && Lis[p] - Lis[i] - 1 <= Gap[p] - Gap[i])
+				{
+					if (Lis[p] - Lis[i] - 1 <= Li[p] - Ri[i] + 1)
+					{
+						for(int j = Li[p],k = Pr[p];j >= Ri[i] && k >= i;j --,k = Pr[k]) A[k] = B[j],Cnt[j] --;
+						p = i;
+						break;
+					}
+				}
+		}
+	}
+	for(int i = 1,l = 1;i <= N;i ++)
+		if (A[i] == -1)
+		{
+			while (!Cnt[l]) l ++;
+			A[i] = B[l];
+			-- Cnt[l];
+		}
+	for(int i = 1;i < N;i ++)
+		printf("%d%c", A[i], (i + 1) == N ? '\n' : ' ');
+	return 0;
+}

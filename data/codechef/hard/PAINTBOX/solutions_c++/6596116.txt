@@ -1,0 +1,129 @@
+#include <cstring>
+#include <cmath>
+#include <cstdio>
+#include <algorithm>
+#include <iostream>
+#include <vector>
+#include <string>
+#include <map>
+#include <set>
+
+using namespace std;
+
+#define pb push_back
+#define sz(a) (int)a.size()
+#define fs first
+#define sc second
+
+typedef long long ll;
+typedef pair<int,int> ii;
+
+const int N = 100005;
+
+struct gt {
+    int mn, mx;
+    gt(int _mn = 0, int _mx = 0) {
+        mn = _mn;
+        mx = _mx;
+    }
+};
+
+gt it[4*N];
+int a[N], n, w;
+
+void build(int p, int l, int r) {
+    if (l==r) {
+        it[p].mn = it[p].mx = a[l];
+        return;
+    }
+    int m = (l+r)>>1;
+    build(p*2,l,m); build(p*2+1,m+1,r);
+    it[p].mn = min(it[p*2].mn,it[p*2+1].mn);
+    it[p].mx = max(it[p*2].mx,it[p*2+1].mx);
+}
+
+void update(int p, int l, int r, int u, int k) {
+    if (u < l || u > r) return;
+    if (l==r && l==u) {
+        it[p].mn = it[p].mx = a[u] = k;
+        return;
+    }
+    int m = (l+r)>>1;
+    update(p*2,l,m,u,k); update(p*2+1,m+1,r,u,k);
+    it[p].mn = min(it[p*2].mn,it[p*2+1].mn);
+    it[p].mx = max(it[p*2].mx,it[p*2+1].mx);
+}
+
+gt retrieve(int p, int l, int r, int u, int v) {
+    if (u > r || v < l) return gt(-1,-1);
+    if (l >= u && r <= v) return it[p];
+    int m = (l+r)>>1;
+    gt q1 = retrieve(p*2,l,m,u,v), q2 = retrieve(p*2+1,m+1,r,u,v);
+    if (q1.mn==-1) return q2;
+    if (q2.mn==-1) return q1;
+    return gt(min(q1.mn,q2.mn),max(q1.mx,q2.mx));
+}
+
+int np(int l, int r) {
+    gt q = retrieve(1,1,n,l,l+w-1);
+    if (q.mx!=q.mn || q.mn!=a[l]) return -1;
+    int res = l-1;
+    while (l <= r) {
+        int m = (l+r)>>1;
+        gt q = retrieve(1,1,n,m,m+w-1);
+        if (q.mn==q.mx && q.mn==a[m]) {
+            res = m;
+            l = m+1;
+        }
+        else r = m-1;
+    }
+    return res;
+}
+
+int tinh_left(int l, int r) {
+    int res = r, p = r;
+    while (l <= r) {
+        int m = (l+r)>>1;
+        gt q = retrieve(1,1,n,m,p);
+        if (q.mx==q.mn && q.mx==a[p]) {
+            res = m;
+            r = m-1;
+        }
+        else l = m+1;
+    }
+    return res;
+}
+
+int main() {
+	//freopen("input.txt","r",stdin);
+    int t;
+    scanf("%d",&t);
+    while (t--) {
+        scanf("%d%d",&n,&w);
+        for (int i = 1; i <= n; ++i)
+            scanf("%d",&a[i]);
+        int q;
+        int res = 0;
+        build(1,1,n);
+        for (int i = 1; i <= n-w+1; ++i) {
+            gt q = retrieve(1,1,n,i,i+w-1);
+            res += (q.mn == q.mx && q.mn == a[i]);
+        }
+        scanf("%d",&q);
+        while (q--) {
+            int x, y;
+            scanf("%d %d",&x,&y);
+            if (a[x] != y) {
+                int l = tinh_left(max(1,x-w+1),min(x,n-w+1));
+                int r = np(l,min(x,n-w+1));
+                if (r != -1) res -= r-l+1;
+                update(1,1,n,x,y);
+                l = tinh_left(max(1,x-w+1),min(x,n-w+1));
+                r = np(l,min(x,n-w+1));
+                if (r != -1) res += r-l+1;
+            }
+            printf("%d\n",res);
+        }
+    }
+	return 0;
+}

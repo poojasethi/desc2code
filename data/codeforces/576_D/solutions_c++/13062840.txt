@@ -1,0 +1,103 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <bitset>
+
+struct BoolMatrix {
+  std::bitset<151> a[151];
+  int n, m;
+  BoolMatrix() {}
+  BoolMatrix(int _n, int _m) :
+      n(_n), m(_m) {}
+};
+
+struct Flight {
+  int a, b, d;
+};
+
+struct FlightLess {
+  bool operator()(const Flight& a, const Flight& b) {
+    return a.d < b.d;
+  }
+};
+
+BoolMatrix multiply(const BoolMatrix& m1, const BoolMatrix& m2) {
+  BoolMatrix ret(m1.n, m2.m);
+  // assert m1.m == m2.n
+  for (int i = 0; i < m1.n; i++) {
+    for (int j = 0; j < m1.m; j++) {
+      if (m1.a[i][j]) {
+        ret.a[i] |= m2.a[j];
+      }
+    }
+  }
+  return ret;
+}
+
+BoolMatrix power(const BoolMatrix& m, int n) {
+  // assert m.n == m.m
+  BoolMatrix ret(m.n, m.m);
+  for (int i = 0; i < m.n; i++) {
+    ret.a[i].set(i);
+  }
+  int p = 1;
+  while (p <= n) {
+    p <<= 1;
+  }
+  p >>= 1;
+  while (p) {
+    ret = multiply(ret, ret);
+    if (p & n) {
+      ret = multiply(ret, m);
+    }
+    p >>= 1;
+  }
+  return ret;
+}
+
+int check(const BoolMatrix& src, const BoolMatrix& vet) {
+  BoolMatrix m = src;
+  for (int i = 1; i <= src.m; i++) {
+    m = multiply(m, vet);
+    if (m.a[0][m.m - 1]) {
+      return i;
+    }
+  }
+  return 0;
+}
+
+int main() {
+  int n, m;
+  Flight f[151];
+  scanf("%d%d", &n, &m);
+  for (int i = 0; i < m; i++) {
+    scanf("%d%d%d", &f[i].a, &f[i].b, &f[i].d);
+    f[i].a--;
+    f[i].b--;
+  }
+  std::sort(f, f + m, FlightLess());
+  BoolMatrix src(1, n);
+  BoolMatrix det(n, n);
+  src.a[0][0] = true;
+  int ret = 0;
+  int last = 0;
+  bool ok = false;
+  for (int i = 0; i < m; i++) {
+    src = multiply(src, power(det, f[i].d - last));
+    ret += f[i].d - last;
+    last = f[i].d;
+    det.a[f[i].a][f[i].b] = true;
+    int c = check(src, det);
+    if (c > 0) {
+      ret += c;
+      ok = true;
+      break;
+    }
+  }
+  if (ok) {
+    printf("%d\n", ret);
+  } else {
+    puts("Impossible");
+  }
+  return 0;
+}

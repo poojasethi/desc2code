@@ -1,0 +1,125 @@
+/*
+ * 2011-06-07  Martin  <Martin@Martin-desktop>
+
+ * 
+ */
+#include <iostream>
+#include <fstream>
+#include <cstring>
+#include <vector>
+#include <map>
+
+using namespace std;
+
+#define MaxiN 100005
+#define forvector(i, v) for (int i = 0; i < (int) (v).size(); ++ i)
+#define pb push_back
+#define ll long long
+
+int N;
+int A[MaxiN], B[MaxiN], C[MaxiN], S[MaxiN];
+ll Cnt[MaxiN], Sub[MaxiN], All[MaxiN];
+bool V1[MaxiN], V2[MaxiN];
+vector <int> Adj[MaxiN];
+map < int, vector <int> > Day;
+
+int Find(int Root)
+{
+	return (S[Root] < 0) ? Root : (S[Root] = Find(S[Root]));
+}
+
+inline void Union(int x, int y)
+{
+	x = Find(x), y = Find(y);
+	if (x == y)
+		return;
+	if (S[x] > S[y])
+		swap(x, y);
+	S[x] += S[y];
+	S[y] = x;
+}
+
+void DFS1(int Cur)
+{
+	V1[Cur] = 0;
+	Sub[Cur] = - S[Cur];
+	forvector (i, Adj[Cur])
+		if (V1[Adj[Cur][i]])
+		{
+			DFS1(Adj[Cur][i]);
+			Sub[Cur] += Sub[Adj[Cur][i]];
+		}
+}
+
+void DFS2(int Cur, int Val)
+{
+	V2[Cur] = 0;
+	All[Cur] = Val;
+	forvector (i, Adj[Cur])
+		if (V2[Adj[Cur][i]])
+			DFS2(Adj[Cur][i], Val);
+}
+
+int main()
+{
+	scanf("%d", &N);
+	Day.clear();
+	for (int i = 1; i < N; ++ i)
+	{
+		scanf("%d%d%d", A + i, B + i, C + i);
+		Day[C[i]].pb(i);
+	}
+	memset(S, - 1, sizeof(S));
+	for (map < int, vector <int> > :: iterator it = Day.begin(); it != Day.end(); ++ it)
+	{
+		int i;
+		forvector (j, it->second)
+		{
+			i = it->second[j];
+			Adj[Find(A[i])].clear();
+			Adj[Find(B[i])].clear();
+			V1[Find(A[i])] = V1[Find(B[i])] = 1;
+			V2[Find(A[i])] = V2[Find(B[i])] = 1;
+		}
+		forvector (j, it->second)
+		{
+			i = it->second[j];
+			Adj[Find(A[i])].pb(Find(B[i]));
+			Adj[Find(B[i])].pb(Find(A[i]));
+		}
+		forvector (j, it->second)
+		{
+			i = it->second[j];
+			if (V1[Find(A[i])])
+			{
+				DFS1(Find(A[i]));
+				DFS2(Find(A[i]), Sub[Find(A[i])]);
+			}
+		}
+		forvector (j, it->second)
+		{
+			i = it->second[j];
+			int u = Find(A[i]), v = Find(B[i]);
+			if (Sub[u] < Sub[v])
+				swap(u, v);
+			Cnt[i] = Sub[v] * (All[v] - Sub[v]) * 2LL;
+		}
+		forvector (j, it->second)
+		{
+			i = it->second[j];
+			Union(A[i], B[i]);
+		}
+	}
+	ll ans = - 1;
+	for (int i = 1; i < N; ++ i)
+		if (Cnt[i] > ans)
+			ans = Cnt[i];
+	vector <int> res;
+	res.clear();
+	for (int i = 1; i < N; ++ i)
+		if (Cnt[i] == ans)
+			res.pb(i);
+	cout << ans << " " << res.size() << endl;
+	forvector (i, res)
+		printf("%d%c", res[i], (i + 1 == (int) res.size()) ? '\n' : ' ');
+}

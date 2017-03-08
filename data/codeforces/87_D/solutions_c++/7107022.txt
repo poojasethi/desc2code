@@ -1,0 +1,99 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef long long ll;
+
+struct edge{ int a, b, l, i; };
+
+const int INF = 1000000000;
+const int MAXN = 100005;
+int n, par[MAXN], sz[MAXN], vis[MAXN] = {};
+edge e[MAXN];
+map<int,vector<edge> > m;
+vector<int> adj[MAXN], id[MAXN];
+int st[MAXN];
+ll res = 0;
+vector<int> resv;
+
+int find(int a){
+  return a == par[a] ? par[a] : par[a] = find(par[a]);
+}
+
+void join(int a, int b){
+  if(find(a) == find(b)) return;
+  sz[find(b)] += sz[find(a)];
+  par[find(a)] = find(b);
+}
+
+void init(){
+  for(int i = 1; i <= n; i++){
+    par[i] = i;
+    sz[i] = 1;
+  }
+}
+
+int dfs1(int v, int p, int l){
+  vis[v] = l;
+  st[v] = sz[v];
+  for(int i = 0; i < adj[v].size(); i++){
+    if(adj[v][i] != p) st[v] += dfs1(adj[v][i], v, l);
+  }
+  return st[v];
+}
+
+int dfs2(int v, int p, int up){
+  for(int i = 0; i < adj[v].size(); i++){
+    if(adj[v][i] != p){
+      ll l = st[adj[v][i]], r = up + st[v] - st[adj[v][i]];
+      if(l * r > res){
+        res = l * r;
+        resv.clear();
+      }
+      if(l * r == res) resv.push_back(id[v][i]);
+      dfs2(adj[v][i], v, r);
+    }
+  }
+}
+
+int main(){
+  cin >> n;
+  init();
+  for(int i = 1; i < n; i++){
+    cin >> e[i].a >> e[i].b >> e[i].l;
+    e[i].i = i;
+    m[e[i].l].push_back(e[i]);
+  }
+  for(map<int,vector<edge> >::iterator it = m.begin(); it != m.end(); it++){
+    vector<edge> v = it -> second;
+    set<int> s;
+    for(int i = 0; i < v.size(); i++){
+      v[i].a = find(v[i].a);
+      v[i].b = find(v[i].b);
+      s.insert(v[i].a);
+      s.insert(v[i].b);
+    }
+    for(set<int>::iterator jt = s.begin(); jt != s.end(); jt++){
+      adj[*jt].clear();
+      id[*jt].clear();
+    }
+    for(int i = 0; i < v.size(); i++){
+      adj[v[i].a].push_back(v[i].b);
+      adj[v[i].b].push_back(v[i].a);
+      id[v[i].a].push_back(v[i].i);
+      id[v[i].b].push_back(v[i].i);
+    }
+    for(set<int>::iterator jt = s.begin(); jt != s.end(); jt++){
+      if(vis[*jt] < it -> first){
+        dfs1(*jt, -1, it -> first);
+        dfs2(*jt, -1, 0);
+      }
+    }
+    for(int i = 0; i < v.size(); i++){
+      join(v[i].a, v[i].b);
+    }
+  }
+  sort(resv.begin(), resv.end());
+  cout << 2 * res << " " << resv.size() << '\n';
+  for(int i = 0; i < resv.size(); i++) cout << resv[i] << ' ';
+  cout << '\n';
+}

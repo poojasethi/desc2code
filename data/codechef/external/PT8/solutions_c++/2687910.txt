@@ -1,0 +1,108 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#define four 0
+#define seven 1
+#define four_seven 2
+#define seven_four 3
+#define MAX 1000005
+
+using namespace std;
+
+int tree[MAX*3][4];
+int lazy[MAX*3];
+string s;
+
+void invert(int a[])
+{
+     swap(a[four],a[seven]);
+     swap(a[four_seven],a[seven_four]);
+     return;
+}
+
+void combine(int a[], int a1[], int a2[])
+{
+     a[four] = a1[four] + a2[four];
+     a[seven] = a1[seven] + a2[seven];
+     a[four_seven] = max(a1[four] + a2[seven], max(a1[four_seven] + a2[seven], a1[four] + a2[four_seven]));
+     a[seven_four] = max(a1[seven] + a2[four], max(a1[seven] + a2[seven_four], a1[seven_four] + a2[four]));
+     return;
+}
+
+void build(int node, int first, int last)
+{
+     if ( first == last ) {
+          if ( s[first] == '4' ) {
+               tree[node][four] = tree[node][four_seven] = 1;
+          }
+          else {
+               tree[node][seven] = tree[node][seven_four] = 1;
+          }
+          return;
+     }
+     int mid = (first+last)/2;
+     build(node*2, first, mid);
+     build(node*2 + 1, mid+1, last);
+     combine(tree[node],tree[node*2],tree[node*2+1]);
+}
+
+void update(int node, int first, int last, int i, int j)
+{
+     if ( lazy[node] != 0 ) {
+          if ( lazy[node] & 1 ) {
+             invert(tree[node]);
+             if ( first != last ) {
+                lazy[node*2] += lazy[node];
+                lazy[node*2 + 1] += lazy[node];
+             }
+          }
+          lazy[node] = 0;
+     }
+     
+     if ( first > last || first > j || last < i ) return;
+     
+     if ( first >= i && last <= j ) {
+        invert(tree[node]);
+        if ( first != last ) {
+           lazy[node*2] += 1;
+           lazy[node*2+1] += 1;
+        }
+        return;
+     }
+     
+     int mid = (first+last)/2;
+     update(node*2, first, mid, i, j);
+     update(node*2 + 1, mid+1, last, i, j);
+     combine(tree[node], tree[node*2], tree[node*2+1]);
+}
+
+int main()
+{
+    int n,m,x,y;
+    scanf("%d%d", &n, &m);
+    string p;
+    cin >> s;
+    memset(lazy, 0, sizeof(lazy));
+    build(1,0,n-1);
+    while ( m-- ) {
+          cin >> p;
+          if ( p == "count" ) {
+               if ( lazy[1] & 1 ) {
+                  invert(tree[1]);
+                  if ( n != 1 ) {
+                       lazy[2] += lazy[1];
+                       lazy[3] += lazy[1];
+                  }
+                  lazy[1] = 0;
+               }     
+               int ans = max(tree[1][four_seven],max(tree[1][four],tree[1][seven]));
+               printf("%d\n", ans);
+          }
+          else {
+               scanf("%d%d", &x, &y);
+               update(1,0,n-1,x-1,y-1);
+          }          
+    }     
+    return 0;
+}

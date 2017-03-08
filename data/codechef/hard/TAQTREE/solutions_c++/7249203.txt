@@ -1,0 +1,228 @@
+#include <bits/stdc++.h>
+using namespace std;
+ 
+#define R(i,a,b) for(int i=a;i<b;i++)
+#define RE(i,a,b) for(int i=a;i<=b;i++)
+#define RR(i,a,b) for(int i=a;i>b;i--)
+#define RRE(i,a,b) for(int i=a;i>=b;i--)
+#define F(i,n) for(int i=0;i<n;i++)
+#define FE(i,n) for(int i=0;i<=n;i++)
+#define FR(i,n) for(int i=n;i>0;i--)
+#define FRE(i,n) for(int i=n;i>=0;i--)
+#define mp(a,b) make_pair(a,b)
+#define pii pair <int, int>
+#define pb push_back
+#define ft first
+#define sd second
+#define LL long long
+#define gc getchar_unlocked
+#define pc putchar_unlocked
+ 
+inline void get(int &x)
+{
+    register int c = gc();
+    x = 0;
+    int neg = 0;
+    for(;((c<48 || c>57) && c != '-');c = gc());
+    if(c=='-') {neg=1;c=gc();}
+    for(;c>47 && c<58;c = gc()) {x = (x<<1) + (x<<3) + c - 48;}
+    if(neg) x=-x;
+}
+ 
+vector < pii > adj[100005];
+pii edge[100005];
+int parent[100005];
+int start[100005], end[100005], level[100005], cost[100005], dep_cost[100005];
+int z, depth;
+int lca[100005][20];
+int dfs_order[100005];
+ 
+struct node
+{
+	int dist;
+ 
+	node():dist(0){}
+}stree[400005];
+ 
+void dfs(int node, int cost = 0)
+{
+	dfs_order[z] = node;
+	level[node] = depth;
+	if (node != 0)
+		dep_cost[node] = dep_cost[parent[node]] + cost;
+	start[node] = z++;
+	
+	int n = adj[node].size();
+	depth++;
+	F(i,n)
+	{
+		if (adj[node][i].ft == parent[node])
+			continue;
+		parent[adj[node][i].ft] = node;
+		dfs(adj[node][i].ft, adj[node][i].sd);
+	}
+	depth--;
+ 
+	end[node] = z-1;
+}
+ 
+void lca_gen()
+{
+	memset(lca, -1, sizeof(lca));
+	queue <int> q;
+	q.push(0);
+	while (!q.empty())
+	{
+		int n = adj[q.front()].size();
+		F(i,n)
+			if (adj[q.front()][i].ft != parent[q.front()])
+				q.push(adj[q.front()][i].ft);
+		for (int j=0; 1<<j <= level[q.front()]; j++)
+			j == 0 ? lca[q.front()][j] = parent[q.front()] : lca[q.front()][j] = lca[lca[q.front()][j-1]][j-1];
+		q.pop();
+	}
+}
+ 
+int lca_find(int w, int v)
+{
+	if (level[v] < level[w])
+		swap(v,w);
+ 
+	int lg = log2(level[v]);
+ 
+	while (level[v] != level[w])
+	{
+		if (level[lca[v][lg]] >= level[w])
+			v = lca[v][lg];
+		lg--;
+	}
+ 
+	if (v == w)
+		return v;
+ 
+	lg = log2(v);
+ 
+	FRE(i,lg)
+	{
+		if (lca[v][i] != lca[w][i])
+		{
+			v = lca[v][i];
+			w = lca[w][i];
+		}
+	}
+ 
+	return parent[v];
+}
+ 
+void build(int root, int s, int e)
+{
+	if (s==e)
+		stree[root].dist = dep_cost[dfs_order[z++]];
+	else
+	{
+		int mid = (s+e)>>1;
+		build (root*2, s, mid);
+		build (root*2+1, mid+1, e);
+	}
+}
+ 
+void update(int root, int s, int e, int qs, int qe, int c)
+{
+	if (s == qs && e == qe)
+	{
+		stree[root].dist += c;
+		return;
+	}
+ 
+	int mid = (s+e)>>1;
+	if (qs > mid)
+		update(root*2+1, mid+1, e, qs, qe, c);
+	else if (qe <= mid)
+		update(root*2, s, mid, qs, qe, c);
+	else
+	{
+		update(root*2, s, mid, qs, mid, c);
+		update(root*2+1, mid+1, e, mid+1, qe, c);
+	}
+}
+ 
+int get_d(int root, int s, int e, int x)
+{
+	int ans = 0;
+	
+	if (s==e)
+	{
+		ans += stree[root].dist;
+		return ans;
+	}
+	
+	int mid = (s+e)>>1;
+	if (x <= mid)
+		ans += get_d(root*2, s, mid, x);
+	else if (x > mid)
+		ans += get_d(root*2+1, mid+1, e, x);
+	
+	return ans+stree[root].dist;
+}
+ 
+int main()
+{
+	int n;
+	get(n);
+	F(i,n-1)
+	{
+		int u,v,w;
+		get(u);
+		get(v);
+		get(w);
+		u--;
+		v--;
+		adj[u].pb(mp(v,w));
+		adj[v].pb(mp(u,w));
+		edge[i] = mp(u,v);
+		cost[i] = w;
+	}
+ 
+	z = 0;
+	depth = 0;
+	dfs(0);
+ 
+	lca_gen();
+ 
+	z = 0;
+	build(1,0,n-1);
+ 
+	int q;
+	get(q);
+	while (q--)
+	{
+		int type;
+		get(type);
+		if (type == 1)
+		{
+			int i,c;
+			get(i);
+			get(c);
+			i--;
+			int u,v;
+			u = edge[i].ft;
+			v = edge[i].sd;
+			int low = v;
+			if (u != 0 && parent[u] == v)
+				low = u;
+			update(1, 0, n-1, start[low], end[low], c-cost[i]);
+			cost[i] = c;
+		}
+		else
+		{
+			int u,v;
+			get(u);
+			get(v);
+			u--;
+			v--;
+			int k = lca_find(u,v);
+			printf("%d\n", get_d(1,0,n-1,start[u]) + get_d(1,0,n-1,start[v]) - 2*get_d(1,0,n-1,start[k]));
+		}
+	}
+	return 0;
+}  

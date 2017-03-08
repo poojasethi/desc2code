@@ -1,0 +1,94 @@
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<cmath>
+#include<set>
+#include<algorithm>
+
+using namespace std; 
+
+typedef long long LL; 
+
+struct node{
+	int p,b;
+	bool operator < ( const node &ta ) const { 
+		return p<ta.p; 
+	}
+}; 
+
+
+struct frog{
+	int x,cnt,id; 
+	LL t; 
+	bool operator < (const frog & ta) const {
+		return x<ta.x; 
+	}
+}f[200003];
+
+LL tree[800003],anst[200003]; 
+int n,m,anscnt[200003]; 
+multiset<node> se; 
+
+void build(int nod,int l,int r){ 
+	if (l==r) { 
+		tree[nod]=f[r].x+f[r].t; 
+		return ;
+	}
+	int mid=(l+r) >>1; 
+	build(2*nod ,l,mid); build(2*nod+1,mid+1,r); 
+	tree[nod]=max(tree[2*nod],tree[2*nod+1]); 
+}
+
+int ask(int nod,int l,int r,int v){
+	if (tree[nod]<v)return 0; 
+	if (l==r) return r; 
+	int mid=(l+r) >>1; 
+	if (tree[2*nod]>=v) 
+		return ask(2*nod,l,mid,v);
+	return ask(2*nod+1,mid+1,r,v); 
+}
+
+void insert(int nod,int l,int r,int w){ 
+	if (l==r){ 
+		tree[nod]=f[r].x+f[r].t; 
+		return ;
+	}
+	int mid=(l+r) >>1; 
+	if (w<=mid) insert(2*nod,l,mid,w);
+		else insert(2*nod+1,mid+1,r,w); 
+	tree[nod]=max(tree[2*nod],tree[2*nod+1]); 
+}
+
+int main(){
+	
+	scanf("%d%d",&n,&m); 
+	for(int i=1;i<=n;i++){ 
+		scanf("%d%I64d",&f[i].x,&f[i].t); 
+		f[i].id=i; 
+	}
+	sort(f+1,f+n+1); 
+	build(1,1,n); 
+	for (int i=1;i<=m;i++) {
+		int xp,xb; 
+		scanf("%d%d",&xp,&xb); 
+		int k=ask(1,1,n,xp); 
+		if (k==0 || f[k].x>xp) {
+			se.insert(node {xp,xb } ); 
+		}else {
+			f[k].t+=xb; f[k].cnt++; 
+			while (1)  {
+				multiset<node> :: iterator lp=se.lower_bound( node{ f[k].x,0 } );
+				if (lp==se.end() )  break; 
+				if ( (*lp).p>f[k].x+f[k].t)break; 
+				f[k].t+=(*lp).b; f[k].cnt++; 
+				se.erase(lp); 
+			}
+			insert(1,1,n,k); 
+		}
+	}
+	for (int i=1;i<=n;i++)
+		anscnt[f[i].id]=f[i].cnt,anst[f[i].id]=f[i].t; 
+	for(int i=1;i<=n;i++) printf("%d %I64d\n",anscnt[i],anst[i]); 
+		
+	return 0; 
+}

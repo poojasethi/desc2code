@@ -1,0 +1,122 @@
+#include <algorithm>
+#include <cstdio>
+#include <vector>
+using namespace std;
+ 
+struct Edge {
+	int st, en, cap;
+	
+	Edge(int st, int en, int cap) : st(st), en(en), cap(cap) {}
+};
+ 
+#define pb push_back
+#define sz(x) int(x.size())
+#define MX 10005
+int N, S, T;
+vector<int> adj[MX];
+vector<Edge> edge;
+int prv[MX];
+int q[MX], hd, tl;
+ 
+void add_edge(int u, int v, int c1, int c2 = 0) {
+	adj[u].pb(sz(edge));
+	edge.pb(Edge(u, v, c1));
+	adj[v].pb(sz(edge));
+	edge.pb(Edge(v, u, c2));
+}
+ 
+int max_flow() {
+	int i, e, u, v, w, inc, tot;
+	
+	tot = 0;
+	while (1) {
+		fill_n(prv, N, -1);
+		hd = tl = 0;
+		prv[S] = -2;
+		q[tl++] = S;
+		while (hd < tl) {
+			u = q[hd++];
+			for (i = 0; i < sz(adj[u]); i++) {
+				e = adj[u][i], v = edge[e].en;
+				if (prv[v] != -1 || !edge[e].cap) continue;
+				prv[v] = e;
+				q[tl++] = v;
+			}
+		}
+		if (prv[T] == -1) break;
+		
+		for (i = 0; i < sz(adj[T]); i++) {
+			e = adj[T][i] ^ 1, w = edge[e].st;
+			if (prv[w] == -1) continue;
+			inc = edge[e].cap;
+			for (v = w; v != S; v = edge[e].st) {
+				e = prv[v];
+				inc = min(inc, edge[e].cap);
+			}
+			if (!inc) continue;
+			e = adj[T][i] ^ 1;
+			edge[e].cap -= inc;
+			edge[e ^ 1].cap += inc;
+			for (v = w; v != S; v = edge[e].st) {
+				e = prv[v];
+				edge[e].cap -= inc;
+				edge[e ^ 1].cap += inc;
+			}
+			tot += inc;
+		}
+	}
+	return tot;
+}
+ 
+#define MN 105
+#define INF 100000000
+int n, m, k;
+int x[MN][MN];
+int a[MN], b[MN];
+int d1[MN], d2[MN];
+ 
+inline int Hash(int i, int j) {
+	return i * (m - 1) + j - 1;
+}
+ 
+int main() {
+//	freopen("in.txt", "r", stdin);
+//	freopen("out.txt", "w", stdout);
+	
+	int i, j, c, tot;
+	
+	scanf("%d%d%d", &n, &m, &k);
+	for (i = 0; i < n; i++) {
+		for (j = 0; j < m; j++) scanf("%d", &x[i][j]);
+	}
+	for (i = 0; i < k; i++) {
+		scanf("%d%d", &a[i], &b[i]);
+		a[i]--, b[i]--;
+		d1[a[i]]++, d2[b[i]]++;
+	}
+	
+	if (m == 1) {
+		tot = 0;
+		for (i = 0; i < n; i++) tot += x[i][0];
+	}
+	else {
+		N = (m - 1) * n;
+		S = N++, T = N++;
+		for (i = 0; i < n; i++) {
+			c = (x[i][0] == -1 || d2[i]) ? INF : 105 - x[i][0];
+			add_edge(S, Hash(i, 1), c);
+			c = (x[i][m - 1] == -1 || d1[i]) ? INF : 105 - x[i][m - 1];
+			add_edge(Hash(i, m - 1), T, c);
+			for (j = 1; j < m - 1; j++) {
+				c = (x[i][j] == -1) ? INF : 105 - x[i][j];
+				add_edge(Hash(i, j), Hash(i, j + 1), c);
+			}
+		}
+		for (i = 0; i < k; i++) {
+			for (j = 1; j < m - 1; j++) add_edge(Hash(a[i], j), Hash(b[i], j + 1), INF);
+		}
+		tot = 105 * n - max_flow();
+	}
+	printf("%.2lf\n", 1.0 * tot / n);
+	return 0;
+} 

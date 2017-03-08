@@ -1,0 +1,101 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+#include <queue>
+#include <map>
+#include <vector>
+#include <string>
+#include <cctype>
+#include <set>
+
+using namespace std;
+
+int n,m,k,nm,a,b,ii,jj;
+int f[201],pd[1<<7][201],pa[1<<7][201];
+bool mark[201];
+int di[4] = {1,0,-1,0}, dj[4] = {0,1,0,-1}, sub[4] = {0,1,0,-1};
+char sai[102];
+
+void make(int mask, int at){
+    mark[at] = true;
+    int pm = pa[mask][at];
+    if(pm < 0) return;
+    int pat = pm&0xFFFF;
+    pm >>= 16;
+    make(pm, pat);
+    if(pm != mask) make(mask^pm,at);
+}
+
+int main (){
+    #ifdef INTERNO
+        freopen("in", "r", stdin);
+    #endif
+    scanf("%d %d %d", &n, &m, &k);
+    nm = n*m;
+    sub[0] = m, sub[2] = -m;
+    for(int i = 0; i < nm; ++i) scanf("%d", f+i);
+    memset(pd, 63, sizeof pd);
+    for(int i = 0; i < k; ++i){
+        scanf("%d %d", &a, &b);
+        --a, --b;
+        a = a*m +b;
+        pd[1<<i][a] = f[a];
+        pa[1<<i][a] = -1;
+    }
+    int mask = 1<<k,c,nx;
+    for(int i = 1; i < mask; ++i){
+        for(int j = 0; j < nm; ++j){
+            b = 1<<30;
+            for(int i2 = (i-1)&i; i2; i2 = (i2-1)&i){
+                a = pd[i2][j] + pd[i^i2][j] - f[j];
+                if(a < b){ b = a; c = i2;}
+            }
+            if(b < pd[i][j]){
+                pd[i][j] = b;
+                pa[i][j] = (c<<16)+j;
+            }
+        }
+        queue<int> fi;
+        memset(mark, 0, nm);
+        for(int j = 0; j < nm; ++j) fi.push(j);
+        while(fi.size()){
+            a = fi.front(); fi.pop();
+            mark[a] = 1;
+            for(int z = 0; z < 4; ++z){
+                ii = a/m+di[z], jj = a%m+dj[z];
+                if(ii>=0 && ii<n && jj>=0 && jj<m){
+                    nx = a+sub[z];
+                    b = pd[i][a]+f[nx];
+                    if(b < pd[i][nx]){
+                        pa[i][nx] = (i<<16)+a;
+                        pd[i][nx] = b;
+                        if(mark[nx]){
+                            mark[nx] = 0;
+                            fi.push(nx);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    --mask;
+    a = 1<<30, b = 0;
+    for(int i = 0; i < nm; ++i)
+        if(pd[mask][i] < a){
+            a = pd[mask][i];
+            b = i;
+        }
+    printf("%d\n", a);
+    memset(mark, 0, nm);
+    make(mask, b);
+    b = 0;
+    for(int i = 0; i < n; ++i, b += m){
+        for(int j = 0; j < m; ++j){
+            sai[j] = mark[b+j]?'X':'.';
+        }
+        printf("%s\n", sai);
+    }
+    return 0;
+}

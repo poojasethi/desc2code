@@ -1,0 +1,188 @@
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#define ll long long
+using namespace std;
+
+const int MaxN = 100010, MaxM = MaxN * 2;
+class Graph {
+public:
+	int En[MaxN], Next[MaxM], Point[MaxM], tot;
+	void clear() {
+		tot = 0;
+		memset(En, 0, sizeof(En));
+	}
+	void Add(int x, int y) {
+		Next[++tot] = En[x];
+		En[x] = tot;
+		Point[tot] = y;
+	}
+}	G;
+struct Splay_node {
+	int f, son[2];
+}	T[MaxN];
+
+int size[MaxN], dep[MaxN], N, Q, in[MaxN], H[MaxN], out[MaxN], dfn;
+
+bool vis[MaxN];
+void Dfs_size(int now) {
+	vis[now] = 1;
+	size[now] = 1;
+	H[++dfn] = now;
+	in[now] = dfn;
+	for (int i = G.En[now]; i; i = G.Next[i])
+		if (!vis[G.Point[i]]) {
+			dep[G.Point[i]] = dep[now] + 1;
+			T[G.Point[i]].f = now;
+			Dfs_size(G.Point[i]);
+			size[now] += size[G.Point[i]];
+		}
+	vis[now] = 0;
+	out[now] = dfn;
+}
+
+class Segment_Tree {
+public:
+	static const int MaxT = (1 << 18) + 18;
+	int x, y, d;
+	ll ans, sum[MaxT], lazy[MaxT];
+
+	void clear() {
+		memset(sum, 0, sizeof(sum));
+		memset(lazy, 0, sizeof(lazy));
+	}
+	void update(int now, int l, int r, int mid) {
+		sum[now] = sum[now << 1] + lazy[now << 1] * (mid - l + 1) + sum[now << 1 | 1] + lazy[now << 1 | 1] * (r - mid);
+	}
+	void pushdown(int now, int l, int r) {
+		sum[now] += lazy[now] * (r - l + 1);
+		lazy[now << 1] += lazy[now];
+		lazy[now << 1 | 1] += lazy[now];
+		lazy[now] = 0;
+	}
+	void Build(int l, int r, int now) {
+		if (l == r) {
+			sum[now] = dep[H[l]];
+			return;
+		}
+		int mid = (l + r) >> 1;
+		Build(l, mid, now << 1);
+		Build(mid + 1, r, now << 1 | 1);
+		update(now, l, r, mid);
+	}
+	void Modify(int l, int r, int now) {
+		if ((x <= l) && (r <= y)) {
+			lazy[now] += d;
+			return;
+		}
+		if ((r < x) || (y < l)) return;
+		if (lazy[now]) pushdown(now, l, r);
+		int mid = (l + r) >> 1;
+		Modify(l, mid, now << 1);
+		Modify(mid + 1, r, now << 1 | 1);
+		update(now, l, r, mid);
+	}
+	void Query(int l, int r, int now) {
+		if ((x <= l) && (r <= y)) {
+			ans += sum[now] + lazy[now] * (r - l + 1);
+			return;
+		}
+		if ((r < x) || (y < l)) return;
+		if (lazy[now]) pushdown(now, l, r);
+		int mid = (l + r) >> 1;
+		Query(l, mid, now << 1);
+		Query(mid + 1, r, now << 1 | 1);
+	}
+	
+	void Modify(int u, int delta) {
+		x = in[u],	y = out[u],	d = delta;
+		Modify(1, N, 1);
+	}
+	ll Query(int u) {
+		ans = 0;
+		x = in[u],	y = out[u];
+		Query(1, N, 1);
+		return ans;
+	}
+}	Tree;
+void Debug() {
+	for (int i = 0; i <= N; i++) printf("%d: %d %d %d\n", i, T[i].f, T[i].son[0], T[i].son[1]);
+}
+
+double Query(int u) {
+	return (double)Tree.Query(u) / size[u];
+}
+
+inline bool is_root(int u) {
+	return (T[T[u].f].son[0] != u) && (T[T[u].f].son[1] != u);
+}
+void Rotate(int u, int p) {
+	int f = T[u].f, q = (T[T[f].f].son[1] == f);
+	if (T[T[f].f].son[q] == f) T[T[f].f].son[q] = u;	T[u].f = T[f].f;
+	if (T[u].son[!p]) T[T[u].son[!p]].f = f;	T[f].son[p] = T[u].son[!p];
+	T[f].f = u;	T[u].son[!p] = f;
+}
+void Splay(int u) {
+	while (!is_root(u)) {
+		int f = T[u].f, p = (T[f].son[1] == u), q = (T[T[f].f].son[1] == f);
+		if (is_root(f)) return Rotate(u, p);
+		Rotate(p == q ? f : u, p);
+		Rotate(u, q);
+	}
+}
+int Find_left(int now) {
+	while (T[now].son[0]) now = T[now].son[0];
+	return now;
+}
+
+void Access(int ind) {
+	for (int u = ind, v = 0; u; v = u, u = T[u].f) {
+		Splay(u);
+		if (T[u].son[1]) Tree.Modify(Find_left(T[u].son[1]), 1);
+		T[u].son[1] = v;
+		if (v) {
+			T[v].f = u;
+			Tree.Modify(Find_left(v), -1);
+		}
+	}
+	Splay(ind);
+}
+
+void Main() {
+	//initiation
+	memset(size, 0, sizeof(size));
+	memset(dep, 0, sizeof(dep));
+	memset(T, 0, sizeof(T));
+	G.clear();
+	Tree.clear();
+	dfn = 0;
+	scanf("%d", &N);
+	for (int i = 1; i < N; i++) {
+		int u, v;
+		scanf("%d%d", &u, &v);
+		u++; v++;
+		G.Add(u, v);
+		G.Add(v, u);
+	}
+	Dfs_size(1);
+	Tree.Build(1, N, 1);
+
+	scanf("%d", &Q);
+	while (Q--) {
+		char op[2];
+		int u;
+		scanf("%s%d", op, &u); u++;
+		if (op[0] == 'q') printf("%.10lf\n", Query(u));
+		else Access(u);
+	}
+}
+
+int main()
+{
+	int T;
+	scanf("%d", &T);
+	for (int i = 1; i <= T; i++) Main();
+	return 0;
+}

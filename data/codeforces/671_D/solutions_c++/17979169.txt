@@ -1,0 +1,133 @@
+
+#define MAXN 300010UL
+#include <cstdio>
+#include <vector>
+#include <cstring>
+#include <algorithm>
+#define INF 1e15
+
+using namespace std;
+
+typedef long long ll;
+
+int n, m, t, T, d[MAXN], dfn[MAXN], c[MAXN], st[MAXN], ed[MAXN];
+ll ret, f[MAXN], bn[MAXN<<2], a[MAXN<<2];
+
+vector <int> add[MAXN], del[MAXN];
+
+struct Edge { int hou, nt; } sg[MAXN<<1];
+
+void Add(int x, int y) {
+	sg[t] = (Edge){y, d[x]}, d[x] = t ++;
+	sg[t] = (Edge){x, d[y]}, d[y] = t ++;
+	return;
+}
+
+void Dfs(int x, int _fa) {
+	st[x] = T+1;
+	for(int i = 0, r = add[x].size() ; i < r ; ++ i) dfn[add[x][i]] = ++ T;
+	for(int i = d[x] ; i != -1 ; i = sg[i].nt) if(sg[i].hou!=_fa) Dfs(sg[i].hou, x);
+	ed[x] = T;
+	return;
+}
+
+void cmin(ll &x, ll y) {
+	x += y;
+	if(x>INF) x = INF;
+	return;
+}
+
+void Push_down(int i, int l, int r) {
+	if(a[i]==0||l==r) return;
+	cmin(a[i<<1], a[i]), cmin(a[i<<1|1], a[i]);
+	cmin(bn[i<<1], a[i]), cmin(bn[i<<1|1], a[i]);
+	a[i] = 0;
+	return;
+}
+
+void Insert(int i, int l, int r, int ls, int rs, ll k) {
+	if(ls>rs) return;
+	if(ls<=l&&rs>=r) {
+		cmin(bn[i], k), cmin(a[i], k);
+		return;
+	}
+	Push_down(i, l, r);
+	int mid = (l+r)>>1;
+	if(ls<=mid) Insert(i<<1, l, mid, ls, rs, k);
+	if(rs>mid) Insert(i<<1|1, mid+1, r, ls, rs, k);
+	bn[i] = min(bn[i<<1], bn[i<<1|1]);
+	return;
+}
+
+void Modify(int i, int l, int r, int pos, ll k) {
+	if(l==r) {
+		bn[i] = k;
+		return;
+	}
+	Push_down(i, l, r);
+	int mid = (l+r)>>1;
+	if(pos<=mid) Modify(i<<1, l, mid, pos, k);
+	else Modify(i<<1|1, mid+1, r, pos, k);
+	bn[i] = min(bn[i<<1], bn[i<<1|1]);
+	return;
+}
+
+void Query(int i, int l, int r, int ls, int rs) {
+	if(ls>rs) return;
+	if(ls<=l&&rs>=r) {
+		ret = min(ret, bn[i]);
+		return;
+	}
+	Push_down(i, l, r);
+	int mid = (l+r)>>1;
+	if(ls<=mid) Query(i<<1, l, mid, ls, rs);
+	if(rs>mid) Query(i<<1|1, mid+1, r, ls, rs);
+	bn[i] = min(bn[i<<1], bn[i<<1|1]);
+	return;
+}
+
+void Dp(int x, int _fa) {
+	ll sum = 0;
+	for(int i = d[x] ; i != -1 ; i = sg[i].nt) if(sg[i].hou!=_fa) {
+		Dp(sg[i].hou, x);
+		cmin(sum, f[sg[i].hou]);
+	}
+	if(x==1) {
+		f[1] = sum;
+		return;
+	}
+	for(int i = 0, r = add[x].size() ; i < r ; ++ i) Modify(1, 1, m, dfn[add[x][i]], c[add[x][i]]+sum);
+	for(int i = 0, r = del[x].size() ; i < r ; ++ i) Modify(1, 1, m, dfn[del[x][i]], INF);
+	for(int i = d[x] ; i != -1 ; i = sg[i].nt) {
+		if(sg[i].hou==_fa) continue;
+		Insert(1, 1, m, st[sg[i].hou], ed[sg[i].hou], sum-f[sg[i].hou]);
+	}
+	ret = INF, Query(1, 1, m, st[x], ed[x]);
+	f[x] = ret;
+	return;
+}
+
+void Build(int i, int l, int r) {
+	bn[i] = INF;
+	if(l==r) return;
+	int mid = (l+r)>>1;
+	Build(i<<1, l, mid), Build(i<<1|1, mid+1, r);
+	return;
+}
+
+int main() {
+	memset(d, -1, sizeof(d));
+	int x, y;
+	scanf("%d%d", &n, &m);
+	for(int i = 2 ; i <= n ; ++ i) scanf("%d%d", &x, &y), Add(x, y);
+	for(int i = 1 ; i <= m ; ++ i) {
+		scanf("%d%d%d", &x, &y, &c[i]);
+		add[x].push_back(i), del[y].push_back(i);
+	}
+	Build(1, 1, m);
+	Dfs(1, 0), Dp(1, 0);
+	if(f[1]>=INF) f[1] = -1;
+	printf("%I64d", f[1]);
+//	while(1);
+	return 0;
+}

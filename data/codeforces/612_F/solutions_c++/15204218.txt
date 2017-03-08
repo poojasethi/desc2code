@@ -1,0 +1,269 @@
+#include <iostream>
+#include <string>
+#include <bits/stdc++.h>
+
+using namespace std;
+
+struct pred
+{
+    int x,g,r;//g - end, x-begin
+};
+
+long long a[2234],st[2234],d[2234],nx[2234];
+queue<int> omega;
+stack<int> alpha;
+pred pr[2234];
+int n,k,s,t,dx;
+long long h;
+
+int inc(int x)
+{
+    x++;
+    if(x==n) return 0;
+    return x;
+}
+
+int dec(int x)
+{
+    x--;
+    if(x==-1) return n-1;
+    return x;
+}
+
+void obr(int x,int r,int g);
+
+void poisk(int x,long long next)
+{
+    int r=x,g=x;
+    dx=d[x];
+    while(a[g]!=next)g=dec(g);
+    r=g;
+    g=dec(g);
+    while(a[g]!=next)g=dec(g);
+    obr(x,r,g);
+    r=g;
+    g=dec(g);
+    while(g!=x)
+    {
+        while(a[g]!=next&&g!=x)g=dec(g);
+        if(g==x)
+        {
+            while(a[g]!=next)g=dec(g);
+            obr(x,r,g);
+            return;
+        }
+        obr(x,r,g);
+        r=g;
+        g=dec(g);
+    }
+    while(a[g]!=next)g=dec(g);
+    obr(x,r,g);
+}
+
+void obr(int x1,int r1,int g1)
+{
+    int rast,r=r1,x=x1,g=g1;
+    //++
+    if(r<g)g=g-n;
+    rast=n-(r-g);
+    if(rast==n)rast=0;
+    rast=rast+min(abs(r-x),n-abs(r-x));
+    if(d[g1]==-1||d[g1]==0)
+    {
+        d[g1]=dx+rast;
+        pr[g1].g=g1;
+        pr[g1].r=r1;
+        pr[g1].x=x1;
+        omega.push(g1);
+    }
+    else if(d[g1]>dx+rast)
+        {
+            d[g1]=dx+rast;
+            pr[g1].g=g1;
+            pr[g1].r=r1;
+            pr[g1].x=x1;
+        }
+    //--
+    rast=0;
+    r=r1;g=g1;x=x1;
+    if(r<g)g=g-n;
+    rast=n-(r-g);
+    g=g1;
+    if(rast==n)rast=0;
+    rast=rast+min(abs(g-x),n-abs(g-x));
+    if(d[r1]==-1||d[r1]==0)
+    {
+        d[r1]=dx+rast;
+        pr[r1].g=g1;
+        pr[r1].r=r1;
+        pr[r1].x=x1;
+        omega.push(r1);
+    }
+    else if(d[r1]>dx+rast)
+        {
+            pr[r1].g=g1;
+            pr[r1].r=r1;
+            pr[r1].x=x1;
+            d[r1]=dx+rast;
+        }
+}
+
+int main()
+{
+    //freopen("in.txt","r",stdin);
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+    cin>>n>>s;
+    s--;
+    for(int i=0;i<n;i++)
+    {
+        cin>>a[i];
+        st[i]=a[i];
+        d[i]=-1;
+    }
+    k=1;
+    sort(st,st+n);
+    nx[0]=st[0];
+    for(int i=1;i<n;i++)
+    {
+        if(st[i]!=st[i-1])
+        {
+            nx[k]=st[i];
+            k++;
+        }
+    }
+    d[s]=0;
+    poisk(s,nx[0]);
+    for(int i=1;i<k;i++)
+    {
+        t=omega.front();
+        while(a[omega.front()]==a[t])
+        {
+            h=nx[i];
+            t=omega.front();
+            omega.pop();
+            poisk(t,h);
+        }
+    }
+    int mn=8e8;
+    for(int i=0;i<n;i++)
+    {
+        if(a[i]==nx[k-1]&&d[i]!=-1&&d[i]<mn&&d[i]>=n-1)
+        {
+            mn=d[i];
+            t=i;
+        }
+    }
+    cout<<mn<<"\n";
+    int dl=0;
+    while(!(t==s&&dl==mn))
+    {
+        pred q=pr[t];
+        int cur=t,last=t,rast=0;
+        bool b=false;
+        if(q.g==q.r)
+        {
+            if((q.r-q.x<=n/2&&q.r>q.x)||(q.x>q.r&&n-q.x+q.r<=n/2))
+            {
+                rast=min(abs(q.r-q.x),n-abs(q.r-q.x));
+                dl+=rast;
+                alpha.push(rast);
+            }
+            else
+            {
+                rast=min(abs(q.r-q.x),n-abs(q.r-q.x));
+                dl+=rast;
+                alpha.push(-rast);
+            }
+        }
+        else if(t==q.g)
+        {
+            while(cur!=q.r)
+            {
+                cur=dec(cur);
+                if(cur==q.x)b=true;
+                if(a[cur]==a[t]&&cur!=q.x)
+                {
+                    if(cur>last)rast=last-cur+n;
+                    else rast=last-cur;
+                    alpha.push(+rast);
+                    dl+=rast;
+                    last=cur;
+                }
+            }
+            if(b)
+            {
+                if(q.r==q.x)
+                {
+                    if(q.x>last)rast=last-q.x+n;
+                    else rast=last-q.x;
+                    alpha.push(+rast);
+                    dl+=rast;
+                }
+                else{
+                        if(last>q.x)rast=n-last+q.x;
+                        else rast=q.x-last;
+                        dl+=rast;
+                        alpha.push(-rast);
+                    }
+            }
+            else{
+                if(last<q.x)rast=n-q.x+last;
+                else rast=last-q.x;
+                dl+=rast;
+                alpha.push(+rast);
+            }
+        }
+        else
+        {
+            while(cur!=q.g)
+            {
+                cur=inc(cur);
+                if(cur==q.x)b=true;
+                if(a[cur]==a[t]&&cur!=q.x)
+                {
+                    if(cur<last)rast=n+cur-last;
+                    else rast=cur-last;
+                    alpha.push(-rast);
+                    dl+=rast;
+                    last=cur;
+                }
+            }
+            if(b)
+            {
+                if(q.g==q.x)
+                {
+                    if(q.x<last)rast=n+q.x-last;
+                    else rast=q.x-last;
+                    alpha.push(-rast);
+                    dl+=rast;
+                }
+                else
+                {
+                if(last<q.x)rast=n-q.x+last;
+                else rast=last-q.x;
+                dl+=rast;
+                alpha.push(+rast);
+                }
+            }
+            else{
+                if(last>q.x)rast=n+q.x-last;
+                else rast=q.x-last;
+                dl+=rast;
+                alpha.push(-rast);
+            }
+        }
+        t=q.x;
+    }
+    if(a[s]==nx[0])alpha.push(0);
+    n=alpha.size();
+    int p;
+    for(int i=0;i<n;i++)
+    {
+        p=alpha.top();
+        alpha.pop();
+        if(p<0)cout<<p;
+        else cout<<"+"<<p;
+        cout<<"\n";
+    }
+}

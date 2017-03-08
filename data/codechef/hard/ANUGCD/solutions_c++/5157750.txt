@@ -1,0 +1,97 @@
+#include<algorithm>
+#include<cstring>
+#include<vector>
+#include<cstdio>
+using namespace std;
+const int N = 100005;
+int factor[N][33], cc[N];
+bool vis[N];
+void init()
+{
+    int i, j;
+    for(i=2; i<=100000; i++){
+        if(vis[i]) continue;
+        factor[i][cc[i]++] = i;
+        for(j=i+i; j<=100000; j+=i){
+            vis[j] = 1;
+            factor[j][cc[j]++] = i;
+        }
+    }
+}
+int root[N], L[10000005], R[10000005];
+int tot;
+struct DATA
+{
+    int va, cnt;
+} dt[10000005], tmp;
+DATA me(DATA r1, DATA r2)
+{
+    DATA cur;
+    cur.va = max(r1.va, r2.va);
+    cur.cnt = 0;
+    if(cur.va == r1.va) cur.cnt += r1.cnt;
+    if(cur.va == r2.va) cur.cnt += r2.cnt;
+    return cur;
+}
+void ins(int &p,int l,int r,int pos,int va)
+{
+    if(!p) p = ++tot;
+    if(l == r){
+        tmp.va = va, tmp.cnt = 1;
+        dt[p] = tmp;
+        return;
+    }
+    int mid = l+r >> 1;
+    if(pos <= mid){
+        ins(L[p], l, mid, pos, va);
+    }else{
+        ins(R[p], mid+1, r, pos, va);
+    }
+    dt[p] = me(dt[L[p]], dt[R[p]]);
+}
+DATA query(int s,int e,int l,int r,int p)
+{
+    if(!p) return dt[0];
+    if(s <= l && r <= e){
+        return dt[p];
+    }
+    int mid = l+r >> 1;
+    if(e <= mid){
+        return query(s, e, l, mid, L[p]);
+    }
+    if(s > mid){
+        return query(s, e, mid+1, r, R[p]);
+    }
+    return me(query(s, e, l, mid, L[p]), query(s, e, mid+1, r, R[p]));
+}
+int main()
+{
+    init();
+    int i, j, n, m, va;
+    dt[0].cnt = 0, dt[0].va = 0;
+    while(~scanf("%d%d",&n,&m)){
+        tot = 0;
+        for(i=1; i<=n; i++) {
+            scanf("%d",&va);
+            for(j=0; j<cc[va]; j++){
+                ins(root[factor[va][j]], 1, n, i, va);
+            }
+        }
+        DATA ans;
+        int x, y, g;
+        for(i=1; i<=m; i++){
+            scanf("%d%d%d",&g,&x,&y);
+            ans = dt[0];
+            for(j=0; j<cc[g]; j++){
+                tmp = query(x, y, 1, n, root[factor[g][j]]);
+                if(tmp.va > ans.va) ans = tmp;
+            }
+            if(ans.va == 0) puts("-1 -1");
+            else printf("%d %d\n",ans.va,ans.cnt);
+        }
+        memset(root, 0, sizeof(root));
+        memset(L, 0, sizeof(L));
+        memset(R, 0, sizeof(R));
+    }
+    return 0;
+}

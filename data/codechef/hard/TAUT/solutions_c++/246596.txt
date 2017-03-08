@@ -1,0 +1,148 @@
+#include <iostream>
+#include <string>
+#include <stack>
+#include <bitset>
+
+using namespace std;
+
+bitset<26> VAR; // variables a-z
+
+inline void initVAR(string variables, int bits)
+{
+  for(unsigned int pos = 0; pos<variables.length(); pos++)
+    VAR.set(variables[pos], bits & (1<<pos) ? true : false);
+}
+
+class Node
+{
+public:
+  Node(int _valueind, unsigned char _oper = 0, 
+    Node * _left = 0, Node * _right = 0) : 
+      m_iValueIndex(_valueind), m_cOperator(_oper), 
+      m_left(_left), m_right(_right) {}
+  ~Node() { delete m_left; delete m_right; }
+
+bool evaluate() const
+{
+  switch(m_cOperator)
+  {
+  case 'C': // AND
+    return m_left->evaluate() && m_right->evaluate();
+  case 'D': // OR
+    return m_left->evaluate() || m_right->evaluate();
+  case 'I': // implication
+    return !m_left->evaluate() || m_right->evaluate();
+  case 'E': // iff
+    return !m_left->evaluate() ^ m_right->evaluate();
+  case 'N': // NOT
+    return !m_left->evaluate();
+  default:
+    return VAR[m_iValueIndex];
+  }
+}
+
+private:
+  int m_iValueIndex;
+  unsigned char m_cOperator;
+  Node * m_left;
+  Node * m_right;
+};
+
+// Reads the PN expression from right to left using a stack
+// and adds unique variables found into a string as indices
+// to VAR.
+Node * buildtree(string _sinput, string & _svariables)
+{
+  stack<Node *> s;
+
+  Node * n = 0;
+  Node * n_left = 0;
+  Node * n_right = 0;
+  int len;
+  unsigned char c, c2;
+
+  _svariables.clear();
+  len = _sinput.length();
+  if(len == 0) return 0; // no expression
+
+  while(1)
+  {
+    c = _sinput[--len];
+
+    if(c >= 'a' && c <= 'z')
+    {
+      c2 = c - 'a';
+      n = new Node(c2);
+      if(_svariables.find(c2) == string::npos)
+        _svariables.push_back(c2);
+    }
+    else if(c == 'N') 
+    {
+      if(s.empty()) return 0; // invalid expression
+
+      n_left = s.top();
+      s.pop();
+		
+      n = new Node(-1, c, n_left);
+    }
+    else if(c == 'D' || c == 'C' || c == 'I' || c == 'E') 
+    {
+      if(s.size()<2) return 0; // invalid expression
+
+      n_left = s.top();
+      s.pop();
+      n_right = s.top();
+      s.pop();
+		
+      n = new Node(-1, c, n_left, n_right);
+    }
+    else return 0; // invalid character
+
+    if(len > 0) 
+      s.push(n);
+    else break;
+  }
+
+  if(s.size()>0) // the stack should be empty
+    return 0; // invalid expression
+  else 
+    return n;
+}
+
+int main()
+{
+  string input, variables;
+  Node * expression = 0;
+  int rows=0, len=0;
+  bool tautology;
+
+  if(cin >> rows)
+  {
+    for(int r = 0; r<rows; r++)
+    {
+      tautology = true;
+		
+      cin >> input;
+      expression = buildtree(input, variables);
+
+      len = variables.length();
+      if(!expression || !len) tautology = false;
+
+      for(register int bits = 0; bits<(1 << len) && tautology; bits++)
+      {
+        initVAR(variables, bits);
+
+        tautology = expression->evaluate();
+      }
+		
+      if(tautology)
+        cout << "YES" << endl;
+      else
+        cout << "NO" << endl;
+			
+      delete expression;
+    }
+  }
+
+  return 0;
+}

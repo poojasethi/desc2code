@@ -1,0 +1,103 @@
+#include <bits/stdc++.h>
+// Cogito, ergo sum
+
+using namespace std;
+
+typedef long long ll;
+typedef pair<ll, ll> pii;
+
+const ll MAXN = 1e5 + 100, MAXB = 20;
+
+ll par[MAXN][MAXB], h[MAXN], st[MAXN], sN;
+vector<int> G[MAXN];
+
+void makeroot(ll u, ll p){
+	h[u] = (p == -1 ? 0 : h[p] + 1);
+	st[u] = sN++;
+
+	par[u][0] = p;
+	for (ll i = 1; i < MAXB; i++) par[u][i] = ( par[u][i - 1] == -1 ? -1 : par[ par[u][i - 1] ][i - 1]);
+
+	for (ll i = 0; i < G[u].size(); i++){
+		ll v = G[u][i];
+		if (v != p) makeroot(v, u);
+	}
+}
+
+ll lca(ll u, ll v){
+	if (h[u] < h[v]) swap(u, v);
+
+	for (ll i = MAXB - 1; i >= 0; i--)
+		if (par[u][i] != -1 && h[ par[u][i] ] >= h[v])
+			u = par[u][i];
+
+	if (u == v) return u;
+	
+	for (ll i = MAXB - 1; i >= 0; i--)
+		if (par[u][i] != par[v][i])
+			u = par[u][i], v = par[v][i];
+
+	return par[u][0];
+}
+
+inline ll dis(ll u, ll v){ return h[u] + h[v] - 2 * h[ lca(u, v) ]; }
+
+set< pii > s;
+inline ll next(ll u){
+	set< pii > :: iterator iter = s.upper_bound( pii(st[u], u) );
+	if (iter == s.end()) iter = s.begin();
+	return iter->second;
+}
+
+inline ll prev(ll u){
+	set<pii> :: iterator iter = s.upper_bound( pii(st[u], u) );
+	if (iter == s.begin()) iter = s.end();
+	iter--;
+	return iter->second;
+}
+
+ll ans = 0;
+inline void add(int u){
+	if ( s.size() ){
+		ll x = next(u), y = prev(u);
+		ans += dis(x, u) + dis(y, u) - dis(x, y);
+	}
+	s.insert( pii(st[u], u) );
+}
+
+inline void rem(int u){
+	s.erase( pii(st[u], u) );
+	if (s.size() ){
+		ll x = next(u), y = prev(u);
+		ans -= dis(x, u) + dis(y, u) - dis(x, y);
+	}
+}
+
+int main(){
+	ios::sync_with_stdio( false );
+	cout.tie(0); cin.tie(0);
+
+	ll n, k; cin >> n >> k;
+	for (ll i = 0; i < n - 1; i++){
+		ll a, b; cin >> a >> b; a--; b--;
+		G[a].push_back( b );
+		G[b].push_back( a );
+	}
+
+	makeroot(0, -1);
+
+	int r = 0;
+	ll outp = 0;
+	for (int l = 0; l < n; l++){
+		if (l) rem(l - 1);
+
+		while(r < n && ans / 2 + 1 <= k)
+			add( r++ );
+
+		outp = max( outp, ll(r) - l + (ans / 2 + 1 <= k ? 0 : -1) );
+//		cerr << l << ", " << r << " : " << ans  << endl;
+	}
+
+	cout << outp << endl;
+}
+

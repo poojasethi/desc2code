@@ -1,0 +1,174 @@
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <iostream>
+#include <vector>
+using namespace std;
+
+#define MAXN 200010
+#define MAXLG 22
+#define mod 1000000009
+
+
+struct entry
+{
+    int nr[2];
+    int p;
+} L[MAXN];
+
+int P[MAXLG][MAXN],ar[MAXN],mn[MAXN][MAXLG];
+int N,i;
+int stp, cnt;
+long long ans[MAXN];
+
+int cmp(entry a, entry b)
+{
+    if (a.nr[0]!=b.nr[0]) return a.nr[0]<b.nr[0];
+    else return a.nr[1]<b.nr[1];
+}
+
+void count_sort(int x)
+{
+	int len=300,idx=0;
+	if(N>len)len=N;
+	vector <entry > temp[len+2];
+
+	for(int i=0;i<N;i++)
+	{
+		temp[L[i].nr[x]+1].push_back(L[i]);
+	}
+	for(int i=0;i<len+2;i++)
+	{
+		for(int j=0;j<temp[i].size();j++)
+		{
+			L[idx]=temp[i][j];
+			idx++;
+		}
+	}
+}
+
+inline int rmq(int x,int y)
+{
+    int n=y-x+1,i=x,j=0,ans=x;
+    while(n)
+    {
+        if(n&1)
+        {
+            if(ar[ans]>ar[mn[i][j]])ans=mn[i][j];
+            i=i+(1<<j);
+        }
+        n>>=1;
+        j++;
+
+    }
+    return ans;
+}
+
+int FindLCP (int x,int y)
+{
+    int ans = 0 , k=0 , tmp=cnt;
+    for (k=stp-1;k>= 0;k--,tmp>>=1)
+    {
+        if (x+tmp <= N && y+tmp <= N && P[k][x] == P[k][y])
+        {// sort-index is same if the first k characters are same
+            ans += tmp;
+            // now we wish to find the characters that are same in the remaining strings
+            x += tmp;
+            y += tmp;
+		}
+	}
+	return ans;
+}
+
+void bin(int l,int r,int val)
+{
+	if(l>r)return;
+	int temp=rmq(l,r),len=r-l+2;
+	ans[len]=ans[len]+(ar[temp]-val);
+	//printf("%d %d %d %d %d %d\n",l,r,temp,len,ar[temp],val);
+	bin(l,temp-1,ar[temp]);
+	bin(temp+1,r,ar[temp]);
+}
+void initialise()
+{
+	for(int i=0;i<=N;i++)
+	{
+		ans[i]=0;
+	}
+}
+
+void solve()
+{
+	initialise();
+    for(stp=1, cnt = 1; cnt < N; stp++, cnt *= 2)
+    {
+        for(i=0; i < N; i++)
+        {
+            L[i].nr[0]=P[stp- 1][i];
+            L[i].nr[1]=i +cnt <N? P[stp -1][i+ cnt]:-1;
+            L[i].p= i;
+        }
+        sort(L, L+N, cmp);
+        //count_sort(1);
+        //count_sort(0);
+        for(i=0; i < N; i++)
+            P[stp][L[i].p] =(((i> 0) && (L[i].nr[0]==L[i-1].nr[0]) && (L[i].nr[1] == L[i- 1].nr[1])) ? P[stp][L[i-1].p] : i);
+    }
+    for(int i=0;i<N-1;i++)
+    {
+		ar[i]=FindLCP(L[i].p,L[i+1].p);
+		mn[i][0]=i;
+		//printf("%d\n",ar[i]);
+    }
+    N--;
+	for(int j=1;(1<<j)<=N;j++)
+    {
+        for(int i=0;(i+(1<<j))<=N;i++)
+        {
+            if(ar[mn[i][j-1]]<ar[mn[i+(1<<(j-1))][j-1]])
+            {
+                mn[i][j]=mn[i][j-1];
+            }
+            else mn[i][j]=mn[i+(1<<(j-1))][j-1];
+        }
+    }
+    bin(0,N-1,0);
+    for(int i=0;i<=N+1;i++)
+    {
+		//printf("%d %lld\n",i,ans[i]);
+		ans[i]=ans[i]*i;
+		//printf("%d %lld\n",i,ans[i]);
+    }
+    for(int i=N;i>1;i--)
+    {
+		ans[i]+=ans[i+1];
+    }
+    ans[1]=N+1;
+    ans[1]=ans[1]*(N+2);
+    ans[1]/=2;
+	int q;
+    scanf("%d",&q);
+    while(q--)
+    {
+		int f;
+		scanf("%d",&f);
+		if(f>N+1)printf("0\n");
+		else printf("%lld\n",ans[f]);
+    }
+}
+int main()
+{
+	int t=1,tmp,last;
+	string s;
+	scanf("%d",&t);
+	while(t--)
+	{
+		cin>>s;
+		N=s.length();
+		//cout<<N<<endl;
+		for(int i=0;i<N;i++)P[0][i] = s[i];
+		solve();
+	}
+}
+

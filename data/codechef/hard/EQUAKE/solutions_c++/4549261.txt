@@ -1,0 +1,234 @@
+#include <stdio.h>
+#include <iostream>
+#include <stack>
+#include<stdlib.h>
+#include<string.h>
+#include<algorithm>
+#include<vector>
+#include<set>
+#include<map>
+#include <iomanip>
+#include <locale>
+#include <sstream>
+using namespace std;
+#define pb push_back
+#define ll long long
+int n,max_arr[2148578][15],m,que[200005][4];
+int tree_sz,height[1800000],res;
+int modu[100],tmp_arr[400005],rng_arr[1600005],rng_len=0;
+char *tmp=(char*)malloc(6); 
+ 
+inline int max(int x, int y) { return (((y-x)>>(31))&(x^y))^y; }
+int qq[14]; 
+
+int dt(int x, int rt)
+{
+	int xx=x, l=0;
+	while (xx>0) xx/=10, l++;
+	xx=x;
+	for (int i=l-1; i>=0; i--) qq[i]=xx%10, xx/=10;
+	int res=0;
+	for (int i=rt; i<rt+l; i++)
+		res=res*10 + qq[i%l];
+	return res;
+}
+
+
+void fill_max_arr(int idx)
+{
+	int i,j,len;
+	int k;
+	string s;
+	max_arr[idx][14]=1;
+	for(i=0;i<12;i++)
+		max_arr[idx][i]=0;
+	int p=(idx-tree_sz+1)<<1;
+	for(j=rng_arr[p];j<=rng_arr[p+1];j++)
+	{
+		k=height[j+1];
+		i=0;
+		while(i<12)
+		{
+			max_arr[idx][i]=max(max_arr[idx][i],dt(k,i));
+			i++;
+		}
+	}
+}
+ 
+ 
+inline void	add_value(int idx,int val)
+{
+	max_arr[idx][12]=modu[max_arr[idx][12]+val];
+	max_arr[idx][13]=modu[max_arr[idx][13]+val];
+}
+ 
+ 
+inline void update_from_child(int i)
+{
+	int p,q,r;
+	p=max_arr[i][12];
+    q=max_arr[2*i+1][12];
+    r=max_arr[2*i+2][12];
+    for(int j=0;j<12;j++)
+         max_arr[i][modu[p+j]]=max(max_arr[(i<<1)+1][modu[q+j]],max_arr[(i<<1)+2][modu[r+j]]);
+}
+ 
+ 
+inline void update_childs(int i)
+{
+	if(i<tree_sz-1 && max_arr[i][13])
+    {
+        add_value((i<<1)+1,max_arr[i][13]);
+        add_value((i<<1)+2,max_arr[i][13]);
+        max_arr[i][13]=0;
+    }
+}
+ 
+
+void fill_tree(int i)
+{
+    if(max_arr[i][14])
+        return;
+    if(i>=tree_sz-1)
+    {
+        fill_max_arr(i);
+        return;
+    }
+	update_childs(i);
+    fill_tree(2*i+1);
+    fill_tree(2*i+2);
+    max_arr[i][14]=1;
+	update_from_child(i);
+}
+
+ 
+void insert(int i,int x,int y,int a,int b,int rot)
+{
+	update_childs(i);
+    if(x>=a && y<=b)
+	{
+		add_value(i,rot);
+		return;
+	}
+	if(x<y && !(y<a || x>b))
+    {
+        insert((i<<1)+1,x,(x+y)/2,a,b,rot);
+        insert((i<<1)+2,(x+y)/2+1,y,a,b,rot);
+		if(max_arr[i][14])
+			update_from_child(i);
+    }           
+}
+ 
+ 
+void get_height(int i,int x,int y,int a,int b)
+{
+	update_childs(i);
+	if(x>=a && y<=b)
+    {
+		if(max_arr[i][14]==0)
+			fill_tree(i);
+		int j=max_arr[i][12];
+		res=max(res,max_arr[i][j]);
+		return;
+	} 
+    if(x<y && !(y<a || x>b))
+    {
+        get_height((i<<1)+1,x,(x+y)/2,a,b);
+        get_height((i<<1)+2,(x+y)/2+1,y,a,b);
+	//	if(max_arr[i][14])
+	//		update_from_child(i);
+    }
+}
+ 
+ 
+void process_queries()
+{
+	int i,j,k,st,ed;
+	for(i=0;i<m;i++)
+	{
+		que[i][1]=lower_bound(rng_arr,rng_arr+rng_len,que[i][1])-rng_arr;
+		que[i][2]=lower_bound(rng_arr,rng_arr+rng_len,que[i][2])-rng_arr;
+		que[i][1]>>=1;que[i][2]>>=1;
+	}
+	for(i=0;i<m;i++)
+	{
+		if(que[i][0])
+		{
+			res=0;
+			get_height(0,1,tree_sz,que[i][1]+1,que[i][2]+1);
+			cout<<res<<"\n";
+		}
+		else
+		{
+			if(que[i][3])
+				insert(0,1,tree_sz,que[i][1]+1,que[i][2]+1,que[i][3]);
+		}
+	}
+}
+ 
+ 
+void display()
+{
+	int i,j;
+	cout<<endl;
+	cout<<m<<" "<<tree_sz<<endl;
+	for(j=0;j<9;j++,cout<<endl)
+	for(i=0;i<14;i++)
+		cout<<max_arr[j][i]<<" ";
+	cout<<endl;	
+}
+ 
+
+void process_ranges()
+{
+	int i,j,k,sz;
+	for(i=0;i<m;i++)
+		tmp_arr[i<<1]=que[i][1],tmp_arr[(i<<1)+1]=que[i][2];
+	m<<=1;
+	sort(tmp_arr,tmp_arr+m);
+	for(i=1,sz=1;i<m;i++)
+		if(tmp_arr[i]!=tmp_arr[sz-1])
+			tmp_arr[sz++]=tmp_arr[i];
+	m>>=1;
+	tmp_arr[sz]=n;
+	for(rng_len=0,i=0;i<sz;i++)
+	{
+		rng_arr[rng_len]=rng_arr[rng_len+1]=tmp_arr[i]; 
+		rng_len+=2;
+		if(tmp_arr[i]+1<tmp_arr[i+1])
+		{
+			rng_arr[rng_len]=tmp_arr[i]+1;
+			rng_arr[rng_len+1]=tmp_arr[i+1]-1;
+			rng_len+=2;	
+		}
+	}
+}
+
+
+int main()
+{
+    std::ios_base::sync_with_stdio(false);
+	int i,j,k;
+	for(i=0;i<100;i++)
+		modu[i]=i%12;
+	cin>>n;
+	for(i=1;i<=n;i++)
+		cin>>height[i];
+	cin>>m;	
+	for(i=0;i<m;i++)
+	{
+		cin>>que[i][0]>>que[i][1]>>que[i][2];
+		if(que[i][0]==0)
+		{
+			cin>>que[i][3];
+			que[i][3]=modu[que[i][3]];
+		}
+	}
+	process_ranges();
+	for(tree_sz=1;tree_sz<(rng_len>>1);tree_sz<<=1);
+	for(i=0,tree_sz<<=1;i<tree_sz;i++)
+		max_arr[i][12]=max_arr[i][13]=max_arr[i][14]=0;
+	tree_sz>>=1;
+	process_queries();
+	return 0;
+}

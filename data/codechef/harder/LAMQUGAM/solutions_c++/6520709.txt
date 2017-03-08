@@ -1,0 +1,118 @@
+#include <cstdio>
+#include <string>
+#include <cstring>
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <algorithm>
+using namespace std;
+const int N = 200000;
+const int MAXT = 100000;
+struct query_point
+{
+    int x, y, id, sign;
+};
+bool row[N + 5];
+int diag_mask[N + 5];
+int point[N + 5];
+query_point query[MAXT * 4 + 5];
+int query_len = 0;
+long long num[N + 5], denom[N + 5];
+int sum[N + 5];
+bool cmp(query_point p, query_point q)
+{
+    return p.x < q.x;
+}
+void add(int x,int d)
+{
+	for(; x <= N; x += (x&-x))
+        sum[x] += d;
+}
+
+int get_sum(int x)
+{
+	int res = 0;
+	for(; x > 0; x -= (x&-x))
+        res += sum[x];
+	return res;
+}
+long long gcd(long long a, long long b)
+{
+    if (b == 0) return a;
+    return gcd(b, a % b);
+}
+int main()
+{
+    int d, x, y = 1, diag = 0, cur_y;
+    scanf("%d", &d);
+    for(x = 1; x <= N; x++)
+        if (!row[x])
+        {
+            for(; y <= N; y++)
+                if (!row[y])
+                    break;
+            if (y > N)
+                break;
+            for (; diag < N; diag++)
+                if (diag_mask[diag] != ((1 << d) - 1))
+                    break;
+            for (cur_y = max(y, x + diag); cur_y <= N; cur_y++)
+                if (!row[cur_y] && (diag_mask[cur_y - x] & (1 << (x % d))) == 0)
+                    break;
+            if (cur_y <= N)
+            {
+                point[x] = cur_y;
+                point[cur_y] = x;
+                row[cur_y] = row[x] = true;
+                diag_mask[cur_y - x] |= (1 << (x % d));
+            }
+        }
+
+    int t, x1, x2, y1, y2, i;
+    scanf("%d", &t);
+    for (i = 0; i < t; i++)
+    {
+        scanf("%d%d%d%d", &x1, &y1, &x2, &y2);
+        x1--;
+        y1--;
+        num[i] = 0;
+        denom[i] = (long long)(x2 - x1) * (y2 - y1);
+        //query[query_len++] = {x1, y1, i, 1};
+        query[query_len].x = x1;
+        query[query_len].y = y1;
+        query[query_len].id = i;
+        query[query_len++].sign = 1;
+        //query[query_len++] = {x1, y2, i, -1};
+        query[query_len].x = x1;
+        query[query_len].y = y2;
+        query[query_len].id = i;
+        query[query_len++].sign = -1;
+        //query[query_len++] = {x2, y1, i, -1};
+        query[query_len].x = x2;
+        query[query_len].y = y1;
+        query[query_len].id = i;
+        query[query_len++].sign = -1;
+        //query[query_len++] = {x2, y2, i, 1};
+        query[query_len].x = x2;
+        query[query_len].y = y2;
+        query[query_len].id = i;
+        query[query_len++].sign = 1;
+    }
+    sort(query, query + query_len, cmp);
+    i = 0;
+    for (x = 1; x <= N; x++)
+    {
+        if (point[x]) add(point[x], 1);
+        for (; i < query_len; i++)
+            if (query[i].x >= x)
+                break;
+        for (; i < query_len && query[i].x == x; i++)
+            num[query[i].id] += query[i].sign * get_sum(query[i].y);
+    }
+    for (i = 0; i < t; i++)
+    {
+        long long d = gcd(num[i], denom[i]);
+        printf("%lld/%lld\n", num[i] / d, denom[i] / d);
+    }
+    return 0;
+}

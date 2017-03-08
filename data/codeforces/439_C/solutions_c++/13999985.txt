@@ -1,0 +1,63 @@
+#include <cstdio>
+#include <algorithm>
+
+using namespace std;
+
+bool mycomp(int i,int j) {
+	return (i%2>j%2);
+}
+
+int main(){
+	int n, k, p, a, i;
+	int as[100001];
+
+	scanf("%d %d %d", &n, &k, &p);
+
+	for(i = 0;i<n;i++){
+		scanf("%d", &a);
+		as[i] = a;
+	}
+
+	sort(as, as+n, mycomp);
+
+	int u = 2*p, v=k-p;
+
+	for(i = 0;i<n;i++){
+		if(as[i]%2 == 0){
+			u-=2;
+		}else if(v == 0){
+			u--;
+		}else{
+			v--;
+		}
+	}
+	
+	if(v!=0 || u%2 != 0 || u>0){
+		printf("NO\n");
+		return 0;
+	}
+
+	printf("YES\n");
+
+	u = p;
+	v=k-p;
+	for(i=0;v>(p > 0 ? 0 : 1);i++,v--){
+		printf("1 %d\n", as[i]);
+	}
+
+	for(;u>1;u--){
+		if(as[i] % 2 == 0){
+			printf("1 %d\n", as[i]);
+			i++;
+		} else{
+			printf("2 %d %d\n", as[i], as[i+1]);
+			i+=2;
+		}
+	}
+
+	printf("%d ", n-i);
+	for(;i<n;i++)
+		printf("%d ", as[i]);
+
+	return 0;
+}

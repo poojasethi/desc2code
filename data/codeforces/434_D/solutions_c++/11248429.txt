@@ -1,0 +1,88 @@
+#include <algorithm>
+#include <iostream>
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+#include <map>
+using namespace std;
+
+typedef long long ll;
+#define REP(i, a, b) for (int i = (a); i < (b); ++i)
+#define PER(i, a, b) for (int i = (a); i > (b); --i)
+#define FOR(i, a, b) for (int i = (a); i <= (b); ++i)
+#define ROF(i, a, b) for (int i = (a); i >= (b); --i)
+const int N = 53, V = 1e4 + 5, E = 1e5 + 3, INF = 1e7, P = 1e6, FUL = 0x3f3f3f3f;
+int n, m, a[N], b[N], c[N], l[N], r[N];
+int sumv, src, des, cur[V], lev[V];
+int amo = 1, info[V], nxt[E], go[E], cap[E];
+map<int, int> node[N];
+
+inline void SetE(const int &x, const int &y, const int &z) {
+	nxt[++amo] = info[x]; go[info[x] = amo] = y; cap[amo] = z;
+	nxt[++amo] = info[y]; go[info[y] = amo] = x; cap[amo] = 0;
+}
+
+inline int calc_func(const int &i, const int &x) {
+	return a[i] * x * x + b[i] * x + c[i] + P;
+}
+
+inline bool modLevel() {
+	static int ql, que[V];
+	memset(lev, 0, sizeof(lev));
+	que[ql = 1] = src; lev[src] = 1;
+	FOR(i, 1, ql) {
+		int x = que[i]; cur[x] = info[x];
+		for (int k = info[x], y; y = go[k], k; k = nxt[k])
+			if (cap[k] && !lev[y]) lev[y] = lev[x] + 1, que[++ql] = y;
+	}
+	return lev[des];
+}
+
+inline int Dinic(const int &x, const int &flow) {
+	if (x == des) return flow;
+	int res = flow, y, delta;
+	for (int &k = cur[x]; y = go[k], k; k = nxt[k])
+		if (cap[k] && lev[x] < lev[y]) {
+			delta = Dinic(y, min(res, cap[k]));
+			if (delta) {
+				cap[k] -= delta; cap[k ^ 1] += delta;
+				if (!(res -= delta)) break;
+			}
+		}
+	if (res) lev[x] = 0;
+	return flow - res;
+}
+
+inline int max_flow() {
+	int res = 0;
+	while (modLevel())
+		res += Dinic(src, FUL);
+	return INF * n - res - P * n;
+}
+
+int main() {
+	//freopen("d.in", "r", stdin);
+	//freopen("d.out", "w", stdout);
+	scanf("%d%d", &n, &m);
+	FOR(i, 1, n) scanf("%d%d%d", &a[i], &b[i], &c[i]);
+	FOR(i, 1, n) {
+		scanf("%d%d", &l[i], &r[i]);
+		FOR(j, l[i] - 1, r[i]) node[i][j] = ++sumv;
+	}
+	src = 0; des = sumv + 1;
+	FOR(i, 1, n) {
+		SetE(src, node[i][l[i] - 1], FUL);
+		REP(j, l[i] - 1, r[i])
+			SetE(node[i][j], node[i][j + 1], INF - calc_func(i, j + 1));
+		SetE(node[i][r[i]], des, FUL);
+	}
+	FOR(i, 1, m) {
+		int u, v, d;
+		scanf("%d%d%d", &u, &v, &d);
+		FOR(j, l[u] - 1, r[u]) if (l[v] - 1 <= j - d && j - d <= r[v])
+			SetE(node[u][j], node[v][j - d], FUL);
+	}
+	printf("%d\n", max_flow());
+	return 0;
+}
+	     		 	   		 				 		  	  	 	

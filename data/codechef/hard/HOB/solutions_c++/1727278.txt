@@ -1,0 +1,116 @@
+#include <cstdio>
+#include <cstring>
+#include <climits>
+#include <cassert>
+
+#define NAME_LENGTH 11
+#define NUM_OF_ROOMS 500
+#define TRIB 14000
+
+int hash(const char *s, int mod)
+{
+    int i, h = 0;
+    for (i = 0; s[i]; i++)
+        h = (h*33 + (s[i] - (s[i] >= 'a' ? 'a' : 'A') + 1))%mod;
+
+    return h;
+}
+
+inline int ts(int day, int hour, int min)
+{
+    return (day*24 + hour)*60 + min;
+}
+
+int main()
+{
+    int nr, nv, cur_hour, cur_min, stay_for_hour, mr,
+        cur_ts, cur_day, min_probes, t, h, last_ts,
+        i, j, r, min_leave_at, acc;
+    char s[NAME_LENGTH];
+    int leave_at[NUM_OF_ROOMS], probes[NUM_OF_ROOMS];
+    int trib[TRIB] = {-1, 0, 1};
+
+    scanf("%d", &t);
+    while (t--)
+    {
+        scanf("%d %d", &nv, &nr);
+        for (i = 0; i < nr; i++)
+        {
+            leave_at[i] = 0;
+            probes[i] = -1;
+        }
+        cur_day = 0;
+        last_ts = -1;
+        acc = 0;
+
+        /*
+         * precompute the table 'probes'
+         */
+        j = 3;
+        for (i = r = 0; i < nr && j < TRIB - 1; i++)
+        {
+            while (probes[r] != -1 && j < TRIB - 1)
+            {
+                j++;
+                trib[j] = (trib[j-1] + trib[j-2] + trib[j-3]) % nr;
+                r = (r + trib[j]) % nr;
+            }
+            if (j < TRIB - 1)
+            {
+                probes[r] = j - 3;
+                j++;
+                trib[j] = (trib[j-1] + trib[j-2] + trib[j-3]) % nr;
+                r = (r + trib[j]) % nr;
+            }
+        }
+
+        while (nv--)
+        {
+            scanf("%d %d %d %s", &cur_hour, &cur_min, &stay_for_hour, s);
+            cur_ts = ts(cur_day, cur_hour, cur_min);
+            if (last_ts > cur_ts)
+            {
+                cur_ts += 24*60;
+                ++cur_day;
+            }
+            last_ts = cur_ts;
+
+            h = (hash(s, nr) + acc) % nr;
+
+            min_probes = min_leave_at = INT_MAX;
+
+            for (r = 0; r < nr; r++)
+            {
+                if (probes[(r + nr - h)%nr] >= 0) //r'th room is reachable from h
+                {
+                    if (leave_at[r] <= cur_ts) //room is empty
+                    {
+                        assert(min_probes != probes[(r + nr - h)%nr]);
+                        if (min_probes > probes[(r + nr - h)%nr])
+                        {
+                            min_probes = probes[(r + nr - h)%nr];
+                            mr = r;
+                        }
+                    }
+                    else if (min_probes == INT_MAX)
+                    {
+                        if (leave_at[r] < min_leave_at)
+                            min_leave_at = leave_at[r];
+                    }
+                }
+            }
+            if (min_probes == INT_MAX)
+            {
+                printf("-%d\n", min_leave_at - cur_ts);
+                acc = (acc + min_leave_at - cur_ts)%nr;
+            }
+            else
+            {
+                leave_at[mr] = cur_ts + (stay_for_hour*60);
+                printf("%d\n", min_probes);
+                acc = (acc + min_probes)%nr;
+            }
+        }
+    }
+    return 0;
+}

@@ -1,0 +1,109 @@
+#include <iostream>
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <set>
+
+using namespace std;
+
+struct line
+{
+    int x, y, len;
+} gor[100500], vert[100500];
+
+int n, m;
+
+struct event
+{
+    int time, len, y;
+    int type;
+    bool operator < (const event & x) const
+    {
+        if (time != x.time)
+            return time < x.time;
+        if (type != x.type)
+            return type < x.type;
+        return y < x.y;
+    }
+};
+
+event makeEvent(int time, int len, int y, int type)
+{
+    event t;
+    t.time = time;
+    t.y = y;
+    t.len = len;
+    t.type = type;
+    return t;
+}
+
+bool solve (int g)
+{
+    vector < event > e;
+    for (int i = 0; i < n; i ++)
+    {
+        int newY = vert[i].y + g;
+        int newLen = vert[i].len - g - g;
+        if (newLen < 0)
+            continue;
+        e.push_back ( makeEvent (vert[i].x, newLen, newY, 2));
+    }
+    for (int i = 0; i < m; i ++)
+    {
+        int newX = gor[i].x + g;
+        int newLen = gor[i].len - g - g;
+        if (newLen < 0)
+            continue;
+        e.push_back ( makeEvent (newX, newLen, gor[i].y, 1));
+        e.push_back ( makeEvent (newX + newLen, newLen, gor[i].y, 3));
+    }
+    sort (e.begin(), e.end());
+    multiset < int > s;
+    for (int i = 0; i < e.size(); i ++)
+    {
+        if (e[i].type == 1)
+        {
+            s.insert (e[i].y);
+            continue;
+        }
+        if (e[i].type == 3)
+        {
+            s.erase (s.find (e[i].y));
+            continue;
+        }
+        int down = e[i].y;
+        int up = down + e[i].len;
+        set < int > :: iterator it = s.lower_bound (down);
+        if (it == s.end())
+            continue;
+        if (*it >= down && *it <= up)
+            return true;
+    }
+    return false;
+}
+
+int main()
+{
+    cin >> n >> m;
+    for (int i = 0; i < n; i ++)
+        cin >> vert[i].x >> vert[i].y >> vert[i].len;
+    for (int i = 0; i < m; i ++)
+        cin >> gor[i].x >> gor[i].y >> gor[i].len;
+    int l = 0;
+    int r = (int) 2e9;
+    while ( r - l > 1 )
+    {
+        int mid = (l + r) >> 1;
+        if ( solve (mid) )
+            l = mid;
+        else
+            r = mid;
+    }
+    if ( solve (r) )
+        cout << r ;
+    else
+        cout << l;
+
+    return 0;
+}

@@ -1,0 +1,308 @@
+#include "string.h"
+#include "stdio.h"
+//#define TESTMODE
+#include "stdlib.h"
+#include "time.h"
+#include "math.h"
+
+#define NODE_SIZE 25
+#define SIZE 100000
+
+struct node
+{
+	union
+	{
+		int			 values[NODE_SIZE+1];
+		node *       childs[NODE_SIZE+1];
+	};
+	int			 count;
+	int			 is_leaf;
+	int          min_val;
+} *root,storage[3*SIZE/NODE_SIZE];
+int storage_count;
+typedef node * pnode;
+
+
+pnode create_new_node()
+{
+	return &storage[storage_count++];
+}
+
+unsigned int n;
+pnode internal_insert(pnode &pn , int newmem)
+{
+	if (!pn)
+	{
+		pn = create_new_node() ;
+		pn->count = 1;
+		pn->is_leaf = true;
+		pn->values[0]=newmem;
+		pn->min_val = newmem;
+		return NULL;
+	}
+	if(newmem < pn->min_val)
+			pn->min_val = newmem;
+	if (!pn->is_leaf)
+	{
+		int cur = pn->count-1;
+		while (cur && pn->childs[cur]->min_val>newmem+1)
+			cur--;
+		pnode newnode = internal_insert(pn->childs[cur] , newmem);
+		if (newnode) //new node added in insert call
+		{
+			int copy_count = pn->count-cur-1;
+			memmove(pn->childs+cur+2,pn->childs+cur+1,copy_count*sizeof(pnode));
+			pn->childs[cur+1]=newnode;
+			pn->count++;	
+		}
+		if (pn->count > NODE_SIZE)
+		{
+			pnode pnew = create_new_node() ;
+			int sz1 = pn->count /2;
+			int sz2 = (pn->count+1)/2;
+			pnew->count = sz2;
+			pn->count = sz1;
+			pnew->is_leaf = false;
+			memcpy(pnew->childs , pn->childs+sz1,sz2*sizeof(pnode));
+			pnew->min_val = pnew->childs[0]->min_val;
+			pn->min_val = pn->childs[0]->min_val;
+			for (int i1 = 1 ; i1 < sz1 ; i1++)
+				if (pn->min_val > pn->childs[i1]->min_val)
+					pn->min_val = pn->childs[i1]->min_val;
+			for (int i2 = 1 ; i2 < sz2 ; i2++)
+				if (pnew->min_val > pnew->childs[i2]->min_val)
+					pnew->min_val = pnew->childs[i2]->min_val;
+			return pnew;
+		}
+		else 
+			return NULL;
+
+	}
+	else
+	{
+		int cur = pn->count-1;
+		while (cur>=0 && pn->values[cur] > newmem+1)
+			cur--;
+		int copy_count = pn->count-cur-1;
+		memmove(pn->values+cur+2,pn->values+cur+1,copy_count*sizeof(int));
+		pn->values[cur+1]=newmem;
+		pn->count++;
+		if (pn->count > NODE_SIZE)
+		{
+			pnode pnew = create_new_node() ;
+			int sz1 = pn->count /2;
+			int sz2 = (pn->count+1)/2;
+			pnew->count = sz2;
+			pn->count = sz1;
+			pnew->is_leaf = true;
+			memcpy(pnew->values , pn->values+sz1,sz2*sizeof(int));
+			pnew->min_val = pnew->values[0];
+			pn->min_val = pn->values[0];
+			for (int i1 = 1 ; i1 < sz1 ; i1++)
+				if (pn->min_val > pn->values[i1])
+					pn->min_val = pn->values[i1];
+			for (int i2 = 1 ; i2 < sz2 ; i2++)
+				if (pnew->min_val > pnew->values[i2])
+					pnew->min_val = pnew->values[i2];
+			return pnew;
+		}
+		else
+			return NULL;
+	}
+}
+void insert(pnode &pn , int newmem)
+{
+	pnode result = pn;
+	pnode newnode;
+	newnode = internal_insert(pn , newmem);
+	if (newnode)
+	{
+		result = create_new_node();
+		result->min_val = (pn->min_val<newnode->min_val)?pn->min_val:newnode->min_val;
+		result->count = 2;
+		result->childs[0]=pn;
+		result->childs[1]=newnode;
+		result->is_leaf = false;
+		pn = result;
+	}
+}
+
+void show(pnode pn , unsigned int * output , int &count)
+{
+	
+	if (pn == NULL)
+		return;
+	for (int k = 0 ; k < pn->count ; k++)
+		if (pn->is_leaf)
+		{
+			output[count++] = pn->values[k];
+			//printf("%d ",pn->values[k]);
+		}
+		else
+			show(pn->childs[k],output,count);
+}
+
+#define BUFSIZE 20000000
+void GetNumbers(unsigned int * input,int count)
+{
+	static char bin[BUFSIZE];
+	static int readed = false;
+	static int total = 0 ;
+	int num = 0, curnum = 0;
+#ifndef TESTMODE
+	if (!readed)
+	{
+		total = fread(bin, sizeof(char), BUFSIZE, stdin);
+		readed = true;
+		//printf("total is %d\n",total);
+	}
+#endif
+	static int current_pos=0;
+
+	while (num < count)
+	{
+#ifdef TESTMODE
+		scanf("%d",&input[num++]);
+#else	
+
+		int l =0 ;
+		if (current_pos==total)
+		{
+			//printf("input error current_ps:%d , total : %d",current_pos,total);
+			return;
+		}
+		for(; current_pos < total; current_pos++) 
+		{
+			if (bin[current_pos]>='0' && bin[current_pos]<='9')  
+			{
+				curnum = (bin[current_pos] - '0') + (10 * curnum);
+				l++;
+			}
+			else if (l)
+			{
+				input[num++]=curnum;
+				curnum = 0 ;
+				l=0;
+				if (num == count)
+					return;
+			}
+		}
+        if (l >0)
+            input[num++]=curnum;
+        curnum = 0 ;
+#endif
+	}
+}
+char * to_str(unsigned int i)
+{
+	static char output[100];
+	int cur=99;
+	output[cur] = 0;
+	do
+	{
+		cur--;
+		output[cur]= '0'+(i % 10);
+		i /=  10 ;
+	}while(i);
+	return output+cur;
+}
+static char bot[BUFSIZE];
+static int bot_count=0;
+void Flush()
+{
+	fwrite(bot , sizeof(char),bot_count,stdout);
+	bot_count = 0;
+
+}
+void WriteNumbers(unsigned int * input,int countnums)
+{
+	
+	int i;
+	char tmp_buff[1000];
+	for (i = 0 ; i < countnums ; i++)
+	{
+		char * p = to_str(input[i]);//itoa(input[i],tmp_buff,10);// 
+		int l = strlen(p);
+		memcpy(bot+bot_count , p , l+1);
+		bot_count += l+1;
+		bot[bot_count-1]=' ';
+		if (bot_count > BUFSIZE-1000)
+			Flush();
+	}
+	if (countnums)
+		bot[bot_count-1]='\n';
+	Flush();
+	//fwrite("\n",sizeof(char),1,stdout);
+}
+
+int main(int argc, char* argv[])
+{
+	unsigned int k;
+	unsigned int tst,test_count;
+	unsigned int input[100000];
+	unsigned int output[100000];
+#ifdef TESTMODE
+	time_t t;
+	srand(time(&t));
+#endif
+	GetNumbers(&test_count,1);
+	//printf("test_count:%d\n",test_count);
+	
+	for (tst = 0 ; tst < test_count ; tst++)
+	{
+		GetNumbers(&n,1);
+		storage_count =0 ;
+		root = NULL;
+		//printf("n:%d\n",n);
+#ifndef TESTMODE
+		GetNumbers(input , n);
+#endif
+		for (k = 0 ; k < n ; k++)
+		{
+#ifdef TESTMODE			
+			input[k] = (rand() % 10)+1;
+			printf("%d ",input[k]);
+#endif
+			insert(root,input[k]);
+		}
+#ifdef TESTMODE			
+		printf("\n");
+#endif
+		int count;
+		count=0;
+		show(root,output,count);
+		WriteNumbers(output,n);
+#ifdef TESTMODE
+		printf("cheking...\n");
+		for (int i = 1 ; i < n ;i++)
+			for (int j = 0 ; j < n-i ; j++ )
+				if (input[j] > input[j+1]+1)
+				{
+					int tmp = input[j];
+					input[j] = input[j+1];
+					input[j+1] = tmp;
+				}
+
+		for (k = 0 ; k < n ; k ++)
+			if (input[k] != output[k])
+			{
+				printf("\n------------------------\n");
+				for( i = 0 ; i < n ; i++)
+					printf("%d " , input[i]);
+				printf("error:currect result is: first error pos :%d  %d != %d",k,input[k],output[k]);
+				printf("\n");
+				break;
+			}
+		if (k == n )
+			printf("passed\n");
+#endif
+	}
+
+	Flush();
+	return 0;
+
+}
+
+
+
+

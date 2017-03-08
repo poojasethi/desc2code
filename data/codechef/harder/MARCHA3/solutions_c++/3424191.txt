@@ -1,0 +1,137 @@
+#include <cstdio>
+#include <algorithm>
+ 
+using namespace std;
+ 
+unsigned int hints[100000];
+unsigned int writeOffset;
+int initial_truths;
+ 
+class Input
+{
+private:
+ 
+	char buffer[1048576];
+	int bufferMax,nextToRead;
+ 
+	void refill()
+	{
+		bufferMax = fread(buffer,1,1048576,stdin);
+		nextToRead = 0;
+	}
+ 
+	int getNextChar()
+	{
+		if ( nextToRead == bufferMax )
+			refill();
+ 
+		return buffer[nextToRead++];
+	}
+ 
+public:
+ 
+	Input(){bufferMax = nextToRead = 0;}
+ 
+	void resetHints() {writeOffset = initial_truths = 0;}
+ 
+	int getInt()
+	{
+		int ret = 0; int c;
+		while((c = getNextChar()) < 48);
+		do
+		{
+			ret = 10*ret + c - 48;
+		}
+		while((c = getNextChar()) > 47);
+		return ret;
+	}
+ 
+	void saveHint()
+	{
+		short int op;
+		unsigned int number;
+		bool yesOrNo;
+ 
+		while((op = getNextChar()) == 10);      //get operator
+ 
+		number = getInt();                      //get number
+		yesOrNo = getNextChar() == 89;          //get boolean value
+ 
+        //analyze and save hint
+ 
+        if (op == '<')
+        {
+            number <<= 1;                //open one-bit room for a boolean flag
+            number |= !(yesOrNo);       //indicate if at the hint number the total true hints increase or decrease
+            initial_truths += yesOrNo;  //indicate if the hint produces a true value at number 1 (an initial truth)
+            hints[writeOffset++] = number;          //save hint
+        }
+        else if (op == '>')
+        {
+            number++;
+            number <<= 1;
+            number |= yesOrNo;
+            initial_truths += !(yesOrNo);
+            hints[writeOffset++] = number;
+        }
+        else
+        {
+            if (yesOrNo)
+            {
+                number <<= 1;
+                number++;
+                hints[writeOffset++] = number;      //save truths increasing hint at 'number'
+                number++;
+                hints[writeOffset++] = number;      //save truths decreasing hint at 'number'+1
+            }
+            else
+            {
+                number <<= 1;
+                hints[writeOffset++] = number;
+                initial_truths++;
+                number += 3;
+                hints[writeOffset++] = number;
+            }
+        }
+        while((op = getNextChar()) > 64);
+	}
+};
+ 
+ 
+int main()
+{
+    Input input;
+    int hints_cnt, tests_cnt, loop_cnt;
+    int maximum_truths, temp_truths;
+    unsigned int hint;
+ 
+    tests_cnt = input.getInt();
+ 
+    while (tests_cnt--)
+    {
+        input.resetHints();
+        loop_cnt = hints_cnt = input.getInt();
+        while (loop_cnt--)
+            input.saveHint();
+ 
+        sort(hints, hints + writeOffset);
+ 
+        while (hints[writeOffset-1] > 2000000001)
+            writeOffset--;
+ 
+        temp_truths = initial_truths;
+        maximum_truths = 0;
+        if (hints[0] > 3)
+            maximum_truths = initial_truths;
+ 
+        for (loop_cnt = 0 ; loop_cnt < writeOffset ; loop_cnt++)
+        {
+            temp_truths += (hints[loop_cnt] & 1 ? 1 : -1 );
+            maximum_truths = (maximum_truths > temp_truths ? maximum_truths : temp_truths);
+        }
+ 
+        printf("%d\n", hints_cnt - maximum_truths);
+    }
+ 
+    return 0;
+}

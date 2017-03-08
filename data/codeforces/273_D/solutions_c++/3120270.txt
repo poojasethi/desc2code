@@ -1,0 +1,73 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+#define rep(I,L,R) for(int I=L;I<=R;++I)
+
+typedef long long LL;
+
+const LL modu = LL(1e9) + 7;
+const int N = 155;
+
+typedef LL mat[N][N];
+
+LL dp[2][2][2][N][N];
+int n, m;
+
+inline void inc (LL &x, LL y) { x = (x + y) % modu; }
+
+inline void incFirst (mat arr, int fl, int ll) {
+	int delt = (fl == 0 ? -1 : 1);
+	int l_lo = (delt == 1 ? 0 : m - 1), l_hi = (delt == 1 ? m : -1);
+	for (int l = l_lo; l != l_hi; l += delt) {
+		for (int r = l; r < m; ++r) {
+			int nl = l + delt;
+			if (nl >= 0 && nl <= r) inc(arr[nl][r], arr[l][r]);
+		}
+	}
+}
+inline void incLast (mat arr, int fl, int ll) {
+	int delt = (ll == 0 ? 1 : -1);
+	int r_lo = (delt == 1 ? 0 : m - 1), r_hi = (delt == 1 ? m : -1);
+	for (int r = r_lo; r != r_hi; r += delt) {
+		for (int l = 0; l <= r; ++l) {
+			int nr = r + delt;
+			if (nr >= l && nr < m) inc(arr[l][nr], arr[l][r]);
+		}
+	}
+}
+
+int main () {
+	scanf("%d%d", &n, &m);
+	LL ans = 0, prev = 0, now = 1;
+	rep(_, 0, n - 1) {
+		swap(prev, now);
+		rep(fl, 0, 1) rep(ll, 0, 1) rep(l, 0, m - 1) rep(r, l, m - 1)
+			dp[now][fl][ll][l][r] = 0;
+		rep(fl, 0, 1) rep(ll, 0, 1)
+			rep(l, 0, m - 1) rep(r, l, m - 1) {
+				rep(nfl, fl, 1) rep(nll, ll, 1) {
+					int nl = l + bool(nfl && !fl), nr = r - bool(nll && !ll);
+					if (nl > nr) continue;
+					inc(dp[now][nfl][nll][nl][nr], dp[prev][fl][ll][l][r]);
+				}
+			}
+		rep(fl, 0, 1) rep(ll, 0, 1) {
+			if (fl == 0 && ll == 1) {
+				incLast(dp[now][fl][ll], fl, ll);
+				incFirst(dp[now][fl][ll], fl, ll);
+			}
+			else {
+				incFirst(dp[now][fl][ll], fl, ll);
+				incLast(dp[now][fl][ll], fl, ll);
+			}
+		}
+		rep(l, 0, m - 1) rep(r, l, m - 1)
+			inc(dp[now][0][0][l][r], 1);
+		rep(fl, 0, 1) rep(ll, 0, 1) rep(l, 0, m - 1) rep(r, l, m - 1)
+			inc(ans, dp[now][fl][ll][l][r]);
+	}
+	printf("%I64d\n", ans);
+	return 0;
+}
+

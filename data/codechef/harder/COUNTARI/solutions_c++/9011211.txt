@@ -1,0 +1,134 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<cmath>
+using namespace std;
+typedef long long LL;
+int n;
+int a[100005];
+int SIZE=3000;
+int A[30005],BEFORE[30005],AFTER[30005];
+int L[3400],R[3400];
+struct C{
+    double x,y;
+    C(double a=0,double b=0){
+        x=a,y=b;
+    }
+}zero,w[120005];
+C operator + (C a,C b){
+    return C(a.x+b.x,a.y+b.y);
+}
+C operator - (C a,C b){
+    return C(a.x-b.x,a.y-b.y);
+}
+C operator * (C a,C b){
+    return C(a.x*b.x-a.y*b.y,a.x*b.y+a.y*b.x);
+}
+C X[120005],Y[120005];
+int rev[120005];
+LL ans;
+bool check(int x){
+    return x>=1&&x<=30000;
+}
+const double PI=acos(-1);
+int Rev(int x,int bit){
+    int ret=0;
+    for(int i=0;i<bit;i++){
+        ret<<=1;
+        if(x&1) ret|=1;
+        x>>=1;
+    }
+    return ret;
+}
+void FFT(C* F,int bit,int o){
+    for(int i=0;i<(1<<bit);i++) if(rev[i]>i) swap(F[i],F[rev[i]]);
+    for(int i=1;i<=bit;i++){
+        //Length;
+        for(int j=0;j<(1<<bit);j+=(1<<i)){
+            int W=0;
+            for(int k=0;k<(1<<(i-1));k++){
+                F[j+k]=F[j+k]+w[W]*F[j+k+(1<<(i-1))];
+                F[j+k+(1<<(i-1))]=F[j+k]-w[W]*F[j+k+(1<<(i-1))]-w[W]*F[j+k+(1<<(i-1))];
+                W+=o*(1<<(bit-i));
+                if(W<0) W+=1<<bit;
+            }
+        }
+    }
+    if(o==-1){
+        for(int i=0;i<(1<<bit);i++) F[i].x/=(1<<bit);
+    }
+}
+int main(){
+    int bit=0;
+    for(;(1<<bit)<=60000;bit++);
+    w[0]=C(1,0);
+    w[1]=C(cos(2*PI/(1<<bit)),sin(2*PI/(1<<bit)));
+    for(int i=2;i<(1<<bit);i++)w[i]=w[i-1]*w[1];
+    for(int i=0;i<(1<<bit);i++) rev[i]=Rev(i,bit);
+
+
+/*
+    /////////////////////////FFT TEST
+    X[0].x=1;X[1].x=2;X[2].x=3;
+    Y[0].x=4;Y[1].x=5;
+
+    FFT(X,bit,1);
+    FFT(Y,bit,1);
+    for(int i=0;i<(1<<bit);i++){
+        X[i]=X[i]*Y[i];
+    }
+    FFT(X,bit,-1);
+    for(int i=0;i<10;i++) printf("%.10f ",X[i].x);
+
+    ///////////////////
+*/
+    scanf("%d",&n);
+    for(int i=1;i<=n;i++){
+        scanf("%d",&a[i]);
+    }
+    int num=(n-1)/SIZE+1;
+    for(int i=1;i<=num;i++){
+        L[i]=R[i-1]+1;
+        R[i]=L[i]+SIZE-1;
+    }
+    R[num]=min(R[num],n);
+    for(int i=1;i<=n;i++) AFTER[a[i]]++;
+    for(int i=1;i<=num;i++){
+        for(int j=L[i];j<=R[i];j++){
+            AFTER[a[j]]--;
+        }
+        for(int x=L[i];x<=R[i];x++){
+            for(int y=R[i];y>x;y--){
+                int z=a[y]+(a[y]-a[x]);
+                if(check(z))ans+=A[z];
+                A[a[y]]++;
+
+                if(check(z))ans+=AFTER[z];
+                z=a[x]-(a[y]-a[x]);
+                if(check(z))ans+=BEFORE[z];
+            }
+            for(int y=R[i];y>x;y--){
+                A[a[y]]--;
+            }
+        }
+        X[0]=Y[0]=zero;
+        for(int i=1;i<=30000;i++) X[i]=C(BEFORE[i],0),Y[i]=C(AFTER[i],0);
+        for(int i=30001;i<(1<<bit);i++) X[i]=Y[i]=zero;
+        FFT(X,bit,1);
+        FFT(Y,bit,1);
+        for(int i=0;i<(1<<bit);i++){
+            X[i]=X[i]*Y[i];
+        }
+        FFT(X,bit,-1);
+
+        for(int x=L[i];x<=R[i];x++){
+            ans+=(long long)(X[a[x]*2].x+0.4);
+        }
+
+        for(int j=L[i];j<=R[i];j++){
+            BEFORE[a[j]]++;
+        }
+    }
+    printf("%lld\n",ans);
+    return 0;
+}

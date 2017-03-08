@@ -1,0 +1,243 @@
+#define _USE_MATH_DEFINES 
+#define _CRT_SECURE_NO_DEPRECATE 
+#include <iostream> 
+#include <cstdio> 
+#include <cstdlib> 
+#include <vector> 
+#include <sstream> 
+#include <string> 
+#include <map> 
+#include <set> 
+#include <algorithm> 
+#include <cmath> 
+#include <cstring> 
+#include <queue>
+#include <time.h>
+using namespace std; 
+#define mp make_pair 
+#define pb push_back 
+#define all(C) (C).begin(), (C).end() 
+#define sz(C) (int)(C).size() 
+#define PRIME 123 
+#define PRIME1 31415 
+typedef long long int64; 
+typedef unsigned long long uint64; 
+typedef pair<int, int> pii; 
+typedef vector<int> vi; 
+typedef vector<vector<int> > vvi; 
+//------------------------------------------------------------ 
+#define y1 asdf
+#define y2 asdqwer
+const int N = 300010; 
+int n, t;
+int64 f[N];
+int64 p[N], h[N], a[N];
+struct Line1
+{
+    int64 x, a;
+    int64 b;
+    Line1()
+    {
+    }
+ 
+    Line1(int64 x1, int64 a1, int64 b1)
+    {
+        x = x1; a = a1; b = b1;
+    }
+ 
+    bool operator < (const Line1& oth) const
+    {
+        if (a < oth.a)
+            return true;
+        return false;
+    }
+};
+ 
+struct Line
+{
+    int64 x, a;
+    int64 b;
+    Line()
+    {
+    }
+    Line(Line1& t)
+    {
+        x = t.x, a = t.a, b = t.b;
+    }
+    Line(int64 x1, int64 a1, int64 b1)
+    {
+        x = x1; a = a1; b = b1;
+    }
+ 
+    bool operator < (const Line& oth) const
+    {
+        if (x < oth.x)
+            return true;
+        return false;
+    }
+};
+ 
+set <Line> tri[N];
+set <Line1> tr[N];
+inline int64 GetMinLine(int u, int64 x)
+{
+	if (tr[u].begin() == tr[u].end())
+		return 1000000000000000000ll;
+    set <Line> :: iterator it = tri[u].lower_bound(Line(x, 0, 0));
+    it--;
+    Line temp = *it;
+    return (x *(int64) temp.a + temp.b);
+}
+ 
+inline void AddLine(int u, int64 a, int64 b)
+{
+	int64 ansx = -1000000000000000000ll;
+	Line1 temp;
+	if (tr[u].begin() == tr[u].end())
+	{
+		tri[u].insert(Line(ansx, a, b));
+		tr[u].insert(Line1(ansx, a, b));
+		return;
+	}
+	set <Line1> :: iterator it = tr[u].upper_bound(Line1(0, a, b));
+	set <Line1> :: iterator it1 = it; 
+	
+	if (it != tr[u].begin())
+	{
+		it--;
+		Line1 ot = *it;
+		int64 tx = 0;
+    
+		if (ot.a == a)
+		{
+			if(b < ot.b)
+				tx = 1000000000000000000ll;
+			else
+				return;
+		}
+		else
+		{
+			tx = (ot.b - b) / (a - ot.a);
+		}
+		if (ot.x > tx)
+			return;
+		while(it != tr[u].begin())
+		{
+			temp = *it;
+			it--;
+			ot = *it;
+			int64 x = (ot.b - b) / (a - ot.a);
+			if (x > tx)
+			{
+				it++;
+				break;
+			}
+			tx = x;
+			Line tt(temp);
+			tri[u].erase(tt);
+			tr[u].erase(temp);
+		}
+		temp = *it;
+		tri[u].erase(temp);
+		tr[u].erase(temp);
+		if(tx != 1000000000000000000ll)
+		{
+			tri[u].insert(Line(tx, temp.a, temp.b));
+			tr[u].insert(Line1(tx, temp.a, temp.b));
+		}
+	}
+	it = it1;
+    if (it != tr[u].end())
+    {
+        Line1 ot = *it;
+        int64 tx;
+        tx = (ot.b - b) / (a - ot.a);
+		temp = *it;
+		it++;
+		while(it != tr[u].end())
+        {
+			ot = *it;
+            int64 x = (ot.b - b) / (a - ot.a);
+            if (x < tx)
+            {
+				break;
+			}
+            tx = x;
+            Line tt(temp);
+            tri[u].erase(tt);
+            tr[u].erase(temp);
+			temp = *it;
+			it++;
+		}
+        ansx = tx;
+    }
+	
+    tri[u].insert(Line(ansx, a, b));
+    tr[u].insert(Line1(ansx, a, b));
+}
+ 
+int64 GetMin(int pos, int64 x)
+{
+	int64 ans = 1e18;
+	while(pos < n)
+	{
+		ans = min(ans, GetMinLine(pos, x));
+		pos |= pos + 1;
+	}
+    return ans;
+}
+ 
+void Add(int pos, int64 a, int64 b)
+{
+    while(pos >= 0)
+	{
+		AddLine(pos, a, b);
+		pos &= pos + 1;
+		pos--;
+	}
+}
+ 
+void solve()
+{
+    scanf("%d", &n);
+    for(int i = 0; i < n; ++i)
+    {
+		scanf("%lld", &p[i]);
+        p[i]--;
+    }
+    for(int i = 0; i < n; ++i)
+       scanf("%lld", &a[i]);
+    for(int i = 0; i < n; ++i)
+        scanf("%lld", &h[i]);
+    f[n - 1] = a[n - 1];
+    //AddLine(1, -2 * h[n - 1], f[n - 1] + h[n - 1] *(int64) h[n - 1]);
+    Add(n - 1, -2 * h[n - 1], f[n - 1] + h[n - 1] *(int64) h[n - 1]);
+    for(int i = n - 2; i >= 0; --i)
+    {
+		f[i] = GetMin(p[i], h[i]) + h[i] *(int64) h[i] + a[i];
+		Add(p[i], -2 * h[i], f[i] + h[i] *(int64) h[i]);
+		//f[i] = GetMinLine(1, h[i]) + h[i] *(int64) h[i] + a[i];
+        //cerr << f[i] << endl;
+        //cerr << f[i] - h[i] *(int64) h[i] - a[i] << endl;
+        //AddLine(1, -2 * h[i], f[i] + h[i] *(int64) h[i]);
+	}
+	//for(int i = 0; i < 3; ++i)
+	//{
+	//	for(int j = 0; j < 100000; ++j)
+	//		cout << (j + 1) << ' ';
+	//	cout << endl;
+	////}
+    cout << f[0];
+
+}
+ 
+int main()
+{
+    ios_base::sync_with_stdio(false);cin.tie(0);
+    #ifdef _MY_DEBUG
+        freopen("input.txt", "r", stdin); freopen("output.txt", "w", stdout);
+    #endif
+    solve();
+ 
+    return 0;
+}   

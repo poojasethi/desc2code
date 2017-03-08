@@ -1,0 +1,179 @@
+#include<cstdio>
+#include<algorithm>
+#include<cassert>
+#include<cstring>
+#include<iostream>
+#include<cstdlib>
+#include<cmath>
+#include<vector>
+#include<map>
+#include<set>
+#include<queue>
+#include<bitset>
+using namespace std;
+typedef long long ll;
+typedef double db;
+void gn(int &x){
+    int sg=1;char c;while(((c=getchar())<'0'||c>'9')&&c!='-');
+    if(c=='-')sg=-1,x=0;else x=c-'0';
+    while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+    x*=sg;
+}
+void gn(ll &x){
+    int sg=1;char c;while(((c=getchar())<'0'||c>'9')&&c!='-');
+    if(c=='-')sg=-1,x=0;else x=c-'0';
+    while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+    x*=sg;
+}
+const int mo=1000000007;
+int qp(int a,ll b){int ans=1;do{if(b&1)ans=1ll*ans*a%mo;a=1ll*a*a%mo;}while(b>>=1);return ans;}
+int gcd(int a,int b){return b?gcd(b,a%b):a;}
+
+char b[55][55];
+
+int bo[55][55];
+int dx[8]={1,1,1,0,0,-1,-1,-1};
+int dy[8]={1,0,-1,1,-1,1,0,-1};
+int vis[55][55]={0};
+int tot;
+void dfs(int i,int j){
+	vis[i][j]=tot;
+	for (int k=0;k<8;k++){
+		int x=i+dx[k],y=j+dy[k];
+		if(!bo[x][y] && !vis[x][y]){
+			dfs(x,y);
+		}
+	}
+}
+
+
+#define MAXV 3333 
+
+
+struct edge{int v,next;}e[100000];int etot=0;int g[MAXV];
+void ae(int u,int v){e[etot].v=v;e[etot].next=g[u];g[u]=etot++;}
+int match[MAXV],next[MAXV],mark[MAXV],fa[MAXV];
+int gf(int x){return fa[x]==x?x:fa[x]=gf(fa[x]);}
+void un(int x,int y){x=gf(x),y=gf(y);fa[x]=y;}
+int qu[MAXV],p,q;
+int tmp[MAXV]={0};
+int lca(int u,int v){
+	static int ts=0;
+	ts++;
+	while(1){
+		if(u){//
+			u=gf(u);
+			if(tmp[u]==ts)return u;
+			tmp[u]=ts;
+			if(match[u])u=next[match[u]];
+			else u=0;//
+		}
+		swap(u,v);
+	}
+}
+void link(int a,int p){
+	while(a!=p){
+		int b=match[a],c=next[b];
+		if(gf(c)!=p)next[c]=b;//if?		
+		if(mark[b]==2)mark[qu[q++]=b]=1;
+		if(mark[c]==2)mark[qu[q++]=c]=1;//if?
+		un(a,b);un(b,c);		
+		a=c;
+	}
+}
+		
+void find(int rt){
+	for (int i=1;i<=tot;i++)next[i]=mark[i]=0,fa[i]=i;
+	p=q=0;qu[q++]=rt;mark[rt]=1;
+	while(p!=q){
+		int u=qu[p++];
+		for (int i=g[u];~i;i=e[i].next){
+			int v=e[i].v;
+			if(gf(v)==gf(u) || mark[v]==2 || v==match[u])continue;
+			if(mark[v]==1){
+				int p=lca(u,v);
+				if(gf(u)!=p)next[u]=v;//if?
+				if(gf(v)!=p)next[v]=u;
+				link(u,p);
+				link(v,p);
+			}else if(!match[v]){
+				next[v]=u;
+				while(v){
+					u=next[v];
+					int t=match[u];
+					match[v]=u;match[u]=v;
+					v=t;
+				}
+				return;	
+			}else{
+				next[v]=u;
+				mark[v]=2;
+				mark[qu[q++]=match[v]]=1;
+			}
+		}
+	}
+	return;
+}
+
+
+int main()
+{
+	int tes;
+	gn(tes);
+	while(tes--){
+		memset(g,-1,sizeof(g));etot=0;
+		memset(match,0,sizeof(match));
+		memset(tmp,0,sizeof(tmp));
+		
+		int r,c;
+		gn(r);gn(c);
+		for (int i=1;i<=r;i++)scanf("%s",b[i]+1);
+		for (int i=0;i<=r+1;i++)
+			for (int j=0;j<=c+1;j++)bo[i][j]=1;
+		for (int i=1;i<=r;i++)
+			for (int j=1;j<=c;j++)bo[i][j]=0;
+		for (int i=1;i<=r;i++)
+			for (int j=1;j<=c;j++)if(b[i][j]=='*'){
+				bo[i][j]=1;
+				for (int k=0;k<8;k++){
+					int xx=i+dx[k],yy=j+dy[k];
+					bo[xx][yy]=1;
+				}
+			}
+		memset(vis,0,sizeof(vis));
+		tot=0;
+		for (int i=1;i<=r;i++)
+			for (int j=1;j<=c;j++)if(bo[i][j]==0 && !vis[i][j]){
+				++tot;
+				dfs(i,j);
+			}
+		int su=0;
+		for (int i=1;i<=r;i++)
+			for (int j=1;j<=c;j++){
+				if(b[i][j]=='*')su++;
+				else if(bo[i][j]==1){
+					int p=0,q=0;
+					for (int k=0;k<8;k++){
+						int x=i+dx[k],y=j+dy[k];
+						if(bo[x][y]==0){
+							if(p==0)p=vis[x][y];
+							else if(p==vis[x][y])continue;
+							else q=vis[x][y];
+						}
+					}
+					if(p==0)su++;
+					else if(q!=0){
+						ae(p,q);
+						ae(q,p);
+					}
+				}
+			}
+		for (int i=1;i<=tot;i++)if(!match[i])find(i);//!match
+		int ans=0;
+		for (int i=1;i<=tot;i++)if(match[i])ans++;
+		ans/=2;
+		su+=tot-ans;
+		printf("%d\n",su);
+	}
+	return 0;
+}

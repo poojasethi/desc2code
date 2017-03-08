@@ -1,0 +1,118 @@
+// retailshop.cpp : Defines the entry point for the console application.
+//
+// build for http://www.codechef.com/problems/NI05
+
+#include <algorithm>
+#include <stdio.h>
+#include <iostream>
+
+const int ITEM_COUNT = 10;
+
+char rewardLUT[ITEM_COUNT][ITEM_COUNT] = {
+        { 55,  60,   4,  25,  18,  10,  12,   8,  11,  50 },
+        { 60,  45,  75,  23,  27,  20,  24,   7,  33,  12 },
+        {  4,  75,  78,  32,  36,  30,  36,   6,  12,  65 },
+        { 25,  23,  32,  15,  45,  40,  48,   5,  14,  23 },
+        { 18,  27,  36,  45,  54,  50,  60,   4,  15,  12 },
+        { 10,  20,  30,  40,  50,  60,  72,   3,  32,  34 },
+        { 12,  24,  36,  48,  60,  72,  84,   2,  23,  34 },
+        {  8,   7,   6,   5,   4,   3,   2,   1,  34, 123 },
+        { 11,  33,  12,  14,  15,  32,  23,  34,  65,  48 },
+        { 50,  12,  65,  23,  12,  34,  34, 123,  48,  71 }
+};
+
+inline int computeBestReward(int indexOne, int indexTwo)
+{
+    return (std::max(rewardLUT[indexOne][indexOne] + rewardLUT[indexTwo][indexTwo],
+                     rewardLUT[indexOne][indexTwo] + rewardLUT[indexTwo][indexOne]));
+}
+
+int computeBestReward(short* itemIndicies, int itemCount)
+{
+    int bestReward = 0;
+    if (itemCount == 1)
+    {
+        // If we only have one item to compute a reward based off of, then we
+        // know that the best reward will be this item paired with itself
+        bestReward = rewardLUT[itemIndicies[0]][itemIndicies[0]];
+    }
+    else if (itemCount == 2)
+    {
+        // If we have to items, then the best reward is an easy check and we don't need to 
+        // incur the overhead of calling ourselves again
+        bestReward = computeBestReward(itemIndicies[0], itemIndicies[1]);
+    }
+    else
+    {
+        // We are going to iterate over the first value in the list (considered "self"),
+        // and compare the reward against all our available pairings. We will
+        // then recursively call this function with the remaining items to determine
+        // what the value is of that option.
+        for (int evalIndex = 0; evalIndex < itemCount; evalIndex++)
+        {
+            int selfReward = 0;
+            if (evalIndex == 0)
+            {
+                selfReward = rewardLUT[itemIndicies[0]][itemIndicies[0]];
+            }
+            else
+            {
+                selfReward = computeBestReward(itemIndicies[0], itemIndicies[evalIndex]);
+            }
+
+            int builderCount = 0;
+            short builtIndicies[ITEM_COUNT];
+            // We can start at index 1 because we know we will never pass down ourselves.
+            for (int builderIndex = 1; builderIndex < itemCount; builderIndex++)
+            {
+                if (builderIndex != evalIndex)
+                {
+                    builtIndicies[builderCount++] = itemIndicies[builderIndex];
+                }
+            }
+
+            int remainderReward = computeBestReward(&(builtIndicies[0]), builderCount);
+            if ((selfReward + remainderReward) > bestReward)
+            {
+                bestReward = selfReward + remainderReward;
+            }
+        }
+    }
+    return bestReward;
+}
+
+int main(int argc, char* argv[])
+{
+    int numTestCases = 0;
+    std::cin >> numTestCases;
+
+    short shoppingBag[ITEM_COUNT];
+    short requestedRewards[ITEM_COUNT];
+
+    for (int testCaseCounter = 0; testCaseCounter < numTestCases; testCaseCounter++)
+    {
+        std::cin >> shoppingBag[0] >> shoppingBag[1] >> shoppingBag[2] >> shoppingBag[3] >> shoppingBag[4] >> 
+                    shoppingBag[5] >> shoppingBag[6] >> shoppingBag[7] >> shoppingBag[8] >> shoppingBag[9];
+        std::cin >> requestedRewards[0] >> requestedRewards[1] >> requestedRewards[2] >> requestedRewards[3] >> 
+                    requestedRewards[4] >> requestedRewards[5] >> requestedRewards[6] >> requestedRewards[7] >> 
+                    requestedRewards[8] >> requestedRewards[9];
+
+        // I don't like using an array here... but it is faster for the purpose of CodeChef.
+        // I'd prefer a list or vector that can do a push back and maintain its size properly.
+        int itemCount = 0;
+        short itemIndicies[ITEM_COUNT];
+        for (int rewardIndex = 0; rewardIndex < ITEM_COUNT; rewardIndex++)
+        {
+            if (requestedRewards[rewardIndex])
+            {
+                itemIndicies[itemCount++] = rewardIndex;
+            }
+        }
+
+        int bestReward = computeBestReward(&(itemIndicies[0]), itemCount);
+        printf("%d\n", bestReward);
+    }
+    
+
+	return 0;
+}

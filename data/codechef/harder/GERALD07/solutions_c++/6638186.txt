@@ -1,0 +1,168 @@
+#include<cstring>
+#include<cstdlib>
+#include<cstdio>
+#include<cmath>
+#include<algorithm>
+#include<map>
+#include<set>
+#include<string>
+#include<vector>
+#include<assert.h>
+#define pb push_back
+#define rep(i,j,k) for(int i=(j);i<=(int)k;i++)
+#define per(i,j,k) for(int i=(j);i>=(int)k;i--)
+#define lowbit(x) ((x)&(-(x)))
+#define fi first
+#define se second
+#define pii pair<int,int>
+#define VI vector<int>
+#define S(x) x.size()
+using namespace std;
+typedef long long LL;
+typedef double db;
+const int N=410000;
+int l[N],r[N],fa[N],val[N];bool rev[N];pii mes[N];
+inline bool top(int x){return (!fa[x])||(l[fa[x]]!=x&&r[fa[x]]!=x);}
+inline void up(int x){
+	mes[x]=pii(val[x],x);
+	if(l[x])if(mes[l[x]]>mes[x])mes[x]=mes[l[x]];
+	if(r[x])if(mes[r[x]]>mes[x])mes[x]=mes[r[x]];
+}
+inline void down(int x){
+	if(rev[x]){
+		rev[x]=0;rev[l[x]]^=1;rev[r[x]]^=1;
+		int tmp=l[x];l[x]=r[x];r[x]=tmp;
+	}
+}
+inline void left(int x){
+	int y=fa[x];int z=fa[y];
+	r[y]=l[x];if(l[x])fa[l[x]]=y;
+	fa[x]=z;if(l[z]==y)l[z]=x;else if(r[z]==y)r[z]=x;
+	fa[y]=x;l[x]=y;up(y);up(x);
+}
+inline void right(int x){
+	int y=fa[x];int z=fa[y];
+	l[y]=r[x];if(r[x])fa[r[x]]=y;
+	fa[x]=z;if(l[z]==y)l[z]=x;else if(r[z]==y)r[z]=x;
+	fa[y]=x;r[x]=y;up(y);up(x);
+}
+int q[N];
+inline void splay(int x){
+	q[q[0]=1]=x;
+	for(int k=x;!top(k);k=fa[k])q[++q[0]]=fa[k];
+	per(i,q[0],1)down(q[i]);
+	while(!top(x)){
+		int y=fa[x];int z=fa[y];
+		if(top(y)){
+			if(l[y]==x)right(x);else left(x);
+		}
+		else{
+			if(r[z]==y){
+				if(r[y]==x)left(y),left(x);
+				else right(x),left(x);
+			}
+			else{
+				if(l[y]==x)right(y),right(x);
+				else left(x),right(x);
+			}
+		}
+	}
+}
+inline int access(int x){
+	int y=0;
+	for(;x;y=x,x=fa[x]){
+		splay(x);r[x]=y;up(x);
+	}
+	return y;
+}
+inline void evert(int x){
+	access(x);splay(x);rev[x]^=1;
+}
+inline void link(int x,int y){
+	evert(x);access(x);splay(x);fa[x]=y;
+}
+inline void cut(int x,int y){
+	evert(x);access(x);splay(y);fa[y]=0;
+}
+inline int getroot(int x){
+	access(x);splay(x);
+	while(1){
+		down(x);
+		if(l[x])x=l[x];
+		else return x;
+	}
+}
+int tot;int ub[N];
+inline int newnode(){
+	++tot;l[tot]=r[tot]=fa[tot]=val[tot]=ub[tot]=0;rev[tot]=0;
+	up(tot);
+	return tot;
+}
+int sum[N*4];
+inline void add(int me,int l,int r,int x,int y){
+	if(x<=l&&r<=y){
+		sum[me]++;return;
+	}
+	int mid=(l+r)>>1;
+	if(x<=mid)add(me*2,l,mid,x,y);
+	if(y>mid)add(me*2+1,mid+1,r,x,y);
+}
+inline int ask(int me,int l,int r,int x){
+	if(l==r)return sum[me];
+	int mid=(l+r)>>1;
+	if(x<=mid)return ask(me*2,l,mid,x)+sum[me];
+	else return ask(me*2+1,mid+1,r,x)+sum[me];
+}
+inline void build(int me,int l,int r){
+	sum[me]=0;
+	if(l==r)return;
+	int mid=(l+r)>>1;
+	build(me*2,l,mid);
+	build(me*2+1,mid+1,r);
+}
+int n,m,Q;
+int u[N],v[N];
+inline void relax(int num,int _u,int _v){
+	if(_u==_v)return;
+	if(getroot(_u)^getroot(_v)){
+		int bb=newnode();ub[bb]=num;
+		val[bb]=num;up(bb);
+		link(_u,bb);link(bb,_v);
+		add(1,1,m,num,m);
+	}
+	else{
+		evert(_u);access(_v);splay(_v);
+		int bb=mes[_v].se;
+		add(1,1,m,num,ub[bb]-1);
+		cut(u[ub[bb]],bb);
+		cut(v[ub[bb]],bb);
+		int pp=newnode();ub[pp]=num;val[pp]=num;up(pp);
+		link(_u,pp);
+		link(_v,pp);
+	}
+}
+int ans[N];
+vector<pii>que[N];
+int main(){
+	int T;scanf("%d",&T);
+	while(T--){
+		scanf("%d%d%d",&n,&m,&Q);
+		//memset(sum,0,sizeof sum);
+		build(1,1,m);
+		tot=0;
+		rep(i,1,m)scanf("%d%d",&u[i],&v[i]);
+		rep(i,1,m)que[i].clear();
+		rep(i,1,n)newnode();
+		rep(i,1,Q){
+			ans[i]=0;
+			int cl,cr;scanf("%d%d",&cl,&cr);
+			que[cl].pb(pii(cr,i));
+		}
+		per(i,m,1){
+			relax(i,u[i],v[i]);
+			rep(j,0,que[i].size()-1)ans[que[i][j].se]=ask(1,1,m,que[i][j].fi);
+		}
+		rep(i,1,Q)printf("%d\n",n-ans[i]);
+	}
+	return 0;
+}

@@ -1,0 +1,177 @@
+#include <cstdlib>
+#include <iostream>
+#include <fstream>
+#include <algorithm>
+#include <set>
+#include <map>
+#include <deque>
+#include <cmath>
+#include <cstring>
+#include <cstdio>
+#include <string>
+#include <vector>
+#include <queue>
+#include <iomanip>
+#include <cctype>
+#include <complex>
+#include <numeric>
+
+#define foreach(i, store) for(__typeof((store).begin()) i = (store).begin() ; i != (store).end() ; i++)
+#define sqr(x) ((x)*(x))
+#define comb2(x) ((x)*((x)-1)/2)
+#define mod(x) ((x + MOD) % MOD)
+#define All(store) store.begin(), store.end()
+#define Unique(store) store.resize(unique(All(store)) - store.begin())
+#define Assign(a, b, s, e) for(int i = s ; i < e ; i++) b[i] = a[i];
+#define IF(condition, x, y) ((condition) ? (x) : (y))
+#define psb push_back
+#define ppb pop_back
+#define psf push_front
+#define ppf pop_front
+#define create make_pair
+#define pii pair<int, int>
+#define ppi pair< pii, int>
+#define pll pair<ll, ll>
+#define X first
+#define Y second
+#define Min(x, y) IF(x < y, x, y)
+#define Max(x, y) IF(x > y, x, y)
+
+using namespace std;
+
+ifstream fin ("in.in");
+ofstream fout ("out.out");
+
+typedef long long ll;
+const int N = 1e5 + 10, L = 18;
+int n, m, q, k, c[N], h[N], par[N][L], mx[N][L];
+vector< pii > adj[N];
+ll sum;
+
+struct edge
+{
+    int x, y, w;   
+    
+    bool operator <(const edge snd)const
+    {
+         return w < snd.w;  
+    }
+} e[N<<1];
+
+int root(int u)
+{
+    if(u == par[u][0]) return u;
+    return par[u][0] = root(par[u][0]);
+}
+
+inline void kruskal()
+{
+    sort(e, e+m);
+       
+    for(int i = 0 ; i < m ; i++)
+        if(root(e[i].x) != root(e[i].y))
+        {
+            par[root(e[i].x)][0] = root(e[i].y); 
+            adj[e[i].x].psb(create(e[i].y, e[i].w));   
+            adj[e[i].y].psb(create(e[i].x, e[i].w));  
+            sum += e[i].w;   
+        }    
+}
+
+void DFS(int u)
+{
+    c[u] = k;
+    
+    for(int i = 0 ; i < adj[u].size() ; i++)
+    {
+        int v = adj[u][i].X;
+            
+        if(!c[v])
+        {
+            par[v][0] = u;
+            h[v] = h[u] + 1;
+            mx[v][0] = adj[u][i].Y;
+            DFS(v);              
+        }
+    } 
+}
+
+inline ll get(int x, int y)
+{
+    if(h[x] > h[y]) swap(x, y);
+    
+    int ret = 0;
+    
+    for(int i = L-1 ; i >= 0 ; i--)
+        if(h[par[y][i]] >= h[x])
+        {
+            ret = max(ret, mx[y][i]);
+            y = par[y][i];            
+        }      
+        
+    if(x == y) return ret;
+    
+    for(int i = L-1 ; i >= 0 ; i--)
+        if(par[x][i] != par[y][i])
+        {
+            ret = max(ret, max(mx[x][i], mx[y][i]));
+            x = par[x][i];
+            y = par[y][i];          
+        }
+        
+    return max(ret, max(mx[x][0], mx[y][0]));
+}
+
+int main()
+{
+    ios_base::sync_with_stdio(false);
+    cin.tie(0);
+    cout.tie(0); 
+    
+    cin >> n >> m;
+    
+    for(int i = 1 ; i <= n ; i++)
+        par[i][0] = i;
+    
+    for(int i = 0 ; i < m ; i++)
+        cin >> e[i].x >> e[i].y >> e[i].w;
+    
+    kruskal();
+
+    h[0] = -1;
+    
+    for(int i = 1 ; i <= n ; i++)
+        if(!c[i])
+        {
+            k++;     
+            par[i][0] = 0;
+            DFS(i);       
+        }
+        
+    for(int i = 1 ; i < L ; i++)
+        for(int j = 1 ; j <= n ; j++)
+        {
+            par[j][i] = par[par[j][i-1]][i-1];
+            mx[j][i] = max(mx[j][i-1], mx[par[j][i-1]][i-1]);
+        }
+            
+    cin >> q;
+    
+    while(q--)
+    {
+        int x, y;
+        cin >> x >> y;
+        
+        if(k > 2) cout << -1 << endl;
+        
+        else if(k == 2)
+        {
+            if(c[x] == c[y]) cout << -1 << endl;
+            else cout << sum << endl;
+        }      
+        
+        else cout << sum - get(x, y) << endl;
+    }
+
+    return 0;
+}

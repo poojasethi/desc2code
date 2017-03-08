@@ -1,0 +1,97 @@
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+const int N = (int)1e3;
+
+struct Event {
+    int a, b, w;
+};
+
+int n, m, h, x, y;
+int aw[N], bw[N];
+vector<int> g[N];
+bool v[N];
+vector<int> st;
+vector<Event> ans;
+
+void add_edge(int a, int b) {
+    g[a].push_back(b);
+    g[b].push_back(a);
+}
+
+void try_flow(int i, int need) {
+    if (i + 1 >= st.size())
+        return;
+
+    int a = st[i], b = st[i + 1];
+    int can = min(need, h - aw[b]);
+
+    if (can > 0)
+        ans.push_back((Event){a, b, can});
+
+    try_flow(i + 1, need);
+
+    if (need - can > 0)
+        ans.push_back((Event){a, b, need - can});
+}
+
+void flow() {
+    int a = st.front(), b = st.back();
+    int need = min(aw[a] - bw[a], bw[b] - aw[b]);
+
+    if (need > 0) {
+        try_flow(0, need);
+        aw[a] -= need, aw[b] += need;
+    }
+}
+
+void dfs(int a) {
+    v[a] = true, st.push_back(a);
+
+    if (aw[a] < bw[a])
+        flow();
+
+    for (int i = 0; i < g[a].size(); i++) {
+        int b = g[a][i];
+        if (!v[b])
+            dfs(b);
+    }
+
+    st.pop_back();
+}
+
+int main() {
+    scanf("%d%d%d", &n, &h, &m);
+
+    for (int i = 0; i < n; i++)
+        scanf("%d", &aw[i]);
+
+    for (int i = 0; i < n; i++)
+        scanf("%d", &bw[i]);
+
+    for (int i = 1; i <= m; i++) {
+        scanf("%d%d", &x, &y), x--, y--;
+        add_edge(x, y);
+    }
+
+    for (int i = 0; i < n; i++)
+        if (aw[i] > bw[i])
+            fill(v, v + n, 0), dfs(i);
+
+    for (int i = 0; i < n; i++) {
+        if (aw[i] != bw[i]) {
+            puts("NO");
+            return 0;
+        }
+    }
+
+    printf("%d\n", ans.size());
+
+    for (int i = 0; i < ans.size(); i++)
+        printf("%d %d %d\n", ans[i].a + 1, ans[i].b + 1, ans[i].w);
+
+    return 0;
+}

@@ -1,0 +1,189 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define all(c) c.begin(), c.end()
+#define tr(container, it) for(auto it = container.begin(); it != container.end(); it++)
+#define present(c,x) ((c).find(x) != (c).end())
+#define cpresent(c,x) (find(all(c),x) != (c).end())
+#define mp make_pair
+#define Foreach(i, c) for(__typeof((c).begin()) i = (c).begin(); i != (c).end(); ++i)
+#define For(i,a,b) for(int (i)=(a);(i) < (b); ++(i))
+#define rof(i,a,b) for(int (i)=(a);(i) > (b); --(i))
+#define rep(i, c) for(auto &(i) : (c))
+#define x first
+#define y second
+#define pb push_back
+#define PB pop_back()
+#define fastscan ios_base::sync_with_stdio(0);cin.tie(NULL);
+#define MAXN 1000000
+#define MAXIND 1000000
+#define ll long long
+int arr[MAXN];
+struct node{
+	ll max,i,d,left,right;
+	ll sum;
+	node(){
+		max=0;
+		sum=0;
+		i=1;
+		d=1;
+		left=0;
+		right=0;
+	}
+	ll query(char type){
+		if(type=='M'){
+			return max;
+		}else if(type=='S'){
+			return sum;
+		}else if(type=='I'){
+			return i;
+		}else if(type=='D'){
+			return d;
+		}
+	}
+}vals[MAXIND];
+void initialize(int node, int b, int e, int N){
+	if (b == e){
+		vals[node].max = arr[b];
+		vals[node].sum = arr[b];
+		//vals[node].d = 1;
+		//vals[node].i = 1;
+		//M[node].left = A[b];
+		//M[node].right = A[b];
+	}else{
+		//compute the values in the left and right subtrees
+		initialize(2 * node, b, (b + e) / 2, N);
+		initialize(2 * node + 1, (b + e) / 2 + 1, e, N);
+		//search for the minimum value in the first and
+		//second half of the interval
+		if (vals[2 * node].max >= vals[2 * node + 1].max){
+			vals[node].max = vals[2 * node].max;
+		}
+		else{
+			vals[node].max = vals[2 * node + 1].max;
+		}
+		// compute sum
+		vals[node].sum=vals[2 * node].sum+vals[2*node+1].sum;
+		// compute monotonicity
+		if(vals[2 * node].d==1&&vals[2 * node+1].d==1&&arr[(b+e)/2]>=arr[(b+e)/2+1]){
+			vals[node].d=1;
+		}else{
+			vals[node].d=0;
+		}
+		if(vals[2 * node].i==1&&vals[2 * node+1].i==1&&arr[(b+e)/2]<=arr[(b+e)/2+1]){
+			vals[node].i=1;
+		}else{
+			vals[node].i=0;
+		}
+	}
+}
+void update(int node, int a, int b, int i, int j, int val){
+	if(a>b||a>j||b<i){
+		return;
+	}
+	//cout<<a<<" "<<b<<"\n";
+	if(a==b){
+		arr[a]=val;
+		vals[node].sum=val;
+		vals[node].max=val;
+		//vals[node].left=val;
+		//vals[node].right=val;
+		//vals[node].d = 1;
+		//vals[node].i = 1;
+		return;
+	}
+	update(node*2, a, (a+b)/2, i, j, val); // Updating left child
+	update(1+node*2, 1+(a+b)/2, b, i, j, val); // Updating right
+
+	// update max value
+	if (vals[2 * node].max >= vals[2 * node + 1].max){
+		vals[node].max = vals[2 * node].max;
+	}
+	else{
+		vals[node].max = vals[2 * node + 1].max;
+	}
+	// update sum
+	vals[node].sum=vals[2 * node].sum+vals[2*node+1].sum;
+
+	// update monotonicity
+	if(vals[2 * node].d==1&&vals[2 * node+1].d==1&&arr[(b+a)/2]>=arr[(b+a)/2+1]){
+		vals[node].d=1;
+	}else{
+		vals[node].d=0;
+	}
+	if(vals[2 * node].i==1&&vals[2 * node+1].i==1&&arr[(b+a)/2]<=arr[(b+a)/2+1]){
+		vals[node].i=1;
+	}else{
+		vals[node].i=0;
+	}
+}
+ll query(int node, int a, int b, int i ,int j,char type){
+	if(a > b || a > j || b < i) return 0;
+	// completely within range
+	if(a >= i && b <= j){
+		return vals[node].query(type);
+	}
+	if(type=='M'){
+		ll p1=query(2*node,a,(a+b)/2,i,j,type);
+		ll p2=query(2*node+1,(a+b)/2+1,b,i,j,type);
+		ll res=max(p1,p2);
+		return res;
+	}else if(type=='S'){
+		ll sum1=query(2*node,a,(a+b)/2,i,j,type);
+		ll sum2=query(2*node+1,(a+b)/2+1,b,i,j,type);
+		return sum1+sum2;
+	}
+}
+// to query monotonicity
+ll query_mon(int node, int a, int b, int i ,int j,char type){
+	if(a > b || a > j || b < i) return -1;
+	//cout<<"Entering "<<a<<" "<<b<<"\n";
+	if(a >= i && b <= j){
+		return vals[node].query(type);
+	}
+
+	int l1=query_mon(2*node,a,(a+b)/2,i,j,type);
+	int l2=query_mon(2*node+1,(a+b)/2+1,b,i,j,type);
+	if(l1==-1) return l2;
+	if(l2==-1) return l1;
+	if(type=='D'){
+		if(l1==1&&l2==1&&arr[(b+a)/2]>=arr[(b+a)/2+1]){
+			return 1;
+		}else{
+			return 0;
+		}
+	}else{
+		if(l1==1&&l2==1&&arr[(b+a)/2]<=arr[(b+a)/2+1]){
+			return 1;
+		}else{
+			return 0;
+		}
+	}
+}
+int main(){
+	fastscan
+	int n,m;
+	cin>>n>>m;
+	For(i,0,n){
+		int d;
+		cin>>d;
+		arr[i]=d;
+	}
+	initialize(1,0,n-1,n);
+	while(m--){
+		char T;
+		int a,b;
+		cin>>T>>a>>b;
+		if(T=='U'){
+			update(1,0,n-1,a-1,a-1,b);
+		}else{
+			if(T=='S'||T=='M'){
+				ll res=query(1,0,n-1,a-1,b-1,T);
+				cout<<res<<"\n";
+			}else{
+				ll res=query_mon(1,0,n-1,a-1,b-1,T);
+				cout<<res<<"\n";
+			}
+		}
+	}
+	return 0;
+}

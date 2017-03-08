@@ -1,0 +1,141 @@
+//#pragma comment(linker,"/STACK:100000000000,100000000000")
+
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <string>
+#include <cstring>
+#include <vector>
+#include <cmath>
+#include <map>
+#include <stack>
+#include <set>
+#include <iomanip>
+#include <queue>
+#include <map>
+#include <functional>
+#include <list>
+#include <sstream>
+#include <ctime>
+#include <climits>
+#include <bitset>
+#include <list>
+#include <cassert>
+#include <complex>
+
+using namespace std;
+
+/* Constants begin */
+const long long inf = 2e18 + 7;
+const long long mod = 1e9 + 7;
+const double eps = 1e-9;
+const double PI = 2*acos(0.0);
+const double E = 2.71828;
+/* Constants end */
+
+/* Defines begin */
+#define pb push_back
+#define mp make_pair
+#define ll long long
+#define double long double
+#define F first
+#define S second
+#define all(a) (a).begin(),(a).end()
+#define forn(i, n) for (int (i)=0; (i)<(n); ++(i))
+#define random (rand()<<16|rand())
+#define sqr(x) (x)*(x)
+#define base complex<double>
+/* Defines end */
+
+ll n[3];
+vector<int> g[3][100005];
+ll val[3][100005], size[3][100005], cnt[3][100005];
+ll bst[2][100005], cur;
+ll res = 0;
+int x, y;
+
+void dfs1(int id, int v, int pr = -1){
+  size[id][v] = 1;
+  forn(i, g[id][v].size()){
+    int to = g[id][v][i];
+    if(to == pr) continue;
+    dfs1(id, to, v);
+    size[id][v] += size[id][to];
+    val[id][v] += val[id][to] + size[id][to];
+  }
+}
+
+void dfs2(int id, int v, int pr = -1){
+  cnt[id][v] = val[id][v];
+  if(pr != -1){
+    cnt[id][v] += cnt[id][pr] - (val[id][v] + size[id][v]) + (n[id] - size[id][v]);
+  }
+  forn(i, g[id][v].size()){
+    int to = g[id][v][i];
+    if(to == pr) continue;
+    dfs2(id, to, v);
+  }
+}
+
+void dfs3(int id, int v, int pr = -1){
+  multiset<ll> now;
+  forn(i, g[id][v].size()){
+    int to = g[id][v][i];
+    if(to == pr) continue;
+    dfs3(id, to, v);
+    now.insert(bst[0][to]);
+  }
+  cur = max(cur, cnt[id][v] * (n[x] + n[y]));
+  bst[0][v] = cnt[id][v] * n[x];
+  bst[1][v] = cnt[id][v] * n[y];
+  forn(i, g[id][v].size()){
+    int to = g[id][v][i];
+    if(to == pr) continue;
+    now.erase(now.find(bst[0][to]));
+    if(!now.empty()) cur = max(cur, *now.rbegin() + 2 * n[x] * n[y] + bst[1][to]);
+    now.insert(bst[0][to]);
+    cur = max(cur, cnt[id][v] * n[x] + n[x] * n[y] + bst[1][to]);
+    cur = max(cur, cnt[id][v] * n[y] + n[x] * n[y] + bst[0][to]);
+    bst[0][v] = max(bst[0][v], bst[0][to] + n[x] * n[y]);
+    bst[1][v] = max(bst[1][v], bst[1][to] + n[x] * n[y]);
+  }
+}
+
+int main(void){
+  #ifdef nobik
+    freopen("input.txt", "rt", stdin);
+    freopen("output.txt", "wt", stdout);
+  #endif
+  cin >> n[0] >> n[1] >> n[2];
+  ll mx[3] = {0, 0, 0};
+  ll s = 0;
+  forn(i, 3){
+    forn(j, n[i] - 1){
+      int x, y; scanf("%d %d", &x, &y); --x; --y;
+      g[i][x].pb(y);
+      g[i][y].pb(x);
+    }
+    dfs1(i, 0);
+    dfs2(i, 0);
+    forn(j, n[i]){
+      s += cnt[i][j];
+      mx[i] = max(mx[i], cnt[i][j]);
+    }
+  }
+  s /= 2;
+  forn(i, 3) forn(j, 3) if(i != j){
+    x = j;
+    y = 3 - i - j;
+    cur = 0;
+    dfs3(i, 0);
+    cur += s;
+    cur += 2 * n[x] * n[y];
+    cur += mx[x] * n[i] + n[x] * n[i];
+    cur += mx[y] * n[i] + n[y] * n[i];
+    cur += mx[x] * n[y] + mx[y] * n[x];
+    res = max(res, cur);
+  }
+  cout << res << "\n";
+  return 0;
+}

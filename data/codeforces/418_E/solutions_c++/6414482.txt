@@ -1,0 +1,66 @@
+#include<cstdio>
+#include<algorithm>
+#include<cmath>
+using namespace std;
+const int MAXN = 200010, MXNM = 110;
+int N, M, K, tot, c[MAXN * 2], a[MAXN], cnt[MAXN * 2][MXNM], temp[MAXN * 2];
+struct Tque { int o, x, y; void Init(int _o, int _x, int _y) { o = _o; x = _x; y = _y; } } Q[MAXN];
+struct Tbit
+{
+	int a[MXNM][MAXN];
+	void Modify(int u, int x, int y) { if(x<=0) return; for(; x <= N; x += x & -x) a[u][x] += y; }
+	int Query(int u, int x) { int ret = 0; for(; x > 0; x -= x & -x) ret += a[u][x]; return ret; }
+} T;
+int main()
+{
+	scanf("%d", &N);
+	for(int i = 1; i <= N; ++i)
+		scanf("%d", &a[i]), c[++tot] = a[i];
+	scanf("%d", &M);
+	for(int i = 1, o, x, y; i <= M; ++i)
+	{
+		scanf("%d%d%d", &o, &x, &y);
+		Q[i].Init(o, x, y); if(o == 1) c[++tot] = x;
+	}
+	sort(c + 1, c + tot + 1); K = unique(c + 1, c + tot + 1) - c - 1;
+	for(int i = 1; i <= N; ++i)
+		a[i] = lower_bound(c + 1, c + K + 1, a[i]) - c;
+	for(int i = 1; i <= M; ++i)
+		if(Q[i].o == 1) Q[i].x = lower_bound(c + 1, c + K + 1, Q[i].x) - c;
+	int Num = min(100, (int) sqrt( (double) N ) ), Len = (N - 1) / Num + 1;
+	for(int i = 1; i <= N; ++i) Num = max(Num, i / Len + 1);
+	for(int i = 1; i <= N; ++i) ++cnt[a[i]][i / Len];
+	for(int i = 1; i <= K; ++i)
+		for(int j = 1; j < Num; ++j) cnt[i][j] += cnt[i][j-1];
+	for(int i = 0; i < Num; ++i)
+		for(int j = 1; j <= K; ++j) T.Modify(i, cnt[j][i], 1);
+    for(int i = 1; i <= M; ++i)
+    if(Q[i].o == 1)
+    {
+		int y = Q[i].y, now = y / Len;
+		for(int j = now; j < Num; ++j)
+		{
+			T.Modify(j, cnt[a[y]][j], -1); --cnt[a[y]][j];
+			T.Modify(j, cnt[a[y]][j], +1); 
+		}
+		a[y] = Q[i].x;
+		for(int j = now; j < Num; ++j)
+		{
+			T.Modify(j, cnt[a[y]][j], -1); ++cnt[a[y]][j];
+			T.Modify(j, cnt[a[y]][j], +1);
+		}
+	}
+	else
+	{
+		int y = Q[i].y, now = y / Len, pos = now ? now * Len : 1;
+		if(Q[i].x == 1) { printf("%d\n", c[a[y]]); continue; }
+		int ans1 = now ? cnt[a[y]][now-1] : 0; 
+		for(int j = pos; j <= y; ++j) ans1 += (a[y] == a[j]);
+		if(Q[i].x % 2 == 0) { printf("%d\n", ans1); continue; }
+		int ans2 = now ? T.Query(now-1, N) - T.Query(now-1, ans1-1) : 0;
+		for(int j = pos; j <= y; ++j) temp[a[j]] = (now ? cnt[a[j]][now-1] : 0);
+		for(int j = pos; j <= y; ++j) if(++temp[a[j]] == ans1) ++ans2;
+		printf("%d\n", ans2);
+	}
+	return 0;
+}

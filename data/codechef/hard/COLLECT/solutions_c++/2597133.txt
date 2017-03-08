@@ -1,0 +1,102 @@
+#include<stdio.h>
+#include<string.h>
+#define MOD 3046201
+int a[100005],segment_tree[262144] ; // 2*2^[ floor(log n/ log 2) + 1 ]
+long long int  fact[3046210],inv[3046210],invfact[3046210] ;
+
+int build_tree(int node,int beg,int end){
+    int lftIndx , rgtIndx ,lcontent ,rcontent ,lvalue , rvalue ;
+	if(beg == end)
+			segment_tree[node] = a[beg];
+	else {
+		lftIndx = 2*node , rgtIndx = 2*node + 1;
+		build_tree(lftIndx,beg,(beg+end)/2);
+		build_tree(rgtIndx,(beg+end)/2 + 1,end);
+        lcontent =  segment_tree[lftIndx] ;
+		rcontent =  segment_tree[rgtIndx] ;
+		segment_tree[node] = lcontent + rcontent;
+	}
+}
+
+int query(int node,int beg,int end,int i,int j){
+	if (i > end || j < beg) return -1;
+	if (beg >= i && end <= j) return  segment_tree[node] ;
+	int p1 = query(2*node,beg,(beg+end)/2,i,j);
+	int p2 = query(2*node+1,(beg+end)/2+1,end,i,j);
+	if(p1 == -1 ) return p2;
+	if(p2 == -1) return p1 ;
+	return p1 + p2 ;
+}
+
+void update(int node, int begin, int end, int pos, int val){
+     if(begin == pos && end == pos)
+              segment_tree[node] += val;
+     else{
+          if(pos > (begin + end)/2)
+                 update(2*node + 1, (begin + end)/2 + 1, end, pos, val);
+          else
+              update(2*node, begin, (begin + end)/2, pos, val);
+          segment_tree[node] = segment_tree[2*node] + segment_tree[2*node + 1];
+      }
+}
+
+long long int power(long long int a,int n){
+	long long int ans = 1 , pow = a;
+	while(n){
+		if(n%2 == 1) ans = (ans * pow)%MOD ;
+		pow = (pow * pow)%MOD ;
+		n /= 2 ;
+	}
+	return ans ;
+}
+
+int main(){
+	int n,i,q,l,r,sum,quo,rem,diff,dif;
+	long long int t1,t2,t3,ans ;
+	char s[10];
+	// Preprocess
+	fact[0] = inv[0] = inv[1] = invfact[0] = 1 ;
+	for(i=2;i<3046210;i++){
+		inv[i] = MOD - (((MOD/i)*inv[MOD%i])%MOD) ;
+	}
+
+	for(i=1;i<3046210;i++) {
+		fact[i] = (fact[i-1]*i)%MOD ;
+		invfact[i] = (inv[i]*invfact[i-1])%MOD ;
+		//printf("%d\n",i);
+	}
+
+	//Build Segment Tree
+	scanf("%d",&n);
+	memset(segment_tree,0,sizeof(segment_tree));
+	for(i=0;i<n;i++)
+		scanf("%d",&a[i]);
+	build_tree(1,0,n-1);
+
+	// Enter Queries
+	scanf("%d",&q);
+	while(q--){
+		scanf("%s%d%d",s,&l,&r);
+		if(strcmp(s,"query") == 0){
+			sum = query(1,0,n-1,l-1,r-1);
+			if(sum >= 3046201) printf("0\n");
+			else {
+				diff = r-l+1 ;
+				quo = sum/diff ;
+				rem = sum % diff ;
+                t1 = power(invfact[quo+1],rem);
+                t2 = power(invfact[quo],diff-rem);
+				t3 = (((fact[diff]*invfact[diff-rem])%MOD)*invfact[rem])%MOD ;
+				ans = (((((fact[sum]*t1)%MOD)*t2)%MOD)*t3)%MOD ;
+				printf("%lld\n",ans);
+			}
+		}
+		else {
+            //printf("Hello\n");
+			dif = r - a[l-1] ;
+			a[l-1] = r ;
+			update(1,0,n-1,l-1,dif);
+		}
+	}
+	return 0;
+}

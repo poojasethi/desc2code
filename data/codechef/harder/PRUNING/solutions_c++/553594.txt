@@ -1,0 +1,158 @@
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <queue>
+#include <iostream>
+#include <cmath>
+#include <sstream>
+#include <map>
+#include <set>
+#include <numeric>
+#include <complex>
+#include <stdio.h>
+#include <memory.h>
+
+using namespace std;
+
+#define pb push_back
+#define INF 1011111111
+#define L(s) (int)((s).size())
+#define FOR(i,a,b) for (int _n(b), i(a); i < _n; i++)
+#define rep(i,n) FOR(i,0,n)
+#define ford(i,a,b) for(int i=(a),_b=(b);i>=_b;--i)
+#define CL(a,v) memset((a),(v),sizeof(a))
+#define ll long long
+#define VI vector<int>
+#define mp make_pair
+#define X first
+#define Y second
+#define all(c) (c).begin(), (c).end()
+#define SORT(c) sort(all(c))
+
+const int MAX = 101;
+
+VI e[MAX];
+int dist[MAX][MAX];
+bool isAncestor[MAX][MAX];
+
+int find_max_center_in_the_tree_memo[MAX];
+int dp_tree_memo[MAX][MAX];
+
+const int ROOT = 0;
+int N,D;
+
+void dfs(int v, int from = -1)
+{
+    rep(i,e[v].size())
+    {
+        const int to = e[v][i];
+
+        if(to==from)
+        {
+            swap(e[v][0],e[v][i]);
+
+            int u = v;
+
+            do
+            {
+                u = e[u][0];
+                isAncestor[u][v] = true;
+            }
+            while(u != ROOT);
+
+            break;
+        }
+    }
+
+    rep(i,e[v].size())
+    {
+        const int to = e[v][i];
+
+        if(to == from) continue;
+
+        dfs(to,v);
+    }
+}
+
+int find_max_center_in_the_tree(int root)
+{
+    int dp_tree(int,int);
+
+    int &ans = find_max_center_in_the_tree_memo[root];
+
+    if(ans != -1) return ans;
+
+    rep(i,N) if(isAncestor[root][i] || i==root)
+    ans = max(dp_tree(root,i),ans);
+
+    return ans;
+}
+
+int dp_tree(int root, int center)
+{
+    int &ans = dp_tree_memo[root][center];
+
+    if(ans != -1) return ans;
+
+    if(dist[root][center] > D) return ans = -1<<31;
+
+    ans = 0;
+
+    FOR(i, root==ROOT ? 0 : 1, e[root].size())
+    {
+        const int to = e[root][i];
+
+        if(!isAncestor[to][center])
+        {
+            ans += max(find_max_center_in_the_tree(to), dp_tree(to,center) + dist[root][to] );
+        }
+        else
+        {
+            ans += dp_tree(to,center) + dist[root][to];
+        }
+    }
+
+    return ans;
+}
+
+int main()
+{
+//	#ifndef ONLINE_JUDGE
+        //freopen("input.txt","r",stdin);
+//        freopen("output.txt","w", stdout);
+//	#endif
+
+    int T;
+    cin >> T;
+    int wrong = 0;
+
+    while(T--)
+    {
+        CL(dp_tree_memo,-1);
+        CL(find_max_center_in_the_tree_memo,-1);
+        CL(isAncestor,0);
+        rep(i,MAX) rep(j,MAX) dist[i][j] = i==j ? 0 : INF;
+        rep(i,MAX) e[i].clear();
+
+        cin >> N >> D;
+
+        rep(i,N-1)
+        {
+            int u,v,w;
+            cin >> u >> v >> w;
+
+            dist[u][v] = dist[v][u] = w;
+            e[u].pb(v);
+            e[v].pb(u);
+        }
+
+        rep(k,N) rep(i,N) rep(j,N) dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j]);
+
+        dfs(ROOT);
+
+        cout <<  find_max_center_in_the_tree(ROOT) << endl;
+    }
+
+
+	return 0;
+}

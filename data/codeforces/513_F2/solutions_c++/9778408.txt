@@ -1,0 +1,199 @@
+#include<iostream>
+#include<stdio.h>
+#include<string.h>
+#include<queue>
+#include<cmath>
+template <class T>
+inline bool rd(T &ret) {
+	char c; int sgn;
+	if (c = getchar(), c == EOF) return 0;
+	while (c != '-' && (c<'0' || c>'9')) c = getchar();
+	sgn = (c == '-') ? -1 : 1;
+	ret = (c == '-') ? 0 : (c - '0');
+	while (c = getchar(), c >= '0'&&c <= '9') ret = ret * 10 + (c - '0');
+	ret *= sgn;
+	return 1;
+}
+template <class T>
+inline void pt(T x) {
+	if (x <0) {
+		putchar('-');
+		x = -x;
+	}
+	if (x>9) pt(x / 10);
+	putchar(x % 10 + '0');
+}
+using namespace std;
+typedef long long ll;
+const ll inf = 1e10;
+const int N = 10009;
+const int M = 10000000;
+template<class T>
+struct Max_Flow {
+	int n;
+	int Q[N], sign;
+	int head[N], level[N], cur[N], pre[N];
+	int nxt[M], pnt[M], E;
+	T cap[M];
+	void Init(int n) {
+		this->n = n + 1;
+		E = 0;
+		std::fill(head, head + this->n, -1);
+	}
+	//有向rw 就= 0  
+	void add(int from, int to, T c, T rw) {
+		pnt[E] = to;
+		cap[E] = c;
+		nxt[E] = head[from];
+		head[from] = E++;
+
+		pnt[E] = from;
+		cap[E] = rw;
+		nxt[E] = head[to];
+		head[to] = E++;
+	}
+	bool Bfs(int s, int t) {
+		sign = t;
+		std::fill(level, level + n, -1);
+		int *front = Q, *tail = Q;
+		*tail++ = t; level[t] = 0;
+		while (front < tail && level[s] == -1) {
+			int u = *front++;
+			for (int e = head[u]; e != -1; e = nxt[e]) {
+				if (cap[e ^ 1] > 0 && level[pnt[e]] < 0) {
+					level[pnt[e]] = level[u] + 1;
+					*tail++ = pnt[e];
+				}
+			}
+		}
+		return level[s] != -1;
+	}
+	void Push(int t, T &flow) {
+		T mi = inf;
+		int p = pre[t];
+		for (int p = pre[t]; p != -1; p = pre[pnt[p ^ 1]]) {
+			mi = std::min(mi, cap[p]);                                                                                                                                       
+		}
+		for (int p = pre[t]; p != -1; p = pre[pnt[p ^ 1]]) {
+			cap[p] -= mi;
+			if (!cap[p]) {
+				sign = pnt[p ^ 1];
+			}
+			cap[p ^ 1] += mi;
+		}
+		flow += mi;
+	}
+	void Dfs(int u, int t, T &flow) {
+		if (u == t) {
+			Push(t, flow);
+			return;
+		}
+		for (int &e = cur[u]; e != -1; e = nxt[e]) {
+			if (cap[e] > 0 && level[u] - 1 == level[pnt[e]]) {
+				pre[pnt[e]] = e;
+				Dfs(pnt[e], t, flow);
+				if (level[sign] > level[u]) {
+					return;
+				}
+				sign = t;
+			}
+		}
+	}
+	T Dinic(int s, int t) {
+		pre[s] = -1;
+		T flow = 0;
+		while (Bfs(s, t)) {
+			std::copy(head, head + n, cur);
+			Dfs(s, t, flow);
+		}
+		return flow;
+	}
+};
+Max_Flow <ll>F;
+struct node{
+	int x, y; ll t;
+	node(int a = 0, int b = 0, ll c = 0) :x(a), y(b), t(c){}
+}AA[N], B[N], C;
+int n, m, a, b;
+char mp[24][24];
+ll Dis[24][24][24][24];
+int has1(int x){ return x - 1; }
+int has2(int x, int y){ return a + (x - 1)*m + y - 1; }
+int has3(int x, int y){ return a + n*m + (x - 1)*m + y - 1; }
+int has4(int x){ return a + 2 * n*m + x - 1; }
+bool ok(ll now){
+	int from = has4(b) + 1, to = from + 1;
+	F.Init(to+10);
+	for (int i = 1; i <= a; i++){
+		F.add(from, has1(i), 1, 0);
+		for (int x = 1; x <= n; x++)
+		for (int y = 1; y <= m; y++)
+			if (Dis[x][y][AA[i].x][AA[i].y] < inf && Dis[x][y][AA[i].x][AA[i].y] * AA[i].t <= now)
+				F.add(has1(i), has2(x, y), 1, 0);
+	}
+	for (int i = 1; i <= n; i++)for (int j = 1; j <= m; j++)if (mp[i][j] == '.') F.add(has2(i, j), has3(i, j), 1, 0);
+	for (int i = 1; i <= b; i++){
+		F.add(has4(i), to, 1, 0);
+		for (int x = 1; x <= n; x++)
+		for (int y = 1; y <= m; y++)
+			if (Dis[x][y][B[i].x][B[i].y] < inf && Dis[x][y][B[i].x][B[i].y] * B[i].t <= now)
+				F.add(has3(x, y), has4(i), 1, 0);
+	}
+	return F.Dinic(from, to) == b;
+}
+ll solve(){
+	if (a != b)return -1;
+	ll ans = -1, l = 0, r = 1e18;
+	while (l <= r){
+		ll mid = (l + r) >> 1;
+		if (ok(mid)){
+			r = mid - 1;
+			ans = mid;
+		}
+		else
+			l = mid + 1;
+	}
+	return ans;
+}
+void pre(){
+	for (int i = 1; i <= n; i++)for (int j = 1; j <= m; j++)for (int x = 1; x <= n; x++)for (int y = 1; y <= m; y++)Dis[i][j][x][y] = inf;
+	int step[4][2] = { 0, 1, 0, -1, 1, 0, -1, 0 };
+	for (int i = 1; i <= n; i++)
+	for (int j = 1; j <= m; j++){
+		if (mp[i][j] == '*')continue;
+		Dis[i][j][i][j] = 0;
+		for (int k = 0; k < 4; k++){
+			int x = i + step[k][0], y = j + step[k][1];
+			if (1 <= x && x <= n && 1 <= y&&y <= m && mp[x][y] == '.')
+				Dis[i][j][x][y] = 1;
+		}
+	}
+	for (int x1 = 1; x1 <= n; x1++)for (int y1 = 1; y1 <= m; y1++) if (mp[x1][y1] == '.')
+	for (int x2 = 1; x2 <= n; x2++)for (int y2 = 1; y2 <= m; y2++) if (mp[x2][y2]=='.' && Dis[x2][y2][x1][y1]<inf)
+	for (int x3 = 1; x3 <= n; x3++)for (int y3 = 1; y3 <= m; y3++) if (mp[x3][y3] == '.')
+		Dis[x2][y2][x3][y3] = min(Dis[x2][y2][x3][y3], Dis[x2][y2][x1][y1] + Dis[x1][y1][x3][y3]);
+	if (a>b)B[++b] = C;
+	else AA[++a] = C;
+}
+void input(){
+	rd(n); rd(m); rd(a); rd(b);
+	for (int i = 1; i <= n; i++)scanf("%s", mp[i] + 1);
+	rd(C.x); rd(C.y); rd(C.t);
+	for (int i = 1; i <= a; i++) { rd(AA[i].x); rd(AA[i].y); rd(AA[i].t); }
+	for (int i = 1; i <= b; i++) { rd(B[i].x); rd(B[i].y); rd(B[i].t); }
+}
+
+int main(){
+	input();
+	pre();
+	cout<<solve()<<endl;
+	return 0;
+}
+/*
+1 1 1 0
+.
+1 1 1
+1 1 1
+
+*/
+		 						 	   							 	 	 	 			

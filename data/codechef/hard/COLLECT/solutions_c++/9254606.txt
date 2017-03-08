@@ -1,0 +1,113 @@
+#include<bits/stdc++.h>
+using namespace std;
+#define pb push_back
+#define mp make_pair
+#define sz(_v) (int)(_v).size()
+#define all(_v) (_v).begin(),(_v).end()
+#define pii pair<int,int>
+typedef long long ll;
+const int INF = 1000000000;
+const ll mod = 3046201;
+
+const int maxn = 100010;
+int tree_node[maxn << 2];
+int arr[maxn];
+ll fact[mod + 6];
+char s[11];
+
+ll fast_expo(ll a,ll b) {
+	// a ^ b % mod;
+	if(b == 0) return 1;
+	ll p;
+	if(!(b & 1)) {
+		p = fast_expo(a,b / 2) % mod;
+		p = (p * p) % mod;
+	}
+	else p = (a * fast_expo(a,b - 1)) % mod;
+
+	return p;
+}
+
+void build(int idx,int lo,int hi) {
+	if(lo == hi) {
+		tree_node[idx] = arr[lo];
+		return;
+	}
+	int mid = (lo + hi) / 2;
+	build(idx + idx,lo,mid);
+	build(idx + idx + 1,mid + 1,hi);
+
+	tree_node[idx] = tree_node[idx + idx] + tree_node[idx + idx + 1];
+}
+
+void update_tree(int idx,int lo,int hi,int index,int val) {
+	if(lo == hi) {
+		tree_node[idx] = val;
+		return;
+	}
+	
+	int mid = (lo + hi) / 2;
+	if(index <= mid) update_tree(idx + idx,lo,mid,index,val);
+	else update_tree(idx + idx + 1,mid + 1,hi,index,val);
+
+	tree_node[idx] = tree_node[idx + idx] + tree_node[idx + idx + 1];
+}
+
+int query_tree(int idx,int lo,int hi,int l,int r) {
+	if(lo == l and hi == r) return tree_node[idx];
+	
+	int mid = (lo + hi) / 2;
+	if(r <= mid) return query_tree(idx + idx,lo,mid,l,r);
+	if(l > mid) return query_tree(idx + idx + 1,mid + 1,hi,l,r);
+
+	int aa = query_tree(idx + idx,lo,mid,l,mid);
+	int bb = query_tree(idx + idx + 1,mid + 1,hi,mid + 1,r);
+
+	return aa + bb;
+}
+
+ll calc(int sum,int range) {
+	int less = sum / range;
+	int more = less + 1;
+	int num_more = sum % range;
+    int num_less = range - num_more;
+	
+	ll aa = (fact[range] * fast_expo(fact[num_more],mod - 2) + mod) % mod;
+	aa = (aa * fast_expo(fact[num_less],mod - 2) + mod) % mod;
+
+	ll a1 = (fast_expo(fact[less],1ll * num_less) + mod) % mod;
+	ll b1 = (fast_expo(fact[more],1ll * num_more) + mod) % mod;
+	
+	ll ans = (fact[sum] * fast_expo(a1,mod - 2) + mod) % mod;
+	ans = (ans * fast_expo(b1,mod - 2) + mod) % mod;
+	ans = (ans * aa + mod) % mod;
+
+	return ans;
+}
+
+int main() {
+	int n; scanf("%d",&n);
+	int u,v;
+	for (int i = 1; i <= n; i ++) scanf("%d",arr + i);
+
+	build(1,1,n);
+	int q; scanf("%d",&q);
+
+	fact[0] = 1;
+	for (int i = 1; i < mod; i ++) fact[i] = (fact[i - 1] * i) % mod;
+
+	while (q --) {
+		scanf("%s",s);
+		scanf("%d%d",&u,&v);
+		if(s[0] == 'c') {
+			arr[u] = v;
+			update_tree(1,1,n,u,v);
+		}
+		else {
+			int aa = query_tree(1,1,n,u,v);
+			ll ans = calc(aa,(v - u + 1));
+			printf("%lld\n",ans);
+		}
+	}
+	return 0;
+}

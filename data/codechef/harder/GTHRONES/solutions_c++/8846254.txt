@@ -1,0 +1,182 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+#include <vector>
+#ifdef WIN32
+	#define ran() (rand()*32768+rand())
+#else
+	#define ran() rand()
+#endif
+using namespace std;
+typedef long double LD;
+typedef long long LL;
+typedef unsigned long long u64;
+const int Maxn=505;
+int n;
+pair<u64,int> a[Maxn];
+vector <int> e[Maxn];
+bool divi[Maxn],flag[Maxn];
+
+u64 Ran() {
+	return (u64(ran())<<30)+ran();
+}
+
+u64 Mul(LL a,LL b,LL mod) {
+	if (mod<(1u<<31)) return a*b%mod;
+	LL ret=(a*b-LL(LD(a)*b/mod+0.5)*mod)%mod;
+	return ret<0?ret+mod:ret;
+}
+
+u64 Pow(u64 a,u64 x,u64 mod) {
+	if (!x) return 1;
+	if (x==1) return a%mod;
+	u64 ret=Pow(a,x>>1,mod);
+	ret=Mul(ret,ret,mod);
+	if (x&1) ret=Mul(ret,a,mod);
+	return ret;
+}
+
+bool MillerRabin(u64 n) {
+	static const int K=20;
+	if (n==2||n==3) return true;
+	if (n==1||n%2==0) return false;
+	u64 d=n-1;
+	int x=0;
+	while ((d&1)==0) d>>=1,x++;
+	for (int i=1;i<=K;i++) {
+		u64 a=Pow(Ran()%(n-3)+2,d,n),lasta;
+		for (int i=1;i<=x;i++) {
+			lasta=a;
+			a=Mul(a,a,n);
+			if (a==1&&lasta!=1&&lasta!=n-1)
+				return false;
+		}
+		if (a!=1) return false;
+	}
+	return true;
+}
+
+void Divide(int x,bool cur) {
+	flag[x]=true;
+	divi[x]=cur;
+	for (int i=0;i<e[x].size();i++)
+		if (!flag[e[x][i]])
+			Divide(e[x][i],!cur);
+}
+
+namespace Dinic{
+	const u64 inf=999999999999999999ull+208;
+	const int Maxp=Maxn,Maxe=Maxn*Maxn;
+	int head[Maxp],next[Maxe],to[Maxe],v[Maxe],En=1,cur[Maxp];
+	int S=0,T=1,Q[Maxp],depth[Maxp];
+	bool visi[Maxp];
+	
+	void add(int x,int y,int z) {
+		next[++En]=head[x]; head[x]=En; to[En]=y; v[En]=z;
+		next[++En]=head[y]; head[y]=En; to[En]=x; v[En]=0;
+	}
+	
+	bool bfs() {
+		memset(depth,0,(T+1)<<2);
+		int l=1,r=2;
+		depth[Q[1]=S]=1;
+		while (l<r) {
+			int x=Q[l++];
+			for (int k=head[x];k;k=next[k])
+				if (v[k]&&!depth[to[k]])
+					depth[Q[r++]=to[k]]=depth[x]+1;
+		}
+		return depth[T]>0;
+	}
+	
+	u64 dfs(int x,u64 f) {
+		if (x==T) return f;
+		u64 r=f,t;
+		for (int &k=cur[x];k;k=next[k])
+			if (v[k]&&depth[to[k]]==depth[x]+1) {
+				t=dfs(to[k],r<v[k]?r:v[k]);
+				r-=t; v[k]-=t; v[k^1]+=t;
+				if (!r) break;
+			}
+		if (f==r) depth[x]=0;
+		return f-r;
+	}
+	
+	u64 flow() {
+		u64 ret=0;
+		while (bfs()) {
+			memcpy(cur,head,(T+1)<<2);
+			ret+=dfs(S,inf);
+		}
+		return ret;
+	}
+	
+	bool dfs(int x,int aim,int Limi) {
+		if (x==aim) return true;
+		visi[x]=true;
+		for (int k=head[x];k;k=next[k])
+			if (k/2!=Limi&&v[k]&&!visi[to[k]]&&dfs(to[k],aim,Limi))
+				return true;
+		return false;
+	}
+	
+	bool check(int s,int t,int Limi) {
+		memset(visi,0,T+1);
+		return dfs(s,t,Limi);
+	}
+	
+	void work() {
+		S=0; T=n+1;
+		u64 totl=0,totr=0;
+		for (int i=1;i<=n;i++) {
+			if (divi[i]) add(i,T,a[i].second),totr+=a[i].second;
+			else add(S,i,a[i].second),totl+=a[i].second;
+		}
+		for (int i=1;i<=n;i++) {
+			if (divi[i]) continue;
+			for (int j=0;j<e[i].size();j++)
+				add(i,e[i][j],min(a[i].second,a[e[i][j]].second));
+		}
+		u64 flo=flow();
+		if (totl==totr&&flo==totl) {
+			puts("Tyrion");
+			return;
+		}
+		for (int i=1;i<=n;i++) {
+			if (divi[i]) {
+				if (v[i*2]!=0||check(i,T,i)) {
+					cout<<"Bran "<<a[i].first<<endl;
+					return;
+				}
+			}
+			else {
+				if (v[i*2]!=0||check(S,i,i)) {
+					cout<<"Bran "<<a[i].first<<endl;
+					return;
+				}
+			}
+		}
+	}
+}
+
+int main() {
+	srand(208);
+	cin>>n;
+	for (int i=1;i<=n;i++)
+		cin>>a[i].first>>a[i].second;
+	sort(a+1,a+n+1);
+	for (int i=1;i<=n;i++)
+		for (int j=i+1;j<=n;j++)
+			if (a[j].first%a[i].first==0&&MillerRabin(a[j].first/a[i].first))
+				e[i].push_back(j),
+				e[j].push_back(i);
+	for (int i=1;i<=n;i++)
+		if (!flag[i])
+			Divide(i,0);
+	Dinic::work();
+	return 0;
+}

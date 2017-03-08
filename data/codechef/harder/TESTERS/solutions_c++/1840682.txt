@@ -1,0 +1,341 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <set>
+#include <math.h>
+#include <assert.h>
+#include <map>
+#include <queue>
+#include <time.h>
+#include <stdio.h>
+#include <string.h>
+#include <string>
+#include <sstream>
+#include <stdarg.h>
+using namespace std;
+#pragma comment(linker, "/STACK:256000000")
+typedef  long long ll;
+template<typename T> int size(T &a) {return (int)a.size();}
+template<typename T> T sqr(T a)  { return a * a; }
+
+#define REP(i,a,b) for(int i=(a);i<(b); ++i)
+#define REPD(i,a,b)for(int i=(b)-1;i>=a;--i)
+#define _(a,b) memset((a), (b), sizeof(a))
+#define all(a) a.begin(), a.end()
+#define mp make_pair
+#define pb push_back
+#define vi vector<int> 
+
+const int MAXT = 300001;
+int iterc = 0;
+void ADD() {
+	if (iterc++>int(7000000)) assert(false);
+}
+struct node {
+	int dq;
+	int pr;
+	int cnt;
+	int sumcnt;
+	ll len;
+	ll sumlen;
+	int maxdep;
+	node *L, *R;
+};
+
+int sz = 0;
+node mem[MAXT];
+int sumcnt (node *t) { return t==NULL ? 0 : t->sumcnt; }
+ll sumlen (node *t) { return t==NULL ? 0 : t->sumlen; }
+int getmaxdep(node *t) { return t==NULL ? 0 : t->maxdep; }
+void update(node *&t) {
+	if (!t) return;
+	t->maxdep = 1 + max(getmaxdep(t->L), getmaxdep(t->R));
+	t->sumcnt = sumcnt(t->L) + sumcnt(t->R) + t->cnt;
+	t->sumlen = sumlen(t->L) + sumlen(t->R) + t->len;
+}
+node *init(int dq, ll len, int ways) {
+	if (sz == MAXT ) {
+		while (1) 
+			++dq;
+		cout << dq;
+	}
+	mem[sz].dq = dq;
+	mem[sz].pr = (rand() << 30) + rand();
+	mem[sz].cnt = mem[sz].sumcnt = ways;
+	mem[sz].sumlen = mem[sz].len = len;
+	mem[sz].L = mem[sz].R = NULL;
+
+	return &mem[sz++];
+}
+void merge(node *L, node *R, node *&t) {
+	if (!L) t = R;
+	else if (!R) t = L;
+	else {
+		if (L->pr < R->pr)merge(L, R->L, R->L), t = R;
+		else merge(L->R, R, L->R), t = L;
+		update(t);
+	}
+}
+void split(node *t, node *&L, node *&R, int key) {
+	if (!t) 
+		L = R = NULL;
+	else {
+		if (t->dq <= key) split(t->R, t->R, R, key), L = t;
+		else split(t->L, L, t->L, key), R = t;
+		update(t);
+	}
+}
+bool exist(node *&t, int dq, int ways, ll sumlen) {
+	if (!t) return false;
+	if (t->dq == dq) {
+		t->cnt += ways;
+		t->len += sumlen;
+		update(t);
+	} else if(t->dq < dq) {
+		bool res = exist(t->R, dq, ways, sumlen);
+		update(t);
+		return res;
+	} else {
+		bool res = exist(t->L, dq, ways, sumlen);
+		update(t);
+		return res;
+	}
+}
+void RecursiveInsert(node *&t, node *add) {
+	node *p, *q;
+	split(t, p, q, add->dq);
+	merge(p, add, t);
+	merge(t, q, t);
+}
+
+void InsertToTree(node *&t, node *q) {
+	ADD();
+	//if (!exist(t, q->dq, q->cnt, q->len)) {
+		RecursiveInsert(t, q);
+	//}
+}
+//void InsertToTree(node *&t, int dq, int ways, ll sumlen) {
+//	if (!exist(t, dq, ways, sumlen)) {
+//		node *add = init(dq, sumlen, ways);
+//		RecursiveInsert(t, add);
+//	}
+//}
+int getways (node *t, int d) {
+	int res = 0;
+	for(; t; ) {
+		if (t->dq >= d) {
+			res += sumcnt(t) - sumcnt(t->L) ;
+			t = t->L;
+		} else {
+			t = t->R;
+		}
+	}
+	return res;
+}
+ll getsum(node *t, int d) {
+	ll res = 0;
+	for(; t; ) {
+		if (t->dq >= d) {
+			res += sumlen(t) - sumlen(t->L);
+			t = t->L;
+		} else {
+			t = t->R;
+		}
+	}
+	return res;
+}
+
+const int MAXE = 600100;
+const int MAXN = 300100;
+
+int head[MAXN], to[MAXE], nxt[MAXE];
+int ps[MAXN][2];
+int b[MAXN][2];
+int edge;
+node* rets[MAXN];
+ll ans = 0;
+
+void init() {
+	edge = 0;
+	_(head, 255);
+}
+void ae (int u, int v) {
+	to[edge] = v;
+	nxt[edge] = head[u];
+	head[u] = edge++;
+}
+
+inline void process (node *q, node *e, int dc, int len) {
+	ADD();
+	int waysq = getways(q, dc - e->dq);
+	int waysc = e->cnt;
+	ll sumq = getsum(q, dc - e->dq);
+	ll sumc = e->len;
+	ans += sumq * waysc + sumc * waysq - 
+		(ll)  len * waysc * waysq * 2 + (ll) waysc * waysq ;
+}
+
+void IterateOnTree(node *t, node *q, int dc, int len) {
+	if (!t) return;
+	IterateOnTree(t->L, q, dc, len);
+	IterateOnTree(t->R, q, dc, len);
+	process(q, t, dc, len);
+}
+void IterateInsert(node *&t, node *q) {
+	if (!q) return;
+	IterateInsert(t, q->L);
+	q->L=0;
+	IterateInsert(t, q->R);
+	q->R = 0;
+	update(q);
+	InsertToTree(t, q);
+	update(t);
+}
+
+int num[MAXN];
+int st[MAXN];
+int par[MAXN];
+int ptr=0;
+
+void DfsWithStack(int v) {
+	_(num, 255);
+	st[ptr] = v;
+	par[ptr] = -1;
+	++ptr;
+	for(; ptr; ) {
+		v = st[ptr - 1];
+		int p = par[ptr - 1];
+		if (num[v] == -1) {
+			num[v] = 1;
+
+			int p0 = (p==-1 ? 0 : ps[p][0]);
+			int p1 = (p==-1 ? 0 : ps[p][1]);
+			ps[v][0] = p0 + b[v][0];
+			ps[v][1] = p1 + b[v][1];
+			if (b[v][1]) ++ ans;
+			
+			for (int e=head[v]; e>=0; e = nxt[e]) {
+				if (to[e]==p) continue;
+				st[ptr] = to[e];
+				par[ptr] = v;
+				++ptr;
+			}
+		} else {
+			--ptr;
+			int p0 = (p==-1 ? 0 : ps[p][0]);
+			int p1 = (p==-1 ? 0 : ps[p][1]);
+			ps[v][0] = p0 + b[v][0];
+			ps[v][1] = p1 + b[v][1];
+			int maxson = -1;
+			rets[v] = NULL;
+			for (int e=head[v]; e>=0; e = nxt[e]) {
+				if (to[e]==p) continue;
+				if (maxson == -1 || sumcnt(rets[v]) < sumcnt(rets[to[e]])) {
+					maxson = to[e];
+					rets[v] = rets[to[e]];
+				}
+			}
+
+			node *add = init(ps[v][1] - ps[v][0], ps[v][1] + ps[v][0],
+				1);
+			IterateOnTree(add, rets[v], 2 * (p1 - p0) + (b[v][1] - b[v][0]), 
+				ps[v][0] + ps[v][1]);
+			IterateInsert(rets[v], add);
+	
+			for (int e = head[v]; e>=0; e = nxt[e]) {
+				if (to[e] == p || to[e] == maxson)
+					continue;
+				IterateOnTree(rets[to[e]], rets[v], 2 * (p1 - p0) + (b[v][1] - b[v][0]), ps[v][1] + ps[v][0]);
+				IterateInsert(rets[v], rets[to[e]]);
+			}
+		}
+	}
+}
+void dfs(int v, int p) {
+	int p0 = (p==-1 ? 0 : ps[p][0]);
+	int p1 = (p==-1 ? 0 : ps[p][1]);
+	ps[v][0] = p0 + b[v][0];
+	ps[v][1] = p1 + b[v][1];
+	if (b[v][1]) ++ ans;
+	int maxson = -1;
+	rets[v] = NULL;
+	for (int e=head[v]; e>=0; e = nxt[e]) {
+		if (to[e]==p) continue;
+		dfs(to[e], v);
+		if (maxson == -1 || sumcnt(rets[v]) < sumcnt(rets[to[e]])) {
+			maxson = to[e];
+			rets[v] = rets[to[e]];
+		}
+	}
+
+	node *add = init(ps[v][1] - ps[v][0], ps[v][1] + ps[v][0],
+		1);
+	IterateOnTree(add, rets[v], 2 * (p1 - p0) + (b[v][1] - b[v][0]), 
+		ps[v][0] + ps[v][1]);
+	IterateInsert(rets[v], add);
+	
+
+	for (int e = head[v]; e>=0; e = nxt[e]) {
+		if (to[e] == p || to[e] == maxson)
+			continue;
+		IterateOnTree(rets[to[e]], rets[v], 2 * (p1 - p0) + (b[v][1] - b[v][0]), ps[v][1] + ps[v][0]);
+		IterateInsert(rets[v], rets[to[e]]);
+	}
+}
+
+
+
+
+
+
+
+
+
+
+int main() {
+#ifdef air
+	/*freopen("input.txt", "w", stdout);
+	const int N = 3655;
+	printf("%d\n", N);
+	REP(i, 0, N-1) {
+		printf("%d %d\n", i + 2, rand() % (i + 1) + 1);
+	}
+	REP(i, 0, N) {
+		printf("%d ", rand() % 2 == 0 ? 1 : 3);
+	}*/
+	freopen("input.txt", "r", stdin);
+	freopen("output.txt","w", stdout);       
+#endif
+
+	int n;
+	init();
+	scanf("%d", &n);
+	REP(i, 0, n - 1) {
+		int x, y;
+		scanf("%d%d", &x, &y);
+		-- x;
+		-- y;
+		ae(x, y);
+		ae(y, x);
+	}
+	REP(i, 0, n) {
+		int u;
+		scanf("%d", &u);
+		while (u % 2 == 0) u /= 2;
+		int j = max(0.0, sqrt(1.0 * u) - 1);
+		while (j * j < u) ++ j;
+		b[i][j * j == u] ++;
+	}
+	int r = rand() % n;
+	DfsWithStack(r);
+	//dfs(0, -1);
+	cout << ans;
+
+
+#ifdef air
+	printf("\n\n %lf \n", clock() * 1e-3);
+#endif
+	
+	return 0;
+}

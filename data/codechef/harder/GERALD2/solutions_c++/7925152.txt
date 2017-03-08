@@ -1,0 +1,389 @@
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#include <stack>
+typedef unsigned int uint;
+int const inf=1e9;
+ 
+enum endl_faszom { endl };
+template <size_t max_input_size,size_t max_output_size>
+struct fast_io
+{
+	fast_io(): input_size(0), s(input), d(output)
+	{
+		read();
+	}
+	~fast_io()
+	{
+		write();
+	}
+	void read()
+	{
+		input_size=fread(input,1,max_input_size,stdin);
+		input[input_size]=0;
+		s=input;
+	}
+	void write()
+	{
+		fwrite(output,1,d-output,stdout);
+		d=output;
+	}
+	void skip_blank()
+	{
+		while(0<*s && *s<=32)
+			++s;
+	}
+	uint read_uint()
+	{
+		uint r=0;
+		while('0'<=*s && *s<='9')
+			r=r*10+ *s++ -'0';
+		return r;
+	}
+	int read_int()
+	{
+		int r=0;
+		bool neg=0;
+		if(*s=='-' || *s=='+')
+			neg=*s++=='-';
+		while('0'<=*s && *s<='9')
+			r=r*10+ *s++ -'0';
+		return neg?-r:r;
+	}
+	fast_io& operator>> (uint &r)
+	{
+		skip_blank();
+		r=read_uint();
+		return *this;
+	}
+	fast_io& operator>> (int &r)
+	{
+		skip_blank();
+		r=read_int();
+		return *this;
+	}
+	fast_io& operator<< (uint x)
+	{
+		char buf[32],*e=buf+32,*p=e;
+		while(*--p='0'+x%10,x/=10,x);
+		while(p!=e)
+			*d++=*p++;
+		return *this;
+	}
+	fast_io& operator<< (int x)
+	{
+		if(x<0)
+		{
+			*d++='-';
+			return operator<< (uint(-x));
+		}
+		else return operator<< (uint(x));
+	}
+	fast_io& operator<< (endl_faszom x)
+	{
+		*d++='\n';
+		return *this;
+	}
+	fast_io& operator>> (char &r)
+	{
+		r=*s++;
+		return *this;
+	}
+	fast_io& operator<< (char c)
+	{
+		*d++=c;
+		return *this;
+	}
+	fast_io& operator<< (char const *p)
+	{
+		while(*p)
+			*d++=*p++;
+		return *this;
+	}
+	size_t input_size;
+	char input[max_input_size+1];
+	char const *s;
+	char output[max_output_size+1];
+	char *d;
+};
+fast_io<8*1024*1024,8*1024*1024> io;
+ 
+struct dist
+{
+	dist(): d(-inf), id(0) {}
+	dist(int _d, uint _id): d(_d), id(_id) {}
+	friend bool operator< (dist const &lhs, dist const &rhs)
+	{
+		return lhs.d<rhs.d || lhs.d==rhs.d && lhs.id<rhs.id;
+	}
+	dist operator+ (int x) const { return dist(d+x,id); }
+	dist operator- (int x) const { return dist(d-x,id); }
+	int d;
+	uint id;
+};
+ 
+struct rmq_max_dist
+{
+	rmq_max_dist(): B(0), max() {}
+	rmq_max_dist(uint size): B(1), max()
+	{
+		while(B<size)
+			B*=2;
+		max.resize(2*B);
+	}
+	void reset(uint size)
+	{
+		B=1;
+		while(B<size)
+			B*=2;
+		max.clear();
+		max.resize(2*B);
+	}
+	void update(uint n, dist x)
+	{
+		max[B+n]=x;
+		for(uint u=B+n; u/=2;)
+			max[u]=std::max(max[2*u],max[2*u+1]);
+	}
+	dist total() const { return max[1]; }
+	dist operator() (uint b, uint e) const
+	{
+		uint f=b+B;
+		uint l=e+B-1;
+		dist r=std::max(max[f],max[l]);
+		for(; 1<(f^l); f/=2,l/=2)
+		{
+			if(~f&1 && r<max[f+1])
+				r=max[f+1];
+			if(l&1 && r<max[l-1])
+				r=max[l-1];
+		}
+		return r;
+	}
+	uint B;
+	std::vector<dist> max;
+};
+ 
+struct tree
+{
+	struct chain
+	{
+		chain(): nodes(), max_up(), max_down() {}
+		std::vector<uint> nodes;
+		rmq_max_dist max_up, max_down;
+	};
+	struct node
+	{
+		node():
+			parent(0), parent_adj_ix(0), white(1), heavy(0), head(0), offset(0), 
+			size(0), max_lazy(), adj()
+		{}
+		uint parent;
+		uint parent_adj_ix;
+		bool white;
+		bool heavy;
+		uint head;
+		uint offset;
+		uint size;
+		rmq_max_dist max_lazy;
+		std::vector<uint> adj;
+	};
+	tree(): size(0), nodes(), chains() {}
+	void reset(uint _size)
+	{
+		size=_size;
+		nodes.clear();
+		nodes.resize(size);
+		chains.clear();
+		chains.resize(size);
+	}
+	void dfs1()
+	{
+		std::stack<uint> q;
+		std::vector<int> s(size,0);
+		q.push(0);
+		while(!q.empty())
+		{
+			uint n=q.top();
+			if(s[n]==0)
+			{
+				s[n]=1;
+				for(uint i=0; i<nodes[n].adj.size(); ++i)
+				{
+					uint u=nodes[n].adj[i];
+					nodes[u].parent=n;
+					nodes[u].parent_adj_ix=i;
+					q.push(u);
+				}
+			}
+			else if(s[n]==1)
+			{
+				s[n]=2;
+				q.pop();
+				nodes[n].size=1;
+				uint ms=0,msa=0;
+				for(uint i=0; i<nodes[n].adj.size(); ++i)
+				{
+					uint u=nodes[n].adj[i];
+					nodes[n].size+=nodes[u].size;
+					if(ms<nodes[u].size)
+					{
+						ms=nodes[u].size;
+						msa=u;
+					}
+				}
+				if(ms)
+					nodes[msa].heavy=1;
+			}
+		}
+	}
+	void dfs2()
+	{
+		std::stack<uint> q;
+		std::vector<int> s(size,0);
+		q.push(0);
+		while(!q.empty())
+		{
+			uint n=q.top();
+			q.pop();
+			uint p=nodes[n].parent;
+			uint h=nodes[n].heavy?nodes[p].head:n;
+			nodes[n].head=h;
+			chain &c=chains[h];
+			uint o=c.nodes.size();
+			c.nodes.push_back(n);
+			nodes[n].offset=o;
+ 
+			for(uint i=0; i<nodes[n].adj.size(); ++i)
+				q.push(nodes[n].adj[i]);
+		}
+	}
+	void dfs3(uint n=0)
+	{
+		std::stack<uint> q;
+		std::vector<int> s(size,0);
+		std::vector<dist> d(size);
+		q.push(0);
+		while(!q.empty())
+		{
+			uint n=q.top();
+			if(s[n]==0)
+			{
+				s[n]=1;
+				uint o=nodes[n].offset;
+				chain &c=chains[nodes[n].head];
+				uint cs=c.nodes.size();
+				if(o==0)
+				{
+					c.max_up.reset(cs);
+					c.max_down.reset(cs);
+				}
+				nodes[n].white=1;
+				nodes[n].max_lazy.reset(nodes[n].adj.size());
+				for(uint i=0; i<nodes[n].adj.size(); ++i)
+					q.push(nodes[n].adj[i]);
+			}
+			else if(s[n]==1)
+			{
+				s[n]=2;
+				q.pop();
+				for(uint i=0; i<nodes[n].adj.size(); ++i)
+				{
+					uint u=nodes[n].adj[i];
+					if(!nodes[u].heavy)
+						nodes[n].max_lazy.update(i,d[u]);
+				}
+				dist max_lazy=nodes[n].max_lazy.total();
+				dist max(0,n);
+				if(max<max_lazy)
+					max=max_lazy;
+				uint o=nodes[n].offset;
+				chain &c=chains[nodes[n].head];
+				uint cs=c.nodes.size();
+				c.max_down.update(o,max+o);
+				c.max_up.update(o,max+(cs-o));
+				if(o==0)
+					max=c.max_down.total();
+				d[n]=max+1;
+			}
+		}
+	}
+	void setup()
+	{
+		dfs1();
+		dfs2();
+		dfs3();
+	}
+	uint query(uint n)
+	{
+		uint pai=0;
+		dist max(0,n);
+		nodes[n].white=!nodes[n].white;
+		uint d=0;
+		dist max_down;
+		while(1)
+		{
+			uint h=nodes[n].head;
+			uint o=nodes[n].offset;
+			chain &c=chains[h];
+			uint cs=c.nodes.size();
+			if(d)
+			{
+				nodes[n].max_lazy.update(pai,dist());
+				max=std::max(max,nodes[n].max_lazy.total()+d);
+				nodes[n].max_lazy.update(pai,max_down);
+			}
+			else max=std::max(max,nodes[n].max_lazy.total()+d);
+			max_down=nodes[n].max_lazy.total();
+			if(nodes[n].white)
+			{
+				max=std::max(max,dist(d,n));
+				max_down=std::max(max_down,dist(0,n));
+			}
+			if(o+1<cs)
+				max=std::max(max,c.max_down(o+1,cs)-o+d);
+			if(0<o)
+				max=std::max(max,c.max_up(0,o)-(cs-o)+d);
+			c.max_down.update(o,max_down+o);
+			c.max_up.update(o,max_down+(cs-o));
+			d+=o+1;
+			max_down=c.max_down.total()+1;
+			pai=nodes[h].parent_adj_ix;
+			n=nodes[h].parent;
+			if(h==0)
+				break;
+		}
+		return max.id;
+	}
+ 
+	uint size;
+	std::vector<node> nodes;
+	std::vector<chain> chains;
+};
+ 
+main()
+{
+	uint T;
+	io >> T;
+	tree g;
+	for(uint t=1; t<=T; ++t)
+	{
+		uint N,M;
+		io >> N >> M;
+		g.reset(N);
+		for(uint n=2; n<=N; ++n)
+		{
+			uint p;
+			io >> p;
+			g.nodes[p-1].adj.push_back(n-1);
+		}
+		g.setup();
+		for(uint i=0; i<M; ++i)
+		{
+			uint n;
+			io >> n;
+			io << g.query(n-1)+1 << endl;
+		}
+	}
+}
+  

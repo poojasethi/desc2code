@@ -1,0 +1,117 @@
+#include<cstdio>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+#define fo(i,a,b) for(int i=a;i<=b;i++)
+#define fd(i,a,b) for(int i=a;i>=b;i--)
+#define maxn 200005
+#define maxnum 8
+#define maxs 105
+using namespace std;
+
+int poi[maxs],line[maxs],totpoi[maxnum],totlin[maxnum][maxnum];
+
+int num[maxn][2],st[maxnum],ins[maxnum];
+
+int n,w;
+
+int head[maxnum][maxnum],next[maxn],sum;
+
+int ans[maxn][2];
+
+inline void insert_poi(int x,int y){
+	totpoi[x]+=y;
+	fo(i,0,(1 << w)-1) 
+		if (i & (1 << (x-1))) poi[i]+=y;
+}
+
+inline void insert_edge(int x,int y,int z){
+	totlin[x][y]+=z;
+	if (x!=y) totlin[y][x]+=z;
+	fo(i,0,(1 << w)-1)
+		if ((i & (1 << (x-1))) || (i & (1 << (y-1)))) line[i]+=z;
+}
+
+inline bool check(){
+	fo(i,0,(1 << w)-1)
+		if (line[i]<poi[i]) return 0;
+	return 1;
+}
+
+inline void add(int len1,int len2,int p1,int p2){
+	if (len1>len2) {
+		swap(len1,len2);
+		swap(p1,p2);
+	}
+	next[++sum]=head[len1][len2];
+	head[len1][len2]=sum;
+	ans[sum][0]=p1;
+	ans[sum][1]=p2;
+}
+
+int main(){
+	scanf("%d",&n);
+	st[1]=1;
+	fo(i,2,6) st[i]=st[i-1] * 10;
+	int tmp=n;
+	while (tmp) {
+		w++;
+		tmp /= 10;
+	}
+	fo(i,1,w-1) insert_poi(i,st[i+1]-st[i]);
+	insert_poi(w,n-st[w]+1);
+	fo(i,1,n-1) {
+		int num1=0,num2=0;
+		char c=getchar();
+		while (c!='?') c=getchar();
+		while (c=='?') {
+			num1++;
+			c=getchar();
+		}
+		while (c!='?') c=getchar();
+		while (c=='?') {
+			num2++;
+			c=getchar();
+		}
+		num[i][0]=num1;
+		num[i][1]=num2;
+		insert_edge(num1,num2,1);
+	}
+	insert_poi(1,-1);
+	ins[1]=1;
+	st[1]++;
+	while (sum<n-1){
+		bool ok=1;
+		fo(i,1,w)
+			fo(j,1,w) {
+				if (!totlin[i][j] || !ins[i] || !totpoi[j]) continue;
+				insert_poi(j,-1);
+				insert_edge(i,j,-1);
+				if (!check()) {
+					insert_poi(j,1);
+					insert_edge(i,j,1);
+					continue;
+				}
+				ins[j]=1;
+				add(i,j,st[i]-1,st[j]);
+				st[j]++;
+				ok=0;
+			}
+		if (ok) {
+			puts("-1");
+			return 0;
+		}
+	}
+	fo(i,1,n-1) {
+		int num1=num[i][0],num2=num[i][1];
+		bool ok=0;
+		if (num1>num2) {
+			swap(num1,num2);
+			ok=1;
+		}
+		if (!ok) printf("%d %d\n",ans[head[num1][num2]][0],ans[head[num1][num2]][1]);
+		else printf("%d %d\n",ans[head[num1][num2]][1],ans[head[num1][num2]][0]);
+		head[num1][num2]=next[head[num1][num2]];
+	}
+	return 0;
+}

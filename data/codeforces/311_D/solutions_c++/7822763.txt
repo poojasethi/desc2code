@@ -1,0 +1,71 @@
+#include <cstdio>
+
+#define T 48
+#define N 100000
+#define mod 95542721
+
+using namespace std;
+
+int n,m,x,y,z,g[T],a[N+10],mov[N*4+10],f[N*4+10][T];
+
+inline void move(int k,int step){
+	for (int i=0;i<T;++i) g[i]=f[k][(i+step)%T];
+	for (int i=0;i<T;++i) f[k][i]=g[i];
+}
+
+inline void update(int k){
+	for (int i=0;i<T;++i) f[k][i]=(f[k*2][i]+f[k*2+1][i])%mod;
+}
+
+inline void down(int k){
+	if (mov[k]){
+		move(k*2,mov[k]);
+		move(k*2+1,mov[k]);
+		mov[k*2]+=mov[k];
+		mov[k*2+1]+=mov[k];
+		mov[k]=0;
+	}
+}
+
+void build(int k,int l,int r){
+	if (l==r){
+		f[k][0]=a[l];
+		for (int i=1;i<T;++i) f[k][i]=(long long)f[k][i-1]*f[k][i-1]%mod*f[k][i-1]%mod;
+		return;
+	}
+	int mid=(l+r)/2;
+	build(k*2,l,mid);
+	build(k*2+1,mid+1,r);
+	update(k);
+}
+
+int query(int k,int lc,int rc,int l,int r){
+	if (l==lc && r==rc) return f[k][0];
+	down(k);
+	int mid=(lc+rc)/2;
+	if (r<=mid) return query(k*2,lc,mid,l,r);
+	if (l>mid) return query(k*2+1,mid+1,rc,l,r);
+	return (query(k*2,lc,mid,l,mid)+query(k*2+1,mid+1,rc,mid+1,r))%mod;
+}
+
+void modify(int k,int lc,int rc,int l,int r){
+	if (l==lc && r==rc){move(k,1);mov[k]++;return;}
+	down(k);
+	int mid=(lc+rc)/2;
+	if (r<=mid) modify(k*2,lc,mid,l,r);
+	else if (l>mid) modify(k*2+1,mid+1,rc,l,r);
+	else modify(k*2,lc,mid,l,mid),modify(k*2+1,mid+1,rc,mid+1,r);
+	update(k);
+}
+
+int main(){
+	scanf("%d",&n);
+	for (int i=1;i<=n;++i) scanf("%d",&a[i]);
+	build(1,1,n);
+	scanf("%d",&m);
+	for (int i=1;i<=m;++i){
+		scanf("%d%d%d",&x,&y,&z);
+		if (x==1) printf("%d\n",query(1,1,n,y,z));else modify(1,1,n,y,z);
+	}
+	return 0;
+}

@@ -1,0 +1,39 @@
+#include <iostream>
+#include <string>
+#include <vector>
+#include <map>
+#include <set>
+using namespace std;
+
+#define INF 100
+int arr[24];
+int st[(1<<23)];
+int gao(int state,int x)
+{
+	if(st[state])return st[state];
+	if(state==1) return 1;
+	int cnt=__builtin_popcount(state);
+	int mn=INF;
+	for(int i=0;i<x;i++)
+		for(int j=0;j<=i;j++)
+			if(arr[x]==arr[i]+arr[j])
+			{
+				int v=gao(state & ~(1<<x) | (1<<(x-1)) | (1<<i) | (1<<j),x-1);
+				mn=min(mn,max(v,cnt));
+			}
+	return st[state]=mn;
+}
+
+int main()
+{
+	int n;
+	cin>>n;
+	for(int i=0;i<n;i++)
+		cin>>arr[i];
+	int ans=gao(1<<(n-1),n-1);	
+	if(ans != INF)
+		cout<<ans<<endl;
+	else
+		cout<<-1<<endl;
+	return 0;
+}

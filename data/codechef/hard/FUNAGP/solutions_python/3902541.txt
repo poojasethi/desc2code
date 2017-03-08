@@ -1,0 +1,230 @@
+//Author : Devendra Agarwal
+//Algo : Binary Indexed Trees(Faster and Easy to Implement) , Number Theory and Mathematics.
+#include<stdio.h>
+#include<algorithm>
+#include<string.h>
+#include<assert.h>
+typedef long long int ll;
+ 
+struct bit{
+	ll ADD,BADD,T,Z;
+	bit(ll a=0,ll b=0,ll c=0,ll d=0){
+		ADD=a;
+		BADD=b;
+		T=c;
+		Z=d;
+	}
+	struct bit operator + (const struct bit a)const{
+		return bit( a.ADD+ADD , a.BADD+BADD , a.T+T ,  a.Z+Z );
+	}
+	struct bit operator %(const int p)const {
+		return bit(ADD%p,BADD%p,T%p,Z%p);
+	}
+	struct bit operator *(const int p)const {
+                return bit(ADD*p,BADD*p,T*p,Z*p);
+        }
+}A[2][1<<17];	//two BIT ,one for p1(0 is used to represent) and the other for p2(1 is used to represent).
+ 
+ 
+ll power[2][100011],inv[2];
+ 
+ll powmod(ll a,ll n,ll mod ) 
+{
+	ll res = 1 ;
+	while ( n )
+		if ( n & 1 ) 
+		{
+			res=(res * a)%mod ;
+			-- n ;
+		}
+		else 
+		{
+			a= (a*a)%mod ;
+			n >>= 1 ;
+		}
+	return res%mod ;
+ 
+}
+ 
+ll inverse(ll a,ll b)					//b>a
+{
+	ll Remainder,p0=0,p1=1,pcurr=1,q,m=b;
+	while(a!=0)
+	{
+		Remainder=b%a;
+		q=b/a;
+		if(Remainder!=0)
+		{
+			pcurr=p0-(p1*q)%m;
+			if(pcurr<0)
+				pcurr+=m;
+			p0=p1;
+			p1=pcurr;
+ 
+		}
+		b=a;
+		a=Remainder;
+	}
+	return pcurr;
+}
+int N,Q,R,MaxVal,dir[2];		//0 is for AP , 1 is for Normal
+ll p[2];
+ 
+//AGP or AP does not matter to this function .. reading from BIT structure
+bit read(int index,int pos){
+	bit a=(0,0,0);
+	while (pos > 0){
+		a = ( a + A[index][pos] )%p[index];
+		pos -= (pos & -pos);
+	}
+	return a;
+}
+ 
+//Updating the BIT Structure
+void update(int index,int pos ,bit val){
+	while (pos <= MaxVal){
+		A[index][pos]=(A[index][pos]+val)%p[index];
+		pos += (pos & -pos);
+	}
+}
+ 
+//return the value to be added at a point P with infinite AGP or AP with Start term = S and Common Difference = D
+bit tuple(int index,ll S,ll D,ll P)
+{
+	if(dir[index]==0){		//return AP tuples
+		ll a,b;
+		a= ((-P+1)*S + (D*((P*P-P)/2))%p[index])%p[index];
+		b=(S-D*P)%p[index];
+		return bit(0,a,b,D);
+	}
+	else{				//return AGP tuples
+		ll a,b,c,BADD,T,Z;
+		//a = R^(-P+1)
+		a=inverse(power[index][P-1],p[index]);
+		//b=R^(-P+2)
+		b=(a*(ll)R)%p[index];
+		//c= P*D
+		c=(P*D)%p[index];
+ 
+		BADD=(-S*(ll)R+S+D*(ll)R)%p[index];
+		T= ( (a*(-S-D))%p[index] + (c*(a-b))%p[index] + (S*b)%p[index] ) %p[index];
+		Z= (D*(b-a))%p[index];
+ 
+		return bit(0,BADD,T,Z);
+	}
+}
+ 
+//This Fucntion Returns the answer for the query 2 from X to Y.
+ll report(int index,int X,int Y)
+{
+	bit imp[2];
+	ll answer_l,answer_r;
+	imp[0]=read(index,X-1);
+	imp[1]=read(index,Y);
+	if(dir[index])      //AGP   
+	{
+		answer_l = imp[0].ADD + ( ((imp[0].BADD + imp[0].T*power[index][X-1] + ( (imp[0].Z*power[index][X-1])%p[index] )*(ll)(X-1) )%p[index])*inv[index] )%p[index];
+		answer_r = imp[1].ADD + ( ((imp[1].BADD + imp[1].T*power[index][Y] + ((imp[1].Z*power[index][Y])%p[index])*(ll)(Y)) %p[index])*inv[index] )%p[index];
+	}
+	else{           //if not AGP(i.e AP)
+		answer_l=(imp[0].ADD + imp[0].BADD + imp[0].T*(ll)(X-1) + ((imp[0].Z)*(((ll)(X-1)*(ll)(X-1)+(ll)(X-1))/(ll)2))%p[index])%p[index];
+		answer_r=(imp[1].ADD + imp[1].BADD + imp[1].T*(ll)(Y) + ((imp[1].Z)*(((ll)Y*(ll)Y+(ll)Y)/(ll)2))%p[index])%p[index];
+	}
+	answer_r=(answer_r-answer_l)%p[index];
+	return (answer_r+p[index])%p[index];
+}
+void solve()
+{
+	bit imp[2];
+	int x,g,X,Y,z;
+	ll S,D,answer1,answer2,answer3;
+	scanf("%d%d%d%lld%lld",&N,&Q,&R,&p[0],&p[1]);
+	assert(N>=1 && N<=100000);
+	assert(Q>=1 && Q<=100000);
+	assert(R>=1 && R<=1000000000);
+	assert(p[0]>=2 && p[0]<=100000000);
+	assert(p[1]>=2 && p[1]<=100000000);
+	
+	/*************Fixing the Approach*******************/
+ 
+	z=R-1;
+	if((z%p[0])==0)	dir[0]=0;	//AP for p1
+	else{				//AGP for p1
+		dir[0]=1;
+		inv[0]=inverse(R-1,p[0]);
+		inv[0]=(inv[0]*inv[0])%p[0];
+	}
+	if((z%p[1])==0)	dir[1]=0;	//AP for p2
+	else{				//AGP for p2
+		dir[1]=1;
+		inv[1]=inverse(R-1,p[1]);
+		inv[1]=(inv[1]*inv[1])%p[1];
+	}
+ 
+	/******************Constants Required**********************/
+	power[0][0]=power[1][0]=1;
+	for(int i=1;i<=N;i++){
+		power[0][i]=(power[0][i-1]*(ll)R)%p[0];
+		power[1][i]=(power[1][i-1]*(ll)R)%p[1];
+	}
+	MaxVal=N+1;
+	for(int i=0;i<=N+1;i++)	A[0][i]=A[1][i]=bit(0,0,0,0);
+	/*********************************************************/
+ 
+	for(int i=1;i<=N;i++){
+		scanf("%d",&x);
+		assert(x>=0 && x<=100000);
+		update(0,i,bit(x,0,0,0));
+		update(1,i,bit(x,0,0,0));
+	}
+ 
+	for(int i=1;i<=Q;i++){	
+		scanf("%d",&x);
+		if(x==0){
+			scanf("%lld%lld%d%d",&S,&D,&X,&Y);	//update query
+			assert(S>=1 && S<=100000);
+			assert(D>=1 && D<=100000);
+			assert(X>=1 && X<=N);
+			assert(Y>=1 && Y<=N);
+			assert(X<=Y);
+			imp[0]=tuple(0,S,D,X);
+			imp[1]=tuple(1,S,D,X);
+			//Adding Infinte AGP at X in both Trees
+			update(0,X,imp[0]);
+			update(1,X,imp[1]);
+			S=(-(S+(ll)(Y-X+1)*D));
+			D=-D;
+			imp[0]=tuple(0,((S%p[0])*power[0][Y-X+1])%p[0],(D*power[0][Y-X+1])%p[0], Y+1);
+			imp[1]=tuple(1,(((S%p[1])*power[1][Y-X+1])%p[1] + p[1])%p[1],((D*power[1][Y-X+1])%p[1]+p[1])%p[1] , Y+1);
+			//Adding Infinte AGP at Y+1 in both Trees
+			update(0,Y+1,imp[0]);
+			update(1,Y+1,imp[1]);
+		}
+		else if(x==1){
+			scanf("%d%d",&X,&g);			//power query
+			assert(X>=1 && X<=N);
+			assert(g>=1 && g<=1000);	
+			answer1=report(0,X,X);
+			answer2=report(1,X,X);
+			answer3=powmod(answer2,g,p[1]);
+			update(0,X,bit(answer3-answer1,0,0,0));	//subtracted and simultaneously added
+			update(1,X,bit(answer3-answer2,0,0,0));	//subtracted and simultaneously added
+		}
+		else{
+			scanf("%d%d",&X,&Y);			//report query
+			assert(X>=1 && X<=N);
+			assert(Y>=1 && Y<=N);
+			assert(X<=Y);
+			printf("%lld\n",report(0,X,Y));
+		}
+	}
+}
+int main()
+{
+	int test;
+	scanf("%d",&test);
+	assert(test>0);
+	while(test--)
+	solve();
+	return 0;
+} 

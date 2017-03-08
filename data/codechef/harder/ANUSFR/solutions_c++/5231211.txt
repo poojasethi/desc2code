@@ -1,0 +1,173 @@
+#pragma comment(linker, "/STACK:1024000000,1024000000")
+#include<stdio.h>
+#include<iostream>
+#include<string.h>
+#include<queue>
+#include<algorithm>
+#include<string>
+#include<map>
+#include<set>
+#include<fstream>
+#include<math.h>
+#include<iomanip>
+#include<time.h>
+#include<assert.h>
+using namespace std;
+#define ll long long
+#define ull unsigned long long
+#define db double
+#define inf 1000000007
+#define mod 1000000007
+#define pii pair<int,int>
+#define vi vector<int>
+#define VS vector<string>
+#define all(x) x.begin(),x.end()
+#define mp make_pair
+#define pb push_back
+#define x first
+#define y second
+#define N 100005
+#define pi 3.14159265358979323846
+#define DBG(vari) cerr<<#vari<<"="<<(vari)<<endl;
+#define FOREACH(i,t) for(__typeof(t.begin()) i=t.begin();i!=t.end();i++)
+
+char s[N];int n,st[27][N],ed[27][N];
+struct node
+{
+	int a,b,id;
+	bool operator <(const node&c)const
+	{
+		return a<c.a;
+	}
+}data[27][N];
+void init()
+{
+	int i,j,k;
+	int cnt[26]={0},d=0;
+	for(int x=1;x<=26;x++)
+	{
+		memset(cnt,0,sizeof(cnt));d=0;
+		for(i=0,j=0;i<n;i++)
+		{
+			data[x][i].id=i;
+			if(i)
+			{
+				int y=s[i-1]-'a';cnt[y]--;
+				if(cnt[y]==0)d--;
+			}
+			while(d<x&&j<n)
+			{
+				int y=s[j]-'a';
+				if(cnt[y]==0)cnt[y]++,d++,j++;
+				else cnt[y]++,j++;
+			}
+			if(d==x)st[x][i]=j-1;else st[x][i]=N;
+		}
+		memset(cnt,0,sizeof(cnt));d=0;
+		for(i=0,j=0;i<n;i++)
+		{
+			if(i)
+			{
+				int y=s[i-1]-'a';cnt[y]--;
+				if(cnt[y]==0)d--;
+			}
+			while(d<=x&&j<n)
+			{
+				int y=s[j]-'a';
+				if(cnt[y]==0)
+				{
+					if(d<x)cnt[y]++,d++,j++;
+					else break;
+				}
+				else cnt[y]++,j++;
+			}
+			if(d==x)ed[x][i]=j-1;else ed[x][i]=N;
+		}
+	}
+	for(int x=1;x<=26;x++)
+	{
+		//DBG(x)
+		for(i=0;i<n;i++)
+		data[x][i].a=st[x][i]==N?-1:st[x][i]-i+1,
+		data[x][i].b=ed[x][i]==N?-1:ed[x][i]-i+1;
+		//cerr<<st[x][i]<<" "<<ed[x][i]<<"\n";
+		sort(data[x],data[x]+n);
+	}
+}
+struct P
+{
+	int id,st,ed,len1,len2;
+	bool operator <(const P &a)const
+	{
+		return len2<a.len2;
+	}
+}e;
+vector<P>q[27];
+int t[N<<2];pii ans[N];
+void build(int p,int l,int r)
+{
+	t[p]=-1;
+	if(l==r)return;
+	int m=(l+r)>>1;
+	build(p<<1,l,m);build(p<<1|1,m+1,r);
+}
+void upd(int p,int l,int r,int x,int v)
+{
+	t[p]=max(t[p],v);
+	if(l==r)return;
+	int m=(l+r)>>1;
+	if(x<=m)upd(p<<1,l,m,x,v);
+	else upd(p<<1|1,m+1,r,x,v);
+}
+int query(int p,int l,int r,int x,int y)
+{
+	if(l>=x&&r<=y)return t[p];
+	int m=(l+r)>>1,ans=0;
+	if(x<=m)ans=query(p<<1,l,m,x,y);
+	if(y>m)ans=max(ans,query(p<<1|1,m+1,r,x,y));
+	return ans;
+}
+int main()
+{
+    int T,i,j,k,ca=0,m;
+	scanf("%s",s);n=strlen(s);
+	init();
+	scanf("%d",&m);
+	for(i=0;i<m;i++)
+	{
+		int x,c1,c2,l,r;
+		scanf("%d%d%d%d%d",&x,&c1,&c2,&l,&r);
+		e.id=i;e.st=l,e.ed=r-c1+1;
+		e.ed=min(e.ed,upper_bound(st[x],st[x]+n,r)-st[x]-1);
+		e.len1=c1,e.len2=c2;
+		q[x].pb(e);
+	}
+	for(int x=1;x<=26;x++)
+	{
+		sort(all(q[x]));
+		int prv=0;build(1,0,n-1);
+		for(k=0;k<q[x].size();k++)
+		{
+			int id=q[x][k].id,len1=q[x][k].len1,len2=q[x][k].len2;
+			for(i=prv;i<n;i++)
+			{
+				if(data[x][i].a>len2)break;
+				upd(1,0,n-1,data[x][i].id,data[x][i].b);
+			}
+			prv=i;
+			int l=q[x][k].st,r=q[x][k].ed;
+			if(l>r||query(1,0,n-1,l,r)<len1){ans[id]=mp(-1,-1);continue;}
+			while(l<=r)
+			{
+				int mid=(l+r)>>1;
+				if(query(1,0,n-1,l,mid)>=len1)r=mid-1;
+				else l=mid+1;
+			}
+			//l=r+1;
+			r=max(st[x][l],l+len1-1);
+			ans[id]=mp(l,r);
+		}
+	}
+	for(i=0;i<m;i++)printf("%d %d\n",ans[i].x,ans[i].y);
+    return 0;
+}

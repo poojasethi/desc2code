@@ -1,0 +1,107 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#define FOR(i,s,e) for (int i=(s); i<(e); i++)
+#define FOE(i,s,e) for (int i=(s); i<=(e); i++)
+#define FOD(i,s,e) for (int i=(s)-1; i>=(e); i--)
+#define CLR(a,x) memset(a, x, sizeof(a))
+#define N 100005
+using namespace std;
+
+struct node{
+	int x, y, s, v;
+};
+
+struct ST{
+	node T[262300];
+
+	void build(int d, int x, int y){
+		T[d].x = x;
+		T[d].y = y;
+		T[d].s = T[d].v = 0;
+		if (x != y){
+			build(d<<1, x, (x+y)/2);
+			build(1+(d<<1), (x+y)/2+1, y);
+		}
+	}
+
+	void push(int d, int v){
+		T[d].v = v;
+		T[d].s = (T[d].y - T[d].x + 1) * v;
+	}
+
+	void push(int d){
+		if (T[d].v == -1) return;
+		push(d<<1, T[d].v);
+		push(1+(d<<1), T[d].v);
+		T[d].v = -1;
+	}
+
+	void update(int d, int x, int y, int v){
+		if (x <= T[d].x && y >= T[d].y) push(d, v);
+		else{
+			push(d);
+			if (x <= T[d<<1].y) update(d<<1, x, y, v);
+			if (y > T[d<<1].y) update((d<<1)+1, x, y, v);
+			T[d].s = T[d<<1].s + T[1+(d<<1)].s;
+		}
+	}
+
+	int query(int d, int x, int y){
+		if (x <= T[d].x && y >= T[d].y) return T[d].s;
+		else if (T[d].v != -1) return (min(y, T[d].y) - max(x, T[d].x) + 1) * T[d].v;
+		else if (!T[d].s) return 0;
+		else{
+			int res = 0;
+			push(d);
+			if (x <= T[d<<1].y) res += query(d<<1, x, y);
+			if (y > T[d<<1].y) res += query((d<<1)+1, x, y);
+			return res;
+		}
+	}
+
+};
+
+ST T[26];
+int n, m, x, y, odd, oddc;
+int cnt[30];
+char s[N];
+
+int main(){
+	freopen("input.txt", "r", stdin);
+	freopen("output.txt", "w", stdout);
+	scanf("%d%d%s", &n, &m, s);
+	FOR(i,0,26) T[i].build(1, 0, n-1);
+	FOR(i,0,n) T[s[i]-'a'].update(1, i, i, 1);
+
+	while (m--){
+		scanf("%d%d", &x, &y), x--, y--;
+		odd = 0, oddc = -1;
+		FOR(i,0,26){
+			cnt[i] = T[i].query(1, x, y);
+			if (cnt[i] & 1) ++odd, oddc = i;
+		}
+		if (odd > 1) continue;
+
+		FOR(i,0,26) if (cnt[i]) T[i].update(1, x, y, 0);
+		FOR(i,0,26){
+			if (!cnt[i]) continue;
+			T[i].update(1, x, x + cnt[i]/2 - 1, 1);
+			x += cnt[i] / 2;
+		}
+		if (oddc != -1){
+			T[oddc].update(1, x, x, 1);
+			++x;
+		}
+ 		FOD(i,26,0){
+			if (!cnt[i]) continue;
+			T[i].update(1, x, x + cnt[i]/2 - 1, 1);
+			x += cnt[i] / 2;
+		}
+	}
+
+	FOR(i,0,n){
+		FOR(j,0,26) if (T[j].query(1, i, i)) printf("%c", j + 'a');
+	}
+	return 0;
+}

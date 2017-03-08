@@ -1,0 +1,122 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cstdlib>
+#include <cassert>
+ 
+#include <map>
+#include <utility>
+#include <algorithm>
+ 
+using namespace std;
+ 
+#define FOR(i,n) for(int i=0;i<(n);i++)
+typedef long long ll;
+typedef pair<ll,ll> ip;
+ 
+int m, n;
+int k, x[10000], y[10000];
+ll pat[64][20000];
+int patn[64];
+ 
+int a[64][64], d[64];
+ 
+int solveLightsOut() {
+    memset(a,0,sizeof(int)*64*64);
+    FOR(i,m) {
+        ll s = pat[i][n%patn[i]];
+        FOR(j,m) a[j][i] = !!(s&(1ll<<j));
+    }
+    ll fs = 0;
+    FOR(i,k) fs ^= pat[x[i]-1][(n-y[i])%patn[x[i]-1]];
+    FOR(i,m) d[i] = !!(fs&(1ll<<i));
+    int cu = 0;
+    FOR(i,m) {
+        if(!a[i][cu]) {
+            int t = -1;
+            for(int j = cu+1; j < m; j++) if(a[i][j]) {
+                t = j;
+                break;
+            }
+            if(t == -1 && d[i]) return 0;
+            else if(t == -1) continue;
+            FOR(j,m) swap(a[j][cu],a[j][t]);
+        }
+        FOR(j,m) if(j!=i && a[j][cu]) {
+            FOR(k,m) a[j][k] ^= a[i][k];
+            d[j] ^= d[i];
+        }
+        cu++;
+    }
+    return 1;
+}
+ 
+int ne, e[10000], no, o[10000];
+int solveForOne() {
+    sort(y,y+k);
+    int la=0, lb=0;
+    if(!(n&1)) {
+        la = 1;
+        lb = 1;
+    }
+    FOR(i,k) {
+        int yy = n-y[i];
+        if(yy%3 == 0) {
+            lb = 1-lb;
+        } else if(yy%3 == 1) {
+            la = 1-la;
+        }
+    }
+    if(lb && n%3 == 0) {
+        lb = 1-lb;
+    }
+    if(la && n%3 == 1) {
+        la = 1-la;
+    }
+    return (la == 0 && lb == 0);
+}
+ 
+void calcLengths() {
+    ll ma = (1ll<<m)-1;
+    FOR(i,m) {
+        ll a = 0, b = (1ll<<i);
+        int cur = 0;
+        map<ip,int> M;
+        while(M.find(ip(a,b)) == M.end()) {
+            pat[i][cur] = b;
+            M[ip(a,b)] = cur++;
+            ll c = ((b>>1) ^ (b<<1) ^ b);
+            c &= ma;
+            c ^= a;
+            a = b;
+            b = c;
+        }
+        assert(M[ip(a,b)] == 0);
+        assert(cur < 20000);
+        patn[i] = cur;
+    }
+}
+ 
+int main() {
+    int T, te=1;
+    scanf("%d", &T);
+    while(T--) {
+        scanf("%d %d",&m,&n);
+        scanf("%d",&k);
+        FOR(i,k) scanf("%d %d",&x[i],&y[i]);
+        if(m > n) {
+            swap(m, n);
+            FOR(i,k) swap(x[i],y[i]);
+        }
+        int res;
+        if(m == 1) res = solveForOne();
+        else {
+            calcLengths();
+            res = solveLightsOut();
+        }
+        //printf("%d: %d %d %d ",te,m,n,k);
+        printf(res ? "YES\n" : "NO\n");
+        te++;
+    }
+    return 0;
+}

@@ -1,0 +1,230 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define add(x) push_back(x)
+#define repeat(x) for(int fl = 0;fl <x; fl ++)
+#define del() pop_back()
+#define left "("
+#define right ")"
+#define an "and"
+#define o "or"
+#define no "not"
+
+struct node {
+    int type;
+    double pb;
+    double expec;
+    vector<node*> c;
+};
+
+bool cmp0(node *a, node *b) {
+    return (a->expec / (1.0 - a->pb)) < (b->expec / (1.0 - b->pb));
+}
+ 
+bool cmp1(node *a, node *b) {
+    return (a->expec / a->pb) < (b->expec / b->pb);
+}
+ 
+class myworld{
+	public :
+node *root;
+map< string , double > M;
+vector<node*> ev;
+vector<string> tree, statement;
+
+void toRPN() {
+    vector<string> temp;
+    repeat(statement.size()) {
+        if(statement[fl] == left) temp.add(statement[fl]);
+        else if(statement[fl] == right) {
+            while(!temp.empty() && temp.back() != left) {
+                tree.add(temp.back());
+                temp.del();
+            }
+            temp.del();
+        } else if(statement[fl] == o) {
+            while(!temp.empty() && (temp.back() == an || temp.back() == no)) {
+                tree.add(temp.back());
+                temp.del();
+            }
+            temp.add(statement[fl]);
+        } else if(statement[fl] == an) {
+            while(!temp.empty() && temp.back() == no) {
+                tree.add(temp.back());
+                temp.del();
+            }
+            temp.add(statement[fl]);
+        } else if(statement[fl] == no) {
+            temp.add(statement[fl]);
+        } else {
+            M[statement[fl]] = 0;
+            tree.add(statement[fl]);
+        }
+    }
+    while(!temp.empty()) {
+        tree.add(temp.back());
+        temp.del();
+    }
+}
+ 
+void buildIt() {
+    for(int i = 0; i < tree.size(); i++) {
+        if(tree[i] == no) {
+            node *n = ev.back();
+            if(n->type & 4) n->pb = 1.0 - n->pb;
+            else n->type ^= 2;
+        } else if(tree[i] == an) {
+            node *n = new node;
+            n->type = 0;
+            n->c.clear();
+            n->c.add(ev.back()); ev.del();
+            n->c.add(ev.back()); ev.del();
+            ev.add(n);
+        } else if(tree[i] == o) {
+            node *n = new node;
+            n->type = 1;
+            n->c.clear();
+            n->c.add(ev.back()); ev.del();
+            n->c.add(ev.back()); ev.del();
+            ev.add(n);
+        } else {
+            node *n = new node;
+            n->type = -1;
+            n->pb = M[tree[i]];
+            n->expec = 1;
+            n->c.clear();
+            ev.add(n);
+        }
+    }
+    root = ev.back();
+}
+ 
+void _removeNot(node *n, bool toNot) {
+    if(n->type == -1) {
+        if(toNot) n->pb = 1.0 - n->pb;
+        return;
+    }
+    if(toNot) n->type ^= 2;
+    if(n->type & 2) {
+        n->type ^= (2 | 1);
+        _removeNot(n->c[0], true);
+        _removeNot(n->c[1], true);
+    } else {
+        _removeNot(n->c[0], false);
+        _removeNot(n->c[1], false);
+    }
+}
+ 
+void _compressSimple(node *n) {
+    if(n->type == -1) return;
+    vector<node*> nc;
+    for(int i = 0; i < n->c.size(); i++) {
+        node *c = n->c[i];
+        _compressSimple(c);
+        if(c->type == n->type) {
+            for(int j = 0; j < c->c.size(); j++) {
+                node *cc = c->c[j];
+                nc.add(cc);
+            }
+            delete c;
+        } else {
+            nc.add(c);
+        }
+    }
+    n->c = nc;
+}
+ 
+void reduceIt() {
+    _removeNot(root, false);
+    _compressSimple(root);
+}
+ 
+void clearIt(node *n) {
+    if(n->type == -1) {
+        delete n;
+        return;
+    }
+    for(int i = 0; i < n->c.size(); i++) {
+        node *c = n->c[i];
+        clearIt(c);
+    }
+    delete n;
+}
+ 
+void evalIt(node *n) {
+    if(n->type == -1) return;
+    if(n->type == 0) {
+        for(int i = 0; i < n->c.size(); i++) {
+            node *c = n->c[i];
+            evalIt(c);
+        }
+        sort(n->c.begin(), n->c.end(), cmp0);
+        double r = n->c.back()->expec;
+        double pr = n->c.back()->pb;
+        for(int i = n->c.size() - 2; i >= 0; i--) {
+            node *c = n->c[i];
+            r *= c->pb ;
+            r += c->expec;
+            pr *= c->pb ;
+        }
+        n->expec = r;
+        n->pb = pr;
+    } else {
+        for(int i = 0; i < n->c.size(); i++) {
+            node *c = n->c[i];
+            evalIt(c);
+        }
+        sort(n->c.begin(), n->c.end(), cmp1);
+        double r = n->c.back()->expec;
+        double pr = 1.0 - n->c.back()->pb;
+        for(int i = n->c.size() - 2; i >= 0; i--) {
+            node *c = n->c[i];
+            r *= 1.0 - c->pb ;
+            r += c->expec;
+            pr *= 1.0 - c->pb ;
+        }
+        n->expec = r;
+        n->pb = 1.0 - pr;
+    }
+}
+}; 
+int main() {
+    int T;
+    cin>>T;
+    string asdf;
+    getline(cin,asdf);//to avoid the new line
+    repeat(T) {
+		myworld mw;
+        string temp,temp2="";mw.statement.clear();
+        getline(cin,temp);
+        for(int i = 0; i<temp.length(); i++) {
+			if(temp[i]=='(' || temp[i]==')'){
+				if(temp2 !="")mw.statement.add(temp2);
+				if(temp[i]=='(')mw.statement.add(left);
+				if(temp[i]==')')mw.statement.add(right);
+				temp2="";
+			}
+            else if(temp[i]==' ') {
+                if(temp2 != "")mw.statement.add(temp2);
+                temp2="";
+            } 
+            else{
+				temp2 += temp[i];
+           }
+        }
+        if(temp2 != "")mw.statement.add(temp2);
+        mw.toRPN();
+        for(int i = 0; i < mw.M.size(); i++) {
+            string v; double p;
+            cin >> v >> p;
+            mw.M[v] = p;
+        }
+        mw.buildIt();
+        mw.reduceIt();
+        mw.evalIt(mw.root);
+        cout << fixed << setprecision(6) << mw.root->expec << endl;
+        mw.clearIt(mw.root);
+        getline(cin,temp);
+    }
+    return 0;
+}
+ 

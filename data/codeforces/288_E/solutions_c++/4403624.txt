@@ -1,0 +1,83 @@
+#include<iostream>
+#include<fstream>
+#include<sstream>
+#include<cstdio>
+#include<algorithm>
+#include<string>
+#include<vector>
+#include<map>
+#include<cstring>
+using namespace std;
+
+#define FOR(I,A,B) for (int I=int(A);I<int(B);++I)
+#define MEM(A,B) memset(A,B,sizeof(A))
+#define CPY(A,B) memcpy(A,B,sizeof(B))
+#define FIN(A) freopen(A, "r", stdin)
+#define FOUT(A) freopen(A, "w", stdout)
+typedef long long LL;
+
+const int N(100010), MOD = 1000000007;
+const int nu[2] = {4, 7};
+
+int pre;
+LL p10[N], b4[N], b7[N], fm[N], fs[N], ft[N];
+char str_l[N], str_r[N];
+int num_l[N], num_r[N];
+
+LL count(LL c, int n) {
+	return (c * c % MOD * (ft[n] - 1) % MOD * p10[n] % MOD * p10[n] + c * p10[n] % MOD * (2 * fs[n] - b4[n] - b7[n]) + fm[n]) % MOD;
+}
+
+LL calc(int *l, int *r, int x, int s, bool ze, LL cnt) {
+	if (x == -1) {
+		LL ret = pre * cnt % MOD;
+		pre = cnt;
+		return ret;
+	}
+	if (s == 3 && !ze) {
+		LL ret = (count(cnt, x + 1) + pre * (cnt * p10[x + 1] % MOD + b4[x + 1])) % MOD;
+		pre = (cnt * p10[x + 1] + b7[x + 1]) % MOD;
+		return ret;
+	}
+	LL ret = 0;
+	if (ze && l[x] == 0) ret += calc(l, r, x - 1, s | 2, ze, cnt);
+	FOR(i, 0, 2) {
+		if ((s & 1) == 0 && l[x] > nu[i]) continue;
+		if ((s & 2) == 0 && r[x] < nu[i]) continue;
+		int _s = s;
+		if (l[x] < nu[i]) _s |= 1;
+		if (r[x] > nu[i]) _s |= 2;
+		ret += calc(l, r, x - 1, _s, false, (cnt * 10 + nu[i]) % MOD);
+	}
+	return ret % MOD;
+}
+
+int main() {
+	//FIN("in.txt");
+	b4[0] = b7[0] = 0;
+	p10[0] = 1;
+	FOR(i, 1, N) {
+		b4[i] = (b4[i - 1] * 10 + 4) % MOD;
+		b7[i] = (b7[i - 1] * 10 + 7) % MOD;
+		p10[i] = p10[i - 1] * 10 % MOD;
+	}
+	ft[0] = 1;
+	FOR(i, 1, N) {
+		LL t1 = (4 * p10[i - 1] + b7[i - 1]) % MOD,
+			t2 = (7 * p10[i - 1] + b4[i - 1]) % MOD;
+		ft[i] = ft[i - 1] * 2 % MOD;
+		fm[i] = (count(4, i - 1) + count(7, i - 1)+ t1 * t2) % MOD;
+		fs[i] = (2 * fs[i - 1] + 
+				(4 * p10[i - 1] + 7 * p10[i - 1]) % MOD * ft[i - 1])
+				% MOD;
+	}
+	scanf("%s%s", str_l, str_r);
+	int n = strlen(str_l), m = strlen(str_r);
+	FOR(i, 0, n)
+		num_l[i] = str_l[n - 1 - i] - '0';
+	FOR(i, 0, m)
+		num_r[i] = str_r[m - 1 - i] - '0';
+	int ans = calc(num_l, num_r, max(n, m) - 1, 0, true, 0);
+	printf("%d\n", ans);
+	return 0;
+}

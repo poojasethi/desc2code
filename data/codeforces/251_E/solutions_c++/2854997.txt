@@ -1,0 +1,208 @@
+#include <iostream>
+#include <vector>
+#include <cstdlib>
+#include <cmath>
+
+using namespace std;
+
+typedef long long int lint;
+
+lint modulo=1000000007;
+
+int infinito=1000000007;
+
+vector<vector<int> > g;
+
+void arreglag(int u,int p)
+{
+  vector<int> &ar=g[u];
+  vector<int> nextar;
+  for (int i=0;i<int(ar.size());i++) {
+    int v=ar[i];
+    if (v!=p) {
+      nextar.push_back(v);
+      arreglag(v,u);
+    }
+  }
+  ar=nextar;
+}
+
+vector<int> numnodos,ubifurcacion,lenbifurcacion;
+
+void precomputa(int u)
+{
+  vector<int> &ar=g[u];
+  if (int(ar.size())==0) {
+    lenbifurcacion[u]=ubifurcacion[u]=infinito;
+    numnodos[u]=1;
+  } else if (int(ar.size())==2) {
+    lenbifurcacion[u]=0;
+    ubifurcacion[u]=u;
+    precomputa(ar[0]);
+    precomputa(ar[1]);
+    numnodos[u]=1+numnodos[ar[0]]+numnodos[ar[1]];
+  } else {
+    precomputa(ar[0]);
+    lenbifurcacion[u]=min(infinito,1+lenbifurcacion[ar[0]]);
+    ubifurcacion[u]=ubifurcacion[ar[0]];
+    numnodos[u]=1+numnodos[ar[0]];
+  }
+}
+
+lint combi(int u,int v);
+
+vector<lint> memformas;
+
+lint formas(int u)
+{
+  lint &mem=memformas[u];
+  if (mem!=-1) return mem;
+  mem=0;
+  if (lenbifurcacion[u]==infinito) {
+    mem=numnodos[u]/2;
+  } else if (lenbifurcacion[u]==0) {
+    for (int d=0;d<2;d++) {
+      int ua=g[u][d];
+      int ub=g[u][1-d];
+      if (int(g[ua].size())==0) {
+	mem=(mem+formas(ub))%modulo;
+      } else if (int(g[ua].size())==1) {
+	mem=(mem+combi(g[ua][0],ub))%modulo;
+      }
+    }
+  } else {
+    if (lenbifurcacion[u]>=2) {
+      int w=g[u][0];
+      w=g[w][0];
+      mem=formas(w);
+    }
+    if (lenbifurcacion[u]<=numnodos[u]/2-1) {
+      int ubif=ubifurcacion[u];
+      for (int d=0;d<2;d++) {
+	int ua=g[ubif][d];
+	int ub=g[ubif][1-d];
+	if (int(g[ua].size())<=1) {
+	  if ((numnodos[ua]==lenbifurcacion[u]+1 or
+	       numnodos[ua]==lenbifurcacion[u]-1)
+	      and lenbifurcacion[ua]==infinito)
+	    mem=(mem+formas(ub))%modulo;
+	} else if (int(g[ua].size())==2) {
+	  for (int dd=0;dd<2;dd++) {
+	    int uaa=g[ua][dd];
+	    int uab=g[ua][1-dd];
+	    if (numnodos[uaa]==lenbifurcacion[u] and lenbifurcacion[uaa]==infinito)
+	      mem=(mem+combi(uab,ub))%modulo;
+	  }
+	}
+      }
+    }
+  }
+  return mem;
+}
+
+vector<vector<pair<int,lint> > > memcombi;
+
+lint combi(int u,int v)
+{
+  if (lenbifurcacion[u]!=infinito)
+    swap(u,v);
+  if (lenbifurcacion[u]!=infinito)
+    return 0;
+  if (lenbifurcacion[v]==infinito)
+    if (numnodos[u]==numnodos[v]) return 1;
+    else return (max(numnodos[u],numnodos[v])-min(numnodos[u],numnodos[v]))/2;
+  if (lenbifurcacion[v]<numnodos[u])
+    return 0;
+  vector<pair<int,lint> > &aux=memcombi[v];
+  for (int i=0;i<int(aux.size());i++)
+    if (aux[i].first==u)
+      return aux[i].second;
+  int w=v;
+  int c=numnodos[u];
+  while (c>0) {
+    c--;
+    w=g[w][0];
+  }
+  lint mem=formas(w);
+  aux.push_back(pair<int,lint> (u,mem));
+  return mem;
+}
+
+int main()
+{
+  int n;
+  cin>>n;
+  g=vector<vector<int> > (2*n+1);
+  for (int i=0;i<2*n-1;i++) {
+    int u,v;
+    cin>>u>>v;
+    g[u].push_back(v);
+    g[v].push_back(u);
+  }
+  if (n==1) {
+    cout<<2<<endl;
+    exit(0);
+  }
+  int raiz=1;
+  for (int u=2;u<=2*n;u++)
+    if (int(g[u].size())>int(g[raiz].size()))
+      raiz=u;
+  if (int(g[raiz].size())>3) {
+    cout<<0<<endl;
+    exit(0);
+  }
+  if (int(g[raiz].size())<3) {
+    lint r=1;
+    for (int i=1;i<=2*n-1;i++) {
+      lint ma=max(i-1,2*n-1-i);
+      lint mi=min(i-1,2*n-1-i);
+      if (ma==mi) r++;
+      else r+=(ma-mi)/2;
+    }
+    r*=2;
+    r%=modulo;
+    cout<<r<<endl;
+    exit(0);
+  }
+  arreglag(raiz,-1);
+  numnodos=ubifurcacion=lenbifurcacion=vector<int> (2*n+1);
+  precomputa(g[raiz][0]);
+  precomputa(g[raiz][1]);
+  precomputa(g[raiz][2]);
+  memformas=vector<lint> (2*n+1,-1);
+  memcombi=vector<vector<pair<int,lint> > > (2*n+1);
+  lint r=0;
+  for (int i=2;i<n;i++) {
+    for (int j=0;j<3;j++) {
+      for (int k=0;k<3;k++) {
+	for (int t=0;t<3;t++) {
+	  if (j!=k and j!=t and k!=t) {
+	    int u1=g[raiz][j];
+	    int u2=g[raiz][k];
+	    int u3=g[raiz][t];
+	    if (int(g[u2].size())==0) {
+	      if (numnodos[u1]==2*(i-1) and numnodos[u3]==2*(n-i))
+		r=(r+formas(u1)*formas(u3))%modulo;
+	    } else if (int(g[u2].size())==1) {
+	      if (numnodos[u1]+numnodos[u2]-1==2*(i-1)
+		  and numnodos[u3]==2*(n-i))
+		r=(r+combi(u1,g[u2][0])*formas(u3))%modulo;
+	      if (numnodos[u1]==2*(i-1)
+		  and numnodos[u3]+numnodos[u2]-1==2*(n-i))
+		r=(r+formas(u1)*combi(u3,g[u2][0]))%modulo;
+	    } else {
+	      for (int d=0;d<2;d++) {
+		int u2a=g[u2][d];
+		int u2b=g[u2][1-d];
+		if (numnodos[u1]+numnodos[u2a]==2*(i-1)
+		    and numnodos[u3]+numnodos[u2b]==2*(n-i))
+		  r=(r+combi(u1,u2a)*combi(u3,u2b))%modulo;
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
+  cout<<(2*r)%modulo<<endl;
+}

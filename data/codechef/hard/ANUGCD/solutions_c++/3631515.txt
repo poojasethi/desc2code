@@ -1,0 +1,163 @@
+#pragma warning(disable:4786)
+#pragma warning(disable:4996)
+#include<list>
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+#include<vector>
+#include<set>
+#include<map>
+#include<functional>
+#include<string>
+#include<cstring>
+#include<cstdlib>
+#include<queue>
+#include<utility>
+#include<fstream>
+#include<sstream>
+#include<cmath>
+#include<stack>
+#include<assert.h>
+using namespace std;
+ 
+#define MEM(a, b) memset(a, (b), sizeof(a))
+#define CLR(a) memset(a, 0, sizeof(a))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define ABS(X) ( (X) > 0 ? (X) : ( -(X) ) )
+#define S(X) ( (X) * (X) )
+#define SZ(V) (int )V.size()
+#define FORN(i, n) for(i = 0; i < n; i++)
+#define FORAB(i, a, b) for(i = a; i <= b; i++)
+#define ALL(V) V.begin(), V.end()
+#define IN(A, B, C)  ((B) <= (A) && (A) <= (C))
+ 
+typedef pair<int,int> PII;
+typedef pair<double, double> PDD;
+typedef vector<int> VI;
+typedef vector<PII > VP;
+ 
+#define AIN(A, B, C) assert(IN(A, B, C))
+ 
+//typedef int LL;
+//typedef long long int LL;
+//typedef __int64 LL;
+ 
+VI prime_list[100005];
+int mark[100005];
+ 
+void init()
+{
+	int i, j;
+ 
+	for(i = 2; i <= 100000; i++) if(!mark[i])
+	{
+		for(j = i; j <= 100000; j+=i)
+		{
+			prime_list[j].push_back(i);
+			mark[j] = 1;
+		}
+	}
+}
+ 
+VI V[100005];
+VI Z;
+int num[100005];
+int start[100005], end[100005];
+PII st[2400005];
+ 
+PII build(int at, int L, int R)
+{
+	if(L == R)
+	{
+		st[at] = PII(num[Z[L]], 1);
+		return st[at];
+	}
+ 
+	int mid = (L + R) / 2;
+	PII A = build(at * 2, L, mid);
+	PII B = build(at * 2 + 1, mid + 1, R);
+ 
+	if(A.first > B.first) st[at] = A;
+	else if(B.first > A.first) st[at] = B;
+	else st[at] = PII(A.first, A.second + B.second);
+ 
+	return st[at];
+}
+ 
+PII query(int at, int L, int R, int l, int r)
+{
+	if(r < L || R < l) return PII(-1, -1);
+	if(l <= L && R <= r) return st[at];
+ 
+	int mid = (L + R) / 2;
+	PII A = query(at * 2, L, mid, l, r);
+	PII B = query(at * 2 + 1, mid + 1, R, l, r);
+ 
+	if(A.first == -1) return B;
+	if(B.first == -1) return A;
+ 
+	if(A.first > B.first) return A;
+	if(B.first > A.first) return B;
+ 
+	return PII(A.first, A.second + B.second);
+}
+ 
+int main()
+{
+	int n, m;
+	int i, j;
+	int g, x, y;
+ 
+	scanf("%d %d", &n, &m);
+	AIN(n, 1, 100000);
+	AIN(m, 1, 100000);
+ 
+	init();
+ 
+	FORN(i, n)
+	{
+		scanf("%d", &num[i]);
+		AIN(num[i], 1, 100000);
+		for(j = SZ(prime_list[num[i]]) - 1; j >= 0; j--)
+			V[prime_list[num[i]][j]].push_back(i);
+	}
+ 
+	for(i = 2; i <= 100000; i++)
+	{
+		start[i] = SZ(Z);
+		for(j = 0; j < SZ(V[i]); j++)
+			Z.push_back(V[i][j]);
+		end[i] = SZ(Z) - 1;
+	}
+ 
+	build(1, 0, SZ(Z) - 1);
+ 
+	FORAB(i, 1, m)
+	{
+		scanf("%d %d %d", &g, &x, &y);
+		AIN(g, 1, 100000);
+		AIN(x, 1, y);
+		AIN(y, x, n);
+ 
+		x--, y--;
+ 
+		PII ans(-1, -1);
+		FORN(j, SZ(prime_list[g]))
+		{
+			if(start[prime_list[g][j]] > end[prime_list[g][j]]) continue;
+ 
+			int l = lower_bound(V[prime_list[g][j]].begin(), V[prime_list[g][j]].end(), x) - V[prime_list[g][j]].begin();
+			int r = upper_bound(V[prime_list[g][j]].begin(), V[prime_list[g][j]].end(), y) - V[prime_list[g][j]].begin();
+			l += start[prime_list[g][j]]; r += start[prime_list[g][j]];
+			if(l > r - 1) continue;
+			PII now = query(1, 0, SZ(Z) - 1, l, r - 1);
+			if(now.first > ans.first) ans = now;
+		}
+ 
+		printf("%d %d\n", ans.first, ans.second);
+	}
+ 
+	return 0;
+}
+ 

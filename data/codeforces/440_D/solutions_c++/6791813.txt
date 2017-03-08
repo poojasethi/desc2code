@@ -1,0 +1,82 @@
+#include<cstdio>
+#include<iostream>
+#include<cstring>
+#include<cmath>
+#include<algorithm>
+#include<vector>
+#include<queue>
+#include<bitset>
+using namespace std;
+
+#define LL long long
+#define uLL unsigned long long
+#define mxn 1000+5
+const int INF=0x3f3f3f3f;
+
+int fst[mxn], nxt[mxn], to[mxn], sz;
+
+void insert(int x , int y){
+	nxt[sz]=fst[x], to[sz]=y, fst[x]=sz++;
+}
+
+int dp[405][405];
+bitset<401> msk[405][405];
+
+int dfs(int u, int pre){
+	dp[u][1]=0;
+	msk[u][1]=0;
+	int cnt=1;
+	for(int cur=fst[u]; cur!=-1; cur=nxt[cur]){
+		int v=to[cur];
+		if(v==pre) continue;
+		int t=dfs(v, u);
+		for(int i=t+cnt; i; --i){
+			if(i>cnt){
+				dp[u][i]=INF;
+				for(int j=i-cnt; j<i && j<=t; ++j){
+					int t=dp[u][i-j]+dp[v][j];
+					if(t<dp[u][i]){
+						dp[u][i]=t;
+						msk[u][i]=msk[u][i-j] | msk[v][j];
+					}
+				}
+			} else{
+				++dp[u][i];
+				msk[u][i][cur>>1]=1;
+				for(int j=1; j<i && j<=t; ++j){
+					int t=dp[u][i-j]+dp[v][j];
+					if(t<dp[u][i]){
+						dp[u][i]=t;
+						msk[u][i]=msk[u][i-j] | msk[v][j];
+					}
+				}
+			}
+		}
+		cnt+=t;
+	}
+	return cnt;
+}
+
+int main(){
+	//freopen("./in", "r", stdin);
+	int N, K;
+	cin>>N>>K;
+	memset(fst, -1, sizeof(fst)), sz=0;
+	for(int i=0; i<N-1; ++i){
+		int x, y; scanf("%d%d", &x, &y);
+		insert(x, y);
+		insert(y, x);
+	}
+	int ans=INF;
+	bitset<401> foo;
+	for(int i=1; i<=N; ++i){
+		dfs(i, -1);
+		if(ans>dp[i][K])
+			foo=msk[i][K], ans=dp[i][K];
+	}
+	printf("%d\n", ans);
+	for(int j=0; j<N-1; ++j)
+		if(foo[j]==1)
+			printf("%d ", j+1);
+	return 0;
+}

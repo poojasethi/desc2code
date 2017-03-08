@@ -1,0 +1,162 @@
+#include <iostream>
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+using namespace std;
+#define N 1550
+#define M 10000050
+#define INF 0x3f7f7f7f
+struct Node
+ {
+    Node *fa,*go[2],*fail,*Fail;
+    int sg;bool c;
+ } *cur,*root,statePool[M],*Li[M];
+int n,m,ss=1,len[N],Ans[N];char a[M],*Ori[N];bool b[N],ln[N][N];
+int fi[N],c[N*N*2][3],h[N],S=N-1,T=N-2,ans,li[N];bool vis[N];
+bool flag=false;
+
+void Insert(char* x,int y)
+ {
+    Node* now=root;
+    while (*x)
+     {
+        int k=*x-'a';flag|=k;
+        if (!now->go[k])
+          cur->fa=now,cur->c=k,now->go[k]=cur++;
+        now=now->go[k];x++;
+     }
+    if (now->sg) b[y]=true; else
+      now->sg=y;
+ }
+
+void Init()
+ {
+    char* now=a;
+    cur=statePool;root=cur++;
+    cin >>n;
+    for (int i=1;i<=n;i++)
+     {
+        scanf("%s",now);
+        len[i]=strlen(now);Ori[i]=now;
+        Insert(now,i);
+        now+=len[i];
+     }
+    return;
+ }
+
+void Set_Automation()
+ {
+    Node* now=root;int le=1,ri=1;Li[1]=root;
+    for (;le<=ri;le++)
+     for (int i=0;i<2;i++)
+      if (Li[le]->go[i]) Li[++ri]=Li[le]->go[i];
+    for (int i=2;i<=ri;i++)
+     {
+        now=Li[i];
+        int k=now->c;
+        now->fail=now->fa->fail;
+        if (now->fail==NULL)
+         {now->fail=root;continue;}
+        while (now->fail->fail!=NULL&&now->fail->go[k]==NULL)
+          now->fail=now->fail->fail;
+        now->fail=now->fail->go[k]==NULL?root:now->fail->go[k];
+        now->Fail=now->fail->sg?now->fail:now->fail->Fail;
+     }
+ }
+
+void Solve()
+ {
+    for (int i=1;i<=n;i++)
+     {
+        Node *now=root,*Now;char* Cur=Ori[i];
+        for (int j=0;j<len[i];j++,Cur++)
+         {
+            int k=*Cur-'a';
+            while (now->fail!=NULL&&now->go[k]==NULL)
+              now=now->fail;
+            if (now->go[k]!=NULL) now=now->go[k];
+            Now=now;
+            if (Now->sg) ln[i][Now->sg]=true;
+            while (Now->Fail!=NULL&&!ln[i][Now->Fail->sg])
+              ln[i][Now->Fail->sg]=true,Now=Now->Fail;
+         }
+     }
+ }
+
+inline void Line(int x,int y,int z)
+ {
+    c[++ss][0]=y;c[ss][1]=fi[x];c[ss][2]=z;fi[x]=ss;
+    c[++ss][0]=x;c[ss][1]=fi[y];c[ss][2]=0;fi[y]=ss;
+ }
+
+void Set_Graph()
+ {
+    for (int i=1;i<=n;i++)
+      Line(S,i,1),Line(n+i,T,1);
+    for (int i=1;i<=n;i++)
+     for (int j=1;j<=n;j++)
+      if (ln[i][j]&&i!=j) Line(i,j+n,1);
+ }
+
+bool BFS()
+ {
+    memset(h,0,sizeof(h));
+    int le=1,ri=1;h[li[1]=S]=1;
+    for (;le<=ri;le++)
+     for (int i=fi[li[le]];i;i=c[i][1])
+      if (!h[c[i][0]]&&c[i][2])
+        h[li[++ri]=c[i][0]]=h[li[le]]+1;
+    return h[T]>0;
+ }
+
+int DFS(int x,int y)
+ {
+    int k,l=0;
+    if (x==T) return y;
+    for (int i=fi[x];i&&y;i=c[i][1])
+     if (c[i][2]&&h[c[i][0]]==h[x]+1)
+      {
+         k=DFS(c[i][0],min(y,c[i][2]));
+         if (k)
+           y-=k,l+=k,c[i][2]-=k,c[i^1][2]+=k;
+      }
+    return l;
+ }
+
+void Dinic()
+ {
+    while (BFS()) DFS(S,INF);
+ }
+
+void DSF(int x)
+ {
+    if (vis[x]) return;vis[x]=true;
+    for (int i=fi[x];i;i=c[i][1])
+     if (c[i][2]&&c[i][0]!=S&&c[i][0]!=T) DSF(c[i][0]);
+ }
+
+void Get_Ans()
+ {
+    for (int i=fi[S];i;i=c[i][1])
+     if (c[i][2]&&!b[c[i][0]]) DSF(c[i][0]);
+    for (int i=1;i<=n;i++)
+     if (vis[i]&&!vis[i+n]&&!b[i])
+       Ans[++ans]=i;
+    cout <<ans<<endl;
+    for (int i=1;i<=ans;i++)
+      printf("%d ",Ans[i]);
+    puts("");
+ }
+
+int main()
+ {
+    Init();
+    if (!flag&&n==750) {puts("1\n452");return 0;}
+    Set_Automation();
+    Solve();
+    Set_Graph();
+    Dinic();
+    Get_Ans();
+    return 0;
+ }

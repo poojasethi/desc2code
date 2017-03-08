@@ -1,0 +1,109 @@
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <cmath>
+#include <iomanip>
+using namespace std;
+
+const int N=200;
+struct pt{
+	double x, y;
+	pt(double _x=0, double _y=0){
+		x=_x, y=_y;
+	}
+	double slength(){
+		return x*x+y*y;
+	}
+	friend pt operator - (pt a, pt b){
+		return pt(a.x-b.x, a.y-b.y);
+	}
+	pt norm(){
+		return pt(-y, x);
+	}
+	friend pt operator * (pt a, double k){
+		return pt(a.x*k, a.y*k);
+	}
+	friend double operator * (pt a, pt b){
+		return a.x*b.x+a.y*b.y;
+	}
+	friend double operator ^ (pt a, pt b){
+		return a.x*b.y-a.y*b.x;
+	}
+} a[N][3];
+int n;
+long double ans=0;
+
+pair<pt, pt> s[3*N];
+int m;
+pt ins[3*N];
+
+bool cmp0(pt a, pt b){
+	return (a-ins[0]).slength()<(b-ins[0]).slength();
+}
+
+const double eps=1e-8;
+const double eps1=1e-5;
+
+bool in(pt b){
+	for (int i=0; i<n; ++i){
+		double alpha=0;
+		for (int j=0; j<3; ++j)
+			alpha+=atan2((a[i][j]-b)^(a[i][(j+1)%3]-b), (a[i][j]-b)*(a[i][(j+1)%3]-b));
+		if (!(fabs(alpha)<eps)) return true;
+	}
+	return false;
+}
+
+bool good(pt a, pt b){
+	pt c((a.x+b.x)/2.0,(a.y+b.y)/2.0);
+	pt d=(b-a).norm();
+	d=d*(eps1/sqrt(d.slength()));
+	return (in(c-d) ^ in(c-pt(-d.x, -d.y)));
+}
+
+pair<bool, pt> intersect(pair<pt,pt>a, pair<pt, pt> b){
+	if (!(
+		((a.second-a.first)^(b.first-a.first))*((a.second-a.first)^(b.second-a.first))
+		<eps
+
+		&&
+
+		((b.second-b.first)^(a.first-b.first))*((b.second-b.first)^(a.second-b.first))
+		<eps
+
+		))
+			return make_pair(false, pt(0,0));
+	double h=(fabs((b.second-a.first)^(b.first-a.first))/
+		sqrt((b.second-b.first).slength()));
+	double sinl=fabs((b.second-b.first)^(a.second-a.first))/
+		sqrt((b.second-b.first).slength())/sqrt((a.second-a.first).slength());
+	pt ans=a.first-((a.first-a.second)*((h/sinl)/sqrt((a.first-a.second).slength())));
+	return make_pair(true, ans);
+}
+
+int main(){
+	cin>>n;
+	for (int i=0; i<n; ++i){
+		for (int j=0; j<3; ++j)
+			cin>>a[i][j].x>>a[i][j].y;
+		for (int j=0; j<3; ++j)
+			s[i*3+j]=make_pair(a[i][j], a[i][(j+1)%3]);
+	}
+	pair<bool, pt> tmp;
+	for (int i=0; i<3*n; ++i){
+		m=0;
+		ins[m++]=s[i].first;
+		for (int j=0; j<3*n; ++j){
+			if (j==i) continue;
+			if ((tmp=intersect(s[i], s[j])).first)
+				ins[m++]=tmp.second;
+		}
+		ins[m++]=s[i].second;
+		sort(ins+1, ins+m-1, cmp0);
+		for (int j=1; j<m; ++j){
+			if (good(ins[j-1], ins[j]))
+				ans+=sqrt((ins[j]-ins[j-1]).slength());
+		}
+	}
+	cout<<fixed<<setprecision(10)<<ans;
+}

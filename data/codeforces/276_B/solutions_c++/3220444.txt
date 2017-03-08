@@ -1,0 +1,12 @@
+#include<cstdio>
+#include<cstring>
+int main()
+{
+    char c;
+    int k=0,n=0;
+    while ((c=getchar())!='\n')
+    n++,k^=1<<(c-'a');
+    if (n&1||!k) printf("First\n");
+    else printf("Second\n");
+    return 0;
+}

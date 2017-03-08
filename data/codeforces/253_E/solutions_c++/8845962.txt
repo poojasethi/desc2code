@@ -1,0 +1,82 @@
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#include <queue>
+const int N = 50000 + 9;
+struct info
+{
+	int t,s,p;
+}a[N];
+struct CMP
+{
+	bool operator()(const int lhs,const int rhs)const
+	{
+		return a[lhs].p < a[rhs].p;
+	}
+};
+std::priority_queue<int,std::vector<int>,CMP>q;
+int n,id,t[N],tmp[N],lst[N],m;
+long long end[N],T;
+inline bool cmp(const int lhs,const int rhs)
+{
+	return a[lhs].t < a[rhs].t;
+}
+long long calc(const int x,const bool bs)
+{
+	static int mem[N];
+	for (int i = 1; i <= n; ++i)
+		mem[i] = a[i].s;
+	a[id].p = x;
+	long long Time = a[t[1]].t;
+	int ii = 2;
+	while (!q.empty()) q.pop();
+	q.push(t[1]);
+	while (ii <= n && a[t[ii]].t == a[t[ii] - 1].t) q.push(t[ii++]);
+	for (; ii <= n || !q.empty(); ) {
+		int u = -1,i = t[ii];
+		if (!q.empty()) u = q.top();
+		if (ii <= n && (u == -1 || a[i].t < a[u].s + Time)) {
+			a[u].s -= a[i].t - Time;
+			Time = a[i].t;
+			q.push(i);
+			++ii;
+		}else {
+			Time += a[u].s;
+			end[u] = Time;
+			if (bs && u == id) {
+				for (int i = 1; i <= n; ++i)
+					a[i].s = mem[i];
+				return end[u];
+			}
+			q.pop();
+		}
+	}
+	return -1;
+}
+int main()
+{
+	freopen("input.txt","r",stdin);
+	freopen("output.txt","w",stdout);
+	scanf("%d",&n);
+	for (int i = 1; i <= n; ++i) {
+		scanf("%d%d%d",&a[i].t,&a[i].s,&a[i].p);
+		if (a[i].p == -1) id = i;
+		t[i] = i;
+		if (a[i].p != -1) tmp[++tmp[0]] = a[i].p;
+	}
+	scanf("%I64d",&T);
+	std::sort(t + 1,t + 1 + n,cmp);
+	std::sort(tmp + 1,tmp + 1 + tmp[0]);
+	if (tmp[1] - 1 > 0) lst[++m] = tmp[1] - 1;
+	for (int i = 1; i <= tmp[0]; ++i)
+		if (tmp[i] + 1 != tmp[i + 1] && tmp[i] + 1 > 0) lst[++m] = tmp[i] + 1;
+	int l = 0,r = m;
+	while (l + 1 < r) {
+		const int mid = (l + r) / 2;
+		if (calc(lst[mid],true) <= T) r = mid;
+		else l = mid;
+	}
+	calc(lst[r],false);
+	printf("%d\n",lst[r]);
+	for (int i = 1; i <= n; ++i) printf("%I64d ",end[i]);
+}

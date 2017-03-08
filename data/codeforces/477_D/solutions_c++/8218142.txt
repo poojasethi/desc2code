@@ -1,0 +1,91 @@
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <algorithm>
+using namespace std;
+const int nmax = 5000 + 18, mo = 1000000000 + 7;
+
+int lcp[nmax][nmax];
+int f[nmax][nmax], g[nmax][nmax];
+int n;
+char a[nmax];
+
+bool bigger(int i, int j, int len)
+{
+    if (lcp[i][j] < len)
+        return a[i + lcp[i][j]] > a[j + lcp[i][j]];
+    else //if (lcp[i][j] == len)
+        return 0;//lcp[i][j] != len;
+}
+
+inline void add(int &a, int b)
+{
+    a = ((long long)a + b) % mo;
+}
+
+inline void update(int &a, int b)
+{
+    if (a == -1 || a > b) a = b;
+}
+
+int calc(int l, int r)
+{
+    int rnt = 0;
+    for (int i =l; i <= r; ++i)
+        rnt = rnt * 2 + a[i] - '0';
+    return rnt;
+}
+
+int calcmod(int l, int r)
+{
+    long long rnt = 0;
+    for (int i =l; i <= r; ++i)
+        rnt = (rnt * 2 + a[i] - '0') % mo;
+    return rnt;
+}
+
+int main()
+{
+    scanf("%s", a + 1);
+    n = strlen(a + 1);
+    for (int i = n; i; --i)
+        for (int j = i; j <= n; ++j)
+            lcp[i][j] = a[i] == a[j] ? lcp[i + 1][j + 1] + 1 : 0;
+    memset(g, -1, sizeof(g));
+    f[1][1] = g[1][1] = 1;
+    for (int i = 1; i <= n; ++i)
+        for (int j = i; j < n; ++j) if (f[i][j]) {
+            add(f[i][j + 1], f[i][j]);
+            update(g[i][j + 1], g[i][j]);
+//          printf("(%d, %d) %d %d\n", i, j, f[i][j], g[i][j]);
+            if (a[j + 1] == '0') continue;
+            int len = j - i + 1, k = j + len;
+            if (bigger(i, j + 1, len))
+                ++k;
+/*          if (i == 1 && j == 1) {
+                printf("%d %d\n", len, k);
+            }*/
+            if (k <= n) {
+                add(f[j + 1][k], f[i][j]);
+                update(g[j + 1][k], g[i][j] + 1);
+            }
+        }
+    int ans1 = 0, ans2, minp;
+    for (int i = 1; i <= n; ++i) {
+//      printf("(%d, %d) %d %d\n", i, n, f[i][n], g[i][n]);
+        add(ans1, f[i][n]);
+        if (f[i][n])
+            minp = i;
+    }
+    if (n - minp + 1 > 15) {
+        ans2 = g[minp][n];
+        add(ans2, calcmod(minp, n));
+    }
+    else {
+        ans2 = 1 << 20;
+        for (int i = 1; i <= n; ++i) if (f[i][n] && n - i + 1 <= 15)
+            update(ans2, g[i][n] + calc(i, n));
+    }
+    printf("%d\n%d\n", ans1, ans2);
+    return 0;
+}

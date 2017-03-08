@@ -1,0 +1,108 @@
+#include<cstdio>
+#include<vector>
+#include<algorithm>
+#define For(i,j,k) for(int i=j;i<=k;i++)
+#define inf 1500000000
+using namespace std;
+typedef long long ll;
+const int maxn=200010;
+struct edge
+{
+	int a,b,p,w,l;
+	bool pd;
+}e[maxn];
+vector<int> g[maxn];
+int fa[maxn],st1[maxn][24],st2[maxn][24],dep[maxn];
+ll ans[maxn];
+int find(int x)
+{
+	if(fa[x]==x) return x;
+	else return fa[x]=find(fa[x]);
+}
+bool cmp(struct edge a,struct edge b)
+{
+	return a.w<b.w;
+}
+void dfs(int x,int fa,int w)
+{
+	//printf("%d\n",x);
+	dep[x]=dep[fa]+1;
+	int t=1;
+	st1[x][0]=fa;
+	st2[x][0]=w;
+	while(dep[x]-(1<<t)>0)
+	{
+		st1[x][t]=st1[st1[x][t-1]][t-1];
+		st2[x][t]=max(st2[st1[x][t-1]][t-1],st2[x][t-1]);
+		t++;
+	}
+	//printf("%d\n",g[x].size());
+	for(int i=0;i<g[x].size();i++) 
+	{
+		//printf("4543");
+		if(e[g[x][i]].pd && fa!=(e[g[x][i]].p^x))
+		dfs(e[g[x][i]].p^x,x,e[g[x][i]].w);
+	}
+}
+int cal(int x,int y)
+{
+	int ret=0;
+	if(dep[x]<dep[y]) swap(x,y);
+	int p=x,q=y;
+	int t=dep[p]-dep[y];
+	for(int i=23;i>=0;i--) if(t-(1<<i)>=0) 
+	{
+		t-=(1<<i);
+		ret=max(ret,st2[p][i]);
+		p=st1[p][i];
+	}
+	if(p==q) return ret;
+	for(int i=23;i>=0;i--) if(dep[p]-(1<<i)>0 && st1[p][i]!=st1[q][i])
+	{
+		ret=max(ret,max(st2[p][i],st2[q][i]));
+		p=st1[p][i];
+		q=st1[q][i];
+	}
+	ret=max(ret,max(st2[p][0],st2[q][0]));
+	return ret;
+}
+int main()
+{
+	//freopen("in.txt","r",stdin);
+	int n,m,a,b,w;
+	scanf("%d%d",&n,&m);
+	For(i,0,m-1)
+	{
+		scanf("%d%d%d",&e[i].a,&e[i].b,&e[i].w);
+		e[i].p=e[i].a^e[i].b;
+		e[i].pd=false;
+		e[i].l=i;
+	}
+	ll span=0;
+	For(i,1,n) fa[i]=i;
+	sort(e,e+m,cmp);
+	For(i,0,m-1) 
+		if(find(e[i].a)!=find(e[i].b))
+		{
+			fa[fa[e[i].a]]=fa[e[i].b];
+			e[i].pd=true;
+			span+=e[i].w;
+		}
+	For(i,0,m-1)
+	{
+		//printf("%d %d\n",i,m-1);
+		g[e[i].a].push_back(i);
+		g[e[i].b].push_back(i);
+	}
+	//printf("%d\n",m);
+	dfs(1,0,0);
+	//printf("423");
+	For(i,0,m-1) if(e[i].pd)
+		ans[e[i].l]=span;
+	else
+		ans[e[i].l]=span-cal(e[i].a,e[i].b)+e[i].w;
+	For(i,0,m-1)
+	printf("%I64d\n",ans[i]);
+
+	return 0;
+}

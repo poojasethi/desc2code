@@ -1,0 +1,163 @@
+#include <bits/stdc++.h>
+#define rep(i,x,y) for (int i = (x); i<=(y); i++)
+#define repe(i,x,y) for (int i = (x); i < (y);i++)
+#define drep(i,x,y) for (int i = (x); i >= (y); i--)
+#define mp make_pair
+#define pb push_back
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAXN 200100
+#define LMAXN 25
+#define	s(n) scanf("%d",&n)
+#define sl(n) scanf("%lld",&n)
+#define pr(n) printf("%d",n)
+#define prl(n) printf("%lld",n)
+#define endc printf("\n")
+#define psp printf(" ")
+using namespace std;
+typedef long long ll;
+typedef long double ld;
+
+int n,m,q,tim,id,N;
+vector<int> G[MAXN];
+vector<int> H[MAXN];
+int a[MAXN], b[MAXN], c[MAXN];
+int P[MAXN][LMAXN];
+int hv[MAXN];
+int low[MAXN], num[MAXN];
+int d[MAXN];
+bool vis[MAXN];
+bool ok;
+
+void dfs1(int x,int pi) {
+	tim++;
+	num[x] = tim; low[x] = num[x];
+	int cnt = 0;
+	repe(j,0,G[x].size()) {
+		int y = G[x][j];
+		if ((y == pi) and (cnt == 0)) { cnt++; continue; }
+		if (num[y] < 0) { dfs1(y,x); low[x] = MIN(low[x], low[y]); }
+		else { low[x] = MIN(low[x], num[y]); }
+	}
+}
+
+void dfs2(int x,int pi,int cid) {
+	hv[x] = cid; 
+	repe(j,0,G[x].size()) {
+		int y = G[x][j];
+		if (hv[y] > 0) continue;
+		if (low[y] >= num[y]) {
+			id++; H[cid].pb(id); H[id].pb(cid);
+			dfs2(y,x,id);
+		} else dfs2(y,x,cid);
+	}
+}
+
+void dfs3(int x,int pi,int lvl) {
+	P[x][0] = pi; d[x] = lvl;
+	repe(j,0,H[x].size()) {
+		int y = H[x][j];
+		if (y == pi) continue;
+		dfs3(y,x,lvl+1);
+	}
+}
+
+int lca(int x,int y) {
+	if (d[x] < d[y]) return lca(y,x);
+	drep(j,LMAXN-1,0) {
+		if (P[x][j] < 0) continue;
+		if (d[P[x][j]] >= d[y]) {
+			x = P[x][j];
+		}
+	}
+	if (x == y) return x;
+	drep(j,LMAXN-1,0) {
+		if (P[x][j] < 0) continue;
+		if (P[x][j] != P[y][j]) { x = P[x][j]; y = P[y][j]; }
+	}
+	return P[x][0];
+}
+		
+void dfs4(int x,int pi) {
+	vis[x] = true;
+	repe(j,0,H[x].size()) {
+		int y = H[x][j];
+		if (y == pi) continue;
+		dfs4(y,x);
+		a[x] += a[y]; b[x] += b[y]; c[x] += c[y];
+		if ((a[y] > c[y]) and (b[y] > c[y])) ok = false;
+	}
+}
+
+int main() {
+	s(n); s(m); s(q);
+	tim = 0;
+	rep(i,1,n) {
+		num[i] = -1;
+		low[i] = -1;
+		hv[i] = -1;
+		H[i] = *new vector<int>();
+		G[i] = *new vector<int>();
+		P[i][0] = -1;
+	}
+	int x,y;
+	rep(i,1,m) {
+		s(x); s(y);
+		G[x].pb(y);
+		G[y].pb(x);
+	}
+	
+	// bicon
+	
+	id = 0;
+
+	rep(i,1,n) {
+		a[i] = 0; b[i] = 0; c[i] = 0; vis[i] = false;
+		if (num[i] < 0) {
+			dfs1(i,-1);
+			id++;
+			dfs2(i,-1,id);
+		}
+	}
+	
+	N = id;
+	rep(i,1,N) {
+		if (P[i][0] < 0) {
+			dfs3(i,-1,1);
+		}
+	}
+
+	repe(j,1,LMAXN) {
+		rep(i,1,N) {
+			if (P[i][j-1] < 0) {
+				P[i][j] = -1;
+			} else P[i][j] = P[P[i][j-1]][j-1];
+		}
+	}
+
+
+	while (q--) {
+		int s,t,l; s(s); s(t);
+		s = hv[s]; t = hv[t];
+		l = lca(s,t);
+		if (l < 0) {
+			printf("No\n");
+			return 0;
+		}
+		a[s]++; b[t]++; c[l]++;
+	}
+	
+	ok = true;
+
+	rep(i,1,N) {
+		if (!vis[i]) {
+			dfs4(i,-1);
+		}
+	}
+	
+
+	if (ok) { printf("Yes\n"); }
+	else { printf("No\n"); }
+
+	return 0;
+}

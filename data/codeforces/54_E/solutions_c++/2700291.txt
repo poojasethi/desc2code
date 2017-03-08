@@ -1,0 +1,82 @@
+#include <iostream>
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+
+using namespace std;
+
+#include <cmath>
+typedef double db;
+const db eps = 1e-8;
+const db pi = acos(-1.0);
+db sqr(db a) { return a * a; }
+bool zero(db a) { return fabs(a) < eps; }
+int sgn(db x) { return x<-eps?-1:x>eps; }
+struct pt {
+    db x, y;
+    pt(db _x = 0, db _y = 0) : x(_x), y(_y) {}
+    pt operator-(const pt& r) const { return pt(x - r.x, y - r.y); }
+    pt operator+(const pt& r) const { return pt(x + r.x, y + r.y); }
+    pt operator*(const db& r) const { return pt(x * r, y * r); }
+    db operator*(const pt& r) const { return x * r.x + y * r.y; }
+    db operator^(const pt& r) const { return x * r.y - y * r.x; }
+    bool operator<(const pt& r) const { return zero(x - r.x) ? y < r.y : x < r.x; }
+    int input() { return scanf("%lf %lf", &x, &y); }
+    db len() { return sqrt(x * x + y * y); }
+    db dist(const pt& r) const { return ((*this) - r).len();}
+    pt rotate(db ag) { return pt(x*cos(ag)-y*sin(ag),x*sin(ag)+y*cos(ag)); }
+    db ang() { return atan2(y, x); }
+    pt scale(db leg) { return (*this)*(leg/len()); }
+    void output() { printf("%lf %lf\n", x, y); }
+};
+db xmult(pt p1, pt p2, pt p0) {
+    return (p1 - p0) ^ (p2 - p0);
+}
+db areaPolygon(int n, pt* p) {
+    db area = 0.0;
+    for (int i = 0; i < n; ++i) {
+        area += p[i] ^ p[(i+1)%n];
+    }
+    return area;
+}
+
+const int maxn = 50050 * 3;
+pt p[maxn];
+db sum[maxn], result;
+int n;
+
+void solved() {
+    for (int i = 0; i < n; ++i) {
+        p[i + n] = p[i];
+    }
+    sum[0] = 0.0;
+    for (int i = 1; i <= 2 * n; ++i) {
+        sum[i] = sum[i-1] + (p[i] ^ p[i-1]) * 0.5;
+    }
+    for (int i = 0, j = 0; i < n; ++i) {
+        j = max(i + 1, j);
+        while (j + 1 < 2 * n && sgn((p[j + 1] - p[i]) * (p[i + 1] - p[i]) 
+            - (p[j] - p[i]) * (p[i + 1] - p[i])) >= 0) ++j;
+        if (j == i + 1) result = 0.0;
+        if (j >= 2 * n) break;
+        db X = (p[j] - p[i]) * (p[i + 1] - p[i]) / (p[i + 1] - p[i]).len();
+        db Y = sqrt(sqr((p[j] - p[i]).len()) - sqr(X));
+        db area = sum[j] - sum[i];
+        area += (p[i] ^ p[j]) * 0.5;
+        result = min(result, X * Y / 2.0 - fabs(area));
+    }
+}
+
+int main() {
+    scanf("%d", &n);
+    for (int i = 0; i < n; ++i) {
+        p[i].input();
+    }
+    result = 1e100;
+    solved();
+    reverse(p, p + n);
+    solved();
+    printf("%.12lf\n", result);
+    return 0;
+}

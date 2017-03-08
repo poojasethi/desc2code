@@ -1,0 +1,378 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <algorithm>
+
+using namespace std;
+
+typedef long long int ll;
+
+ll modulo=1e9+7;
+
+bool escribir=false;
+
+void escribe(vector<ll> &v)
+{
+  for (int i=0;i<int(v.size());i++)
+    cout<<v[i]<<",";
+  cout<<endl;
+}
+
+void anyade(ll &a,ll b)
+{
+  a=(a+b)%modulo;
+}
+
+ll memoria1[60][1<<19];
+
+vector<ll> calcula1(int n,int m,vector<pair<int,ll> > f[100],vector<pair<int,ll> > c[100])
+{
+  if (escribir) cout<<"calcula1"<<endl;
+  if (m>19) cout<<"error"<<endl;
+  for (int a=0;a<=n;a++)
+    for (int b=0;b<1<<m;b++)
+      memoria1[a][b]=0;
+  memoria1[0][0]=1;
+  for (int i=0;i<n;i++) {
+    vector<pair<int,ll> > &ar=f[i];
+    for (int conj=0;conj<1<<m;conj++) {
+      anyade(memoria1[i+1][conj],memoria1[i][conj]);
+      for (int d=0;d<int(ar.size());d++)
+	if ((conj&(1<<ar[d].first))==0)
+	  anyade(memoria1[i+1][conj|(1<<ar[d].first)],memoria1[i][conj]*(ar[d].second-1));
+    }
+  }
+  vector<ll> sol(m+1,0);
+  for (int conj=0;conj<1<<m;conj++)
+    anyade(sol[__builtin_popcount(conj)],memoria1[n][conj]);
+  return sol;
+}
+
+vector<ll> fusiona(vector<ll> s1,vector<ll> s2)
+{
+  int n1=int(s1.size());
+  int n2=int(s2.size());
+  if (n1==0 or n2==0) return vector<ll> ();
+  int n=n1+n2-1;
+  vector<ll> s(n,0);
+  for (int i1=0;i1<n1;i1++)
+    for (int i2=0;i2<n2;i2++)
+      anyade(s[i1+i2],s1[i1]*s2[i2]);
+  return s;
+}
+
+vector<ll> suma(vector<ll> s1,vector<ll> s2)
+{
+  while (int(s1.size())<int(s2.size()))
+    s1.push_back(0);
+  while (int(s2.size())<int(s1.size()))
+    s2.push_back(0);
+  vector<ll> s(int(s1.size()));
+  for (int i=0;i<int(s1.size());i++)
+    anyade(s1[i],s2[i]);
+  return s1;
+}
+
+struct arista {
+  int i,j;
+  ll w;
+  arista() {
+  }
+  arista(int ini,int inj,ll inw) {
+    i=ini;j=inj;w=inw;
+  }
+};
+
+int n,m;
+vector<pair<int,ll> > af[100],ac[100];
+int conectadootrosf[100],conectadootrosc[100];
+
+vector<arista> otros;
+vector<pair<int,ll> > f[100],c[100];
+int visf[100],visc[100];
+
+void generaarbolf(int i,int p);
+
+void generaarbolc(int j,int p)
+{
+  visc[j]=1;
+  vector<pair<int,ll> > &ar=c[j];
+  for (int d=0;d<int(ar.size());d++) {
+    int i=ar[d].first;
+    if (i!=p) {
+      if (visf[i]) {
+	// No hay que meterlo porque se mete desde las i's.
+	//otros.push_back(arista(i,j,ar[d].second));
+      } else {
+	af[i].push_back(pair<int,ll> (j,ar[d].second));
+	ac[j].push_back(pair<int,ll> (i,ar[d].second));
+	generaarbolf(i,j);
+      }
+    }
+  }
+}
+
+void generaarbolf(int i,int p)
+{
+  vector<pair<int,ll> > &ar=f[i];
+  visf[i]=1;
+  for (int d=0;d<int(ar.size());d++) {
+    int j=ar[d].first;
+    if (j!=p) {
+      if (visc[j]) {
+	otros.push_back(arista(i,j,ar[d].second));
+      } else {
+	af[i].push_back(pair<int,ll> (j,ar[d].second));
+	ac[j].push_back(pair<int,ll> (i,ar[d].second));
+	generaarbolc(j,i);
+      }
+    }
+  }
+}
+
+vector<ll> memoriac[100][2];
+vector<ll> memoriaf[100][2];
+int calculadoc[100][2];
+int calculadof[100][2];
+
+// cp significa conectado al padre
+void calculaf(int i,int p,int cp);
+
+void calculac(int j,int p,int cp)
+{
+  if (calculadoc[j][cp]) return;
+  calculadoc[j][cp]=1;
+  vector<ll> &mem=memoriac[j][cp];
+  mem=vector<ll> (1,1);
+  vector<ll> mem1;
+  int ocupado=conectadootrosc[j] or cp;
+  vector<pair<int,ll> > &ar=ac[j];
+  for (int d=0;d<int(ar.size());d++) {
+    int i=ar[d].first;
+    if (i!=p) {
+      calculaf(i,j,0);
+      mem1=fusiona(mem1,memoriaf[i][0]);
+      if (not ocupado and not conectadootrosf[i]) {
+	calculaf(i,j,1);
+	vector<ll> subsol2=vector<ll> (2,0);
+	subsol2[1]=ar[d].second-1;
+	vector<ll> subsol3=memoriaf[i][1];
+	mem1=suma(mem1,fusiona(mem,fusiona(subsol2,subsol3)));
+      }
+      mem=fusiona(mem,memoriaf[i][0]);
+    }
+  }
+  mem=suma(mem,mem1);
+}
+
+void calculaf(int i,int p,int cp)
+{
+  if (calculadof[i][cp]) return;
+  calculadof[i][cp]=1;
+  vector<ll> &mem=memoriaf[i][cp];
+  mem=vector<ll> (1,1);
+  vector<ll> mem1;
+  int ocupado=conectadootrosf[i] or cp;
+  vector<pair<int,ll> > &ar=af[i];
+  for (int d=0;d<int(ar.size());d++) {
+    int j=ar[d].first;
+    if (j!=p) {
+      calculac(j,i,0);
+      mem1=fusiona(mem1,memoriac[j][0]);
+      if (not ocupado and not conectadootrosc[j]) {
+	calculac(j,i,1);
+	vector<ll> subsol2=vector<ll> (2,0);
+	subsol2[1]=ar[d].second-1;
+	vector<ll> subsol3=memoriac[j][1];
+	mem1=suma(mem1,fusiona(mem,fusiona(subsol2,subsol3)));
+      }
+      mem=fusiona(mem,memoriac[j][0]);
+    }
+  }
+  mem=suma(mem,mem1);
+}
+
+vector<ll> calcula2()
+{
+  if (escribir) cout<<"calcula2"<<endl;
+  for (int i=0;i<n;i++) {
+    visf[i]=0;
+    af[i]=vector<pair<int,ll> > ();
+  }
+  for (int j=0;j<m;j++) {
+    visc[j]=0;
+    ac[j]=vector<pair<int,ll> > ();
+  }
+  otros=vector<arista>();
+  generaarbolf(0,-1);
+  vector<ll> sol;
+  for (int conj=0;conj<1<<int(otros.size());conj++) {
+    for (int i=0;i<n;i++)
+      conectadootrosf[i]=0;
+    for (int j=0;j<m;j++)
+      conectadootrosc[j]=0;
+    bool error=false;
+    int numconectados=0;
+    ll prod=1;
+    for (int b=0;b<int(otros.size()) and not error;b++) {
+      if (conj&(1<<b)) {
+	int i=otros[b].i;
+	int j=otros[b].j;
+	ll w=otros[b].w;
+	if (conectadootrosf[i] or conectadootrosc[j]) error=true;
+	else {
+	  conectadootrosf[i]=1;
+	  conectadootrosc[j]=1;
+	  numconectados++;
+	  prod=(prod*(w-1))%modulo;
+	}
+      }
+    }
+    if (not error) {
+      for (int i=0;i<n;i++)
+	for (int cp=0;cp<2;cp++)
+	  calculadof[i][cp]=0;
+      for (int j=0;j<m;j++)
+	for (int cp=0;cp<2;cp++)
+	  calculadoc[j][cp]=0;
+      vector<ll> subsol(numconectados+1,0);
+      subsol[numconectados]=prod;
+      calculaf(0,-1,0);
+      subsol=fusiona(subsol,memoriaf[0][0]);
+      sol=suma(subsol,sol);
+    }
+  }
+  return sol;
+}
+
+
+vector<ll> calcula()
+{
+  if (escribir) {
+    cout<<"filas:"<<endl;
+    for (int i=0;i<n;i++) {
+      cout<<i<<":";
+      vector<pair<int,ll> > &ar=f[i];
+      for (int d=0;d<int(ar.size());d++)
+	cout<<"("<<ar[d].first<<","<<ar[d].second<<")";
+      cout<<endl;
+    }
+    cout<<"columnas:"<<endl;
+    for (int j=0;j<m;j++) {
+      cout<<j<<":";
+      vector<pair<int,ll> > &ar=c[j];
+      for (int d=0;d<int(ar.size());d++)
+	cout<<"("<<ar[d].first<<","<<ar[d].second<<")";
+      cout<<endl;
+    }
+  }
+  int numaristas=0;
+  for (int i=0;i<n;i++)
+    numaristas+=int(f[i].size());
+  if (min(n,m)<numaristas-(n+m-1)) {
+    if (n>m) return calcula1(n,m,f,c);
+    return calcula1(m,n,c,f);
+  }
+  return calcula2();
+}
+
+
+
+vector<pair<int,ll> > ff[1000000],cc[1000000];
+int vistof[1000000],vistoc[1000000];
+ll fact[1000000];
+int traducef[1000000],traducec[1000000];
+
+void generaf(int i);
+
+void generac(int j)
+{
+  if (vistoc[j]) return;
+  vistoc[j]=1;
+  c[m]=vector<pair<int,ll> > ();
+  traducec[j]=m++;
+  vector<pair<int,ll> > &ar=cc[j];
+  for (int d=0;d<int(ar.size());d++) {
+    int i=ar[d].first;
+    generaf(i);
+    c[traducec[j]].push_back(pair<int,ll> (traducef[i],ar[d].second));
+  }
+}
+
+void generaf(int i)
+{
+  if (vistof[i]) return;
+  vistof[i]=1;
+  f[n]=vector<pair<int,ll> > ();
+  traducef[i]=n++;
+  vector<pair<int,ll> > &ar=ff[i];
+  for (int d=0;d<int(ar.size());d++) {
+    int j=ar[d].first;
+    generac(j);
+    f[traducef[i]].push_back(pair<int,ll> (traducec[j],ar[d].second));
+  }
+}
+
+vector<ll> calcula(int i)
+{
+  n=0;m=0;
+  generaf(i);
+  return calcula();
+}
+
+ll matriz[100][100];
+int elegido[100];
+
+ll permanente(int n,int i)
+{
+  if (i==n+1) return 1;
+  ll s=0;
+  for (int j=1;j<=n;j++) {
+    if (not elegido[j]) {
+      elegido[j]=1;
+      anyade(s,matriz[i][j]*permanente(n,i+1));
+      elegido[j]=0;
+    }
+  }
+  return s;
+}
+
+int main()
+{
+  int n,k;
+  cin>>n>>k;
+  //if (n>50) escribir=true;
+  /*
+  for (int i=1;i<=n;i++)
+    for (int j=1;j<=n;j++)
+      matriz[i][j]=1;
+  */
+  for (int d=0;d<k;d++) {
+    int i,j,w;
+    cin>>i>>j>>w;
+    //if (d==0 and i==79039 and j==64823) escribir=true;
+    ff[i].push_back(pair<int,ll> (j,w));
+    cc[j].push_back(pair<int,ll> (i,w));
+    //matriz[i][j]=w;
+  }
+  //cout<<"permanente: "<<permanente(n,1)<<endl;
+  vector<ll> sol(1,1);
+  for (int i=1;i<=n;i++) {
+    if (int(ff[i].size()) and not vistof[i]) {
+      vector<ll> subsol=calcula(i);
+      if (escribir) {
+        cout<<"resultado:";
+        escribe(subsol);
+      }
+      sol=fusiona(sol,subsol);
+    }
+  }
+  fact[0]=1;
+  for (int i=1;i<1000000;i++)
+    fact[i]=(fact[i-1]*i)%modulo;
+  ll final=0;
+  for (int i=0;i<int(sol.size());i++)
+    anyade(final,sol[i]*fact[n-i]);
+  cout<<(final%modulo+modulo)%modulo<<endl;
+}
+

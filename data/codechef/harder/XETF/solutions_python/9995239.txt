@@ -1,0 +1,99 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define DEBUG(x) cerr << #x << " = " << x << endl;
+typedef long long LL;
+
+const int N = (int) 1e6 + 10;
+const int K = (int) 3e2 + 10;
+const int P = (int) 1e9 + 7;
+
+bool p[N];
+int a[K], b[K], c[K][K], ft[K];
+vector<LL> prime;
+
+LL Power(LL a, int k) {
+	LL ans = 1; a %= P;
+	while (k) {
+		if (k & 1) ans = ans * a % P;
+		a = a * a % P;
+		k >>= 1;
+	}
+	return ans;
+}
+
+int Bermoulli(int n) {
+	for (int i = 0; i <= n; ++i) {
+		a[i] = Power(i + 1, P - 2);
+		for (int j = i; j >= 1; --j) a[j - 1] = (LL) j * (a[j - 1] - a[j] + P) % P;
+	}
+	return a[0];
+}
+
+void Prepare() {
+	for (int i = 0; i <= 300; ++i) {
+		c[i][0] = 1;
+		for (int j = 1; j <= i; ++j) {
+			c[i][j] = c[i - 1][j] + c[i - 1][j - 1];
+			if (c[i][j] >= P) c[i][j] -= P;
+		}
+	}
+	memset(p, true, sizeof p);
+	for (int i = 2; i <= 1000; ++i) if (p[i])
+		for (int j = i * i; j <= 1000000; j += i)
+			p[j] = false;
+	for (int i = 2; i <= 1000000; ++i) if (p[i]) prime.push_back(i);
+	for (int i = 0; i <= 300; ++i) b[i] = Bermoulli(i);
+}
+
+int Sum(LL n, int k) {
+	ft[0] = 1;
+	for (int i = 1; i <= k + 1; ++i) ft[i] = ft[i - 1] * (n % P) % P;
+	int ans = 0;
+	for (int i = 0; i <= k; ++i) ans = (ans + (LL) c[k + 1][i] * b[i] % P * ft[k - i + 1]) % P;
+	return ans * Power(k + 1, P - 2) % P;
+}
+
+int Compute(LL n, int k) {
+	LL __n = n;
+	vector<LL> div;
+	for (int i = 0; i < (int) prime.size() && prime[i] * prime[i] <= n; ++i) {
+		if (n % prime[i]) continue;
+		while (n % prime[i] == 0) n /= prime[i];
+		div.push_back(prime[i]);
+	}
+	if (n > 1) div.push_back(n);
+	int d = (int) div.size(), ans = 0;
+	for (int x = 1; x < 1 << d; ++x) {
+		LL z = 1;
+		for (int i = 0; i < d; ++i) if (x >> i & 1) z *= div[i];
+		LL f = Power(z, k) * Sum(__n / z, k) % P;
+		if (__builtin_popcount(x) & 1) ans = (ans + f) % P;
+		else ans = (ans + P - f) % P;
+	}
+	return (Sum(__n, k) - ans + P) % P;
+}
+
+int main() {
+#ifdef LOCAL
+	freopen("Data.inp", "r", stdin);
+	freopen("Data.out", "w", stdout);
+#endif
+
+	int TC;
+	cin >> TC;
+
+	Prepare();
+	while (TC--) {
+		LL n; int k;
+		cin >> n >> k;// cerr << Sum(n, k) << endl;
+		if (n <= 10000) {
+			int ans = 0;
+			for (int i = 1; i <= n; ++i)
+				if (__gcd(n, (LL) i) == 1) ans = (ans + Power(i, k)) % P;
+			cout << ans << "\n";
+		}
+		else cout << Compute(n, k) << "\n";
+	}
+
+	return 0;
+}

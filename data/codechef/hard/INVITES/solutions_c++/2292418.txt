@@ -1,0 +1,134 @@
+#include <cmath>
+#include <ctime>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <queue>
+#include <map>
+#include <set>
+#include <algorithm>
+#include <cctype>
+#include <stack>
+using namespace std;
+
+typedef long long int int64;
+
+#define EPS 10e-9
+#define INF 0x3f3f3f3f
+#define REP(i,n) for(int i=0; i<(n); i++)
+
+#define MOD 1000000007LL
+#define MAXN 100100
+int n;
+int in[100100];
+vector<int> adj[100010];
+
+int used[MAXN];
+int64 memo[MAXN][2][2];
+int circ;
+int achou;
+
+bool DFS(int u) {
+  used[u] = 1;
+  int v = in[u];
+  if (used[v] == 0) {
+    bool res = DFS(v);
+    used[u] = 2;
+    return res;
+  }
+  if (used[v] == 1) {
+    circ = v;
+    achou = u;
+    used[u] = 2;
+    return false;
+  }
+  used[u] = 2;
+  return true;
+}
+
+int64 calcula(int u, int c, int ul, int pai) {
+  if (memo[u][c][ul] != -1) return memo[u][c][ul];
+
+  int64 x = 1;
+  int64 y = 1;
+  REP(i, (int) adj[u].size()) {
+    int v = adj[u][i];
+    if (v == pai) continue;
+    x = (x * calcula(v, 0, ul, u)) % MOD;
+  }
+  int v = in[u];
+  if (u != achou && v != pai) {
+    x = (x * calcula(v, 0, ul, u)) % MOD;
+  }
+  if ((u == achou && ul) || c) {
+    return memo[u][c][ul] = x;
+  }
+  REP(i, (int) adj[u].size()) {
+    int v = adj[u][i];
+    if (v == pai) continue;
+    y = (y * calcula(v, 1, ul, u)) % MOD;
+  }
+  v = in[u];
+  if (u != achou && v != pai) {
+    y = (y * calcula(v, 1, ul, u)) % MOD;
+  }
+  return memo[u][c][ul] = (y + x) % MOD;
+}
+
+int64 init(int u) {
+  int64 x = 1;
+  int64 y = 1;
+  REP(i, (int) adj[u].size()) {
+    int v = adj[u][i];
+    if (v == achou) continue;
+    x = (x * calcula(v, 0, 0, u)) % MOD;
+  }
+  int v = in[u];
+  x = (x * calcula(v, 0, 0, u)) % MOD;
+
+  REP(i, (int) adj[u].size()) {
+    int v = adj[u][i];
+    if (v == achou) continue;
+    y = (y * calcula(v, 1, 1, u)) % MOD;
+  }
+  v = in[u];
+  y = (y * calcula(v, 1, 1, u)) % MOD;
+
+  return (x + y) % MOD;  
+}
+
+int main()
+{	
+  int t;
+  scanf("%d", &t);
+  REP(k, t) {
+    scanf("%d", &n);
+    REP(i, n) adj[i].clear();
+    REP(i, n) {
+      int x;
+      scanf("%d", &x);
+      x--;
+      in[i] = x;
+      adj[x].push_back(i);
+    }
+    //REP(i, n) printf("%d\n", (int) adj[i].size());
+    memset(used, 0, sizeof(used));
+    memset(memo, -1, sizeof(memo));
+    int64 res = 1;
+    REP(i, n) {
+      if (used[i]) continue;
+      circ = -1;
+      if (DFS(i)) continue;
+      //printf("%d %d\n", circ, achou);
+      if (circ != -1)
+        res = (res * init(circ)) % MOD;
+      else
+        res = (res * calcula(i, 0, 0, -1)) % MOD;
+    }
+    printf("%lld\n", res);
+  }
+	return 0;
+}

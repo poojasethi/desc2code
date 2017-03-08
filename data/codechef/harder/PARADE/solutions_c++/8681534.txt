@@ -1,0 +1,88 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+using namespace std;
+const int Maxn=253,inf=999999999+208;
+const int Maxp=Maxn*2,Maxe=Maxn*Maxn*2,L=(1<<9)-1;
+int n,m,q,S,T,tot=0;
+int dist[Maxn][Maxn];
+int head[Maxp],next[Maxe],to[Maxe],v[Maxe],c[Maxe],En=1;
+int Q[L+5],d[Maxp],fro[Maxp],f[Maxn];
+bool flag[Maxp];
+
+void Floyd() {
+	for (int k=1;k<=n;k++)
+		for (int i=1;i<=n;i++)
+			for (int j=1;j<=n;j++)
+				dist[i][j]=min(dist[i][j],dist[i][k]+dist[k][j]);
+}
+
+void add(int s,int t,int _v,int _c) {
+	next[++En]=head[s]; head[s]=En; to[En]=t; v[En]=_v; c[En]=_c;
+	next[++En]=head[t]; head[t]=En; to[En]=s; v[En]=0; c[En]=-_c;
+}
+
+bool spfa() {
+	memset(d,63,(T+1)<<2);
+	int l=1,r=2;
+	d[Q[1]=S]=0;
+	while (l!=r) {
+		int x=Q[l];
+		flag[x]=false;
+		l=(l&L)+1;
+		for (int k=head[x];k;k=next[k])
+			if (v[k]&&d[x]+c[k]<d[to[k]]) {
+				d[to[k]]=d[x]+c[k];
+				fro[to[k]]=k;
+				if (!flag[to[k]]) {
+					flag[to[k]]=true;
+					Q[r]=to[k];
+					r=(r&L)+1;
+				}
+			}
+	}
+	return d[T]<inf;
+}
+
+int Delta() {
+	int ret=0;
+	for (int x=T;x!=S;x=to[fro[x]^1]) {
+		ret+=c[fro[x]];
+		--v[fro[x]];
+		++v[fro[x]^1];
+	}
+	return ret;
+}
+
+int main() {
+	scanf("%d%d%d",&n,&m,&q);
+	memset(dist,63,sizeof dist);
+	for (int i=1,s,t,v;i<=m;i++) {
+		scanf("%d%d%d",&s,&t,&v);
+		dist[s][t]=min(dist[s][t],v);
+	}
+	Floyd();
+	S=0; T=2*n+1;
+	for (int i=1;i<=n;i++) add(S,i,1,0);
+	for (int i=1;i<=n;i++)
+		for (int j=1;j<=n;j++)
+			if (dist[i][j]<inf)
+				add(i,n+j,1,dist[i][j]);
+	for (int i=1;i<=n;i++) add(i+n,T,1,0);
+	while (spfa()) {
+		++tot;
+		f[tot]=f[tot-1]+Delta();
+	}
+	while (q--) {
+		int C,ans=inf;
+		scanf("%d",&C);
+		for (int i=0;i<=tot;i++)
+			ans=min(ans,f[i]+C*(n-i));
+		printf("%d\n",ans);
+	}
+	return 0;
+}

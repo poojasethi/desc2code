@@ -1,0 +1,136 @@
+#include<stdio.h>
+#include<algorithm>
+
+struct Level
+{
+	Level();
+	Level* Children[26];
+	bool Terminate;
+};
+
+Level::Level()
+{
+	Terminate = false;
+	for(int i=0; i<26; ++i) Children[i] = NULL;
+}
+
+class Trie
+{
+	public:
+	Trie();
+	void Insert(char str[]);
+	bool IsMember(char str[]);
+	private:
+	Level* Epsilon;
+};
+
+Trie::Trie()
+{
+	Epsilon = new Level();
+}
+
+void Trie::Insert(char str[])
+{
+	Level* Temp = Epsilon;
+	for(int index=0; str[index] != '\0'; ++index)
+	{
+		if(Temp->Children[str[index]-'A'] == NULL)
+		{
+			Temp->Children[str[index]-'A'] = new Level();
+		}
+		Temp = Temp->Children[str[index]-'A'];
+	}
+	Temp->Terminate = true;
+}
+
+bool Trie::IsMember(char str[])
+{
+	Level* Temp = Epsilon;
+	for(int index=0; str[index] != '\0'; ++index)
+	{
+		Temp = Temp->Children[str[index]-'A'];
+		if(Temp == NULL) return false;
+	}
+	return Temp->Terminate;
+}
+
+void convert(int i, char str[], char s[], int length)
+{
+	int j = __builtin_popcount(i),count = length-1;
+	int l = j;
+	while(i)
+	{
+		if(i&1) s[--j] = str[count];
+		count--;
+		i >>= 1;
+	}
+	s[l] = '\0';
+}
+
+int main()
+{
+	//freopen("wplay.in","r",stdin);
+
+	int D,length,r,c,T,temp,mask,iterator;
+	char str[18];
+	char s[18];
+	Trie Dictionary;
+
+	scanf("%d",&D);
+	while(D--)
+	{
+		scanf("%s",str);
+		for(length=0; str[length] != '\0'; ++length) {}
+		std::sort(str,str+length);
+		Dictionary.Insert(str);
+	}
+
+	scanf("%d%d",&r,&c);
+	length = r*c;
+	bool* dp = new bool[1<<length];
+	int* InDict = new int[1<<length];
+
+	scanf("%d",&T);
+	while(T--)
+	{
+		temp = 0;
+		for(int i=0; i<r; ++i)
+		{
+			scanf("%s",str+temp);
+			temp += c;
+		}
+		std::sort(str,str+length);
+
+		temp = 1<<length;
+		for(int i=0; i<temp; ++i)
+		{
+			iterator = i;
+			dp[i] = false;
+			InDict[i] = -1;
+			while(iterator > 0)
+			{
+				iterator = (iterator-1) & i;
+				if(!dp[iterator])
+				{
+					if(InDict[iterator^i] == -1)
+					{
+						convert(iterator^i,str,s,length);
+						InDict[iterator^i] = Dictionary.IsMember(s)?1:0;
+					}
+					if(InDict[iterator^i])
+					{
+						dp[i] = true;
+						break;
+					}
+				}
+			}
+		}
+
+		printf("%s\n",dp[temp-1]?"Alice":"Bob");
+	}
+
+	delete[] dp;
+	delete[] InDict;
+
+	return 0;
+}

@@ -1,0 +1,88 @@
+#include <cmath>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+#define	n	200005
+#define DB	double
+#define	CH	(ch=getchar())
+#define Pi	3.14159265358979
+#define max(a,b)	((a)>(b)?(a):(b))
+#define For(i,a,b)	for(int i=a;i<b;i++)
+
+int		N,M,T,D,st[n],Siz[n],Max[n],rev[n];
+struct	Lin{int v,next;}E[n];
+DB		Ans[n],ret;
+bool	V[n];
+
+struct	Cpx{
+		DB	x,y;
+		Cpx	operator + (const Cpx&b)	{return	(Cpx){x+b.x,y+b.y};}
+		Cpx	operator - (const Cpx&b)	{return	(Cpx){x-b.x,y-b.y};}
+		Cpx	operator * (const Cpx&b)	{
+			return	(Cpx){x*b.x-y*b.y,x*b.y+y*b.x};
+		}
+}w[2][n],A[n];
+
+int		IN(){
+		int x=0,ch;
+		for	(;CH<'0'||ch>'9';);
+		for	(;ch>='0'&&ch<='9';CH)	(x*=10)+=ch-'0';
+		return	x;
+}
+void	Link(int u,int v){
+		E[++D]=(Lin){v,st[u]};	st[u]=D;
+		E[++D]=(Lin){u,st[v]};	st[v]=D;
+}
+
+void	FFT(Cpx*A,int f){
+		For(i,0,M)	if	(rev[i]>i)	swap(A[i],A[rev[i]]);
+		for	(int i=1;i<M;i<<=1)
+		for	(int j=0,t=M/(i<<1);j<M;j+=i<<1)
+		for	(int k=0,l=0;k<i;l+=t,k++){
+			Cpx	x=A[j+k],y=w[f][l]*A[j+k+i];
+			A[j+k]=x+y;	A[j+k+i]=x-y;
+		}	if	(f)	For(i,0,M)	A[i].x/=M;
+}
+void	Mult(int t){
+		for	(M=1;M<T+1;M<<=1);	M<<=1;
+		For(i,0,M){
+			w[0][i]=(Cpx){cos(2*Pi/M*i),sin(2*Pi/M*i)};
+			w[1][i]=w[0][i];	w[1][i].y*=-1;	rev[i]=0;
+			for	(int x=1,t=i;x<M;x<<=1,t>>=1)	(rev[i]<<=1)|=(t&1);
+		}	FFT(A,0);	For(i,0,M)	A[i]=A[i]*A[i];	FFT(A,1);
+		For(i,0,M)	Ans[i]+=t*(long long)(A[i].x+0.5),A[i]=(Cpx){0,0};
+}
+
+int		Rt(int u,int f,int S){
+		Max[u]=0;	Siz[u]=1;
+		for	(int i=st[u],v,t;i;i=E[i].next)
+			if	((v=E[i].v)!=f&&!V[v])	Max[u]=max(Max[u],Siz[v]),Siz[u]+=Siz[v];
+		int rt=u;	Max[u]=max(Max[u],S-Siz[u]);
+
+		for	(int i=st[u],v,t;i;i=E[i].next)
+			if	((v=E[i].v)!=f&&!V[v]&&Max[t=Rt(v,u,S)]<Max[rt])	rt=t;
+		return	rt;
+}
+void	DFS(int u,int f,int d){
+		A[d].x++;	Siz[u]=1;	T=max(T,d);
+		for	(int i=st[u],v;i;i=E[i].next)
+			if	((v=E[i].v)!=f&&!V[v])	DFS(v,u,d+1),Siz[u]+=Siz[v];
+}
+
+void	Work(int u){
+		DFS(u,0,T=0);	V[u]=1;	Mult(1);
+		for	(int i=st[u],v;i;i=E[i].next)
+			if	(!V[v=E[i].v])	DFS(v,u,T=1),Mult(-1);
+		for	(int i=st[u],v;i;i=E[i].next)
+			if	(!V[v=E[i].v])	Work(Rt(v,u,Siz[v]));
+}
+
+int		main(){
+		N=IN();	For(i,1,N)	Link(IN(),IN());
+		Work(Rt(1,0,N));	For(i,0,N)	V[i]=0;
+		For(i,2,N)	if	(!V[i]){
+			ret+=Ans[i];
+			for	(int j=i;j<N;j+=i)	V[j]=1;
+		}	printf("%.6lf\n",ret/N/(N-1));
+}

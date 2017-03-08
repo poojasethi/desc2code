@@ -1,0 +1,156 @@
+#include <stdio.h>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <queue>
+#include <map>
+#include <set>
+#include <cmath>
+#include <sstream>
+#include <cstring>
+
+#define pb push_back
+#define mp make_pair
+#define PI 3.14159265358979
+#define sqr(x) (x)*(x)
+#define forn(i, n) for(int i = 0; i < n; ++i)
+#define ALL(x) x.begin(), x.end()
+#define sz(x) int((x).size())
+#define X first
+#define Y second
+typedef long long ll;
+typedef unsigned long long ull;
+typedef long double ld;
+using namespace std;
+typedef pair<int,int> pii;
+const int INF = 2147483647;
+const ll LLINF = 9223372036854775807LL;
+struct node {
+	int l, r, id, cnt, y;
+	int sum[4];
+};
+const int maxn = 6000010;
+node t[maxn];
+int mem = 0;
+void recalc(int v) {
+	for (int i = 0; i < 4; ++i) t[v].sum[i] = 0;
+	t[v].sum[t[v].id] = 1;
+	t[v].cnt = 1;
+	if (t[v].l!=-1) {
+		t[v].cnt += t[t[v].l].cnt;
+		for (int i = 0; i < 4; ++i) t[v].sum[i] += t[t[v].l].sum[i];
+	}
+	if (t[v].r!=-1) {
+		t[v].cnt += t[t[v].r].cnt;
+		for (int i = 0; i < 4; ++i) t[v].sum[i] += t[t[v].r].sum[i];
+	}
+}
+int getnode(int id, int l, int r) {
+	t[mem].id = id;
+	t[mem].l = l;
+	t[mem].r = r;
+	t[mem].cnt = 1;
+	t[mem].y = (rand()<<15)|rand();
+	recalc(mem);
+	mem++;
+	return mem-1;
+}
+int merge(int l, int r) {
+	if (l == -1) return r;
+	if (r == -1) return l;
+	if (t[l].y > t[r].y) {
+		return getnode(t[l].id, t[l].l, merge(t[l].r,r));
+	} else {
+		return getnode(t[r].id, merge(l,t[r].l), t[r].r);
+	}
+}
+void split(int v, int key, int &l, int &r) {
+	if (v == -1) {
+		l = r = -1;
+		return;
+	}
+	int curkey = 0;
+	if (t[v].l!=-1) curkey = t[t[v].l].cnt;
+	if (curkey<=key) {
+		int tl;
+		split(t[v].r, key-curkey-1, tl, r);
+		l = getnode(t[v].id, t[v].l, tl);
+	} else {
+		int tr;
+		split(t[v].l, key, l, tr);
+		r = getnode(t[v].id, tr, t[v].r);
+	}
+}
+int merge2(int l, int r) {
+	if (l == -1) return r;
+	if (r == -1) return l;
+	if (t[l].y > t[r].y) {
+		t[l].r = merge2(t[l].r,r);
+		recalc(l);
+		return l;
+	} else {
+		t[r].l = merge2(l,t[r].l);
+		recalc(r);
+		return r;
+	}
+}
+int dnas[10010] = {};
+int getid(char c) {
+	switch(c) {
+		case 'A': return 0;
+		case 'G': return 1;
+		case 'T': return 2;
+		case 'C': return 3;
+	}
+}
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt", "r", stdin);
+	//freopen("output.txt", "w", stdout);
+#endif
+	int n, q; scanf("%d", &n);
+	int num = 0;
+	memset(dnas, -1, sizeof(dnas));
+	for (int i = 0; i < n; ++i) {
+		string s; cin >> s;
+		for (int i = 0; i < s.length(); ++i) {
+			int c = getid(s[i]);
+			
+			dnas[num]=merge2(dnas[num],getnode(c,-1,-1));
+		}
+		num++;
+	}
+	scanf("%d", &q);
+	for (int i = 0; i < q; ++i) {
+		string s; cin >> s;
+		if (s[1] == 'O') {
+			int id,l,r; scanf("%d%d%d", &id,&l,&r);
+			id--;l--;r--;
+			int tl,tm,tr;
+			split(dnas[id],r,tm,tr);
+			split(tm,l-1,tl,tm);
+			for (int j = 0; j < 4; ++j) printf("%d ", t[tm].sum[j]);
+			printf("\n");
+		} else if (s[1] == 'U') {
+			int id, k; char c=0; scanf("%d%d", &id, &k);
+			while (c!='G'&&c!='T'&&c!='A'&&c!='C') c = getchar();
+			id--;k--;
+			int cur = getid(c);
+			int tl, tm, tr;
+			split(dnas[id],k,tm,tr);
+			split(dnas[id],k-1,tl,tm);
+			dnas[id] = merge(merge(tl,getnode(cur,-1,-1)),tr);
+		} else if (s[1] == 'R') {
+			int id1, id2, k1, k2; scanf("%d%d%d%d", &id1, &id2, &k1, &k2);
+			id1--;id2--;k1--;k2--;
+			int tl1,tr1,tl2,tr2;
+			split(dnas[id1],k1,tl1,tr1);
+			split(dnas[id2],k2,tl2,tr2);
+			dnas[num++] = merge(tl1,tr2);
+			dnas[num++] = merge(tl2,tr1);
+		}
+	}
+	return 0;
+}

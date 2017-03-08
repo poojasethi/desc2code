@@ -1,0 +1,23 @@
+#include <bits/stdc++.h>
+using namespace std;
+int main() 
+{
+   // ios::sync_with_stdio(false),cin.tie(0),cout.tie(0);
+	int q;
+	scanf("%d",&q);
+	while(q--)
+	{
+	    int a,b,c=0;
+	    scanf("%d %d",&a,&b);
+	    while(a!=b)
+	    {
+	        if(a>b)
+	        a>>=1;
+	        else
+	        b>>=1;
+	        c++;
+	    }
+	    printf("%d\n",c);
+	}
+	return 0;
+}

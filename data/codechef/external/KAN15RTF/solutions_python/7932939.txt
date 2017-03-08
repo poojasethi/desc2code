@@ -1,0 +1,125 @@
+#include <bits/stdc++.h>
+using namespace std;
+const int MAXN = 5005;
+vector <int> G[MAXN], T[MAXN];
+vector < pair<int,int> > bridges;
+int par[MAXN], depth[MAXN], lo[MAXN];
+bool vis[MAXN], is_imp[MAXN];
+int parent(int pos)
+{
+	if(par[pos] != pos)
+		par[pos] = parent(par[pos]);
+	return par[pos];
+}
+void bridge_dfs(int pos, int prev)
+{
+	vis[pos] = true;
+	depth[pos] = 1+depth[prev];
+	lo[pos] = depth[pos];
+	for (int i = 0; i < G[pos].size(); ++i)
+	{
+		if(G[pos][i] != prev)
+		{
+			if(!vis[G[pos][i]])
+			{
+				bridge_dfs(G[pos][i], pos);
+				if(lo[G[pos][i]] <= depth[pos])
+				{
+					// not bridge
+					lo[pos] = min(lo[pos], lo[G[pos][i]]);
+					int p1 = parent(pos), p2 = parent(G[pos][i]);
+					if(p1 < p2)
+						par[p2] = p1;
+					else
+						par[p1] = p2;
+				}
+				else
+					bridges.push_back(make_pair(pos,G[pos][i]));
+			}
+			else
+				lo[pos] = min(lo[pos],depth[G[pos][i]]);
+		}
+	}
+}
+int leaf_dfs(int pos, int prev)
+{
+	vis[pos] = true;
+	int ans = 0;
+	if(T[pos].size() <= 1)
+		ans = 1;
+	for (int i = 0; i < T[pos].size(); ++i)
+	{
+		if(T[pos][i] != prev)
+			ans+=leaf_dfs(T[pos][i],pos);
+	}
+	return ans;
+}
+int main()
+{
+	// freopen("input.txt", "r", stdin);
+	// ios_base::sync_with_stdio(0);
+	int t;
+	scanf("%d", &t);
+	while(t--)
+	{
+		int n,m,u,v;
+		scanf("%d %d", &n, &m);
+		for (int i = 0; i < m; ++i)
+		{
+			scanf("%d %d", &u, &v);
+			G[u].push_back(v);
+			G[v].push_back(u);
+		}
+		for (int i = 1; i <= n; ++i)
+		{
+			par[i] = i;
+		}
+		memset(vis, false, sizeof vis);
+		for (int i = 1; i <= n; ++i)
+		{
+			if(!vis[i])
+				bridge_dfs(i,0);
+		}
+		memset(vis, false, sizeof vis);
+		memset(is_imp, false, sizeof is_imp);
+		for (int i = 0; i < bridges.size(); ++i)
+		{
+			// cout<<bridges[i].first<<" "<<bridges[i].second<<" becomes\n";
+			bridges[i].first = parent(bridges[i].first);
+			bridges[i].second = parent(bridges[i].second);
+			// cout<<bridges[i].first<<" "<<bridges[i].second<<"\n";
+			T[bridges[i].first].push_back(bridges[i].second);
+			T[bridges[i].second].push_back(bridges[i].first);
+		}
+		for (int i = 1; i <= n; ++i)
+			is_imp[parent(i)] = true;
+		int ans = 0, leaf_ctr = leaf_dfs(1,0);
+		for (int i = 1; i <= n; ++i)
+		{
+			if(is_imp[i] && !vis[i])
+			{
+				ans++;
+				int lf = leaf_dfs(i,0);
+				if(lf > 1)
+					lf--;
+				if(leaf_ctr > 1)
+					leaf_ctr--;
+				leaf_ctr+=lf;
+			}
+		}
+		if(leaf_ctr > 1)
+			ans+=((leaf_ctr+1)/2);
+		if(n == 2)
+			printf("-1\n");
+		else
+			printf("%d\n", ans);
+		// cleanup
+		bridges.clear();
+		for (int i = 1; i <= n; ++i)
+		{
+			G[i].clear();
+			T[i].clear();
+		}
+	}
+	return 0;
+}

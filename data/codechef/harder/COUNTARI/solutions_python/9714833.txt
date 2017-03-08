@@ -1,0 +1,172 @@
+#include <iostream>
+#include <vector>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <cmath>
+#include <map>
+#include <set>
+#include <string>
+#include <queue>
+#include <complex>
+#include <stack>
+#include <bitset>
+using namespace std;
+#define pb(x) push_back(x)
+#define ll long long
+#define mk(x, y) make_pair(x, y)
+#define lson l, m, rt<<1
+#define mem(a) memset(a, 0, sizeof(a))
+#define rson m+1, r, rt<<1|1
+#define mem1(a) memset(a, -1, sizeof(a))
+#define mem2(a) memset(a, 0x3f, sizeof(a))
+#define rep(i, n, a) for(int i = a; i<n; i++)
+#define fi first
+#define se second
+typedef pair<int, int> pll;
+const double PI = acos(-1.0);
+const double eps = 1e-8;
+const int mod = 1e9+7;
+const int inf = 1061109567;
+const int dir[][2] = { {-1, 0}, {1, 0}, {0, -1}, {0, 1} };
+const int maxn = 3e5+5;
+struct Complex
+{
+    double real, image;
+    Complex(double _real, double _image)
+    {
+        real = _real;
+        image = _image;
+    }
+    Complex(){}
+};
+
+Complex operator + (const Complex &c1, const Complex &c2)
+{
+    return Complex(c1.real + c2.real, c1.image + c2.image);
+}
+
+Complex operator - (const Complex &c1, const Complex &c2)
+{
+    return Complex(c1.real - c2.real, c1.image - c2.image);
+}
+
+Complex operator * (const Complex &c1, const Complex &c2)
+{
+    return Complex(c1.real *c2.real - c1.image*c2.image, c1.real*c2.image + c1.image*c2.real);
+}
+
+int rev(int id, int len)
+{
+    int ret = 0;
+    for(int i = 0; (1 << i) < len; i++)
+    {
+        ret <<= 1;
+        if(id & (1 << i)) ret |= 1;
+    }
+    return ret;
+}
+
+Complex A[1 << 16];
+void FFT(Complex *a, int len, int DFT)
+{
+    for(int i = 0; i < len; i++)
+        A[rev(i, len)] = a[i];
+    for(int s = 1; (1 << s) <= len; s++)
+    {
+        int m = (1 << s);
+        Complex wm = Complex(cos(DFT*2*PI/m), sin(DFT*2*PI/m));
+        for(int k = 0; k < len; k += m)
+        {
+            Complex w = Complex(1, 0);
+            for(int j = 0; j < (m >> 1); j++)
+            {
+                Complex t = w*A[k + j + (m >> 1)];
+                Complex u = A[k + j];
+                A[k + j] = u + t;
+                A[k + j + (m >> 1)] = u - t;
+                w = w*wm;
+            }
+        }
+    }
+    if(DFT == -1) for(int i = 0; i < len; i++) A[i].real /= len, A[i].image /= len;
+    for(int i = 0; i < len; i++) a[i] = A[i];
+    return;
+}
+
+int num[100010];
+Complex L[1 << 16], R[1 << 16];
+const int K = 44;
+int before[30010], behind[30010], n, maxx, in[30010];//当前块前面的块, 后面的块, 当前块中的i的个数为before[i], behind[i], in[i]
+
+void solve() {
+    int block = min(n, 44);
+    int len = 1;
+    while(len<=maxx)
+        len<<=1;
+    len <<= 1;
+    int size = n / block;
+        if(n % block != 0) size++;
+        //这里之前写的block++逻辑错了, 不过block++取K = 100能AC..成功避开所有错误数据,什么人品..改了K值试了几下才发现
+
+        ll ans = 0;
+        for(int pos = 1; pos <= block; pos++)//当前第几块
+        {
+            int s = size*(pos - 1) + 1, e = size*pos;
+            if(e > n) e = n;
+            for(int t = s; t <= e; t++)//更新behind数组
+                behind[num[t]]--;
+            for(int i = s; i <= e; i++)
+            {
+                for(int j = i + 1; j <= e; j++)//枚举两个数
+                {
+                    int ak = 2*num[i] - num[j];
+                    if(ak >= 1 && ak <= 30000)
+                    {
+                        ans += in[ak];//三个数再同一块中时, 枚举的是后两个数, 询问同一块的in数组
+                        //枚举后两个数在同一块, 第一个数不在时
+                        ans += before[ak];
+                    }
+                    ak = 2*num[j] - num[i];//枚举前两个数时, 第三个数再后面的块中
+                    if(ak >= 1 && ak <= 30000)
+                        ans += behind[ak];
+
+                }
+                in[num[i]]++;
+            }
+
+            //接下来是三个数分布在三块中的情况, 枚举中间数, 对前后部分作FFT
+            for(int i = 0; i <= maxx; i++)
+            {
+                L[i] = Complex(before[i]*1., 0);
+                R[i] = Complex(behind[i]*1., 0);
+            }
+            for(int i = maxx + 1; i < len; i++)
+                L[i] = R[i] = Complex(0, 0);
+            FFT(L, len, 1); FFT(R, len, 1);
+            for(int i = 0; i < len; i++)
+                L[i] = L[i]*R[i];
+            FFT(L, len, -1);
+            for(int j = s; j <= e; j++)
+                ans += (ll)(L[2*num[j]].real + 0.5);
+            for(int t = s; t <= e; t++)//更新before数组, 还原in数组
+                before[num[t]]++, in[num[t]]--;
+        }
+    cout<<ans<<endl;
+}
+int main()
+{
+    while(~scanf("%d", &n)) {
+        mem(behind);
+        mem(before);
+        mem(in);
+        maxx = 0;
+        for(int i = 1; i <= n; i++) {
+            scanf("%d", &num[i]);
+            behind[num[i]]++;
+            maxx = max(maxx, num[i]);
+        }
+        solve();
+    }
+    return 0;
+}

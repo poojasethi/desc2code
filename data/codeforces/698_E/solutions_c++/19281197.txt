@@ -1,0 +1,244 @@
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+using namespace std;
+struct st
+{
+	int d[10];
+	//s,m,h,dweek,date,mon,year
+	st() {d[1]=0,d[2]=0,d[3]=0,d[4]=4,d[5]=1,d[6]=1,d[7]=1970;}
+}lim;
+long long fh=12622780800ll;
+long long fy=126230400ll,y=31536000ll,runy=31622400ll;
+long long dy=86400;
+bool is_run(int p)
+{
+	return p%400==0 || (p%100!=0 && p%4==0);
+}
+int mon[]={0,31,28,31,30,31,30,31,31,30,31,30,31};
+void nxt_day(st &p)
+{
+	p.d[4]++; if(p.d[4]>7) p.d[4]-=7;
+	if(is_run(p.d[7]))
+	{
+		if(p.d[5]==28 && p.d[6]==2)
+		{
+			p.d[5]++;
+			return;
+		}
+		if(p.d[5]==29 && p.d[6]==2)
+		{
+			p.d[5]=1; p.d[6]=3;
+			return;
+		}
+	}
+	p.d[5]++;
+	if(p.d[5]>mon[p.d[6]])
+	{
+		p.d[5]=1;
+		p.d[6]++;
+		if(p.d[6]>12)
+		{
+			p.d[6]=1;
+			p.d[7]++;
+		}
+	}
+}
+void nxt_hour(st &p)
+{
+	p.d[3]++;
+	if(p.d[3]>=24)
+	{
+		p.d[3]=0;
+		nxt_day(p);
+	}
+}
+void nxt_min(st &p)
+{
+	p.d[2]++;
+	if(p.d[2]>=60)
+	{
+		p.d[2]=0;
+		nxt_hour(p);
+	}
+}
+void nxt_sec(st &p)
+{
+	p.d[1]++;
+	if(p.d[1]>=60)
+	{
+		p.d[1]=0;
+		nxt_min(p);
+	}
+}
+/*		p.d[2]++;
+		if(p.d[2]>=60)
+		{
+			p.d[2]=0;
+			p.d[3]++;
+			if(p.d[3]>=24)
+			{
+				p.d[3]=0;
+				nxt_day(p);
+			}
+		}
+	}
+}*/
+st get_it(long long p)
+{
+	st now;
+	long long tmp=((p/86400)%7+now.d[4])%7; if(tmp==0) tmp=7;
+	now.d[7]+=p/fh*400; p%=fh;
+//	now.d[4]=(p%7+now.d[4])%7; if(now.d[4]==0) now.d[4]=7;
+	while(p>=runy)
+	{
+		if(is_run(now.d[7]))
+			p-=runy;
+		else p-=y;
+		now.d[7]++;
+	}
+	while(p>=dy)
+	{
+		nxt_day(now);
+		p-=dy;
+	}
+	now.d[1]=p%60;
+	now.d[2]=p/60%60;
+	now.d[3]=p/3600%24;
+	now.d[4]=tmp;
+	return now;
+}
+bool smaller_sh(st p,st q)
+{
+	return p.d[3]<q.d[3] || (p.d[3]==q.d[3] && p.d[2]<q.d[2])
+		|| (p.d[3]==q.d[3] && p.d[2]==q.d[2] && p.d[1]<q.d[1]);
+}
+long long dec_it(st p)
+{
+	long long ans=0;
+	st now;
+	long long delt_y=(p.d[7]-now.d[7])/400;
+	ans+=delt_y*fh; now.d[7]+=delt_y*400;
+	while(p.d[7]>now.d[7])
+	{
+		if(is_run(now.d[7])) ans+=runy;
+		else ans+=y;
+		now.d[7]++;
+	}
+	while(now.d[5]!=p.d[5] || now.d[6]!=p.d[6])
+	{
+		ans+=dy;
+		nxt_day(now);
+	}
+	ans+=p.d[3]*3600+p.d[2]*60+p.d[1];
+	return ans;
+}
+long long solve(st p)
+{
+	long long ans1=1ll<<60,ans2=1ll<<60;
+	st nowlim=lim;
+	st cur=p;
+	nxt_sec(cur);
+	bool x=false;
+	while(nowlim.d[1]!=-1 && cur.d[1]!=nowlim.d[1])
+	{
+		nxt_sec(cur);
+		//	x=true;
+		//	nxt_min(cur);
+	}
+	//	if(nowlim.d[1]!=-1)
+	//		cur.d[1]=nowlim.d[1];
+	//	else if(x) cur.d[1]=0;
+	//else cur.d[1];
+	//x=false;
+	while(nowlim.d[2]!=-1 && cur.d[2]!=nowlim.d[2])
+	{
+		nxt_min(cur);
+		//	x=true;
+		//	nxt_hour(cur);
+		if(nowlim.d[1]==-1) cur.d[1]=0;
+	}
+	//if(nowlim.d[2]!=-1) cur.d[2]=nowlim.d[2];
+	//else if(x) cur.d[2]=0;
+	//else cur.d[2]=0;
+	//x=false;
+	while(nowlim.d[3]!=-1 && cur.d[3]!=nowlim.d[3])
+	{
+		nxt_hour(cur);
+		//	x=true;
+		if(nowlim.d[1]==-1) cur.d[1]=0;
+		if(nowlim.d[2]==-1) cur.d[2]=0;
+		//	nxt_day(cur);
+	}
+	//if(nowlim.d[3]!=-1) cur.d[3]=nowlim.d[3];
+	//else if(x) cur.d[3]=0;
+	//else cur.d[3]=0;
+	/*	cur.d[2]=max(0,nowlim.d[2]);
+		cur.d[1]=max(0,nowlim.d[1]);
+		else
+	//if(smaller_sh(nowlim,cur))
+	//	nxt_day(cur);*/
+	st nn=cur;
+	if(lim.d[4]!=-1)
+	{
+		nowlim.d[4]=lim.d[4];
+		nowlim.d[5]=-1;
+		while(cur.d[4]!=nowlim.d[4] || (cur.d[6]!=nowlim.d[6] && nowlim.d[6]!=-1))
+		{
+			if(nowlim.d[1]==-1) cur.d[1]=0;
+			if(nowlim.d[2]==-1) cur.d[2]=0;
+			if(nowlim.d[3]==-1) cur.d[3]=0;
+			nxt_day(cur);
+		}
+		ans1=dec_it(cur);
+	}
+	if(lim.d[5]!=-1)
+	{
+		cur=nn;
+		nowlim.d[5]=lim.d[5];
+		while(cur.d[5]!=nowlim.d[5] || (cur.d[6]!=nowlim.d[6] && nowlim.d[6]!=-1))
+		{
+			if(nowlim.d[1]==-1) cur.d[1]=0;
+			if(nowlim.d[2]==-1) cur.d[2]=0;
+			if(nowlim.d[3]==-1) cur.d[3]=0;
+			nxt_day(cur);
+		}
+		ans2=dec_it(cur);
+	}
+	if(lim.d[4]==-1 && lim.d[5]==-1)
+	{
+		while(nowlim.d[6]!=-1 && cur.d[6]!=nowlim.d[6])
+		{
+			if(nowlim.d[1]==-1) cur.d[1]=0;
+			if(nowlim.d[2]==-1) cur.d[2]=0;
+			if(nowlim.d[3]==-1) cur.d[3]=0;
+			nxt_day(cur);
+		}
+		ans1=min(ans1,dec_it(cur));
+	}
+	return min(ans1,ans2);
+}
+
+
+int main()
+{
+	//freopen("e.in","r",stdin);
+	for(int i=1; i<=6; i++)
+		scanf("%d",&lim.d[i]);
+	int T; scanf("%d",&T);
+	/*if(T==1000)
+	{
+		long long p;
+		for(int i=1; i<=695; i++) cin>>p;
+		cout<<p<<endl;
+		return 0;
+	}*/
+	while(T--)
+	{
+		long long p;
+		cin>>p;
+		cout<<solve(get_it(p))<<endl;
+	}
+	return 0;
+}
+

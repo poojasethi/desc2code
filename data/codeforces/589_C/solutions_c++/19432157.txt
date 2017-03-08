@@ -1,0 +1,145 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define NN 11000
+#define inf 0x3f3f3f3f
+#define eps 1e-8
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
+
+typedef pair<int, int> pii;
+typedef long long INT;
+
+int N, M, K[110000];
+INT L[66];
+char s[NN];
+char last[66][NN];
+int freq[66][110][26];
+int all[26];
+
+namespace FastIO {
+	template <typename T>
+	inline void readInteger(T& ret) {
+		char ch = getchar();
+		bool flag = false;
+		while ((ch<'0' || ch>'9') && ch!='-') ch=getchar();
+		if (ch == '-') {
+			flag = true;
+			ch = getchar();
+		}
+		ret = 0;
+		while (ch>='0' && ch<='9') {
+			ret = ret*10 + (ch-'0');
+			ch = getchar();
+		}
+		if (flag) ret = -ret;
+	}
+	
+	inline int nextInt() {
+		int x;
+		readInteger(x);
+		return x;
+	}
+	
+	inline long long nextLong() {
+		long long x;
+		readInteger(x);
+		return x;
+	}
+	
+	template <typename T>
+	inline void outInteger(T x) {
+		if (x < 0) {
+			putchar('-');
+			x = -x;
+		}
+		if (x >= 10) {
+			outInteger(x / 10);
+		}
+		putchar(x % 10 + '0');
+	}
+	
+	inline void newline () {
+		putchar('\n');
+	}
+}
+
+using namespace FastIO;
+
+INT calc(int n, INT l, INT r, int c) {
+	if (all[c]==0) return 0;
+	if (n==0) return freq[0][r+1][c]-freq[0][l][c];
+	if (l==0 && r==L[n]-1) return (INT)all[c]<<n;
+	
+	if (r<L[n-1]) return calc(n-1, l, r, c);
+	else if (l>=L[n-1]) {
+		l-=L[n-1]; r-=L[n-1];
+		if (r<K[n-1]) return freq[n][r+1][c]-freq[n][l][c];
+		else if (l<K[n-1]) return calc(n-1, 0, r-K[n-1], c)+freq[n][K[n-1]][c]-freq[n][l][c];
+		else return calc(n-1, l-K[n-1], r-K[n-1], c);
+	} else {
+		r-=L[n-1];
+		if (r<K[n-1]) return calc(n-1, l, L[n-1]-1, c)+freq[n][r+1][c];
+		else {
+			INT ans=freq[n][K[n-1]][c];
+			r-=K[n-1];
+			if (r==l-1) ans+=((INT)all[c]<<(n-1));
+			else if (r>l-1) ans+=((INT)all[c]<<(n-1))+calc(n-1, l, r, c);
+			else ans+=((INT)all[c]<<(n-1))-calc(n-1, r+1, l-1, c);
+			return ans;
+		}
+	}
+}
+
+int main() {
+	scanf("%s", s);
+	scanf("%d%d", &N, &M);
+	for (int i=0; i<N; i++) scanf("%d", &K[i]);
+	
+	for (int i=0; s[i]; i++) all[s[i]-'a']++;
+	
+	int cnt=0, id;
+	strcpy(last[0], s); L[0]=strlen(s);
+	for (int i=1; i<=N; i++) {
+		if (L[i-1]>1000000000000000000LL) break;
+		K[i-1]%=L[i-1]; L[i]=L[i-1]*2;
+		if (L[i]<NN-100) {
+			strcpy(last[i], last[i-1]);
+			strcpy(last[i]+L[i-1], last[i-1]+L[i-1]-K[i-1]);
+			strcpy(last[i]+L[i-1]+K[i-1], last[i-1]);
+			last[i][L[i]]=0; id=i;
+		} else {
+			strcpy(last[i], last[i-1]);
+			last[i][strlen(last[i])-K[i-1]]=0;
+		}
+		cnt=i;
+	}
+	
+	N=cnt;
+	
+	for (int i=0; i<L[0]; i++) {
+		memcpy(freq[0][i+1], freq[0][i], sizeof(freq[0][i]));
+		freq[0][i+1][s[i]-'a']++;
+	}
+	
+	for (int i=1; i<=N; i++) {
+		int len=strlen(last[i-1]);
+		for (int j=0; j<K[i-1]; j++) {
+			memcpy(freq[i][j+1], freq[i][j], sizeof(freq[i][j]));
+			freq[i][j+1][last[i-1][len-K[i-1]+j]-'a']++;
+		}
+	}
+	
+	int len=L[id];
+	for (int i=0; i<M; i++) {
+		INT L=nextLong(), R=nextLong();
+		char ch=' ';
+		while (isspace(ch)) ch=getchar();
+		L--, R--;
+		outInteger(calc(cnt, L, R, ch-'a'));
+		newline();
+	}
+	
+	return 0;
+}
+                  

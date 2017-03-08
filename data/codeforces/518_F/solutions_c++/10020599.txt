@@ -1,0 +1,99 @@
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <set>
+#include <cstdio>
+#include <cstring>
+#include <stack>
+#include <string>
+#include <map>
+#include <vector>
+#include <queue>
+#include <deque>
+#include <algorithm>
+#include <cmath>
+#include <sstream>
+#include <bitset>
+#include <ctime>
+#include <list>
+using namespace std;
+#define mp make_pair
+#define ull unsigned long long
+#define ll long long
+#define mod1 1000000009
+#define mod (ll)1000000007
+#define inf 1500000015000000000
+#define mpi acos(-1.0)
+#define M_E (double)2.71828182845
+
+static char s[3000][3000];
+static bool u[3000][3000], d[3000][3000], l[3000][3000], r[3000][3000];
+
+int main(){
+	ios_base::sync_with_stdio(0);
+	cin.tie(0);
+	//freopen("downloading.in", "r", stdin);
+	//freopen("downloading.out", "w", stdout);
+	int n, m, a, b, aa, bb;
+	ll res = 0;
+	cin >> n >> m;
+	for (int i = 0; i < n; ++i)
+		cin >> s[i];
+	for (int i = 0; i < n; ++i)
+		for (int j = 0; j < m; ++j){
+			u[i][j] = (u[i - 1][j] || (!i)) & (s[i][j] == '.');
+			l[i][j] = (l[i][j - 1] || (!j)) & (s[i][j] == '.');
+		}
+	for (int i = n - 1; i >= 0; --i)
+		for (int j = m - 1; j >= 0; --j){
+			d[i][j] = (d[i + 1][j] || (i == n - 1)) & (s[i][j] == '.');
+			r[i][j] = (r[i][j + 1] || (j == m - 1)) & (s[i][j] == '.');
+		}
+	for (int i = 1; i < n - 1; ++i)
+		res += l[i][m - 1];
+	for (int i = 1; i < m - 1; ++i)
+		res += u[n - 1][i];
+	for (int i = 1; i < n - 1; ++i)
+		for (int j = 1; j < m - 1; ++j)
+			res += (u[i][j] & l[i][j]) + (u[i][j] & r[i][j]) + (d[i][j] & l[i][j]) + (d[i][j] & r[i][j]);
+	for (int i = 1; i < n - 1; ++i){
+		aa = a = b = bb = 0;
+		for (int j = 1; j < m - 1; ++j){
+			if (u[i][j])
+				res += a + bb;
+			if (d[i][j])
+				res += b + aa;
+			if (s[i][j] == '.'){
+				a += d[i][j];
+				b += u[i][j];
+				if (j > 1){
+					aa += d[i][j - 1];
+					bb += u[i][j - 1];
+				}
+			}
+			else 
+				a = aa = b = bb = 0;
+		}
+	}
+	for (int j = 1; j < m - 1; ++j){
+		aa = a = b = bb = 0;
+		for (int i = 1; i < n - 1; ++i){// u -> l, d -> r
+			if (l[i][j])
+				res += a + bb;
+			if (r[i][j])
+				res += b + aa;
+			if (s[i][j] == '.'){
+				a += r[i][j];
+				b += l[i][j];
+				if (i > 1){
+					aa += r[i - 1][j];
+					bb += l[i - 1][j];
+				}
+			}
+			else 
+				a = aa = b = bb = 0;
+		}
+	}
+	cout << res << endl;
+	return 0;
+}

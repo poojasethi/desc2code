@@ -1,0 +1,158 @@
+#include <cmath>
+#include <map>
+#include <vector>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <set>
+#include <bitset>
+#include <memory.h>
+#include <functional>
+#include <queue>
+#include <fstream>
+#include <ctime>
+#include <deque>
+#include <utility>
+#include <stack>
+#include <sstream>
+#include <list>
+#include <cctype> 
+#include <numeric>
+#include <iomanip>
+#include <assert.h>
+using namespace std;
+#define sqr(_) ((_)*(_))
+
+typedef long long LL;
+
+typedef pair<int, int> Pii;
+#define x first
+#define y second
+#define mp make_pair
+#define pb push_back
+
+const int MAXN = 100000 + 10, L = 400;
+
+int n, m, N, a[MAXN], cnt[L][MAXN * 2], f[L][MAXN], x[MAXN], y[MAXN];
+vector<int> X;
+
+int Getp(int w)
+{
+	return lower_bound(X.begin(), X.end(), w) - X.begin();
+}
+int lowbit(int x) {
+	return x & -x;
+}
+void Add(int *f, int x, int d)
+{
+	for (; x <= n; f[x] += d, x += lowbit(x));
+}
+int Gets(int *f, int x)
+{
+	int Tohka = 0;
+	for (; x; Tohka += f[x], x -= lowbit(x));
+	return Tohka;
+}
+void Add(int x, int y, int d)
+{
+	for (int p = (y - 1) / L + 1; (p - 1) * L + 1 <= n; ++p)
+	{
+		if (cnt[p][x])
+			Add(f[p], n - cnt[p][x] + 1, -1);
+		cnt[p][x] += d;
+		if (cnt[p][x])
+			Add(f[p], n - cnt[p][x] + 1, 1);
+	}
+}
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt", "r", stdin), freopen("output.txt", "w", stdout);
+#endif
+	
+	scanf("%d", &n);
+	for (int i = 1; i <= n; ++i)
+	{
+		int x;
+		scanf("%d", &x);
+		a[i] = x;
+		X.pb(x);
+	}
+	scanf("%d", &m);
+	for (int i = 1; i <= m; ++i)
+	{
+		int ty;
+		scanf("%d%d%d", &ty, &x[i], &y[i]);
+		if (ty == 1)
+			X.pb(x[i]), x[i] = -x[i];
+	}
+	sort(X.begin(), X.end());
+	X.erase(unique(X.begin(), X.end()), X.end());
+	
+	for (int i = 1; i <= n; ++i)
+		a[i] = Getp(a[i]);
+	for (int i = 1; i <= m; ++i)
+		if (x[i] < 0)
+			x[i] = -Getp(-x[i]);
+	N = X.size();
+	
+	for (int i = 1; (i - 1) * L + 1 <= n; ++i)
+	{
+		for (int j = 0; j < N; ++j)
+			cnt[i][j] = cnt[i - 1][j];
+		for (int j = (i - 1) * L + 1; j <= min(i * L, n); ++j)
+			++cnt[i][a[j]];
+		for (int j = 0; j < N; ++j)
+			if (cnt[i][j] > 0)
+				Add(f[i], n - cnt[i][j] + 1, 1);
+	}
+	
+	for (int i = 1; i <= m; ++i)
+		if (x[i] <= 0)
+		{
+			x[i] = -x[i];
+			Add(a[y[i]], y[i], -1);
+			a[y[i]] = x[i];
+			Add(a[y[i]], y[i], 1);
+		}
+		else
+		{
+			int Tohka = 0;
+			int p = (y[i] - 1) / L + 1;
+			if (x[i] == 1)
+				Tohka = X[a[y[i]]] - 1;
+			else
+			if (x[i] & 1)
+			{
+				for (int j = (p - 1) * L + 1; j < y[i]; ++j)
+				{
+					if (cnt[p - 1][a[j]])
+						Add(f[p - 1], n - cnt[p - 1][a[j]] + 1, -1);
+					++cnt[p - 1][a[j]];
+					Add(f[p - 1], n - cnt[p - 1][a[j]] + 1, 1);
+				}
+				Tohka = Gets(f[p - 1], n - cnt[p - 1][a[y[i]]]);
+				for (int j = y[i] - 1; j > (p - 1) * L; --j)
+				{
+					Add(f[p - 1], n - cnt[p - 1][a[j]] + 1, -1);
+					--cnt[p - 1][a[j]];
+					if (cnt[p - 1][a[j]])
+						Add(f[p - 1], n - cnt[p - 1][a[j]] + 1, 1);
+				}
+			}
+			else
+			{
+				Tohka = cnt[p - 1][a[y[i]]];
+				for (int j = (p - 1) * L + 1; j < y[i]; ++j)
+					Tohka += (a[j] == a[y[i]]);
+			}
+			printf("%d\n", Tohka + 1);
+		}
+	
+	fclose(stdin);
+	fclose(stdout);
+	return 0;
+}
+

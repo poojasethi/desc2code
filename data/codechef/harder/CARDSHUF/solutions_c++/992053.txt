@@ -1,0 +1,109 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
+
+using namespace std;
+
+struct TNode {
+	int p, key, children;
+	bool flipped;
+	TNode *L, *R;
+	TNode(): p(0), key(0), L(NULL), R(NULL), children(0),flipped(false) {}
+	TNode(int key): p(rand()), key(key), L(NULL), R(NULL), children(1), flipped(false) {}
+};
+
+typedef TNode* Node;
+
+void fix(Node at) {
+	if (at == NULL) return;
+	if (at->flipped) {
+		at->flipped = false;
+		swap(at->L, at->R);
+		if (at->L) at->L->flipped ^= true;
+		if (at->R) at->R->flipped ^= true;
+	}
+	at->children = (at->L == NULL ? 0 : at->L->children) + (at->R == NULL ? 0 : at->R->children) + 1;
+}
+
+void split(Node at, Node& root1, Node& root2, int x) {
+	if (at == NULL) {
+		root1 = NULL;
+		root2 = NULL;
+		return;
+	}
+	
+	fix(at);
+	int k = (at->L ? at->L->children : 0) + 1; // "array" position of this element
+	if (k <= x) {
+		root1 = at;
+		split(root1->R, root1->R, root2, x-k);
+		fix(root1);
+	} else {
+		root2 = at;
+		split(root2->L, root1, root2->L, x);
+		fix(root2);
+	}
+}
+
+Node merge(Node L, Node R) {
+	if (L == NULL) return R;
+	else if (R == NULL) return L;
+	fix(L);
+	fix(R);
+	if (L->p >= R->p) {
+		fix(L->R);
+		L->R = merge(L->R, R);
+		fix(L);
+		return L;
+	} else {
+		fix(R->L);
+		R->L = merge(L, R->L);
+		fix(R);
+		return R;
+	}
+}
+
+bool firstPrint = true;
+void printTreeRec(Node at) {
+	if (at == NULL) return;
+	fix(at);
+	printTreeRec(at->L);
+	if (firstPrint) firstPrint = false;
+	else printf(" ");
+	printf("%d", at->key);
+	printTreeRec(at->R);
+}
+
+void printTree(Node root) {
+	firstPrint = true;
+	printTreeRec(root);
+	printf("\n");
+}
+
+TNode nodes[100003];
+Node deckA, deckB, deckC, deck, deckTmp, deckTmp2, deckTmp3;
+int A, B, C, N, M;
+
+int main() {
+	while(scanf("%d%d",&N,&M) == 2) {
+		deck = NULL;
+		for (int i=1; i <= N; ++i) {
+			nodes[i] = TNode(i);
+			deck = merge(deck, &nodes[i]);
+		}
+		for (int i=0; i < M; ++i) {
+			scanf("%d%d%d",&A,&B,&C);
+			split(deck, deckA, deckTmp, A);
+			split(deckTmp, deckB, deckTmp2, B);
+			deckTmp3 = merge(deckA, deckTmp2);
+			split(deckTmp3, deckC, deckTmp, C);
+			if (deckB) deckB->flipped = true;
+			deckTmp2 = merge(deckB, deckTmp);
+			deck = merge(deckC, deckTmp2);
+		}
+		printTree(deck);
+	}
+
+	return 0;
+}

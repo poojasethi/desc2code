@@ -1,0 +1,156 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+
+using namespace std ;
+
+#define N 200010
+
+typedef long long ll ;
+
+int n , m , i , j , k  , rec[N][2] ;
+
+ll w[N] ;
+
+struct node {
+    int va , nt , bel ;
+    //0:left of comm , 1:rig of comm , 2: left of win , 3:rig of win
+}z[N*4] ;
+
+struct ecc { 
+    int a , b ;
+}q[N] , p[N] ;
+
+bool cmp( node a , node b ) {
+    return a.va < b.va ;
+}
+
+struct tree {
+    int l , r , va , pos ;
+}tr[6000010] ;
+
+int T  = 0 ;
+
+void Insert( int ps , int va , int l , int r , int po , int id ) {
+    if( l==r ) {
+        if( tr[po].va < va ) {
+            tr[po].va  = va ;
+            tr[po].pos = id ;
+        }
+        return ;
+    }
+    int m = ( l+r ) / 2 ;
+    if( ps<=m ) {
+        if( tr[po].l==0 ) tr[po].l = ++T ;
+        Insert( ps , va , l , m , tr[po].l , id ) ;
+    } else {
+        if( tr[po].r== 0 ) tr[po].r = ++T ;
+        Insert( ps , va , m+1 , r , tr[po].r , id ) ;   
+    }
+    tr[po].va = max( tr[ tr[po].l ].va , tr[ tr[po].r ].va ) ;
+    if( tr[ tr[po].l ].va == tr[po].va ) tr[po].pos = tr[ tr[po].l ].pos ;
+        else tr[po].pos = tr[ tr[po].r ].pos ;
+}
+
+ecc QRY( int _l , int _r , int l , int r , int po ) {
+    if( po ) {
+        m = ( l+r ) / 2 ;
+        if( _l==l && _r==r ) {
+            ecc p ;
+            p.a = tr[po].va ;
+            p.b = tr[po].pos ;
+            return p ;
+        }
+        if( _r<=m ) return QRY( _l , _r , l , m , tr[po].l ) ;
+            else if( _l>m ) return QRY( _l , _r , m+1 , r , tr[po].r ) ;
+                else {
+                    ecc a = QRY( _l,m,l,m,tr[po].l ) ;
+                    ecc b = QRY( m+1,_r,m+1,r,tr[po].r ) , p ;
+                    if( a.a >b.a ) p = a ;
+                        else p = b ;
+                    return p ;
+                }
+    }
+    ecc p ;
+    p.a = p.b = 0 ;
+    return p ;
+}   
+
+int main() {
+    scanf("%d%d",&n,&m ) ;
+    k = 0 ;
+    int rig = 0 ;
+    for( i=1 ; i<=n ; i++ ) {
+        int l , r ;
+        scanf("%d%d",&l , &r ) ;
+        l++ , r++ ;
+        rig = max( rig , r ) ;
+        z[++k].va = l , z[k].nt = 0 ;
+        z[++k].va = r , z[k].nt = 1 ;
+        z[k].bel = z[k-1].bel = i ;
+        q[i].a = l , q[i].b = r ;
+    }
+    for( i=1 ; i<=m ; i++ ) {
+        int a , b ;
+        ll c ;
+        scanf("%d%d%I64d",&a,&b,&c ) ;
+        a++ , b++ ;
+        rig = max( rig , b ) ;
+        z[++k].va = a , z[k].nt = 2 ;
+        z[++k].va = b , z[k].nt = 3 ;
+        z[k].bel = z[k-1].bel = i ;
+        w[i] = c ;
+        p[i].a = a , p[i].b = b ;
+    }   
+    sort( z , z+1+k , cmp ) ;
+    int far = 0 ;
+    int  aa , bb ;
+    ll ans = 0;
+    T = 1 ;
+    int la ;
+    for( i=1 ; i<=k ; i++ ) {
+        //case one
+        if( z[i].nt == 0 ) {
+            far = max( far , q[ z[i].bel ].b ) ;
+            if( far==q[ z[i].bel ].b ) {
+                la = z[i].bel ;
+            }
+        }
+        if( z[i].nt == 2 ) {
+            if( w[ z[i].bel ] * ( min( far , p[ z[i].bel ].b ) - z[i].va )>ans ) {
+                ans = w[ z[i].bel ] * ( min( far , p[ z[i].bel ].b ) - z[i].va ) ;
+                aa = la , bb = z[i].bel ;
+            }
+        }
+        //case two 
+        if( z[i].nt == 1 ) 
+            Insert( q[ z[i].bel ].a , q[ z[i].bel ].b - q[ z[i].bel ].a , 1 , rig , 1 , z[i].bel ) ;
+        if( z[i].nt == 3 ) {
+            ecc tmp = QRY( p[ z[i].bel ].a , p[ z[i].bel ].b , 1 , rig , 1 ) ;
+            if( tmp.a * w[ z[i].bel ]>ans ) {
+                ans = tmp.a * w[ z[i].bel ] ;
+                aa = tmp.b , bb = z[i].bel ;
+                
+            }
+        }
+    }
+    far = rig ;
+    for( i=k ; i ; i-- ) {
+        if( z[i].nt == 1 ) {
+            far = min( far , q[ z[i].bel ].a ) ;    
+            if( far==q[ z[i].bel ].a ) {
+                la = z[i].bel ;
+            }
+        }
+        if( z[i].nt == 3 ) {
+            if( ans < ( p[ z[i].bel ].b - max( far , p[ z[i].bel ].a ) ) * w[ z[i].bel ] ) {
+                ans = ( p[ z[i].bel ].b - max( far , p[ z[i].bel ].a ) ) * w[ z[i].bel ] ;
+                aa = la , bb = z[i].bel ;
+            }
+        }
+    }
+    printf("%I64d\n",ans ) ;
+    if( ans ) {
+        printf("%d %d",aa ,bb ) ;
+    }
+}   

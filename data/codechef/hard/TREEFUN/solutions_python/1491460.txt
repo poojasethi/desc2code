@@ -1,0 +1,196 @@
+#include<iostream>
+#include<stdio.h>
+
+#include<assert.h>
+#include<string>
+#include<algorithm>
+#include<queue>
+#include<set>
+#include<vector>
+using namespace std;
+#define MAXN 50010
+#define LOGMAXN 16
+int P[MAXN][LOGMAXN];
+int L[MAXN];
+int T[MAXN];
+int X[MAXN];
+  void process3(int N)
+  {
+      int i, j;
+
+  //we initialize every element in P with -1
+      for (i = 0; i < N; i++)
+          for (j = 0; 1 << j < N; j++)
+              P[i][j] = -1;
+
+  //the first ancestor of every node i is T[i]
+      for (i = 0; i < N; i++)
+          P[i][0] = T[i];
+
+  //bottom up dynamic programing
+      for (j = 1; 1 << j < N; j++)
+         for (i = 0; i < N; i++)
+             if (P[i][j - 1] != -1)
+                 P[i][j] = P[P[i][j - 1]][j - 1];
+  }
+
+  int query(int N , int p, int q)
+  {
+      int tmp, log, i;
+
+  //if p is situated on a higher level than q then we swap them
+      if (L[p] < L[q])
+          tmp = p, p = q, q = tmp;
+
+  //we compute the value of [log(L[p)]
+      for (log = 1; 1 << log <= L[p]; log++);
+      log--;
+
+  //we find the ancestor of node p situated on the same level
+  //with q using the values in P
+      for (i = log; i >= 0; i--)
+          if (L[p] - (1 << i) >= L[q])
+              p = P[p][i];
+
+      if (p == q)
+          return p;
+
+  //we compute LCA(p, q) using the values in P
+      for (i = log; i >= 0; i--)
+          if (P[p][i] != -1 && P[p][i] != P[q][i])
+              p = P[p][i], q = P[q][i];
+
+      return T[p];
+  }
+  vector<int >v[MAXN];
+  int GC;
+  void dfs(int x,int par,int level)
+  {
+        T[x]=par;
+        X[x]=GC++;
+        L[x]=level;
+        for(int i=0;i<v[x].size();i++)
+        {
+            if(par!=v[x][i])dfs(v[x][i],x,level+1);
+        }
+  }
+int main()
+{
+    int t,n,x,i,j,k,m,a,b;
+    cin>>t;
+
+    while(t--)
+    {
+
+        cin>>n>>m;
+        for(i=1;i<=n;i++)
+        {
+            v[i-1].clear();
+        }
+        for(i=0;i<n-1;i++)
+        {
+            scanf("%d %d",&a,&b);
+            v[a-1].push_back(b-1);
+            v[b-1].push_back(a-1);
+        }
+        GC=0;
+        dfs(0,0,0);
+        process3(n);
+
+        for(i=0;i<m;i++)
+        {
+            vector<int>v1;
+            scanf("%d",&k);
+            for(j=0;j<k;j++)
+            {
+                scanf("%d",&x);
+                v1.push_back(x-1);
+            }
+            if(k==2)
+            {
+                if(v1[0]==v1[1])
+                {
+                    printf("0\n");
+                }
+                else if(T[v1[0]]==v1[1]||T[v1[1]]==v1[0])printf("0\n");
+                else
+                {
+                    int a=query(n,v1[0],v1[1]);
+                    //cout<<L[v1[0]]-L[a]<<" "<<L[v1[1]]-L[a]<<endl;
+                    printf("%d\n",(L[v1[0]]-L[a])+(L[v1[1]]-L[a])-1);
+                }
+            }
+            else
+            {
+                int f=0;
+
+                vector<pair<int,int> >ax;
+                for(j=0;j<k;j++)
+                {
+                    pair<int,int> p(X[v1[j]],v1[j]);
+                    ax.push_back(p);
+                }
+                sort(ax.begin(),ax.end());
+                int a=query(n,ax[0].second,ax[1].second);
+                for(j=1;j<k-1;j++)
+                {
+                    int b=query(n,ax[j].second,ax[j+1].second);
+                    if(b!=a)
+                    {
+
+                        if(j==k-2&&L[b]<L[a]);
+                        else
+                        {
+                            f++;
+                            break;
+                        }
+                    }
+                }
+                if(!f)
+                {
+                    for(j=0;j<k;j++)
+                    {
+                        if(v1[j]==a)f=1;
+                    }
+                    if(!f)
+                    {
+                        printf("1\n");
+                        continue;
+                    }
+                }
+                f=0;
+                a=query(n,ax[k-1].second,ax[k-2].second);
+                for(j=1;j<k-1;j++)
+                {
+                    int b=query(n,ax[k-j-1].second,ax[k-j-2].second);
+                    if(b!=a)
+                    {
+                        if(j==k-2&&L[b]<L[a]);
+                        else
+                        {
+                            f++;
+                            break;
+                        }
+                    }
+                }
+                if(!f)
+                {
+                    for(j=0;j<k;j++)
+                    {
+                        if(v1[j]==a)f=1;
+                    }
+                    if(!f)
+                    {
+                        printf("1\n");
+                        continue;
+                    }
+                }
+                printf("0\n");
+
+            }
+        }
+
+
+    }
+    return 0;
+}

@@ -1,0 +1,231 @@
+#include<cstdio>
+#include<algorithm>
+#include<cassert>
+#include<cstring>
+#include<iostream>
+#include<cstdlib>
+#include<cmath>
+#include<vector>
+#include<map>
+#include<set>
+#include<queue>
+#include<bitset>
+using namespace std;
+#define inf 1000000005
+typedef long long ll;
+typedef double db;
+void gn(int &x){
+	int sg=1;char c;while(((c=getchar())<'0'||c>'9')&&c!='-');
+	if(c=='-')sg=-1,x=0;else x=c-'0';
+	while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+	x*=sg;
+}
+void gn(ll &x){
+	int sg=1;char c;while(((c=getchar())<'0'||c>'9')&&c!='-');
+	if(c=='-')sg=-1,x=0;else x=c-'0';
+	while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+	x*=sg;
+}
+const int mo=1000000007;
+int qp(int a,ll b){int ans=1;do{if(b&1)ans=1ll*ans*a%mo;a=1ll*a*a%mo;}while(b>>=1);return ans;}
+int gcd(int a,int b){return b?gcd(b,a%b):a;}
+
+int fac[1333333];
+int ifac[1333333];
+int c(int n,int m){
+	return 1ll*fac[n]*ifac[m]%mo*ifac[n-m]%mo;
+}
+struct pt{
+	int x,y;int dis;
+}p[50];
+int cmp(const pt&a,const pt&b){
+	return a.dis<b.dis;
+}
+int ax,ay,bx,by;
+int x,y,k;
+inline int det(int a,int b,int c,int d){
+	return a*d-b*c;
+}
+int solve(int x,int y,int &na,int &nb){
+	int d=det(ax,bx,ay,by);
+	int d1=det(x,bx,y,by);
+	int d2=det(ax,x,ay,y);
+	if(d1%d || d2%d)return 0;
+	na=d1/d,nb=d2/d;
+	if(na<0 || nb<0)return 0;
+	return 1;
+}
+void work1(){
+	int ans=0;
+	for (int i=1;i<=k;i++){
+		int s,t;
+		solve(p[i].x,p[i].y,s,t);
+		p[i].dis=s+t;
+	}
+	sort(p+1,p+1+k,cmp);
+	for (int i=0;i<1<<k;i++){
+		int sg=1;
+		int cnt=1;
+		pt las;las=(pt){0,0,0};
+		for (int j=0;j<k;j++)if(1<<j&i){
+			int s,t;
+			sg*=-1;
+			cnt*=solve(p[j+1].x-las.x,p[j+1].y-las.y,s,t);
+			if(cnt){
+				cnt=1ll*cnt*c(s+t,s)%mo;
+			}
+			las=p[j+1];
+		}
+		int s,t;
+		cnt*=solve(x-las.x,y-las.y,s,t);
+		if(cnt){
+			cnt=1ll*cnt*c(s+t,s)%mo;
+		}
+		ans=(ans+sg*cnt)%mo;
+	}
+	ans=(ans+mo)%mo;
+	printf("%d\n",ans);
+}
+
+int tar;
+bool blo[1066666];
+bool vis1[1066666],vis2[1066666];
+#define X 510000 
+int qu[1066666];
+int vali(int x){
+	return  x<X && x>-X && !blo[x+X];
+}
+int a,b;
+void bfs1(){
+	int p=0,q=0;
+	qu[q++]=0;
+	vis1[0+X]=1;
+	while(p!=q){
+		int u=qu[p++];
+		if(vali(u+a) && !vis1[u+a+X]){
+			vis1[u+a+X]=1;
+			qu[q++]=u+a;
+		}
+		if(a==b)continue;
+		if(vali(u+b) && !vis1[u+b+X]){
+			vis1[u+b+X]=1;
+			qu[q++]=u+b;
+		}
+	}
+}
+void bfs2(){
+	int p=0,q=0;
+	qu[q++]=tar;
+	vis2[tar+X]=1;
+	while(p!=q){
+		int u=qu[p++];
+		if(vali(u-a) && !vis2[u-a+X]){
+			vis2[u-a+X]=1;
+			qu[q++]=u-a;
+		}
+		if(a==b)continue;
+		if(vali(u-b) && !vis2[u-b+X]){
+			vis2[u-b+X]=1;
+			qu[q++]=u-b;
+		}
+	}
+}
+int rea(int i){
+	return vali(i) && vis1[i+X] && vis2[i+X];
+}
+
+int deg[1066666];
+int f[1066666];
+
+void work2(){
+
+	int dx=gcd(ax,bx),dy=gcd(ay,by);
+	if(det(ax,ay,dx,dy))dy*=-1;
+	if(dx==0){
+		swap(dx,dy);
+		swap(x,y);
+		swap(ax,ay);
+		swap(bx,by);
+		for (int i=1;i<=k;i++)swap(p[i].x,p[i].y);
+	}
+	a=ax/dx,b=bx/dx;
+	memset(blo,0,sizeof(blo));
+	memset(f,0,sizeof(f));
+	for (int i=1;i<=k;i++){
+		if(p[i].x%dx==0 && p[i].x/dx*dy==p[i].y){
+			blo[p[i].x/dx+X]=1;
+		}
+	}
+	if(x%dx==0 && x/dx*dy==y)tar=x/dx;
+	else {
+		printf("0\n");
+		return;
+	}
+	memset(vis1,0,sizeof(vis1));
+	memset(vis2,0,sizeof(vis2));
+	bfs1();
+	bfs2();
+	if(!vis1[tar+X]){
+		printf("0\n");
+		return;
+	}
+	memset(deg,0,sizeof(deg));
+	int su=0;
+	for (int i=-X;i<=X;i++)if(rea(i)){
+		su++;
+		if(rea(i+a))deg[i+a+X]++;
+		if(a==b)continue;
+		if(rea(i+b))deg[i+b+X]++;
+	}
+	f[0+X]=1;
+	int p=0,q=0;
+	for (int i=-X;i<=X;i++)if(rea(i) && deg[i+X]==0)qu[q++]=i;
+	while(p!=q){
+		int u=qu[p++];
+		if(rea(u+a)){
+			f[u+a+X]=(f[u+a+X]+f[u+X])%mo;
+			if(--deg[u+a+X]==0)qu[q++]=u+a;
+		}
+		if(a==b)continue;
+		if(rea(u+b)){
+			f[u+b+X]=(f[u+b+X]+f[u+X])%mo;
+			if(--deg[u+b+X]==0)qu[q++]=u+b;
+		}
+	}
+	if(q!=su){
+		printf("-1\n");
+		return;
+	}printf("%d\n",f[tar+X]);
+
+}
+void work(){
+	scanf("%d%d%d",&x,&y,&k);
+	scanf("%d%d%d%d",&ax,&ay,&bx,&by);
+	for (int i=1;i<=k;i++)scanf("%d%d",&p[i].x,&p[i].y);
+	if(det(ax,ay,bx,by)){
+		work1();
+	}else{
+		if(ax==0 && ay==0){
+			swap(ax,bx);
+			swap(ay,by);
+		}
+		if(ax==0 && ay==0){
+			if(x==0 && y==0)printf("-1\n");
+			else printf("0\n");
+			return;
+		}
+		work2();
+	}
+}
+int main()
+{
+	//freopen("1.in","r",stdin);
+	fac[0]=1;
+	for (int i=1;i<=1000000;i++)fac[i]=1ll*fac[i-1]*i%mo;
+	for (int i=0;i<=1000000;i++)ifac[i]=qp(fac[i],mo-2);
+	int tes;scanf("%d",&tes);
+	for (int tt=1;tt<=tes;tt++){
+		work();
+	}
+	return 0;
+}

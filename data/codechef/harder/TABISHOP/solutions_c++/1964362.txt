@@ -1,0 +1,171 @@
+#include <iostream>
+#include <vector>
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+#include <queue>
+#include <set>
+
+using namespace std;
+
+int n;
+vector < pair <int,int> > b,p;
+vector <int> X,Y;
+vector <int> bx[3*200002],by[3*200002];
+vector < pair<int,int> > xq[3*200002],yq[3*200002];
+vector < pair <int,int> > add[3*200002];
+
+int getX(int x) {
+	return lower_bound(X.begin(),X.end(),x)-X.begin();
+}
+
+int getY(int y) {
+	return lower_bound(Y.begin(),Y.end(),y)-Y.begin();
+}
+
+int getLeft(int i) {
+	return getY(abs(X[i]));
+}
+
+int getRight(int i) {
+	return getY(2+2*n-abs(X[i]));
+}
+
+int getUp(int i) {
+	return getX(abs(Y[i]-(n+1))-(n-1)-2);
+}
+
+int getDown(int i) {
+	return getX(-abs(Y[i]-(n+1))+(n-1)+2);
+}
+
+int fen[3*200002],sz;
+
+void upd(int pos,int val) {
+	for(;pos<sz;pos|=(pos+1))
+		fen[pos]+=val;
+}
+
+int fnd(int pos) {
+	int ret=0;
+	for(;pos>=0;pos=(pos&(pos+1))-1)
+		ret+=fen[pos];
+	return ret;
+}
+
+int get(int l,int r) {
+	return fnd(r)-fnd(l-1);
+}
+
+long long solve(int it) {
+	long long ret=0;
+	for(int i=0;i<X.size();++i) {
+		for(int j=0;j<add[i].size();++j)
+			upd(add[i][j].first,add[i][j].second);
+		if ((X[i]&1)==it)
+			for(int j=0;j<xq[i].size();++j)
+				ret+=get(xq[i][j].first+1,xq[i][j].second-1);
+	}
+	return ret;
+}
+
+int main() {
+//	freopen("input.txt","r",stdin);
+//	freopen("output.txt","w",stdout);
+	int k,m,x,y;
+	scanf("%d%d%d",&n,&k,&m);
+	b.reserve(k); p.reserve(m);
+	for(int i=0;i<k;++i) {
+		scanf("%d%d",&x,&y);
+		b.push_back(make_pair(x-y,x+y));
+		X.push_back(x-y);
+		Y.push_back(x+y);
+		X.push_back(abs(x+y-(n+1))-(n-1)-2);
+		X.push_back(-abs(x+y-(n+1))+(n-1)+2);
+		Y.push_back(abs(x-y));
+		Y.push_back(2*n+2-abs(x-y));
+	}
+	for(int i=0;i<m;++i) {
+		scanf("%d%d",&x,&y);
+		p.push_back(make_pair(x-y,x+y));
+		X.push_back(x-y);
+		Y.push_back(x+y);
+	}
+	sort(X.begin(),X.end());
+	X.resize(unique(X.begin(),X.end())-X.begin());
+	sort(Y.begin(),Y.end());
+	Y.resize(unique(Y.begin(),Y.end())-Y.begin());
+	for(int i=0;i<k;++i) {
+		b[i]=make_pair(getX(b[i].first),getY(b[i].second));
+	}
+	for(int i=0;i<m;++i) {
+		p[i]=make_pair(getX(p[i].first),getY(p[i].second));
+		bx[p[i].first].push_back(p[i].second);
+		by[p[i].second].push_back(p[i].first);
+	}
+	for(int i=0;i<X.size();++i) {
+		sort(bx[i].begin(),bx[i].end());
+		bx[i].resize(unique(bx[i].begin(),bx[i].end())-bx[i].begin());
+	}
+	for(int i=0;i<Y.size();++i) {
+		sort(by[i].begin(),by[i].end());
+		by[i].resize(unique(by[i].begin(),by[i].end())-by[i].begin());
+	}
+	for(int i=0;i<k;++i) {
+		if (bx[b[i].first].size()==0) {
+			xq[b[i].first].push_back(make_pair(getLeft(b[i].first),getRight(b[i].first)));
+		} else {
+			int r=upper_bound(bx[b[i].first].begin(),bx[b[i].first].end(),b[i].second)-bx[b[i].first].begin(),l=r-1;
+			if (r>=bx[b[i].first].size()) r=getRight(b[i].first);
+			else r=bx[b[i].first][r];
+			if (l<0) l=getLeft(b[i].first);
+			else l=bx[b[i].first][l];
+			xq[b[i].first].push_back(make_pair(l,r));
+		}
+	}
+	for(int i=0;i<k;++i) {
+		if (by[b[i].second].size()==0) {
+			yq[b[i].second].push_back(make_pair(getUp(b[i].second),getDown(b[i].second)));
+		} else {
+			int r=upper_bound(by[b[i].second].begin(),by[b[i].second].end(),b[i].first)-by[b[i].second].begin(),l=r-1;
+			if (r>=by[b[i].second].size()) r=getDown(b[i].second);
+			else r=by[b[i].second][r];
+			if (l<0) l=getUp(b[i].second);
+			else l=by[b[i].second][l];
+			yq[b[i].second].push_back(make_pair(l,r));
+		}
+	}
+	for(int i=0;i<X.size();++i) {
+		sort(xq[i].begin(),xq[i].end());
+		xq[i].resize(unique(xq[i].begin(),xq[i].end())-xq[i].begin());
+	}
+	for(int i=0;i<Y.size();++i) {
+		sort(yq[i].begin(),yq[i].end());
+		yq[i].resize(unique(yq[i].begin(),yq[i].end())-yq[i].begin());
+	}
+	long long total=0;
+	for(int i=0;i<X.size();++i)
+		for(int j=0;j<xq[i].size();++j) {
+			total+=(Y[xq[i][j].second]-Y[xq[i][j].first])/2-1;
+		}
+	for(int i=0;i<Y.size();++i)
+		for(int j=0;j<yq[i].size();++j) {
+			total+=(X[yq[i][j].second]-X[yq[i][j].first])/2-1;
+		}
+	sz=Y.size()+1;
+	for(int it=0;it<2;++it) {
+		memset(fen,0,sizeof(fen));
+		for(int i=0;i<Y.size();++i)
+			if ((Y[i]&1)==it)
+				for(int j=0;j<yq[i].size();++j) {
+					add[yq[i][j].first].push_back(make_pair(i,1));
+					add[yq[i][j].second+1].push_back(make_pair(i,-1));
+				}
+		total-=solve(it);
+		if (it==0)
+			for(int i=0;i<X.size();++i)
+				add[i].clear();
+	}
+	cout << total << endl;
+	return 0;
+}

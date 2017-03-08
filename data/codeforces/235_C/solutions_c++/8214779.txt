@@ -1,0 +1,95 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+const int N = 1000010;
+
+char s[N], t[N];
+int n, m, ans;
+
+int cnt[N * 2], lst[N * 2];
+
+struct node {
+	int c[26];
+	int par, len, size;
+} nd[N * 2];
+
+int dn, root, last;
+int vis[N * 2], V;
+
+void extend(int x) {
+	int p = last, np = ++dn;
+	nd[np].len = nd[p].len + 1;
+	nd[np].size = 1;
+	while (p && !nd[p].c[x]) {
+		nd[p].c[x] = np;
+		p = nd[p].par;
+	}
+	if (!p) {
+		nd[np].par = root;
+	} else {
+		int q = nd[p].c[x];
+		if (nd[q].len == nd[p].len + 1) {
+			nd[np].par = q;
+		} else {
+			int nq = ++dn;
+			nd[nq] = nd[q];
+			nd[nq].len = nd[p].len + 1;
+			nd[nq].size = 0;
+			nd[np].par = nd[q].par = nq;
+			while (p && nd[p].c[x] == q) {
+				nd[p].c[x] = nq;
+				p = nd[p].par;
+			}
+		}
+	}
+	last = np;
+}
+int main() {
+	scanf("%s", s), n = strlen(s);
+	last = root = ++dn;
+	for (int i = 0; i < n; ++i) {
+		extend(s[i] - 'a');
+	}
+
+	for (int i = 1; i <= dn; ++i) cnt[nd[i].len]++;
+	for (int i = 1; i <= dn; ++i) cnt[i] += cnt[i - 1];
+	for (int i = 1; i <= dn; ++i) lst[cnt[nd[i].len]--] = i;
+	for (int i = dn; i >= 1; --i) {
+		nd[nd[lst[i]].par].size += nd[lst[i]].size;
+	}
+
+	int T;
+	scanf("%d", &T);
+	while (T--) {
+		scanf("%s", t), m = strlen(t);
+		++V;
+		ans = 0;
+		int at = root;
+		int len = 0;
+		for (int i = 0; i < 2 * m; ++i) {
+			int x = t[i % m] - 'a';
+			while (!nd[at].c[x] && at) {
+				at = nd[at].par;
+				len = nd[at].len;
+			}
+			if (nd[at].c[x]) {
+				at = nd[at].c[x];
+				len++;
+			}
+			while (at != root && nd[nd[at].par].len >= m) {
+				at = nd[at].par;
+			}
+			if (len > m) len = m;
+			
+			if (len == m) {
+				if (vis[at] == V) break;
+				else vis[at] = V;
+				ans += nd[at].size;
+			}
+		}
+		printf("%d\n", ans);
+	}
+}

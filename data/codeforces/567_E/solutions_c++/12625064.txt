@@ -1,0 +1,93 @@
+#include <cstdio>
+#include <cstring>
+#include <queue>
+#include <utility>
+#include <vector>
+#include <functional>
+#include <algorithm>
+
+using namespace std;
+
+const int maxn = 100010;
+const int maxm = 100010;
+
+typedef long long i64;
+typedef pair<i64, int> pii;
+
+const i64 oo = ~0ULL>>2;
+
+struct edge {
+	int v, w;
+	edge *next;
+	edge(int _v, int _w, edge *_next): v(_v), w(_w), next(_next) {}
+};
+
+int n, m, s, t;
+int a[maxn], b[maxn], l[maxn];
+edge *E[maxn], *Erev[maxn], *Ep[maxn];
+i64 d[maxn], drev[maxn];
+priority_queue< pii, vector<pii>, greater<pii> > H;
+int ti = 0, dfn[maxn], low[maxn];
+bool cut[maxm];
+
+void dijkstra(int S, edge *E[], i64 d[])
+{
+	for (int i = 1; i <= n; i ++)  d[i] = oo;
+	d[S] = 0;
+	H.push( pii(0, S) );
+	while (!H.empty())
+	{
+		pii p = H.top();  H.pop();
+		int u = p.second;
+		if (d[u] != p.first)  continue;
+		for (edge *e = E[u]; e; e = e->next)
+			if (d[e->v] > d[u] + e->w)
+			{
+				d[e->v] = d[u] + e->w;
+				H.push( pii(d[e->v], e->v) );
+			}
+	}
+}
+
+void dfs(int u, int num)
+{
+	dfn[u] = low[u] = ++ti;
+	for (edge *e = Ep[u]; e; e = e->next)
+	{
+		if (!dfn[e->v])  dfs(e->v, e->w);
+		if (e->w != num)  low[u] = min(low[u], low[e->v]);
+	}
+	if (dfn[u] == low[u] && ~num)  cut[num] = true;
+}
+
+
+int main()
+{
+	scanf("%d%d%d%d", &n, &m, &s, &t);
+	for (int i = 0; i < m; i ++) 
+	{
+		scanf("%d%d%d", a+i, b+i, l+i);
+		E[a[i]] = new edge(b[i], l[i], E[a[i]]);
+		Erev[b[i]] = new edge(a[i], l[i], Erev[b[i]]);
+	}
+
+	
+	dijkstra(s, E, d);
+	dijkstra(t, Erev, drev);
+
+	for (int i = 0; i < m; i ++)
+		if (d[a[i]] + l[i] + drev[b[i]] == d[t])
+		{
+			Ep[a[i]] = new edge(b[i], i, Ep[a[i]]);
+			Ep[b[i]] = new edge(a[i], i, Ep[b[i]]);
+		}
+
+	dfs(s, -1);
+	for (int i = 0; i < m; i ++)
+	{
+		if (cut[i])  puts("YES");
+		else if (d[a[i]] + 1 + drev[b[i]] >= d[t])  puts("NO");
+		else printf("CAN %I64d\n", l[i] - (d[t] - d[a[i]] - drev[b[i]] - 1));
+	}
+	return 0;
+}

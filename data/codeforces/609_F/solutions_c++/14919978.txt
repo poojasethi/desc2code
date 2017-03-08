@@ -1,0 +1,112 @@
+#include <iostream>
+#include <algorithm>
+#include <set>
+#include <cstring>
+using namespace std;
+typedef long long ll;
+
+struct frog
+{
+	ll a, b;
+	int idx, cnt = 0;
+	bool operator<(const frog& f) const
+	{
+		return a < f.a;
+	}
+};
+
+const int MAXN = 200005;
+int N, M;
+frog F[MAXN];
+ll BIT[MAXN];
+ll ans[MAXN][2];
+
+void add(int idx, ll val)
+{
+	for (; idx < MAXN; idx += idx&-idx)
+		BIT[idx] = max(BIT[idx], val);
+}
+
+ll get(int idx) //get maximum position some frog from 1 to idx can eat
+{
+	ll ret = -1;
+	for (; idx > 0; idx -= idx&-idx)
+		ret = max(ret, BIT[idx]);
+	return ret;
+}
+
+int main()
+{
+	ios::sync_with_stdio(0);
+
+	cin >> N >> M;
+	for (int i = 1; i <= N; i++)
+	{
+		cin >> F[i].a >> F[i].b;
+		F[i].b += F[i].a;
+		F[i].idx = i;
+	}
+
+	sort(F + 1, F + N + 1);
+	memset(BIT, -1, sizeof(BIT));
+	for (int i = 1; i <= N; i++)
+		add(i, F[i].b);
+	
+	multiset<pair<ll, ll> > st;
+	for (int i = 0, p, sz; i < M; i++)
+	{
+		cin >> p >> sz;
+		int lo = 0, hi = N;
+		while (lo < hi) //find range of potential frogs
+		{
+			int mid = lo + (hi - lo + 1) / 2;
+			if (F[mid].a <= p)
+				lo = mid;
+			else
+				hi = mid - 1;
+		}
+
+		if (lo == 0) //mosquito is left of all frogs so it can't be eaten
+			continue;
+
+		lo = 1;
+		while (lo < hi) //find leftmost index that can eat mosquito
+		{
+			int mid = lo + (hi - lo) / 2;
+			if (get(mid) < p)
+				lo = mid + 1;
+			else
+				hi = mid;
+		}
+
+		if (get(lo) < p) //no frog can eat it
+			st.insert(make_pair(p, sz));
+		else
+		{
+			F[lo].b += sz;
+			F[lo].cnt++;
+
+			set<pair<ll, ll> >::iterator it = st.lower_bound(make_pair(F[lo].a, -1)); //get range of mosquitoes frog can potentially eat
+			while (it != st.end() && it->first <= F[lo].b)
+			{
+				F[lo].b += it->second;
+				F[lo].cnt++;
+				set<pair<ll, ll> >::iterator it1 = it++;
+				st.erase(it1);
+			}
+
+			add(lo, F[lo].b); //update new endpoint
+		}
+	}
+
+	for (int i = 1; i <= N; i++)
+	{
+		ans[F[i].idx][0] = F[i].cnt;
+		ans[F[i].idx][1] = F[i].b - F[i].a;
+	}
+
+	for (int i = 1; i <= N; i++)
+		cout << ans[i][0] << " " << ans[i][1] << "\n";
+
+	return 0;
+}

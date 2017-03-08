@@ -1,0 +1,148 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <map>
+#include <algorithm>
+using namespace std;
+
+#define inf 1000000000
+struct Dinic_maximum_flow
+{
+	#define Graph_vertex 200005
+	#define Graph_edge 5000005
+	#define flow_value int
+	
+	int son[Graph_vertex],next[Graph_edge],ed[Graph_edge],d[Graph_vertex],q[Graph_vertex],ll,rr;
+	flow_value flow[Graph_edge],sum,tmp;
+	int n,S,T,tot,i,u,v;
+	bool vis[Graph_vertex];
+	
+	inline void clear(int N){for(n=N,tot=1,i=0;i<=n;++i)son[i]=0;}
+	inline void add(int u,int v,flow_value c)
+	{
+		next[++tot]=son[u];son[u]=tot;ed[tot]=v;flow[tot]=c;
+		next[++tot]=son[v];son[v]=tot;ed[tot]=u;flow[tot]=0;
+	}
+	flow_value find(int now,flow_value Flow)
+	{
+		if(now==T||!Flow)return Flow;
+		flow_value tmp,w=0;
+		for(int i=son[now];i&&w<Flow;i=next[i])
+		if(flow[i]&&d[now]+1==d[ed[i]])
+		{
+			tmp=find(ed[i],min(Flow-w,flow[i]));
+			flow[i]-=tmp;flow[i^1]+=tmp;w+=tmp;
+		}
+		if(!w)d[now]=inf;
+		return w;
+	}
+	bool bfs()
+	{
+		for(i=0;i<=n;++i)vis[i]=false;
+		q[rr=1]=S;vis[S]=true;
+		for(ll=0;ll<rr&&!vis[T];)
+		{
+			u=q[++ll];
+			for(i=son[u];i;i=next[i])
+			if(flow[i]&&!vis[ed[i]])
+			{
+				v=ed[i];
+				q[++rr]=v;
+				d[v]=d[u]+1;
+				vis[v]=true;
+			}
+		}
+		return vis[T];
+	}
+	flow_value dinic(int s,int t)
+	{
+		S=s;T=t;
+		for(sum=d[S]=0;bfs();)sum+=find(S,inf);
+		return sum;
+	}
+	
+	#undef Graph_vertex
+	#undef Graph_edge
+	#undef flow_value
+}G;
+
+int Test,S,T,n,i,j,k,u,v,totA,totB,totp;
+int a[405],b[405],c[405];
+int A[160005],Ap[160005][12];
+int B[160005],Bp[160005][12];
+
+map <int,int> HA,HB,Hp;
+
+int main()
+{
+	scanf("%d",&Test);
+	for(;Test;--Test)
+	{
+		HA.clear();
+		HB.clear();
+		Hp.clear();
+		totA=totB=totp=0;
+		scanf("%d",&n);
+		for(i=1;i<=n;++i)scanf("%d",&a[i]);
+		for(i=1;i<=n;++i)scanf("%d",&b[i]);
+		for(i=1;i<=n;++i)
+		for(j=1;j<=n;++j)
+		if(a[i]!=b[j])
+		{
+			u=__gcd(a[i],b[j]);
+			if(u==1)continue;
+			v=1;c[0]=0;
+			for(k=2;k*k<=u;++k)
+			if(u%k==0)
+			{
+				v*=k;c[++c[0]]=k;
+				for(u/=k;u%k==0;u/=k);
+			}
+			if(u!=1)v*=u,c[++c[0]]=u;
+			if(a[i]>b[j])
+			{
+				if(!HA[v])
+				{
+					HA[v]=++totA;
+					A[totA]=1;
+					Ap[totA][0]=c[0];
+					for(k=1;k<=c[0];++k)
+					{
+						if(!Hp[c[k]])Hp[c[k]]=++totp;
+						Ap[totA][k]=Hp[c[k]];
+					}
+				}
+				else ++A[HA[v]];
+			}
+			else
+			{
+				if(!HB[v])
+				{
+					HB[v]=++totB;
+					B[totB]=1;
+					Bp[totB][0]=c[0];
+					for(k=1;k<=c[0];++k)
+					{
+						if(!Hp[c[k]])Hp[c[k]]=++totp;
+						Bp[totB][k]=Hp[c[k]];
+					}
+				}
+				else ++B[HB[v]];
+			}
+		}
+		S=0;T=totA+totp+totB+1;
+		G.clear(T);
+		for(i=1;i<=totA;++i)
+		{
+			G.add(S,i,A[i]);
+			for(j=1;j<=Ap[i][0];++j)
+			G.add(i,totA+Ap[i][j],inf);
+		}
+		for(i=1;i<=totB;++i)
+		{
+			for(j=1;j<=Bp[i][0];++j)
+			G.add(totA+Bp[i][j],totA+totp+i,inf);
+			G.add(totA+totp+i,T,B[i]);
+		}
+		printf("%d\n",G.dinic(S,T));
+	}
+}

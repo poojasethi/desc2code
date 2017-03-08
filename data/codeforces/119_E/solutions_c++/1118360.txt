@@ -1,0 +1,117 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <deque>
+#include <stack>
+#include <bitset>
+#include <queue>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+
+using namespace std;
+
+struct point {
+	double x, y, z;
+	point(double _x = 0, double _y = 0, double _z = 0) : x(_x), y(_y), z(_z) {};
+} p[900], q[900];
+
+int sign(double x) {
+	if (fabs(x) < 1e-8) return 0;
+	return (x < 0) ? -1 : 1;
+}
+
+double dist(point a, point b) {
+	return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z));
+}
+
+double scalar(point a, point b) {
+	return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+int main() {
+#ifndef ONLINE_JUDGE
+	freopen("input.txt", "r", stdin);
+	freopen("output.txt", "w", stdout);
+#endif
+	
+	int n, m;
+	scanf("%d%d", &n, &m);
+	for (int i = 0; i < n; i ++)
+		scanf("%lf%lf%lf", &p[i].x, &p[i].y, &p[i].z);
+	for (int i = 0; i < m; i ++) {
+		int a, b, c;
+		scanf("%d%d%d", &a, &b, &c);
+		point v1, v2;
+		if (a == 0 && b == 0) {
+			v1 = point(0, c, 0);
+			v2 = point(c, 0, 0);
+		} else if (a == 0 && c == 0) {
+			v1 = point(b, 0, 0);
+			v2 = point(0, 0, b);
+		} else if (b == 0 && c == 0) {
+			v1 = point(0, a, 0);
+			v2 = point(0, 0, a);
+		} else if (a == 0) {
+			v1 = point(0, c, -b);
+			v2 = point(1, c, -b);
+		} else if (b == 0) {
+			v1 = point(c, 0, -a);
+			v2 = point(c, 1, -a);
+		} else if (c == 0) {
+			v1 = point(b, -a, 0);
+			v2 = point(b, -a, 1);
+		} else {
+			v1 = point(b, -a, 0);
+			v2 = point(c, 0, -a);
+		}
+		for (int j = 0; j < n; j ++) {
+			double a1 = scalar(v1, v1), b1 = scalar(v1, v2), c1 = scalar(v1, p[j]);
+			double a2 = scalar(v2, v1), b2 = scalar(v2, v2), c2 = scalar(v2, p[j]);
+			double x = (c1 * b2 - c2 * b1) / (a1 * b2 - a2 * b1);
+			double y = (c1 * a2 - c2 * a1) / (b1 * a2 - b2 * a1);
+			q[j] = point(v1.x * x + v2.x * y, v1.y * x + v2.y * y, v1.z * x + v2.z * y);
+		}
+		random_shuffle(q, q + n);
+		point o = q[0];
+		double R = 0;
+		for (int j = 1; j < n; j ++)
+			if (sign(dist(q[j], o) - R) > 0) {
+				o = q[j];
+				R = 0;
+				for (int k = 0; k < j; k ++)
+					if (sign(dist(q[k], o) - R) > 0) {
+						o.x = (q[j].x + q[k].x) / 2;
+						o.y = (q[j].y + q[k].y) / 2;
+						o.z = (q[j].z + q[k].z) / 2;
+						R = dist(q[j], q[k]) / 2;
+						for (int t = 0; t < k; t ++)
+							if (sign(dist(q[t], o) - R) > 0) {
+								double a1 = 2 * (scalar(v1, q[j]) - scalar(v1, q[k]));
+								double b1 = 2 * (scalar(v2, q[j]) - scalar(v2, q[k]));
+								double c1 = scalar(q[j], q[j]) - scalar(q[k], q[k]);
+								double a2 = 2 * (scalar(v1, q[k]) - scalar(v1, q[t]));
+								double b2 = 2 * (scalar(v2, q[k]) - scalar(v2, q[t]));
+								double c2 = scalar(q[k], q[k]) - scalar(q[t], q[t]);
+								double x = (c1 * b2 - c2 * b1) / (a1 * b2 - a2 * b1);
+								double y = (c1 * a2 - c2 * a1) / (b1 * a2 - b2 * a1);
+								o = point(v1.x * x + v2.x * y, v1.y * x + v2.y * y, v1.z * x + v2.z * y);
+								R = dist(o, q[j]);
+							}
+					}
+			}
+		printf("%.10lf\n", R);
+	}
+	
+	return 0;
+}

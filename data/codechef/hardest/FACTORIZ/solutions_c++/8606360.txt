@@ -1,0 +1,190 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+#include <ctime>
+#include <vector>
+using namespace std;
+typedef unsigned int u32;
+typedef unsigned long long u64;
+const int N=1200000,MaxT=105,Len=200005,n1=100;
+int T,now,ord[MaxT],Score=0;
+char str[1005];
+int pr[Len],pn=0;
+bool flag[N+5],Type[MaxT];
+vector <u32> ans[MaxT];
+
+void init() {
+	bool tmp=false;
+	for (int i=2;i<=N;i++)
+		if (!flag[i]) {
+			pr[++pn]=i;
+			if (tmp||i*i>N) {
+				tmp=true;
+				continue;
+			}
+			for (int j=i*i;j<=N;j+=i)
+				flag[j]=true;
+		}
+}
+
+namespace SmallTask{
+	u64 n,SmallNum[MaxT];
+	
+	void op() {
+		Score+=(ans[now].size()+(SmallNum[now]!=1))*(ans[now].size()+(SmallNum[now]!=1));
+		printf("%d\n",ans[now].size()+(SmallNum[now]!=1));
+		for (int i=0;i<ans[now].size();i++)
+			printf("%u\n",ans[now][i]);
+		if (SmallNum[now]>1) cout<<SmallNum[now]<<endl;
+	}
+	
+	void init() {
+		SmallNum[now]=0;
+		for (int i=1;i<=strlen(str+1);i++)
+			SmallNum[now]=SmallNum[now]*10+str[i]-48;
+	}
+	
+	void work() {
+		n=SmallNum[now];
+		for (int i=1;i<=300;i++)
+			while (n%pr[i]==0) {
+				n/=pr[i];
+				ans[now].push_back(pr[i]);
+			}
+		SmallNum[now]=n;
+	}
+}
+
+namespace LargeTask{
+	const u64 K=1000000000;
+	u32 tmpm[120],curp;
+	int curi;
+	
+	struct Bignum{
+		u32 a[120],len;
+		void set() {
+			len=strlen(str+1);
+			memset(a,0,sizeof a);
+			for (int i=1;i<=len;i++)
+				a[(len-i)/9+1]=a[(len-i)/9+1]*10+str[i]-48;
+			len=(len-1)/9+1;
+		}
+		void op() {
+			printf("%u",a[len]);
+			for (int i=len-1;i>=1;i--) printf("%09u",a[i]);
+			putchar('\n');
+		}
+		bool check() {
+			return len>1||a[1]>1;
+		}
+		u32 module(u32 mod) {
+			u32 ret=0;
+			for (int i=len;i>=1;i--)
+				ret=(ret*K+a[i])%mod;
+			return ret;
+		}
+		u32 module2() {
+			u64 ret=0;
+			for (int i=len;i>=1;i--)
+				ret+=u64(a[i])*tmpm[i-1];
+			return ret%curp;
+		}
+		void div(u32 p) {
+			u64 tmp;
+			u32 ret=0;
+			for (int i=len;i>=1;i--) {
+				tmp=ret*K+a[i];
+				a[i]=tmp/p;
+				ret=tmp-a[i]*u64(p);
+			}
+			while (len>1&&!a[len]) --len;
+		}
+	}n,LargeNum[MaxT];
+	
+	void op() {
+		n=LargeNum[now];
+		Score+=(ans[now].size()+n.check())*(ans[now].size()+n.check());
+		printf("%d\n",ans[now].size()+n.check());
+		for (int i=0;i<ans[now].size();i++)
+			printf("%u\n",ans[now][i]);
+		if (n.check()) n.op();
+	}
+	
+	void init() {
+		LargeNum[now].set();
+	}
+	
+	void work() {
+		n=LargeNum[now];
+		for (int i=1;i<=n1;i++) {
+			while (n.module(pr[i])==0) {
+				n.div(pr[i]);
+				ans[now].push_back(pr[i]);
+			}
+		}
+		LargeNum[now]=n;
+	}
+	
+	void init2(int _curi) {
+		curi=_curi;
+		curp=pr[curi];
+		tmpm[0]=1;
+		for (int i=1;i<=113;i++)
+			tmpm[i]=tmpm[i-1]*K%curp;
+	}
+	
+	void work2() {
+		n=LargeNum[now];
+		while (n.module2()==0) {
+			n.div(curp);
+			ans[now].push_back(curp);
+		}
+		LargeNum[now]=n;
+	}
+}
+
+bool cmp(int u,int v) {
+	return ans[u].size()>ans[v].size();
+}
+
+int main() {
+	//freopen("FACTORIZ.in","r",stdin);
+	//freopen("FACTORIZ.out","w",stdout);
+	init();
+	scanf("%d",&T);
+	for (int i=1;i<=T;i++) {
+		scanf(" %s",str+1);
+		now=i;
+		if (strlen(str+1)<=18) {
+			Type[i]=false;
+			SmallTask::init();
+			SmallTask::work();
+		}
+		else {
+			Type[i]=true;
+			LargeTask::init();
+			LargeTask::work();
+		}
+		ord[i]=i;
+	}
+	sort(ord+1,ord+T+1,cmp);
+	for (int i=1;i<=pn;i++) {
+		LargeTask::init2(i);
+		for (int i=1;i<=25;i++) {
+			now=ord[i];
+			if (Type[now]) LargeTask::work2();
+		}
+	}
+	for (int i=1;i<=T;i++) {
+		now=i;
+		if (Type[i]) LargeTask::op();
+		else SmallTask::op();
+	}
+	//cout<<Score<<endl;
+	//cout<<clock()<<endl;
+	return 0;
+} 

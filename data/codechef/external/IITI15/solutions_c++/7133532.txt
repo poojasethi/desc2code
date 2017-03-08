@@ -1,0 +1,118 @@
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#include <map>
+
+#define MAXN 20100
+#define BUCK 145
+
+#define X first
+#define Y second
+#define mp make_pair
+#define pb push_back
+
+using namespace std;
+
+typedef pair< int, int > pii;
+typedef pair< pii, int > qq;
+
+int N, Q, A[ MAXN + 1 ], BIT[ MAXN + 1 ], ans[ MAXN + 1 ];
+
+pii queries[ MAXN + 1 ];
+vector< qq > seg[ BUCK + 1 ];
+
+void compress() {
+  vector< int > AS;
+  map< int, int > R;
+  for( int i = 1; i <= N; i++ ) {
+    AS.pb( A[ i ] );
+  }
+  sort( AS.begin(), AS.end() );
+
+  int cnt = 1;
+  R[ AS[ 0 ] ] = cnt;
+  for( int i = 1; i < AS.size(); i++ ) {
+    if( AS[ i ] != AS[ i - 1 ] ) {
+      cnt++;
+      R[ AS[ i ] ] = cnt;
+    }
+
+  }
+  for( int i = 1; i <= N; i++ ) {
+    A[ i ] = R[ A[ i ] ];
+  }
+}
+
+bool cmp( qq A, qq B ) {
+  if( A.X.Y == B.X.Y ) return A.X.X < B.X.X;
+  return A.X.Y < B.X.Y;
+}
+
+void add( int idx, int val ) {
+  while( idx <= MAXN ) {
+    BIT[ idx ] += val;
+    idx += ( idx & -idx );
+  }
+}
+
+int sum( int idx ) {
+  int ans = 0;
+  while( idx > 0 ) {
+    ans += BIT[ idx ];
+    idx -= ( idx & -idx );
+  }
+  return ans;
+}
+
+int main( void ) {
+  int l, r;
+  scanf("%d", &N );
+  for( int i = 1; i <= N; i++ ) {
+    scanf("%d", A + i );
+  }
+  scanf("%d", &Q );
+  for( int i = 1; i <= Q; i++ ) {
+    scanf("%d%d", &l, &r );
+    queries[ i ] = mp( l, r );
+  }
+
+  compress();
+  for( int i = 1; i <= Q; i++ ) {
+    seg[ queries[ i ].X / BUCK + 1 ].pb( mp( queries[ i ], i ) );
+  }
+  for( int i = 1; i <= BUCK; i++ ) sort( seg[ i ].begin(), seg[ i ].end(), cmp );
+
+  int prevl = 1, prevr = 0, pans = 0;
+
+  for( int b = 1; b <= BUCK; b++ ) {
+    for( int i = 0; i < seg[ b ].size(); i++ ) {
+      bool status = false;
+      while( prevr < seg[ b ][ i ].X.Y ) {
+        prevr++;
+        pans += sum( MAXN ) - sum( A[ prevr ] );
+        add( A[ prevr ], 1 );
+        status = true;
+      }
+      while( !status && prevr > seg[ b ][ i ].X.Y ) {
+        add( A[ prevr ], -1 );
+        pans -= sum( MAXN ) - sum( A[ prevr ] );
+        prevr--;
+      }
+      while( prevl < seg[ b ][ i ].X.X ) {
+        add( A[ prevl ], -1 );
+        pans -= sum( A[ prevl ] - 1 );
+        prevl++;
+      }
+      while( prevl > seg[ b ][ i ].X.X ) {
+        prevl--;
+        pans += sum( A[ prevl ] - 1 );
+        add( A[ prevl ], 1 );
+      }
+      ans[ seg[ b ][ i ].Y ] = pans;
+    }
+  }
+  for( int i = 1; i <= Q; i++ ) {
+    printf("%d\n", ans[ i ] );
+  }
+  return 0;
+}

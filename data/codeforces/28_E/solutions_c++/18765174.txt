@@ -1,0 +1,276 @@
+#include <cstdio>
+#include <climits>
+#include <cmath>
+#include <algorithm>
+#include <cfloat>
+#include <iostream>
+using namespace std;
+
+struct Point
+{
+    double x, y;
+
+    Point operator * (double cof)
+    {
+        Point ret;
+
+        ret.x = x * cof;
+        ret.y = y * cof;
+
+        return ret;
+    }
+
+    Point operator + (Point other)
+    {
+        Point ret;
+
+        ret.x = x + other.x;
+        ret.y = y + other.y;
+
+        return ret;
+    }
+
+    Point operator - (Point other)
+    {
+        Point ret;
+
+        ret.x = x - other.x;
+        ret.y = y - other.y;
+
+        return ret;
+    }
+};
+
+struct Ray
+{
+    Point start, speed;
+};
+
+struct Segment
+{
+    Point start, ending;
+};
+
+struct Line
+{
+    Point start, dir0, dir1;
+};
+
+struct Triangle
+{
+    Point a, b, c;
+};
+
+const double error = 1e-9;
+const int MAXN = 10000;
+Point polygon[MAXN];
+Point A, V, U;
+double Vz, Fdown, Uz;
+Ray r0, r1;
+Line line0;
+double r0_t, r1_t, line0_t;
+int n;
+
+bool Equals(double val0, double val1)
+{
+    double tem = fabs(val0 - val1);
+
+    return tem < error;
+}
+
+double CrossProduct(Point a, Point b)
+{
+    return (a.x * b.y - a.y * b.x);
+}
+
+double dist(Point a, Point b)
+{
+    return sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+}
+
+bool InSegment(Point test, Point a, Point b)
+{
+    double tem = CrossProduct(a - test, b - test);
+
+    if(a.x > b.x) swap(a.x, b.x);
+    if(a.y > b.y) swap(a.y, b.y);
+
+    return Equals(tem, 0) && (a.x - error <= test.x && test.x <= b.x + error && a.y - error <= test.y && test.y <= b.y + error);
+}
+
+double CheckRayCrossSegment(Ray ray, Segment seg)
+{
+    double tem = (seg.start.x - seg.ending.x) * ray.speed.y - (seg.start.y - seg.ending.y) * ray.speed.x;
+
+    if(Equals(tem, 0))
+        return -1;
+    else
+    {
+        double t = (seg.start.y - seg.ending.y) * ray.start.x + (seg.start.x * seg.ending.y - seg.ending.x * seg.start.y) - (seg.start.x - seg.ending.x) * ray.start.y;
+        t /= tem;
+
+        if(t < 0)
+            return -1;
+
+        Point p = (ray.start + (ray.speed * t));
+
+        if(InSegment(p, seg.start, seg.ending))
+            return t;
+        else
+            return -1;
+    }
+}
+
+double CheckRayCrossPolygon(Ray ray)
+{
+    double minv = DBL_MAX;
+
+    for(int i = 0; i < n; i ++)
+    {
+        Segment s;
+
+        s.start = polygon[i];
+        s.ending = polygon[(i + 1) % n];
+
+        double val = CheckRayCrossSegment(ray, s);
+
+        if(val > 0)
+            minv = min(minv, val);
+    }
+
+    return minv;
+}
+
+bool IsTriangle(Triangle tr)
+{
+    return !Equals(CrossProduct(tr.a - tr.b, tr.a - tr.c), 0);
+}
+
+bool InTriangle(Point p, Triangle tr)
+{
+    if(!IsTriangle(tr))
+        return false;
+
+    double cro0 = CrossProduct(tr.a - p, tr.b - p);
+    double cro1 = CrossProduct(tr.b - p, tr.c - p);
+    double cro2 = CrossProduct(tr.c - p, tr.a - p);
+
+    if(InSegment(p, tr.a, tr.b) || InSegment(p, tr.b, tr.c) || InSegment(p, tr.c, tr.a))
+        return true;
+
+    if(cro0 * cro1 < 0 || cro1 * cro2 < 0 || cro2 * cro0 < 0)
+        return false;
+
+    return true;
+}
+
+double CheckLineCrossPoint(Line line, Point p)
+{
+    double ansmin = 0, ansmax = 1e100;
+    Point tem0, tem1;
+    Triangle tr;
+
+    tr.a = line.start + (line.dir0 * ansmax);
+    tr.b = line.start + (line.dir1 * ansmax);
+    tr.c = line.start;
+
+    if(!InTriangle(p, tr))
+        return -1;
+
+    while(!Equals(ansmin, ansmax))
+    {
+        double ansmid = (ansmin + ansmax) / 2;
+
+        tr.a = line.start + (line.dir0 * ansmid);
+        tr.b = line.start + (line.dir1 * ansmid);
+        tr.c = line.start;
+
+        if(InTriangle(p, tr))
+            ansmax = ansmid;
+        else
+            ansmin = ansmid;
+    }
+
+    return ansmax;
+}
+
+double CheckLineCrossPolygonPoint(Line line, double &line_t_tem)
+{
+    double minv = DBL_MAX;
+
+    for(int i = 0; i < n; i ++)
+    {
+        Point s;
+
+        s = polygon[i];
+
+        double deltab = CheckLineCrossPoint(line, s);
+
+        if(deltab > 0)
+        {
+            if(deltab < minv)
+            {
+                minv = deltab;
+                if(!Equals(U.x, 0))
+                    line_t_tem = (deltab * Vz - (fabs(line.start.x + line.dir0.x * deltab - s.x) / fabs(U.x)) * -Uz) / -Fdown;
+                else
+                    line_t_tem = (deltab * Vz - (fabs(line.start.y + line.dir0.y * deltab - s.y) / fabs(U.y)) * -Uz) / -Fdown;
+            }
+        }
+    }
+
+    return minv;
+}
+
+int main()
+{
+
+    // freopen("D:\\1.in", "r", stdin);
+    // freopen("D:\\1.out", "w", stdout);
+
+    scanf("%d", &n);
+    for(int i = 0; i < n; i ++)
+        scanf("%lf%lf", &(polygon[i].x), &(polygon[i].y));
+
+    scanf("%lf%lf", &(A.x), &(A.y));
+    scanf("%lf%lf%lf", &(V.x), &(V.y), &(Vz));
+    scanf("%lf", &(Fdown));
+    scanf("%lf%lf%lf", &(U.x), &(U.y), &(Uz));
+
+    r0.start = A;
+    r0.speed = V;
+
+    r1.start = A;
+    r1.speed = (V + (U * (Vz / -Uz)));
+
+    line0.start = A;
+    line0.dir0 = r0.speed;
+    line0.dir1 = r1.speed;
+
+
+    double line_t_tem;
+    r0_t = CheckRayCrossPolygon(r0);
+    r1_t = CheckRayCrossPolygon(r1);
+    line0_t = CheckLineCrossPolygonPoint(line0, line_t_tem);
+
+    double minval = min(min(r0_t, r1_t), line0_t);
+
+
+    if(Equals(minval, DBL_MAX))
+        printf("%.9lf %.9lf\n", (double)-1, (double)-1);
+    else if(Equals(r1_t, minval))
+        printf("%.9lf %.9lf\n", r1_t, 0);
+    else if(Equals(r0_t, minval))
+        printf("%.9lf %.9lf\n", r0_t, r0_t * Vz / -Fdown);
+    else if(Equals(line0_t, minval))
+    {
+        if(Equals(line0_t, r1_t))
+            printf("%.9lf %.9lf\n", r1_t, 0);
+        else
+            printf("%.9lf %.9lf\n", line0_t, line_t_tem);
+    }
+
+
+
+	return 0;
+}

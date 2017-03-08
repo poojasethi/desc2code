@@ -1,0 +1,119 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <utility>
+#include <map>
+using namespace std;
+
+#define fi first
+#define se second
+
+typedef long long ll;
+const int N = 200100;
+int n, K, D, sn1, sn2, ans, L, R;
+ll a[N];
+pair<int, ll> st1[N], st2[N];
+map<ll, int> tank;
+
+void Init() {
+    scanf("%d%d%d", &n, &K, &D);
+    for (int i = 1; i <= n; i++) {scanf("%I64d", &a[i]); a[i] += int(1e9);}
+}
+
+void Special_Treatment() {
+    int ans = 0;
+    a[n + 1] = -1;
+    for (int i = 1, st = 0; i <= n; i++) {
+        if (a[i] != a[i + 1]) {
+            if (i - st > ans) ans = i - st, L = st + 1, R = i;
+            st = i;
+        }
+    }
+    printf("%d %d\n", L, R);
+}
+
+struct Segment_Tree {
+    int le[4 * N], ri[4 * N];
+    ll mi[4 * N], plus[4 * N];
+    
+    void Spread(int x) {
+        mi[x + x] += plus[x], mi[x + x + 1] += plus[x], plus[x + x] += plus[x], plus[x + x + 1] += plus[x], plus[x] = 0;        
+    }
+    
+    void Build(int x, int l, int r) {
+        le[x] = l; ri[x] = r;
+        if (l == r) {mi[x] = -l; return;}
+        int mid = (l + r) >> 1;
+        Build(x + x, l, mid);
+        Build(x + x + 1, mid + 1, r);
+        mi[x] = min(mi[x + x], mi[x + x + 1]);
+    }
+
+    void Modify(int l, int r, ll d, int x) {
+        l = max(l, le[x]); r = min(r, ri[x]); if (l > r) return;
+        if (le[x] == l && ri[x] == r) {
+            plus[x] += d;
+            mi[x] += d;
+            return;
+        }
+        Spread(x);
+        Modify(l, r, d, x + x);
+        Modify(l, r, d, x + x + 1);
+        mi[x] = min(mi[x + x], mi[x + x + 1]);
+    }
+    
+    int Find(int l, int r, ll L, int x) {
+        l = max(l, le[x]); r = min(r, ri[x]); 
+        if (l > r || mi[x] + L > K) return 0;
+        if (le[x] == ri[x]) return le[x];
+        
+        Spread(x);
+        int t = Find(l, r, L, x + x + 1);
+        return t ? t : Find(l, r, L, x + x);
+    }
+} T;
+
+void Update_Max(int p, ll d) {
+    st1[++sn1] = make_pair(d, p);
+    int i = sn1 - 1;
+    for (; i && d > st1[i].fi; i--) 
+        T.Modify(st1[i].se, st1[i - 1].se - 1, d - st1[i].fi, 1);
+    st1[sn1 = (i + 1)] = make_pair(d, p);
+}
+
+void Update_Min(int p, ll d) {
+    st2[++sn2] = make_pair(d, p);
+    int i = sn2 - 1;
+    for (; i && d < st2[i].fi; i--) 
+        T.Modify(st2[i].se, st2[i - 1].se - 1, st2[i].fi - d, 1);
+    st2[sn2 = (i + 1)] = make_pair(d, p);
+}
+
+void Work() {
+    T.Build(1, 1, n);
+    st1[0] = st2[0] = make_pair(0, n + 1);
+    for (int l = n, r = n, p; l >= 1; l--) {
+    
+        for (; a[r] % D != a[l] % D; r--);
+        if (tank[a[l]]) r = min(tank[a[l]] - 1, r);
+        tank[a[l]] = l;
+
+        Update_Max(l, a[l] / D);
+        Update_Min(l, a[l] / D);
+        
+        p = T.Find(l, r, l, 1);
+        //printf("%d %d\n", l, p);
+        
+        if (p - l + 1 >= ans) ans = p - l + 1, L = l, R = p;
+    }
+    
+    printf("%d %d\n", L, R);
+}
+
+int main() {
+
+    Init();
+    if (D == 0) Special_Treatment(); else Work();
+    
+    return 0;
+}

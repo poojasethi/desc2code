@@ -1,0 +1,88 @@
+#include<cstdio>
+#include<cstdlib>
+#include<algorithm>
+#include<cstring>
+#define INF 0x7fffffff
+#define MAXN 200005
+#define Trans(n, m) (n-m+N)
+using namespace std ;
+typedef long long LL ;
+
+int N, M, Q, top ;
+int a[MAXN], sum[MAXN] ;
+int ans[MAXN] ;
+
+struct Query {
+	int x, y ;
+	int num ;
+	bool operator < (Query b) const {
+		return y < b.y ;
+	}
+} q[MAXN] ;
+struct seg {
+	int lt, rt ;
+	int at ;
+	int Calc(int n, int m)
+	{
+		if(m-at > n-1) return INF ;
+		return (sum[m]-sum[at])+a[at]*(n-m+at) ; 
+	}
+	bool operator < (seg b) const {
+		return lt > b.lt ;
+	} 
+} stk[MAXN], s ;
+
+int Find(int m, seg a, seg b)
+{
+	int lt, rt, mid, n ;
+	lt = a.lt, rt = a.rt ;
+	while(lt <= rt)
+	{
+		mid = (lt+rt)/2 ;
+		n = mid+m-N ;
+		if(a.Calc(n, m) >= b.Calc(n, m)) lt = mid+1 ;
+		else rt = mid-1 ;
+	}
+	return rt ;
+}
+
+int main()
+{
+	int i, j, now = 1, get, tmp ;
+	scanf("%d", &N) ;
+	for(i = 1; i <= N; i ++)
+		scanf("%d", &a[i]), sum[i] = sum[i-1]+a[i] ;
+	scanf("%d", &Q) ;
+	for(i = 1; i <= Q; i ++)
+	{
+		scanf("%d %d", &q[i].x, &q[i].y) ;
+		q[i].num = i ;
+	}
+	sort(q+1, q+1+Q) ;
+	for(i = 1; i <= N; i ++)
+	{
+		s.at = i, s.lt = 1-i+N ;
+		for(top; top; top --)
+		{
+			tmp = min(N, stk[top].rt+i-N) ;
+			if(stk[top].Calc(tmp, i) >= s.Calc(tmp, i)) continue ;
+			else {tmp = Find(i, stk[top], s); break ;}
+		}
+		if(top)
+		{
+			stk[top].lt = tmp+1 ;
+			s.rt = tmp ;
+		}
+		else s.rt = 2*N-i ;
+		stk[++top] = s ;
+		for(now; now <= Q && q[now].y == i; now ++)
+		{
+			s.lt = q[now].x-i+N ;
+			tmp = lower_bound(stk+1, stk+1+top, s)-stk ;
+			ans[q[now].num] = stk[tmp].Calc(q[now].x, i) ;
+		}
+	}
+	for(i = 1; i <= Q; i ++)
+		printf("%d\n", ans[i]) ;
+	return 0 ;
+}

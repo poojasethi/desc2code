@@ -1,0 +1,109 @@
+#include<stdio.h>
+#include<algorithm>
+using namespace std;
+int getint()
+{
+	int ret=0;bool ok=false;
+	for(;;)
+	{
+		int c=getchar();
+		if(c>='0'&&c<='9')ret=(ret<<3)+ret+ret+c-'0',ok=true;
+		else if(ok)return ret;
+	}
+}
+const int maxn=300010;
+int n;
+int p[maxn],pos[maxn];
+typedef pair<int,int> pii;
+struct node
+{
+	pii d[2];
+};
+node T[maxn<<2];
+int tag[maxn<<2],L[maxn<<2],R[maxn<<2],M[maxn<<2];
+inline node operator + (const node &a,const node &b)
+{
+	node ret;
+	pii tmp[10];
+	tmp[0]=a.d[0],tmp[1]=a.d[1],tmp[2]=b.d[0],tmp[3]=b.d[1];
+	sort(tmp,tmp+4);
+	ret.d[0]=tmp[0];
+	int t=0;
+	for(int i=1;i<4;i++)if(ret.d[t].first==tmp[i].first)ret.d[t].second+=tmp[i].second;
+	else if(++t==2)break;
+	else ret.d[t]=tmp[i];
+	return ret;
+}
+void build(int i,int l,int r)
+{
+	L[i]=l,R[i]=r;
+	int mid=(l+r)>>1;
+	M[i]=mid;
+	if(l==r)
+	{
+		T[i].d[0].first=0,T[i].d[0].second=1;
+		T[i].d[1].first=maxn,T[i].d[1].second=0;
+		return;
+	}
+	build(i+i,l,mid);
+	build(i+i+1,mid+1,r);
+	T[i]=T[i+i]+T[i+i+1];
+}
+inline void tagdown(int i)
+{
+	int t=tag[i];
+	if(t)
+	{
+		tag[i]=0;
+		T[i].d[0].first+=t;
+		T[i].d[1].first+=t;
+		if(L[i]!=R[i])tag[i+i]+=t,tag[i+i+1]+=t;
+	}
+}
+inline void tagup(int i)
+{
+	tagdown(i+i),tagdown(i+i+1);
+	T[i]=T[i+i]+T[i+i+1];
+}
+void add(int i,int l,int r,int x)
+{
+	tagdown(i);
+	if(l<=L[i]&&r>=R[i]){tag[i]+=x;return;}
+	if(l<=M[i])add(i+i,l,r,x);
+	if(r>M[i])add(i+i+1,l,r,x);
+	tagup(i);
+}
+node query(int i,int l,int r)
+{
+	tagdown(i);
+	if(l<=L[i]&&r>=R[i])return T[i];
+	if(r<=M[i])return query(i+i,l,r);
+	if(l>M[i])return query(i+i+1,l,r);
+	return query(i+i,l,r)+query(i+i+1,l,r);
+}
+typedef long long ll;
+int main()
+{
+	n=getint();
+	for(int i=1;i<=n;i++)p[i]=getint(),pos[p[i]]=i;
+	build(1,1,n);
+	ll ans=0;
+	p[0]=p[n+1]=maxn;
+	for(int i=1;i<=n;i++)
+	{
+		int k=pos[i];
+		int a=p[k-1],b=p[k+1];
+		if(a>b)swap(a,b);
+		if(a>i)add(1,1,i,1);
+		else if(b>i)add(1,a+1,i,1);
+		else add(1,b+1,i,1),add(1,1,a,-1);
+		if(i>1)
+		{
+			node t=query(1,1,i-1);
+			if(t.d[0].first<=2)ans+=t.d[0].second;
+			if(t.d[1].first<=2)ans+=t.d[1].second;
+		}
+	}
+	printf("%I64d\n",ans);
+	return 0;
+}

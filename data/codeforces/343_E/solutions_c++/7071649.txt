@@ -1,0 +1,155 @@
+#include <algorithm>
+#include <cassert>
+#include <cctype>
+#include <climits>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <functional>
+#include <iostream>
+#include <iterator>
+#include <numeric>
+#include <utility>
+
+#include <bitset>
+#include <deque>
+#include <list>
+#include <map>
+#include <queue>
+#include <set>
+#include <stack>
+#include <string>
+#include <vector>
+using namespace std;
+
+template<class T>
+inline void chkmax(T& x, T y) {
+	if (x < y) x = y;
+}
+
+template<class T>
+inline void chkmin(T& x, T y) {
+	if (y < x) x = y;
+}
+
+typedef vector<int> VI;
+#define MX 205
+#define INF 100000000
+int N, rlt;
+int c[MX][MX], f[MX][MX];
+int p[MX], prv[MX], w[MX];
+queue<int> Q;
+
+int con[MX][MX], ww[MX][MX];
+VI R;
+#define flow(src, dst) (f[src][dst] - f[dst][src])
+#define residue(src, dst) (c[src][dst] - flow(src, dst))
+
+void gomory_hu() {
+	int s, t, tot, u, v, i, inc;
+	
+	memset(p, 0, sizeof p);
+	for (s = 1; s < N; s++) {
+		t = p[s];
+		for (u = 0; u < N; u++) {
+			for (v = 0; v < N; v++) f[u][v] = 0;
+		}
+		tot = 0;
+		
+		while (1) {
+			while (!Q.empty()) Q.pop();
+			Q.push(s);
+			memset(prv, -1, sizeof prv);
+			prv[s] = -2;
+			while (!Q.empty() && prv[t] == -1) {
+				u = Q.front();
+				Q.pop();
+				for (v = 0; v < N; v++) {
+					if (prv[v] == -1 && residue(u, v) > 0) {
+						prv[v] = u;
+						Q.push(v);
+					}
+				}
+			}
+			if (prv[t] == -1) break;
+			inc = INF;
+			for (v = t; (u = prv[v]) >= 0; v = u) chkmin(inc, residue(u, v));
+			for (v = t; (u = prv[v]) >= 0; v = u) f[u][v] += inc;
+			tot += inc;
+		}
+			
+		w[s] = tot;
+		for (i = 0; i < N; i++) {
+			if (i != s && prv[i] != -1 && p[i] == t) p[i] = s;
+		}
+		if (prv[p[t]] != -1) {
+			p[s] = p[t];
+			p[t] = s;
+			w[s] = w[t];
+			w[t] = tot;
+		}
+	}
+	for (s = 0; s < N; s++) {
+		if (s != p[s]) {
+			con[s][p[s]] = con[p[s]][s] = 1;
+			ww[s][p[s]] = ww[p[s]][s] = w[s];
+		}
+	}
+}
+
+void DFS(int u, int p, VI& V) {
+	V.push_back(u);
+	for (int v = 0; v < N; v++) {
+		if (con[u][v] && v != p) DFS(v, u, V);
+	}
+}
+
+void find(VI& V) {
+	int n, i, j, u, v, a, b, mw;
+	VI V1, V2;
+	
+	n = V.size();
+	if (n == 1) {
+		R.push_back(V[0]);
+		return;
+	}
+	mw = INF;
+	for (i = 0; i < n; i++) {
+		for (j = i + 1; j < n; j++) {
+			u = V[i], v = V[j];
+			if (con[u][v] && ww[u][v] < mw) {
+				mw = ww[u][v];
+				a = u, b = v;
+			}
+		}
+	}
+	con[a][b] = con[b][a] = 0;
+	DFS(a, -1, V1);
+	DFS(b, -1, V2);
+	find(V1), find(V2);
+	rlt += ww[a][b];
+}
+
+main() {
+//	freopen("in.txt", "r", stdin);
+//	freopen("out.txt", "w", stdout);
+	
+	int m, i, j, cap;
+	VI V;
+	
+	scanf("%d%d", &N, &m);
+	while (m--) {
+		scanf("%d%d%d", &i, &j, &cap);
+		i--, j--;
+		c[i][j] = c[j][i] = cap;
+	}
+	
+	gomory_hu();
+	for (i = 0; i < N; i++) V.push_back(i);
+	find(V);
+	printf("%d\n", rlt);
+	for (i = 0; i < N; i++) printf("%d ", R[i] + 1);
+	puts("");
+}

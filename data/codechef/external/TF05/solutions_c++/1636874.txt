@@ -1,0 +1,153 @@
+#include<stdio.h>
+#define inf 1000000
+
+int* sum;
+int* late;
+int count;
+
+inline int MaxOf(int a, int b)
+{
+    return (a>=b)?a:b;
+}
+
+void Initialize(int index, int a, int b)
+{
+    if(a > b) return;
+    sum[index] = 0;
+    late[index] = -inf;
+    if(a < b)
+    {
+        int mid = a + (b-a)/2;
+        Initialize(2*index,a,mid);
+        Initialize(2*index+1,mid+1,b);
+    }
+}
+
+void Initiate(int size)
+{
+    count = 1;
+    int temp = size;
+    while(temp)
+    {
+        temp >>= 1;
+        count++;
+    }
+    count = 1<<count;
+    sum = new int[count];
+    late = new int[count];
+    Initialize(1,0,size-1);
+}
+
+void UpdateSum(int index, int a, int b, int x, int v)
+{
+    if(a > b || x < a || x > b) return;
+    if(a == b)
+    {
+        sum[index] = v;
+        return;
+    }
+    int mid = a + (b-a)/2;
+    UpdateSum(2*index,a,mid,x,v);
+    UpdateSum(2*index+1,mid+1,b,x,v);
+    sum[index] = sum[2*index] + sum[2*index+1];
+}
+
+void UpdateLate(int index, int a, int b, int x, int v)
+{
+    if(a > b || x < a || x > b) return;
+    if(a == b)
+    {
+        if(late[index] < v) late[index] = v;
+        return;
+    }
+    int mid = a + (b-a)/2;
+    UpdateLate(2*index,a,mid,x,v);
+    UpdateLate(2*index+1,mid+1,b,x,v);
+    late[index] = MaxOf(late[2*index],sum[2*index]+late[2*index+1]);
+}
+
+int Query()
+{
+    return late[1];
+}
+
+int partition(int A[], int B[], int Hash[], int start, int end)
+{
+    int i = start;
+    int j = end+1;
+    int temp;
+
+    while(true)
+    {
+        while(A[++i] < A[start]) if(i == end) break;
+        while(A[--j] > A[start]) {}
+        if(j<=i) break;
+
+        temp = A[i];
+        A[i] = A[j];
+        A[j] = temp;
+        temp = B[i];
+        B[i] = B[j];
+        B[j] = temp;
+        temp = Hash[i];
+        Hash[i] = Hash[j];
+        Hash[j] = temp;
+    }
+
+    temp = A[start];
+    A[start] = A[j];
+    A[j] = temp;
+    temp = B[start];
+    B[start] = B[j];
+    B[j] = temp;
+    temp = Hash[start];
+    Hash[start] = Hash[j];
+    Hash[j] = temp;
+
+    return j;
+}
+
+void quickSort(int A[], int B[], int Hash[], int start, int end)
+{
+    if(start >= end) return;
+    int split = partition(A,B,Hash,start,end);
+    quickSort(A,B,Hash,start,split-1);
+    quickSort(A,B,Hash,split+1,end);
+}
+
+void qSort(int A[], int B[], int Hash[], int size)
+{
+    quickSort(A,B,Hash,0,size-1);
+}
+
+int main()
+{
+    //freopen("TF05.in","r",stdin);
+    int T,temp;
+    int* D;
+    int* M;
+    int* Hash;
+    int* Inverse;
+    scanf("%d",&T);
+    D = new int[T];
+    M = new int[T];
+    Hash = new int[T];
+    Inverse = new int[T];
+    for(int i=0; i<T; ++i)
+    {
+        scanf("%d%d",&D[i],&M[i]);
+        Hash[i] = i;
+    }
+    qSort(D,M,Hash,T);
+    for(int i=0; i<T; ++i) Inverse[Hash[i]] = i;
+    Initiate(T);
+    for(int i=0; i<T; ++i)
+    {
+        temp = Inverse[i];
+        UpdateSum(1,0,T-1,temp,M[temp]);
+        UpdateLate(1,0,T-1,temp,M[temp]-D[temp]);
+        printf("%d\n",MaxOf(Query(),0));
+    }
+    delete[] D,M,Hash,Inverse,sum,late;
+	return 0;
+}

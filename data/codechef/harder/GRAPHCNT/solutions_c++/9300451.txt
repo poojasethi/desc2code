@@ -1,0 +1,114 @@
+#include<cstdio>
+#include<vector>
+#include<iostream>
+#include<cstring>
+using namespace std;
+const int SIZEN=100010,maxn=0x7fffffff;
+typedef long long LL;
+vector<int> s[SIZEN],c[SIZEN],sa[SIZEN],id[SIZEN];
+int N,M;
+int timer=0,st[SIZEN]={0},ed[SIZEN]={0},tot=0,dfslist[SIZEN],list[SIZEN];
+int fa[SIZEN];
+void read()
+{
+	scanf("%d%d",&N,&M);
+	int v,u;
+	for(int i=1;i<=M;i++)
+	{
+		scanf("%d%d",&v,&u);
+		s[v].push_back(u);
+		c[u].push_back(v);
+	}
+}
+bool vis[SIZEN];
+void dfs(int x)
+{
+	st[x]=++timer;
+	dfslist[++tot]=x;
+	list[x]=tot;
+	vis[x]=1;
+	for(int i=0;i<s[x].size();i++)
+	{
+		int u=s[x][i];
+		if(!vis[u])
+		{
+			fa[tot+1]=list[x];
+			dfs(u);
+		}
+	}
+	ed[x]=++timer;
+}
+int ufs[SIZEN],best[SIZEN],sdom[SIZEN],idom[SIZEN];
+int find(int x)
+{
+	if(x==ufs[x]) return x;
+	int y=find(ufs[x]);
+	if(sdom[best[ufs[x]]]<sdom[best[x]]) best[x]=best[ufs[x]];
+	return ufs[x]=y;
+}
+void lengauer_tarjan()
+{
+	for(int i=1;i<=tot;i++) ufs[i]=best[i]=sdom[i]=i;
+	for(int i=tot;i>=1;i--)
+	{
+		int x=dfslist[i];
+		for(int j=0;j<c[x].size();j++)
+		{
+			int w=c[x][j];
+			if(!st[w]) continue;
+			w=list[w];
+			find(w);
+			sdom[i]=min(sdom[i],sdom[best[w]]);
+			//cout<<i<<" "<<w<<" "<<best[w]<<" "<<sdom[i]<<endl;
+		}
+		ufs[i]=fa[i];
+		int y=fa[i];
+		sa[sdom[i]].push_back(i);
+		//cout<<y<<endl;;
+		for(int j=0;j<sa[y].size();j++)
+		{
+			int z=sa[y][j];
+			find(z);
+			//cout<<i<<" "<<y<<" "<<z<<endl;
+			if(sdom[best[z]]<y) idom[z]=best[z];
+			else idom[z]=y;
+		}
+		sa[y].clear();
+	}
+	for(int i=2;i<=tot;i++)
+	{
+		if(sdom[i]!=idom[i]) idom[i]=idom[idom[i]];
+		id[idom[i]].push_back(i);
+	}
+}
+int siz[SIZEN];
+void work()
+{
+	memset(vis,0,sizeof(vis));
+	fa[1]=0;
+	timer=0;
+	dfs(1);
+	lengauer_tarjan();
+	for(int i=tot;i>=1;i--)
+	{
+		siz[i]++;
+		siz[idom[i]]+=siz[i];
+	}
+	LL s1=0,s2=0;
+	for(int i=0;i<id[1].size();i++)
+	{
+		int u=id[1][i];
+		s1+=siz[u];
+		s2+=(LL)siz[u]*siz[u];
+	}
+	LL ans=(s1*s1-s2)/2+tot-1;
+	printf("%lld\n",ans);
+}
+int main()
+{
+	//freopen("GRAPHCNT.in","r",stdin);
+	//freopen("GRAPHCNT.out","w",stdout);
+	read();
+	work();
+	return 0;
+}

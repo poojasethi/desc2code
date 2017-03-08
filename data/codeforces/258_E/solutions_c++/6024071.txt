@@ -1,0 +1,97 @@
+#include <cstdio>
+#include <vector>
+using namespace std;
+#define rep(i,n) for(int i=0;i<(n);i++)
+
+
+vector<int> vs[100005],que[100005];
+int n,m;
+
+int in[100005],out[100005];
+
+int ek=0;
+void edfs(int no,int pa){
+  in[no]=ek;ek++;
+  rep(i,vs[no].size()){
+    int to=vs[no][i];
+    if(to==pa)continue;
+    edfs(to,no);
+  }
+  out[no]=ek;ek++;
+}
+
+struct node{
+  int s,n;
+  node(){s=0;n=0;}
+};
+
+node seg[800005];
+int N=1;
+void init(int p){
+  while(N<p)N*=2;
+}
+
+
+void upd(int l,int r,int a,int b,int no,int p){
+  if(r<=a || b<=l)return;
+  if(a<=l && r<=b){
+    seg[no].s+=p;
+    if(seg[no].s<=0){
+      if(r-l<=1)seg[no].n=0;
+      else seg[no].n=seg[no*2].n+seg[no*2+1].n;
+    }
+    else seg[no].n=r-l;
+    return;
+  }
+  upd(l,(l+r)/2,a,b,no*2,p);
+  upd((l+r)/2,r,a,b,no*2+1,p);
+  if(seg[no].s<=0)seg[no].n=seg[no*2].n+seg[no*2+1].n;
+  else seg[no].n=r-l;
+}
+
+int ans[100005]={};
+
+void dfs(int no,int pa){
+  rep(i,que[no].size()){
+    int nq=que[no][i];
+    upd(0,N,in[nq],out[nq]+1,1,1);
+  }
+  if(que[no].size()>0)upd(0,N,in[no],out[no]+1,1,1);
+  //rep(i,N*2)printf("(%d %d)%c",seg[i].s,seg[i].n,i==N*2-1?'\n':' ');
+  ans[no]+=max(0,seg[1].n/2-1);
+  
+  rep(i,vs[no].size()){
+    int to=vs[no][i];
+    if(to==pa)continue;
+    dfs(to,no);
+  }
+  
+  rep(i,que[no].size()){
+    int nq=que[no][i];
+    upd(0,N,in[nq],out[nq]+1,1,-1);
+  }
+  if(que[no].size()>0)upd(0,N,in[no],out[no]+1,1,-1);  
+}
+
+int main(void){
+  scanf("%d%d",&n,&m);
+  rep(i,n-1){
+    int a,b;
+    scanf("%d%d",&a,&b);
+    vs[a].push_back(b);
+    vs[b].push_back(a);
+  }
+  edfs(1,-1);
+  init(n*2+5);
+  
+  rep(i,m){
+    int a,b;
+    scanf("%d%d",&a,&b);
+    que[a].push_back(b);
+    que[b].push_back(a);
+  }
+  
+  dfs(1,-1);
+  rep(i,n)printf("%d%c",ans[i+1],i==n-1?'\n':' ');
+  return 0;
+}

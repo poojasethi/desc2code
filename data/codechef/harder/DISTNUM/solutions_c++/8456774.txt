@@ -1,0 +1,303 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <set>
+#include <map>
+#define p 1000000007
+using namespace std;
+
+set <int> S[200005];
+set <int> :: iterator it;
+map <int,int> Hash;
+int Hash_cnt,Hash_num[200005];
+
+int Hash_trans(int x)
+{
+	if(!Hash[x])
+	{
+		Hash[x]=++Hash_cnt;
+		Hash_num[Hash_cnt]=x;
+	}
+	return Hash[x];
+}
+
+int BST[200005],l[200005],r[200005],fa[200005],size[200005],root,tot;
+int id[200005],w[200005],dfn;
+
+void splay_update(int x)
+{
+	size[x]=size[l[x]]+size[r[x]]+BST[x];
+}
+
+void zig(int x)
+{
+	int y=fa[x],z=fa[y];
+	if(l[z]==y)l[z]=x;else r[z]=x;
+	fa[x]=z,fa[y]=x,fa[r[x]]=y;
+	l[y]=r[x],r[x]=y;
+	splay_update(y);
+}
+
+void zag(int x)
+{
+	int y=fa[x],z=fa[y];
+	if(l[z]==y)l[z]=x;else r[z]=x;
+	fa[x]=z,fa[y]=x,fa[l[x]]=y;
+	r[y]=l[x];l[x]=y;
+	splay_update(y);
+}
+
+void splay(int x)
+{
+	int y,z;
+	while(fa[x])
+	{
+		y=fa[x],z=fa[y];
+		if((z)&&(y!=root))
+		{
+			if(l[z]==y){if(l[y]==x)zig(y),zig(x);else zag(x),zig(x);}
+			else{if(l[y]==x)zig(x),zag(x);else zag(y),zag(x);}
+		}
+		else{if(l[y]==x)zig(x);else zag(x);}
+	}
+	root=x;
+	splay_update(root);
+}
+
+int BST_K(int K)
+{
+	for(int x=root;;)
+	{
+		if(BST[x]&&size[l[x]]+BST[x]==K){splay(x);return x;}
+		if(size[l[x]]>=K)x=l[x];
+		else K-=BST[x]+size[l[x]],x=r[x];
+	}
+}
+
+void BST_dfs(int x)
+{
+	if(l[x])BST_dfs(l[x]);
+	id[x]=++dfn;w[dfn]=x;
+	if(r[x])BST_dfs(r[x]);
+}
+
+int splay_build(int L,int R,int f)
+{
+    int mid;
+    mid=(L+R)>>1;
+    fa[mid]=f;BST[mid]=1;
+    if(mid!=L)l[mid]=splay_build(L,mid-1,mid);
+    if(mid!=R)r[mid]=splay_build(mid+1,R,mid);
+    splay_update(mid);
+    return mid;
+}
+
+int n,m,i,j,k,u,v,ll,rr,aim,key,sum1,sum2,sum3,sum4;
+int a[200005],opt[100005],opt_x[100005],opt_y[100005];
+
+struct node
+{
+	int l,r,sum1,sum2,sum3,sum4;
+}t[20000005];
+int Root[200005];
+bool use[200005],flag;
+
+void update(int x)
+{
+	int L=t[x].l,R=t[x].r;
+	t[x].sum1=t[L].sum1+t[R].sum1;if(t[x].sum1>=p)t[x].sum1-=p;
+	if(flag)
+	{
+		t[x].sum2=t[L].sum2+t[R].sum2;if(t[x].sum2>=p)t[x].sum2-=p;
+		t[x].sum3=t[L].sum3+t[R].sum3;if(t[x].sum3>=p)t[x].sum3-=p;
+		t[x].sum4=t[L].sum4+t[R].sum4;if(t[x].sum4>=p)t[x].sum4-=p;
+	}
+}
+
+void C(int &x,int l,int r)
+{
+	if(!x)x=++tot;
+	if(l==r)
+	{
+		if(key)
+		{
+			t[x].sum1=1;
+			if(flag)
+			{
+				int y=Hash_num[a[w[l]]];
+				t[x].sum2=y;
+				t[x].sum3=(long long)y*y%p;
+				t[x].sum4=(long long)y*y%p*y%p;
+			}
+		}
+		else t[x].sum1=t[x].sum2=t[x].sum3=t[x].sum4=0;
+		return;
+	}
+	int mid=l+r>>1;
+	if(aim<=mid)C(t[x].l,l,mid);
+	else C(t[x].r,mid+1,r);
+	update(x);
+}
+
+void Q1(int x,int l,int r)
+{
+	if(!x)return;
+	if(l>=ll&&r<=rr)
+	{
+		sum1+=t[x].sum1;if(sum1>=p)sum1-=p;
+		return;
+	}
+	int mid=l+r>>1;
+	if(rr<=mid)Q1(t[x].l,l,mid);
+	else if(ll>mid)Q1(t[x].r,mid+1,r);
+		else Q1(t[x].l,l,mid),Q1(t[x].r,mid+1,r);
+}
+
+void Q2(int x,int l,int r)
+{
+	if(!x)return;
+	if(l>=ll&&r<=rr)
+	{
+		sum2+=t[x].sum2;if(sum2>=p)sum2-=p;
+		sum3+=t[x].sum3;if(sum3>=p)sum3-=p;
+		sum4+=t[x].sum4;if(sum4>=p)sum4-=p;
+		return;
+	}
+	int mid=l+r>>1;
+	if(rr<=mid)Q2(t[x].l,l,mid);
+	else if(ll>mid)Q2(t[x].r,mid+1,r);
+		else Q2(t[x].l,l,mid),Q2(t[x].r,mid+1,r);
+}
+
+void Ins(int x,int y)
+{
+	set <int> :: iterator it;
+	int i,val=a[x],w;
+	it=S[val].find(id[x]);
+	if(it==S[val].begin())w=1;else w=*(--it);
+	aim=id[x];key=y;
+	for(i=w;i<=n;i+=i&-i)if(use[i])C(Root[i],1,n);
+}
+
+void Insert(int x)
+{
+	u=x;v=a[u];
+	S[v].insert(id[u]);
+	it=S[v].find(id[u]);++it;
+	if(it!=S[v].end())
+	{
+		S[v].erase(id[u]);
+		Ins(w[*it],0);
+		S[v].insert(id[u]);
+		Ins(u,1);
+		Ins(w[*it],1);
+	}else Ins(u,1);
+}
+
+void Delete(int x)
+{
+	u=x;v=a[u];
+	it=S[v].find(id[u]);++it;
+	if(it!=S[v].end())
+	{
+		Ins(w[*it],0);
+		Ins(u,0);
+		S[v].erase(id[u]);
+		Ins(w[*it],1);
+	}else Ins(u,0),S[v].erase(id[u]);
+}
+
+int inv6;
+int calc(int x,int y,int z)
+{
+	int ans=(long long)x*x%p*x%p;
+	ans-=(long long)x*y%p*3%p;if(ans<0)ans+=p;
+	ans+=z*2%p;if(ans>=p)ans-=p;
+	return (long long)ans*inv6%p;
+}
+
+int Power(int a,int b)
+{
+	int ans=1;
+	for(;b;b>>=1,a=(long long)a*a%p)if(b&1)ans=(long long)ans*a%p;
+	return ans;
+}
+
+int main()
+{
+	inv6=Power(6,p-2);
+	scanf("%d%d",&n,&m);++n;
+	for(i=2;i<=n;++i)scanf("%d",&a[i]),a[i]=Hash_trans(a[i]);
+	for(i=1;i<=m;++i)
+	{
+		scanf("%d",&opt[i]);
+		if(opt[i]==1)scanf("%d%d",&opt_x[i],&opt_y[i]),++opt_x[i],++opt_y[i],flag=true;
+		if(opt[i]==2)scanf("%d%d",&opt_x[i],&opt_y[i]),++opt_x[i],opt_y[i]=Hash_trans(opt_y[i]);
+		if(opt[i]==3)scanf("%d",&opt_x[i]),++opt_x[i];
+		if(opt[i]==4)scanf("%d%d",&opt_x[i],&opt_y[i]),++opt_x[i],opt_y[i]=Hash_trans(opt_y[i]);
+		if(opt[i]==5)scanf("%d%d",&opt_x[i],&opt_y[i]),++opt_x[i],++opt_y[i];
+	}
+	root=splay_build(1,tot=n,0);
+	
+	for(i=1;i<=m;++i)
+	{
+		if(opt[i]==1)opt_x[i]=BST_K(opt_x[i]),opt_y[i]=BST_K(opt_y[i]);
+		if(opt[i]==2)opt_x[i]=BST_K(opt_x[i]);
+		if(opt[i]==3)
+		{
+			u=opt_x[i]=BST_K(opt_x[i]);
+			splay(u);BST[u]=0;splay_update(u);
+		}
+		if(opt[i]==4)
+		{
+			u=BST_K(opt_x[i]);opt_x[i]=++tot;a[tot]=opt_y[i];
+			splay(u);v=r[u];
+			fa[v]=tot;r[u]=tot;fa[tot]=u;r[tot]=v;
+			BST[tot]=1;splay_update(tot);splay_update(u);
+		}
+		if(opt[i]==5)opt_x[i]=BST_K(opt_x[i]),opt_y[i]=BST_K(opt_y[i]);
+	}
+	BST_dfs(root);
+	
+	k=n;n=tot;tot=0;
+	for(i=1;i<=m;++i)
+	{
+		if(opt[i]==1)
+		{
+			ll=id[opt_x[i]];rr=id[opt_y[i]];
+			for(j=ll-1;j;j-=j&-j)use[j]=true;
+		}
+		if(opt[i]==5)
+		{
+			ll=id[opt_x[i]];rr=id[opt_y[i]];
+			for(j=ll-1;j;j-=j&-j)use[j]=true;
+		}
+	}
+	for(i=2;i<=k;++i)S[a[i]].insert(id[i]);
+	for(i=2;i<=k;++i)Ins(i,1);
+	
+	for(i=1;i<=m;++i)
+	{
+		if(opt[i]==1)
+		{
+			sum2=sum3=sum4=0;
+			ll=id[opt_x[i]];rr=id[opt_y[i]];
+			for(j=ll-1;j;j-=j&-j)Q2(Root[j],1,n);
+			printf("%d\n",calc(sum2,sum3,sum4));
+		}
+		if(opt[i]==2)
+		{
+			Delete(opt_x[i]);
+			a[opt_x[i]]=opt_y[i];
+			Insert(opt_x[i]);
+		}
+		if(opt[i]==3)Delete(opt_x[i]);
+		if(opt[i]==4)Insert(opt_x[i]);
+		if(opt[i]==5)
+		{
+			sum1=0;
+			ll=id[opt_x[i]];rr=id[opt_y[i]];
+			for(j=ll-1;j;j-=j&-j)Q1(Root[j],1,n);
+			printf("%d\n",sum1);
+		}
+	}
+}

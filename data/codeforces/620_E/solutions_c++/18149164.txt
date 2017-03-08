@@ -1,0 +1,81 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define ll long long
+typedef vector <int> vi;
+const int N = 400010;
+ll T[N<<2];
+int L[N<<2], Start[N], End[N], child[N], cur, E[N];
+int n, c[N], m;
+bool vis[N];
+vector <vi> G;
+#define left (id<<1)
+#define right ((id<<1)|1)
+#define mid ((l + r) >> 1)
+
+void lazy(int id, int l, int r) {
+	if (L[id] == -1) return;
+	if (l != r) L[left] = L[id], L[right] = L[id];
+	T[id] = (1LL << L[id]);
+	L[id] = -1;
+}
+
+void upd(int id, int l, int r, int u, int v, int c) {
+	lazy(id, l, r);
+	if (v < l || u > r || l > r) return;
+	if (u <= l && r <= v) { L[id] = c; lazy(id, l, r); return; }
+	upd(left, l, mid, u, v, c); upd(right, mid+1, r, u, v, c);
+	T[id] = 0;
+	T[id] |= T[left]; T[id] |= T[right];
+}
+
+ll get(int id, int l, int r, int u, int v) {
+	lazy(id, l, r);
+	if (v < l || u > r || l > r) return 0;
+	if (u <= l && r <= v) { return T[id]; }
+	ll ans = 0;
+	ans |= get(left, l, mid, u, v);
+	ans |= get(right, mid+1, r, u, v);
+	return ans;
+}
+
+void dfs(int u) {
+	vis[u] = child[u] = 1; Start[u] = ++cur; E[cur] = u;
+	for (int i = 0; i < G[u].size(); i++) {
+		int v = G[u][i]; if (vis[v]) continue;
+		dfs(v); child[u] += child[v];
+	}
+	End[u] = Start[u] + child[u] - 1;
+}
+
+void buildTree(int id, int l, int r) {
+	L[id] = -1;
+	if (l > r) return;
+	if (l == r) { T[id] = (1LL << c[E[l]]); return; }
+	buildTree(left, l, mid); buildTree(right, mid+1, r);
+	T[id] = 0;
+	T[id] |= T[left]; T[id] |= T[right];
+}
+
+int main() {
+	ios_base::sync_with_stdio(false); cin.tie(0);
+	cin >> n >> m; G.assign(n + 1, vi());
+	for (int i = 1; i <= n; i++) cin >> c[i], c[i]--;
+	for (int i = 1; i <= n-1; i++) {
+		int u, v; cin >> u >> v;
+		G[u].push_back(v); G[v].push_back(u);
+	}
+	dfs(1);
+	buildTree(1, 1, n);
+	while(m--) {
+		int type; cin >> type;
+		if (type == 1) {
+			int u, color; cin >> u >> color;
+			color--;
+			upd(1, 1, n, Start[u], End[u], color);
+		}
+		else {
+			int u; cin >> u;
+			cout << __builtin_popcountll( get(1, 1, n, Start[u], End[u]) ) << endl;
+		}
+	}
+}

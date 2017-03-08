@@ -1,0 +1,169 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+typedef long long LL;
+typedef pair<int,int> PII;
+
+const int maxN = 100000;
+const int maxK = 250000;
+int a[maxN];
+int C2[maxN+1];
+int res[maxK];
+PII b[maxN],c[maxN];
+int mid[maxN];
+PII newb[maxN],newc[maxN];
+int midb[maxN],midc[maxN];
+
+int middle(int L,int R,int h)
+{
+	int M;
+	for(M=L;M<R && !(a[M] & (1<<h));M++);
+	return M;
+}
+
+int mult(int a,int b)
+{
+	LL val=LL(a)*b;
+	return (val>maxK?maxK+1:val);
+}
+
+int main()
+{
+	int n,k;
+	for(n=0;n<=maxN;n++)
+	{
+		LL val=LL(n)*(n-1)/2;
+		C2[n]=val>maxK?maxK+1:val;
+	}
+	scanf("%d%d",&n,&k);
+	int i;
+	for(i=0;i<n;i++)
+		scanf("%d",a+i);
+	sort(a,a+n);
+	int H=0;
+	for(int x=a[n-1];x;x/=2) H++;
+	int blen=0;
+	bool cross=false;
+	b[blen++]=PII(0,n);
+	int reslen=0;
+	for(int h=H-1;h>=0;h--)
+	{
+		if(!cross)
+		{
+			int cnt0=0;
+			for(i=0;i<blen;i++)
+			{
+				int L=b[i].first;
+				int R=b[i].second;
+				int M=middle(L,R,h);
+				mid[i]=M;
+				if(cnt0<k)
+					cnt0+=C2[R-M]+C2[M-L];
+			}
+			int newb_len=0;
+			for(i=0;i<blen;i++)
+			{
+				int L=b[i].first;
+				int R=b[i].second;
+				int M=mid[i];
+				if(cnt0>=k)
+				{
+					if(L<M) newb[newb_len++]=PII(L,M);
+					if(M<R) newb[newb_len++]=PII(M,R);
+				}
+				else
+				{
+					for(int u=L;u<M;u++)
+						for(int v=L;v<u;v++)
+							res[reslen++]=a[u]^a[v];
+					for(int u=M;u<R;u++)
+						for(int v=M;v<u;v++)
+							res[reslen++]=a[u]^a[v];
+					if(L<M && M<R)
+					{
+						newb[newb_len]=PII(L,M);
+						c[newb_len++]=PII(M,R);
+					}
+				}
+			}
+			if(cnt0<k)
+			{
+				cross=true;
+				k-=cnt0;
+			}
+			blen=newb_len;
+			for(i=0;i<blen;i++)
+				b[i]=newb[i];
+		}
+		else
+		{
+			int cnt0=0;
+			for(i=0;i<blen;i++)
+			{
+				int L1=b[i].first;
+				int R1=b[i].second;
+				int M1=middle(L1,R1,h);
+				midb[i]=M1;
+				int L2=c[i].first;
+				int R2=c[i].second;
+				int M2=middle(L2,R2,h);
+				midc[i]=M2;
+				if(cnt0<k)
+					cnt0+=mult(M1-L1,M2-L2)+mult(R1-M1,R2-M2);
+			}
+			int newb_len=0;
+			for(i=0;i<blen;i++)
+			{
+				int L1=b[i].first;
+				int R1=b[i].second;
+				int M1=midb[i];
+				int L2=c[i].first;
+				int R2=c[i].second;
+				int M2=midc[i];
+				if(cnt0>=k)
+				{
+					if(L1<M1 && L2<M2)
+					{
+						newb[newb_len]=PII(L1,M1);
+						newc[newb_len++]=PII(L2,M2);
+					}
+					if(M1<R1 && M2<R2)
+					{
+						newb[newb_len]=PII(M1,R1);
+						newc[newb_len++]=PII(M2,R2);
+					}
+				}
+				else
+				{
+					for(int u=L1;u<M1;u++)
+						for(int v=L2;v<M2;v++)
+							res[reslen++]=a[u]^a[v];
+					for(int u=M1;u<R1;u++)
+						for(int v=M2;v<R2;v++)
+							res[reslen++]=a[u]^a[v];
+					if(L1<M1 && M2<R2)
+					{
+						newb[newb_len]=PII(L1,M1);
+						newc[newb_len++]=PII(M2,R2);
+					}
+					if(M1<R1 && L2<M2)
+					{
+						newb[newb_len]=PII(M1,R1);
+						newc[newb_len++]=PII(L2,M2);
+					}
+				}
+			}
+			if(cnt0<k) k-=cnt0;
+			blen=newb_len;
+			for(i=0;i<blen;i++)
+				b[i]=newb[i],c[i]=newc[i];
+		}
+	}
+	int val = cross ? a[b[0].first]^a[c[0].first] : 0;
+	for(;k--;) res[reslen++]=val;
+	sort(res,res+reslen);
+	for(i=0;i<reslen;i++)
+		printf("%d%c",res[i],i<reslen-1?' ':'\n');
+	return 0;
+}

@@ -1,0 +1,257 @@
+
+
+    #define _CRT_SECURE_NO_WARNINGS
+    #pragma comment(linker, "/STACK:128777216")
+     
+    #include <cstdio>
+    #include <cmath>
+    #include <cstring>
+    #include <ctime>
+    #include <algorithm>
+    #include <vector>
+    #include <queue>
+    #include <string>
+    #include <map>
+    #include <set>
+    #include <iostream>
+    #include <functional>
+    #include <numeric>
+    #include <sstream>
+    #include <exception>
+    #include <cassert>
+     
+    typedef long long i64;
+    typedef unsigned int u32;
+    const int null = 0;
+    using namespace std;
+     
+    typedef vector<int> VI;
+    typedef vector<int>::iterator VII;
+     
+    template<class T> int size(const T &a) {
+    return int(a.size());
+    }
+    template<class T> T abs(const T &a) {
+    return (a < 0? -a: a);
+    }
+    template<class T> T sqr(const T &a) {
+    return a * a;
+    }
+     
+    char words[500][5005];
+    char s[100000];
+     
+    struct Node;
+     
+    struct Pos {
+    Node* node;
+    int pos;
+    } p[500][5005];
+     
+    int c[500][5005];
+    bool b[500][5005];
+     
+     
+    int getCode(char c) {
+    if ('a' <= c && c <= 'z') {
+    return c - 'a';
+    } else if ('A' <= c && c <= 'Z') {
+    return c - 'A' + 26;
+    } else if ('0' <= c && c <= '9') {
+    return c - '0' + 52;
+    } else {
+    return 62;
+    }
+    }
+     
+    struct Node {
+    char *s;
+    int len;
+    Node* next[63];
+    int wordId;
+    Pos* p;
+    int* c;
+    bool *b;
+    Node() {
+    s = 0;
+    len = 0;
+    wordId = -1;
+    memset(next, 0, sizeof(next));
+    }
+    } *head ;
+     
+    struct CMP {
+    Pos v;
+    Pos p;
+    } cur[2500010];
+     
+    int res[1000];
+    int wr[1000];
+     
+    bool goNext(Pos &p, int c) {
+    bool ret = true;
+    Node* &node = p.node;
+    int &pos = p.pos;
+    while (node != head) {
+    if (node->len == pos) {
+    if (node->next[c] != null) {
+    break;
+    }
+    } else {
+    if (getCode(node->s[pos]) == c) {
+    pos++;
+    return ret;
+    }
+    }
+    p = node->p[pos];
+    ret = false;
+    }
+    if (node->next[c]) {
+    node = node->next[c];
+    pos = 1;
+    } else {
+    node = head;
+    pos = 0;
+    ret =false;
+    }
+    return ret;
+    }
+     
+     
+    int main() {
+    #ifdef pperm
+    freopen("input.txt", "r", stdin);
+    //freopen("input.txt", "w", stdout);
+    //freopen("output.txt", "w", stdout);
+    #endif
+    memset(wr, -1, sizeof(wr));
+    int n;
+    scanf("%d", &n);
+    head = new Node();
+    for (int i = 0; i < n; i++) {
+    char *s = words[i];
+    scanf("%s", s);
+    Node* w = head;
+    int len = strlen(s);
+    Pos *cp = p[i];
+    int *cc = c[i];
+    bool *bb = b[i];
+    for (char *p = s; *p; ) {
+    int c = getCode(*p);
+    if (w->next[c] == 0) {
+    Node* node = new Node();
+    node->s = p;
+    node->c = cc;
+    node->b = bb;
+    node->len = len;
+    node->p = cp;
+    w->next[c] = node;
+    w = node;
+    break;
+    } else {
+    Node* next = w->next[c];
+    int j = 0;
+    for (j = 0; j < next->len && j < len && next->s[j] == p[j]; j++);
+    if (j == next->len) {
+    p += j;
+    cp += j;
+    cc += j;
+    bb += j;
+    len -= j;
+    w = next;
+    } else {
+    Node* mid = new Node();
+    mid->s = next->s;
+    mid->p = next->p;
+    mid->c = next->c;
+    mid->b = next->b;
+    mid->len = j;
+    mid->next[getCode(next->s[j])] = next;
+    w->next[c] = mid;
+    next->s += j;
+    next->p += j;
+    next->c += j;
+    next->b += j;
+    next->len -= j;
+    p += j;
+    cp += j;
+    cc += j;
+    bb += j;
+    w = mid;
+    len -= j;
+    }
+    }
+    }
+    if (w->wordId == -1) {
+    w->wordId = i;
+    } else {
+    wr[i] = w->wordId;
+    }
+    }
+    int u = 0;
+    Pos def;
+    def.node = head;
+    def.pos = 0;
+    for (int i = 0; i < 63; i++) {
+    if (head->next[i]) {
+    cur[u].v.pos = 1;
+    cur[u].v.node = head->next[i];
+    cur[u].p = def;
+    cur[u].v.node->p[1] = def;
+    u++;
+    }
+    }
+    for (int i = 0; i < u; i++) {
+    CMP &cmp = cur[i];
+    int l = 0, r = 63;
+    if (cmp.v.pos != cmp.v.node->len) {
+    l = r = getCode(cmp.v.node->s[cmp.v.pos]);
+    r++;
+    }
+    for (int j = l; j < r; j++) {
+    CMP &nxt = cur[u];
+    nxt = cmp;
+    if (goNext(nxt.v, j)) {
+    goNext(nxt.p, j);
+    nxt.v.node->p[nxt.v.pos] = nxt.p;
+    u++;
+    }
+    }
+    }
+     
+    int T;
+    scanf("%d", &T);
+    while (T--) {
+    Pos p = def;
+    scanf("%s", s);
+    for (int i = 0; s[i]; i++) {
+    int c = getCode(s[i]);
+    goNext(p, c);
+    if (p.node != head) {
+    p.node->c[p.pos]++;
+    }
+    }
+    }
+    for (int i = u - 1; i >= 0; i--) {
+    CMP &cmp = cur[i];
+    Pos &v = cmp.v, &p = cmp.p;
+    int c = v.node->c[v.pos];
+    if (p.node != head) {
+    p.node->c[p.pos] += c;
+    }
+    if (v.pos == v.node->len && v.node->wordId != -1) {
+    res[v.node->wordId] += c;
+    }
+    }
+    for (int i = 0; i < n; i++) {
+    if (wr[i] != -1) {
+    res[i] = res[wr[i]];
+    }
+    printf("%d\n", res[i]);
+    }
+    #ifdef pperm
+    fprintf(stderr, "\n%.3lf\n", clock() / double(CLOCKS_PER_SEC));
+    #endif
+    return 0;
+    } 
+

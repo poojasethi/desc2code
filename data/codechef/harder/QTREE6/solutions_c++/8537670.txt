@@ -1,0 +1,113 @@
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+#include<cstring>
+#include<cstdlib>
+#define MAX 100005
+using namespace std;
+int n;
+void gn(int &x){
+	char c;while((c=getchar())<'0'||c>'9');x=c-'0';
+	while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+}
+struct edge{int v,next;}e[2*MAX];int etot=0;int g[MAX];
+void ae(int u,int v){
+	e[etot].v=v;e[etot].next=g[u];g[u]=etot++;
+	e[etot].v=u;e[etot].next=g[v];g[v]=etot++;
+}
+int lef[MAX],rig[MAX],lef2[MAX],rig2[MAX];int ind=0,ind2=0;
+int pre[MAX][18]={0};
+int sz[MAX];
+
+int stk[MAX],cur[MAX];
+void dfs(int rt){
+	int top;
+	stk[top=1]=rt;cur[1]=g[rt];
+	while(top){
+		int u=stk[top];
+		if(cur[top]==g[stk[top]]){
+			sz[u]=1;lef[u]=++ind;lef2[u]=++ind2;
+		}
+		if(cur[top]==-1){			
+			rig[u]=ind;rig2[u]=++ind2;
+			sz[pre[u][0]]+=sz[u];
+			--top;
+		}else{
+			int v=e[cur[top]].v;cur[top]=e[cur[top]].next;
+			if(v!=pre[u][0]){
+				pre[v][0]=u;
+				stk[++top]=v;cur[top]=g[v];
+			}
+		}
+	}
+}
+int bit[2][MAX],bit2[MAX*2];
+void bitupd(int *a,int n,int x,int d){for (;x>0 && x<=n;x+=x&-x)a[x]+=d;}
+int bitque(int*a,int x){int ans=0;for(;x>0;x-=x&-x)ans+=a[x];return ans;}
+void modi(int i,int down,int up,int del){
+	bitupd(bit[i],n,lef[down],del);
+	bitupd(bit[i],n,lef[pre[up][0]],-del);
+}
+int que(int i,int x){
+	return bitque(bit[i],rig[x])-bitque(bit[i],lef[x]-1);
+}
+void modi2(int x,int del){
+	bitupd(bit2,2*n,lef2[x],del);
+	bitupd(bit2,2*n,rig2[x],-del);
+}
+int que2(int down,int up){
+	return bitque(bit2,lef2[down])-bitque(bit2,lef2[pre[up][0]]);
+}
+int color[MAX]={0};
+int up(int x){
+	int c=color[x];
+	for (int i=17;i>=0;i--){
+		if(pre[x][i] && que2(x,pre[x][i])==c*(1+(1<<i)))x=pre[x][i];
+	}
+	return x;
+}		
+int main()
+{
+
+	memset(g,-1,sizeof(g));
+	scanf("%d",&n);
+	for (int i=1;i<n;i++){
+		int x,y;
+		gn(x);gn(y);
+		ae(x,y);
+	}
+	dfs(1);
+	for (int i=1;i<18;i++)
+		for (int u=1;u<=n;u++)pre[u][i]=pre[pre[u][i-1]][i-1];
+	for (int i=1;i<=n;i++){
+		bitupd(bit[0],n,i,1);
+		modi(1,i,i,1);
+	}
+	int qu;gn(qu);
+	while(qu--){
+		int opt,x;
+		gn(opt);gn(x);
+		if(opt==0){
+			x=up(x);
+			printf("%d\n",que(color[x],x));
+		}else{
+			int bo=color[x];
+			int f1=que(bo,x),f0=que(!bo,x);
+			int y;
+			if(pre[x][0]){
+				y=color[pre[x][0]]!=bo?pre[x][0]:pre[up(pre[x][0])][0];if(!y)y=1;
+				modi(bo,pre[x][0],y,-f1);
+				y=color[pre[x][0]]==bo?pre[x][0]:pre[up(pre[x][0])][0];if(!y)y=1;
+				modi(!bo,pre[x][0],y,f0);
+			}
+			modi2(x,(!bo)-bo);
+			color[x]^=1;
+		}
+	}
+	return 0;
+}
+		
+	
+	
+	
+		

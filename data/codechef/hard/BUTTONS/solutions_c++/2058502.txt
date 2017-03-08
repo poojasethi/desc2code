@@ -1,0 +1,157 @@
+/*
+ * Buttons - Level 02
+ *
+ * 19-Apr-2013 (c) Sumith Kumar Puri
+ */
+
+#include <cstdio>
+#include <iostream>
+#include <sys/time.h>
+using namespace std;
+
+#define FOR(i,m,n) for (int i = (m); i < (n); ++i)
+#define MAXLEN 1000
+
+typedef bool* matrix_t;
+
+class Timer {
+    struct timeval t0;
+    const char* mesg;
+    public:
+    Timer(char *_mesg) : mesg(_mesg) {
+        gettimeofday(&t0, NULL);
+    }
+    ~Timer() {
+        struct timeval t1;
+        gettimeofday(&t1, NULL);
+        long delta = 1000000 * (t1.tv_sec - t0.tv_sec) + (t1.tv_usec - t0.tv_usec);
+#ifdef DEBUG
+        fprintf(stderr, "%s: %d\n", mesg, delta);
+#endif
+    }
+};
+
+void solveButtons(const matrix_t m, int n) {
+    bool rows[MAXLEN];
+    bool cols[MAXLEN];
+
+    /* Assign row#0 to set 0 */
+    rows[0] = 0;
+
+    /* Already having assigned a set to row#0
+     * we can decide the sets for all the cols
+     */
+    FOR (j,0,n) {
+        cols[j] = m[0*n+j] != rows[0];
+    }
+
+    /* and now do the same for all the rows
+     */
+    FOR (i,0,n) {
+        rows[i] = m[i*n+0] != cols[0];
+    }
+
+    /* All we have to do now is for the rest of the matrix,
+     * validate the set assignment we made above
+     */
+    bool temp;
+    FOR (i,1,n) {
+        FOR (j,1,n) {
+            temp = rows[i] != cols[j];
+            if (m[i*n+j] != temp) {
+                printf("-1\n");
+                return;
+            }
+        }
+    }
+
+    /* figure out the row and column counts of the set "1"
+     */
+    bool resultSet = 1;
+    int cr, cc;
+    cr = cc = 0;
+
+    FOR (i,0,n) cr += rows[i];
+    FOR (j,0,n) cc += cols[j];
+
+    /* if this set is larger than n, then we need the other set
+     */
+    if ( (cr + cc) > n ) {
+        resultSet = 0;
+        cr = n - cr;
+        cc = n - cc;
+    }
+
+    /* if we don't need any swaps, then just print 0 and return
+     */
+    if ( (cr + cc) == 0 ) {
+        printf("0\n");
+        return;
+    }
+
+    /* now, just print the number of row operations and the actual data
+     */
+    printf("%d\n",cr);
+    FOR (i,0,n) {
+        if (rows[i] == resultSet) {
+            printf("%d\n",i);
+        }
+    }
+
+    printf("%d\n",cc);
+    FOR (j,0,n) {
+        if (cols[j] == resultSet) {
+            printf("%d\n",j);
+        }
+    }
+}
+
+int main() {
+    int nTest;
+    bool m[MAXLEN*MAXLEN];
+    char *line = NULL;
+    size_t read = 0;
+    size_t len = 0;
+
+    read = getline(&line, &len, stdin);
+    sscanf(line,"%d",&nTest);
+
+    int N;
+    int temp;
+
+    while (nTest--) {
+        {
+            read = getline(&line, &len, stdin);
+            sscanf(line,"%d",&N);
+
+            {
+                Timer boo("input first");
+                FOR (i,0,N) {
+                    read = getline(&line, &len, stdin);
+                    // ugly for loop to read a row because scanf is slow
+                    FOR (j,0,N) {
+                        temp = *(line + 2 * j) - '0';
+                        m[i*N + j] = temp;
+                    }
+                }
+            }
+            {
+                Timer boo("input second");
+                FOR (i,0,N) {
+                    read = getline(&line, &len, stdin);
+                    // ugly for loop to read a row because scanf is slow
+                    FOR (j,0,N) {
+                        temp = *(line + 2 * j) - '0';
+                        m[i*N + j] = ( m[i*N + j] != temp );
+                    }
+                }
+            }
+        }
+        {
+            Timer boo("output");
+            solveButtons(m, N);
+        }
+    }
+
+    return 0;
+}

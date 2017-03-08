@@ -1,0 +1,84 @@
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <map>
+
+using namespace std;
+
+typedef pair<int,int> PII;
+
+const int MaxN = 100010;
+const double INF = 1e20;
+
+struct Point{
+	double x,y;
+	Point(){}
+	Point(double _x,double _y) : x(_x),y(_y) {}
+	double ang(){return atan2(y,x);}
+}vtx[MaxN];
+inline bool operator <(const Point &a,const Point &b){return a.x<b.x || a.x==b.x && a.y<b.y;}
+inline Point operator -(const Point &a,const Point &b){return Point(a.x-b.x,a.y-b.y);}
+inline double operator *(const Point &a,const Point &b){return a.x*b.y-a.y*b.x;}
+
+struct Edge{
+	int v;
+	double ang;
+	Edge(){}
+	Edge(int _v,double _ang) : v(_v),ang(_ang) {}
+};
+inline bool operator <(const Edge &a,const Edge &b){return a.ang<b.ang;}
+
+int n,m,T,S;
+int u[MaxN],v[MaxN],vis[MaxN],tot[MaxN];
+vector<Edge> g[MaxN];
+map<PII,int> flow,sum;
+
+void make_edge(int u,int v){
+	Edge t(v,(vtx[v]-vtx[u]).ang());
+	g[u].push_back(t);
+	flow[PII(u,v)]=0;
+}
+int dfs(int u,int v){
+	int cnt=1;vis[u]=1;
+	for(vector<Edge> :: iterator p=g[u].begin();p!=g[u].end();p++) if(!vis[p->v]) cnt+=dfs(p->v,u);
+	if(v) flow[PII(v,u)]+=cnt,flow[PII(u,v)]-=cnt;
+	return cnt;
+}
+int calc(int a,int b,int c){
+	double a1=(vtx[b]-vtx[a]).ang(),a2=(vtx[c]-vtx[a]).ang();
+	return (a1<a2?0:tot[a])+sum[PII(a,c)]-sum[PII(a,b)]-flow[PII(a,c)];
+}
+void solve(){
+	int w=0,res=0;scanf("%d",&w);
+	vector<int> cut;
+	for(int i=1,t;i<=w;i++) scanf("%d",&t),cut.push_back(t);
+	double s=0;
+	for(int i=0;i<w;i++) s+=vtx[cut[i?i-1:w-1]]*vtx[cut[i]];
+	if(s>0) reverse(cut.begin(),cut.end());
+	for(int i=0;i<w;i++) res+=calc(cut[i],cut[i?i-1:w-1],cut[(i+1)%w]);
+	printf("%d\n",res+w);
+}
+int main()
+{
+	scanf("%d%d",&n,&m);
+	for(int i=1;i<=m;i++) scanf("%d%d",&u[i],&v[i]);
+	for(int i=1;i<=n;i++) scanf("%lf%lf",&vtx[i].x,&vtx[i].y);
+	vtx[T=n+1]=Point(-INF,0);
+	for(int i=S=1;i<=n;i++) if(vtx[i]<vtx[S]) S=i;
+	for(int i=1;i<=m;i++) make_edge(u[i],v[i]),make_edge(v[i],u[i]);
+	make_edge(S,T);make_edge(T,S);
+	dfs(T,0);
+	for(int i=1;i<=T;i++) sort(g[i].begin(),g[i].end());
+	for(int i=1;i<=T;i++){
+		int pre=i;sum[PII(i,i)]=0;
+		for(vector<Edge> :: iterator p=g[i].begin();p!=g[i].end();p++){
+			tot[i]+=flow[PII(i,p->v)];
+			sum[PII(i,p->v)]=sum[PII(i,pre)]+flow[PII(i,p->v)];
+			pre=p->v;
+		}
+	}
+	for(scanf("%d",&m);m--;) solve();
+	return 0;
+}

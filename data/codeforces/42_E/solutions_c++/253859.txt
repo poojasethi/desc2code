@@ -1,0 +1,217 @@
+#include <cstdlib>
+#include <cctype>
+#include <cstring>
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <iostream>
+#include <sstream>
+#include <map>
+#include <set>
+#include <queue>
+using namespace std;
+
+const int maxn = 111111;
+const int maxm = 222222;
+int n , m;
+long long treeSum;
+int treeNum;
+
+struct Node {
+	int a , b , cost;
+	Node() {
+	}
+	Node(int x, int y, int z) :
+		a(x), b(y), cost(z) {
+	}
+	bool operator <(const Node &cmp) const {
+		return cost < cmp.cost;
+	}
+} ee[ maxm ];
+vector<int> edge[ maxn ];
+vector<int> cost[ maxn ];
+int pre[ maxn ] , realcost[ maxn ];
+bool Inque[ maxn ];
+int que[ maxn ] , deep[ maxn ];
+int child[ maxn ] , idx[ maxn ] , rank[ maxn ] , tot[ maxn ] , top[ maxn ];
+int sz;
+int root[ maxn ];
+struct seg_tree {
+	int Max[ maxn << 2 ];
+	int L[ maxn << 2 ];
+	int R[ maxn << 2 ];
+	int sz;
+	void newNode(int &root) {
+		root = sz ++;
+		Max[ root ] = 0;
+		L[ root ] = R[ root ] = 0;
+	}
+	void build(int &root, int l, int r) {
+		newNode(root);
+		if ( l == r ) return;
+		int mid = ( l + r ) >> 1;
+		build(L[ root ], l, mid);
+		build(R[ root ], mid + 1, r);
+	}
+	void push_up(int root) {
+		Max[ root ] = max(Max[ L[ root ] ], Max[ R[ root ] ]);
+	}
+	void update(int root, int pos, int val, int l, int r) {
+		if ( l == r ) {
+			Max[ root ] = val;
+			return;
+		}
+		int mid = ( l + r ) >> 1;
+		if ( pos <= mid ) update(L[ root ], pos, val, l, mid);
+		else update(R[ root ], pos, val, mid + 1, r);
+		push_up(root);
+	}
+	int query(int root, int a, int b, int l, int r) {
+		if ( a <= l && r <= b ) return Max[ root ];
+		int mid = ( l + r ) >> 1 , ret = 0;
+		if ( a <= mid ) ret = max(ret, query(L[ root ], a, b, l, mid));
+		if ( b > mid ) ret = max(ret, query(R[ root ], a, b, mid + 1, r));
+		return ret;
+	}
+	int query(int a, int b) {
+		int x = idx[ a ] , y = idx[ b ];
+		int ret = 0;
+		while ( x != y ) {
+			if ( deep[ top[ x ] ] > deep[ top[ y ] ] ) {
+				ret = max(ret, query(root[ x ], rank[ a ], tot[ x ], 0, tot[ x ]));
+				a = pre[ top[ x ] ];
+				x = idx[ a ];
+			} else {
+				ret = max(ret, query(root[ y ], rank[ b ], tot[ y ], 0, tot[ y ]));
+				b = pre[ top[ y ] ];
+				y = idx[ b ];
+			}
+		}
+		if ( rank[ a ] > rank[ b ] ) swap(a, b);
+		if ( rank[ b ] > rank[ a ] ) ret = max(ret, query(root[ x ], rank[ a ], rank[ b ] - 1, 0, tot[ x ]));
+		return ret;
+	}
+} tt;
+
+int find(int a) {
+	int b = a;
+	while ( pre[ a ] != a )
+		a = pre[ a ];
+	while ( b != a ) {
+		int t = pre[ b ];
+		pre[ b ] = a;
+		b = t;
+	}
+	return a;
+}
+void buildTree() {
+	for ( int i = 0 ; i < n ; i ++ ) {
+		pre[ i ] = i;
+		edge[ i ].clear();
+		cost[ i ].clear();
+	}
+	sort(ee, ee + m);
+	treeSum = 0;
+	treeNum = n;
+	for ( int i = 0 ; i < m ; i ++ ) {
+		int ra = find(ee[ i ].a);
+		int rb = find(ee[ i ].b);
+		if ( ra == rb ) continue;
+		pre[ ra ] = rb;
+		treeNum --;
+		treeSum += ee[ i ].cost;
+		edge[ ee[ i ].a ].push_back(ee[ i ].b);
+		cost[ ee[ i ].a ].push_back(ee[ i ].cost);
+		edge[ ee[ i ].b ].push_back(ee[ i ].a);
+		cost[ ee[ i ].b ].push_back(ee[ i ].cost);
+	}
+}
+void divideTree() {
+	int lo = 0 , hi = 0;
+	que[ 0 ] = 0;
+	Inque[ 0 ] = true;
+	deep[ 0 ] = 0;
+	while ( lo <= hi ) {
+		int u = que[ lo ++ ];
+		for ( int it = 0 ; it < edge[ u ].size() ; it ++ ) {
+			int v = edge[ u ][ it ];
+			if ( Inque[ v ] ) continue;
+			pre[ v ] = u;
+			realcost[ v ] = cost[ u ][ it ];
+			Inque[ v ] = true;
+			deep[ v ] = deep[ u ] + 1;
+			que[ ++ hi ] = v;
+		}
+	}
+	sz = 0;
+	for ( int i = hi ; i >= 0 ; i -- ) {
+		int u = que[ i ];
+		child[ u ] = 1;
+		int heavy = -1;
+		for ( int it = 0 ; it < edge[ u ].size() ; it ++ ) {
+			int v = edge[ u ][ it ];
+			if ( Inque[ v ] ) continue;
+			child[ u ] += child[ v ];
+			if ( heavy == -1 || child[ v ] > child[ heavy ] ) heavy = v;
+		}
+		if ( heavy == -1 ) {
+			idx[ u ] = sz ++;
+			rank[ u ] = 0;
+			tot[ idx[ u ] ] = 0;
+		} else {
+			for ( int it = 0 ; it < edge[ u ].size() ; it ++ ) {
+				int v = edge[ u ][ it ];
+				if ( Inque[ v ] ) continue;
+				if ( heavy == v ) {
+					idx[ u ] = idx[ v ];
+					rank[ u ] = rank[ v ] + 1;
+					tot[ idx[ u ] ] ++;
+				} else {
+					top[ idx[ v ] ] = v;
+				}
+			}
+		}
+		Inque[ u ] = false;
+	}
+	top[ idx[ 0 ] ] = 0;
+}
+void solve() {
+	int a , b;
+	scanf("%d%d", &a, &b);
+	a --, b --;
+	if ( treeNum == 1 ) {
+		printf("%I64d\n", treeSum - tt.query(a, b));
+	} else if ( treeNum == 2 ) {
+		if ( find(a) == find(b) ) puts("-1");
+		else printf("%I64d\n", treeSum);
+	} else {
+		puts("-1");
+	}
+}
+int main() {
+	scanf("%d%d", &n, &m);
+	for ( int i = 0 ; i < m ; i ++ ) {
+		scanf("%d%d%d", &ee[ i ].a, &ee[ i ].b, &ee[ i ].cost);
+		ee[ i ].a --, ee[ i ].b --;
+	}
+	buildTree();
+
+	if ( treeNum == 1 ) {
+		divideTree();
+		tt.sz = 1;
+		for ( int i = 0 ; i < sz ; i ++ ) {
+			tt.build(root[ i ], 0, tot[ i ]);
+		}
+		for ( int i = 0 ; i < n ; i ++ ) {
+			tt.update(root[ idx[ i ] ], rank[ i ], realcost[ i ], 0, tot[ idx[ i ] ]);
+		}
+	}
+	int Q;
+	scanf("%d", &Q);
+	while ( Q -- ) {
+		solve();
+	}
+	return 0;
+}

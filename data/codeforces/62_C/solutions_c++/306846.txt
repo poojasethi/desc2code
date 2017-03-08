@@ -1,0 +1,142 @@
+#include <cstdio>
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <cmath>
+#include <vector>
+
+using namespace std;
+
+struct point
+{
+	double x, y;
+	point() {}
+	point(double x, double y) : x(x), y(y) {}
+	
+	void input()
+	{
+		cin >> x >> y;	
+	}	
+	
+	void output()
+	{
+		printf("%.4f %.4f\n", x, y);	
+	}
+};
+
+struct TRI
+{
+	point a[4];	
+}tr[110];
+double ans;
+
+const double eps = 1e-8;
+
+int sgn(double x)
+{
+	return x < -eps ? -1 : x > eps;	
+}
+
+double operator * (const point &a, const point &b)
+{
+	return a.x*b.y - a.y*b.x;	
+}
+
+point operator - (const point &a, const point &b)
+{
+	return point(a.x-b.x, a.y-b.y);	
+}
+
+point operator + (const point &a, const point &b)
+{
+	return point(a.x+b.x, a.y+b.y);	
+}
+
+point operator * (double a, const point &b)
+{
+	return point(a*b.x, a*b.y);	
+}
+
+double vlen(const point &a)
+{
+	return sqrt(a.x*a.x + a.y*a.y);	
+}
+
+double dist(const point &a, const point &b)
+{
+	return vlen(a - b);	
+}
+
+bool check_inter(point a, point b, point c, point d)
+{
+	if(sgn((d-c)*(b-a)) == 0)	return 0;
+	return (sgn((a-c)*(a-d)) != sgn((b-c)*(b-d)));
+}
+
+double inter(point a, point b, point c, point d)
+{
+	return ((c-a)*(a-b)) / ((d-c)*(b-a));	
+}
+
+void dfs(int k, point a, point b, int id)
+{
+	if(k < 0)
+	{
+		ans += dist(a, b);
+		return;	
+	}
+	
+	if(k == id)
+	{
+		dfs(k-1, a, b, id);
+		return;	
+	}
+	
+	vector <double> v;// t * (b-a)
+	for(int i=0; i<3; i++)
+	{
+		if(check_inter(tr[k].a[i], tr[k].a[i+1], a, b))
+		{
+			v.push_back(inter(tr[k].a[i], tr[k].a[i+1], a, b));	
+		}
+	}
+	if(v.size() < 2)	dfs(k-1, a, b, id);
+	else
+	{
+		sort(v.begin(), v.end());
+		if(v.size() == 3)	v.erase(v.begin()+1);
+		if(sgn(v[0]) <= 0 && sgn(v[1]-1.0) >= 0)	return;
+		point c = a + v[0] * (b-a);
+		point d = a + v[1] * (b-a);
+		if(sgn(v[1]) <= 0 || sgn(v[0]-1.0) >= 0)	dfs(k-1, a, b, id);
+		else if(sgn(v[0]) <= 0)	dfs(k-1, d, b, id);	
+		else if(sgn(v[1]-1.0) >= 0)	dfs(k-1, a, c, id);
+		else if(sgn(v[0]-v[1]) == 0)	dfs(k-1, a, b, id);
+		else	dfs(k-1, a, c, id), dfs(k-1, d, b, id);
+	}
+}
+
+int main()
+{
+	int N;	cin >> N;
+	for(int i=0; i<N; i++)
+	{
+		for(int j=0; j<3; j++)
+		{
+			tr[i].a[j].input();	
+		}	
+		tr[i].a[3] = tr[i].a[0];
+	}
+	
+	ans = 0.0;
+	for(int i=0; i<N; i++)
+	{
+		for(int j=0; j<3; j++)
+		{
+			dfs(N-1, tr[i].a[j], tr[i].a[j+1], i);	
+		}
+	}
+	printf("%.10f\n", ans);
+	
+	return 0;	
+}

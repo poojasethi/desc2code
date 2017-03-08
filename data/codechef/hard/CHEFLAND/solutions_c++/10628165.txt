@@ -1,0 +1,163 @@
+# include <stdio.h>
+# include <vector>
+# include <algorithm>
+# include <utility>
+# include <map>
+# define maxv (int)1e5
+std::vector <std::pair< int,bool> > adj[maxv+1];
+std::vector < std::pair< int,int> > bridgelist;
+std::map <int,int> bicomp;
+int low[maxv+1],num[maxv+1],parent[maxv+1],BC[maxv+1],Bridge_cnt,N,dfsroot,numchild,counter,BCnum=0;
+bool hasmorethan3,wronggraph;
+void insert(int u)
+{
+	if(bicomp.count(u))
+	{
+		if(bicomp[u]==2)
+		{
+			hasmorethan3=true;
+			wronggraph=true;
+		}
+		bicomp[u]++;
+	}
+	else
+	{
+		bicomp[u]=1;
+		// cnt1++;
+	}
+}
+void initallise()
+{
+	// callingdfsfirsttime=true;
+	// wronggraph=false;
+	// counter=0;
+	// bicomp.clear();
+	// hasmorethan3=false;
+	// for(int i=1;i<=N;i++)
+	// {
+	// 	low[i]=num[i]=parent[i]=0;
+	// 	adj[i].clear();
+	// }
+	// Bridge_cnt=0;
+	// bridgelist.clear();
+}
+void dfs(int u)
+{
+	int v;
+	low[u]=num[u]=++counter;
+	// bool hasBridgeEdge=false;
+	for(int i=0;i<adj[u].size();i++)
+	{
+		v=adj[u][i].first;
+		if(!low[v])
+		{
+			parent[v]=u;
+			dfs(v);
+			if(low[v]>num[u])
+			{
+				adj[u][i].second=false;
+				int j;
+				for(j=0;j<adj[v].size()&&adj[v][j].first!=u;j++);
+					adj[v][j].second=false;
+				bridgelist.push_back(std::make_pair(std::min(u,v),std::max(u,v)));
+			}
+			low[u]=std::min(low[u],low[v]);
+		}
+		else if(v!=parent[u]||(i<adj[u].size()-1&&adj[u][i+1].first==v))
+		{
+			// ++i;
+			low[u]=std::min(num[v],low[u]);
+		}
+	}
+}
+void dfs_net()
+{
+	for(int i=1;i<=N;i++)
+		if(!num[i])
+		{
+/*			if(callingdfsfirsttime==false)
+			{
+				wronggraph=true;
+				break;
+			}
+			callingdfsfirsttime=false;*/
+			// numchild=0;
+			// dfsroot=i;
+			parent[i]=i;
+			dfs(i);
+		}
+}
+void BCdfs(int u)
+{
+	BC[u]=BCnum;
+	int v;
+
+	// bool hasBridgeEdge=false;
+	for(int i=0;i<adj[u].size();i++)
+	{
+		v=adj[u][i].first;
+		if(!BC[v]&&adj[u][i].second)
+			BCdfs(v);
+	}
+}
+void BCdfs_net()
+{
+	for(int i=1;i<=N;i++)
+		if(!BC[i])
+		{
+			++BCnum;
+			BCdfs(i);
+		}
+}
+/*void printadj()
+{
+	for(int j=1;j<=N;j++)
+	{
+		//printf("%d :",j);
+		for(int i=0;i<adj[j].size();i++)
+			//printf(" %d,",adj[j][i]);
+		//printf("\n");
+	}
+}*/
+int main()
+{
+	int a,b,c;
+
+		// initallise();
+		scanf("%d%d",&N,&c);
+		for(int i=0;i<c;i++)
+		{
+			scanf("%d %d",&a,&b);
+			adj[a].push_back(std::make_pair(b,true));
+			adj[b].push_back(std::make_pair(a,true));
+		}
+		for(int i=1;i<=N;i++)
+			std::sort(adj[i].begin(),adj[i].begin()+adj[i].size());
+		/*while(scanf("%d",&a),a)
+			while(scanf("%d",&b))
+			{
+				adj[a].push_back(b);
+				adj[b].push_back(a);
+				scanf("%c",&c);
+				if(c=='\n')
+					break;
+			}*/
+		// printadj();
+		dfs_net();
+		BCdfs_net();
+		 /* for (int i=1;i<=N;i++)
+            printf("%d : %d\n",i,BC[i]);*/
+/*		std::sort(bridgelist.begin(),bridgelist.begin()+bridgelist.size());
+		printf("%lu critical links\n",bridgelist.size());*/
+		for(int i=0;!wronggraph && i<bridgelist.size();i++)
+		{
+			insert(BC[bridgelist[i].first]);
+			insert(BC[bridgelist[i].second]);
+			// printf("%d - %d\n",bridgelist[i].first,bridgelist[i].second);
+		}
+		if(wronggraph)
+			printf("NO\n");
+		else
+			printf("YES\n");
+	return 0;
+}

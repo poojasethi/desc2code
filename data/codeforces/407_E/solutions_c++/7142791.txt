@@ -1,0 +1,125 @@
+#include<cstdio>
+#include<algorithm>
+#include<cstring>
+#include<map>
+using namespace std;
+bool upmin(int &v,int x){if(x<v){v=x;return true;}return false;}
+bool upmax(int &v,int x){if(x>v){v=x;return true;}return false;}
+const int N=200050;
+int n,k,d;
+long long a[N];
+map<long long,int>next;
+int rmst[N],rmd[N];
+long long md(long long x,int y){
+  if(y)return ((x%y)+y)%y;
+  return x;
+}
+
+int ans=0,ansL=0;
+int sta1[N],top1,sta2[N],top2;
+
+long long T[4*N],Tag[4*N];
+void downtag(int v){
+  T[v*2]+=Tag[v];
+  T[v*2+1]+=Tag[v];
+  Tag[v*2]+=Tag[v];
+  Tag[v*2+1]+=Tag[v];
+  Tag[v]=0;
+}
+long long min(long long a,long long b){if(a<b)return a;return b;}
+void updata(int v){
+  T[v]=min(T[v*2],T[v*2+1]);
+}
+int tmp=0;
+void go(int v,int s,int t,long long x){
+  if(s==t){
+    tmp=s;
+    return;
+  }
+  int mid=(s+t)>>1;
+  downtag(v);
+  if(T[v*2+1]<=x) go(v*2+1,mid+1,t,x);
+  else go(v*2,s,mid,x);
+  updata(v);
+}
+void ask(int v,int s,int t,int l,int r,long long x){
+  if(s>=l&&t<=r){
+    if(tmp)return;
+    if(T[v]>x)return;
+    go(v,s,t,x);
+    return;
+  }
+  int mid=(s+t)>>1;
+  downtag(v);
+  if(mid+1<=r) ask(v*2+1,mid+1,t,l,r,x);
+  if(mid>=l) ask(v*2,s,mid,l,r,x);
+  updata(v);
+}
+
+void add(int v,int s,int t,int l,int r,long long x){
+  if(s>=l&&t<=r){
+    T[v]+=x;Tag[v]+=x;
+    return;
+  }
+  int mid=(s+t)>>1;
+  downtag(v);
+  if(mid>=l) add(v*2,s,mid,l,r,x);
+  if(mid+1<=r) add(v*2+1,mid+1,t,l,r,x);
+  updata(v);
+}
+void set(int v,int s,int t,int p){
+  if(s==t){
+    T[v]=-p;
+    return;
+  }
+  int mid=(s+t)>>1;
+  downtag(v);
+  if(p<=mid) set(v*2,s,mid,p);
+  else set(v*2+1,mid+1,t,p);
+  updata(v);
+}
+int main(){
+  //freopen("sequence.in","r",stdin);
+  //freopen("sequence.out","w",stdout);
+  scanf("%d%d%d",&n,&k,&d);
+  for(int i=1;i<=n;i++)scanf("%I64d",&a[i]);
+  rmd[n+1]=n;rmst[n+1]=n;
+  for(int i=n;i>=1;i--){
+    rmst[i]=next[a[i]];
+    if(!rmst[i])rmst[i]=n;
+    else rmst[i]--;
+    next[a[i]]=i;
+    if(md(a[i],d)==md(a[i+1],d)) rmd[i]=rmd[i+1];
+    else rmd[i]=i;
+  }
+  if(!d){
+    for(int i=1;i<=n;i++)
+      if(upmax(ans,rmd[i]-i+1))
+        ansL=i;
+    printf("%d %d\n",ansL,ansL+ans-1);
+    return 0;
+  }
+  memset(T,63,sizeof(T));
+  for(int i=n;i>=1;i--){
+    upmin(rmst[i],rmd[i]);
+    upmin(rmst[i],rmst[i+1]);
+  }
+  for(int i=1;i<=n;i++)a[i]=(a[i]-md(a[i],d))/d;
+  sta1[0]=n+1;sta2[0]=n+1;
+  for(int i=n;i>=1;i--){
+    for(;a[i]>a[sta1[top1]]&&top1>=1;top1--)
+      add(1,1,n,sta1[top1],sta1[top1-1]-1,a[i]-a[sta1[top1]]);
+    sta1[++top1]=i;
+    for(;a[i]<a[sta2[top2]]&&top2>=1;top2--)
+      add(1,1,n,sta2[top2],sta2[top2-1]-1,-a[i]+a[sta2[top2]]);
+    sta2[++top2]=i;
+    set(1,1,n,i);
+    tmp=0;
+    ask(1,1,n,i,rmst[i],k-i);
+    if(tmp-i+1>=ans){
+      ans=tmp-i+1;
+      ansL=i;
+    }
+  }
+  printf("%d %d\n",ansL,ansL+ans-1);
+}

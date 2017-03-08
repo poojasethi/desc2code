@@ -1,0 +1,182 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+#define  pb push_back
+#define  fr(i,x,y) for(i=x;i<=y;i++)
+#define  frk(k,x,z) for(k=first[x];z=edge[k].y,k;k=edge[k].nxt)
+using namespace std;
+typedef long long LL;
+const int maxn=1010;
+const int maxm=30010;
+const int maxint=(int)2e9+1;
+vector <int> have[maxn];
+struct Edge{int y,nxt,d;}edge[maxm<<1];
+int n,m,E_cnt,st,ed,bel_cnt,vis_num;
+int ans_cost,ans_bian[3];
+int first[maxn],fa[maxn],sta[maxn];
+int bel[maxn],que[maxn],f[maxn],pre[maxn];
+int dfn[maxn],low[maxn],pre1[maxn];
+bool used[maxm],inque[maxn];
+void Insert(int x,int y,int d)
+{
+	edge[++E_cnt]=(Edge){y,first[x],d};
+	first[x]=E_cnt;
+}
+void Read()
+{
+	int i,x,y,d;
+	scanf("%d%d",&n,&m);
+	scanf("%d%d",&st,&ed);
+	E_cnt=1;
+	fr(i,1,m)
+	{
+		scanf("%d%d%d",&x,&y,&d);
+		Insert(x,y,d);
+		Insert(y,x,d);
+	}
+}
+int Get_fa(int x)
+{
+	while(fa[x]!=x)sta[++sta[0]]=x,x=fa[x];
+	while(sta[0])fa[sta[sta[0]--]]=x;
+	return x;
+}
+bool Judge()
+{
+	int i,k,y;
+	fr(i,1,n)fa[i]=i;
+	fr(i,1,n)frk(k,i,y)
+		fa[Get_fa(y)]=Get_fa(i);
+	if(Get_fa(st)!=Get_fa(ed))
+	{
+		printf("0\n0\n");
+		return true;
+	}
+	return false;
+}
+void Tarjan(int x,int la)
+{
+	int k,y;
+	dfn[x]=low[x]=++vis_num;
+	frk(k,x,y)if((k^1)!=la&&!used[k>>1])
+	{
+		if(!dfn[y])
+		{
+			Tarjan(y,k);
+			low[x]=min(low[x],low[y]);
+			if(low[y]<=dfn[x])
+				fa[Get_fa(y)]=Get_fa(x);
+		}else low[x]=min(low[x],dfn[y]);
+	}
+}
+void Cal(int &cost,int &bian)
+{
+	int i,j,x,k,y;
+	vector <int> :: iterator iter;
+	bel_cnt=0;
+	fr(i,1,n)if(Get_fa(i)==i)bel[i]=++bel_cnt;
+	fr(i,1,bel_cnt)have[i].clear();
+	fr(i,1,n)have[bel[i]=bel[Get_fa(i)]].pb(i);
+	memset(inque+1,false,bel_cnt*sizeof(bool));
+	memset(pre+1,0,bel_cnt*sizeof(int));
+	que[que[0]=1]=bel[st];
+	inque[bel[st]]=true;
+	fill(f+1,f+bel_cnt+1,maxint);
+	fr(i,1,que[0])
+	{
+		j=que[i];
+		for(iter=have[j].begin();iter!=have[j].end();iter++)
+		{
+			x=*iter;
+			frk(k,x,y)
+				if(!used[k>>1]&&bel[y]!=bel[x]&&!inque[bel[y]])
+				{
+					y=bel[y];
+					if(f[j]<f[y])f[y]=f[j],pre[y]=pre[j];
+					if(edge[k].d<f[y])f[y]=edge[k].d,pre[y]=k^1;
+					que[++que[0]]=y;
+					inque[y]=true;
+				}
+		}
+	}
+	cost=f[bel[ed]];
+	bian=pre[bel[ed]]>>1;
+}
+void Update(int x,int y=0)
+{
+	ans_bian[0]=1;
+	ans_bian[1]=x;
+	if(y)ans_bian[++ans_bian[0]]=y;
+}
+void Cal1()
+{
+	int i,cost,bian;
+	memset(dfn+1,0,n*sizeof(int));
+	fr(i,1,n)fa[i]=i;
+	vis_num=0;
+	Tarjan(st,0);
+	if(Get_fa(st)==Get_fa(ed))return;
+	Cal(cost,bian);
+	if(cost<ans_cost)ans_cost=cost,Update(bian);
+}
+void Find_Path()
+{
+	int i,x,k,y;
+	memset(inque+1,false,n*sizeof(bool));
+	que[que[0]=1]=st;
+	fr(i,1,que[0])
+	{
+		x=que[i];
+		frk(k,x,y)
+			if(!inque[y])
+			{
+				pre1[y]=k^1;
+				inque[y]=true;
+				que[++que[0]]=y;
+				if(y==ed)return;
+			}
+	}
+}
+void Cal2()
+{
+	int cost,bian,i,cur,j;
+	Find_Path();
+	for(i=ed;i!=st;i=edge[cur].y)
+	{
+		cur=pre1[i];
+		memset(dfn+1,0,n*sizeof(int));
+		fr(j,1,n)fa[j]=j;
+		used[cur>>1]=true;
+		vis_num=0;
+		Tarjan(st,0);
+		if(Get_fa(st)==Get_fa(ed))continue;
+		Cal(cost,bian);
+		if((LL)cost+edge[cur].d<ans_cost)
+		{
+			ans_cost=cost+edge[cur].d;
+			Update(cur>>1,bian);
+		}
+		used[cur>>1]=false;
+	}
+}
+void Solve()
+{
+	int i;
+	ans_cost=maxint;
+	if(Judge())return;
+	Cal1();
+	Cal2();
+	if(ans_cost==maxint)printf("-1\n");
+	else
+	{
+		printf("%d\n%d\n",ans_cost,ans_bian[0]);
+		fr(i,1,ans_bian[0])
+			printf("%d%c",ans_bian[i]," \n"[i==ans_bian[0]]);
+	}
+}
+int main()
+{
+	Read();
+	Solve();
+}

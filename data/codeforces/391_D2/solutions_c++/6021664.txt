@@ -1,0 +1,170 @@
+#include<stdio.h>
+#include<string.h>
+#include<stdlib.h>
+#define mm 60000
+#define min(a,b) (a>b?b:a)
+struct c1
+{
+int l,r,y,ran;
+}x[mm*6];
+struct cc
+{
+  int x,y,l;
+}hor[mm],vrt[mm],a[mm*2],b[mm*2];
+int lena,top,lenb,mid,root,l,r,i,j,k,m,n;
+void qsort(cc a[],int l,int r)
+{
+  int i,j;
+  cc p,mid;
+  i=l;j=r;mid=a[(l+r)/2];
+  do
+  {
+    while (a[i].x<mid.x||(a[i].x==mid.x&&a[i].l<mid.l))i++;
+    while (a[j].x>mid.x||(a[j].x==mid.x&&a[j].l>mid.l))j--;
+    if (i<=j)
+    {
+      p=a[i];a[i]=a[j];a[j]=p;
+      i++;j--;
+    }
+  }while (i<=j);
+  if (i<r)qsort(a,i,r);
+  if (j>l)qsort(a,l,j);
+}
+void init()
+{
+  scanf("%d%d",&n,&m);
+  for (i=1;i<=n;i++){scanf("%d%d%d",&vrt[i].x,&vrt[i].y,&vrt[i].l);r=r>vrt[i].l?r:vrt[i].l;}
+  for (i=1;i<=m;i++){scanf("%d%d%d",&hor[i].x,&hor[i].y,&hor[i].l);r=r>hor[i].l?r:hor[i].l;}
+  top=0;
+}
+void l_rotate(int &k)
+{
+   int i=x[k].l;x[k].l=x[i].r;x[i].r=k;k=i;
+}
+void r_rotate(int &k)
+{int i=x[k].r;x[k].r=x[i].l;x[i].l=k;k=i;
+}
+void insert(int &root,int val)
+{
+  if (root==0)
+  {
+    top++;
+    x[top].y=val;
+    x[top].ran=(rand()%1000000)+1;
+    root=top;
+    return;
+  }
+  if (val<x[root].y)
+  {
+   insert(x[root].l,val);
+   if (x[root].ran<x[x[root].l].ran)l_rotate(root);
+  }
+  else 
+  {insert(x[root].r,val);
+   if (x[root].ran<x[x[root].r].ran)r_rotate(root);
+  }
+}
+void del1(int &root)
+{
+   int l=x[root].l,r=x[root].r;
+   if (x[l].ran==0&&x[r].ran==0){root=0;return;}
+   if (x[l].ran>x[r].ran)
+   {
+      l_rotate(root);
+      del1(x[root].r);
+   }
+   else
+   {
+      r_rotate(root);
+      del1(x[root].l);
+   }
+}
+void del(int &root,int val)
+{
+  if (x[root].y<val)del(x[root].r,val);
+  if (x[root].y>val)del(x[root].l,val);
+  if (x[root].y==val){x[root].ran==-1;del1(root);}
+}
+int find(int root,int l,int r)
+{
+  if (root==0)return 0;
+  if (x[root].y<l)return find(x[root].r,l,r);
+  if (x[root].y>r)return find(x[root].l,l,r);
+  if (x[root].y>=l&&x[root].y<=r)
+  return 1;
+}
+bool can(int k)
+{
+  int i;
+  memset(a,0,sizeof(a));
+  memset(b,0,sizeof(b));
+  lena=0;lenb=0;
+  for (i=1;i<=m;i++)
+     if (hor[i].l>=2*k)
+     {
+        a[++lena].x=hor[i].x+k;  a[lena].y=hor[i].y;a[lena].l=0;
+        a[++lena].x=hor[i].x+hor[i].l-k;a[lena].y=hor[i].y;a[lena].l=1;
+     }
+  for (i=1;i<=n;i++)
+     if (vrt[i].l>=2*k)
+     {
+        b[++lenb].x=vrt[i].x;  
+        b[lenb].y=vrt[i].y+k;
+        b[lenb].l=vrt[i].l-2*k;
+     }
+  qsort(a,1,lena);
+  qsort(b,1,lenb);
+  int l1=1,l2=1;
+  while (l1<=lena&&l2<=lenb)
+  {
+     if (a[l1].x<=b[l2].x&&a[l1].l==0)
+     {
+       insert(root,a[l1].y);
+       l1++; 
+     }
+     else
+     if (a[l1].x<b[l2].x && a[l1].l==1){del(root,a[l1].y);l1++;}
+     else
+     {
+       if (find(root,b[l2].y,b[l2].y+b[l2].l))return 1;
+       l2++;
+     }
+  }
+  return 0;
+}
+void solve()
+{
+int l,r,mid;
+l=0;r=100001000;
+while (l<r)
+{
+  memset(x,0,sizeof(x));top=0;root=0;
+  mid=(l+r+1)/2;
+  if (can(mid))l=mid;
+  else r=mid-1;
+}
+printf("%d\n",l);
+}
+void solve1()
+{
+     int p,ans,i,j;
+     ans=0;
+     for (i=1;i<=n;i++)
+     for (j=1;j<=m;j++)
+     {
+         p=hor[j].y-vrt[i].y;
+         p=min(p,vrt[i].y+vrt[i].l-hor[j].y);
+         p=min(p,vrt[i].x-hor[j].x);
+         p=min(p,hor[j].x+hor[j].l-vrt[i].x);
+         if (ans<p)ans=p;
+     }
+     printf("%d\n",ans);
+}
+int main()
+{
+    init();
+    //solve1();
+    solve();
+    //system("pause");
+    return 0;
+}

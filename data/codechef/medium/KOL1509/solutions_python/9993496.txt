@@ -1,0 +1,146 @@
+#include <map>
+#include <limits>
+#include <vector>
+#include <iostream>
+#include <cmath>
+#include <algorithm>
+#include <deque>
+#include <cassert>
+#include <experimental/optional>
+
+using namespace std;
+
+struct point{
+    int64_t x, y;
+    point(pair<int64_t, int64_t> p): x(p.second), y(p.first){}
+
+    point(int64_t y, int64_t x): x(x), y(y){}
+    point(){}
+
+    bool is_left(const point &p0, const point &p1){
+        return ((p0.x - x)*(p1.y - y) - (p1.x - x)*(p0.y - y) > 0);
+    }
+
+    static int64_t angle(const point &p0, const point &p1, const point &p3){
+        return (p0.x - p3.x)*(p1.y - p3.y) - (p1.x - p3.x)*(p0.y - p3.y);
+    }
+    
+    bool coolinear(const point &p0, const point &p1){
+        return ((p0.x - x)*(p1.y - y) - (p1.x - x)*(p0.y - y) == 0);
+    }
+
+    double value(const point &o) const{
+        if (*this == o) return -numeric_limits<double>::infinity();
+        return -((double) (x - o.x)) / (y - o.y);
+    }
+
+    bool operator==(const point &a) const{
+        return x == a.x && y == a.y;
+    }
+
+    point& operator=(const pair<int64_t, int64_t> &o){
+        this->x = o.second;
+        this->y = o.first;
+        return *this;
+    }
+
+    int64_t distSq(const point &a) const{
+        return (a.x - x)*(a.x - x) + (a.y - y)*(a.y - y);
+    }
+};
+
+template<size_t C>
+void graham_scan(array<point, C> &points, size_t &N){
+    //swap points[1] with the point with the lowest y-coordinate
+    //@precondition: assume points is sorted by y-index
+
+    auto ccw=[](const point &p1, const point &p2, const point &p3){
+        return (p2.x - p1.x)*(p3.y - p1.y) - (p2.y - p1.y)*(p3.x - p1.x);
+    };
+
+    swap(points[0], *(min_element(points.begin(), points.begin()+N, [](const point &a, const point &b) {
+                                            return a.y < b.y || (a.y == b.y && a.x < b.x);
+                                        })));
+
+    point orig = points.front();
+    //sort points by polar angle with points[1]
+    sort(points.begin()+1, points.begin()+N, [orig](const point &a, const point &b) {
+                                                int64_t comp = (a.y - orig.y) * (b.x - a.x) - (b.y - a.y) * (a.x - orig.x);
+                                                if (comp == 0) return a.distSq(orig) < b.distSq(orig);
+                                                return comp < 0;
+                                        });
+
+    // points.erase(unique(points.begin(), points.end()), points.end());
+
+    //We want points[0] to be a sentinel point that will stop the loop
+    //let points[0] = points[N]
+
+    if (N <= 3) return;
+    // points.insert(points.begin(), points.back());
+
+    //M will denote the number of points on the convex hull
+    int64_t M = 2;
+    for (uint64_t i = 3 ; i < N ; ++i){
+        //Find next valid point on convex hull.
+        while (M >= 1 && ccw(points[M-1], points[M], points[i]) <= 0) --M;
+        //Update M and swap points[i] to the correct place.
+        points[++M] = points[i];
+    }
+
+    N = M+1;
+}
+
+/**
+ * Shoelace formula
+ */
+template<size_t C>
+int64_t twiceTheArea(const array<point, C> &points, size_t N){
+    int64_t area = 0;
+
+    point curr = points[N-1];
+    point prev;
+
+    for (size_t i = 0; i < N; ++i){
+        prev = curr;
+        curr = points[i];
+        area += prev.x * curr.y - prev.y * curr.x;
+    }
+
+    return abs(area);
+}
+
+int main(){
+    ios_base::sync_with_stdio(false);
+
+    size_t T;
+    cin >> T;
+
+    array<point, 0x40000> vecs;
+
+    do {
+        size_t N;
+        cin >> N;
+
+        int64_t t;
+        cin >> t;
+
+        int64_t mincoord = t;
+        int64_t maxcoord = t;
+
+        size_t M = 2*(N-1);
+        for (int i = 0 ; i < M ; i+=2){
+            int64_t t;
+            cin >> t;
+
+            vecs[i  ] = point(t, mincoord);
+            vecs[i+1] = point(t, maxcoord);
+
+            mincoord  = min(t, mincoord);
+            maxcoord  = max(t, maxcoord);
+        }
+
+        graham_scan(vecs, M);
+
+        cout << twiceTheArea(vecs, M) << endl;
+    } while (--T);
+}

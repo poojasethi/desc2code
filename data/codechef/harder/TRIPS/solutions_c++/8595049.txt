@@ -1,0 +1,121 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<set>
+#include<map>
+#include<vector>
+#define pii pair<int,int>
+#define fi first
+#define se second
+#define rep(i,j,k) for(int i=(int)j;i<=(int)k;i++)
+#define per(i,j,k) for(int i=(int)j;i>=(int)k;i--)
+using namespace std;
+typedef long long LL;
+typedef double db;
+const int N=110000;
+int head[N],np[N*2],p[N*2],w[N*2],tot,dep[N*2];
+int n,Q;
+int ans[N];
+struct prob{
+	int x,y,D;
+}gg[N];
+vector<int>suo[N];
+int dis[N],fa[N];
+int f[17][N];
+void dfs(int x){
+	for(int u=head[x];u;u=np[u])if(p[u]!=fa[x]){
+		fa[p[u]]=f[0][p[u]]=x;
+		dis[p[u]]=dis[x]+w[u];
+		dep[p[u]]=dep[x]+1;
+		dfs(p[u]);
+	}
+}
+inline int lca(int x,int y){
+	if(dep[x]<dep[y]){int tmp=x;x=y;y=tmp;}
+	per(i,16,0)if((dep[x]-dep[y])&(1<<i))x=f[i][x];
+	if(x==y)return x;
+	per(i,16,0)if(f[i][x]^f[i][y]){
+		x=f[i][x];y=f[i][y];
+	}
+	return f[0][x];
+}
+pii JJJ(int x,int y,int D){
+	int aa=0;
+	if(x==y)return pii(0,0);
+	while(1){
+		int t=x;
+		per(i,16,0)if(f[i][t])if(dep[f[i][t]]>=dep[y])if(dis[x]-dis[f[i][t]]<=D){
+			t=f[i][t];
+		}
+		aa++;
+		if(t==y){
+			return pii(aa,dis[x]-dis[y]);
+		}
+		x=t;
+	}
+}
+void baoli(int id){
+	int x=gg[id].x;
+	int y=gg[id].y;
+	int D=gg[id].D;
+	int lp=lca(x,y);
+	pii dy=JJJ(x,lp,D);
+	pii dr=JJJ(y,lp,D);
+	int V=dy.fi+dr.fi;
+	if(dy.se+dr.se<=D&&dy.se!=0&&dr.se!=0)V--;
+	ans[id]=V;
+}
+int g[17][N];
+void WORK(int D){
+	rep(i,1,n){
+		int x=i;
+		per(j,16,0)if(f[j][x])if(dis[i]-dis[f[j][x]]<=D)x=f[j][x];
+		g[0][i]=x;
+		if(x==i)g[0][i]=0;
+	}
+	rep(j,1,16)rep(x,1,n)g[j][x]=g[j-1][g[j-1][x]];
+	for(vector<int>::iterator it=suo[D].begin();it!=suo[D].end();++it){
+		int id=*it;
+		int x=gg[id].x;
+		int y=gg[id].y;
+		int lp=lca(x,y);
+		int _ans=0;
+		per(i,16,0)if(g[i][x])if(dep[g[i][x]]>dep[lp]){
+			x=g[i][x];_ans+=(1<<i);
+		}
+		per(i,16,0)if(g[i][y])if(dep[g[i][y]]>dep[lp]){
+			y=g[i][y];_ans+=(1<<i);
+		}
+		//printf("%d %d %d %d %d\n",id,x,y,lp,_ans);
+		if(x!=lp)_ans++;
+		if(y!=lp)_ans++;
+		if(x!=lp&&y!=lp){
+			if(dis[x]+dis[y]-2*dis[lp]<=D)_ans--;
+		}
+		ans[id]=_ans;
+	}
+}
+int main(){
+	scanf("%d",&n);
+	rep(i,1,n-1){
+		int u,v,d;scanf("%d%d%d",&u,&v,&d);
+		++tot;p[tot]=v;np[tot]=head[u];head[u]=tot;w[tot]=d;
+		++tot;p[tot]=u;np[tot]=head[v];head[v]=tot;w[tot]=d;
+	}
+	dfs(1);
+	rep(j,1,16)rep(i,1,n)f[j][i]=f[j-1][f[j-1][i]];
+	scanf("%d",&Q);
+	rep(i,1,Q){
+		scanf("%d%d%d",&gg[i].x,&gg[i].y,&gg[i].D);
+		if(gg[i].D>300)baoli(i);
+		else{
+			suo[gg[i].D].push_back(i);
+		}
+	}
+	rep(step,2,300)if(suo[step].size()){
+		WORK(step);
+	}
+	rep(i,1,Q)printf("%d\n",ans[i]);
+	return 0;
+}
+

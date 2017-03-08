@@ -1,0 +1,79 @@
+#include <cstdio>
+#include <cstring>
+using namespace std;
+
+const int N = 10005 + 2005;
+const int M = 2005;
+const int E = 2 * (N + N + M * 10 + M);
+const int INF = 2e9;
+
+int n, m, g, sx[N], v[N], lis[N], S, T;
+int to[E], next[E], end[N], f[E], tms(1);
+int cnt[N], cur[N], pred[N], dat[N], dist[N];
+
+int min(int x, int y){return x<y?x:y;}
+
+void lk(int x, int y, int c)
+{
+	to[++tms]=y, next[tms]=end[x], end[x]=tms, f[tms]=c;
+	to[++tms]=x, next[tms]=end[y], end[y]=tms, f[tms]=0;
+}
+
+int SAP(int S, int T)
+{
+	for(int i=0; i<=T; i++) cnt[i]=0, cur[i]=end[i], dist[i]=1;
+	dist[T]=0, cnt[1]=T-1, cnt[0]=1, dat[S]=INF;
+	
+	int x(S), ret(0), p, q;
+	for(;;)
+	{
+		for(p=cur[x]; p; p=next[p]) if(f[p]&&dist[to[p]]+1==dist[x]) break;
+		if(p)
+		{
+			cur[x]=p, dat[to[p]]=min(dat[x],f[p]), pred[to[p]]=p, x=to[p];
+			if(x==T) for(ret+=dat[T]; x!=S; x=to[pred[x]^1]) f[pred[x]]-=dat[T], f[pred[x]^1]+=dat[T];
+		}
+		else
+		{
+			if(--cnt[dist[x]]==0) return ret;
+			for(dist[x]=T+1, q=end[x]; q; q=next[q]) if(f[q]&&dist[to[q]]+1<dist[x]) dist[x]=dist[to[q]]+1, cur[x]=q;
+			++cnt[dist[x]];
+			if(dist[S]>T) return ret;
+			if(x!=S) x=to[pred[x]^1];
+		}
+	}
+}
+
+int main()
+{
+	int ans(0);
+	
+	scanf("%d%d%d", &n, &m, &g);
+	for(int i=1; i<=n; i++) scanf("%d", &sx[i]);
+	for(int i=1; i<=n; i++) scanf("%d", &v[i]);
+	S = n+m+1, T = n+m+2;
+	
+	for(int i=1; i<=n; i++) if(!sx[i]) lk(i,T,v[i]); else lk(S,i,v[i]);
+	
+	for(int i=1, c, w, k, f; i<=m; i++)
+	{
+		scanf("%d%d%d", &c, &w, &k), ans += w;
+		for(int j=1; j<=k; j++) scanf("%d", &lis[j]);
+		scanf("%d", &f); if(f) w += g;
+		if(c)
+		{
+			lk(S, n+i, w);
+			for(int j=1; j<=k; j++) lk(n+i, lis[j], INF);
+		}
+		else
+		{
+			lk(n+i, T, w);
+			for(int j=1; j<=k; j++) lk(lis[j], n+i, INF);
+		}
+	}
+	
+	ans -= SAP(S, T);
+	printf("%d\n", ans);
+	
+	return 0;
+}

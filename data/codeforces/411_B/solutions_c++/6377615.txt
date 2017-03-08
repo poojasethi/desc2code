@@ -1,0 +1,33 @@
+#include<bits/stdc++.h>
+
+int a[105][105],s[105],c[105];
+const int inf=1<<30;
+
+int main()
+{
+    int n,m,k,i,j;
+    scanf("%d%d%d",&n,&m,&k);
+    for(i=1;i<=n;i++)
+    for(j=1;j<=m;j++)
+        scanf("%d",&a[i][j]);
+    for(j=1;j<=m;j++)
+    {
+        for(i=1;i<=n;i++)
+        if(!s[i]&&a[i][j])
+        {
+            if(c[a[i][j]]<j)
+                c[a[i][j]]=j;
+            else
+                c[a[i][j]]=inf;
+        }
+        for(i=1;i<=n;i++)
+        if(!s[i]&&a[i][j])
+        {
+            if(c[a[i][j]]==inf)
+                s[i]=j;
+        }
+    }
+    for(i=1;i<=n;i++)
+        printf("%d\n",s[i]);
+    return 0;
+}

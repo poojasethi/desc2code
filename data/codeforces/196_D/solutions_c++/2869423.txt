@@ -1,0 +1,52 @@
+//196D
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+using namespace std;
+const int MAXD=400000;
+const int MAXN=400000;
+typedef unsigned long long ull;
+char a[MAXN+10],b[MAXN+10];
+int hash1[MAXN+10],hash2[MAXN+10];
+const int MAGIC=1000000007;
+int n,d;
+int exps[MAXD+10];
+bool check(int id,int len){
+	if(id<len)return true;
+	else return (hash1[id]-hash1[id-len]*exps[len])*exps[id-len+1]!=hash2[id]-hash2[id-len];
+}
+bool dfs(int id,bool modified){
+	if(id>n){
+		for(char i=1;i<=n;i++)
+			putchar(b[i]);
+		return true;
+	}
+	for(b[id]=modified?'a':a[id];b[id]<='z';b[id]++){
+		hash1[id]=hash1[id-1]*MAGIC+b[id];
+		hash2[id]=hash2[id-1]+b[id]*exps[id];
+		if(!check(id,d) || !check(id,d+1))continue;
+		if(dfs(id+1,modified || b[id]!=a[id]))return true;
+	}
+	return false;
+}
+int main(){
+	exps[0]=1;
+	scanf("%d",&d);
+	scanf("%s",a+1);
+	n=strlen(a+1);
+	for(int i=1;i<=n;i++)
+		exps[i]=exps[i-1]*MAGIC;
+	for(int i=n;i>=1;i--)
+		if(a[i]=='z')
+			a[i]='a';
+		else{
+			++a[i];
+			goto Found;
+		}
+	puts("Impossible");
+	return 0;
+Found:;
+	if(!dfs(1,false))
+		puts("Impossible");
+	return 0;
+}

@@ -1,0 +1,146 @@
+#include <iostream>
+#include <vector>
+#include <map>
+#include <queue>
+#include <cstdlib>
+
+using namespace std;
+
+const int limite=1000000;
+
+typedef long long int ll;
+
+struct elem {
+  int p;
+  ll c;
+  elem() {}
+  elem(int p,ll c):p(p),c(c) {}
+};
+
+bool operator<(elem e1,elem e2)
+{
+  return e1.c>e2.c;
+}
+
+void escribe(int anyadir,map<int,ll> mapa)
+{
+  cout<<anyadir;
+  for (map<int,ll>::iterator it=mapa.begin();it!=mapa.end();it++)
+    cout<<"("<<it->first<<","<<it->second<<")";
+  cout<<endl;
+}
+
+
+void purgar(map<int,ll> &mapa,priority_queue<elem> &q,int p)
+{
+  /*
+  cout<<"purgar"<<endl;
+  escribe(0,mapa);
+  */
+  for (;;) {
+    if (int(mapa.size())==0) break;
+    map<int,ll>::iterator it=mapa.end();
+    it--;
+    if (it->first<=p) break;
+    mapa.erase(it);
+  }
+  while (not q.empty() and p<q.top().p) q.pop();
+  //escribe(0,mapa);
+}
+
+int fusionar(int i1,map<int,ll> &mapa1,priority_queue<elem> &q1,ll &anyadir1,
+	     int i2,map<int,ll> &mapa2,priority_queue<elem> &q2,ll &anyadir2)
+{
+  if (int(mapa1.size())<int(mapa2.size()))
+    return fusionar(i2,mapa2,q2,anyadir2,i1,mapa1,q1,anyadir1);
+  if (int(mapa2.size())==0) {
+    cout<<-1<<endl;
+    exit(0);
+  }
+  /*
+  cout<<"fusionar "<<i1<<" "<<i2<<endl;
+  escribe(anyadir1,mapa1);
+  escribe(anyadir2,mapa2);
+  */
+  ll minimo1=q1.top().c;
+  ll minimo2=q2.top().c;
+  anyadir1+=anyadir2+minimo2;
+  for (map<int,ll>::iterator it=mapa2.begin();it!=mapa2.end();it++) {
+    int p=it->first;
+    ll c=it->second+minimo1-minimo2;
+    if (mapa1.count(p)==0 or c<mapa1[p])
+      mapa1[p]=c;
+    q1.push(elem(p,c));
+  }
+  //escribe(anyadir1,mapa1);
+  return i1;
+}
+
+
+int n,m;
+vector<int> g[limite];
+int profundidad[limite];
+map<int,ll> mapa[limite];
+priority_queue<elem> vq[limite];
+ll anyadir[limite];
+int indice[limite];
+
+void iniciar(int u,int p)
+{
+  indice[u]=u;
+  profundidad[u]=1+profundidad[p];
+  mapa[u][profundidad[u]]=0;
+  vq[u].push(elem(profundidad[u],0));
+  vector<int> &ar=g[u];
+  vector<int> nextar;
+  for (int i=0;i<int(ar.size());i++) {
+    int v=ar[i];
+    if (v!=p) {
+      iniciar(v,u);
+      nextar.push_back(v);
+    }
+  }
+  ar=nextar;
+}
+
+void calcula(int u)
+{
+  //cout<<"calcula "<<u<<endl;
+  vector<int> &ar=g[u];
+  for (int i=0;i<int(ar.size());i++) {
+    int v=ar[i];
+    calcula(v);
+    int iv=indice[v];
+    purgar(mapa[iv],vq[iv],profundidad[u]);
+    int iu=indice[u];
+    indice[u]=fusionar(iu,mapa[iu],vq[iu],anyadir[iu],
+		       iv,mapa[iv],vq[iv],anyadir[iv]);
+    //cout<<"indice "<<u<<" "<<indice[u]<<endl;
+  }
+  //cout<<"fincalcula "<<u<<endl;
+}
+
+int main()
+{
+  ios::sync_with_stdio(false);
+  cin>>n>>m;
+  for (int i=0;i<n-1;i++) {
+    int u,v;
+    cin>>u>>v;
+    g[u].push_back(v);
+    g[v].push_back(u);
+  }
+  iniciar(1,0);
+  for (int i=0;i<m;i++) {
+    int u,v,c;
+    cin>>u>>v>>c;
+    int pv=profundidad[v];
+    if (mapa[u].count(pv)==0 or c<mapa[u][pv])
+      mapa[u][pv]=c;
+    vq[u].push(elem(pv,c));
+  }
+  calcula(1);
+  int i1=indice[1];
+  priority_queue<elem> &q=vq[i1];
+  cout<<q.top().c+anyadir[i1]<<endl;
+}

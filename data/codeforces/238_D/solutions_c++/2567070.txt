@@ -1,0 +1,84 @@
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+using namespace std;
+
+#define N 101000
+#define L 10
+#define INF 0x3f3f3f3f
+
+struct State
+{
+	int num[L];
+	State operator -(State p) const {
+		for (int i = 0; i < L; i ++) p.num[i] = num[i] - p.num[i];
+		return p;
+	}
+}s, rec[N * 10];
+int cnt[N], n, m, t[N][2], stack[2][N];
+struct list
+{
+	int nex[2], a;
+	bool d;
+}l[N];
+char str[N];
+bool vis[N];
+
+void init()
+{
+	scanf("%d%d", &n, &m);
+	scanf("%s", str + 1);
+	for (int i = 1; i <= n; i ++)
+		l[i].a = (str[i] >= '0' && str[i] <= '9') ? (str[i] - '0') : (str[i] == '>'), 
+		l[i].d = (str[i] == '<' || str[i] == '>'),
+		l[i].nex[0] = (i == 1) ? -1 : (i - 1), l[i].nex[1] = (i == n) ? -1 : i + 1;
+}
+void Del(int p)
+{
+	if (l[p].nex[1] != -1) l[l[p].nex[1]].nex[0] = l[p].nex[0];
+	if (l[p].nex[0] != -1) l[l[p].nex[0]].nex[1] = l[p].nex[1];
+}
+void Pop(int ti, int id, int s[], int l, int r)
+{
+	while (s[0] >= 1 && s[s[0]] >= l && s[s[0]] <= r) {
+		t[s[s[0]]][id] = ti;
+		s[0] --;
+	}
+}
+void solve()
+{
+	int tot = 0, MP = 0;
+	memset(t, 0x3f, sizeof(t));
+	while (MP < n) {
+		stack[0][0] = stack[1][0] = 0;
+		for (int DP = 1, CP = MP + 1; 1; CP = l[CP].nex[DP]) {
+			MP = max(MP, CP);
+			if (!l[CP].d) {
+				s.num[l[CP].a --]++;
+				if (l[CP].a < 0) Del(CP);
+			}
+			else {
+				DP = l[CP].a;
+				if (l[CP].nex[DP] != -1 && l[l[CP].nex[DP]].d) Del(CP);
+			}
+			rec[++ tot] = s;
+			if (!vis[CP]) vis[CP] = true, stack[0][++ stack[0][0]] = CP, stack[1][++ stack[1][0]] = CP;
+			if (l[CP].nex[DP] == -1) {Pop(tot, DP, stack[DP], min(CP, (DP == 0) ? 1 : n), max(CP, (DP == 0) ? 1 : n)); break;}
+			Pop(tot, DP, stack[DP], min(CP, l[CP].nex[DP] - ((DP == 1) ? 1 : -1)), max(CP, l[CP].nex[DP] - ((DP == 1) ? 1 : -1)));
+		}
+	}
+	for (int i = 1; i <= m; i ++) {
+		int l, r;
+		scanf("%d%d", &l, &r);
+		State CC = rec[min(t[r][1], t[l][0])] - rec[min(t[l][1], t[l][0]) - 1];
+		for (int j = 0; j < L; j ++) printf("%d ", CC.num[j]);
+		puts("");
+	}
+	return ;
+}
+int main()
+{
+	init();
+	solve();
+	return 0;
+}

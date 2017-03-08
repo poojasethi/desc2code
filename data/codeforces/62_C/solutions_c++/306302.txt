@@ -1,0 +1,144 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <iostream>
+#include <vector>
+#include <cstring>
+#include <queue>
+#include <cmath>
+#include <cstdlib>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+typedef long double ld;
+const ld eps=1e-10;
+const ld eps1=eps*10;
+
+struct point
+{
+	ld x,y;
+	point(){}
+	point(ld x,ld y):x(x),y(y){}
+
+	point operator+(const point& p) const
+	{
+		return point(x+p.x,y+p.y);
+	}
+
+	point operator-(const point& p) const
+	{
+		return point(x-p.x,y-p.y);
+	}
+
+	point operator*(const ld p) const
+	{
+		return point(x*p,y*p);
+	}
+
+	ld len2() const
+	{
+		return x*x+y*y;
+	}
+
+	ld len() const
+	{
+		return sqrt(len2());
+	}
+
+	point norm() const
+	{
+		return (*this)*(1.0/len());
+	}
+
+	point rot90() const
+	{
+		return point(y,-x);
+	}
+};
+
+bool operator<(const point& a,const point& b)
+{
+	return a.x<b.x-eps || fabs(a.x-b.x)<eps && a.y<b.y-eps;
+}
+
+bool operator==(const point& a,const point& b)
+{
+	return fabs(a.x-b.x)<eps && fabs(a.y-b.y)<eps;
+}
+
+ld cross(const point& a,const point& b)
+{
+	return a.x*b.y-a.y*b.x;
+}
+
+bool intersect(const point& a,const point& b,const point& c,const point& d,point& r)
+{
+	ld q=cross(b-a,d-c);
+	if(fabs(q)<eps)
+		return false;
+	ld q1=cross(c-a,d-c)/q;
+	ld q2=cross(b-a,a-c)/q;
+	if(q1<-eps || q1>1+eps || q2<-eps || q2>1+eps) return false;
+	r=a+(b-a)*q1;
+	return true;
+}
+
+bool check(const vector<pair<point,point> >& p,const point& v)
+{
+	for(int i=0;i<(int)p.size();i+=3)
+	{
+		bool f[3]={false,false,false};
+		for(int j=0;j<3;++j)
+			f[j]=cross(v-p[i+j].first,p[i+j].second-p[i+j].first)>0;
+		if(f[0]==f[1] && f[1]==f[2])
+			return true;
+	}
+	return false;
+}
+
+int main(int argc, char *argv[])
+{
+#ifdef _DEBUG
+	freopen("input.txt","r",stdin);
+#endif
+
+	int n;
+	cin>>n;
+	vector<pair<point,point> > p(n*3);
+	vector<vector<point> > w(n*3);
+	for(int i=0;i<n;++i)
+	{
+		point a,b,c;
+		cin>>a.x>>a.y>>b.x>>b.y>>c.x>>c.y;
+		p[i*3]=make_pair(a,b);
+		p[i*3+1]=make_pair(b,c);
+		p[i*3+2]=make_pair(c,a);
+	}
+	ld sum=0;
+	for(int i=0;i<(int)p.size();++i)
+	{
+		vector<point>& ww=w[i];
+		ww.push_back(p[i].first);
+		ww.push_back(p[i].second);
+		for(int j=0;j<(int)p.size();++j)
+			if(i!=j)
+			{
+				point r;
+				if(intersect(p[i].first,p[i].second,p[j].first,p[j].second,r))
+					ww.push_back(r);
+			}
+		sort(ww.begin(),ww.end());
+		ww.resize(unique(ww.begin(),ww.end())-ww.begin());
+
+		for(int j=1;j<(int)ww.size();++j)
+		{
+			point a=ww[j-1],b=ww[j];
+			point mid=(a+b)*0.5;
+			point z=(b-a).norm().rot90()*eps1;
+			if(check(p,mid+z)!=check(p,mid-z))
+				sum+=(b-a).len();
+		}
+	}
+	printf("%.10lf",(double)sum);
+
+	return 0;
+}

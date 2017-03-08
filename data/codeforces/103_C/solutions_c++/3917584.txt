@@ -1,0 +1,27 @@
+#include<cstdio>
+
+long long n,k,pos;
+int p;
+
+long long need(long long pos){
+	long long res=0,nn=n;
+	if(nn%2==1){
+		res++;nn--;
+	}
+	if(pos==n) return 1;
+	if(pos%2==0)
+		return res+(nn-pos)/2+1;
+	return res+nn/2+(nn-pos)/2+1;
+}
+
+int main(){
+	scanf("%I64d%I64d%d",&n,&k,&p);
+	for(int i=0;i<p;i++){
+		scanf("%I64d",&pos);
+		if(need(pos)>k) printf(".");
+		else printf("X");
+	}
+	printf("\n");
+
+	return 0;
+}

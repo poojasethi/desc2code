@@ -1,0 +1,115 @@
+#include<bits/stdc++.h>
+#define N 400010
+#define M 40000010
+#define mod 1000000007
+#define ll long long
+using namespace std;
+ll ca[M],cb[M],sum[M],ans,a,b;
+int n,m,i,x,ln,y,np,l,t,tot,now;
+char s[10];
+int cs[N],dad[N],sz[N],head[N],ne[N],v[N],wz[N],top[N],lc[M],rc[M],root[N];
+void add(int x,int y){v[++l]=y;ne[l]=head[x];head[x]=l;}
+void dfs(int x)
+{
+	cs[x]=cs[dad[x]]+1;sz[x]=1;
+	for(int i=head[x];i;i=ne[i])
+		if(v[i]!=dad[x])dad[v[i]]=x,dfs(v[i]),sz[x]+=sz[v[i]];
+}
+void slpf(int x)
+{
+	int mx=0;wz[x]=++ln;
+	for(int i=head[x];i;i=ne[i])
+		if(sz[v[i]]>sz[mx]&&v[i]!=dad[x])mx=v[i];
+	if(mx)top[mx]=top[x],slpf(mx);
+	for(int i=head[x];i;i=ne[i])
+		if(v[i]!=mx&&v[i]!=dad[x])top[v[i]]=v[i],slpf(v[i]);
+}
+int lca(int x,int y)
+{
+	for(;top[x]!=top[y];x=dad[top[x]])
+		if(cs[top[x]]<cs[top[y]])swap(x,y);
+	return cs[x]>cs[y]?y:x;
+}
+void newp(int &cur,int cur1)
+{
+	cur=++np;
+	lc[cur]=lc[cur1];
+	rc[cur]=rc[cur1];
+	sum[cur]=sum[cur1];
+	ca[cur]=ca[cur1];
+	cb[cur]=cb[cur1];
+}
+void add(int l,int r,int L,int R,ll A,ll B,int &cur,int cur1)
+{
+	newp(cur,cur1);
+	if(L<=l&&R>=r)
+	{
+		ca[cur]+=A+(l-L)*B;cb[cur]+=B;
+		sum[cur]+=(2*A+B*(l+r-2*L))*(r-l+1)/2;
+		return;
+	}
+	int mid=(l+r)>>1;
+	if(L<=mid)add(l,mid,L,R,A,B,lc[cur],lc[cur1]);
+	if(R>mid)add(mid+1,r,L,R,A,B,rc[cur],rc[cur1]);
+	sum[cur]=sum[lc[cur]]+sum[rc[cur]]+(2*ca[cur]+cb[cur]*(r-l))*(r-l+1)/2;
+	}
+ll query(int l,int r,int L,int R,int cur)
+{
+	if(L<=l&&R>=r)return sum[cur];
+	int mid=(l+r)>>1;
+	ll ans=(2*ca[cur]+cb[cur]*(L+R-2*l))*(R-L+1)/2;
+	if(L<=mid)ans+=query(l,mid,L,min(mid,R),lc[cur]);
+	if(R>mid)ans+=query(mid+1,r,max(mid+1,L),R,rc[cur]);
+	return ans;
+}
+int main()
+{
+	scanf("%d%d",&n,&m);
+	for(i=1;i<n;i++)
+	{
+		scanf("%d%d",&x,&y);
+		add(x,y);add(y,x);
+	}
+	dfs(1);
+	top[1]=1;
+	slpf(1);
+	while(m--)
+	{
+		scanf("%s%d",s,&x);
+		if(s[0]=='c')
+		{
+			scanf("%d%lld%lld",&y,&a,&b);
+			x=(x+ans)%n+1;y=(y+ans)%n+1;
+			t=lca(x,y);root[++tot]=root[now];now=tot;
+			for(;cs[top[x]]>cs[t];x=dad[top[x]],a+=b)
+			{
+				a+=b*(cs[x]-cs[top[x]]);
+				add(1,n,wz[top[x]],wz[x],a,-b,root[now],root[now]);
+			}
+			a+=b*(cs[x]-cs[t]);
+			if(x!=t)add(1,n,wz[t]+1,wz[x],a-b,-b,root[now],root[now]);
+			a+=b*(cs[y]-cs[t]);
+			for(;cs[top[y]]>cs[t];y=dad[top[y]],a-=b)
+			{
+				a-=b*(cs[y]-cs[top[y]]);
+				add(1,n,wz[top[y]],wz[y],a,b,root[now],root[now]);
+			}
+			a-=b*(cs[y]-cs[t]);
+			add(1,n,wz[t],wz[y],a,b,root[now],root[now]);
+		}
+		if(s[0]=='q')
+		{
+			scanf("%d",&y);
+			x=(x+ans)%n+1;y=(y+ans)%n+1;ans=0;
+			for(;top[x]!=top[y];x=dad[top[x]])
+			{
+				if(cs[top[x]]<cs[top[y]])swap(x,y);
+				ans+=query(1,n,wz[top[x]],wz[x],root[now]);
+			}
+			if(cs[x]>cs[y])swap(x,y);
+			ans+=query(1,n,wz[x],wz[y],root[now]);
+			printf("%lld\n",ans);
+		}
+		if(s[0]=='l')now=(x+ans)%(tot+1);
+	}
+}

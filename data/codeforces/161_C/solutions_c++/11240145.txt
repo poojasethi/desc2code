@@ -1,0 +1,32 @@
+#include <iostream>
+#include <cstdlib>
+#include <cstdio>
+#include <stdio.h>
+using namespace std;
+long long c2,c3,v2,v3,ans=0;
+void l(long long &c2,long long &v2,long long c,long long v,long long e,long long r){
+  c2=min(max(c,e),e+r-1)-e;
+  v2=max(min(v,e+r-1),e)-e;
+}
+void m(){
+  ans=max(ans,min(v2,v3)-max(c2,c3));
+}
+int main(){
+  //freopen("input.txt","r",stdin);
+  //freopen("output.txt","w",stdout);
+  long long q,w,e,r,t,c,c1,v,v1;
+  cin>>c>>v>>c1>>v1;
+  c--;c1--;
+  for(w=1,e=2;w<31;w++,e*=2){
+   l(c2,v2,c ,v ,c -(c %e),e);
+   l(c3,v3,c1,v1,c1-(c1%e),e);
+   m();
+   l(c3,v3,c1,v1,c1-(c1%e)+e,e);
+   m();
+   l(c2,v2,c ,v ,c -(c %e)+e,e);
+   l(c3,v3,c1,v1,c1-(c1%e),e);
+   m();
+   l(c3,v3,c1,v1,c1-(c1%e)+e,e);
+   m();}
+  cout<<ans;
+  return 0;}

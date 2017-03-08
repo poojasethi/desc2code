@@ -1,0 +1,101 @@
+#include <cstdio>
+#include <algorithm>
+#include <iostream>
+#define M 900000
+#define N 400000
+#define oo 10000000
+
+using namespace std;
+typedef long long ll;
+
+pair<int,int> u[6];
+
+class S{
+public:
+    S *e, *d;
+    int x, y;
+    int tmp;
+    pair<int,int> ms[3];
+    
+    void update(int a, int b, S* ee, S* dd){
+        e = ee, d = dd;
+        x = a, y = b;
+        tmp = 0;
+        ms[0].first = 0, ms[0].second = b-a+1;
+        ms[1].first = oo, ms[1].second = 0;
+        ms[2].first = oo, ms[2].second = 0;
+    }
+    
+    void add(int a, int b, int v){
+        if(a <= x && b >= y){
+            ms[0].first += v;
+            ms[1].first += v;
+            ms[2].first += v;
+            tmp += v;
+        }else{
+            if(tmp){
+                e->add(e->x,e->y,tmp);
+                d->add(d->x,d->y,tmp);
+                tmp = 0;
+            }
+            if(a <= e->y) e->add(a,min(e->y,b),v);
+            if(b >= d->x) d->add(max(a,d->x),b,v);
+            
+            u[0] = e->ms[0], u[1] = e->ms[1];
+            u[2] = d->ms[0], u[3] = d->ms[1];
+            u[4] = e->ms[2], u[5] = d->ms[2];
+            sort(u,u+6);
+            
+            ms[0] = u[0];
+            int cnt = 0;
+            for(int i=1; i<6 && cnt < 3; i++){
+                if(u[i].first == ms[cnt].first) ms[cnt].second += u[i].second;
+                else if(cnt < 2) ms[++cnt] = u[i];
+                else break;
+            }
+        }
+    }
+};
+
+S ss[M];
+int p[N];
+int g[N];
+
+int cnt;
+S* build(int a, int b){
+    S* s = &ss[cnt++];
+    s->update(a,b,NULL,NULL);
+    if(a!=b){
+        s->e = build(a,(a+b)/2);
+        s->d = build(((a+b)/2) + 1, b);
+    }
+    return s;
+}
+
+int main(){
+    cnt = 0;
+    
+    int n;
+    scanf("%d",&n);
+    for(int i=1; i<=n; i++){
+        scanf("%d",&g[i]);
+        p[g[i]] = i;
+    }
+    
+    S* root = build(1,n);
+    root->add(1,1,1);
+    ll resp = 0LL;
+    for(int i=2; i<=n; i++){
+        root->add(1,i,1);
+        if(p[i] > 1 && g[p[i]-1] < i) root->add(1,g[p[i]-1],-1);
+        if(p[i] < n && g[p[i]+1] < i) root->add(1,g[p[i]+1],-1);
+        
+        for(int j=0; j<3; j++){
+            if(root->ms[j].first >= 1 && root->ms[j].first <= 2)
+                resp = resp + root->ms[j].second;
+        }
+        resp--;
+    }   
+    cout << resp << endl;
+    return 0;
+}

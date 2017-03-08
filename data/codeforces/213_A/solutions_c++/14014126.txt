@@ -1,0 +1,66 @@
+#include <bits/stdc++.h>
+using namespace std ;
+const int N = 205;
+int c[N], a[N][N], na[N];
+int n;
+int go(int S) 
+{
+	int t=n;
+	int u[N] = {}, remain=n;
+	while(remain) 
+	{
+		int change = 1;
+		while(change) 
+		{
+			change=0;
+			for(int i=1;i<=n;i++) 
+			{
+				if(c[i]!=S || u[i]) 
+					continue;
+				int fail=0;
+				for(int j=0;j<na[i];j++)
+				{
+					if(!u[a[i][j]]) 
+					{
+						fail=1;
+						break;
+					}
+				}
+				if(!fail) 
+				{
+					change=1;
+					u[i]=1;
+					--remain;
+				}
+			}
+		}
+		if(remain) 
+		{ 
+			++t; 
+			S = S%3+1; 
+		}
+	}
+	return t;
+}
+
+int main(void) 
+{
+	scanf("%d",&n);
+	for(int i=1;i<=n;i++)
+	{ 
+		scanf("%d", &c[i]);
+	}
+	for(int i=1;i<=n;i++) 
+	{
+		scanf("%d", &na[i]);
+		for(int j=0;j<na[i];j++)
+		{
+			scanf("%d", &a[i][j]);
+		}
+	}
+	int ans = 1000000;
+	for(int i=1;i<=3;i++) 
+		ans = min(ans, go(i));
+	printf("%d\n", ans);
+	return 0;
+}

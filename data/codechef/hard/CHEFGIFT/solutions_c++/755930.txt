@@ -1,0 +1,158 @@
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#include <stdint.h>
+
+int DEBUG = 0;
+
+#define INFTY 0x0FFFFFFF
+
+int code(int dist) {
+  return dist >= INFTY ? -1 : dist;
+}
+
+
+int Min(int a, int b) {
+  return (a < b ? a : b);
+}
+int Max(int a, int b) {
+  return (a > b ? a : b);
+}
+int Abs(int a) {
+  return (a >= 0 ? a : -a);
+}
+
+int *alloc1d(int M) {
+  int *a = new int [M];
+  return a;
+}
+
+void print1d(int *vec, int M, const char *str=NULL) {
+  if(str != NULL) printf("%s ", str);
+  for(int i=0; i<M; i++) {
+    if(i>0) printf(" ");
+    printf("%d", vec[i]);
+  }
+  printf("\n");
+}
+
+int ** alloc2d(int M, int N) {
+  int **a = new int * [M];
+  for(int i=0; i<M; i++) a[i] = new int [N];
+  return a;
+}
+
+void print2d(int **a, int M, int N, const char *str=NULL) {
+  if(str != NULL) printf("%s\n", str);
+  for(int i=0; i<M; i++) {
+    for(int j=0; j<N; j++) {
+      printf (" %2d", a[i][j]);
+    }
+    printf("\n");
+  }
+}
+
+#define MAXN 200
+
+main(int argc, char **argv) {
+  DEBUG = (argc>=2) ? atoi(argv[1]) : 0;
+
+  int toll[101][101];
+  int C[101][101];
+  int minCost[101][101];
+
+  int T;
+  scanf("%d", &T);
+  for(int t=1; t<=T; t++) {
+    int amt, ntoll, nroad; // D, n, m;
+    if(scanf("%d%d%d", &amt, &ntoll, &nroad)!=3) {
+      printf("Error reading\n"); exit(1);
+    }
+    if(DEBUG) {
+      printf("\namt= %d ntoll= %d nroad= %d\n", amt, ntoll, nroad);
+    }
+    for(int i=1; i<=nroad; i++) {
+      for(int j=1; j<=ntoll; j++) {
+	// for(int j=1; j<=ntoll; j++) {
+	if(scanf("%d", &toll[i][j])!=1) {
+	  printf("Error reading\n"); exit(1);
+	}
+      }
+    } 
+    for(int i=1; i<=nroad; i++) {
+      for(int j=1; j<=nroad; j++) {
+	if(scanf("%d", &C[i][j]) != 1) {
+	  // if(scanf("%d", &C[j][i]) != 1) {
+	  printf("Error reading\n"); exit(1);
+	}
+	if(i==j) {
+	  C[i][j] = 0;
+	}
+      }
+    }
+
+    //=========================================================
+    // find shortest path of all pairs (Floyd-Warshall)
+    // O(V^3)
+    //=========================================================
+    int nv = nroad;
+    for(int k=1; k<=nv; k++) {
+      for(int i=1; i<=nv; i++) {
+	for(int j=1; j<=nv; j++) {
+	  C[i][j] = Min(C[i][j], C[i][k] + C[k][j]);
+	}
+      }
+    }
+    //=========================================================
+    // End of Floyd-Warshall
+    //=========================================================
+    
+    // actual work
+    int curMinCost = 0x0FFFFFFF;
+    for(int i=1; i<=nroad; i++) {
+      minCost[i][1] = toll[i][1];
+      if(minCost[i][1] < curMinCost) {
+	curMinCost = minCost[i][1];
+      }
+      //prevRoad[i][1] = -1;
+    }
+    for(int j=2; j<=ntoll; j++) {
+      for(int i=1; i<=nroad; i++) {
+	curMinCost = 0x0FFFFFFF;
+	for(int k=1; k<=nroad; k++) {
+	  int newCost;
+	  if( k == i ) {
+	    newCost = minCost[k][j-1]+toll[i][j];
+	  } else {
+	    newCost = minCost[k][j-1]+C[k][i]+toll[i][j];
+	  }
+	  if(newCost <= curMinCost) {
+	    curMinCost = newCost;
+	    //prevRoad[i][j] = k;
+	  }
+	}
+	minCost[i][j] = curMinCost;
+      }
+    }
+    curMinCost = 0x0FFFFFFF;
+    for(int i=1; i<=nroad; i++) {
+      if( minCost[i][ntoll] < curMinCost ) {
+	curMinCost = minCost[i][ntoll];
+      }
+    }
+
+    if(curMinCost <= amt) {
+      printf("%d\n", amt - curMinCost);
+    } else {
+      printf("-1\n");
+    }
+  } // end of T
+  
+  exit(0);
+  }
+
+// g++ CHEFGIFT.cpp; cat CHEFGIFT.in | ./a.out
+
+

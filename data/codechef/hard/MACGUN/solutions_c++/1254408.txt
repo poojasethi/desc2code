@@ -1,0 +1,195 @@
+#include<iostream>
+#include<stack>
+#include<queue>
+#include<cstdio>
+#include<algorithm>
+#include<vector>
+#include<set>
+#include<string>
+#include<cstring>
+#include<map>
+#include<numeric>
+#include<sstream>
+#include<cmath>
+using namespace std;
+#define all(v) (v).begin(), (v).end()
+#define rall(v) (v).rbegin(), (v).rend()
+#define pb push_back
+#define f(i,x,y) for(int i = x; i<y; i++ )
+#define FORV(it,A) for(vector<int>::iterator it = A.begin(); it!= A.end(); it++)
+#define FORS(it,A) for(set<int>::iterator it = A.begin(); it!= A.end(); it++)
+#define quad(x) (x) * (x)
+#define mp make_pair
+#define clr(x, y) memset(x, y, sizeof x)
+#define fst first
+#define snd second
+#define N 750
+#define NN 150000
+#define inf 1000000010
+#define eps 1e-7
+typedef pair<int, int> pii;
+typedef long long ll;
+typedef long double ld;
+
+
+int Vx[] = {-2, -2, 2, 2};
+int Vy[] = {2, -2, -2, 2};
+
+char M[N][N];
+bool pode[N][N];
+int per[N][N];
+int cnt[2];
+int n, m;
+pii V[2][NN];
+int a, b;
+
+//bool seen[N*N];
+//int matchL[N*N], matchR[N*N];
+int tam1, tam0;
+//vector <int> E[N*N];
+
+inline bool fora (int a, int b){
+    if (min (a,b) < 0 || a >= n || b >= m) return 1;
+    return 0;
+}
+
+/*bool bpm( int u ){
+    for (int i = 0; i < E[u].size(); i++){
+    	int v = E[u][i];
+        if( seen[v] ) continue;
+        seen[v] = true;
+
+        if( matchR[v] < 0 || bpm( matchR[v] ) ){
+            matchL[u] = v;
+            matchR[v] = u;
+            return true;
+        }
+    }
+    return false;
+}*/
+int le[NN], ri[NN], distx[NN], disty[NN], q[NN];
+int to[NN], head[NN], next[NN], edg;
+
+void reset(){
+    int sz = max (tam1, tam0);
+    f (i, 0, sz) head[i] = ri[i] = le[i] = -1;
+    edg = 0;
+}
+inline void add(int u, int v){
+    to[edg] = v; next[edg] = head[u]; head[u] = edg++;
+}
+bool bfs(){
+    bool flag = false;
+    f(i, 0, tam0) distx[i] = 0;
+    f(i, 0, tam1) disty[i] = 0;
+    int sz = 0;
+    f(i, 0, tam0) if(le[i] == -1) q[sz++] = i;
+    f(ii, 0, sz){
+        int u = q[ii];
+        for(int i = head[u]; i != -1; i = next[i]){
+            int v = to[i];
+            if(!disty[v]){
+                disty[v] = distx[u] + 1;
+                if(ri[v] == -1) flag = true;
+                else distx[ri[v]] = disty[v] + 1, q[sz++] = ri[v];
+            }
+        }
+    }
+    return flag;
+}
+bool dfs(int u){
+    for(int i = head[u]; i != -1; i = next[i]){
+        int v = to[i];
+        if(disty[v] == distx[u] + 1){
+            disty[v] = 0;
+            if(ri[v] == -1 || dfs(ri[v])){
+                le[u] = v;
+                ri[v] = u;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+int hopcroft(){
+    int res = 0;
+    while(bfs())
+        f(i, 0, tam0)
+            if(le[i] == -1 && dfs(i)) res++;
+    return res;
+}
+
+inline int solve(){
+	tam0 = cnt[0];
+	tam1 = cnt[1];
+	reset();
+	//f (i, 0, tam0) E[i].clear();
+	f (i, 0, cnt[0]){
+		f (t, 0, 4){
+			int xx = V[0][i].fst+Vx[t], yy = V[0][i].snd+Vy[t];
+			if (fora(xx,yy)) continue;
+			int bx = V[0][i].fst+Vx[t]/2, by = V[0][i].snd+Vy[t]/2; 
+			if (per[xx][yy] >= 0 && M[bx][by] != 'P') add (i, per[xx][yy]); //E[i].pb(per[xx][yy]);
+		}
+	}
+	
+	/*memset( matchL, -1, sizeof( matchL ) );
+    memset( matchR, -1, sizeof( matchR ) );
+    int conta = 0;
+    for( int i = 0; i < tam0; i++ ){
+        memset( seen, 0, sizeof( seen ) );
+        if( bpm( i ) ) conta++;
+    }*/
+    return tam1+tam0-hopcroft();
+}
+
+
+
+void dfss (int x, int y, int ql){
+    if (fora (x, y) || per[x][y] != -1) return;
+    if (pode[x][y]){
+    	per[x][y] = cnt[ql]++;
+        V[ql][cnt[ql]-1] = mp(x,y);
+    }
+    else per[x][y] = -2;
+    f (i, 0, 4){
+        int xx = x+Vx[i], yy = y+Vy[i];
+        dfss (xx, yy, ql^1);
+    }
+}
+
+int main (){
+    while (1){
+    	clr (per, -1);
+        scanf("%d %d", &n, &m); if (n+m == 0) break;
+        f (i, 0, n) scanf(" %s", M[i]);
+        f (i, 0, n) f (j, 0, m) pode[i][j] = 1;
+        f (i, 0, n) f (j, 0, m){
+            if (M[i][j] != 'F') pode[i][j] = 0;
+            if (M[i][j] == 'G'){
+                f (t, 0, 4){
+                    int x = i+Vx[t], y = j+Vy[t];
+                    int bx = i+Vx[t]/2, by = j+Vy[t]/2;
+                    if (fora(x,y)) continue;
+                    if (M[bx][by] != 'P') pode[x][y] = 0;
+                }
+            }
+        }
+        /*printf("pode: \n");
+        f (i, 0, n){
+            f (j, 0, m) printf("%d", pode[i][j]); printf("\n");
+        }*/
+        int ans = 0;
+        f (inix, 0, n) f (iniy, 0, m) if (per[inix][iniy] == -1){
+            clr (cnt, 0);
+            dfss (inix, iniy, 0);
+            ans += solve();
+            //printf("tam0 = %d tam1 =%d ans = %d\n", V[0].size(), V[1].size(), ans);
+        }
+        printf("%d\n", ans);
+    }
+    return 0;
+}
+
+

@@ -1,0 +1,203 @@
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <algorithm>
+#include <iostream>
+#include <iomanip>
+#include <map>
+#include <set>
+#include <list>
+#include <queue>
+#include <vector>
+#include <bitset>
+#include <complex>
+#include <cmath>
+#include <ctime>
+#include <cassert>
+
+using namespace std;
+
+#define pb push_back
+#define mp make_pair
+#define ft first
+#define sd second
+#define REP(i, n) for (int i = 0; i < (int)(n); i++)
+#define foreach(e, x) for (__typeof(x.begin()) e = x.begin(); e != x.end(); e++)
+typedef long long LL;
+typedef pair<int, int> PII;
+
+const int maxn = 200010;
+
+int O, ll, rr, tot;
+int del[2][maxn], op[2][maxn], ed[2][maxn], sk[2][maxn*2];
+
+vector<int> res, graph[2][maxn];
+vector< pair<PII, int> > edge[2];
+vector<PII> cnt, nxt, ret;
+
+void readIn(int &x)
+{
+	char ch;
+	while ((ch = getchar()) && (ch < '0' || ch > '9'));
+	x = ch-'0';
+	while ((ch = getchar()) && ch >= '0' && ch <= '9') x = x*10+ch-'0';
+}
+
+int pos(int o, int u, int v)
+{
+	if (u > v) swap(u, v);
+	return lower_bound(edge[o].begin(), edge[o].end(), make_pair(make_pair(u, v), -1))->sd;
+}
+
+struct Tree
+{
+	int l, r, L, R;
+	Tree *lc, *rc;
+	
+	vector<PII> S;
+
+	Tree(int _l, int _r) : l(_l), r(_r)
+	{
+		S.clear();
+		lc = l+1 < r ? new Tree(l, (l+r) >> 1) : NULL;
+		rc = l+1 < r ? new Tree((l+r) >> 1, r) : NULL;
+	}
+
+	void insert(int ll, int rr, int x, int y)
+	{
+		if (ll <= l && rr >= r) S.push_back(make_pair(y, x));
+		if (l+1 < r) x < (l+r) >> 1 ? lc->insert(ll, rr, x, y) : rc->insert(ll, rr, x, y);
+	}
+
+	void query()
+	{
+		// [ll, rr)
+		if (ll <= l && rr >= r) {
+			while (L <= R) {
+				PII x = S[L];
+				if (x.ft < ll) {
+					int p = pos(O ^ 1, sk[O][x.ft], sk[O][x.sd]);
+					if (! del[O][p]) {
+						ret.push_back(make_pair(x.ft, x.sd));
+						del[O][p] = 1;
+					}
+					L++;
+				}
+				else break;
+			}
+			while (L <= R) {
+				PII x = S[R];
+				if (x.ft >= rr) {
+					int p = pos(O ^ 1, sk[O][x.ft], sk[O][x.sd]);
+					if (! del[O][p]) {
+						ret.push_back(make_pair(x.ft, x.sd));
+						del[O][p] = 1;
+					}
+					R--;
+				}
+				else break;
+			}
+		}
+		else {
+			if (ll < (l+r) >> 1) lc->query();
+			if (rr > (l+r) >> 1) rc->query();
+		}
+	}
+
+	void fit()
+	{
+		sort(S.begin(), S.end());
+		L = 0; R = S.size()-1;
+		if (l+1 < r) lc->fit(), rc->fit();
+	}
+} *root[2];
+
+void dfs(int o, int t, int p)
+{
+	op[o][t] = tot;
+	sk[o][tot++] = t;
+	for (int i = 0; i < graph[o][t].size(); i++) {
+		int k = graph[o][t][i];
+		if (k == p) continue;
+		dfs(o, k, t);
+	}
+	ed[o][t] = tot;
+	sk[o][tot++] = t;
+}
+
+int main()
+{
+	//freopen("input.txt", "r", stdin);
+	//freopen("output.txt", "w", stdout);
+	
+	int n, u, v, x;
+	readIn(n);
+	for (int o = 0; o < 2; o++)
+		for (int i = 1; i < n; i++) {
+			readIn(u); u--; v = i;
+			if (u > v) swap(u, v);
+			graph[o][u].push_back(v);
+			graph[o][v].push_back(u);
+			edge[o].push_back(make_pair(make_pair(u, v), i));
+		}
+	readIn(x);
+	u = edge[0][x-1].ft.ft; v = edge[0][x-1].ft.sd;
+	cnt.push_back(make_pair(u, v));
+	sort(edge[0].begin(), edge[0].end());
+	sort(edge[1].begin(), edge[1].end());
+
+	for (int o = 0; o < 2; o++) {
+		tot = 0;
+		dfs(o, 0, -1);
+	}
+
+	for (int o = 0; o < 2; o++) {
+		root[o] = new Tree(0, 2*n);
+		int _o = o ^ 1;
+		for (int i = 0; i < edge[_o].size(); i++) {
+			if (o == 1 && edge[_o][i].sd == x) continue;
+			u = op[o][edge[_o][i].ft.ft];
+			v = op[o][edge[_o][i].ft.sd];
+			if (u > v) swap(u, v);
+			root[o]->insert(0, v, u, v);
+			root[o]->insert(u+1, 2*n, v, u);
+		}
+	}
+	root[0]->fit();
+	root[1]->fit();
+
+	for (int o = 0; ; o ^= 1) {
+		O = o;
+		if (cnt.size() == 0) break;
+		nxt.clear();
+		o == 0 ? puts("Blue") : puts("Red");
+		res.clear();
+		for (int i = 0; i < cnt.size(); i++) {
+			u = cnt[i].ft, v = cnt[i].sd;
+			res.push_back(pos(o, u, v));
+		}
+		sort(res.begin(), res.end());
+		for (int i = 0; i < res.size(); i++) {
+			printf("%d", res[i]);
+			i+1 == res.size() ? puts("") : printf(" ");
+		}
+
+		for (int i = 0; i < cnt.size(); i++) {
+			u = cnt[i].ft, v = cnt[i].sd;
+			if (op[o][u] > op[o][v]) swap(u, v);
+			// u -> v
+			ll = op[o][v], rr = ed[o][v]+1;
+			ret.clear();
+			root[o]->query();
+			for (int j = 0; j < ret.size(); j++) {
+				u = sk[o][ret[j].ft];
+				v = sk[o][ret[j].sd];
+				nxt.push_back(make_pair(u, v));
+			}
+		}
+		cnt.swap(nxt);
+	}
+
+	return 0;
+}
+

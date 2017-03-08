@@ -1,0 +1,146 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+#include<iostream>
+#include<fstream>
+#include<map>
+#include<ctime>
+#include<set>
+#include<queue>
+#include<cmath>
+#include<vector>
+#include<bitset>
+#include<functional>
+#define x first
+#define y second
+#define mp make_pair
+#define pb push_back
+#define REP(i,l,r) for((i)=(l);(i)<=(r);++(i))
+#define REP2(i,l,r) for((i)=(l);(i)!=(r);++(i))
+using namespace std;
+
+typedef long long LL;
+typedef double ld;
+
+const int MAX=300000+10;
+
+LL ans=0;
+int n[3];
+vector<int> ne[3][MAX];
+LL di[3][MAX],mm[3]={0,0,0};
+
+void read(vector<int> ne1[MAX],int n1)
+{
+	int i;
+	REP(i,1,n1-1)
+	{
+		int a,b;
+		scanf("%d%d",&a,&b);
+		ne1[a].pb(b);
+		ne1[b].pb(a);
+	}
+}
+
+LL dist[MAX],sum[MAX];
+
+void dfs(int u,int fa,vector<int> ne[MAX])
+{
+	int i;
+	dist[u]=0;
+	sum[u]=1;
+	REP2(i,0,(int)ne[u].size())
+	{
+		int v=ne[u][i];
+		if(v!=fa)
+		{
+			dfs(v,u,ne);
+			sum[u]+=sum[v];
+			dist[u]+=sum[v]+dist[v];
+		}
+	}
+}
+
+LL tt;
+LL dep[MAX],t1,t2,t0;
+
+void dfs3(int u,int fa,vector<int> ne[MAX])
+{
+	int i;
+	REP2(i,0,(int)ne[u].size())
+	{
+		int v=ne[u][i];
+		if(v==fa)
+			continue;
+		di[t0][v]=di[t0][u] - (sum[v]+dist[v]) + (n[t0]-sum[v]) + dist[v];
+		dfs3(v,u,ne);
+	}
+}
+
+pair<LL,LL> dfs2(int u,int fa,vector<int> ne[MAX])
+{
+	int i;
+	pair<LL,LL> ans=mp(0,0);
+	ans.x=max(ans.x,(mm[t1]+n[t1])*(n[t0]+n[t2])+di[t0][u]*n[t1] + dep[u]*n[t1]*n[t2]);
+	ans.y=max(ans.y,(mm[t2]+n[t2])*(n[t0]+n[t1])+di[t0][u]*n[t2] + dep[u]*n[t1]*n[t2]);
+
+	LL del=2*dep[u]*n[t1]*n[t2];
+	tt=max(tt,ans.x+ans.y-del);
+
+	REP2(i,0,(int)ne[u].size())
+	{
+		int v=ne[u][i];
+		if(v==fa)
+			continue;
+		dep[v]=dep[u]+1;
+		pair<LL,LL> tmp=dfs2(v,u,ne);
+
+		tt=max(tt,ans.x+tmp.y-del);
+		tt=max(tt,ans.y+tmp.x-del);
+
+		if(tmp.x>ans.x)
+			ans.x=tmp.x;
+		if(tmp.y>ans.y)
+			ans.y=tmp.y;
+	}
+	return ans;
+}
+
+LL work(int i,int j,int k)
+{
+	tt=0;
+	t0=i;
+	t1=j;
+	t2=k;
+	dfs2(1,0,ne[i]);
+	return tt;
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt","r",stdin);freopen("output.txt","w",stdout);
+#endif
+	int i,j;
+	scanf("%d%d%d",&n[0],&n[1],&n[2]);
+	LL val=0;
+	REP2(i,0,3)
+	{
+		read(ne[i],n[i]);
+
+		dfs(1,0,ne[i]);
+
+		t0=i;
+		di[i][1]=dist[1];
+		dfs3(1,0,ne[i]);
+
+		REP(j,1,n[i])
+		{
+			val+=di[i][j];
+			mm[i]=max(mm[i],di[i][j]);
+		}
+	}
+	val/=2;
+	cout<<val+max( max( work(0,1,2), work(1,0,2) ), work(2,0,1) )<<endl;
+	return 0;
+}

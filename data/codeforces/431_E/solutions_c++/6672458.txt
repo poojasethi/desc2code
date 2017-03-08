@@ -1,0 +1,103 @@
+#include <iostream>
+#include <vector>
+#include <sstream>
+#include <bitset>
+#include <cstdlib>
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+
+#define FOR(i,a,b) for (int i=a;  i<=b;  i++)
+#define DFU(i,a,b) for (int i=a;  i>=b;  i--)
+#define SIZE(a) int(a.size())
+
+using namespace std;
+
+struct point
+{
+    int tp,a;
+    long long value;
+};
+
+vector<long long> st;
+long long mang[555555][2],a[555555];
+int n,m;
+point d[555555];
+
+void push(int tp, long long value, int x)
+{
+    while (x<=SIZE(st)) {
+        mang[x][tp]+=value;
+        x=x+(x & (x ^ (x-1)));
+    }
+}
+
+long long get(int tp, int x)
+{
+    long long ans=0;
+    while (x) {
+        ans+=mang[x][tp];
+        x=x-(x & (x ^ (x-1)));
+    }
+    return ans;
+}
+
+int found(long long x)
+{
+    return lower_bound(st.begin(),st.end(),x)-st.begin()+1;
+}
+
+void init()
+{
+    st.clear();
+    FOR(i,1,n) st.push_back(a[i]);
+    FOR(i,1,m) if (d[i].tp==1) st.push_back(d[i].value);
+    sort(st.begin(),st.end());
+    st.resize(unique(st.begin(),st.end())-st.begin());
+    memset(mang,0,sizeof(mang));
+    FOR(i,1,n) push(0,a[i],found(a[i]));
+    FOR(i,1,n) push(1,1,found(a[i]));
+}
+
+void solve()
+{
+    int x;
+    FOR(i,1,m) if (d[i].tp==1) {
+        x=d[i].a;
+        push(0,-a[x],found(a[x]));
+        push(1,-1,found(a[x]));
+        a[x]=d[i].value;
+        push(0,a[x],found(a[x]));
+        push(1,1,found(a[x]));
+    }
+    else {
+        int low=1,high=SIZE(st),mid,pick;
+        long long gt;
+        while (low+1<high) {
+            mid=(low+high)/2;
+            gt=get(1,mid)*st[mid-1]-get(0,mid);
+            if (gt<=d[i].value) low=mid; else high=mid;
+        }
+        gt=get(1,high)*st[high-1]-get(0,high);
+        if (gt<=d[i].value) pick=high;
+        else pick=low;
+        gt=get(1,pick)*st[pick-1]-get(0,pick);
+        printf("%lf\n",(double)st[pick-1]+(double)(d[i].value-gt)/get(1,pick));
+    }
+}
+
+int main()
+{
+    //freopen("test.inp","r",stdin);
+    cin >>n>>m;
+    FOR(i,1,n) scanf("%I64d",&a[i]);
+    FOR(i,1,m) {
+        scanf("%d",&d[i].tp);
+        if (d[i].tp==1) scanf("%d%I64d",&d[i].a,&d[i].value);
+        else scanf("%I64d",&d[i].value);
+    }
+    init();
+    solve();
+    return 0;
+}

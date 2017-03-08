@@ -1,0 +1,152 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+
+#define F first
+#define S second
+#define MAXX 1000000000
+#define MAXN 100005
+#define MAXB 20
+
+using namespace std;
+
+int n, c[MAXN], H[MAXN], T[MAXN][MAXB], L[MAXN][MAXB], R[MAXN][MAXB];
+pair<int, int> d[MAXN][3];
+vector<int> a[MAXN];
+
+int DFS(int u, int h, int prev)
+{
+  H[u] = h;
+  c[u] = h;
+  d[u][0] = make_pair(h, u);
+  for (int i = 0, v; i < a[u].size(); i++)
+    if (a[u][i] != prev)
+    {
+      v = a[u][i];
+      T[v][0] = u;
+      for (int j = 1; j < MAXB; j++) 
+        T[v][j] = T[T[v][j - 1]][j - 1];
+        
+      DFS(v, h + 1, u);
+      
+      c[u] = max(c[u], c[v]);      
+      pair<int, int> p(c[v], v);
+      for (int j = 0; j < 3; j++)
+        if (p > d[u][j]) swap(p, d[u][j]);
+    }
+}
+
+int find(int u, int l)
+{
+  for (int i = MAXB - 1; i >= 0; i--)
+    if ((l >> i) & 1) u = T[u][i];
+  return u;
+}
+
+int LCA(int u, int v)
+{
+  v = find(v, H[v] - H[u]);
+  for (int i = MAXB - 1; i >= 0; i--)
+    if (T[u][i] != T[v][i])
+    { 
+      u = T[u][i];
+      v = T[v][i];
+    }
+  return (u != v) ? T[u][0] : u;
+}
+
+int getL(int u, int l)
+{
+  int x = -MAXX;
+  for (int i = MAXB - 1; i >= 0; i--)
+    if ((l >> i) & 1) 
+    {
+      x = max(x, L[u][i]);
+      u = T[u][i];
+    }
+  return x;
+}
+
+int getR(int u, int l)
+{
+  int x = -MAXX;
+  for (int i = MAXB - 1; i >= 0; i--)
+    if ((l >> i) & 1) 
+    {
+      x = max(x, R[u][i]);
+      u = T[u][i];
+    }
+  return x;
+}
+
+main()
+{
+  scanf("%d", &n);
+  for (int i = 1; i < n; i++)
+  {
+    int u, v;
+    scanf("%d%d", &u, &v);
+    a[u].push_back(v);
+    a[v].push_back(u);
+  }
+  
+  DFS(1, 0, 0);
+  
+  for (int i = 0; i <= n; i++)
+    for (int j = 0; j < MAXB; j++) 
+      L[i][j] = R[i][j] = -2 * MAXN;
+    
+  for (int i = 2; i <= n; i++)
+  {
+    L[i][0] = d[T[i][0]][((d[T[i][0]][0].S != i) ? 0 : 1)].F - 2 * H[T[i][0]];
+    R[i][0] = d[T[i][0]][((d[T[i][0]][0].S != i) ? 0 : 1)].F;
+  } 
+   
+  for (int j = 1; j < MAXB; j++)
+    for (int i = 2; i <= n; i++)
+    {
+      L[i][j] = max(L[i][j - 1], L[T[i][j - 1]][j - 1]);
+      R[i][j] = max(R[i][j - 1], R[T[i][j - 1]][j - 1]);
+    }
+  
+  int q;
+  scanf("%d", &q);
+  while (q--)
+  {
+    int x, y;
+    scanf("%d%d", &x, &y);
+    
+    if (H[x] > H[y]) swap(x, y);
+    
+    int z = LCA(x, y);
+    int dx = H[x] - H[z];
+    int dy = H[y] - H[z];
+    
+    int k = (dx + dy - 1) / 2;
+    int g = find(y, k);
+    
+    int res = max(c[y] - H[y], getL(y, k) + H[y]);
+    
+    if (x != z)
+    {
+      res = max(res, c[x] - H[x]);
+      res = max(res, getL(x, H[x] - H[z] - 1) + H[x]);
+      res = max(res, getR(g, H[g] - H[z] - 1) + H[x] - 2 * H[z]);
+      
+      int xx = find(x, H[x] - H[z] - 1);
+      int yy = find(y, H[y] - H[z] - 1);
+      if (c[xx] < c[yy] || (c[xx] == c[yy] && xx < yy)) swap(xx, yy);
+      
+      int i = (xx == d[z][0].S) ? ((yy == d[z][1].S) ? 2 : 1) : 0;
+      res = max(res, d[z][i].F + H[x] - 2 * H[z]);  
+    } 
+    else
+      res = max(res, getR(g, H[x] - H[g]) - H[x]);
+      
+    res = max(res, getL(z, H[z]) + H[x]);
+    
+    printf("%d\n", res);
+  }
+  
+//  system("pause");
+}

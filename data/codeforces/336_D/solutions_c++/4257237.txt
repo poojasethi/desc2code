@@ -1,0 +1,44 @@
+#include<stdio.h>
+#define M 1000000007
+long long fct[200001];
+long long inv[200001];
+long long fiv[200001];
+
+void calc(int n){
+    int i;
+    fct[0]=1;
+    for(i=1;i<=n;i++)fct[i]=fct[i-1]*i%M;
+    inv[1]=1;
+    for(i=2;i<=n;i++)inv[i]=M-(M/i)*inv[M%i]%M;
+    fiv[0]=1;
+    for(i=1;i<=n;i++)fiv[i]=fiv[i-1]*inv[i]%M;
+}
+
+long long C(int n,int k){
+    return (fct[n]*fiv[k]%M)*fiv[n-k]%M;
+}
+
+int n,m,p;
+
+long long dfs(int a,int b,int r){
+    if(b>n)return 0;
+    if(a==1){
+        if(m==0&&p==r)return 1;
+        if(m==1&&p!=r)return 1;
+        return 0;
+    }
+    long long ret=0;
+    if(r==p)ret+=C(a-1,n-b);
+    return (ret+dfs(a-1,b+1,(r+1)%2))%M;
+}
+
+int main(){
+    scanf("%d %d %d",&n,&m,&p);
+    if(n+m==1){
+        printf("%d\n",n^p?1:0);
+        return 0;
+    }
+    calc(n+m);
+    printf("%I64d\n",dfs(n+m,0,0));
+    return 0;
+}

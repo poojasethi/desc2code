@@ -1,0 +1,335 @@
+//Coder: Balajiganapathi
+//#define TRACE
+#define DEBUG
+
+#include <algorithm>
+#include <bitset>
+#include <deque>
+#include <cassert>
+#include <cctype>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <list>
+#include <map>
+#include <numeric>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <utility>
+#include <vector>
+
+using namespace std;
+
+typedef long long ll;
+typedef vector<int> vi;
+typedef pair<int,int> pi;
+typedef vector<string> vs;
+
+// Basic macros
+#define st          first
+#define se          second
+#define all(x)      (x).begin(), (x).end()
+#define ini(a, v)   memset(a, v, sizeof(a))
+#define re(i,s,n)  	for(int i=s;i<(n);++i)
+#define rep(i,s,n)  for(int i=s;i<=(n);++i)
+#define fr(i,n)     re(i,0,n)
+#define repv(i,f,t) for(int i = f; i >= t; --i)
+#define rev(i,f,t)  repv(i,f - 1,t)
+#define frv(i,n)    rev(i,n,0)
+#define pu          push_back
+#define mp          make_pair
+#define sz(x)       (int)(x.size())
+
+const int oo = 2000000009;
+const double eps = 1e-9;
+
+#ifdef TRACE
+    #define trace1(x)                cerr << #x << ": " << x << endl;
+    #define trace2(x, y)             cerr << #x << ": " << x << " | " << #y << ": " << y << endl;
+    #define trace3(x, y, z)          cerr << #x << ": " << x << " | " << #y << ": " << y << " | " << #z << ": " << z << endl;
+    #define trace4(a, b, c, d)       cerr << #a << ": " << a << " | " << #b << ": " << b << " | " << #c << ": " << c << " | " << #d << ": " << d << endl;
+    #define trace5(a, b, c, d, e)    cerr << #a << ": " << a << " | " << #b << ": " << b << " | " << #c << ": " << c << " | " << #d << ": " << d << " | " << #e << ": " << e << endl;
+    #define trace6(a, b, c, d, e, f) cerr << #a << ": " << a << " | " << #b << ": " << b << " | " << #c << ": " << c << " | " << #d << ": " << d << " | " << #e << ": " << e << " | " << #f << ": " << f << endl;
+
+#else
+
+    #define trace1(x)
+    #define trace2(x, y)
+    #define trace3(x, y, z)
+    #define trace4(a, b, c, d)
+    #define trace5(a, b, c, d, e)
+    #define trace6(a, b, c, d, e, f)
+
+#endif
+
+const int mx = 50004, log_mx = 18;
+char str[mx];
+int sa[mx], inv_sa[mx], sa_rank[mx][log_mx], lcp[mx];
+int log_n, n;
+
+class sa_entry {
+    public:
+    int rank[2], pos;
+
+    bool operator <(const sa_entry &s) const {
+        if(rank[0] == s.rank[0]) return rank[1] < s.rank[1];
+        else return rank[0] < s.rank[0];
+    }
+
+    bool operator == (const sa_entry &s) const {
+        return rank[0] == s.rank[0] && rank[1] == s.rank[1];
+    }
+} sa_nxt[mx];
+
+int get_lcp(int x, int y) {
+    int _x = x, _y = y;
+    int ret = 0;
+
+    for(int i = log_n - 1; i >= 0 && x < n && y < n; --i) {
+        if(sa_rank[x][i] == sa_rank[y][i]) {
+            ret += (1 << i);
+            x += (1 << i);
+            y += (1 << i);
+        }
+    }
+    //assert(ret <= min(n - _x, n - _y));
+
+    return ret;
+}
+
+
+void build_sa() {
+    for(int i = 0; i < n; ++i) sa_rank[i][0] = str[i];
+
+    if(n == 1) sa_rank[0][0] = 0;
+
+    int siz = 1;
+    for(log_n = 1; siz < n; ++log_n, siz *= 2) {
+        for(int i = 0; i < n; ++i) {
+            sa_nxt[i].rank[0] = sa_rank[i][log_n - 1];
+            sa_nxt[i].rank[1] = i + siz < n? sa_rank[i + siz][log_n - 1]: -1;
+            sa_nxt[i].pos = i;
+        }
+
+        sort(sa_nxt, sa_nxt + n);
+        for(int i = 0; i < n; ++i) {
+            sa_rank[sa_nxt[i].pos][log_n] = (i > 0 && sa_nxt[i] == sa_nxt[i - 1])? sa_rank[sa_nxt[i - 1].pos][log_n]: i;
+        }
+    }
+    for(int i = 0; i < n; ++i) sa[i] = -1;
+
+    for(int i = 0; i < n; ++i) {
+        assert(sa[sa_rank[i][log_n - 1]] == -1);
+        sa[sa_rank[i][log_n - 1]] = i;
+    }
+
+    for(int i = 0; i < n; ++i) inv_sa[sa[i]] = i;
+
+    lcp[0] = 0;
+    for(int i = 1; i < n; ++i) lcp[i] = get_lcp(sa[i - 1], sa[i]);
+    fr(i, n) trace3(i, sa[i], lcp[i]);
+}
+
+int rmq[mx][log_mx], loglen[mx];
+
+void init_rmq() {
+    loglen[0] = 0;
+    for(int i = 1; i < mx; ++i) {
+        loglen[i] = loglen[i - 1];
+        if((1 << (loglen[i] + 1)) <= i) ++loglen[i];
+    }
+}
+
+void pre_rmq() {
+    assert((1 << log_n) > n);
+    fr(i, n) rmq[i][0] = lcp[i];
+    re(j, 1, log_n) fr(i, n) {
+        if(i + (1 << (j - 1)) < n) rmq[i][j] = min(rmq[i][j - 1], rmq[i + (1 << (j - 1))][j - 1]);
+        else rmq[i][j] = rmq[i][j - 1];
+    }
+}
+
+int rmq_query(int i, int j) {
+    trace2(i, j);
+    assert(i < j);
+    ++i;
+    if(i > j) return 0;
+    int k = loglen[j - i + 1];
+    assert(k < log_n);
+    assert(i + (1 << k) - 1 <= j && j - (1 << k) + 1 >= i);
+    assert(j - i + 1 <= (1 << (k + 1)));
+    int ret =  min(rmq[i][k], rmq[j - (1 << k) + 1][k]);
+    trace4(i, j, k, ret);
+
+    return ret;
+}
+
+int siz, m;
+bool byidx;
+class Query {
+    public:
+    int l, r, idx;
+    ll ans;
+
+    bool operator <(const Query &q) const {
+        if(byidx) return idx < q.idx;
+        if(l / siz == q.l / siz) return r < q.r;
+
+        return l / siz < q.l / siz;
+    }
+
+    void disp() {
+    }
+
+} queries[mx];
+
+set<int> pos;
+int cur_lo, cur_hi;
+ll sub;
+
+void add(int x) {
+    trace1("ADD");
+    assert(x == cur_lo || x == cur_hi);
+    x = inv_sa[x];
+    int prev, nxt;
+    set<int>::iterator it = pos.lower_bound(x);
+    nxt = *it; prev = *(--it);
+    pos.insert(x);
+
+    
+    int m1 = oo, m2 = oo;
+    if(prev != -1) sub += (m1 = rmq_query(prev, x));
+    if(nxt != n) sub += (m2 = rmq_query(x, nxt));
+    if(prev != -1 && nxt != n) {
+        assert(min(m1, m2) == rmq_query(prev, nxt));
+        sub -= min(m1, m2);
+    }
+
+}
+
+void remove(int x) {
+    trace1("REM");
+    x = inv_sa[x];
+
+    int prev, nxt;
+    pos.erase(x);
+    set<int>::iterator it = pos.lower_bound(x);
+    nxt = *it; prev = *(--it);
+
+    int m1 = oo, m2 = oo;
+    if(prev != -1) sub -= (m1 = rmq_query(prev, x));
+    if(nxt != n) sub -= (m2 = rmq_query(x, nxt));
+    if(prev != -1 && nxt != n) sub += min(m1, m2);
+}
+
+inline ll get_ans() {
+    ll len = n - cur_lo, len2 = n - cur_hi - 1, ret;
+    ret  = len * (len + 1) / 2;
+    ret -= len2 * (len2 + 1) / 2;
+    ret -= sub;
+    trace2(cur_lo, cur_hi);
+    trace4(len, len2, ret, sub);
+
+    return ret;
+}
+
+void cleanup() {
+    pos.clear();
+    sub = 0;
+}
+
+void solve() {
+    assert(sz(pos) == 0 && sub == 0);
+    pos.insert(-1); pos.insert(n);
+    if(m == 0) return;
+
+    cur_lo = 0; cur_hi = 0;
+    add(0);
+
+    fr(i, m) {
+        trace2(queries[i].l, queries[i].r);
+        while(cur_hi > queries[i].r) {
+            remove(cur_hi);
+            --cur_hi;
+        }
+
+        while(cur_hi < queries[i].r) {
+            ++cur_hi;
+            trace2(cur_lo, cur_hi);
+            add(cur_hi);
+        }
+
+        while(cur_lo > queries[i].l) {
+            --cur_lo;
+            trace2(cur_lo, cur_hi);
+            add(cur_lo);
+        }
+
+        while(cur_lo < queries[i].l) {
+            remove(cur_lo);
+            ++cur_lo;
+        }
+
+        queries[i].ans = get_ans();
+    }
+    
+    cleanup();
+}
+
+int brute(int x, int y) {
+    set<string> ret;
+
+    rep(start, x, y) {
+        string s;
+        re(i, start, n) {
+            s += str[i];
+            ret.insert(s);
+        }
+    }
+
+    return sz(ret);
+}
+
+int main() {
+    init_rmq();
+    int t;
+    scanf("%d", &t);
+    while(t--) {
+        scanf("%s", str);
+        n = strlen(str);
+        siz = (int)ceil(sqrt(n) + eps);
+        build_sa();
+        pre_rmq();
+        scanf("%d", &m);
+
+        fr(i, m) {
+            scanf("%d %d", &queries[i].l, &queries[i].r);
+            assert(queries[i].l <= queries[i].r);
+            --queries[i].l; --queries[i].r;
+            queries[i].idx = i;
+        }
+
+        byidx = false;
+        sort(queries, queries + m);
+        solve();
+        byidx = true;
+        sort(queries, queries + m);
+        fr(i, m) {
+            //int br = brute(queries[i].l, queries[i].r);
+            //printf("%lld\n", (ll) br);
+            assert(i == queries[i].idx);
+            printf("%lld\n", queries[i].ans);
+            //assert(br == queries[i].ans);
+        }
+        
+    }
+    
+	return 0;
+}

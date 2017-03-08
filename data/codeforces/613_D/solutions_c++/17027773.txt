@@ -1,0 +1,96 @@
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#include <ctime>
+#include <cmath>
+#include <set>
+#include <queue>
+#include <map>
+#include <vector>
+#include <deque>
+#include <iomanip>
+using namespace std;
+#define INF (1000000001)
+#define MLL (1000000000000000001LL)
+typedef long long LL;
+#define FOR(i, x) for(__typeof(x.begin()) i = x.begin(); i != x.end(); i++)
+#define sz(x) ((int) (x).size())
+
+const int N = 100010;
+int n, m;
+int fa[N], fir[N], edge[N * 2], nex[N * 2], totEdge;
+int que[N], ans[N];
+set<int> query[N], lcaQuery, restQuery[N];
+
+inline void insert(int u, int v)
+{
+	totEdge++;
+	edge[totEdge] = v, nex[totEdge] = fir[u];
+	fir[u] = totEdge;
+}
+
+inline void bfs(int st)
+{
+	fa[que[0] = st] = 0;
+	for(int head = 0, tail = 1; head < tail; head++)
+	{
+		int u = que[head];
+		for(int tab = fir[u], v; tab; tab = nex[tab])
+			if((v = edge[tab]) != fa[u])
+				fa[que[tail++] = v] = u;
+	}
+}
+
+inline void solve()
+{
+	bfs(1);
+	
+	for(int k = n - 1; k >= 0; k--)
+	{
+		lcaQuery.clear();
+		int u = que[k];
+		for(int tab = fir[u], v; tab; tab = nex[tab])
+			if((v = edge[tab]) != fa[u])
+			{
+				FOR(it, query[v])
+					if(query[u].count(*it)) ans[*it] = INF;
+				if(sz(restQuery[u]) < sz(restQuery[v])) swap(restQuery[u], restQuery[v]);
+				FOR(it, restQuery[v])
+					if(query[u].count(*it)) ans[*it]++;
+					else if(restQuery[u].count(*it)) lcaQuery.insert(*it);
+					else restQuery[u].insert(*it);
+				
+				restQuery[v].clear();
+			}
+		FOR(it, lcaQuery) restQuery[u].erase(*it), ans[*it]++;
+		FOR(it, query[u])
+			if(restQuery[u].count(*it)) ans[*it]++;
+			else restQuery[u].insert(*it);
+	}
+	
+	for(int i = 0; i < m; i++)
+		printf("%d\n", ans[i] >= INF ? -1 : ans[i]);
+}
+
+int main()
+{
+	scanf("%d", &n);
+	for(int i = 0, u, v; i < n - 1; i++)
+	{
+		scanf("%d%d", &u, &v);
+		insert(u, v), insert(v, u);
+	}
+	scanf("%d", &m);
+	for(int i = 0, num, x; i < m; i++)
+	{
+		for(scanf("%d", &num); num--; )
+		{
+			scanf("%d", &x);
+			query[x].insert(i);
+		}
+	}
+	solve();
+	return 0;
+}

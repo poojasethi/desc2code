@@ -1,0 +1,67 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+const int MAXN = 1000000 + 10, M = 1e9 + 7;
+int mp[MAXN], pc[MAXN], pw[MAXN];
+int pl[MAXN], m;
+
+void sieve() {
+  m = 0; pw[0] = 1;
+  for (int i = 1; i < MAXN; ++i) pw[i] = 2 * pw[i - 1] % M;
+  for (int i = 2; i < MAXN; ++i) {
+    if (!mp[i]) mp[i] = i, pl[m ++] = i;
+    for (int j = 0; j < m && pl[j] * i < MAXN; ++j) {
+      mp[i * pl[j]] = pl[j];
+      if (i % pl[j] == 0) break;
+    }
+  }
+  for (int i = 2; i < MAXN; ++i) pc[i] = pc[i / mp[i]] + 1;
+}
+
+void add(int &x, int y) {x += y; if (x >= M) x -= M;}
+void sub(int &x, int y) {add(x, M - y);}
+
+int d[MAXN], cnt[MAXN], ret;
+void ins(int n) {
+  int p[20], s = 0;
+  for (; n > 1; n /= mp[n]) p[s++] = mp[n];
+  s = unique(p, p + s) - p; d[0] = 1;
+  for (int i = 1; i < (1 << s); ++i) {
+    d[i] = d[i - (i & -i)] * p[__builtin_ctz(i)];
+    if (pc[d[i]] & 1) add(ret, 1ll * pc[d[i]] * pw[cnt[d[i]]] % M);
+    else sub(ret, 1ll * pc[d[i]] * pw[cnt[d[i]]] % M);
+    cnt[d[i]]++;
+  }
+}
+void del(int n) {
+  int p[20], s = 0;
+  for (; n > 1; n /= mp[n]) p[s++] = mp[n];
+  s = unique(p, p + s) - p; d[0] = 1;
+  for (int i = 1; i < (1 << s); ++i) {
+    d[i] = d[i - (i & -i)] * p[__builtin_ctz(i)];
+    cnt[d[i]]--;
+    if (pc[d[i]] & 1) sub(ret, 1ll * pc[d[i]] * pw[cnt[d[i]]] % M);
+    else add(ret, 1ll * pc[d[i]] * pw[cnt[d[i]]] % M);
+  }
+}
+
+int A[MAXN], n, q;
+
+void run() {
+  scanf("%d%d", &n, &q); ret = 0;
+  for (int i = 0; i < MAXN; ++i) cnt[i] = 0; 
+  for (int i = 1; i <= n; ++i) {
+    scanf("%d", A + i); ins(A[i]);
+  }
+  for (int i = 0; i < q; ++i) {
+    int x, y; scanf("%d%d", &x, &y);
+    del(A[x]); A[x] = y; ins(A[x]);
+    printf("%d\n", ret);
+  }
+}
+
+int main() {
+  sieve();
+  int T; scanf("%d", &T);
+  for (int cas = 1; cas <= T; ++cas) run();
+}

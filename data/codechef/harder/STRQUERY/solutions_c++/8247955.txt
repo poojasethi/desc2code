@@ -1,0 +1,404 @@
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cmath>
+#include <cstring>
+#include <ctime>
+using namespace std;
+
+const int maxn=150010+15;
+const int maxq=1500000+15;
+struct Node
+{
+	long double tag,tagl,tagr;
+	int ran,ch,siz,wz;
+	Node *pre,*suc,*son[2],*fa;
+	int update()
+	{
+		siz=1;
+		for (int i=0;i<2;i++)
+			if (son[i]) siz+=son[i]->siz;
+		return 0;
+	}
+}pp[maxn];
+int Seed;
+int Rand()
+{
+	Seed=((long long)Seed*1371+3214567)%1000000007;
+	return Seed;
+}
+int tot,pool[maxn];
+int relax(Node *dy)
+{
+	dy->tag=dy->tagl=dy->tagr=0.0;
+	dy->ch=dy->ran=dy->siz=dy->wz=0;
+	dy->pre=dy->suc=dy->son[0]=dy->son[1]=dy->fa=NULL;
+	pool[++tot]=dy-pp;
+	return 0;
+}
+bool les(Node *a,Node *b)
+{
+	if (a->ch==b->ch)
+	{
+		if (!a->suc) return true;
+		if (!b->suc) return false;
+		return a->suc->tag<b->suc->tag;
+	}
+	return a->ch<b->ch;
+}
+Node *merge(Node *l,Node *r)
+{
+	if (l==NULL) return r;
+	if (r==NULL) return l;
+	if (l->ran>r->ran) swap(l,r);
+	if (les(l,r)) l->son[1]=merge(l->son[1],r),l->son[1]->fa=l;
+	 else l->son[0]=merge(l->son[0],r),l->son[0]->fa=l;
+	l->update();
+	return l;
+}
+struct Pair
+{
+	Node *a,*b;
+	Pair(Node *a=NULL,Node *b=NULL):a(a),b(b) {}
+};
+Pair split(Node *rot,Node *fj)
+{
+	if (!rot) return Pair();
+	if (les(rot,fj)) 
+	{
+		Pair ls=split(rot->son[1],fj);
+		rot->son[1]=ls.a;
+		rot->update();
+		if (ls.a) ls.a->fa=rot;
+		return Pair(rot,ls.b);
+	}
+	Pair ls=split(rot->son[0],fj);
+	rot->son[0]=ls.b;
+	rot->update();
+	if (ls.b) ls.b->fa=rot;
+	return Pair(ls.a,rot);
+}
+int update(Node *rot,long double tagl,long double tagr)
+{
+	if (!rot) return 0;
+	long double tagm=(tagl+tagr)/2;
+	rot->tag=tagm;
+	rot->tagl=tagl;rot->tagr=tagr;
+	update(rot->son[0],tagl,tagm);
+	update(rot->son[1],tagm,tagr);
+	return 0;
+}
+const int qg=80000;
+struct Half
+{
+	  Node *root,*top,*bottom;
+	  char st[maxn];
+	  int Ins_left(int ch)
+	  {
+	  	  int num=pool[tot--];
+	 	  pp[num].ch=ch;
+	 	  pp[num].ran=Rand();
+	 	  pp[num].suc=top;
+	 	  if (top) top->pre=&pp[num],pp[num].wz=top->wz+1;
+	 	  	else pp[num].wz=0;
+	 	  st[qg-pp[num].wz]=ch;
+	 	  pp[num].siz=1;
+	 	  top=&pp[num];
+	 	  if (!root) bottom=top;
+	 	  Pair ls=split(root,&pp[num]);
+	 	  if (ls.a) ls.a->fa=NULL;
+	 	  if (ls.b) ls.b->fa=NULL;
+	 	  root=merge(ls.a,&pp[num]);
+	 	  root=merge(root,ls.b);
+	 	  long double tagl,tagr;
+	 	  if (root==&pp[num]) tagl=0,tagr=1;
+	 	  	else
+	 	  	{
+	 	  		tagl=pp[num].fa->tagl,tagr=pp[num].fa->tagr;
+	 	  		if (pp[num].fa->son[0]==&pp[num]) tagr=pp[num].fa->tag;
+	 	  			else tagl=pp[num].fa->tag;
+	 	  	}
+	 	  update(&pp[num],tagl,tagr);
+		  return 0;
+	  }
+	  int Del_left()
+	  {
+	  	  if (bottom==top)
+	  	  {
+	  	  	relax(top);
+	  	  	root=bottom=top=NULL;
+	  	  	return 0;
+	  	  }
+	  	  if (root==top)
+	  	  {
+	  	  	root=merge(top->son[0],top->son[1]);
+	  	  	update(root,0,1);
+	  	  }
+	  	  else
+	  	  {
+	  	  	int d=(top->fa->son[1]==top);
+	  	  	top->fa->son[d]=merge(top->son[0],top->son[1]);
+	  	  	if (top->fa->son[d]) 
+			{
+				top->fa->son[d]->fa=top->fa;
+	  	  		long double tagl=top->fa->tagl,tagr=top->fa->tagr;
+	  	  		if (d==0) tagr=top->fa->tag;
+	  	  			else tagl=top->fa->tag;
+	  	  		update(top->fa->son[d],tagl,tagr);
+	  	  	}
+	  	  	for (Node *ls=top->fa;ls;ls->update(),ls=ls->fa);
+	  	  }
+	  	  Node *ls=top;
+	  	  top=top->suc;
+	  	  top->pre=NULL;
+	  	  relax(ls);
+	  	  return 0;
+	  }
+	  int clear()
+	  {
+	  	for (Node *ls=top,*nex;ls;ls=nex)
+	  	{
+	  		nex=ls->suc;
+	  		relax(ls);
+	  	}
+	  	root=top=bottom=NULL;
+	  	return 0;
+	  }
+};
+char st[maxq],ass[maxq],kmp[maxq],pui[maxq];
+int lenkmp;
+int lenpui;
+int nex[maxq],len;
+int prepare()
+{
+	nex[0]=-1;
+	int p=-1;
+	for (int i=1;i<len;i++)
+	{
+		while (p!=-1 && ass[p+1]!=ass[i]) p=nex[p];
+		if (ass[p+1]==ass[i]) p++;
+		nex[i]=p;
+	}
+	return 0;
+}
+int match()
+{
+	int ans=0;
+	int p=-1;
+	for (int i=0;i<lenkmp;i++)
+	{
+		while (p!=-1 && ass[p+1]!=kmp[i]) p=nex[p];
+		if (ass[p+1]==kmp[i]) p++;
+		if (p==len-1)
+		{
+			ans++;
+			p=nex[p];
+		}
+	}
+	return ans;
+}
+bool unless(Node *root,char *ss)
+{
+	return memcmp(ss+qg-root->wz,pui,lenpui)>=0;
+}
+int query(Node *root,char *ss)
+{
+	int ans=0;
+	for (;root;)
+	{
+		if (unless(root,ss)) root=root->son[0];
+			else
+			{
+				if (root->son[0]) ans+=root->son[0]->siz;
+				ans++;
+				root=root->son[1];
+			}
+	}
+	return ans;
+}
+struct Whole
+{
+	int all;
+	Half l,r;
+	int Ins_left(int ch)
+	{
+		l.Ins_left(ch);
+		all++;
+		return 0;
+	}
+	int Ins_right(int ch)
+	{
+		r.Ins_left(ch);
+		all++;
+		return 0;
+	}
+	int rebuild(int ll,int rr)
+	{
+		all=0;
+		int mid=(ll+rr)/2;
+		for (int i=mid;i>=ll;i--) l.Ins_left(st[i]);
+		for (int i=mid+1;i<=rr;i++) r.Ins_left(st[i]);
+		all=rr-ll+1;
+		return 0;
+	}
+	int Print_out()
+	{
+		int now=0;
+		Node *ls=l.top;
+		for (;ls;st[now++]=ls->ch,ls=ls->suc);
+		l.clear();
+		for (ls=r.bottom;ls;st[now++]=ls->ch,ls=ls->pre);
+		r.clear();
+		rebuild(0,now-1);
+		return 0;
+	}
+	int Del_left()
+	{
+		l.Del_left();
+		all--;
+		if (!l.root) Print_out();
+		return 0;
+	}
+	int Del_right()
+	{
+		r.Del_left();
+		all--;
+		if (!r.root) Print_out();
+		return 0;
+	}
+	int Query()
+	{
+		lenpui=len;
+		for (int i=0;i<lenpui;i++) pui[i]=ass[i];
+		pui[lenpui++]=32;
+		int ans=0;
+		ans-=query(l.root,l.st);
+		for (int i=0;i<lenpui-i-2;swap(pui[i],pui[lenpui-i-2]),i++);
+		ans-=query(r.root,r.st);
+		for (int i=0;i<lenpui-i-2;swap(pui[i],pui[lenpui-i-2]),i++);
+		pui[lenpui-1]='z'+2;
+		ans+=query(l.root,l.st);
+		for (int i=0;i<lenpui-i-2;swap(pui[i],pui[lenpui-i-2]),i++);
+		ans+=query(r.root,r.st);
+		lenkmp=0;
+		int i=0;
+		for (Node *las=l.bottom;i<len-1 && las;kmp[lenkmp++]=las->ch,i++,las=las->pre);
+		for (i=0;i<lenkmp-1-i;swap(kmp[i],kmp[lenkmp-1-i]),i++);
+		i=0;
+		for (Node *las=r.bottom;i<len-1 && las;kmp[lenkmp++]=las->ch,i++,las=las->pre);
+		ans+=match();
+		return ans;
+	}
+}SL,SR;
+int check()
+{
+	if (SL.all>SR.all)
+	{
+		int ch=SL.r.top->ch;
+		SL.Del_right();
+		SR.Ins_left(ch);
+	}
+	else
+	if (SL.all+1<SR.all)
+	{
+		int ch=SR.l.top->ch;
+		SR.Del_left();
+		SL.Ins_right(ch);
+	}
+	return 0;
+}
+int LRQuery()
+{
+	lenkmp=0;
+	int i=0;
+	for (Node *las=SL.r.top;las && i<len-1;kmp[lenkmp++]=las->ch,i++,las=las->suc);
+	for (Node *las=SL.l.bottom;las && i<len-1;kmp[lenkmp++]=las->ch,i++,las=las->pre);
+	for (i=0;i<lenkmp-i-1;swap(kmp[i],kmp[lenkmp-i-1]),i++);
+	i=0;
+	for (Node *las=SR.l.top;las && i<len-1;kmp[lenkmp++]=las->ch,i++,las=las->suc);
+	for (Node *las=SR.r.bottom;las && i<len-1;kmp[lenkmp++]=las->ch,i++,las=las->pre);
+	return match();
+}
+int main()
+{
+	SL.l.st[qg+1]=SL.r.st[qg+1]=SR.l.st[qg+1]=SR.r.st[qg+1]=32;
+	scanf("%s",st);
+	int m;
+	scanf("%d",&m);
+	bool boo=false;
+	for (int i=1;i<=m+10;i++) pool[++tot]=i;
+	SL.rebuild(0,4);
+	SR.rebuild(5,9);
+	int lenn=10;
+	while (m--)
+	{
+		char od[15];
+		scanf("%s",od);
+		if (od[0]=='I' && od[7]=='L')
+		{
+			lenn++;
+			char ch;
+			scanf(" %c",&ch);
+			SL.Ins_left(ch);
+			check();
+		}
+		else
+		if (od[0]=='I' && od[7]=='R')
+		{
+			lenn++;
+			char ch;
+			scanf(" %c",&ch);
+			SR.Ins_right(ch);
+			check();
+		}
+		else
+		if (od[0]=='I' && od[7]=='M')
+		{
+			lenn++;
+			char ch;
+			scanf(" %c",&ch);
+			if (lenn%2==0) SL.Ins_right(ch);
+				else SR.Ins_left(ch);
+			check();
+		}
+		else
+		if (od[0]=='D' && od[7]=='L')
+		{
+			lenn--;
+			SL.Del_left();
+			check();
+		}
+		else
+		if (od[0]=='D' && od[7]=='R')
+		{
+			lenn--;
+			SR.Del_right();
+			check();
+		}
+		else
+		if (od[0]=='D' && od[7]=='M')
+		{
+			lenn--;
+			SR.Del_left();
+			check();
+		}
+		else
+		if (od[0]=='Q')
+		{
+			scanf("%s",ass);
+			len=strlen(ass);
+			if (len>lenn)
+			{
+				printf("0\n");
+				continue;
+			}
+			prepare();
+			int ans=0;
+			ans+=SL.Query();
+			ans+=SR.Query();
+			ans+=LRQuery();
+			printf("%d\n",ans);
+		}
+	}
+	return 0;
+}

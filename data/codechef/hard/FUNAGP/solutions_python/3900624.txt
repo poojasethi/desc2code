@@ -1,0 +1,265 @@
+#include <algorithm>
+#include <iostream>
+#include <sstream>
+#include <cassert>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+#include <string>
+#include <vector>
+#include <bitset>
+#include <queue>
+#include <stack>
+#include <cmath>
+#include <deque>
+#include <ctime>
+#include <list>
+#include <set>
+#include <map>
+#include <iomanip>
+//zlb//
+
+using namespace std;
+
+typedef long long     LL;
+typedef unsigned long long     uLL;
+typedef pair<LL,LL> pii;
+
+double PI  = acos(-1);
+double EPS = 1e-7;
+LL INF    = 1000000000;
+LL MOD    = 1000000007;
+LL MAXINT = 2147483647;
+LL INFLL   = 1000000000000000000LL;
+LL MAXLL   = 9223372036854775807LL;
+
+#define fi            first
+#define se            second
+#define mp            make_pair
+#define pb            push_back
+#define SIZE(a)       (int)a.size()
+#define MIN(a, b)     (a) = min((a), (b))
+#define MAX(a, b)     (a) = max((a), (b))
+#define input(in)     freopen(in,"r",stdin)
+#define output(out)   freopen(out,"w",stdout)
+#define RESET(a, b)   memset(a,b,sizeof(a))
+#define FOR(a, b, c)  for (int (a)=(b); (a)<=(c); (a)++)
+#define FORD(a, b, c) for (int (a)=(b); (a)>=(c); (a)--)
+#define FORIT(a, b)   for (__typeof((b).begin()) a=(b).begin(); a!=(b).end(); a++)
+
+LL mx[8] = {-1,1,0,0,-1,-1,1,1};
+LL my[8] = {0,0,-1,1,-1,1,-1,1};
+
+// ------------ //
+
+ #define getcx getchar
+
+ inline void inp( int &n ) 
+ {
+    n=0;
+    int ch=getcx();int sign=1;
+    while( ch < '0' || ch > '9' ){if(ch=='-')sign=-1; ch=getcx();}
+
+    while(  ch >= '0' && ch <= '9' )
+            n = (n<<3)+(n<<1) + ch-'0', ch=getcx();
+    n=n*sign;
+  }   
+
+struct seg
+{
+	int s,d,sum;
+};
+
+int x[100005];
+int expp[3][100005];
+seg lol[3][400005];
+int n,q,R;
+int p[3];
+
+inline int pwr(int id,int num,int ex)
+{
+	if (ex == 0) return 1;
+	else if (ex%2==0)
+	{
+		int tmp = pwr(id,num,ex/2);
+		return ((LL)tmp*tmp)%(LL)p[id];
+	}
+	else
+	{
+		return ((LL)num*pwr(id,num,ex-1))%(LL)p[id];
+	}
+}
+
+int tmp2[3];
+int tmp3[3];
+bool yoy[3];
+
+inline int val(int id,int k,int l,int r)
+{
+	int n = (r-l+1);
+	if (!yoy[id])
+	{
+		LL s1 = n;
+		LL s2 = ((2*lol[id][k].s)+((LL)(n-1)*lol[id][k].d));
+		if (s1&1) s2/=2;
+		else s1 /=2; 
+		return (((LL)s1*(s2%(LL)p[id]))+(LL)lol[id][k].sum)%(LL)p[id];
+	}
+	else
+	{
+		int s1 = (((((((LL)lol[id][k].s+(((LL)(n-1)*(LL)lol[id][k].d)%p[id]))*(LL)expp[id][n])%p[id])-(LL)lol[id][k].s))*(LL)tmp2[id])%p[id]-((((LL)lol[id][k].d*(LL)R)%p[id]*((LL)(expp[id][n-1]-1+p[id])))%p[id]*(LL)tmp3[id])%p[id];
+		s1 %= p[id];
+		if (s1 < 0) s1 += p[id];
+		return ((LL)lol[id][k].sum+s1)%p[id];
+	}
+}
+
+
+
+inline void build(int k=1,int l=1,int r=n)
+{
+	lol[1][k].sum = lol[1][k].s = lol[1][k].d = 0;
+	lol[2][k].sum = lol[2][k].s = lol[2][k].d = 0;
+	if (l == r)
+	{
+		lol[1][k].sum = x[l]%p[1];
+		lol[2][k].sum = x[l]%p[2];
+		return;
+	}
+	int m = (l+r)/2;
+	build(2*k,l,m);
+	build(2*k+1,m+1,r);
+	lol[1][k].sum = (val(1,2*k,l,m)+val(1,2*k+1,m+1,r))%p[1];
+	lol[2][k].sum = (val(2,2*k,l,m)+val(2,2*k+1,m+1,r))%p[2];
+}
+
+inline void pass(int id,int k,int l,int r)
+{
+	int m = (l+r)/2;
+	lol[id][2*k].s = (lol[id][2*k].s+lol[id][k].s);
+	if (lol[id][2*k].s >= p[id]) lol[id][2*k].s -= p[id];
+	lol[id][2*k].d = (lol[id][2*k].d+lol[id][k].d)%p[id];
+	if (lol[id][2*k].d >= p[id]) lol[id][2*k].d -= p[id];
+
+	int dif = m+1-l;
+	lol[id][2*k+1].s += ((LL)expp[id][dif]*(lol[id][k].s+(dif*(LL)lol[id][k].d)%p[id])%p[id])%p[id];
+	lol[id][2*k+1].d += ((LL)expp[id][dif]*(LL)lol[id][k].d)%p[id];
+	if (lol[id][2*k+1].s >= p[id]) lol[id][2*k+1].s -= p[id];
+	if (lol[id][2*k+1].d >= p[id]) lol[id][2*k+1].d -= p[id];
+
+
+	lol[id][k].s = lol[id][k].d = 0;
+}
+
+inline void update(int s,int d,int x,int y,int id,int k=1,int l=1,int r=n)
+{
+	//cout << "UPDATE " << s << " " << d << " " << x << " " << y << " " << k << " " << l << " " << r << endl;
+	if (l > y || r < x) return;
+	if (x <= l && r <= y)
+	{
+		lol[id][k].s = (lol[id][k].s+s);
+		if (lol[id][k].s >= p[id]) lol[id][k].s -= p[id];
+		lol[id][k].d = (lol[id][k].d+d);
+		if (lol[id][k].d >= p[id]) lol[id][k].d -= p[id];
+		return;
+	}
+	int m = (l+r)/2;
+	pass(id,k,l,r);
+	if (x <= m)
+	{
+		update(s,d,x,min(y,m),id,2*k,l,m);
+	}
+	if (y >= m+1)
+	{
+		if (x <= m) 
+		{
+			int dif = m+1-x;
+			s = ((LL)expp[id][dif]*(s+(((LL)dif*d)%p[id])))%p[id];
+			d = ((LL)expp[id][dif]*(LL)d)%p[id];
+			update(s,d,max(m+1,x),y,id,2*k+1,m+1,r);
+		}
+		else update(s,d,max(m+1,x),y,id,2*k+1,m+1,r);
+	}
+	lol[id][k].sum = (val(id,2*k,l,m)+val(id,2*k+1,m+1,r))%p[id];
+}
+
+inline int query(int x,int y,int id,int k=1,int l=1,int r=n)
+{
+	if (l > y || r < x) return 0;
+	if (x <= l && r <= y)
+	{
+		return val(id,k,l,r);
+	}
+	int m = (l+r)/2;
+	pass(id,k,l,r);
+	int res = (query(x,y,id,2*k,l,m)+query(x,y,id,2*k+1,m+1,r))%p[id];
+	lol[id][k].sum = (val(id,2*k,l,m)+val(id,2*k+1,m+1,r))%p[id];
+	return res;
+}
+
+int main()
+{
+	int T;
+	scanf("%d",&T);
+	FOR(tc,1,T)
+	{
+		//scanf("%d%d%d%d%d",&n,&q,&R,&p[1],&p[2]);
+		inp(n);
+		inp(q);
+		inp(R);
+		inp(p[1]);
+		inp(p[2]);
+		expp[1][0] = 1;
+		expp[2][0] = 1;
+		tmp2[1] = pwr(1,R-1,p[1]-2);
+		tmp2[2] = pwr(2,R-1,p[2]-2);
+		tmp3[2] = ((LL)tmp2[2]*tmp2[2])%p[2];
+		tmp3[1] = ((LL)tmp2[1]*tmp2[1])%p[1];
+		
+		yoy[1] = (R-1)%p[1];
+		yoy[2] = (R-1)%p[2];
+		FOR(a,1,n)
+		{
+			//scanf("%d",&x[a]);
+			inp(x[a]);
+			expp[1][a] = ((LL)expp[1][a-1]*R)%(LL)p[1];
+			expp[2][a] = ((LL)expp[2][a-1]*R)%(LL)p[2];
+		}
+		build();
+		while(q--)
+		{
+			int t,s,d,x,y,g;
+			inp(t);
+			//scanf("%d",&t);
+			if (t == 0)
+			{
+				//scanf("%d %d %d %d",&s,&d,&x,&y);
+				inp(s);
+				inp(d);
+				inp(x);
+				inp(y);
+				update(s%p[1],d%p[1],x,y,1);
+				update(s%p[2],d%p[2],x,y,2);
+			}
+			else if (t == 1)
+			{
+				//scanf("%d %d",&x,&g);
+				inp(x);
+				inp(g);
+				int t1 = query(x,x,1);
+				int t2 = query(x,x,2);
+				int tmp = pwr(2,t2,g);
+				update((p[1]-t1+tmp)%p[1],0,x,x,1);
+				update((p[2]-t2+tmp)%p[2],0,x,x,2);
+			}
+			else
+			{
+				//scanf("%d %d",&x,&y);
+				inp(x);
+				inp(y);
+				printf("%d\n",(query(x,y,1)+p[1])%p[1]);
+			}
+		}
+
+	}
+}

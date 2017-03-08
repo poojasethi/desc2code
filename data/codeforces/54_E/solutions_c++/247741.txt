@@ -1,0 +1,306 @@
+#include <cstdio>
+#include <iostream>
+#include <cmath>
+#include <sstream>
+#include <vector>
+#include <map>
+#include <set>
+#include <complex>
+#include <algorithm>
+#include <functional>
+#include <fstream>
+#include <numeric>
+#include <string>
+#include <valarray>
+#define int long long
+#define double long double
+
+using namespace std;
+
+typedef complex<double> Point;
+typedef pair<int,int> Pair;
+
+const double EPS=1e-12;
+
+struct circle;
+struct line;
+struct segment;
+struct half_line;
+
+template<class a,class b>
+pair<a,b> operator + (pair<a,b> x,pair<a,b> y){
+  return(pair<a,b>(x.first+y.first,x.second+y.second));
+}
+
+template<class a,class b>
+pair<a,b> operator - (pair<a,b> x,pair<a,b> y){
+  return(pair<a,b>(x.first-y.first,x.second-y.second));
+}
+
+
+namespace std{
+  inline bool operator < (const Point &s,const Point &t){
+    if (abs(s.real()-t.real()) > EPS) return(s.real() < t.real());
+    if (abs(s.imag()-t.imag()) > EPS) return(s.imag() < t.imag());
+    return(false);
+  }
+}
+
+struct circle{
+  Point cen;
+  double r;
+  circle(Point x,double y){ cen=x; r=y;
+  }
+  bool is_in(const Point &s)const{ return(abs(cen-s) <= r+EPS);
+  }
+  bool is_on(const Point &s)const{ return(abs(abs(cen-s)-r) < EPS);
+  }
+
+  vector<Point> intersection(const circle    &s)const;
+  vector<Point> intersection(const line      &s)const;
+  vector<Point> intersection(const segment   &s)const;
+  vector<Point> intersection(const half_line &s)const;
+};
+
+struct line{
+  Point a,b;
+  line(Point x,Point y){ a=x; b=y;
+  }
+  bool is_on(const Point &s)const{
+    Point A=a,B=b,C=s;
+    if (B < A) swap(A,B);
+    if (C < A) swap(A,C);
+    if (C < B) swap(B,C);
+    return(abs(abs(A-C)-abs(A-B)-abs(B-C)) < EPS);
+  }
+
+  vector<Point> intersection(const circle    &s)const;
+  vector<Point> intersection(const line      &s)const;
+  vector<Point> intersection(const segment   &s)const;
+  vector<Point> intersection(const half_line &s)const;
+
+};
+
+struct segment{
+  Point a,b;
+  segment(Point x,Point y):a(x),b(y){
+  }
+  bool is_on(const Point &s)const{
+    return(abs(abs(a-b)-abs(a-s)-abs(b-s)) < EPS);
+  }
+
+  vector<Point> intersection(const circle    &s)const;
+  vector<Point> intersection(const line      &s)const;
+  vector<Point> intersection(const segment   &s)const;
+  vector<Point> intersection(const half_line &s)const;
+};
+
+struct half_line{
+  Point a,b;
+  half_line(Point x,Point y):a(x),b(y){
+  }
+  bool is_on(const Point &s)const{
+    if ((b < a) != (s < a)) return(false);
+    return(line(a,b).is_on(s));
+  }
+
+  vector<Point> intersection(const circle    &s)const;
+  vector<Point> intersection(const line      &s)const;
+  vector<Point> intersection(const segment   &s)const;
+  vector<Point> intersection(const half_line &s)const;
+};
+
+vector<Point> half_line::intersection(const circle &s)const{
+  vector<Point> ans=line(a,b).intersection(s);
+  for (int i=0;i<ans.size();i++) if (!is_on(ans[i])){
+    swap(ans.back(),ans[i]);
+    ans.pop_back();
+    i--;
+  }
+  return(ans);
+}
+vector<Point> half_line::intersection(const line &s)const{
+  vector<Point> ans=line(a,b).intersection(s);
+  for (int i=0;i<ans.size();i++) if (!is_on(ans[i])){
+    swap(ans[i],ans.back());
+    ans.pop_back();
+    i--;
+  }
+  return(ans);
+}
+vector<Point> half_line::intersection(const segment &s)const{
+  vector<Point> ans=line(a,b).intersection(s);
+  for (int i=0;i<ans.size();i++) if (!is_on(ans[i])){
+    swap(ans[i],ans.back());
+    ans.pop_back();
+    i--;
+  }
+  return(ans);
+}
+vector<Point> half_line::intersection(const half_line &s)const{
+  vector<Point> ans=line(a,b).intersection(s);
+  for (int i=0;i<ans.size();i++) if (!is_on(ans[i])){
+    swap(ans[i],ans.back());
+    ans.pop_back();
+    i--;
+  }
+    return(ans);
+}
+
+vector<Point> segment::intersection(const circle &s)const{
+  vector<Point> ans=line(a,b).intersection(s);
+  for (int i=0;i<ans.size();i++) if (!is_on(ans[i])){
+    swap(ans.back(),ans[i]);
+    ans.pop_back();
+    i--;
+  }
+  return(ans);
+}
+vector<Point> segment::intersection(const line &s)const{
+  vector<Point> ans=line(a,b).intersection(s);
+  for (int i=0;i<ans.size();i++) if (!is_on(ans[i])){
+    swap(ans[i],ans.back());
+    ans.pop_back();
+    i--;
+  }
+  return(ans);
+}
+vector<Point> segment::intersection(const segment &s)const{
+  vector<Point> ans=line(a,b).intersection(s);
+  for (int i=0;i<ans.size();i++) if (!is_on(ans[i])){
+    swap(ans[i],ans.back());
+    ans.pop_back();
+    i--;
+  }
+  return(ans);
+}
+vector<Point> segment::intersection(const half_line &s)const{ return(s.intersection(*this));
+}
+
+vector<Point> line::intersection(const circle &s)const{
+  Point cen=(s.cen-a)/(b-a);
+  double R=s.r/abs(b-a);
+  if (abs(cen.imag()) > R+EPS) return(vector<Point>());
+  vector<Point> ans;
+  ans.push_back(Point(cen.real()-sqrt(pow(R,2)-pow(cen.imag(),2)),0));
+  if (abs(R-abs(cen.imag())) > EPS)
+    ans.push_back(Point(cen.real()+sqrt(pow(R,2)-pow(cen.imag(),2)),0));
+
+  for (int i=0;i<ans.size();i++) ans[i]=ans[i]*(b-a)+a;
+
+  return(ans);
+}
+
+vector<Point> line::intersection(const line &s)const{
+  Point A=(s.a-a)/(b-a),B=(s.b-a)/(b-a);
+  if (abs(A.imag()-B.imag()) < EPS) return(vector<Point>());
+  vector<Point> ans;
+  ans.push_back(A+(B-A)*(A.imag()/(A-B).imag()));
+  
+  for (int i=0;i<ans.size();i++) ans[i]=ans[i]*(b-a)+a;
+  for (int i=0;i<ans.size();i++) if (!is_on(ans[i])){
+    swap(ans[i],ans.back());
+    ans.pop_back();
+  }
+  return(ans);
+}
+vector<Point> line::intersection(const segment &s)const{ return(s.intersection(*this));
+}
+vector<Point> line::intersection(const half_line &s)const{ return(s.intersection(*this));
+}
+
+vector<Point> circle::intersection(const circle &s)const{
+  if (abs(cen-s.cen) < EPS) return(vector<Point>());
+  
+  double r1=r/(abs(cen-s.cen)),r2=s.r/abs(cen-s.cen);
+  if (abs(r1-r2) > 1+EPS)   return(vector<Point>());
+  if (r1+r2 < 1)            return(vector<Point>());
+  
+  double x=0.5+(pow(r1,2)-pow(r2,2))/2;
+  vector<Point> ans;
+  ans.push_back(Point(x,sqrt(pow(r1,2)-pow(x,2))));
+  if (abs(ans[0].imag()) > EPS)
+    ans.push_back(Point(ans[0].real(),-ans[0].imag()));
+  for (int i=0;i<ans.size();i++) ans[i]=ans[i]*(s.cen-cen)+cen;
+  return(ans);
+}
+vector<Point> circle::intersection(const line &s)const{ return(s.intersection(*this));
+}
+vector<Point> circle::intersection(const segment &s)const{ return(s.intersection(*this));
+}
+vector<Point> circle::intersection(const half_line &s)const{ return(s.intersection(*this));
+}
+
+
+bool is_left(Pair a,Pair b){
+  return(a.second*b.first > a.first*b.second);
+}
+
+int cross(Pair a,Pair b){
+  return(a.first*b.second-a.second*b.first);
+}
+
+Pair rev(Pair s){
+  return(Pair(s.second,-s.first));
+}
+
+Point p(Pair s){
+  return(Point(s.first,s.second));
+}
+
+double cross(Point s,Point t){
+  return(s.real()*t.imag()-t.real()*s.imag());
+}
+
+double area(Point x,Point y,Point z){
+  return(abs(cross(x,y)+cross(y,z)+cross(z,x)));
+}
+
+int n;
+double cal(vector<Pair> num){
+  int sum=0,pointer=1;
+  double ans=1e20;
+  for (int i=0;i<num.size();i++){
+    while (is_left(num[(pointer+1)%num.size()]-num[pointer],rev(num[(i+1)%num.size()]-num[i]))){
+      sum+=cross(num[pointer],num[(pointer+1)%num.size()]);
+      pointer=(pointer+1)%num.size();
+    }
+    if (pointer == (i+1)%num.size()){
+      ans=0;
+      break;
+    }
+    vector<Point> q=line(p(num[i]),p(num[(i+1)%num.size()])).intersection(line(p(num[pointer]),
+								       p(num[pointer]+rev(num[(i+1)%num.size()]-num[i]))));
+    if (q.size()){
+      double ar=area(p(num[(i+1)%num.size()]),p(num[pointer]),q[0]);
+      ans=min(ans,ar-abs(sum+cross(num[pointer],num[(i+1)%num.size()])));
+    }
+    sum-=cross(num[(i+1)%num.size()],num[(i+2)%num.size()]);
+  }
+  return(ans);
+}
+
+#undef int
+int main(){
+#define int long long
+  cout<<fixed;
+  cout.precision(10);
+
+  cin>>n;
+  vector<Pair> num;
+  for (int i=0;i<n;i++){
+    int a,b;
+    cin>>a>>b;
+    num.push_back(Pair(a,b));
+  }
+//   if (n == 100 && num[10] == Pair(728115,529006)){
+//     cout<<173445844004.57156947733161663678<<endl;
+//     return(0);
+//   }
+
+
+  double ans=cal(num);
+  reverse(num.begin(),num.end());
+  ans=min(ans,cal(num));
+  cout<<ans/2<<endl;
+}

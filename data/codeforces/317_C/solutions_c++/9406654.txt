@@ -1,0 +1,74 @@
+#include<cstdio>
+#include<algorithm>
+
+#define foredge(u) for(int j=eq[u],v;v=ee[j].to,j;j=ee[j].nx)
+
+using namespace std;
+
+const int N=330,M=50050;
+
+int n,maxV,m,s[N],t[N],fa[N],vis[N],V;
+int sv[N*N*2][3],svt;
+struct edge{
+	int to,nx;
+}ee[M*2];
+int eq[N],en=1;
+
+void link(int u,int v){
+	ee[++en]=(edge){v,eq[u]},eq[u]=en;
+}
+void move(int u,int v,int w){
+	svt++;
+	sv[svt][0]=u,sv[svt][1]=v,sv[svt][2]=w;
+	s[u]-=w,s[v]+=w;
+}
+void transup(int u,int p){
+	if(!fa[u]) return;
+	if(s[fa[u]]+p>maxV)
+		transup(fa[u],p),move(u,fa[u],p);
+	else
+		move(u,fa[u],p),transup(fa[u],p);
+}
+void absorb(int root){
+	static int que[N];
+	int ql=1,qr=0;
+	vis[root]=++V;
+	for(que[++qr]=root;ql<=qr;++ql){
+		int u=que[ql];
+		foredge(u) if(vis[v]!=V){
+			vis[v]=V;
+			que[++qr]=v;
+			fa[v]=u;
+		}
+	}
+	fa[root]=0;
+	for(int i=1,u;u=que[i],i<=qr;++i)
+		if(s[u]>t[u]){
+			int x=min(t[root]-s[root],s[u]-t[u]);
+			if(x>maxV/2)
+				transup(u,maxV/2),x-=maxV/2;
+			transup(u,x);
+			if(s[root]==t[root]) break;
+		}
+}
+int main(){
+	scanf("%d%d%d",&n,&maxV,&m);
+	for(int i=1;i<=n;++i) scanf("%d",s+i);
+	for(int i=1;i<=n;++i) scanf("%d",t+i);
+	while(m--){
+		int u,v;
+		scanf("%d%d",&u,&v);
+		link(u,v),link(v,u);
+	}
+
+	for(int i=1;i<=n;++i)
+		if(s[i]<t[i]) absorb(i);
+	for(int i=1;i<=n;++i)
+		if(s[i]!=t[i]){
+			puts("NO");
+			return 0;
+		}
+	printf("%d\n",svt);
+	for(int i=1;i<=svt;++i)
+		printf("%d %d %d\n",sv[i][0],sv[i][1],sv[i][2]);
+}

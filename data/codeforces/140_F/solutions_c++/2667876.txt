@@ -1,0 +1,45 @@
+#include<cstdio>
+#include<iostream>
+#include<algorithm>
+#include<cstring>
+#include<set>
+#define X first
+#define Y second
+#define mp make_pair
+using namespace std;
+typedef pair<int,int> pa;
+set<pa> s;
+pa a[200010];
+int n,k,ans;
+pa operator+(pa a,pa b){
+    return mp(a.X+b.X,a.Y+b.Y);
+}
+pa operator-(pa a,pa b){
+    return mp(a.X-b.X,a.Y-b.Y);
+}
+int main(){
+    //freopen("AC.in","r",stdin);
+    //freopen("AC.out","w",stdout);
+    scanf("%d%d",&n,&k);
+    if(n<=k)return puts("-1"),0;
+    for(int i=0;i<n;i++)scanf("%d%d",&a[i].X,&a[i].Y);
+    sort(a,a+n);
+    for(int i=0;i<=k;i++)
+        for(int j=n-k-1;j<n;j++){
+            pa u=a[i]+a[j];
+            int ct=0,l=0,r=n-1;
+            for(;l<=r&&ct<=k;){
+				pa p=a[l]+a[r];
+				if(p==u)++l,--r;
+				else{
+                    ct++;
+                    p<u?l++:r--;
+                }
+			}
+            if(ct<=k)s.insert(u);
+        }
+    cout<<s.size()<<endl;
+    for(set<pa>::iterator it=s.begin();it!=s.end();it++)
+        printf("%.1lf %.1lf\n",it->X*0.5,it->Y*0.5);
+    return 0;
+}

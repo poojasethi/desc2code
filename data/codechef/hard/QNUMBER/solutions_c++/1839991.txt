@@ -1,0 +1,201 @@
+/*Important lesson. Dont compare int to long long Even naive type casting does not work. Better to not mess with that and just compare long long to long long :)*/
+
+
+#include <iostream>
+#include <limits>
+#include <vector>
+#include <algorithm>
+#include<cstdio>
+#include<cassert>
+#include<utility>
+#include<cmath>
+#include<cstdlib>
+using namespace std;
+
+const int maxp = 1000005;
+const int num_primes = 78498;
+
+long long primes[num_primes];
+bool isprime[maxp];
+
+vector< pair<long long, int> > factorN;
+vector< pair<long long, int> > factorK;
+
+long long N, K;
+int Q, T;
+
+int min(int a, int b)
+{
+    return a<b?a:b;
+}
+
+void precompute()
+{
+    factorN.clear();
+    factorK.clear();
+    /*make list of primes less that 10^6*/
+    for(int i = 2; i<maxp; i++ )
+    isprime[i] = true;
+
+    for(int i=2; i*i<maxp-3; i++)
+    {
+        if(isprime[i] == true)
+        {
+            for(int j= i*i; j<=maxp-3; j+=i)
+            {
+                isprime[j] = false;
+            }
+        }
+    }
+    int k = 0;
+    for(int i=2; i<maxp-3; i++)
+    {
+        if(isprime[i] == true)
+        {
+        primes[k++] = (long long)i;
+        }
+    }
+
+    /*factorize N*/
+    int c;
+    bool flag;
+    long long  Ncopy = N;
+    for(int i=0; i<num_primes && primes[i]<= Ncopy; i++)
+    {
+        c = 0;
+        flag = false;
+
+        while(N%primes[i] == 0)
+        {
+            flag = true;
+            c++;
+            N/= primes[i];
+        }
+
+        if(flag == true)
+        {
+            factorN.push_back(make_pair(primes[i], c));
+            factorK.push_back(make_pair(primes[i], 0));
+        }
+
+    }
+    if(N!=1)
+    {
+            factorN.push_back(make_pair(N, 1));
+            factorK.push_back(make_pair(N, 0));
+    }
+    N = Ncopy;
+}
+
+/*find powers of factors of K which are also factors of N*/
+void factorize(long long k)
+{
+    long long Kcopy = k;
+
+
+    for(int i=0; i<factorK.size(); i++)
+    factorK[i].second = 0;
+
+    for(int i=0; i<factorK.size()&& factorK[i].first<= Kcopy; i++)
+    {
+        while(k%factorK[i].first == 0)
+        {
+            factorK[i].second++;
+            k/= factorK[i].first;
+        }
+    }
+
+}
+
+int QueryA()
+{
+
+    if(N==1 || K == 1)return 1;
+
+    factorize(K);
+
+    int ans = 1;
+
+    for(int i=0; i<factorK.size(); i++)
+    {
+        ans*= (1+ min(factorN[i].second, factorK[i].second));
+    }
+    assert(ans>=0);
+    return ans;
+}
+
+int QueryB()
+{
+  if(N==1)
+  {
+      if(K==1)return 1;
+      return 0;
+  }
+  if(K == 1)
+  {
+        int d =1;
+        for(int i =0; i<factorN.size(); i++)
+        {
+            d*= factorN[i].second +1;
+        }
+        return d;
+  }
+
+  if(N%K != 0)return 0;
+
+  factorize(K);
+  int  ans = 1;
+  for(int i=0; i<factorN.size(); i++)
+  {
+      ans*= factorN[i].second - factorK[i].second + 1;
+  }
+
+  return ans;
+}
+
+int QueryC()
+{
+    int d;
+    if(N == 1) d =1;
+    else
+    {
+        d =1;
+        for(int i =0; i<factorN.size(); i++)
+        {
+            d*= factorN[i].second +1;
+        }
+    }
+
+    int ans = d - QueryB();
+    return ans;
+}
+
+
+void solve()
+{
+   scanf("%lld %d", &N, &Q);
+
+   if(N!=1)
+   precompute();
+
+   for(int i=0; i<Q; i++)
+   {
+       scanf("%d%lld", &T, &K);
+
+       if(T == 1)printf("%d\n", QueryA());
+       else if(T==2)printf("%d\n", QueryB());
+       else if(T ==3)printf("%d\n", QueryC());
+   }
+}
+
+int main()
+{
+    #ifndef ONLINE_JUDGE
+    freopen("in.txt","r",stdin);
+    freopen("out.txt","w",stdout);
+    #endif
+
+    solve();
+
+}
+

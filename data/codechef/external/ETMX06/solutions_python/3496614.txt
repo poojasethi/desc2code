@@ -1,0 +1,10 @@
+x=raw_input()
+a,b=x.split()
+d=0
+for i in a:
+    if i in b:
+        print "TRUE"
+        d=1
+        break
+if d==0:
+    print "FALSE"

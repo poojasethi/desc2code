@@ -1,0 +1,153 @@
+#include <bits/stdc++.h>
+
+#define ll long long
+
+#define SZ(x) (int)(x).size()
+#define pb push_back
+#define debug(...) fprintf(stderr, __VA_ARGS__)
+
+template<class T>inline void chkmax(T &x, const T &y) {if(x < y) x = y;}
+template<class T>inline void chkmin(T &x, const T &y) {if(x > y) x = y;}
+
+template<class T>
+inline void read(T &x) {
+    char c;int f = 1;x = 0;
+    while(((c=getchar()) < '0' || c > '9') && c != '-');
+    if(c == '-') f = -1;else x = c-'0';
+    while((c=getchar()) >= '0' && c <= '9') x= x*10+c-'0';
+    x *= f;
+}
+int outn;
+char out[(int)2e7];
+template<class T>
+inline void write(T x) {
+    if(x < 0) out[outn++] = '-', x = -x;
+    if(x) {
+        static int tmpn;
+        static char tmp[20];
+        tmpn = 0;
+        while(x) tmp[tmpn++] = x%10+'0', x /= 10;
+        while(tmpn) out[outn++] = tmp[--tmpn];
+    }
+    else out[outn++] = '0';
+}
+
+const int N = 3e4, Q = N;
+
+int n, m, a[N+9];
+int v[N+9], vn, id[N+9], qn;
+struct qry {
+    int id, l, r;
+    inline void input() {
+        read(l), read(r);
+    }
+}q[Q+9];
+int g[N+9][2][2], base[2][2];
+
+struct node {
+    int p[2], s;
+    node() {p[0] = p[1] = s = 0;}
+}tr[N*4+9];
+
+inline void mult(int a[2][2], int b[2][2], int c[2][2]) {
+    for(int k = 0; k < 2; ++k)
+        for(int i = 0; i < 2; ++i)
+            for(int j = 0; j < 2; ++j)
+                (c[i][j] += a[i][k]*b[k][j]%m) %= m;
+}
+
+inline bool cmp1(const qry &p, const qry &q) {
+    return p.l < q.l;
+}
+inline bool cmp2(const qry &p, const qry &q) {
+    return p.r < q.r;
+}
+
+int pl, pr;
+int cnt[N+9];
+int ans[Q+9];
+
+inline void pushup(int x) {
+    int ls = tr[x<<1].s;
+    tr[x].p[0] = (tr[x<<1].p[0]+g[ls][0][0]*tr[x<<1|1].p[0]+g[ls][0][1]*tr[x<<1|1].p[1])%m;
+    tr[x].p[1] = (tr[x<<1].p[1]+g[ls][1][0]*tr[x<<1|1].p[0]+g[ls][1][1]*tr[x<<1|1].p[1])%m;
+    tr[x].s = tr[x<<1].s+tr[x<<1|1].s;
+}
+
+void ins(int x, int l, int r, int p) {
+    if(l == r) {
+        tr[x].p[0] = tr[x].p[1] = v[l]%m;
+        tr[x].s = 1;
+        return ;
+    }
+    int mid = (l+r)>>1;
+    if(p <= mid) ins(x<<1, l, mid, p);
+    else ins(x<<1|1, mid+1, r, p);
+    pushup(x);
+}
+
+void del(int x, int l, int r, int p) {
+    if(l == r) {
+        tr[x].p[0] = tr[x].p[1] = tr[x].s = 0;
+        return ;
+    }
+    int mid = (l+r)>>1;
+    if(p <= mid) del(x<<1, l, mid, p);
+    else del(x<<1|1, mid+1, r, p);
+    pushup(x);
+}
+
+inline void ins(int v) {
+    cnt[v]++;
+    if(cnt[v] == 1)
+        ins(1, 1, vn, v);
+}
+
+inline void del(int v) {
+    cnt[v]--;
+    if(cnt[v] == 0)
+        del(1, 1, vn, v);
+}
+
+int main() {
+#ifndef ONLINE_JUDGE
+    freopen("633H.in", "r", stdin);
+    freopen("633H.out", "w", stdout);
+#endif
+
+    read(n), read(m);
+    for(int i = 1; i <= n; ++i)
+        read(a[i]), v[++vn] = a[i];
+    std::sort(v+1, v+vn+1);
+    vn = std::unique(v+1, v+vn+1)-v-1;
+    for(int i = 1; i <= n; ++i)
+        id[i] = std::lower_bound(v+1, v+vn+1, a[i])-v;
+    g[0][0][0] = g[0][1][1] = 1;
+    base[0][1] = base[1][0] = base[1][1] = 1;
+    for(int i = 1; i <= n; ++i)
+        mult(g[i-1], base, g[i]);
+    read(qn);
+    for(int i = 1; i <= qn; ++i)
+        q[i].input(), q[i].id = i;
+    std::sort(q+1, q+qn+1, cmp1);
+    int bs = sqrt(qn), bn = ceil(1.0*qn/bs);
+    for(int i = 1; i <= bn; ++i)
+        std::sort(q+(i-1)*bs+1, q+std::min(qn, i*bs)+1, cmp2);
+    pl = 1, pr = 0;
+    for(int i = 1; i <= qn; ++i) {
+        int l = q[i].l, r = q[i].r;
+        while(l < pl) ins(id[--pl]);
+        while(r > pr) ins(id[++pr]);
+        while(l > pl) del(id[pl++]);
+        while(r < pr) del(id[pr--]);
+        ans[q[i].id] = tr[1].p[0];
+    }
+    for(int i = 1; i <= qn; ++i)
+        write(ans[i]), out[outn++] = '\n';
+    printf("%s", out);
+
+#ifndef ONLINE_JUDGE
+    fclose(stdin);fclose(stdout);
+#endif
+    return 0;
+}

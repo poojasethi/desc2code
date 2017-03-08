@@ -1,0 +1,131 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define MAX 112345
+typedef long long LL;
+
+vector<LL> v[MAX];
+LL idx[MAX],ac[MAX],ct[MAX];
+LL L[MAX],T[MAX],cnt = 0;
+LL P[MAX][30],N,K,R;
+
+LL seg[3*MAX],lazy[3*MAX][2];
+void dfs(LL id,LL H,LL par){
+	idx[id] = cnt;
+	ac[cnt] = id;
+	L[id] = H;
+	T[id] = par;
+	++cnt;
+	for(LL i = 0; i < v[id].size(); ++i){
+		LL x = v[id][i];
+		if(idx[x] != -1) continue;
+		dfs(x,H+1,id);
+		ct[id] += ct[x] + 1;
+	}
+}
+
+void preLCA(){
+	for(LL i = 1; i <= N; ++i) P[i][0] = T[i];
+	for(LL i = 1; (1 << i) <= N; ++i){
+		for(LL j = 1; j <= N; ++j){
+			if (P[j][i-1] != -1)
+				P[j][i] = P[P[j][i-1]][i-1];
+		}
+	}
+}
+
+LL LCA(LL x,LL y){
+	if (L[x] < L[y]) swap(x,y);
+	for(LL i = 20; i >= 0; --i)
+		if (L[x]-(1 << i) >= L[y])
+			x = P[x][i];
+
+	if (x == y) return x;
+	for(LL i = 20; i >= 0; --i){
+		if (P[x][i] != -1 && P[x][i] != P[y][i])
+			x = P[x][i], y = P[y][i];
+	}
+	return T[x];
+}
+
+#define LT (node << 1)
+#define RT ((node << 1) + 1)
+#define MID ((l+r) >> 1)
+
+void pushdown(LL node,LL l,LL r){
+	if (lazy[node][0] != 0 || lazy[node][1] != 0){
+		if (l == r)
+			seg[node] += ((lazy[node][0]*L[ac[l]]) - lazy[node][1]);
+		else {
+			lazy[LT][0] += lazy[node][0], lazy[LT][1] += lazy[node][1];
+			lazy[RT][0] += lazy[node][0], lazy[RT][1] += lazy[node][1];
+		}
+
+		lazy[node][0] = lazy[node][1] = 0;
+		return;
+	}
+}
+void update(LL node,LL l,LL r,LL a,LL b,LL val,LL sub){
+	pushdown(node,l,r);
+	if (l > b || r < a) return;
+	if (l >= a && r <= b){
+		lazy[node][0] += val, lazy[node][1] += sub;
+		pushdown(node,l,r);
+		return;
+	}
+	update(LT,l,MID,a,b,val,sub);
+	update(RT,MID+1,r,a,b,val,sub);
+}
+
+LL query(LL node,LL l,LL r,LL id){
+	pushdown(node,l,r);
+	if (l == r)
+		return seg[node];
+	if (MID >= id)
+		return query(LT,l,MID,id);
+	return query(RT,MID+1,r,id);
+}
+
+void solve(){
+	memset(idx,-1,sizeof(idx));
+	memset(P,-1,sizeof(P));
+
+	cin >> N >> K >> R;
+	for(LL i = 0; i < N-1; ++i){
+		LL a,b;
+		cin >> a >> b;
+		v[a].push_back(b);
+		v[b].push_back(a);
+	}
+
+	dfs(R,1,-1);
+	preLCA();
+	char ch;
+	LL a,b;
+
+	while(K--){
+		cin >> ch >> a >> b;
+		if (ch == 'U'){
+			LL id1 = idx[a] , id2 = id1 + ct[a];
+			update(1,0,N-1,id1,id2,b,b*(L[a]-1));
+			continue;
+		}
+
+		LL com = LCA(a,b);
+		LL d1 = query(1,0,N-1,idx[a]), d2 = query(1,0,N-1,idx[b]);
+		LL d3 = query(1,0,N-1,idx[com]),d4 = 0;
+
+		if (T[com] != -1)
+			d4 = query(1,0,N-1,idx[T[com]]);
+		d4 = d3-d4;
+		LL two = (LL)2;
+		LL res = d1+d2+d4-(two*d3);
+		cout << res << endl;
+	}
+}
+
+int main()
+{
+	ios_base::sync_with_stdio(0);
+	solve();
+	return 0;
+}

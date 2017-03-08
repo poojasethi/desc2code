@@ -1,0 +1,109 @@
+#include <cstdio>
+#include <vector>
+ 
+using namespace std;
+ 
+#define MAXN 200005
+ 
+vector<int> L[MAXN];
+ 
+int p[18][MAXN],h[MAXN];
+ 
+void dfs(int cur, int par, int lvl){
+    p[0][cur] = par;
+    h[cur] = lvl;
+    
+    for(int i = L[cur].size() - 1;i >= 0;--i)
+        if(L[cur][i] != par)
+            dfs(L[cur][i],cur,lvl + 1);
+}
+ 
+int lca(int u, int v){
+    if(h[v] > h[u]) swap(u,v);
+    
+    int diff = h[u] - h[v];
+    
+    while(diff){
+        int i = __builtin_ctz(diff);
+        diff ^= (1 << i);
+        u = p[i][u];
+    }
+    
+    if(u == v) return u;
+    
+    for(int i = 17;i >= 0;--i)
+        if(p[i][u] != p[i][v]){
+            u = p[i][u];
+            v = p[i][v];
+        }
+    
+    return p[0][u];
+}
+ 
+int dist(int u, int v){
+    return h[u] + h[v] - 2 * h[lca(u,v)];
+}
+ 
+int up(int u, int x){
+    int ret = u;
+    
+    while(x){
+        int i = __builtin_ctz(x);
+        x ^= (1 << i);
+        ret = p[i][ret];
+    }
+    
+    return ret;
+}
+ 
+int solve(int r, int u, int anc){
+    int lo = 0,hi = h[u] - h[anc],mi;
+    
+    while(lo < hi){
+        mi = (lo + hi) >> 1;
+        
+        int v = up(u,mi);
+        int d1 = dist(r,v);
+        int d2 = dist(r,p[0][v]);
+        
+        if(d1 < d2) hi = mi;
+        else lo = mi + 1;
+    }
+    
+    return up(u,lo);
+}
+ 
+int main(){
+    int N,Q;
+    
+    scanf("%d",&N);
+    
+    for(int i = 1,u,v;i < N;++i){
+        scanf("%d %d",&u,&v);
+        L[u].push_back(v);
+        L[v].push_back(u);
+    }
+    
+    dfs(1,0,0);
+    
+    for(int i = 1;i <= 17;++i)
+        for(int j = 1;j <= N;++j)
+            p[i][j] = p[i - 1][ p[i - 1][j] ];
+    
+    scanf("%d",&Q);
+    
+    int r,u,v;
+    
+    while(Q--){
+        scanf("%d %d %d",&r,&u,&v);
+        
+        int x = lca(u,v);
+        int x1 = solve(r,u,x);
+        
+        if(x1 != x) printf("%d\n",x1);
+        else printf("%d\n",solve(r,v,x));
+    }
+    return 0;
+    }
+    
+    

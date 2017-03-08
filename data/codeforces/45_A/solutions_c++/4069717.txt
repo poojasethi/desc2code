@@ -1,0 +1,14 @@
+#include<iostream>
+using namespace std;
+string list[12]={"January","February","March","April","May","June","July","August","September","October","November","December"};
+string s;
+int main()
+{
+    cin>>s;
+    int x;
+    for(x=0;x<12;x++)if(list[x]==s)break;
+    int n;
+    cin>>n;
+    int sum=(x+n)%12;
+    cout<<list[sum];
+}

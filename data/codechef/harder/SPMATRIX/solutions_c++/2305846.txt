@@ -1,0 +1,87 @@
+/**
+ * June 2013 Long Challenge at Codechef
+ *
+ * Problem:  SPMATRIX - Count Special Matrices
+ * Author:   Anton Lunyov (Problem-Setter)
+ * Timing:   0.300 out of 0.666
+ *
+ * The formula is f(N) = N! * (N-1)! / 2^(N-1) / 3 * (3*N/2 - 2 - H(N-1)),
+ * where H(N) = 1 + 1/2 + 1/3 + ... + 1/N.
+ *
+ * To calculate it efficiently I set W(n) = n! * (2 + H(n)). Then
+ * W(0) = 2 and W(n) = n * W(n-1) + (n-1)!
+ * Using W(n) we can rewrite f(n) as follows
+ * f(n) = (1/2)^n * n! * (n! - 2 * (W(n-1)/3))
+ * Hence precalculating factorials and W(n) modulo MOD
+ * and also powers (1/2)^n for n upto sqrt(N) ~ 3333 =: sqN
+ * and powers (1/2)^(sqN * n) for n upto sqN
+ * we can find each f(n) using 3 operations of the form A * B % MOD,
+ * while in precalc we use <= 2 * N + O(sqrt(N)) such operations.
+ * The point of this problem is that each A * B % MOD operation matters.
+ * Even using 4 such operations some issues are possible in passing TL.
+ */
+#include <cstdio>
+
+typedef long long LL;
+
+const int maxN = 10000000;
+const int sqN = 3333;
+const int MOD = 1000000007;
+
+int fact[maxN+1],W[maxN+1];
+int pw2[sqN + 1], pw22[sqN];
+
+// returns x/2 modulo MOD
+inline int div2(int x)
+{
+  return x%2 ? (x + MOD) / 2 : x / 2;
+}
+
+// returns x/3 modulo MOD
+// Works only when MOD % 3 == 2
+inline int div3(int x)
+{
+  return (x + unsigned(x % 3) * MOD) / 3;
+}
+
+// return (1/2)^n mod MOD
+int PW2(int n)
+{
+  return LL(pw2[n % sqN]) * pw22[n / sqN] % MOD;
+}
+
+void precalc()
+{
+  // factorials and W(n)
+  fact[0] = 1;
+  W[0] = 2;
+  for (int n = 1; n <= maxN; ++n) {
+    fact[n] = LL(n) * fact[n-1] % MOD;
+    W[n] = (LL(n) * W[n-1] + fact[n-1]) % MOD;
+  }
+  // powers of 1/2
+  pw2[0] = pw22[0] = 1;
+  for (int n = 1; n <= sqN; ++n) {
+    pw2[n] = div2(pw2[n-1]);
+  }
+  LL q = pw2[sqN];
+  for (int n = 1; n < sqN; ++n) {
+    pw22[n] = q * pw22[n-1] % MOD;
+  }
+}
+
+int main() {
+  precalc();
+  int T;
+  scanf("%d", &T);
+  for (int t = 0; t < T; ++t) {
+    int n;
+    scanf("%d", &n);
+    int res = LL(PW2(n)) * fact[n] % MOD * (fact[n] - (div3(W[n-1])<<1)) % MOD;
+    if (res < 0) {
+      res += MOD;
+    }
+    printf("%d\n", res);
+  }
+  return 0;
+}

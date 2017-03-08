@@ -1,0 +1,213 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+struct Edge {
+    int y;
+    Edge *next;
+};
+
+struct Treenode {
+    int lc,rc,dfn;
+    long long k,b,s;
+};
+
+Treenode t[20000000];
+int root[100010];
+int tot;
+int deep[100010],sz[100010],fa[100010][20],pl[100010],bl[100010];
+int cq[100010],cntcq;
+Edge *b1[100010];
+int id,tid;
+long long k,b;
+
+void addedge(int x,int y) {
+    Edge *p = new Edge;
+    p->y = y;
+    p->next = b1[x];
+    b1[x] = p;
+}
+
+void dfs1(int x,int f) {
+    sz[x] = 1;
+    for (int i = 1; (1 << i) <= deep[x]; i++)
+        fa[x][i] = fa[fa[x][i - 1]][i - 1];
+    for (Edge *i = b1[x]; i != NULL; i = i->next)
+        if (i->y != f) {
+            fa[i->y][0] = x;
+            deep[i->y] = deep[x] + 1;
+            dfs1(i->y,x);
+            sz[x] += sz[i->y];
+        }
+}
+
+void dfs2(int x,int chain) {
+    pl[x] = ++id;
+    bl[x] = chain;
+    int k = 0;
+    for (Edge *i = b1[x]; i != NULL; i = i->next)
+        if (deep[x] < deep[i->y])
+            if (sz[i->y] > sz[k])
+                k = i->y;
+    if (! k)
+        return;
+    dfs2(k,chain);
+    for (Edge *i = b1[x]; i != NULL; i = i->next)
+        if (deep[x] < deep[i->y] && k != i->y)
+            dfs2(i->y,i->y);
+}
+
+int lca(int x,int y) {
+    if (deep[x] < deep[y])
+        swap(x,y);
+    int t = deep[x] - deep[y];
+    for (int i = 0; i <= 16; i++)
+        if (t & (1 << i))
+            x = fa[x][i];
+    for (int i = 16; i >= 0; i--)
+        if (fa[x][i] != fa[y][i]) {
+            x = fa[x][i];
+            y = fa[y][i];
+        }
+    return x == y?x:fa[x][0];
+}
+
+int modify(int lk,int l,int r,int ll,int rr) {
+    int nk;
+    if (t[lk].dfn == tid)
+        nk = lk;
+    else {
+        nk = ++tot;
+        t[nk] = t[lk];
+        t[nk].dfn = tid;
+    }
+    if (l == ll && r == rr) {
+        t[nk].k += k;
+        t[nk].b += b;
+        t[nk].s += k * (l + r) * (r - l + 1) / 2 + b * (r - l + 1);
+        return nk;
+    }
+    int mid = (l + r) / 2;
+    if (rr <= mid)
+        t[nk].lc = modify(t[nk].lc,l,mid,ll,rr);
+    else
+        if (ll > mid)
+            t[nk].rc = modify(t[nk].rc,mid + 1,r,ll,rr);
+        else {
+            t[nk].lc = modify(t[nk].lc,l,mid,ll,mid);
+            t[nk].rc = modify(t[nk].rc,mid + 1,r,mid + 1,rr);
+        }
+    t[nk].s = t[nk].k * (l + r) * (r - l + 1) / 2 + t[nk].b * (r - l + 1);
+    if (t[nk].lc)
+        t[nk].s += t[t[nk].lc].s;
+    if (t[nk].rc)
+        t[nk].s += t[t[nk].rc].s;
+    return nk;
+}
+
+long long query(int k,int l,int r,int ll,int rr,long long sk,long long sb) {
+    if (! k)
+        return sk * (ll + rr) * (rr - ll + 1) / 2 + sb * (rr - ll + 1);
+    if (l == ll && r == rr)
+        return t[k].s + sk * (l + r) * (r - l + 1) / 2 + sb * (r - l + 1);
+    sk += t[k].k;
+    sb += t[k].b;
+    int mid = (l + r) / 2;
+    if (rr <= mid)
+        return query(t[k].lc,l,mid,ll,rr,sk,sb);
+    else
+        if (ll > mid)
+            return query(t[k].rc,mid + 1,r,ll,rr,sk,sb);
+        else
+            return query(t[k].lc,l,mid,ll,mid,sk,sb) + query(t[k].rc,mid + 1,r,mid + 1,rr,sk,sb);
+}
+
+int main() {
+    int n,m;
+    scanf("%d%d",&n,&m);
+    for (int i = 1; i < n; i++) {
+        int x,y;
+        scanf("%d%d",&x,&y);
+        addedge(x,y);
+        addedge(y,x);
+    }
+    dfs1(1,0);
+    dfs2(1,1);
+    long long ans = 0;
+    for (int i = 1; i <= m; i++) {
+        char op[2];
+        scanf("%s",op);
+        if (op[0] == 'c') {
+            cq[++cntcq] = i;
+            int x,y;
+            long long a,b;
+            scanf("%d%d%lld%lld",&x,&y,&a,&b);
+            x = (x + ans) % n + 1;
+            y = (y + ans) % n + 1;
+            tid = i;
+            root[i] = root[i - 1];
+            int cntl = 0,cntr = 0,len = deep[x] + deep[y] - 2 * deep[lca(x,y)] + 1;
+            for (; bl[x] != bl[y];) {
+                int tx = bl[x],ty = bl[y];
+                if (deep[tx] > deep[ty]) {
+                    ::k = -b;
+                    ::b = a + b * (cntl + pl[x]);
+                    root[i] = modify(root[i],1,n,pl[tx],pl[x]);
+                    cntl += deep[x] - deep[tx] + 1;
+                    x = fa[tx][0];
+                }
+                else {
+                    cntr += deep[y] - deep[ty] + 1;
+                    ::k = b;
+                    ::b = a + b * (len - cntr - pl[ty]);
+                    root[i] = modify(root[i],1,n,pl[ty],pl[y]);
+                    y = fa[ty][0];
+                }
+            }
+            if (deep[x] > deep[y]) {
+                ::k = -b;
+                ::b = a + b * (cntl + pl[x]);
+                root[i] = modify(root[i],1,n,pl[y],pl[x]);
+            }
+            else {
+                cntr += deep[y] - deep[x] + 1;
+                ::k = b;
+                ::b = a + b * (len - cntr - pl[x]);
+                root[i] = modify(root[i],1,n,pl[x],pl[y]);
+            }
+        }
+        else
+            if (op[0] == 'q') {
+                root[i] = root[i - 1];
+                int x,y;
+                scanf("%d%d",&x,&y);
+                x = (x + ans) % n + 1;
+                y = (y + ans) % n + 1;
+                ans = 0;
+                for (; bl[x] != bl[y];) {
+                    int tx = bl[x],ty = bl[y];
+                    if (deep[tx] < deep[ty]) {
+                        swap(tx,ty);
+                        swap(x,y);
+                    }
+                    ans += query(root[i],1,n,pl[tx],pl[x],0,0);
+                    x = fa[tx][0];
+                }
+                if (deep[x] < deep[y])
+                    swap(x,y);
+                ans += query(root[i],1,n,pl[y],pl[x],0,0);
+                printf("%lld\n",ans);
+            }
+            else {
+                int x;
+                scanf("%d",&x);
+                x = (x + ans) % (cntcq + 1);
+                root[i] = root[cq[x]];
+            }
+    }
+    return 0;
+}
+

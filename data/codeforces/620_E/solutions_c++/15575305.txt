@@ -1,0 +1,110 @@
+#include<iostream>
+#include<stdio.h>
+#include<queue>
+#include<algorithm>
+#include<math.h>
+#include<string.h>
+#include<vector>
+#include<map>
+#define rep(i,a,b) for(int i=(a);i<(b);++i)
+#define drep(i,a,b) for(int i=(a);i>=(b);--i)
+using namespace std;
+typedef long long LL;
+
+const int MN=400010;
+
+vector<int> g[MN];
+int be[MN],en[MN];
+int na[MN],num=0;
+
+void dfs(int v,int pre){
+    na[v]=num;
+    be[num++]=v;
+	rep(i,0,g[v].size()){
+	    int u=g[v][i];
+	    if(u!=pre) dfs(u,v);
+	}
+	en[v]=num-1;
+}
+
+int color[MN];
+long long A[MN<<2];
+bool lazy[MN<<2];
+inline void gather(int x) {
+	A[x] = A[x << 1 ] | A[x <<1 | 1];
+}
+void build(int x,int l,int r){
+	if(l == r){
+		A[x]=1LL<<color[ be[l] ];
+		lazy[x]=1;
+		return ;
+	}
+	int y=(l+r)>>1;
+	build(x<<1,l,y);
+	build(x<<1|1,y+1,r);
+	gather(x);
+	lazy[x]=0;
+}
+inline void push(int x){
+	if(lazy[x]){
+		A[x<<1]=A[x<<1|1]=A[x];
+		lazy[x<<1]=lazy[x<<1|1]=1;
+		lazy[x]=0;
+	}
+}
+void modify(int root,int l,int r,int L,int R,LL change){
+	if(L<=l&&r<=R){
+		A[root]=change;
+		lazy[root]=1;
+		return ;
+	}
+	push(root);
+	int mid=(l+r)>>1;
+	if(L<=mid) modify(root<<1,l,mid,L,R,change);
+	if(R>mid) modify(root<<1|1,mid+1,r,L,R,change);
+	gather(root);
+}
+LL get(int root,int l,int r,int L,int R){
+	if(L<=l&&r<=R){
+		return A[root];
+	} push(root);
+	int mid=(l+r)>>1;
+	LL ans=0;
+	if(L<=mid) ans|=get(root<<1,l,mid,L,R);
+	if(R>mid) ans|=get(root<<1|1,mid+1,r,L,R);
+	return ans;
+}
+int main(){
+#ifndef ONLINE_JUDGE
+	freopen("in.cpp","r",stdin);
+#endif // ONLINE
+	int n,m;
+	scanf("%d%d",&n,&m);
+	rep(i,0,n) scanf("%d",color+i);
+	rep(i,0,n-1){
+		int a,b;
+		scanf("%d%d",&a,&b);
+		a--,b--;
+		g[a].push_back(b);
+		g[b].push_back(a);
+	}
+	dfs(0,-1);
+	build(1,0,n-1);
+	while(m--){
+		int p;
+		scanf("%d",&p);
+		if(p==1){
+			int a,b;
+			scanf("%d%d",&a,&b);
+			a--;
+			modify(1,0,n-1,na[a], en[a], 1LL<<b);
+		} else {
+			int a;
+			scanf("%d",&a);
+			a--;
+			LL ans=get(1,0,n-1,na[a],en[a]);
+			printf("%d\n",__builtin_popcountll(ans));
+		}
+	}
+	return 0;
+}

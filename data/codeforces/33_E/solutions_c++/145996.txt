@@ -1,0 +1,235 @@
+#if 1
+#include <iostream>
+#include <string>
+#include <vector>
+#include <map>
+#include <set>
+#include <queue>
+#include <sstream>
+#include <stack>
+#include <cstdlib>
+#include <cassert>
+#include <cstring>
+#include <functional>
+#include <algorithm>
+#include <cmath>
+#include <bitset>
+#include <cstdio>
+#include <list>
+using namespace std;
+
+typedef long long LL;
+typedef long double LD;
+const LD eps = 1e-9;
+
+typedef pair<int, int> pii;
+#define mp make_pair
+#define pb push_back
+#define X first
+#define Y second
+#define iss istringstream
+#define oss ostringstream
+#define dbg(x) cerr << #x << " = " << x << endl;
+
+
+const int mday = 24 * 60;
+
+pii getTime(string s)
+{
+    int h1, m1, h2, m2;
+    sscanf(s.c_str(), "%d:%d-%d:%d", &h1, &m1, &h2, &m2);
+    return mp(h1 * 60 + m1, h2 * 60 + m2);
+}
+int getOneTime(string s)
+{
+    int h, m;
+    sscanf(s.c_str(), "%d:%d", &h, &m);
+    return h * 60 + m;
+}
+struct student
+{
+    int solve;
+    int cost;
+    int time;
+    student() { }
+    student(int time, int solve, int cost) : time(time), solve(solve), cost(cost)
+    {
+        
+    }
+};
+
+int dp[102][mday * 33];
+int pred[102][mday * 33];
+int st[102][mday * 33];
+
+bool av[mday * 33];
+char tmp[12312];
+string time2str(int time)
+{
+    int day = time / mday + 1;
+    time %= mday;
+    int hours = time / 60;
+    int mins = time % 60;
+    sprintf(tmp, "%d %02d:%02d", day, hours, mins);
+    return tmp;
+}
+struct recover
+{
+    int stTime, enTime;
+    int student;
+    recover() { }
+    recover(int student, int stTime, int enTime) : stTime(stTime), enTime(enTime), student(student)
+    {
+    }
+    void print()
+    {
+        cout << student + 1 << " " << time2str(stTime) << " " << time2str(enTime) << endl;
+    }
+    friend bool operator < (const recover &a, const recover &b)
+    {
+        return a.stTime < b.stTime;
+    }
+};
+int main()
+{
+    //freopen("input.txt", "r", stdin);
+    int n, m, k; 
+    cin >> m >> n >> k;
+    //assert(k > 1);
+    map<string, int> lst;
+    vector<int> t(m);
+    for(int i = 0; i < m; ++i)
+    {
+        string s; cin >> s;
+        lst[s] = i;
+    }
+    for(int i = 0; i < m; ++i)
+        cin >> t[i];
+    vector<pii> forbid(4);
+    for(int i = 0; i < 4; ++i)
+    {
+        string s; cin >> s;
+        forbid[i] = getTime(s);
+    }
+
+    vector<student> a(n);
+    for(int i = 0; i < n; ++i)
+    {
+        string dsc; cin >> dsc;
+        int day; cin >> day;
+        string ttime; cin >> ttime;
+        int cost; cin >> cost;
+        int solve;
+        if(lst.count(dsc) == 0)
+            solve = mday * 44;
+        else
+        {
+            int idx = lst[dsc];
+            solve = t[idx];
+        }
+        int qtime = getOneTime(ttime) + mday * (day - 1);
+        a[i] = student(qtime, solve, cost);
+    }
+
+    memset(av, true, sizeof av);
+    for(int i = 0; i < 4; ++i)
+        for(int j = 0; j < k; ++j)
+            for(int z = forbid[i].X; z <= forbid[i].Y; ++z)
+                av[j * mday + z] = false;
+
+    vector<int> ord(n);
+    for(int i = 0; i < n; ++i)
+        ord[i] = i;
+    vector<int> mytime(n);
+    for(int i = 0; i < n; ++i)
+    {
+        mytime[i] = a[i].time - 1;
+        for(int j = 0; j < a[i].time; ++j)
+            mytime[i] -= !av[j];
+    }
+    for(int i = 0; i < n; ++i)
+        for(int j = i + 1; j < n; ++j)
+            if(mytime[ord[i]] /*- a[ord[i]].solve*/ > mytime[ord[j]] /*- a[ord[j]].solve*/)
+                swap(ord[i], ord[j]);
+    memset(dp, 0, sizeof dp);
+    memset(pred, -1, sizeof pred);
+    for(int z = 0; z < n; ++z)
+    {
+        int i = ord[z];
+        int cnt = 1;
+        int left = a[i].time - 1;
+        for(int j = a[i].time - 1; j >= a[i].solve - 1; --j)
+        {
+            if(av[j])
+            {
+                cnt--;              
+
+                while(cnt < a[i].solve && left >= 0)
+                {
+                    if(av[left])
+                        cnt++;
+                    left--;
+                }
+                if(cnt == a[i].solve)
+                {
+                    int cost;
+                    if(left < 0)
+                        cost = a[i].cost;
+                    else
+                        cost = dp[z][left] + a[i].cost;
+                    
+                    if(dp[z + 1][j] < cost)
+                    {
+                        dp[z + 1][j] = cost;
+                        pred[z + 1][j] = left;
+                        st[z + 1][j] = i;
+                    }
+                }
+            }
+        }
+        for(int i = 1; i <= mday * k; ++i)
+        {
+            dp[z + 1][i] = max(max(dp[z + 1][i], dp[z + 1][i - 1]), dp[z][i]);
+            //dp[z + 1][i] = max(dp[z + 1][i], dp[z][i]);
+        }
+    }
+    
+    int cnum = n, ctime = mday * k - 1;
+    int anss = dp[cnum][ctime];
+    cout << dp[cnum][ctime] << endl;
+    vector< recover > ans;
+    
+    while(cnum > 0 && ctime >= 0)
+    {
+        if(cnum > 0 && dp[cnum][ctime] == dp[cnum - 1][ctime])
+        {
+            cnum--;
+            continue;
+        }
+        
+        if(ctime > 0 && dp[cnum][ctime] == dp[cnum][ctime - 1])
+        {
+            --ctime;
+            continue;
+        }
+
+        if(dp[cnum][ctime] == 0)
+            break;
+        ans.pb(recover(ord[cnum - 1], pred[cnum][ctime] + 1, ctime));
+        ctime = pred[cnum][ctime];
+        cnum--;
+    }
+
+    if(anss > 0 && ans.size() == 0)
+        assert(false);
+    cout << ans.size() << endl;
+    reverse(ans.begin(), ans.end());
+    for(int i = 0; i < ans.size(); ++i)
+        ans[i].print();
+
+    
+
+    
+    return 0;
+}
+#endif

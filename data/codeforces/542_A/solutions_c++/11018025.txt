@@ -1,0 +1,156 @@
+#include <bits/stdc++.h>
+
+#define pb push_back
+#define mp make_pair
+#define L first
+#define R second
+#define T1				4
+#define T2				5
+
+using namespace std;
+
+typedef long long ll;
+typedef pair < int, int > pii;
+typedef pair < ll, ll > pll;
+const int TAM = 2e5 + 10;
+
+struct ev {
+	int pos, type, id;
+	ev() {}
+	ev( int p, int t, int i ) {
+		pos = p;
+		type = t;
+		id = i;
+	}
+};
+
+struct channel {
+	pii seg;
+	int val;
+};
+
+channel tvc[TAM];
+pii ad[TAM];
+vector < ev > events;
+int arr[TAM];
+int arr2[TAM];
+
+bool comp ( const ev &a, const ev &b ) {
+	if ( a.pos != b.pos ) return a.pos < b.pos;
+	return a.type < b.type;
+}
+
+set < pii > activos;
+set < pii > :: iterator it;
+int sz, nf;
+pii BIT[TAM * 5];
+
+void update ( int pos, pii val ) {
+	for ( ; pos <= sz; pos += ( pos & (-pos) ) )
+		BIT[pos] = max ( BIT[pos], val );
+}
+
+pii get ( int pos ) {
+    pii s;
+	for ( ; pos ; pos -= ( pos & (-pos) ) )
+		s = max ( s, BIT[pos] );
+	return s;
+}
+
+pii query ( int relativePos ) {
+	return get ( sz - relativePos - 1 );
+}
+
+void finish ( int i ) {
+	activos.erase ( activos.find ( mp ( ad[i].L, i ) ) );
+	update ( sz - arr2[i], mp ( ad[i].R - ad[i].L, i ) );
+}
+
+void reset ( ) {
+	sz = events.size();
+	nf = 0;
+	for ( int i = 0; i <= sz; i ++ )
+		BIT[i].first = -1;
+}
+	   
+
+int main() {
+
+	ios_base::sync_with_stdio ( 0 );
+	cin.tie ( 0 );
+
+	int n, m;
+
+	cin >> n >> m;
+
+	for ( int i = 0; i < n; i ++ ) {
+		cin >> ad[i].L >> ad[i].R;
+		events.pb ( ev ( ad[i].L, T1, i ) );
+		events.pb ( ev ( ad[i].R, T2, i ) );
+	}
+
+	for ( int i = 0; i < m; i ++ ) {
+		cin >> tvc[i].seg.L >> tvc[i].seg.R >> tvc[i].val;
+		events.pb ( ev ( tvc[i].seg.L, 2, i ) );
+		events.pb ( ev ( tvc[i].seg.R, 3, i ) );
+	}
+
+	ll ans = 0;
+	int besti, bestj;
+	pii best, opc;
+
+	for ( int k = 0; k < 2; k ++ ) {
+		
+		reset();
+		sort ( events.begin(), events.end(), comp );
+
+		for ( int ne = 0; ne < int(events.size()); ne ++ ) {
+			ev curr = events[ne];
+			if ( curr.type == T1 ) {
+				arr2[curr.id] = nf ++;
+				activos.insert ( mp ( ad[curr.id].L, curr.id ) );
+			} else if ( curr.type == T2 )
+				finish ( curr.id );
+			else if ( curr.type == 2 )
+				arr[curr.id] = nf - 1;
+			else {
+				best = query ( arr[curr.id] );
+				if ( !activos.empty() ) {
+					it = activos.begin();
+					opc.first = curr.pos -
+					   	max ( (*it).first, tvc[curr.id].seg.L );
+					opc.second = (*it).second;
+					best = max ( best, opc );
+				}
+				ll val = ll(tvc[curr.id].val) * ll(best.first);
+				if ( val > ans ) {
+					ans = val;
+					besti = best.second + 1;
+					bestj = curr.id + 1;
+				}
+			}
+		}
+
+		for ( int i = 0; i < n; i ++ ) {
+			ad[i].L *= -1; ad[i].R *= -1;
+			swap ( ad[i].L, ad[i].R );
+		}
+		for ( int i = 0; i < m; i ++ ) {
+			tvc[i].seg.L *= -1;
+			tvc[i].seg.R *= -1;
+			swap ( tvc[i].seg.L, tvc[i].seg.R );
+		}
+		for ( int i = 0; i < int(events.size()); i ++ ) {
+			events[i].pos *= -1;	
+			if ( events[i].type == T1 ) events[i].type = T2;
+			else if ( events[i].type == T2 ) events[i].type = T1;
+			else if ( events[i].type == 2 ) events[i].type = 3;
+			else if ( events[i].type == 3 ) events[i].type = 2;
+		}
+	}
+
+	cout << ans << '\n';
+	if ( ans ) cout << besti << ' ' << bestj << '\n';
+
+	return 0;
+}

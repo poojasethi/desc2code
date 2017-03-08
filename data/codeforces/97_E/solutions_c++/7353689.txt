@@ -1,0 +1,138 @@
+#include <iostream>
+#include <vector>
+#include <cstdio>
+#include <algorithm>
+#include <queue>
+#include <string>
+#include <cstring>
+#define sz(a) int((a).size())
+#define pb push_back
+#define rep(i,j,k) for (int i=j; i<=k; i++)
+#define all(c) (c).begin(),(c).end()
+#define tr(c,i) for(typeof((c).begin()) i = (c).begin(); i != (c).end(); i++)
+#define online
+using namespace std;
+typedef vector<int> vi;
+typedef vector<vi> vvi;
+typedef pair<int,int> ii;
+typedef long long LL;
+
+#ifndef online
+const int maxn=110;
+#else
+const int maxn=110000;
+#endif
+
+int dep[maxn],n,m,f[maxn][18],sum[maxn],head,tail,num[maxn],tot,low[maxn];
+ii q[maxn];
+vi edge[maxn];
+vector<ii> mark[maxn];
+
+int lca(int x, int y){
+    if (dep[x]<dep[y]) swap(x,y);
+    int k=dep[x]-dep[y];
+    rep(i,0,17) if ((k>>i)&1) x=f[x][i];
+    if (x==y) return x;
+    for (int i=17; i!=-1; i--)if (f[x][i]!=f[y][i]) x=f[x][i],y=f[y][i];    
+    return f[x][0];
+}
+
+int main(){
+    
+    cin>>n>>m;
+    
+    rep(i,0,m-1){
+        int x,y;
+        scanf("%d%d",&x,&y);
+        edge[x].pb(y); edge[y].pb(x);   
+    }
+    
+    memset(dep,0xff,sizeof(dep));
+    memset(low,0xff,sizeof(low));   
+    rep(i,1,n)
+        if (dep[i]==-1)
+	{
+            dep[i]=0; q[1]=make_pair(i,0); tail=1;
+            num[++tot]=i;
+            while (tail){                
+                int& x=q[tail].first, &e=q[tail].second;      
+                  
+                if (e>=edge[x].size()){
+                    --tail;
+                    continue;
+                }
+                
+                for(;e<edge[x].size();e++){
+                    int y=edge[x][e];
+                    if (dep[y]==-1){
+                        num[++tot]=y;
+                        dep[y]=dep[x]+1;
+                        f[y][0]=x;
+                        q[++tail]=make_pair(y,0);
+                        break;   
+                    }else{
+                        if (dep[x]-dep[y]>1&&(dep[x]-dep[y])%2==0){
+                            low[x]=max(low[x],dep[y]);   
+                        }   
+                    }
+                }
+                
+            }            
+        }
+    rep(j,0,16) rep(i,1,n)
+        f[i][j+1]=f[f[i][j]][j];
+         
+ //   for(int i =1;i<=n;i++)cout<<i<<" fa "<<f[i][0]<<endl;
+   // for(int i = 1;i<=n;i++)cout<<num[i]<<endl;
+    for(int i=1; i<=n; ++i){
+        int x=num[i];
+        if (f[x][0])
+            low[x]=max(low[x],low[f[x][0]]);   
+    }
+  //  for(int i =1;i<=n;i++)cout<<i<<" "<<low[i]<<endl;
+    //rep(i,1,n) cout<<"low "<<i<<":"<<low[i]<<endl;
+    
+    memset(sum,0,sizeof(sum));
+    rep(x,1,n)
+    tr(edge[x],i){
+        int y=*i;
+        if (dep[x]>=dep[y]||f[x][0]==y||f[y][0]==x) continue;
+   //     cout << x << " " << y << endl;
+        if ((dep[y]-dep[x])&1){
+            if (low[y]>=dep[x])
+                --sum[x],++sum[y];
+        } else {
+            //cout<<x<<" "<<y<<endl;
+            --sum[x],++sum[y];
+        }
+    }
+    
+    for (int i=n; i; --i){
+        int x=num[i];
+        if (f[x][0]!=0) sum[f[x][0]]+=sum[x];   
+    }
+    
+    for (int i=1; i<=n; ++i){
+        int x=num[i];
+        if (f[x][0]) sum[x]+=sum[f[x][0]];
+    }
+  //  rep(i,1,n) cout<<sum[i]<<endl;
+       
+    int Q;
+    cin>>Q;
+    rep(o,1,Q){
+        int x,y;
+        scanf("%d%d",&x,&y);
+        int fa=lca(x,y);
+        bool YES=false;
+        
+        if (fa>=1&&fa<=n&&x!=y){                     
+            if ((dep[x]+dep[y])%2||sum[x]+sum[y]-2*sum[fa])
+                YES=true;                  
+        }
+        
+        if (YES)printf("Yes\n");else printf("No\n");
+    }
+    
+    return 0;
+}

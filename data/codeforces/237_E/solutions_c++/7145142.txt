@@ -1,0 +1,73 @@
+#include <cstdio>
+#include <cstring>
+#include <queue>
+#include <algorithm>
+
+using namespace std;
+
+const int MaxN = 200;
+const int MaxM = 20000;
+const int INF = 0X3f3f3f3f;
+
+struct Node{
+	int v,c,cost;
+	Node *nxt,*twin;
+}*g[MaxN],pool[MaxM],*tail=pool,*pre[MaxN];
+
+int n,S,T,sum;
+char st[MaxN];
+int d[MaxN],flow[MaxN];
+
+inline void make_edge(int u,int v,int c,int cost){
+	tail->v=v;tail->c=c;tail->cost=cost; tail->twin=tail+1;tail->nxt=g[u];g[u]=tail++;
+	tail->v=u;tail->c=0;tail->cost=-cost;tail->twin=tail-1;tail->nxt=g[v];g[v]=tail++;
+}
+
+int spfa(){
+	queue<int> q;
+	static int inq[MaxN];
+	memset(d,0x3f,sizeof(d));
+	memset(flow,0,sizeof(flow));
+	memset(pre,0,sizeof(pre));
+	flow[S]=INF;d[S]=0;inq[S]=1;q.push(S);
+	while(!q.empty()){
+		int u=q.front();q.pop();inq[u]=0;
+		for(Node *p=g[u];p;p=p->nxt) if(p->c && p->cost+d[u]<d[p->v]){
+			d[p->v]=d[u]+p->cost;flow[p->v]=min(flow[u],p->c);pre[p->v]=p;
+			if(!inq[p->v]) inq[p->v]=1,q.push(p->v);
+		}
+	}
+	return d[T]<INF;
+}
+int aug(){
+	int dt=flow[T]*d[T];sum-=flow[T];
+	for(Node *p=pre[T];p;p=pre[p->twin->v])
+		p->c-=flow[T],p->twin->c+=flow[T];
+	return dt;
+}
+int costFlow(){
+	int res=0;
+	while(spfa()) res+=aug();
+	return res;
+}
+void M_E(int v,int lim){
+	int cnt[30]={0};
+	for(int i=0;st[i];i++) cnt[st[i]-'a'+1]++;
+	if(!v){
+		for(int i=1;i<=26;i++) if(cnt[i]) make_edge(S,i,cnt[i],0);
+	}
+	else{
+		make_edge(v+26,T,min(lim,(int)strlen(st)),v);
+		for(int i=1;i<=26;i++) if(cnt[i]) make_edge(i,v+26,cnt[i],0);
+	}
+}
+int main()
+{
+	scanf("%s%d",st,&n);S=0,T=n+26+1;
+	sum=strlen(st);M_E(0,0);
+	for(int i=1,lim;i<=n;i++) scanf("%s%d",st,&lim),M_E(i,lim);
+	int res=costFlow();
+	//printf("%d\n",sum);
+	printf("%d\n",sum ? -1 : res);
+	return 0;
+}

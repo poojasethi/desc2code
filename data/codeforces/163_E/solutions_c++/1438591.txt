@@ -1,0 +1,96 @@
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+struct node
+{
+	int next[26],fail;	
+}tree[1100005];
+int que[1500005],head,tail,ntot,c[3000005],tot,DFSX,root,n,m,son[3000005],pre[3000005],last[3000005],ed[3000005],op[3000005],pos[3000005];
+char o,str[2000005];
+bool del[3000005];
+void add(int a,int b){son[++tot]=b;pre[tot]=last[a];last[a]=tot;}
+int insert(char *s)
+{
+	int now=root;
+	for(;*s;s++)
+	{ 
+		if(tree[now].next[*s-'a']==0) tree[now].next[*s-'a']=++ntot;
+		now=tree[now].next[*s-'a'];	
+	}	
+	return now;
+}
+void buildac()
+{
+	que[tail++]=1;while(head<tail)
+	{
+		int p=que[head++];
+		for(int i=0;i<26;i++)
+		{
+			int t=tree[p].next[i];
+			tree[t].fail=p==1?1:tree[tree[p].fail].next[i];
+			if(t==0) tree[p].next[i]=tree[t].fail;
+			else que[tail++]=t;
+		}	
+	}	
+}
+void dfs(int k)
+{
+	++DFSX;op[k]=DFSX;
+	for(int x=last[k];x!=0;x=pre[x]) dfs(son[x]);
+	++DFSX;ed[k]=DFSX;	
+}
+void change(int x,int k)
+{
+	for(;x<=DFSX;x+=(x&(-x))) c[x]+=k;	
+}
+__int64 findsum(int x)
+{
+	__int64 ans=0;
+	for(;x;x-=(x&(-x))) ans+=c[x];
+	return ans;	
+}
+int main()
+{
+	root=ntot=1; scanf("%d %d",&m,&n);
+	for(int i=1;i<=n;i++) scanf("%s",str),pos[i]=insert(str);
+	buildac();
+	for(int i=2;i<=ntot;i++) add(tree[i].fail,i);
+	dfs(1);
+	for(int i=1;i<=n;i++) change(op[pos[i]],1),change(ed[pos[i]],-1);
+	for(int i=1;i<=m;i++)
+	{
+		scanf("\n%c",&o);	
+		if(o=='+')
+		{
+			int k; scanf("%d",&k);
+			if(!del[k]) continue;
+			del[k]=0;
+			change(op[pos[k]],1),change(ed[pos[k]],-1);	
+		}
+		else if(o=='-')
+		{
+			int k; scanf("%d",&k);
+			if(del[k]) continue;
+			del[k]=1; 
+			change(op[pos[k]],-1),change(ed[pos[k]],1);
+		}
+		else
+		{
+			scanf("%s",str);
+			int now=root; __int64 ans=0;
+			for(char *k=str;*k;k++)	
+			{
+				now=tree[now].next[*k-'a'];
+			//	cout<<now<<endl;
+				ans+=findsum(op[now]);
+			}
+			printf("%I64d\n",ans);
+		}
+	}
+//	system("pause");
+	return 0;
+}

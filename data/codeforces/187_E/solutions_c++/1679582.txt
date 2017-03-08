@@ -1,0 +1,164 @@
+#define _CRT_SECURE_NO_DEPRECATE
+
+#include <stdio.h>
+#include <iostream>
+#include <memory.h>
+#include <assert.h>
+#include <algorithm>
+#include <functional>
+#include <vector>
+#include <string>
+#include <map>
+#include <set>
+#include <deque>
+#include <math.h>
+
+#define fo(a,b,c) for( a = ( b ); a < ( c ); ++ a )
+#define fr(a,b) fo( a, 0, ( b ) )
+#define fi(a) fr( i, ( a ) )
+#define fj(a) fr( j, ( a ) )
+#define fk(a) fr( k, ( a ) )
+#define mp make_pair
+#define pb push_back
+#define all(v) (v).begin( ), (v).end( )
+#define _(a,b) memset( a, b, sizeof( a ) )
+using namespace std;
+int ni() { int a; scanf( "%d", &a ); return a; }
+double nf() { double a; scanf( "%lf", &a ); return a; }
+char sbuf[100005]; string ns() { scanf( "%s", sbuf ); return sbuf; }
+long long nll() { long long a; scanf( "%lld", &a ); return a; }
+
+template <class T> void out( T a, T b ) { bool first = true; for( T i = a; i != b; ++ i ) { if( !first ) printf( " " ); first = false; cout << * i; } printf( "\n" ); }
+template <class T> void outl( T a, T b ) { for( T i = a; i != b; ++ i ) { cout << * i << "\n"; } }
+typedef long long ll;
+typedef vector<int> vi;
+typedef vector<string> vs;
+typedef pair<int,int> pii;
+typedef map<string,int> msi;
+
+int n, m;
+vector<int> ans;
+long long a[100005];
+int l, r, nl, nr;
+
+const long long inf = 1000000000000000005;
+
+bool mark[100005];
+
+long long doit()
+{
+    int i;
+    ans.clear();
+    if (nl > 0 && l == 0) return inf;
+    if (nl >= l)
+    {
+        fi(n - 1) ans.pb(i >= nl ? i + 1 : i);
+        reverse(&ans[0], &ans[l]);
+        return a[nl] - a[0] + a[n - 1] - a[0];
+    }
+    else
+    {
+        fi(n - 1) ans.pb(i >= nl ? i + 1 : i);
+        reverse(&ans[0], &ans[nl]);
+        long long ret = a[nl] - a[0] + a[n - 1] - a[0];
+
+        set<pair<int, int> > dst;
+
+        int todo = l - nl;
+
+        fi(n - 1 - todo) if (i != nl && i != nl - 1 /*!!!*/ && i > nl)
+        {
+            dst.insert(mp(a[i + 1] - a[i], i));
+        }
+        _(mark, 0);
+
+        vector<int> takethem;
+        vector<int> costthem;
+
+        int bs = 0;
+        long long bsa = a[n - 1] - a[n - todo - 1]; 
+//        printf("take: 0, right: %d, cur: %lld\n", todo, bsa);
+        long long zu = 0;
+        fi(todo)
+        {
+            int cbs = todo - i - 1;
+            int id = n - 1 - todo + i;
+            dst.insert(mp(a[id + 1] - a[id], id));
+
+            zu += dst.begin()->first * 2;
+            takethem.pb(dst.begin()->second);
+            costthem.pb(dst.begin()->first);
+            dst.erase(dst.begin());
+
+            long long cur = a[n - 1] - a[n - cbs - 1] + zu;
+//            printf("take: %d, right: %d, zu: %lld, cur: %lld\n", i + 1, cbs, zu, cur);
+
+            if (cur < bsa)  { bsa = cur; bs = i + 1; }
+        }
+
+        fi(bs) { 
+            ret += costthem[i] * 2; 
+            if (takethem[i] > nl)
+            {
+                mark[takethem[i] - 1] = 1; 
+//                printf("a %d - ", takethem[i] - 1);
+            }
+            else
+            {
+                assert(false);
+                mark[nl - takethem[i] - 1] = 1;
+//]i                printf("b %d - ", nl - takethem[i] - 1);
+            }
+        }
+
+        ret += a[n - 1] - a[n - (todo - bs) - 1];
+        fi(todo - bs)
+        {
+            mark[n - i - 3] = 1;
+//            printf("c %d - ", n - i - 3);
+        }
+
+        fi(n - 2) if (mark[i])
+        {
+            int j = i + 1;
+            while(j < n - 2 && mark[j]) ++ j;
+//            printf("%d %d\n", i, j);
+            reverse(&ans[i], &ans[j + 1]);
+            i = j;
+        }
+
+        return ret;
+    }
+}
+
+int main( )
+{
+    int i, j, k;
+
+    n = ni();
+    l = ni(); r = n - l - 1;
+    nl = ni() - 1; nr = n - nl - 1;
+
+    fi(n) a[i] = nll();
+
+    if (nl && !l || nr && !r)
+    {
+        printf("-1\n");
+        return 0;
+    }
+
+    long long A = doit();
+    reverse(a, a + n); fi(n) a[i] = -a[i]; swap(l, r); swap(nl, nr);
+    long long B = doit();
+
+    if(A < B) { reverse(a, a + n); fi(n) a[i] = -a[i]; swap(l, r); swap(nl, nr); }
+    doit();
+    if (B < A) fi(n) ans[i] = n - ans[i];
+    else fi(n) ans[i] ++;
+
+    printf("%I64d\n", min(A, B));
+    out(all(ans));
+
+    return 0;
+}
+

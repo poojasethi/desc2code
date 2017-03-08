@@ -1,0 +1,354 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <deque>
+#include <stack>
+#include <cmath>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <bitset>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <cstring>
+#include <climits>
+#include <map>
+#include <cassert>
+
+#define ull unsigned long long
+#define ill long long int
+#define pii pair<int,int>
+#define pb(x) push_back(x)
+#define F(i,a,n) for(i=(a);i<(n);++i)
+#define FD(i,a,n) for(i=(a);i>=(n);--i)
+#define FE(it,x) for(it=x.begin();it!=x.end();++it)
+#define V(x) vector<x>
+#define S(x) scanf("%d",&x)
+#define S1(x) scanf("%lld",&x)
+#define epsilon 0.000000000000001
+#define pie acos (-1.0)
+#define MAXNODES 100001
+#define sz size()
+#define MAX 100009
+using namespace std;
+
+ill a[MAX];
+ill parent[MAX];
+ill d[MAX];
+ill level[MAX];
+vector < vector <ill> > s;
+ill root;
+ill chainhead[MAX];
+ill which[MAX];
+ill where[MAX];
+ill ssize[MAX];
+ill chain;
+
+class seg
+{
+    private:
+
+    public:
+        vector <ill> a;
+        vector <ill> flag;
+        ill ss;
+        void add (ill index)
+        {
+            ss++;
+        }
+
+        seg ()
+        {
+            ss = 0;
+        }
+
+        void space ()
+        {
+            a.resize (7*ss + 10);
+            fill (a.begin(), a.end(), 0);
+
+            flag.resize (7*ss + 10);
+            fill (flag.begin(), flag.end(), 0);
+        }
+
+        void build (ill node, ill x, ill y)
+        {
+            if (x > y) {
+                return;
+            }
+            if (x == y) {
+                a[node] = 0;
+                return;
+            }
+            ill mid = (x+y)/2;
+            build (node*2, x, mid);
+            build (node*2 + 1, mid+1, y);
+            a[node] = a[node*2] + a[node*2 + 1];
+        }
+
+        void checking (ill node, ill x, ill y)
+        {
+            if (flag[node] == 0) {
+                return;
+            }
+
+            ill mid = (x+y)/2;
+
+            if (2*node < 7*ss) {
+                a[node*2] += (ill)(mid-x+1)*flag[node];
+                flag[node*2] += flag[node];
+            }
+            if (2*node +1 < 7*ss) {
+                a[node*2 +1] += (ill)(y-mid)*flag[node];
+                flag[node*2 +1] += flag[node];
+            }
+            flag[node] = 0;
+        }
+
+        ill query (ill node, ill x, ill y, ill sx, ill sy)
+        {
+        //    cout << node << " " << 4*ss << " " << x << " " << y << " " << sx << " " << sy << endl;
+            if (x > y) {
+                return 0;
+            }
+            if (x > sy || y < sx) {
+                return 0;
+            }
+            checking (node, x, y);
+
+            if (sx <= x && sy >= y) {
+                return a[node];
+            }
+
+            if (x == y) {
+                return a[node];
+            }
+            ill mid = (x+y)/2;
+            if (sy <= mid) {
+                return query (2*node, x, mid, sx, sy);
+            }
+            if (sx > mid) {
+                return query (2*node +1, mid+1, y, sx, sy);
+            }
+            return query (2*node, x, mid, sx, sy) + query (2*node + 1, mid+1, y, sx, sy);
+        }
+
+
+
+        void update (ill node, ill x,
+
+
+                     ill y, ill sx, ill sy, ill value)
+        {
+            if (x > y) {
+                return;
+            }
+            if (x  > sy || y < sx) {
+                return;
+            }
+            checking(node, x, y);
+            if (x == y) {
+                a[node] = a[node]+value;
+               // a[x] += value;
+                return;
+            }
+
+
+
+            if (sx <= x && sy >= y) {
+                flag[node] += value;
+                a[node] = a[node]+((ill)(y-x+1)*value);
+                return;
+            }
+            ill mid = (x+y)/2;
+            update (node*2, x, mid, sx, sy, value);
+            update (node*2 +1, mid+1, y, sx, sy, value);
+            a[node] = a[node*2] + a[node*2 +1];
+        }
+};
+vector <seg> segment;
+
+ill lca( ill a, ill b)
+{
+    while (which[a] != which[b]) {
+        ill a1 = chainhead[which[a]];
+        ill b1 = chainhead[which[b]];
+        if (level[a1] < level[b1]) {
+            b = parent[b1];
+        } else {
+            a = parent[a1];
+        }
+    }
+    if (a == -1 || b == -1) {
+        return root;
+    }
+    if (level[a] < level[b]) {
+        return a;
+    }
+    return b;
+}
+
+ill query (ill u)
+{
+    ill sum = 0;
+    ill total=0;
+    while (u != -1) {
+       // cout << "AA " << u << endl;
+        ill cc = which[u];
+      //  cout << ssize[cc] << " " << where[u] << endl;
+        ill xx =  segment[cc].query (1, 0, ssize[cc]-1, where[u], where[u]);
+
+        sum = sum + total*xx;
+        xx =  segment[cc].query (1, 0, ssize[cc]-1, 0, where[u]);
+        sum = sum + xx;
+        total = total + (ill)(where[u]+1);
+        u = chainhead[cc];
+        u = parent[u];
+    }
+    return sum;
+}
+
+void update (ill index, ill value)
+{
+    ill cc = which[index];
+    segment[cc].update (1, 0, ssize[cc]-1, where[index],  ssize[cc]-1, value);
+}
+
+
+void dfs (ill index, ill p)
+{
+    d[index] = 1;
+    parent[index] = p;
+    ill i;
+
+    F (i, 0, s[index].size()) {
+        ill x = s[index][i];
+        if (x == p) {
+            continue;
+        }
+        level[x] = level[index] + 1;
+        dfs (x, index);
+        d[index] = d[index] + d[x];
+    }
+}
+
+void hld (ill index, ill p)
+{
+    if (chainhead[chain] == -1) {
+        chainhead[chain] = index;
+    }
+    which[index] = chain;
+    where[index] = ssize[chain];
+    ssize[chain]++;
+    segment[chain].add (0);
+
+    ill i,j=-1,xx=-1;
+
+    F (i, 0, s[index].size()) {
+        ill x = s[index][i];
+        if (x == p) {
+            continue;
+        }
+        if (d[x] > xx) {
+            xx = d[x];
+            j = x;
+        }
+    }
+
+    if (j == -1) {
+        return;
+    }
+    hld (j, index);
+
+    F (i, 0, s[index].size()) {
+        ill x = s[index][i];
+        if (x == p || x == j) {
+            continue;
+        }
+        chain++;
+        hld (x, index);
+    }
+}
+
+int main()
+{
+  // freopen ("input.txt", "r", stdin);
+    ill tt,ix=1;
+
+
+    ill i,n;
+    S1 (n);
+    ill qq;
+    S1 (qq);
+
+    S1 (root);
+    root--;
+
+    s.clear();      s.resize (n);
+    F (i, 0, n-1) {
+        ill x,y;
+        S1 (x);      S1 (y);
+        x--;        y--;
+        s[x].pb (y);
+        s[y].pb (x);
+    }
+
+    level[root] = 0;
+    dfs (root, -1);
+
+    segment.clear();
+    segment.resize (n+3);
+
+    chain = 0;
+    memset (chainhead, -1, sizeof(chainhead));
+    memset (ssize, 0, sizeof(ssize));
+
+    hld (root, -1);
+    F (i, 0, chain+4) {
+        segment[i].space ();
+        segment[i].build (1, 0, ssize[i]-1);
+    }
+    //cout << "SDAS" << endl;
+
+  //  cout << "SDAD " << qq << endl;
+    while (qq--) {
+        char ch[3];
+        scanf ("%s", ch);
+        if (ch[0] == 'U') {
+            ill x;
+            ill y;
+            S1(x);
+            S1(y);
+            x--;
+            update (x, y);
+
+            continue;
+        }
+
+        ill x,y;
+        S1(x);
+        S1(y);
+        x--;
+        y--;
+        ill ll = lca(x,y);
+
+
+      //  cout << x << " " << y << " " << ll << endl;
+        ill ans = query(y)+query(x)-query(ll)-(parent[ll]!=-1?query(parent[ll]):0);
+        printf ("%lld\n", ans);
+      //  cout << "A" << endl;
+      //  cout << endl;
+
+    }
+
+
+    return 0;
+}

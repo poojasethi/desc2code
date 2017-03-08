@@ -1,0 +1,214 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <vector>
+#include <map>
+#include <algorithm>
+#define pb push_back
+#define MAXN 2005
+#define INF 0x3f3f3f3f
+#define ROT 0
+#define WALK 1
+#define END 2
+using namespace std;
+
+struct answer {
+    int op;
+    int from;
+    int to;
+    int dir;
+
+    answer() {}
+    answer(int op, int from, int to, int dir):op(op), from(from), to(to), dir(dir) {}
+};
+
+int v[MAXN];
+int l[MAXN];
+int r[MAXN];
+int dp[MAXN];
+vector <pair <int, int> > pos;
+vector <answer> next[MAXN];
+int n, s;
+
+int min_dist(int a, int b) {
+    return min(abs(a - b), n - abs(a - b));
+}
+
+int rotate_right(int x) {
+    int idx = pos[x].second;
+    if (l[idx] >= idx) {
+        return l[idx] - idx;
+    }
+    return n - (idx - l[idx]);
+}
+
+int rotate_left(int x) {
+    int idx = pos[x].second;
+    if (r[idx] <= idx) {
+        return idx - r[idx];
+    }
+    return n - (r[idx] - idx);
+}
+
+int delta_left(int x, int y) {
+    int a = pos[x].second;
+    int b = pos[y].second;
+    return min_dist(r[a], b);
+}
+
+int delta_right(int x, int y) {
+    int a = pos[x].second;
+    int b = pos[y].second;
+    return min_dist(l[a], b);
+}
+
+void print_answer(int x) {
+    while(1) {
+        int done = 0;
+        //printf("here x = %d\n", x);
+        for (int i = 0; i < (int)next[x].size(); i++) {
+            int op = next[x][i].op;
+            int from = next[x][i].from;
+            int to = next[x][i].to;
+            int dir = next[x][i].dir;
+            //printf("\nop = %d, from = %d, to = %d, dir = %d\n", op, from, to, dir);
+            if (op == END) {
+                done = 1;
+                break;
+            } else if (op == ROT) {
+                int delta = 0;
+                for (int j = (from + dir + n) % n; j != x; j = (j + dir + n) % n) {
+                    //printf("here here from = %d, j = %d, delta = %d\n", from, j, delta);
+                    delta++;
+                    if (v[j] == v[from]) {
+                        //printf("inside\n");
+                        if (dir > 0) {
+                            printf("+");
+                        } else {
+                            printf("-");
+                        }
+                        printf("%d\n", delta);
+                        delta = 0;
+                    }
+                }
+            } else { // op == WALK
+                int aux = min_dist(from, to);
+                if (to >= from && to - from == aux) {
+                    printf("+%d\n", to - from);
+                } else if (to <= from && from - to == aux) {
+                    printf("-%d\n", from - to);
+                } else if (to >= from && n - (to - from) == aux) {
+                    printf("-%d\n", n - (to - from));
+                } else {
+                    printf("+%d\n", n - (from - to));
+                }
+                x = to;
+                break;
+            }
+        }
+        if (done) {
+            break;
+        }
+    }
+    return;
+}
+
+int main(void) {
+
+    scanf(" %d %d", &n, &s);
+    s--;
+    for (int i = 0; i < n; i++) {
+        scanf(" %d", &v[i]);
+        pos.pb(make_pair(v[i], i));
+    }
+    sort(pos.begin(), pos.end());
+    reverse(pos.begin(), pos.end());
+
+    for (int i = 0; i < n; i++) {
+        l[i] = r[i] = i;
+        for (int j = (i + 1) % n; j != i; j = (j + 1) % n) {
+            if (v[j] == v[i]) {
+                r[i] = j;
+                break;
+            }
+        }
+        for (int j = (i - 1 + n) % n; j != i; j = (j - 1 + n) % n) {
+            if (v[j] == v[i]) {
+                l[i] = j;
+                break;
+            }
+        }
+    }
+
+    int i;
+    for (i = 0; i < n; i++) {
+        dp[i] = INF;
+        if (pos[i].first == pos[0].first) {
+            int aux = rotate_left(i);
+            if (aux < dp[i]) {
+                dp[i] = aux;
+                int idx = pos[i].second;
+                next[idx].clear();
+                next[idx].pb(answer(ROT, idx, r[idx], -1));
+                next[idx].pb(answer(END, 0, 0, 0));
+            }
+            aux = rotate_right(i);
+            if (aux < dp[i]) {
+                dp[i] = aux;
+                int idx = pos[i].second;
+                next[idx].clear();
+                next[idx].pb(answer(ROT, idx, l[idx], 1));
+                next[idx].pb(answer(END, 0, 0, 0));
+            }
+        } else {
+            break;
+        }
+    }
+
+    int last = pos[0].first;
+    for(; i < n; i++) {
+        if (i > 0 && pos[i].first != pos[i - 1].first) {
+            last = pos[i - 1].first;
+        }
+        dp[i] = INF;
+        for (int j = i - 1; j >= 0; j--) {
+            if (pos[j].first == last) {
+                int aux = rotate_left(i) + delta_left(i, j) + dp[j];
+                if (aux < dp[i]) {
+                    dp[i] = aux;
+                    int idx = pos[i].second;
+                    next[idx].clear();
+                    next[idx].pb(answer(ROT, idx, r[idx], -1));
+                    // CHANGE LINE BELOW TO RETRIEVE ANSWER
+                    next[idx].pb(answer(WALK, r[idx], pos[j].second, 0));
+                }
+                aux = rotate_right(i) + delta_right(i, j) + dp[j];
+                //printf("here pos = %d, rotate_right = %d, delta = %d, j = %d, aux = %d\n", pos[i].second, rotate_right(i), delta_right(i, j), j, aux);
+                if (aux < dp[i]) {
+                    dp[i] = aux;
+                    int idx = pos[i].second;
+                    next[idx].clear();
+                    next[idx].pb(answer(ROT, idx, l[idx], 1));
+                    // CHANGE LINE BELOW TO RETRIEVE ANSWER
+                    next[idx].pb(answer(WALK, l[idx], pos[j].second, 0));
+                }
+            }
+        }
+    }
+    last = pos[n - 1].first;
+    dp[n] = INF;
+    for (int i = n - 1; i >= 0; i--) {
+        if (pos[i].first == pos[n - 1].first) {
+            int aux = dp[i] + min_dist(s, pos[i].second);
+            //printf("i = %d, dp[i] = %d, aux = %d\n", i, dp[i], aux);
+            if (aux < dp[n]) {
+                dp[n] = aux;
+                next[n].clear();
+                // CHANGE LINE BELOW TO RETRIEVE ANSWER
+                next[n].pb(answer(WALK, s, pos[i].second, 0));
+            }
+        }
+    }
+    printf("%d\n", dp[n]);
+    print_answer(n);
+    return 0;
+}

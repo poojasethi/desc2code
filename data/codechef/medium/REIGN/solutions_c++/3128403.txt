@@ -1,0 +1,44 @@
+/* bhupkas */
+
+#include "bits/stdc++.h"
+
+using namespace std;
+
+typedef long long LL;
+
+int t,n,k;
+vector < LL > v;
+LL S[100005],E[100005],US[100005],UE[100005];
+
+int main()
+{
+	cin >> t;
+	LL temp;
+	while(t--)
+	{
+		v.clear();
+		cin >> n >> k;
+		for(int i = 0 ; i < n ; i++)	cin >> temp , v.push_back(temp);
+		for(int i = 0 ; i < n ; i++)	S[i] = E[i] = US[i] = UE[i] = 0;
+		E[0] = v[0];
+		for(int i = 1 ; i < n ; i++)	
+		{
+			if(E[i - 1] <= 0)	E[i] = v[i];
+			else			E[i] = E[i - 1] + v[i];
+		}
+		S[n-1] = v[n-1];
+		for(int i = n - 2 ; i >= 0 ; i--)
+		{
+			if(S[i + 1] <= 0)	S[i] = v[i];
+			else			S[i] = S[i + 1] + v[i];
+		}
+		UE[n-1] = S[n-1];
+		for(int i = n - 2 ; i >= 0 ; i--) UE[i] = max(UE[i + 1] , S[i]);
+		US[0] = E[0];
+		for(int i = 1 ; i < n ; i++)	US[i] = max(US[i - 1], E[i]);
+		LL ans = (LL)(-1000000000000000LL);
+		for(int i = 0 ; i + k + 1 < n ; i++)	ans = max(ans,US[i] + UE[i + k + 1]); 
+		cout << ans << endl;		
+	}
+	return 0;
+}

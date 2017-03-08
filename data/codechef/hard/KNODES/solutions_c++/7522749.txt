@@ -1,0 +1,126 @@
+#include<bits/stdc++.h>
+using namespace std;
+#define D(x)    printf("-> %d\n", x)
+#define st      first
+#define ed      second
+#define MAX     1000000
+
+vector<int> edge[MAX+11];
+int dt[MAX+11], ft[MAX+11], lev[MAX+11], clk, tab[25][MAX+11], inv[2*MAX+11], stp;
+vector< pair<int,int> > rng;
+
+
+void dfs(int idx, int par, int dpt)
+{
+    dt[idx] = ++clk;
+    lev[idx] = dpt;
+    tab[0][idx] = par;
+    inv[clk] = idx;
+
+    int i, v;
+    for(i = 0; i < (int) edge[idx].size(); i++)
+    {
+        v = edge[idx][i];
+        if(v != par) dfs(v, idx, dpt+1);
+    }
+    ft[idx] = ++clk;
+}
+
+int go(int cur, int gap, int pos)
+{
+    if(!gap) return cur;
+
+    if(gap&1)
+    {
+        cur = tab[pos][cur];
+        gap /= 2;
+        return go(cur, gap, pos+1);
+    }
+    gap /= 2;
+    return go(cur,gap,pos+1);
+}
+
+int lca(int u, int v)
+{
+    if(u == v) return u;
+
+    if(lev[u] > lev[v]) swap(u,v);
+    v = go(v, lev[v]-lev[u], 0);
+    if(u == v) return u;
+
+    int i;
+    for(i = stp-1; i >= 0; i--)
+        if(tab[i][u] != tab[i][v])
+            u = tab[i][u], v = tab[i][v];
+
+    assert(tab[0][u] > 0);
+    return tab[0][u];
+}
+
+
+int main()
+{
+    int i, j, k, t, cs, u, v, q, n, cnt, idx, gap;
+
+    scanf("%d", &t);
+    while(t--)
+    {
+        scanf("%d", &n);
+        for(i = 1; i < n; i++)
+        {
+            scanf("%d %d", &u, &v);
+            edge[u].push_back(v);
+            edge[v].push_back(u);
+
+            assert(max(u,v) <= n);
+        }
+
+        clk = 0;
+        dfs(1, -1, 1);
+
+        for(stp = 1; (1<<stp) < n ; stp++)
+            for(idx = 1; idx <= n; idx++)
+                if(tab[stp-1][idx] == -1) tab[stp][idx] = -1;
+                else tab[stp][idx] = tab[stp-1][tab[stp-1][idx]];
+
+        scanf("%d", &q);
+        while(q--)
+        {
+            rng.clear();
+            scanf("%d", &k);
+            for(i = 1; i <= k; i++)
+            {
+                scanf("%d", &u);
+                rng.push_back(make_pair(dt[u], ft[u]));
+            }
+
+            sort(rng.begin(), rng.end());
+            cnt = 1;
+
+
+            for(i = 1; i < (int) rng.size(); i++)
+            {
+                if(rng[i-1].st < rng[i].st && rng[i].ed < rng[i-1].ed) continue;
+                else
+                {
+                    cnt++;
+                    u = inv[rng[i-1].st];
+                    v = inv[rng[i].st];
+
+                    if(lev[lca(u,v)] > lev[inv[rng[0].st]] || cnt > 2)
+                    {
+                        puts("No");
+                        goto next_qry;
+                    }
+                }
+            }
+            puts("Yes");
+
+            next_qry:;
+        }
+
+        for(i = 1; i <= n; i++)
+            edge[i].clear();
+    }
+    return 0;
+}

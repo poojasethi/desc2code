@@ -1,0 +1,279 @@
+#include<iostream>
+#include<vector>
+#include<algorithm>
+#include<set>
+#include<map>
+#include<string>
+#include<cmath>
+#include<cstdio>
+using namespace std;
+///////////////////
+//Segtree Code (1-Based)
+//Powers of 2: 262,144(18), 524,288(19), 1,048,576(20), 2,097,152(21), 4,194,304(22)
+//For segtree 1 to n, choose S=1+nearest_pow_2(above)
+//Leaf nodes are from (1<<(S-1)) to ((1<<S)-1)
+//!/
+#define S 18
+bool islazy=1;
+struct node
+{
+	long long val1,val2; //The basic value
+	long long acc1,acc2; //Accumulator (for lazy)
+	bool dirty;    //This node needs to be updated? (because of laziness?)
+};
+node ident={0,0,0,0,0};
+//!/
+node segtree[(1<<S)];
+void lazy_update(int ind, int l, int r)
+{
+	//If node i is dirty (update it and propogate)
+	if(islazy&&segtree[ind].dirty)
+	{
+		//!/ lazy code here
+		segtree[ind].val1+=(r-l+1)*segtree[ind].acc1;
+		segtree[ind].val2+=(r-l+1)*segtree[ind].acc2;
+		int left=ind<<1,right=left|1;
+		if(left<(1<<S)){segtree[left].acc1+=segtree[ind].acc1;segtree[left].acc2+=segtree[ind].acc2;segtree[left].dirty=1;}
+		if(right<(1<<S)){segtree[right].acc1+=segtree[ind].acc1;segtree[right].acc2+=segtree[ind].acc2;segtree[right].dirty=1;}
+		//!/
+		//Now that the node is updated, set it to not dirty
+		segtree[ind].acc1=0;
+		segtree[ind].acc2=0;
+		segtree[ind].dirty=0;
+	}
+}
+node merge(node a,node b)
+{
+	//!/Merge two clean nodes into a clean node
+	node ans={a.val1+b.val1,a.val2+b.val2,0,0,0};	
+	return ans;
+	//!/
+}
+void update(int l,int r,bool v,int ind=1,int lind=0,int rind=((1<<(S-1))-1))
+{
+	//The given segment (l,r) is broken into log(n) parts which are found by recursion
+	//They are called base nodes.
+	//Nodes above base nodes are called UP nodes and below are called DOWN nodes
+	//acc is the accumulator which needs to be applied to DOWN nodes
+	//l and r are 0 based indices;
+	if(l>r)swap(l,r);
+	int m=(lind+rind)>>1,left=ind<<1,right=left|1;
+	lazy_update(ind,lind,rind);
+	if(lind==l && rind==r)
+	{
+		//Reached a base node, update it
+		//!/ Update single node operation
+		if(v)
+			segtree[ind].val1+=(r-l+1);
+		else 
+			segtree[ind].val2+=(r-l+1);
+		if(islazy&&left<(1<<S))
+		{
+			segtree[left].dirty=1;
+			if(v)segtree[left].acc1++;
+			else segtree[left].acc2++;
+		}
+		if(islazy&&right<(1<<S))
+		{
+			segtree[right].dirty=1;
+			if(v)segtree[right].acc1++;
+			else segtree[right].acc2++;
+		}
+		//!/
+		return;
+	}
+	//Recurse to find base nodes
+	if(l<=m)update(l,min(r,m),v,left,lind,m);
+	if(r>=m+1)update(max(m+1,l),r,v,right,m+1,rind);
+	//Now we have recursed. We have correct values for nodes below.
+	//Update UP node here
+	segtree[ind]=ident;
+	if(left<(1<<S)){lazy_update(left,lind,m);segtree[ind]=merge(segtree[ind],segtree[left]);}
+	if(right<(1<<S)){lazy_update(right,m+1,rind);segtree[ind]=merge(segtree[ind],segtree[right]);}
+}
+node query(int l,int r,int ind=1,int lind=0,int rind=((1<<(S-1))-1))
+{
+	if(l>r)swap(l,r);
+	int m=(lind+rind)>>1,left=ind<<1,right=left|1;
+	lazy_update(ind,lind,rind);
+	if(lind==l && rind==r)
+	{
+		return segtree[ind];
+	}
+	//Recurse to find base nodes
+	node ans=ident;
+	if(l<=m)ans=merge(ans,query(l,min(r,m),left,lind,m));
+	if(r>=m+1)ans=merge(ans,query(max(m+1,l),r,right,m+1,rind));
+	return ans;
+}
+void segtree_init()
+{
+	for(int i=0;i<(1<<S);++i)segtree[i]=ident;
+}
+//////////////////
+//HLD Code! (Tree is 0 based!!)
+vector<vector<int> > adjlst;
+int n,dfsno;
+vector<int> p,h,renum,subsize,skip,invnum;
+vector<bool> isheavy,visited;
+//p is the parent p(0)=-1
+//renum is the dfs number
+//isheavy denotes whether the edge to parent is heavy or not
+//skip denotes the end of the chain
+int prelim_dfs(int x,int par=-1,int hi=0)
+{
+	p[x]=par;
+	h[x]=hi;
+	visited[x]=1;
+	subsize[x]=1;
+	for(int i=0;i<(int)adjlst[x].size();++i)
+	{
+		int nxt=adjlst[x][i];
+		if(!visited[nxt])
+		{
+			subsize[x]+=prelim_dfs(nxt,x,hi+1);
+		}
+	}
+	return subsize[x];
+}
+void dfs(int x,bool ish=0)
+{
+	renum[x]=dfsno;
+	invnum[dfsno]=x;
+	dfsno++;
+	isheavy[x]=ish;
+	if(ish)skip[x]=skip[p[x]];
+	else skip[x]=x;
+	visited[x]=1;
+	int nmax=-1,maxind=-1;
+	for(int i=0;i<(int)adjlst[x].size();++i)
+	{
+		int nxt=adjlst[x][i];
+		if(!visited[nxt])
+		{
+			if(subsize[nxt]>nmax)
+			{
+				nmax=subsize[nxt];
+				maxind=nxt;
+			}
+		}
+	}
+	if(maxind!=-1)dfs(maxind,1);
+	for(int i=0;i<(int)adjlst[x].size();++i)
+	{
+		int nxt=adjlst[x][i];
+		if(!visited[nxt])
+		{
+			dfs(nxt,0);
+		}
+	}
+}
+void hld()
+{
+	//Assumes adjlst is correctly set
+	//Chain corresponding to x is [ renum[skip[x]],renum[x] ]
+	//Segtree's leaf 'i' contains node i's value or i's parent edge value
+	p.clear();
+	renum.clear();
+	invnum.clear();
+	isheavy.clear();
+	subsize.clear();
+	skip.clear();
+	visited.clear();
+	h.clear();
+	n=adjlst.size();
+	p.resize(n);
+	h.resize(n);
+	renum.resize(n);
+	invnum.resize(n);
+	isheavy.resize(n);
+	skip.resize(n);
+	subsize.resize(n);
+	visited.resize(n);
+	for(int i=0;i<n;++i)
+	{
+		isheavy[i]=0;
+		subsize[i]=0;
+		skip[i]=i;
+		visited[i]=0;
+	}
+	p[0]=-1;
+	prelim_dfs(0);
+	for(int i=0;i<n;++i)
+		visited[i]=0;
+	dfsno=0;
+	dfs(0);
+}
+//Normally for edge associated values use a=0 (not use root's parent edge) to go to root 
+//Store parent's edge value in segtree
+//For vertex associated values use a=-1 to go to the root
+//x and a are original (not renumbered) vertices
+//Assumes a is ancestor of x
+void val(int x,int a,bool v)
+{
+	//Find the merged value associated with the segtree values renum[x],renum[p(x)], ... ,renum[a_child] (a_child=0 if a=-1) 
+	if(x==a)return;
+	int s=skip[x];
+	if(a!=-1)
+	{
+		if(renum[a]>=renum[s]){
+			update(renum[x],renum[a]+1,v);
+		}
+	}
+	update(renum[x],renum[s],v);
+	val(p[s],a,v);
+}
+///////////////////
+void doit()
+{
+	segtree_init();
+	adjlst.clear();
+	int n=1,m;
+	vector<int> tmp;
+	adjlst.push_back(tmp);
+	scanf("%d",&m);
+	vector<pair<int,int> > queries(m);
+	for(int i=0;i<m;++i)
+	{
+		int a,b;
+		scanf("%d%d",&a,&b);
+		if(a==0)
+		{
+			n++;
+			adjlst.push_back(tmp);
+			adjlst[n-1].push_back(b);
+			adjlst[b].push_back(n-1);
+		}
+		queries[i]=make_pair(a,b);
+	}
+	hld();
+	val(0,-1,1);
+	int qw=1;
+	for(int i=0;i<m;++i)
+	{
+		int a,b;
+		a=queries[i].first;
+		b=queries[i].second;
+		if(a==0)
+		{
+			val(qw,-1,h[qw]%2==0);
+			//update(0,0,h[qw]%2==0);
+			qw++;
+		}
+		else
+		{
+			node ans=query(renum[b],renum[b]);
+			printf("%lld\n",(ans.val1*(ans.val1-1))/2 + ((ans.val2*(ans.val2-1))/2));
+		}
+	}
+}
+int main()
+{
+	int t;
+	scanf("%d",&t);
+	while(t--)
+	{
+		doit();
+	}
+	return 0;
+}

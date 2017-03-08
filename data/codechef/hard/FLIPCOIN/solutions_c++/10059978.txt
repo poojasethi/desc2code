@@ -1,0 +1,107 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+struct node {
+	int headsCount;
+	bool dirty;
+};
+
+vector<node> segmentTree;
+
+int headsCount(int p, int start, int end, int a, int b) {
+	//cout << "Calling " << p << ", " << a << ", " << b << "\n";
+	
+	node& cur = segmentTree[p];
+	if(a > end || b < start) return 0;
+
+	if(cur.dirty) {
+		//cout << "I (" << p << ") am dirty\n";
+		cur.headsCount = end - start + 1 - cur.headsCount;
+		if(start != end) {
+			// not a leaf
+			segmentTree[2*p+1].dirty = !segmentTree[2*p+1].dirty;
+			segmentTree[2*p+2].dirty = !segmentTree[2*p+2].dirty;
+		}
+		cur.dirty = false;
+	}
+
+	if(a <= start && end <= b) {
+		// node inside the interval
+		return cur.headsCount;
+	}
+	int x = headsCount(2*p+1, start, (start+end)>>1, a, b);
+	int y = headsCount(2*p+2, ((start+end)>>1)+1, end, a, b);
+	return x + y; //segmentTree[2*p+1].headsCount + segmentTree[2*p+2].headsCount;
+}
+
+void flip(int p, int start, int end, int a, int b) {
+	node& cur = segmentTree[p];
+
+	if(cur.dirty) {
+		cur.headsCount = end - start + 1 - cur.headsCount;
+		if(start != end) {
+			// not a leaf
+			segmentTree[2*p+1].dirty = !segmentTree[2*p+1].dirty;
+			segmentTree[2*p+2].dirty = !segmentTree[2*p+2].dirty;
+		}
+		cur.dirty = false;
+	}
+	if(a > end || b < start) return;
+	
+	//cout << "Flip(" << p << ", " << a << ", " << b << ")\t\t";
+	//cout << "Left: " << start << ", Right: " << end << "\n";
+
+
+	if(a <= start && end <= b) {
+		cur.headsCount = end - start + 1 - cur.headsCount;
+		if(start != end) {
+			// not a leaf
+			segmentTree[2*p+1].dirty = !segmentTree[2*p+1].dirty;
+			segmentTree[2*p+2].dirty = !segmentTree[2*p+2].dirty;
+		}
+		return;
+	}
+	
+	flip(2*p+1, start, (start+end)>>1, a, b);
+	flip(2*p+2, ((start+end)>>1)+1, end, a, b);
+	segmentTree[p].headsCount = segmentTree[2*p+1].headsCount + segmentTree[2*p+2].headsCount;
+}
+
+void initTree(int p, int l, int r) {
+	/*if(l > r) return;
+	segmentTree[p].left = l;
+	segmentTree[p].right = r;
+	segmentTree[p].headsCount = 0;
+	
+	if(l == r) return;
+
+	initTree(2*p+1, l, (l+r)/2);
+	initTree(2*p+2, (l+r)/2 + 1, r);*/
+}
+
+int main() {
+	int n, q;
+	cin >> n >> q;
+
+	int origN = n;
+
+	int next_pow_of_two = 1 << (32 - __builtin_clz(n));
+	n = next_pow_of_two;
+
+	segmentTree = vector<node>(2*n);
+
+	initTree(0, 0, n-1);
+
+	int cmd, a, b;
+	while(q--) {
+		cin >> cmd >> a >> b;
+		if(cmd) {
+			cout << headsCount(0, 0, origN-1, a, b) << "\n";
+		}
+		else if(cmd == 0) {
+			flip(0, 0, origN-1, a, b);
+		}
+	}
+	return 0;
+}

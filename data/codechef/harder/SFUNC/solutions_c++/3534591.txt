@@ -1,0 +1,228 @@
+//Coder: Balajiganapathi
+//#define TRACE
+#define DEBUG
+
+#include <algorithm>
+#include <bitset>
+#include <deque>
+#include <cassert>
+#include <cctype>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <list>
+#include <map>
+#include <numeric>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <utility>
+#include <vector>
+
+using namespace std;
+
+typedef long long ll;
+typedef vector<int> vi;
+typedef pair<int,int> pi;
+typedef vector<string> vs;
+
+// Basic macros
+#define st          first
+#define se          second
+#define all(x)      (x).begin(), (x).end()
+#define ini(a, v)   memset(a, v, sizeof(a))
+#define re(i,s,n)  	for(int i=s;i<(n);++i)
+#define rep(i,s,n)  for(int i=s;i<=(n);++i)
+#define fr(i,n)     re(i,0,n)
+#define repv(i,f,t) for(int i = f; i >= t; --i)
+#define rev(i,f,t)  repv(i,f - 1,t)
+#define frv(i,n)    rev(i,n,0)
+#define pu          push_back
+#define mp          make_pair
+#define sz(x)       (int)(x.size())
+
+const int oo = 2000000009;
+const double eps = 1e-9;
+
+#ifdef TRACE
+    #define trace1(x)                cerr << #x << ": " << x << endl;
+    #define trace2(x, y)             cerr << #x << ": " << x << " | " << #y << ": " << y << endl;
+    #define trace3(x, y, z)          cerr << #x << ": " << x << " | " << #y << ": " << y << " | " << #z << ": " << z << endl;
+    #define trace4(a, b, c, d)       cerr << #a << ": " << a << " | " << #b << ": " << b << " | " << #c << ": " << c << " | " << #d << ": " << d << endl;
+    #define trace5(a, b, c, d, e)    cerr << #a << ": " << a << " | " << #b << ": " << b << " | " << #c << ": " << c << " | " << #d << ": " << d << " | " << #e << ": " << e << endl;
+    #define trace6(a, b, c, d, e, f) cerr << #a << ": " << a << " | " << #b << ": " << b << " | " << #c << ": " << c << " | " << #d << ": " << d << " | " << #e << ": " << e << " | " << #f << ": " << f << endl;
+
+#else
+
+    #define trace1(x)
+    #define trace2(x, y)
+    #define trace3(x, y, z)
+    #define trace4(a, b, c, d)
+    #define trace5(a, b, c, d, e)
+    #define trace6(a, b, c, d, e, f)
+
+#endif
+
+ll n, k, mod;
+
+inline ll add(ll a, ll b) {
+    a += b;
+    if(a >= mod) a -= mod;
+
+    return a;
+}
+
+inline ll sub(ll a, ll b) {
+    if(b) b = mod - b;
+    return add(a, b);
+}
+
+inline ll mult(ll a, ll b) {
+    ll ret = 0;
+    for(; b; b /= 2) {
+        if(b & 1) ret += a;
+        a += a;
+        if(ret >= mod) ret -= mod;
+        if(a >= mod) a -= mod;
+    }
+
+    return ret;
+}
+
+ll modpow(ll a, ll b) {
+    ll ret = 1;
+    a %= mod;
+    for(; b; b /= 2) {
+        if(b & 1) ret = mult(ret, a);
+        a = mult(a, a);
+    }
+
+    return ret;
+}
+
+const int mat_mx = 15;
+const int log_mx = 50;
+ll mat[log_mx][mat_mx][mat_mx], res[mat_mx][mat_mx];
+
+void disp_mat(int dim, ll m[mat_mx][mat_mx]) {
+#ifdef TRACE
+    fr(i, dim) {
+        fr(j, dim) cerr << m[i][j] << " ";
+        cerr << endl;
+    }
+#endif
+}
+
+void mat_mult(int dim, ll res[mat_mx][mat_mx], ll a[mat_mx][mat_mx], ll b[mat_mx][mat_mx]) {
+    static ll tmp[mat_mx][mat_mx];
+    for(int i = 0; i < dim; ++i) for(int j = 0; j < dim; ++j) {
+        tmp[i][j] = 0;
+        for(int k = 0; k < dim; ++k) {
+            tmp[i][j] += mult(a[i][k], b[k][j]);
+            if(tmp[i][j] >= mod) tmp[i][j] -= mod;
+        }
+    }
+
+
+    for(int i = 0; i < dim; ++i) for(int j = 0; j < dim; ++j) res[i][j] = tmp[i][j];
+}
+
+void mat_v_mult(int dim, ll res[mat_mx], ll a[mat_mx][mat_mx], ll b[mat_mx]) {
+    static ll tmp[mat_mx];
+    for(int i = 0; i < dim; ++i) {
+        tmp[i] = 0;
+        for(int j = 0; j < dim; ++j) {
+            tmp[i] += mult(a[i][j], b[j]);
+            if(tmp[i] >= mod) tmp[i] -= mod;
+        }
+    }
+
+    for(int i = 0; i < dim; ++i) res[i] = tmp[i];
+}
+
+void mat_pow(int dim, ll res[mat_mx][mat_mx], ll a[mat_mx][mat_mx], ll p) {
+    static ll tmp[mat_mx][mat_mx], tres[mat_mx][mat_mx];
+
+    for(int i = 0; i < dim; ++i) for(int j = 0; j < dim; ++j) tres[i][j] = (i == j) % mod;
+    for(int i = 0; i < dim; ++i) for(int j = 0; j < dim; ++j) tmp[i][j] = a[i][j];
+
+    for(; p; p /= 2) {
+        if(p & 1) mat_mult(dim, tres, tres, tmp);
+        mat_mult(dim, tmp, tmp, tmp);
+    }
+
+    
+    for(int i = 0; i < dim; ++i) for(int j = 0; j < dim; ++j) res[i][j] = tres[i][j];
+}
+
+ll v[mat_mx], resv[mat_mx];
+
+void build_mat() {
+    int dim = k + 2;
+    mat[0][0][0] = 1 % mod;
+    rep(i, 1, k) {
+        mat[0][i][0] = mat[0][i][i] = 1 % mod;
+        re(j, 1, i) mat[0][i][j] = add(mat[0][i - 1][j], mat[0][i - 1][j - 1]);
+    }
+    mat[0][k + 1][k] = mat[0][k + 1][k + 1] = 1 % mod;
+
+    fr(i, dim - 1) v[i] = 1 % mod;
+    v[dim - 1] = 0;
+
+    for(int i = 1; (1ll << i) <= n; ++i) mat_mult(dim, mat[i], mat[i - 1], mat[i - 1]);
+}
+
+ll getsum(ll till) {
+    trace1(till);
+    int dim = k + 2;
+    fr(i, dim) resv[i] = v[i];
+
+    for(int i = 0; (1ll << i) <= till; ++i) if(till & (1ll << i)) {
+        mat_v_mult(dim, resv, mat[i], resv);
+        trace1(i);
+    }
+
+    return resv[dim - 1];
+}
+
+vi divs;
+ll ans;
+
+void calc_div(ll n) {
+    for(ll p = 2; p * p <= n; ++p) if(n % p == 0) {
+        divs.pu(p);
+        n /= p;
+        while(n % p == 0) n /= p;
+    }
+
+    if(n > 1) divs.pu(n);
+}
+
+void calc(ll sofar, int idx, int sign) {
+    if(idx == sz(divs)) {
+        ll cur = mult(modpow(sofar, k), getsum(n / sofar));
+        if(sign == -1 && cur) cur = mod - cur;
+        ans += cur;
+        if(ans >= mod) ans -= mod;
+
+        return;
+    }
+    calc(sofar * divs[idx], idx + 1, sign * -1);
+    calc(sofar, idx + 1, sign);
+}
+
+int main() {
+    cin >> n >> k >> mod;
+    build_mat();
+    calc_div(n);
+    calc(1, 0, 1);
+    printf("%lld\n", ans);
+    
+	return 0;
+}

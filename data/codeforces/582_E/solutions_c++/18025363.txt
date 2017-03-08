@@ -1,0 +1,120 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cmath>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+using namespace std;
+
+typedef long long int64;
+const int mod=1000000007,tot=(1<<16)-1;
+char s[505];
+int f[505][1<<16],n,len,ans[20][5],root,a[1<<16],b[1<<16],num,sum;
+inline void inv(int a[]) {
+	for (int i=0;i<1<<15;i++) swap(a[i],a[tot^i]);
+}
+inline void mobius(int a[]) {
+	for (int i=0;i<16;i++)
+		for (int s=0;s<1<<16;s++) if (s&(1<<i)) a[s]=(a[s]+a[s^(1<<i)])%mod;
+}
+inline void mobius_inv(int a[]) {
+	for (int i=0;i<16;i++)
+		for (int s=0;s<1<<16;s++) if (s&(1<<i)) a[s]=(a[s]-a[s^(1<<i)]+mod)%mod;
+}
+inline void update_or(int now,int lch,int rch) {
+	for (int i=0;i<1<<16;i++) a[i]=f[lch][i];
+	for (int i=0;i<1<<16;i++) b[i]=f[rch][i];
+	mobius(a); mobius(b);
+	for (int i=0;i<1<<16;i++) a[i]=(int64)a[i]*b[i]%mod;
+	mobius_inv(a);
+	for (int i=0;i<1<<16;i++) f[now][i]=(f[now][i]+a[i])%mod;
+}
+inline void update_and(int now,int lch,int rch) {
+	for (int i=0;i<1<<16;i++) a[i]=f[lch][i];
+	for (int i=0;i<1<<16;i++) b[i]=f[rch][i];
+	inv(a); inv(b);
+	mobius(a); mobius(b);
+	for (int i=0;i<1<<16;i++) a[i]=(int64)a[i]*b[i]%mod;
+	mobius_inv(a);
+	inv(a);
+	for (int i=0;i<1<<16;i++) f[now][i]=(f[now][i]+a[i])%mod;
+}
+int solve(int l,int r) {
+	int now=++num;
+	if (l==r) {
+		if (s[l]>='A'&&s[l]<='D') {
+			int p=s[l]-'A';
+			for (int s=0;s<1<<16;s++) {
+				bool flag=true;
+				for (int i=0;i<1<<4;i++) if ((i>>p&1)!=(s>>i&1)) {
+					flag=false; break;
+				}
+				if (flag) f[now][s]++;
+			}
+		} else if (s[l]>='a'&&s[l]<='d') {
+			int p=s[l]-'a';
+			for (int s=0;s<1<<16;s++) {
+				bool flag=true;
+				for (int i=0;i<1<<4;i++) if ((i>>p&1)==(s>>i&1)) {
+					flag=false; break;
+				}
+				if (flag) f[now][s]++;
+			}
+		} else {
+			for (int p=0;p<4;p++) {
+				for (int s=0;s<1<<16;s++) {
+					bool flag=true;
+					for (int i=0;i<1<<4;i++) if ((i>>p&1)!=(s>>i&1)) {
+						flag=false; break;
+					}
+					if (flag) f[now][s]++;
+				}
+			}
+			for (int p=0;p<4;p++) {
+				for (int s=0;s<1<<16;s++) {
+					bool flag=true;
+					for (int i=0;i<1<<4;i++) if ((i>>p&1)==(s>>i&1)) {
+						flag=false; break;
+					}
+					if (flag) f[now][s]++;
+				}
+			}
+		}
+		return now;
+	}
+	int num=0,pos=0;
+	for (int i=l;i<=r;i++) {
+		if (s[i]=='(') num++;
+		if (s[i]==')') num--;
+		if (s[i]!='('&&s[i]!=')'&&!num) pos=i;
+	}
+	int lch=solve(l+1,pos-2),rch=solve(pos+2,r-1);
+	if (s[pos]=='|') update_or(now,lch,rch);
+	else if (s[pos]=='&') update_and(now,lch,rch);
+	else {
+		update_or(now,lch,rch); update_and(now,lch,rch);
+	}
+	return now;
+}
+int main() {
+	scanf("%s",s+1);
+	len=strlen(s+1);
+	root=solve(1,len);
+	scanf("%d",&n);
+	for (int i=1;i<=n;i++)
+		for (int j=0;j<5;j++) scanf("%d",&ans[i][j]);
+	for (int i=0;i<1<<16;i++) {
+		bool flag=true;
+		for (int j=1;j<=n;j++) {
+			int mask=0;
+			for (int k=0;k<4;k++) mask|=ans[j][k]<<k;
+			if (((i>>mask)&1)!=ans[j][4]) {
+				flag=false;
+				break;
+			}
+		}
+		if (flag) sum=(sum+f[root][i])%mod;
+	}
+	printf("%d\n",sum);
+	return 0;
+}

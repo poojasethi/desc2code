@@ -1,0 +1,147 @@
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <string>
+#include <vector>
+#include <set>
+#include <map>
+#include <stack>
+#include <queue>
+#include <algorithm>
+
+using namespace std;
+
+typedef vector<int> vi;
+typedef vector<vi> vvi;
+typedef pair<int,int> ii;
+typedef vector<ii> vii;
+typedef vector<vii> vvii;
+#define all(c) (c).begin(), (c).end()
+#define size(a) int((a).size())
+#define pb push_back
+#define mp make_pair
+#define traverse(c,it, cond) for(typeof(c.begin()) it = c.begin(); it != c.end() && cond; it++)
+#define ll long long
+#define INF 0x7FFFFFFF
+
+ii disk[251],pile[251];
+int edge[251][251][251],cost[251][251];
+set<pair<int,ii> > myset;
+
+bool can_connect(ll dx,ll dy,ll r)
+{
+	if(dx*dx + dy*dy <= r*r)
+		return true;
+	return false;
+}
+
+int main()
+{
+	multiset<pair<int,ii> >::iterator it;
+	multiset<pair<int,ii> >::iterator it2;
+	int t,n,m,w,i,j,k,a,b,res,l,next;
+	scanf("%d",&t);
+	while(t--)
+	{
+		res = INF;
+		scanf("%d%d%d",&n,&m,&w);
+		for(i=0;i<n;i++)
+			scanf("%d%d",&(pile[i].first),&(pile[i].second));
+		for(i=0;i<m;i++)
+			scanf("%d%d",&(disk[i].first),&(disk[i].second));
+			
+		sort(disk,disk+m);
+		
+		for(i=1,k=0; i<m; i++)
+		{
+			while(k>=0 && disk[i].second <= disk[k].second)
+				k--;
+			disk[++k] = disk[i];
+		}
+		m = k+1;
+		
+		for(i=0;i<n;i++)
+		{
+			for(j=0;j<n;j++)
+			{
+				b = m-1;
+				if(j != i)
+				{
+					for(a=0;a<m;a++)
+					{
+						if(!can_connect(pile[i].first-pile[j].first,pile[i].second-pile[j].second,disk[a].first+disk[b].first))
+						{
+							edge[i][j][a]=-1;
+							continue;
+						}
+						while(b >= 1 && can_connect(pile[i].first-pile[j].first,pile[i].second-pile[j].second,disk[a].first+disk[b-1].first))
+							b--;
+						edge[i][j][a]=b;
+					}
+				}
+			}
+		}
+		
+		for(i=0;i<n;i++)
+			for(j=0;j<m;j++)
+				cost[i][j] = INF;
+				
+		for(i=0;i<n;i++)
+			for(j=0;j<m;j++)
+				if(disk[j].first >= pile[i].second)
+				{
+					cost[i][j] = disk[j].second;
+					myset.insert(mp(cost[i][j],mp(i,j)));
+				}
+		
+		while(!myset.empty())
+		{
+			it = myset.begin();
+			i = (*it).second.first;
+			j = (*it).second.second;
+			myset.erase(it);
+			
+			if(pile[i].second + disk[j].first >= w)
+			{
+				res = cost[i][j];
+				break;
+			}
+			
+			if(j+1 < m)
+			{
+				next = cost[i][j] + disk[j+1].second - disk[j].second;
+				if(cost[i][j+1] > next)
+				{
+					if((it2 = myset.find(mp(cost[i][j+1],mp(i,j+1)))) != myset.end())
+							myset.erase(it2);
+					cost[i][j+1] = next;
+					myset.insert(mp(cost[i][j+1],mp(i,j+1)));
+				}
+			}
+			
+			for(k=0;k<n;k++)
+			{
+				if(k != i && edge[i][k][j] != -1)
+				{
+					l = edge[i][k][j];
+					next = cost[i][j] + disk[l].second;
+					if(cost[k][l] > next)
+					{
+						if((it2 = myset.find(mp(cost[k][l],mp(k,l)))) != myset.end())
+							myset.erase(it2);
+						cost[k][l] = next;
+						myset.insert(mp(cost[k][l],mp(k,l)));
+					}
+				}
+			}
+		}
+		
+		if(res == INF)
+			printf("impossible\n");
+		else
+			printf("%d\n",res);
+			
+		myset.clear();
+	}
+	return 0;
+}

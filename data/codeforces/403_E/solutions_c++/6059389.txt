@@ -1,0 +1,197 @@
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <map>
+#define INF 999999999
+#define mp make_pair
+#define x first
+#define y second
+using namespace std;
+typedef vector<pair<int, int> > Node;
+struct node
+{
+    node* son[2];
+    int d, id;
+};
+node STK[1000001], *head = STK;
+int n;
+void update(node* p)
+{
+    if (!p) return ;
+    if (p -> son[0] && p -> son[1])
+    {
+        int mark = p -> son[0] -> d > p -> son[1] -> d;
+        p -> d = p -> son[mark] -> d, p -> id = p -> son[mark] -> id;
+    }
+    else if (p -> son[0]) p -> d = p -> son[0] -> d, p -> id = p -> son[0] -> id;
+    else if (p -> son[1]) p -> d = p -> son[1] -> d, p -> id = p -> son[1] -> id;
+}   
+node* Build_tree(int l, int r)
+{
+    if (l > r) return 0;
+    node* tmp = ++ head;
+    tmp -> son[0] = tmp -> son[1] = 0;
+    tmp -> d = INF, tmp -> id = l;
+    if (l == r) return tmp;
+    int mid = (l + r) >> 1;
+    tmp -> son[0] = Build_tree(l, mid);
+    tmp -> son[1] = Build_tree(mid + 1, r);
+    return tmp;
+}
+void Modify(node* p, int L, int R, int pos, int d)
+{
+    if (L == R) { p -> d = d, p -> id = pos; return ; }
+    int mid = (L + R) >> 1;
+    if (pos <= mid) Modify(p -> son[0], L, mid, pos, d);
+    else Modify(p -> son[1], mid + 1, R, pos, d);
+    update(p);
+}
+pair<int, int> Query(node* p, int L, int R, int l, int r)
+{
+    if (L == l && R == r) return mp(p -> d, p -> id);
+    int mid = (L + R) >> 1;
+    if (r <= mid) return Query(p -> son[0], L, mid, l, r);
+    else if (l > mid) return Query(p -> son[1], mid + 1, R, l, r);
+    else return min(Query(p -> son[0], L, mid, l, mid), Query(p -> son[1], mid + 1, R, mid + 1, r));
+}
+struct Event
+{
+    int L[200005], R[200005], pos[200005];
+    int dfs_clock, d[200005][21], depth[200005];
+    vector<int > E[200005];
+    int px[200005], py[200005];
+    bool Mark[200005];
+    map<pair<int, int>, int> M, M2;
+    Node RevE[200005];
+    Node :: iterator S[200005];
+    node* Root;
+    void dfs(int x, int fa, int deep)
+    {
+        L[x] = ++ dfs_clock; pos[dfs_clock] = x;
+        depth[x] = deep; d[x][0] = fa;
+        for (int i = 1; i <= 20; i ++)
+            d[x][i] = d[d[x][i - 1]][i - 1];
+        for (int i = 0; i < (int )E[x].size(); i ++)
+        {
+            int to = E[x][i];
+            if (!L[to]) dfs(to, x, deep + 1);
+        }
+        R[x] = dfs_clock;
+    }
+    int LCA(int x, int y)
+    {
+        if (x == y) return x;
+        if (depth[x] < depth[y]) swap(x, y);
+        for (int i = 20; i >= 0; i --)
+            if (depth[d[x][i]] >= depth[y]) x = d[x][i];
+        if (x == y) return x;
+        for (int i = 20; i >= 0; i --)
+            if (d[x][i] != d[y][i]) x = d[x][i], y = d[y][i];
+        return d[x][0];
+    }
+    void Read(int n, int *a, int *Rev)
+    {
+        for (int i = 1; i < n; i ++)
+        {
+            int tmpx = a[i], tmpy = i + 1;
+            E[tmpx].push_back(tmpy), E[tmpy].push_back(tmpx);
+            M[mp(tmpx, tmpy)] = i, M[mp(tmpy, tmpx)] = i;
+        }
+        dfs_clock = 0;
+        Root = Build_tree(1, n);
+        dfs(1, 0, 1);
+        for (int i = 1; i < n; i ++)
+        {
+            int tmpx = Rev[i], tmpy = i + 1;
+            M2[mp(tmpx, tmpy)] = i, M2[mp(tmpy, tmpx)] = i;
+            int tmp = depth[LCA(tmpx, tmpy)];
+            RevE[tmpx].push_back(mp(tmp, i));
+            RevE[tmpy].push_back(mp(tmp, i));
+            px[i] = tmpx, py[i] = tmpy;
+        }
+        for (int i = 1; i <= n; i ++)
+        {
+            RevE[i].push_back(mp(INF, 0));
+            sort(RevE[i].begin(), RevE[i].end());
+        }
+        for (int i = 1; i <= n; i ++)
+            Modify(Root, 1, n, L[i], RevE[i].begin() -> x);
+        for (int i = 1; i <= n; i ++)
+            S[i] = RevE[i].begin();
+    }
+    void Cut(int x, int y) { Mark[M2[mp(x, y)]] = 1; }
+    void Work(int x, int y, Node &V)
+    {
+        if (d[y][0] == x) swap(x, y);
+        while (1)
+        {
+            pair<int, int> tmp = Query(Root, 1, n, L[x], R[x]);
+            if (tmp.x >= depth[x]) break;
+            int tmps = S[pos[tmp.y]] -> y;
+            if (!Mark[tmps])
+            {
+                Mark[tmps] = 1;
+                V.push_back(mp(px[tmps], py[tmps]));
+            }
+            ++ S[pos[tmp.y]];
+            Modify(Root, 1, n, L[pos[tmp.y]], S[pos[tmp.y]] -> x);
+        }
+    }
+};
+Event RED, BLUE;
+int a[200001], b[200001];
+int tops = 0;
+int ans[200001];
+int main( )
+{
+    int idx = 0;
+    scanf("%d", &n);
+    for (int i = 1; i < n; i ++)
+        scanf("%d", &a[i]);
+    for (int i = 1; i < n; i ++)
+        scanf("%d", &b[i]);
+    scanf("%d", &idx);
+    BLUE.Read(n, a, b);
+    RED.Read(n, b, a);
+    int tmpx = a[idx], tmpy = idx + 1;
+    RED.Cut(tmpx, tmpy);
+    Node now, next;
+    int flag = 0;
+    now.push_back(mp(tmpx, tmpy));
+    while (!now.empty())
+    {
+        next.clear();
+        if (!flag)
+        {
+            printf("Blue\n");
+            tops = 0;
+            for (int i = 0; i < (int )now.size(); i ++)
+                ans[++ tops] = BLUE.M[now[i]];
+            sort(ans + 1, ans + 1 + tops);
+            for (int i = 1; i <= tops; i ++)
+                printf("%d ", ans[i]);
+            printf("\n");
+            for (int i = 0; i < (int )now.size(); i ++)
+                BLUE.Work(now[i].x, now[i].y, next);
+        }
+        else
+        {
+            printf("Red\n");
+            tops = 0;
+            for (int i = 0; i < (int )now.size(); i ++)
+                ans[++ tops] = RED.M[now[i]];
+            sort(ans + 1, ans + 1 + tops);
+            for (int i = 1; i <= tops; i ++)
+                printf("%d ", ans[i]);
+            printf("\n");
+            for (int i = 0; i < (int )now.size(); i ++)
+                RED.Work(now[i].x, now[i].y, next);
+        }
+        swap(now, next); flag ^= 1;
+    }
+    return 0;
+}

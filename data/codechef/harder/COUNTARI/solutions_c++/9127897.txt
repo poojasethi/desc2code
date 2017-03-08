@@ -1,0 +1,83 @@
+#include<iostream>
+#include<cstring>
+#include<cstdio>
+#include<cmath>
+#define N 100005
+#define sz 65536
+#define L 16
+#define LL long long
+using namespace std;
+struct cp{
+	double r,i;
+	inline void init(double x,double y){r=x,i=y;}
+	inline cp operator + (const cp &A)const{
+	  return (cp){r+A.r,i+A.i};}
+	inline cp operator - (const cp &A)const{
+	  return (cp){r-A.r,i-A.i};}
+	inline cp operator * (const cp &A)const{
+	  return (cp){r*A.r-i*A.i,r*A.i+i*A.r};}
+}A[N],B[N],C[N],T[N];
+int rev[N],a[N],c[N],c1[N],ct[N];
+inline int in(){
+	int x=0; char ch=getchar();
+	while (ch<'0'||ch>'9') ch=getchar();
+	while (ch>='0'&&ch<='9') x=x*10+ch-'0',ch=getchar();
+	return x;
+}
+inline void prework(){
+	for (int i=0; i<sz; i++){
+	  int t=0,now=i;
+	  for (int j=1; j<=L; j++)
+	    t=t<<1|(now&1),now>>=1;
+	  rev[i]=t;
+	}
+}
+inline void FFT(cp a[],int flag){
+	for (int i=0; i<sz; i++) T[rev[i]]=a[i];
+	for (int i=0; i<sz; i++) a[i]=T[i];
+	for (int i=2; i<=sz; i<<=1){
+	  cp wn; wn.init(cos(M_PI*2./i),flag*sin(M_PI*2./i));
+	  for (int j=0; j<sz; j+=i){
+	  	cp w; w.init(1,0);
+	  	for (int k=j; k<j+i/2; k++){
+	  	  cp t=a[k+i/2]*w;
+	  	  a[k+i/2]=a[k]-t,a[k]=a[k]+t;
+	  	  w=w*wn;
+	  	}
+	  }
+	}
+	if (flag==-1) for (int i=0; i<sz; i++) a[i].r/=(double)sz;
+}
+inline LL cal(int l,int r){
+    LL ans=0;
+	for (int i=l; i<=r; i++) ct[a[i]]++;
+	for (int i=l; i<=r; i++){
+	  ct[a[i]]--; 
+	  for (int j=l; j<i; j++)
+	    if ((a[i]<<1)>=a[j]) ans+=ct[(a[i]<<1)-a[j]]+c[(a[i]<<1)-a[j]];
+	  for (int j=i+1; j<=r; j++)
+	    if ((a[i]<<1)>=a[j]) ans+=c1[(a[i]<<1)-a[j]];
+	}
+	return ans;
+}
+int main(){
+	//freopen("data.in","r",stdin);
+	//freopen("f.out","w",stdout);
+	prework(); LL ans=0;
+	int n=in(); int bl=(int)pow(n,2./3.);
+	for (int i=1; i<=n; i++) a[i]=in(),c[a[i]]++;
+	for (int now=1; now<=n; now+=bl){
+		int ed=min(now+bl-1,n);
+		//cout<<now<<' '<<ed<<endl;
+		for (int i=now; i<=ed; i++) c[a[i]]--;
+		for (int i=0; i<sz; i++)
+		  A[i]=(cp){(double)c1[i],0},B[i]=(cp){(double)c[i],0};
+		FFT(A,1); FFT(B,1);
+		for (int i=0; i<sz; i++) C[i]=A[i]*B[i];
+		FFT(C,-1);
+		for (int i=now; i<=ed; i++) ans+=(LL)(C[a[i]<<1].r+0.5);
+		ans+=cal(now,ed);
+		for (int i=now; i<=ed; i++) c1[a[i]]++;
+	}
+	cout<<ans<<endl;
+}

@@ -1,0 +1,230 @@
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <functional>
+#include <vector>
+using namespace std;
+
+const int N=400005,Q=N,logN=20;
+
+const int inf=(int)1e9+7;
+
+int n,q;
+
+int lg[N];
+int a[N],st[logN][N];
+int rangemin(int l,int r){
+	l--;
+	int j=lg[r-l];
+	return min(st[j][l+(1<<j)],st[j][r]);
+}
+
+struct result{
+	int st,cost;
+	result():cost(inf){
+	}
+};
+
+struct data{
+	int x,st,aim;
+	result r1,r2;
+};
+
+struct data2{
+	int x,xlast,aim;
+	result r1,r2;
+};
+
+bool cmpx(const data *a,const data *b){
+	return a->x<b->x;
+}
+bool cmpx2(const data2 *a,const data2 *b){
+	return a->x<b->x;
+}
+
+vector<data*> seq1,seq2;
+vector<data2*> seq3,seq4;
+
+struct query{
+	int x1,y1,x2,y2;
+	data d1,d2;
+	data2 d3;
+	int ans;
+	void read(){
+		scanf("%d%d%d%d",&x1,&y1,&x2,&y2);
+		if(x1>=x2){
+			ans=min(1+y2,abs(min(y1,rangemin(x2,x1))-y2));
+			d1.x=x2;
+			d1.st=min(y1,rangemin(x2,x1));
+			d1.aim=y2;
+			seq1.push_back(&d1);
+			d2.x=x1;
+			d2.st=y1;
+			d2.aim=y2;
+			seq2.push_back(&d2);
+			d3.x=x2;
+			d3.xlast=x1;
+			d3.aim=y2;
+			seq4.push_back(&d3);
+		}
+		else{
+			ans=min(1+y2,abs(min(y1,rangemin(x1,x2))-y2));
+			d1.x=x2;
+			d1.st=min(y1,rangemin(x1,x2));
+			d1.aim=y2;
+			seq2.push_back(&d1);
+			d2.x=x1;
+			d2.st=y1;
+			d2.aim=y2;
+			seq1.push_back(&d2);
+			d3.x=x2;
+			d3.xlast=x1;
+			d3.aim=y2;
+			seq3.push_back(&d3);
+		}
+	}
+	void work(){
+		if(x1>=x2){
+			ans=min(ans,d1.r1.cost);
+			ans=min(ans,d1.r2.cost);
+			if(d2.r1.st<rangemin(x2,x1))
+				ans=min(ans,d2.r1.cost);
+			if(d2.r2.st<rangemin(x2,x1))
+				ans=min(ans,d2.r2.cost);
+			ans=min(ans,d3.r1.cost);
+			ans=min(ans,d3.r2.cost);
+		}
+		else{
+			ans=min(ans,d1.r1.cost);
+			ans=min(ans,d1.r2.cost);
+			if(d2.r1.st<rangemin(x1,x2))
+				ans=min(ans,d2.r1.cost);
+			if(d2.r2.st<rangemin(x1,x2))
+				ans=min(ans,d2.r2.cost);
+			ans=min(ans,d3.r1.cost);
+			ans=min(ans,d3.r2.cost);
+		}
+		ans+=abs(x1-x2);
+		printf("%d\n",ans);
+	}
+} seq[Q];
+
+int s[N];
+
+bool cmps(const int i,const int j){
+	return a[i]<a[j];
+}
+
+int main(){
+	scanf("%d",&n);
+	for(int i=1;i<=n;i++) scanf("%d",&a[i]),st[0][i]=a[i];
+	for(int i=2;i<=n;i++) lg[i]=lg[i>>1]+1;
+	for(int j=1;j<=lg[n];j++)
+		for(int i=1<<j;i<=n;i++)
+			st[j][i]=min(st[j-1][i-(1<<(j-1))],st[j-1][i]);
+	scanf("%d",&q);
+	for(int i=1;i<=q;i++) seq[i].read();
+	sort(seq1.begin(),seq1.end(),cmpx);
+	*s=0;
+	for(int i=1,j=0;i<=n;i++){
+		while(*s&&a[s[*s]]>=a[i]) --*s;
+		s[++*s]=i;
+		for(;j<int(seq1.size())&&seq1[j]->x==i;j++){
+			data *d=seq1[j];
+			a[0]=d->aim;
+			int loc=upper_bound(s+1,s+*s+1,0,cmps)-s-1;
+			if(loc>=1){
+				d->r1.st=a[s[loc]];
+				d->r1.cost=2*abs(i-s[loc])+(a[s[loc]]>d->st)+(d->aim-a[s[loc]]);
+			}
+		}
+	}
+	*s=0;
+	for(int i=1,j=0;i<=n;i++){
+		while(*s&&a[s[*s]]>=a[i]) --*s;
+		while(*s&&2*abs(i-s[*s])+a[s[*s]]>a[i]) --*s;
+		s[++*s]=i;
+		for(;j<int(seq1.size())&&seq1[j]->x==i;j++){
+			data *d=seq1[j];
+			a[0]=d->aim;
+			int loc=lower_bound(s+1,s+*s+1,0,cmps)-s;
+			if(loc<=*s){
+				d->r2.st=a[s[loc]];
+				d->r2.cost=2*abs(i-s[loc])+(a[s[loc]]>d->st)+(a[s[loc]]-d->aim);
+			}
+		}
+	}
+	sort(seq2.begin(),seq2.end(),cmpx);
+	*s=0;
+	for(int i=n,j=int(seq2.size())-1;i>=1;i--){
+		while(*s&&a[s[*s]]>=a[i]) --*s;
+		s[++*s]=i;
+		for(;j>=0&&seq2[j]->x==i;j--){
+			data *d=seq2[j];
+			a[0]=d->aim;
+			int loc=upper_bound(s+1,s+*s+1,0,cmps)-s-1;
+			if(loc>=1){
+				d->r1.st=a[s[loc]];
+				d->r1.cost=2*abs(i-s[loc])+(a[s[loc]]>d->st)+(d->aim-a[s[loc]]);
+			}
+		}
+	}
+	*s=0;
+	for(int i=n,j=int(seq2.size())-1;i>=1;i--){
+		while(*s&&a[s[*s]]>=a[i]) --*s;
+		while(*s&&2*abs(i-s[*s])+a[s[*s]]>a[i]) --*s;
+		s[++*s]=i;
+		for(;j>=0&&seq2[j]->x==i;j--){
+			data *d=seq2[j];
+			a[0]=d->aim;
+			int loc=lower_bound(s+1,s+*s+1,0,cmps)-s;
+			if(loc<=*s){
+				d->r2.st=a[s[loc]];
+				d->r2.cost=2*abs(i-s[loc])+(a[s[loc]]>d->st)+(a[s[loc]]-d->aim);
+			}
+		}
+	}
+	sort(seq3.begin(),seq3.end(),cmpx2);
+	*s=0;
+	for(int i=1,j=0;i<=n;i++){
+		while(*s&&a[s[*s]]>=a[i]) --*s;
+		s[++*s]=i;
+		for(;j<int(seq3.size())&&seq3[j]->x==i;j++){
+			data2 *d=seq3[j];
+			int lim=lower_bound(s+1,s+*s+1,d->xlast,less<int>())-s;
+			a[0]=d->aim;
+			int loc=upper_bound(s+lim,s+*s+1,0,cmps)-s-1;
+			if(loc>=lim){
+				d->r1.st=a[s[loc]];
+				d->r1.cost=1+abs(a[s[loc]]-d->aim);
+			}
+			++loc;
+			if(loc<=*s){
+				d->r2.st=a[s[loc]];
+				d->r2.cost=1+abs(a[s[loc]]-d->aim);
+			}
+		}
+	}
+	sort(seq4.begin(),seq4.end(),cmpx2);
+	*s=0;
+	for(int i=n,j=int(seq4.size())-1;i>=1;i--){
+		while(*s&&a[s[*s]]>=a[i]) --*s;
+		s[++*s]=i;
+		for(;j>=0&&seq4[j]->x==i;j--){
+			data2 *d=seq4[j];
+			int lim=lower_bound(s+1,s+*s+1,d->xlast,greater<int>())-s;
+			a[0]=d->aim;
+			int loc=upper_bound(s+lim,s+*s+1,0,cmps)-s-1;
+			if(loc>=lim){
+				d->r1.st=a[s[loc]];
+				d->r1.cost=1+abs(a[s[loc]]-d->aim);
+			}
+			++loc;
+			if(loc<=*s){
+				d->r2.st=a[s[loc]];
+				d->r2.cost=1+abs(a[s[loc]]-d->aim);
+			}
+		}
+	}
+	for(int i=1;i<=q;i++) seq[i].work();
+}

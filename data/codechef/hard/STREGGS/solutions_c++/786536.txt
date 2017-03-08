@@ -1,0 +1,129 @@
+/*
+@author = Walter Erquinigo (a20012251@gmail.com)
+
+Brief description:
+ Given N stacks of width 1 and height A_i (1 <= A_i <= 10^6), and a number K (1 <= K <= N). Find a subset of size K of the given stacks that minimizes the area covered by projecting each stack onto every other greater stack and also considering the same stack in the projection (overlaps don't count twice). The answer is the minimum area.
+ 
+Brief solution:
+
+Suppose K=1 and we know beforehand which egg to tap, let the index of this egg be 'a'. Then the worst case happens when we tap before every other greater egg. So, the solution for this case is A_a * (1 + number of eggs whose A_i is greater than A_a). Obviously, the worst case doesn't happen when we break an egg with a lesser A value than the chosen one.
+
+Now, for greater K, each time we decide to break an egg with index 'a', we have to tap every other greater egg exactly A_a times, but if we have already broke another egg, we may not have to tap A_a times some eggs, because the former egg made us tap them several times. So, we make two assumptions:
+1. The eggs are sorted increasingly and we select which eggs to break in decreasing order.
+2. As each egg has an A_i value, we model each egg as a stack of height A_i.
+
+Now, each time we decide to break a stack of height A_i, we have to 'paint' this stack and every other greater stack exactly a height of A_i. If the previous selected stack was A_j (j > i) and if i <= k < j, we have to paint now, for the k-th stack, exactly A_i units, and leave all the rest untouched. So, let's define the recursive formula
+
+DP[pos][k] = Min j (j > pos) : DP[j][k - 1] + A[pos] * (j - pos)
+
+This gives us a simple solution with complexity O(N^2 * K), which is too big, so we investigate further this formula
+
+DP[pos][k] = Min j (j > pos) : DP[j][k - 1] + A[pos] * j - A[pos] * i
+           = (Min j (j > pos) : A[pos] * j + DP[j][k - 1]) - A[i] * i
+
+Now, in this formula, let X[j] = j and Y[j] = DP[j][k - 1], so we have
+
+DP[pos][k] = (Min j (j > pos) : X[j] * A[pos] + Y[j]) - A[i] * i
+
+As A[i] * i is fixed, we have to figure out how to calculate fast X[j] * A[pos] + Y[j]. 
+If we let A[pos] be a variable called z, we now have 
+ X[j] * z + Y[j]
+This is exactly the equation of a line with slope X[j] and constant value Y[j],
+if we fix k and j, for every i < j, we will have to take a look to X[j] * A[i] + Y[j], so X[j] and Y[j] doesn't change, the only value that changes is z = A[i].
+
+Now the problem has been reduced to find the minimum value of a set of lines when we fix the x coordinate. To do that, we have to find the lower envelope of a set of lines.
+http://www.cs.umd.edu/~mount/754/Lects/754lects.pdf (see page 37) READ THIS NOW!!!!
+
+According to the point-line duality theorem, we can express each line as a point in a dual space where the x coordinate is the slope and the y coordinate is the constant value. And now, as the lower envelope of a set of lines is determined by the lower hull of the set of dual points, we can determine the lower hull and then solve each query (a query is Min j (j > pos) : X[j] * A[pos] + Y[j]) in log(N) time by doing a ternary search on the set of lines, as the minimum value of a set of lines in a lower envelope can be found with a ternary search (notice that, fixed a x coordinate, the y value of each line decreases and then increases as we traverse the sorted-by-slope set of lines).
+Besides, as X[j] decreases, we can use a sweep line algorithm to update the lower hull as we iterate on pos decreasingly. The update is done like in Andrews monotone-chane algorithm.
+
+So, the total complexity is O(KNlog(N))
+*/
+#include<iostream>
+#include<queue>
+#include<cstdio>
+#include<algorithm>
+#include<vector>
+#include<set>
+#include<string>
+#include<cstring>
+#include<map>
+#include<numeric>
+#include<sstream>
+#include<cmath>
+using namespace std;
+#define all(v) (v).begin(), (v).end()
+#define rall(v) (v).rbegin(), (v).rend()
+#define pb push_back
+#define f(i,x,y) for(int i = x; i<y; i++)
+#define FOR(it,A) for(typeof A.begin() it = A.begin(); it!= A.end(); it++)
+#define quad(x) (x) * (x)
+#define mp make_pair
+#define clr(x, y) memset(x, y, sizeof x)
+#define fst first
+#define snd second
+typedef pair<int, int> pii;
+typedef long long ll;
+typedef long double ld;
+#define inf (1LL << 40)
+#define N 505
+// a point
+struct pt{
+   ll x, y;
+   pt(ll a = 0, ll b = 0): x(a), y(b){}
+   pt operator -(pt q){return pt(x - q.x, y - q.y);}
+   ll operator %(pt q){return x * q.y - y * q.x;}
+};
+ll A[N];
+ll G[N][N];
+pt T[N];
+int n, sz;
+
+//add a point to the convex hull
+void add(ll x, ll y){
+   pt p(x, y);
+   while(sz >= 2 && (p - T[sz - 1]) % (p - T[sz - 2]) <= 0) sz--;
+   T[sz++] = p;
+   //we have to take care when the convex hull has twos points with the same x coordinate
+   if(sz >= 2 && T[sz - 1].x == T[sz - 2].x) sz--; 
+}
+
+ll eval(int i, ll x){
+   return T[i].x * x + T[i].y;
+}
+
+int main(){
+	int t; cin >> t;
+  
+   while(t--){
+      int K;
+      scanf("%d %d", &n, &K);
+      f(i, 0, n) scanf("%lld", A + i);
+      sort(A, A + n);
+
+      f(k, 0, K + 1){
+         sz = 0; //iterators for the convex hull
+         for(int pos = n; pos >= 0; pos--){
+            ll &res = G[pos][k];
+            if(pos == n) res = k == 0 ? 0LL : inf;
+            else{
+               if(k && G[pos + 1][k - 1] != inf) add(pos + 1, G[pos + 1][k - 1]);
+               res = inf;
+
+               int le = 0, ri = sz - 1;
+               while(ri - le >= 4){
+                  int a = le + (ri - le) / 3, b = le + (ri - le) * 2 / 3;
+                  if(eval(a, A[pos]) < eval(b, A[pos])) ri = b;
+                  else le = a;
+               }
+               f(it, le, ri + 1)
+                  res = min(res, eval(it, A[pos]) - A[pos] * pos);
+            }
+
+         }
+      }
+      ll ret = inf;
+      f(i, 0, n) ret = min(ret, G[i][K]);
+      printf("%lld\n", ret);
+   }
+}

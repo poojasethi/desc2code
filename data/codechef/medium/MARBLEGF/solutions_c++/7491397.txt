@@ -1,0 +1,118 @@
+#include<stdio.h>
+#include<iostream>
+using namespace std;
+#include <math.h>
+int arr[1000001];
+long long int tree[3000001];
+long long int lazy[3000001];
+void build_tree(long int node,long int a,long int b)
+ {
+  	if(a > b) return; // Out of range
+
+  	if(a == b)
+    { // Leaf node
+        tree[node] = arr[a]; // Init value
+		return;
+	}
+
+	build_tree(node*2, a, (a+b)/2); // Init left child
+	build_tree(node*2+1, 1+(a+b)/2, b); // Init right child
+
+	tree[node] = tree[node*2] + tree[node*2+1]; // Init root value
+}
+void update_tree(long int node,long int a,long int b,long int i,long int j, int value)
+{
+
+  	if(lazy[node] != 0) { // This node needs to be updated
+   		tree[node] += (b-a+1)*lazy[node]; // Update it
+
+		if(a != b) {
+			lazy[node*2] = lazy[node*2]+lazy[node];// Mark child as lazy
+    			lazy[node*2+1] = lazy[node*2+1]+lazy[node]; // Mark child as lazy
+		}
+
+   		lazy[node] = 0; // Reset it
+  	}
+
+	if(a > b || a > j || b < i) // Current segment is not within range [i, j]
+		return;
+
+  	if(a >= i && b <= j) { // Segment is fully within range
+    		tree[node] += (b-a+1)*value;
+
+		if(a != b) { // Not leaf node
+			lazy[node*2] = lazy[node*2]+value; // Mark child as lazy
+    			lazy[node*2+1] = lazy[node*2+1]+value;
+		}
+
+    		return;
+	}
+
+	update_tree(node*2, a, (a+b)/2, i, j, value); // Updating left child
+	update_tree(1+node*2, 1+(a+b)/2, b, i, j, value); // Updating right child
+
+	tree[node] = tree[node*2] + tree[node*2+1]; // Updating root with max value
+}
+long long int query_tree(long int node,long int a,long int b, long int i,long int j)
+{
+
+	if(a > b || a > j || b < i)
+	{ // printf("%ld %d %d %d %d ",node,a,b,i,j);
+	    return 0;  }
+
+	if(lazy[node] != 0) { // This node needs to be updated
+		tree[node] += (b-a+1)*lazy[node];
+
+		if(a != b) {
+			lazy[node*2] += lazy[node]; // Mark child as lazy
+    			lazy[node*2+1] += lazy[node];  // Mark child as lazy
+		}
+
+		lazy[node] = 0; // Reset it
+	}
+
+	if(a >= i && b <= j) // Current segment is totally within range [i, j]
+		return tree[node];
+
+	long long int q1 = query_tree(node*2, a, (a+b)/2, i, j); // Query left child
+	//printf("%lld %d %d %d\n",q1,node,a,b);
+	long long int q2 = query_tree(1+node*2, 1+(a+b)/2, b, i, j); // Query right child
+
+	long long int res = q1 + q2; // Return final result
+
+	return res;
+}
+int main()
+{
+    int n,q,i;
+    scanf("%ld%d",&n,&q);
+    for(i=0;i<n;i++)
+        scanf("%d",&arr[i]);
+    build_tree(1,0,n-1);
+
+    /*for(i=1;i<=2*n;i++)
+        printf("%d ",tree[i]);*/
+
+    for(i=0;i<3000001;i++)
+        lazy[i]=0;
+    while(q--)
+    {
+        char ch;
+        long int c,d;
+        cin>>ch;
+
+        scanf("%ld%ld",&c,&d);
+        if(ch=='S')
+        {
+            long long int ans= query_tree(1,0,n-1,c,d);
+            printf("%lld\n",ans);
+        }
+        else
+            if(ch=='G')
+                update_tree(1,0,n-1,c,c,d);
+        else
+          if(ch=='T')
+               update_tree(1,0,n-1,c,c,-d);
+    }
+    return 0;
+}

@@ -1,0 +1,115 @@
+#include <cstdio>
+#include <iostream>
+#include <algorithm>
+#include <vector>
+#include <queue>
+#include <ios>
+#include <cstring>
+
+using namespace std;
+
+#define fi first
+#define se second
+
+typedef long long ll;
+typedef pair<ll, ll> pll;
+
+const int MAXN = 255;
+
+int T, N, M, W;
+ll X[MAXN], Y[MAXN], R[MAXN], C[MAXN];
+pll arr[MAXN];
+int dist[MAXN][MAXN];
+bool vis[MAXN][MAXN], good[MAXN][MAXN];
+int num[MAXN][MAXN][MAXN]; //minimum value of R
+
+struct data {
+    int i, j, d;
+    data() {}
+    data(int _i, int _j, int _d) : i(_i), j(_j), d(_d) {}
+    bool operator<(const data& dat) const {
+        return d > dat.d;
+    }
+};
+
+priority_queue<data> pq;
+
+ll sq(ll x) { return x * x; }
+
+void go() {
+    scanf("%d%d%d", &N, &M, &W);
+    for (int i=0; i<N; i++)
+        scanf("%d%d", &X[i], &Y[i]);
+    for (int i=0; i<M; i++)
+        scanf("%d%d", &arr[i].fi, &arr[i].se);
+    sort(arr, arr + M);
+    vector<pll> v;
+    for (int i=0; i<M; i++) {
+        while (!v.empty() && arr[i].se <= v.back().se) v.pop_back();
+        v.push_back(arr[i]);
+    }
+    M = v.size();
+    for (int i=0; i<v.size(); i++)
+        R[i] = v[i].fi, C[i] = v[i].se;
+    memset(vis, 0, sizeof(vis));
+    memset(good, 0, sizeof(good));
+    for (int i=0; i<MAXN; i++)
+        for (int j=0; j<MAXN; j++)
+            dist[i][j] = 1e9;
+    while (!pq.empty()) pq.pop();
+
+    for (int i=0; i<N; i++)
+        for (int j=0; j<M; j++) {
+            if (Y[i] - R[j] <= 0)
+                pq.push(data(i, j, C[j]));
+            if (Y[i] + R[j] >= W)
+                good[i][j] = 1;
+        }
+
+    for (int i=0; i<N; i++)
+        for (int i1=0; i1<N; i1++) {
+            ll d = sq(X[i] - X[i1]) + sq(Y[i] - Y[i1]);
+            int p = M-1;
+            for (int j=0; j<M; j++) {
+                while (p > 0 && sq(R[j] + R[p-1]) >= d) p--;
+                if (sq(R[j] + R[p]) < d) num[i][j][i1] = -1;
+                else num[i][j][i1] = p;
+            }
+        }
+
+    while (!pq.empty()) {
+        data dat = pq.top(); pq.pop();
+        int i = dat.i, j = dat.j, d = dat.d;
+        if (good[i][j]) {
+            printf("%d\n", d);
+            return;
+        }
+        if (vis[i][j]) continue;
+        vis[i][j] = 1;
+        if (j < M-1) {
+            int nd = d + C[j+1] - C[j];
+            if (nd < dist[i][j+1])
+                dist[i][j+1] = nd, pq.push(data(i, j+1, nd));
+        }
+
+        for (int i1=0; i1<N; i1++) {
+            int j1 = num[i][j][i1];
+            if (j1 != -1 && i != i1) {
+                int nd = d + C[j1];
+                if (nd < dist[i1][j1])
+                    dist[i1][j1] = nd, pq.push(data(i1, j1, nd));
+            }
+        }
+    }
+    printf("impossible\n");
+}
+
+int main() {
+    //ios :: sync_with_stdio(0);
+
+    if (fopen("input.txt", "r")) freopen("input.txt", "r", stdin);
+
+    scanf("%d", &T);
+    for (int i=0; i<T; i++) go();
+    return 0;
+}

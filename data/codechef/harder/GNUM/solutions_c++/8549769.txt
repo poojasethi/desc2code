@@ -1,0 +1,151 @@
+#include<cstdio>
+#include<algorithm>
+#include<cassert>
+#include<cstring>
+#include<iostream>
+#include<cstdlib>
+#include<cmath>
+#include<vector>
+#include<map>
+#include<set>
+#include<queue>
+#include<bitset>
+using namespace std;
+typedef long long ll;
+typedef double db;
+void gn(int &x){
+	int sg=1;char c;while(((c=getchar())<'0'||c>'9')&&c!='-');
+	if(c=='-')sg=-1,x=0;else x=c-'0';
+	while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+	x*=sg;
+}
+void gn(ll &x){
+	int sg=1;char c;while(((c=getchar())<'0'||c>'9')&&c!='-');
+	if(c=='-')sg=-1,x=0;else x=c-'0';
+	while((c=getchar())>='0'&&c<='9')x=x*10+c-'0';
+	x*=sg;
+}
+const int mo=1000000007;
+int qp(int a,ll b){int ans=1;do{if(b&1)ans=1ll*ans*a%mo;a=1ll*a*a%mo;}while(b>>=1);return ans;}
+int gcd(int a,int b){return b?gcd(b,a%b):a;}
+
+const int N=400*400+400*20;
+const int E=400*400*20*2;
+const int INF= 1000000000;
+int s,t;
+struct edge{int u,v,f,next;}e[E];int etot;
+int g[N];
+void ae(int u,int v,int f){
+	e[etot].v=v;e[etot].f=f;e[etot].next=g[u];g[u]=etot++;
+	e[etot].v=u;e[etot].f=0;e[etot].next=g[v];g[v]=etot++;
+}
+int d[N];
+int qu[N],p,q;
+int label(){
+	p=q=0;
+	for (int i=1;i<=t;i++)d[i]=0;
+		//memset(d,0,sizeof(d));
+	d[s]=1;
+	qu[q++]=s;
+	while(p!=q){
+		int u=qu[p++],v;
+		for (int i=g[u];~i;i=e[i].next)
+			if(e[i].f && !d[v=e[i].v]){
+				d[v]=d[u]+1;
+				if(v==t)return 1;
+				qu[q++]=v;
+			}
+		}
+	return 0;
+}	
+int aug(int u,int mi=INF){
+	if(u==t)return mi;
+	int sum=0;
+	for (int i=g[u];~i;i=e[i].next)
+		if(e[i].f && d[e[i].v]==d[u]+1){
+			int tmp=aug(e[i].v,min(mi,e[i].f));
+			e[i].f-=tmp;
+			e[i^1].f+=tmp;
+			mi-=tmp;
+			sum+=tmp;
+			if(!mi)break;
+		}
+	if(!sum)d[u]=-1;
+	return sum;
+}
+		
+int dinic(){
+	int flow=0;
+	while(label()){
+		flow+=aug(s);
+	}
+	return flow;
+}
+
+int n;
+int a[555],b[555];
+
+vector<int> pr[555];
+
+//int id[555][555];int idtot;
+int all[55555],atot;
+map<int,int>ma,mb;
+int main()
+{
+	//freopen("1.in","r",stdin);
+	int tes;scanf("%d",&tes);
+	while(tes--){
+		memset(g,-1,sizeof(g));
+		etot=0;
+		scanf("%d",&n);
+		for (int i=1;i<=n;i++)scanf("%d",&a[i]);
+		for (int i=1;i<=n;i++)scanf("%d",&b[i]);
+		atot=0;
+		for (int i=1;i<=n;i++){
+			pr[i].clear();
+			int x=a[i];
+			for (int j=2;j*j<=x;j++)if(x%j==0){
+				pr[i].push_back(j);
+				while(x%j==0)x/=j;
+			}
+			if(x>1)pr[i].push_back(x);
+			for (int j=0;j<pr[i].size();j++)all[++atot]=pr[i][j];
+		}
+		sort(all+1,all+1+atot);
+		atot=unique(all+1,all+1+atot)-all-1;
+		ma.clear();mb.clear();
+		for (int i=1;i<=n;i++)
+			for (int j=1;j<=n;j++)
+				if(gcd(a[i],b[j])>1){
+					if(a[i]<b[j])ma[gcd(a[i],b[j])]++;
+					else if(a[i]>b[j])mb[gcd(a[i],b[j])]++;
+				}
+		s=ma.size()+mb.size()+atot+1;
+		t=s+1;
+		int xtot=atot;
+		for (int i=1;i<=n;i++)
+			for (int j=1;j<=n;j++){
+				int d=gcd(a[i],b[j]);
+				if(d==1)continue;
+				if(a[i]<b[j]){
+					if(ma[d]==0)continue;
+					++xtot;
+					for (int k=0;k<pr[i].size();k++)if(d%pr[i][k]==0){
+						ae(xtot,lower_bound(all+1,all+1+atot,pr[i][k])-all,INF);
+					}
+					ae(s,xtot,ma[d]);
+					ma[d]=0;
+				}else if(a[i]>b[j]){
+					if(mb[d]==0)continue;
+					++xtot;
+					for (int k=0;k<pr[i].size();k++)if(d%pr[i][k]==0){
+						ae(lower_bound(all+1,all+1+atot,pr[i][k])-all,xtot,INF);
+					}
+					ae(xtot,t,mb[d]);
+					mb[d]=0;
+				}
+			}
+		printf("%d\n",dinic());
+	}
+	return 0;
+}

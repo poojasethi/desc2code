@@ -1,0 +1,47 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#define FOR(i,s,e) for (int i=(s); i<(e); i++)
+#define FOE(i,s,e) for (int i=(s); i<=(e); i++)
+#define FOD(i,s,e) for (int i=(s)-1; i>=(e); i--)
+#define CLR(a,x) memset(a, x, sizeof(a))
+#define EXP(i,l) for (int i=(l); i; i=qn[i])
+#define LLD long long
+using namespace std;
+
+struct dat{
+	int x, y, r;
+	bool operator < (dat const &T) const{
+		return x == T.x ? y > T.y : x < T.x;
+	}
+};
+
+int n, m, mx, y, mp;
+char v[200005];
+dat a[200005];
+
+int main(){
+	scanf("%d%d", &m, &n);
+	FOR(i,0,n) scanf("%d%d", &a[i].x, &a[i].y), a[i].y += a[i].x - 1, a[i].r = i + 1;
+	sort(a, a + n);
+	
+
+	for (int i=0, j=0; i<n;){
+		mx = y = a[i].y;
+		mp = i;
+		v[a[i].r] = 1;
+	    while (j < n){
+			if (a[j].x > y + 1) break;
+			if (a[j].y > mx) mx = a[j].y, mp = j;
+			++j;
+		}
+		if (mp == i) i = j;
+		else i = mp;
+	}
+
+	int ret = 0;
+	FOE(i,1,n) ret += 1 - v[i];
+	printf("%d\n", ret);
+	FOE(i,1,n) if (!v[i]) printf("%d ", i);
+	return 0;
+}

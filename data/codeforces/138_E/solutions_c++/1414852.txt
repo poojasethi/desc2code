@@ -1,0 +1,119 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+
+using namespace std;
+
+typedef long long int lint;
+
+int n;
+int valor[100005];
+int ultimo[26];
+int anterior[100005];
+
+int m;
+int posicion[100005];
+int anyade[100005];
+
+int cuantos[26];
+
+int main()
+{
+  string s;
+  cin>>s;
+  n=int(s.size());
+  for (int i=0;i<n;i++)
+    valor[i]=s[i]-'a';
+  for (int i=0;i<26;i++) {
+    ultimo[i]=-1;
+    cuantos[i]=0;
+  }
+  for (int i=0;i<n;i++) {
+    anterior[i]=ultimo[valor[i]];
+    ultimo[valor[i]]=i;
+  }
+
+  int numrest,le,ri;
+  cin>>numrest>>le>>ri;
+
+  vector<vector<pair<int,int> > > v(26);
+  for (int i=0;i<numrest;i++) {
+    char c;
+    int l,r;
+    cin>>c>>l>>r;
+    int val=c-'a';
+    v[val].push_back(pair<int,int> (l,+1));
+    v[val].push_back(pair<int,int> (r+1,-1));
+  }
+
+  for (int i=0;i<26;i++) {
+    vector<pair<int,int> > &lista=v[i];
+    sort(lista.begin(),lista.end());
+    vector<pair<int,int> > nextlista;
+    for (int j=0;j<int(lista.size());j++) {
+      if (j>0 and lista[j].first==lista[j-1].first)
+	lista[j].second+=lista[j-1].second;
+      if ((j==int(lista.size())-1 or lista[j].first!=lista[j+1].first)
+	  and lista[j].second!=0)
+	nextlista.push_back(lista[j]);
+    }
+    lista=nextlista;
+  }
+  vector<int> indicev(26,0);
+  int evaluacionini=0;
+  for (int i=0;i<26;i++) {
+    int &ind=indicev[i];
+    int val=i;
+    if (ind<int(v[val].size())) {
+      pair<int,int> &p=v[val][ind];
+      if (p.first==0) {
+	evaluacionini+=p.second;
+	ind++;
+      }
+    }
+  }
+
+  m=0;
+  lint total=0;
+  for (int i=n-1;i>=0;i--) {
+    int val=valor[i];
+    for (int j=0;j<m;j++) {
+      if (valor[posicion[j]]==val) {
+	posicion[j]=anterior[posicion[j]];
+	for (int jj=j;jj>0 and posicion[jj]<posicion[jj-1];jj--) {
+	  swap(posicion[jj],posicion[jj-1]);
+	  swap(anyade[jj],anyade[jj-1]);
+	}
+      }
+    }
+    cuantos[val]++;
+    int &indv=indicev[val];
+    if (indv<int(v[val].size())) {
+      pair<int,int> &p=v[val][indv];
+      if (p.first==cuantos[val]) {
+	posicion[m]=ultimo[val];
+	anyade[m]=p.second;
+	m++;
+	indv++;
+	for (int jj=m-1;jj>0 and posicion[jj]<posicion[jj-1];jj--) {
+	  swap(posicion[jj],posicion[jj-1]);
+	  swap(anyade[jj],anyade[jj-1]);
+	}
+      }
+    }
+    int suma=0;
+    int evaluacion=evaluacionini;
+    int last=i;
+    for (int j=0;j<m;j++) {
+      if (evaluacion>=le and evaluacion<=ri)
+	suma+=posicion[j]-last;
+      evaluacion+=anyade[j];
+      last=posicion[j];
+    }
+    if (evaluacion>=le and evaluacion<=ri)
+      suma+=n-last;
+    total+=suma;
+  }
+  cout<<total<<endl;
+}

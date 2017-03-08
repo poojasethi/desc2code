@@ -1,0 +1,116 @@
+#include <cstdio>
+#include <vector>
+#include <string.h>
+
+using namespace std;
+
+const int MAX_N = 100500;
+
+int n, m, k, f, t, a, b, c, cnt;
+
+int p[MAX_N];
+int height[MAX_N];
+int comp[MAX_N];
+int d[MAX_N];
+
+bool used[MAX_N];
+bool isCycle[MAX_N];
+bool isCycleComp[MAX_N];
+
+vector < int > g[MAX_N];
+vector < int > ng[MAX_N];
+
+int ncomp[MAX_N];
+int compn[MAX_N];
+int power[MAX_N];
+
+int dfs(int x) {
+	used[x] = true;
+	int ret = -1;
+	for (int i = 0;i < g[x].size();++i) {
+		int to = g[x][i];
+		if (!used[to]) {
+			p[to] = x;
+			int dfsTo = dfs(to);
+			if (dfsTo != -1)
+				ret = dfsTo;
+		} else if (used[to] == true && comp[to] == -1 && p[to] != x && p[x] != to) {
+			ret = to;
+		}
+	}
+	if (ret != -1) {
+		isCycle[x] = true;
+		comp[x] = ret;
+	} else {
+		comp[x] = x;
+	}
+	return ret == x ? -1 : ret;
+}
+
+void dfs2(int x) {
+	used[x] = true;
+	for (int i = 0;i < ng[x].size();++i)
+		if (!used[ng[x][i]]) {
+			height[ng[x][i]] = height[x]+1;
+			d[ng[x][i]] = d[x] + isCycleComp[ng[x][i]];
+			p[ng[x][i]] = x;
+			dfs2(ng[x][i]);
+		}
+}
+
+int lca(int a, int b) {
+	while (a != b) {
+		if (height[a] < height[b])
+			b = p[b];
+		else
+			a = p[a];	
+	}
+	return a;
+}
+
+int main() {
+	power[0] = 1;
+	for (int i = 1;i < MAX_N;++i)
+		power[i] = (power[i-1] << 1) % 1000000007;
+	scanf("%d%d", &n, &m);
+	for (int i = 0;i < m;++i) {
+		scanf("%d%d", &f, &t);
+		--f; --t;
+		g[f].push_back(t);
+		g[t].push_back(f);
+	}
+	p[0] = -1;
+	memset(comp, -1, sizeof comp);
+	dfs(0);
+	memset(used, 0, sizeof used);
+	
+	k = 0;
+	for (int i = 0;i < n;++i) {
+		if (!used[comp[i]]) {
+			compn[comp[i]] = ncomp[i] = k++;
+			used[comp[i]] = true;
+		} else {
+			ncomp[i] = compn[comp[i]];
+			isCycleComp[ncomp[i]] = isCycle[i];
+		}
+	}
+
+	for (int i = 0;i < n;++i)
+		for (int j = 0;j < g[i].size();++j)
+			if (ncomp[i] != ncomp[g[i][j]])
+				ng[ncomp[i]].push_back(ncomp[g[i][j]]);
+	
+	memset(used, 0, sizeof used);
+	d[0] = (int)isCycleComp[0];
+	dfs2(0);
+	scanf("%d", &m);
+	for (int i = 0;i < m;++i) {
+		scanf("%d%d", &a, &b);
+		--a; --b;
+		a = compn[comp[a]];
+		b = compn[comp[b]];
+		c = lca(a, b);
+		cnt = (d[a]+d[b]) - (d[c] << 1) + (int)isCycleComp[c];
+		printf("%d\n", power[cnt]);
+	}
+}

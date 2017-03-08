@@ -1,0 +1,111 @@
+#include <algorithm>
+#include <cstdio>
+ 
+#define k_max 100000
+ 
+#define less    0
+#define greater 1
+#define equal   2
+#define ge      4
+#define le      5
+#define ne      6
+ 
+static long long hints[k_max];
+ 
+static int parse_int(const char *s)
+{
+    int n = 0;
+    for (; *s; ++s) {
+        n = (n * 10) + (*s - '0');
+    }
+    return n;
+}
+ 
+static long long parse_hint(const char *s)
+{
+    int op;
+    if (*s == '<') {
+        op = less;
+    } else if (*s == '>') {
+        op = greater;
+    } else {
+        op = equal;
+    }
+    s += 2;
+    long long n = 0;
+    for (; *s != ' '; ++s) {
+        n = (n * 10) + (*s - '0');
+    }
+    if (s[1] == 'N') {
+        op |= 4;
+    }
+    return op | (n << 3);
+}
+ 
+static char inp[32];
+ 
+static int read_int(void)
+{
+    gets(inp);
+    return parse_int(inp);
+}
+ 
+static long long read_hint(void)
+{
+    gets(inp);
+    return parse_hint(inp);
+}
+ 
+static int lies(const long long *begin, const long long *end)
+{
+    int min_lies = 0, before_lies = 0, in_lies = 0, after_lies = 0;
+    int prev_n = 0;
+    for (; begin != end; ++begin) {
+        int n = *begin >> 3;
+        int op = *begin & 7;
+        if (n != prev_n) {
+            if (prev_n == 1) {
+                min_lies = in_lies;
+            } else {
+                if (before_lies < min_lies) { min_lies = before_lies; }
+                if (in_lies < min_lies) { min_lies = in_lies; }
+            }
+            before_lies = (n == (prev_n + 1)) ? (1 << 30) : after_lies;
+            in_lies = after_lies;
+        }
+        prev_n = n;
+        switch (op) {
+        case less:    ++in_lies; ++after_lies; break;
+        case greater: ++min_lies; ++before_lies; ++in_lies; break;
+        case equal:   ++min_lies; ++before_lies; ++after_lies; break;
+        case ge:      ++min_lies; ++before_lies; break;
+        case le:      ++after_lies; break;
+        case ne:      ++in_lies; break;
+        }
+    }
+    if (prev_n == 1) {
+        min_lies = in_lies;
+    } else {
+        if (before_lies < min_lies) { min_lies = before_lies; }
+        if (in_lies < min_lies) { min_lies = in_lies; }
+    }
+    if (prev_n < 1000000000) {
+        if (after_lies < min_lies) { min_lies = after_lies; }
+    }
+    return min_lies;
+}
+ 
+int main(void)
+{
+    int t = read_int();
+ 
+    int i, j;
+    for (i = 0; i != t; ++i) {
+        int k = read_int();
+        for (j = 0; j != k; ++j) {
+            hints[j] = read_hint();
+        }
+        std::sort(hints, hints + k);
+        printf("%d\n", lies(hints, hints + k));
+    }
+}

@@ -1,0 +1,251 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+using namespace std;
+const int maxn=100000+10;
+const int maxm=200000+10;
+struct Edge{
+	int u,v;
+	Edge(){}
+	Edge(int u,int v): u(u),v(v){}
+}e[maxn];
+int n,odd,m;
+int rub[maxn],rtop;
+struct Heap{
+    int q[maxn],num[maxn],back[maxn];
+    int sz;
+    inline void ex(int l,int r)
+    {
+        swap(q[l],q[r]);
+		swap(back[l],back[r]);
+        num[back[l]]=l;
+		num[back[r]]=r;
+    }
+    inline void up(int now)
+    {
+		int next;
+        while (now>1)
+		{
+			next=now>>1;
+            if (q[now]<=q[next])
+                break;
+            ex(now,next);
+            now=next;
+		}
+    }
+    inline void down(int now)
+    {
+        while ((now<<1)<=sz)
+		{
+			int next=now<<1;
+			if (next<sz&&q[next+1]>q[next])
+                next++;
+            if (q[now]>=q[next])
+                break;
+			ex(now,next);
+			now=next; 
+		}
+    }
+    inline void add(int x,int v)
+    {
+        q[++sz]=v;
+		num[x]=sz;
+		back[sz]=x;
+		up(sz);
+    }
+    inline void del(int x)
+    {
+        int pos=num[x];
+		ex(pos,sz--);
+		down(pos),up(pos);
+    }
+}h;
+struct LCT{
+    int q[maxm],MAX[maxm];
+    int sz[maxm],nsz[maxm];
+    int anc[maxn],top;
+    int fa[maxm],ch[maxm][2],rev[maxm];
+    inline void push_up(int x)
+    {
+        MAX[x]=x;
+        sz[x]=nsz[x]+(x<=n);
+        for (int i=0;i<2;i++)
+        {
+            if (ch[x][i]&&q[MAX[ch[x][i]]]>q[MAX[x]])
+                MAX[x]=MAX[ch[x][i]];
+            sz[x]+=sz[ch[x][i]];
+        }
+    }
+    inline void push_down(int x)
+    {
+        if (rev[x])
+        {
+            for (int i=0;i<2;i++)
+                if (ch[x][i])
+                    rev[ch[x][i]]^=1;
+            swap(ch[x][0],ch[x][1]);
+            rev[x]=0;
+        }
+    }
+    inline bool root(int x)
+	{
+		return ch[fa[x]][0]!=x&&ch[fa[x]][1]!=x;
+	}
+    inline void Rotate(int x)
+    {
+        int y=fa[x],z=fa[y];
+		int l=ch[y][1]==x,r=l^1;
+        if (!root(y))
+			ch[z][ch[z][1]==y]=x;
+        fa[x]=z;
+        fa[y]=x;
+        fa[ch[x][r]]=y;
+        ch[y][l]=ch[x][r];
+        ch[x][r]=y;
+        push_up(y);
+    }
+    inline void Splay(int x)
+    {
+        anc[top=1]=x;
+        for (int i=x;!root(i);i=fa[i])
+            anc[++top]=fa[i];
+        while (top)
+            push_down(anc[top--]);
+        while (!root(x))
+        {
+            int y=fa[x];
+            if (!root(y))
+            {
+                if ((ch[fa[x]][1]==x)^(ch[fa[y]][1]==y))
+                    Rotate(x);
+                else
+                    Rotate(y);
+            }
+            Rotate(x);
+        }
+        push_up(x);
+    }
+    inline void Access(int x)
+    {
+        Splay(x);
+		nsz[x]+=sz[ch[x][1]];
+		ch[x][1]=0;
+        while (fa[x])
+		{
+            int y=fa[x];
+			Splay(y);
+            nsz[y]-=sz[x];
+			nsz[y]+=sz[ch[y][1]];
+            ch[y][1]=x;
+            fa[x]=y;
+			push_up(y);
+            Splay(x=y); 
+		}
+    }
+    inline void beroot(int x)
+    {
+        Access(x);
+		Splay(x);
+		rev[x]^=1;
+    }
+    inline int leaf(int x)
+    {
+        Access(x);
+		Splay(x);
+        while (ch[x][0])
+            x=ch[x][0];
+        return x;
+    }
+    inline void link(int loc,int x,int y,int k)
+    {
+        Access(x);
+		Splay(x);
+		Access(y);
+		Splay(y);
+        if ((sz[x]&1)&&(sz[y]&1))
+            odd-=2;
+        q[loc]=k;
+		e[loc-n]=Edge(x,y);
+        h.add(loc-n,k);
+        beroot(x);fa[x]=loc;nsz[loc]+=sz[x];
+        beroot(y);fa[y]=loc;nsz[loc]+=sz[y];
+    }
+    inline void cut(int loc,int x,int y)
+    {
+        beroot(loc);
+		h.del(loc-n);
+		rub[++rtop]=loc;
+        Access(x);Splay(loc);fa[ch[loc][1]]=0;ch[loc][1]=0;
+        Access(y);Splay(loc);fa[ch[loc][1]]=0;ch[loc][1]=0;
+        Access(x);Splay(x);
+        Access(y);Splay(y);
+        if ((sz[x]&1)&&(sz[y]&1))
+			odd+=2;
+    }
+    inline void check(int x,int y,int k)
+    {
+        if (leaf(x)!=leaf(y))
+        {
+            beroot(x);
+			beroot(y);
+            link(rub[rtop--],x,y,k);
+        }
+        else
+        {
+            beroot(x);
+			Access(y);
+			Splay(y);
+            int loc=MAX[y];
+            if (q[loc]>k)
+            {
+                cut(loc,x,y);
+                link(rub[rtop--],x,y,k);
+            }
+        }
+    }
+}Gintoki;
+inline int read()
+{
+    int x=0;
+    char ch=getchar();
+    while (ch<'0'||ch>'9')
+        ch=getchar();
+    while (ch>='0'&&ch<='9')
+    {
+        x=x*10+ch-'0';
+        ch=getchar();
+    }
+    return x;
+}
+inline int solve()
+{
+    int loc;
+    while (!odd)
+    {
+        loc=h.back[1];
+        Gintoki.cut(loc+n,e[loc].u,e[loc].v);
+    }
+    Gintoki.link(rub[rtop--],e[loc].u,e[loc].v,h.q[h.num[loc]]);
+    return h.q[h.num[loc]];
+}
+int main()
+{
+    odd=n=read();
+	m=read();
+    for (int i=1;i<=n;i++)
+    {
+        rub[++rtop]=n+i;
+        Gintoki.sz[i]=1;
+    }
+    for (int i=1,u,v,w;i<=m;i++)
+    {
+        u=read(),v=read(),w=read();
+        Gintoki.check(u,v,w);
+        if (odd==0)
+            printf("%d\n",solve());
+        else
+            puts("-1");
+    }
+    return 0;
+}
+			 	 		 	 	     		 	 	     	

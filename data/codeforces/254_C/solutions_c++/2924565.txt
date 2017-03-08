@@ -1,0 +1,5 @@
+#include<cstdio>
+#define F(a,b) for(p=a;p<=b;++p)
+#define Z(i,s) for(i=0;s[i];++i)
+int a[255],b[255],r,i,p;char s[1<<17],t[1<<17];
+main(){fscanf(fopen("input.txt","r"),"%s%s",s,t);Z(i,s)a[s[i]]++,b[t[i]]++;Z(i,s)if(a[s[i]]>b[s[i]])F(65,90)p==s[i]&&a[p]>0&&b[p]>0?--a[p],--b[p],p=254:b[p]>a[p]?--a[s[i]],++a[p],s[i]=p,++r,p=255:p=p;fprintf(fopen("output.txt","w"),"%d\n%s",r,s);}

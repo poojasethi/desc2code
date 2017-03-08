@@ -1,0 +1,254 @@
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <queue>
+#include <iostream>
+#include <cmath>
+#include <sstream>
+#include <map>
+#include <set>
+#include <numeric>
+#include <complex>
+#include <stdio.h>
+#include <memory.h>
+
+using namespace std;
+
+#define pb push_back
+#define INF 1011111111
+#define L(s) (int)((s).size())
+#define FOR(i,a,b) for (int _n(b), i(a); i < _n; i++)
+#define rep(i,n) FOR(i,0,n)
+#define ford(i,a,b) for(int i=(a),_b=(b);i>=_b;--i)
+#define CL(a,v) memset((a),(v),sizeof(a))
+#define ll long long
+#define VI vector<int>
+#define mp make_pair
+#define X first
+#define Y second
+#define all(c) (c).begin(), (c).end()
+#define SORT(c) sort(all(c))
+
+const int MAX = 101;
+
+VI e[MAX];
+int dist[MAX][MAX];
+bool isAncestor[MAX][MAX];
+
+int find_max_center_in_the_tree_memo[MAX];
+int dp_tree_memo[MAX][MAX];
+
+const int ROOT = 0;
+int N,D;
+
+void dfs(int v, int from = -1)
+{
+    rep(i,e[v].size())
+    {
+        const int to = e[v][i];
+
+        if(to==from)
+        {
+            swap(e[v][0],e[v][i]);
+
+            int u = v;
+
+            do
+            {
+                u = e[u][0];
+                isAncestor[u][v] = true;
+            }
+            while(u != ROOT);
+
+            break;
+        }
+    }
+
+    rep(i,e[v].size())
+    {
+        const int to = e[v][i];
+
+        if(to == from) continue;
+
+        dfs(to,v);
+    }
+}
+
+int find_max_center_in_the_tree(int root)
+{
+    int dp_tree(int,int);
+
+    int &ans = find_max_center_in_the_tree_memo[root];
+
+    if(ans != -1) return ans;
+
+    //ans = 0;
+
+    rep(i,N) //if(isAncestor[root][i] || i==root)
+    ans = max(dp_tree(root,i),ans);
+
+    //cout << "find_max_center_in_the_tree root " << root << " ans " << ans << endl << endl;
+
+    return ans;
+}
+
+int dp_tree(int root, int center)
+{
+    int &ans = dp_tree_memo[root][center];
+
+    if(ans != -1) return ans;
+
+    if(dist[root][center] > D) return ans = -INF;
+
+    ans = 0;
+
+    FOR(i, root==ROOT ? 0 : 1, e[root].size())
+    {
+        const int to = e[root][i];
+
+        if(!isAncestor[to][center])
+        {
+            ans += max(find_max_center_in_the_tree(to), dp_tree(to,center) + dist[root][to] );
+        }
+        else
+        {
+            ans += dp_tree(to,center) + dist[root][to];
+        }
+    }
+
+    //cout << "dp_tree " << "root " << root << " center " << center << " ans " << ans << endl;
+
+    return ans;
+}
+
+//author solution
+
+int parent[100], dist2par[100], height[100];
+int isancestor[100][100], dst[100][100], children[100][100], ccount[100];
+
+void dfs(int edges[100][3], int id){
+	ccount[id]=0;
+	for(int i=0; i<N-1; i++){
+		if(edges[i][0]==id || edges[i][1]==id){
+			int cid=edges[i][0]+edges[i][1]-id;
+			if(cid==parent[id])
+				continue;
+			parent[cid]=id;
+			dist2par[cid]=edges[i][2];
+			height[cid]=height[id]+1;
+			children[id][ccount[id]++]=cid;
+			for(int j=id; j!=-1; j=parent[j])
+				isancestor[j][cid]=1;
+			dfs(edges, cid);
+		}
+	}
+}
+
+int getdist(int i, int j){
+	int &ret=dst[i][j];
+	if(ret!=-1)
+		return ret;
+	if(i==j)
+		ret=0;
+	else if(height[i]<height[j])
+		ret=getdist(i, parent[j])+dist2par[j];
+	else if(height[j]<height[i])
+		ret=getdist(parent[i], j)+dist2par[i];
+	else
+		ret=getdist(parent[i], parent[j])+dist2par[i]+dist2par[j];
+	return ret;
+}
+
+int solution1[100], solution2[100][100];
+int solve1(int root);
+int solve2(int root, int center);
+
+int solve1(int root){
+	int &ret=solution1[root];
+	if(ret!=-1)
+		return ret;
+	for(int i=0; i<N; i++)
+		ret=max(ret, solve2(root, i));
+	return ret;
+}
+
+int solve2(int root, int center){
+	int &ret=solution2[root][center];
+	if(ret!=-1)
+		return ret;
+	if(getdist(root, center)>D)
+		return ret=-1<<31;
+	ret=0;
+	for(int i=0; i<ccount[root]; i++){
+		int cid=children[root][i];
+		if(isancestor[cid][center])
+			ret+=solve2(cid, center)+dist2par[cid];
+		else
+			ret+=max(solve1(cid), solve2(cid, center)+dist2par[cid]);
+	}
+	return ret;
+}
+
+
+int main()
+{
+//	#ifndef ONLINE_JUDGE
+        //freopen("input.txt","r",stdin);
+//        freopen("output.txt","w", stdout);
+//	#endif
+
+    int T;
+    cin >> T;
+    int wrong = 0;
+
+    while(T--)
+    {
+        CL(dp_tree_memo,-1);
+        CL(find_max_center_in_the_tree_memo,-1);
+        CL(isAncestor,0);
+        rep(i,MAX) rep(j,MAX) dist[i][j] = i==j ? 0 : INF;
+        rep(i,MAX) e[i].clear();
+
+        memset(solution1, -1, sizeof(solution1));
+		memset(solution2, -1, sizeof(solution2));
+		memset(dst, -1, sizeof(dist));
+		memset(isancestor, 0, sizeof(isancestor));
+		int edges[100][3];
+
+        cin >> N >> D;
+
+        rep(i,N-1)
+        {
+            int u,v,w;
+            cin >> u >> v >> w;
+
+            dist[u][v] = dist[v][u] = w;
+            e[u].pb(v);
+            e[v].pb(u);
+
+            edges[i][0] = u;
+            edges[i][1] = v;
+            edges[i][2] = w;
+        }
+
+        rep(i,N) rep(j,N) rep(k,N) dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j]);
+
+        dfs(ROOT);
+
+        parent[0]=-1;
+		height[0]=0;
+		dfs(edges, 0);
+
+
+        int ans_1 = find_max_center_in_the_tree(ROOT);
+
+        int ans_2 = solve1(0);
+
+        wrong += ans_1 != ans_2;
+
+        cout <<  (wrong < 10 ? ans_2 : ans_1) << endl;
+    }
+
+
+	return 0;
+}

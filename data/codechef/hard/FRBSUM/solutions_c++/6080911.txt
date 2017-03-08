@@ -1,0 +1,126 @@
+#include <algorithm>
+#include <bitset>
+#include <cassert>
+#include <cctype>
+#include <cmath>
+#include <complex>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <iostream>
+#include <map>
+#include <queue>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+using namespace std;
+
+#define pb push_back
+#define fi first
+#define se second
+#define all(x) (x).begin(), (x).end()
+#define sz(x) (int((x).size()))
+#define bit(x) (1 << (x))
+
+#ifdef _WIN32
+#define LLD "%I64d"
+#else
+#define LLD "%lld"
+#endif
+
+template<class T>
+inline void chkmax(T& x, T y) {
+	if (x < y) x = y;
+}
+
+template<class T>
+inline void chkmin(T& x, T y) {
+	if (y < x) x = y;
+}
+
+typedef long long LL;
+typedef pair<int, int> PII;
+typedef vector<int> VI;
+const int MX = 100005;
+const int MC = 320;
+int n, m;
+int a[MX];
+int b[MX], bn;
+int d, cn;
+int sum[MC][MX];
+PII pr[MX], *pst[MC], *pen[MC];
+
+void preprocess() {
+	int i, j, x, c;
+	
+	for (i = 0; i < n; i++) b[i] = a[i];
+	sort(b, b + n);
+	bn = unique(b, b + n) - b;
+	
+	d = int(sqrt(n)) + 1;
+	cn = (n - 1) / d + 1;
+	for (i = 0; i < n; i++) {
+		x = lower_bound(b, b + bn, a[i]) - b + 1;
+		for (c = i / d + 1; c <= cn; c++) sum[c][x] += a[i];
+	}
+	for (c = 1; c <= cn; c++) {
+		for (x = 0; x < bn; x++) sum[c][x + 1] += sum[c][x];
+	}
+	
+	for (i = 0; i < n; i++) pr[i] = PII(a[i], i);
+	for (c = 1; c <= cn; c++) {
+		i = (c - 1) * d, j = min(i + d, n);
+		pst[c] = pr + i, pen[c] = pr + j;
+		sort(pst[c], pen[c]);
+	}
+}
+
+int calc(int st, int en) {
+	int u, v, s, t, x, ps, qs, nt;
+	PII *p, *pe, *q, *qe;
+	
+	u = st / d, v = (en - 1) / d;
+	p = pst[u + 1], q = pst[v + 1];
+	pe = pen[u + 1], qe = pen[v + 1];
+	ps = qs = 0;
+	s = t = 0;
+	while (1) {
+		s = t + 1;
+		x = upper_bound(b, b + bn, s) - b;
+		
+		for (; p != pe; p++) {
+			if (p->fi > s) break;
+			if (p->se < st) ps += a[p->se];
+		}
+		for (; q != qe; q++) {
+			if (q->fi > s) break;
+			if (q->se < en) qs += a[q->se];
+		}
+		
+		nt = (sum[v][x] + qs) - (sum[u][x] + ps);
+		if (nt == t) break;
+		t = nt;
+	}
+	return s;
+}
+
+int main() {
+	#ifndef ONLINE_JUDGE
+		freopen("in.txt", "r", stdin);
+		freopen("out.txt", "w", stdout);
+	#endif
+	
+	int i, j, k;
+	
+	scanf("%d", &n);
+	for (i = 0; i < n; i++) scanf("%d", &a[i]);
+	preprocess();
+	scanf("%d", &m);
+	for (k = 0; k < m; k++) {
+		scanf("%d%d", &i, &j);
+		printf("%d\n", calc(i - 1, j));
+	}
+	return 0;
+}

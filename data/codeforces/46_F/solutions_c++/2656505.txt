@@ -1,0 +1,62 @@
+#include<cstdio>
+#include<string>
+#include<map>
+#include<cstdlib>
+#define N 1010
+#define rep(i,n) for(int i=0;i<n;i++)
+using namespace std;
+map<string,int> pt;
+int n,m,k,x,room,tmp,key[N],fa[N],u[N],v[N];
+char s[20];
+bool d[N],dd[N];
+void NO(){ printf("NO");exit(0); }
+int getfa(int x)
+{
+	if (fa[x]==x) return x;
+	return fa[x]=getfa(fa[x]);
+}
+void Work(bool d[N])
+{
+	rep(i,n) fa[i]=i;
+	for(bool ok=1;ok;)
+	{
+		ok=0;
+		rep(i,m)
+		    if (!d[i] && (getfa(key[i])==getfa(u[i])||getfa(key[i])==getfa(v[i])))
+		    {
+				d[i]=ok=1;
+				fa[getfa(u[i])]=getfa(v[i]);
+			}
+	}
+}
+int main()
+{
+	scanf("%d%d%d",&n,&m,&k);
+	rep(i,m)
+		scanf("%d%d",&u[i],&v[i]),u[i]--,v[i]--;
+	rep(i,k)
+	{
+		scanf("%s",s);
+		scanf("%d%d",&room,&tmp);
+		pt[s]=--room;
+		rep(j,tmp) scanf("%d",&x),key[x-1]=room;
+	}
+	Work(d);
+	rep(i,k)
+	{
+		scanf("%s",s);
+		scanf("%d%d",&room,&tmp);
+		if (getfa(pt[s])!=getfa(--room)) NO();
+		rep(j,tmp)
+		{
+			scanf("%d",&x);x--;
+			if (getfa(room)!=getfa(key[x])) NO();
+			key[x]=room;
+		}
+	}
+	Work(dd);
+	rep(i,m)
+		if (d[i]!=dd[i]) NO();
+	printf("YES");
+	return 0;
+}

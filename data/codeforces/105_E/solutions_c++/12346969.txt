@@ -1,0 +1,148 @@
+#include <stdio.h>
+#include <algorithm>
+#include <string.h>
+#include <math.h>
+using namespace std;
+
+int ans=0;
+int pla[3],mov[3],thr[3];
+
+struct Data
+{
+	int d[3],s,lif[3];
+	Data () {}
+	Data (const int *a,const int b,const int *c)
+	{
+		d[0]=a[0]; d[1]=a[1]; d[2]=a[2];
+		s=b;
+		lif[0]=c[0]; lif[1]=c[1]; lif[2]=c[2];
+	}
+	bool operator == ( const Data oth ) const
+	{
+		if ( s!=oth.s ) return false;
+		for (int i=0;i<3;++i)
+			if ( d[i]!=oth.d[i] || lif[i]!=oth.lif[i] ) return false;
+		return true;
+	}
+};
+
+#define mod 10000007
+#define walk 10007
+
+int h[mod];
+
+int getnum(const Data a)
+{
+	int ret=1;
+	ret+=a.d[0]*59+a.d[1]*61+a.d[2]*71;
+	ret+=a.s*100007;
+	ret+=a.lif[0]*101+a.lif[1]*103+a.lif[2]*107;
+	if ( ret<0 ) ret=-ret;
+	return ret%mod;
+}
+
+int getkey(const Data a)
+{
+	long long ret=1;
+	for (int i=2;i>-1;--i)
+		ret=(ret*100007+a.d[i]*101+a.lif[i]*93+a.s*61)%mod;
+	return ret;
+}
+
+bool is_have(const Data a)
+{
+	int i=getnum(a),key=getkey(a);
+	while ( h[i]>-1 && h[i]!=key )
+	{
+		i+=walk;
+		if ( i>=mod ) i-=mod;
+	}
+	if ( h[i]==key ) return true;
+	           else return false;
+}
+
+void insert_(const Data a)
+{
+	int i=getnum(a);
+	while ( h[i]>-1 )
+	{
+		i+=walk;
+		if ( i>=mod ) i-=mod;
+	}
+	h[i]=getkey(a);
+}
+
+void DFS(const Data now)
+{
+    if ( now.d[0]>ans ) ans=now.d[0];
+	if ( now.d[1]>ans ) ans=now.d[1];
+	if ( now.d[2]>ans ) ans=now.d[2];
+	Data nex;
+	for (int i=0;i<3;++i)
+	{
+		bool flag=true;
+		for ( int j=0;j<3;++j) 
+			if ( i!=j && now.lif[j]==i ) flag=false;
+		if ( !flag ) continue;
+		if ( now.lif[i]==i && now.s&( 1<<(i*3+1) ) ) //lift up somebody
+		{
+			nex=now;
+			nex.s-=( 1<<(i*3+1) );
+			for (int j=0;j<3;++j)
+			if ( now.d[i]==now.d[j]+1 || now.d[i]==now.d[j]-1 )
+			{
+				nex.lif[i]=j;
+				nex.d[j]=now.d[i];
+				if ( is_have(nex) ) continue;
+				insert_(nex);
+				DFS(nex);
+			}
+		}
+		if ( now.lif[i]==i && now.s&( 1<<(i*3+0) ) )
+		{
+			nex=now;
+			nex.s-=( 1<<(i*3+0) );
+			int limit=min(42,now.d[i]+mov[i]);
+			for (int j=max(1,now.d[i]-mov[i]);j<=limit;++j)
+			if ( j!=now.d[0] && j!=now.d[1] && j!=now.d[2] )
+			{
+				nex.d[i]=j;
+				if ( is_have(nex) ) continue;
+				insert_(nex);
+				DFS(nex);
+			}
+		}
+		if ( now.lif[i]!=i && ( now.s&( 1<<(i*3+2) ) ) )
+		{
+			nex=now;
+			nex.s-=( 1<<(i*3+2) );
+			nex.lif[i]=i;
+			int limit=min(42,now.d[i]+thr[i]);
+			for (int j=max(1,now.d[i]-thr[i]);j<=limit;++j)
+			if ( j!=now.d[0] && j!=now.d[1] && j!=now.d[2] )
+			{
+				nex.d[ now.lif[i] ]=j;
+				if ( is_have(nex) ) continue;
+				insert_(nex);
+				DFS(nex);
+			}
+		}
+	}
+}
+
+int main()
+{
+	//freopen("A.in","r",stdin);
+	//freopen("A.out","w",stdout);
+	scanf("%d%d%d",&pla[0],&mov[0],&thr[0]);
+	scanf("%d%d%d",&pla[1],&mov[1],&thr[1]);
+	scanf("%d%d%d",&pla[2],&mov[2],&thr[2]);
+	int tmp[3]={0,1,2};
+	for (int i=0;i<mod;++i)
+		h[i]=-1;
+	DFS( Data(pla,(1<<9)-1,tmp) );
+	printf("%d\n",ans);
+	return 0;
+}
+
+    	 			    	 			 			 	 		  		

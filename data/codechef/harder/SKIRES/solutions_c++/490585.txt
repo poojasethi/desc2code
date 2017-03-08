@@ -1,0 +1,112 @@
+#include<cstdio>
+#include<vector>
+#include<cstring>
+#include<algorithm>
+#define PB push_back
+#define MP make_pair
+#define all(x) x.begin(),x.end()
+#define in(x,y) (x>=0&&x<n&&y>=0&&y<m)
+#define oo 500000
+#define MX 100005
+using namespace std;
+const int dx[]={0, 1, 0, -1}, dy[]={1, 0, -1, 0};
+int n,m,sx,sy,tx,ty,a[51][51],num[51][51];
+int h[MX],Q[MX],ed[MX],cnt;
+pair<pair<int,int>,int> g[MX];
+//                                                                        Last Change:  2011-03-17 18:54:16
+inline void addedge(int x,int y,int v)
+{
+	++cnt;g[cnt]=MP(MP(y,v),ed[x]);ed[x]=cnt;
+	++cnt;g[cnt]=MP(MP(x,0),ed[y]);ed[y]=cnt;
+}
+bool Dinic_BFS(int u)
+{
+	memset(h,-1,sizeof(h));
+	int l=0,r=1;Q[l]=u;h[u]=0;
+	while(l!=r)
+	{
+		int x=Q[l++];
+		for(int i=ed[x];i;i=g[i].second)
+		{
+			if(!g[i].first.second||h[g[i].first.first]!=-1)continue;
+			Q[r++]=g[i].first.first;
+			h[g[i].first.first]=h[x]+1;
+			if(g[i].first.first==num[tx][ty]*5+4)return true;
+		}
+	}
+	return false;
+}
+int Dinic_DFS(int u,int t)
+{
+	if(u==num[tx][ty]*5+4)return t;
+	int l=t;
+	for(int i=ed[u];i;i=g[i].second)
+	{
+		int v=g[i].first.first,tmp=g[i].first.second;
+		if(h[v]!=h[u]+1||tmp<1)continue;
+		tmp=min(tmp,t);
+		if((tmp=Dinic_DFS(v,tmp))>0)
+		{
+			g[i].first.second-=tmp;
+			g[i^1].first.second+=tmp;
+			t-=tmp;
+			if(!t)break;
+		}
+	}
+	if(l==t)h[u]=-1;
+	return l-t;
+}
+int Work()
+{
+	if(a[sx][sy]<a[tx][ty])return 0;
+	if(abs(sx-tx)+abs(sy-ty)==1)return -1;
+	cnt=1;
+	memset(ed,0,sizeof(ed));
+	for(int i=0,cnt=0;i<n;++i)
+		for(int j=0;j<m;++j)
+			num[i][j]=cnt++;
+	for(int i=0;i<n;++i)
+		for(int j=0;j<m;++j)
+		{
+			vector< pair<int,int> > h;
+			for(int k=0;k<4;++k)
+			{
+				int x=i+dx[k];
+				int y=j+dy[k];
+				if(in(x,y))
+					h.PB(MP(a[x][y]-a[i][j]+1,num[x][y]));
+			}
+			while(h.size()<4)h.PB(MP(-1,-1));
+			sort(all(h));
+			int id=num[i][j]*5;
+			for(int k=0;k<4;++k)
+			{
+				int f=h[k].first;
+				if(f<0)f=0;
+				if(num[i][j]==num[tx][ty])f=oo;
+				addedge(id+k,id+k+1,f);
+				if(h[k].second!=-1&&h[k].first>=0)
+					addedge(h[k].second*5+4,id+k,oo);
+			}
+		}
+	int ret=0;
+	while(Dinic_BFS(num[sx][sy]*5+4))
+		ret+=Dinic_DFS(num[sx][sy]*5+4,oo);
+	if(ret>=oo)ret=-1;
+	return ret;
+}
+int main()
+{
+	int _;
+	for(scanf("%d",&_);_--;)
+	{
+		scanf("%d%d",&n,&m);
+		scanf("%d%d%d%d",&sx,&sy,&tx,&ty);
+		--sx,--sy,--tx,--ty;
+		for(int i=0;i<n;++i)
+			for(int j=0;j<m;++j)
+				scanf("%d",a[i]+j);
+		printf("%d\n",Work());
+	}
+	return 0;
+}

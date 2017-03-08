@@ -1,0 +1,77 @@
+#include <iostream>
+#include <string>
+#include <vector>
+#include <cstring>
+using namespace std;
+#define REP(i,n) for(int (i)=0;(i)<(n); ++(i)) 
+typedef long long int64;
+const int MOD = 151109;
+const int MAX = 80000; 
+const int MAXEDIT = 8858835;
+int mask;
+int M,N;
+char b[30][30];
+int dp[20][20][MAX];
+int patternCnt;
+int pattern[1<<20],number[1<<20]; //分别记录pattern和它的编号，便于反向查找
+int edit[MAXEDIT];int editCnt;
+/////////////////////////////
+//  xxxxoooo 现在考虑到A的位置 pattern由上一排开始到此处结束从而只需要判断
+//  oooA		  A和pattern的第一位与最后一位是否可以放置即可~~~
+/////////////////////////////
+bool check(int pat){
+	int wrong =0 ,prev=0; //wrong 记录失败的数目，由于pattern可能分为两段，所以最大可以
+	                                      //有一处错误的放置雷
+	while(pat){
+		if(pat&1) wrong+=prev,prev=1;
+		else prev =0;
+		pat/=2;
+	}
+	return wrong<=1;
+}
+int cacl(int x,int y,int s){
+	if(y>=N)return cacl(x+1,0,s);
+	if(x>=M)return (1<<9);  //??????????????
+	int & ref = dp[x][y][number[s]];
+	if(ref!=-1)return ref;
+	edit[editCnt++] = (((number[s]<<5)+y)<<5)+x;
+
+	int maxMine = 0 , way=0;
+	//可不可以放雷
+	if(b[x][y]=='.' && !(y>0&&(s&1))&&!((1<<(N-1))&s)){ //从左向右放，因此第一个不需要和最右边的比较，也就是不用和最低位比较
+		int res = cacl(x,y+1,((s<<1)|1)&mask);
+		maxMine = 1 + (res&511);
+		way = res>>9;
+	}
+	//如果不放雷
+	int res=cacl(x,y+1,(s<<1)&mask);
+	if((res&511)>maxMine)maxMine = (res&511),way=0;
+	if(maxMine == (res&511)) {
+		way+= (res>>9);if(way>MOD)way-=MOD;
+	}
+	return ref = maxMine + (way<<9);
+}
+int main(){
+	//freopen("d:\\input.txt","r",stdin);
+	int testcase;patternCnt=0;
+	scanf("%d",&testcase);
+	for(int i=0;i<(1<<20);i++){ //首先给所有合法的pattern编上号码
+		if(check(i)){
+			pattern[patternCnt]=i;
+			number[i]=patternCnt;
+			patternCnt++;
+		}
+	}
+	memset(dp,-1,sizeof(dp));
+	while(testcase--){
+		REP(i,editCnt) dp[edit[i]&31][(edit[i]>>5)&31][edit[i]>>10]=-1 ; //恢复上一个testcase修改的记录为-1
+																														 // memset太耗费时间因为数组大
+		scanf("%d %d",&M,&N);
+		editCnt=0;
+		gets(b[0]);
+		REP(i,M)gets(b[i]);
+		mask = (1<<N)-1;
+		int res = cacl(0,0,0);
+		printf("%d %d\n",res&511,res>>9);
+	}
+}

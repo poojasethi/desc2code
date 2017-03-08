@@ -1,0 +1,110 @@
+# include <bits/stdc++.h>
+
+using namespace std;
+
+const int maxn = 1e5 + 100;
+const int maxl = 20;
+const int sqt = 300;
+
+vector <int> adj[maxn];
+vector <int> qu;
+
+queue <int> q;
+
+int par[maxn][maxl];
+int dp[maxn];
+int h[maxn];
+
+bool mark[maxn];
+
+void dfs(int v){
+	mark[v] = true;
+	dp[v] = h[v];
+
+	for(int i=1 ; i<maxl and par[v][i-1] != -1 ; i++)
+		par[v][i] = par[par[v][i-1]][i-1];
+	
+	for(int i=0 ; i<adj[v].size() ; i++){
+		int u = adj[v][i];
+		if(!mark[u]){
+			h[u] = h[v] + 1;
+			par[u][0] = v;
+			dfs(u);
+		}
+	}
+}
+
+void bfs(){
+	qu.clear();
+
+	while(q.size()){
+		int v = q.front();
+		q.pop();
+
+		for(int i=0 ; i<adj[v].size() ; i++){
+			int u = adj[v][i];
+			if(dp[v] + 1 < dp[u]){
+				dp[u] = dp[v] + 1;
+				q.push(u);
+			}
+		}
+	}
+}
+
+int lca(int v,int u){
+	if(h[v] < h[u])
+		swap(v, u);
+
+	for(int i=maxl-1 ; i>=0 ; i--)
+		if(par[v][i] != -1 and h[par[v][i]] >= h[u])
+			v = par[v][i];
+	
+	if(v == u)
+		return v;
+	
+	for(int i=maxl-1 ; i>=0 ; i--)
+		if(par[v][i] != -1 and par[v][i] != par[u][i])
+			v = par[v][i], u = par[u][i];
+	
+	return par[v][0];
+}
+
+int get(int v,int u){
+	return h[u] + h[v] - 2 * h[lca(u, v)];
+}
+
+int main(){
+
+	int n, m;
+	cin >> n >> m;
+	for(int i=1 ; i<n ; i++){
+		int v, u;
+		cin >> v >> u;
+		adj[v].push_back(u);
+		adj[u].push_back(v);
+	}
+	
+	memset(par, -1, sizeof par);
+	dfs(1);
+
+	while(m--){
+		int t, v;
+		cin >> t >> v;
+		if(t == 1){
+			dp[v] = 0;
+			q.push(v);
+			qu.push_back(v);
+			if(qu.size() > sqt)
+				bfs();
+		}
+		else{
+			int dis = dp[v];
+			for(int i=0 ; i<qu.size() ; i++)
+				dis = min(dis, get(qu[i], v));
+
+			cout << dis << '\n';
+		}
+	}
+
+	return 0;
+}

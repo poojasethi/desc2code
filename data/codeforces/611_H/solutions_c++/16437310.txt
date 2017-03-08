@@ -1,0 +1,165 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+void RD(int &res)
+{
+	res=0;char c;
+	while(c=getchar(),c!='?');
+	do{++res;}while(c=getchar(),c=='?');
+}
+const int N=132,M=1e4+32,MX=2e5+32,inf=0x7fffffff;
+namespace{
+	struct edge{
+		int to,c;
+		edge *nex,*pair;
+		edge(){}
+		edge(int to,int c,edge *nex):to(to),c(c),nex(nex){}
+	}*E[N],*EC[N],POOL[M],*cur=POOL;
+	typedef edge* ed;
+	void INS(int x,int y,int c)
+	{
+		*cur=edge(y,c,E[x]);E[x]=cur++;
+		*cur=edge(x,0,E[y]);E[y]=cur++;
+		E[x]->pair=E[y];
+		E[y]->pair=E[x];
+	}
+}
+namespace{
+	int ANS[MX][2],CNT;
+	void putans(int x,int y)
+	{
+		ANS[++CNT][0]=x;
+		ANS[CNT][1]=y;
+	}
+	void popans(){--CNT;}
+}
+namespace FLOW{
+	int S,T;
+	int d[N],Q[N],l,r;
+	bool bfs()
+	{
+		memset(d,-1,sizeof d);
+		l=r=d[S]=0;Q[r++]=S;
+		for(;l<r;)
+		{
+			int x=Q[l++];
+			for(ed i=E[x]=EC[x];i;i=i->nex)
+				if(i->c&&d[i->to]==-1)
+					d[Q[r++]=i->to]=d[x]+1;
+		}
+		return d[T]!=-1;
+	}
+	int aug(int x,int flow)
+	{
+		if(x==T)return flow;
+		for(ed &i=E[x];i;i=i->nex)
+			if(i->c&&d[x]+1==d[i->to])
+			{
+				int t=aug(i->to,min(flow,i->c));
+				if(t)return i->c-=t,i->pair->c+=t,t;
+			}
+		return 0;
+	}
+	bool GET()
+	{
+		int t;
+		for(;bfs();)
+			for(;(t=aug(S,inf)););
+		for(ed i=E[S]=EC[S];i;i=i->nex)
+			if(i->c)return 0;
+		return 1;
+	}
+}
+int n,d;
+int num[10][10];
+int G[10][10],rem[10],hd[10],on[10];
+bool flag=0;
+void mk_tree(int k)
+{
+	if(flag)return;
+	if(k>d){
+		memset(E,0,sizeof E);
+		for(int i=1;i<=d;++i)
+			for(int j=i;j<=d;++j)
+			{
+				INS(FLOW::S,num[i][j],G[i][j]);
+				INS(num[i][j],i,inf);
+				INS(num[i][j],j,inf);
+			}
+		for(int i=1;i<=d;++i)INS(i,FLOW::T,rem[i]);
+		memcpy(EC,E,sizeof E);
+		if(FLOW::GET())
+		{
+			for(int i=1;i<=d;++i)
+				for(int j=i;j<=d;++j)
+				{
+					int x=num[i][j];
+					for(ed k=E[x]=EC[x];k;k=k->nex)
+						if(k->pair->c)
+						{
+							for(int t=1;t<=k->pair->c;++t)
+							{
+								if(k->to==i)putans(hd[j],on[i]++);
+								else putans(hd[i],on[j]++);
+							}
+						}
+				}
+			flag=1;
+		}
+		return;
+	}
+	if(hd[k]){
+		mk_tree(k+1);
+		return;
+	}
+	for(int i=1;i<=d;++i)
+	{
+		int &EG=G[min(i,k)][max(i,k)];
+		if(hd[i]&&rem[k]&&EG)
+		{
+			--EG;--rem[k];
+			hd[k]=on[k]++;
+			putans(hd[i],hd[k]);
+			mk_tree(k+1);
+			if(flag)return;
+			++EG;++rem[k];
+			--on[k];
+			hd[k]=0;
+			popans();
+		}
+	}
+}
+int main()
+{
+	//freopen("611H.in","r",stdin);
+	scanf("%d",&n);
+	for(int tmp=n;tmp;tmp/=10)++d;
+	for(int i=1;i<=n-1;++i)
+	{
+		static int x,y;
+		RD(x);RD(y);
+		if(x>y)swap(x,y);
+		++G[x][y];
+	}
+	int cnt=d;
+	for(int i=1;i<=d;++i)
+		for(int j=i;j<=d;++j)num[i][j]=++cnt;
+	FLOW::S=0;FLOW::T=cnt+1;
+	on[1]=1;
+	for(int i=2;i<=d;++i)on[i]=on[i-1]*10;
+	for(int i=1;i<d;++i)rem[i]=on[i+1]-on[i];
+	rem[d]=n-on[d]+1;
+	for(int i=1;i<=d&&!flag;++i)
+	{
+		hd[i]=on[i]++;
+		--rem[i];
+		mk_tree(1);
+		--on[i];
+		hd[i]=0;
+		++rem[i];
+	}
+	if(!flag)printf("-1\n");
+	else for(int i=1;i<=CNT;++i)printf("%d %d\n",ANS[i][0],ANS[i][1]);
+	return 0;
+}

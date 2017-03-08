@@ -1,0 +1,128 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define p 1000000007
+using namespace std;
+
+struct Lagrange_polynomial_interpolation
+{
+	#define pol_m 200005
+	
+	int m,fac[pol_m],fac_inv[pol_m],fac_l[pol_m],fac_r[pol_m],f[pol_m];
+	
+	int Power(int a,int b)
+	{
+		int ans=1;
+		for(;b;b>>=1,a=(long long)a*a%p)if(b&1)ans=(long long)ans*a%p;
+		return ans;
+	}
+	void prepare(int m_)
+	{
+		int i;m=m_;
+		for(fac[0]=i=1;i<=m;++i)fac[i]=(long long)fac[i-1]*i%p;
+		for(fac_inv[m]=Power(fac[m],p-2),i=m;i>=1;--i)fac_inv[i-1]=(long long)fac_inv[i]*i%p;
+	}
+	int calc(int n)
+	{
+		if(!n)n=p;
+		if(n<=m)return f[n];
+		int i,ans=0,tmp;
+		for(fac_l[0]=i=1;i<=m;++i)fac_l[i]=(long long)fac_l[i-1]*(n-i)%p;
+		for(fac_r[m+1]=1,i=m;i>=1;--i)fac_r[i]=(long long)fac_r[i+1]*(n-i)%p;
+		for(i=1;i<=m;++i)
+		{
+			tmp=(long long)f[i]*fac_l[i-1]%p*fac_r[i+1]%p*fac_inv[i-1]%p;
+			if((m-i)&1)tmp=(long long)tmp*(p-fac_inv[m-i])%p;
+			else tmp=(long long)tmp*fac_inv[m-i]%p;
+			ans+=tmp;if(ans>=p)ans-=p;
+		}
+		return ans;
+	}
+	
+	#undef pol_m
+}A;
+
+int T,lc,n,m,d,d2,d_inv,i,j,k,l,u,v,ans,sum;
+int D[105],Bd[105][505],a[505],tmp[505],f[505];
+char C[105];
+
+int Power(int a,int b)
+{
+	int ans=1;
+	for(;b;b>>=1,a=(long long)a*a%p)if(b&1)ans=(long long)ans*a%p;
+	return ans;
+}
+
+int ModC(int d)
+{
+	int i,ans=0;
+	for(i=1;i<=lc;++i)ans=((long long)ans*10+C[i]-'0')%d;
+	return ans;
+}
+
+int main()
+{
+	scanf("%d",&T);
+	for(;T;--T)
+	{
+		scanf("%d%s",&n,C+1);lc=strlen(C+1);
+		for(i=1;i<=n;++i)scanf("%d",&D[i]);
+		for(i=1;i<=n;++i)
+		{
+			d=D[i];d_inv=Power(d,p-2);
+			for(j=0;j<d;++j)Bd[i][j]=(p-(long long)j*d_inv%p)%p;
+			for(j=1;j<=n;++j)
+			if(i!=j)
+			{
+				d2=D[j];sum=0;
+				for(k=0;k<d;++k)sum=(sum+Bd[i][k])%p;
+				for(k=0;k<d;++k)tmp[k]=0;
+				for(k=0;k<d;++k)
+				{
+					u=(d-k*d2%d)%d;
+					tmp[0]=(tmp[0]+(long long)Bd[i][u]*k)%p;
+				}
+				ans=tmp[0];
+				for(l=d2%d;l;l=(l+d2)%d)
+				{
+					ans=(ans+sum-(long long)d*Bd[i][l]%p+p)%p;
+					tmp[l]=ans;
+				}
+				for(k=0;k<d;++k)Bd[i][k]=(p-(long long)tmp[k]*d_inv%p)%p;
+			}
+		}
+		
+		m=n+5;
+		A.prepare(m);
+		for(i=0;i<=m;++i)f[i]=0;
+		f[0]=1;
+		for(i=1;i<=n;++i)
+		for(j=D[i];j<=m;++j)
+		{
+			f[j]+=f[j-D[i]];
+			if(f[j]>=p)f[j]-=p;
+		}
+		for(i=1;i<=m;++i)
+		{
+			ans=0;
+			for(j=1;j<=n;++j)
+			{
+				d=D[j];k=i%d;
+				ans+=Bd[j][k];if(ans>=p)ans-=p;
+				--k;if(k<0)k+=d;
+				ans-=Bd[j][k];if(ans<0)ans+=p;
+			}
+			A.f[i]=(f[i]+p-ans)%p;
+		}
+		
+		ans=A.calc(ModC(p));
+		for(i=1;i<=n;++i)
+		{
+			d=D[i];k=ModC(d);
+			ans+=Bd[i][k];if(ans>=p)ans-=p;
+			--k;if(k<0)k+=d;
+			ans-=Bd[i][k];if(ans<0)ans+=p;
+		}
+		printf("%d\n",ans);
+	}
+}

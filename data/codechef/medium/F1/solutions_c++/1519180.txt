@@ -1,0 +1,101 @@
+#include      <algorithm>
+#include      <tr1/unordered_map>
+#include      <cstring>
+#include      <set>
+#include      <iostream>
+using namespace std;
+const int BUFF_SIZE = 1024 * 256;
+char g_rbuffer[BUFF_SIZE], *g_rpos = g_rbuffer, *g_rend = g_rbuffer;
+#define READ_HELPER(fnAccum, fnEnd, fnCheck) while (true) { for (; g_rpos != g_rend && (fnCheck); ++g_rpos) fnAccum;\
+	if (g_rpos != g_rend) fnEnd; g_rend = g_rbuffer + read(0, g_rbuffer, BUFF_SIZE), g_rpos = g_rbuffer; }
+template<typename R> void readNumber(R &rtn) {
+	rtn = 0;
+	READ_HELPER(;, break, *g_rpos < '0' || *g_rpos > '9'); READ_HELPER(rtn = rtn * 10 + *g_rpos - '0', return, *g_rpos >= '0' && *g_rpos <= '9');
+}
+char g_wbuffer[BUFF_SIZE];
+char *g_wpos = g_wbuffer, *g_wend = g_wbuffer + BUFF_SIZE;
+inline void flushWBuffer() { write(1, g_wbuffer, g_wpos - g_wbuffer); g_wpos = g_wbuffer;}
+inline void writeChar(char ch) { *(g_wpos++) = ch; if (g_wpos == g_wend) flushWBuffer(); }
+void writeBuffer(char *start, char *end) { for (; start != end; start += 1) writeChar(*start); }
+inline void writeString(char* ch) {writeBuffer(ch, ch + strlen(ch));}
+template<typename I> void writeNumber(I n) {
+	static char tmpBuffer[100];
+	char *cur = tmpBuffer, *start = tmpBuffer;
+	if (n == 0) { writeChar('0'); return; }
+	if (n < 0) *(cur++) = '-', n *= -1, start += 1;
+	while (n) *(cur++) = n % 10 + '0', n /= 10;
+	reverse(start, cur); writeBuffer(tmpBuffer, cur);
+}
+template<typename T1, typename T2> ostream& operator<<(ostream &o, const pair<T1, T2> &p) {return o << '(' << p.first << ", " << p.second << ')';}
+
+const int MAX_SIZE = 501;
+int Matrix[MAX_SIZE][MAX_SIZE], N, M, K;
+struct MQ {
+    pair<int, int> queue[MAX_SIZE];
+	int qhead, qtail;
+    int lstMaxPrefix[MAX_SIZE], lhead, ltail;
+	tr1::unordered_map<int, int> mapCounts;
+	MQ() { clean(); }
+    void enqueue(const pair<int, int> &v) {
+        while (lhead < ltail && lstMaxPrefix[ltail - 1] < v.first) ltail -= 1;
+		lstMaxPrefix[ltail++] = v.first;
+        queue[qtail++] = v;
+		mapCounts[v.first] += v.second;
+    }
+    int dequeue() {
+        lhead += queue[qhead].first == lstMaxPrefix[lhead];
+		mapCounts[queue[qhead].first] -= queue[qhead].second;
+        return queue[qhead++].first;
+    }
+    int maxInQueue() { return lstMaxPrefix[lhead]; }
+	int count(int v) {return mapCounts[v];}
+	void clean() {
+		qhead = 0, qtail = 0, lhead = 0, ltail = 0;
+		mapCounts.clear();
+	}
+};
+
+MQ vqueues[MAX_SIZE];
+MQ hqueue;
+
+int main(int argc, char **argv) {
+	ios_base::sync_with_stdio(false), cin.tie(0);
+	int T;
+	readNumber(T);
+	for (int t = 1; t <= T; t += 1) {
+		readNumber(M); readNumber(N); readNumber(K);
+		if (t != 1) writeChar('\n');
+		writeString("Case "); writeNumber(t); writeChar(':'); writeChar('\n');
+		for (int i = 0; i < M; i += 1) for (int j = 0; j < N; j += 1) readNumber(Matrix[i][j]);
+
+		for (int j = 0; j < N; j += 1) {
+			vqueues[j].clean();
+			for (int i = 0; i < min(M, K); i += 1) vqueues[j].enqueue(make_pair(Matrix[i][j], 1));
+		}
+
+		for (int i = 0; i < M - K + 1; i += 1) {
+			hqueue.clean();
+			for (int j = 0; j < min(N, K); j += 1) hqueue.enqueue(make_pair(vqueues[j].maxInQueue(), vqueues[j].count(vqueues[j].maxInQueue())));
+
+			for (int j = 0; j < N - K + 1; j += 1) {
+				const int r = hqueue.maxInQueue();
+				if (j != 0) writeChar(' ');
+				writeNumber(r);
+				if (hqueue.count(r) > 1) writeChar('('), writeNumber(hqueue.count(r)), writeChar(')');
+				hqueue.dequeue();
+
+				if (j < N - K) hqueue.enqueue(make_pair(vqueues[j + K].maxInQueue(), vqueues[j + K].count(vqueues[j + K].maxInQueue())));
+			}
+			writeChar('\n');
+
+			if (i < M - K) {
+				for (int j = 0; j < N; j += 1) {
+					vqueues[j].dequeue();
+					vqueues[j].enqueue(make_pair(Matrix[i + K][j], 1));
+				}
+			}
+		}
+	}
+	flushWBuffer();
+	return 0;
+}

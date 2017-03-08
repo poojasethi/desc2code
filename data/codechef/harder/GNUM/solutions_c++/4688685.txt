@@ -1,0 +1,177 @@
+#include <list>
+#include <set>
+#include <map>
+#include <ctime>
+#include <stack>
+#include <string>
+#include <vector>
+#include <cstdio>
+#include <cmath>
+#include <queue>
+#include <deque>
+#include <bitset>
+#include <cstdlib>
+#include <cctype>
+#include <cstring>
+#include <iterator>
+#include <cassert>
+#include <fstream>
+#include <numeric>
+#include <iomanip>
+#include <complex>
+#include <sstream>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+ 
+#define LL long long
+#define int64 LL
+
+typedef vector < int > VI;
+typedef pair< int , int > pii;
+typedef pair < LL , LL > PLL;
+#define fr first
+#define se second
+#define pi M_PI
+#define rad(x) (x)*acos(-1)/180.0
+#define EPS 1e-6
+#define INF 10000*10000*10000LL
+stringstream ss;
+#define two(x) ( 1LL<<x )
+#define sq(x) ( (x)*(x) )
+LL mod = 1000000007LL;
+
+/**************************Code****************************/
+
+int a[410], b[410];
+
+struct Edge {
+int from, to, cap, flow, index;
+Edge(int from, int to, int cap, int flow, int index) :
+from(from), to(to), cap(cap), flow(flow), index(index) {}
+};
+ 
+struct PushRelabel {
+int N;
+vector<vector<Edge> > G;
+vector<LL> excess;
+vector<int> dist, active, count;
+queue<int> Q;
+ 
+PushRelabel(int N) : N(N), G(N), excess(N), dist(N), active(N), count(2*N) {}
+ 
+void AddEdge(int from, int to, int cap) {
+G[from].push_back(Edge(from, to, cap, 0, G[to].size()));
+if (from == to) G[from].back().index++;
+G[to].push_back(Edge(to, from, 0, 0, G[from].size() - 1));
+}
+ 
+void Enqueue(int v) {
+if (!active[v] && excess[v] > 0) { active[v] = true; Q.push(v); }
+}
+ 
+void Push(Edge &e) {
+int amt = int(min(excess[e.from], (LL)(e.cap - e.flow)));
+if (dist[e.from] <= dist[e.to] || amt == 0) return;
+e.flow += amt;
+G[e.to][e.index].flow -= amt;
+excess[e.to] += amt;
+excess[e.from] -= amt;
+Enqueue(e.to);
+}
+void Gap(int k) {
+for (int v = 0; v < N; v++) {
+if (dist[v] < k) continue;
+count[dist[v]]--;
+dist[v] = max(dist[v], N+1);
+count[dist[v]]++;
+Enqueue(v);
+}
+}
+ 
+void Relabel(int v) {
+count[dist[v]]--;
+dist[v] = 2*N;
+for (int i = 0; i < G[v].size(); i++)
+if (G[v][i].cap - G[v][i].flow > 0)
+dist[v] = min(dist[v], dist[G[v][i].to] + 1);
+count[dist[v]]++;
+Enqueue(v);
+}
+ 
+void Discharge(int v) {
+for (int i = 0; excess[v] > 0 && i < G[v].size(); i++) Push(G[v][i]);
+if (excess[v] > 0) {
+if (count[dist[v]] == 1)
+Gap(dist[v]);
+else
+Relabel(v);
+}
+}
+ 
+LL GetMaxFlow(int s, int t) {
+count[0] = N-1;
+count[N] = 1;
+dist[s] = N;
+active[s] = active[t] = true;
+for (int i = 0; i < G[s].size(); i++) {
+excess[s] += G[s][i].cap;
+Push(G[s][i]);
+}
+while (!Q.empty()) {
+int v = Q.front();
+Q.pop();
+active[v] = false;
+Discharge(v);
+}
+LL totflow = 0;
+for (int i = 0; i < G[s].size(); i++) totflow += G[s][i].flow;
+return totflow;
+}
+};
+int main()
+{
+	int t, n, g;
+	scanf( "%d" , &t );
+	while( t -- )
+	{
+		map < int , int > L, R;
+		map < int , int > :: iterator ii, jj;
+		scanf( "%d" , &n );
+		for( int i = 0 ; i < n ; i ++ )
+			scanf( "%d" , a + i );
+		for( int j = 0 ; j < n ; j ++ )
+		{
+			scanf( "%d" , b + j );
+			for( int i = 0 ; i < n ; i ++ )
+				if( a[i] < b[j] )
+				{
+					if( ( g = __gcd( a[i] , b[j] ) ) != 1 )
+						L[g] ++;
+				}
+				else if( a[i] > b[j] )
+				{
+					if( ( g = __gcd( a[i] , b[j] ) ) != 1 )
+						R[g] ++;
+				}
+		}
+		int src = 0, sink = L.size() + R.size() + 1;
+		PushRelabel flow( sink + 1 );
+		int x = 1;
+		for( ii = L.begin() ; ii != L.end() ; ii ++, x ++ )
+			flow.AddEdge( src , x , ii->se );
+		x = L.size() +1;
+		for( ii = R.begin() ; ii != R.end() ; ii ++, x ++ )
+			flow.AddEdge( x , sink , ii->se );
+		x = 1;
+		for( ii = L.begin() ; ii != L.end() ; ii ++, x ++ )
+		{
+			int y = L.size() + 1;
+			for( jj = R.begin() ; jj != R.end() ; jj ++, y ++ )
+				if( __gcd( ii->fr , jj->fr ) != 1 )
+					flow.AddEdge( x , y , ii->se );
+		}
+		printf( "%d\n" , (int)flow.GetMaxFlow( src , sink ) );
+	}
+	return 0;
+}

@@ -1,0 +1,103 @@
+#include<bits/stdc++.h>
+using namespace std;
+
+const int N = 1e5 + 10;
+int n,q,k,u,v,cnt,res;
+int start[N],finish[N];
+int par[20][N],h[N],f[N][2],g[N][2];
+bool imp[N],check[N];
+vector<int> G[N];
+vector<int> GQ[N];
+
+void predfs(int u, int p) {
+    start[u] = ++cnt;
+    for(int i = 0; i < G[u].size(); ++i) {
+        int v = G[u][i];
+        if(v != p) {
+            h[v] = h[u] + 1;
+            par[0][v] = u;
+            predfs(v, u);
+        }
+    }
+    finish[u] = ++cnt;
+}
+
+int lca(int u,int v) {
+    if(h[u] > h[v]) swap(u,v);
+    for(int i = 17; i >= 0; --i) if(h[par[i][v]] >= h[u]) v = par[i][v];
+    for(int i = 17; i >= 0; --i) if(par[i][u] != par[i][v]) u = par[i][u], v = par[i][v];
+    return (u == v) ? u : par[0][u];
+}
+
+bool cmp(int u,int v) {
+    return start[u] < start[v];
+}
+
+void dfs(int u) {
+    int num = 0;
+    for(int i = 0; i < GQ[u].size(); ++i) {
+        dfs(GQ[u][i]);
+        if(check[GQ[u][i]]) num++;
+    }
+    if(imp[u]) {
+        check[u] = 1;
+        res += num;
+    }
+    else {
+        if(num >= 2) {
+            res++;
+            check[u] = 0;
+        }
+        else if(num) {
+            check[u] = 1;
+        }
+        else {
+            check[u] = 0;
+        }
+    }
+}
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin >> n;
+    for(int i = 1; i < n; ++i) {
+        cin >> u >> v;
+        G[u].push_back(v);
+        G[v].push_back(u);
+    }
+    par[0][1] = h[1] = 1;
+    predfs(1, 1);
+    for(int i = 1; i <= 17; ++i) for(int j = 1; j <= n; ++j) par[i][j] = par[i-1][par[i-1][j]];
+    cin >> q;
+    while(q--) {
+        cin >> k;
+        vector<int> v; v.clear();
+        int x;
+        bool ok = 1;
+        for(int i = 0; i < k; ++i) {
+            cin >> x;
+            imp[x] = 1;
+            v.push_back(x);
+        }
+        sort(v.begin(),v.end(),cmp);
+        for(int i = 1; i < k; ++i) {
+            v.push_back(lca(v[i],v[i-1]));
+            if(imp[par[0][v[i]]]) ok = 0;
+        }
+        if(!ok) {
+           for(int i = 0; i < v.size(); ++i) imp[v[i]] = 0;
+           cout << "-1\n";
+           continue;
+        }
+        sort(v.begin(),v.end(),cmp);
+        v.resize(distance(v.begin(),unique(v.begin(),v.end())));
+        for(int i = 1; i < v.size(); ++i) {
+            int p = lca(v[i],v[i-1]);
+            GQ[p].push_back(v[i]);
+        }
+        dfs(v[0]);
+        for(int i = 0; i < v.size(); ++i) { GQ[v[i]].clear(); imp[v[i]] = 0; check[v[i]] = 0; }
+        cout << res << '\n';
+        res = 0;
+    }
+}

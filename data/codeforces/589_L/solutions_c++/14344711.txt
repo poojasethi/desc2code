@@ -1,0 +1,200 @@
+#include<cassert>
+#include<vector>
+#include<cstdio>
+#include<cstring>
+#include<iostream>
+#include<algorithm>
+using namespace std;
+
+const int K = 129 * 3;
+
+int n, m, k;
+
+vector<int> uses;
+
+int id[K];
+
+#define left LEFT
+#define right RIGHT
+
+char up[K][K], right[K][K], down[K][K], left[K][K];
+
+int N, M;
+
+const int MOD = 1000000007;
+
+int inverse(int a) {
+    return a == 1 ? a : (long long)(MOD - MOD / a) * inverse(MOD % a) % MOD;
+}
+
+int a[K * K][K];
+
+#define x(u) (u) * 3
+#define y(u) (u) * 3 + 1
+#define r(u) (u) * 3 + 2
+
+void gauss(int n, int m) {
+    /*
+    cout << n << ' ' << m << endl;
+    for (int i = 0; i < m; ++i) {
+        for (int j = 0; j <= n; ++j) {
+            printf("%d ", a[i][j]);
+        }
+        printf("\n");
+    }
+    */
+    for (int i = 0; i < m; ++i) {
+        for (int j = 0; j <= n; ++j) {
+            a[i][j] %= MOD;
+            if (a[i][j] < 0) {
+                a[i][j] += MOD;
+            }
+        }
+    }
+    for (int i = 0; i < n; ++i) {
+        if (!a[i][i]) {
+            for (int j = i + 1; j < m; ++j) {
+                if (a[j][i]) {
+                    for (int k = i; k <= n; ++k) {
+                        swap(a[i][k], a[j][k]);
+                    }
+                    break;
+                }
+            }
+        }
+        assert(a[i][i]);
+        int inv = inverse(a[i][i]);
+        for (int j = i + 1; j < m; ++j) {
+            if (a[j][i]) {
+                int ratio = (long long)a[j][i] * inv % MOD;
+                for (int k = i; k <= n; ++k) {
+                    a[j][k] = (a[j][k] - (long long)a[i][k] * ratio % MOD + MOD) % MOD;
+                }
+            }
+        }
+    }
+    for (int i = n - 1; i >= 0; --i) {
+        int inv = inverse(a[i][i]);
+        a[i][i] = 1;
+        a[i][n] = (long long)a[i][n] * inv % MOD;   
+        for (int j = 0; j < i; ++j) {
+            a[j][n] = (a[j][n] - (long long)a[i][n] * a[j][i] % MOD + MOD) % MOD;
+            a[j][i] = 0;
+        }
+    }
+    /*
+    for (int i = 0; i < n; ++i) {
+        cout << a[i][n] << endl;
+    }
+    */
+}
+
+const int NN = 305;
+
+char ans[NN][NN];
+
+int main() {
+    scanf("%d%d%d", &n, &m, &k);
+    for (int i = 0; i < k; ++i) {
+        char op[2];
+        scanf("%s", op);
+        uses.push_back(op[0]);
+        int u = op[0];
+        id[u] = i;
+        scanf("%s%s%s%s", up[u], right[u], down[u], left[u]);
+    }
+    N = k * 3;
+    M = 0;
+    for (int i = 0; i < k; ++i) {
+        int u = uses[i];
+        if (up[u][0] == '~') {
+            a[M][x(i)] = 1;
+            a[M][N] = 0;
+            ++M;
+        }
+        if (left[u][0] == '~') {
+            a[M][y(i)] = 1;
+            a[M][N] = 0;
+            ++M;
+        }
+        int l = strlen(right[u]);
+        for (int j = 0; j < l; ++j) {
+            a[M][y(i)] = 1;
+            a[M][r(i)] = 1;
+            if (right[u][j] == '~') {
+                a[M][N] = m;
+            } else {
+                a[M][y(id[(int)right[u][j]])] = -1;
+            }
+            ++M;
+        }
+        if (right[u][0] != '~') {
+            vector<int> q;
+            q.push_back(u);
+            a[M][r(id[u])] = 1;
+            for (int j = 0; j < (int)q.size(); ++j) {
+                int u = q[j];
+                char *s = a[M][r(id[u])] > 0 ? right[u] : left[u];
+                int l = strlen(s);
+                if (s[0] == '~') {
+                    continue;
+                }
+                for (int k = 0; k < l; ++k) {
+                    int v = s[k];
+                    if (a[M][r(id[v])] == 0) {
+                        a[M][r(id[v])] = -a[M][r(id[u])];
+                        q.push_back(v);
+                    }
+                }
+            }
+            ++M;
+        }
+        l = strlen(down[u]);
+        for (int j = 0; j < l; ++j) {
+            a[M][x(i)] = 1;
+            a[M][r(i)] = 1;
+            if (down[u][j] == '~') {
+                a[M][N] = n;
+            } else {
+                a[M][x(id[(int)down[u][j]])] = -1;
+            }
+            ++M;
+        }
+        if (down[u][0] != '~') {
+            vector<int> q;
+            q.push_back(u);
+            a[M][r(id[u])] = 1;
+            for (int j = 0; j < (int)q.size(); ++j) {
+                int u = q[j];
+                char *s = a[M][r(id[u])] > 0 ? down[u] : up[u];
+                int l = strlen(s);
+                if (s[0] == '~') {
+                    continue;
+                }
+                for (int k = 0; k < l; ++k) {
+                    int v = s[k];
+                    if (a[M][r(id[v])] == 0) {
+                        a[M][r(id[v])] = -a[M][r(id[u])];
+                        q.push_back(v);
+                    }
+                }
+            }
+            ++M;
+        }
+    }
+    gauss(N, M);
+    for (int i = 0; i < k; ++i) {
+        int tx = a[x(i)][N],
+            ty = a[y(i)][N],
+            tr = a[r(i)][N];
+        for (int dx = 0; dx < tr; ++dx) {
+            for (int dy = 0; dy < tr; ++dy) {
+                ans[tx + dx][ty + dy] = uses[i];
+            }
+        }
+    }
+    for (int i = 0; i < n; ++i) {
+        puts(ans[i]);
+    }
+    return 0;
+}

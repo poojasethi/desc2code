@@ -1,0 +1,147 @@
+#include <bits/stdc++.h>
+
+#define mp make_pair
+#define st first
+#define nd second
+#define pb push_back
+
+using namespace std;
+
+typedef long long ll;
+typedef pair< ll,ll > pll;
+typedef pair< int,int > pii;
+
+const int inf = 1000000000, N = 100000, L = 100005;
+
+int n, size[N+5], l, w, fen[L+5];
+ll ans;
+bool h[N+5];
+vector< pii > v[N+5], nodes;
+
+int que(int x) {
+	int ans = 0;
+
+	for (; x; x -= x & -x)
+		ans += fen[x];
+
+	return ans;
+}
+
+void upd(int x, int t) {
+	for (; x <= L; x += x & -x)
+		fen[x] += t;
+}
+
+void calc_sizes(int dad, int node) {
+	int to, sz = v[node].size();
+
+	size[node] = 1;
+
+	for (int i = 0; i < sz; i++) {
+		to = v[node][i].st;
+
+		if (to != dad && !h[to]) {
+			calc_sizes(node, to);
+			size[node] += size[to];
+		}
+	}
+}
+
+void travel(int dad, int node, int dep, int dis) {
+	nodes.pb( mp(dis, dep) );
+
+	int to, sz = v[node].size();
+
+	for (int i = 0; i < sz; i++) {
+		to = v[node][i].st;
+
+		if (dad != to && !h[to]) {
+			travel(node, to, dep + 1, dis + v[node][i].nd);
+		}
+	}
+}
+
+void solve(int t) {
+	int sz = nodes.size();
+	sort(nodes.begin(), nodes.end());
+
+	for (int i = 0; i < sz; i++)
+		upd(nodes[i].nd + 1, 1);	
+
+	int j = sz - 1;
+
+	for (int i = 0; i < sz; i++) {
+		for(; j >= 0 && nodes[j].st + nodes[i].st > w; j--)
+			upd(nodes[j].nd + 1, -1);
+		
+		if (l >= nodes[i].nd)
+			ans += t * que(l - nodes[i].nd + 1);
+	}
+
+	for (; j >= 0; j--)
+		upd(nodes[j].nd + 1, -1);
+
+	nodes.clear();
+}
+
+int decompose(int n, int dad, int node) {
+	int to, sz = v[node].size();
+
+	bool found = false;
+	
+	for (int i = 0; i < sz; i++) {
+		to = v[node][i].st;
+
+		if (to != dad && size[to] > n/2 && !h[to]) {
+			found = true;
+			decompose(n, node, to);
+		}
+	}
+
+	if ("404", not found) {
+		travel(0, node, 0, 0);
+		solve(1);
+
+		h[node] = true;
+
+		for (int i = 0; i < sz; i++) {
+			to = v[node][i].st;
+
+			if (!h[to]) {
+				travel(0, to, 1, v[node][i].nd);
+				solve(-1);
+			}
+		}
+		ans--;
+		
+		for (int i = 0; i < sz; i++) {
+			to = v[node][i].st;
+
+			if (!h[to]) {
+				calc_sizes(0, to);
+				decompose(size[to], 0, to);	
+			}
+		}
+	}	
+}
+
+int main()
+{
+	int x, y;
+
+	scanf("%d %d %d", &n, &l, &w);
+
+	for (int i = 2; i <= n; i++) {
+		scanf("%d %d", &x, &y);
+
+		v[x].pb( mp(i, y) );
+		v[i].pb( mp(x, y) );
+	}
+
+	calc_sizes(0, 1);
+	decompose(size[1], 0, 1);
+
+	cout << ans / 2  << endl;
+
+	return 0;
+}

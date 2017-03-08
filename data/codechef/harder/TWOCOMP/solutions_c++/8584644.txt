@@ -1,0 +1,227 @@
+#include<iostream>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<ctime>
+#include<cmath>
+#include<algorithm>
+#include<set>
+#include<map>
+#include<vector>
+#include<string>
+#include<queue>
+#include<stack>
+using namespace std;
+#ifdef WIN32
+#define LL "%I64d"
+#else
+#define LL "%lld"
+#endif
+#define MAXM 810
+#define MAXN 111000
+#define MAXV MAXN*2
+#define INF 0x3f3f3f3f
+#define MAXE MAXV*20
+#define PROB "company"
+typedef long long qword;
+
+int n,m1,m2;
+struct Edge
+{
+		int np,val;
+		Edge *next,*neg;
+}E[MAXE],*V[MAXV];
+int tope=-1;
+void addedge(int x,int y,int z=INF+1)
+{
+//		if (z!=INF+1)cout<<"Add edge:<"<<tope+1<<">"<<x<<" "<<y<<":"<<z<<endl;
+		E[++tope].np=y;
+		E[tope].next=V[x];
+		E[tope].val=z;
+		V[x]=&E[tope];
+
+		E[++tope].np=x;
+		E[tope].next=V[y];
+		E[tope].val=0;
+		V[y]=&E[tope];
+		
+		E[tope].neg=&E[tope-1];
+		E[tope-1].neg=&E[tope];
+}
+int sour=0,sink=1;
+int q[MAXV],lev[MAXV];
+int vis[MAXV],bfstime=0;
+bool bfs()
+{
+		int i,j;
+		int head=-1,tail=0;
+		Edge *ne;
+		lev[sour]=1;
+		vis[sour]=++bfstime;
+		q[0]=sour;
+		while (head<tail)
+		{
+				for (ne=V[q[++head]];ne;ne=ne->next)
+				{
+						if (!ne->val || vis[ne->np]==bfstime)continue;
+						q[++tail]=ne->np;
+						vis[ne->np]=bfstime;
+						lev[ne->np]=lev[q[head]]+1;
+				}
+		}
+		return vis[sink]==bfstime;
+}
+int dfs(int now,int maxf)
+{
+		int ret=0,t;
+		if (now==sink || !maxf)return maxf;
+		Edge* ne;
+		for (ne=V[now];ne;ne=ne->next)
+		{
+				if (!ne->val || lev[ne->np]!=lev[now]+1)continue;
+				t=dfs(ne->np,min(maxf,ne->val));
+				ne->val-=t;
+				ne->neg->val+=t;
+				maxf-=t;
+				ret+=t;
+				//cout<<"Flow:"<<now<<"-"<<ne->np<<":"<<x<<"("<<ne->val<<")"<<endl;
+		}
+		if (maxf)lev[now]=-1;
+		return ret;
+}
+int dinic()
+{
+		int ret=0;
+		while (bfs())
+		{
+				ret+=dfs(sour,INF);
+		}
+		return ret;
+}
+
+struct aaa
+{
+		int x,y,z;
+}p1[MAXN],p2[MAXN];
+int fa[MAXN];
+int depth[MAXN];
+void dfs_1(int now,int d)
+{
+		Edge *ne;
+		depth[now]=d;
+		for (ne=V[now];ne;ne=ne->next)
+		{
+				if (ne->np==fa[now])continue;
+				fa[ne->np]=now;
+				dfs_1(ne->np,d+1);
+		}
+}
+int jump[20][MAXN];
+void init_lca()
+{
+		int i,j;
+		for (i=1;i<=n;i++)jump[0][i]=fa[i];
+		for (j=1;j<20;j++)
+		{
+				for (i=1;i<=n;i++)
+				{
+						jump[j][i]=jump[j-1][jump[j-1][i]];
+				}
+		}
+}
+int lca(int x,int y)
+{
+		if (depth[x] > depth[y]) swap(x, y);
+		int Dep = depth[y] - depth[x];
+		for (int i=19;i>=0;i--)
+				if (Dep & ( 1 << i ) )
+						y = jump[i][y];
+		if (x==y)return x;
+		int i;
+		for (i=19;i>=0;i--)
+		{
+				if (jump[i][x]!=jump[i][y])
+				{
+						x=jump[i][x];
+						y=jump[i][y];
+				}
+		}
+		return fa[x];
+}
+bool state[MAXM][MAXM];
+int main()
+{
+		//freopen(PROB".in","r",stdin);
+		//freopen(PROB".out","w",stdout);
+		int i,j,k;
+		int x,y,z;
+		qword ans=0;
+		scanf("%d%d%d",&n,&m1,&m2);
+		for (i=1;i<n;i++)
+		{
+				scanf("%d%d",&x,&y);
+				addedge(x,y);
+		}
+		fa[1]=1;
+		dfs_1(1,0);
+		init_lca();
+		for (i=0;i<m1;i++)
+		{
+				scanf("%d%d%d",&x,&y,&z);
+				p1[i].x=x;
+				p1[i].y=y;
+				p1[i].z=z;
+				ans+=z;
+		}
+		for (i=0;i<m2;i++)
+		{
+				scanf("%d%d%d",&x,&y,&z);
+				p2[i].x=x;
+				p2[i].y=y;
+				p2[i].z=z;
+				ans+=z;
+		}
+		int x1,x2,y1,y2;
+		int a,b;
+		for (i=0;i<m1;i++)
+		{
+				for (j=0;j<m2;j++)
+				{
+						x1=p1[i].x;x2=p2[j].x;
+						y1=p1[i].y;y2=p2[j].y;
+						a=lca(x1,y1);
+						b=lca(x2,y2);
+						if (depth[a]<depth[b])
+						{
+								swap(a,b);
+								swap(x1,x2);
+								swap(y1,y2);
+						}
+						if (((lca(x2,a)==a||lca(y2,a)==a) && lca(b,a)==b)||a==b)
+						{
+								state[i][j]=1;
+				//				cout<<i+1<<" "<<j+1<<endl;
+								continue;
+						}
+				}
+		}
+		memset(V,0,sizeof(V));
+		tope=-1;
+		for (i=0;i<m1;i++)
+		{
+				for (j=0;j<m2;j++)
+				{
+						if (state[i][j])
+						{
+								addedge(2+m2+i,2+j,INF);
+						}
+				}
+		}
+		for (i=0;i<m1;i++)
+				addedge(sour,2+m2+i,p1[i].z);
+		for (i=0;i<m2;i++)
+				addedge(2+i,sink,p2[i].z);
+		ans-=dinic();
+		printf(LL"\n",ans);
+		return 0;
+}

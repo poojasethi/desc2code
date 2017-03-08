@@ -1,0 +1,92 @@
+#include <cstdio>
+#include <algorithm>
+#define N 100005
+#define M 2000000
+#define fi(a, b, c) for(int a = (b); a < (c); a++)
+#define fd(a, b, c) for(int a = (b); a > (c); a--)
+#define FI(a, b, c) for(int a = (b); a <= (c); a++)
+#define FD(a, b, c) for(int a = (b); a >= (c); a--)
+#define fe(a, b, c) for(int a = (b); a; a = c[a])
+using namespace std;
+
+int n, x[N], c[N], p, f[N], o[N], m;
+int root[N], ll[M], rr[M], s[M], cnt;
+
+void build(int d, int l, int r){
+	if(l == r) return;
+	int m = l + r >> 1;
+	ll[d] = cnt++;
+	rr[d] = cnt++;
+	build(ll[d], l, m);
+	build(rr[d], m + 1, r);
+}
+
+void update(int d, int dd, int l, int r, int p){
+	if(l == r){
+		s[d] += x[p];
+		return;
+	}
+	
+	int m = l + r >> 1;
+	if(p > m){
+		ll[d] = ll[dd];
+		int last = rr[dd];
+		rr[d] = cnt++;
+		update(rr[d], last, m + 1, r, p);
+	}else{
+		int last = ll[dd];
+		ll[d] = cnt++;
+		rr[d] = rr[dd];
+		update(ll[d], last, l, m, p);
+	}
+	
+	s[d] = s[ll[d]] + s[rr[d]];
+}
+
+int query(int d, int l, int r, int a, int b){
+	if(a <= l && b >= r) return s[d];
+	int ret = 0, m = l + r >> 1;
+	if(a <= m && b >= l) ret += query(ll[d], l, m, a, b);
+	if(a <= r && b > m) ret += query(rr[d], m + 1, r, a, b);
+	return ret;
+}
+
+int main(){
+	scanf("%d", &n);
+	FI(i, 1, n){
+		scanf("%d", &x[i]);
+		c[i] = x[i];
+	}
+	
+	sort(c, c + n + 1);
+	p = unique(c, c + n + 1) - c;
+	
+	FI(i, 1, n){
+		int j = lower_bound(c, c + p, x[i]) - c;
+		o[i] = f[j];
+		f[j] = i;
+	}
+	
+	root[0] = cnt++;
+	build(1, 1, n);
+	
+	fi(i, 1, p){
+		root[i] = cnt++;
+		int last = root[i - 1];
+		fe(j, f[i], o){
+			update(root[i], last, 1, n, j);
+			last = root[i];
+		}
+	}
+	
+	scanf("%d", &m);
+	while(m--){
+		int a, b, last = 0, ind = upper_bound(c, c + p, 1) - c - 1, sum;
+		scanf("%d %d", &a, &b);
+		while(sum = query(root[ind], 1, n, a, b), sum > last){
+			ind = upper_bound(c, c + p, sum + 1) - c - 1;
+			last = sum;
+		}
+		printf("%d\n", last + 1);
+	}
+}

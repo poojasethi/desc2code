@@ -1,0 +1,149 @@
+#include<iostream>
+using namespace std;
+#include<stdio.h>
+int st[4*200010];
+int makest(long long *a,int start,int end,int* st,int putst)
+{
+    if(start==end)
+    {
+        if(a[start]==0)
+        st[putst]=1;
+    }
+    else
+    st[putst]=makest(a,start,(start+end)/2,st,2*putst)+makest(a,(start+end)/2+1,end,st,2*putst+1);
+    return st[putst];
+}
+
+void update(int * st,int start,int end,int pos,int add,int putst)
+{
+    if(pos<start || pos>end)
+    {
+        return;
+    }
+    else
+    {
+    if(start<=pos && end>=pos)
+    st[putst]+=add;
+    if(start!=end)
+    {
+    update(st,start,(start+end)/2,pos,add,2*putst);
+    update(st,(start+end)/2+1,end,pos,add,2*putst+1);
+    }
+    }
+}
+
+int query(int *st,int start,int end,int istart,int iend,int pickst)
+{
+    if(istart<=start && iend>=end)
+    return st[pickst];
+    if(end<istart || start>iend)
+    return 0;
+    return query(st,start,(start+end)/2,istart,iend,2*pickst)+
+        query(st,(start+end)/2+1,end,istart,iend,2*pickst+1);
+}
+
+
+
+long long discover[200010],begin[200010],end[200010];
+long long arr[200010];
+int top1=1;
+class node
+{
+    public:
+  int v;
+  node *link;
+  node()
+  {
+      link=NULL;
+  }
+};
+class adj
+{
+    public:
+  node *head;
+  adj()
+  {
+      head=NULL;
+  }
+  void push(int x)
+  {
+      node *newnode=new node;
+      newnode->v=x;
+      if(head==NULL)
+      head=newnode;
+      else
+      {
+          newnode->link=head->link;
+          head->link=newnode;
+      }
+  }
+};
+void dfs(adj *vlist,int i,int *visited)
+{
+    node *ptr=vlist[i].head;
+    visited[i]=true;
+    discover[top1++]=arr[i];
+    begin[i]=top1-1;
+    while(ptr)
+    {
+        if(!visited[ptr->v])
+        {
+            dfs(vlist,ptr->v,visited);
+        }
+        ptr=ptr->link;
+    }
+    end[i]=top1-1;
+}
+int main()
+{
+    char ch;
+    long long n,m,a,b,i;
+    scanf("%lld %lld",&n,&m);
+    adj vlist[200010];
+    for(i=1;i<n;i++)
+    {
+        scanf("%lld %lld",&a,&b);
+        vlist[a].push(b);
+        vlist[b].push(a);
+    }
+     for(i=1;i<=n;i++)
+    {
+        scanf("%lld",&arr[i]);
+    }
+    int visited[200010];
+    for(i=0;i<=n;i++)
+    visited[i]=false;
+    dfs(vlist,1,visited);
+    makest(discover,1,n,st,1);
+    while(m--)
+    {
+        scanf(" %c",&ch);
+        if(ch=='U')
+        {
+            scanf("%lld %lld",&a,&b);
+               if(b != 0)
+            {
+                if(discover[begin[a]] == 0)
+                {
+                    discover[begin[a]]+=b;
+                    update(st,1,n,begin[a],-1,1);
+                }
+                else
+                {
+                    discover[begin[a]]+=b;
+                    if(discover[begin[a]] == 0)
+                    {
+                       // cout<<"hey";
+                        update(st,1,n,begin[a],+1,1);
+                    }
+                }
+            }
+        }
+        else
+        {
+            scanf("%lld",&a);
+            cout<<query(st,1,n,begin[a],end[a],1)<<"\n";
+        }
+    }
+    return 0;
+}

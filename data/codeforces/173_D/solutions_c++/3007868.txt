@@ -1,0 +1,109 @@
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+using namespace std;
+
+const int N = 100003;
+vector<int> adj[N];
+int vis[N];
+int res[N];
+vector<int> v[2];
+int n;
+
+void dfs(int u, int k)
+{
+    vis[u] = k+1;
+    v[k].push_back(u);
+    for(vector<int>::iterator it = adj[u].begin(); it != adj[u].end(); ++it)
+        if(!vis[*it])
+            dfs(*it, 1-k);
+}
+
+bool is_edge(int u, int v)
+{
+    int i = lower_bound(adj[u].begin(), adj[u].end(), v) - adj[u].begin();
+    return i < (int)adj[u].size() && adj[u][i] == v;
+}
+
+void fill_res(int u, int x)
+{
+    res[u] = x;
+    int t = 0;
+    for(int v = 1; v <= n && t < 2; ++v)
+        if(vis[u] != vis[v] && !is_edge(u, v)) {
+            res[v] = x;
+            ++t;
+        }
+}
+
+bool solve()
+{
+    if(v[0].size() % 3 == 2)
+        swap(v[0], v[1]);
+    
+    int c = 1;
+    if(v[0].size() % 3 == 1) {
+        int x = -1;
+        for(vector<int>::iterator it = v[0].begin(); it != v[0].end(); ++it)
+            if(adj[*it].size() <= v[1].size()-2) {
+                x = *it;
+                break;
+            }
+        
+        if(x != -1)
+            fill_res(x, c++);
+        else {
+            vector<int> p;
+            for(vector<int>::iterator it = v[1].begin(); it != v[1].end(); ++it)
+                if((int)adj[*it].size() <= (int)v[0].size()-2)
+                    p.push_back(*it);
+            if(p.size() < 2)
+                return false;
+            fill_res(p[0], c++);
+            fill_res(p[1], c++);
+        }
+    }
+        
+    for(int k = 0; k < 2; ++k) {
+        for(vector<int>::iterator it = v[k].begin(); it != v[k].end(); )
+            if(!res[*it]) ++it;
+            else {
+                swap(*it, v[k].back());
+                v[k].pop_back();
+            }
+        
+        for(int i = 0; i < (int)v[k].size(); i += 3, c++)
+            res[v[k][i]] = res[v[k][i+1]] = res[v[k][i+2]] = c;
+    }
+    
+    return true;
+}
+
+int main()
+{
+    int m;
+    scanf("%d%d", &n, &m);
+    while(m--) {
+        int u, v;
+        scanf("%d%d", &u, &v);
+        adj[u].push_back(v);
+        adj[v].push_back(u);
+    }
+    
+    for(int u = 1; u <= n; ++u) {
+        sort(adj[u].begin(), adj[u].end());
+        if(!vis[u])
+            dfs(u, 0);
+    }
+    
+    if(!solve()) puts("NO");
+    else {
+        puts("YES");
+        for(int u = 1; u <= n; ++u) {
+            if(u > 1) printf(" ");
+            printf("%d", res[u]);
+        }
+        printf("\n");
+    }
+    return 0;
+}

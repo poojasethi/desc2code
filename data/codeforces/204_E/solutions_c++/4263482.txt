@@ -1,0 +1,114 @@
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <set>
+#include <vector>
+#include <map>
+using namespace std;
+
+const int MAXN = 100000 + 10;
+#define x first
+#define y second
+#define mp make_pair
+typedef map<int, int>::iterator mit;
+typedef long long LL;
+
+struct State
+{
+	int len, fa, tr[26];
+	map<int, int> h;
+	State() {
+		len = fa = 0;
+		memset(tr, 0, sizeof(tr));
+		h.clear();
+	}
+	State(int len, int fa): len(len), fa(fa) {
+		memset(tr, 0, sizeof(tr));
+		h.clear();
+	}
+}SAM[MAXN * 4];
+
+int n, k, tot = 1;
+char str[MAXN];
+
+int Build(int pre, int id, int ref)
+{
+	int cp = 0;
+	if (SAM[pre].tr[id] && SAM[SAM[pre].tr[id]].len == SAM[pre].len + 1)
+	{
+		SAM[SAM[pre].tr[id]].h[ref]++;
+		return SAM[pre].tr[id];
+	}
+	cp = ++tot;
+	SAM[cp] = State(SAM[pre].len + 1, 0);
+	SAM[cp].h[ref]++;
+	for (; !SAM[pre].tr[id] && pre; SAM[pre].tr[id] = cp, pre = SAM[pre].fa);
+	if (pre)
+		if (SAM[SAM[pre].tr[id]].len == SAM[pre].len + 1)
+			SAM[cp].fa = SAM[pre].tr[id];
+		else
+		{
+			int tp = SAM[pre].tr[id];
+			SAM[++tot] = State(SAM[pre].len + 1, SAM[tp].fa);
+			memcpy(SAM[tot].tr, SAM[tp].tr, sizeof(SAM[tp].tr));
+			SAM[cp].fa = SAM[tp].fa = tot;
+			for (; pre && SAM[pre].tr[id] == tp; SAM[pre].tr[id] = tot, pre = SAM[pre].fa);
+		}
+	else
+	SAM[cp].fa = 1;
+	return cp;
+}
+void init()
+{
+	scanf("%d%d", &n, &k);
+	for (int i = 1, pre, len; i <= n; ++i)
+	{
+		scanf("%s", str);
+		pre = 1;
+		len = strlen(str);
+		for (int j = 0; j < len; ++j)
+			pre = Build(pre, str[j] - 'a', i);
+	}
+}
+vector<int> lis[MAXN];
+void Calc()
+{
+	for (int i = 1; i <= tot; ++i)
+		lis[SAM[i].len].push_back(i);
+	for (int i = MAXN - 1; i >= 1; --i)
+		for (int j = 0; j < (int)lis[i].size(); ++j)
+		{
+			int x = lis[i][j];
+			for (mit it = SAM[x].h.begin(); it != SAM[x].h.end(); ++it)
+				SAM[SAM[x].fa].h[it -> x] += it -> y;
+		}
+}
+LL CC[MAXN];
+void solve()
+{
+	Calc();
+	for (int i = 2; i <= tot; ++i)
+		if (SAM[i].h.size() >= k)
+		{
+			for (mit it = SAM[i].h.begin(); it != SAM[i].h.end(); ++it)
+				CC[it -> x] += (LL)(SAM[i].len - SAM[SAM[i].fa].len) * (it -> y);
+		}
+	for (int i = 1; i < n; ++i)
+		cout << CC[i] << " ";
+	cout << CC[n] << endl;
+}
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("string.in", "r", stdin), freopen("string.out", "w", stdout);
+#endif
+	init();
+	solve();
+	fclose(stdin);
+	fclose(stdout);
+	return 0;
+}
+ 	 	 	  	  		  	 		  	 		

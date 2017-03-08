@@ -1,0 +1,283 @@
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+using namespace std;
+typedef long long ll;
+const int N=100005;
+struct node
+{
+    ll a,b,sum;
+    int tl,tr;
+    node *l,*r;
+    node() {}
+    node(ll _a,ll _b,int _tl,int _tr,node *_l=0,node *_r=0)
+    {
+        tl=_tl;
+        tr=_tr;
+        a=_a;
+        b=_b;
+        sum=0;
+        l=_l;
+		r=_r;
+		if (l)
+			sum+=l->get_sum();
+		if (r)
+			sum+=r->get_sum();
+    }
+    int size()
+    {
+        return tr-tl+1;
+    }
+    ll get_sum()
+    {
+        return sum+calc(a,b,size());
+    }
+    ll calc(ll a,ll b,int n)
+    {
+        return (2*a+(n-1)*b)*n/2;
+    }
+};
+struct simple_node
+{
+	int x;
+	simple_node *l,*r;
+	simple_node() {}
+	simple_node(int _x)
+	{
+		x=_x;
+		l=r=0;
+	}
+	simple_node(simple_node *_l,simple_node *_r)
+	{
+		x=-1;
+		l=_l;
+		r=_r;
+	}
+};
+typedef node* pnode;
+typedef simple_node* simple_pnode;
+typedef vector <pnode> p_array;
+pnode build(int tl,int tr)
+{
+    if (tl==tr)
+        return new node(0,0,tl,tr);
+    int tm=(tl+tr)>>1;
+    return new node(0,0,tl,tr,build(tl,tm),build(tm+1,tr));
+}
+pnode upd(pnode t,int l,int r,ll a,ll b)
+{
+    if (l==t->tl && r==t->tr)
+        return new node(t->a+a,t->b+b,l,r,t->l,t->r);
+    int tm=(t->tl+t->tr)>>1;
+    return new node(t->a,t->b,t->tl,t->tr,l<=min(r,tm)?upd(t->l,l,min(r,tm),a,b):t->l,max(l,tm+1)<=r?upd(t->r,max(l,tm+1),r,a+max(0,tm-l+1)*b,b):t->r);
+}
+ll query(pnode t,int l,int r,ll a,ll b)
+{
+    if (l>r)
+        return 0;
+    if (l==t->tl && r==t->tr)
+        return t->sum+t->calc(a,b,r-l+1);
+    int tm=(t->tl+t->tr)>>1;
+    return query(t->l,l,min(r,tm),a+t->l->a,b+t->l->b)+query(t->r,max(l,tm+1),r,a+t->r->a+b*t->l->size(),b+t->r->b);
+}
+inline p_array build_p_array(int n)
+{
+    p_array ans;
+    ans.push_back(build(0,n-1));
+    return ans;
+}
+vector <int> g[N],gr[N];
+vector <p_array> hv;
+int tin[N],tout[N],tm,s[N],up[18][N],h[N],last[N];
+pair <int,int> w[N];
+vector <simple_pnode> history;
+void dfs(int v,int pr=-1,int d=0)
+{
+    s[v]=1;
+    tin[v]=tm++;
+    h[v]=d;
+    up[0][v]=pr;
+    for(int i=1;h[v]-(1<<i)>=0;i++)
+        up[i][v]=up[i-1][up[i-1][v]];
+    for(int i=0;i<g[v].size();i++)
+    {
+        int to=g[v][i];
+        if (!s[to])
+        {
+			gr[v].push_back(to);
+            dfs(to,v,d+1);
+            s[v]+=s[to];
+        }
+    }
+    tout[v]=tm++;
+}
+inline bool heavy(int v,int to)
+{
+    return s[to]>=s[v]/2.0;
+}
+inline bool ancestor(int a,int b)
+{
+    return tin[a]<=tin[b] && tout[a]>=tout[b];
+}
+inline int lca(int a,int b)
+{
+    if (ancestor(a,b))
+        return a;
+    else if (ancestor(b,a))
+        return b;
+    else
+    {
+        for(int i=17;i>=0;--i)
+            if (h[a]-(1<<i)>=0 && !ancestor(up[i][a],b))
+                a=up[i][a];
+        return up[0][a];
+    }
+}
+bool cmp(int a,int b)
+{
+    return tout[a]<b;
+}
+ll lift_ans;
+simple_pnode simple_build(int tl,int tr)
+{
+	if (tl==tr)
+		return new simple_node(0);
+	int tm=(tl+tr)>>1;
+	return new simple_node(simple_build(tl,tm),simple_build(tm+1,tr));
+}
+simple_pnode simple_upd(simple_pnode t,int tl,int tr,int pos,int val)
+{
+	if (tl==tr)
+		return new simple_node(val);
+	int tm=(tl+tr)>>1;
+	if (pos<=tm)
+		return new simple_node(simple_upd(t->l,tl,tm,pos,val),t->r);
+	else
+		return new simple_node(t->l,simple_upd(t->r,tm+1,tr,pos,val));
+}
+int get_heavy_ver(simple_pnode t,int tl,int tr,int pos)
+{
+	if (tl==tr)
+		return t->x;
+	int tm=(tl+tr)>>1;
+	if (pos<=tm)
+		return get_heavy_ver(t->l,tl,tm,pos);
+	else
+		return get_heavy_ver(t->r,tm+1,tr,pos);
+}
+void lift(int x,int y,ll a,ll b,bool cod=false)
+{
+    int ind=get_heavy_ver(history.back(),0,hv.size()-1,w[x].first);
+    if (w[x].first!=w[y].first)
+    {
+        if (!cod)
+		{
+			hv[w[x].first].push_back(upd(hv[w[x].first][ind],w[x].second,hv[w[x].first][ind]->tr,a,b));
+			history.push_back(simple_upd(history.back(),0,hv.size()-1,w[x].first,hv[w[x].first].size()-1));
+		}
+        else
+            lift_ans+=query(hv[w[x].first][ind],w[x].second,hv[w[x].first][ind]->tr,hv[w[x].first][ind]->a,hv[w[x].first][ind]->b);
+        int H=h[x]-h[last[w[x].first]]+1;
+        x=up[0][last[w[x].first]];
+        lift(x,y,a+H*b,b,cod);
+    } else
+    {
+        if (!cod)
+        {
+			hv[w[x].first].push_back(upd(hv[w[x].first][ind],w[x].second,w[y].second,a,b));
+			history.push_back(simple_upd(history.back(),0,hv.size()-1,w[x].first,hv[w[x].first].size()-1));
+        } else
+            lift_ans+=query(hv[w[x].first][ind],w[x].second,w[y].second,hv[w[x].first][ind]->a,hv[w[x].first][ind]->b);
+    }
+}
+inline void heavy_upd(int x,int y,ll a,ll b)
+{
+    int v=lca(x,y);
+    int d=h[x]-h[v]+h[y]-h[v];
+    vector <int>::iterator it=lower_bound(gr[v].begin(),gr[v].end(),tout[y],cmp);
+    lift(x,v,a,b);
+    if (y!=v)
+        lift(y,(*it),a+b*d,-b);
+}
+inline ll heavy_query(int x,int y)
+{
+    int v=lca(x,y);
+    vector <int>::iterator it=lower_bound(gr[v].begin(),gr[v].end(),tout[y],cmp);
+    ll ans=0;
+    lift_ans=0;
+    lift(x,v,-1,-1,true);
+    ans+=lift_ans;
+    if (y!=v)
+    {
+        lift_ans=0;
+        lift(y,(*it),-1,-1,true);
+        ans+=lift_ans;
+    }
+    return ans;
+}
+int change_time[N];
+int main()
+{
+    int n,m,a,b,l,r;
+    scanf("%d%d",&n,&m);
+    for(int i=0;i<n-1;i++)
+    {
+        scanf("%d%d",&a,&b);
+        g[--a].push_back(--b);
+        g[b].push_back(a);
+        w[i]=make_pair(-1,-1);
+    }
+    w[n-1]=make_pair(-1,-1);
+    dfs(0);
+    for(int i=0;i<n;i++)
+    {
+        if (w[i].first!=-1)
+            continue;
+        bool ok=true;
+        for(int j=0;j<g[i].size() && ok;j++)
+            if (s[g[i][j]]<s[i] && heavy(i,g[i][j]))
+                ok=false;
+        if (!ok)
+            continue;
+        int cnt=0,v=i;
+        for(;;)
+        {
+            w[v]=make_pair(hv.size(),cnt++);
+            last[hv.size()]=v;
+            if (!v || !heavy(up[0][v],v))
+                break;
+            v=up[0][v];
+        }
+        hv.push_back(build_p_array(cnt));
+    }
+	history.push_back(simple_build(0,hv.size()-1));
+    char cod;
+    ll last_ans=0;
+    int change_cnt=0;
+	change_time[0]=0;
+    for(int i=0;i<m;i++)
+    {
+        scanf("\n%c",&cod);
+        if (cod=='c')
+        {
+            scanf("%d%d%d%d",&l,&r,&a,&b);
+            l=(l+last_ans)%n;
+            r=(r+last_ans)%n;
+            heavy_upd(l,r,a,b);
+			change_time[++change_cnt]=history.size()-1;
+        } else if (cod=='q')
+        {
+            scanf("%d%d",&l,&r);
+            l=(l+last_ans)%n;
+            r=(r+last_ans)%n;
+            printf("%lld\n",last_ans=heavy_query(l,r));
+        } else
+        {
+            scanf("%d",&l);
+            l=(l+last_ans)%(change_cnt+1);
+			history.push_back(history[change_time[l]]);
+        }
+    }
+    return 0;
+}

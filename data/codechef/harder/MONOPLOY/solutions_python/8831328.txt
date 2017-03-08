@@ -1,0 +1,193 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef long long ll;
+
+const int N=100000+5;
+
+struct Splay
+{
+	int c[2],fa,pre;
+	bool cnt;
+	int tot;
+	ll tag,sum;
+	void clear(void)
+	{
+		c[0]=c[1]=fa=pre=cnt=tot=tag=sum=0;
+	}
+}tr1[N],tr2[N];
+struct Edge{int to,nxt;}e[N<<1];
+int n,m,top,hd[N],sz[N];
+
+inline void rd(int& x)
+{
+	char ch;
+	for (;!isdigit(ch=getchar()););
+	for (x=ch-48;isdigit(ch=getchar());x=x*10+ch-48);
+}
+
+inline char rd(void)
+{
+	char ch;
+	while (!isalpha(ch=getchar()));
+	return ch;
+}
+
+inline void adde(int x,int y)
+{
+	e[++top].to=y;e[top].nxt=hd[x];hd[x]=top;
+	e[++top].to=x;e[top].nxt=hd[y];hd[y]=top;
+}
+
+inline void build(void)
+{
+	static int l,r,now,p,ch,q[N];
+	static bool inq[N];
+	for (int i=1;i<=n;++i) sz[i]=inq[i]=0;
+	for (inq[q[l=r=1]=1]=1;l<=r;++l)
+		for (p=hd[now=q[l]];p;p=e[p].nxt)
+			if (!inq[ch=e[p].to])
+				inq[q[++r]=ch]=1,
+				tr1[ch].pre=tr2[ch].pre=now,
+				tr2[ch].cnt=tr2[ch].tot=1;
+	for (int i=n;i>=1;--i)
+	{
+		inq[now=q[i]]=0;sz[now]=1;
+		for (p=hd[now];p;p=e[p].nxt)
+			if (!inq[ch=e[p].to])
+				sz[now]+=sz[ch],
+				tr2[now].sum+=tr2[ch].sum;
+		if (i>1) tr2[now].sum+=sz[now];
+	}
+}
+
+inline void update(Splay* tr,int x)
+{
+	tr[x].tot=tr[x].cnt+tr[tr[x].c[0]].tot+tr[tr[x].c[1]].tot;
+}
+
+inline void pushdown(Splay* tr,int x)
+{
+	if (tr[x].tag)
+	{
+		int ch;
+		if (ch=tr[x].c[0]) tr[ch].tag+=tr[x].tag,tr[ch].sum+=tr[x].tag;
+		if (ch=tr[x].c[1]) tr[ch].tag+=tr[x].tag,tr[ch].sum+=tr[x].tag;
+		tr[x].tag=0;
+	}
+}
+
+inline void rot(Splay* tr,int x)
+{
+	int f=tr[x].fa,ff=tr[f].fa,ch;
+	bool z=(tr[f].c[1]==x);
+	pushdown(tr,f);pushdown(tr,x);
+	if (ch=tr[f].c[z]=tr[x].c[z^1]) tr[ch].fa=f;
+	update(tr,tr[tr[f].fa=x].c[z^1]=f);
+	if (tr[x].fa=ff) tr[ff].c[tr[ff].c[1]==f]=x;
+	else tr[x].pre=tr[f].pre,tr[f].pre=0;
+
+}
+
+inline void splay(Splay* tr,int x)
+{
+	pushdown(tr,x);
+	while (tr[x].fa)
+		if (!tr[tr[x].fa].fa) rot(tr,x);else
+		if ((tr[tr[x].fa].c[0]==x)^(tr[tr[tr[x].fa].fa].c[0]==tr[x].fa))
+		{rot(tr,x);rot(tr,x);}else{rot(tr,tr[x].fa);rot(tr,x);}
+	update(tr,x);
+}
+
+inline void cut(Splay* tr,int x)
+{
+	int ch=tr[x].c[1];
+	if (ch)
+	{
+		tr[x].c[1]=tr[ch].fa=0;
+		tr[ch].pre=x;update(tr,x);
+	}
+}
+
+inline void cut(Splay* tr,int x,int* q,int& r)
+{
+	int ch=tr[x].c[1];
+	if (ch)
+	{
+		tr[x].c[1]=tr[ch].fa=0;
+		tr[ch].pre=x;update(tr,x);
+		while (tr[ch].c[0]) ch=tr[ch].c[0];
+		q[++r]=ch;
+	}
+}
+
+inline void lnk(Splay* tr,int x,int p)
+{
+	tr[x].pre=0;tr[x].fa=p;
+	tr[p].c[1]=x;update(tr,p);
+}
+
+inline void lnk(Splay* tr,int x,int p,int* q,int& r)
+{
+	tr[x].pre=0;tr[x].fa=p;
+	tr[p].c[1]=x;update(tr,p);
+	while (tr[x].c[0]) x=tr[x].c[0];
+	q[++r]=-x;
+}
+
+inline void access(Splay* tr,int x)
+{
+	for (splay(tr,x),cut(tr,x);tr[x].pre;)
+		splay(tr,tr[x].pre),cut(tr,tr[x].pre),
+		lnk(tr,x,tr[x].pre),splay(tr,x);
+}
+
+inline void modify(int x)
+{
+	static int r,q[N];
+	for (splay(tr1,x),cut(tr1,x,q,r=0);tr1[x].pre;)
+		splay(tr1,tr1[x].pre),cut(tr1,tr1[x].pre,q,r),
+		lnk(tr1,x,tr1[x].pre,q,r),splay(tr1,x);
+	while (r)
+	{
+		int y=q[r--];
+		if (y>0)
+		{
+			access(tr2,y);
+			tr2[y].cnt=1;++tr2[y].tot;
+			tr2[y].tag+=sz[y];tr2[y].sum+=sz[y];
+		}else{
+			y=-y;
+			access(tr2,y);
+			tr2[y].cnt=0;--tr2[y].tot;
+			tr2[y].tag-=sz[y];tr2[y].sum-=sz[y];
+		}
+	}
+}
+
+inline ll query(int x)
+{
+	access(tr2,x);
+	return tr2[tr2[x].c[0]].tot*(ll)sz[x]+tr2[x].sum;
+}
+
+inline void solve(void)
+{
+	rd(n);top=0;
+	for (int i=1;i<=n;++i) tr1[i].clear(),tr2[i].clear(),hd[i]=0;
+	for (int i=1,x,y;i<n;++i)
+		rd(x),rd(y),adde(x+1,y+1);
+	build();
+	rd(m);
+	for (int i=1,x;i<=m;++i)
+		if (rd()=='O') rd(x),modify(x+1);
+		else rd(x),printf("%.10lf\n",query(x+1)/(double)sz[x+1]);
+}
+
+int main()
+{
+	int t;
+	rd(t);
+	while (t--) solve();
+	return 0;
+}

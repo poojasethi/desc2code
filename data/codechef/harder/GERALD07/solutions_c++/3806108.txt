@@ -1,0 +1,190 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+const int oo=1073741819;
+using namespace std;
+struct Ques{
+    int l,r,i; 
+}Q[250000];
+struct Line{
+    int l,r;
+}L[250000];
+int l[2000000],r[2000000],rt[2000000],w[2000000],M[2000000],sw[2000000];
+int sum[2000000],Ans[2000000];
+int n,m,q,m1;
+void origin()
+{
+	for (int i=1;i<=m1+m1;i++) sum[i]=0;
+	for (m1=1;m1<=m+2;m1<<=1) ;
+    w[0]=oo;
+    for (int i=1;i<=n;i++) {
+        l[i]=r[i]=rt[i]=sw[i]=0;
+        w[i]=oo,M[i]=i;
+    }
+    for (int i=n+1;i<=n+m;i++) {
+        l[i]=r[i]=rt[i]=sw[i]=0;
+        w[i]=i-n,M[i]=i;
+    }
+}
+void change(int x,int w)
+{
+	if (!x) return ;
+	sum[x+=m1]=w;
+	for (x>>=1;x;x>>=1) 
+		sum[x]=sum[x<<1]+sum[(x<<1)+1];
+}
+int ask(int l,int r)
+{
+	l+=m1-1,r+=m1+1;
+	int ans=0;
+	for (;!((l^r)==1);l>>=1,r>>=1) {
+		if ((l&1)==0) ans+=sum[l+1];
+		if ((r&1)==1) ans+=sum[r-1];
+	}
+	return ans;
+}
+void swap(int x)
+{
+	if (!x) return ;
+	int e;
+	e=l[x],l[x]=r[x],r[x]=e;
+	sw[x]^=1;
+}
+void pushdown(int x)
+{
+	if (!x) return ;
+	if (sw[x]) {
+		swap(l[x]),swap(r[x]);
+		sw[x]=0;
+	}
+}
+int Max(int x,int y)
+{
+	return (w[x]<w[y]) ? x : y;
+}
+void updata(int x)
+{
+	if (!x) return ;
+	M[x]=Max(M[l[x]],Max(M[r[x]],x));
+}
+void right(int x)
+{
+	int y=rt[x],z=rt[y];
+	l[y]=r[x],rt[r[x]]=y;
+	r[x]=y,rt[y]=x;
+	if (l[z]==y) l[z]=x;else if (r[z]==y) r[z]=x;
+	rt[x]=z;
+	updata(y);
+}
+void left(int x)
+{
+	int y=rt[x],z=rt[y];
+	r[y]=l[x],rt[l[x]]=y;
+	l[x]=y,rt[y]=x;
+	if (l[z]==y) l[z]=x;else if (r[z]==y) r[z]=x;
+	rt[x]=z;
+	updata(y);
+}
+void splay(int x)
+{
+    pushdown(x);
+	for (int y,z;l[rt[x]]==x || r[rt[x]]==x;) {
+		y=rt[x],z=rt[y];
+		pushdown(z);
+		pushdown(y),pushdown(x);
+		if (l[y]==x) {
+			if (l[z]==y) right(y);
+			right(x);
+		}
+		else if (r[y]==x) {
+			if (r[z]==y) left(y);
+			left(x);
+		}
+	}
+	updata(x);
+} 
+void access(int x)
+{
+	splay(x);
+	l[x]=0,updata(x);
+	for (;rt[x];) {
+		int y=rt[x];
+		splay(y);
+		l[y]=x,updata(y);
+		splay(x);
+	}
+}
+int Ask(Line L)
+{
+	access(L.l),access(L.r);
+    splay(L.l);
+	int root=rt[L.l];
+    if (!root) root=L.l;
+	access(root);
+    splay(L.r);
+//    cout<<root<<endl;
+    if (rt[L.r]!=root && root!=L.r) return 0;
+	splay(L.l);
+	int X=0;
+    if (root!=L.l) X=Max(M[L.l],X);
+    if (root!=L.r) X=Max(M[L.r],X);
+	return X;
+}
+bool cmp(Ques i,Ques j)
+{
+    return i.r<j.r;
+}
+void del(int X,Line R,int Y)
+{
+    Line id=L[w[X]];
+    access(X);
+    splay(id.l),splay(id.r);
+    int e,v;
+    if (rt[id.l]==X) e=id.l,v=id.r;else e=id.r,v=id.l;
+    access(v);
+    rt[e]=rt[X]=0;
+}
+void link(int X,Line R,int Y)
+{
+    int e=R.l,v=R.r;
+    access(e),access(v);
+    swap(e);
+    rt[e]=Y,rt[Y]=v;
+}
+int main()
+{
+    int T;
+	scanf("%d",&T);
+	for (;T;T--) {
+		scanf("%d%d%d",&n,&m,&q);
+//        cout<<n<<' '<<m<<' '<<q<<endl;
+		for (int i=1;i<=m;i++) 
+			scanf("%d%d",&L[i].l,&L[i].r);
+		for (int i=1;i<=q;Q[i].i=i,i++) 
+			scanf("%d%d",&Q[i].l,&Q[i].r);
+		sort(Q+1,Q+q+1,cmp);
+		origin();
+		for (int i=1,j=1;i<=m && j<=q;i++) {
+            if (L[i].l!=L[i].r) {
+    			int id=Ask(L[i]);
+          //      cout<<i<<' '<<id-n<<endl;
+//                cout<<L[w[id]].l<<' '<<L[w[id]].r<<endl;
+//                cout<<L[i].l<<' '<<L[i].r<<endl;
+                if (id) {
+        			change(w[id],0);
+                    del(id,L[i],i+n);
+                }
+                link(id,L[i],i+n);
+    			change(i,1);
+            }
+			for (;Q[j].r<=i && j<=q;j++) {
+				int sum=ask(Q[j].l,Q[j].r);
+				Ans[Q[j].i]=n-sum;
+			}
+		}
+		for (int i=1;i<=q;i++) printf("%d\n",Ans[i]);
+	}
+	return 0;
+}

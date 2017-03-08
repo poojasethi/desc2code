@@ -1,0 +1,229 @@
+#pragma comment(linker, "/STACK:128777216")
+#include <iostream>
+#include <cstdlib>
+#include <cmath>
+#include <cstdio>
+#include <vector>
+#include <memory.h>
+#include <map>
+#include <stack>
+#include <set>
+#include <algorithm>
+#include <cmath>
+#include <string>
+#include <cstring>
+#include <string.h>
+#include <cmath>
+#include <math.h>
+#include <queue>
+#include <cassert>
+#include <time.h>
+
+#define forn(i,n) for (int i = 0; i < (int)n; i++)
+#define fornd(i, n) for (int i = (int)n - 1; i >= 0; i--)
+#define forab(i,a,b) for (int i = (int)a; i <= (int)b; i++)
+#define forabd(i, b, a) for (int i = (int)(b); i >= (int)(a); i--)
+#define forit(i, a) for (__typeof((a).begin()) i = (a).begin(); i != (a).end(); i++)
+#define zero(a) memset (a, 0, sizeof (a))
+#define last(v) (int)v.size() - 1
+#define _(a, val) memset (a, val, sizeof (a))
+#define pb push_back
+#define mp make_pair
+#define all(v) (v).begin(), (v).end()
+typedef long long ll;
+typedef unsigned long long ull;
+typedef double ld;
+
+const ll LINF = 1000000000000000000LL;
+const int INF = 1000000000;
+const long double eps = 1e-9;
+const long double PI = 3.1415926535897932384626433832795l;
+
+using namespace std;
+
+void prepare (string s)
+{
+#ifdef _DEBUG
+	freopen ("input.txt", "r", stdin);
+	//freopen ("output.txt", "w", stdout);
+#else
+	if (s.length() != 0)
+	{
+		freopen ((s + ".in").c_str(), "r", stdin);
+		freopen ((s + ".out").c_str(), "w", stdout);
+	}
+#endif
+}
+
+#define NMAX 100100
+#define MOD 1000000007
+int n;
+vector <int> g[NMAX];
+bool used[NMAX];
+bool isroot[NMAX];
+int a[NMAX];
+ll dp[NMAX][2];
+
+void clear()
+{
+	zero(used);
+	zero(isroot);
+	forn(i, NMAX)
+		g[i].clear();
+	/*forn(i, n)
+	{
+		g[i + 1].clear();
+
+	}*/
+	/*memset(used, 0, sizeof(bool)*(n + 1));
+	memset(isroot, 0, sizeof(bool)*(n + 1));*/
+}
+
+void readdata()
+{
+	clear();
+	scanf("%d", &n);
+	forn(i, n)
+	{
+		int t;
+		scanf("%d", &t);
+		a[i + 1] = t;
+		g[i + 1].pb ( t );
+		g[t].pb ( i + 1 );
+	}
+}
+
+void dfs(int v, int par = -1)
+{
+	used[v] = true;
+	forn(i, g[v].size()) if (!isroot[g[v][i]] && g[v][i] != par)
+	{
+		int u = g[v][i];
+		dfs( u, v );
+	}
+	dp[v][0] = dp[v][1] = 1;
+	forn(i, g[v].size()) if (!isroot[g[v][i]] && g[v][i] != par)
+	{
+		int u = g[v][i];
+		dp[v][1] = (dp[v][1] * (ll)dp[u][0]) % MOD;
+		dp[v][0] = ((ll)dp[v][0] * (ll)((dp[u][0] + dp[u][1]) % MOD)) % MOD;
+	}
+}
+
+void solve()
+{
+	int ans = 1;
+	
+	forn(i, n)
+	{
+		if (!used[i + 1])
+		{
+			int v = i + 1;
+			
+			while ( !used[v] )
+			{
+				used[v] = true;
+				v = a[v];
+			}
+
+			vector <int> root;
+			int r = v;
+			while (a[r] != v)
+			{
+				root.pb ( r );
+				isroot[r] = true;
+				r = a[r];
+			}
+			root.pb ( r );
+			isroot[r] = true;
+			forn(i, root.size())
+			{
+				dfs( root[i] );
+			}
+
+			r = a[v];
+			pair <ll, ll> d = mp(dp[v][0], dp[v][1]);
+			/*while (a[r] != v)
+			{
+				int dp0 = (dp[r][0]*(ll)((d.first + d.second) % MOD)) % MOD;
+				int dp1 = (dp[r][1] * (ll)d.first) % MOD;
+				d.first = dp0;
+				d.second = dp1;
+
+				r = a[r];
+			}
+			d.second = (dp[r][0] * (ll)(d.first + d.second) % MOD) % MOD;*/
+
+			d.first = dp[root[0]][0];
+			d.second = 0;
+			forab(i, 1, (int)root.size() - 1)
+			{
+				ll t1, t2;
+				t1 = (dp[root[i]][0] * ((d.first + d.second) % MOD)) % MOD;//(d.first*(dp[root[i]][0] + dp[root[i]][1])) % MOD;
+				t2 = (d.first*(dp[root[i]][1])) % MOD;
+				d.first = t1;
+				d.second = t2;
+			}
+
+			ll tans = d.second + d.first;
+
+
+			/*r = a[v];
+			d = mp(dp[v][0], 0);
+			while (a[r] != v)
+			{
+				int dp0 = (dp[r][0]*(ll)((d.first + d.second) % MOD)) % MOD;
+				int dp1 = (dp[r][1] * (ll)d.first) % MOD;
+				d.first = dp0;
+				d.second = dp1;
+
+				r = a[r];
+			}
+			d.first = (dp[r][1] * (ll)d.first) % MOD;*/
+
+			d.first = 0;
+			d.second = dp[v][1];
+			forab(i, 1, (int)root.size() - 1)
+			{
+				if (i + 1 == root.size())
+				{
+					d.first = (dp[root[i]][0] * ((d.first + d.second) % MOD)) % MOD;//(d.first*(dp[root[i]][0] + dp[root[i]][1])) % MOD;
+					d.second = 0;
+				}
+				else
+				{
+					ll t1, t2;
+					t1 = (dp[root[i]][0] * ((d.first + d.second) % MOD)) % MOD;//(d.first*(dp[root[i]][0] + dp[root[i]][1])) % MOD;
+					t2 = (d.first*(dp[root[i]][1])) % MOD;
+					d.first = t1;
+					d.second = t2;
+				}
+			}
+
+			ans = ((ll)ans * (((ll)d.first + d.second + tans) % MOD)) % MOD;
+		}
+	}
+
+	printf ("%d\n", ans);
+}
+
+void writedata()
+{
+
+}
+
+int main ()
+{
+	prepare ("");
+
+	int t;
+	scanf ("%d", &t);
+	forn(i, t)
+	{
+		readdata ();
+		solve ();
+		writedata ();
+	}
+
+	return 0;
+}

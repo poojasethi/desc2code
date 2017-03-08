@@ -1,0 +1,334 @@
+#include <iostream>
+#include <vector>
+#include <ctime>
+#include <cmath>
+#include <cstdio>
+#include <set>
+#include <map>
+#include <fstream>
+#include <sstream>
+#include <cstdlib>
+#include <numeric>
+#include <string>
+#include <cassert>
+#include <cstring>
+#include <algorithm>
+ 
+#define mp make_pair
+#define pb push_back
+#define all(x) (x).begin(), (x).end()
+ 
+using namespace std;
+ 
+typedef pair<int, int> pii;
+typedef pair<int, unsigned int> piu;
+ 
+struct TEdge {
+    int from, to, cost;
+ 
+    explicit TEdge(int from = 0, int to = 0, int cost = 0)
+        : from(from)
+        , to(to)
+        , cost(cost)
+    {
+    }
+ 
+    bool operator!=(const TEdge &e) {
+        return from != e.from || to != e.to;
+    }
+};
+ 
+vector<TEdge> edges[100];
+vector< vector<TEdge> > comps;
+vector< vector<int> > compByV;
+vector<TEdge> eSt;
+int d[100], up[100];
+int tin[100];
+int tt;
+bool vis[100];
+ 
+void dfs(int v, int p) {
+    vis[v] = true;
+    tin[v] = up[v] = tt++;
+    for (size_t i = 0; i < edges[v].size(); ++i) {
+        int u = edges[v][i].to;
+        if (u == p) {
+            continue;
+        }
+        if (!vis[u]) {
+            eSt.pb(edges[v][i]);
+            dfs(u, v);
+            if (up[u] >= tin[v]) {
+                comps.resize(comps.size() + 1);
+                while (eSt.back() != edges[v][i]) {
+                    comps.back().pb(eSt.back());
+                    eSt.pop_back();
+                }
+                comps.back().pb(eSt.back());
+                eSt.pop_back();
+            }
+            up[v] = min(up[v], up[u]);
+        } else {
+            if (tin[u] < tin[v]) {
+                eSt.pb(edges[v][i]);
+            }
+            up[v] = min(up[v], tin[u]);
+        }
+    }
+}
+ 
+piu globalAns;
+ 
+inline void combine(piu &a, const piu &b) {
+/*    if (a.first != b.first) {
+        return a.first > b.first ? a : b;
+    }
+    return mp(a.first, a.second + b.second);*/
+    if (b.first > a.first) {
+        a = b;
+        return;
+    }
+    if (b.first == a.first) {
+        a.second += b.second;
+    }
+}
+ 
+piu prod(const piu &a, const piu &b) {
+    return mp(a.first + b.first, a.second * b.second);
+}
+ 
+bool cvis[500];
+ 
+/*void bruteTree(const vector< vector<TEdge> > &edges, vector<pii> &st, int minv, int cost, int mask, int left, vector<piu> &dp) {
+    if (mask != 0) {
+        dp[mask] = combine(dp[mask], mp(cost, 1));
+    }
+    if (mask) {
+        combine(dp[mask], mp(cost, 1));
+        if (dp[mask].first != cost) {
+            return;
+        }
+    }
+    if (left == 0) {
+        return;
+    }
+    while (!st.empty()) {
+        int v = st.back().first;
+        int bv = (mask >> (2 * v)) & 3;
+        if (bv < 3) {
+            while (st.back().second < edges[v].size()) {
+                int u = edges[v][st.back().second].to, c = edges[v][st.back().second].cost;
+                ++st.back().second;
+                int bu = (mask >> (2 * u)) & 3;
+                if (u > minv && bu == 0) {
+                    vector<pii> nst = st;
+//                    nst.back().second = j + 1;
+                    nst.pb(mp(u, 0));
+                    bruteTree(edges, nst, minv, cost + c, mask + (1 << (2 * u)) + (1 << (2 * v)), left - 1, dp);
+                }
+            }
+        }
+        st.pop_back();
+    }
+} */
+ 
+ 
+//piu allpairs[10][1000000];
+vector<pii> allpairs[10];
+vector<pii> allow[10];
+int aps[10];
+//vector<int> tr[10];
+ 
+void rec(int lmask, int rmask, int i, int N, int n1, int n2, int sd1, int sd2, int lall, int rall, int lm, int rm) {
+    if (i == N) {
+        if (lmask <= rmask && (lmask == 0 || sd1 == 2 * (n1 - 1)) && (rmask == 0 || sd2 == 2 * (n2 - 1))) {
+  //          allpairs[N][aps[N]++] = mp(lmask, rmask);
+            allpairs[N].pb(mp(lmask, rmask));
+            if (!lmask) {
+                lall = (1 << N) - 1 - rm;
+            }
+            if (!rmask) {
+                rall = (1 << N) - 1 - lm;
+            }
+            allow[N].pb(mp(lall, rall));
+        }
+        return;
+    }
+    for (int j = 1; j <= 3; ++j) {
+//        if (lmask || rmask) {
+            rec(lmask + (j << (2 * i)), rmask, i + 1, N, n1 + 1, n2, sd1 + j, sd2, lall + (1 << i) * (j < 3), rall, lm + (1 << i), rm);
+//        }
+        rec(lmask, rmask + (j << (2 * i)), i + 1, N, n1, n2 + 1, sd1, sd2 + j, lall, rall + (1 << i) * (j < 3), lm, rm + (1 << i));
+    }
+    rec(lmask, rmask, i + 1, N, n1, n2, sd1, sd2, lall, rall, lm, rm);
+}  
+ 
+ 
+inline int getGr(int x, int i) {
+    return (x >> (2 * i)) & 3;
+}
+ 
+inline int gr0(int x, int i) {
+    return getGr(x, i) == 0;
+}
+ 
+inline int gr3(int x, int i) {
+    return getGr(x, i) == 3;
+}
+ 
+vector<piu> compDfs(int k, int p) {
+    cvis[k] = true;
+    vector<int> v;
+    for (size_t i = 0; i < comps[k].size(); ++i) {
+        v.pb(comps[k][i].from);
+        v.pb(comps[k][i].to);
+    }
+    sort(all(v));
+    v.erase(unique(all(v)), v.end());
+    int K = v.size();
+    assert(K < 10);
+    vector<pii> &pMasks = allpairs[K], &pAll = allow[K];
+    int M = 1 << (2 * K);
+    vector<piu> dp(M, mp(-1e9, 1));
+    dp[0] = mp(0, 1);
+    for (size_t i = 0; i < comps[k].size(); ++i) {
+        TEdge ee = comps[k][i];
+        int x = find(all(v), ee.from) - v.begin();
+        int y = find(all(v), ee.to) - v.begin();
+        int c = ee.cost;
+        int add = (1 << (2 * x)) + (1 << (2 * y));
+        for (vector<pii>::iterator it = pMasks.begin(), al = pAll.begin(); it != pMasks.end(); ++it, ++al) {
+//        piu *it = allpairs[K];
+//        for (int j = 0; j < aps[K]; ++j) {
+            int l = it->first, r = it->second;
+            int lall = al->first, rall = al->second;
+            //int lx = getGr(l, x), ly = getGr(l, y), rx = getGr(r, x), ry = getGr(r, y);
+            //if (ly == 0 && rx == 0 && lx != 3 && ry != 3 && (!l || lx != 0) && (!r || ry != 0)) {
+//            int q = 0;
+            if (((1 << x) & lall) && ((1 << y) & rall)) {
+                combine(dp[(l | r) + add], prod(mp(c, 1), prod(dp[l], dp[r])));
+            }
+            if (l < r && ((1 << y) & lall) && ((1 << x) & rall)) {
+                combine(dp[(l | r) + add], prod(mp(c, 1), prod(dp[l], dp[r])));
+            }
+/*            if (q) {
+                combine(dp[(l | r) + add], prod(mp(c, q), prod(dp[l], dp[r])));
+            }*/
+        }
+    }
+    for (size_t i = 0; i < K; ++i) {
+        int u = v[i];
+        if (u == p) {
+            continue;
+        }
+        for (size_t j = 0; j < compByV[u].size(); ++j) {
+            int kk = compByV[u][j];
+            if (cvis[kk]) {
+                continue;
+            }
+            vector<piu> ans = compDfs(kk, u);
+//            for (int qq = tr[K].size() - 1; qq >= 0; --qq) {
+//                int q = tr[K][qq];
+            for (int q = M - 1; q >= 0; --q) {
+                if (dp[q].first < -1e8) {
+                    continue;
+                }
+                int bu = getGr(q, i);//(q >> (2 * i)) & 3;
+                if (bu == 0 && q > 0) {
+                    continue;
+                }
+                for (int s = 1; s <= 3 - bu; ++s) {
+                    if (ans[s].first < -1e8) { 
+                        continue;
+                    }
+                    combine(dp[q + (s << (2 * i))], prod(dp[q], ans[s]));
+                }
+            }
+        }
+    }
+    int j = find(all(v), p) - v.begin();
+    for (int q = 1; q < M; ++q) {
+//    for (int qq = 1; qq < tr[K].size(); ++qq) {
+//        int q = tr[K][qq];
+//        int bj = (q >> (2 * j)) & 3;
+        if (p == -1 || getGr(q, j) == 0) {
+            combine(globalAns, dp[q]);
+        }
+    }
+    vector<piu> ans(4, mp(-1e9, 1));
+    if (p == -1) {
+        return ans;
+    }
+    for (int q = 0; q < M; ++q) {
+//        int bj = (q >> (2 * j)) & 3;
+        combine(ans[getGr(q, j)], dp[q]);
+    }
+//    delete[] dp;
+    return ans;
+}
+ 
+int main() {
+#ifdef LOCAL_DEFINE
+    freopen("input.txt", "rt", stdin);
+    freopen("output.txt", "wt", stdout);
+#endif
+ 
+    for (int i = 1; i < 10; ++i) {
+        aps[i] = 0;
+        rec(0, 0, 0, i, 0, 0, 0, 0, 0, 0, 0, 0);
+//        vector<int> u;
+    }
+ 
+    int T;
+    cin >> T;
+    for (int t = 0; t < T; ++t) {
+        int N, M;
+        cin >> N >> M;
+        for (int i = 0; i < N; ++i) {
+            edges[i].clear();
+        }
+        for (int i = 0; i < M; ++i) {
+            int x, y, c;
+            cin >> x >> y >> c;
+            --x; --y;
+            edges[x].pb(TEdge(x, y, c));
+            edges[y].pb(TEdge(y, x, c));
+        }
+        comps.clear();
+        for (int i = 0; i < N; ++i) {
+            vis[i] = false;
+        }
+        for (int i = 0; i < N; ++i) {
+            if (!vis[i]) {
+                tt = 0;
+                dfs(i, -1);
+            }
+        }
+        compByV.assign(N, vector<int>());
+        for (size_t i = 0; i < comps.size(); ++i) {
+            for (size_t j = 0; j < comps[i].size(); ++j) {
+                //cout << comps[i][j].from << ' ' << comps[i][j].to << ' ' << comps[i][j].cost << '\n';
+                compByV[comps[i][j].from].pb(i);
+                compByV[comps[i][j].to].pb(i);
+            }
+            //cout << '\n';
+        }
+        for (int i = 0; i < N; ++i) {
+            sort(all(compByV[i]));
+            compByV[i].erase(unique(all(compByV[i])), compByV[i].end());
+        }
+        globalAns = mp(0, N + 1);
+        for (size_t i = 0; i < comps.size(); ++i) {
+            cvis[i] = false;
+        }
+        for (size_t i = 0; i < comps.size(); ++i) {
+            if (!cvis[i]) {
+                compDfs(i, -1);
+            }
+        }
+        cout << globalAns.first << ' ' << globalAns.second << '\n';
+    }
+    cerr << 1.0 * clock() / CLOCKS_PER_SEC << '\n';
+ 
+    return 0;
+}

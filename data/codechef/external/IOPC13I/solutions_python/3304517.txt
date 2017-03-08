@@ -1,0 +1,79 @@
+#include <cstdio>
+#include <cstring>
+#include <queue>
+
+int M, N, C, D;
+int dp[102*100*100*10];
+
+char map[102][101][10];
+
+inline int encrypt(int n, int c, int r, int d){
+    return ((n * C + c) * C + r) * D + d;
+}
+
+inline void decrypt(int &n, int &c, int &r, int &d, int val){
+    d = val % D; val /= D;
+    r = val % C; val /= C;
+    c = val % C; val /= C;
+    n = val;
+}
+
+void go(int n, int c, int r, int d, int val, std::queue<int>& que){
+
+    int obc = (n == 0 || n == N + 1)? c: ((((n + d) & 1)? c + r: c - r) + C) % C;
+    if(map[n][obc][d] == 'X') return;
+
+    int idx = encrypt(n, c, r, d);
+    if(dp[idx] == -1) dp[idx] = val, que.push(idx);
+
+}
+
+int main(){
+
+    scanf("%d %d %d %d\n" ,&M ,&N ,&C ,&D);
+
+    memset(dp, -1, sizeof(dp));
+
+    for(int i = 0; i < D; i++){
+        for(int j = 0; j < N+2; j++){
+            static char buf[200]; gets(buf);
+            for(int k = 0; k < C; k++) map[j][k][i] = buf[k];
+        }
+    }
+
+    int st, ed;
+    for(int c = 0; c < C; c++){
+        for(int d = 0; d < D; d++){
+            if(map[0][c][d] == 'S') st = encrypt(0, c, 0, d);
+        }
+    }
+
+    int ans = -1;
+    dp[st] = 0;
+    std::queue<int> que; que.push(st);
+    while(!que.empty()){
+
+        int n, c, r, d, idx;
+        idx = que.front(); que.pop();
+        if(dp[idx] > M) break;
+
+        decrypt(n, c, r, d, idx);
+        if(map[n][c][d] == 'D'){
+            ans = dp[idx];
+            break;
+        }
+
+        int nr = (r + 1) % C, stp = dp[idx] + 1;
+        if(n > 0) go(n - 1, c, nr, d, stp, que);
+        if(n < N + 1) go(n + 1, c, nr, d, stp, que);
+        if(c > 0) go(n, c - 1, nr, d, stp, que);
+        if(c < C - 1) go(n, c + 1, nr, d, stp, que);
+        if(d > 0) go(n, c, nr, d - 1, stp, que);
+        if(d < D - 1) go(n, c, nr, d + 1, stp, que);
+        go(n, c, nr, d, stp, que);
+
+    }
+
+    printf("%d\n" ,ans);
+
+}

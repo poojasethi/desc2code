@@ -1,0 +1,128 @@
+// permutations-lcp
+// Kanstantsin Sokal
+// AC
+//setter's soln to LCPMAX
+
+#include <bits/stdc++.h>
+
+using namespace std;
+
+const int MAX_N = 125050;
+const int C = 10;
+
+const int BASE = 7;
+const int MOD = 1000000009;
+
+int powers[MAX_N];
+
+void set_up() {
+  powers[0] = 1;
+  for (int i = 1; i < MAX_N; i++) {
+    powers[i] = (powers[i - 1] * 1ll * BASE) % MOD;		//store all powers of BASE(=7 here)
+  }
+}
+
+int hashes[2][C + 1][MAX_N];		//take array of size 2 x alpha size x length of string
+char s[2][MAX_N];					//char array for 2 strings
+
+void build_hashes(int n, char s[], int hashes[][MAX_N]) {
+  for (int i = 1; i <= n; i++) {
+    for (int j = 0; j < C; j++) {
+      hashes[j][i] = hashes[j][i - 1];	// ???
+      if (s[i] == 'a' + j) {
+        hashes[j][i] += powers[i];		//doing prefix sum of  ???
+        if (hashes[j][i] >= MOD) {		//doing modulus
+          hashes[j][i] -= MOD;
+        }
+      }
+    }
+  }
+}
+
+int get_hash(int n, int hashes[], int l, int r) {	//return hash(l..r)
+  return ((hashes[r] - hashes[l - 1] + MOD) * 1ll * powers[n - r]) % MOD;
+}
+
+int character_hashes[2][C + 1];
+
+bool check_substrings(int n, int l_1, int r_1, int l_2, int r_2) {		//check if hash of 2 substrings is same
+  for (int i = 0; i < C; i++) {
+    character_hashes[0][i] = get_hash(n, hashes[0][i], l_1, r_1);
+    character_hashes[1][i] = get_hash(n, hashes[1][i], l_2, r_2);
+  }
+
+  sort(character_hashes[0], character_hashes[0] + C);
+  sort(character_hashes[1], character_hashes[1] + C);
+
+  for (int i = 0; i < C; i++) {
+    if (character_hashes[0][i] != character_hashes[1][i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool character_is_taken[C + 1];		
+
+void process_query(int n, int x, int y, int &prefix_length, char permutation[]) {
+  int left = 1;							//we can  always have an LCP of len = 1 by some bijective mapping of alphas
+  int right = n - max(x, y) + 1;		//this could be the maximum length of LCP
+  prefix_length = 0;
+
+  while (left <= right) {				//binary search on length of LCP 
+    int middle = (left + right) / 2;
+
+    if (check_substrings(n, x, x + middle - 1, y, y + middle - 1)) {	//check if corresponding substrings are equal
+      prefix_length = middle;
+      left = middle + 1;
+    } else {
+      right = middle - 1;
+    }
+  }
+
+  memset(character_is_taken, false, sizeof(character_is_taken));		
+  for (int i = 0; i < C; i++) {				//building permutation or bijective mapping of characters
+    int hash = get_hash(n, hashes[0][i], x, x + prefix_length - 1);
+    for (int j = 0; j < C; j++) {
+      if (!character_is_taken[j] && hash == get_hash(n, hashes[1][j], y, y + prefix_length - 1)) {
+        character_is_taken[j] = true;
+        permutation[i] = 'a' + j;
+        break;
+      }
+    }
+  }
+
+  permutation[C] = '\0';
+}
+
+char resulting_permutation[C + 1];
+
+void solve() {
+  int n, q; scanf("%d%d", &n, &q);		//get n and q
+  scanf("%s", s[0] + 1);				//get both strings indexed from 1
+  scanf("%s", s[1] + 1);
+
+  build_hashes(n, s[0], hashes[0]);		//build hashes for both strings
+  build_hashes(n, s[1], hashes[1]);
+
+  for (int i = 0; i < q; i++) {
+    int x, y; scanf("%d%d", &x, &y);		//get each query parameters
+
+    int resulting_prefix_length;
+    process_query(n, x, y, resulting_prefix_length, resulting_permutation);		//process query
+
+    printf("%d %s\n", resulting_prefix_length, resulting_permutation);		//output result
+  }
+}
+
+int main() {
+  set_up();
+  int cases; scanf("%d", &cases);
+
+  for (int i = 0; i < cases; i++) {
+    solve();
+  }
+
+  return 0;
+}

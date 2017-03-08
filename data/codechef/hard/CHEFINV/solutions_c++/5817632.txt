@@ -1,0 +1,121 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define MAXN 200005
+long long int BIT[MAXN] = {0};
+long long int ans[MAXN] = {0};
+int input[MAXN] = {0}, temp[MAXN] = {0};
+pair<int, int> query[MAXN];
+vector< pair<int, int> > forward[MAXN], backward[MAXN];
+void update(long long int BIT[], int x, long long int val, int n) {
+	while(x <= n) {
+		BIT[x] += val;
+		x += (x & -x);
+	}
+}
+long long int readVal(long long int BIT[], int x) {
+	long long int retVal = 0;
+	while(x > 0) {
+		retVal += BIT[x];
+		x -= (x & -x);
+	}
+	return retVal;
+}
+/*void update(int BIT[], int x, int val) {
+	while( x > 0 ) {
+		BIT[x] += val;
+		x -= (x & -x);
+	}
+}
+int readVal(int BIT[], int x, int n) {
+	int retVal = 0;
+	while( x <= n ) {
+		retVal += BIT[x];
+		x += (x & -x);
+	}
+	return retVal;
+}*/
+void forwardSolve(int n) {
+	int i, j;
+	memset(BIT, 0, sizeof(BIT));
+	for(i = 1; i <= n; i++) {
+		for(j = 0; j < forward[i].size(); j++) {
+			//update(BIT, abs(forward[i][j].first), val, n);
+			if(forward[i][j].first < 0) {
+				ans[forward[i][j].second] -= (i - 1 - readVal(BIT, abs(forward[i][j].first)));	
+				///printf("%d %lld\n",forward[i][j].second, ans[forward[i][j].second]);
+			} else {
+				ans[forward[i][j].second] += (i - 1 - readVal(BIT, abs(forward[i][j].first)));	
+				//printf("%d %lld\n",forward[i][j].second, ans[forward[i][j].second]);
+			}
+			//update(BIT, abs(forward[i][j].first), -val, n);
+		}
+		update(BIT, input[i], 1, n);
+	}
+}
+void backwardSolve(int n) {
+	int i, j;
+	memset(BIT, 0, sizeof(BIT));
+	for( i = n; i >= 1; i-- ) {
+		for(j = 0; j < backward[i].size(); j++) {
+			//update(BIT, abs(backward[i][j].first), val, n);
+			if(backward[i][j].first < 0) {
+				ans[backward[i][j].second] -= readVal(BIT,abs(backward[i][j].first) - 1);
+				//printf("%d %lld\n",backward[i][j].second, ans[backward[i][j].second]);
+			} else {
+				ans[backward[i][j].second] += readVal(BIT,abs(backward[i][j].first) - 1);
+				//printf("%d %lld\n",backward[i][j].second, ans[backward[i][j].second]);
+			}
+			//update(BIT, abs(backward[i][j].first), -val, n);
+		}
+		update(BIT, input[i], 1, n);
+	}
+}
+int main() {
+	int n, q;
+	scanf("%d%d", &n, &q);
+	int i;
+	for(i = 1; i <= n; i++) {
+		scanf("%d",&input[i]);
+		temp[i] = input[i];
+	}
+	sort(temp + 1, temp + n + 1);
+	for(i = 1; i <= n; i++) {
+		input[i] = lower_bound(temp + 1, temp + n + 1, input[i]) - temp;
+	}
+	for(i = 1; i <= q; i++) {
+		int x, y;
+		scanf("%d%d",&x,&y);
+		if(x > y) {
+			swap(x, y);
+		}
+		if(input[x] != input[y])
+			ans[i]++;
+		query[i].first = x;
+		query[i].second = y;
+
+		forward[x].push_back(make_pair(-input[x], i));
+		forward[x].push_back(make_pair(input[y], i));
+		forward[y].push_back(make_pair(-input[y], i));
+		forward[y].push_back(make_pair(input[x], i));
+
+		backward[x].push_back(make_pair(-input[x], i));
+		backward[x].push_back(make_pair(input[y], i));
+		backward[y].push_back(make_pair(-input[y], i));
+		backward[y].push_back(make_pair(input[x], i));
+	}
+	long long int invCnt = 0;
+	for(i = 1; i <= n; i++) {
+		invCnt += i - 1;
+		invCnt -= readVal(BIT, input[i]);
+		update(BIT, input[i], 1, n);
+	}
+	//printf("%d",invCnt);
+	forwardSolve(n);
+	//printf("ye ho gaya!!\n");
+	backwardSolve(n);
+	for(i = 1; i <= q; i++) {
+		//printf("%lld\n", ans[i]);
+		printf("%lld\n",invCnt + ans[i]);
+	} 
+	return 0;
+}

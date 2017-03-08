@@ -1,0 +1,3 @@
+n = input();
+s = sum(map(int, raw_input().split()))
+print n if s % n == 0 else n - 1;

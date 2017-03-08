@@ -1,0 +1,39 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+
+    int a[4];
+
+    // freopen("D:\\1.in", "r", stdin);
+    // freopen("D:\\1.out", "w", stdout);
+
+    for(int i = 0; i < 4; i ++) scanf("%d", &(a[i]));
+    while(a[0] != 1 || a[1] != 1 || a[2] != 1 || a[3] != 1)
+    {
+        int k, pre, next, next2;
+        for(k = 0; k < 4; k ++) if(a[k] != 1) break;
+        pre = (k - 1 + 4) % 4; next = (k + 1) % 4; next2 = (next + 1) % 4;
+        if(a[k] == 2 && a[0] + a[1] + a[2] + a[3] == 5)
+        {
+            a[pre] ++, a[k] ++, a[k] ++, a[next] ++;
+            printf("+%d\n+%d\n", pre + 1, k + 1);
+            a[pre] /= 2, a[k] /= 2, a[k] /= 2, a[next] /= 2;
+            printf("/%d\n/%d\n", pre + 1, k + 1);
+        }
+        else
+        {
+            while(a[k] != 1)
+            {
+                if(a[k] % 2 == 1)
+                    a[k] ++, a[next] ++, printf("+%d\n", k + 1);
+                else if(a[next] % 2 == 1)
+                    a[next] ++, a[next2] ++, printf("+%d\n", next + 1);
+                else
+                    a[k] /= 2, a[next] /= 2, printf("/%d\n", k + 1);
+            }
+        }
+    }
+
+	return 0;
+}

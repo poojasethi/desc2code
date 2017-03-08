@@ -1,0 +1,97 @@
+/*
+    Problem:
+    Algorithm:
+    Note:
+*/
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<set>
+#include<vector>
+#include<map>
+#include<string>
+#include<iomanip>
+#include<iostream>
+#include<cmath>
+#include<queue>
+using namespace std;
+
+#define rep(i,x,y) for(i=x;i<=y;i++)
+#define _rep(i,x,y) for(i=x;i>=y;i--)
+#define CL(S,x) memset(S,x,sizeof(S))
+#define CP(S1,S2) memcpy(S1,S2,sizeof(S2))
+#define ALL(x,S) for(x=S.begin();x!=S.end();x++)
+#define sqr(x) ((x)*(x))
+#define mp make_pair
+#define fi first
+#define se second
+#define upmin(x,y) x=min(x,y)
+#define upmax(x,y) x=max(x,y)
+
+typedef long long ll;
+typedef long double ld;
+void read(int&x){bool fu=0;char c;for(c=getchar();c<=32;c=getchar());if(c=='-')fu=1,c=getchar();for(x=0;c>32;c=getchar())x=x*10+c-'0';if(fu)x=-x;};
+char getc(){char c;for(c=getchar();c<=32;c=getchar());return c;}
+
+int n,m,i,j,k,l,p,K;ll ans;
+bool a[2510][2510];int s[2510][2510];
+
+int S(int x1,int y1,int x2,int y2){return s[x2][y2]+s[x1-1][y1-1]-s[x2][y1-1]-s[x1-1][y2];}
+
+#define get(t,i) (cnt[(t)][(i)]-(((i)>0)?cnt[(t)][(i)-1]:0))
+void work(int x1,int y1,int x2,int y2,int ki)
+{
+	int mid,cnt[2][10],t;
+	if(x1>x2||y1>y2)return;
+	if(ki==0)
+	{	
+		mid=(x1+x2)/2;
+		rep(i,y1,y2)
+		{
+			rep(t,0,K)cnt[0][t]=0,cnt[1][t]=1;
+			_rep(j,y2,i)
+			{
+				rep(t,0,K)
+				{
+					while(mid-cnt[0][t]>=x1&&S(mid-cnt[0][t],i,mid,j)<=t)cnt[0][t]++;
+					while(mid+cnt[1][t]<=x2&&S(mid+1,i,mid+cnt[1][t],j)<=t)cnt[1][t]++;
+				}
+				rep(t,0,K)
+				ans+=1LL*get(0,t)*get(1,K-t);
+			}
+		}
+		work(x1,y1,mid-1,y2,1-ki);
+		work(mid+1,y1,x2,y2,1-ki);
+	}
+	else
+	{
+		mid=(y1+y2)/2;
+		rep(i,x1,x2)
+		{
+			rep(t,0,K)cnt[0][t]=0,cnt[1][t]=1;
+			_rep(j,x2,i)
+			{
+				rep(t,0,K)
+				{
+					while(mid-cnt[0][t]>=y1&&S(i,mid-cnt[0][t],j,mid)<=t)cnt[0][t]++;
+					while(mid+cnt[1][t]<=y2&&S(i,mid+1,j,mid+cnt[1][t])<=t)cnt[1][t]++;
+				}
+				rep(t,0,K)
+				ans+=1LL*get(0,t)*get(1,K-t);
+			}
+		}
+		work(x1,y1,x2,mid-1,1-ki);
+		work(x1,mid+1,x2,y2,1-ki);
+	}
+}
+int main()
+{
+    //freopen(".in","r",stdin);
+    //freopen(".out","w",stdout);
+    read(n);read(m);read(K);
+    rep(i,1,n)rep(j,1,m)a[i][j]=getc()-'0',s[i][j]=a[i][j]+s[i][j-1]+s[i-1][j]-s[i-1][j-1];
+    work(1,1,n,m,0);
+    cout<<ans<<endl;
+    scanf("\n");
+    return 0;
+}

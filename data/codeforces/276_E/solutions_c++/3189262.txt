@@ -1,0 +1,85 @@
+#include<iostream>
+#include<cstring>
+#include<cstdio>
+#include<cstdlib>
+#include<algorithm>
+using namespace std;
+
+const int maxn=600000;
+
+int i,j,k,x,y,z,n,m;
+int l[maxn],r[maxn],p[maxn],v[maxn];
+int cnt;
+int a[maxn];
+int cor[maxn];
+int tl[maxn],tk[maxn];
+
+void maketree(int x,int le,int ri){
+	l[x]=le;r[x]=ri;
+	if(le!=ri){
+		int mid=(le+ri)/2;
+		maketree(x*2,le,mid);
+		maketree(x*2+1,mid+1,ri);
+	}
+}
+
+void crap(int x,int left,int right,int t){
+	if(l[x]>right || r[x]<left)return;
+	if(l[x]>=left && r[x]<=right){
+		p[x]+=t;
+		return;
+	}
+	if(l[x]==r[x])return;
+	int mid=(l[x]+r[x])/2;
+	if(right>mid)crap(x*2+1,left,right,t);
+	if(left<=mid)crap(x*2,left,right,t);
+}
+
+int query(int x,int t){
+	int ret=p[x];
+	if(l[x]==r[x])return ret;
+	int mid=(l[x]+r[x])/2;
+	if(t>mid)ret+=query(x*2+1,t);else ret+=query(x*2,t);
+	return ret;
+}
+
+int main(){
+	//freopen("data.txt","r",stdin);
+	scanf("%d%d",&n,&m);
+	for(i=1;i<n;i++){
+		scanf("%d%d",&x,&y);
+		if(y==1)swap(x,y);
+		if(x==1)a[++a[0]]=y;else{
+		v[x]+=y;v[y]+=x;}
+	}
+	maketree(1,1,n-1+n);
+	for(i=1,j=0;i<=a[0];i++){
+		cor[a[i]]=++j;tk[a[i]]=j;
+		for(k=v[a[i]],z=a[i];k!=0;y=k,k=v[k]-z,z=y)tk[k]=j;
+		for(k=v[a[i]],z=a[i],x=1;k!=0;y=k,k=v[k]-z,z=y,x++)cor[k]=++j;
+		tl[a[i]]=j;
+		for(k=v[a[i]],z=a[i];k!=0;y=k,k=v[k]-z,z=y)tl[k]=j;
+	}
+	for(i=1;i<=m;i++){
+		scanf("%d",&x);
+		if(x==0){
+			scanf("%d%d%d",&j,&x,&y);
+			if(j==1){
+				crap(1,n,n+y,x);
+			}else{
+				int left=max(cor[j]-y,tk[j]),right=min(cor[j]+y,tl[j]);
+				crap(1,left,right,x);
+				if(cor[j]-y<tk[j]){
+					crap(1,n,n+tk[j]-cor[j]+y-1,x);
+					if(tk[j]-cor[j]+y-2+tk[j]>=left)
+						crap(1,left,min(right,tk[j]+tk[j]-cor[j]+y-2),-x);
+				}
+			}
+		}else {
+			scanf("%d",&x);
+			if(x==1)printf("%d\n",query(1,n));else
+			printf("%d\n",query(1,cor[x])+query(1,cor[x]-tk[x]+n+1));
+		}
+	}
+	return 0;
+}

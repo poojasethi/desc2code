@@ -1,0 +1,194 @@
+#include <cstdio>
+#include <utility>
+#include <math.h>
+
+using namespace std;
+
+class Plane{
+
+private:
+	pair<double, double> velocity;
+   	pair<double, double> initcoords;
+
+public:
+        Plane ()
+        {
+            /* Nothing to do. */
+        }
+	Plane(pair<double, double> velocity, pair<double, double> initcoords)
+	{
+		this->velocity = velocity;
+		this->initcoords = initcoords;
+	}
+
+	pair<double, double>* get_position_at_time (double time)
+	{
+		return new pair<double, double> (initcoords.first  + velocity.first * time,
+					initcoords.second  + velocity.second * time
+		);
+	}
+
+	void initialize (pair<double, double> *velocity, pair<double, double> *initcoords)
+	{
+		this->velocity = *velocity;
+		this->initcoords = *initcoords;
+	}
+	
+	double time_to_reach (double velocity, pair<double, double> initcoords, double total_time)
+	{
+                pair <double, double> *newpos = get_position_at_time (total_time);
+                
+                double a, b, c;
+                
+                a = (velocity * velocity  - this->velocity.first * this->velocity.first
+                        - this->velocity.second * this->velocity.second);
+                b = -2 * ((newpos->first - initcoords.first) * this->velocity.first
+                        + ((newpos->second - initcoords.second) * this->velocity.second));
+                c = -((newpos->first - initcoords.first) * (newpos->first - initcoords.first)
+                        + (newpos->second - initcoords.second) * (newpos->second - initcoords.second));
+                
+                return (-b + sqrt(b * b - 4 * a * c)) / (2 * a);
+	}
+        
+        ~Plane ()
+        {
+            /* Nothing to do.*/
+        }
+};
+
+class TimeCalc {
+private:
+	Plane *planes;
+	int number_of_planes;
+        double ccvelocity;
+	pair<double, double> ccinitcoords;
+        double min_time = 1.7E308;
+	
+public:
+        TimeCalc ()
+        {
+        }
+        
+	TimeCalc (Plane *planes, int number_of_planes, double ccvelocity, pair<double, double> *ccinitcoords)
+	{
+		this->planes = planes;
+		this->number_of_planes = number_of_planes;
+		this->ccvelocity = ccvelocity;
+		this->ccinitcoords = *ccinitcoords;
+	}
+
+	double calculate_time (int *order, Plane *origin)
+	{
+		int i;
+		double total_time = 0.0;
+		pair<double, double> ccposition (ccinitcoords);
+		
+		for (i = 0; i < number_of_planes; ++i)
+		{
+			total_time += planes[order[i]].time_to_reach (ccvelocity, ccposition, total_time);
+
+                        total_time += 1;
+			ccposition = *planes[order[i]].get_position_at_time (total_time);
+		}
+                
+                total_time += origin->time_to_reach(ccvelocity, ccposition, total_time);
+                
+                if (min_time > total_time)
+                    min_time = total_time;
+                
+                return total_time;
+	}
+        
+        void display_answer (int c)
+        {
+            int hr, min, sec;
+            double min_sec;
+            
+            hr = (int) min_time;
+            
+            min_sec = (min_time - hr) * 60;
+            min = (int) min_sec;
+            
+            sec = (int) ceil ((min_sec - min) * 60);
+            
+            if (sec == 60){
+                min ++;
+                sec = 0;
+                
+                if (min == 60)
+                {
+                    hr++;
+                    min = 0;
+                }
+            }
+            printf ("%d %d %d %d\n", c, hr, min, sec);
+        }
+        
+        ~TimeCalc ()
+        {
+        }
+};
+
+void init_permutation (int *order, int length, int level, TimeCalc* callback, Plane *origin);
+
+int main (int argc,
+	  char **argv
+	)
+{
+	int number_of_planes, counter, c = 1;
+	double velocity, px, py, vx, vy;
+        
+        while (true)
+        {
+
+                scanf ("%d", &number_of_planes);
+                
+                if (!number_of_planes)
+                    break;
+        
+                Plane *planes = new Plane [number_of_planes];
+                int *order = new int [number_of_planes];
+
+                for (counter = 0; counter < number_of_planes; ++counter)
+                {
+                        scanf ("%lf %lf %lf %lf", &px, &py, &vx, &vy);
+                        planes[counter].initialize (new pair<double, double>(vx, vy), new pair<double, double>(px, py));
+                }
+
+                scanf ("%lf %lf %lf", &px, &py, &velocity);
+
+                for (counter = 0; counter < number_of_planes; ++counter)
+                        order[counter] = counter;
+	
+                TimeCalc* calculator = new TimeCalc (planes, number_of_planes, velocity, new pair<double, double> (px, py));
+                init_permutation (order, number_of_planes, 0, calculator,
+                new Plane(pair<double, double>(0.0, 0.0), pair<double, double> (px, py)));
+                
+                calculator->display_answer(c++);
+        }
+
+	return 0;
+}
+
+void init_permutation (int *order, int length, int level, TimeCalc* callback, Plane *origin)
+{
+	int i, temp;
+
+	if (level == length)
+		callback->calculate_time (order, origin);
+	else {
+		temp = order [level];
+
+		for (i = level; i < length; i++)
+		{
+			order [level] = order[i];
+			order [i] = temp;
+			
+			init_permutation (order, length, level + 1, callback, origin);
+
+			order [i] = order [level];
+			order [level] = temp;
+ 
+		}
+	}
+}

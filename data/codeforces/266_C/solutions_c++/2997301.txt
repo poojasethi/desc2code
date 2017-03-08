@@ -1,0 +1,37 @@
+#include <iostream>
+using namespace std;
+
+int main()
+{
+	ios_base::sync_with_stdio(false);
+	short n;
+	cin >> n;
+
+	short a[n][2], b[2*n][3], nswaps = 0, x[n+1], rx[n+1], y[n+1], ry[n+1];
+	for (short i = 1; i <= n; i++)
+		x[i] = rx[i] = y[i] = ry[i] = i;
+
+	for (short i = 1; i < n; i++) {
+		cin >> a[i][0] >> a[i][1];
+		if (y[a[i][0]] != i+1) {
+			b[nswaps][0] = 1, b[nswaps][1] = i+1, b[nswaps][2] = y[a[i][0]];
+			++nswaps;
+			ry[y[a[i][0]]] = ry[i+1];
+			y[ry[i+1]] = y[a[i][0]];
+			y[a[i][0]] = i+1;
+			ry[i+1] = a[i][0];
+		}
+		if (x[a[i][1]] > i) {
+			b[nswaps][0] = 2, b[nswaps][1] = i, b[nswaps][2] = x[a[i][1]];
+			++nswaps;
+			rx[x[a[i][1]]] = rx[i];
+			x[rx[i]] = x[a[i][1]];
+			x[a[i][1]] = i;
+			rx[i] = a[i][1];
+		}
+	}
+	cout << nswaps << '\n';
+	for (short i = 0; i < nswaps; i++)
+		cout << b[i][0] << ' ' << b[i][1] << ' ' << b[i][2] << '\n';
+	return 0;
+}

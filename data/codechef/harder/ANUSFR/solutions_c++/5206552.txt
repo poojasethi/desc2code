@@ -1,0 +1,228 @@
+// uzumaki naruto
+#include <bits/stdc++.h>
+#define each(v,c)  for(typeof((c).begin()) v = (c).begin(); v != (c).end(); ++v)
+#define pb         push_back
+#define mp         make_pair
+#define sz(a)      ((int)(a.size()))
+#define all(a)     (a).begin(), (a).end()
+#define fi         first
+#define se         second
+#define TRACE
+using namespace std;
+
+#ifdef TRACE
+#define debug(a,n)    cerr << "["; for(int i = 0; i < n; ++i) cerr << a[i] << " ";cerr << "\b]\n";
+#define dbg(args...)  {debug1,args; cerr<<endl;}
+#define pause()       cin.get();cin.get();
+
+#else
+
+#define debug(a,n)
+#define dbg(args...)
+#define pause()
+
+#endif
+
+struct debugger {
+    template<typename T> debugger& operator , (const T& v) {
+        cerr<<v<<" "; return *this;
+    }
+} debug1;
+
+template <typename T1, typename T2>
+inline ostream& operator << (ostream& os, const pair<T1, T2>& p) {
+    return os << "(" << p.first << ", " << p.second << ")";
+}
+
+template<typename T>
+inline ostream &operator << (ostream & os,const vector<T>& v) {
+    bool first = true; os << "[";
+    for (typename vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii) {
+        if(!first) os << ", ";
+        os << *ii; first = false;
+    }
+    return os << "]";
+}
+
+typedef long long LL;
+typedef pair<int,int> pii;
+typedef vector<int> vi;
+
+const int NN = 112345;
+
+struct node{
+    int L,R,mx,ind;
+    node(){}
+    node(int a,int b,int c,int d):L(a),R(b),mx(c),ind(d){}
+};
+
+int Min[30][NN],f[30];
+pii res[NN];
+
+int seg_min[30][3*NN];
+int seg_end[30][3*NN];
+
+vector<int> Max[30][NN];
+vector<node> qq[30][NN];
+
+string msg;
+
+void pushup(int no,int node){
+    seg_min[no][node] = min(seg_min[no][2*node],seg_min[no][2*node+1]);
+    seg_end[no][node] = min(seg_end[no][2*node],seg_end[no][2*node+1]);
+}
+
+void build(int no,int node,int st,int en){
+    if (st == en){
+        seg_min[no][node] = NN;
+        seg_end[no][node] = NN;
+        return;
+    }
+
+    int mid = (st+en)/2;
+    build(no,2*node,st,mid);
+    build(no,2*node+1,mid+1,en);
+
+    pushup(no,node);
+}
+
+void update(int no,int node,int st,int en,int pt){
+    if (st == en){
+        seg_min[no][node] = Min[no][pt];
+        seg_end[no][node] = pt + Min[no][pt]-1;
+        return;
+    }
+
+    int mid = (st+en)/2;
+    if (mid >= pt) update(no,2*node,st,mid,pt);
+    else update(no,2*node+1,mid+1,en,pt);
+
+    pushup(no,node);
+}
+
+int query_min(int no,int node,int st,int en,int L,int R,int mx){
+    if (st > en or st > R or en < L) return NN;
+
+    int mid = (st+en)/2;
+    if (st >= L and en <= R){
+        if (seg_min[no][node] > mx) return NN;
+
+        if (st == en) return st;
+        if (seg_min[no][2*node] <= mx)
+            return query_min(no,2*node,st,mid,L,R,mx);
+        return query_min(no,2*node+1,mid+1,en,L,R,mx);
+    }
+
+    int ans = query_min(no,2*node,st,mid,L,R,mx);
+    if (ans >= NN)
+        ans = query_min(no,2*node+1,mid+1,en,L,R,mx);
+    return ans;
+}
+
+int query_end(int no,int node,int st,int en,int L,int R,int mx){
+    if (st > en or st > R or en < L) return NN;
+
+    int mid = (st+en)/2;
+    if (st >= L and en <= R){
+        if (seg_end[no][node] > mx) return NN;
+
+        if (st == en) return st;
+        if (seg_end[no][2*node] <= mx)
+            return query_end(no,2*node,st,mid,L,R,mx);
+        return query_end(no,2*node+1,mid+1,en,L,R,mx);
+    }
+
+    int ans = query_end(no,2*node,st,mid,L,R,mx);
+    if (ans >= NN)
+        ans = query_end(no,2*node+1,mid+1,en,L,R,mx);
+    return ans;
+}
+
+void query(int L,int R,int mx,int mn,int x,int ind,int n){
+    int mid = max(L,R-mx+1);
+    int RR = R-mn+1;
+
+    int ans = query_min(x,1,0,n-1,L,mid-1,mx);
+
+    //dbg(L,mid,RR,R,ans);
+    if (ans >= NN)
+        ans = query_end(x,1,0,n-1,mid,RR,R);
+
+    //dbg(ans,n,Min[1][7],Min[2][7]);
+    if (ans < n){
+        res[ind].fi = ans;
+        res[ind].se = max(mn,Min[x][ans]);
+    }
+}
+
+void solve(){
+    cin >> msg;
+    int n = sz(msg);
+
+    for(int i = 27; i > 0; --i){
+        int y = 0, cnt = 0;
+        for(int x = 0; x < n; ++x){
+            while(y < n and cnt < i){
+                int s = msg[y]-'a';
+                if (!f[s]) ++cnt;
+                f[s]++;
+                y++;
+            }
+
+            int add = y-x;
+            if (y >= n and cnt < i)
+                add = n-x+1;
+
+            Min[i][x] = add;
+            if (cnt == i and i <= 26){
+                int len = Min[i+1][x]-1;
+                Max[i][len].pb(x);
+            }
+
+            int s = msg[x]-'a';
+            f[s]--;
+            if (!f[s]) --cnt;
+        }
+    }
+
+    for(int i = 1; i <= 26; ++i)
+        build(i,1,0,n-1);
+
+    int m,a,b,c,d,e;
+    cin >> m;
+    for(int i = 0; i < m; ++i){
+        cin >> a >> b >> c >> d >> e;
+        qq[a][b].pb(node(d,e,c,i));
+        res[i] = mp(-1,-1);
+    }
+
+    for(int i = 1; i <= 26; ++i){
+        for(int len = n; len > 0; --len){
+            for(int tmp = 0; tmp < sz(Max[i][len]) ; ++tmp){
+                int pt = Max[i][len][tmp];
+                //dbg("updating",pt,"at",len,Min[i][pt],i);
+                update(i,1,0,n-1,pt);
+            }
+
+            for(int tmp = 0; tmp < sz(qq[i][len]); ++tmp){
+                int L = qq[i][len][tmp].L, R = qq[i][len][tmp].R;
+                int mx = qq[i][len][tmp].mx, ind = qq[i][len][tmp].ind;
+
+                query(L,R,mx,len,i,ind,n);
+            }
+        }
+    }
+
+    for(int i = 0; i < m; ++i){
+        int st = res[i].fi;
+        int en = (st == -1 ? -1 : st + res[i].se - 1);
+        cout << st << " " << en << "\n";
+    }
+}
+
+int main()
+{
+    ios_base::sync_with_stdio(0);
+    solve();
+    return 0;
+}

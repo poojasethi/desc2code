@@ -1,0 +1,173 @@
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+#include <vector>
+#include <string>
+#include <queue>
+#include <map>
+#include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <sstream>
+#include <set>
+using namespace std;
+
+const int mmod = 1000000007;
+
+struct _s {
+  int a, b, l, iter;
+  _s(int _a, int _b, int _l, int _iter) { a = _a; b = _b; l = _l; iter = _iter; }
+  _s() {}
+  bool operator < (const _s & another) const {
+    if (l != another.l) return l < another.l;
+    return iter < another.iter;
+  }
+};
+
+_s V[300000];
+_s W[300000];
+
+int parent[100000];
+int rank[100000];
+int is_odd[100000];
+int res[300000];
+
+int middle[100000];
+
+int op_cnt = 0;
+int op_kind[600000];
+int op_p1[600000];
+int op_p2[600000];
+
+int n, m;
+
+int lister[300000];
+int lister_cnt = 0;
+
+void update(int prev_use, int now_use, int prev_reach, int now_reach) {
+//  printf("%d %d %d %d\n", prev_use, now_use, prev_reach, now_reach);
+
+  for (int i=0; i<n; i++) middle[i] = 0;
+  for (int i=prev_use; i<now_use; i++)
+    middle[W[i].a] = middle[W[i].b] = 1;
+
+  for (int i=0; i<n; i++) parent[i] = i;
+  for (int i=0; i<n; i++) rank[i] = 0;
+  for (int i=0; i<n; i++) is_odd[i] = 1;
+
+  int remain = n;
+  for (int i=0; i<now_reach; i++) {
+    if (V[prev_use-1] < W[i]) continue;
+    int aa = W[i].a;
+    int bb = W[i].b;
+    while (parent[aa] != aa) aa = parent[aa];
+    while (parent[bb] != bb) bb = parent[bb];
+    if (aa != bb) {
+      if (is_odd[aa] && is_odd[bb]) remain -= 2;
+      if (rank[aa] < rank[bb]) parent[aa] = bb, is_odd[bb] ^= is_odd[aa];
+      else if (rank[bb] < rank[aa]) parent[bb] = aa, is_odd[aa] ^= is_odd[bb];
+      else { parent[bb] = aa, is_odd[aa] ^= is_odd[bb]; rank[aa] ++; }
+    }
+  }
+
+  for (int target=now_reach; target<prev_reach; target++) {
+    if (!(V[prev_use-1] < W[target])) {
+      int aa = W[target].a;
+      int bb = W[target].b;
+      while (parent[aa] != aa) aa = parent[aa];
+      while (parent[bb] != bb) bb = parent[bb];
+      if (aa != bb) {
+        if (is_odd[aa] && is_odd[bb]) remain -= 2;
+        if (rank[aa] < rank[bb]) parent[aa] = bb, is_odd[bb] ^= is_odd[aa];
+        else if (rank[bb] < rank[aa]) parent[bb] = aa, is_odd[aa] ^= is_odd[bb];
+        else { parent[bb] = aa, is_odd[aa] ^= is_odd[bb]; rank[aa] ++; }
+      }
+    }
+    
+    int now_remain = remain;
+    op_cnt = 0;
+    for (int i=prev_use; i<now_use; i++) {
+      if (V[i].iter > target) continue;
+      int aa = V[i].a;
+      int bb = V[i].b;
+      while (parent[aa] != aa) aa = parent[aa];
+      while (parent[bb] != bb) bb = parent[bb];
+      if (aa != bb) {
+        if (is_odd[aa] && is_odd[bb]) now_remain -= 2;
+        if (rank[aa] < rank[bb]) {
+          parent[aa] = bb; op_kind[op_cnt] = 0; op_p1[op_cnt] = aa; op_cnt ++;
+          is_odd[bb] ^= is_odd[aa]; op_kind[op_cnt] = 1; op_p1[op_cnt] = bb; op_p2[op_cnt] = aa; op_cnt ++;
+        }
+        else if (rank[bb] < rank[aa]) {
+          parent[bb] = aa; op_kind[op_cnt] = 0; op_p1[op_cnt] = bb; op_cnt ++;
+          is_odd[aa] ^= is_odd[bb]; op_kind[op_cnt] = 1; op_p1[op_cnt] = aa; op_p2[op_cnt] = bb; op_cnt ++;
+        } else {
+          parent[bb] = aa; op_kind[op_cnt] = 0; op_p1[op_cnt] = bb; op_cnt ++;
+          is_odd[aa] ^= is_odd[bb]; op_kind[op_cnt] = 1; op_p1[op_cnt] = aa; op_p2[op_cnt] = bb; op_cnt ++;
+          rank[aa] ++; op_kind[op_cnt] = 2; op_p1[op_cnt] = aa; op_cnt ++;
+        }
+      }
+      if (now_remain == 0) {
+        res[target] = V[i].l;
+        break;
+      }
+    }
+    for (int i=op_cnt-1; i>=0; i--) {
+      if (op_kind[i] == 0) parent[op_p1[i]] = op_p1[i];
+      else if (op_kind[i] == 1) is_odd[op_p1[i]] ^= is_odd[op_p2[i]];
+      else rank[op_p1[i]] --;
+    }
+  }
+}
+
+int main()
+{
+  cin >> n >> m;
+  for (int iter=0; iter<m; iter++) {
+    scanf("%d %d %d", &V[iter].a, &V[iter].b, &V[iter].l);
+    V[iter].a --;
+    V[iter].b --;
+    V[iter].iter = iter;
+    W[iter].a = V[iter].a;
+    W[iter].b = V[iter].b;
+    W[iter].l = V[iter].l;
+    W[iter].iter = V[iter].iter;
+  }
+  sort(V, V+m);
+
+  int step = sqrt(m + 0.5);
+  int use = 0;
+  int prev = m;
+
+  for (int i=0; i<m; i++) res[i] = -1;
+  while (use < m) {
+    int prev_use = use;
+    use = min(use + step, m);
+
+    for (int i=0; i<n; i++) parent[i] = i;
+    for (int i=0; i<n; i++) rank[i] = 0;
+    for (int i=0; i<n; i++) is_odd[i] = 1;
+
+    int remain = n;
+    for (int i=0; i<m; i++) {
+      if (V[use-1] < W[i]) continue;
+      int aa = W[i].a;
+      int bb = W[i].b;
+      while (parent[aa] != aa) aa = parent[aa];
+      while (parent[bb] != bb) bb = parent[bb];
+      if (aa != bb) {
+        if (is_odd[aa] && is_odd[bb]) remain -= 2;
+        if (rank[aa] < rank[bb]) parent[aa] = bb, is_odd[bb] ^= is_odd[aa];
+        else if (rank[bb] < rank[aa]) parent[bb] = aa, is_odd[aa] ^= is_odd[bb];
+        else { parent[bb] = aa, is_odd[aa] ^= is_odd[bb]; rank[aa] ++; }
+      }
+      if (remain == 0) {
+        update(prev_use, use, prev, i);
+        prev = i;
+        break;
+      }
+    }
+  }
+
+  for (int i=0; i<m; i++) printf("%d\n", res[i]);
+}

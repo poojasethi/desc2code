@@ -1,0 +1,222 @@
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <queue>
+#include <iostream>
+#include <cmath>
+#include <sstream>
+#include <map>
+#include <set>
+#include <numeric>
+#include <complex>
+#include <stdio.h>
+#include <memory.h>
+#include <assert.h>
+#include <iomanip>
+
+using namespace std;
+
+#define pb push_back
+#define INF 1000000000
+#define SZ(s) (int)((s).size())
+#define FOR(i,a,b) for (int _n(b), i(a); i < _n; i++)
+#define rep(i,n) FOR(i,0,n)
+#define ford(i,a,b) for(int i=(a),_b=(b);i>=_b;--i)
+#define CL(a,v) memset((a),(v),sizeof(a))
+#define ll long long
+#define VI vector<int>
+#define mp make_pair
+#define X first
+#define Y second
+#define all(c) (c).begin(), (c).end()
+#define SORT(c) sort(all(c))
+
+struct query
+{
+    query() : L(0),R(0),D(0) {}
+
+    int L,R,D;
+};
+
+vector<query> queries;
+vector< int > points;
+
+int idx(int x)
+{
+    int l = 0, h = SZ(points)-1;
+
+    while(h >= l)
+    {
+        int m = (l + h) >> 1;
+
+        if(points[m] == x) return m;
+
+        if(points[m] < x)
+            l = m + 1;
+        else
+            h = m - 1;
+    }
+
+    throw exception();
+    return -1;
+}
+
+struct SegmentTree
+{
+    vector<double> sin_tree, cos_tree;
+    VI D;
+
+    double sin_sum(int L, int R) //[L,R)
+    {
+        if(R < L) return 0;
+
+        return sin(1.0*(R+L-1)/2) * sin(1.0*(R-L)/2) / sin(0.5);
+    }
+
+    double cos_sum(int L, int R) //[L,R)
+    {
+        if(R < L) return 0;
+
+        return cos(1.0*(R+L-1)/2) * sin(1.0*(R-L)/2) / sin(0.5);
+    }
+
+    SegmentTree(int sz)
+    {
+        int tsz = 1;
+
+        while(tsz < sz) tsz <<= 1;
+        tsz <<= 1;
+
+        sin_tree.resize(tsz, 0.);
+        cos_tree.resize(tsz, 0.);
+        D.resize(tsz, 0);
+
+        init_tree(sin_tree, &SegmentTree::sin_sum);
+        init_tree(cos_tree, &SegmentTree::cos_sum);
+    }
+
+    void add(int L, int R, int val)
+    {
+        const int l = idx(L), r = idx(R+1)-1;
+
+        add(1, 0, SZ(sin_tree)/2-1, l, r, val);
+    }
+
+    double sum(int L, int R)
+    {
+        const int l = idx(L), r = idx(R+1)-1;
+
+        return sum(1, 0, SZ(sin_tree)/2-1, l, r );
+    }
+
+    private :
+
+    double sum(int root, int L, int R, int l, int r, int val = 0)
+    {
+        if(l > R || r < L) return 0;
+
+        val += D[root];
+
+        if(l == L && R == r)
+        {
+            return sin_tree[root] * cos(1.*val) + cos_tree[root] * sin(1.*val);
+        }
+
+        const int M = (L+R) >> 1, lch = root<<1, rch = (root<<1) | 1;
+
+        return sum(lch, L, M, l , min(r,M), val) + sum(rch, M+1, R, max(M+1,l), r, val);
+    }
+
+    void add(int root, int L, int R, int l, int r, int val)
+    {
+        if(l > R || r < L) return;
+
+        if(l == L && R == r)
+        {
+            D[root] += val;
+            return;
+        }
+
+        const int M = (L+R)>>1, lch = root<<1, rch = (root<<1)|1;
+
+        add(lch, L, M, l, min(M,r), val);
+        add(rch, M+1, R, max(M+1,l), r, val);
+
+        vector<double> &sn = sin_tree, &cs = cos_tree;
+
+        const int chlds[] = {lch, rch};
+
+        sn[root] = cs[root] = 0;
+
+        rep(i,2)
+        {
+            sn[root] += sn[chlds[i]] * 1.0*cos(1.*D[chlds[i]]) + cs[chlds[i]] * 1.0*sin(1.*D[chlds[i]]);
+            cs[root] += cs[chlds[i]] * 1.0*cos(1.*D[chlds[i]]) - sn[chlds[i]] * 1.0*sin(1.*D[chlds[i]]);
+        }
+    }
+
+    void init_tree(vector<double> &tree, double(SegmentTree::* accum_segment)(int,int) )
+    {
+        const int sz = tree.size() >> 1;
+
+        for(int i = sz; i < (int)tree.size(); ++i)
+        {
+            if(i-sz+1 < SZ(points))
+                tree[i] = (this->*accum_segment)(points[i-sz], points[i+1-sz]);
+            else
+                tree[i] = 0;
+        }
+
+        for(int i = sz-1; i >= 1; --i)
+            tree[i] = tree[i<<1] + tree[(i<<1)|1];
+    }
+};
+
+
+int main()
+{
+	#ifndef ONLINE_JUDGE
+        //freopen("input.txt","r",stdin);
+        //freopen("output.txt","w", stdout);
+	#endif
+
+    int N, Q;
+
+    cin >> N >> Q;
+
+    queries.clear();
+    queries.resize(Q);
+    points.clear();
+
+    rep(i,Q)
+    {
+        cin >> queries[i].L >> queries[i].R >> queries[i].D;
+
+        points.pb(queries[i].L);
+        points.pb(queries[i].R+1);
+    }
+
+    SORT(points);
+    points.resize( unique(all(points)) - points.begin() );
+
+    SegmentTree st(points.size());
+
+    rep(i,Q)
+    {
+        if(queries[i].D == 0)
+        {
+            //cout << "calc sum " << queries[i].L << ' ' <<  queries[i].R << endl;
+            //cout.setpresision(7);
+            //cout << setprecision (9) << st.sum(queries[i].L, queries[i].R) << endl;
+            printf("%.7lf\n",st.sum(queries[i].L, queries[i].R));
+        }
+        else
+        {
+            //cout << "add val " << queries[i].D << endl;
+
+            st.add(queries[i].L, queries[i].R, queries[i].D);
+        }
+    }
+
+	return 0;
+}

@@ -1,0 +1,152 @@
+#include <iostream>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <map>
+
+using namespace std;
+
+int horaminutoatiempo(int h,int m)
+{
+  return 60*h+m;
+}
+
+int diahoraminutoatiempo(int d,int h,int m)
+{
+  return 60*(24*d+h)+m;
+}
+
+void tiempoadiahoraminuto(int t,int &d,int &h,int &m)
+{
+  m=t%60;
+  h=(t/60)%24;
+  d=t/(60*24);
+}
+
+struct peticion {
+  int duracion;
+  int tiempolimite;
+  int index;
+  int precio;
+};
+
+bool operator<(peticion p1,peticion p2)
+{
+  return p1.tiempolimite<p2.tiempolimite;
+}
+
+struct informacion {
+  int indiceanterior;
+  int index;
+  int tiemporealini;
+  int tiemporealfin;
+};
+
+bool operator<(informacion i1,informacion i2)
+{
+  return i1.tiemporealini<i2.tiemporealini;
+}
+
+int main()
+{
+  int m,n,totaldias;
+  cin>>m>>n>>totaldias;
+  vector<string> subject(m);
+  for (int i=0;i<m;i++) cin>>subject[i];
+  map<string,int> subjecttotime;
+  for (int i=0;i<m;i++) cin>>subjecttotime[subject[i]];
+  vector<int> restriccioninf(4);
+  vector<int> restriccionsup(4);
+  for (int i=0;i<4;i++) {
+    int hinf,minf,hsup,msup;
+    char c1,c2,c3;
+    cin>>hinf>>c1>>minf>>c2>>hsup>>c3>>msup;
+    restriccioninf[i]=horaminutoatiempo(hinf,minf);
+    restriccionsup[i]=horaminutoatiempo(hsup,msup);
+  }
+  vector<int> tiempolineal(60*24*totaldias,-1);
+  vector<int> tiemporeal;
+  {
+    int h=0;int m=0;
+    for (int i=0;i<int(tiempolineal.size());i++) {
+      int trestrict=horaminutoatiempo(h,m);
+      bool restringido=false;
+      for (int j=0;j<4 and not restringido;j++)
+	restringido=restriccioninf[j]<=trestrict and
+	  trestrict<=restriccionsup[j];
+      if (not restringido) {
+	tiempolineal[i]=int(tiemporeal.size());
+	tiemporeal.push_back(i);
+      }
+      m++;
+      if (m==60) {
+	h++;m=0;if (h==24) h=0;
+      }
+    }
+    int lasttime=int(tiemporeal.size());
+    tiemporeal.push_back(int(tiempolineal.size()));
+    for (int i=int(tiempolineal.size())-1;i>=0;i--)
+      if (tiempolineal[i]==-1) tiempolineal[i]=lasttime;
+      else lasttime=tiempolineal[i];
+  }
+  int totaltiempo=int(tiemporeal.size());
+  vector<peticion> input(n);
+  for (int i=0;i<n;i++) {
+    string s;int d,h,m;char c;int p;
+    cin>>s>>d>>h>>c>>m>>p;
+    peticion &inp=input[i];
+    inp.duracion=subjecttotime[s];
+    d--;
+    inp.tiempolimite=tiempolineal[diahoraminutoatiempo(d,h,m)];
+    inp.index=i;
+    inp.precio=p;
+  }
+  sort(input.begin(),input.end());
+
+  vector<int> valor(totaltiempo,-1);
+  valor[0]=0;
+  vector<int> indice(totaltiempo);
+  indice[0]=-1;
+  vector<informacion> info;
+  for (int i=0;i<n;i++) {
+    peticion &inp=input[i];
+    if (inp.duracion>0) {
+      for (int j=inp.tiempolimite-inp.duracion;j>=0;j--) {
+	if (valor[j]!=-1 and (valor[j+inp.duracion]<valor[j]+inp.precio)) {
+	  informacion inf;
+	  inf.index=inp.index;
+	  inf.indiceanterior=indice[j];
+	  inf.tiemporealini=tiemporeal[j];
+	  inf.tiemporealfin=tiemporeal[j+inp.duracion-1];
+	  valor[j+inp.duracion]=valor[j]+inp.precio;
+	  indice[j+inp.duracion]=int(info.size());
+	  info.push_back(inf);
+	}
+      }
+    }
+  }
+  int imax=0;
+  for (int i=0;i<totaltiempo;i++)
+    if (valor[i]>valor[imax]) imax=i;
+  cout<<valor[imax]<<endl;
+  vector<informacion> sol;
+  imax=indice[imax];
+  while (imax!=-1) {
+    sol.push_back(info[imax]);
+    imax=info[imax].indiceanterior;
+  }
+  cout<<int(sol.size())<<endl;
+  sort(sol.begin(),sol.end());
+  for (int i=0;i<int(sol.size());i++) {
+    informacion &inf=sol[i];
+    cout<<inf.index+1;
+    int d,h,m;
+    tiempoadiahoraminuto(inf.tiemporealini,d,h,m);
+    d++;
+    cout<<" "<<d<<" "<<h/10<<h%10<<":"<<m/10<<m%10;
+    tiempoadiahoraminuto(inf.tiemporealfin,d,h,m);
+    d++;
+    cout<<" "<<d<<" "<<h/10<<h%10<<":"<<m/10<<m%10<<endl;
+  }
+}
+

@@ -1,0 +1,137 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+#include <vector>
+#include <ctime>
+using namespace std;
+typedef unsigned long long u64;
+typedef pair<u64,int> info;
+const u64 MaxR=10000000000ull;
+const int mod=1000000007,N=100000,Maxd=50005,Maxp=9605;
+int T,ans=0;
+u64 L,R;
+int pr[Maxp],pn=0,pic[Maxd];
+u64 now[Maxd],ord2[Maxp][23],gi;
+info pi[Maxd][12];
+
+inline u64 mul(u64 x,u64 y,u64 mod) {
+	return ((((x>>17)*y%mod)<<17)+(x&0x1ffff)*y)%mod;
+}
+
+inline u64 Pow(u64 a,u64 x,u64 mod) {
+	if (mod<(1ull<<31)) {
+		int ret=1;
+		for (;x;x>>=1,a=u64(a)*a%mod)
+			if (x&1)
+				ret=u64(ret)*a%mod;
+		return ret;
+	}
+	u64 ret=1;
+	for (;x;x>>=1,a=mul(a,a,mod))
+		if (x&1)
+			ret=mul(ret,a,mod);
+	return ret;
+}
+
+u64 getord2(u64 x,u64 phix) {
+	u64 ret=phix;
+	for (int i=1;i<=pn&&u64(pr[i])*pr[i]<=phix;i++)
+		if (phix%pr[i]==0) {
+			while (Pow(2,ret/pr[i],x)==1) {
+				ret/=pr[i];
+				if (ret%pr[i]!=0) break;
+			}
+			for (phix/=pr[i];phix%pr[i]==0;phix/=pr[i]);
+		}
+	if (phix>1)
+		if (Pow(2,ret/phix,x)==1) ret/=phix;
+	return ret;
+}
+
+namespace Calc{
+	info *pi;
+	int pic;
+	u64 ord_sp;
+	
+	u64 gcd(u64 x,u64 y) {
+		for (;y;x%=y,swap(x,y));
+		return x;
+	}
+
+	u64 lcm(u64 x,u64 y) {
+		return x/gcd(x,y)*y;
+	}
+	
+	void dfs(int i,u64 phi,u64 ord) {
+		if (i>pic) {
+			gi+=phi/ord;
+			return;
+		}
+		dfs(i+1,phi,ord);
+		if (i==pic&&pi[i].first>pn)
+			dfs(i+1,phi*(pi[i].first-1),lcm(ord,ord_sp));
+		else {
+			u64 now=1;
+			int id=pi[i].first,p=pr[id];
+			for (int j=1;j<=pi[i].second;j++) {
+				now*=p;
+				dfs(i+1,phi*(now-now/p),lcm(ord,ord2[id][j]));
+			}
+		}
+	}
+}
+
+void init() {
+	static bool flag[N+5];
+	for (int i=2;i<=N;i++)
+		if (!flag[i]) {
+			pr[++pn]=i;
+			if (u64(i)*i<=N)
+				for (int j=i*i;j<=N;j+=i)
+					flag[j]=true;
+		}
+	for (int i=2;i<=pn;i++) {
+		int j=0;
+		for (u64 x=pr[i];x<=MaxR;x*=pr[i])
+			ord2[i][++j]=getord2(x,x-x/pr[i]);
+	}
+}
+
+int main() {
+	init();
+	for (cin>>T;T;T--) {
+		cin>>L>>R;
+		for (u64 i=(L|1);i<=(R|1);i+=2)
+			now[i-L]=i,pic[i-L]=0;
+		for (int i=1;i<=pn&&u64(pr[i])*pr[i]<=(R|1);i++) {
+			for (u64 cur=((L|1)-1)/pr[i]*pr[i]+pr[i];cur<=(R|1);cur+=pr[i])
+				if (cur&1) {
+					int cnt=0;
+					while (now[cur-L]%pr[i]==0) {
+						now[cur-L]/=pr[i];
+						++cnt;
+					}
+					pi[cur-L][++pic[cur-L]]=info(i,cnt);
+				}
+		}
+		for (u64 i=(L|1);i<=(R|1);i+=2)
+			if (now[i-L]>1)
+				pi[i-L][++pic[i-L]]=info(now[i-L]>N?now[i-L]:lower_bound(pr+1,pr+pn+1,now[i-L])-pr,1);
+		ans=0;
+		for (u64 i=(L|1);i<=(R|1);i+=2) {
+			gi=0;
+			Calc::pi=pi[i-L];
+			Calc::pic=pic[i-L];
+			if (now[i-L]>N) Calc::ord_sp=getord2(now[i-L],now[i-L]-1);
+			Calc::dfs(1,1,1);
+			if (L<=i-1&&i-1<=R) ans=(ans+Pow(26,gi-1,mod))%mod;
+			if (L<=i&&i<=R) ans=(ans+Pow(26,gi,mod))%mod;
+		}
+		cout<<ans<<endl;
+	}
+	return 0;
+}

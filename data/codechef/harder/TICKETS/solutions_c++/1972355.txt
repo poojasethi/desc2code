@@ -1,0 +1,229 @@
+#include <cstdio>
+#include <algorithm>
+#include <utility>
+#include <queue>
+#include <cassert>
+#include <cstring>
+#include <ctime>
+using namespace std;
+ 
+#define MAX_N 200
+#define MAX_M 500
+ 
+int N, M;
+pair<int, int> edges[MAX_M*2];
+int edgestart[MAX_M+1];
+long long hashval[MAX_N];
+ 
+void read(){
+	scanf("%d %d", &N, &M);
+	for(int i=0; i<M; i++){
+		scanf("%d %d", &edges[i].first, &edges[i].second);
+	}
+}
+ 
+void preprocess()
+{
+    for(int i=0; i<M; i++){
+        edges[i+M].first=--edges[i].second;
+        edges[i+M].second=--edges[i].first;
+    }
+    sort(edges, edges+2*M);
+    edgestart[0]=0;
+    for(int i=1; i<=N; i++){
+        edgestart[i]=edgestart[i-1];
+        while(edgestart[i]<2*M && edges[edgestart[i]].first<i)
+            edgestart[i]++;
+    }
+}
+ 
+struct node{
+    unsigned int mark[MAX_N/32+1];
+    int length;
+    int current;
+};
+ 
+int bfs1(int start){
+    int count[MAX_N]={0}, cost[MAX_N]={0};
+    queue<node> q;
+    node n;
+    for(int i=0; i<MAX_N/32+1; i++)
+    {
+        n.mark[i]=0;
+    }
+    n.length = 0;
+    n.current = start;
+    n.mark[start>>5]=1<<(start&31);
+    for(q.push(n); !q.empty(); q.pop()){
+        int depth=q.front().length;
+        int cur=q.front().current;
+        if(count[cur]==3)
+			continue;
+        count[cur]++;
+		cost[cur]+=depth;
+		for(int i=edgestart[cur]; i<edgestart[cur+1]; i++)
+           if(!(q.front().mark[edges[i].second>>5]&(1<<(edges[i].second&31)))){
+				assert(edges[i].first==cur);
+                n=q.front();
+                n.length++;
+                n.current=edges[i].second;
+                n.mark[edges[i].second>>5]|=1<<(edges[i].second&31);
+                q.push(n);
+			}
+	}
+	int ret=M;
+	for(int i=0; i<N; i++)
+		if(count[i]==3){
+			ret=min(ret, cost[i]-1);
+		}
+	return ret;
+}
+ 
+// cycles share edge
+int solve1(){
+	int ret=M;
+	for(int i=0; i<N; i++)
+		ret=min(ret, bfs1(i));
+	return ret;
+}
+ 
+int dist[MAX_N][MAX_N];
+long long pathhash[MAX_N][MAX_N];
+int firstedge[MAX_N][MAX_N];
+ 
+void calc_dist(){
+    memset(dist, -1, sizeof(dist));
+    for(int i=0; i<N; i++){
+        queue<int> q;
+        dist[i][i]=0;
+        pathhash[i][i]=hashval[i];
+        for(q.push(i); !q.empty(); q.pop()){
+            int f=q.front();
+            for(int e=edgestart[f]; e<edgestart[f+1]; e++){
+                int v=edges[e].second;
+                if(dist[i][v]==-1){
+                    dist[i][v]=dist[i][f]+1;
+                    q.push(v);
+                    pathhash[i][v]=pathhash[i][f]^hashval[v];
+                    firstedge[i][v]= f==i ? v : firstedge[i][f];
+                }
+            }
+        }
+    }
+}
+ 
+// cycles share vertex but not edge
+int solve2(){
+	int ret=M;
+	for(int i=0; i<N; i++){
+	    int cycles[4], cnt=0;
+	    for(int j=0; j<N; j++){
+	        if(dist[i][j]==-1)
+	            continue;
+	        int eq=0, le=0;
+	        for(int e=edgestart[j]; e<edgestart[j+1]; e++){
+	            int v=edges[e].second;
+	            if(dist[i][v]<dist[i][j])
+	                le++;
+	            else if(dist[i][v]==dist[i][j])
+	                eq++;
+	        }
+	        if(le>1){
+	            cycles[cnt]=2*dist[i][j];
+	            push_heap(cycles, cycles+ ++cnt);
+	        }else if(eq){
+	            cycles[cnt]=2*dist[i][j]+1;
+	            push_heap(cycles, cycles+ ++cnt);
+	        }
+            if(cnt>3){
+                pop_heap(cycles, cycles+cnt--);
+            }
+	    }
+	    if(cnt<2)
+	        continue;
+	    sort_heap(cycles, cycles+cnt);
+	    int len;
+	    // if shortest cycle is odd, it is found twice
+	    if(cycles[0]&1){
+	        if(cnt<3)
+	            continue;
+	        len=cycles[0]+cycles[2];
+	    }else{
+	        len=cycles[0]+cycles[1];
+	    }
+	    ret=min(ret, len-1);
+	}
+	return ret;
+}
+ 
+// cycles share no vertex
+int solve3(){
+    int cyclehash[MAX_N], cyclelen[MAX_N];
+  for(int i=0; i<N; i++){
+        cyclelen[i]=M;
+        for(int j=0; j<N; j++){
+            if(dist[i][j]==-1)
+                continue;
+            int le=0;
+            long long h1=0;
+            int e1;
+            for(int e=edgestart[j]; e<edgestart[j+1]; e++){
+                int v=edges[e].second;
+                if(dist[i][v]<dist[i][j]){
+                    if(!le){
+                        le=1;
+                        h1=pathhash[i][v];
+                        e1=firstedge[i][v];
+                    }else if(e1!=firstedge[i][v] || i==v){
+                        if(cyclelen[i]>2*dist[i][j]){
+                            cyclelen[i]=2*dist[i][j];
+                            cyclehash[i]=h1^pathhash[i][v]^hashval[i]^hashval[j];
+                        }
+                    }
+                }else if(dist[i][v]==dist[i][j] &&firstedge[i][v]!=firstedge[i][j]){
+                   if(cyclelen[i]>2*dist[i][j]+1){
+                       cyclelen[i]=2*dist[i][j]+1;
+                        cyclehash[i]=pathhash[i][j]^pathhash[i][v]^hashval[i];
+                    }
+                }
+            }
+        }
+    }
+    int ret=M;
+    for(int i=0; i<N; i++)
+    for(int j=0; j<N; j++){
+        if(dist[i][j]==-1)
+            continue;
+        if(cyclehash[i]==cyclehash[j])
+            continue;
+        ret=min(ret, dist[i][j]+cyclelen[i]+cyclelen[j]-1);
+    }
+    return ret;
+}
+ 
+int solve(){
+    preprocess();
+    calc_dist();
+    int s1=solve1();
+    int s2=solve2();
+    int s3=solve3();
+    return min(s1, min(s2, s3));
+}
+ 
+void init(){
+    rand();
+    for(int i=0; i<MAX_N; i++)
+        hashval[i]=((long long)rand()<<32)+rand();
+}
+ 
+int main(){
+    init();
+	int T;
+	scanf("%d", &T);
+	while(T--){
+		read();
+		printf("%d\n", solve());
+	}
+	return 0;
+} 
+

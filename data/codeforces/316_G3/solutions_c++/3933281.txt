@@ -1,0 +1,101 @@
+#include <cstdio>
+#include <cstring>
+#include <vector>
+using namespace std;
+
+#define pb push_back
+#define forit(it,con) for (typeof(con.begin()) it = con.begin(); it != con.end(); ++it)
+const int maxn = (int)4e5;
+struct state {
+	int next[37], len, suff;
+	state() {
+		memset(next, -1, sizeof(next));
+		suff = -1; len = 0;
+	}
+} st[maxn];
+int sz = 1, last = 0;
+vector<int> g[maxn];
+
+char s[maxn];
+int L[maxn], R[maxn], n;
+int dp[maxn][11], cnt[maxn], was[maxn];
+long long ans; 
+
+void addAutomat(int ch) {
+	int nv = sz++, p = last;
+	st[nv].len = st[p].len + 1;
+	for (;p != -1 && st[p].next[ch] == -1; p = st[p].suff)
+		st[p].next[ch] = nv;
+	if (p == -1) st[nv].suff = 0; else {
+		int q = st[p].next[ch];
+		if (st[q].len == st[p].len + 1) st[nv].suff = q; else { 
+			int clone = sz++;
+			memcpy(st[clone].next, st[q].next, sizeof(st[clone].next));
+		   	st[clone].suff = st[q].suff;
+			st[clone].len = st[p].len + 1;
+			st[q].suff = st[nv].suff = clone;
+		
+			for (;p != -1 && st[p].next[ch] == q; p = st[p].suff)
+				st[p].next[ch] = clone;
+		}
+	}
+	last = nv;
+}
+
+int Count(int v) {
+	if (v == 0) return 1;
+	if (cnt[v] != -1) return cnt[v];
+	cnt[v] = 0;
+	for (int i = 0; i < g[v].size(); ++i)
+		cnt[v] += Count(g[v][i]);
+	return cnt[v];
+}
+
+void Dfs(int v) {
+	if (was[v]) return;
+	was[v] = true;	
+
+	for (int i = 0; i <= n; ++i) 
+		if (st[v].next[26 + i] != -1) 
+			dp[v][i] = 1;
+
+	for (int i = 0; i < 26; ++i) if (st[v].next[i] != -1) {
+		int u = st[v].next[i];
+		Dfs(u);
+		for (int j = 0; j <= n; ++j) 
+			dp[v][j] += dp[u][j];
+	}
+
+	if (v && dp[v][0]) {
+		bool ok = true;
+		for (int i = 1; i <= n; ++i)
+			if (!(L[i] <= dp[v][i] && dp[v][i] <= R[i]))
+				ok = false;		
+		if (ok) ans += st[v].len - st[st[v].suff].len;
+	}
+}
+
+int main() {
+	scanf("%s", s);
+	for (int i = 0; s[i]; ++i)
+		addAutomat(s[i] - 'a');
+	addAutomat(26);
+	scanf("%d", &n);
+	for (int i = 1; i <= n; ++i) {
+		scanf("\n%s %d %d", &s, &L[i], &R[i]);
+		for (int j = 0; s[j]; ++j)
+			addAutomat(s[j] - 'a');
+		addAutomat(i + 26);
+	}
+			
+	for (int i = 0; i < sz; ++i) {
+		for (int ch = 0; ch < 26; ++ch) if (st[i].next[ch] != -1) 
+			g[st[i].next[ch]].pb(i);
+	}
+
+	memset(cnt, -1, sizeof(cnt));
+	Dfs(0);
+	printf("%I64d", ans);
+	return 0;
+}
+

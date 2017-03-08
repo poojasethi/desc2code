@@ -1,0 +1,115 @@
+#include <cstdio>
+using namespace std;
+const int N=100004,M=200004,oo=1000000000;
+int n,m,s[N],d[N],fa[N][18],fu[N],gu[N],fd[N],gd[N],c[N];
+int E,first[N],next[M],des[M],len[M];
+bool isM[N];
+void add(int u,int v,int w)
+{
+	next[++E]=first[u]; first[u]=E;
+	des[E]=v; len[E]=w;
+}
+void predfs(int u,int f)
+{
+	int i; d[u]=d[f]+1; fa[u][0]=f;
+	for (i=1;i<18;i++) fa[u][i]=0;
+	for (i=1;i<18;i++)
+	{
+		if (!fa[u][i-1]) break;
+		fa[u][i]=fa[fa[u][i-1]][i-1];
+	}
+	if (isM[u]) fd[u]=0,gd[u]=u;
+	else fd[u]=gd[u]=-oo;
+	for (i=first[u];i;i=next[i])
+	    if (des[i]!=f)
+	    {
+	    	int v=des[i];
+	    	predfs(v,u);
+	    	if (fd[v]<0) continue;
+	    	if (fd[v]+len[i]>fd[u]) fd[u]=fd[v]+len[i],gd[u]=gd[v];
+	    	else if (fd[v]+len[i]==fd[u]) gd[u]=u;
+	    }
+}
+void calcup(int u)
+{
+	int u1=-oo,u2=-oo,u3=-oo,x1,x2,x3,i;
+	for (i=first[u];i;i=next[i])
+	{
+		int v=des[i]; if (fa[u][0]==v) continue;
+		if (fd[v]+len[i]>u1) u3=u2,x3=x2,u2=u1,x2=x1,u1=fd[v]+len[i],x1=v;
+		else if (fd[v]+len[i]>u2) u3=u2,x3=x2,u2=fd[v]+len[i],x2=v;
+		else if (fd[v]+len[i]>u3) u3=fd[v]+len[i],x3=v;
+	}
+	for (i=first[u];i;i=next[i])
+	{
+		int v=des[i]; if (fa[u][0]==v) continue;
+		fu[v]=fu[u]; gu[v]=gu[u];
+		if (fu[v]>=0) fu[v]+=len[i];
+		if ((isM[v])&&(fu[v]<0)) fu[v]=0,gu[v]=v;
+		if (u1<0) {calcup(v); continue;}
+		if (fd[v]+len[i]==u1)
+		{
+			if ((u2<0)||(u2+len[i]<fu[v])) {calcup(v); continue;}
+			if ((u2==u3)||(u2+len[i]==fu[v])) gu[v]=u;
+			else gu[v]=gd[(x1==v)?x2:x1];
+			fu[v]=u2+len[i];
+		}
+		else if (u1+len[i]>=fu[v])
+		{
+			if ((u1==u2)||(u1+len[i]==fu[v])) gu[v]=u;
+			else gu[v]=gd[x1];
+			fu[v]=u1+len[i];
+		}
+		calcup(v);
+	}
+}
+int lca(int u,int v)
+{
+	if (d[u]>d[v]) v^=u,u^=v,v^=u;
+	if (d[v]>d[u]) for (int i=17;i>=0;i--) if (d[fa[v][i]]>=d[u]) v=fa[v][i];
+	if (u!=v)
+	{
+		for (int i=17;i>=0;i--) if (fa[v][i]!=fa[u][i]) u=fa[u][i],v=fa[v][i];
+		u=fa[u][0];
+	}
+	return u;
+}
+void dfs(int u)
+{
+	for (int i=first[u];i;i=next[i])
+	    if (des[i]!=fa[u][0])
+	    {
+	    	dfs(des[i]);
+	    	c[u]+=c[des[i]];
+	    }
+}
+int main()
+{
+	int i; scanf("%d%d",&n,&m);
+	E=0; for (i=1;i<=n;i++) first[i]=isM[i]=0;
+	for (i=1;i<=m;i++) scanf("%d",&s[i]),isM[s[i]]=true;
+	for (i=1;i<n;i++)
+	{
+		int u,v,w; scanf("%d%d%d",&u,&v,&w);
+		add(u,v,w); add(v,u,w);
+	}
+	d[0]=-1; predfs(1,0);
+	fu[1]=gu[1]=-oo; if (isM[1]) fu[1]=0,gu[1]=1; calcup(1);
+	for (i=1;i<=n;i++) c[i]=0;
+	for (i=1;i<=n;i++)
+	{
+		if ((!isM[i])||(fu[i]==fd[i])) continue;
+		int x=(fu[i]>fd[i])?gu[i]:gd[i],y=lca(x,i);
+		c[i]++; c[x]++; c[y]--; c[fa[y][0]]--;
+	}
+	dfs(1);
+	int ans=-1,cnt=0;
+	for (i=1;i<=n;i++)
+	{
+		if (isM[i]) continue;
+		if (c[i]>ans) ans=c[i],cnt=0;
+		if (c[i]==ans) cnt++;
+	}
+	printf("%d %d\n",ans,cnt);
+	return 0;
+}

@@ -1,0 +1,106 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <stack>
+#include <algorithm>
+#include <cstring>
+
+using namespace std;
+
+#define NAME "GERALD07"
+#define X first
+#define Y second
+#define mp make_pair
+#define pb push_back
+
+int const N = 2E5+10;
+int const LEN = 455;
+
+typedef pair<int, int> ii;
+typedef pair<ii, int> iii;
+int test, n, m, n_query, len, cnt;
+ii e[N];
+vector<iii> b[LEN];
+stack<ii> stk;
+int ans[N], p[N];
+
+bool cmp(const iii &a, const iii &b) { return a.X.Y < b.X.Y; }
+
+void enter() {
+    scanf("%d%d%d", &n, &m, &n_query);
+    for (int i=1; i<=m; ++i) scanf("%d%d", &e[i].X, &e[i].Y);
+    len = 0; while (len*len<m) ++len;
+    for (int i=0; i<len; ++i) b[i].resize(0);
+    for (int i=1; i<=n_query; ++i) {
+        int l, r;
+        scanf("%d%d", &l, &r);
+        b[(l-1)/len].pb(mp(mp(l, r), i));
+    }
+
+    for (int i=0; i<len; ++i)
+        sort(b[i].begin(), b[i].end(), cmp);
+}
+
+int find_set(int u) {
+    while (p[u]>0) u = p[u];
+    return u;
+}
+
+void union_set(int u, int v, bool ok) {
+    int r1 = find_set(u);
+    int r2 = find_set(v);
+    if (r1==r2) return;
+    cnt--;
+    if (p[r1]>p[r2]) swap(r1, r2);
+    if (ok) {
+        stk.push(mp(r1, p[r1]));
+        stk.push(mp(r2, p[r2]));
+    }
+    p[r1] += p[r2];
+    p[r2] = r1;
+}
+
+void roll_back() {
+    cnt += (int) stk.size() / 2;
+    while (!stk.empty()) {
+        ii u = stk.top();
+        stk.pop();
+        p[u.X] = u.Y;
+    }
+}
+
+void solve() {
+    int rmax = 0;
+    for (int i=0; i<len; ++i) {
+        rmax += len; int r1 = rmax+1;
+        memset(p, 255, sizeof(p));
+        cnt = n;
+        for (int j=0; j< b[i].size(); ++j) {
+            iii query = b[i][j];
+            if (query.X.Y <= rmax) {
+                for (int k=query.X.X; k<=query.X.Y; ++k)
+                    union_set(e[k].X, e[k].Y, true);
+                ans[query.Y] = cnt;
+                roll_back();
+            } else {
+                for (; r1 <= query.X.Y; ++r1)
+                    union_set(e[r1].X, e[r1].Y, false);
+                for ( int k = rmax; k>= query.X.X; --k)
+                    union_set(e[k].X, e[k].Y, true);
+                ans[query.Y] = cnt;
+                roll_back();
+            }
+        }
+    }
+}
+
+int main() {
+    //freopen(NAME".INP", "r", stdin);
+    //freopen(NAME".OUT", "w", stdout);
+    scanf("%d", &test);
+    for (; test; --test) {
+        enter();
+        solve();
+        for (int i=1; i<=n_query; ++i) printf("%d\n", ans[i]);
+    }
+}

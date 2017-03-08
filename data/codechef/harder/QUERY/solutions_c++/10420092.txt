@@ -1,0 +1,128 @@
+#include <iostream>
+#include <cstring>
+#include <cmath>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+#define N 100050
+#define M 35000050
+#define ll long long
+int sn[M][2],c[N*2][2],fi[N],fa[N],wei[N],rf[N],sg[N],nd[N];
+int h[N],rt[N],Now,_Now,n,m,st,ss=1;ll ans,ad[M][2],Cnt[M];
+inline int Read()
+ {
+ 	int x=0;char y;
+ 	do y=getchar(); while (y<'0'||y>'9');
+ 	do x=x*10+y-'0',y=getchar(); while (y>='0'&&y<='9');
+ 	return x;
+ }
+inline void Line(int x,int y)
+ {
+ 	c[++ss][0]=y;c[ss][1]=fi[x];fi[x]=ss;
+ 	c[++ss][0]=x;c[ss][1]=fi[y];fi[y]=ss;
+ 	return;
+ }
+void DFS(int x)
+ {
+ 	wei[x]=true;h[x]=h[fa[x]]+1;
+ 	for (int i=fi[x];i;i=c[i][1])
+ 	 if (c[i][0]!=fa[x])
+ 	   fa[c[i][0]]=x,DFS(c[i][0]),wei[x]+=wei[c[i][0]];
+ 	return;
+ }
+void DSF(int x,int y)
+ {
+ 	int k=false;rf[x]=y;nd[sg[x]=++st]=x;
+ 	for (int i=fi[x];i;i=c[i][1])
+ 	 if (c[i][0]!=fa[x]&&wei[c[i][0]]>wei[k]) k=c[i][0];
+ 	if (k) DSF(k,y);
+ 	for (int i=fi[x];i;i=c[i][1])
+ 	 if (c[i][0]!=fa[x]&&c[i][0]!=k) DSF(c[i][0],c[i][0]);
+ 	return;
+ }
+int Modify(int x,int y,int z,int o,int p,int u,int r)
+ {
+ 	int mid = x + y >> true, j = ++st;
+ 	sn[j][0]=sn[z][0];sn[j][1]=sn[z][1];
+ 	ad[j][0]=ad[z][0];ad[j][1]=ad[z][1];Cnt[j]=Cnt[z];
+ 	if (x==o&&y==p) {ad[j][0]+=u;ad[j][1]+=r;return j;}
+ 	Cnt[j] += u*(p-o+1LL)+1LL*(p-o)*(p-o+1)/2*r;
+ 	if (p<=mid) sn[j][0]=Modify(x,mid,sn[z][0],o,p,u,r); else
+ 	 if (o>mid) sn[j][1]=Modify(mid+1,y,sn[z][1],o,p,u,r); else
+ 	   sn[j][0]=Modify(x,mid,sn[z][0],o,mid,u,r),
+ 	   sn[j][1]=Modify(mid+1,y,sn[z][1],mid+1,p,u+(mid+1-o)*r,r);
+ 	return j;
+ }
+ll Query(int x,int y,int z,int o,int p)
+ {
+ 	int mid = x + y >> true;ll _Cnt;
+ 	_Cnt = (p-o+1LL)*ad[z][0] + (o+p-2LL*x)*(p-o+1)/2*ad[z][1];
+ 	if (x==o&&y==p) return _Cnt+Cnt[z];
+ 	if (o<=mid) _Cnt += Query(x,mid,sn[z][0],o,min(mid,p));
+ 	if (p>mid) _Cnt += Query(mid+1,y,sn[z][1],max(o,mid+1),p);
+ 	return _Cnt;
+ }
+void _Query(int x,int y)
+ {
+ 	x = (x+ans)%n+1;y = (y+ans)%n+1;
+ 	ans = false;
+ 	while (rf[x]!=rf[y])
+ 	 {
+ 	 	if (h[rf[x]]<h[rf[y]]) swap(x,y);
+ 	 	ans += Query(1,n,_Now,sg[rf[x]],sg[x]);
+ 	 	x = fa[rf[x]];
+ 	 }
+ 	if (h[x]>h[y]) swap(x,y);
+ 	ans += Query(1,n,_Now,sg[x],sg[y]);
+ 	printf("%lld\n",ans);
+ 	return;
+ }
+int LCA(int x,int y)
+ {
+ 	while (rf[x]!=rf[y])
+ 	 {
+ 	 	if (h[rf[x]]<h[rf[y]]) swap(x,y);
+ 	 	x=fa[rf[x]];
+ 	 }
+ 	return h[x]<h[y]?x:y;
+ }
+void Up(int x,int y,int z,int o)
+ {
+ 	while (rf[x]!=rf[y])
+ 	 {
+ 	 	int k=(-h[rf[x]]+h[x])*o+z;
+ 	 	_Now=Modify(1,n,_Now,sg[rf[x]],sg[x],k,-o);
+ 	 	z=k+o;x=fa[rf[x]];
+ 	 }
+ 	int k=(h[x]-h[y])*o+z;
+ 	_Now=Modify(1,n,_Now,sg[y],sg[x],k,-o);
+ 	return;
+ }
+void _Modify(int x,int y,int z,int o)
+ {
+ 	Now++;int k = LCA(x,y);
+ 	Up(y,k,z+(h[x]+h[y]-2LL*h[k])*o,-o);
+ 	Up(x,k,z,o);
+ 	_Now=Modify(1,n,_Now,sg[k],sg[k],-z-1LL*o*(h[x]-h[k]),0);
+ 	rt[Now]=_Now;
+ 	return;
+ }
+int main()
+ {
+ 	n=Read();m=Read();
+ 	for (int i=1;i<n;i++) Line(Read(),Read());
+ 	DFS(1);DSF(1,1);st=false;
+    while (m--)
+     {
+     	char ch[20];scanf("%s",ch+1);
+     	if (ch[1]=='l')
+     	  _Now=rt[(Read()+ans)%(Now+1)]; else
+     	if (ch[1]=='q') _Query(Read(),Read()); else
+     	 {
+     	 	int k=Read(),l=Read(),q=Read(),w=Read();
+     	 	k=(k+ans)%n+1;l=(l+ans)%n+1;
+     	 	_Modify(k,l,q,w);
+     	 }
+     }
+    return 0;
+ }

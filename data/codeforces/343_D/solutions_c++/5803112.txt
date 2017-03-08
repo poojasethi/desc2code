@@ -1,0 +1,102 @@
+#include <cstdio>
+#include <iostream>
+#include <vector>
+#include <cstring>
+#define pb push_back
+using namespace std;
+vector<int> g[500010];
+const int SIZE=(1<<20);
+int n,q,k=0;
+int id[500010],end[500010];
+void dfs(int v,int p)
+{
+	id[v]=k++;
+	for(int i=0;i<g[v].size();i++)if(g[v][i]!=p)dfs(g[v][i],v);
+	end[v]=k;
+	return;
+}
+struct fill_tree
+{
+	int seg[SIZE*2];
+	fill_tree()
+	{
+		memset(seg,-1,sizeof(seg));
+	}
+	void change(int a,int b,int x,int k,int l,int r)
+	{
+		if(a>=r||b<=l)return;
+		else if(a<=l&&r<=b)seg[k]=x;
+		else
+		{
+			change(a,b,x,k*2+1,l,(l+r)/2);
+			change(a,b,x,k*2+2,(l+r)/2,r);
+		}
+	}
+	int query(int k)
+	{
+		k+=SIZE-1;
+		int r=seg[k];
+		while(k>0)
+		{
+			k=(k-1)/2;
+			r=max(r,seg[k]);
+		}
+		return r;
+	}
+	void change(int a,int b,int x)
+	{
+		change(a,b,x,0,0,SIZE);
+	}
+}ft;
+struct empty_tree
+{
+	int seg[SIZE*2];
+	empty_tree()
+	{
+		memset(seg,-1,sizeof(seg));
+	}
+	void change(int k,int x)
+	{
+		k+=SIZE-1;
+		seg[k]=x;
+		while(k>0)
+		{
+			k=(k-1)/2;
+			seg[k]=max(seg[k*2+1],seg[k*2+2]);
+		}
+		return;
+	}
+	int query(int a,int b,int k,int l,int r)
+	{
+		if(a>=r||b<=l)return -1;
+		else if(a<=l&&r<=b)return seg[k];
+		else return max(query(a,b,k*2+1,l,(l+r)/2),query(a,b,k*2+2,(l+r)/2,r));
+	}
+	int query(int a,int b)
+	{
+		return query(a,b,0,0,SIZE);
+	}
+}et;
+int main()
+{
+	cin >> n;
+	for(int i=0;i<n-1;i++)
+	{
+		int a,b;
+		cin >> a >> b;
+		a--;b--;
+		g[a].pb(b);
+		g[b].pb(a);
+	}
+	cin >> q;
+	dfs(0,-1);
+	for(int i=0;i<q;i++)
+	{
+		int type,v;
+		cin >> type >> v;v--;
+		if(type==1)ft.change(id[v],end[v],i);
+		else if(type==2)et.change(id[v],i);
+		else printf("%d\n",ft.query(id[v])>et.query(id[v],end[v]));
+	}
+	return 0;
+}

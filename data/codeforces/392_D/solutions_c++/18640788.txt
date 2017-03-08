@@ -1,0 +1,94 @@
+#include<cstdio>
+#include<algorithm>
+#include<cstring>
+#include<set>
+using namespace std;
+
+const int N=100010;
+int a[N],b[N],c[N],d[N*3],n,m,ans;
+int fr1[N*3],fr2[N*3],fr3[N*3];
+struct node{
+	int l,r,dl,dr,ans,tag;
+}t[N*4];
+multiset<int>s;
+multiset<int>::iterator ii;
+
+void push_down(int k){
+	if(t[k].tag==-1) return;
+	t[k*2].tag=t[k*2].dl=t[k*2].dr=t[k].tag;
+	t[k*2].ans=t[k].tag+t[k*2].l;
+	t[k*2+1].tag=t[k*2+1].dl=t[k*2+1].dr=t[k].tag;
+	t[k*2+1].ans=t[k].tag+t[k*2+1].l;
+	t[k].tag=-1;
+}
+void built(int k,int l,int r){
+	t[k].l=l; t[k].r=r; t[k].tag=-1;
+	if(l==r){
+		t[k].dl=t[k].dr=d[l]; 
+		t[k].ans=d[l]+l;
+		return;
+	}
+	int mid=(l+r)>>1;
+	built(k*2,l,mid); built(k*2+1,mid+1,r);
+	t[k].dl=t[k*2].dl; t[k].dr=t[k*2+1].dr;
+	t[k].ans=min(t[k*2].ans,t[k*2+1].ans);
+}
+void modify(int k,int l,int r,int x){
+	if(t[k].l==l&&t[k].r==r&&t[k].dl<=x){
+		t[k].dl=t[k].dr=t[k].tag=x;
+		t[k].ans=x+t[k].l;
+		return;
+	}
+	if(t[k].l==t[k].r) return;
+	push_down(k);
+	int mid=(t[k].l+t[k].r)>>1;
+	if(t[k*2].dr<x&&l<=mid) 
+	modify(k*2,l,min(mid,r),x);
+	if(t[k*2+1].dr<x&&r>mid) 
+	modify(k*2+1,max(l,mid+1),r,x);
+	t[k].dl=t[k*2].dl; t[k].dr=t[k*2+1].dr;
+	t[k].ans=min(t[k*2].ans,t[k*2+1].ans);
+}
+int find(int x){
+	int l=0,r=m,mid;
+	while(r-l>1){
+		mid=(r+l)>>1;
+		if(d[mid]>=x) r=mid;
+		else l=mid;
+	}
+	return r;
+}
+int main(){
+	scanf("%d",&n);
+	for(int i=1;i<=n;i++) scanf("%d",a+i),d[++m]=a[i];
+	for(int i=1;i<=n;i++) scanf("%d",b+i),d[++m]=b[i];
+	for(int i=1;i<=n;i++) scanf("%d",c+i),d[++m]=c[i];
+	sort(d+1,d+1+m);
+	m=unique(d+1,d+1+m)-d-1;
+	for(int i=1;i<=n;i++) a[i]=find(a[i]);
+	for(int i=1;i<=n;i++) b[i]=find(b[i]);
+	for(int i=1;i<=n;i++) c[i]=find(c[i]);
+	for(int i=1;i<=m;i++) fr1[i]=fr2[i]=fr3[i]=n*3;
+	for(int i=1;i<=n;i++) if(fr1[a[i]]==n*3) fr1[a[i]]=i;
+	for(int i=1;i<=n;i++) if(fr2[b[i]]==n*3) fr2[b[i]]=i;
+	for(int i=1;i<=n;i++) if(fr3[c[i]]==n*3) fr3[c[i]]=i;
+	for(int i=1;i<=m;i++)
+	if(fr1[i]==3*n) s.insert(fr3[i]);
+	s.insert(0);
+	for(int i=0;i<=n;i++){
+		if(i&&fr2[b[i]]==i&&fr1[b[i]]==3*n) {
+			ii=s.find(fr3[b[i]]);
+			if(ii!=s.end()) s.erase(ii);
+		}
+		ii=s.end(); ii--; 
+		d[i]=*ii;
+	}
+	built(1,0,n);
+	ans=t[1].ans+n;
+	for(int i=n;i;i--){
+		if(fr1[a[i]]==i) modify(1,0,min(n,fr2[a[i]]-1),fr3[a[i]]);
+		ans=min(ans,i-1+t[1].ans);
+	}
+	printf("%d\n",ans);
+	return 0;
+}

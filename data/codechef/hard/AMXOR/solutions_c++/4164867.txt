@@ -1,0 +1,214 @@
+/*
+ * AMXOR.cpp
+ *
+ * http://www.codechef.com/problems/AMXOR
+ *
+ */
+
+#include<stdio.h>
+#include<cstring>
+#include<ctype.h>
+#include<stdlib.h>
+#include<math.h>
+#include<vector>
+using namespace std;
+
+#define MAXSIZE 100002
+#define MODVALUE 1000000009
+#define INT_MAX 100000001
+
+#define MAX(a,b) \
+({ __typeof__ (a) _a = (a); \
+__typeof__ (b) _b = (b); \
+_a > _b ? _a : _b; })
+
+#define MIN(a,b) \
+({ __typeof__ (a) _a = (a); \
+__typeof__ (b) _b = (b); \
+_a < _b ? _a : _b; })
+
+inline void fastRead(long long int *a)
+{
+	register char c=0;
+	while (c<33) c=getchar_unlocked();
+	*a=0;
+	while (c>33)
+	{
+		*a=*a*10+c-'0';
+		c=getchar_unlocked();
+	}
+}
+inline void fastWrite(long long int a)
+{
+	register char c;
+	char snum[20];
+	int i=0;
+	do
+	{
+		snum[i++]=a%10+48;
+		a=a/10;
+	}while(a!=0);
+	i=i-1;
+	while(i>=0)
+		putchar_unlocked(snum[i--]);
+	putchar_unlocked('\n');
+}
+
+long long int modPow(long long int a, long long int x, long long int p) {
+    //calculates a^x mod p in logarithmic time.
+    long long int res = 1;
+    while(x > 0) {
+        if( x % 2 != 0) {
+            res = (res * a) % p;
+        }
+        a = (a * a) % p;
+        x /= 2;
+    }
+    return res;
+}
+
+long long int modInverse(long long int a, long long int mod) {
+    //calculates the modular multiplicative of a mod m.
+    //(assuming p is prime).
+    return modPow(a, mod-2, mod);
+}
+
+
+long long int factMod(long long int a,long long int mod)
+{
+	long long int result=1;
+//	if(a<=5000)
+//		return factHash[a];
+//	result=factHash[5000];
+	for(int i=1;i<=a;i++)
+	{
+		result=(result*i%mod)%mod;
+		//printf("%lld,",result);
+	}
+	return result;
+}
+long long int factMod(long long int a,long long int b,long long int mod) //a<b
+{
+
+//	if(a<=5000)
+//		return factHash[a];
+//	result=factHash[5000];
+	long long int result=1;
+	for(int i=a+1;i<=b;i++)
+	{
+		result=(result*i)%mod;
+		//printf("%lld,",result);
+	}
+	return result;
+}
+
+
+long long int fastgcd(long long int u, long long int v)
+{
+	long long int shift;
+    if (u == 0) return v;
+    if (v == 0) return u;
+    shift = __builtin_ctz(u | v);
+    u >>= __builtin_ctz(u);
+    do {
+        v >>= __builtin_ctz(v);
+        if (u > v) {
+            long long int t = v;
+            v = u;
+            u = t;
+        }
+        v = v - u;
+    } while (v != 0);
+    return u << shift;
+}
+
+int bitCount(int number)
+{
+	int count=0;
+	while(number)
+	{
+		count++;
+		number>>=1;
+	}
+	return count;
+}
+
+long long int modValues[30];
+void generateMod()
+{
+	for(int i=0;i<30;i++)
+		modValues[i]=modInverse(1<<i,MODVALUE);
+}
+int main()
+{
+	generateMod();
+	int T;
+	scanf("%d",&T);
+	while(T--)
+	{
+		int N;
+		scanf("%d",&N);
+
+		vector <int> input(100002);
+		//int input[100002];
+		int xorSum=0;
+		int max=0,maxbitCount=0;
+		for(int i=1;i<=N;i++)
+		{
+			long long int number;
+			fastRead(&number);
+			input[i]=(int)number;
+			xorSum^=input[i];
+			max=(input[i]>max)?input[i]:max;
+		}
+
+		int maxBits=bitCount(max);
+		long long int ans=0;
+		for(int i=maxBits-1;i>=0;i--)
+		{
+			long long int dp0=1,dp1=0;
+			long long int allOnes=1,allZeros=1;
+			for(int j=1;j<=N;j++)
+			{
+				long long int number=(long long int)input[j];
+				if(number & (1<<i))
+				{
+					input[j]=number-(1<<i);
+					long long int lessValuesStartingWithOne=(long long int)(input[j]+1);
+
+					allOnes*=lessValuesStartingWithOne;
+					if(allOnes>=MODVALUE)
+						allOnes%=MODVALUE;
+
+
+					long long int temp=(lessValuesStartingWithOne*dp0+(1<<i)*dp1)%MODVALUE;// new value for dp1
+					dp0=(lessValuesStartingWithOne*dp1+(1<<i)*dp0)%MODVALUE;
+					dp1=temp;
+				}
+				else
+				{
+					allZeros*=(number+1);
+					if(allZeros>=MODVALUE)
+						allZeros%=MODVALUE;
+
+					dp1=((number+1)*dp1)%MODVALUE;
+					dp0=((number+1)*dp0)%MODVALUE;
+
+				}
+
+			}
+
+			ans+=(((xorSum&(1<<i)?dp1:dp0)+MODVALUE-(allOnes*allZeros)%MODVALUE)*modValues[i]);
+
+
+			if(ans>=MODVALUE)
+				ans%=MODVALUE;
+
+		}
+		//fastWrite((ans+1)%MODVALUE)
+		printf("%lld\n",(ans+1)%MODVALUE);
+
+
+	}
+}
+

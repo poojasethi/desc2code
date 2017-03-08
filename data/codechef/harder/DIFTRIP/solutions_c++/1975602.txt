@@ -1,0 +1,138 @@
+#include<cstdio>
+#include<vector>
+#include<set>
+#include<map>
+#include<queue>
+#include<algorithm>
+#include<string>
+#include<utility>
+#include<cassert>
+#include<cstring>
+using namespace std;
+
+#define REP(i,a,b) for(i=a;i<b;i++)
+#define rep(i,n) REP(i,0,n)
+
+#define ll long long
+
+void intIntSort(int d[],int m[],int s){int i=-1,j=s,k,t;if(s<=1)return;k=(d[0]+d[s-1])/2;for(;;){while(d[++i]<k);while(d[--j]>k);if(i>=j)break;t=d[i];d[i]=d[j];d[j]=t;t=m[i];m[i]=m[j];m[j]=t;}intIntSort(d,m,i);intIntSort(d+j+1,m+j+1,s-j-1);}
+
+int N, logN;
+vector<int> edge[110000];
+
+int up[110000][25], level[110000];
+int val[25][110000], tmp_val[110000];
+int ind[110000], unival[110000];
+
+void gen_up(void){
+  int i, j, k;
+  static int st[110000], st_size;
+
+  up[0][0] = -1;
+  level[0] = 1;
+  st[0] = 0; st_size = 1;
+  while(st_size){
+    i = st[--st_size];
+    REP(j,1,logN){
+      if(up[i][j-1]==-1) up[i][j] = -1;
+      else               up[i][j] = up[up[i][j-1]][j-1];
+    }
+    rep(j,edge[i].size()){
+      k = edge[i][j];
+      if(k==up[i][0]) continue;
+      st[st_size++] = k;
+      up[k][0] = i;
+      level[k] = level[i]+1;
+    }
+  }
+}
+
+int get_up(int node, int depth){
+  int i;
+  if(node < 0 || depth == 0) return node;
+
+  for(i=1;(1<<i)<=depth;i++); i--;
+  return get_up(up[node][i], depth-(1<<i));
+}
+
+
+int LCP(int a, int b){
+  int i;
+
+  if(a < 0 || b < 0) return 0;
+  if(edge[a].size() != edge[b].size()) return 0;
+  
+  rep(i,logN) if(val[i][a]!=val[i][b]) return (1<<(i-1)) + LCP(up[a][i-1], up[b][i-1]);
+  
+  return level[a];
+}
+
+int main(){
+  int i, j, k, m, cnt;
+  ll res;
+  static vector<int> vec[2][100001];
+
+  assert( scanf("%d",&N)==1 );
+  assert( 1<=N && N<=100000 );
+
+  for(logN=0; (1<<logN) < N; logN++);
+  logN += 1;
+  
+  rep(i,N) edge[i].clear();
+  rep(i,N-1){
+    assert( scanf("%d%d",&j,&k)==2 ), j--, k--;
+    assert( 0<=j && j<N && 0<=k && k<N && j!=k );
+    edge[j].push_back(k);
+    edge[k].push_back(j);
+  }
+
+  /* get ancestor with doubling */
+  gen_up();
+
+  cnt = 1;
+  rep(i,N) vec[0][edge[i].size()].push_back(i);
+  rep(i,N) if(vec[0][i].size()){
+    rep(j,vec[0][i].size()) val[0][vec[0][i][j]] = cnt;
+    cnt++;
+  }
+
+  REP(k,1,logN){
+    /* radix sort */
+    cnt = 0;
+    rep(i,N+1) vec[0][i].clear(), vec[1][i].clear();
+    rep(i,N){
+      if(up[i][k-1]>=0) tmp_val[i] = val[k-1][up[i][k-1]];
+      else              tmp_val[i] = 0;
+      vec[0][tmp_val[i]].push_back(i);
+
+    }
+    //rep(i,N) vec[0][tmp_val[i]].push_back(i);
+
+    rep(i,N+1) rep(j,vec[0][i].size()){
+      m = vec[0][i][j];
+      vec[1][val[k-1][m]].push_back(m);
+    }
+    cnt = 1;
+    rep(i,N+1) if(vec[1][i].size()){
+      rep(j,vec[1][i].size()){
+        if(j && tmp_val[vec[1][i][j-1]]!=tmp_val[vec[1][i][j]]) cnt++;
+        val[k][vec[1][i][j]] = cnt;
+      }
+      cnt++;
+    }
+  }
+
+  rep(i,N) ind[i] = i, unival[i] = val[logN-1][i];
+  intIntSort(unival, ind, N); /* sort: unival[i]<=unival[i+1] */
+
+  res = 0;
+  rep(i,N-1){
+    k = LCP(ind[i], ind[i+1]); /* k is the number of similar paths between starting by ind[i] and ind[j]*/
+    res += level[ind[i]] - k;
+  }
+  res += level[ind[N-1]];
+
+  printf("%lld\n",res);
+
+  return 0;
+}

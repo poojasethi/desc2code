@@ -1,0 +1,231 @@
+//Autor: Mateusz Wasylkiewicz
+//Zawody: Codeforces Round #364 (Div. 1)
+//Strona: http://codeforces.com/contest/700
+//Zadanie: C. Break Up
+//Czas: O(n*m)
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef long long LL;
+typedef vector<int> VI;
+typedef pair<int, int> PII;
+#define FOR(x, a, b) for (int x = (a); x <= (b); x++)
+#define FORD(x, a, b) for (int x = (a); x >= (b); x--)
+#define REP(x, n) for (int x = 0; x < (n); x++)
+#define VAR(v, n) __typeof(n) v = (n)
+#define ALL(c) (c).begin(), (c).end()
+#define SIZE(x) (int((x).size()))
+#define FOREACH(i, c) for (VAR(i, (c).begin()); i != (c).end(); i++)
+#define PB push_back
+#define ST first
+#define ND second
+#define POKAZ(x) cerr << #x << " = " << (x) << '\n'
+
+const int MAX = 1010, INF = 1000000100;
+int n, s, t, sciezka_roz;
+PII sciezka[MAX];
+
+namespace G
+{
+	struct E
+	{
+		int v, l, nr, rev;
+		E(int vv, int ll, int n, int r) : v(vv), l(ll), nr(n), rev(r) {}
+	};
+	
+	struct V : vector<E>
+	{
+		bool odw;
+		int wej, wyj, low;
+	};
+	
+	V g[MAX];
+	PII bez[2];
+	
+	void dodaj_krawedz(int a, int b, int l, int nr)
+	{
+		g[a].PB(E(b, l, nr, SIZE(g[b])));
+		g[b].PB(E(a, l, nr, SIZE(g[a]) - 1));
+	}
+	
+	void wyczysc_odw()
+	{
+		REP(v, n)
+			g[v].odw = false;
+	}
+	
+	bool dfs1(int v)
+	{
+		g[v].odw = true;
+		if (v == t)
+			return true;
+		REP(i, SIZE(g[v]))
+		{
+			int u = g[v][i].v;
+			if ((! g[u].odw) && dfs1(u))
+			{
+				sciezka[sciezka_roz++] = PII(v, i);
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	void znajdz_sciezke()
+	{
+		wyczysc_odw();
+		sciezka_roz = 0;
+		dfs1(s);
+	}
+	
+	void wypelnij_bez(const PII& bezemnie)
+	{
+		bez[0] = bezemnie;
+		int v = bezemnie.ST;
+		VAR(e, G::g[v].begin());
+		e += bezemnie.ND;
+		bez[1] = PII(e->v, e->rev);
+	}
+	
+	inline bool legalna_krawedz(int v, int k)
+	{
+		PII pom(v, k);
+		REP(i, 2)
+			if (pom == bez[i])
+				return false;
+		return true;
+	}
+	
+	int CZAS;
+	PII WYNIK;
+	
+	void dfs2(int v, int rev = -1)
+	{
+		g[v].odw = true;
+		g[v].wej = g[v].low = CZAS++;
+		REP(i, SIZE(g[v]))
+			if (i != rev && legalna_krawedz(v, i))
+			{
+				VAR(e, g[v].begin());
+				e += i;
+				int u = e->v;
+				if (! g[u].odw)
+				{
+					dfs2(u, e->rev);
+					g[v].low = min(g[v].low, g[u].low); 
+					if (g[v].wej < g[u].low && g[t].odw
+							&& g[u].wej <= g[t].wej && g[t].wyj <= g[u].wyj
+							&& (WYNIK.ST == -2 || e->l < g[WYNIK.ST][WYNIK.ND].l))
+						WYNIK = PII(v, i);
+				}
+				else
+					g[v].low = min(g[v].low, g[u].wej);
+			}
+		g[v].wyj = CZAS++;
+	}
+	
+	PII znajdz_najkrotszy_most_bez(const PII& bezemnie)
+	{
+		wypelnij_bez(bezemnie);
+		wyczysc_odw();
+		WYNIK = PII(-2, -1);
+		CZAS = 0;
+		dfs2(s);
+		return g[t].odw ? WYNIK : PII(-1, -1);
+	}
+}
+
+inline int koszt(const PII& a)
+{
+	return G::g[a.ST][a.ND].l; 
+}
+
+struct Wynik
+{
+	int c, suma;
+	PII w[2];
+	
+	Wynik(int cc) : c(cc), suma(cc == 0 ? 0 : 2 * INF) {}
+	
+	Wynik(const PII& a) : c(1)
+	{
+		w[0] = a;
+		suma = koszt(a);
+	}
+	
+	Wynik(const PII& a, const PII& b) : c(2)
+	{
+		w[0] = a;
+		w[1] = b;
+		suma = koszt(a) + koszt(b);
+	}
+	
+	bool operator < (const Wynik& dane) const
+	{
+		return suma < dane.suma;
+	}
+};
+
+void wczytaj_dane()
+{
+	int m;
+	cin >> n >> m >> s >> t;
+	s--;
+	t--;
+	FOR(i, 1, m)
+	{
+		int x, y, w;
+		cin >> x >> y >> w;
+		G::dodaj_krawedz(--x, --y, w, i);
+	}
+}
+
+Wynik rozwiaz()
+{
+	G::znajdz_sciezke();
+	if (sciezka_roz == 0)
+		return Wynik(0);
+	Wynik wynik(-1);
+	REP(i, sciezka_roz)
+	{
+		PII najkrotszy_most = G::znajdz_najkrotszy_most_bez(sciezka[i]);
+		if (najkrotszy_most.ST == -1) //mostu nie ma, bo sciezka[i] juz jest mostem
+			wynik = min(wynik, Wynik(sciezka[i]));
+		else if (najkrotszy_most.ST >= 0) //most zostal znaleziony
+			wynik = min(wynik, Wynik(sciezka[i], najkrotszy_most));
+		//w.p.p. nie znaleziono mostu
+	}
+	return wynik;
+}
+
+inline int numer(const PII& a)
+{
+	return G::g[a.ST][a.ND].nr;
+}
+
+void wypisz_wynik(const Wynik& w)
+{
+	if (w.c == -1)
+		cout << "-1\n";
+	else
+	{
+		cout << w.suma << '\n' << w.c << '\n';
+		REP(i, w.c)
+			cout << numer(w.w[i]) << ' ';
+		cout << '\n';
+	}
+}
+
+void zrob_test()
+{
+	wczytaj_dane();
+	wypisz_wynik(rozwiaz());
+}
+
+int main()
+{
+	ios_base::sync_with_stdio(false);
+	cin.tie(NULL);
+	zrob_test();
+	return 0;
+}

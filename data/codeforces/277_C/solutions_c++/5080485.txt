@@ -1,0 +1,137 @@
+#include <stdio.h>
+
+#include <algorithm>
+#include <map>
+#include <vector>
+
+using namespace std;
+
+int cutLen(vector<pair<int, int> > v)
+{
+	pair<int, int> p(0, 0);
+	int len = 0;
+	for(int i=0; i<v.size(); ++i)
+		if(v[i].first <= p.second)
+			p.second = max(v[i].second, p.second);
+		else
+		{
+			len += p.second - p.first;
+			p = v[i];
+		}
+	len += p.second - p.first;
+	
+	return len;
+}
+
+int solve(vector<pair<int, int> > v, int len)
+{
+	int prev = 0;
+	for(int i=0; i<v.size(); ++i)
+		if(v[i].first > prev)
+		{
+			if(len <= v[i].first - prev)
+				break;
+			len -= v[i].first - prev;
+			prev = v[i].second;
+		}
+		else
+			prev = max(prev, v[i].second);
+	
+	return prev + len;
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen ("277c.in", "r", stdin);
+	freopen ("277c.out", "w", stdout);
+#endif
+
+	int w, h, n;
+	scanf ("%d %d %d", &w, &h, &n);
+
+	map<int, vector<pair<int, int> > > row, col;
+	
+	while(n--)
+	{
+		int x1, y1, x2, y2;
+		scanf ("%d %d %d %d", &x1, &y1, &x2, &y2);
+		if(y1 == y2)
+		{
+			if(x1 > x2)
+				swap(x1, x2);
+			row[y1].push_back(make_pair(x1, x2));
+		}
+		else
+		{
+			if(y1 > y2)
+				swap(y1, y2);
+			col[x1].push_back(make_pair(y1, y2));
+		}
+	}
+
+	int ret = 0;
+	if((h - row.size()) % 2 == 0)
+		ret ^= w;
+	if((w - col.size()) % 2 == 0)
+		ret ^= h;
+	
+	for(map<int, vector<pair<int, int> > >::iterator it=row.begin(); it!=row.end(); ++it)
+	{
+		sort(it->second.begin(), it->second.end());
+		int len = w - cutLen(it->second);
+		ret ^= len;
+	}
+
+	for(map<int, vector<pair<int, int> > >::iterator it=col.begin(); it!=col.end(); ++it)
+	{
+		sort(it->second.begin(), it->second.end());
+		int len = h - cutLen(it->second);
+		ret ^= len;
+	}
+
+	if(!ret){
+		printf ("SECOND");
+		return 0;
+	}
+	
+	printf ("FIRST\n");
+
+	for(int i=1; ; ++i)
+	{
+		if(i < h)
+		{
+			int y = i;
+			vector<pair<int, int> > v;
+			if(row.find(y) != row.end())
+				v = row[y];
+		
+			int len = w - cutLen(v);
+			len = len - (len ^ ret);
+			if(len > 0)
+			{
+				int x = solve(v, len);
+				printf ("0 %d %d %d", y, x, y);;
+				return 0;
+			}
+		}
+		
+		if(i < w)
+		{
+			int x = i;
+			vector<pair<int, int> > v;
+			if(col.find(x) != col.end())
+				v = col[x];
+		
+			int len = h - cutLen(v);
+			len = len - (len ^ ret);
+			if(len > 0)
+			{
+				int y = solve(v, len);
+				printf ("%d 0 %d %d", x, x, y);
+				return 0;
+			}
+		}
+	}
+	return 0;
+}

@@ -1,0 +1,342 @@
+#include <cstdio>
+#include <cmath>
+#include <cstring>
+#include <cstdlib>
+#include <ctime>
+#include <cassert>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <set>
+#include <map>
+#include <list>
+#include <complex>
+#pragma comment(linker, "/STACK:266777216")
+using namespace std;
+
+typedef long long LL;
+typedef vector<int> VI;
+typedef vector<VI> VVI;
+typedef vector<LL> VLL;
+typedef pair<int,int> PII;
+typedef vector<PII> VPII;
+typedef vector<double> VD;
+typedef pair<double,double> PDD;
+
+const int inf=1000000000;
+const LL INF=LL(inf)*inf;
+const double eps=1e-9;
+const double PI=2*acos(0.0);
+#define bit(n) (1<<(n))
+#define bit64(n) ((LL(1))<<(n))
+#define pb push_back
+#define sz size()
+#define mp make_pair
+#define cl clear()
+#define all(a) (a).begin(),(a).end()
+#define fill(ar,val) memset((ar),(val),sizeof (ar))
+#define MIN(a,b) {if((a)>(b)) (a)=(b);}
+#define MAX(a,b) {if((a)<(b)) (a)=(b);}
+#define min(a,b) (a<b?a:b)
+#define sqr(x) ((x)*(x))
+#define X first
+#define Y second
+
+#define p_len 4
+const int base=10000;
+#define NN 50/p_len
+
+struct num
+{
+	int len;
+	int it[NN];
+
+	num(LL n=0)
+	{
+		for(len=0;n>0;n/=base) it[len++]=n%base;
+	}
+
+	void print() const
+	{
+		if(len==0) printf("0"); else
+		{
+			int i=len-1;
+			printf("%d",it[i]);
+			char s[10];
+			sprintf(s,"%%0%dd",p_len);
+			for(i--;i>=0;i--) printf(s,it[i]);
+		}
+		printf("\n");
+	}
+};
+
+num operator*(num &a,num &b)
+{
+	num prod(0);
+	memset(prod.it,0,sizeof prod.it);
+	if(b.len==0 || a.len==0) return prod;
+	int i,j,d;
+	for(i=0;i<a.len;i++)
+	{
+		if(a.it[i]>0)
+		{
+			d=0;
+			for(j=0;j<b.len;j++)
+			{
+				d+=prod.it[i+j]+a.it[i]*b.it[j];
+				prod.it[i+j]=d%base;
+				d/=base;
+			}
+			if(d>0) prod.it[i+j]=d;
+		}
+	}
+	prod.len=a.len+b.len;
+	if(prod.it[prod.len-1]==0) prod.len--;
+	return prod;
+}
+
+
+int gcd(int a,int b)
+{
+	int c;
+	while(b) c=a%b,a=b,b=c;
+	return a;
+}
+
+#define N 100001
+int minp[N];
+int primes[N];
+int plen;
+
+void sieve()
+{
+	for(int i=2;i<N;i++) if(!minp[i])
+	{
+		primes[plen++]=i;
+		for(int j=i;j<N;j+=i)
+			if(!minp[j]) minp[j]=i;
+	}
+}
+
+int factor_it;
+VPII factor(int n) // n < 2e9
+{
+	VPII res;
+	if(n<N)
+	{
+		for(;n>1;)
+		{
+			int p=minp[n];
+			int a=0;
+			for(;n%p==0;n/=p) a++;
+			res.pb(mp(p,a));
+		}
+		factor_it=0;
+	}
+	else
+	{
+		int i;
+		for(i=0;i<plen;i++)
+		{
+			int p=primes[i];
+			if(p*p>n) break;
+			if(n%p) continue;
+			int a=0;
+			for(;n%p==0;n/=p) a++;
+			res.pb(mp(p,a));
+		}
+		if(n>1) res.pb(mp(n,1));
+		factor_it=i;
+	}
+	return res;
+}
+
+VPII unite(const VPII &a,const VPII &b)
+{
+	VPII res;
+	int i,j;
+	for(i=j=0;i<a.sz && j<b.sz;)
+		if(a[i].X<b[j].X) res.pb(a[i++]); else
+		if(a[i].X>b[j].X) res.pb(b[j++]); else
+		{
+			res.pb(mp(a[i].X,a[i].Y+b[j].Y));
+			i++;j++;
+		}
+	for(;i<a.sz;) res.pb(a[i++]);
+	for(;j<b.sz;) res.pb(b[j++]);
+	return res;
+}
+
+int tau(const VPII &pa)
+{
+	int res=1;
+	for(int i=pa.sz;i--;)
+		res*=pa[i].Y+1;
+	return res;
+}
+
+namespace find_div
+{
+	int sqn;
+	VPII pa;
+	VI res;
+
+	void rec(int i,int d)
+	{
+		if(i==pa.sz)
+		{
+			res.pb(d);
+			return;
+		}
+		rec(i+1,d);
+		for(int j=pa[i].Y;j--;)
+		{
+			int p=pa[i].X;
+			if(d>sqn/p) break;
+			d*=p;
+			rec(i+1,d);
+		}
+	}
+
+	VI divisors(LL n,const VPII &pa_) // return only divisors <= sqrt(n)
+	{
+		sqn=sqrt(1.*n)+eps;
+		pa=pa_;
+		res.cl;
+		rec(0,1);
+		return res;
+	}
+}
+
+LL frac(LL a,LL b)
+{
+	if(a<0) return 0;
+	return a/b+1;
+}
+
+const int maxM = 2000000000;
+
+int count(int n,LL mx)
+{
+	int i,k;
+	int ans=0;
+
+	VPII pa_n=factor(n);
+	int tot=0;
+	for(k=1;;k++)
+	{
+		int m=(k+1)*n-k;
+		if(m>maxM) break;
+		LL w=LL(n)*m;
+		VPII pa=unite(factor(m),pa_n);
+		tot+=factor_it+tau(pa);
+		if(tot>4*n) break;
+		VI dvs=find_div::divisors(w,pa);
+		int cur=0;
+		for(i=dvs.sz;i--;)
+		{
+			int d=dvs[i];
+			if((d+n)%k==0 && (w/d+n)%k==0 && (w/d+n)/k<=mx)
+				cur+=1+(d<w/d);
+		}
+		ans+=cur;
+	}
+	fprintf(stderr,"k=%d   ",k);
+	LL nk=LL(n)*((k+1)*n-k);
+	int maxx=min(mx,LL((sqrt(1.*nk)+n)/k+eps));
+	for(int x=1;x<=maxx;x++)
+	{
+		int g=gcd(n,x);
+		int x1=x/g;
+		int n1=n/g;
+		int m=n+x-1;
+		for(;;)
+		{
+			g=gcd(m,x1);
+			if(g==1) break;
+			m/=g;
+		}
+		int v=(n+x-1)/m;
+		int r=-m%x1;
+		if(r<0) r+=x1;
+		LL w=LL(n1)*m;
+		VPII pa=unite(factor(n1),factor(m));
+		int cur=0;
+		bool need_count=true;
+		if(LL(k)*x>n)
+		{
+			LL maxy=(nk/(x*k-n)+n)/k;
+			LL cnt=frac(maxy-v*r,v*x1)-frac(x-1-v*r,v*x1);
+			if(cnt<4*tau(pa))
+			{
+				if(cnt<=0) continue;
+				for(LL t=(maxy-v*r)/(v*x1);;t--)
+				{
+					LL z=x1*t+r;
+					LL y=v*z;
+					if(y<x) break;
+					if(w%z==0 && y<=mx)
+						cur+=1+(y>x);
+				}
+				need_count=false;
+			}
+		}
+		if(need_count)
+		{
+			VI dvs_half=find_div::divisors(w,pa);
+			VLL dvs;
+			for(i=dvs_half.sz;i--;)
+			{
+				int d=dvs_half[i];
+				dvs.pb(d);
+				if(d<w/d) dvs.pb(w/d);
+			}
+			for(i=dvs.sz;i--;)
+			{
+				LL z=dvs[i];
+				LL y=v*z;
+				if((z-r)%x1==0 && LL(n)*(n+x+y-1)/LL(y)/x>=k && x<=y && y<=mx)
+					ans+=1+(x<y);
+			}
+		}
+		ans+=cur;
+	}
+	return ans;
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("in.txt","r",stdin);
+#endif
+
+	clock_t start=clock();
+
+	sieve();
+
+	int TST,tst;
+	scanf("%d",&TST);
+	for(tst=0;tst<TST;tst++)
+	{
+		int n;
+		LL mx;
+		scanf("%d%lld",&n,&mx);
+		mx-=n+1;
+		if(n==0)
+		{
+			num a(mx);
+			a=a*a;
+			a.print();
+		}
+		else
+		{
+			int ans=count(n,mx);
+			printf("%d\n",ans);
+		}
+	}
+	fprintf(stderr,"time=%.3lfsec\n",0.001*(clock()-start));
+	return 0;
+}

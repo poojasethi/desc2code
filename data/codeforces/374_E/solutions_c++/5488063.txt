@@ -1,0 +1,85 @@
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#include <set>
+using namespace std;
+
+#define ii pair<int, int>
+#define iii pair<int, ii>
+
+const int N = 2005;
+
+int n, m;
+int blue[N][2], red[N][2];
+iii tver[N], thor[N];
+set<int> s;
+
+inline bool cmp(const iii &a, const iii &b) {
+	return a.second.second > b.second.second;
+}
+
+inline bool can(int t) {
+	for (int i = 1; i <= n; i++) {
+		int x = blue[i][0], y = blue[i][1];
+		tver[i] = iii(x+y, ii(x-y - 2*t, x-y + 2*t));
+	}
+	for (int i = 1; i <= m; i++) {
+		int x = red[i][0], y = red[i][1];
+		thor[i] = iii(x-y, ii(x+y - 2*t, x+y + 2*t));
+	}
+	sort(tver+1, tver+1 + n);
+	sort(thor+1, thor+1 + m);
+	
+	vector<iii> hor, ver;
+	for (int i = 1; i <= m; i++) {
+		if (hor.empty() || hor.back().first != thor[i].first) {
+			hor.push_back(thor[i]);
+		} else if (hor.back().second.second + 1 >= thor[i].second.first) {
+			hor[hor.size()-1].second.second = max(hor[hor.size()-1].second.second, thor[i].second.second);
+		} else {
+			hor.push_back(thor[i]);
+	} }
+	sort(hor.begin(), hor.end(), cmp);
+	for (int i = 1; i <= n; i++) {
+		if (ver.empty() || ver.back().first != tver[i].first) {
+			ver.push_back(tver[i]);
+		} else if (ver.back().second.second + 1 >= tver[i].second.first) {
+			ver[ver.size()-1].second.second = max(ver[ver.size()-1].second.second, tver[i].second.second);
+		} else {
+			ver.push_back(tver[i]);
+	} }
+	
+	for (int i = 0; i < ver.size(); i++) {
+		s.clear();
+		int k = 0;
+		for (int j = ver.size()-1; ver[j].first > ver[i].first; j--) {
+			for (; k < hor.size() && hor[k].second.second >= ver[j].first; k++) {
+				if (hor[k].second.first <= ver[i].first) {
+					s.insert(hor[k].first);
+			} }
+			int l = max(ver[i].second.first, ver[j].second.first);
+			int r = min(ver[i].second.second, ver[j].second.second);
+			if (l < r) {
+				set<int>::iterator itl = s.lower_bound(l),
+													 itr = s.upper_bound(r);
+				bool flag = true;
+				if (itl == itr) flag = false;
+				else if (itl == s.end()) flag = false;
+				else if (++itl == itr) flag = false;
+				if (flag) return true;
+	} } }
+	return false;
+}
+
+int main() {
+	scanf("%d %d", &n, &m);
+	for (int i = 1; i <= n; i++) scanf("%d %d", blue[i], blue[i]+1);
+	for (int i = 1; i <= m; i++) scanf("%d %d", red[i], red[i]+1);
+	int lo = 0, hi = 4e6;
+	while (lo <= hi) {
+		int mid = lo+hi >> 1;
+		if (can(mid)) hi = mid - 1;
+		else lo = mid + 1;
+	}
+	printf(lo > 4e6? "Poor Sereja!\n": "%d\n", lo);
+}

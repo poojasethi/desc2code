@@ -1,0 +1,108 @@
+#include <cstdio>
+
+using namespace std;
+
+#define MAXN 100005
+#define MOD 1000000009
+#define MAXB 30
+
+int mod_pow(long long a, int b){
+    long long ret = 1;
+    
+    while(b){
+        if(b & 1) ret = ret * a % MOD;
+        a = a * a % MOD;
+        b >>= 1;
+    }
+    
+    return ret;
+}
+
+int main(){
+    int T,N;
+    int a[MAXN];
+    long long f[MAXB + 1];
+    
+    scanf("%d",&T);
+    
+    while(T--){
+        scanf("%d",&N);
+        
+        int sum = 0;
+        
+        for(int i = 0;i < N;++i){
+            scanf("%d",&a[i]);
+            sum = (sum ^ a[i]);
+        }
+        
+        for(int i = 0;i <= MAXB;++i){
+            int cont = 0;
+            long long prod = 1,prod2 = 1;
+            int p2 = (1 << i);
+            
+            for(int j = 0;j < N;++j){
+                int aux = (a[j] & (p2 - 1));
+                
+                if(a[j] >> i & 1){
+                    prod2 = prod2 * (aux + 1) % MOD;
+                    ++cont;
+                }else{
+                    prod = prod * (aux + 1) % MOD;
+                    prod2 = prod2 * (aux + 1) % MOD;
+                }
+            }
+            
+            if(cont == 0){
+                f[i] = (i == 0? 1 : f[i - 1]);
+                continue;
+            }
+            
+            long long dp0 = 1,dp1 = 0,aux0,aux1;
+            
+            for(int j = 0;j < N;++j){
+                if(a[j] >> i & 1){
+                    aux0 = (((a[j] & ((1 << i) - 1)) + 1) * dp1 + p2 * dp0) % MOD;
+                    aux1 = (((a[j] & ((1 << i) - 1)) + 1) * dp0 + p2 * dp1) % MOD;
+                    dp0 = aux0; dp1 = aux1;
+                }
+            }
+            
+            long long &res = f[i];
+            res = 0;
+            
+            if(sum >> i & 1){
+                // x impar
+                res = prod * dp1 % MOD;
+                
+                if(cont & 1){
+                    // y = 0
+                    res -= prod2;
+                    res = res * mod_pow(p2,MOD - 2) % MOD;
+                    res += (i == 0? 1 : f[i - 1]);
+                    res %= MOD;
+                    if(res < 0) res += MOD;
+                }else{
+                    res = res * mod_pow(p2,MOD - 2) % MOD;
+                }
+            }else{
+                // x par
+                res = prod * dp0 % MOD;
+                
+                if(cont & 1){
+                    res = res * mod_pow(p2,MOD - 2) % MOD;
+                }else{
+                    // y = 0
+                    res -= prod2;
+                    res = res * mod_pow(p2,MOD - 2) % MOD;
+                    res += (i == 0? 1 : f[i - 1]);
+                    res %= MOD;
+                    if(res < 0) res += MOD;
+                }
+            }
+        }
+        
+        printf("%d\n",(int)f[MAXB]);
+    }
+    
+    return 0;
+}

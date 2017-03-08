@@ -1,0 +1,111 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<iostream>
+#include<set>
+#include<vector>
+using namespace std;
+const int N = 200005;
+const int P = 99991;
+set<int>lzs;
+vector<int>E[N],ps[100005],gs[100005];
+typedef long long ll;
+ll r=0;
+int a[N],b[N],f[N],K;
+ll sum[N],u[N];
+int find(int v)
+{
+    int x=v%P;
+    for(int i=ps[x].size()-1;i>=0;i--)
+    {
+        if(ps[x][i]==v)return gs[x][i];
+    }
+    return -1;
+}
+bool cmp(int x,int y)
+{
+    return sum[x]<sum[y];
+}
+bool cmp2(int x,int y)
+{
+    return a[x]<a[y];
+}
+void work(int l1,int r1,int l2,int r2,int vv)
+{
+    if(l2>r2)return ;
+    for(int i=l1;i<=r1;i++)
+    {
+        int v=(sum[i]+vv+K)%K;
+        int id=find(v);
+        //printf("i:%d v:%d id:%d \n",i,v,id);
+        if(id==-1)continue;
+        int rd=upper_bound(E[id].begin(),E[id].end(),r2)-E[id].begin();
+        int ld=lower_bound(E[id].begin(),E[id].end(),l2)-E[id].begin();
+        r+=rd-ld;
+    }
+}
+int main()
+{
+    int n,i;
+    scanf("%d%d",&n,&K);
+    {
+        memset(u,false,sizeof(u));
+        b[0]=0;
+        for(i=1;i<=n;i++)
+        {
+            scanf("%d",&a[i]);
+            sum[i]=(sum[i-1]+a[i])%K;
+            b[i]=i;
+        }
+        r=0;
+        sort(b,b+n+1,cmp);
+        int k=0;
+        for(i=0;i<=n;i++)
+        {
+            if(i==0||sum[b[i]]!=sum[b[i-1]])k++;
+            f[b[i]]=k;
+        }
+        /*for(i=0;i<=n;i++)
+        {
+            printf("i:%d sum:%d f:%d \n",i,sum[i],f[i]);
+        }*/
+        for(i=0;i<=n;i++)
+        {
+            E[f[i]].push_back(i);
+            if(!u[f[i]])
+            {
+                ps[sum[i]%P].push_back(sum[i]);
+                gs[sum[i]%P].push_back(f[i]);
+                u[f[i]]=true;
+            }
+        }
+        lzs.insert(0);
+        lzs.insert(n+1);
+        for(i=1;i<=n;i++)b[i]=i;
+        sort(b+1,b+n+1,cmp2);
+        for(i=1;i<=n;i++)
+        {
+            set<int>::iterator it=lzs.upper_bound(b[i]);
+            int l2=b[i],r2=(*it)-1;
+            it--;
+            int l1=(*it),r1=b[i]-1;
+            //printf("L:%d R:%d \n",L,R);
+            //printf("l1:%d r1:%d l2:%d r2:%d \n",l1,r1,l2,r2);
+            if(r1-l1<r2-l2)
+            {
+                work(l1,r1,l2,r2,a[b[i]]);
+            }
+            else
+            {
+                work(l2,r2,l1,r1,(-a[b[i]])%K);
+            }
+            //printf("i:%d r:%d \n",i,r);
+            lzs.insert(b[i]);
+        }
+        cout << r-n << endl;
+        lzs.clear();
+        for(i=1;i<=k;i++)E[i].clear();
+        for(i=0;i<P;i++)ps[i].clear(),gs[i].clear();
+    }
+    return 0;
+}

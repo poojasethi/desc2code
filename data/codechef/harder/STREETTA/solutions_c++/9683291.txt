@@ -1,0 +1,126 @@
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+using namespace std;
+typedef long long LL;
+const LL inf=1ll<<60;
+struct line
+{
+	LL k,b;
+	line(LL _k=0,LL _b=0):k(_k),b(_b){}
+	LL calc(int x){return k*x+b;}
+	line &operator+=(const line &o){k+=o.k,b+=o.b;}
+};
+struct node
+{
+	node *ch[2];
+	int l,r;
+	bool exist;
+	line price,tax;
+	node(LL _l,LL _r):l(_l),r(_r)
+	{
+		exist=false;
+		price.k=price.b=0;
+		tax.k=tax.b=0;
+		ch[0]=ch[1]=NULL;
+	}
+}*root;
+void modify_price(node *u,int l,int r,line price)
+{
+	if(l<=u->l&&u->r<=r)
+	{
+		if(!u->exist){u->exist=true,u->price=price;return;}
+		line p1=u->price,p2=price;
+		if(p1.calc(u->l)<p2.calc(u->l))swap(p1,p2);
+		if(p1.calc(u->r)>=p2.calc(u->r))u->price=p1;
+		else
+		{
+			int mid=u->l+u->r>>1;
+			if(p1.calc(mid)>p2.calc(mid))
+			{
+				u->price=p1;
+				if(!u->ch[1])u->ch[1]=new node(mid+1,u->r);
+				modify_price(u->ch[1],l,r,p2);
+			}
+			else
+			{
+				u->price=p2;
+				if(!u->ch[0])u->ch[0]=new node(u->l,mid);
+				modify_price(u->ch[0],l,r,p1);
+			}
+		}
+	}
+	else
+	{
+		int mid=u->l+u->r>>1;
+		if(l<=mid)
+		{
+			if(!u->ch[0])u->ch[0]=new node(u->l,mid);
+			modify_price(u->ch[0],l,r,price);
+		}
+		if(r>mid)
+		{
+			if(!u->ch[1])u->ch[1]=new node(mid+1,u->r);
+			modify_price(u->ch[1],l,r,price);
+		}
+	}
+}
+void modify_tax(node *u,int l,int r,line tax)
+{
+	if(l<=u->l&&u->r<=r){u->tax+=tax;return;}
+	int mid=u->l+u->r>>1;
+	if(l<=mid)
+	{
+		if(!u->ch[0])u->ch[0]=new node(u->l,mid);
+		modify_tax(u->ch[0],l,r,tax);
+	}
+	if(r>mid)
+	{
+		if(!u->ch[1])u->ch[1]=new node(mid+1,u->r);
+		modify_tax(u->ch[1],l,r,tax);
+	}
+}
+void query(node *u,LL p,LL &price,LL &tax,bool &exist)
+{
+	if(!u)return;
+	if(u->exist)exist=true,price=max(price,u->price.calc(p));
+	tax+=u->tax.calc(p);
+	int mid=u->l+u->r>>1;
+	if(p<=mid)query(u->ch[0],p,price,tax,exist);
+	else query(u->ch[1],p,price,tax,exist);
+}
+int main(void)
+{
+//	freopen("STREETTA.in","r",stdin);
+	int n,m;
+	scanf("%d%d",&n,&m);
+	root=new node(1,n);
+	int opt,l,r;
+	LL k,b,price,tax;
+	bool exist;
+	while(m--)
+	{
+		scanf("%d",&opt);
+		if(opt==1)
+		{
+			scanf("%d%d%lld%lld",&l,&r,&k,&b);
+			b-=k*l;
+			modify_price(root,l,r,line(k,b));
+		}
+		else if(opt==2)
+		{
+			scanf("%d%d%lld%lld",&l,&r,&k,&b);
+			b-=k*l;
+			modify_tax(root,l,r,line(k,b));
+		}
+		else
+		{
+			scanf("%d",&l);
+			price=-inf,tax=0,exist=false;
+			query(root,l,price,tax,exist);
+			if(exist)printf("%lld\n",price+tax);
+			else printf("NA\n");
+		}
+	}
+	return 0;
+}

@@ -1,0 +1,23 @@
+#include <iostream>
+#include <algorithm>
+using namespace std;
+int p[]={0,1,2,3,4,5,6,7,8},x[9],y[9];
+int d(int a,int b){
+	return (x[p[a]]-x[p[b]])*(x[p[a]]-x[p[b]])+(y[p[a]]-y[p[b]])*(y[p[a]]-y[p[b]]);
+}
+int main(){
+	for(int i=1;i<=8;i++)
+		cin>>x[i]>>y[i];
+	do{
+		if (d(1,2)==d(2,3)&&d(2,3)==d(3,4)&&d(3,4)==d(4,1)&&d(1,3)==d(2,4)&&d(5,6)==d(7,8)&&d(5,8)==d(6,7)&&d(6,8)==d(5,7)){
+			cout<<"YES"<<endl;
+			for(int i=1;i<=8;i++){
+				cout<<p[i]<<" ";
+				if (i%4==0) cout<<endl;
+			}
+			return 0;
+		}
+	}while(next_permutation(p+1,p+9));
+	cout<<"NO";
+	return 0;
+}

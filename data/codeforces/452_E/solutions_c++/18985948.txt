@@ -1,0 +1,133 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <algorithm>
+
+#define MAXN 610000
+#define MOD 1000000007
+
+using namespace std;
+
+typedef long long int LL;
+
+int ch[MAXN][30],maxl[MAXN],par[MAXN],nCount=0,last,root;
+
+int newnode(int len)
+{
+    maxl[++nCount]=len;
+    return nCount;
+}
+
+void init()
+{
+    root=last=newnode(0);
+}
+
+int ans=0;
+LL num[MAXN][5];
+
+void extend(int x,int id)
+{
+    int p=last;
+    int np=newnode(maxl[p]+1);
+    while(p&&!ch[p][x])
+    {
+        ch[p][x]=np;
+        p=par[p];
+    }
+    if(!p)
+        par[np]=root;
+    else
+    {
+        int q=ch[p][x];
+        if(maxl[p]+1==maxl[q])
+            par[np]=q;
+        else
+        {
+            int nq=newnode(maxl[p]+1);
+            par[nq]=par[q];
+            memcpy(ch[nq],ch[q],sizeof(ch[q]));
+            par[q]=par[np]=nq;
+            while(p&&ch[p][x]==q)
+            {
+                ch[p][x]=nq;
+                p=par[p];
+            }
+        }
+    }
+    num[np][id]++;
+    last=np;
+}
+
+char S[MAXN];
+
+int inDegree[MAXN];
+int q[MAXN],topo[MAXN],tot=0;
+
+void toposort()
+{
+    int h=0,t=0;
+    for(int i=1;i<=nCount;i++)
+        inDegree[par[i]]++;
+    for(int i=1;i<=nCount;i++)
+        if(!inDegree[i])
+            q[t++]=i;
+    while(h<t)
+    {
+        int x=q[h++];
+        topo[++tot]=x;
+        inDegree[par[x]]--;
+        if(par[x]&&!inDegree[par[x]]) q[t++]=par[x];
+    }
+    for(int i=1;i<=tot;i++)
+    {
+        num[par[topo[i]]][1]+=num[topo[i]][1];
+        num[par[topo[i]]][2]+=num[topo[i]][2];
+        num[par[topo[i]]][3]+=num[topo[i]][3];
+    }
+}
+
+LL A[MAXN];
+
+int main()
+{
+    int minl=0x3f3f3f3f;
+    init();
+    int n;
+    scanf("%s",S+1);
+    n=strlen(S+1);
+    minl=min(minl,n);
+    for(int i=1;i<=n;i++)
+        extend(S[i]-'a',1);
+    extend(27,0);
+    scanf("%s",S+1);
+    n=strlen(S+1);
+    minl=min(minl,n);
+    for(int i=1;i<=n;i++)
+        extend(S[i]-'a',2);
+    extend(28,0);
+    scanf("%s",S+1);
+    n=strlen(S+1);
+    minl=min(minl,n);
+    for(int i=1;i<=n;i++)
+        extend(S[i]-'a',3);
+    toposort();
+    //LL sum1=0,sum2=0,sum3=0;
+    for(int i=1;i<=nCount;i++)
+    {
+        //sum1+=num[i][1],sum2+=num[i][2],sum3+=num[i][3];
+        LL tmp=num[i][1]*num[i][2]%MOD*num[i][3]%MOD;
+        A[maxl[par[i]]+1]=(A[maxl[par[i]]+1]+tmp)%MOD;
+        A[maxl[i]+1]=(A[maxl[i]+1]-tmp)%MOD;
+    }
+    //printf("dbg: %I64d %I64d %I64d\n",sum1,sum2,sum3);
+    for(int i=1;i<=minl;i++)
+        A[i]=(A[i]+A[i-1])%MOD;
+    for(int i=1;i<=minl;i++)
+    {
+        if(A[i]<0) A[i]+=MOD;
+        printf("%I64d ",A[i]);
+    }
+    printf("\n");
+    return 0;
+}

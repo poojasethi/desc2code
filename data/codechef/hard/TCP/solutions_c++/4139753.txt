@@ -1,0 +1,141 @@
+#include <stdio.h>
+#include <math.h>
+
+typedef long long INT64;
+const int N=10000;
+int T[N];
+int ct[N][4];
+int cv[N][4];
+
+INT64 get_gcd(INT64 a, INT64 b)
+{
+    INT64 remain=1;
+    while(remain)
+    {
+        remain = b%a;
+        b = a;
+        a = remain;
+    }
+    return b;
+}
+double get_root(double a, double b, double c, double d, double ub, double lb)
+{
+	while(ub-lb>=1e-12)
+	{
+		double slice=(ub-lb)/10;
+		for(int i=0;i<10;i++)
+		{
+			double u=lb+(i+1)*slice;
+			double l=lb+i*slice;
+			double x=a*u*u*u+b*u*u+c*u+d;
+			double y=a*l*l*l+b*l*l+c*l+d;
+			if(x*y<=0)
+			{
+				ub=u;
+				lb=l;
+				break;
+			}
+		}
+	}
+	return (ub+lb)/2;
+}
+
+int main(int argc, char* argv[])
+{
+	int i, j, n;
+	scanf("%d", &n);
+	for(i=0;i<n;i++)
+	{
+		scanf("%d", &T[i]);
+		for(j=0;j<4;j++)
+		{
+			scanf("%d %d", &ct[i][j], &cv[i][j]);
+		}
+	}
+	for(i=0;i<n;i++)
+	{
+		INT64 x[3]={0}, y[3]={0}, z[3]={0}, w[3]={0};
+		for(j=0;j<3;j++)
+		{
+			INT64 t1=ct[i][j+1], t2=ct[i][j];
+			x[j]=t1*t1*t1-t2*t2*t2;
+			y[j]=t1*t1-t2*t2;
+			z[j]=t1-t2;
+			w[j]=cv[i][j+1]-cv[i][j];
+		}
+		INT64 p[2]={0}, q[2]={0}, r[3]={0};
+		for(j=0;j<2;j++)
+		{
+			INT64 gcd=get_gcd(z[j], z[j+1]);
+			INT64 lcm=z[j]*(z[j+1]/gcd);
+			p[j]=x[j+1]*(lcm/z[j+1])-x[j]*(lcm/z[j]);
+			q[j]=y[j+1]*(lcm/z[j+1])-y[j]*(lcm/z[j]);
+			r[j]=w[j+1]*(lcm/z[j+1])-w[j]*(lcm/z[j]);
+		}
+		INT64 gcd=get_gcd(q[0], q[1]);
+		INT64 lcm=q[0]*(q[1]/gcd);
+		INT64 m=p[1]*(lcm/q[1])-p[0]*(lcm/q[0]);
+		INT64 n=r[1]*(lcm/q[1])-r[0]*(lcm/q[0]);
+		double a=(double)n/m;
+		double b=((double)r[0]-p[0]*a)/q[0];
+		double c=((double)w[0]-x[0]*a-y[0]*b)/z[0];
+		double t=ct[i][0];
+		double d=(double)cv[i][0]-t*t*t*a-b*t*t-c*t;
+		t=T[i];
+		double delta=b*b-3*a*c;
+		double dis=0;
+		double root[3]={0};
+		double lx=0, ux=0;
+		double ly=d, uy=0;
+		int cnt=0;
+		if(delta>=0)
+		{
+			double r1=(-1*b+sqrt(delta))/(3*a);
+			double r2=(-1*b-sqrt(delta))/(3*a);
+			double br=(r1>r2) ? r1 : r2;
+			double sr=(r1<r2) ? r1 : r2;			
+			if(sr>0 && sr<t)
+			{
+				uy=a*sr*sr*sr+b*sr*sr+c*sr+d;
+				ux=sr;
+				if(uy*ly<0)
+				{
+					root[cnt++]=get_root(a,b,c,d,ux,lx);
+				}
+				ly=uy;
+				lx=ux;
+			}
+			if(br>0 && br<t)
+			{
+				uy=a*br*br*br+b*br*br+c*br+d;
+				ux=br;
+				if(uy*ly<0)
+				{
+					root[cnt++]=get_root(a,b,c,d,ux,lx);
+				}
+				ly=uy;
+				lx=ux;
+			}
+		}
+		uy=a*t*t*t+b*t*t+c*t+d;
+		ux=t;
+		if(uy*ly<0)
+		{
+			root[cnt++]=get_root(a,b,c,d,ux,lx);
+		}
+		ly=0;
+		for(j=0;j<cnt;j++)
+		{
+			double x=root[j];
+			uy=a*x*x*x*x/4+b*x*x*x/3+c*x*x/2+d*x;
+			double area=uy-ly;
+			dis+=(area<0) ? -1*area : area;
+			ly=uy;
+		}
+		uy=a*t*t*t*t/4+b*t*t*t/3+c*t*t/2+d*t;
+		double area=uy-ly;
+		dis+=(area<0) ? -1*area : area;
+		printf("%.10f\n", dis);
+	}
+	return 0;
+}

@@ -1,0 +1,90 @@
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+typedef long long s64;
+
+const int MaxN = 100000;
+const int MaxM = 100000;
+const int D = 70;
+const int L = 7000;
+const int NLet = 26;
+
+string s;
+int n, m;
+int ak[MaxN + 1];
+
+string suf[D + 1];
+int sufc[D + 1][NLet][2 * L + 1];
+
+s64 getF(int d, int c, s64 l)
+{
+	if (l == 0)
+		return 0;
+	if (d == 0)
+		return sufc[0][c][l];
+	if (((s64)s.size() << (d - 1)) >= l)
+		return getF(d - 1, c, l);
+
+	s64 inh = (s64)sufc[0][c][s.size()] << (d - 1);
+	l -= (s64)s.size() << (d - 1);
+
+	inh += sufc[d - 1][c][suf[d - 1].size() - ak[d] + min(l, (s64)ak[d])] - sufc[d - 1][c][suf[d - 1].size() - ak[d]];
+	l -= min(l, (s64)ak[d]);
+	return inh + getF(d - 1, c, l);
+}
+
+int main()
+{
+	cin >> s;
+	cin >> n >> m;
+	for (int i = 1; i <= n; i++)
+		scanf("%d", &ak[i]);
+
+	int sh = 1;
+	while (sh <= n && s.size() < L)
+	{
+		string t;
+		t.resize(s.size());
+
+		for (int i = 0; i < (int)s.size(); i++)
+			t[(i + ak[sh]) % s.size()] = s[i];
+		s = s + t;
+
+		sh++;
+	}
+
+	for (int i = sh; i <= n; i++)
+		ak[i - sh + 1] = ak[i];
+	n -= sh - 1;
+
+	int tn = 0;
+	while (tn < n && ((s64)s.size() << tn) <= 1000000000000000000ll)
+		tn++;
+	n = tn;
+
+	suf[0] = s;
+	for (int i = 1; i <= n; i++)
+		suf[i] = suf[i - 1].substr(0, suf[i - 1].size() - ak[i]);
+
+	for (int i = 0; i <= n; i++)
+		for (int c = 0; c < 26; c++)
+		{
+			sufc[i][c][0] = 0;
+			for (int k = 0; k < (int)suf[i].size(); k++)
+				sufc[i][c][k + 1] = sufc[i][c][k] + (suf[i][k] == 'a' + c);
+		}
+
+	for (int iq = 1; iq <= m; iq++)
+	{
+		s64 l, r;
+		char cc;
+		scanf("%lld %lld %c", &l, &r, &cc);
+
+		int c = cc - 'a';
+		printf("%lld\n", getF(n, c, r) - getF(n, c, l - 1));
+	}
+
+	return 0;
+}

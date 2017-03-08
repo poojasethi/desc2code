@@ -1,0 +1,117 @@
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+#include<cstring>
+#include<queue>
+using namespace std;
+#define rep(i, a, b) for(int i = a; i < b; i++)
+#define CC(a, b) memset(a, b, sizeof(a))
+int n, m, K;
+int co[105][105];
+int dis[205][1 << 7];
+int key[105][105];
+int pi[205][1 << 7], ps[205][1 << 7];
+bool inq[205][1 << 7];
+queue<int> que;
+inline int ind(int x, int y) {
+	return x * m + y;
+}
+inline void insertq(int i, int sta, int val, int PI, int PS) {
+	if(dis[i][sta] == -1 || dis[i][sta] > val) {
+		dis[i][sta] = val;
+		pi[i][sta] = PI;
+		ps[i][sta] = PS;
+		if(!inq[i][sta]) {
+			que.push(i);
+			que.push(sta);
+			inq[i][sta] = true;
+		}		
+	}
+}
+int dir[4][2] = {
+	1, 0, -1, 0, 0, 1, 0, -1
+};
+int M;
+void bfs() {
+	memset(inq, false, sizeof(inq));
+	while(!que.empty()) que.pop();
+	for(int i = 0; i < n; i++) {
+		for(int j = 0; j < m; j++) {
+			if(key[i][j] == -1) continue;
+			insertq(ind(i, j), 1 << key[i][j], co[i][j], -1, 0);
+		}
+	}
+	M = (1 << K) - 1;
+	while(!que.empty()) {
+		int u = que.front(); que.pop();
+		int s = que.front(); que.pop();
+		inq[u][s] = false;
+		int bs = M ^ s;
+		int x = u / m, y = u % m;
+		for(int i = bs; i; i = bs & (i - 1)) {
+			if(dis[u][i] == -1) continue;
+			insertq(u, i | s, dis[u][s] + dis[u][i] - co[x][y], u, i);
+		}
+		for(int i = 0; i < 4; i++) {
+			int tx = x + dir[i][0], ty = y + dir[i][1];
+			if(tx < 0 || tx >= n || ty < 0 || ty >= m) continue;
+			insertq(ind(tx, ty), s, dis[u][s] + co[tx][ty], u, s);
+		}
+	}
+	
+}
+bool cov[205][205];
+bool vis[205][1 << 7];
+void DFS(int u, int s) {
+	if(u == -1 || s == 0) return ;
+//	cout<<u / m<<" ," << u % m<<" ... "<<s<<endl;
+//	system("PAUSE");
+	cov[u / m][u % m] = true;
+	vis[u][s] = true;
+	int v = pi[u][s], ss = ps[u][s];
+	if(!vis[v][ss]) DFS(v, ss);
+	if(!vis[u][ss ^ s]) DFS(u, ss ^ s);
+}
+void gao() {
+	int ans = 0x7fffffff;
+	int u = -1, s = -1;
+	for(int i = 0; i < n * m; i++) {
+		if(dis[i][M] == -1) continue;
+		if(dis[i][M] < ans) {
+			ans = dis[i][M];
+			u = i;
+			s = M;
+		}
+	}
+	printf("%d\n", ans);
+	memset(cov, false, sizeof(cov));
+	memset(vis, false, sizeof(vis));
+	DFS(u, s);
+	for(int i = 0; i < n; i++) {
+		for(int j = 0; j < m; j++) {
+			putchar(cov[i][j] ? 'X' : '.');
+		}
+		puts("");
+	}
+}
+int main() {
+	while(~scanf("%d%d%d", &n, &m, &K)) {
+		rep(i, 0, n) rep(j, 0, m) scanf("%d", &co[i][j]);
+		CC(key, -1);
+		int ind = 0;
+		rep(i, 0, K) {
+			int x, y;
+			scanf("%d%d", &x, &y);
+			x--, y--;
+			key[x][y] = ind++;
+		}
+		CC(dis, -1);
+		CC(pi, -1);
+		CC(ps, -1);
+		bfs();
+		gao();
+	}
+	return 0;
+}
+
+    			 			  							 	 	 	

@@ -1,0 +1,91 @@
+//In the name of God
+//...
+#include <iostream>
+#include <vector>
+using namespace std;
+const int N = 1e5 + 5, lg = 20, mod = 1e9 + 7;
+
+int n, m, cnt, k, par[N][lg], col[N], h[N], dp[N], path[N], p2[N] = {1};
+bool mark[N], cir[N];
+vector<int> adj[N], e[N];
+
+void dfs(int v, int par) {
+	static int ed = 0;
+	mark[v] = true;
+	path[ed++] = v;
+	for (int i = 0; i < (int) adj[v].size(); i++) {
+		int u = adj[v][i];
+		if (u == par)
+			continue;
+		if (col[v] == -1 && mark[u]) {
+			while (path[ed - 1] != u) {
+				col[path[--ed]] = cnt;
+			}
+			col[path[--ed]] = cnt;
+			cir[cnt++] = true;
+		}
+		else if (!mark[u])
+			dfs(u, v);
+	}
+	if (col[v] == -1) {
+		col[v] = cnt++;
+		ed--;
+	}
+}
+void dfs(int v) {
+	dp[v] += cir[v];
+	for (int i = 1; i < lg; i++)
+		par[v][i] = par[par[v][i - 1]][i - 1];
+	for (int i = 0; i < (int) e[v].size(); i++) {
+		int u = e[v][i];
+		if (u != par[v][0]) {
+			dp[u] = dp[v];
+			h[u] = h[v] + 1;
+			par[u][0] = v;
+			dfs(u);
+		}
+	}
+}
+int lca(int u, int v) {
+	if (h[u] > h[v])
+		swap(u, v);
+	for (int i = lg - 1; i >= 0; i--)
+		if (h[v] - h[u] >= 1 << i)
+			v = par[v][i];
+	for (int i = lg - 1; i >= 0; i--)
+		if (par[v][i] != par[u][i]) {
+			v = par[v][i];
+			u = par[u][i];
+		}
+	return v == u? v: par[v][0];
+}
+int main() {
+	ios_base::sync_with_stdio(false);
+	for (int i = 1; i < N; i++)
+		p2[i] = p2[i - 1] * 2 % mod;
+	cin >> n >> m;
+	for (int i = 0; i < m; i++) {
+		int u, v;
+		cin >> u >> v;
+		u--, v--;
+		adj[u].push_back(v);
+		adj[v].push_back(u);
+	}
+	fill(col, col + n, -1);
+	dfs(0, -1);
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < (int) adj[i].size(); j++)
+			if (col[i] != col[adj[i][j]])
+				e[col[i]].push_back(col[adj[i][j]]);
+	}
+	n = cnt;
+	dfs(0);
+	cin >> k;
+	while (k--) {
+		int u, v, w;
+		cin >> u >> v;
+		u = col[u - 1], v = col[v - 1], w = lca(u, v);
+		cout << p2[dp[u] + dp[v] - dp[w] - (w? dp[par[w][0]]: 0)] << '\n';
+	}
+	return 0;
+}

@@ -1,0 +1,237 @@
+#include<iostream>
+#include<algorithm>
+#include<cassert>
+#include<cstring>
+#include<queue>
+
+#define PB push_back
+#define SZ(c) ll((c).size())
+#define ALL(c) (c).begin(), (c).end()
+#define CONTAINS(c, x) ((c).find(x)!=(c).end())
+#define foreach(it,c) for(__typeof (c).begin() it=(c).begin(); it!=(c).end(); it++)
+#define WAIT cout<<flush, system("PAUSE")
+using namespace std;
+typedef long long ll;
+typedef double ld;
+#define MAX 33
+
+int N, M, NM, NF, t, x, y;
+char A[MAX][MAX];
+bool used[MAX][MAX][MAX][MAX];
+ll   time[MAX][MAX][MAX][MAX], lo, mi, hi;
+
+int dx[4]={0, 1, 0, -1};
+int dy[4]={-1, 0, 1, 0};
+struct nd{
+   int x, y, t;
+   nd(){}
+   nd(int x, int y, int t):x(x), y(y), t(t){}
+} curr;
+vector<nd> ma, fe;
+
+void BFS(int x, int y){
+   queue<nd> Q;
+   Q.push(nd(x,y,0));
+   
+   while(!Q.empty()){
+      curr = Q.front();
+      Q.pop();
+      
+      if (used[x][y][curr.x][curr.y]) continue;
+      time[x][y][curr.x][curr.y]=curr.t;
+      used[x][y][curr.x][curr.y]=true;
+      
+      for(int d=0;d<4;d++){
+         int nx=curr.x+dx[d];
+         int ny=curr.y+dy[d];
+         if (!used[x][y][nx][ny] && A[nx][ny]=='.')
+            Q.push(nd(nx, ny, curr.t+1));
+      }
+   }
+}
+
+struct dinic{
+	typedef int flint;
+	typedef int vint;
+	#define MAXV 20100
+	#define oo   20100	
+	vint N, source, sink;
+	struct edge{
+		vint to, rev;
+		flint flow;
+		edge(){}
+		edge(vint _to, vint _rev, flint _flow): to(_to), rev(_rev), flow(_flow){}
+	};
+	vector<edge> E[MAXV];
+	void init(int _N=MAXV){
+      N=_N;
+		for(vint I=0; I<N; I++) 
+			E[I].clear();
+		source = 0;
+		sink = 1;
+	}
+	void add(int u, int v, int c){
+      //cout<<u<<" "<<v<<endl;
+      c = min(c, oo);
+		N = max(N, vint(max(u, v)+1));
+		E[u].PB(edge(v, SZ(E[v]),   c));
+		E[v].PB(edge(u, SZ(E[u])-1, 0));
+	}
+	vint Q[MAXV], lvl[MAXV];
+	bool bfs(){
+		memset(lvl, -1, sizeof(vint)*N);
+		vint fst=0, lst=0;
+		lvl[source]=0;
+		Q[lst++]=source;
+		
+		while(fst<lst && lvl[sink]==-1){
+			vint u = Q[fst++];
+			for(vint I=0; I<SZ(E[u]); I++){
+				vint  v = E[u][I].to;
+				flint c = E[u][I].flow;
+				if (c!=0 && lvl[v]==-1){
+					lvl[v]=lvl[u]+1;
+					Q[lst++]=v;
+				}
+			}
+		}
+		return lvl[sink]!=-1;
+	}
+	vint curr[MAXV];
+	flint dfs(vint u, flint C){
+		if (u==sink)
+			return C;
+			
+		flint ret=0;
+		for(int &I=curr[u]; I<SZ(E[u]); I++){
+			vint v = E[u][I].to;
+			vint c = E[u][I].flow;
+			vint r = E[u][I].rev;
+			
+			if (c!=0 && lvl[v]==lvl[u]+1){
+				flint fl = dfs(v, min(C-ret, c));
+				if (fl>0){
+					ret += fl;
+					E[u][I].flow  -= fl;
+					E[v][r].flow  += fl;
+				}
+			}
+			assert(ret<=C);
+			if (ret == C)
+				break;
+		}
+		return ret;
+	}
+	flint maxflow(){
+		flint ret=0;
+		while(bfs()){
+			memset(curr, 0, sizeof(vint)*N);
+			ret += dfs(0, oo);
+		}
+		return ret;
+	}
+} flow;
+
+inline int src(int x, int y){
+   return M*(x-1)+y+1;
+}
+inline int dst(int x, int y){
+   return M*N + src(x,y);
+}
+
+bool ok(ll mi){
+   flow.init();
+   
+   int cnt=0;
+   foreach(it, ma){
+      cnt++;
+      int cma = 1100+cnt;
+      flow.add(0, cma, 1);
+      
+      for(int I=1; I<=N; I++)
+      for(int K=1; K<=M; K++)
+         if (used[it->x][it->y][I][K] && (time[it->x][it->y][I][K]*it->t) <=mi )
+            flow.add(cma, src(I,K), 1);
+
+   }
+   foreach(it, fe){
+      cnt++;
+      int cfe = 1100+cnt;
+      flow.add(cfe, 1, 1);
+      
+      for(int I=1; I<=N; I++)
+      for(int K=1; K<=M; K++)
+         if (used[it->x][it->y][I][K] && (time[it->x][it->y][I][K]*it->t) <=mi )
+            flow.add(dst(I,K), cfe, 1);
+            
+   }   
+   for(int I=1; I<=N; I++)
+   for(int K=1; K<=M; K++)
+      flow.add(src(I,K), dst(I,K), 1);
+      
+   return flow.maxflow() == NM;
+}
+
+int main(){
+   ios_base::sync_with_stdio(0);
+   cin.tie(0);
+   
+   cin>>N>>M >> NM >> NF;
+   for(int I=1; I<=N; I++) 
+      cin>>A[I]+1;
+      
+   cin>>x>>y>>t;
+   BFS(x, y);
+   if (NM<NF) ma.PB(nd(x, y, t));
+   else       fe.PB(nd(x, y, t));
+   
+   while(NM--){
+      cin>>x>>y>>t;
+      BFS(x, y);
+      ma.PB(nd(x, y, t));
+   }
+   while(NF--){  
+      cin>>x>>y>>t;
+      BFS(x, y);
+      fe.PB(nd(x, y, t));
+   }   
+   NM = SZ(ma);
+   NF = SZ(fe);
+   if (NM!=NF){
+      cout<<-1<<endl;
+      return 0;
+   }
+      
+   lo = 0;   
+   hi = (1ll<<60);
+   if (!ok(hi)){
+      cout<<-1<<endl;
+      return 0;
+   }
+   while(lo<hi){
+      mi = lo+(hi-lo)/2;
+      if (ok(mi))
+         hi=mi;
+      else
+         lo=mi+1;
+   }
+   cout<<lo<<endl;
+   //WAIT;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

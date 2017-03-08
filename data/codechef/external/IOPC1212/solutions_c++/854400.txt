@@ -1,0 +1,113 @@
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <functional>
+#include <algorithm>
+#include <bitset>
+#include <deque>
+#include <list>
+#include <stack>
+#include <queue>
+#include <vector>
+#include <map>
+#include <set>
+#include <string>
+#include <cstring>
+#include <cstdlib>
+#include <cmath>
+#include <cstdio>
+#include <cctype>
+#include <complex>
+#include <cassert>
+using namespace std;
+#define REP(i,n) for(int i=0;i<(int)(n);i++)
+#define EACH(i,c) for(__typeof((c).begin())i=(c).begin();i!=(c).end();++i)
+#define FOR(i,k,n) for (int i=(k);i<(int)(n);i++)
+#define FEQ(i,k,n) for(int i=(k);i<=(int)(n);i++)
+typedef long long ll;
+typedef complex<double> P;
+
+int m, n;
+double r, dist[100][100];
+
+double pol(double la0, double lo0, double la1, double lo1)
+{
+  double
+    x0 = r * cos(la0 * M_PI / 180.0) * cos(lo0 * M_PI / 180.0),
+    y0 = r * sin(la0 * M_PI / 180.0),
+    z0 = r * cos(la0 * M_PI / 180.0) * sin(lo0 * M_PI / 180.0),
+    x1 = r * cos(la1 * M_PI / 180.0) * cos(lo1 * M_PI / 180.0),
+    y1 = r * sin(la1 * M_PI / 180.0),
+    z1 = r * cos(la1 * M_PI / 180.0) * sin(lo1 * M_PI / 180.0);
+  
+  double d2 = (x0 - x1) * (x0 - x1) + (y0 - y1) * (y0 - y1) + (z0 - z1) * (z0 - z1);
+  double alpha = acos(1.0 - d2 / (2.0 * r * r));
+
+  return alpha * r;
+}
+
+#define MAX_V 200
+
+int V;
+vector<int> G[MAX_V];
+int match[MAX_V];
+bool used[MAX_V];
+
+void add_edge(int u, int v)
+{
+  G[u].push_back(v);
+  G[v].push_back(u);
+}
+
+bool dfs(int v)
+{
+  used[v] = true;
+  for (int i = 0; i < G[v].size(); i++){
+    int u = G[v][i], w = match[u];
+    if (w < 0 || !used[w] && dfs(w)) {
+      match[v] = u;
+      match[u] = v;
+      return true;
+    }
+  }
+  return false;
+}
+
+int bipartite_matching()
+{
+  int res = 0;
+  memset(match, -1, sizeof(match));
+  for (int v = 0; v < V; v++){
+    if (match[v] < 0){
+      memset(used, 0, sizeof(used));
+      if (dfs(v)) res++;
+    }
+  }
+  return res;
+}
+
+int main(int argc, char *argv[])
+{
+  int tc; scanf("%d", &tc);
+  while(tc--){
+    scanf("%d%d%lf", &n, &m, &r);
+    double lam[100], lom[100], lat[100], lot[100];
+    REP(i, n) scanf("%lf%lf", lam+i, lom+i);
+    REP(i, m) scanf("%lf%lf", lat+i, lot+i);
+    REP(i, n) REP(j, m) dist[i][j] = pol(lam[i], lom[i], lat[j], lot[j]);
+    V = n + m;
+
+    double lo = 0.0, hi = r * M_PI;
+    REP(t, 50){
+      double md = (lo + hi) / 2.0;
+      REP(i, V) G[i].clear();
+      REP(i, n) REP(j, m) if (dist[i][j] <= md) add_edge(i, j + n);
+      if (bipartite_matching() >= m) hi = md;
+      else lo = md;
+    }
+    int base = (int)log10(hi);
+    printf("%.6fE%+2d\n", hi * pow(10, -base), base);
+  }
+
+  return 0;
+}

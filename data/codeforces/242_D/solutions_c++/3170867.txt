@@ -1,0 +1,34 @@
+//By momo
+#include <queue>
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#define N 100010
+#define PB push_back
+#define FOR(it,c) for(__typeof((c).begin())it=(c).begin();it!=(c).end();it++)
+using namespace std;
+
+queue<int> q;
+vector<int> G[N];
+int prs[N], cnt, A[N];
+
+int main (){
+	int n, m;
+	scanf("%d%d", &n, &m);
+	for(int i = 0; i < m; i++){
+		int a, b; scanf("%d%d", &a, &b);
+		G[a-1].PB(b-1); G[b-1].PB(a-1);
+	}
+	for(int i = 0; i < n; i++){
+		scanf("%d", &A[i]);
+		if(A[i] == 0) q.push(i);
+	}
+	while(!q.empty()){
+		int p = q.front(); q.pop();
+		A[p]--; prs[cnt++] = p;
+		FOR(it, G[p]) if(--A[*it] == 0) q.push(*it);
+	}
+	printf("%d\n", cnt);
+	for(int i = 0; i < cnt; i++)
+		printf("%d ", prs[i] + 1);
+}

@@ -1,0 +1,108 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <climits>
+#define MAXV (1ll<<60)
+using namespace std;
+
+void initX(int x,int a,int b);
+void initY(int x,int y,int a,int b);
+void updateX(int x,int a,int b);
+void updateY(int x,int y,int a,int b);
+long long int queryX(int x,int a,int b);
+long long int queryY(int x,int y,int a,int b);
+
+int TC,N,M,D,R,C,x1,x2,y1,y2,L,cur,S[505][505];
+long long int T[2005][2005],G[505][505],dp[505][505],val;
+pair <int,int> A[250005];
+
+bool cmp(pair<int,int> a,pair<int,int> b){
+	return S[a.first][a.second] < S[b.first][b.second];
+}
+
+void initX(int x,int a,int b){
+	initY(x,1,1,M);
+	if(a < b){
+		initX(2*x,a,(a+b)/2);
+		initX(2*x+1,(a+b)/2+1,b);
+	}
+}
+
+void initY(int x,int y,int a,int b){
+	T[x][y] = MAXV;
+	if(a < b){
+		initY(x,2*y,a,(a+b)/2);
+		initY(x,2*y+1,(a+b)/2+1,b);
+	}
+}
+
+long long int queryX(int x,int a,int b){
+	if(a > x2 || b < x1) return MAXV;
+	if(x1 <= a && b <= x2) return queryY(x,1,1,M);
+	return min(queryX(2*x,a,(a+b)/2),queryX(2*x+1,(a+b)/2+1,b));
+}
+
+long long int queryY(int x,int y,int a,int b){
+	if(a > y2 || b < y1) return MAXV;
+	if(y1 <= a && b <= y2) return T[x][y];
+	return min(queryY(x,2*y,a,(a+b)/2),queryY(x,2*y+1,(a+b)/2+1,b));
+}
+
+void updateX(int x,int a,int b){
+	if(a > x1 || b < x1) return;
+	if(a == x1 && b == x1) updateY(x,1,1,M);
+	else if(x1 <= (a+b)/2) updateX(2*x,a,(a+b)/2);
+	else updateX(2*x+1,(a+b)/2+1,b);
+}
+
+void updateY(int x,int y,int a,int b){
+	if(a > y1 || b < y1) return;
+	if(a == y1 && b == y1)
+		for(int i=x;i>0;i/=2)
+			for(int j=y;j>0;j/=2)
+				T[i][j] = min(T[i][j],val);
+	else if(y1 <= (a+b)/2) updateY(x,2*y,a,(a+b)/2);
+	else updateY(x,2*y+1,(a+b)/2+1,b);
+}
+
+int main(){
+	scanf("%d",&TC);
+	while(TC--){
+		L = 0;
+		scanf("%d%d%d%d%d",&N,&M,&D,&R,&C);
+		++R; ++C;
+		for(int i=1;i<=N;++i)
+			for(int j=1;j<=M;++j){
+				//cin >> G[i][j];
+				scanf("%lld",&G[i][j]);
+				//S[i][j] = (i-R)*(i-R) + (j-C)*(j-C);
+				S[i][j] = (i-1)*(i-1) + (j-1)*(j-1);
+				A[L++] = pair<int,int>(i,j);
+			}
+		sort(A,A+L,cmp);
+		initX(1,1,N);
+		cur = 0;
+	//	dp[R][C] = G[R][C];
+		dp[1][1] = G[1][1];
+		for(int i=1;i<L;++i){
+			if(S[A[cur].first][A[cur].second] != S[A[i].first][A[i].second])
+				while(cur < i){
+					x1 = A[cur].first;
+					y1 = A[cur].second;
+					val = dp[A[cur].first][A[cur].second];
+					updateX(1,1,N);
+					++cur;
+				}
+			x1 = max(1,A[i].first-D);
+			x2 = min(N,A[i].first+D);
+			y1 = max(1,A[i].second-D);
+			y2 = min(M,A[i].second+D);
+			dp[A[i].first][A[i].second] = queryX(1,1,N);
+			if(dp[A[i].first][A[i].second] < MAXV) dp[A[i].first][A[i].second] += G[A[i].first][A[i].second];
+			//if(A[i].first == R && A[i].second == C) break;
+		}
+		printf("%lld\n",dp[R][C]);
+	//	printf("%lld\n",dp[1][1]);
+	}
+}

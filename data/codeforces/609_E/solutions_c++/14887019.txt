@@ -1,0 +1,119 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef long long ll;
+
+#define mp(x, y) make_pair((x), (y))
+
+int n, m;
+struct edge {
+	int u, v, w;
+	int i;
+	bool operator<(const edge &e) const {
+		return w<e.w;
+	}
+} e[200005];
+
+int par[200005];
+int rank[200005];
+
+int parent(int v)
+{
+	if(par[v]==v) return v;
+	else return (par[v]=parent(par[v]));
+}
+
+void uni(int u, int v)
+{
+	u=parent(u);
+	v=parent(v);
+	if(rank[u]<rank[v]) {
+		par[u]=v;
+	} else if(rank[u]>rank[v]) {
+		par[v]=u;
+	} else {
+		par[u]=v;
+		rank[v]++;
+	}
+}
+
+vector<pair<int,int> > next[200005];
+pair<int,int> dp[200005][20];
+int le[200005];
+
+void dfs(int v, int f=-1)
+{
+	for(int i=0; i<next[v].size(); i++) {
+		int s=next[v][i].first;
+		int c=next[v][i].second;
+		if(s==f) continue;
+		dp[s][0]=mp(v, c);
+		le[s]=le[v]+1;
+		dfs(s, v);
+	}
+}
+
+ll minst;
+ll ans[200005];
+
+int main()
+{
+	scanf("%d%d", &n, &m);
+	for(int i=0; i<m; i++) {
+		scanf("%d%d%d", &e[i].u, &e[i].v, &e[i].w);
+		e[i].u--;
+		e[i].v--;
+		e[i].i=i;
+	}
+	sort(e, e+m);
+	for(int i=0; i<n; i++) par[i]=i;
+	for(int i=0; i<m; i++) {
+		int u=e[i].u, v=e[i].v, w=e[i].w;
+		if(parent(u)!=parent(v)) {
+			uni(u, v);
+			next[u].push_back(mp(v, w));
+			next[v].push_back(mp(u, w));
+			minst+=((ll)w);
+		}
+	}
+	dp[0][0]=mp(0, 0);
+	dfs(0);
+	for(int l=0; l<19; l++) {
+		for(int i=0; i<n; i++) {
+			dp[i][l+1]=mp(dp[dp[i][l].first][l].first, max(dp[i][l].second, dp[dp[i][l].first][l].second));
+		}
+	}
+	for(int i=0; i<m; i++) {
+		int u=e[i].u, v=e[i].v, w=e[i].w;
+		if(dp[u][0].first==v || dp[v][0].first==u) {
+			ans[e[i].i]=minst;
+		} else {
+			int cur=0;
+			if(le[u]>le[v]) swap(u, v);
+			for(int d=le[v]-le[u], k=0; d>0; d>>=1, k++) {
+				if(d&1) {
+					cur=max(cur, dp[v][k].second);
+					v=dp[v][k].first;
+				}
+			}
+			for(int l=19; l>=0 && u!=v; l--) {
+				if(dp[u][l].first!=dp[v][l].first) {
+					cur=max(cur, dp[u][l].second);
+					cur=max(cur, dp[v][l].second);
+					u=dp[u][l].first;
+					v=dp[v][l].first;
+				}
+			}
+			if(u!=v) {
+				cur=max(cur, dp[u][0].second);
+				cur=max(cur, dp[v][0].second);
+			}
+			ans[e[i].i]=minst-cur+w;
+		}
+	}
+	for(int i=0; i<m; i++) {
+		printf("%I64d\n", ans[i]);
+	}
+
+	return 0;
+}

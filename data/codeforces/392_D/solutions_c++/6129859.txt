@@ -1,0 +1,89 @@
+#include <map>
+#include <set>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+typedef map<int,int> MII;
+typedef MII::iterator MIIT;
+
+struct foo {
+    int y, z, s;
+    foo() {}
+    foo(int _y, int _z) : y(_y), z(_z), s(_y + _z) {}
+    bool operator<(const foo& rhs) const {
+        if (s != rhs.s) return s < rhs.s;
+        return y < rhs.y;
+    }
+};
+
+const int N = 100005;
+
+int n, a[3][N], x[N][3];
+bool vst[N];
+MII idx, mp, mpn;
+set<foo> st;
+
+void insert(int k) {
+    int y0, z0, y1 = x[k][1], z1 = x[k][2];
+    MIIT i = mp.lower_bound(y1);
+    if (i->second >= z1) return;
+    if (i->first == y1) i->second = z1;
+    else i = mp.insert(make_pair(y1, z1)).first;
+    while (i != mp.begin()) {
+        MIIT j = i; --j;
+        y0 = j->first;
+        z0 = j->second;
+        st.erase(foo(y0, mpn[y0]));
+        if (z1 < z0) break;
+        mp.erase(j);
+    }
+    if (i != mp.begin()) {
+        st.insert(foo(y0, mpn[y0] = z1));
+    }
+    if (++i != mp.end()) {
+        st.insert(foo(y1, mpn[y1] = i->second));
+    }
+}
+
+int main() {
+    scanf("%d", &n);
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 1; j <= n; ++j) {
+            scanf("%d", &a[i][j]);
+            idx[a[i][j]] = 0;
+        }
+    }
+    MIIT it = idx.begin();
+    for (int i = 0; it != idx.end(); ++it, ++i) {
+        it->second = i;
+    }
+    for (int i = n; i; --i) {
+        for (int j = 0; j < 3; ++j) {
+            a[j][i] = idx[a[j][i]];
+            x[a[j][i]][j] = i;
+        }
+    }
+    mp[0] = n + 1;
+    mp[n + 1] = 0;
+    mpn[0] = 0;
+    st.insert(foo(0, 0));
+    for (size_t i = 0; i < idx.size(); ++i) {
+        for (int j = 0; j < 3; ++j) {
+            if (!x[i][j]) x[i][j] = n + 1;
+        }
+        if (x[i][0] == n + 1) insert(i);
+    }
+    int ans = n + st.begin()->s;
+    for (int i = n; i; --i) {
+        int k = a[0][i];
+        if (i == x[k][0]) {
+            if (x[k][1] == n + 1 && x[k][2] == n + 1) {
+                break;
+            }
+            insert(k);
+        }
+        ans = min(ans, i - 1 + st.begin()->s);
+    }
+    printf("%d\n", ans);
+}

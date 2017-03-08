@@ -1,0 +1,130 @@
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <vector>
+#include <cstring>
+using namespace std;
+const long long INF=1000000000;
+
+vector<int> cor; static long long m[300010];
+struct str{long long a, b, s, c, u;};
+str st1[1500000], st2[1500000];
+static long long q[300010][5]; long long u, v, a, b, tu, ta, tb, qs, ans1, ans2, chk;
+int n, nm, s=0;
+
+void build(int x, int y, int n){
+    if(x==y){
+        st1[n].a=st1[n].b=-INF*2; st1[n].s=INF*INF; st1[n].s*=-5;
+        return;
+    }
+    int mid=(x+y)>>1;
+    build(x, mid, 2*n); build(mid+1, y, 2*n+1);
+    st1[n].a=st1[n].b=-INF*2; st1[n].s=INF*INF; st1[n].s*=-5;
+}
+
+void up2(int x, int y, int n){
+    if(m[y] < u || v < m[x] || y<x)return;
+    if(u<= m[x] && m[y]<=v){
+        st2[n].b+=b; st2[n].a+=a; st2[n].s+=(m[x]-u)*a;
+        return;
+    }
+    int mid=(x+y)>>1;
+    up2(x, mid, 2*n); up2(mid+1, y, 2*n+1);
+}
+
+void up3(int x, int y, int n){
+    if(x==y){
+        long long tmpn=(m[x]-tu)*ta, tmpo=(m[y]-m[x])*st1[n].a; tmpn+=tb; tmpo+=st1[n].b+st1[n].s;
+        if(tmpn>tmpo){
+            st1[n].u=tu; st1[n].b=tb; st1[n].a=ta; st1[n].s=(m[x]-st1[n].u)*st1[n].a;
+        }
+        return;
+    }
+    int mid=(x+y)>>1;
+    long long tmpn=(m[x]-tu)*ta, tmpo=st1[n].s+st1[n].b; tmpn+=tb;
+
+    if(tmpn>=tmpo && ta>=st1[n].a){
+        st1[n].u=tu; st1[n].b=tb; st1[n].a=ta; st1[n].s=(m[x]-st1[n].u)*st1[n].a;
+        return;
+    }
+    else if(tmpn>tmpo && st1[n].a>ta){
+        long long t=st1[n].a-ta;
+        if(tmpn-tmpo > t*(m[mid]-m[x])){
+            swap(tu, st1[n].u); swap(st1[n].a,ta); swap(st1[n].b,tb); st1[n].s=(m[x]-st1[n].u)*st1[n].a;
+            up3(mid+1, y, 2*n+1);
+        }
+        else up3(x, mid, 2*n);
+    }
+    else if(tmpn<tmpo && ta>st1[n].a){
+        long long t=ta-st1[n].a;
+        if(tmpo-tmpn > t*(m[mid]-m[x])) up3(mid+1, y, 2*n+1);
+        else{
+            swap(tu, st1[n].u); swap(ta, st1[n].a); swap(tb, st1[n].b); st1[n].s=(m[x]-st1[n].u)*st1[n].a;
+            up3(x, mid, 2*n);
+        }
+    }
+    else return;
+}
+void up1(int x, int y, int n){
+    if(m[y] < u || v < m[x] || y<x)return;
+    if(u<= m[x] && m[y]<=v){
+        ta=a; tb=b; tu=u; st1[n].c=1;
+        up3(x, y, n); return;
+    }
+    int mid=(x+y)>>1;
+    up1(x, mid, 2*n); up1(mid+1, y, 2*n+1);
+}
+
+void que(int x, int y, int n){
+    if(x==y){
+        long long tmp=st1[n].s+st1[n].b; tmp += (qs-m[x])*st1[n].a;
+        ans1=max(ans1, tmp); chk=max(st1[n].c, chk);
+        ans2 += (st2[n].s+st2[n].b); ans2 += (qs-m[x])*st2[n].a;
+        return;
+    }
+    int mid=(x+y)>>1;
+    if(m[x] <= qs && qs <= m[mid]) que(x, mid, 2*n);
+    else if(m[mid+1] <= qs && qs <= m[y]) que(mid+1, y, 2*n+1);
+
+    chk=max(st1[n].c, chk);
+    long long tmp=st1[n].s+st1[n].b; tmp += (qs-m[x])*st1[n].a;
+    ans1=max(tmp, ans1);
+    ans2 += (st2[n].s+st2[n].b); ans2 += (qs-m[x])*st2[n].a;
+}
+
+int main(){
+    memset(st1, 0, sizeof st1); memset(st2, 0, sizeof st2);
+    scanf("%d %d", &n, &nm);
+
+    for(int i=1; i<=nm; ++i){
+        scanf("%lld", &q[i][0]);
+        if(q[i][0]-2<=0)
+            scanf("%lld %lld %lld %lld", &q[i][1], &q[i][2], &q[i][3], &q[i][4]);
+        else{
+            scanf("%lld", &q[i][1]);
+            cor.push_back(q[i][1]);
+        }
+    }
+    sort(cor.begin(), cor.end());
+    for(int i=0; i<cor.size(); ++i)
+        (cor[i-1]<cor[i] || !i)? m[++s]=cor[i]: s=s;
+    if(s)build(1, s, 1);
+
+    for(int i=1; i<=nm; ++i){
+        if(q[i][0]==1 && s){
+            u=q[i][1], v=q[i][2], a=q[i][3], b=q[i][4];
+            up1(1, s, 1);
+        }
+        else if(q[i][0]==2 && s){
+            u=q[i][1], v=q[i][2], a=q[i][3], b=q[i][4];
+            up2(1, s, 1);
+        }
+        else if(q[i][0]==3 && s){
+            qs=q[i][1]; ans1=INF*INF; ans1*=-7; ans2=chk=0;
+            que(1, s, 1);
+            if(!chk) printf("NA\n");
+            else printf("%lld\n", ans1+ ans2);
+        }
+    }
+    return 0;
+}

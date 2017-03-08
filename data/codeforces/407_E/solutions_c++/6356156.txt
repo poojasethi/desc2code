@@ -1,0 +1,161 @@
+#include <cstdio>
+#include <iostream>
+#include <map>
+#include <stack>
+using namespace std;
+
+#define rep(i, n) for (int i = 0; i < n; ++ i)
+
+const int INF = 0x3f3f3f3f;
+const int N = 2e5;
+int n, k, d, a[N];
+
+// Segment Tree
+
+struct Tree
+{
+	int l, r, v, lazy;
+	Tree *left, *right;
+};
+int mc;
+Tree memory[400000], *root;
+map<int, int> hash;
+Tree *Build(int l, int r)
+{
+	Tree *ret = &memory[mc++];
+	ret->l = l, ret->r = r;
+	if(l == r)
+		ret->v = l;
+	else
+	{
+		ret->left = Build(l, (l + r) / 2);
+		ret->right = Build((l + r) / 2 + 1, r);
+		ret->v = min(ret->left->v, ret->right->v);
+	}
+	return ret;
+}
+void PushDown(Tree *t)
+{
+	t->v += t->lazy;
+	if(t->l < t->r)
+	{
+		t->left->lazy += t->lazy;
+		t->right->lazy += t->lazy;
+	}
+	t->lazy = 0;
+}
+void Modify(Tree *t, int l, int r, int v)
+{
+	//if (l > r) return;
+	PushDown(t);
+	if(t->l == l && t->r == r)
+		t->lazy += v;
+	else
+	{
+		if(r <= t->left->r)
+			Modify(t->left, l, r, v);
+		else if(l >= t->right->l)
+			Modify(t->right, l, r, v);
+		else
+			Modify(t->left, l, t->left->r, v), Modify(t->right, t->right->l, r, v);
+		t->v = min(t->left->v + t->left->lazy, t->right->v + t->right->lazy);
+	}
+}
+int Query(Tree *t, int l, int r, int v)
+{
+	PushDown(t);
+	if(t->l == t->r)
+		return t->v <= v ? l : -1;
+	if(t->left->v + t->left->lazy <= v && l <= t->left->r)
+	{
+		int tmp = Query(t->left, l, min(r, t->left->r), v);
+		if(tmp != -1)
+			return tmp;
+	}
+	if(t->right->v + t->right->lazy <= v && r >= t->right->l)
+		return Query(t->right, max(l, t->right->l), r, v);
+	return -1;
+}
+int ansl, ansr;
+inline void Submit(int l, int r)
+{
+	if (r - l > ansr - ansl || (r - l == ansr - ansl && l < ansl)) ansl = l, ansr = r;
+}
+
+int pre[N];
+
+// max(l, r) - min(l, r) - (r - l) <= k
+
+void Solve(int l, int r)
+{
+	map< int, int > hash;   // value and index
+	for (int i = l; i <= r; i ++) a[i] /= d;
+	for (int i = l; i <= r; i ++)
+	{
+		map<int, int> :: iterator iter = hash.find(a[i]);
+		if (iter == hash.end()) hash.insert(make_pair(a[i], i));
+		else pre[i] = iter -> second + 1, iter -> second = i;
+	}
+	
+	stack< pair<int, int> > maxi, mini;
+	
+	int p = l;
+	for (int i = l; i <= r; i ++)
+	{
+		p = max(p, pre[i]);
+		while (! mini.empty() && a[i] <= mini.top().first) 
+		{
+			pair<int, int> tmp = mini.top();
+			mini.pop();
+			if (mini.empty() && p > tmp.second) continue;
+			Modify(root, mini.empty() ? p : mini.top().second + 1, tmp.second, tmp.first - a[i]);
+		}
+		while (! maxi.empty() && a[i] >= maxi.top().first)
+		{
+			pair<int, int> tmp = maxi.top();
+			maxi.pop();
+			if (maxi.empty() && p > tmp.second) continue;
+			Modify(root, maxi.empty() ? p : maxi.top().second + 1, tmp.second, a[i] - tmp.first);
+		}
+		mini.push(make_pair(a[i], i));
+		maxi.push(make_pair(a[i], i));
+		
+		int tmp = Query(root, p, i, i + k);
+		if (tmp != -1) Submit(tmp, i);
+	}
+}
+
+int main()
+{
+	//freopen("input.txt", "r", stdin);
+	
+	scanf("%d%d%d", &n, &k, &d);
+	rep(i, n) 
+	{
+		scanf("%d", a + i);
+		a[i] += 1000000000;
+	}
+	
+	if (d == 0) 
+		for (int i = 0; i < n; )
+		{
+			int r = i + 1;
+			while (r < n && a[i] == a[r]) r ++;
+			Submit(i, r - 1);
+			i = r;
+		}
+	else 
+	{
+		root = Build(0, n - 1);
+		for (int i = 0; i < n; )
+		{
+			int r = i + 1;
+			while (r < n && a[i] % d == a[r] % d) r ++;
+			Solve(i, r - 1);
+			i = r;
+		}
+	}
+	cout << ansl + 1 << ' ' << ansr + 1 << endl;
+	return 0;
+}
+

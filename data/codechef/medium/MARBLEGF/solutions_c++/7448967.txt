@@ -1,0 +1,183 @@
+#include<iostream>
+#include<cmath>
+#include<string>
+#define inf -12345
+using namespace std;
+
+void buildSegmentTree(int input[],long long *segmentTreePtr,long long node,int low,int high);
+
+long long getSum(long long *segmentTreePtr, long long *lazy, long long node,int low,int high,int start, int end);
+
+void increment(int input[] , long long *segmentTreePtr, long long *lazy, long long node , int low , int high , int start , int value );
+
+void decrement(int input[] , long long *segmentTreePtr, long long *lazy, long long node , int low , int high , int start , int value );
+
+int main(){
+
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+
+    int students,queries;
+    cin>>students>>queries;
+    int input[students];
+    long long i,j;
+    for(i=0;i<students;i++)
+        cin>>input[i];
+    long long sizeofTree=2*pow(2,(ceil(log2(students))))-1;
+    //cout<<sizeofTree<<endl;
+    long long *segmentTreePtr = new long long[sizeofTree];
+    long long *lazy = new long long[sizeofTree];
+    for(i=0;i<sizeofTree;i++)
+        lazy[i]=0;
+    //for(i=0;i<sizeofTree;i++)
+      //  cout<<lazy[i]<<' ';
+    //cout<<endl;
+    for(i=0;i<sizeofTree;i++)
+        segmentTreePtr[i]=inf;
+    buildSegmentTree(input,segmentTreePtr,0,0,students-1);
+   // for(i=0;i<sizeofTree;i++)
+     //   cout<<segmentTreePtr[i]<<' ';
+    //cout<<endl;
+    char crap=cin.get();
+    while(queries--){
+
+      //  char action=cin.get();
+        int a,b;
+        long long output;
+       //unsigned long long output;
+        //crap=cin.get();
+        //cin>>a>>b;
+        //cout<<action<<endl<<a<<endl<<b<<endl;
+        string r;
+        cin>>r;
+        cin>>a>>b;
+        //cout<<r[0]<<' '<<a<<' '<<b<<endl;
+        if(r[0]=='S'){
+            output=getSum(segmentTreePtr,lazy,0,0,students-1,a,b);
+            cout<<output<<endl;
+        }
+        else if(r[0]=='G'){
+            increment(input , segmentTreePtr, lazy, 0 , 0 , students-1 , a,b);
+            //cout<<a<<' '<<b<<" new value "<<segmentTreePtr[a]<<endl;
+        }
+        else{
+            decrement(input , segmentTreePtr, lazy, 0 , 0 , students-1 , a,b);
+            //cout<<a<<' '<<b<<" new value "<<segmentTreePtr[a]<<endl;
+        }
+    }
+}
+
+void buildSegmentTree(int input[],long long *segmentTreePtr, long long node,int low,int high){
+
+    if(low > high){
+        cout<<"case 1"<<endl;
+        return;
+    }
+
+    if(low==high){
+        //cout<<"case 2"<<endl;
+        segmentTreePtr[node]=input[low];
+        //cout<<"segmentTreePtr[node] node "<<node<<" input[low] "<<input[low]<<endl;
+        return;
+    }
+
+    buildSegmentTree(input, segmentTreePtr, node*2+1, low, (low+high)/2); // Init left child
+	buildSegmentTree(input, segmentTreePtr, node*2+2, 1+(low+high)/2, high); // Init right child
+
+	segmentTreePtr[node] = (segmentTreePtr[node*2+1] + segmentTreePtr[node*2+2]); // Init root value}
+
+    //return segmentTreePtr;
+}
+
+long long int getSum(long long *segmentTreePtr, long long *lazy, long long node, int low, int high, int start, int end){
+
+    if(lazy[node] != 0) { // This node needs to be updated
+		segmentTreePtr[node] += lazy[node]; // Update it
+
+		if(low != high) {
+			lazy[node*2+1] += lazy[node]; // Mark child as lazy
+			lazy[node*2+2] += lazy[node]; // Mark child as lazy
+		}
+
+		lazy[node] = 0; // Reset it
+	}
+
+
+    if(start<=low&&end>=high){
+        //cout<<"segmentTreePtr[node] "<<segmentTreePtr[node]<<" node "<<node<<endl;
+        return segmentTreePtr[node];
+    }
+
+    if (high < start || low > end)
+        return 0;
+
+    return getSum(segmentTreePtr, lazy, 2*node+1, low, (low+high)/2, start, end ) +
+           getSum(segmentTreePtr, lazy, 2*node+2, (low+high)/2+1, high, start, end );
+}
+
+void increment(int input[] , long long *segmentTreePtr,long long *lazy, long long node , int low , int high , int start , int value ){
+
+	if(lazy[node] != 0) { // This node needs to be updated
+   		segmentTreePtr[node] += lazy[node]; // Update it
+
+		if(low != high) {
+			lazy[node*2+1] += lazy[node]; // Mark child as lazy
+    			lazy[node*2+2] += lazy[node]; // Mark child as lazy
+		}
+
+   		lazy[node] = 0; // Reset it
+  	}
+
+	if( start < low || start > high) // Current segment is not within range [i, j]
+		return;
+
+  	if(low == high) { // Leaf node
+    		segmentTreePtr[node] += value;
+    		if(low != high) { // Not leaf node
+			lazy[node*2+1] += value;
+			lazy[node*2+2] += value;
+		}
+
+    		return;
+	}
+
+	increment(input , segmentTreePtr, lazy , node*2+1, low, (low+high)/2, start,  value); // Updating left child
+	increment(input , segmentTreePtr, lazy , node*2+2, 1+(low+high)/2, high, start, value); // Updating right child
+
+	segmentTreePtr[node] = (segmentTreePtr[node*2+1] + segmentTreePtr[node*2+2]); // Updating root with max value
+
+}
+
+void decrement(int input[] , long long *segmentTreePtr, long long *lazy, long long node , int low , int high , int start , int value ){
+
+
+	if(lazy[node] != 0) { // This node needs to be updated
+   		segmentTreePtr[node] += lazy[node]; // Update it
+
+		if(low != high) {
+			lazy[node*2+1] += lazy[node]; // Mark child as lazy
+    			lazy[node*2+2] += lazy[node]; // Mark child as lazy
+		}
+
+   		lazy[node] = 0; // Reset it
+  	}
+
+	if( start < low || start > high) // Current segment is not within range [i, j]
+		return;
+
+  	if(low == high) { // Leaf node
+    		segmentTreePtr[node] -= value;
+    		if(low != high) { // Not leaf node
+			lazy[node*2+1] += value;
+			lazy[node*2+2] += value;
+		}
+
+    		return;
+	}
+
+	decrement(input , segmentTreePtr, lazy, node*2+1, low, (low+high)/2, start,  value); // Updating left child
+	decrement(input , segmentTreePtr, lazy, node*2+2, 1+(low+high)/2, high, start, value); // Updating right child
+
+	segmentTreePtr[node] = (segmentTreePtr[node*2+1] + segmentTreePtr[node*2+2]); // Updating root with max value
+
+}

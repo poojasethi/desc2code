@@ -1,0 +1,151 @@
+#include<stdio.h>
+#include<string.h>
+#include<stdlib.h>
+#include<math.h>
+#include<algorithm>
+#include<set>
+#include<map>
+#include<utility>
+#include<vector>
+#include<string>
+#include<stack>
+#include<queue>
+using namespace std;
+#define MAXS 1206
+#define MAXN 66
+#define MAXL 26
+#define MAXALPHA 10
+#define stchar '0'
+char str[MAXL];
+int TRIE[MAXS][MAXALPHA],trsz;
+int acfail[MAXS];
+vector < int > VQ;
+bool valid[MAXS];
+void trinsert(char *str)
+{
+    int cur = 0;
+    char *s = str;
+    char ch;
+    while (*s)
+    {
+        ch = *s - stchar;
+        if (TRIE[cur][ch] == -1)
+        {
+            ++trsz;
+            TRIE[cur][ch] = trsz;
+        }
+        cur = TRIE[cur][ch];
+        ++s;
+    }
+    valid[cur] = true;
+}
+void acprep()
+{
+    int ch,nxt,now,f;
+    memset(acfail, 0, sizeof(acfail));
+    VQ.clear();
+    queue < int > Q;
+    for (ch = 0; ch < 10; ++ch)
+    {
+        nxt = TRIE[0][ch];
+        if (nxt == -1) continue;
+        Q.push(nxt);
+        VQ.push_back(nxt);
+    }
+    while (!Q.empty())
+    {
+        now = Q.front();
+        f = acfail[now];
+        if (valid[f]) valid[now] = true;
+        Q.pop();
+        for (ch = 0; ch < 10; ++ch)
+        {
+            nxt = TRIE[now][ch];
+            if (nxt == -1) continue;
+            f = acfail[now];
+            while (f != 0 && TRIE[f][ch] == -1) f = acfail[f];
+            if (TRIE[f][ch] != -1) f = TRIE[f][ch];
+            acfail[nxt] = f;
+            Q.push(nxt);
+            VQ.push_back(nxt);
+        }
+    }
+}
+int P, num[MAXL];
+void setnum(long long x)
+{
+    memset(str, 0, sizeof(str));
+    sprintf(str, "%lld", x);
+    for (P=0; str[P]; ++P) num[P] = str[P] - stchar;
+}
+int VC, vis[MAXL][MAXS][2][2][2];
+long long dp[MAXL][MAXS][2][2][2];  // [pos][cur state][valid found][eq][nz]
+long long rec(int pos, int cur, bool v, bool eq, bool nz)
+{
+    if (pos == P)
+    {
+        if (nz == 1) return 0;
+        return v;
+    }
+    long long &ret = dp[pos][cur][v][eq][nz];
+    if (vis[pos][cur][v][eq][nz] == VC) return ret;
+    else vis[pos][cur][v][eq][nz] = VC;
+    int i, now, f, ch;
+    ret = 0;
+    if (nz) ret += rec(pos+1,cur,v,0,1);
+    for (i=nz; i<10; ++i)
+    {
+        ch = i;
+        if (eq && ch > num[pos]) break;
+        f = cur;
+        while (f != 0 && TRIE[f][ch] == -1) f = acfail[f];
+        if (TRIE[f][ch] != -1) f = TRIE[f][ch];
+        ret += rec(pos+1, f, v|valid[f], eq & (num[pos] == ch), 0);
+    }
+    //printf("%d %d %d %d %d : %lld\n", pos, cur, v, eq, nz, ret);
+    return ret;
+}
+long long calc(long long n)
+{
+    if (n == 0) return 0;
+    setnum(n);
+    ++VC;
+    return rec(0,0,0,1,1);
+}
+long long find(long long low, long long high, long long K)
+{
+    long long mid,k;
+    long long prev = calc(low-1);
+    K += prev;
+    while (low < high)
+    {
+        mid = (low + high) / 2;
+        k = calc(mid);
+        if (k < K) low = mid + 1;
+        else high = mid;
+    }
+    if (calc(low) == K) return low;
+    return -1;
+}
+int main()
+{
+    //freopen("data.txt", "r", stdin);
+    long long L,R,K,n;
+    int N;
+    while (scanf("%lld %lld %lld %d", &L, &R, &K, &N) != EOF)
+    {
+        memset(TRIE, -1, sizeof(TRIE));
+        memset(valid, false, sizeof(valid));
+        trsz = 0;
+        while (N--)
+        {
+            scanf("%s", str);
+            trinsert(str);
+        }
+        acprep();
+        n = find(L,R,K);
+        if (n == -1) puts("no such number");
+        else printf("%lld\n", n);
+    }
+    return 0;
+}

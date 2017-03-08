@@ -1,0 +1,342 @@
+#include<stdio.h>
+#include<string.h>
+#include<algorithm>
+#define N 110000
+#define MEM 2000000
+#define K 70
+#define MAX 2000000000000000ll
+using namespace std;
+typedef long long ll;
+struct node
+{
+	int x,y,l,r,no,type;
+	friend bool operator < (const node &a,const node &b)
+	{
+		if(a.x!=b.x)
+			return a.x<b.x;
+		else
+			return a.type<b.type;
+	}
+}Q[N<<1];
+int m,tot;
+int x1[N],y1[N],x2[N],y2[N];
+int sx[N],sy[N];
+char kind[N],op[N][5];
+int next[N][K],st[N];
+ll T[N],dis[N][K];
+int cov[MEM],ls[MEM],rs[MEM],rt,mt;
+bool is[MEM];
+int newnode()
+{
+	mt++;
+	cov[mt]=ls[mt]=rs[mt]=is[mt]=0;
+	return mt;
+}
+void Pushdown(int no)
+{
+	if(is[no])
+	{
+		if(!ls[no])	ls[no]=newnode();
+		if(!rs[no])	rs[no]=newnode();
+		cov[ls[no]]=cov[no];
+		cov[rs[no]]=cov[no];
+		is[ls[no]]=is[rs[no]]=1;
+		is[no]=0;
+	}
+}
+void update(int l,int r,int &no,int st,int en,int c)
+{
+	if(!no)
+		no=newnode();
+	if(st<=l&&r<=en)
+	{
+		cov[no]=c;
+		is[no]=1;
+	}
+	else
+	{
+		int mid=(l+r)>>1;
+		Pushdown(no);
+		if(en<=mid)		update(l,mid,ls[no],st,en,c);
+		else if(st>mid)	update(mid+1,r,rs[no],st,en,c);
+		else	update(l,mid,ls[no],st,en,c),update(mid+1,r,rs[no],st,en,c);
+	}
+}
+int query(int l,int r,int no,int x)
+{
+	if(!no)	return 0;
+	if(l==r)
+		return cov[no];
+	else
+	{
+		int mid=(l+r)>>1;
+		Pushdown(no);
+		if(x<=mid)	return query(l,mid,ls[no],x);
+		else		return query(mid+1,r,rs[no],x);
+	}
+}
+void slove()
+{
+	sort(Q+1,Q+tot+1);
+	rt=0,mt=0;
+	for(int i=1;i<=tot;i++)
+	{
+		if(Q[i].type==0)
+		{
+			update(0,m,rt,Q[i].l,Q[i].r,Q[i].no);
+		}
+		else
+		{
+			(Q[i].type==1?next[Q[i].no][0]:st[Q[i].no])=
+				query(0,m,rt,Q[i].y);
+		}
+	}
+}
+void Print(int x,int y,char k,ll t)
+{
+	if(k=='L')
+		printf("%I64d %d\n",max(0ll,x-t),y);
+	else if(k=='R')
+		printf("%I64d %d\n",min((ll)m,x+t),y);
+	else if(k=='D')
+		printf("%d %I64d\n",x,max(0ll,y-t));
+	else
+		printf("%d %I64d\n",x,min((ll)m,y+t));
+}
+int main()
+{
+	#ifndef ONLINE_JUDGE
+//	freopen("tt.in","r",stdin);
+//	freopen("mine.out","w",stdout);
+	#endif
+	int n,q,i,k,x;
+	scanf("%d%d",&n,&m);
+	for(i=1;i<=n;i++)
+	{
+		scanf("%d%d%d%d",x1+i,y1+i,x2+i,y2+i);
+		if(x1[i]-x2[i]>0)
+			kind[i]='L';
+		else if(x1[i]-x2[i]<0)
+			kind[i]='R';
+		else if(y1[i]-y2[i]>0)
+			kind[i]='D';
+		else
+			kind[i]='U';
+	}
+	scanf("%d",&q);
+	for(i=1;i<=q;i++)
+		scanf("%d%d%s%I64d",sx+i,sy+i,op[i],T+i);
+	for(i=1;i<=n;i++)
+	{
+		if(kind[i]=='L')
+			Q[++tot].type=1,Q[tot].x=x2[i],Q[tot].y=y2[i],Q[tot].no=i;
+		else if(kind[i]=='R')
+			Q[++tot].type=0,Q[tot].x=x1[i],Q[tot].l=y2[i],Q[tot].r=y2[i],Q[tot].no=i;
+		else
+			Q[++tot].type=0,Q[tot].x=x1[i],Q[tot].l=min(y1[i],y2[i]),Q[tot].r=max(y1[i],y2[i]),Q[tot].no=i;
+	}
+	for(i=1;i<=q;i++)
+	{
+		if(op[i][0]=='L')
+			Q[++tot].type=2,Q[tot].x=sx[i],Q[tot].y=sy[i],Q[tot].no=i;
+	}
+	slove();
+	for(i=1,tot=0;i<=n;i++)
+	{
+		if(kind[i]=='R')
+			Q[++tot].type=1,Q[tot].x=-x2[i],Q[tot].y=y2[i],Q[tot].no=i;
+		else if(kind[i]=='L')
+			Q[++tot].type=0,Q[tot].x=-x1[i],Q[tot].l=y2[i],Q[tot].r=y2[i],Q[tot].no=i;
+		else
+			Q[++tot].type=0,Q[tot].x=-x2[i],Q[tot].l=min(y1[i],y2[i]),Q[tot].r=max(y1[i],y2[i]),Q[tot].no=i;
+	}
+	for(i=1;i<=q;i++)
+	{
+		if(op[i][0]=='R')
+			Q[++tot].type=2,Q[tot].x=-sx[i],Q[tot].y=sy[i],Q[tot].no=i;
+	}
+	slove();
+	for(i=1,tot=0;i<=n;i++)
+	{
+		if(kind[i]=='D')
+			Q[++tot].type=1,Q[tot].x=y2[i],Q[tot].y=x2[i],Q[tot].no=i;
+		else if(kind[i]=='U')
+			Q[++tot].type=0,Q[tot].x=y1[i],Q[tot].l=x2[i],Q[tot].r=x2[i],Q[tot].no=i;
+		else
+			Q[++tot].type=0,Q[tot].x=y1[i],Q[tot].l=min(x1[i],x2[i]),Q[tot].r=max(x1[i],x2[i]),Q[tot].no=i;
+	}
+	for(i=1;i<=q;i++)
+	{
+		if(op[i][0]=='D')
+			Q[++tot].type=2,Q[tot].x=sy[i],Q[tot].y=sx[i],Q[tot].no=i;
+	}
+	slove();
+	for(i=1,tot=0;i<=n;i++)
+	{
+		if(kind[i]=='U')
+			Q[++tot].type=1,Q[tot].x=-y2[i],Q[tot].y=x2[i],Q[tot].no=i;
+		else if(kind[i]=='D')
+			Q[++tot].type=0,Q[tot].x=-y1[i],Q[tot].l=x2[i],Q[tot].r=x2[i],Q[tot].no=i;
+		else
+			Q[++tot].type=0,Q[tot].x=-y1[i],Q[tot].l=min(x1[i],x2[i]),Q[tot].r=max(x1[i],x2[i]),Q[tot].no=i;
+	}
+	for(i=1;i<=q;i++)
+	{
+		if(op[i][0]=='U')
+			Q[++tot].type=2,Q[tot].x=-sy[i],Q[tot].y=sx[i],Q[tot].no=i;
+	}
+	slove();
+	for(i=1;i<=n;i++)
+	{
+		if(next[i][0])
+		{
+			ll temp=0;
+			if(kind[i]=='L')
+				temp=x2[i]-x2[next[i][0]];
+			else if(kind[i]=='R')
+				temp=x2[next[i][0]]-x2[i];
+			else if(kind[i]=='D')
+				temp=y2[i]-y2[next[i][0]];
+			else
+				temp=y2[next[i][0]]-y2[i];
+			bool flag=0;
+			if(temp<0)	temp=0,flag=1;
+			ll temp2=0;
+			if((kind[next[i][0]]=='L'||kind[next[i][0]]=='R')&&
+				((kind[i]=='U'||kind[i]=='D')||flag))
+				temp2=abs(x2[i]-x2[next[i][0]]);
+			if((kind[next[i][0]]=='U'||kind[next[i][0]]=='D')&&
+				((kind[i]=='L'||kind[i]=='R')||flag))
+				temp2=abs(y2[i]-y2[next[i][0]]);
+			dis[i][0]=temp+temp2;
+		}
+		else
+		{
+			if(kind[i]=='L')
+				dis[i][0]=x2[i];
+			else if(kind[i]=='R')
+				dis[i][0]=m-x2[i];
+			else if(kind[i]=='D')
+				dis[i][0]=y2[i];
+			else
+				dis[i][0]=m-y2[i];
+		}
+	}
+	for(k=1;k<K;k++)
+	{
+		for(i=1;i<=n;i++)
+		{
+			next[i][k]=next[next[i][k-1]][k-1];
+			dis[i][k]=dis[next[i][k-1]][k-1]+dis[i][k-1];
+			dis[i][k]=min(dis[i][k],MAX);
+		}
+	}
+	for(i=1;i<=q;i++)
+	{
+		ll temp;
+		if(st[i])
+		{
+			if(op[i][0]=='L')
+				temp=sx[i]-x2[st[i]];
+			else if(op[i][0]=='R')
+				temp=x2[st[i]]-sx[i];
+			else if(op[i][0]=='D')
+				temp=sy[i]-y2[st[i]];
+			else
+				temp=y2[st[i]]-sy[i];
+			bool flag=0;
+			if(temp<0)	temp=0,flag=1;
+			if(T[i]<=temp)
+			{
+				Print(sx[i],sy[i],op[i][0],T[i]);
+				continue;
+			}
+			T[i]-=temp;
+			ll temp2=0;
+			if((kind[st[i]]=='L'||kind[st[i]]=='R')&&
+				((op[i][0]=='U'||op[i][0]=='D')||flag))
+				temp2=abs(sx[i]-x2[st[i]]);
+			if((kind[st[i]]=='U'||kind[st[i]]=='D')&&
+				((op[i][0]=='L'||op[i][0]=='R')||flag))
+				temp2=abs(sy[i]-y2[st[i]]);
+			if(T[i]<=temp2)
+			{
+				if(op[i][0]=='L')
+					Print(sx[i]-temp,sy[i],kind[st[i]],T[i]);
+				else if(op[i][0]=='R')
+					Print(sx[i]+temp,sy[i],kind[st[i]],T[i]);
+				else if(op[i][0]=='D')
+					Print(sx[i],sy[i]-temp,kind[st[i]],T[i]);
+				else
+					Print(sx[i],sy[i]+temp,kind[st[i]],T[i]);
+				continue;
+			}
+			T[i]-=temp2;
+		}
+		else
+		{
+			if(op[i][0]=='L')
+				temp=sx[i];
+			else if(op[i][0]=='R')
+				temp=m-sx[i];
+			else if(op[i][0]=='D')
+				temp=sy[i];
+			else
+				temp=m-sy[i];
+			if(T[i]<=temp)
+			{
+				Print(sx[i],sy[i],op[i][0],T[i]);
+				continue;
+			}
+			T[i]-=temp;
+		}
+		x=st[i];
+		if(x==0)
+		{
+			if(op[i][0]=='L')
+				printf("%d %d\n",0,sy[i]);
+			else if(op[i][0]=='R')
+				printf("%d %d\n",m,sy[i]);
+			else if(op[i][0]=='D')
+				printf("%d %d\n",sx[i],0);
+			else
+				printf("%d %d\n",sx[i],m);
+			continue;
+		}
+		for(k=K-1;k>=0;k--)
+		{
+			if(T[i]>=dis[x][k]&&next[x][k])
+			{
+				T[i]-=dis[x][k];
+				x=next[x][k];
+			}
+		}
+		if(next[x][0]==0)
+			Print(x2[x],y2[x],kind[x],T[i]);
+		else
+		{
+			if(kind[x]=='L')
+				temp=x2[x]-x2[next[x][0]];
+			else if(kind[x]=='R')
+				temp=x2[next[x][0]]-x2[x];
+			else if(kind[x]=='D')
+				temp=y2[x]-y2[next[x][0]];
+			else
+				temp=y2[next[x][0]]-y2[x];
+			if(T[i]<=temp)
+				Print(x2[x],y2[x],kind[x],T[i]);
+			else
+			{
+				if(kind[x]=='L')
+					Print(x2[x]-temp,y2[x],kind[next[x][0]],T[i]-temp);
+				else if(kind[x]=='R')
+					Print(x2[x]+temp,y2[x],kind[next[x][0]],T[i]-temp);
+				else if(kind[x]=='D')
+					Print(x2[x],y2[x]-temp,kind[next[x][0]],T[i]-temp);
+				else
+					Print(x2[x],y2[x]+temp,kind[next[x][0]],T[i]-temp);
+			}
+		}
+	}
+	return 0;
+}

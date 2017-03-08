@@ -1,0 +1,191 @@
+#include<cstdio>
+#include<cstring>
+#include<cmath>
+#include<algorithm>
+#include<vector>
+using namespace std ;
+
+const int MAXM1 = 1000;
+const int MOD = 1e9 + 7;
+
+typedef vector<vector<int> > Matrix;
+
+
+int bestColumn[MAXM1+5][MAXM1+5];
+int N,M,X,Y;
+
+int modPow(int base, int power) {
+    if (power == 0) return 1;
+    int ret = modPow(base, power >> 1);
+    ret = ret * 1LL * ret % MOD;
+    if (power & 1)
+        ret = ret * 1LL * base % MOD;
+    return ret;
+}
+
+int solveColumn(int n, int sameBefore) {
+    if (sameBefore == Y) return 0;
+    if (n == 0) return 1;
+    int& ret = bestColumn[n][sameBefore];
+    if (~ret) return ret;
+    return ret = (solveColumn(n - 1, sameBefore + 1) + solveColumn(n - 1, 1)) % MOD;
+}
+
+Matrix operator * (const Matrix& a, const Matrix& b) {
+    Matrix ret(a.size(), vector<int>(a.size()));
+    for (int i=0;i<ret.size();i++)
+        for (int j=0;j<ret.size();j++) {
+            ret[i][j] = 0;
+            for (int k=0;k<ret.size();k++)
+                ret[i][j] = (ret[i][j] + a[i][k] * 1LL * b[k][j] % MOD) % MOD;
+        }
+    return ret;
+}
+
+Matrix identity(int n) {
+    Matrix ret(n, vector<int>(n,0));
+    for (int c=0;c<n;c++)
+        ret[c][c] = 1;
+    return ret;
+}
+
+//Matrix operator ^ (const Matrix& base, int power) {
+//    if (power == 0) return identity(base.size());
+//    Matrix ret = base ^ (power >> 1);
+//    ret = ret * ret;
+//    if (power & 1)
+//        ret = ret * base;
+//    return ret;
+//}
+
+int mat[1 << 7 | 5][1 << 7 | 5];
+int cur[1 << 7 | 5][1 << 7 | 5];
+int ret[1 << 7 | 5][1 << 7 | 5];
+int sz;
+
+int C[1 << 7 | 5][1 << 7 | 5];
+
+void multiply(int a[1 << 7 | 5][1 << 7 | 5], int b[1 << 7 | 5][1 << 7 | 5]) {
+    for (int i=0;i<sz;i++)
+        for (int j=0;j<sz;j++) {
+            C[i][j] = 0;
+            for (int k = 0;k < sz; k++)
+                C[i][j] = (C[i][j] + a[i][k] * 1LL * b[j][k] % MOD) % MOD;
+        }
+    memcpy(a, C, sizeof(C));
+}
+void getPower(int power) {
+    for (int c=0;c<(1<<M);c++)
+        ret[c][c] = 1;
+    memcpy(cur, mat, sizeof(mat));
+    for ( ;power; power >>= 1) {
+        if (power & 1)
+            multiply(ret, cur);
+        multiply(cur, cur);
+    }
+    memcpy(mat, ret, sizeof(ret));
+}
+Matrix operator ^ (const Matrix& base, int power) {
+    Matrix ret = identity(base.size());
+    Matrix cur = base;
+    for (; power ; power >>= 1) {
+        if (power & 1)
+            ret = ret * cur;
+        cur = cur * cur;
+    }
+    return ret;
+}
+
+
+bool valid(int mask, int mask2) {
+    int cur1 = 0, cur2 = 0;
+    for (int i=0;i<M;i++) {
+        if (i == 0) {
+            cur1 = 1;
+            cur2 = 1;
+        } else {
+            if (!!(mask & (1 << i - 1)) == !!(mask & (1 << i)))
+                cur1 ++;
+            else cur1 = 1;
+            if (!!(mask2 & (1 << i - 1)) == !!(mask2 & (1 << i)))
+                cur2 ++;
+            else cur2 = 1;
+        }
+        if (cur1 >= Y && cur2 >= Y && (!!(mask & (1 << i))) == (!!(mask2 & (1 << i))))
+            return false;
+    }
+    return true;
+}
+
+int best[1 << 5 | 5][1 << 5 | 5][10];
+
+bool valid(int mask2, int mask1, int mask) {
+    int cur1 = 0, cur2 = 0, cur3 = 0;
+    for (int i=0;i<M;i++) {
+        if (i == 0) {
+            cur1 = 1;
+            cur2 = 1;
+            cur3 = 1;
+        } else {
+            if (!!(mask1 & (1 << i - 1)) == !!(mask1 & (1 << i)))
+                cur1 ++;
+            else cur1 = 1;
+            
+            if (!!(mask2 & (1 << i - 1)) == !!(mask2 & (1 << i)))
+                cur2 ++;
+            else cur2 = 1;
+            
+            if (!!(mask & (1 << i - 1)) == !!(mask & (1 << i)))
+                cur3 ++;
+            else cur3 = 1;
+        }
+        if (cur1 >= Y && cur2 >= Y && cur3 >= Y && (!!(mask & (1 << i))) == (!!(mask2 & (1 << i)))
+            && (!!(mask & (1 << i))) == (!!(mask1 & (1 << i))))
+            return false;
+    }
+    return true;
+}
+
+int solve(int mask2, int mask1, int i) {
+    if (i == N) return 1;
+    int& ret = best[mask2][mask1][i];
+    if (~ret) return ret;
+    ret = 0;
+    for (int mask = 0; mask < (1 << M); mask++)
+        if (i < 2 || valid(mask2, mask1, mask)) {
+            ret += solve(mask1, mask, i + 1);
+            ret %= MOD;
+        }
+    return ret;
+}
+
+
+int main() {
+    //freopen("painting.in","r",stdin);
+    int c,c2;
+    memset(bestColumn, -1 ,sizeof(bestColumn));
+    scanf("%d%d%d%d",&N,&M,&X,&Y);
+    if (X == 1) {
+        int column = solveColumn(M, 0);
+        printf("%d\n",modPow(column, N));
+    } else if (X == 2) {
+        sz = 1 << M;
+        for (int mask = 0; mask < (1 << M); mask++)
+            for (int mask2 = 0; mask2 < (1 << M); mask2++) {
+                mat[mask][mask2] = valid(mask,mask2);
+            }
+        getPower(N - 1);
+        int ret = 0;
+        for (int mask = 0; mask < (1 << M); mask++)
+            for (int mask2 = 0; mask2 < (1 << M); mask2++) {
+                ret += mat[mask][mask2];
+                ret %= MOD;
+            }
+        printf("%d\n",ret);
+    } else {
+        memset(best, -1 ,sizeof(best));
+        int ret = solve(0, 0, 0);
+        printf("%d\n",ret);
+    }
+    return 0;
+}

@@ -1,0 +1,155 @@
+#include<bits/stdc++.h>
+#define MAXN 300005
+using namespace std;
+
+vector<int> g[MAXN], queries[MAXN];
+vector<pair<int, int> > segments[MAXN];
+int U[MAXN], V[MAXN], C[MAXN], lca[MAXN];
+int id[MAXN], sz[MAXN], cnt[MAXN], depth[MAXN];
+bool visited[MAXN];
+bool validSol;
+int root(int x) {
+	if (x == id[x])
+		return x;
+	return id[x] = root(id[x]);
+}
+
+void merge(int x, int y) {
+	x = root(x);
+	y = root(y);
+	if (x == y)
+		return;
+	if (sz[x] < sz[y])
+		swap(x, y);
+	id[y] = x;
+	sz[x] += sz[y];
+}
+
+void setParent(int node) {
+	int r = root(node);
+	id[r] = node;
+	id[node] = node;
+	sz[node] = sz[r];
+}
+
+void dfs(int node, int parent) {
+	cnt[node] = 1;
+	for (int i = 0; i < int(g[node].size()); i++) {
+		int child = g[node][i];
+		if (child == parent)
+			continue;
+		depth[child] = 1 + depth[node];
+		dfs(child, node);
+		cnt[node] += cnt[child];
+		merge(node, child);
+		setParent(node);
+	}
+	visited[node] = true;
+	for (int i = 0; i < int(queries[node].size()); i++) {
+		int ind = queries[node][i];
+		if (!visited[U[ind]] || !visited[V[ind]])
+			continue;
+		if (U[ind] == node)
+			lca[ind] = root(V[ind]);
+		else
+			lca[ind] = root(U[ind]);
+	}
+}
+
+long long solve(int node, int parent, set<pair<int, int> > &S, int &offset) {
+	long long ret = 0;
+
+	// heavy chilld
+	for (int i = 0; i < int(g[node].size()); i++) {
+		int child = g[node][i];
+		if (child == parent || cnt[child] * 2 <= cnt[node])
+			continue;
+		ret += solve(child, node, S, offset);
+	}
+
+	for (int i = 0; i < int(segments[node].size()); i++) {
+		int cost = segments[node][i].first;
+		int ancestorDepth = segments[node][i].second;
+		if (ancestorDepth < depth[node])
+			S.insert(make_pair(cost + offset, ancestorDepth));
+	}
+
+
+	// light children
+	for (int i = 0; i < int(g[node].size()); i++) {
+		int child = g[node][i];
+		if (child == parent || cnt[child] * 2 > cnt[node])
+			continue;
+		set<pair<int, int> > yourS;
+		int yourOffset = 0;
+		ret += solve(child, node, yourS, yourOffset);
+
+		for (set<pair<int, int> >::iterator it = yourS.begin(); it != yourS.end(); it++) {
+			int cost = it->first - yourOffset, ancestorDepth = it->second;
+			if (ancestorDepth < depth[node])
+				S.insert(make_pair(cost + offset, ancestorDepth));
+		}
+	}
+
+	while (!S.empty() && S.begin()->second >= depth[node])
+		S.erase(S.begin());
+
+	if (node != 0 && S.empty()) {
+		validSol = false;
+		return ret;
+	}
+
+	if (S.empty())
+		return ret;
+
+	assert(node != 0);
+	if (node != 0) {
+		int paid = S.begin()->first - offset;
+		ret += paid;
+		offset += paid;
+	}
+	return ret;
+}
+
+
+int main() {
+	ios::sync_with_stdio(false);
+	int n, m; scanf("%d%d", &n, &m);
+	for (int i = 0; i < n - 1; i++) {
+		int u, v; scanf("%d%d", &u, &v);
+		--u; --v;
+		g[u].push_back(v);
+		g[v].push_back(u);
+	}
+	for (int i = 0; i < m; i++) {
+		scanf("%d%d%d", U + i, V + i, C + i);
+		--U[i]; --V[i];
+		queries[U[i]].push_back(i);
+		queries[V[i]].push_back(i);
+	}
+	for (int i = 0; i < n; i++)
+		id[i] = i, sz[i] = 1;
+	dfs(0, -1);
+
+	for (int i = 0; i < m; i++)
+		segments[U[i]].push_back(make_pair(C[i], depth[lca[i]]));
+
+	for (int i = 0; i < n; i++)
+		sort(segments[i].begin(), segments[i].end());
+
+	validSol = true;
+	set<pair<int, int> > yourS;
+	int yourOffset = 0;
+	long long ans =  solve(0, -1, yourS, yourOffset);
+	if (validSol)
+		cout << ans << endl;
+	else
+		cout << -1 << endl;
+
+
+
+
+
+
+	return 0;
+}

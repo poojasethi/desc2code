@@ -1,0 +1,166 @@
+#include <cstring>
+#include <algorithm>
+#include <cstdio>
+#define min(a, b) (((a) < (b)) ? a : b); 
+#define max(a, b) (((a) > (b)) ? a : b); 
+
+using namespace std;
+
+const int MAXN = 2e5 + 5, MAXQ = 19;
+const int Inf = 1e9 + 7;
+
+struct Node {
+	int Ans, Len;
+	Node(int ans, int len) {Ans = ans, Len = len;}
+	Node() {}
+};
+
+Node Tr[MAXN * 4];
+int Len, L, R, Rmq[MAXN][MAXQ], T[MAXN * 4], Log[MAXN * 2];
+int n, m, tp[MAXN], rank[MAXN], tax[MAXN], SA[MAXN], Height[MAXN];
+char S[MAXN];
+
+void RSort() {
+	for (int i = 0; i <= m; i ++) tax[i] = 0;
+	for (int i = 1; i <= n; i ++) tax[rank[tp[i]]] ++;
+	for (int i = 1; i <= m; i ++) tax[i] += tax[i - 1];
+	for (int i = n; i; i --) SA[tax[rank[tp[i]]] --] = tp[i];
+}
+
+bool cmp(int *f, int x, int y, int w) {
+	return f[x + w] == f[y + w] && f[x] == f[y];
+}
+
+void Suffix() {
+	n = Len;
+	for (int i = 1; i <= n; i ++) tp[i] = i, rank[i] = S[i];
+	m = 127, RSort();
+	
+	for (int p = 0, w = 1, i; p < n; w += w, m = p) {
+		for (i = n - w + 1, p = 0; i <= n; i ++) tp[++ p] = i;
+		for (int i = 1; i <= n; i ++) if (SA[i] > w) tp[++ p] = SA[i] - w;
+		RSort(), swap(tp, rank), rank[SA[1]] = p = 1;
+		for (int i = 2; i <= n; i ++) rank[SA[i]] = cmp(tp, SA[i], SA[i - 1], w) ? p : ++ p;
+	}
+	
+	int j, k = 0;
+	for (int i = 1; i <= n; Height[rank[i ++]] = k) 
+		for (k = k ? k - 1 : k, j = SA[rank[i] - 1]; S[i + k] == S[j + k]; k ++);
+}
+
+int GetRmq(int l, int r) {
+	int Lg = Log[r - l + 1];
+	return min(Rmq[l][Lg], Rmq[r - (1 << Lg) + 1][Lg]);
+}
+
+void PreRmq() {
+	for (int i = 1; i <= Len; i ++) Rmq[i][0] = Height[i];
+	for (int j = 1; j <= 18; j ++)
+		for (int i = 1; i <= Len - (1 << (j)) + 1; i ++)
+			Rmq[i][j] = min(Rmq[i][j - 1], Rmq[i + (1 << (j - 1))][j - 1]);
+	for (int i = 0, j = 1; j <= Len; j *= 2, i ++) 
+		Log[j] = i;
+	for (int i = 1; i <= Len; i ++)
+		Log[i] = max(Log[i - 1], Log[i]);
+}
+
+Node Max(Node A, Node B) {
+	if (A.Ans > B.Ans) return A;
+	if (B.Ans > A.Ans) return B;
+	if (A.Len < B.Len) return A;
+	return B;
+}
+
+void Modify1(int Now, int l, int r, int lx, int rx, int Ans, int Len) {
+	if (l == lx && r == rx) {
+		Tr[Now] = Max(Tr[Now], Node(Ans, Len));
+		return;
+	}
+	int Mid = (l + r) >> 1;
+	if (rx <= Mid) Modify1(Now * 2, l, Mid, lx, rx, Ans, Len); else
+	if (lx > Mid) Modify1(Now * 2 + 1, Mid + 1, r, lx, rx, Ans, Len); else
+		Modify1(Now * 2, l, Mid, lx, Mid, Ans, Len), Modify1(Now * 2 + 1, Mid + 1, r, Mid + 1, rx, Ans, Len);
+}
+
+Node Query1(int Now, int l, int r, int Side) {
+	if (l == r) return Tr[Now];
+	int Mid = (l + r) >> 1;
+	if (Side <= Mid) return Max(Tr[Now], Query1(Now * 2, l, Mid, Side)); else
+		return Max(Tr[Now], Query1(Now * 2 + 1, Mid + 1, r, Side));
+}
+
+void Modify2(int Now, int l, int r, int Side, int Val) {
+	if (l == r) {
+		T[Now] = Val;
+		return;
+	}
+	int Mid = (l + r) >> 1;
+	if (Side <= Mid) Modify2(Now * 2, l, Mid, Side, Val); else
+		Modify2(Now * 2 + 1, Mid + 1, r, Side, Val);
+	T[Now] = min(T[Now * 2], T[Now * 2 + 1]);
+}
+
+int Query2(int Now, int l, int r, int lx, int rx) {
+	if (l == lx && r == rx) return T[Now];
+	int Mid = (l + r) >> 1;
+	if (rx <= Mid) return Query2(Now * 2, l, Mid, lx, rx); else 
+	if (lx > Mid) return Query2(Now * 2 + 1, Mid + 1, r, lx, rx); else
+		return min(Query2(Now * 2, l, Mid, lx, Mid), Query2(Now * 2 + 1, Mid + 1, r, Mid + 1, rx));
+}
+
+void Build(int Now, int l, int r) {
+	Tr[Now] = Node(0, 0);
+	T[Now] = Inf;
+	if (l == r) return;
+	int Mid = (l + r) >> 1;
+	Build(Now * 2, l, Mid), Build(Now * 2 + 1, Mid + 1, r);
+}
+
+void GetInter(int Side, int Le) {
+	int l = 1, r = Side - 1, Ans = Side;
+	while (l <= r) {
+		int Mid = (l + r) >> 1;
+		if (GetRmq(Mid + 1, Side) >= Le) Ans = Mid, r = Mid - 1; else
+			l = Mid + 1;
+	}
+	L = Ans;
+	l = Side + 1, r = Len, Ans = Side;
+	while (l <= r) {
+		int Mid = (l + r) >> 1;
+		if (GetRmq(Side + 1, Mid) >= Le) Ans = Mid, l = Mid + 1; else
+			r = Mid - 1;
+	}
+	R = Ans;
+}
+
+void Prepare() {
+	Suffix();
+	PreRmq();
+	Build(1, 1, Len);
+}
+
+void Solve() {
+	int Ans = 0;
+	for (int i = Len; i; i --) {
+		int Rk = rank[i];
+		Node Now = Query1(1, 1, Len, Rk);
+		int len = 1, ans = 1;
+		if (Now.Len) {
+			GetInter(Rk, Now.Len);
+			len = Now.Len + Query2(1, 1, Len, L, R) - i;
+			ans = Now.Ans + 1;
+		}
+		Modify2(1, 1, Len, Rk, i);
+		GetInter(Rk, len);
+		Modify1(1, 1, Len, L, R, ans, len);
+		Ans = max(Ans, ans);
+	}
+	printf("%d\n", Ans);
+}
+
+int main() {
+	scanf("%d", &Len);
+	scanf("%s", S + 1);
+	Prepare();
+	Solve();
+}

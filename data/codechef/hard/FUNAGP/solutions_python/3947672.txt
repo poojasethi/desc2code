@@ -1,0 +1,279 @@
+#include <algorithm>
+#include <cassert>
+#include <cctype>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <ctime>
+#include <fstream>
+#include <functional>
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <numeric>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
+using namespace std;
+
+const int IO_MAXCHARS = 1<<16;
+char input_buffer[IO_MAXCHARS+1];
+struct FastReader {
+    char *p, *q;
+    FastReader(): p(input_buffer), q(input_buffer) {}
+    char next_char() {
+        if (p == q) {
+            p = input_buffer;
+            q = p + fread(input_buffer, 1, IO_MAXCHARS, stdin);
+            *q = '\0';
+        }
+        return *p++;
+    }
+    int next_uint() {
+        char c;
+        int ret = firstnws()-'0';
+        while (isdigit(c=next_char())) {
+            ret = 10*ret + (c-'0');
+        }
+        return ret;
+    }
+    int next_int() {
+        char c = firstnws();
+        if (c == '-') {
+            return -next_uint();
+        } else {
+            --p;
+            return next_uint();
+        }
+    }
+    private:
+    char firstnws() {
+        char c;
+        while (isspace(c=next_char())) ;
+        return c;
+    }
+} reader;
+
+char output_buffer[IO_MAXCHARS];
+struct FastWriter {
+    char *p;
+    FastWriter(): p(output_buffer) {}
+    ~FastWriter() { flush(); }
+    void flush() {
+        *p = '\0';
+        fputs(output_buffer, stdout);
+        p = output_buffer;
+    }
+    void write_char(char c) {
+        if (p-output_buffer+1 == sizeof output_buffer) {
+            flush();
+        }
+        *p++ = c;
+    }
+    void write_uint(int x) {
+        if (x < 10) {
+            write_char(char('0' + x));
+        } else {
+            int t = x/10;
+            write_uint(t);
+            write_char(char('0' + x-10*t));
+        }
+    }
+} writer;
+
+inline void modadd(long long &a, long long b, int mod) {
+    a += b;
+    if (a<0 || a>=mod) a %= mod;
+    if (a < 0) a += mod;
+}
+inline long long modmul(long long a, long long b, long long mod) {
+    a *= b;
+    return (a%mod+mod)%mod;
+}
+long long modexp(long long n, long long k, long long mod) {
+    long long ret = 1;
+    while (k > 0) {
+        if (k&1) ret = modmul(ret, n, mod);
+        n = modmul(n, n, mod);
+        k /= 2;
+    }
+    return ret;
+}
+inline long long modinv(long long n, long long mod) {
+    return modexp(n, mod-2, mod);
+}
+
+struct Node {
+    long long base, a, b, c;
+    Node(): base(0), a(0), b(0), c(0) {}
+    void add(const Node &other, int mod) {
+        modadd(base, other.base, mod);
+        modadd(a, other.a, mod);
+        modadd(b, other.b, mod);
+        modadd(c, other.c, mod);
+    }
+};
+
+int R;
+struct FenwickTree {
+    const int MAXVAL;
+    const int M;
+    const bool IS_AGP; // otherwise only arithmetic progression
+    long long invRm1sqr;
+    vector<Node> T;
+    vector<int> Rpow;
+    FenwickTree(int maxval, int mod):
+            MAXVAL(maxval), M(mod), IS_AGP((R-1)%M != 0), T(maxval+1), Rpow(maxval+1) {
+        if (IS_AGP) {
+            Rpow[0] = 1;
+            for (int i=1; i<=maxval; ++i) {
+                Rpow[i] = int(modmul(Rpow[i-1], R, M));
+            }
+            invRm1sqr = modinv(modmul(R-1, R-1, M), M);
+        }
+    }
+
+    void AGP_add(int pos, long long S, long long D) {
+        Node upd;
+        if (IS_AGP) {
+            upd.a = modmul(D, R, M);
+            modadd(upd.a, -modmul(S, R-1, M), M);
+
+            long long rp = modinv(Rpow[pos-1], M);
+            long long tmp = modmul(S, R-1, M);
+            modadd(tmp, -D, M);
+            long long t2 = modmul(pos, D, M);
+            t2 = modmul(t2, R-1, M);
+            modadd(tmp, -t2, M);
+            upd.b = modmul(tmp, rp, M);
+
+            tmp = modmul(D, R-1, M);
+            upd.c = modmul(tmp, rp, M);
+        } else {
+            upd.a = ((long long)pos*(pos-1)/2)%M;
+            upd.a = modmul(upd.a, D, M);
+            modadd(upd.a, modmul(S, 1-pos, M), M);
+
+            upd.b = S;
+            modadd(upd.b, modmul(-D, pos, M), M);
+            
+            upd.c = D;
+        }
+        add(pos, upd);
+    }
+    void AGP_add(int X, int Y, long long S, long long D) {
+        AGP_add(X, S, D);
+        if (IS_AGP) {
+            AGP_add(Y+1, modmul(-(S+(Y-X+1)*D)%M, Rpow[Y-X+1], M),
+                        modmul(-D, Rpow[Y-X+1], M));
+        } else {
+            AGP_add(Y+1, -(S+(Y-X+1)*D)%M, -D);
+        }
+    }
+
+    void add(int pos, const Node &node) {
+        while (pos <= MAXVAL) {
+            T[pos].add(node, M);
+            pos += pos&-pos;
+        }
+    }
+
+    long long lte(int pos) {
+        int r = pos;
+        Node R;
+        while (pos > 0) {
+            R.add(T[pos], M);
+            pos -= pos&-pos;
+        }
+
+        long long ret = R.a;
+        if (IS_AGP) {
+            long long tmp = modmul(R.b, Rpow[r], M);
+            modadd(ret, tmp, M);
+            tmp = modmul(r, Rpow[r], M);
+            tmp = modmul(tmp, R.c, M);
+            modadd(ret, tmp, M);
+            ret = modmul(ret, invRm1sqr, M);
+        } else {
+            long long tmp = modmul(R.b, r, M);
+            modadd(ret, tmp, M);
+            tmp = (long long)r*(r+1)/2;
+            tmp = modmul(tmp, R.c, M);
+            modadd(ret, tmp, M);
+        }
+        modadd(ret, R.base, M);
+        return ret;
+    }
+    
+    long long value(int l, int r) {
+        long long ret = lte(r);
+        modadd(ret, -lte(l-1), M);
+        return ret;
+    }
+};
+
+void solve() {
+    int n = reader.next_uint();
+    int Q = reader.next_uint();
+    R = reader.next_uint();
+    int p1 = reader.next_uint();
+    int p2 = reader.next_uint();
+
+    FenwickTree T1(n, p1), T2(n, p2);
+    for (int i=1; i<=n; ++i) {
+        Node upd;
+        upd.base = reader.next_uint();
+        T1.add(i, upd);
+        T2.add(i, upd);
+    }
+
+    while (Q--) {
+        int type = reader.next_uint();
+        if (type == 0) {
+            int S = reader.next_uint();
+            int D = reader.next_uint();
+            int X = reader.next_uint();
+            int Y = reader.next_uint();
+            T1.AGP_add(X, Y, S, D);
+            T2.AGP_add(X, Y, S, D);
+        } else if (type == 1) {
+            int X = reader.next_uint();
+            int g = reader.next_uint();
+            int v1 = int(T1.value(X, X));
+            int v2 = int(T2.value(X, X));
+            int newval = int(modexp(v2, g, p2));
+            Node upd;
+            upd.base = newval-v1;
+            T1.add(X, upd);
+            upd.base = newval-v2;
+            T2.add(X, upd);
+        } else {
+            assert(type == 2);
+            int X = reader.next_uint();
+            int Y = reader.next_uint();
+            int ret = int(T1.value(X, Y));
+            writer.write_uint(ret);
+            writer.write_char('\n');
+        }
+        /*
+        for (int i=1; i<=n; ++i) {
+            cerr << T1.value(i, i) << ' ';
+        }
+        cerr << '\n';
+        */
+    }
+}
+
+int main() {
+    int T = reader.next_uint();
+    while (T--) {
+        solve();
+    }
+
+    return 0;
+}

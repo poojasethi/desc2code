@@ -1,0 +1,90 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+using namespace std;
+const int N = 500003;
+typedef pair<int,int> pii;
+int n,m,i,j,k,Q,ql,qr,qc,qe,nx[N],tnx[N],rcol[N];
+pii e[N],q[N];
+vector<pii> mgv[1100000];
+struct revdt
+{
+	int c,p,f,z,s;
+	revdt(int _c,int _p,int _f,int _z,int _s){c=_c,p=_p,f=_f,z=_z,s=_s;}
+};
+typedef vector<revdt> revvct;
+struct revdsu
+{
+	int f[N],z[N],s[N];
+	pii findf(int a){ int ss=0; while(a!=f[a]) ss^= s[a], a = f[a]; return make_pair(a,ss); }
+	bool dis(int a,int b){ return findf(a)!=findf(b); }
+	void merge(int a,int b,int col,revvct &vct)
+	{
+		pii pa = findf(a), pb = findf(b);
+		int fa = pa.first, fb = pb.first;
+		if(fa==fb) return;
+		bool fl = 0;
+		if(z[fa]==z[fb]) z[fa]++, fl = 1;
+		if(z[fa]>z[fb]) swap(fa,fb);
+		vct.push_back(revdt(col,fa,f[fa],z[fa]-(fl?1:0),s[fa]));
+		f[fa] = fb; s[fa] = pa.second^pb.second^1;
+	}
+}osu[51];
+inline int read()
+{
+	int s = 0; char c; while((c=getchar())<'0'||c>'9');
+	do{s=s*10+c-'0';}while((c=getchar())>='0'&&c<='9');
+	return s;
+}
+void add(int p,int l,int r)
+{
+	if(ql<=l&&r<=qr)
+	{
+		mgv[p].push_back(make_pair(qc,qe));
+		return;
+	}
+	int m = (l+r)>>1;
+	if(ql<=m) add(p+p,l,m);
+	if(qr>m) add(p+p+1,m+1,r);
+}
+void query(int p,int l,int r)
+{
+	revvct vct;
+	for(vector<pii>::iterator it=mgv[p].begin();it!=mgv[p].end();it++)
+		osu[it->first].merge(e[it->second].first,e[it->second].second,it->first,vct);
+	if(l>=r)
+	{
+		qe = q[l].first;
+		int a = e[qe].first, b = e[qe].second, co = q[l].second;
+		if(osu[co].dis(a,b)) printf("YES\n"), rcol[qe] = co;
+		else printf("NO\n");
+		ql = l+1, qr = nx[l]-1, qc = rcol[qe];
+		if(rcol[qe]) add(1,1,Q);
+	}
+	else
+	{
+		int m = (l+r)>>1;
+		query(p+p,l,m);
+		query(p+p+1,m+1,r);
+	}
+	while(!vct.empty())
+	{
+		revdt it = vct.back();
+		osu[it.c].f[it.p] = it.f;
+		osu[it.c].z[it.p] = it.z;
+		osu[it.c].s[it.p] = it.s;
+		vct.pop_back();
+	}
+}
+int main()
+{
+	n = read(); m = read(); k = read(); Q = read();
+	for(i=1;i<=n;i++) for(j=1;j<=k;j++) osu[j].f[i] = i;
+	for(i=1;i<=m;i++) e[i].first = read(), e[i].second = read(), tnx[i]=Q+1;
+	for(i=1;i<=Q;i++) q[i].first = read(), q[i].second = read();
+	for(i=Q;i;i--){ nx[i] = tnx[q[i].first]; tnx[q[i].first] = i; }
+	query(1,1,Q);
+	return 0;
+}

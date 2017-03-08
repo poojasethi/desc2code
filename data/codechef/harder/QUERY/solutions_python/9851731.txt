@@ -1,0 +1,227 @@
+#include<stdio.h>
+#include<vector>
+#include<algorithm>
+using namespace std;
+#define N 101000
+typedef long long ll;
+vector<int> v[N];
+int sz[N], son[N], dep[N], st[N], pa[N], top[N], rev[N];
+int tot;
+
+#define M 33000000
+int Son[M][2], Sz[M];
+
+ll add[M], sum[M], Multisum[M], mul[M];
+
+void DFS(int x, int p) {
+    sz[x] = 1;
+    son[x] = 0;
+    int mx = 0;
+    for(int i = 0; i < v[x].size(); i ++) {
+        int y = v[x][i];
+        if(y == p)continue;
+        pa[y] = x;
+        dep[y] = dep[x] + 1;
+        DFS(y, x);
+        if(mx < sz[y])mx = sz[y], son[x] = y;
+        sz[x] += sz[y];
+    }
+    return ;
+}
+int fin;
+
+void decom(int x, int p) {
+    st[x] = ++fin;
+    rev[fin] = x;
+    int y = son[x];
+    top[x] = p;
+    if(!y) return ;
+    decom(y, p);
+    for(int i = 0; i < v[x].size(); i ++) {
+        int z = v[x][i];
+        if(z == pa[x])continue;
+        if(z == y)continue;
+        decom(z, z);
+    }
+    return ;
+}
+
+void add_delta(int id, ll val) {
+    if(!id) return ;
+    add[id] += val;
+    sum[id] += 1ll * val * Sz[id];
+    return ;
+}
+
+void mul_delta(int id, ll val) {
+    if(!id) return ;
+    mul[id] += val;
+    sum[id] += 1ll * val * Multisum[id];
+    return ;
+}
+void push_up(int id) {
+    int x = Son[id][0];
+    int y = Son[id][1];
+    sum[id] = sum[x] + sum[y] + 1ll * add[id] * Sz[id] + 1ll * mul[id] * Multisum[id];
+    Sz[id] = Sz[x] + Sz[y];
+    Multisum[id] = Multisum[x] + Multisum[y];
+    return ;
+}
+
+void Copy(int x, int y) {
+    Son[x][0] = Son[y][0];
+    Son[x][1] = Son[y][1];
+    sum[x] = sum[y];
+    add[x] = add[y];
+    mul[x] = mul[y];
+    Sz[x] = Sz[y];
+    Multisum[x] = Multisum[y];
+    return ;
+
+}
+
+
+int build(int l, int r) {
+    tot++;
+    int x = tot;
+    if(l == r) {
+        add[x] = 0;
+        mul[x] = 0;
+        sum[x] = 0;
+        Sz[x] = 1;
+        Multisum[x] = dep[rev[l]];
+        return x;
+    }
+    int mid = (l + r) >> 1;
+    int y = build(l, mid);
+    int z = build(mid+1, r);
+    Son[x][0] = y;
+    Son[x][1] = z;
+    push_up(x);
+    return x;
+}
+
+
+
+int Add(int l, int r, int st, int en, int id, ll val, ll Mul) {
+    ++tot;
+    if(tot > M - 1000) exit(0);
+    int x = tot;
+    Copy(x, id);
+    if(l <= st && r >= en) {
+        add_delta(x, val);
+        mul_delta(x, Mul);
+        return x;
+    }
+    int mid = (st + en) >> 1;
+    if(mid >= l) Son[x][0] = Add(l, r, st, mid, Son[x][0], val, Mul);
+    if(r >= mid + 1) Son[x][1] = Add(l, r, mid + 1, en, Son[x][1], val, Mul);
+    push_up(x);
+    return x;
+}
+
+int n;
+
+void Doit(int u, int v, int &Root, int a, int b) {
+    int K = 0;
+    int x = u;
+    int y = v;
+    while(top[x] != top[y]) {
+        if(dep[top[x]] < dep[top[y]]) K += dep[y] - dep[top[y]] + 1, y = pa[top[y]];
+        else K += dep[x] - dep[top[x]] + 1, x = pa[top[x]];
+        if(x == 0)exit(0);
+    }
+    if(dep[x] < dep[y]) K += dep[y] - dep[x];
+    else K += dep[x] - dep[y];
+    int ST = 0;
+    int EN = K;
+    x = u;
+    y = v;
+    while(top[x] != top[y]) {
+        if(dep[top[x]] > dep[top[y]]) {
+            Root = Add(st[top[x]], st[x], 1, n, Root,1ll *  a + 1ll * b * (ST + dep[x]), -b);
+            ST += dep[x] - dep[top[x]] + 1;
+            x = pa[top[x]];
+        } else {
+            Root = Add(st[top[y]], st[y], 1, n, Root, 1ll * a + 1ll * b * (EN - dep[y]), b);
+            EN -= dep[y] - dep[top[y]] + 1;
+            y = pa[top[y]];
+        }
+    }
+    if(dep[x] < dep[y]) {
+        Root = Add(st[x], st[y], 1, n, Root, 1ll * a + 1ll * b * (EN - dep[y]), b);
+    } else {
+        Root = Add(st[y], st[x], 1, n, Root, 1ll * a + 1ll * b * (ST + dep[x]), -b);
+    }
+    return ;
+}
+
+ll Sum(int l, int r, int st, int en, int id, ll a, ll b) {
+    if(l > en || r < st) return 0;
+    if(l <= st && r >= en) return sum[id] + 1ll * a * Sz[id] + 1ll * b * Multisum[id];
+    int mid = (st + en) >> 1;
+    ll x = Sum(l, r, st, mid, Son[id][0], 1ll * a + add[id], b + mul[id]);
+    ll y = Sum(l, r, mid + 1, en, Son[id][1], 1ll * a + add[id], b + mul[id]);
+    return x + y;
+}
+
+ll QuerySum(int u, int v, int root) {
+    ll ans = 0;
+    while(top[u] != top[v]) {
+        if(dep[top[u]] < dep[top[v]]) swap(u, v);
+        ans += Sum(st[top[u]], st[u], 1,  n, root, 0, 0);
+        u = pa[top[u]];
+    }
+    if(dep[u] < dep[v]) swap(u, v);
+    ans += Sum(st[v], st[u], 1, n, root, 0, 0);
+    return ans;
+}
+
+int root[N];
+char s[100];
+
+int main() {
+    //freopen("1.in", "r", stdin);
+    //freopen("out1.txt", "w", stdout);
+    int m, x, y;
+    int a, b;
+    scanf("%d%d", &n, &m);
+    for(int i = 1; i < n; i ++) {
+        scanf("%d%d", &x, &y);
+        v[x].push_back(y);
+        v[y].push_back(x);
+    }
+    dep[1] = 0;
+    DFS(1, 0);
+    fin = 0;
+    tot = 0;
+    decom(1, 1);
+    root[0] = build(1, n);
+    int Root = root[0];
+    int cnt = 0;
+    ll ans = 0;
+    for(int i = 1; i <= m; i ++) {
+        scanf("%s", s);
+        if(s[0] == 'c') {
+            cnt++;
+            root[cnt] = Root;
+            scanf("%d%d%d%d", &x, &y, &a, &b);
+            x = 1ll * (ans + x) % n + 1;
+            y = 1ll * (ans + y) % n + 1;
+            Doit(x, y, root[cnt], a, b);
+            Root = root[cnt];
+        } else if(s[0] == 'q') {
+            scanf("%d%d", &x, &y);
+            x = (1ll * ans + x) % n + 1;
+            y = (1ll * ans + y) % n + 1;
+            ans = QuerySum(x, y, Root);
+            printf("%lld\n", ans);
+        } else {
+            scanf("%d", &x);
+            x = (1ll * ans + x) % (cnt + 1);
+            Root = root[x];
+        }
+    }
+    //fprintf(stderr, "%d\n", tot);
+    return 0;
+}

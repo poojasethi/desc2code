@@ -1,0 +1,128 @@
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <deque>
+#include <queue>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <functional>
+#include <utility>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <cstring>
+using namespace std;
+
+#define N 100001
+
+typedef struct person {
+    int a, r, in;
+} person;
+typedef struct query {
+    int x, y, amin, amax, rmin, id;
+} query;
+person P[N];
+query Q[N];
+bool cmpP(const person& p1, const person& p2) {
+    return p1.r < p2.r;
+}
+bool cmpQ(const query& q1, const query& q2) {
+    return q1.rmin > q2.rmin;
+}
+int A[N], ans[N], T[N], S[4*N];
+int aNum = 0;
+//...............
+int lowbit(int a) {
+	return a & (-a);
+}
+
+void add(int p, int v) {
+	while (p <= aNum) {
+		T[p] += v;
+		p += lowbit(p);
+	}
+}
+
+int get(int p) {
+	int ret = 0;
+	while (p) {
+		ret += T[p];
+		p -= lowbit(p);
+	}
+	return ret;
+}
+
+int getSum(int l, int r) {
+    if (r > aNum) r = aNum;
+	return get(r) - get(l-1);
+}
+//................
+void update(int root, int tl, int tr, int at, int v) {
+    S[root] = max(S[root], v);
+    if (tl == tr) return;
+    int tm = tl + (tr - tl)/2;
+    if (at<=tm) update(2*root+1, tl, tm, at, v);
+    else update(2*root+2, tm+1, tr, at, v);
+}
+
+int getMax(int root, int tl, int tr, int l, int r) {
+    if (l > r) return -1;
+    if (tl == l && tr == r) return S[root];
+    int tm = tl + (tr - tl)/2;
+    return max(getMax(2*root+1, tl, tm, l, min(r,tm)), getMax(2*root+2, tm+1, tr, max(l,tm+1), r));
+}
+//................
+
+int main() {
+    int n, k, q, i, j;
+    cin>>n>>k;
+    for (i=0; i<n; i++) cin>>P[i].r;
+    for (i=0; i<n; i++) {
+        cin>>P[i].a;
+        A[aNum++] = P[i].a;
+    }
+    cin>>q;
+    for (i=0; i<q; i++) {
+        cin>>Q[i].x>>Q[i].y;
+        Q[i].amin = max(P[Q[i].x-1].a-k, P[Q[i].y-1].a-k);
+        Q[i].amax = min(P[Q[i].x-1].a+k, P[Q[i].y-1].a+k);
+        Q[i].rmin = max(P[Q[i].x-1].r, P[Q[i].y-1].r);
+        Q[i].id = i;
+    }
+    sort(Q, Q+q, cmpQ);
+    sort(A, A+aNum);
+    aNum = unique(A, A+aNum) - A;
+    for (i=0; i<n; i++) {
+        P[i].a = lower_bound(A, A+aNum, P[i].a) - A;
+    }
+    sort(P, P+n, cmpP);
+    for (i=0; i<n;) {
+        j = i;
+        while (j<n && P[j].r == P[i].r) j++;
+        for (int kk=i; kk<j; kk++) add(P[kk].a+1, 1);
+        for (int kk=i; kk<j; kk++) {
+            int ll = lower_bound(A, A+aNum, A[P[kk].a]-k) - A + 1;
+            int rr = upper_bound(A, A+aNum, A[P[kk].a]+k) - A;
+            P[kk].in = getSum(ll, rr);
+        }
+        i = j;
+    }
+    int pi = n - 1;
+    memset(S, -1, sizeof(S));
+    for (i=0; i<q; i++) {
+        while (pi>=0 && P[pi].r>=Q[i].rmin) {
+            update(0, 0, aNum-1, P[pi].a, P[pi].in);
+            pi--;
+        }
+        int ll = lower_bound(A, A+aNum, Q[i].amin) - A;
+        int rr = upper_bound(A, A+aNum, Q[i].amax) - A - 1;
+        ans[Q[i].id] = getMax(0, 0, aNum-1, ll, rr);
+    }
+    for (i=0; i<q; i++) cout<<ans[i]<<endl;
+}

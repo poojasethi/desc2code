@@ -1,0 +1,261 @@
+#include<iostream>
+#include<cstdio>
+using namespace std;
+
+namespace IO {
+const int SIZE = 1 << 19;
+char buff[SIZE], *p = buff + SIZE;
+ 
+char read_char() {
+if( p == buff + SIZE ) {
+fread( buff, 1, SIZE, stdin );
+p = buff;
+}
+return *(p++);
+}
+ 
+inline int read_int() {
+char c;
+ 
+while( !isdigit( c = read_char() ) );
+ 
+int r = c-'0';
+while( isdigit( c = read_char() ) ) r = 10*r + c - '0';
+ 
+return r;
+}
+}
+ 
+using namespace IO;
+
+
+bool flipped[2000];
+bool flipped1[2000];
+
+bool matrix[1001][1001];
+
+void flipColumn (int, int);
+int flipRow (int, int);
+
+void flipRow_with_side_effects(int rownumber, int size) {
+	for(int j=0; j<size; j++) {
+		if(!matrix[rownumber][j]) {
+			flipColumn(j, size);
+		}
+	}
+	flipped[rownumber]=true;
+}
+
+void flipColumn(int columnnumber, int size) {	
+	flipped[size+columnnumber]=true;
+}
+
+void simpleflipRow(int rownumber, int size) {
+	flipped[rownumber]=true;
+}
+
+int flipRow(int rownumber, int size) {
+	bool cellvalue;
+	if(flipped[size]) {
+		cellvalue=!matrix[rownumber][0];
+	} else {
+		cellvalue=matrix[rownumber][0];
+	}
+	int valid=true;	
+	for(int j=0; j<size; j++) {
+		bool currentcellvalue;
+		if(flipped[size+j]) {
+			currentcellvalue=!matrix[rownumber][j];
+		} else {
+			currentcellvalue=matrix[rownumber][j];
+		}
+		if(currentcellvalue!=cellvalue) {
+			valid=false;
+			break;
+		}
+	}
+	if(valid && cellvalue) {
+		flipped[rownumber]=1;
+		return 1;
+	} else if(!valid) {
+		return -1;
+	} else if(!cellvalue) {
+		return 1;
+	}
+}
+
+void transformMatrix(int size) {
+	// alternative 1 (flip first row)
+	int alt1, alt2, alt3;
+	flipRow_with_side_effects(0, size);
+
+	for(int i=1; i<size; i++) {
+		alt1=flipRow(i, size);
+		if(alt1==-1) {
+			break;
+		}
+	}
+	
+	int rowcount1=0;
+	int columncount1=0;
+
+	
+	int count1=3001;
+	if(alt1!=-1) {
+		count1=0;
+		for(int i=0; i<size; i++) {
+			if(flipped[i]) {
+				count1++;
+				//simpleflipRow(i, size);
+				flipped[i]=0;
+				flipped1[i]=1;
+				rowcount1++;
+			}
+			flipped[i]=0;
+		}
+		for(int j=size; j<2*size; j++) {
+			if(flipped[j]) {
+				////cout <<"flipColumn=" << j << endl;				
+				count1++;
+				//flipColumn(j-size, size);
+				flipped[j]=0;
+				flipped1[j]=1;
+				columncount1++;
+			}
+			flipped[j]=0;
+		}
+	} else {
+		for(int i=0; i<2*size; i++) {
+			flipped[i]=0;
+		}
+	}
+	
+	////cout << "count1=" << count1 << endl;
+	
+	// alternative 2 (don't flip first row)
+	for(int j=0; j<size; j++) {
+		if(matrix[0][j]) {
+			flipColumn(j, size);
+			//cout << "flippedcolumn " << j << endl; 
+		}
+	}
+
+	for(int i=1; i<size; i++) {
+		alt2=flipRow(i, size);
+		if(alt2==-1) {
+			break;
+		}
+	}
+
+	//cout << "alt2=" << alt2 << endl;
+	int rowcount2=0;
+	int columncount2=0;
+
+	int count2=3000;
+	if(alt2!=-1) {
+		count2=0;
+		for(int i=0; i<size; i++) {
+			if(flipped[i]) {
+				count2++;
+				rowcount2++;
+				//flipRow(i, size);
+			}
+		}
+		for(int j=size; j<2*size; j++) {
+			if(flipped[j]) {
+				count2++;
+				columncount2++;
+				//flipColumn(j, size);
+			}
+		}
+	}
+	
+	//cout << "count2=" << count2 << endl;
+	
+	if(alt1==-1 && alt2==-1) {
+		printf("%d\n", -1);
+		return;
+	}
+	
+	if(count1<count2) {
+		if(count1<2001) {
+			//int rowcount=0;
+			//int columncount=0;
+			if(count1==0) {
+				printf("%d\n", 0);
+				return;
+			}
+			printf("%d\n", rowcount1);
+			for(int i=0; i<size; i++) {
+				if(flipped1[i]) {
+					printf("%d\n", i);
+				}
+			}
+			printf("%d\n", columncount1);
+			for(int j=size; j<2*size; j++) {
+				if(flipped1[j]) {
+					printf("%d\n", j-size);
+				}
+			}
+		} else {
+			printf("-1\n");
+		}
+	} else {
+		if(count2<2001) {
+			//int rowcount=0;
+			//int columncount=0;
+			if(count2==0) {
+				printf("0\n");
+				return;
+			}
+			printf("%d\n", rowcount2);
+			for(int i=0; i<size; i++) {
+				if(flipped[i]) {
+					printf("%d\n", i);
+				}
+			}
+			printf("%d\n", columncount2);
+			for(int j=size; j<2*size; j++) {
+				if(flipped[j]) {
+					printf("%d\n", j-size);
+				}
+			}
+		} else {
+			printf("-1\n");
+		}		
+	}
+}
+
+int main() {
+	int t;
+	t=read_int();
+	int size;
+	while(t) {
+		size=read_int();
+		for(int i=0; i<size; i++) {
+			for(int j=0; j<size; j++) {
+				int cellvalue=read_int();
+				matrix[i][j]=cellvalue;
+			}
+		}
+		bool changedcellvalue;
+		for(int i=0; i<size; i++) {
+			for(int j=0; j<size; j++) {
+				changedcellvalue=read_int();
+				if(matrix[i][j]!=changedcellvalue) {
+					matrix[i][j]=1;
+				} else {
+					matrix[i][j]=0;
+				}
+			}
+		}		
+		
+		transformMatrix(size);
+		//printf("\n");
+		for(int index=0; index<2*size; index++) {
+			flipped[index]=0;
+			flipped1[index]=0;
+		}
+		t--;
+	}
+}

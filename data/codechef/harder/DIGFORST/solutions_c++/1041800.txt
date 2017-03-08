@@ -1,0 +1,178 @@
+#include <cassert>
+#include <cstdio>
+#include <ctime>
+#include <cstdlib>
+#include <climits>
+#include <cstddef>
+#include <cctype>
+#include <cmath>
+#include <cstring>
+#include <fstream>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <iterator>
+#include <numeric>
+#include <algorithm>
+#include <map>
+#include <set>
+#include <queue>
+#include <stack>
+#include <vector>
+#include <bitset>
+#include <list>
+#include <string>
+#include <functional>
+#include <utility>
+using namespace std;
+typedef long long llint;
+int const N = 100;
+int const A = 7;
+int n;
+int dig[N];
+bool g[N][N];
+int pos[A + 1];
+bool ok[A + 1];
+int dist[N * 1344];
+bool visited[N * 1344];
+inline int encode(int at, int mask, int m7, int m4, int m3)
+{
+	return at * 1344 + mask * 84 + m7 * 12 + m4 * 3 + m3;
+}
+inline void decode(int status, int &at, int &mask, int &m7, int &m4, int &m3)
+{
+	m3 = status % 3;
+	m4 = (status % 12) / 3;
+	m7 = (status % 84) / 12;
+	mask = (status % 1344) / 84;
+	at = status / 1344;
+}
+bool readin()
+{
+	int i, j, k;
+	if (scanf("%d", &n) == EOF || n == 0)
+	{
+		return false;
+	}
+	for (i = 0; i < n; ++i)
+	{
+		scanf("%d", &dig[i]);
+	}
+	for (i = 0; i < n; ++i)
+	{
+		for (j = 0; j < n; ++j)
+		{
+			scanf("%d", &k);
+			g[i][j] = (k != 0);
+		}
+	}
+	return true;
+}
+bool check(int mask, int m3, int m4, int m7)
+{
+	// 4
+	if (((mask & (1 << 1)) != 0) && m4 != 0)
+	{
+		return false;
+	}
+	// 3 or 6
+	if (((mask & (1 << 0)) != 0 || (mask & (1 << 2)) != 0) && m3 != 0)
+	{
+		return false;
+	}
+	// 7
+	if (((mask & (1 << 3)) != 0) && m7 != 0)
+	{
+		return false;
+	}
+	return true;
+}
+void solve()
+{
+	priority_queue <pair <int, int> > pq;
+	int s, d;
+	int ns;
+	int at, mask, m7, m4, m3;
+	int n_at, n_mask, n_m7, n_m4, n_m3;
+	if (n == 1)
+	{
+		printf("%d\n", dig[0]);
+		return;
+	}
+	// record digits
+	fill(pos, pos + (A + 1), -1);
+	pos[3] = 0;
+	pos[4] = 1;
+	pos[6] = 2;
+	pos[7] = 3;
+	// possible digits
+	fill(ok, ok + (A + 1), false);
+	// 5
+	if (dig[n - 1] == 5)
+	{
+		ok[1] = ok[3] = ok[5] = ok[7] = true;
+	}
+	// 2 4 6
+	else if (dig[n - 1] % 2 == 0)
+	{
+		fill(ok, ok + (A + 1), true);
+		ok[5] = false;
+	}
+	// 1 3 7
+	else
+	{
+		ok[1] = ok[3] = ok[7] = true;
+	}
+	// shortest path
+	if (!ok[dig[0]])
+	{
+		printf("-1\n");
+		return;
+	}
+	memset(dist, -1, sizeof(dist));
+	memset(visited, false, sizeof(visited));
+	dist[s = encode(0, pos[dig[0]] != -1 ? (1 << pos[dig[0]]) : 0, dig[0] % 7, dig[0] % 4, dig[0] % 3)] = dig[0];
+	pq.push(make_pair(-dig[0], s));
+	while (!pq.empty())
+	{
+		s = pq.top().second;
+		d = -pq.top().first;
+		pq.pop();
+		if (visited[s])
+		{
+			continue;
+		}
+		visited[s] = true;
+		decode(s, at, mask, m7, m4, m3);
+		if (at == n - 1 && check(mask, m3, m4, m7))
+		{
+			printf("%d\n", d);
+			return;
+		}
+		for (n_at = 0; n_at < n; ++n_at)
+		{
+			if (g[at][n_at] && ok[dig[n_at]])
+			{
+				n_mask = mask | (pos[dig[n_at]] != -1 ? (1 << pos[dig[n_at]]) : 0);
+				n_m3 = (m3 * 10 + dig[n_at]) % 3;
+				n_m4 = (m4 * 10 + dig[n_at]) % 4;
+				n_m7 = (m7 * 10 + dig[n_at]) % 7;
+				ns = encode(n_at, n_mask, n_m7, n_m4, n_m3);
+				if (!visited[ns] && (dist[ns] == -1 || d + dig[n_at] < dist[ns]))
+				{
+					dist[ns] = d + dig[n_at];
+					pq.push(make_pair(-dist[ns], ns));
+				}
+			}
+		}
+	}
+	printf("-1\n");
+}
+int main()
+{
+	while (readin())
+	{
+		solve();
+	}
+	return 0;
+}

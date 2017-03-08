@@ -1,0 +1,174 @@
+/* Pranet Verma */
+/* Yeh mera template hai. Apna khud banao =_= */
+#include <bits/stdc++.h>
+using namespace std;
+#define infinity (1000000007)
+#define ll long long
+#define ull unsigned long long
+#define pii pair<int,int>
+#define ppi pair<pii,int>
+#define ppp pair<pii,pii>
+#define pip pair<int,pii>
+#define pb push_back
+#define mp make_pair
+#define s(n) scanf("%d",&n)
+#define s2(n,m) scanf("%d%d",&n,&m)
+#define s3(n,m,l) scanf("%d%d%d",&n,&m,&l)
+#define rep(i,n) for(int i=0;i<n;++i)
+ll pwr(ll a,ll b,ll mod) {a%=mod;if(a<0)a+=mod;ll ans=1; while(b) {if(b&1) ans=(ans*a)%mod; a=(a*a)%mod; b/=2; } return ans; }
+ll pwr(ll a,ll b) {ll ans=1; while(b) {if(b&1) ans*=a; a*=a; b/=2; } return ans; }
+ll gcd(ll a,ll b) {while(b) {ll temp=a; a=b; b=temp%b; } return a; }
+ll lcm(ll a,ll b) {return (a/gcd(a,b))*b; }
+ll modularInverse(ll a,ll m) {/*reminder: make sure m is prime*/ assert(false); return pwr(a,m-2,m); }
+const int mod=1000000007;
+
+int n,N,base;
+int b[1000000];
+int cnt=0;
+int a[100001];
+int idx[100001];
+int val[100001];
+int RM[1000001];
+int f(int x)
+{
+  int ret=lower_bound(b,b+cnt,x)-b;
+  RM[ret]=x;
+  return ret;
+}
+
+struct Node
+{
+  int maxF;
+  int maxFIdx;
+  ll sum;
+  int cnt;
+  Node()
+  {
+    
+    sum=0;
+    cnt=0;
+    maxF=0;
+    maxFIdx=-1;
+  }
+
+};
+
+Node tree[1000001];
+Node identity;
+
+
+
+Node merge(const Node &l,const Node &r)
+{
+  Node n;
+  n.sum=l.sum+r.sum;
+
+  n.maxF=max(l.maxF,r.maxF);
+
+  if(n.maxF==r.maxF)
+    n.maxFIdx=r.maxFIdx;
+  else
+    n.maxFIdx=l.maxFIdx;
+
+  n.cnt=l.cnt+r.cnt;
+  return n;
+}
+void mergeUp(int i)
+{
+  while(i)
+  {
+    int p=(i-1)/2;
+    if(i&1)
+      tree[p]=merge(tree[i],tree[i+1]);
+    else
+      tree[p]=merge(tree[i-1],tree[i]);
+    i=p;
+  }
+}
+void addPoint(int x)
+{
+  tree[base+x].cnt++;
+  tree[base+x].sum+=RM[x];
+
+  tree[base+x].maxF=tree[base+x].cnt;
+  tree[base+x].maxFIdx=RM[x];
+
+  mergeUp(base+x);
+}
+
+void removePoint(int x)
+{
+  tree[base+x].cnt--;
+  tree[base+x].sum-=RM[x];
+  tree[base+x].maxF=tree[base+x].cnt;
+  if(tree[base+x].cnt==0)
+    {
+      assert(tree[base+x].maxFIdx!=-1);
+      tree[base+x].maxFIdx=-1;
+      assert(tree[base+x].sum==0);
+    }
+  assert(tree[base+x].cnt>=0);
+  assert(tree[base+x].sum>=0);
+  mergeUp(base+x);
+}
+
+int queryKthSmallest(int i,int l,int r,int k)
+{
+  // cout<<i<<" "<<l<<" "<<r<<" "<<k<<endl;
+  if(tree[i].cnt<k)
+    assert(0);
+  if(l==r)
+  {
+    return RM[l];
+  }
+  int m=(l+r)/2;
+  /* see if left has answer */
+  if(tree[2*i+1].cnt>=k)
+    return queryKthSmallest(2*i+1,l,m,k);
+  return queryKthSmallest(2*i+2,m+1,r,k-tree[2*i+1].cnt);
+}
+int main()
+{
+
+  std::ios::sync_with_stdio(false);
+  
+  int q;
+  cin>>n>>q;
+  
+  for(int i=0;i<n;++i)
+    {
+      cin>>a[i];
+      b[cnt++]=a[i];
+    }
+  for(int i=0;i<q;++i)
+  {
+    cin>>idx[i]>>val[i];
+    b[cnt++]=val[i];
+  }  
+
+  sort(b,b+cnt);
+  N=ceil(log2(cnt));
+  base=(1<<N)-1;
+
+  for(int i=0;i<n;++i)
+  {
+    addPoint(f(a[i]));
+  }
+  
+  for(int i=0;i<q;++i)
+  {
+    int u=idx[i];
+    removePoint(f(a[u]));
+    a[u]=val[i];
+    addPoint(f(a[u]));
+
+    double mean=double(tree[0].sum)/n;
+    // cout<<mean<<endl
+    // int median=-1;
+    int median=queryKthSmallest(0,0,base,1+n/2);
+    int mode=tree[0].maxFIdx;
+    assert(mode!=-1);
+    cout<<setprecision(7)<<fixed<<mean<<" "<<median<<" "<<mode<<"\n";
+  } 
+
+}

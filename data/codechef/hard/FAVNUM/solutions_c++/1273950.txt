@@ -1,0 +1,184 @@
+#include<map>
+#include<ctime>
+#include<cmath>
+#include<queue>
+#include<vector>
+#include<cstdio>
+#include<string>
+#include<cassert>
+#include<cstring>
+#include<numeric>
+#include<sstream>
+#include<iostream>
+#include<algorithm>
+using namespace std;
+typedef long long LL;
+#define MM(a, x) memset(a, x, sizeof(a))
+#define P(x) cout << #x << " = " << x << endl;
+
+int N;
+string s[65];
+vector<string> vs;
+LL ten[20];
+int ntState[1500][10];
+LL dp[20][1500][2][2];
+
+struct Prefix {
+	string s;
+	int len;
+	int id;
+	Prefix() {};
+	Prefix(string _s, int _len, int _id): s(_s), len(_len), id(_id) {};
+	bool operator < (const Prefix& o) const {
+		if(s != o.s) return s < o.s;
+		if(len != o.len) return len < o.len;
+		if(id != o.id) return id < o.id;
+	}
+};
+
+vector<Prefix> prefix;
+
+inline int hashCode(int i, int j) {
+	return i * 20 + j;
+}
+
+void init() {
+	ten[0] = 1;
+	for(int i = 1; i < 20; i++) ten[i] = 10 * ten[i - 1];
+	for(int i = 0; i < N; i++)
+		for(int j = 0; j <= s[i].length(); j++) {
+			int curState = hashCode(i, j);
+			string p = s[i].substr(0, j);
+			for(int k = 0; k < 10; k++) {
+				string ns = p + char(k + '0');
+				int equal = 0;
+				for(int d = 0; d < ns.length(); d++) {
+					string suffix = ns.substr(d);
+					if(binary_search(vs.begin(), vs.end(), suffix)) {
+						equal = 1;
+						ntState[curState][k] = -1;
+						break;
+					}
+				}
+				if(!equal) {
+					for(int d = 0; d < ns.length(); d++) {
+ 						string suffix = ns.substr(d);
+						int L = 0, R = prefix.size() - 1;
+						while(L < R){
+							int M = (L + R) / 2;
+							if(suffix <= prefix[M].s){
+								R = M;
+							}else{
+								L = M + 1;
+							}
+						}
+						if(prefix[L].s == suffix){
+							ntState[curState][k] = hashCode(prefix[L].id, suffix.length());
+							break;
+						}
+					}
+				}
+			}
+		}
+}
+vector<int> D;
+int n;
+LL X;
+
+LL f(int remain, int state, int tight, int beauty) {
+	if(state == -1) beauty = 1;
+	if(remain == 0) {
+		if(beauty == 0) return 0;
+		else return 1;
+	}
+	if(beauty) {
+		if(!tight)
+			return ten[remain];
+		else
+			return X % ten[remain] + 1;
+	}
+	LL &ret = dp[remain][state][tight][beauty];
+	if(ret == -1) {
+		ret = 0;
+		if(tight == 1) {
+			for(int i = 0; i <= D[n - remain]; i++) {
+				int nextState = ntState[state][i];
+				int r = nextState / 20;
+				int c = nextState % 20;
+				ret += f(remain - 1, nextState, i == D[n - remain], c == s[r].length());
+			}
+		} else {
+			for(int i = 0; i < 10; i++) {
+				int nextState = ntState[state][i];
+				int r = nextState / 20;
+				int c = nextState % 20;
+				ret += f(remain - 1, nextState, 0, c == s[r].length());
+			}
+		}
+	}
+	return ret;
+}
+
+LL F(LL x) {
+	X = x;
+	D.clear();
+	LL t = x;
+	while(t) {
+		D.push_back(t % 10);
+		t /= 10;
+	}
+	//D.resize(19, 0);
+	reverse(D.begin(), D.end());
+	n = D.size();
+	MM(dp, -1);
+	return f(n, 0, 1, 0);
+}
+
+LL Count(LL L, LL x) {
+	return F(x) - F(L - 1);
+}
+
+int main() {
+	LL L, R, K;
+	cin >> L >> R >> K >> N;
+	for(int i = 0; i < N; i++) cin >> s[i], vs.push_back(s[i]);
+	sort(vs.begin(), vs.end());
+	for(int i = 0; i < N; i++)
+		for(int j = 0; j < s[i].length(); j++) {
+			prefix.push_back(Prefix(s[i].substr(0, j + 1), s[i].length(), i));
+		}
+	sort(prefix.begin(), prefix.end());
+	init();
+	LL l = L, r = R;
+	while(l < r) {
+		LL m = (l + r) / 2;
+		LL t = Count(L, m);
+		if(t >= K) {
+			r = m;
+		} else {
+			l = m + 1;
+		}
+	}
+	if(Count(L, l) == K) cout << l << endl;
+	else {
+		cout << "no such number" << endl;
+	}
+#ifdef _DEBUG
+	system("pause");
+#endif
+	return 0;
+}
+
+/*
+12341 109213411234312112
+41542511234 6
+41234  6431234 23124 6863 1236 12341293
+
+12341 109213411234312112
+415425112411234 5
+41234  6431234 234 68763 12236 12341293
+
+1 1000000000000000000
+1000000000000000000 9
+1 2 3 4 5 6 7 8 9
+*/

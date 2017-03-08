@@ -1,0 +1,127 @@
+#include <cstdio>
+#include <iostream>
+#include <algorithm>
+#include <map>
+#include <set>
+#include <sstream>
+#include <cstring>
+#include <vector>
+#include <string>
+ 
+using namespace std;
+#define pb push_back
+#define pii pair<int,  int>
+#define x first
+#define y second
+#define mp make_pair
+#define L(s) (int)(s).size()
+#define ll long long
+#define all(s) (s).begin(), (s).end()
+#define VI vector<int>
+int n;
+int f[1 << 20];
+int g[1 << 20];
+int h[1 << 20];
+const int mod = 1000000007;
+inline int naive() {
+	int ans = 0;
+	for(int i = 0; i < (1 << n); ++i) {
+		for(int j = 0; j < (1 << n); ++j) {
+			for(int k = 0; k < (1 << n); ++k) {
+				for(int l = 0; l < (1 << n); ++l) {
+					bool good = 1;
+					good = (((i | j | k) & l) == l);
+					if (good) {
+						ans += f[i] * g[j] * h[k];
+						ans %= mod;
+					}
+				}
+			}
+		}
+	}
+	return ans;
+}
+ 
+int solve(VI f, VI g, VI h, int bits) {
+	if (bits == 1) {
+		int ans = 0;
+		for(int i = 0; i < 2; ++i)
+			for(int j = 0; j < 2; ++j)
+				for(int k = 0; k < 2; ++k) {
+					int add = (ll)f[i] * g[j] % mod;
+					add = (ll)add * h[k] % mod;
+					ans += add; if (ans >= mod) ans -= mod;
+					if (i | j | k) {
+						ans += add; if (ans >= mod) ans -= mod;
+					}
+				}
+		return ans;
+	}
+	int half = (1 << (bits - 1));
+	VI nf(0), ng(0), nh(0);
+	for(int i = 0; i < half; ++i) {
+		nf.pb(f[i] + f[i + half]);
+		ng.pb(g[i] + g[i + half]);
+		nh.pb(h[i] + h[i + half]);
+	}
+	int ans = 2 * solve(nf, ng, nh, bits - 1);
+	f.resize(half);
+	g.resize(half);
+	h.resize(half);
+	ans -= solve(f, g, h, bits - 1);
+	return ans;
+}
+int mysolve(int shift, int bits) {
+	for(int i = shift; i < shift + (1 << bits); ++i) {
+		if (f[i] >= mod) f[i] -= mod;
+		if (g[i] >= mod) g[i] -= mod;
+		if (h[i] >= mod) h[i] -= mod;
+	}
+//	cerr << shift << " " << bits << endl;
+	if (bits == 1) {
+		int ans = 0;
+		for(int i = 0; i < 2; ++i)
+			for(int j = 0; j < 2; ++j)
+				for(int k = 0; k < 2; ++k) {
+					int add = (ll)f[i + shift] * g[j + shift] % mod;
+					add = (ll)add * h[k + shift] % mod;
+					ans += add; if (ans >= mod) ans -= mod;
+					if (i | j | k) {
+						ans += add; if (ans >= mod) ans -= mod;
+					}
+				}
+		return ans;
+	}
+	int half = 1 << (bits - 1);
+	for(int i = 0; i < half; ++i) {
+		f[i + half + shift] += f[i + shift];
+		g[i + half + shift] += g[i + shift];
+		h[i + half + shift] += h[i + shift];
+	}
+	int ans = mysolve(shift + half, bits - 1);
+	ans += ans; if (ans >= mod) ans -= mod;
+	ans += mod - mysolve(shift, bits - 1); if (ans >= mod) ans -= mod;
+	return ans;
+ 
+}
+int main() {
+	scanf("%d", &n);
+	for(int i = 0; i < (1 << n); ++i) scanf("%d", &f[i]);
+	for(int i = 0; i < (1 << n); ++i) scanf("%d", &g[i]);
+	for(int i = 0; i < (1 << n); ++i) scanf("%d", &h[i]);
+	cout << mysolve(0, n) << endl;
+//	while(1) {
+//		n = 1 + rand() % 6;
+//		for(int i = 0; i < (1 << n); ++i) f[i] = rand() % 10;
+//		for(int i = 0; i < (1 << n); ++i) g[i] = rand() % 10;
+//		for(int i = 0; i < (1 << n); ++i) h[i] = rand() % 10;
+//		int v1 = naive();
+//		int v2 = mysolve(0, n);//solve(VI(f, f + (1 << n)), VI(g, g + (1 << n)), VI(h, h + (1 << n)), n);
+//		if (v1 != v2) {
+//			cerr << "ERROR\n";
+//			cerr << v1 << " " << v2 << " " << mysolve(0, n) << endl;
+//			exit(0);
+//		}
+//		cerr << "OK\n";
+//	}
+}

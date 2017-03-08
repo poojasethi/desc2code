@@ -1,0 +1,306 @@
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <deque>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <queue>
+#include <set>
+#include <stack>
+#include <stdlib.h>
+#include <string>
+#include <vector>
+
+using namespace std;
+
+#define LL long long
+#define LD long double
+
+#define VI vector<int>
+
+#define sd(x) x = GetNextInt()
+
+#define PB push_back
+#define MP make_pair
+#define F first
+#define S second
+#define PII pair<int,int>
+#define PPII pair< PI , PI >
+
+#define INF 2000000009
+
+#if 0
+#define get getchar_unlocked
+#else
+#define get getchar
+#endif
+
+int next_int;
+char in_char;
+
+inline int GetNextInt(){
+    in_char = ' ';
+    while((in_char < '0') || (in_char > '9')){
+        in_char = get();
+    }
+    next_int = 0;
+    while((in_char >= '0') && (in_char <= '9')){
+        next_int *= 10;
+        next_int += in_char - 48;
+        in_char = get();
+    }
+    return next_int;
+}
+
+LL PowerMod(LL base,LL power,LL mod){
+    LL ret = 1;
+    if(base >= mod){
+        base %= mod;
+    }
+    while(power > 0){
+        if((power & 1) == 1){
+            ret *= base;
+            if(ret >= mod){
+                ret %= mod;
+            }
+        }
+        power >>= 1;
+        base *= base;
+        if(base >= mod){
+            base %= mod;
+        }
+    }
+    return ret;
+}
+
+inline bool validchar(char ch){
+    if((ch >= 'a') && (ch <= 'z')){
+        return true;
+    }
+    if((ch >= 'A') && (ch <= 'Z')){
+        return true;
+    }
+    if((ch >= '0') && (ch <= '9')){
+        return true;
+    }
+    return false;
+}
+
+vector<string> GetStringsFromLine(){
+    vector<string> ret;
+    char ch;
+    string s;
+    ch = ' ';
+    while(true){
+        while(!validchar(ch)){
+            if(ch == '\n'){
+                return ret;
+            }
+            ch = get();
+        }
+        s = "";
+        while(validchar(ch)){
+            s = s + ch;
+            ch = get();
+        }
+        ret.PB(s);
+    }
+}
+
+/* Main Code */
+
+#define MAXL 4111111
+#define MOD 1000000007
+
+char in[MAXL];
+string N;
+int n, lastdig, l, r;
+int ans, tp[MAXL];
+
+struct node{
+    int l, r, ones, val;
+    bool flip;
+};
+
+class SegTree{
+public:
+    node tree[MAXL];
+    void init(int root, int l, int r);
+    int QueryDigits(int root, int l, int r);
+    int QueryValue(int root, int l, int r);
+    void Update(int root, int l, int r);
+} st;
+
+bool QueryN(){
+    //cout<<lastdig<<"    ";
+    if(lastdig == 1){
+        return true;
+    }
+    else{
+        int ones = st.QueryDigits(1,1,n);
+        if(ones & 1){
+            return false;
+        }
+        else{
+            return true;
+        }
+    }
+}
+
+void PreProcess(){
+    int i;
+    tp[0] = 1;
+    for(i = 1;i < MAXL;i++){
+        tp[i] = tp[i - 1] + tp[i - 1];
+        if(tp[i] >= MOD){
+            tp[i] = tp[i] - MOD;
+        }
+    }
+    scanf("%s",in);
+    N = in;
+    n = N.length() - 1;
+    N = " " + N;
+    lastdig = N[n + 1] - 48;
+    st.init(1,1,n);
+}
+
+inline void Solve(){
+    sd(l); sd(r);
+    if(r == n + 1){
+        lastdig ^= 1;
+        r--;
+    }
+    st.Update(1,l,r);
+    ans = st.QueryValue(1,1,n);
+    if(QueryN()){
+        ans++;
+        if(ans >= MOD){
+            ans -= MOD;
+        }
+    }
+    printf("%d\n",ans);
+}
+
+int main(){
+    PreProcess();
+    int q;
+    sd(q);
+    ans = st.QueryValue(1,1,n);
+    if(QueryN()){
+        ans++;
+        if(ans == MOD){
+            ans = 0;
+        }
+    }
+    cout<<ans<<endl;
+    while(q--){
+        Solve();
+    }
+    return 0;
+}
+
+void SegTree::init(int root, int l, int r){
+    if(l > r){
+        return;
+    }
+    tree[root].l = l;
+    tree[root].r = r;
+    tree[root].flip = false;
+    if(l == r){
+        if(N[l] == '1'){
+            tree[root].val = tp[n - r];
+            tree[root].ones = 1;
+        }
+        else{
+            tree[root].val = 0;
+            tree[root].ones = 0;
+        }
+    }
+    else{
+        init(root + root, l, (l + r) / 2);
+        init(root + root + 1, (l + r) / 2 + 1, r);
+        tree[root].val = tree[root + root].val + tree[root + root + 1].val;
+        tree[root].ones = tree[root + root].ones + tree[root + root + 1].ones;
+        if(tree[root].val >= MOD){
+            tree[root].val -= MOD;
+        }
+    }
+}
+
+void SegTree::Update(int root, int l, int r){
+    if(l > r){
+        return;
+    }
+    if(tree[root].l > r || tree[root].r < l){
+        return;
+    }
+    if(tree[root].l >= l && tree[root].r <= r){
+        tree[root].val = tp[n - tree[root].l + 1] - tp[n - tree[root].r] - tree[root].val;
+        tree[root].ones = tree[root].r - tree[root].l + 1 - tree[root].ones;
+        while(tree[root].val < 0){
+            tree[root].val += MOD;
+        }
+        tree[root].flip ^= true;
+    }
+    else{
+        int lc = root + root;
+        int rc = lc + 1;
+        if(tree[root].flip){
+            tree[root].flip = false;
+            Update(lc, tree[lc].l, tree[lc].r);
+            Update(rc, tree[rc].l, tree[rc].r);
+        }
+        Update(lc, l, r);
+        Update(rc, l, r);
+        tree[root].val = tree[lc].val + tree[rc].val;
+        tree[root].ones = tree[lc].ones + tree[rc].ones;
+        if(tree[root].val >= MOD){
+            tree[root].val -= MOD;
+        }
+    }
+}
+
+int SegTree::QueryValue(int root, int l, int r){
+    if(l > r){
+        return 0;
+    }
+    if(tree[root].l > r || tree[root].r < l){
+        return 0;
+    }
+    if(tree[root].l >= l && tree[root].r <= r){
+        return tree[root].val;
+    }
+    else{
+        int lc = root + root;
+        int rc = lc + 1;
+        if(tree[root].flip){
+            tree[root].flip = false;
+            Update(lc, tree[lc].l, tree[lc].r);
+            Update(rc, tree[rc].l, tree[rc].r);
+        }
+        return (QueryValue(lc, l, r) + QueryValue(rc, l, r))%MOD;
+    }
+}
+
+int SegTree::QueryDigits(int root, int l, int r){
+    if(l > r){
+        return 0;
+    }
+    if(tree[root].l > r || tree[root].r < l){
+        return 0;
+    }
+    if(tree[root].l >= l && tree[root].r <= r){
+        return tree[root].ones;
+    }
+    else{
+        int lc = root + root;
+        int rc = lc + 1;
+        if(tree[root].flip){
+            tree[root].flip = false;
+            Update(lc, tree[lc].l, tree[lc].r);
+            Update(rc, tree[rc].l, tree[rc].r);
+        }
+        return QueryDigits(lc, l, r) + QueryDigits(rc, l , r);
+    }
+}

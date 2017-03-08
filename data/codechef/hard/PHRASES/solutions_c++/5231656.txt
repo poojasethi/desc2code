@@ -1,0 +1,236 @@
+#include <bits/stdc++.h>
+#include <tr1/unordered_map>
+#define MAXN 2000010
+
+using namespace std;
+using namespace tr1;
+
+typedef long long int64;
+typedef unsigned long long uint64;
+
+
+#ifdef _WIN32 
+    #define getchar_unlocked getchar
+#endif
+
+bool read( int &n ) {
+    n = 0;
+    register bool neg = false;
+    register char c = getchar_unlocked();
+    if( c == EOF) { n = -1; return false; }
+    while (!('0' <= c && c <= '9')) {
+        if( c == '-' ) neg = true;
+        c = getchar_unlocked();
+    }
+    while ('0' <= c && c <= '9') {
+        n = n * 10 + c - '0';
+        c = getchar_unlocked();
+    }
+    n = (neg ? (-n) : (n));
+    return true;
+}
+
+char str[MAXN], texto[MAXN];
+int N, id[MAXN], SA[MAXN];
+char mask[]={0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
+#define tget(i) ( (t[(i)/8]&mask[(i)%8]) ? 1 : 0 )
+#define tset(i, b) t[(i)/8]=(b) ? (mask[(i)%8]|t[(i)/8]) : ((~mask[(i)%8])&t[(i)/8])
+#define chr(i) (cs==sizeof(int)?((int*)s)[i]:(( char *)s)[i])
+#define isLMS(i) (i>0 && tget(i) && !tget(i-1))
+  
+// find the start or end of each bucket
+void getBuckets( char *s, int *bkt, int n, int K, int cs, bool end) {
+  int i, sum=0;
+  for(i=0; i<=K; i++) bkt[i]=0; // clear all buckets
+  for(i=0; i<n; i++) bkt[chr(i)]++; // compute the size of each bucket
+  for(i=0; i<=K; i++) { sum+=bkt[i]; bkt[i]=end ? sum : sum-bkt[i]; }
+}
+ 
+// compute SAl
+void induceSAl( char *t, int *SA,  char *s, int *bkt,
+                int n, int K, int cs, bool end) {
+  int i, j;
+  getBuckets(s, bkt, n, K, cs, end); // find starts of buckets
+  for(i=0; i<n; i++) {
+      j=SA[i]-1;
+      if(j>=0 && !tget(j)) SA[bkt[chr(j)]++]=j;
+  }
+}
+ 
+// compute SAs
+void induceSAs( char *t, int *SA,  char *s, int *bkt,
+                int n, int K, int cs, bool end) {
+    int i, j;
+    getBuckets(s, bkt, n, K, cs, end); // find ends of buckets
+    for( i=n-1; i>=0; i-- ){
+        j=SA[i]-1;
+        if(j>=0 && tget(j)) SA[--bkt[chr(j)]]=j;
+    }
+}
+ 
+// find the suffix array SA of s[0..n-1] in {1..K}^n
+// require s[n-1]=0 (the sentinel!), n>=2
+// use a working space (excluding s and SA) of at most 2.25n+O(1) for a constant alphabet
+void SA_IS( char *s, int *SA, int n, int K, int cs) {
+  int i, j;
+   char *t=( char *)malloc(n/8+1); // LS-type array in bits
+ 
+  // Classify the type of each character
+  tset(n-2, 0); tset(n-1, 1); // the sentinel must be in s1, important!!!
+  for(i=n-3; i>=0; i--)
+    tset(i, (chr(i)<chr(i+1) || (chr(i)==chr(i+1) && tget(i+1)==1))?1:0);
+ 
+  // stage 1: reduce the problem by at least 1/2
+  // sort all the S-substrings
+  int *bkt = (int *)malloc(sizeof(int)*(K+1)); // bucket array
+  getBuckets(s, bkt, n, K, cs, true); // find ends of buckets
+  for(i=0; i<n; i++) SA[i]=-1;
+  for(i=1; i<n; i++)
+    if(isLMS(i)) SA[--bkt[chr(i)]]=i;
+ 
+  induceSAl(t, SA, s, bkt, n, K, cs, false);
+  induceSAs(t, SA, s, bkt, n, K, cs, true);
+  free(bkt);
+ 
+  // compact all the sorted substrings into the first n1 items of SA
+  // 2*n1 must be not larger than n (proveable)
+  int n1=0;
+  for(i=0; i<n; i++)
+    if(isLMS(SA[i])) SA[n1++]=SA[i];
+ 
+  // find the lexicographic names of all substrings
+  for(i=n1; i<n; i++) SA[i]=-1; // init the name array buffer
+  int name=0, prev=-1;
+  for(i=0; i<n1; i++) {
+    int pos=SA[i]; bool diff=false;
+    for(int d=0; d<n; d++)
+      if(prev==-1 || chr(pos+d)!=chr(prev+d) || tget(pos+d)!=tget(prev+d))
+      { diff=true; break; }
+      else if(d>0 && (isLMS(pos+d) || isLMS(prev+d))) break;
+    if(diff) { name++; prev=pos; }
+    pos=(pos%2==0)?pos/2:(pos-1)/2;
+    SA[n1+pos]=name-1;
+  }
+  for(i=n-1, j=n-1; i>=n1; i--)
+      if(SA[i]>=0) SA[j--]=SA[i];
+ 
+  // stage 2: solve the reduced problem
+  // recurse if names are not yet unique
+  int *SA1=SA, *s1=SA+n-n1;
+  if(name<n1)
+    SA_IS(( char*)s1, SA1, n1, name-1, sizeof(int));
+  else // generate the suffix array of s1 directly
+    for(i=0; i<n1; i++) SA1[s1[i]] = i;
+ 
+  // stage 3: induce the result for the original problem
+  bkt = (int *)malloc(sizeof(int)*(K+1)); // bucket array
+  // put all left-most S characters into their buckets
+  getBuckets(s, bkt, n, K, cs, true); // find ends of buckets
+  for(i=1, j=0; i<n; i++)
+    if(isLMS(i)) s1[j++]=i; // get p1
+  for(i=0; i<n1; i++) SA1[i]=s1[SA1[i]]; // get index in s
+  for(i=n1; i<n; i++) SA[i]=-1; // init SA[n1..n-1]
+  for(i=n1-1; i>=0; i--) {
+      j=SA[i]; SA[i]=-1;
+      SA[--bkt[chr(j)]]=j;
+  }
+  induceSAl(t, SA, s, bkt, n, K, cs, false);
+  induceSAs(t, SA, s, bkt, n, K, cs, true);
+  free(bkt); free(t);
+}
+ 
+int ranking[MAXN];
+int lcp[MAXN];
+
+void compute_lcp( int n ){
+  int i, j, h = 0;
+  for (i = 0; i != n; ++i) { ranking[SA[i]] = i; }
+  for (i = 0; i != n; ++i) if (ranking[i] > 0) {
+    j = SA[ranking[i]-1];
+    while (texto[i+h] == texto[j+h]) { h++; }
+    lcp[ranking[i]] = h;
+    if (h > 0) { h--; }
+  }
+}
+
+struct tri{
+  int lo, hi;
+  tri( int lo = 1e9, int hi = -1e9 ) : lo(lo), hi(hi) { }
+};
+
+int main(){
+    ios::sync_with_stdio(false);
+    int t, qt;
+    read(t);
+    int pot[] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048};
+    while( t-- ){
+      read(qt);
+      N = 0;
+      int lo = 0, hi = 0, mid;
+      char at = 'B';
+      for( int i = 0; i < qt; i++ ){
+        char c = getchar_unlocked();
+        bool flag = false;
+        int j = 0;
+        while( c != '\n' && c != EOF ){
+          if( c == ' ' ){
+            id[N] = -1;
+            texto[N++] = 'A';
+          }
+          else{
+            id[N] = i;
+            texto[N++] = c;
+          }
+          j++;
+          c = getchar_unlocked();
+        }
+        hi = max(hi, j);
+        id[N] = -1;
+        texto[N++] = at;
+      }
+      id[N] = -1;
+      texto[N++] = '.';
+      id[N] = -1;
+      texto[N++] = '\0';
+      SA_IS( texto, SA, N, 200, 200 );  
+      compute_lcp(N);
+      register int ans = 0, mask = 0, tot = (1 << qt)-1;
+      while( lo <= hi ){
+        mid = (lo+hi) >> 1;
+        int melhor = -1;
+        for( int i = 2; i < N; i++ ){
+            mask = 0;
+            tri used[100];
+            if( !lcp[i] || id[SA[i]] == -1 || lcp[i] < mid ) continue;
+            register int k = i+1;
+            used[id[SA[i-1]]].lo = min(used[id[SA[i-1]]].lo, SA[i-1]);
+            used[id[SA[i-1]]].hi = max(used[id[SA[i-1]]].hi, SA[i-1]);
+            used[id[SA[i]]].lo = min(used[id[SA[i]]].lo, SA[i]);
+            used[id[SA[i]]].hi = max(used[id[SA[i]]].hi, SA[i]);
+            if( (used[id[SA[i]]].hi - used[id[SA[i]]].lo) >= mid ) mask |= pot[id[SA[i]]];
+            if( (used[id[SA[i-1]]].hi - used[id[SA[i-1]]].lo) >= mid ) mask |= pot[id[SA[i-1]]];
+            while( lcp[k] >= mid && mask != tot ){
+              used[id[SA[k]]].lo = min(used[id[SA[k]]].lo, SA[k]);
+              used[id[SA[k]]].hi = max(used[id[SA[k]]].hi, SA[k]);
+              if( (used[id[SA[k]]].hi - used[id[SA[k]]].lo) >= mid ) mask |= pot[id[SA[k]]];
+              k++;
+            }
+            if( mask == tot ){
+              melhor = mid;
+              break;
+            }
+            i = k-1;
+        }
+        if( melhor != -1 ){
+          ans = max(ans, melhor);
+          lo = mid+1;
+        }
+        else hi = mid-1;
+      }
+      cout << ans << "\n";
+      memset(lcp,0,sizeof(lcp));
+      memset(texto,'\0',sizeof(texto));
+      memset(id,0,sizeof(id));
+    }
+    return 0;
+}

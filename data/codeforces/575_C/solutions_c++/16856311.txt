@@ -1,0 +1,184 @@
+#include<stdio.h>
+#include<algorithm>
+#include<queue>
+#include<memory.h>
+#define MAXN 30
+#define INF 100000000
+using namespace std;
+
+queue<int> q1;
+
+int w[MAXN][MAXN];
+int n, M;
+int u[MAXN], v[MAXN];
+int xy[MAXN];
+int yx[MAXN];
+bool S[MAXN], T[MAXN];
+int slack[MAXN];
+int slackx[MAXN];
+int prev[MAXN];
+int q[MAXN];
+
+void init_labels() {
+	memset(u, 0, sizeof(u));
+	memset(v, 0, sizeof(v));
+	for (int x = 0; x < n; x++)
+	for (int y = 0; y < n; y++) u[x] = max(u[x], w[x][y]);
+}
+void update_labels() {
+	int x, y, delta = INF;
+	for (y = 0; y < n; y++)if (!T[y]) delta = min(delta, slack[y]);
+	for (x = 0; x < n; x++)if (S[x]) u[x] -= delta;
+	for (y = 0; y < n; y++)if (T[y]) v[y] += delta;
+	else slack[y] -= delta;
+}
+void add_to_tree(int x, int prevx) {
+	S[x] = true;
+	prev[x] = prevx;
+	for (int y = 0; y < n; y++)
+		if (u[x] + v[y] - w[x][y] < slack[y]) {
+			slack[y] = u[x] + v[y]  - w[x][y];
+			slackx[y] = x;
+		}
+
+}
+
+
+void add_match(int a, int b){
+	int cx= a;
+	int cy = b;
+	while(1){
+		int yy = xy[cx];
+		xy[cx] = cy;
+		yx[cy] = cx;
+		if(prev[cx] == -2)break;
+		int xx = prev[cx];
+		cy = yy;
+		cx = xx;
+	}
+	return ;
+}
+
+void augment() {
+	if (M == n) return;
+	//printf("%d\n", M);
+	int x, y, root;
+	int wr = 0, rd = 0;
+	memset(S, 0, sizeof (S));
+	memset(T, 0, sizeof (T));
+	memset(prev, -1, sizeof (prev));
+	for (x = 0; x < n; x++)if (xy[x] == -1) break;
+	while(!q1.empty())q1.pop();
+	root = x;
+	q1.push(root);
+	prev[x] = -2;
+	S[x] = true;
+	for (y = 0; y < n; y++) {
+		slack[y] = u[root] + v[y]  - w[root][y];
+		slackx[y] = root;
+	}
+	while (true) {
+		while(!q1.empty()){
+			x = q1.front();
+			q1.pop();
+			for (y = 0; y < n; y++)
+			if (w[x][y] == u[x] + v[y] && !T[y]) {
+				if (yx[y] == -1) break;
+				T[y] = true;
+				q1.push(yx[y]);
+				add_to_tree(yx[y], x);
+			}
+			if (y < n) {
+				break;
+			}
+		}
+		if(y<n)break;
+		update_labels();
+		while(!q1.empty())q1.pop();
+		for (y = 0; y < n; y++)
+			if (!T[y] && !slack[y]) {
+				if (yx[y] == -1) {
+					x = slackx[y];
+					break;
+				} else {
+					T[y] = true;
+					if (!S[yx[y]]) {
+						q1.push(yx[y]);
+						add_to_tree(yx[y], slackx[y]);
+					}
+				}
+			}
+		if(y<n){
+			break;
+		}
+	}
+	if(y<n){
+		M++;
+		add_match(x, y);
+		augment();
+	}
+	return ;
+}
+#define N 30
+int Fri[N][N], Sat[N][N], A[N], C[N], B[N];
+
+int ans;
+
+void doit(int *A, int *B, int num){
+    for(int i=0; i<num; i++)C[i] = xy[A[i]], C[i+num] = xy[B[i]];
+    for(int i=0; i<num; i++)for(int j=0; j<n; j++)w[A[i]][j] = Sat[A[i]][j];
+    for(int i=0; i<num; i++)for(int j=0; j<n; j++)w[B[i]][j] = Fri[B[i]][j];
+    for(int i=0; i<num*2; i++)yx[C[i]] = -1;
+    for(int i=0; i<num; i++)xy[A[i]]=-1, xy[B[i]] = -1;
+    M-=2*num;
+    for(int i=0; i<num; i++)u[A[i]] = 0, u[B[i]] = 0;
+    for(int i=0; i<num; i++)for(int j=0; j<n; j++)u[A[i]] = max(u[A[i]], w[A[i]][j]), u[B[i]] = max(u[B[i]], w[B[i]][j]);
+    augment();
+    int ans1 = 0;
+    for(int j=0; j<n; j++)ans1+=u[j]+v[j];
+    ans = max(ans, ans1);
+    return ;
+}
+
+
+
+int main(){
+	//freopen("1.in", "r", stdin);
+
+	scanf("%d", &n);
+	for(int i=0; i<n; i++)for(int j=0; j<n; j++)scanf("%d", &Fri[i][j]);
+	for(int i=0; i<n; i++)for(int j=0; j<n; j++)scanf("%d", &Sat[i][j]);
+	int m = n/2;
+	for(int i=0; i<m; i++)for(int j=0; j<n; j++)w[i][j] = Fri[i][j];
+	for(int i=m+1; i<n; i++)for(int j=0; j<n; j++)w[i][j] = Sat[i][j];
+	for(int i=0; i<n; i++)u[i] =0;
+	for(int i=0; i<n; i++){
+		v[i] = 0;
+		for(int j=0; j<n; j++)v[i] = max(v[i], w[j][i]);
+	}
+	for(int i=0; i<n; i++)xy[i] = -1;
+	for(int i=0; i<n; i++)yx[i] = -1;
+	M = 0;
+	augment();
+	ans = 0;
+	for(int i=0; i<n; i++)ans += u[i]+v[i];
+	int x = (1<<m) -1;
+	int X = 0;
+    for(int i=(1<<m); i<(1<<n); i++){
+        int cnt = 0;
+        for(int j=0; j<n; j++)if((i>>j)&1)A[cnt++] = j;
+        if(cnt!=m)continue;
+        int cnt1 = 0;
+        int cnt2 = 0;
+        for(int j=0; j<n; j++){
+            if(((i>>j)&1) && !((x>>j)&1))A[cnt1++] = j;
+            else if(!((i>>j)&1) && ((x>>j)&1))B[cnt2++] = j;
+        }
+        X+=cnt1;
+        doit(B, A, cnt1);
+        x = i;
+    }
+    //fprintf(stderr, "%d\n", X);
+	printf("%d\n", ans);
+	return 0;
+}

@@ -1,0 +1,87 @@
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<algorithm>
+#include<set>
+#define int64 long long
+#define N 240000
+using namespace std;
+int i,j,k,l,n,m,fa[N][19],e[N],head[N],c[N],next[N],D[N],x,y,len,dfn[N],tim;
+int64 ans,st[N][19];
+char type[120];
+struct frog{
+	bool operator ()(const int&x,const int&y){
+		return dfn[x]<dfn[y];
+	}
+};
+set <int,frog> q;
+set <int,frog> :: iterator fl,fr;
+void pret(int x){
+	for(int i=1;i<=18;++i){
+		fa[x][i]=fa[fa[x][i-1]][i-1];
+		st[x][i]=st[fa[x][i-1]][i-1]+st[x][i-1];
+	}
+}
+void dfs(int x){
+	for(int i=head[x];i;i=next[i])if(e[i]!=fa[x][0]){
+		fa[e[i]][0]=x;
+		st[e[i]][0]=c[i];
+		D[e[i]]=D[x]+1;
+		pret(e[i]);
+		dfs(e[i]);
+	}
+	dfn[x]=++tim;
+}
+int64 dis(int x,int y){
+	int64 res=0;
+	if(D[x]<D[y])swap(x,y);
+	for(int i=18;i>=0;--i)if((D[x]-D[y])>=1<<i){
+		res+=st[x][i];
+		x=fa[x][i];
+	}
+	if(x==y)return res;
+	for(int i=18;i>=0;--i)if(fa[x][i]!=fa[y][i]){
+		res+=st[x][i]+st[y][i];
+		x=fa[x][i];
+		y=fa[y][i];
+	}
+	return res+st[x][0]+st[y][0];
+}
+int main(){
+	scanf("%d",&n);
+	for(i=1;i<n;++i){
+		scanf("%d%d%d",&x,&y,&k);
+		next[++len]=head[x]; head[x]=len; e[len]=y; c[len]=k;
+		next[++len]=head[y]; head[y]=len; e[len]=x; c[len]=k;
+	}
+	dfs(1);
+	scanf("%d",&m);
+	for(i=1;i<=m;++i){
+		scanf("%s",type);
+		if(type[0]=='+'){
+			scanf("%d",&x);
+			if(!q.empty()){
+				fl=fr=q.lower_bound(x);
+				if(fr==q.end()) fr=q.begin();
+				if(fl==q.begin())fl=q.end();
+				fl--;
+				ans-=dis(*fl,*fr);
+				ans+=dis(*fl,x)+dis(x,*fr);
+			}
+			q.insert(x);
+		}
+		else if(type[0]=='-'){
+			scanf("%d",&x);
+			fl=fr=q.lower_bound(x);
+			fr++;
+			if(fr==q.end()) fr=q.begin();
+			if(fl==q.begin()) fl=q.end();
+			fl--;
+			ans-=dis(*fl,x)+dis(x,*fr);
+			ans+=dis(*fl,*fr);
+			q.erase(q.lower_bound(x));
+		}
+		else if(type[0]=='?')
+			printf("%I64d\n",ans/2);
+	}
+}

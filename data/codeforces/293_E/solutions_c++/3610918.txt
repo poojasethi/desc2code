@@ -1,0 +1,147 @@
+#include<stdio.h>
+#include<string.h>
+#include<vector>
+#include<algorithm>
+#include<iostream>
+using namespace std;
+
+const int maxn=100010;
+int c[maxn],N;
+void upd(int n,int k)
+{
+    while(n<=N+1)
+	c[n]+=k,n+=n&(-n);
+}
+int get(int n)
+{
+    int ans=0;
+    if(n<=0)
+	return 0;
+    while(n)
+	ans+=c[n],n-=n&(-n);
+    return ans;
+}
+
+int first[maxn],nxt[maxn<<1],vv[maxn<<1],w[maxn<<1],L,W;
+int siz[maxn],vis[maxn],ms[maxn];
+
+int M,zhong,tot;
+int dfs1(int n,int ee)
+{
+    if(vis[n])
+	return 0;
+    siz[n]=1;
+    for(int e=first[n];e;e=nxt[e])if(e-ee)
+	siz[n]+=dfs1(vv[e],e^1);
+    return siz[n];
+}
+void dfs2(int n,int ee)
+{
+    if(vis[n])
+	return;
+    ms[n]=0;
+    for(int e=first[n];e;e=nxt[e])if(e-ee)
+	dfs2(vv[e],e^1),ms[n]=max(ms[n],siz[vv[e]]);
+    if(M>max(tot-siz[n],ms[n]))
+	M=max(tot-siz[n],ms[n]),zhong=n;
+}
+int finzhong(int n)
+{
+    dfs1(n,0);
+    M=(1ll<<31)-1;tot=siz[n];
+    dfs2(n,0);
+    return zhong;
+}
+struct NN
+{
+    int l,w;
+}nn[maxn],mm[maxn];
+int cmp(NN a,NN b)
+{
+    return a.w<b.w;
+}
+pair<int,int> que[maxn];
+
+long long cal(int p1,int p2)
+{
+    int cnt=0,i,j,top=0;
+    long long ans=0;
+    for(i=p1;i<=p2;i++)
+	mm[cnt++]=nn[i];
+
+    for(i=0,j=cnt-1;i<cnt;i++)
+    {
+	while(j>=0&&mm[i].w+mm[j].w>W)
+	    j--;
+	if(j<0)
+	    break;
+	if(mm[i].l*2<=L&&mm[i].w*2<=W)
+	    ans--;
+	que[++top]=make_pair(j,L-mm[i].l);
+    }
+    for(i=0;i<cnt;i++)
+    {
+	upd(mm[i].l+1,1);
+	while(top&&que[top].first==i)
+	    ans+=get(que[top].second+1),top--;
+    }
+    for(i=0;i<cnt;i++)
+	upd(mm[i].l+1,-1);
+    return ans/2;
+}
+long long ans;
+int ll[maxn],ww[maxn],cnt,dai;
+
+void dfs(int n,int ee)
+{
+    if(vis[n])
+	return;
+    for(int e=first[n];e;e=nxt[e])if(e-ee)
+    {
+	ll[vv[e]]=ll[n]+1;
+	ww[vv[e]]=ww[n]+w[e];
+	dfs(vv[e],e^1);
+    }
+    ++cnt;
+    nn[cnt].l=ll[n],nn[cnt].w=ww[n];
+}
+void solve(int n)
+{
+    n=finzhong(n);
+    vis[n]=1;
+    cnt=0;
+
+    int i;
+    for(int e=first[n];e;e=nxt[e])if(!vis[vv[e]])
+    {
+	i=cnt+1;
+	ll[vv[e]]=1,ww[vv[e]]=w[e];
+	dfs(vv[e],e^1);
+	sort(nn+i,nn+cnt+1,cmp);
+	ans-=cal(i,cnt);
+    }
+    ++cnt;
+    nn[cnt].l=0,nn[cnt].w=0;
+    sort(nn+1,nn+1+cnt,cmp);
+    ans+=cal(1,cnt);
+
+    for(int e=first[n];e;e=nxt[e])if(!vis[vv[e]])
+	solve(vv[e]);
+}
+int main()
+{
+    int n,m,i,j,k,u,v,e=2;
+
+    scanf("%d%d%d",&n,&L,&W);
+    N=n;
+
+    for(i=1;i<n;i++)
+    {
+	scanf("%d%d",&u,&j);
+	v=i+1;
+	nxt[e]=first[u],vv[e]=v,w[e]=j,first[u]=e++;
+	nxt[e]=first[v],vv[e]=u,w[e]=j,first[v]=e++;
+    }
+    solve(1);
+    cout<<ans<<endl;
+}

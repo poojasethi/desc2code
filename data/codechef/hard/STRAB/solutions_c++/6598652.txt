@@ -1,0 +1,140 @@
+#include <algorithm>
+#include <string>
+#include <vector>
+#include <queue>
+#include <iostream>
+#include <cmath>
+#include <sstream>
+#include <map>
+#include <set>
+#include <numeric>
+#include <memory.h>
+#include <cstdio>
+#include <assert.h>
+
+using namespace std;
+
+#define pb push_back
+#define INF 1011111111
+#define FOR(i, a, b) for (int _n(b), i(a); i < _n; i++)
+#define rep(i, n) FOR(i, 0, n)
+#define CL(a, v) memset((a), (v), sizeof(a))
+#define mp make_pair
+#define X first
+#define Y second
+#define all(c) (c).begin(), (c).end()
+#define SORT(c) sort(all(c))
+
+typedef long long ll;
+typedef vector<int> VI;
+typedef pair<int, int> pii;
+
+/*** TEMPLATE CODE ENDS HERE */
+
+const ll mod = 1e9 + 7;
+int memo[19][19][1 << 19];
+int M, L, R, MASK;
+
+int solve3(int n, int mask, int bad) {
+  if (n < 0) {
+    return 1;
+  }
+  int &ans = memo[n][bad][mask];
+  if (ans != -1) return ans;
+  ans = int(24ll * solve3(n - 1, 0, 0) % mod);
+  rep(i, 2) {
+    int nmask = ((mask << 1) & MASK) | i;
+    int nbad = bad == M ? bad : bad + 1;
+    if (!(L <= nmask && nmask <= R && nbad == M)) {
+      ans += solve3(n - 1, nmask, nbad);
+      ans %= mod;
+    }
+  }
+
+  return ans;
+}
+
+// inclusion-exclusion
+
+ll calc_less(const string &a) {
+  int n = (int)a.size();
+  ll ans = 0;
+  rep(i, n) {
+    if (a[i] == 'B') {
+      ans += 1ll << (n - 1 - i);
+    }
+  }
+  return ans % mod;
+}
+
+ll dp[22][22];
+
+ll ways(int n, int k, int m, ll bad) {
+  // length, num of bad words, length of bad word
+  CL(dp, 0);
+  dp[0][0] = 1;
+  rep(i, n) rep(j, k + 1) {
+    dp[i + 1][j] += dp[i][j] * 26;
+    dp[i + 1][j] %= mod;
+    if (i + m <= n) {
+      dp[i + m][j + 1] += dp[i][j] * bad % mod;
+      dp[i + m][j + 1] %= mod;
+    }
+  }
+  return dp[n][k];
+}
+
+ll solve(int n, int m, ll bad) {
+  int cnt = n / m;
+  ll ans = 0;
+  ll mul = 1;
+  rep(i, cnt + 1) {
+    ans += mul * ways(n, i, m, bad) % mod;
+    ans = (ans + mod) % mod;
+    mul = -mul;
+  }
+  return ans;
+}
+
+int main() {
+#ifdef LOCAL_HOST
+  freopen("input.txt", "r", stdin);
+// freopen("output.txt","w",stdout);
+#endif
+
+  ios_base::sync_with_stdio(false);
+
+  int T;
+  cin >> T;
+  while (T--) {
+    int n, m;
+    cin >> n >> m;
+    string x, y;
+    cin >> x >> y;
+    if (1) {
+      L = 0, R = 0;
+      rep(i, m) {
+        L <<= 1;
+        L |= x[i] == 'A' ? 0 : 1;
+        R <<= 1;
+        R |= y[i] == 'A' ? 0 : 1;
+      }
+      M = m;
+      MASK = (1 << M) - 1;
+      CL(memo, -1);
+      ll ans = solve3(n - 1, 0, 0);
+      cout << ans << endl;
+    } else {  // inclusion-exclusion is wrong with function ways!!
+      ll bad_num = (calc_less(y) - calc_less(x) + 1) % mod;
+      bad_num = (bad_num + mod) % mod;
+      ll ans2 = solve(n, m, bad_num);
+      cout << ans2 << endl;
+    }
+  }
+
+#ifdef LOCAL_HOST
+  printf("TIME: %.3lf\n", double(clock()) / CLOCKS_PER_SEC);
+#endif
+
+  return 0;
+}

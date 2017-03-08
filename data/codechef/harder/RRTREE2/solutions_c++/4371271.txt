@@ -1,0 +1,138 @@
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <cassert>
+
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <stack>
+#include <queue>
+#include <map>
+#include <set>
+
+#define vint vector<int>::iterator
+
+using namespace std;
+
+ifstream fin ("C.in");
+
+int w[2][100011],mod[2]={(1<<30)-1,(1<<29)-1},v[510],total,s,sub[510],n,x;
+char ans[100011];
+vector<int> T[510];
+
+void update_answer (int s)
+{
+    for (int i=0; i <= total; ++i)
+    {
+        if (w[0][i] || w[1][i])
+           ans[i+s] = '1';
+    }
+}
+
+void knapsack_add (int val, int wh)
+{
+    for (int i=total; i>=val; --i)
+    {
+        w[wh][i] += w[wh][i-val];
+        if (w[wh][i] >= mod[wh])
+         w[wh][i] -= mod[wh];
+    }
+}
+
+void knapsack_remove (int val, int wh)
+{
+    for (int i=val; i<=total; ++i)
+    {
+        w[wh][i] -= w[wh][i-val];
+
+        if (w[wh][i] < 0)
+         w[wh][i] += mod[wh];
+    }
+}
+
+void knapsack_add (int val)
+{
+    knapsack_add (val,0);
+    knapsack_add (val,1);
+}
+
+void knapsack_remove (int val)
+{
+    knapsack_remove (val,0);
+    knapsack_remove (val,1);
+}
+
+int subtree_sums (int x)
+{
+    int s = v[x];
+
+    for (vint it = T[x].begin (); it != T[x].end(); ++it)
+    {
+        s += subtree_sums (*it);
+    }
+
+    return sub[x] = s;
+}
+
+void dfs (int x)
+{
+    s += v[x];
+
+    update_answer (s);
+
+    for (vint it = T[x].begin (); it != T[x].end(); ++it)
+    {
+        knapsack_add (sub[*it]);
+    }
+
+    for (vint it = T[x].begin (); it != T[x].end(); ++it)
+    {
+        knapsack_remove (sub[*it]);
+
+        dfs (*it);
+
+        knapsack_add (sub[*it]);
+    }
+
+    for (vint it = T[x].begin (); it != T[x].end(); ++it)
+    {
+        knapsack_remove (sub[*it]);
+    }
+    
+    s -= v[x];
+}
+
+int main()
+{
+    cin>>n;
+
+    for (int i=1; i<=n; ++i)
+    {
+        cin>>v[i];
+        total += v[i];
+    }
+
+    for (int i=2; i<=n; ++i)
+    {
+        cin>>x;
+        T[x].push_back (i);
+    }
+
+    subtree_sums (1);
+
+    w[1][0] = 1;
+    w[0][0] = 1;
+    for (int i=0; i<=total; ++i)
+      ans[i] = '0';
+    ans[total+1] = '\0';
+
+    dfs (1);
+
+    cout<<ans+1;
+}

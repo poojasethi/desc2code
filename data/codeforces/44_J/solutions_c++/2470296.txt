@@ -1,0 +1,32 @@
+#include<stdio.h>
+int n,m;
+char map[1010][1010],ans[1010][1010];
+int main()
+{
+	scanf("%d%d",&n,&m);
+	for(int i=1;i<=n;i++)scanf("%s",map[i]+1);
+	for(int i=1;i<=n;i++)
+		for(int j=1;j<=m;j++)ans[i][j]='.';
+	for(int i=1;i<=n;i++)
+		for(int j=1;j<=m;j++)
+		{
+			if(map[i][j]!='b')continue;
+			int c='a'+2*((i/2+j/2)%2)+i%2;
+			if(map[i-1][j]=='w'&&map[i+1][j]=='w')
+				ans[i-1][j]=ans[i][j]=ans[i+1][j]=c,
+				map[i-1][j]=map[i][j]=map[i+1][j]='.';
+			else if(map[i][j-1]=='w'&&map[i][j+1]=='w')
+				ans[i][j-1]=ans[i][j]=ans[i][j+1]=c,
+				map[i][j-1]=map[i][j]=map[i][j+1]='.';
+		}
+	bool ok=true;
+	for(int i=1;i<=n;i++)
+		for(int j=1;j<=m;j++)if(map[i][j]!='.')ok=false;
+	puts(ok?"YES":"NO");
+	if(ok)for(int i=1;i<=n;i++)
+	{
+		for(int j=1;j<=m;j++)putchar(ans[i][j]);
+		putchar('\n');
+	}
+	return 0;
+}

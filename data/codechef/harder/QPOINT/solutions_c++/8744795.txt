@@ -1,0 +1,119 @@
+#include <map>
+#include <cmath>
+#include <vector>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+#define n	300005
+#define DB	double
+#define I64	long long
+#define For(i,a,b)	for(int i=a;i<=b;i++)
+
+#define CH	(ch=getchar())
+int		IN(){
+		int x=0,f=0,ch;
+		for	(;CH<'0'||ch>'9';)	f=(ch=='-');
+		for	(;ch>='0'&&ch<='9';CH)	(x*=10)+=ch-'0';
+		return	f?-x:x;
+}
+void	Ot(int x)	{printf("%d\n",x);fflush(stdout);}
+
+int		N,Q,C1,C2,Ans,X[n];
+
+struct	Vec{
+		int x,y;
+		bool	operator <	(const Vec&a)const{
+			return	x<a.x||x==a.x&&y<a.y;
+		}
+		I64	operator *	(const Vec&a)	{return	1ll*x*a.y-1ll*y*a.x;}
+}A[n];
+
+struct	Lin{
+		int c;	Vec	s,t;
+
+		DB	Val(DB x)	{return	s.y+1.*(t.y-s.y)/(t.x-s.x)*(x-s.x);}
+		int	ON(int x,int y)	{return	abs(Val(x)-y)<1e-10;}
+}L1[n],L2[n];
+
+map<Vec,int>Pt;
+map<int,int>G[n];
+vector<int>T[n<<2];
+
+bool	Cmp(int a,int b){
+		int x1=L2[a].s.x,x2=L2[a].t.x,y1=L2[b].s.x,y2=L2[b].t.x;
+		if	(x1>x2)	swap(x1,x2);
+		if	(y1>y2)	swap(y1,y2);
+		DB	k=(min(x2,y2)+max(x1,y1))*.5;
+		return	L2[a].Val(k)<L2[b].Val(k);
+}
+
+void	Modify(int u,int l,int r,int x,int y,int k){
+		if	(x<=l&&r<=y)	{
+			T[u].push_back(k);	return;
+		}	int Mid=l+r>>1;
+		if	(x<=Mid)	Modify(u<<1,l,Mid,x,y,k);
+		if	(y>Mid)		Modify(u<<1|1,Mid+1,r,x,y,k);
+}
+void	Build(int u,int l,int r){
+		sort(T[u].begin(),T[u].end(),Cmp);	int Mid=l+r>>1;
+		if	(l^r)	Build(u<<1,l,Mid),Build(u<<1|1,Mid+1,r);
+}
+
+void	Ask(int u,int x,int y){
+		int l=-1,r=T[u].size();
+		for	(;l+1<r;)	{
+			int Mid=l+r>>1;
+			L2[T[u][Mid]].Val(x)>=y?r=Mid:l=Mid;
+		}
+		if	(r<T[u].size()&&(Ans==-1||Cmp(T[u][r],Ans)))	Ans=T[u][r];
+}
+void	Query(int u,int l,int r,int t,int x,int y){
+		Ask(u,x,y);
+		if	(l==r)	return;	int	Mid=l+r>>1;
+		if	(t<=Mid)	Query(u<<1,l,Mid,t,x,y);
+			else	Query(u<<1|1,Mid+1,r,t,x,y);
+}
+
+int		main(){
+		N=IN();
+		For(c,1,N)	{
+			int t=IN();	I64	S=0;
+			For(i,1,t)	A[i]=(Vec){IN(),IN()},X[++*X]=A[i].x,Pt[A[i]]=c;
+			A[t+1]=A[1];For(i,1,t)	S+=A[i]*A[i+1];
+			if	(S<0)	reverse(A+1,A+t+1);	A[t+1]=A[1];
+
+			For(i,1,t)	if	(A[i].x==A[i+1].x)	L1[++C1]=(Lin){c,A[i],A[i+1]};
+				else	L2[++C2]=(Lin){c,A[i],A[i+1]};
+		}
+
+		sort(X+1,X+*X+1);	*X=unique(X+1,X+*X+1)-X-1;
+		For(i,1,C1)	{
+			int x=lower_bound(X+1,X+*X+1,L1[i].s.x)-X,l=L1[i].s.y,r=L1[i].t.y;
+			if	(l>r)	swap(l,r);	G[x][r]=i;
+			if	(!G[x].count(l))	G[x][l]=-i;
+		}
+		For(i,1,C2)	{
+			int x=lower_bound(X+1,X+*X+1,L2[i].s.x)-X,
+				y=lower_bound(X+1,X+*X+1,L2[i].t.x)-X;
+			if	(x>y)	swap(x,y);	Modify(1,1,*X,x,y-1,i);
+		}
+
+		Build(1,1,*X);
+		for	(Q=IN();Q--;){
+			int x=IN(),y=IN();	Ans=-1;
+
+			if	(x<X[1]||X[*X]<x)	{Ot(-1);continue;}
+			if	(Pt.count((Vec){x,y}))	{Ot(Pt[(Vec){x,y}]);continue;}
+
+			int t=upper_bound(X+1,X+*X+1,x)-X-1;
+			if	(X[t]==x){
+				map<int,int>::iterator it=G[t].lower_bound(y);
+				if	(it->second>0)	{Ot(L1[it->second].c);continue;}
+			}
+			Query(1,1,*X,t,x,y);
+
+			if	(Ans==-1||L2[Ans].t.x>L2[Ans].s.x&&!L2[Ans].ON(x,y))	Ot(-1);
+				else	Ot(L2[Ans].c);
+		}
+}

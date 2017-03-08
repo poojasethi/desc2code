@@ -1,0 +1,25 @@
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+long long ans;
+int f[2005][2005],g[2005][2005],sum,n,m,i,j;
+const int MOD=1000000007;
+int main()
+{
+    scanf("%d%d",&n,&m);
+    for (i=1; i<=n; i++)
+      for (sum=0,j=2; j<=m; j++)
+      {
+          f[i][j]=(1+g[i-1][j])%MOD;
+          sum=(sum+f[i][j])%MOD;
+          g[i][j]=(g[i][j-1]+sum)%MOD;
+      }
+    for (i=1; i<=n; i++)
+      for (j=1; j<=m; j++)
+        ans=(ans+1ll*f[i][j]*(g[n-i][j]-f[n-i][j]+1+MOD)%MOD*(m-j+1))%MOD;
+    cout<<ans;
+    return 0;
+}

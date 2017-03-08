@@ -1,0 +1,87 @@
+#! /usr/bin/env python
+
+def input_evidences():
+    input = lambda: map(int, raw_input().split())
+    n, m = input()
+    
+    evidences = [[] for i in xrange(n)]
+
+    for witness in xrange(n):
+        evidence , = input()
+        is_killer = 1 if evidence > 0 else 0
+        defendant = evidence if evidence > 0 else -evidence
+        defendant -= 1
+        evidences[defendant].append([witness, is_killer, 'none']) 
+
+    return n, m, evidences
+    
+def output_result(evidences):
+    accusants = [0 for i in xrange(len(evidences))]
+    for defendant in evidences:
+        for opinion in defendant:
+            accusants[opinion[0]] = opinion[2]
+
+    for accusant in accusants:
+        print accusant
+    
+
+def comparison(honour, trueness):
+    if (honour == 'Not defined'):
+        return 'Not defined'
+    if (honour == 'Truth'):
+        return 'Truth' if trueness == 1 else 'Not defined'
+    else:
+        return 'Lie' if trueness == 0 else 'Not defined'
+
+def check_honour(evidences, def1, def2):
+    if (def1 == 'Not defined'): # it is the first time truth_count == m
+        #print "it is the first time truth_count == m, def2 == ", def2
+        for opinion in evidences[def2]:
+            opinion[2] = 'Truth' if (opinion[1] == 1) else 'Lie'
+        for defendant in evidences[:def2] + evidences[def2 + 1:]:
+            for opinion in defendant:
+                opinion[2] = 'Truth' if (opinion[1] == 0) else 'Lie'
+    else: # not the first time truth_count == m
+        for opinion in evidences[def1]: # def1 is not killer
+            opinion[2] = comparison(opinion[2], 1 - opinion[1])
+        for opinion in evidences[def2]: # def2 is killer
+            opinion[2] = comparison(opinion[2], opinion[1])
+        
+
+def main():
+    n, m, evidences = input_evidences()
+    #print evidences
+    # as a first step, let number = 0 is killer
+    truth_count = 0
+    for opinion in evidences[0]:
+        truth_count += opinion[1]
+    #print truth_count
+    for defendant in evidences[1:]:
+        for opinion in defendant:
+            truth_count += 1 - opinion[1]
+            #print truth_count
+
+    memory = 'Not defined'
+    if (truth_count == m):
+        #print "truth_count == m, killer = ", 0
+        check_honour(evidences, memory, 0)
+        memory = 0
+    
+    # other steps
+    for i in range(1,len(evidences)):
+        # recalc truth in evidences[i] and evidences[i-1]
+        for opinion in evidences[i-1]: # was killer, now not
+            truth_count += (1 - opinion[1]) * 2 - 1
+        for opinion in evidences[i]: # was not, now killer
+            truth_count += opinion[1] * 2 - 1
+        if (truth_count == m):
+            #print "truth_count == m, killer = ", i
+            check_honour(evidences, memory, i)
+            memory = i
+    
+    # print result
+    output_result(evidences)
+
+if __name__ == "__main__":
+    main()
+    

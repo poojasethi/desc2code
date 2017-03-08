@@ -1,0 +1,48 @@
+#include <cstdio>
+const int maxn = 100005;
+struct point
+{
+  int x, y;    
+}a[maxn], b;
+int n, m;
+long long xl(point a, point b, point c)
+{
+  return (static_cast<long long>(b.x-a.x)*(c.y-a.y)-static_cast<long long>(b.y-a.y)*(c.x-a.x));    
+}
+bool check(point now)
+{
+  int l = 0;
+  int r = n;
+  while (true)
+  {
+    int mid = (l+r)/2;
+    if (xl(a[0], a[mid], now) > 0) r = mid;
+    else l = mid;
+    if (l+1 >= r) break;    
+  }
+  if (xl(a[l], a[l+1], now) < 0) return true;
+  else return false;
+}
+int main()
+{
+//freopen("code9_2.in", "r", stdin);
+//freopen("code9_2.out", "w", stdout);
+  scanf("%d", &n);
+  for (int i = 0; i != n; i++) scanf("%d%d", &a[i].x, &a[i].y);
+  scanf("%d", &m);
+  bool br = true;
+  for (int i = 0; i != m; i++)
+  {
+    scanf("%d%d", &b.x, &b.y);
+    if (xl(a[0], a[1], b) >= 0 ||
+     xl(a[0], a[n-1], b) <= 0 ||
+      !check(b))
+    {
+      br = false;
+      break;    
+    }    
+  }
+  if (br) printf("YES");
+  else printf("NO");
+//fclose(stdin);fclose(stdout);
+}

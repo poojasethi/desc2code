@@ -1,0 +1,97 @@
+#include <cstring>
+#include <iostream>
+using namespace std;
+
+const int MAXK = 11;
+const int o = 1 << 18;
+const int MAXN = 200005;
+
+struct node {
+       int l, r, prop;
+       int num[MAXK][MAXK];
+       node(int _l = -1, int _r = -1, int _prop = -1) {
+                l = _l; r = _r; prop = _prop;
+       }
+};
+
+int n, m, k;
+bool ok[MAXK][MAXK];
+
+struct Tournament {
+       node t[o * 2];
+       node merge(node x, node y) {
+            node ret;
+            for (int i=0; i<k; i++)
+                for (int j=0; j<k; j++)
+                    ret.num[i][j] = x.num[i][j] + y.num[i][j];
+            ret.l = x.l; ret.r = y.r;
+            if (x.r == -1 || y.l == -1)
+               return ret;
+            ret.num[x.r][y.l]++;
+            return ret;
+       }
+       void propag(int x, int lo, int hi) {
+            if (t[x].prop == -1)
+               return;
+            memset(t[x].num, 0, sizeof t[x].num);
+            t[x].num[t[x].prop][t[x].prop] = hi - lo - 1;
+            t[x].l = t[x].prop; t[x].r = t[x].prop;
+            if (x < o) {
+               t[x * 2].prop = t[x].prop;
+               t[x * 2 + 1].prop = t[x].prop;
+            }
+            t[x].prop = -1;
+       }
+       void update(int x, int lo, int hi, int a, int b, int val) {
+            propag(x, lo, hi);
+            if (lo >= b || hi <= a)
+               return;
+            if (lo >= a && hi <= b) {
+               t[x].prop = val;
+               propag(x, lo, hi);
+               return;
+            }
+            int mid = (lo + hi) / 2;
+            update(x * 2, lo, mid, a, b, val);
+            update(x * 2 + 1, mid, hi, a, b, val);
+            t[x] = merge(t[x * 2], t[x * 2 + 1]);
+       }
+       int get() {
+            int ret = 0;
+            for (int i=0; i<k; i++)
+                for (int j=0; j<k; j++)
+                    if (!ok[i][j])
+                       ret += t[1].num[i][j];
+            return ret + 1;
+       }
+} T;
+
+int main (void) {
+    ios::sync_with_stdio(false);
+    cin >> n >> m >> k;
+    for (int i=0; i<n; i++) {
+        char x;
+        cin >> x;
+        T.update(1, 0, o, i, i + 1, x - 'a');
+    }
+    for (int i=0; i<m; i++) {
+        int t;
+        cin >> t;
+        if (t == 1) {
+           char x;
+           int lo, hi;
+           cin >> lo >> hi >> x;
+           T.update(1, 0, o, lo - 1, hi, x - 'a');
+        }
+        else {
+             string x;
+             cin >> x;
+             memset(ok, 0, sizeof ok);
+             for (int j=0; j<x.size(); j++)
+                 for (int l=j + 1; l<x.size(); l++)
+                     ok[x[j] - 'a'][x[l] - 'a'] = 1;
+             cout << T.get() << endl;
+        }
+    }
+    return 0;
+}

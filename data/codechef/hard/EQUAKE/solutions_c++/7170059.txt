@@ -1,0 +1,156 @@
+#include<bits/stdc++.h>
+using namespace std;
+const int MAXN = 800010;
+const int inf=123456789;
+
+int numlen[MAXN];
+
+typedef struct {
+	int arr[12];
+	int curr;
+} elem;
+
+elem tree[4*MAXN+5];
+int lazy[4*MAXN+5];
+int A[MAXN];
+
+int len(int num)
+{
+	int ans=0;
+	if(!num)
+		ans=1;
+	while(num>0)
+	{
+		ans++;
+		num/=10;
+	}
+	return ans;
+}
+
+int rotate(int num,int len)
+{
+	if(num==0)
+		return 0;
+	int n = pow(10,len-1);
+	int ans = (num%n)*10 + (num/n);
+	return ans;
+}
+
+void build(int node,int i,int j)
+{
+	int p,q;
+	if(j<i)
+		return;
+	if(i==j)
+	{
+		tree[node].curr = 0;
+		tree[node].arr[0] = A[i];
+		for(p=1;p<12;p++)
+			tree[node].arr[p] = rotate(tree[node].arr[p-1],numlen[i]);
+	}
+	else
+	{
+		build(node*2,i,(i+j)/2);
+		build(node*2+1,(i+j)/2+1,j);
+
+		tree[node].curr = 0;
+		for(p=0;p<12;p++)
+			tree[node].arr[p] = max(tree[node*2].arr[p],tree[node*2+1].arr[p]);
+	}
+}
+
+void update(int node,int i,int j,int l,int r,int v)
+{
+	int p;
+	if(lazy[node]!=0) {
+		tree[node].curr = (tree[node].curr + lazy[node])%12;     //Update this node
+		if(i!=j)
+		{
+			lazy[2*node] +=lazy[node];    // Pass on to children
+			lazy[2*node] %= 12;
+			lazy[2*node+1]+=lazy[node];
+			lazy[2*node+1] %= 12;
+		}
+		lazy[node] = 0;        // Reset it
+	}
+
+	if( (j<i) || (j<l) || (i>r) )
+		return;
+
+	if(i>=l && j<=r)
+	{
+		tree[node].curr = (tree[node].curr + v)%12;
+		if(j!=i)
+		{
+			lazy[2*node] += v;
+			lazy[2*node] %= 12;
+			lazy[2*node+1] += v;
+			lazy[2*node+1] %= 12;
+		}
+	}
+	else
+	{
+		update(node*2,i,(i+j)/2,l,r,v);
+		update(node*2+1,(i+j)/2+1,j,l,r,v);
+		for(p=0;p<12;p++)
+			tree[node].arr[(tree[node].curr+p)%12] = max(tree[2*node].arr[(tree[2*node].curr+p)%12],tree[2*node+1].arr[(tree[2*node+1].curr+p)%12]);
+	}
+}
+
+int query(int node,int i,int j,int l,int r)
+{
+	if( (j<i) || (j<l) || (i>r) )
+		return -inf;
+
+	if(lazy[node]!=0) {
+		tree[node].curr = (tree[node].curr + lazy[node])%12;    //Update this node
+		if(i!=j)
+		{
+			lazy[2*node]+=lazy[node];    // Pass on to children
+			lazy[2*node+1]+=lazy[node];
+			lazy[2*node] %= 12;
+			lazy[2*node+1] %= 12;
+		}
+		lazy[node] = 0;        // Reset it
+	}
+
+	if(i>=l && j<=r)
+		return tree[node].arr[tree[node].curr];
+	else
+	{
+		int lmax = query(node*2,i,(i+j)/2,l,r);
+		int rmax = query(node*2+1,(i+j)/2+1,j,l,r);
+		return max(lmax,rmax);
+	}
+}
+
+int main()
+{
+	int f,n,m,p,q,v,t,i,j,k;
+	scanf("%d",&n);
+	memset(lazy,0,sizeof(lazy));
+	for(i=1;i<=n;i++)
+	{
+		scanf("%d",&A[i]);
+		numlen[i] = len(A[i]);
+	}
+	build(1,1,n);
+	//for(i=1;i<=n;i++)
+		//printf("%d ",numlen[i]);
+	scanf("%d",&m);
+	while(m--)
+	{
+		scanf("%d",&f);
+		if(f) {
+			scanf("%d%d",&p,&q);
+			p++; q++;
+			printf("%d\n",query(1,1,n,p,q));
+		}
+		else {
+			scanf("%d%d%d",&p,&q,&v);
+			p++; q++;
+			update(1,1,n,p,q,v);
+		}
+	}
+	return 0;
+}

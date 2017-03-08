@@ -1,0 +1,315 @@
+
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <cassert>
+#include <vector>
+#include <set>
+#include <deque>
+#include <iostream>
+#include <utility>
+
+using namespace std;
+
+const int MAX_X = 500;
+const int MAX_Y = 500;
+const int MAX_K = 500;
+
+pair<int, int>	data[MAX_Y][MAX_X];
+
+#define ONLINE_JUDGE
+
+class Row
+{
+public:
+	Row( int k )
+	:	K(k),
+		start(0),
+		size(0),
+		max(-1),
+		count(0)
+	{
+		
+	}
+
+	void clear()
+	{
+		start = 0;
+		size = 0;
+		max = -1;
+		count = 0;
+	}
+
+	pair<int, int> getTop() const
+	{
+		return pair<int, int>(max, count);
+	}
+
+	void add( pair<int, int> value )
+	{
+		if( size >= K )
+		{
+			// need to remove old value.
+			if( data[start].first == max )
+			{
+				//assert( count > 0 );
+				//assert( count >= data[start].second );
+				count -= data[start].second;
+
+				if( count == 0 )
+				{
+					// recalc max
+					max = 0;
+					int index = start + 1;
+					if( index >= K )
+						index = 0;
+					for( int i = 1; i < size; i++ )
+					{
+						if( max < data[index].first )
+						{
+							max = data[index].first;
+							count = data[index].second;
+						}
+						else if( max == data[index].first )
+						{
+							count += data[index].second;
+						}
+						index += 1;
+						if( index >= K )
+							index = 0;
+					}
+				}
+			}
+
+			start += 1;
+			size  -= 1;
+			if( start >= K )
+				start = 0;
+		}
+
+		int end = start + size;
+		if( end >= K )
+			end -= K;
+
+		data[end] = value;
+		size += 1;
+
+		if( max < value.first )
+		{
+			max = value.first;
+			count = value.second;
+		}
+		else if( max == value.first )
+		{
+			count += value.second;
+		}
+	}
+
+private:
+	int K;
+	pair<int, int> data[MAX_K];
+	int start;
+	int size;
+
+public:
+	int max;
+	int count;
+};
+/*
+class Row2
+{
+public:
+	int						K;
+	deque<pair<int, int> >	data;
+	vector<int>				freq;
+	set<int>				top;
+
+public:
+	Row2( int k )
+	:	K(k)
+	{
+		
+	}
+
+	void clear()
+	{
+		data.clear();
+		freq.assign( 10001, 0 );
+		top.clear();
+	}
+
+	pair<int, int> getTop() const
+	{
+		int value = *top.crbegin();
+		int count = freq[value];
+		return pair<int, int>(value, count);
+	}
+
+	void add( pair<int, int> value )
+	{
+		if( (int)data.size() >= K )
+		{
+			// need to remove old value.
+			pair<int, int> old = data.front();
+			data.pop_front();
+
+			freq[old.first] -= old.second;
+			if( freq[old.first] <= 0 )
+				top.erase( old.first );
+		}
+
+		data.push_back( value );
+		if( freq[value.first] <= 0 )
+			top.insert( value.first );
+		freq[value.first] += value.second;
+	}
+};
+*/
+ostream& operator<<( ostream& os, const pair<int, int>& p )
+{
+	os << p.first << "(" << p.second << ")";
+	return os;
+}
+
+void myitoa( char* str, int value )
+{
+	char buf[20];
+
+	int index = 0;
+	buf[index++] = '0' + value % 10;
+	value /= 10;
+
+	while( value > 0 )
+	{
+		buf[index++] = '0' + value % 10;
+		value /= 10;
+	}
+
+	while( index > 0 )
+		*str++ = buf[--index];
+	*str++ = '\0';
+}
+
+int main( int argc, char** argv )
+{
+#ifndef ONLINE_JUDGE
+	clock_t	start = clock();
+#endif
+
+	int nTests;
+	cin >> nTests;
+
+	char buffer[(5 + 1) * MAX_X + 20];
+
+	for( int t = 0; t < nTests; t++ )
+	{
+		int M, N, K;
+		cin >> M >> N >> K;
+		cin.getline(buffer, sizeof(buffer));
+
+		Row row(K);
+		//Row2 row(K);
+
+		for( int y = 0; y < M; y++ )
+		{
+			row.clear();
+			int x = 0;
+			int value;
+
+			cin.getline(buffer, sizeof(buffer));
+			int lineIdx = 0;
+			int lineLen = strlen(buffer);
+
+			for( ; x < K; x++ )
+			{
+				//cin >> value;
+				value = atoi(&buffer[lineIdx]);
+
+				while( lineIdx < lineLen && isdigit(buffer[lineIdx]) )
+					lineIdx++;
+				while( lineIdx < lineLen && !isdigit(buffer[lineIdx]) )
+					lineIdx++;
+
+				row.add( pair<int, int>(value, 1) );
+			}
+
+			data[y][0] = row.getTop();
+			//cout << data[y][0];
+
+			for( ; x < N; x++ )
+			{
+				//cin >> value;
+				value = atoi(&buffer[lineIdx]);
+
+				while( lineIdx < lineLen && isdigit(buffer[lineIdx]) )
+					lineIdx++;
+				while( lineIdx < lineLen && !isdigit(buffer[lineIdx]) )
+					lineIdx++;
+
+				row.add( pair<int, int>(value, 1) );
+
+				data[y][x - K + 1] = row.getTop();
+				//cout << data[y][x - K + 1];
+			}
+			//cout << endl;
+		}
+
+		for( int x = 0; x < N - K + 1; x++ )
+		{
+			row.clear();
+			int y = 0;
+			for( ; y < K; y++ )
+			{
+				row.add( data[y][x] );
+			}
+			data[0][x] = row.getTop();
+			for( ; y < M; y++ )
+			{
+				row.add( data[y][x] );
+				data[y - K + 1][x] = row.getTop();
+			}
+		}
+
+		cout << "Case " << t + 1 << ":" << endl;
+#ifndef ONLINE_JUDGE
+		cerr << "Case " << t + 1 << ":" << endl;
+#endif
+		for( int y = 0; y < M - K + 1; y++ )
+		{
+			int lineIdx = 0;
+			for( int x = 0; x < N - K + 1; x++ )
+			{
+				if( x > 0 )
+					//cout << " ";
+					buffer[lineIdx++] = ' ';
+				//cout << data[y][x].first;
+				myitoa( &buffer[lineIdx], data[y][x].first );
+				while( isdigit(buffer[lineIdx]) )
+					lineIdx++;
+
+				if( data[y][x].second > 1 )
+				{
+					//cout << "(" << data[y][x].second << ")";
+					buffer[lineIdx++] = '(';
+					myitoa( &buffer[lineIdx], data[y][x].second );
+					while( isdigit(buffer[lineIdx]) )
+						lineIdx++;
+					buffer[lineIdx++] = ')';
+				}
+			}
+			//cout << endl;
+			buffer[lineIdx++] = '\0';
+			cout << buffer << endl;
+		}
+		cout << endl;
+
+	}
+
+#ifndef ONLINE_JUDGE
+	clock_t	end = clock();
+	clock_t elapsed = end - start;
+	cerr << double(elapsed) / CLOCKS_PER_SEC << endl;
+#endif
+
+	return 0;
+}

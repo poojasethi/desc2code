@@ -1,0 +1,98 @@
+#include <stdio.h>
+#include <vector>
+#include <string.h>
+#include <algorithm>
+#define INF 20000
+using std::vector;
+
+short dp[400][401][401]; //num, sonnum, k
+short from[400][401][401];
+int max[400];
+int scnt[400];
+int n;
+bool mark[400];
+int pre[400];
+int in[400][2];
+
+vector <int> E[400];
+
+void dfs(int now){
+	dp[now][0][0] = 1, dp[now][0][1] = 0;
+	max[now] = 1;
+	
+	for(int i=0;i<E[now].size();++i){
+		int to = E[now][i];
+		if( to == pre[now] ) continue;
+		++scnt[now];
+		pre[to] = now;
+		dfs(to);
+		dp[now][scnt[now]][0] = 1;
+		for(int j=1;j<=max[now];++j)
+			for(int k=0;k<=max[to];++k)
+				if( dp[now][scnt[now]][j+k] > dp[now][scnt[now]-1][j] + dp[to][scnt[to]][k] )
+					dp[now][scnt[now]][j+k] = dp[now][scnt[now]-1][j] + dp[to][scnt[to]][k],
+					from[now][scnt[now]][j+k] = k;
+		max[now] += max[to];
+	}
+}
+void print(int now, int k){
+	vector <int> son;
+	for(int i=0;i<E[now].size();++i){
+		if( E[now][i] == pre[now] ) continue;
+		son.push_back(E[now][i]);
+	}
+	for(int i=scnt[now];i>0;--i){
+		if( from[now][i][k] > 0 ){
+			mark[son[i-1]] = 1;
+			print( son[i-1], from[now][i][k] );
+			k -= from[now][i][k];
+		}
+	}
+}
+int main(){
+	int k;
+	scanf("%d%d",&n,&k);
+	for(int i=0;i<n-1;++i){
+		int x,y;
+		scanf("%d%d",&x,&y);
+		--x, --y;
+		E[x].push_back(y);
+		E[y].push_back(x);
+		in[i][0] = x, in[i][1] = y;
+	}
+	for(int i=0;i<n;++i)
+		for(int j=0;j<=n;++j)
+			for(int kk=0;kk<=n;++kk)
+				dp[i][j][kk] = INF;
+
+	dfs(0);
+
+	int rans = dp[0][scnt[0]][k];
+	int sans = INF;
+	int swho = 0;
+	for(int i=1;i<n;++i)
+		if( dp[i][scnt[i]][k] != INF && dp[i][scnt[i]][k]+1 < sans )
+			sans = dp[i][scnt[i]][k] + 1,
+			swho = i;
+	
+	if( rans == sans && sans == INF )
+		printf("0\n");
+	else {
+		if ( rans <= sans ){
+			mark[0] = 1;
+			print( 0, k );
+		}else {
+			mark[swho] = 1;
+			print(swho, k);
+		}
+		int ans = std::min( rans, sans );
+		int printed = 0;
+		printf("%d\n", ans);
+		for(int i=0;i<n-1;++i){
+			if( mark[in[i][0]] != mark[in[i][1]] )
+				++printed,
+				printf("%d%c", i+1, printed == ans ? '\n' : ' ');
+		}
+	}
+	return 0;	
+}

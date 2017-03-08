@@ -1,0 +1,76 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+#define N 100010
+#define M 200010
+
+int p[M],n1[M],h[N],ee = 0,anc[17][N],F[N],d[N],odd[N],sum[N],n,m;
+void ae(int x,int y){
+	p[ee] = y;	n1[ee] = h[x];	h[x] = ee ++;
+}
+int gf(int x){
+	return (F[x] == x) ? x : F[x] = gf(F[x]);
+}
+int lca(int x,int y){
+	if(d[x] < d[y])	swap(x,y);
+	for(int k = d[x] - d[y],j = 0;k;k >>= 1,j ++)	if(k & 1)	x = anc[j][x];
+	if(x == y)	return x;
+	for(int i = 16;~i;i --)	if(anc[i][x] != anc[i][y])	x = anc[i][x], y = anc[i][y];
+	return anc[0][x];
+}
+void dfs(int u){
+	for(int i = h[u];~i;i = n1[i]){
+		int v = p[i];
+		if(!~d[v]){
+			d[v] = d[u] + 1;
+			anc[0][v] = u;
+			dfs(v);
+			if(gf(v) == gf(u))	odd[u] |= odd[v];
+		}else	if(d[u] > d[v] + 1){
+			if((d[u] - d[v]) % 2 == 0)	odd[u] = 1;
+		//	cout << u << "->" << v << endl;
+			for(int w = gf(u);d[w] > d[v] + 1;w = gf(w))	F[w] = anc[0][w];
+		}
+	}
+}
+void work(int u){
+	sum[u] += odd[u];
+	for(int i = h[u];~i;i = n1[i]){
+		int v = p[i];
+		if(d[v] == d[u] + 1){
+			if(gf(u) == gf(v))	odd[v] |= odd[u];
+			sum[v] = sum[u];
+			work(v);
+		}
+	}
+}
+int check(int x,int y){
+	int z = lca(x,y);
+	if(!z)	return 0;
+	return ((d[x] + d[y]) & 1) || (sum[x] + sum[y] - 2 * sum[z] > 0);
+}
+int main(){
+//	freopen("data.in","r",stdin); 
+	scanf("%d%d",&n,&m);
+	memset(h,-1,sizeof(h));
+	memset(d,-1,sizeof(d));
+	int Q,x,y;
+	for(int i = 1;i <= m;i ++)	scanf("%d%d",&x,&y),ae(x,y),ae(y,x);
+	for(int i = 1;i <= n;i ++)	F[i] = i;
+	for(int i = 1;i <= n;i ++)	if(!~d[i])	d[i] = 0,dfs(i),work(i);
+//	for(int i = 1;i <= n;i ++)	printf("%d fa %d\n",i, gf(i));
+	for(int j = 1;j <= 16;j ++)
+		for(int i = 1;i <= n;i ++)
+			anc[j][i] = anc[j - 1][anc[j - 1][i]]; 
+	scanf("%d",&Q);
+	while(Q --){
+		scanf("%d%d",&x,&y);
+		printf("%s\n",check(x,y) ? "Yes" : "No");
+	}
+	return 0;
+}
+
+	

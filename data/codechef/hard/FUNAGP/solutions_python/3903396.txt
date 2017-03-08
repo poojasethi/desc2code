@@ -1,0 +1,325 @@
+#include<iostream>
+#include<cstdio>
+using namespace std;
+ 
+typedef long long ll;
+ 
+#define MAXN 100010
+ 
+ll M,r,p2;
+ll cm1[MAXN],cm2[MAXN],cp1[MAXN],cp2[MAXN];
+ 
+ 
+ll pow(ll a,ll n,ll mod)
+{
+    ll res=1,curr=a;
+    while(n>0)
+    {
+        if(n&1)
+            res=(res*curr)%mod;
+        curr=(curr*curr)%mod;
+        n>>=1;
+    }
+    return res;
+}
+ 
+ll sum_AGP(ll a,ll d,ll n,int mod)  // r is fixed!
+{
+    //cout<<"IN AGP: a: "<<a<<"d: "<<d<<"r: "<<r<<" n:"<<n<<" mod:"<<mod<<endl;
+    if(mod) return ((a*cm1[n])+(d*cm2[n]))%M;
+    return ((a*cp1[n])+(d*cp2[n]))%p2;
+}
+ 
+ 
+struct node
+{
+    int left,right;
+    bool flag;
+    ll st1,sum1,df1;    // modulo p1(=M)
+    ll st2,sum2,df2;    // modulo p2
+};
+ 
+node a[MAXN*3];
+ 
+ 
+void build_seg_tree(int tmp[],int curr)
+{
+    //cout<<"Building..curr:"<<curr<<" left"<<a[curr].left<<" right: "<<a[curr].right<<endl;
+    a[curr].flag=0;
+    a[curr].st1=a[curr].df1=a[curr].sum1=0;
+    a[curr].st2=a[curr].df2=a[curr].sum2=0;
+    if(a[curr].left<a[curr].right)
+    {
+        //cout<<"here!"<<endl;
+        int mid=(a[curr].left+a[curr].right)>>1;
+        a[(curr<<1)].left=a[curr].left;
+        a[(curr<<1)].right=mid;
+        a[(curr<<1) + 1].left=mid+1;
+        a[(curr<<1) + 1].right=a[curr].right;
+        build_seg_tree(tmp,(curr<<1));
+        build_seg_tree(tmp,(curr<<1) + 1);
+        a[curr].sum1=(a[(curr<<1)].sum1 + a[(curr<<1) + 1].sum1)%M;
+        a[curr].sum2=(a[(curr<<1)].sum2 + a[(curr<<1) + 1].sum2)%p2;
+    }
+    else
+    {
+        a[curr].sum1=tmp[a[curr].left]%M;
+        a[curr].sum2=tmp[a[curr].left]%p2;
+    }
+}
+ 
+/*void print_seg_tree(int curr,int t=1)
+{
+    //cout<<"curr: "<<curr<<" left: "<<a[curr].left<<" rght: "<<a[curr].right;
+    //cout<<" sum1: "<<a[curr].sum1<<" st1:"<<a[curr].st1<<" df1: "<<a[curr].df1;
+    //cout<<" sum2: "<<a[curr].sum2<<" st2:"<<a[curr].st2<<" df2: "<<a[curr].df2<<endl;
+    if((a[curr].left<a[curr].right)&&(t==1))
+    {
+        //cout<<"here!"<<endl;
+        int mid=(a[curr].left+a[curr].right)/2;
+        print_seg_tree((curr<<1));
+        print_seg_tree((curr<<1) + 1);
+    }
+}*/
+ 
+ 
+void update1(ll sm,ll dm,ll sp,ll dp, int x,int y,int curr)
+{
+    //cout<<"u1-> x: "<<x<<"y: "<<y<<" ";
+    //print_seg_tree(curr,0);
+    int ind;
+    ll sm1,dm1,sp1,dp1,pw;
+    if(a[curr].left==x && a[curr].right==y)
+    {
+      //  cout<<"Match Found @!"<<curr<<"--";
+        a[curr].st1=(a[curr].st1+sm)%M;
+        a[curr].df1=(a[curr].df1+dm)%M;
+        a[curr].st2=(a[curr].st2+sp)%p2;
+        a[curr].df2=(a[curr].df2+dp)%p2;
+      //  cout<<"sum1: "<<a[curr].sum1<<" sum2: "<<a[curr].sum2<<endl;
+        a[curr].sum1=(a[curr].sum1+sum_AGP(sm,dm,y-x+1,1))%M;
+        a[curr].sum2=(a[curr].sum2+sum_AGP(sp,dp,y-x+1,0))%p2;
+      //  cout<<"sum1: "<<a[curr].sum1<<" sum2: "<<a[curr].sum2<<endl;
+        a[curr].flag=1;
+        /*if(x==y)
+        {
+            a[curr].st1=a[curr].df1=0;
+            a[curr].st2=a[curr].df2=0;
+            a[curr].flag=0;
+        }*/
+        return;
+    }
+    int mid=(a[curr].left + a[curr].right)>>1;
+    if(a[curr].flag)
+    {
+        update1(a[curr].st1,a[curr].df1,a[curr].st2,a[curr].df2,a[curr].left,mid,(curr<<1));
+        int ind=(mid-a[curr].left)+1;
+        pw=(cm1[ind+1]-cm1[ind]+M)%M;  //for r^ind % M
+        sm1=(((a[curr].st1 + (ind*a[curr].df1))%M)*pw)%M;
+        dm1=(a[curr].df1*pw)%M;
+        pw=(cp1[ind+1]-cp1[ind]+p2)%p2;   // for r^ind % p2
+        sp1=(((a[curr].st2 + (ind*a[curr].df2))%p2)*pw)%p2;
+        dp1=(a[curr].df2*pw)%p2;
+        update1(sm1,dm1,sp1,dp1,mid+1,a[curr].right,(curr<<1) + 1);
+        a[curr].flag=0;
+        a[curr].st1=0;
+        a[curr].df1=0;
+        a[curr].st2=0;
+        a[curr].df2=0;
+    }
+    if(mid<x)
+    {
+        update1(sm,dm,sp,dp,x,y,(curr<<1) + 1);
+        a[curr].sum1=(a[(curr<<1)].sum1 + a[(curr<<1) + 1].sum1)%M;
+        a[curr].sum2=(a[(curr<<1)].sum2 + a[(curr<<1) + 1].sum2)%p2;
+        return ;
+    }
+    if(mid>=y)
+    {
+        update1(sm,dm,sp,dp,x,y,(curr<<1));
+        a[curr].sum1=(a[(curr<<1)].sum1 + a[(curr<<1) + 1].sum1)%M;
+        a[curr].sum2=(a[(curr<<1)].sum2 + a[(curr<<1) + 1].sum2)%p2;
+        return ;
+    }
+    /* --case when x<=mid<y -- */
+    //cout<<"here, asshole!"<<endl;
+    update1(sm,dm,sp,dp,x,mid,(curr<<1));
+   // cout<<"Returned!"<<endl;
+    ind=(mid-x)+1;
+    pw=(cm1[ind+1]-cm1[ind]+M)%M;  //for r^ind % M
+    sm1=(((sm + (ind*dm))%M)*pw)%M;
+    dm1=(dm*pow(r,ind,M))%M;
+    pw=(cp1[ind+1]-cp1[ind]+p2)%p2;  //for r^ind % p2
+    sp1=(((sp + (ind*dp))%p2)*pw)%p2;
+    dp1=(dp*pow(r,ind,p2))%p2;
+    //cout<<"here, asshole2!"<<endl;
+    update1(sm1,dm1,sp1,dp1,mid+1,y,(curr<<1) + 1);
+    a[curr].sum1=(a[(curr<<1)].sum1 + a[(curr<<1) + 1].sum1)%M;
+    a[curr].sum2=(a[(curr<<1)].sum2 + a[(curr<<1) + 1].sum2)%p2;
+    return ;
+}
+ 
+ll query(int x,int y,int curr)
+{
+    //cout<<"query-> x: "<<x<<"y: "<<y<<" ";
+   // print_seg_tree(curr,0);
+    ll sm1,dm1,sp1,dp1;
+    int ind;
+    if(a[curr].left==x && a[curr].right==y)
+    {
+      //  cout<<"Match found @"<<curr<<endl;
+        return a[curr].sum1;
+    }
+    int mid=(a[curr].left + a[curr].right)>>1;
+    if(a[curr].flag)
+    {
+        update1(a[curr].st1,a[curr].df1,a[curr].st2,a[curr].df2,a[curr].left,mid,(curr<<1));
+        int ind=(mid-a[curr].left)+1;
+        ll pw=(cm1[ind+1]-cm1[ind]+M)%M;  //for r^ind % M
+        sm1=(((a[curr].st1 + (ind*a[curr].df1))%M)*pw)%M;
+        dm1=(a[curr].df1*pw)%M;
+        pw=(cp1[ind+1]-cp1[ind]+p2)%p2;   // for r^ind % p2
+        sp1=(((a[curr].st2 + (ind*a[curr].df2))%p2)*pw)%p2;
+        dp1=(a[curr].df2*pw)%p2;
+        update1(sm1,dm1,sp1,dp1,mid+1,a[curr].right,(curr<<1) + 1);
+        a[curr].flag=0;
+        a[curr].st1=0;
+        a[curr].df1=0;
+        a[curr].st2=0;
+        a[curr].df2=0;
+    }
+    if(mid<x)
+    {
+        return query(x,y,(curr<<1) + 1);
+    }
+    if(mid>=y)
+    {
+        return query(x,y,(curr<<1));
+    }
+    /* -- case when x<=mid<y -- */
+    return (query(x,mid,(curr<<1)) + query(mid+1,y,(curr<<1) + 1))%M;
+}
+ 
+void update2(int x,int g,int curr)
+{
+    //cout<<"u2-> x: "<<x<<" ";
+    //print_seg_tree(curr,0);
+    if(a[curr].left==x && a[curr].right==x)
+    {
+      //  cout<<"Match found @ Changing valuee...."<<curr<<endl;
+       // print_seg_tree(curr,0);
+     //   cout<<"**p2: "<<p2<<endl;
+        a[curr].sum2 = pow(a[curr].sum2,g,p2);
+        a[curr].sum1 = a[curr].sum2 % M;
+        a[curr].st1=a[curr].df1=0;
+        a[curr].st2=a[curr].df2=0;
+        a[curr].flag=0;
+       // print_seg_tree(curr,0);
+     //   cout<<"----------!"<<endl;
+   //     cout<<" to: "<<a[curr].sum<<endl;
+        return;
+    }
+    int mid=(a[curr].left + a[curr].right)>>1;
+    if(a[curr].flag)
+    {
+        update1(a[curr].st1,a[curr].df1,a[curr].st2,a[curr].df2,a[curr].left,mid,(curr<<1));
+        int ind=(mid-a[curr].left)+1;
+        ll pw=(cm1[ind+1]-cm1[ind]+M)%M;  //for r^ind % M
+        ll sm1=(((a[curr].st1 + (ind*a[curr].df1))%M)*pw)%M;
+        ll dm1=(a[curr].df1*pw)%M;
+        pw=(cp1[ind+1]-cp1[ind]+p2)%p2;   // for r^ind % p2
+        ll sp1=(((a[curr].st2 + (ind*a[curr].df2))%p2)*pw)%p2;
+        ll dp1=(a[curr].df2*pw)%p2;
+        update1(sm1,dm1,sp1,dp1,mid+1,a[curr].right,(curr<<1) + 1);
+        a[curr].flag=0;
+        a[curr].st1=0;
+        a[curr].df1=0;
+        a[curr].st2=0;
+        a[curr].df2=0;
+    }
+    if(x<=mid)
+    {
+        update2(x,g,(curr<<1));
+        a[curr].sum1 = (a[(curr<<1)].sum1 + a[(curr<<1) + 1].sum1)%M;
+        a[curr].sum2 = (a[(curr<<1)].sum2 + a[(curr<<1) + 1].sum2)%p2;
+    }
+    else
+    {
+        update2(x,g,(curr<<1) + 1);
+        a[curr].sum1 = (a[(curr<<1)].sum1 + a[(curr<<1) + 1].sum1)%M;
+        a[curr].sum2 = (a[(curr<<1)].sum2 + a[(curr<<1) + 1].sum2)%p2;
+    }
+}
+ 
+/*
+void print_array(int n)
+{
+    //for(int i=1;i<=n;++i)
+    //    cout<<query1(i,i,1)<<" ";
+    //cout<<endl<<"--<>--"<<endl;
+    ;
+}*/
+ 
+int main()
+{
+    int q,t,n,typ,g,x,y,i,tmp[MAXN];
+    ll s,d,curr;
+    scanf("%d",&t);
+    while(t--)
+    {
+        scanf("%d%d%lld%lld%lld",&n,&q,&r,&M,&p2);
+        //cout<<"sum_AGP(2,3,3,M): "<<sum_AGP(2,3,3)<<endl;
+       // cout<<"sum_AGP(2,3,3,p2): "<<sum_AGP(2,3,3,p2)<<endl;
+        cm1[1]=1;
+        cm2[1]=0;
+        curr=r;
+        for(i=2;i<=n;++i)
+        {
+            cm1[i]=(cm1[i-1]+curr)%M;
+            cm2[i]=(cm2[i-1]+(curr*(i-1)))%M;
+            curr=(curr*r)%M;
+        }
+        cp1[1]=1;
+        cp2[1]=0;
+        curr=r;
+        for(i=2;i<=n;++i)
+        {
+            cp1[i]=(cp1[i-1]+curr)%p2;
+            cp2[i]=(cp2[i-1]+(curr*(i-1)))%p2;
+            curr=(curr*r)%p2;
+        }
+        for(i=1;i<=n;++i)
+        {
+            scanf("%d",&tmp[i]);
+        }
+        a[1].left=1;
+        a[1].right=n;
+        build_seg_tree(tmp,1);
+     //   print_seg_tree(1);
+       // cout<<"----------"<<endl;
+        while(q--)
+        {
+            scanf("%d",&typ);
+            //cout<<"q: "<<q<<" type "<<typ<<" querY!"<<endl;
+            switch(typ)
+            {
+ 
+                case 0:
+                        scanf("%lld%lld%d%d",&s,&d,&x,&y);
+                        update1(s%M,d%M,s%p2,d%p2,x,y,1);
+                        break;
+                case 1:
+                        scanf("%d%d",&x,&g);
+                        update2(x,g,1);
+                        break;
+                case 2:
+                        scanf("%d%d",&x,&y);
+                        printf("%lld\n",query(x,y,1));
+            }
+         //   print_seg_tree(1);
+        //    print_array(n);
+           // cout<<"----------"<<endl;
+        }
+    }
+}
+ 

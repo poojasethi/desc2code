@@ -1,0 +1,203 @@
+#include <iostream>
+#include <assert.h>
+#include <string.h>
+#include <stdio.h>
+#include <string>
+#include <set>
+#include <vector>
+
+using std::set;
+using std::string;
+using std::vector;
+
+
+//////////////////////////////////////////////////////////////////////////
+
+template<class data_t>
+class matrix_t
+{
+	friend std::ostream &operator<<(std::ostream& out,const matrix_t& rhs)
+	{
+		for(size_t i = 0,p = 0;i < rhs._row;++i)
+		{
+			for(size_t j = 0;j < rhs._col;++j,++p)
+			{
+				out << rhs._data[p] << ' ';
+			}
+			out << std::endl;
+		}
+		return out;
+	}
+private:
+	data_t*	_data;
+	size_t	_row;
+	size_t	_col;
+	size_t	_size;
+public:
+	matrix_t(size_t r = 0,size_t c = 0,data_t coef = data_t()):_row(r),_col(c)
+	{
+		_size =_row*_col;
+		_data = new data_t[_size];
+		assert(NULL != _data);
+		memset(_data,0,_size*sizeof(data_t));
+	}
+	matrix_t(const matrix_t& rhs):_row(rhs._row),_col(rhs._col)
+	{
+		_size = rhs._size;
+		_data = new data_t[_size];
+		assert(NULL != _data);
+		memcpy(_data,rhs._data,_size*sizeof(data_t));
+	}
+	~matrix_t() { delete[] _data; }
+public:
+	int getRow()const { return _row; }
+	int getCol()const { return _col; }
+public:
+	data_t& operator()(size_t i,size_t j) { assert(0 <= i && i < _row && 0 <= j && j < _col);return _data[i*_col+j]; }
+	const data_t& operator()(size_t i,size_t j)const  { assert(0 <= i && i < _row && 0 <= j && j < _col);return _data[i*_col+j]; }
+public:
+	const matrix_t &operator=(const matrix_t& rhs)
+	{
+		if(&rhs == this) return *this;
+		delete[] _data;
+		_row = rhs._row;_col = rhs._col;
+		_size = rhs._size;
+		_data = new data_t[_size];
+		assert(NULL != _data);
+		memcpy(_data,rhs._data,_size*sizeof(data_t));
+		return *this;
+	}
+public:
+	bool operator==(const matrix_t& rhs)const
+	{
+		if(_row != rhs._row || _col != rhs._col) return false;
+		for(size_t p = 0;p < _size;++p)
+		{
+			if(_data[p] != rhs._data[p]) return false;
+		}
+		return true;
+	}
+	bool operator!=(const matrix_t& rhs)const { return !((*this) == rhs); }
+public:
+	matrix_t operator~()//矩阵转置
+	{
+		matrix_t result(_col,_row);
+		for(size_t i = 0;i < _row;++i)
+			for(size_t j = 0;j < _col;++j)
+				result._data[j*_row+i]=_data[i*_col+j];
+		return result;
+	}
+	matrix_t operator+(const matrix_t& rhs)const
+	{
+		matrix_t result(_row,_col);
+		for(size_t p = 0;p < _size;++p) result._data[p] = _data[p]+rhs._data[p];
+		return result;
+	}
+	matrix_t operator-(const matrix_t& rhs)const
+	{
+		matrix_t result(_row,_col);
+		for(size_t p = 0;p < _size;++p) result._data[p] = _data[p]-rhs._data[p];
+		return result;
+	}
+	matrix_t operator*(const matrix_t& rhs)const
+	{
+		if(_col != rhs._row) throw "";
+		matrix_t result(_row,rhs._col);
+
+		for(size_t i = 0,p = 0;i < _row;++i)
+		{
+			for(size_t j = 0;j < rhs._col;++j,++p)
+			{
+				data_t v = result._data[p];
+				for(size_t k = 0;k < _col;++k)
+				{
+					v += _data[i*_col+k]*rhs._data[k*rhs._col+j];
+				}
+				result._data[p] = v;
+			}
+		}
+		return result;
+	}
+	// 只对方阵有效
+public:
+	void unit()
+	{
+		assert(_row == _col);
+		memset(_data,0,sizeof(data_t)*_size);
+		for(size_t i = 0;i < _size;i += _row + 1) _data[i] = 1;
+	}
+public:
+	data_t tr()const
+	{
+		assert(_row == _col);
+		data_t ret;
+		for(size_t i = 0;i < _size;i += _row + 1) ret += _data[i];
+		return ret;
+	}
+public:
+	// 矩阵快速幂
+	matrix_t operator^(unsigned int x)const
+	{
+		assert(_row == _col);
+		matrix_t result(_row,_col);result.unit();
+		matrix_t product = *this;
+		for(;0 != x;x >>= 1)
+		{
+			if(x&1) result = result*product;
+			product = product*product;
+		}
+		return result;
+	}
+};
+
+void CodeChef201411CHEFWORD()
+{
+	typedef matrix_t<double> CMatrix;
+
+	static const size_t charset_size = 26;
+	static const size_t buff_size = 100;
+
+	CMatrix convert(charset_size,charset_size);
+	unsigned int nCases = 0;scanf("%d",&nCases);								// 1 <= nCases <= 50
+	for(unsigned int iCases = 1;iCases <= nCases;++iCases)
+	{
+		char buff[buff_size] = { 0 },word[buff_size] = { 0 };
+		unsigned int n = 0,k = 0;												// 1 <= n <= 100000,1 <= k <= 1000000000
+		scanf("%d%d%s",&n,&k,buff);
+		for(unsigned int i = 0;i < charset_size;++i)
+		{
+			for(unsigned int j = 0;j < charset_size;++j)
+			{
+				double v = 0;
+				scanf("%lf",&v);
+				convert(i,j) = v;
+			}
+		}
+
+		CMatrix result = convert^k;
+
+		double ans = 0;
+		size_t len = strlen(buff);
+		set<string> table;
+		for(unsigned int i = 0;i < n;++i)
+		{
+			scanf("%s",word);
+			if(strlen(word) != len) continue;
+			if(table.find(word) != table.end()) continue;
+			table.insert(word);
+			double v = 1.0;
+			for(size_t j = 0;j < len;++j)
+			{
+				v *= result(buff[j]-'a',word[j]-'a');
+			}
+			ans += v;
+		}
+		printf("%.9f\n",ans);
+	}
+}
+
+int main()
+{
+	CodeChef201411CHEFWORD();
+	return 0;
+}

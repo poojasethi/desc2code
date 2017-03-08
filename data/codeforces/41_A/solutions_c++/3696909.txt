@@ -1,0 +1,13 @@
+# include <iostream>
+# include <algorithm>
+using namespace std;
+	string s,s1;
+int main()
+{
+	cin>>s>>s1;
+	reverse(s.begin(),s.end());
+	if(s==s1)
+		cout<<"YES";
+	else
+		cout<<"NO";
+}

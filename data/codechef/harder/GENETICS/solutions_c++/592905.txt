@@ -1,0 +1,269 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <algorithm>
+#include <numeric>
+#include <string>
+#include <cstring>
+#include <set>
+#include <map>
+#include <vector>
+#include <queue>
+#include <iostream>
+#include <iterator>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <sstream>
+
+using namespace std;
+
+#define REP(i,n) for (int i=0,_n=(n); i < _n; i++)
+#define REPD(i,n) for (int i=(n)-1; i >= 0; i--)
+#define FOR(i,a,b) for (int _b=(b), i=(a); i <= _b; i++)
+#define FORD(i,a,b) for(int i=(a),_b=(b);i>=_b;i--)
+#define ALL(c) (c).begin(), (c).end()
+#define SORT(c) sort(ALL(c))
+
+#define CLEAR(x) memset(x,0,sizeof x);
+#define CLEARA(x) memset(&x,0,sizeof x);
+#define FILL(x,v) memset(x,v,sizeof x);
+#define FILLA(x,v) memset(&x,v,sizeof x);
+
+#define VAR(a,b) __typeof(b) a=(b)
+#define FOREACH(it,c) for(VAR(it,(c).begin());it!=(c).end();++it)
+
+#define REVERSE(c) reverse(ALL(c))
+#define UNIQUE(c) SORT(c),(c).resize(unique(ALL(c))-(c).begin())
+#define INF 0x7fffffff
+#define X first
+#define Y second
+#define pb push_back
+#define SZ(c) (int)(c).size()
+#define MP make_pair
+#define eps 1.0e-11
+const double pi = acos(-1.0);
+
+typedef pair<int, int> PII;
+typedef vector<PII> VPII;
+typedef vector<int> VI;
+typedef vector<VI> VVI;
+typedef long long LL;
+
+#define HUGE 2048000
+int ids[HUGE];
+
+class Node
+{
+public:
+	Node * l,*r; // dont use p!!!
+	int val;
+	int cnt;
+	int sum[4];
+	int y;
+	Node() {}
+	void up()
+	{
+		CLEAR(sum);
+		sum[val]++;
+		cnt=1;
+		if (l)
+		{
+			cnt+=l->cnt;
+			REP(i,4)
+				sum[i]+=l->sum[i];
+		}
+		if (r)
+		{
+			cnt+=r->cnt;
+			REP(i,4)
+				sum[i]+=r->sum[i];
+		}
+	}
+	Node(int V, Node *L=0, Node *R=0): val(V),l(L),r(R)
+	{
+		up();
+	}
+};
+
+Node data[HUGE];
+int dpos=0;
+
+Node * newNode(int V, Node *L=0, Node *R=0)
+{
+	data[dpos] = Node(V,L,R);
+	data[dpos].y = ids[dpos];
+	return &data[dpos++];
+}
+
+void split(Node * tree, int cnt0, Node * &L, Node * &R)
+{
+	if (tree == 0)
+	{
+		L=R=0;
+		return;
+	}
+	if (cnt0 == 0)
+	{
+		L = 0;
+		R = tree;
+		return;
+	}
+	if (cnt0 >= tree->cnt)
+	{
+		L = tree;
+		R = 0;
+		return;
+	}
+	int leftcnt = (tree->l ? tree->l->cnt : 0);
+	if (leftcnt+1 <= cnt0)
+	{
+		Node * ll;
+		split(tree->r, cnt0-leftcnt-1, ll, R);
+		L = newNode(tree->val, tree->l, ll);
+	}
+	else
+	{
+		Node * rr;
+		split(tree->l, cnt0, L, rr);
+		R = newNode(tree->val, rr, tree->r);
+	}
+}
+
+Node* merge(Node * L, Node * R)
+{
+	if (L == 0)
+		return R;
+	else if (R == 0)
+		return L;
+	else
+	{
+		if (L->y > R->y)
+			return newNode(L->val, L->l, merge(L->r, R));
+		else
+			return newNode(R->val, merge(L, R->l), R->r);
+	}
+}
+
+void mergeQ(Node * L, Node * R, Node * &tree)
+{
+	if (L == 0)
+		tree = R;
+	else if (R == 0)
+		tree = L;
+	else
+	{
+		if (L->y > R->y)
+		{
+			tree=L;
+			mergeQ(tree->r, R, tree->r);
+			tree->up();
+		}
+		else
+		{
+			tree=R;
+			mergeQ(L, tree->l, tree->l);
+			tree->up();
+		}
+	}
+}
+
+void cut(Node * tree, int l, int r, Node * &L, Node * &M, Node * &R)
+{
+	Node * tmp;
+	split(tree, r, tmp, R);
+	split(tmp, l-1, L, M);
+}
+
+Node* glue(Node * L, Node * M, Node * R)
+{
+	Node * tmp;
+	tmp = merge(L,M);
+	return merge(tmp,R);
+}
+
+void mutate(Node * t, int index, int val)
+{
+    //assert(index >= 0 && index < cnt(t));
+
+    //if(index < 0) add(t, 0, c);
+    //if(index >= cnt(t)) add(t, cnt(t), c);
+
+    if(t==NULL) return;
+    if(!(index >= 0 && index < t->cnt)) return;
+
+    int leftcnt = t->l ? t->l->cnt : 0;
+
+    if(index < leftcnt)
+        mutate(t->l, index, val);
+    else if(index > leftcnt)
+        mutate(t->r, index - leftcnt - 1, val);
+    else
+        t->val = val;
+
+    t->up();
+}
+
+int n,m;
+char buf[33000];
+Node * a[33000];
+const char * let = "AGTC";
+
+int main()
+{
+//	freopen("input2.txt","r",stdin);
+//    freopen("output_dzhulgakov.txt","w",stdout);
+
+	REP(i,HUGE) ids[i]=i;
+	random_shuffle(ids,ids+HUGE);
+	scanf("%d",&n);
+	CLEAR(a);
+	REP(i,n)
+	{
+		scanf("%s",buf);
+		REP(j,strlen(buf))
+		{
+			mergeQ(a[i],newNode(strchr(let,buf[j])-let),a[i]);
+		}
+	}
+	scanf("%d",&m);
+	REP(step,m)
+	{
+		scanf("%s",buf);
+		if (strcmp(buf,"CROSS")==0)
+		{
+			int id1,id2,k1,k2;
+			scanf("%d%d%d%d",&id1,&id2,&k1,&k2);
+			id1--,id2--;
+			Node * L1, * R1;
+			Node * L2, * R2;
+			split(a[id1], k1, L1, R1);
+			split(a[id2], k2, L2, R2);
+			a[n++] = merge(L1,R2);
+			a[n++] = merge(L2,R1);
+		}
+		else if (strcmp(buf,"MUTATE")==0)
+		{
+			int id,k;
+			scanf("%d%d",&id,&k);
+			id--;
+			char c;
+			do c = getc(stdin); while (!isalpha(c));
+			Node * L, * M, * R;
+			cut(a[id], k, k, L, M, R);
+			a[id] = glue(L, newNode(strchr(let,c)-let), R);
+
+			mutate(a[id], k-1, strchr(let,c)-let);
+		}
+		else
+		{
+			int id,k1,k2;
+			scanf("%d%d%d",&id,&k1,&k2);
+			id--;
+			Node * L, * M, * R;
+			cut(a[id], k1, k2, L, M, R);
+			REP(j,4)
+				printf(" %d"+(j==0), M->sum[j]);
+			printf("\n");
+		}
+	}
+	return 0;
+}

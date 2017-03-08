@@ -1,0 +1,185 @@
+#include<iostream>
+#include<cstdio>
+#define gc getchar_unlocked
+
+void scanint(int &x)
+{
+    register int c = gc();
+    x = 0;
+    for(;(c<48 || c>57);c = gc());
+    for(;c>47 && c<58;c = gc()) {x = (x<<1) + (x<<3) + c - 48;}
+}
+inline void write(int x){
+
+         register char buffor[35];
+         register int i=0;
+         do{
+               buffor[i++]=(x%10)+'0';
+               x/=10;
+            } while(x);
+           i--;
+            while(i>=0) putchar_unlocked(buffor[i--]);
+            putchar_unlocked('\n');
+}
+int n;
+typedef struct{
+    int c0,c1,c2;
+}triple;
+class segtree{
+    triple *p;
+    int *l;
+public:
+    void display(int low=0,int high=n-1,int pos=0)
+    {
+        if(low>high)
+            return;
+        printf("c0=%d c1=%d c2=%d low=%d high=%d l=%d\n",p[pos].c0,p[pos].c1,p[pos].c2,low,high,l[pos]);
+        if(low==high)
+            return;
+        int mid=(low+high)/2;
+        display(low,mid,2*pos+1);
+        display(mid+1,high,2*pos+2);
+    }
+    segtree(int n)
+    {
+        int s=1;
+        while(s<n)
+            s*=2;
+        s=2*s-1;
+        p=new triple[s];
+        l=new int[s];
+        for(int i=0;i<s;i++)
+            l[i]=0;
+    }
+    void build(int low=0,int high=n-1,int pos=0)
+    {
+        if(low>high)
+            return;
+        if(low==high)
+        {
+            p[pos].c0=1;
+            p[pos].c1=p[pos].c2=0;
+            return;
+        }
+        int mid=(low+high)/2;
+        build(low,mid,2*pos+1);
+        build(mid+1,high,2*pos+2);
+        p[pos].c0=p[2*pos+1].c0+p[2*pos+2].c0;
+        p[pos].c1=p[2*pos+1].c1+p[2*pos+2].c1;
+        p[pos].c2=p[2*pos+1].c2+p[2*pos+2].c2;
+    }
+    void update(int ulow,int uhigh,int low=0,int high=n-1,int pos=0)
+    {
+        if(low>high)
+            return;
+        if(l[pos])
+        {
+            if(l[pos]==1)
+            {
+                int a=p[pos].c0,b=p[pos].c1,c=p[pos].c2;
+                p[pos].c0=c;
+                p[pos].c1=a;
+                p[pos].c2=b;
+                if(low!=high)
+                {
+                    l[2*pos+1]=(l[2*pos+1]+1)%3;
+                    l[2*pos+2]=(l[2*pos+2]+1)%3;
+                }
+
+            }
+            else if(l[pos]==2)
+            {
+                int a=p[pos].c0,b=p[pos].c1,c=p[pos].c2;
+                p[pos].c0=b;
+                p[pos].c1=c;
+                p[pos].c2=a;
+                if(low!=high)
+                {
+                    l[2*pos+1]=(l[2*pos+1]+2)%3;
+                    l[2*pos+2]=(l[2*pos+2]+2)%3;
+                }
+
+            }
+            l[pos]=0;
+        }
+        if(ulow>high || uhigh<low)
+            return;
+        if(ulow<=low&&uhigh>=high)
+        {
+            int a=p[pos].c0,b=p[pos].c1,c=p[pos].c2;
+            p[pos].c0=c;
+            p[pos].c1=a;
+            p[pos].c2=b;
+            if(low!=high)
+            {
+                l[2*pos+1]=(l[2*pos+1]+1)%3;
+                l[2*pos+2]=(l[2*pos+2]+1)%3;
+            }
+            return;
+        }
+        int mid=(low+high)/2;
+        update(ulow,uhigh,low,mid,2*pos+1);
+        update(ulow,uhigh,mid+1,high,2*pos+2);
+        p[pos].c0=p[2*pos+1].c0+p[2*pos+2].c0;
+        p[pos].c1=p[2*pos+1].c1+p[2*pos+2].c1;
+        p[pos].c2=p[2*pos+1].c2+p[2*pos+2].c2;
+    }
+    int query(int qlow,int qhigh,int low=0,int high=n-1,int pos=0)
+    {
+        if(low>high)
+            return 0;
+        if(l[pos])
+        {
+            if(l[pos]==1)
+            {
+                int a=p[pos].c0,b=p[pos].c1,c=p[pos].c2;
+                p[pos].c0=c;
+                p[pos].c1=a;
+                p[pos].c2=b;
+                if(low!=high)
+                {
+                    l[2*pos+1]=(l[2*pos+1]+1)%3;
+                    l[2*pos+2]=(l[2*pos+2]+1)%3;
+                }
+
+            }
+            else if(l[pos]==2)
+            {
+                int a=p[pos].c0,b=p[pos].c1,c=p[pos].c2;
+                p[pos].c0=b;
+                p[pos].c1=c;
+                p[pos].c2=a;
+                if(low!=high)
+                {
+                    l[2*pos+1]=(l[2*pos+1]+2)%3;
+                    l[2*pos+2]=(l[2*pos+2]+2)%3;
+                }
+
+            }
+            l[pos]=0;
+        }
+        if(qlow>high || qhigh<low)
+            return 0;
+        if(qlow<=low&&qhigh>=high)
+            return p[pos].c0;
+        int mid=(low+high)/2;
+        return query(qlow,qhigh,low,mid,2*pos+1)+query(qlow,qhigh,mid+1,high,2*pos+2);
+    }
+};
+int main()
+{
+    int q,a,b,c;
+    scanint(n);
+    scanint(q);
+    segtree t(n);
+    t.build();
+    while(q--)
+    {
+        scanint(a);scanint(b);scanint(c);
+        if(a)
+            write(t.query(b,c));
+        else
+            t.update(b,c);
+    }
+    return 0;
+}

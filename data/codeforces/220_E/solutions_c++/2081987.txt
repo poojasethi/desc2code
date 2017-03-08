@@ -1,0 +1,78 @@
+#include <iostream>
+#include <algorithm>
+
+using namespace std;
+
+int N;
+int A[100002], pos[100002];
+int AIB[2][100002];
+long long K, invnow;
+long long result;
+
+void update(int wh, int pos, int val)
+{
+	for (; pos <= N; pos += pos & -pos)
+		AIB[wh][pos] += val;
+}
+long long query(int wh, int pos)
+{
+	long long sum = 0;
+	for (; pos >= 1; pos -= pos & -pos)
+		sum += AIB[wh][pos];
+	return sum;
+}
+
+inline bool compare(const int& i1, const int& i2)
+{
+	return A[i1] < A[i2];
+}
+
+int main()
+{
+	cin >> N >> K;
+	for (int i = 1; i <= N; ++i)
+	{
+		cin >> A[i];
+		pos[i] = i;
+	}
+	sort(pos + 1, pos + N + 1, compare);
+	
+	int now = 0;
+	for (int i = 1; i <= N; ++i)
+	{
+		++now;
+		while (i < N && A[pos[i]] == A[pos[i + 1]])
+		{
+			A[pos[i]] = now;
+			++i;
+		}
+		A[pos[i]] = now;
+	}
+	
+	for (int i = 1; i <= N; ++i)
+	{
+		update(1, A[i], 1);
+		invnow += query(1, N) - query(1, A[i]);
+	}
+	
+	int L = 0;
+	for (int R = 1; R <= N; ++R)
+	{
+		long long addinv = query(0, N) - query(0, A[L + 1]) + query(1, A[L + 1] - 1);
+		while (L + 1 < R && invnow + addinv <= K)
+		{
+			++L;
+			invnow += addinv;
+			update(0, A[L], 1);
+			addinv = query(0, N) - query(0, A[L + 1]) + query(1, A[L + 1] - 1);
+		}
+		
+		result += L;
+		
+		update(1, A[R], -1);
+		invnow -= query(1, A[R] - 1);
+		invnow -= query(0, N) - query(0, A[R]);
+	}
+	
+	cout << result << '\n';
+}

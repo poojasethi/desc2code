@@ -1,0 +1,228 @@
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <algorithm>
+#include <set>
+#include <map>
+#define left (node*2 + 1)
+#define right (node*2 + 2)
+#define mid ((ini+fim)/2)
+
+using namespace std;
+
+const int tmax = (int)1e5 + 100;
+
+int gcd( int a, int b ){
+  a = max(a,-a);
+  b = max(b,-b);
+  if( b == 0 ) return a;
+  return gcd(b,a % b);
+}
+
+struct seg{
+  int valor;
+  int gdiff;
+  int first;
+  int last;
+  int flag;
+};
+
+struct Chain{
+  int sz;
+  vector < seg > T;
+  vector < int > iniv;
+  Chain(){}
+  Chain( int n, vector < int > vals ){
+    iniv = vals;
+    sz = n;
+    T.resize(sz * 4);
+    init(0,0,sz - 1);
+  }
+  void init( int node, int ini, int fim ){
+    if( ini == fim ){
+      T[node].first = T[node].last = iniv[ini];
+      T[node].valor = iniv[ini];
+      T[node].gdiff = T[node].flag = 0;
+    }else{
+      init(left,ini,mid);
+      init(right,mid+1,fim);
+      T[node].first = T[left].first;
+      T[node].last = T[right].last;
+      T[node].valor = gcd(T[left].valor,T[right].valor);
+      T[node].gdiff = gcd(T[left].gdiff,gcd(iniv[mid+1] - iniv[mid],T[right].gdiff));
+    }
+  }
+  void doLazy( int node, int ini, int fim ){
+    if( T[node].flag != 0 ){
+      int k = T[node].flag;
+      T[node].first += k;
+      T[node].last += k;
+      T[node].valor = gcd(T[node].first, T[node].gdiff);
+      if( ini != fim ){
+	T[left].flag += k;
+	T[right].flag += k;
+      }
+      T[node].flag = 0;
+    }
+  }
+  void update( int node, int ini, int fim, int i, int j, int val ){
+    doLazy(node,ini,fim);
+    if( i > fim || j < ini || ini > fim ) return;
+    if( i <= ini && j >= fim ){
+      T[node].flag += val;
+      doLazy(node,ini,fim);
+      return;
+    }
+    update(left,ini,mid,i,j,val);
+    update(right,mid+1,fim,i,j,val);
+    T[node].first = T[left].first;
+    T[node].last = T[right].last;
+    T[node].valor = gcd(T[left].valor, T[right].valor);
+    T[node].gdiff = gcd(T[left].gdiff, gcd(T[right].first - T[left].last,T[right].gdiff));
+  }
+  int get( int node, int ini, int fim, int i, int j){
+    doLazy(node,ini,fim);
+    if( i > fim || j < ini || ini > fim ) return 0;
+    if( i <= ini && j >= fim ) return T[node].valor;
+    return gcd(get(left,ini,mid,i,j),get(right,mid+1,fim,i,j));
+  }
+};
+
+vector < int > graph[tmax];
+int next_node[tmax], parent[tmax], level[tmax];
+int weight[tmax], nchains;
+
+int node_id[tmax], node_pos[tmax];
+int head[tmax];
+vector < Chain * > chains;
+vector < vector < int > > nodes_chain;
+int val_no[tmax];
+
+void buildTree( int no ){
+  int pos = 0;
+  vector < int > nos;
+  int save_no = no;
+  vector < int > vals;
+  while( no != -1 ){
+    vals.push_back(val_no[no]);
+    head[no] = save_no;
+    nos.push_back(no);
+    node_pos[no] = pos++;
+    node_id[no] = nchains;
+    no = next_node[no];
+  }
+  chains.push_back(new Chain(pos,vals));
+  nodes_chain.push_back(nos);
+  nchains++;
+}
+
+void go( int node, int father ){
+  int heavy_node = -1;
+  for( int i = 0; i < graph[node].size(); i++){
+    int no = graph[node][i];
+    if( no == father ) continue;
+    go(no,node);
+    if( heavy_node == -1 || weight[no] > weight[heavy_node] )
+      heavy_node = no;
+  }
+  next_node[node] = heavy_node;
+  for( int i = 0; i < graph[node].size(); i++){
+    int no = graph[node][i];
+    if( no == father || no == heavy_node ) continue;
+    buildTree(no);
+  }
+  if( level[node] == 0 ) buildTree(node);
+}
+
+void dfs( int node, int father, int dst ){
+  parent[node] = father;
+  level[node] = dst;
+  for( int i = 0; i < graph[node].size(); i++){
+    int no = graph[node][i];
+    if( no == father ) continue;
+    dfs(no,node,dst+1);
+  }
+  weight[node] = 1;
+  for( int i = 0; i < graph[node].size(); i++){
+    int no = graph[node][i];
+    if( no == father ) continue;
+    weight[node] = max(weight[node], weight[no] + 1);
+  }
+}
+
+int lca( int a, int b ){
+  while( node_id[a] != node_id[b] ){
+    if( level[head[a]] > level[head[b]] ) a = parent[head[a]];
+    else b = parent[head[b]];
+  }
+  if( level[a] < level[b] ) return a;
+  return b;
+}
+
+void updatePath( int lc, int no, int val, bool flag ){
+  while( no != -1 &&  (level[no] > level[lc] - flag) ){
+    int chain_id = node_id[no];
+    int chain_pos = node_pos[no];
+    Chain *ch = chains[chain_id];
+    if( level[head[no]] > level[lc] ) 
+      ch->update(0,0,ch->sz - 1,0,chain_pos,val);
+    else
+      ch->update(0,0,ch->sz - 1,node_pos[lc] + !flag,chain_pos,val);
+    no = parent[head[no]];
+  }
+}
+
+int query( int lc, int no, bool flag ){
+  int ans = 0;
+  while( no != -1 && (level[no] > level[lc] - flag) ){
+    int chain_id = node_id[no];
+    int chain_pos = node_pos[no];
+    Chain *ch = chains[chain_id];
+    if( level[head[no]] > level[lc] )
+      ans = gcd(ans, ch->get(0,0,ch->sz - 1,0,chain_pos));
+    else
+      ans = gcd(ans, ch->get(0,0,ch->sz - 1,node_pos[lc] + !flag,chain_pos));
+    no = parent[head[no]];
+  }
+  return ans;
+}
+
+void init( int root ) {
+  memset(next_node,-1,sizeof(next_node));
+  memset(weight,0,sizeof(weight));
+  nchains = 0;
+  dfs(root,-1,0);
+  go(root,0);
+}
+
+int main(){
+  int n;
+  scanf("%d", &n);
+  for( int i = 0; i < n - 1; i++){
+    int a,b;
+    scanf("%d %d", &a, &b);
+    graph[a].push_back(b);
+    graph[b].push_back(a);
+  }
+  for( int i = 0; i < n; i++) scanf("%d", &val_no[i]);
+  init(0);
+  int m;
+  scanf("%d", &m);
+  while( m-- ){
+    char op;
+    scanf(" %c", &op);
+    if( op == 'F' ){
+      int a,b;
+      scanf("%d %d", &a, &b);
+      int lc = lca(a,b);
+      printf("%d\n", gcd(query(lc,a,true),query(lc,b,false)));
+    }else{
+      int a,b,c;
+      scanf("%d %d %d", &a, &b, &c);
+      int lc = lca(a,b);
+      updatePath(lc,a,c,true);
+      updatePath(lc,b,c,false);
+    }  
+  }
+  return 0;
+}

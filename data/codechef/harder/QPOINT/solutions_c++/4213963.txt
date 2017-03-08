@@ -1,0 +1,432 @@
+#include <iostream>
+#include <iomanip>
+#include <cstdio>
+#include <cstdlib>
+#include <vector>
+#include <algorithm>
+using namespace std;
+ 
+typedef long long s64;
+ 
+// getint
+inline int getint()
+{
+    char c;
+    while (c = getchar(), ('0' > c || c > '9') && c != '-');
+    
+    if (c != '-')
+    {
+        int res = c - '0';
+        while (c = getchar(), '0' <= c && c <= '9')
+            res = res * 10 + c - '0';
+        return res;
+    }
+    else
+    {
+        int res = 0;
+        while (c = getchar(), '0' <= c && c <= '9')
+            res = res * 10 + c - '0';
+        return -res;
+    }
+}
+ 
+inline int sgn(const int &x)
+{
+	if (x < 0)
+		return -1;
+	else if (x > 0)
+		return 1;
+	else
+		return 0;
+}
+inline int sgn(const s64 &x)
+{
+	if (x < 0)
+		return -1;
+	else if (x > 0)
+		return 1;
+	else
+		return 0;
+}
+ 
+struct point
+{
+	int x, y;
+ 
+	friend inline bool operator==(const point &lhs, const point &rhs)
+	{
+		return lhs.x == rhs.x && lhs.y == rhs.y;
+	}
+	friend inline bool operator!=(const point &lhs, const point &rhs)
+	{
+		return lhs.x != rhs.x || lhs.y != rhs.y;
+	}
+};
+ 
+inline s64 cross(const point &a, const point &b)
+{
+	return (s64)a.x * b.y - (s64)a.y * b.x;
+}
+inline s64 cross(const point &a, const point &o, const point &b)
+{
+	return (s64)(a.x - o.x) * (b.y - o.y) - (s64)(a.y - o.y) * (b.x - o.x);
+}
+ 
+namespace Querier
+{
+	const int MaxN = 100000;
+	const int MaxSumPolyN = 300000;
+ 
+	int n;
+	int poly_n[MaxN];
+	point *poly[MaxN];
+ 
+	struct int_with_eps
+	{
+		int a, b; // a + b * eps
+ 
+		int_with_eps(){}
+		int_with_eps(const int &_a)
+			: a(_a), b(0){}
+		int_with_eps(const int &_a, const int &_b)
+			: a(_a), b(_b){}
+ 
+		friend inline bool operator<(const int_with_eps &lhs, const int_with_eps &rhs)
+		{
+			if (lhs.a != rhs.a)
+				return lhs.a < rhs.a;
+			return lhs.b < rhs.b;
+		}
+		friend inline bool operator>(const int_with_eps &lhs, const int_with_eps &rhs)
+		{
+			if (lhs.a != rhs.a)
+				return lhs.a > rhs.a;
+			return lhs.b > rhs.b;
+		}
+		friend inline bool operator==(const int_with_eps &lhs, const int_with_eps &rhs)
+		{
+			return lhs.a == rhs.a && lhs.b == rhs.b;
+		}
+		friend inline bool operator!=(const int_with_eps &lhs, const int_with_eps &rhs)
+		{
+			return lhs.a != rhs.a || lhs.b != rhs.b;
+		}
+	};
+ 
+	inline int_with_eps getY_with_eps(const point &p)
+	{
+		return int_with_eps(p.y, p.x);
+	}
+ 
+	struct poly_seg
+	{
+		int polyNum;
+		int pIdx; // poly[polyNum]: ([pi], [pi + 1])
+ 
+		poly_seg(){}
+		poly_seg(const int &_polyNum, const int &_pIdx)
+			: polyNum(_polyNum), pIdx(_pIdx){}
+ 
+		friend inline bool operator==(const poly_seg &lhs, const poly_seg &rhs)
+		{
+			return lhs.polyNum == rhs.polyNum && lhs.pIdx == rhs.pIdx;
+		}
+	};
+ 
+	const int MaxELiN = MaxSumPolyN * 2;
+ 
+	enum EventType
+	{
+		ET_I = 0, ET_D = 1
+	};
+ 
+	struct event
+	{
+		poly_seg seg;
+		int_with_eps y;
+		EventType type;
+ 
+		event(){}
+		event(const poly_seg &_seg, const int_with_eps &_y, const EventType &_type)
+			: seg(_seg), y(_y), type(_type){}
+ 
+		friend inline bool operator<(const event &lhs, const event &rhs)
+		{
+			if (lhs.y != rhs.y)
+				return lhs.y < rhs.y;
+			return lhs.type < rhs.type;
+		}
+	};
+ 
+	int eLi_n = 0;
+	event eLi[MaxELiN];
+ 
+	inline int sgncross_with_eps(const point &a, const point &o, const point &b)
+	{
+		// eps doesn't affect the results
+		return  sgn((s64)(a.x - o.x) * (b.y - o.y) - (s64)(a.y - o.y) * (b.x - o.x));
+	}
+ 
+	inline bool cmpSeg(const poly_seg &s, const poly_seg &t)
+	{
+		point pA = poly[s.polyNum][s.pIdx], pB = poly[s.polyNum][s.pIdx + 1];
+		point qA = poly[t.polyNum][t.pIdx], qB = poly[t.polyNum][t.pIdx + 1];
+		if (getY_with_eps(pA) > getY_with_eps(pB))
+			swap(pA, pB);
+		if (getY_with_eps(qA) > getY_with_eps(qB))
+			swap(qA, qB);
+ 
+		if (pB == qA)
+			return false;
+		if (pA == qB)
+			return true;
+		if (pA == qA)
+			return sgncross_with_eps(qB, pA, pB) > 0;
+		if (pB == qB)
+			return sgncross_with_eps(pA, pB, qA) > 0;
+		int c1 = sgncross_with_eps(pB, pA, qA);
+		int c2 = sgncross_with_eps(pB, pA, qB);
+		if (c1 < 0 && c2 < 0)
+			return true;
+		else if (c1 > 0 && c2 > 0)
+			return false;
+		else if (c1 < 0)
+			return sgncross_with_eps(qB, qA, pB) > 0;
+		else // c2 < 0
+			return sgncross_with_eps(qA, qB, pA) < 0;
+	}
+	inline bool earlierThanQuery(const event &e, const int_with_eps &y)
+	{
+		if (e.y != y)
+			return e.y < y;
+		return e.type == ET_I;
+	}
+	inline bool onTheLeft(const poly_seg &s, const point &p)
+	{
+		point pA = poly[s.polyNum][s.pIdx], pB = poly[s.polyNum][s.pIdx + 1];
+		if (getY_with_eps(pA) > getY_with_eps(pB))
+			swap(pA, pB);
+		return sgncross_with_eps(pB, pA, p) >= 0;
+	}
+	
+	const int TreapPoolLen = 10916761;
+ 
+	struct treap_node
+	{
+		poly_seg key;
+		int pri;
+		treap_node *lc, *rc;
+	};
+	treap_node treap_pool[TreapPoolLen], *treap_tail;
+ 
+	inline treap_node *treap_new()
+	{
+		if (treap_tail != treap_pool + TreapPoolLen)
+			return treap_tail++;
+		else
+			return new treap_node;
+	}
+ 
+	inline void treap_zig(treap_node *&y)
+	{
+		treap_node *x = y->lc;
+		y->lc = x->rc;
+		x->rc = y;
+		y = x;
+	}
+	inline void treap_zag(treap_node *&y)
+	{
+		treap_node *x = y->rc;
+		y->rc = x->lc;
+		x->lc = y;
+		y = x;
+	}
+ 
+	treap_node *treap_insert(const treap_node *p, const poly_seg &key, const int &pri)
+	{
+		treap_node *q = treap_new();
+		if (!p)
+		{
+			q->key = key, q->pri = pri;
+			q->lc = q->rc = NULL;
+		}
+		else
+		{
+			*q = *p;
+			if (cmpSeg(key, p->key))
+			{
+				q->lc = treap_insert(p->lc, key, pri);
+				if (q->lc->pri < q->pri)
+					treap_zig(q);
+			}
+			else
+			{
+				q->rc = treap_insert(p->rc, key, pri);
+				if (q->rc->pri < q->pri)
+					treap_zag(q);
+			}
+		}
+		return q;
+	}
+ 
+	void treap_delete_root(treap_node *&p)
+	{
+		if (!p->lc && !p->rc)
+			p = NULL;
+		else
+		{
+			treap_node *q = treap_new();
+			if (p->lc && (!p->rc || p->lc->pri < p->rc->pri))
+			{
+				*q = *p->lc;
+				p->lc = q;
+				treap_zig(p);
+				treap_delete_root(p->rc);
+			}
+			else
+			{
+				*q = *p->rc;
+				p->rc = q;
+				treap_zag(p);
+				treap_delete_root(p->lc);
+			}
+		}
+	}
+	treap_node *treap_delete(const treap_node *p, const poly_seg &key)
+	{
+		treap_node *q = treap_new();
+		*q = *p;
+		if (p->key == key)
+			treap_delete_root(q);
+		else
+		{
+			if (cmpSeg(key, p->key))
+				q->lc = treap_delete(p->lc, key);
+			else
+				q->rc = treap_delete(p->rc, key);
+		}
+		return q;
+	}
+	treap_node *treap_query(treap_node *root, const point &q)
+	{
+		treap_node *res = NULL;
+		treap_node *p = root;
+		while (p)
+		{
+			if (onTheLeft(p->key, q))
+				res = p, p = p->lc;
+			else
+				p = p->rc;
+		}
+		return res;
+	}
+	
+	treap_node *history[MaxELiN];
+ 
+	inline void init()
+	{
+		for (int i = 0; i < n; i++)
+		{
+			s64 sum = 0;
+			for (int j = 0; j < poly_n[i]; j++)
+				sum += cross(poly[i][j], poly[i][j + 1]);
+			if (sum < 0)
+				reverse(poly[i], poly[i] + poly_n[i]), poly[i][poly_n[i]] = poly[i][0];
+		}
+ 
+		for (int polyNum = 0; polyNum < n; polyNum++)
+			for (int pIdx = 0; pIdx < poly_n[polyNum]; pIdx++)
+			{
+				point pi = poly[polyNum][pIdx], pj = poly[polyNum][pIdx + 1];
+				if (getY_with_eps(pi) > getY_with_eps(pj))
+					swap(pi, pj);
+				eLi[eLi_n++] = event(poly_seg(polyNum, pIdx), getY_with_eps(pi), ET_I);
+				eLi[eLi_n++] = event(poly_seg(polyNum, pIdx), getY_with_eps(pj), ET_D);
+			}
+		sort(eLi, eLi + eLi_n);
+ 
+		treap_tail = treap_pool;
+ 
+		treap_node *curT = NULL;
+		for (int ei = 0; ei < eLi_n; ei++)
+		{
+			event e = eLi[ei];
+			if (e.type == ET_I)
+				curT = treap_insert(curT, e.seg, rand() << 15 ^ rand());
+			else if (e.type == ET_D)
+				curT = treap_delete(curT, e.seg);
+ 
+			history[ei] = curT;
+		}
+	}
+ 
+	inline int query(const point &q)
+	{
+		int le = 0, ri = eLi_n;
+		while (le != ri)
+		{
+			int mid = (le + ri) >> 1;
+			if (earlierThanQuery(eLi[mid], getY_with_eps(q)))
+				le = mid + 1;
+			else
+				ri = mid;
+		}
+		if (le == 0)
+			return -1;
+ 
+		int ti = le - 1;
+		treap_node *p = treap_query(history[ti], q);
+		if (!p)
+			return -1;
+		poly_seg s = p->key;
+		if (sgncross_with_eps(poly[s.polyNum][s.pIdx + 1], poly[s.polyNum][s.pIdx], q) < 0)
+			return -1;
+		return s.polyNum + 1;
+	}
+ 
+	inline void dispose()
+	{
+		for (int i = 0; i < n; i++)
+			delete []poly[i];
+	}
+}
+ 
+int main()
+{
+ 
+	srand(192737);
+ 
+	namespace Q = Querier;
+ 
+	cin >> Q::n;
+	for (int i = 0; i < Q::n; i++)
+	{
+		Q::poly_n[i] = getint();
+		Q::poly[i] = new point[Q::poly_n[i] + 1];
+		for (int j = 0; j < Q::poly_n[i]; j++)
+		{
+			point p;
+			p.x = getint(), p.y = getint();
+			Q::poly[i][j] = p;
+		}
+		Q::poly[i][Q::poly_n[i]] = Q::poly[i][0];
+	}
+ 
+	Q::init();
+ 
+	int nQ;
+	cin >> nQ;
+ 
+	while (nQ--)
+	{
+		point p;
+		p.x = getint(), p.y = getint();
+ 
+		printf("%d\n", Q::query(p));
+		fflush(stdout);
+	}
+ 
+	Q::dispose();
+ 
+	return 0;
+} 

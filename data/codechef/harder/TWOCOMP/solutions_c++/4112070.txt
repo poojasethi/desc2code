@@ -1,0 +1,198 @@
+#include <iostream>
+#include <cstdio>
+#include <cmath>
+#include <vector>
+#include <map>
+#include <set>
+#include <string>
+#include <cstring>
+#include <algorithm>
+#include <iomanip>
+#include <queue>
+#include <cstdlib>
+#include <ctime>
+#include <cassert>
+#include <stack>
+#include <bitset>
+#include <sstream>
+#include <fstream>
+ 
+typedef unsigned long long ull;
+#define mp make_pair
+#define pb push_back
+ 
+const long double eps = 1e-9;
+const double pi = acos(-1.0);
+const long long inf = 1e18;
+ 
+using namespace std;
+ 
+struct route
+{
+    int a, b, c, cost;
+    route( int a = 0, int b = 0, int c = 0, int cost = 0 ) : a( a ), b( b ), c( c ), cost( cost ) {};  
+};
+ 
+struct edge
+{
+    int v, f, c;
+    edge( int v = 0, int f = 0, int c = 0 ) : v( v ), f( f ), c( c ) {};
+};
+ 
+route r1[ 777 ], r2[ 777 ];
+int n, m1, m2, tin[ 100100 ], tout[ 100100 ], timer;
+int pt[ 100100 ][ 18 ];
+vector< int > graph[ 100100 ];
+//------ FLOW SECTION ------
+int S, T, d[ 1444 ], p[ 1444 ];
+vector< edge > e;
+vector< int > g[ 1444 ];
+ 
+void dfs( int v, int prev )
+{
+    pt[v][0] = prev;
+    for ( int i = 1; i < 18; i++ ) pt[v][i] = pt[ pt[v][i - 1] ][i - 1];
+    tin[v] = ++timer;
+    for ( int i = 0; i < graph[v].size(); i++ )
+    {
+        int next = graph[v][i];
+        if ( next == prev ) continue;
+        dfs( next, v );
+    }
+    tout[v] = timer;
+}
+ 
+bool is_parent( int parent, int child )
+{
+    return ( tin[ parent ] <= tin[ child ] && tout[ child ] <= tout[ parent ] );
+}
+ 
+int lca( int u, int v )
+{
+    if ( is_parent( u, v ) ) return u;
+    if ( is_parent( v, u ) ) return v;
+    for ( int i = 17; i >= 0; i-- )
+        if ( !is_parent( pt[u][i], v ) )
+            u = pt[u][i];
+    return pt[u][0];
+}
+ 
+bool between( int a, int b, int c )
+{
+    return is_parent( a, b ) && is_parent( b, c ); 
+}
+ 
+bool intersect( int a, int b, int c, int d )
+{
+    return between( a, c, b ) || between( a, d, b ) || between( c, a, d ) || between( c, b, d );
+}
+ 
+//---------------------------------------------------
+// FLOW SECTION
+//---------------------------------------------------
+ 
+void add_edge( int a, int b, int c )
+{
+    g[ a ].pb( e.size() );
+    e.pb( edge( b, 0, c ) );
+    g[ b ].pb( e.size() );
+    e.pb( edge( a, 0, 0 ) );
+}
+ 
+void bfs()
+{
+    for ( int i = S; i <= T; i++ ) d[i] = -1, p[i] = 0;
+    d[S] = 0;
+    queue< int > q; q.push( S );
+    while ( q.size() )
+    {
+        int v = q.front(); q.pop();
+        for ( int i = 0; i < g[v].size(); i++ )
+        {
+            int id = g[v][i];
+            if ( e[id].c - e[id].f <= 0 ) continue;
+            int next = e[id].v;
+            if ( d[ next ] != -1 ) continue;
+            d[ next ] = d[ v ] + 1;
+            q.push( next );
+        }
+    }
+}
+ 
+int dfs_flow( int v, int flow )
+{
+    if ( v == T ) return flow;
+    if ( flow == 0 ) return 0;
+    int pushed = 0;
+    for ( ; p[v] < g[v].size(); p[v]++ )
+    {
+        int id = g[v][ p[v] ];
+        if ( e[id].c - e[id].f <= 0 ) continue;
+        int next = e[id].v;
+        if ( d[v] + 1 != d[next] ) continue;
+        int delta = dfs_flow( next, min( flow - pushed, e[id].c - e[id].f ) );
+        e[id].f += delta;
+        e[id ^ 1].f -= delta;
+        pushed += delta;
+        if ( pushed == flow ) return pushed;
+    }
+    return pushed;
+}
+ 
+int flow()
+{
+    int result = 0;
+    while ( true )
+    {
+        bfs();
+        if ( d[ T ] == -1 ) break;
+        while ( true )
+        {
+            int delta = dfs_flow( S, 1000000000 );
+            if ( delta == 0 ) break;
+            result += delta;
+        }
+    } 
+    return result;
+}
+ 
+int main (int argc, const char * argv[])
+{
+    scanf("%d%d%d", &n, &m1, &m2);
+    for ( int i = 1; i < n; i++ )
+    {
+        int u, v; scanf("%d%d", &u, &v);
+        graph[u].push_back(v);
+        graph[v].push_back(u); 
+    }
+    dfs( 1, 1 );
+    S = 0; T = m1 + m2 + 1;
+    int answer = 0;
+    for ( int i = 1; i <= m1; i++ )
+    {
+        scanf("%d%d%d", &r1[i].a, &r1[i].b, &r1[i].cost);
+        r1[i].c = lca( r1[i].a, r1[i].b );
+        add_edge( S, i, r1[i].cost );
+        answer += r1[i].cost;
+    }
+    for ( int i = 1; i <= m2; i++ )
+    {
+        scanf("%d%d%d", &r2[i].a, &r2[i].b, &r2[i].cost);
+        r2[i].c = lca( r2[i].a, r2[i].b );
+        add_edge( m1 + i, T, r2[i].cost );
+        answer += r2[i].cost;
+    }
+    for ( int i = 1; i <= m1; i++ )
+        for ( int j = 1; j <= m2; j++ )
+        {
+            bool flag = false;
+            if ( !flag && intersect( r1[i].c, r1[i].a, r2[j].c, r2[j].a ) ) flag = true;
+            if ( !flag && intersect( r1[i].c, r1[i].a, r2[j].c, r2[j].b ) ) flag = true;
+            if ( !flag && intersect( r1[i].c, r1[i].b, r2[j].c, r2[j].a ) ) flag = true;
+            if ( !flag && intersect( r1[i].c, r1[i].b, r2[j].c, r2[j].b ) ) flag = true;
+            if ( !flag ) continue;
+            add_edge( i, m1 + j, 1000000000 );
+        }
+    cout << answer - flow() << "\n";
+    return 0;
+}

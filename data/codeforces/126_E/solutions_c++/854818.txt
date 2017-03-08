@@ -1,0 +1,254 @@
+#include <map>
+#include <set>
+#include <cmath>
+#include <stack>
+#include <queue>
+#include <string>
+#include <vector>
+#include <bitset>
+#include <fstream>
+#include <sstream>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+#define li       	long long int
+#define rep(i,to)	for(li i=0;i<((li)(to));++i)
+#define pb       	push_back
+#define sz(v)    	((li)(v).size())
+#define bit(n)   	(1ll<<(li)(n))
+#define all(vec)	(vec).begin(),(vec).end()
+#define each(i,c)	\
+for(__typeof((c).begin()) i=(c).begin();i!=(c).end();i++)
+typedef pair<li,li> PI;
+#define MP make_pair
+#define F first
+#define S second
+
+
+
+#define MAX_FLOW_MAX_V 25
+#define MAX 10
+#define X 7
+#define Y 8
+struct max_flow_edge{
+	li to,cap,rev;
+};
+vector<max_flow_edge> MAX_FLOW_E[MAX_FLOW_MAX_V];
+li same[MAX],base[MAX],best=-1;
+char mp[MAX][MAX];
+char ans[MAX*2][MAX*2];
+set<vector<li> > s;
+vector<li> now,best_vec;
+vector<string> remain;
+vector<string> one_vec[MAX];
+map<pair<char,char>,li> con;
+string color[]={"BY","BW","BR","BB","RY","RW","RR","WY","WW","YY"};
+li max_flow(li s,li y);
+void max_flow_add_edge(li from,li to,li cap);
+void max_flow_init();
+
+void recur(li x,li y,li mask){
+	if(y==Y){ recur(x+1,0,mask); return; }
+	if(x==X){ s.insert(now); return; }
+	if(mask&1){ recur(x,y+1,mask/2); return; }
+	now[con[MP(mp[x][y],mp[x][y+1])]]++;
+	if(y+1<Y && (mask&bit(1))==0) recur(x,y+1,mask/2+1);
+	now[con[MP(mp[x][y],mp[x][y+1])]]--;
+	now[con[MP(mp[x][y],mp[x+1][y])]]++;
+	if(x+1<X) recur(x,y+1,mask/2+bit(Y-1));
+	now[con[MP(mp[x][y],mp[x+1][y])]]--;
+}
+
+li cal(vector<li> vec){
+	li res=0;
+	max_flow_init();
+	rep(i,10) same[i]=min(base[i],vec[i]);
+	rep(i,10) max_flow_add_edge(20,i,base[i]-same[i]);
+	rep(i,10) max_flow_add_edge(10+i,21,vec[i]-same[i]);
+	rep(i,10)rep(j,10)if(color[i][0]==color[j][0] || color[i][0]==color[j][1] || color[i][1]==color[j][0] || color[i][1]==color[j][1]) max_flow_add_edge(i,j+10,100);
+	rep(i,10) res+=same[i]*2;
+	return max_flow(20,21)+res;
+}
+
+bool make(li x,li y){
+	if(x==X) return true;
+	if(y==Y) return make(x+1,0);
+	if(ans[x*2][y*2]!='.') return make(x,y+1);
+	if(x+1!=X && ans[x*2+2][y*2]=='.'){
+		char c0=mp[x][y],c1=mp[x+1][y];
+		li num=con[MP(c0,c1)];
+		if(best_vec[num]!=0){
+			ans[x*2+1][y*2]='|';
+			best_vec[num]--;
+			if(same[num]){
+				same[num]--;
+				ans[x*2+0][y*2]=c0;
+				ans[x*2+2][y*2]=c1;
+				if(make(x,y+1)) return true;
+				same[num]++;
+			}else if(sz(one_vec[num])){
+				string str=one_vec[num].back();
+				one_vec[num].pop_back();
+				if(c0!=str[0] && c1!=str[1]) swap(str[0],str[1]);
+				ans[x*2+0][y*2]=str[0];
+				ans[x*2+2][y*2]=str[1];
+				if(make(x,y+1)) return true;
+				one_vec[num].pb(str);
+			}else{
+				string str=remain.back();
+				remain.pop_back();
+				ans[x*2+0][y*2]=str[0];
+				ans[x*2+2][y*2]=str[1];
+				if(make(x,y+1)) return true;
+				remain.pb(str);
+			}
+			best_vec[num]++;
+			ans[x*2+0][y*2]=ans[x*2+1][y*2]=ans[x*2+2][y*2]='.';
+		}
+	}
+	if(y+1!=Y && ans[x*2][y*2+2]=='.'){
+		char c0=mp[x][y],c1=mp[x][y+1];
+		li num=con[MP(c0,c1)];
+		if(best_vec[num]!=0){
+			best_vec[num]--;
+			ans[x*2][y*2+1]='-';
+			if(same[num]){
+				same[num]--;
+				ans[x*2][y*2+0]=c0;
+				ans[x*2][y*2+2]=c1;
+				if(make(x,y+1)) return true;
+				same[num]++;
+			}else if(sz(one_vec[num])){
+				string str=one_vec[num].back();
+				one_vec[num].pop_back();
+				if(c0!=str[0] && c1!=str[1]) swap(str[0],str[1]);
+				ans[x*2][y*2+0]=str[0];
+				ans[x*2][y*2+2]=str[1];
+				if(make(x,y+1)) return true;
+				one_vec[num].pb(str);
+			}else{
+				string str=remain.back();
+				remain.pop_back();
+				ans[x*2][y*2+0]=str[0];
+				ans[x*2][y*2+2]=str[1];
+				if(make(x,y+1)) return true;
+				remain.pb(str);
+			}
+			best_vec[num]++;
+			ans[x*2][y*2+0]=ans[x*2][y*2+1]=ans[x*2][y*2+2]='.';
+		}
+	}
+	return false;
+}
+		
+		
+int main(){
+	rep(i,7) scanf("%s",mp[i]);
+	now=vector<li>(10,0);
+	rep(i,10) cin>>base[i];
+	rep(i,10) con[MP(color[i][0],color[i][1])]=i;
+	rep(i,10) con[MP(color[i][1],color[i][0])]=i;
+	recur(0,0,0);
+	each(it,s)if(best<cal(*it)){ best=cal(*it); best_vec=*it; }
+	cout<<cal(best_vec)<<endl;
+	rep(i,sz(MAX_FLOW_E[20]))rep(j,MAX_FLOW_E[20][i].cap){
+		remain.pb(color[MAX_FLOW_E[20][i].to]);
+	}
+	rep(i,10)rep(j,sz(MAX_FLOW_E[i+10])){
+		if(MAX_FLOW_E[i+10][j].to==21) continue;
+		rep(k,MAX_FLOW_E[i+10][j].cap) one_vec[i].pb(color[MAX_FLOW_E[i+10][j].to]);
+	}
+	rep(i,MAX*2)rep(j,MAX*2) ans[i][j]='.';
+	make(0,0);
+	rep(i,13){ rep(j,15) cout<<ans[i][j]; cout<<endl; }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//	O(E*V*V)
+//	p.194
+
+
+#define INF bit(62)
+li max_flow_iter[MAX_FLOW_MAX_V];
+li max_flow_level[MAX_FLOW_MAX_V];
+
+void max_flow_init(){
+	rep(i,MAX_FLOW_MAX_V) MAX_FLOW_E[i].clear();
+}
+
+void max_flow_add_edge(li from,li to,li cap){
+	max_flow_edge e0={to,cap,sz(MAX_FLOW_E[to])};
+	max_flow_edge e1={from,0,sz(MAX_FLOW_E[from])};
+	MAX_FLOW_E[from].pb(e0);
+	MAX_FLOW_E[to].pb(e1);
+}
+
+void max_flow_bfs(li s){
+	rep(i,MAX_FLOW_MAX_V) max_flow_level[i]=-1;
+	max_flow_level[s]=0;
+	queue<li> q;
+	q.push(s);
+	while(sz(q)){
+		li v=q.front();
+		q.pop();
+		rep(i,sz(MAX_FLOW_E[v])){
+			max_flow_edge &e=MAX_FLOW_E[v][i];
+			if(e.cap>0 && max_flow_level[e.to]==-1){
+				max_flow_level[e.to]=max_flow_level[v]+1;
+				q.push(e.to);
+			}
+		}
+	}
+}
+
+li max_flow_dfs(li pos,li g,li f){
+	if(pos==g) return f;
+	for(li &i=max_flow_iter[pos];i<sz(MAX_FLOW_E[pos]);i++){
+		max_flow_edge &e=MAX_FLOW_E[pos][i];
+		if(e.cap>0 && max_flow_level[pos]<max_flow_level[e.to]){
+			li tmp=max_flow_dfs(e.to,g,min(f,e.cap));
+			if(tmp>0){
+				e.cap-=tmp;
+				MAX_FLOW_E[e.to][e.rev].cap+=tmp;
+				return tmp;
+			}
+		}
+	}
+	return 0;
+}
+
+li max_flow(li s,li g){
+	if(s==g){ cout<<"s==g at max_flow(li s,li g)"<<endl; return -1; }
+	li res=0;
+	while(true){
+		max_flow_bfs(s);
+		if(max_flow_level[g]==-1) return res;
+		rep(i,MAX_FLOW_MAX_V) max_flow_iter[i]=0;
+		li tmp;
+		while((tmp=max_flow_dfs(s,g,INF))>0) res+=tmp;
+	}
+	return -1;
+}
+
+

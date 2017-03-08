@@ -1,0 +1,190 @@
+#include<iostream>
+#include<algorithm>
+#include<cstdio>
+#include<string.h>
+#include<climits>
+#include<vector>
+#include<stack>
+#include<set>
+using namespace std;
+#define FOR(i,a,b) for(i=a;i<=b;i++)
+#define sint(i) scanf("%d",&i)
+#define ss(s) scanf("%s",s)
+#define pii pair<int,int>
+#define mp(i,j) make_pair(i,j)
+#define ll long long
+#define MAX 1000000000
+#define MOD 1000000007
+#define vi vector<pii>
+#define vvi vector < vi >
+#define pb(i) push_back(i);
+#define tr(v,it) for(it=v.begin();it!=v.end();it++)
+struct node
+{
+     long long max;
+     long long count_max;
+     long long second_max;
+     long long count_second_max;
+};
+
+node combine(node a,node b)
+{
+    if(a.max==-1)
+    return b;
+    if(b.max==-1)
+    return a;
+    node c;
+    c.max=max(a.max,b.max);
+    if(a.max==b.max)
+    {
+        c.count_max=a.count_max+b.count_max;
+        c.second_max=max(a.second_max,b.second_max);
+        if(a.second_max==b.second_max)
+        {
+            c.count_second_max=a.count_second_max+b.count_second_max;
+        }
+        else if(c.second_max==a.second_max)
+        c.count_second_max=a.count_second_max;
+        else
+        c.count_second_max=b.count_second_max;
+    }
+    else if(c.max==a.max)
+    {
+    c.count_max=a.count_max;
+    c.second_max=max(a.second_max,b.max);
+    if(a.second_max==b.max)
+        {
+            c.count_second_max=a.count_second_max+b.count_max;
+        }
+        else if(c.second_max==a.second_max)
+        c.count_second_max=a.count_second_max;
+        else
+        c.count_second_max=b.count_max;
+    }
+
+    else
+    {
+    c.count_max=b.count_max;
+    c.second_max=max(b.second_max,a.max);
+    if(b.second_max==a.max)
+        {
+            c.count_second_max=b.count_second_max+a.count_max;
+        }
+        else if(c.second_max==b.second_max)
+        c.count_second_max=b.count_second_max;
+        else
+        c.count_second_max=a.count_max;
+    }
+    c.count_max=c.count_max%MOD;
+    c.count_second_max=c.count_second_max%MOD;
+    return c;
+}
+node universal;
+void update(struct node* st,long long start,long long end,long long pos,node value,long long putst)
+{
+    if(pos<start || pos>end)
+    {
+        return;
+    }
+    else
+    {
+    if(start<=pos && end>=pos)
+    {
+       st[putst]=combine(st[putst],value);
+    }
+    if(start!=end)
+    {
+    update(st,start,(start+end)/2,pos,value,2*putst);
+    update(st,(start+end)/2+1,end,pos,value,2*putst+1);
+    }
+    }
+}
+
+node query(struct node* st,long long start,long long end,long long istart,long long iend,long long pickst)
+{
+    if(istart<=start && iend>=end)
+    return st[pickst];
+
+    if(end<istart || start>iend)
+    return universal;
+
+    return combine(query(st,start,(start+end)/2,istart,iend,2*pickst),
+        query(st,(start+end)/2+1,end,istart,iend,2*pickst+1));
+}
+void print(node a)
+{
+    cout<<a.max<<" "<<a.count_max<<" "<<a.second_max<<" "<<a.count_second_max<<"\n";
+}
+int main()
+{
+    universal.max=-1;
+    universal.count_max=-1;
+    universal.second_max=-1;
+    universal.count_second_max=-1;
+int i;
+int t;
+cin>>t;
+while(t--)
+{
+    int n;
+    sint(n);
+    pii a[n+1];
+    FOR(i,1,n)
+    {
+        sint(a[i].first);
+        a[i].second=i;
+    }
+    sort(a+1,a+n+1);
+    ll b[n+1];
+    int num=1;
+    FOR(i,1,n)
+    {
+        if(i>1 && a[i].first!=a[i-1].first)
+        num++;
+        b[a[i].second]=num;
+    }
+   // FOR(i,1,n)
+   // cout<<b[i]<<" ";
+    node max_ending;
+    struct node* st=(struct node*)malloc(sizeof(struct node)*4*n);//
+    FOR(i,1,4*n-1)
+    {
+        st[i].max=0;
+        st[i].count_max=0;
+        st[i].count_second_max=0;
+        st[i].second_max=0;
+    }
+    for(i=1;i<=n;i++)
+    {
+        if(b[i]!=1)
+        {
+        max_ending=query(st,1,n,1,b[i]-1,1);
+        }
+        else
+        {
+            max_ending.max=0;
+            max_ending.second_max=0;
+            max_ending.count_max=0;
+            max_ending.count_second_max=0;
+        }
+        if(max_ending.max>max_ending.second_max)
+        {
+            max_ending.second_max+=1;
+        }
+        max_ending.max+=1;
+       // max_ending.second_max+=1;
+        if(max_ending.max==1)
+        {
+            max_ending.count_max=1;
+        }
+        if(max_ending.second_max==1)
+        {
+            max_ending.count_second_max=1;
+        }
+      //  print(max_ending);
+             update(st,1,n,b[i],max_ending,1);
+    }
+    cout<<query(st,1,n,1,n,1).count_second_max<<"\n";
+}
+return 0;
+}

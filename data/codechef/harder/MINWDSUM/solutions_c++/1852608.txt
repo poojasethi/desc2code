@@ -1,0 +1,116 @@
+/**
+ * February 2013 Cook-Off
+ *
+ * Problem:     MINWDSUM - Minimal Weighted Digit Sum
+ * Author:      Anton Lunyov (Problem-Setter)
+ * Complexity:  O(10 * M + maxW * log10(M)) per test
+ * Timing:      1.14 out of 2.5
+ *
+ * Description:
+ * We build a graph with vertexes from 0 to M-1.
+ * For each digit D from 0 to 9 and for each R from 0 to M-1
+ * we add the directed edge from R to (10*R+D)%M with length W[D].
+ * Then Smin(R) is the shortest path from 0 to R in this graph.
+ * To find shortest paths we use 012-BFS which is efficient here
+ * due to low bound on W[D]. Namely for each S from 0 to maxS = maxW * log10(M)
+ * we have a queue of vertexes having current Smin value S.
+ * We traverse this list of queues in increasing order of S
+ * and process vertexes in each queue as in Dijkstra algorithm
+ * After we find Smin(R) for all R we can find f(Nmin(R)) for all R
+ * via standard BFS on the acyclic graph G of shortest paths of the above graph.
+ * Namely we find the decimal length Lmin(R) of Nmin(R) as usual distance
+ * in the graph G for all R via BFS and simultaneously fill array f(Nmin(R)).
+ */
+#include <iostream>
+#include <vector>
+#include <queue>
+using namespace std;
+
+// returns length of the decimal representation of M
+int len(int M) {
+	return M ? len(M / 10) + 1 : 0;
+}
+
+int main() {
+	int T;
+	cin >> T;
+	for (int t = 0; t < T; ++t) {
+		int M;
+		cin >> M;
+
+		vector<int> W(10);
+		int maxW = 0;
+		for (int D = 0; D < 10; ++D) {
+			cin >> W[D];
+			maxW = max(maxW, W[D]);
+		}
+		// maxW = max(W[0], W[1], ..., W[9])
+
+		// Smin(R) <= WS(R) <= max(W[D]) * len(R)  <= max(W[D]) * len(M-1)
+		// hence such upper bound on Smin
+		int maxS = maxW * len(M - 1) + 1;
+		vector<int> Smin(M, maxS);
+		vector<queue<int> > q(maxS);
+		// the shortest path to 0 is 0
+		q[0].push(0);
+		Smin[0] = 0;
+		for (int S = 0; S < maxS; ++S) {
+			while (!q[S].empty()) {
+				// extract the current vertex
+				int R = q[S].front();
+				q[S].pop(); // and pop it from the queue
+				// we skip vertex R if Smin[R] != S as in standard
+				// implementation of Dijkstra algorithm using priority_queue
+				if (Smin[R] != S) {
+					continue;
+				}
+				// Smin[R] == S means that we have final value of Smin for R
+				// so we update other vertexes
+				for (int D = 0; D < 10; ++D) {
+					// RD is the neighboring vertex for R via edge D
+					int RD = (10 * R + D) % M;
+					// SD is the path from 0 to RD through R
+					int SD = S + W[D];
+					// the relaxation of the shortest path of RD
+					if (Smin[RD] > SD)
+					{
+						Smin[RD] = SD; // update the Smin value 
+						q[SD].push(RD); // and add the vertex RD to the corresponding queue
+					}
+				}
+			}
+		}
+
+		long long res = 0; // will contain value of required sum
+		// M is an upper bound on Lmin since any simple path
+		// in any graph of M vertexes has < M vertexes :)
+		vector<int> Lmin(M, M); // the decimal length of Nmin(R)
+		vector<unsigned> Nmin(M); // the value of f(Nmin(R)), range of unsigned is [0, 2^32)
+		queue<int> bfs; // usual queue for bfs
+		// the init of vertex 0
+		bfs.push(0);
+		Lmin[0] = 0;
+		while (!bfs.empty()) {
+			// extract the current vertex
+			int R = bfs.front();
+			bfs.pop(); // and pop it from the queue
+			int L = Lmin[R]; // the decimal length of Nmin(R)
+			res += Nmin[R]; // Nmin[R] is the correct value of f(Nmin(R)) so we update res
+			// iterating over edges from R as in the above loop
+			for (int D = 0; D < 10; ++D) {
+				int RD = (10 * R + D) % M;
+				// the first condition here is that edge belongs to the shortest path to RD
+				// the second is that we not visit vertex RD earlier in this bfs
+				if (Smin[RD] == Smin[R] + W[D] && Lmin[RD] == M)
+				{
+					// standard update in bfs:
+					Lmin[RD] = L + 1; // update of distance
+					bfs.push(RD); // add to to the queue
+					Nmin[RD] = 3141 * Nmin[R] + D; // unsigned overflow is equivalent to mod 2^32 operation
+				}
+			}
+		}
+		cout << res << endl;
+	}
+	return 0;
+}

@@ -1,0 +1,133 @@
+/*
+Author: LJQ
+PROG: Codeforces #144 Div1 D. Fence
+DATE: 2012.12.24
+*/
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+const int maxd = 18;
+const int maxn = 200005;
+
+int A[maxn], B[maxn], v[maxn], s[maxn];
+int sa[maxn], rank[maxn], h[maxn][maxd];
+int a[maxn], c[maxn], d[maxn];
+int n, m;
+
+inline int lowbit(int x){
+	return x & (x ^ (x - 1));
+}
+
+inline int Fmin(int x, int y){
+	return x < y ? x : y;
+}
+
+void add(int x){
+	for (; x <= n; x += lowbit(x)) d[x] ++;
+}
+
+int chksum(int x){
+	int ret = 0;
+	for (; x > 0; x -= lowbit(x)) ret += d[x];
+	return ret;
+}
+
+bool cmp(int x, int y){
+	return c[x] < c[y];
+}
+
+bool same(int *r, int a, int b, int l){
+	return r[a] == r[b] && r[a+l] == r[b+l];
+}
+
+void mk_sa(int n)
+{
+	int *x = A, *y = B, *t = NULL, m = 0;
+	for (int i = 0; i < n; i ++) sa[i] = i;
+	sort(sa, sa + n, cmp);
+	for (int i = 0; i < n; i ++){
+		x[sa[i]] = m; if (c[sa[i]] != c[sa[i+1]]) m ++;
+	}
+	for (int p = 1, j = 1; p < n; j <<= 1, m = p){
+		p = 0;
+		for (int i = n - j; i < n; i ++) y[p ++] = i;
+		for (int i = 0; i < n; i ++)
+			if (sa[i] >= j) y[p ++] = sa[i] - j;
+		for (int i = 0; i < n; i ++) v[i] = x[y[i]];
+		for (int i = 0; i < m; i ++) s[i] = 0;
+		for (int i = 0; i < n; i ++) s[v[i]] ++;
+		for (int i = 1; i < m; i ++) s[i] += s[i-1];
+		for (int i = n-1; i >= 0; i --) sa[-- s[v[i]]] = y[i];
+		t = x; x = y; y = t; x[sa[0]] = 0; p = 1;
+		for (int i = 1; i < n; i ++)
+			x[sa[i]] = same(y, sa[i], sa[i-1], j) ? p - 1 : p ++;
+	}
+	for (int i = 0; i < n; i ++) rank[sa[i]] = i;
+	int k = 0;
+	for (int i = 0; i < n-1; i ++){
+		if (k) k --;
+		while (c[i + k] == c[sa[rank[i]-1] + k]) k ++;
+		h[rank[i]][0] = k;
+	}
+	for (int j = 0; j < maxd-1; j ++)
+		for (int i = 0; i + (1 << (j + 1)) <= n; i ++)
+			h[i][j+1] = Fmin(h[i][j], h[i + (1 << j)][j]);
+}
+
+void init()
+{
+	scanf("%d", &n);
+	for (int i = 0; i < n; i ++) scanf("%d", &a[i]);
+	c[n - 1] = c[n*2 - 1] = -200;  c[n*2 - 1] --;
+	for (int i = 0; i < n-1; i ++)
+		c[i] = a[i] - a[i + 1], c[n + i] = - c[i];
+	mk_sa(n << 1);
+}
+
+struct Tquery{
+	int l, r, id, sgn;
+};
+
+vector <Tquery> Q[maxn];
+
+int ans[maxn];
+
+void work()
+{
+	scanf("%d", &m);
+	int x, y;
+	for (int i = 0; i < m; i ++){
+		scanf("%d%d", &x, &y);
+		if (x == y){ans[i] = n - 1; continue;}
+		int H = y - x, w = rank[n + x - 1], L = w, R = w;
+		for (int j = maxd-1; j >= 0; j --){
+			if ((1 << j) <= L + 1 && h[L + 1 - (1 << j)][j] >= H) L -= 1 << j;
+			if (h[R + 1][j] >= H) R += 1 << j;
+		}
+		Q[L-1].push_back((Tquery){x - H, y, i, -1});
+		Q[R].push_back((Tquery){x - H, y, i, 1});
+	}
+	for (int i = 0; i < (n << 1); i ++){
+		add(sa[i] + 1);
+		for (int j = 0; j < Q[i].size(); j ++){
+			Tquery &t = Q[i][j];
+			ans[t.id] += (chksum(t.l - 1) - chksum(t.r) + chksum(n)) * t.sgn;
+		}
+	}
+}
+
+void print()
+{
+	for (int i = 0; i < m; i ++) printf("%d\n", ans[i]);
+}
+
+int main()
+{
+	init();
+	work();
+	print();
+	return 0;
+}

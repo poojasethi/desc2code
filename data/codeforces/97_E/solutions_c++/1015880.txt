@@ -1,0 +1,148 @@
+//97E Hewr
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <queue>
+#include <iomanip>
+#include <set>
+#include <map>
+#include <bitset>
+using namespace std;
+#define fo(i,a,b) for (int i = a; i <= b; ++i)
+#define fd(i,a,b) for (int i = a; i >= b; --i)
+#define fe(i,x) for (int i = g[x], y = E[i].y; i; i = E[i].l, y = E[i].y)
+#define forall(i, x) for (typeof((x).begin()) i = (x).begin(); i != (x).end(); ++i)
+#define pb push_back
+#define SIZE(x) ((int) (x).size())
+#define MP make_pair
+#define fi first
+#define se second
+#define UNIQUE(x) x.resize(unique(x.begin(), x.end()) - x.begin())
+#define clr(a,x) memset(&a, x, sizeof(a))
+#define move(a,b) memcpy(&b, &a, sizeof(a))
+#define Plus(a,b) (((LL) (a) + (b)) % mo)
+#define Minus(a,b) ((((LL) (a) - (b) ) % mo + mo) % mo)
+#define Mul(a,b) ((LL) (a) * (b) % mo)
+#define updmin(a,b) (a = min(a, b))
+#define updmax(a,b) (a = max(a, b))
+#define sqr(x) ((x) * (x))
+
+typedef long long LL;
+typedef long double LD;
+typedef pair<int, int> PII;
+typedef vector<int> VI;
+
+const double eps = 1e-10;
+const int oo = ~0u >> 2, mo = (int) 1e9 + 7;
+const int mn = 110000, mm = 110000 * 2, ml = 18;
+
+struct Edge{ int y, l; } E[mm];
+int g[mn], d[mn], s[mn], blg[mn];
+int fa[mn][ml], f[mn];
+bool o[mn];
+int n, m, tt(1);
+
+void add(int x, int y){
+	E[++tt].y = y, E[tt].l = g[x], g[x] = tt;
+	E[++tt].y = x, E[tt].l = g[y], g[y] = tt;
+}
+
+int LOG2(int x){
+	int t = (int) log2(x);
+	while ((1 << t) > x) --t;
+	while ((1 << (t + 1)) <= x) ++t;
+	return t;
+}
+
+int find(int x){
+	int i = x, t;
+	while (f[i] != i) i = f[i];
+	while (x != i) t = f[x], f[x] = i, x = t;
+	return x;
+}
+
+struct Stack{
+	int x, i;
+	Stack(){}
+	Stack(int _x){ x = _x, i = -1; }
+	void init(int _x){ x = _x, i = -1; }
+} Q[mn];
+
+void init(){
+	fo (i, 1, n) if (!d[i]){
+		int r = 0;
+		d[i] = 1, fa[i][0] = i, blg[i] = i, f[i] = i;
+		Q[++r].init(i);
+		while (r){
+			int x = Q[r].x, &i = Q[r].i, y;
+			updmax(d[0], d[x]);
+			if (i == -1) f[x] = x, i = g[x]; else {
+				y = E[i].y;
+				if (find(x) == find(y)) o[x] |= o[y];
+				i = E[i].l;
+			}
+			y = E[i].y;
+			if (!i){ --r; continue; }
+			if (!d[y]){
+				d[y] = d[x] + 1, fa[y][0] = x, blg[y] = blg[x], f[y] = y;
+				Q[++r].init(y);
+			} else  
+			if (d[x] > d[y] + 1){
+				int z = find(x);
+				while (d[z] > d[y] + 1) f[z] = fa[z][0], z = find(z);
+				o[x] |= !((d[x] - d[y]) % 2);
+			}
+		}
+
+		Q[r = 1].init(i);
+		while (r){
+			int x = Q[r].x, &i = Q[r].i, y;
+			if (i == -1) s[x] += o[find(x)], i = g[x]; else i = E[i].l;
+			y = E[i].y;
+			if (!i){ --r; continue; }
+			if (d[y] == d[x] + 1){
+				if (find(x) == find(y)) o[y] |= o[x];
+				s[y] = s[x], Q[++r].init(y);
+			}
+		}
+	}
+
+	int t = LOG2(d[0]);
+	fo (j, 1, t) fo (i, 1, n) fa[i][j] = fa[fa[i][j - 1]][j - 1];
+}
+
+int lca(int x, int y){
+	if (d[x] < d[y]) swap(x, y);
+	while (d[x] > d[y]) x = fa[x][LOG2(d[x] - d[y])];
+	if (x == y) return x;
+	fd (i, LOG2(d[x]), 0) if (fa[x][i] != fa[y][i])
+		x = fa[x][i], y = fa[y][i];
+	return fa[x][0];
+}
+
+int main(){
+	scanf("%d%d", &n, &m);
+	fo (i, 1, m){
+		int x, y;
+		scanf("%d%d", &x, &y);
+		add(x, y);
+	}
+	init();
+	scanf("%d", &tt);
+	while (tt--){
+		int x, y, z;
+		scanf("%d%d", &x, &y);
+		if (blg[x] != blg[y]){
+			printf("No\n");
+			continue;
+		}
+		z = lca(x, y);
+		if (((d[x] + d[y]) & 1) || s[x] + s[y] - 2 * s[z])
+			printf("Yes\n");
+		else	printf("No\n");
+	}
+}

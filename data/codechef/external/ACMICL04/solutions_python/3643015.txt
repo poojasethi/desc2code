@@ -1,0 +1,111 @@
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <iostream>
+#include <cstdio>
+#include <complex>
+#include <queue>
+using namespace std;
+#define For(i,a,b) for(int i=a;i<=b;i++)
+#define Ford(i,a,b) for(int i=a;i>=b;i--)
+#define fi first
+#define se second
+#define sr(x) (int)x.size()
+#define BUG(x) {cout << #x << " = " << x << endl;}
+#define PR(x,a,b) {cout << #x << " = "; For(_,a,b) cout << x[_] << ' '; cout << endl;}
+#define Bit(s,i) ((s&(1<<i))>0)
+#define Two(x) (1<<x)
+const int modul = 1000000007;
+const int nmax = 1000010;
+const double e = 1e-8;
+const double pi = acos(-1);
+typedef long long ll;
+typedef pair<int,int> pii;
+int n,m,stest;
+ll Tree[4*nmax];
+int Lazy[4*nmax][4];
+ll sum(int n) {
+    return ( (ll)n * (n+1) )/2;
+}
+void Cal(int i,int lo,int hi) {
+    int mid = (lo+hi) >> 1;
+//    BUG(10);
+//    cout << i << " " << lo << " " << hi;
+//    PR(Lazy[i],1,3);
+    if (Lazy[i][3]!=modul) {
+        int x = Lazy[i][3]; Lazy[i][3]=modul;
+        Tree[2*i] = x*(mid-lo+1); Lazy[2*i][3]=x;
+        Tree[2*i+1] = x*(hi-mid); Lazy[2*i+1][3]=x;
+    }
+    if (Lazy[i][1]!=0) {
+        int x = Lazy[i][1]; Lazy[i][1]=0;
+        Tree[2*i] += x*sum(mid-lo+1); Lazy[2*i][1]+=x;
+        Tree[2*i+1]+=x* (sum(hi-mid) + (ll)(mid-lo+1)*(hi-mid)); Lazy[2*i+1][1]+=x; Lazy[2*i+1][2]+=(mid-lo+1);
+    }
+    if (Lazy[i][2]!=0) {
+        int x = Lazy[i][2]; Lazy[i][2]=0;
+        Tree[2*i] += x*(mid-lo+1); Lazy[2*i][2]+=x;
+        Tree[2*i+1]+=x*(hi-mid); Lazy[2*i+1][2]+=x;
+    }
+}
+void update(int i,int lo,int hi,int u,int v,int type,int x) {
+    if (v<lo || hi<u) return;
+    if (u<=lo && hi<=v) {
+        if (type==1) {
+            Tree[i]+=sum(hi-lo+1);
+            Lazy[i][1]++;
+        } else if (type==2) {
+            Tree[i]+=x*(hi-lo+1);
+            Lazy[i][2]+=x;
+        } else if (type==3) {
+            Tree[i] = x*(hi-lo+1);
+            Lazy[i][3]=x;
+            Lazy[i][1]=Lazy[i][2]=0;
+        }
+        return;
+    }
+    int mid = (lo+hi) >> 1;
+    if (Lazy[i][1]!=0 || Lazy[i][2]!=0 || Lazy[i][3]!=modul) Cal(i,lo,hi);
+    update(2*i,lo,mid,u,v,type,x);
+    update(2*i+1,mid+1,hi,u,v,type,x);
+    Tree[i] = Tree[2*i] + Tree[2*i+1];
+}
+ll query(int i,int lo,int hi,int u,int v) {
+    if (v<lo || hi<u) return 0;
+    if (u<=lo && hi<=v) return Tree[i];
+    int mid = (lo+hi) >> 1;
+    if (Lazy[i][1]!=0 || Lazy[i][2]!=0 || Lazy[i][3]!=modul) Cal(i,lo,hi);
+    return query(2*i,lo,mid,u,v) + query(2*i+1,mid+1,hi,u,v);
+}
+void init(int i,int lo,int hi) {
+    Tree[i]=0;
+    Lazy[i][1]=Lazy[i][2]=0;
+    Lazy[i][3]=modul;
+    if (lo==hi) return;
+    int mid = (lo+hi) >> 1;
+    init(2*i,lo,mid);
+    init(2*i+1,mid+1,hi);
+}
+int main() {
+    //freopen("input.txt","r",stdin);
+    ios::sync_with_stdio(false);
+    for (cin >> stest;stest;stest--) {
+        cin >> n >> m;
+        init(1,0,n-1);
+        For(i,1,m) {
+            int type,u,v,x;cin >> type;
+            if (type==1) {
+                cin >> u >> v;
+                update(1,0,n-1,u,v,type,1);
+            } else if (type==2 || type==3) {
+                cin >> u >> v >> x;
+                update(1,0,n-1,u,v,type,x);
+            } else {
+                cin >> u >> v;
+                cout << query(1,0,n-1,u,v) << endl;
+            }
+        }
+    }
+    return 0;
+}
+

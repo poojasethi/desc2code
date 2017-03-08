@@ -1,0 +1,218 @@
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+#include <utility>
+#include <set>
+#include <map>
+#include <iostream>
+#include <queue>
+#include <climits>
+
+using namespace std;
+
+typedef long long LL;
+
+#define PB push_back
+#define FRO freopen("in.txt","r",stdin);
+
+#define CLR(arr) memset( (arr),0,sizeof(arr) );
+#define NEG(arr) memset( (arr),-1,sizeof(arr) );
+
+#define X first
+#define Y second
+
+#define MP make_pair
+
+#define snuke(c,itr) for(__typeof((c).begin()) itr=(c).begin();itr!=(c).end();itr++)
+
+
+typedef pair<int,int> pint;
+typedef map<int,int> mint;
+#define SIZE 100100
+
+struct node{
+    int minm,cnt;
+    int left,right;
+}tree[7*SIZE];
+int arr[SIZE];
+
+
+node merge( node x,node y ){
+    node tmp;
+
+    tmp.cnt=x.cnt+y.cnt;
+    tmp.minm=min( x.minm,y.minm );
+
+    tmp.left=x.left;
+    tmp.right=y.right;
+    return tmp;
+}
+
+void build( int num ,int le,int ri){
+    //printf("%d\n",num);
+    tree[num].left=le;
+    tree[num].right=ri;
+    if ( le==ri ){
+        tree[num].minm=arr[le];
+        tree[num].cnt=( arr[le] >0 );
+    }else{
+        build(2*num,le,(le+ri)/2);
+        build(2*num+1, (le+ri)/2+1,ri);
+        tree[num]=merge(tree[2*num],tree[2*num+1]);
+    }
+}
+
+int lazy[7*SIZE];
+
+
+node query( int num,int ql,int qr ){
+    //printf("%d %d %d\n",num,tree[num].left,tree[num].right);
+    if ( lazy[num] != 0 ){
+        lazy[2*num]+= lazy[num] ;
+        lazy[2*num+1]+= lazy[num] ;
+        tree[num].minm -=lazy[num];
+        lazy[num]=0;
+    }
+
+    if ( tree[num].left ==  tree[num].right ){
+        if ( tree[num].minm >0 )return tree[num];
+        else{
+            tree[num].minm=INT_MAX;
+            tree[num].cnt=0;
+            return tree[num];
+        }
+    }
+
+    if ( ql <= tree[num].left && qr >= tree[num].right  ){
+
+        if ( tree[num].minm<=0 ){
+            node tmp= merge(query(2*num,ql,qr),query(2*num+1,ql,qr));
+            tree[num]=merge( tree[2*num],tree[2*num+1] );
+            return tmp;
+        }else{
+            return tree[num];
+        }
+    }
+    else{
+        bool lon=false,ron=false;
+        if (  ql<= tree[2*num].right )
+            lon=true;
+        if ( qr>= tree[2*num+1].left  )
+            ron=true;
+        if ( lon && ron ){
+            node tmp=merge(query(2*num,ql,qr),query(2*num+1,ql,qr));
+            tree[num]=merge( tree[2*num],tree[2*num+1] );
+            return tmp;
+        }else if ( lon ){
+            return query(2*num,ql,qr);
+        }else if ( ron ){
+            return query(2*num+1,ql,qr);
+        }
+    }
+}
+
+void update(int num,int ul,int ur,int vv){
+    //printf("%d %d %d %d %d %d\n",l,r,lazy[node],tree[node].zero,tree[node].one,tree[node].two);
+    if ( lazy[num]!= 0 ){
+        lazy[2*num]+= lazy[num] ;
+        lazy[2*num+1]+= lazy[num] ;
+        tree[num].minm -=lazy[num];
+        lazy[num]=0;
+    }
+
+    if (tree[num].right  <ul || tree[num].left>ur)return ;
+    else if (tree[num].left>=ul && tree[num].right <=ur){
+        lazy[num]=vv;
+        tree[num].minm -=lazy[num];
+        lazy[num]=0;
+        lazy[2*num]+= vv;
+        lazy[2*num+1]+= vv ;
+    }else{
+        update(2*num,ul,ur,vv);
+        update(2*num+1,ul,ur,vv);
+
+        while (num){
+            tree[num]=merge( tree[2*num],tree[2*num+1] );
+            num/=2;
+        }
+
+    }
+}
+int n;
+
+vector<int> out[SIZE];
+
+int tin[SIZE],tout[SIZE];
+int tt=0;
+
+int dfs( int x,int p ){
+
+
+    tin[x] = ++tt;
+    //cout<<"entering "<<x<<" "<<tt<<endl;
+
+    int y;
+    for (int i=0;i<out[x].size();++i){
+        y= out[x][i];
+        if ( y!= p ){
+            dfs( y,x );
+        }
+    }
+    //cout<<"exiting "<<x<<" "<<tt<<endl;
+    tout[x]=tt;
+
+}
+
+int save[SIZE];
+int main(){
+
+    //FRO
+
+    scanf("%d",&n);
+
+    int u,v;
+    save[0]=INT_MAX;
+    for (int i=1;i<=n;++i){
+        scanf("%d %d",&u,&v);
+        save[i] = u;
+        out[i].PB( v );
+        out[v].PB( i );
+    }
+
+    dfs( 0 ,-1);
+
+    for (int i=0;i<=n;++i){
+        arr[ tin[i] ] = save[i];
+        //cout<<tin[i]<<" "<<tout[i]<<endl;
+    }
+
+    build( 1,1,tt );
+
+    int qq;
+    scanf("%d",&qq);
+
+    //cout<<"shoan "<<qq<<endl;
+
+    int typ,a,x;
+
+    while ( qq-- ){
+        scanf("%d",&typ);
+        //cout<<typ<<endl;
+        if ( typ==1 ){
+            scanf("%d %d",&a,&x);
+            //if ( tin[a]+1 <= tout[a] )
+                update( 1,tin[a]+1,tout[a],x );
+        }else{
+            scanf("%d",&a);
+            //cout<<tin[a]+1<<" "<<tout[a]<<endl;
+            if ( tin[a]+1 <= tout[a] )
+                printf("%d\n",query( 1,tin[a]+1,tout[a] ).cnt  );
+            else
+                printf("0\n");
+        }
+    }
+
+    return 0;
+}

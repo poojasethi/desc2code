@@ -1,0 +1,91 @@
+#include <cstdio>
+#include <algorithm>
+#define N 155
+#define INF 1050000000
+#define fi(a, b, c) for(int a = (b); a < (c); a++)
+#define fd(a, b, c) for(int a = (b); a > (c); a--)
+#define FI(a, b, c) for(int a = (b); a <= (c); a++)
+#define FD(a, b, c) for(int a = (b); a >= (c); a--)
+#define fe(a, b, c) for(int a = (b); a; a = c[a])
+using namespace std;
+
+int n, m, a[N], b[N], c[N], q[N], e[N], f[N][N], g[N][N], mat[N][N], dp[N][N], ret;
+
+bool cmp(int x, int y){
+	return c[x] < c[y];
+}
+
+void mul(int a[][N], int b[][N]){
+	int aa[N][6], bb[6][N];
+	
+	fi(i, 0, N) fi(j, 0, 6) aa[i][j] = 0;
+	fi(i, 0, 6) fi(j, 0, N) bb[i][j] = 0;
+	
+	fi(i, 0, n) fi(j, 0, n) aa[i][j / 32] |= a[i][j] << j % 32;
+	fi(i, 0, n) fi(j, 0, n) bb[i / 32][j] |= b[i][j] << i % 32;
+	
+	fi(i, 0, n) fi(j, 0, n){
+		a[i][j] = 0;
+		fi(k, 0, (n + 31) / 32) a[i][j] |= aa[i][k] & bb[k][j];
+		if(a[i][j]) a[i][j] = 1;
+	}
+}
+
+void pow(int a[][N], int x){
+	fi(i, 0, n) fi(j, 0, n) a[i][j] = 0;
+	fi(i, 0, n) a[i][i] = 1;
+	
+	int to[N][N];
+	fi(i, 0, n) fi(j, 0, n) to[i][j] = mat[i][j];
+	
+	for(int i = x; i; i >>= 1){
+		if(i & 1) mul(a, to);
+		mul(to, to);
+	}
+}
+
+int main(){
+	scanf("%d %d", &n, &m);
+	fi(i, 0, m){
+		q[i] = i;
+		scanf("%d %d %d", &a[i], &b[i], &c[i]);
+		a[i]--;
+		b[i]--;
+	}
+	sort(q, q + m, cmp);
+	
+	if(c[q[0]]){
+		puts("Impossible");
+		return 0;
+	}
+	
+	ret = INF;
+	fi(i, 0, n) f[i][i] = 1;
+	
+	fi(i, 0, m){
+		int z = i;
+		while(z < m && c[q[z]] == c[q[i]]){
+			mat[a[q[z]]][b[q[z]]] = 1;
+			z++;
+		}
+		
+		fi(j, 0, n) fi(k, 0, n) dp[j][k] = INF;
+		fi(j, 0, n) fi(k, 0, n) if(mat[j][k]) dp[j][k] = min(dp[j][k], 1);
+		
+		fi(l, 0, n) fi(j, 0, n) fi(k, 0, n) dp[j][k] = min(dp[j][k], dp[j][l] + dp[l][k]);
+		
+		fi(j, 0, n) if(f[0][j]) ret = min(ret, dp[j][n - 1] + c[q[i]]);
+		
+		if(z < m){
+			int ex[N][N];
+			pow(ex, c[q[z]] - c[q[i]]);
+			mul(f, ex);
+		}
+		
+		i = z - 1;
+	}
+	
+	if(ret == INF) puts("Impossible");
+	else printf("%d\n", ret);
+	scanf("\n");
+}

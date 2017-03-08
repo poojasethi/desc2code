@@ -1,0 +1,108 @@
+#include<cstdio>
+#include<cstring>
+#include<cstdlib>
+#include<algorithm>
+#include <vector>
+#include <map>
+#include <iostream>
+#define pii pair<int,int>
+using namespace std;
+
+int N, M, G;
+map<int, vector<pii> > X, Y;
+map<int,int> gx, gy;
+
+void add(map<int, vector<pii> > & m, int key, int lo, int hi) {
+	if ( key == 0) return ;
+	if (lo > hi)
+		swap(lo, hi);
+	m[key].push_back(pii(lo, hi));
+}
+
+void process(map<int, vector<pii> > & m, int size, map<int, int>& g) {
+	map<int, vector<pii> >::iterator it;
+	for (it = m.begin(); it != m.end(); it++) {
+
+		vector<pii> & v = it->second;
+		vector<pii> n;
+
+		g[it->first] = M + N - size;
+		sort(v.begin(), v.end());
+		for (int i = 0, j; i < (int) v.size();) {
+			int _max = v[i].second;
+			for (j = i; i < (int) v.size() && v[i].first <= _max; i++) {
+				_max = max(_max, v[i].second);
+			}
+			n.push_back(pii(v[j].first, _max));
+			g[it->first] -= _max - v[j].first;
+		}
+		G ^= g[it->first];
+		it->second = n;
+	}
+
+	int pos = 1;
+	if(( size - 1 - m.size()) % 2){
+		while( m.count(pos)) pos ++;
+		m[pos].push_back(pii(0, 0));
+		g[pos] = M + N - size;
+		G ^= M + N - size;
+	}
+}
+
+void change( vector<pii> & v, int val, int pos, bool axis){
+	int i, lo, hi, size = axis ? M : N;
+
+	for(i = 0, lo = 0, hi = 0; val; i ++){
+		int t = min ( val, ( i < (int)v.size() ? v[i].first : size) - lo );
+	    val -= t;
+	    hi = lo + t;
+	    lo = v[i].second;
+	}
+	lo = 0;
+	if ( axis ){
+		cout << pos << " " << lo << " " << pos << " " << hi << endl;
+	}else{
+		cout << lo << " " << pos << " " << hi << " " << pos << endl;
+	}
+}
+bool find(map<int,vector<pii> > & m, map<int,int> &g, bool x){
+	map<int, vector<pii> >::iterator it;
+	for( it = m.begin(); it != m.end(); it ++){
+		int val = it->first;
+		if( (G ^ g[val]) < g[val]){
+			change(it->second, g[val] - (G ^ g[val]), val, x);
+			return true;
+		}
+	}
+	return false;
+}
+
+int main() {
+	ios::sync_with_stdio(false);
+	int K, i, x1, y1, x2, y2;
+	cin >> N >> M >> K;
+
+	for (i = 0; i < K; i++) {
+		cin >> x1 >> y1 >> x2 >> y2;
+		if (x1 == x2) {
+			if ( x1 == N) continue;
+			add(X, x1, y1, y2);
+		} else {
+			if ( y1 == M) continue;
+			add(Y, y1, x1, x2);
+		}
+	}
+
+	process(X, N, gx);
+	process(Y, M, gy);
+
+	if ( !G )
+		cout << "SECOND" << endl;
+	else{
+		cout << "FIRST" << endl;
+
+		find(X, gx, true) || find(Y, gy, false);
+	}
+
+	return 0;
+}

@@ -1,0 +1,99 @@
+
+
+#include <set>
+#include <map>
+#include <ctime>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+#define LL long long
+bool flag;
+int N,K,x,y,M,pt;
+int a[200010];
+int st[200010],ne[400010],go[400010],fa[200010];
+class rec{
+	public:
+	int f,size,relax,s[2];
+	void clr(){
+		f=size=relax=s[0]=s[1]=0;
+	}
+}dp[200010];
+void Add(int x,int y){ne[++pt]=st[x];st[x]=pt;go[pt]=y;}
+void init(int x,int y){
+	int w=dp[y].f;
+	if (w==dp[y].size)dp[x].relax+=w;
+	else if (w>dp[x].s[0])dp[x].s[1]=dp[x].s[0],dp[x].s[0]=w;
+	else dp[x].s[1]=max(dp[x].s[1],w);
+	dp[x].size+=dp[y].size;
+	dp[x].f=dp[x].relax+dp[x].s[0]+1;
+	if (a[x]<M)dp[x].f=0;
+}
+void del(int x,int y){
+	int w=dp[y].f;
+	if (w==dp[y].size)dp[x].relax-=w;
+	else if (dp[x].s[0]==dp[y].f)dp[x].s[0]=dp[x].s[1],dp[x].s[1]=0;
+	else if (dp[x].s[1]==dp[y].f)dp[x].s[1]=0;
+	dp[x].size-=dp[y].size;
+	dp[x].f=dp[x].relax+dp[x].s[0]+1;
+	if (a[x]<M)dp[x].f=0;
+}
+void dfs(int x){
+	dp[x].clr();
+	if (a[x]>=M)dp[x].f=1;
+	dp[x].size=1;
+	for (int i=st[x];i;i=ne[i])
+		if (go[i]!=fa[x]){
+			fa[go[i]]=x;
+			dfs(go[i]);
+			init(x,go[i]);
+		}
+}
+void move_root(int x,int y){
+	del(x,y);
+	init(y,x);
+}
+void movemove(int x){
+	if (flag)return;
+	if (dp[x].f>=K){flag=1;return;}
+	for (int i=st[x];i&&!flag;i=ne[i])
+		if (go[i]!=fa[x]){
+			move_root(x,go[i]);
+			movemove(go[i]);
+			move_root(go[i],x);
+		}
+}
+bool check(){
+	dfs(1);
+	flag=0;
+	movemove(1);
+	return flag;
+}
+register char *_sp __asm__("rsp");
+int main(){
+	const int size=64*1024*1024;
+	static char *sys, *mine(new char[size]+size-4096);
+	sys=_sp;
+	_sp=mine;
+	
+	scanf("%d%d",&N,&K);
+	int l=1,r=0;
+	for (int i=1;i<=N;i++)
+		scanf("%d",&a[i]),r=max(r,a[i]);
+	for (int i=1;i<N;i++){
+		scanf("%d%d",&x,&y);
+		Add(x,y);
+		Add(y,x);
+	}
+	while (l<r){
+		M=(l+r+1)>>1;
+		if (check())l=M;
+		else r=M-1;
+	}
+	printf("%d",l);
+	
+	_sp=sys;
+}

@@ -1,0 +1,130 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<cstdlib>
+#include<vector>
+#include<cmath>
+#include<queue>
+#define MAXN 100005
+#define MAXL 65
+#define mod 1000000007
+#define INF 1000000000000000005LL
+using namespace std ;
+typedef long long LL ;
+
+struct Matrix {
+	LL k[4][4] ;
+	Matrix operator * (Matrix b) const {
+		int i, j, t ;
+		Matrix c ;
+		for(i = 0; i < 4; i ++)
+			for(j = 0; j < 4; j ++)
+				for(t = 0, c.k[i][j] = INF; t < 4; t ++)
+					c.k[i][j] = min(c.k[i][j], k[i][t]+b.k[t][j]) ;
+		return c ;
+	}
+} dis[MAXL], now, get ;
+
+struct node {
+	int mx, vis, dis ;
+	node *son[4], *fa ;
+	node(int mx=0):mx(mx) {vis = -1, fa = 0, memset(son, 0, sizeof(son)) ;} 
+} ;
+struct Sam {
+	node* root ;
+	node *end, *p, *q, *nq ;
+	void Clear() {root = end = new node(0) ;}
+	void Insert(char c)
+	{
+		int tmp = c-'A' ;
+		p = end, end = new node(end->mx+1) ;
+		for(p; p && !p->son[tmp]; p = p->fa) 
+			p->son[tmp] = end ;
+		if(!p) {end->fa = root; return ;}
+		q = p->son[tmp] ;
+		if(q->mx == p->mx+1)
+			{end->fa = q; return ;}
+		nq = new node(p->mx+1) ;
+		memcpy(nq->son, q->son, sizeof(q->son)) ;
+		nq->fa = q->fa, q->fa = end->fa = nq ;
+		for(p; p && p->son[tmp]==q; p = p->fa)
+			p->son[tmp] = nq ;
+	}
+} S ;
+
+LL N, M, len, ans ;
+char ss[MAXN] ;
+queue<node*> q ;
+void Bfs(int now)
+{
+	int i ;
+	q.push(S.root->son[now]) ; 
+	S.root->son[now]->vis = now ;
+	S.root->son[now]->dis = 1 ;
+	while(!q.empty())
+	{
+		node *x = q.front() ;
+		q.pop() ;
+		for(i = 0; i < 4; i ++)
+		{
+			node *tmp = x->son[i] ;
+			if(!tmp) 
+				dis[0].k[now][i] = min(dis[0].k[now][i], (LL)x->dis) ;
+			else if(tmp->vis != now)
+			{
+				tmp->vis = now, tmp->dis = x->dis+1 ;
+				q.push(tmp) ;
+			}
+		}
+	}
+}
+
+int main()
+{
+	int i, j, t, k, flag = 0 ;
+	LL pw, tmp ;
+	//freopen("1.in", "r", stdin) ;
+	scanf("%I64d %s", &N, ss) ;
+	len = strlen(ss) ;
+	S.Clear() ;
+	for(i = 0; i < len; i ++)
+	{
+		S.Insert(ss[i]) ;
+	}
+	for(i = 0; i < 4; i ++)
+	{
+		for(j = 0; j < 4; j ++)
+			dis[0].k[i][j] = INF ;
+		if(S.root->son[i] != 0)
+			Bfs(i) ;
+	}
+	for(k = 1, pw = 2;; pw *= 2, k ++)
+	{
+		dis[k] = dis[k-1]*dis[k-1] ;
+		for(i = 0, tmp = INF; i < 4; i ++)
+			for(j = 0; j < 4; j ++)
+				tmp = min(tmp, dis[k].k[i][j]) ;
+		if(tmp > N) break ;
+	}
+	for(i = 0; i < 4; i ++)
+	{
+		for(j = 0; j < 4; j ++)
+			now.k[i][j] = INF ;
+		now.k[i][i] = 0 ;
+	}
+	for(pw /= 2, k --; k >= 0; pw /= 2, k --)
+	{
+		get = now*dis[k] ;
+		for(i = 0, tmp = INF; i < 4; i ++)
+			for(j = 0; j < 4; j ++)
+				tmp = min(tmp, get.k[i][j]) ;
+		if(tmp <= N) now = get, ans += pw ;
+	}
+	for(i = 0, tmp = INF; i < 4; i ++)
+		for(j = 0; j < 4; j ++)
+			tmp = min(tmp, now.k[i][j]) ;
+	if(tmp != N) ans ++ ;
+	printf("%I64d\n", ans) ;
+	//system("pause") ;
+	return 0 ;
+}

@@ -1,0 +1,57 @@
+#include<bits/stdc++.h>
+
+#define mp make_pair
+#define st first
+#define nd second
+
+using namespace std;
+
+int ind,s,n,m,r[1000000],f[10000000];
+pair<int,int> arr[1000000];
+pair< pair< int,pair< int,int > >,int > q[1000000];
+
+void update( int x ){
+  x += 5;
+  while( x<=3000000 ){ f[x]++; x+=x&-x; }
+}
+int query( int x,int y ){
+  int r=0;
+  x += 4;
+  y += 5;
+  while( y ){ r+=f[y]; y-=y&-y; }
+  while( x ){ r-=f[x]; x-=x&-x; }
+  return r;
+}
+
+int main(){
+
+  cin >> n >> m;
+  
+  for( int i=1 ; i<=n ; i++ )
+    scanf("%d %d",&arr[i].st,&arr[i].nd);
+  
+  sort( arr+1,arr+n+1 );
+  
+  int x,y;
+  for( int i=1 ; i<=m ; i++ ){
+    scanf("%d %d",&s,&x);
+    while( --s ){
+      scanf("%d",&y);
+      q[++ind] = mp( mp( x,mp( x,y-1 ) ),i );
+      x = y;
+    }
+    q[++ind] = mp( mp( x,mp( x,2000000 ) ),i );
+  }
+  
+  sort( q+1,q+ind+1 );
+  
+  int t=1;
+  for( int i=1 ; i<=ind ; i++ ){
+    while( t<=n and arr[t].st<=q[i].st.st ){ update( arr[t].nd ); t++; }
+    r[ q[i].nd ] += query( q[i].st.nd.st,q[i].st.nd.nd );
+  }
+  
+  for( int i=1 ; i<=m ; i++ )
+    printf("%d\n",r[i]);
+
+}

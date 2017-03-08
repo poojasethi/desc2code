@@ -1,0 +1,82 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <queue>
+#define int64 long long
+
+using namespace std;
+const int Maxn = (1 << 30),Max2 = (1 << 20);
+int n,m,a[110],b[110],c[110],s,t,dis[100100];
+int head[100100],next[1001000],to[1001000],val[1001000],top = 1;
+bool vis[100100];
+
+int P(int x,int y){return x * 205 - 205 + y;}
+int V(int x,int y){return a[x] * y * y + b[x] * y + c[x];}
+void link(int x,int y,int z)
+{
+    next[++top] = head[x];  head[x] = top;  to[top] = y;   val[top] = z;
+}
+void link2(int x,int y,int z)
+{
+    link(x,y,z);link(y,x,0);
+}
+bool bfs()
+{
+    for (int i = 0;i <= t;i++)   dis[i] = 0;
+    queue <int> Q;   Q.push(s);   dis[s] = 1;
+    while (!Q.empty())
+        {
+            int u = Q.front();   Q.pop();
+            for (int i = head[u],y;y = to[i],i;i = next[i])
+                if (val[i] && !dis[y])
+                    {
+                        dis[y] = dis[u] + 1;
+                        Q.push(y);   if (y == t)  return true;
+                    }
+        }
+    return false;
+}
+int dfs(int node,int A)
+{
+    if (!A || node == t)  return A;
+    int flow = 0;
+    for (int i = head[node],y;y = to[i],i;i = next[i])
+        if (val[i] && dis[y] == dis[node] + 1)
+            {
+                int t = dfs(y,min(val[i],A));
+                A -= t;  flow += t;  val[i] -= t;  val[i ^ 1] += t;
+                if (!A)  return flow;
+            }
+    dis[node] = Maxn;
+    return flow;
+}
+
+int main()
+{
+    cin >> n >> m;  int l,r,x,y,d;  s = 0;t = P(n + 1,202);
+    for (int i = 1;i <= n;i++)   scanf("%d %d %d",&a[i],&b[i],&c[i]);
+    for (int i = 1;i <= n;i++)   {
+        scanf("%d %d",&l,&r);  l += 101,r += 101;
+        link2(s,P(i,l),Maxn);  link2(P(i,r + 1),t,Maxn);   vis[P(i,r + 1)] = 1;
+        for (int j = l;j <= r;j++)   {
+            link2(P(i,j),P(i,j + 1),Max2 - V(i,j - 101));
+            vis[P(i,j)] = 1;
+        }
+    }
+    for (int i = 1;i <= m;i++)
+        {
+            scanf("%d %d %d",&x,&y,&d);
+            for (int i = d + 2;i <= 205;i++)
+                {
+                    if (!vis[P(x,i)] || !vis[P(y,i - d)])   continue ;
+                    link2(P(x,i),P(y,i - d),Maxn);
+                }
+        }
+    int flow = n * Max2;
+    while (bfs())    flow -= dfs(s,Maxn);
+    cout << flow;
+}
+  

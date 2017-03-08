@@ -1,0 +1,116 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+typedef long long LL;
+
+const int maxN = 60;
+const int maxM = 8000;
+
+void read(int n,LL *a)
+{
+	for(int i=0;i<n;i++) a[i]=0;
+	char type[11];
+	scanf("%s",type);
+	if(strcmp(type,"raw")==0)
+	{
+		for(int i=0;i<n;i++)
+			for(int j=0;j<n;j++)
+			{
+				int q;
+				scanf("%d",&q);
+				if(q&1) a[i] |= 1LL<<j;
+			}
+	}
+	else
+	{
+		unsigned S, P, A;
+		scanf("%u%u%u", &S, &P, &A);
+		for(int i=0;i<n;i++)
+			for(int j=0;j<n;j++)
+			{
+				if(!(S>>12 & 1)) a[i] |= 1LL<<j;
+				S=S*P+A;
+			}
+	}
+}
+
+LL calc(int n,LL *a)
+{
+	int i,j,k;
+	for(i=0;i<n;i++) a[i] += 1LL<<n;
+	int x=n;
+	for(i=k=0;i<n;i++,k++)
+	{
+		for(j=i;j<n && !(a[j] & 1LL<<k);j++);
+		if(j==n)
+		{
+			if(k==i+1) return 0;
+			x=i;
+			k++;
+			for(j=i;j<n && !(a[j] & 1LL<<k);j++);
+			if(j==n) return 0;
+		}
+		swap(a[i],a[j]);
+		for(j=0;j<n;j++)
+			if(j!=i && (a[j] & 1LL<<k)) a[j]^=a[i];
+	}
+	LL res=1LL<<x;
+	for(i=0;i<n;i++)
+		if(a[i] & 1LL<<x) res += 1LL<<i;
+	return res;
+}
+
+const int maxH = 16;
+int BITPARITY[1<<maxH];
+
+void bitparity_precalc()
+{
+	BITPARITY[0]=0;
+	for(int n=1;n < (1<<maxH);n++)
+		BITPARITY[n] = BITPARITY[n/2] ^ (n%2);
+}
+
+inline int bit_parity(LL a)
+{
+	// check it out the funny way of taking 16 first bits of the number
+	// we simply cast it to unsigned short type :)
+	return BITPARITY[a>>48] ^ BITPARITY[(unsigned short)(a>>32)] ^ BITPARITY[(unsigned short)(a>>16)] ^ BITPARITY[(unsigned short)a];
+}
+
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("in.txt","r",stdin);
+	freopen("1.in","r",stdin);
+	freopen("1_my.out","wb",stdout);
+	//freopen("3_stats.txt","w",stderr);
+#endif
+	bitparity_precalc();
+	int T;
+	scanf("%d",&T);
+	for(int t=0;t<T;t++)
+	{
+		int n,m;
+		scanf("%d%d",&n,&m);
+		LL a[maxM];
+		int cnt=0;
+		for(int i=0;i<m;i++)
+		{
+			LL b[maxN];
+			read(n,b);
+			if(n==1) cnt+=b[0]; else
+				a[i] = calc(n,b);
+		}
+		int ans=0;
+		if(n==1) ans=cnt*(cnt-1)/2; else
+		{
+			for(int i=0;i<m;i++)
+				for(int j=0;j<i;j++)
+					if(bit_parity(a[i] & a[j])) ans++;
+		}
+		printf("%d\n",ans);
+	}
+	return 0;
+}

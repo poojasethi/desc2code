@@ -1,0 +1,131 @@
+//longest common prefix between two consecutive suffixes
+#include<iostream>
+#include<algorithm>
+#include<cmath>
+#include<climits>
+#define MOD 1000000009
+using namespace std;
+
+struct suffix{
+	int rank[2];	//rank of current suffix and suffix that starts after k steps  
+	int index;		//original index of suffix
+};
+
+struct cmp{
+	bool operator()(const suffix a,const suffix b){
+		return a.rank[0]<b.rank[0]||((a.rank[0]==b.rank[0])&&(a.rank[1]<b.rank[1]));
+	}
+};
+	
+long long mod_exponent(long long base,long long exp){
+    long long res=1;
+    while(exp){
+        if(exp%2)
+            res=(res*base)%MOD;
+        base=(base*base)%MOD;
+//      res=(res*res)%MOD;
+        exp/=2;
+    }
+    return res%MOD;
+}
+
+
+int sortIndex[25][1000001];
+void build_suffix(int str[],int suffixarr[],int n){
+	suffix suffixes[n];//stores 3 tuples for every suffix
+
+	for(int i=0;i<n;i++){
+		sortIndex[0][i]=str[i];
+		suffixes[i].index=i;
+	}
+	
+	for(int k=1,stp=1;k<n;k*=2,stp++){
+		for(int i=0;i<n;i++){
+			suffixes[i].rank[0]=sortIndex[stp-1][suffixes[i].index];
+			suffixes[i].rank[1]=(((suffixes[i].index + k) < n)?(sortIndex[stp-1][suffixes[i].index+k]):INT_MIN);
+		}
+		
+		
+
+		sort(suffixes,suffixes+n,cmp());
+
+
+
+		sortIndex[stp][suffixes[0].index]=0;
+
+		for(int i=1;i<n;i++){
+			sortIndex[stp][suffixes[i].index]=((suffixes[i].rank[0]==suffixes[i-1].rank[0]) && (suffixes[i].rank[1]==suffixes[i-1].rank[1]))?sortIndex[stp][suffixes[i-1].index]:sortIndex[stp][suffixes[i-1].index]+1;
+	
+
+		}
+
+	}
+
+	for(int i=0;i<n;i++){
+		suffixarr[i]=suffixes[i].index;
+	}
+	
+
+}
+
+int lcpf(int x,int y,int n){
+	
+	int ans=0;
+	for(int k=(int)ceil(log2(n));k>=0 && x<n && y<n;k--){
+		
+		//cout<<x<<y<<endl;
+		//cout<<sortIndex[k][x]<<sortIndex[k][y]<<endl;
+		
+		if(sortIndex[k][x]==sortIndex[k][y]){
+			int n=mod_exponent(2,k);
+			ans=(ans+n)%MOD;
+			x+=n;
+			y+=n;
+		}
+	}
+	return ans;
+}
+
+void build_lcp_array(int str[],int lcp[],int n){
+	lcp[0]=0;
+	int suffixArr[n];
+	build_suffix(str,suffixArr,n);
+
+	for(int i=1;i<n;i++){
+		lcp[i]=lcpf(suffixArr[i],suffixArr[i-1],n);
+		
+	}
+}
+
+
+int count_substring(int str[],int n){
+	int lcp[n];
+	build_lcp_array(str,lcp,n);
+	int ans=(((long long)n*(n+1))/2)%MOD;
+
+	for(int i=0;i<n;i++)
+		ans=(ans-lcp[i]+MOD)%MOD;
+	
+	return ans;
+}
+		
+
+int main(){
+	int t,n,a,b;
+	cin>>t;
+	while(t--){
+		cin>>n;
+		cin>>a;
+		int diff[n];
+		for(int i=1;i<n;i++){
+			cin>>b;
+			diff[i-1]=b-a;
+			a=b;
+		}
+	cout<<count_substring(diff,n-1)<<endl;
+	}
+
+    return 0;
+}
+
+

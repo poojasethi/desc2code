@@ -1,0 +1,77 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <map>
+#include <set>
+#include <vector>
+using namespace std;
+#define LL long long
+#define pb(x) push_back(x)
+#define maxn 100005
+
+int n, m, a[maxn], li[maxn];
+map<int, vector<int> > mm;
+
+bool isLucky(int num) {
+	for (; num > 0; num /= 10) 
+		if ((num % 10) != 4 && (num % 10) != 7)
+			return false;
+	return true;
+}
+
+int main() {
+#ifndef ONLINE_JUDGE
+	freopen("test.in", "r", stdin);
+#endif
+	scanf("%d", &n);
+	LL nn[4] = {n - 1, n, n + 1, n + 2};
+	for (int i = 4; i >= 2; i--) for (int j = 0; j < 4; j++)
+		if (nn[j] % i == 0) {
+			nn[j] /= i;
+			break;
+		}
+	LL res = nn[0] * nn[1] * nn[2] * nn[3];
+
+	m = 0;
+	li[0] = 0;
+	for (int i = 1; i <= n; i++) {
+		scanf("%d", &a[i]);
+		if (isLucky(a[i])) {
+			mm[a[i]].pb(i);
+			li[++m] = i; //li[i] 表示第i个luckNumber的indice
+		}
+	}
+
+	set<int> visit, seg;
+	set<int>::iterator itL, it, itR;
+	for (int i = 1; i <= m; i++) {
+		//Right brack of the Left one [li[i], li[i + 1])
+		visit.clear();
+		seg.clear();
+		seg.insert(li[i]);
+		seg.insert(n + 1);
+		LL sum = 0;
+		for (int j = i; j >= 1; j--) {
+			//Left brack of the Left one (li[j - 1], li[j]]
+			if (visit.find(a[li[j]]) == visit.end()) {
+				int num = a[li[j]];  
+				visit.insert(num);
+				vector<int> que = mm[num];  // luckNumber num的元素队列
+				for (int k = 0, up_k = que.size(); k < up_k; k++) if (que[k] > li[i]){
+					it = seg.insert(que[k]).first;
+					itL = itR = it;
+					itL--;
+					itR++;
+					if (itL == seg.begin()) {
+						sum += (LL)(li[i + 1] - li[i]) * (li[i + 1] - li[i] - 1) / 2 * (*itR - *it);  // Left brack of the Right one is also in [li[i], li[i + 1])
+						sum += (LL)(li[i + 1] - li[i]) * (*it - li[i + 1] + 1) * (*itR - *it);  //Left brack of the Right one is in [li[i +1], *it]
+					} else {
+						sum += (LL)(li[i + 1] - li[i]) * (*it - *itL) * (*itR - *it);
+					}
+				}
+			}
+			res -= (LL)(li[j] - li[j - 1]) * sum;
+		}
+	}
+	cout << res << endl;
+}

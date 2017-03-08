@@ -1,0 +1,167 @@
+#include <iostream>
+#include <cstring>
+#include <cstdio>
+#include <utility>
+#include <vector>
+#include <queue>
+#include <map>
+#define mod 1000000007
+#define maxn 100010
+#define maxs 131072
+#define mp make_pair
+#define X first
+#define Y second
+
+using namespace std;
+
+typedef pair<int, int> pii;
+typedef pair<unsigned, unsigned> puu;
+typedef long long ll;
+
+map<puu,unsigned> id;
+
+struct Int
+{
+    Int *l,*r;
+    unsigned v;
+};
+
+unsigned get_id(int a,int b)
+{
+    if(id.find(puu(a,b))==id.end())
+    {
+        unsigned s=id.size();
+        return id[puu(a,b)]=s;
+    }
+    return id[puu(a,b)];
+}
+   
+Int* make(Int *a,Int *b)
+{
+    return new Int({a,b,get_id(a->v,b->v)});
+}
+   
+pair<Int*, bool> add(Int *u,int b,int s=maxs)
+{
+    if(s==32)
+        return mp(new Int({0,0,u->v+(1<<b)}),u->v > u->v+(1<<b) );
+    int mid=s>>1;
+    if(b<mid)
+    {
+        pair<Int*, bool> l=add(u->l,b,mid);
+        if(l.Y)
+        {
+            pair<Int*, bool> r=add(u->r,0,mid);
+            return make_pair(make(l.X,r.X),r.Y);
+        }else
+            return make_pair(make(l.X,u->r),0);
+    }else
+    {
+        pair<Int*, bool> l=add(u->r,b-mid,mid);
+        return make_pair(make(u->l,l.X),l.Y);
+    }
+}
+
+ll power(ll k,ll e)
+{
+    ll res=1;
+    while(e)
+    {
+        if(e&1)res=res*k%mod;
+        k=k*k%mod,e>>=1;
+    }
+    return res;
+}
+
+ll getres(Int *u,int s=maxs)
+{
+    if(s==32)return u->v%mod;
+    int mid=s>>1;
+    return (getres(u->l,mid)+getres(u->r,mid)*power(2,mid))%mod;
+}
+
+Int* zero(int s=maxs)
+{
+    if(s==32)
+        return new Int({0,0,0});
+    Int* v=zero(s>>1);
+    return new Int({v,v,0});
+}
+
+bool shorter(const Int* a,const Int* b)
+{
+    if(a->v==b->v)return 0;
+    if(!a->l)return a->v < b->v;
+    if(a->r->v==b->r->v)return shorter(a->l,b->l);
+    return shorter(a->r,b->r);
+}
+
+int n,m,s,t;
+vector<pii> g[maxn];
+Int* dist[maxn];
+bool vis[maxn],reach[maxn];
+int pre[maxn];
+
+typedef pair<Int*,int> elem;
+struct Cmp
+{
+    bool operator ()(elem a,elem b)
+    {
+        return shorter(b.X,a.X);
+    }
+};
+priority_queue<elem,vector<elem>,Cmp> q;
+
+void check(int u,int v,Int* newdist)
+{
+    if(vis[v])return;
+    if(!reach[v] || shorter(newdist,dist[v]))
+    {
+        reach[v]=1;
+        pre[v]=u;
+        dist[v]=newdist;
+        q.push(mp(newdist,v));    
+    }
+}
+
+int main()
+{
+    id[pii(0,0)]=0;
+    scanf("%d%d",&n,&m);
+    for(int i=1,a,b,c;i<=m;i++)
+    {
+        scanf("%d%d%d",&a,&b,&c);
+        g[a].push_back(pii(b,c));
+        g[b].push_back(pii(a,c));
+    }
+    scanf("%d%d",&s,&t);
+    
+    check(0,s,zero());
+    while(!q.empty())
+    {
+        int u=q.top().Y;q.pop();
+        if(vis[u])continue;
+        
+        vis[u]=1;
+        for(int i=0;i<g[u].size();i++)
+            check(u,g[u][i].X,add(dist[u],g[u][i].Y).X);
+    }
+    
+    if(!reach[t])
+        printf("-1\n");
+    else
+    {
+        printf("%d\n",(int)getres(dist[t]));
+        vector<int> path;
+        for(int u=t;u;u=pre[u])
+            path.push_back(u);
+        printf("%d\n",(int)path.size());
+        while(!path.empty())
+        {
+            printf("%d ",path.back());
+            path.pop_back();
+        }
+    }
+    
+    return 0;
+}

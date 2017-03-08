@@ -1,0 +1,178 @@
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+#include <cstring>
+#include <string>
+#include <cctype>
+#include <stack>
+#include <queue>
+#include <vector>
+#include <map>
+#include <sstream>
+#include <cmath>
+#include <limits>
+#include <utility>
+#include <iomanip>
+#include <set>
+#include <numeric>
+#include <cassert>
+#include <ctime>
+
+#define INF_MAX 2147483647
+#define INF_MIN -2147483647
+#define INF_LL 9223372036854775807LL
+#define INF 2000000000
+#define PI acos(-1)
+#define EPS 1e-8
+#define LL long long
+#define mod 1000000007
+#define pb push_back
+#define mp make_pair
+#define f first
+#define s second
+#define setzero(a) memset(a,0,sizeof(a))
+#define setdp(a) memset(a,-1,sizeof(a))
+#define bits(a) __builtin_popcount(a)
+
+using namespace std;
+
+int tree[1600005];
+int lazy[1600005];
+int pos[200005];
+
+void build(int i,int L,int R)
+{
+  if(L == R)
+  {
+    tree[i] = INF;
+    lazy[i] = INF;
+    return ;
+  }
+  build(i*2 + 1, L, (L + R) / 2);
+  build(i*2 + 2, (L + R) / 2 + 1, R);
+  tree[i] = INF;
+  lazy[i] = INF;
+}
+
+inline int get(int x, int y)
+{
+  if(x == INF) return y;
+  if(y == INF) return x;
+  if(pos[x - 1] < pos[y - 1]) return x;
+  return y;
+}
+
+void update(int i,int L,int R,int x,int y,int val)
+{
+  if(lazy[i] != INF)
+  {
+    tree[i] = get(lazy[i], tree[i]);
+    if(L != R)
+    {
+      lazy[i*2+1] = get(lazy[i], lazy[i*2+1]);
+      lazy[i*2+2] = get(lazy[i], lazy[i*2+2]);
+    }
+    lazy[i] = INF;
+  }
+  if(L >= x && R <= y)
+  {
+    lazy[i] = get(lazy[i], val);
+    tree[i] = get(lazy[i], tree[i]);
+    if(L != R)
+    {
+      lazy[i*2+1] = get(lazy[i], lazy[i*2+1]);
+      lazy[i*2+2] = get(lazy[i], lazy[i*2+2]);
+    }
+    lazy[i] = INF;
+    return;
+  }
+  if(L > y || R < x)
+    return;
+  update(i*2 + 1, L, (L + R) / 2, x, y, val);
+  update(i*2 + 2, (L + R) / 2 + 1, R, x, y, val);
+  tree[i] = get(tree[i*2 + 1], tree[i*2 + 2]);
+}
+
+int query(int i,int L,int R,int x,int y)
+{
+  if(lazy[i] != INF)
+  {
+    tree[i] = get(lazy[i], tree[i]);
+    if(L != R)
+    {
+      lazy[i*2+1] = get(lazy[i], lazy[i*2+1]);
+      lazy[i*2+2] = get(lazy[i], lazy[i*2+2]);
+    }
+    lazy[i] = INF;
+  }
+  if(L >= x && R <= y)
+    return tree[i];
+  if(L > y || R < x)
+    return INF;
+  return get(query(i*2 + 1, L, (L + R) / 2, x, y), query(i*2 + 2, (L + R) / 2 + 1, R, x, y));
+}
+
+LL len[200005];
+int land[200005], lenm[200005], idx;
+int res[200005];
+map<LL, int> ma;
+map<pair<int, int>, int> s;
+
+inline void upd(int x, LL l, int ind)
+{
+  map<LL, int>::iterator it = ma.lower_bound(x + l);
+  if(it == ma.end() || it->f > x + l) it--;
+  int y = it->s;
+  update(0, 0, idx - 1, ma[x], y, ind);
+}
+
+int main()
+{
+  int n, m;
+  scanf("%d %d", &n, &m);
+  vector<int> v;
+  for(int i=0;i<n;i++)
+  {
+    scanf("%d %d", &pos[i], &len[i]);
+    v.pb(pos[i]);
+  }
+  for(int i=0;i<m;i++)
+  {
+    scanf("%d %d", &land[i], &lenm[i]);
+    v.pb(land[i]);
+  }
+  sort(v.begin(), v.end());
+  for(int i=0;i<v.size();i++)
+  {
+    if(i && v[i] == v[i - 1]) continue;
+    ma[v[i]] = idx++;
+  }
+  build(0, 0, idx - 1);
+  for(int i=0;i<n;i++)
+    upd(pos[i], len[i], i + 1);
+  for(int i=0;i<m;i++)
+  {
+    int ind = query(0, 0, idx - 1, ma[land[i]], ma[land[i]]) - 1;
+    if(ind > n)
+    {
+      s[mp(land[i], lenm[i])]++;
+      continue;
+    }
+    res[ind]++;
+    len[ind] += lenm[i];
+    map<pair<int, int>, int>::iterator it = s.lower_bound(mp(pos[ind], 0)), it2;
+    while(it != s.end() && it->f.f <= pos[ind] + len[ind])
+    {
+      res[ind] += it->s;
+      len[ind] += it->f.s * 1LL * it->s;
+      it2 = it;
+      it2++;
+      s.erase(it);
+      it = it2;
+    }
+    upd(pos[ind], len[ind], ind + 1);
+  }
+  for(int i=0;i<n;i++)
+    printf("%d %I64d\n", res[i], len[i]);
+  return 0;
+}

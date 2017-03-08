@@ -1,0 +1,117 @@
+#include<bits/stdc++.h>
+using namespace std;
+#define ll long long
+#define ull unsigned long long
+#define pb push_back
+#define ft first
+#define se second
+#define mp make_pair
+
+vector<pair<int, int> > adj[20001];
+int n, e;
+const ll INF = 1e14;
+
+class disjUnion {
+    public:
+    int *parent, cnt, *siz;
+    disjUnion(int N) {
+        cnt = N;
+        parent = new int[N];
+        siz = new int[N];
+        for (int i=0; i < N; i++) {
+            parent[i] = i;
+            siz[i] = 1;
+        }
+    }
+    ~disjUnion(){
+        delete [] parent;
+        delete [] siz;
+    }
+    int find(int p) {
+        int root = p;
+        while (root != parent[root]) root = parent[root];
+        while (p != root) {
+            int newp = parent[p];
+            parent[p] = root;
+            p = newp;
+        }
+        return root;
+    }
+    void merge(int x, int y) {
+        int i = find(x);
+        int j = find(y);
+        if (i == j) return;
+        if (siz[i] < siz[j]) { 
+            parent[i] = j; 
+            siz[j] += siz[i]; 
+        } 
+        else { 
+            parent[j] = i; 
+            siz[i] += siz[j]; 
+        }
+        cnt--;
+    }
+    bool connected(int x, int y) {
+        return find(x) == find(y);
+    }
+    int count() {
+        return cnt;
+    } 
+};
+    	
+ll dik() {
+	ll cost[n], in[n];
+	for (int i = 0; i < n; ++i) cost[i] = in[i] = INF;
+	priority_queue<pair<ll, int> > bf;
+	bf.push(mp(0, 0));
+	cost[0] = in[0] = 0;
+	while (!bf.empty()) {
+		pair<ll, int > s = bf.top();
+		bf.pop();
+		int nd = s.se;
+		for (int i = 0; i < adj[nd].size(); ++i) {
+			if (cost[adj[nd][i].ft] < cost[nd] + adj[nd][i].se) continue;
+			if (cost[adj[nd][i].ft] > cost[nd] + adj[nd][i].se) {
+				cost[adj[nd][i].ft] = cost[nd] + adj[nd][i].se;
+				in[adj[nd][i].ft] = adj[nd][i].se;
+				bf.push(mp(-cost[adj[nd][i].ft], adj[nd][i].ft));
+			} else if (adj[nd][i].se < in[adj[nd][i].ft]){
+				in[adj[nd][i].ft] = adj[nd][i].se;
+			}
+		}
+	}
+	ll sum = 0;
+	for (int i = 0; i < n; ++i) sum += in[i];
+	return sum;
+}
+int main(int argc, char const *argv[]) {
+    int t;
+    scanf("%d", &t);
+    while (t--) {
+    	scanf("%d%d", &n, &e);
+    	pair<int, pair<int, int> > edg[e];
+    	for (int i = 0; i < n; ++i) adj[i].clear();
+    	for (int i = 0; i < e; ++i) {
+    		int u, v, w;
+	    	scanf("%d%d%d", &u, &v, &w);
+	    	adj[u].pb(mp(v, w));
+	    	adj[v].pb(mp(u, w));
+	    	edg[i] = (mp(w, mp(u, v)));
+    	}
+    	disjUnion mst(n);
+    	int cnt = 0, curr = 0;
+    	ll msans = 0, dikans = dik();
+    	sort(edg, edg + e);
+    	while (cnt < (n - 1) && curr < e) {
+    		if (!mst.connected(edg[curr].se.ft, edg[curr].se.se)) 
+    			mst.merge(edg[curr].se.ft, edg[curr].se.se), cnt++, msans += edg[curr].ft;
+    		curr++;
+    	}	
+    	if (cnt != (n - 1)) printf("NO\n");
+    	else {
+    		if (msans == dikans) printf("YES\n");
+    		else printf("NO\n");
+    	}
+    }
+	return 0;
+}

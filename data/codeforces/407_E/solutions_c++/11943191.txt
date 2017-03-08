@@ -1,0 +1,58 @@
+#include <map>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+#define	n	200005
+#define min(a,b)	((a)<(b)?(a):(b))
+#define For(i,a,b)	for(int i=a;i<=b;i++)
+
+int		N,K,D,A[n],S1[n],S2[n];
+struct	Nod{int	laz,Min;}T[n<<2];
+map<int,int>G;
+
+void	Build(int u,int l,int r){
+		int Mid=l+r>>1;	T[u]=(Nod){0,0};
+		if	(l^r)	Build(u<<1,l,Mid),Build(u<<1|1,Mid+1,r);
+}
+void	Modify(int u,int l,int r,int x,int y,int k){
+		if	(x<=l&&r<=y)	{
+			T[u].laz+=k;	T[u].Min+=k;	return;
+		}	int Mid=l+r>>1;
+		if	(x<=Mid)	Modify(u<<1,l,Mid,x,y,k);
+		if	(y>Mid)		Modify(u<<1|1,Mid+1,r,x,y,k);
+		T[u].Min=min(T[u<<1].Min,T[u<<1|1].Min)+T[u].laz;
+}
+int		Query(int u,int l,int r,int x,int y,int k){
+		if	(T[u].Min>k)	return	0;
+		if	(l==r)	return	l;	int Mid=l+r>>1,t=0;	k-=T[u].laz;
+		if	(x<=Mid)t=Query(u<<1,l,Mid,x,y,k);
+		return	t?t:Query(u<<1|1,Mid+1,r,x,y,k);
+}
+
+int		main(){
+		scanf("%d%d%d",&N,&K,&D);
+		For(i,1,N)	scanf("%d",&A[i]),A[i]+=1<<30;
+
+		int Max=0,st=0;
+		if	(!D)	{
+			for (int i=1,j;i<=N;i=j){
+				for (j=i;j<=N&&A[j]==A[i];j++);
+				if	(j-i>Max)	Max=j-i,st=i;
+			}
+		}	else	{
+			for (int L=1,R;L<=N;L=R+1){
+				for (R=L;R+1<=N&&A[R+1]%D==A[L]%D;R++);
+				For(i,L,R)	A[i]/=D;	G.clear();	Build(1,L,R);	int T1=0,T2=0;
+
+				for (int i=L,j=L;i<=R;i++){
+					for (G[A[i]]++;G[A[i]]>1;G[A[j++]]--);
+					for (;T1&&A[i]>=A[S1[T1]];--T1)	Modify(1,L,R,S1[T1-1]+1,S1[T1],A[i]-A[S1[T1]]);
+					for (;T2&&A[i]<=A[S2[T2]];--T2)	Modify(1,L,R,S2[T2-1]+1,S2[T2],A[S2[T2]]-A[i]);
+					Modify(1,L,R,i,i,i);	S1[++T1]=S2[++T2]=i;
+					int k=Query(1,L,R,j,i,i+K);
+					if	(i-k+1>Max)	Max=i-k+1,st=k;
+				}
+			}
+		}	printf("%d %d\n",st,st+Max-1);
+}

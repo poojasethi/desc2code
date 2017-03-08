@@ -1,0 +1,194 @@
+#pragma comment(linker, "/STACK:10000000")
+#define _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_DEPRECATE
+
+#include <cassert>
+#include <cstdio>
+#include <iostream>
+#include <sstream>
+#include <numeric>
+#include <bitset>
+#include <vector>
+#include <set>
+#include <string>
+#include <map>
+#include <cmath>
+#include <algorithm>
+#include <queue>
+#include <cstdlib>
+#include <functional>
+#include <cstring>
+#include <ctime>
+
+#define y1 AAA_BBB
+#define y0 AAA_AAA
+
+#define pb push_back
+#define mp make_pair
+#define fi first
+#define se second
+#define sz(v) (int)((v).size())
+#define forn(i, n) for(int i = 0; i < (int)(n); ++i)
+#define ford(i, n) for(int i = (int)(n) - 1; i >= 0; --i)
+#define fore(i, a, b) for(int i = (int)(a); i <= (int)(b); ++i)
+#define for1(i, n) for(int i = 1; i <= (int)(n); ++i)
+
+using namespace std;
+
+typedef long long i64;
+typedef unsigned long long u64;
+typedef double ld;
+typedef vector<int> vi;
+typedef pair<int, int> pii;
+template <class T> T inline sqr(T x) {
+    return x * x;
+}
+const ld pi = 3.1415926535897932384626433832795;
+const ld eps = 1e-8;
+
+const int maxn = 2e6 + 50;
+char s[maxn * 2];
+
+const i64 mod = 1e9 + 7;
+i64 powers2[maxn];
+i64 tree[3 * maxn][2];
+bool rev[3 * maxn];
+
+void apply(int v)
+{
+	rev[v] ^= 1;
+	swap(tree[v][0], tree[v][1]);
+}
+
+void add(i64& x, i64 y, i64 z)
+{
+	x = (y + z);
+	x %= mod;
+}
+void upd(int v, int cl, int cr, int l, int r)
+{
+	if (cr < l || cl > r)
+		return;
+	if (cl >= l && cr <= r)
+	{
+		apply(v);
+		return;
+	}
+	if (rev[v])
+	{
+		apply(v + v);
+		apply(v + v + 1);
+		rev[v] = 0;
+	}
+
+	int mid = (cl + cr) / 2;
+	upd(v + v, cl, mid, l, r);
+	upd(v + v + 1, mid + 1, cr, l, r);
+	forn (j, 2) {
+		add(tree[v][j], tree[v + v][j], tree[v + v + 1][j]);
+		
+	}
+}
+
+int getAns(int q1, int lastPos)
+{
+	i64 ans = tree[1][1];
+	if ((lastPos == 0 && q1 == 0) || lastPos)
+		ans++;
+	ans %= mod; 
+	return ans;
+}
+
+const int maxl = 1;
+const int maxm = (1 << maxl) + 10;
+int d[maxm];
+vi a;
+void initSlow()
+{
+	int n = strlen(s);
+	a.assign(n, 0);
+	forn (i, n)
+		a[i] = s[i] - '0';
+	d[0] = 1;
+	for1 (i, maxm - 1)
+	{
+		d[i] = d[i - 1];
+		int s = 0;
+		int x = i;
+		while (x)
+		{
+			if (x & 1)
+				s ^= 1;
+			x >>= 1;
+		}
+		if (!s)
+			d[i]++;
+	}
+}
+
+int getSlow(int l, int r)
+{
+	for (int i = l; i <= r; i++)
+		a[i] ^= 1;
+	int v = 0;
+	forn (i, a.size())
+		v += a[i] * (1 << (a.size() - i - 1));
+	return d[v];
+}
+
+int main() {
+	//freopen("input.txt", "r", stdin);
+	//freopen("output.txt","w", stdout);
+	scanf("%s", &s);
+	int n = strlen(s);
+	assert(n <= 1000000);
+	int szTree = 1;
+	while (szTree < n)
+		szTree *= 2;
+	
+	if (n < maxl)initSlow();
+
+	powers2[0] = 0;
+	powers2[1] = 1;
+	for (int i = 2; i < maxn; i++) {
+		add(powers2[i], powers2[i - 1], powers2[i - 1]);
+	}
+
+	int q1 = 0;
+	forn (i, n) {
+		int x = s[i] - '0';
+		if (x) q1^=1;
+		tree[szTree + i][x] = powers2[n - i - 1];
+		tree[szTree + i][x ^ 1] = 0;
+	}
+	for (int i = szTree - 1; i >= 1; i--)
+	forn (j, 2)
+	{
+		add(tree[i][j],tree[i+i][j], tree[i+i+1][j]);
+	}
+	int lastPos = s[n - 1] - '0';
+
+	
+	printf("%d\n", getAns(q1, lastPos));
+	int t = 1e5;
+	scanf("%d", &t);
+	forn (tt, t)
+	{
+		int l = rand() % n, r = rand() % n; if (l > r) swap(l, r);
+		scanf("%d%d", &l, &r); l--, r--;
+		if ((r - l + 1) % 2 == 1)
+			q1 ^= 1;
+		upd(1, 0, szTree - 1, l, r);
+		if (r == n - 1)
+			lastPos ^= 1;
+		int ans = getAns(q1, lastPos);
+		if (n < maxl)
+		{
+			int ans1 = getSlow(l, r);
+			assert(ans == ans1);
+		}
+		assert(ans >= 0);
+		printf("%d\n", ans);
+	}
+	return 0;
+}

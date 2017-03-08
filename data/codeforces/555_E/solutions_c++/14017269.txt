@@ -1,0 +1,112 @@
+#include<bits/stdc++.h>
+using namespace std;
+int const MAXN = 2e5+10, MAXK = 30;
+
+int n, m, q;
+
+bool mrk[MAXN], root[MAXN], fail = 0;
+
+vector<int> adj[MAXN], g[MAXN];
+
+int low[MAXN], h[MAXN], comp[MAXN], cont = 0, cmp = 0;
+
+typedef pair<int,int> pii;
+map<pii,int> ok, OK;
+
+void dfs(int v, int par, int c){
+	low[v] = h[v] = ++cont;
+	mrk[v] = true;
+	comp[v] = c;
+	for(int i = 0; i < adj[v].size(); i++){
+		int w = adj[v][i];
+		if(w == par) continue;
+		if(!mrk[w]){
+			dfs(w,v,c);
+			low[v] = min(low[v],low[w]);
+		} 
+		else low[v] = min(low[v],h[w]);
+	}
+}
+
+int dp[MAXK][MAXN], prof[MAXN], id[MAXN];
+
+void compress(int v, int c){
+	id[v] = c;
+	mrk[v] = true;
+	for(int i = 0; i < adj[v].size(); i++){
+		int w = adj[v][i];
+		if(mrk[w]) continue;
+		if(low[w] > h[v]){
+			cont++;
+			dp[0][cont] = c;
+			prof[cont] = prof[c] + 1;
+			g[c].push_back(cont);
+			if(ok[pii(min(v,w),max(v,w))] > 1) OK[pii(min(cont,c),max(cont,c))] = 1;
+			compress(w,cont); 
+		}
+		else compress(w,c);
+	}
+}
+
+int lca(int x, int y){
+	if(prof[y] < prof[x]) swap(x,y);
+	int dis = prof[y] - prof[x];
+	for(int k = MAXK-1; k >= 0; k--) if((1<<k) & dis) y = dp[k][y];
+	if(x == y) return x;
+	for(int k = MAXK-1; k >= 0; k--) if(dp[k][x] != dp[k][y]) x = dp[k][x], y = dp[k][y];
+	return dp[0][x];
+}
+
+int a[MAXN], b[MAXN], c[MAXN];
+
+void solve(int v){
+	for(int i = 0; i < g[v].size(); i++){
+		int w = g[v][i];
+		solve(w);
+		a[v] += a[w];
+		b[v] += b[w];
+		c[v] += c[w];
+		if(OK[pii(min(v,w),max(v,w))]) continue;
+		if(a[w]-c[w] > 0 && b[w]-c[w] > 0){
+			printf("No\n");
+			exit(0);
+		}
+	}
+}
+
+int main(){
+	scanf("%d%d%d",&n,&m,&q);
+	
+	for(int i = 1; i <= m; i++){
+		int u, v;
+		scanf("%d%d",&u,&v);
+		adj[u].push_back(v);
+		adj[v].push_back(u);
+		ok[pii(min(u,v),max(u,v))]++;
+	}
+	
+	for(int i = 1; i <= n; i++) if(!mrk[i]) cmp++, root[i] = true, dfs(i,-1,cmp);
+	
+	memset(mrk,false,sizeof(mrk));
+	cont = 0;
+	for(int i = 1; i <= n; i++) if(root[i]) ++cont, dp[0][cont] = cont, compress(i,cont); 
+	
+	for(int k = 1; k < MAXK; k++) for(int i = 1; i <= cont; i++) dp[k][i] = dp[k-1][dp[k-1][i]];
+	
+	for(int i = 1; i <= q; i++){
+		int u, v;
+		scanf("%d%d",&u,&v);
+		if(comp[v] != comp[u]) fail = 1;
+		if(fail) continue;
+		u = id[u], v = id[v];
+		if(u == v) continue;
+		a[u]++, b[v]++, c[lca(u,v)]++;
+	}
+	
+	if(fail){ printf("No\n"); return 0; }
+	
+	memset(mrk,false,sizeof(mrk));
+	for(int i = 1; i <= n; i++) if(root[i]) solve(id[i]);
+	
+	printf("Yes\n");
+}

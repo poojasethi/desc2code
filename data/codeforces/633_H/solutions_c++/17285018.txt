@@ -1,0 +1,151 @@
+#include <set>
+#include <map>
+#include <cmath>
+#include <cstdio>
+#include <vector>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+
+using namespace std;
+
+#define pb push_back
+#define mp make_pair
+#define x first
+#define y second
+
+typedef long long ll;
+typedef pair<int,int> pii;
+typedef vector<int> vi;
+typedef vector<pii> vpii;
+
+template <class T>
+void read(T &x)
+{
+	char ch;
+	for (ch=getchar();(ch<'0'||ch>'9')&&ch!='-';) ch=getchar();
+	x=0;int t=1;if (ch=='-') {ch=getchar();t=-1;}
+	for (;ch>='0'&&ch<='9';ch=getchar()) x=x*10+ch-'0';
+	x*=t;
+}
+
+const int N=30010;
+const int p=175;
+int n,m,cnt,a[N],b[N][2],c[N],F[N],s[N],ans[N];
+
+struct node
+{
+	int s1,s2,size;
+	node operator +(node a)const
+	{
+		node b;
+		b.size=size+a.size;
+		b.s1=(s1+F[size+1]*a.s1+F[size]*a.s2)%m;
+		if (size) b.s2=(s2+F[size]*a.s1+F[size-1]*a.s2)%m; else b.s2=a.s2;
+		return b;
+	}
+};
+
+struct ques
+{
+	int x,y,z;
+	bool operator <(ques a)const {return y<a.y;}
+}q[N];
+
+struct segtree
+{
+	int lnum,rnum,lch,rch;
+	node data;
+}tree[2*N];
+
+void build(int k,int l,int r)
+{
+	tree[k].lnum=l;tree[k].rnum=r;tree[k].data.s1=tree[k].data.s2=tree[k].data.size=0;
+	if (l==r) return;
+	int mid=(l+r)>>1;
+	tree[k].lch=++cnt;build(cnt,l,mid);
+	tree[k].rch=++cnt;build(cnt,mid+1,r);
+}
+
+void clear(int k)
+{
+	tree[k].data.s1=tree[k].data.s2=tree[k].data.size=0;
+	if (tree[k].lnum==tree[k].rnum) return;
+	clear(tree[k].lch);clear(tree[k].rch);
+}
+
+void modify(int k,int p,int d)
+{
+	if (tree[k].lnum==tree[k].rnum)
+	{
+		tree[k].data.s2=0;
+		if (d)
+		{
+			tree[k].data.size=1;tree[k].data.s1=c[p]%m;
+		}
+		else
+		{
+			tree[k].data.size=0;tree[k].data.s1=0;
+		}
+		return;
+	}
+	if (p<tree[tree[k].rch].lnum) modify(tree[k].lch,p,d); else modify(tree[k].rch,p,d);
+	tree[k].data=tree[tree[k].lch].data+tree[tree[k].rch].data;
+}
+
+void add(int k)
+{
+	if (!s[k]) modify(0,k,1);
+	s[k]++;
+}
+
+void del(int k)
+{
+	s[k]--;
+	if (!s[k]) modify(0,k,0);
+}
+
+int main()
+{
+	#ifndef ONLINE_JUDGE
+		freopen("input.txt","r",stdin);
+		freopen("output.txt","w",stdout);
+	#endif
+	read(n);read(m);
+	F[1]=1;F[2]=1;
+	for (int i=3;i<=n+1;i++) F[i]=(F[i-1]+F[i-2])%m;
+	for (int i=1;i<=n;i++) {read(a[i]);c[i]=a[i];}
+	sort(c+1,c+n+1);
+	int l=1;for (int i=2;i<=n;i++) if (c[i]!=c[i-1]) c[++l]=c[i];
+	for (int i=1;i<=n;i++) a[i]=lower_bound(c+1,c+l+1,a[i])-c;
+	int Q;read(Q);
+	for (int i=1;i<=Q;i++) scanf("%d%d",&b[i][0],&b[i][1]);
+	cnt=0;build(0,1,l);
+	for (int i=0;i<=n/p;i++)
+	{
+		clear(0);
+		int mm=0;
+		for (int j=1;j<=Q;j++)
+			if (i*p<=b[j][0]&&b[j][0]<(i+1)*p)
+			{
+				q[++mm].x=b[j][0];
+				q[mm].y=b[j][1];q[mm].z=j;
+			}
+		if (!mm) continue;
+		sort(q+1,q+mm+1);
+		memset(s+1,0,l*sizeof(int));
+		for (int j=q[1].x;j<=q[1].y;j++) add(a[j]);
+		ans[q[1].z]=tree[0].data.s1;
+		for (int j=2;j<=mm;j++)
+		{
+			if (q[j-1].x<q[j].x)
+				for (int k=q[j-1].x;k<q[j].x;k++) del(a[k]);
+			else
+				for (int k=q[j].x;k<q[j-1].x;k++) add(a[k]);
+			for (int k=q[j].y;k>q[j-1].y;k--) add(a[k]);
+			ans[q[j].z]=tree[0].data.s1;
+		}
+	}
+	for (int i=1;i<=Q;i++) printf("%d\n",ans[i]);
+	return 0;
+}

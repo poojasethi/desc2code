@@ -1,0 +1,87 @@
+#include <cstdio>
+#include <cstring>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+const int MAXN = 100005;
+struct RMQ {
+    int a[MAXN * 7][20];
+    int log2[MAXN * 7];
+    void init(int A[], int N) {
+        for (int i = 0; i < MAXN * 7; i++) log2[i] = (i == 0 ? -1 : log2[i >> 1] + 1);
+        for (int i = 1; i <= N; i++) a[i][0] = A[i];
+        for (int j = 1; (1 << j) <= N; j++) {
+            for (int i = 1; i + (1<<j) - 1 <= N; i++) {
+                a[i][j] = max(a[i][j-1], a[i + (1<<(j-1))][j - 1]);
+            }
+        }
+    }
+    int rmq(int L, int R) {
+        if (R < L) return 0;
+        int k = log2[R - L + 1];
+        return max(a[L][k], a[R-(1<<k)+1][k]);
+    }
+}AC;
+vector<int> prime[MAXN];
+int check[MAXN] = {0}, ptot = 0;
+void init(int N) {
+    for (int i = 2; i <= N; i++) {
+        if (!check[i]) {
+            for (int j = 1; j * i <= N; j++) {
+                prime[j * i].push_back(i);
+                check[i * j] = 1;
+            }
+            check[i] = ++ ptot;
+        }
+    }
+}
+vector<int> G[MAXN];
+int query(int x, int y, int e) {
+    return upper_bound(G[e].begin(), G[e].end(), y) - lower_bound(G[e].begin(), G[e].end(), x);
+}
+int n, m;
+int b[MAXN * 7];
+int a[MAXN];
+int pre[MAXN];
+vector<int> gao[MAXN];
+
+int main() {
+    init(100000);
+    scanf("%d%d", &n, &m);
+    for (int i = 1; i <= n; i++) {
+        scanf("%d", &a[i]);
+        for (int j = 0; j < prime[a[i]].size(); j++) {
+            int v = check[prime[a[i]][j]];
+            gao[v].push_back(i);
+        }
+        G[a[i]].push_back(i);
+    }
+    int tot = 0;
+    for (int i = 1; i <= ptot; i++) {
+        if (gao[i].size() == 0) continue;
+        pre[i] = tot;
+        for (int j = 0; j < gao[i].size(); j++) {
+            b[++ tot] = a[gao[i][j]];
+        }
+    }
+    AC.init(b, tot);
+    while (m--) {
+        int g, x, y, Max = -1;
+        scanf("%d%d%d", &g, &x, &y);
+        for (int i = 0; i < prime[g].size(); i++) {
+            int v = check[prime[g][i]];
+            int r = upper_bound(gao[v].begin(), gao[v].end(), y) - gao[v].begin() + pre[v] + 1;
+            int l = lower_bound(gao[v].begin(), gao[v].end(), x) - gao[v].begin() + pre[v] + 1;
+            r --;
+            if (r >= l)Max = max(Max, AC.rmq(l, r));
+        }
+        if (Max == -1) {
+            printf("-1 -1\n");
+        }else {
+            printf("%d %d\n", Max, query(x, y, Max));
+        }
+    }
+    return 0;
+}
+

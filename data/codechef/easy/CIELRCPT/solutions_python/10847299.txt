@@ -1,0 +1,11 @@
+menu = [1,2,4,8,16,32,64,128,256,512,1024,2048]
+menu.reverse()
+def find_menus(price, count):
+    if price==0:
+        return count
+    for i in menu:
+        if price/i>0:
+            return find_menus(price%i, count+price/i)
+
+for i in range(input()):
+    print find_menus(input(), 0)

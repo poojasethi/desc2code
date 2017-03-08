@@ -1,0 +1,96 @@
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <cstring>
+using namespace std;
+#define pb(a) push_back(a)
+#define sz(a) ((int)a.size())
+#define SZ 1000010
+struct node{
+  int go[26] , link , par;
+  char pch;
+  node(){link=par=-1;}
+};
+node B[SZ]; int cp=2;
+int rep[100010];
+void add(char* w , int id){
+  int L=strlen(w) , pos=1;
+  for(int i=0;i<L;++i){
+   w[i]-='a';
+   if(!B[pos].go[w[i]]){B[pos].go[w[i]]=-cp; B[cp].par=pos; B[cp++].pch=w[i]; }
+   pos=-B[pos].go[w[i]];
+                      }
+  rep[id]=pos;
+}
+int get_link(int vr);
+int go(int vr,int w){
+  if(B[vr].go[w]<=0)
+   if(!B[vr].go[w])B[vr].go[w] = (vr==1)?1:go(get_link(vr) , w);
+   else B[vr].go[w]*=-1;
+  return B[vr].go[w];
+}
+int get_link(int vr){
+  if(B[vr].link == -1)
+   if(vr==1 || B[vr].par==1)B[vr].link=1;
+   else B[vr].link=go( get_link(B[vr].par) , B[vr].pch ); 
+  return B[vr].link;
+}
+// Tree paths
+int tin[SZ] , tout[SZ] , tim=1;
+vector<int> fo[SZ];
+void dfs(int vr){
+  tin[vr]=tim++;
+  for(int i=sz(fo[vr])-1;i>=0;--i)dfs(fo[vr][i]);
+  tout[vr]=tim++;
+}
+void init_tree(){
+  for(int i=2;i<cp;++i)fo[get_link(i)].pb(i);
+  dfs(1);
+}
+#define OB 2000020
+int FT[OB];
+void add_t(int p,int how){
+  for(;p<OB;p+=(p&(-p)))FT[p]+=how;
+}
+int get(int f,int t){
+  int ret=0;
+  for(;t;t-=(t&(-t)))ret+=FT[t];
+  if(f)for(--f;f;f-=(f&(-f)))ret-=FT[f];
+  return ret;
+}
+char buf[1000010];
+int main(){
+  int N,M;
+  scanf("%d%d",&N,&M);
+  for(int i=0;i<M;++i){
+   scanf("%s",&buf);
+   add(buf , i);
+                      }
+  init_tree();
+  for(int i=0;i<M;++i)add_t(tin[rep[i]] , +1) , add_t(tout[rep[i]] , -1);
+  for(int i=0;i<N;++i){
+   char C;
+   do{C=getchar();}while(C==' ' || C=='\n');
+   if(C=='?'){
+    scanf("%s",&buf);
+    int ans=0 , pos=1 , L=strlen(buf);
+    for(int j=0;j<L;++j){
+     pos=go(pos , buf[j]-'a');
+     ans+=get(0 , tin[pos]);
+                        }
+    printf("%d\n" , ans);
+             }
+   else{
+    if(C=='+'){
+     int W; scanf("%d",&W); --W;
+     if(get(tin[rep[W]],tin[rep[W]])==0)add_t(tin[rep[W]] , +1), add_t(tout[rep[W]] , -1);
+              }
+    if(C=='-'){
+     int W; scanf("%d",&W); --W;
+     if(get(tin[rep[W]],tin[rep[W]])==1)add_t(tin[rep[W]] , -1), add_t(tout[rep[W]] , +1);
+              }
+       }
+                      }
+  //system("pause");
+  return 0;
+}

@@ -1,0 +1,97 @@
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+using namespace std;
+#define nMax 100100
+#define L(x) (x << 1)
+#define R(x) (x << 1 | 1)
+#define MID(x,y) ( (x + y) >> 1	)
+int tr[26][nMax*4];
+char str[nMax*4],ans[nMax];
+int n;
+int s[26];
+
+inline void update(int k,int p){	tr[k][p] = tr[k][L(p)] + tr[k][R(p)]; }
+inline void pushdown(int k,int p,int l,int m,int r){
+	//if(l == r)	return;
+	if(tr[k][p] == r - l + 1)	tr[k][L(p)]	= m - l + 1,tr[k][R(p)] = r - m;
+	else	if(tr[k][p] == 0)	tr[k][L(p)] = tr[k][R(p)] = 0;
+}
+
+void build(int l,int r,int p)
+{
+	if(l == r){
+		for(int i=0; i<26; i++)	tr[i][p] = ((str[l] - 'a') == i);
+		return;
+	}
+	int mid = MID(l,r);
+	build(l,mid,L(p));
+	build(mid+1,r,R(p));
+	for(int i=0; i<26; i++)	update(i,p);
+}
+
+inline int sum(int l,int r,int ql,int qr,int p,int k)
+{
+	if(r < ql  || l > qr)	return 0;
+	if(ql <= l && r <= qr)	return tr[k][p];
+	int mid = MID(l,r);
+	pushdown(k,p,l,mid,r);
+	return sum(l, mid, ql, qr, L(p), k) + sum(mid+1, r, ql, qr, R(p), k);
+}
+
+inline void Modify(int l,int r,int ql,int qr,bool to,int p,int k)
+{
+	if(l > qr || r < ql)	return;
+	if(ql <= l && r <= qr){	tr[k][p] = to? (r - l + 1): 0;	return;}
+	int mid =MID(l,r);
+	pushdown(k,p,l,mid,r);
+	Modify(l, mid, ql, qr, to, L(p), k);
+	Modify(mid+1, r, ql, qr, to, R(p), k);
+	update(k,p);
+}
+
+int main()
+{
+	freopen("input.txt","r",stdin);
+	freopen("output.txt","w",stdout);
+	//register
+	int i,j,m,l,r,odd,mid,he,ta;
+	scanf("%d%d",&n,&m);
+	scanf("%s",str+1);
+	build(1,n,1);
+	while(m--){
+		odd = 0;
+		scanf("%d%d",&l,&r);
+		for(i=0; i<26; i++)	{
+			s[i] = sum(1,n,l,r,1,i);
+			if( (s[i] & 1) ){
+				odd ++;
+				if(odd > 1)	break;
+				mid = i;
+			}
+		}
+		if(odd > 1)	continue;
+		he = l;	ta = r;
+		for(i=0; i<26; i++){
+			if(s[i] > 1){
+				Modify(1,n,l,r,0,1,i);
+				Modify(1,n,he,he+s[i]/2-1,1,1,i);
+				Modify(1,n,ta-s[i]/2+1,ta,1,1,i);
+				he += s[i]/2;	ta -= s[i]/2;
+			}
+		}
+		if(odd){
+			if(s[mid] == 1)	Modify(1,n,l,r,0,1,mid);
+			Modify(1,n,he,ta,1,1,mid);
+		}
+	}
+	for(i=1; i<=n; i++)
+		for(j=0; j<26; j++)
+			if(sum(1,n,i,i,1,j)){
+				ans[i] = 'a'+j;
+				break;
+			}
+	ans[n+1] = '\0';
+	puts(ans+1);
+	return 0;
+}

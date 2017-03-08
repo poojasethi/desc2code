@@ -1,0 +1,279 @@
+//RandomUsername(Nikola Jovanovic)
+//Codechef Long MAR14
+//ANUGCD
+ 
+#include <cstdlib>
+#include <iostream>
+#include <cstdio>
+#include <set>
+#include <queue>
+#include <vector>
+#include <cstring>
+#include <algorithm>
+#include <stack>
+#define MAXN 100005
+#define PRIMCNT 65
+#define LOGG 4
+using namespace std;
+ 
+struct vc
+{
+    vector<int> p;
+};
+ 
+struct sg
+{
+    int a[MAXN];
+    int s[MAXN*LOGG];
+};
+ 
+struct q
+{
+    int l,r,g,lp,maxm,idx;
+};
+ 
+struct numz
+{
+    int val,idx;
+};
+ 
+int primz[PRIMCNT]={2,3,5,7,11,13,17,19,23,29
+,31,37,41,43,47,53,59,61,67,71
+,73,79,83,89,97,101,103,107,109,113
+,127,131,137,139,149,151,157,163,167,173
+,179,181,191,193,197,199,211,223,227,229
+,233,239,241,251,257,263,269,271,277,281
+,283,293,307,311,313};
+vc lps[MAXN];
+numz a[MAXN];
+sg segg[PRIMCNT]; //A segment tree is nearly twice as large as the array.
+int n,m;
+int lpseg[MAXN*LOGG];
+q qs[MAXN];
+ 
+void build(int segind,int* seg, int i, int l, int d)
+{
+ if (l>d) return;
+ else if (d==l)//We hit the leaf.
+ {
+  if(segg[segind].a[d]!=0)
+    seg[i] = segg[segind].a[d];
+  else
+    seg[i]=-1;
+  return;
+ }
+ build(segind,seg,i*2, l, (d+l)/2);//Recurse
+ build(segind,seg,i*2+1, (d+l)/2+1, d);//Recurse
+ seg[i] = max(seg[i*2], seg[i*2+1]);//It's a RMQ so we take maxs
+}
+ 
+void buildlp(int idx,int i, int l, int d)//Building a segment tree.
+{
+ if (l>d) return;
+ else if (d==l)//We hit the leaf.
+ {
+  if(a[ lps[idx].p[l] ].val!=0)
+    lpseg[i] = a[ lps[idx].p[l] ].val;
+  else
+    lpseg[i]=-1;
+  return;
+ }
+ buildlp(idx,i*2, l, (d+l)/2);//Recurse
+ buildlp(idx,i*2+1, (d+l)/2+1, d);//Recurse
+ lpseg[i] = max(lpseg[i*2], lpseg[i*2+1]);//It's a RMQ so we take maxs
+}
+ 
+int get(int* seg, int i, int lq, int dq, int l, int d)//get
+{
+     if (lq > d || dq < l)//no intersection with [lq,dq] (the query interval)
+          return -1;
+     else if(l>=lq && d<=dq)//[l,d] is in canonic cover of [lq,dq]
+          return seg[i];
+     int m1=get(seg,2*i,lq,dq,l,(l+d)/2);//take both sons
+     int m2=get(seg,2*i+1,lq,dq,(l+d)/2+1,d);
+ 
+     //pick the max
+     if(m1==-1) return m2;
+     if(m2==-1) return m1;
+     if(m1>=m2) return m1;
+     return m2;
+}
+ 
+bool cmp(q a,q b)
+{
+    return a.lp>b.lp;
+}
+bool cmp2(q a,q b)
+{
+    return a.idx<b.idx;
+}
+ 
+bool cmpa(numz a,numz b)
+{
+    if(a.val==b.val)
+        return a.idx<b.idx;
+    return a.val<b.val;
+}
+ 
+int bsl(int qval,int qidx)
+{
+    int gornja=n-1,donja=0,pivot;
+    while(gornja>donja)
+    {//cout<<"KL"<<pivot<<" "<<gornja<<" "<<donja<<endl;
+        pivot=(gornja+donja)/2;
+       // if(gornja-donja==1) pivot++;
+        if(a[pivot].val>qval)
+            gornja=pivot-1;
+        else if(a[pivot].val<qval)
+            donja=pivot+1;
+        else
+        {
+            //=
+             if(a[pivot].idx>qidx)
+            gornja=pivot;
+            else if(a[pivot].idx<qidx)
+            donja=pivot+1;
+            else return pivot;
+        }
+    }
+    return gornja;
+}
+ 
+int bsd(int qval,int qidx)
+{
+    int gornja=n-1,donja=0,pivot;
+    while(gornja>donja)
+    {//cout<<pivot<<"!!!!!"<<gornja<<"@@@"<<donja<<"!"<<a[pivot].val<<"!"<<a[pivot].idx<<endl;
+        pivot=(gornja+donja)/2;
+        if(gornja-donja==1) pivot++;
+        if(a[pivot].val>qval)
+            gornja=pivot-1;
+        else if(a[pivot].val<qval)
+            donja=pivot+1;
+        else
+        {
+            //=
+             if(a[pivot].idx>qidx)
+            gornja=pivot-1;
+            else if(a[pivot].idx<qidx)
+            donja=pivot;
+            else return pivot;
+        }
+    }
+    return gornja;
+}
+ 
+int pom;
+bool sgd;
+ 
+int main(int argc, char *argv[])
+{
+    //freopen("in.txt","r",stdin);
+    //freopen("out.txt","w",stdout);
+    //Input, factorize numbers and fill segarrays, add large factors to lps
+    scanf("%d %d",&n,&m);
+    for(int i=0;i<n;i++)
+        {
+            scanf("%d",&a[i].val);
+            pom=a[i].val;
+            a[i].idx=i;
+            for(int j=0;j<PRIMCNT;j++)
+            {
+             while(pom%primz[j]==0)
+             {
+                 segg[j].a[i]=a[i].val;
+                 pom/=primz[j];
+             }
+             if(pom==0) break;
+            }
+            if(pom>1)
+             lps[pom].p.push_back(i);
+        }
+ 
+ 
+    //build segs for small primes
+    for(int i=0;i<PRIMCNT;i++)
+        build(i,segg[i].s,1,0,n-1);
+    //load the queries, query the small primes, find large factors and sort
+    for(int i=0;i<m;i++)
+     {
+            scanf("%d %d %d",&qs[i].g,&qs[i].l,&qs[i].r);
+            qs[i].l--;
+            qs[i].r--;
+            qs[i].idx=i;
+            pom=qs[i].g;
+            qs[i].maxm=-1;
+            for(int j=0;j<PRIMCNT;j++)
+            {
+             sgd=false;
+             while(pom%primz[j]==0)
+             {
+                 //cout<<i<<" "<<j<<" "<<primz[j]<<"!"<<segg[j].s[0]<<" "<<pom<<endl;
+                 //cout<<get(segg[j].s,1,qs[i].l,qs[i].r,0,n-1)<<endl;
+                 if(!sgd)
+                    qs[i].maxm=max(qs[i].maxm,get(segg[j].s,1,qs[i].l,qs[i].r,0,n-1));
+                 sgd=true;
+                 pom/=primz[j];
+             }
+             if(pom==0) break;
+            }
+            qs[i].lp=pom;
+     }
+ //printf("RES:\n");
+ 
+ //  for(int i=0;i<m;i++)
+  //      printf("%d\n",qs[i].maxm);
+ 
+ //printf("RES:\n");
+ 
+    sort(qs,qs+m,cmp);
+    //for every large factor build lpseg and query it several times
+    int lastlp=-1;
+    int lq,dq;
+    vector<int>::iterator it;
+ 
+    for(int i=0;i<m;i++)//od najveceg
+    {
+        if(qs[i].lp==1)
+            break;
+        if(qs[i].lp!=lastlp)
+        {
+            if(lps[qs[i].lp].p.size()==0)
+             continue;
+             //cout<<lps[qs[i].lp].p.size()-1<<"BRE"<<endl;
+            buildlp(qs[i].lp,1,0,lps[qs[i].lp].p.size()-1);//cout<<i<<"BRE"<<endl;
+            lastlp=qs[i].lp;
+        }
+       // cout<<"VEKTOR: "<<lps[qs[i].lp].p[0]<<" "<<lps[qs[i].lp].p[1]<<endl;
+            it=lower_bound(lps[qs[i].lp].p.begin(),lps[qs[i].lp].p.end(),qs[i].l);
+            lq=it-lps[qs[i].lp].p.begin();
+            it=upper_bound(lps[qs[i].lp].p.begin(),lps[qs[i].lp].p.end(),qs[i].r);
+            if(it-lps[qs[i].lp].p.begin()>0)
+             {
+                 --it;
+                dq=it-lps[qs[i].lp].p.begin();
+             }
+            else dq=-1;
+//cout<<i<<"$"<<qs[i].maxm<<" "<<lps[qs[i].lp].p.size()<<" "<<lq<<" "<<dq<<endl;
+        qs[i].maxm=max(qs[i].maxm,get(lpseg,1,lq,dq,0,lps[qs[i].lp].p.size()-1));
+//cout<<i<<"$"<<qs[i].maxm<<endl;
+    }
+ 
+    //sort it back, find number of occurAnces and print it out
+    sort(qs,qs+m,cmp2);
+    sort(a,a+n,cmpa);
+    for(int i=0;i<m;i++)
+    {
+        if(qs[i].maxm==-1)
+            lq=2,dq=0;
+        else
+        {
+            lq=bsl(qs[i].maxm,qs[i].l);
+            dq=bsd(qs[i].maxm,qs[i].r);
+        }
+       // cout<<a[lq].val<<"check"<<a[dq].val<<endl;
+        printf("%d %d\n",qs[i].maxm,dq-lq+1);
+    }
+    //Done
+    return 0;
+} 

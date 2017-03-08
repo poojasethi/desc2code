@@ -1,0 +1,99 @@
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <deque>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <string>
+#include <vector>
+
+char s[2][202020];
+
+struct node {
+  int a[2][2];
+} tr[808080];
+
+node merge(const node& x, const node& y) {
+  node res;
+  memset(res.a, -1, sizeof(res.a));
+  for (int i = 0; i < 2; ++i)
+    for (int j = 0; j < 2; ++j)
+      for (int k = 0; k < 2; ++k)
+        if (x.a[i][k] != -1 && y.a[k][j] != -1) {
+          int val = x.a[i][k] + y.a[k][j] + 1;
+          int& ref = res.a[i][j];
+          if (ref == -1 || ref > val)
+            ref = val;
+        }
+  return res;
+}
+
+void build(int i, int f, int t) {
+  if (f == t) {
+    if (s[0][f - 1] == '.') {
+      if (s[1][f - 1] == '.') {
+        tr[i].a[0][0] = tr[i].a[1][1] = 0;
+        tr[i].a[0][1] = tr[i].a[1][0] = 1;
+      } else {
+        tr[i].a[0][0] = 0;
+      }
+    } else {
+      if (s[1][f - 1] == '.') {
+        tr[i].a[1][1] = 0;
+      }
+    }
+  } else {
+    int il = i << 1;
+    int ir = i << 1 | 1;
+    int m = (f + t) >> 1;
+    build(il, f, m);
+    build(ir, m + 1, t);
+    tr[i] = merge(tr[il], tr[ir]);
+  }
+}
+
+node query(int i, int f, int t, int qf, int qt) {
+  if (qf <= f && t <= qt) {
+    return tr[i];
+  } else {
+    int il = i << 1;
+    int ir = i << 1 | 1;
+    int m = (f + t) >> 1;
+    if (qt < m + 1) return query(il, f, m, qf, qt);
+    if (qf > m) return query(ir, m + 1, t, qf, qt);
+    return merge(query(il, f, m, qf, qt), query(ir, m + 1, t, qf, qt));
+  }
+}
+
+int main() {
+  //assert(freopen("input.txt", "r", stdin));
+  //assert(freopen("output.txt", "w", stdout));
+  //std::ios::sync_with_stdio(0);
+  //std::cin.tie(0);
+  for (int i = 1; i <= 800000; ++i)  
+    memset(tr[i].a, -1, sizeof(tr[i].a));
+  int n, m;
+  scanf("%d %d", &n, &m);
+  scanf("%s %s", s[0], s[1]);
+  build(1, 1, n);
+  int x, y;
+  while (m--) {
+    scanf("%d %d", &x, &y);
+    --x, --y;
+    int rx = x / n, cx = x % n;
+    int ry = y / n, cy = y % n;
+    if (cx > cy) {
+      std::swap(rx, ry);
+      std::swap(cx, cy);
+    }
+    node res = query(1, 1, n, cx + 1, cy + 1);
+    printf("%d\n", res.a[rx][ry]);
+  }
+}

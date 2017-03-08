@@ -1,0 +1,137 @@
+#include <cstdio>
+#include <cmath>
+#include <algorithm>
+using namespace std;
+typedef long long ll;
+typedef long double db;
+
+const int maxN=100005,N=1<<16,S=1024;
+
+const db pi=acos(db(-1));
+
+struct comp{
+	db real,imag;
+	comp(){
+	}
+	comp(db _real,db _imag=0):real(_real),imag(_imag){
+	}
+	operator db() const{
+		return real;
+	}
+	comp operator -() const{
+		return comp(-real,-imag);
+	}
+	comp operator + (const comp &b) const{
+		return comp(real+b.real,imag+b.imag);
+	}
+	comp operator - (const comp &b) const{
+		return comp(real-b.real,imag-b.imag);
+	}
+	comp operator * (const comp &b) const{
+		return comp(real*b.real-imag*b.imag,real*b.imag+imag*b.real);
+	}
+	comp operator / (const db b) const{
+		return comp(real/b,imag/b);
+	}
+	comp& operator += (const comp &b){
+		real+=b.real;
+		imag+=b.imag;
+		return *this;
+	}
+	comp& operator -= (const comp &b){
+		real-=b.real;
+		imag-=b.imag;
+		return *this;
+	}
+	comp& operator *= (const comp &b){
+		return *this=*this*b;
+	}
+	comp& operator /= (const db b){
+		real/=b;
+		imag/=b;
+		return *this;
+	}
+};
+
+int base,rev[N];
+comp initW[N+1];
+
+int getbase(int n){
+	int base;
+	for(base=1;base<n+1;base<<=1);
+	return base;
+}
+
+void init(){
+	for(int i=0;i<base;i++){
+		rev[i]=0;
+		for(int j=1;j<base;j<<=1) (rev[i]<<=1)|=bool(i&j);
+	}
+	for(int i=0;i<=base;i++){
+		initW[i]=comp(cos(2*pi*i/base),sin(2*pi*i/base));
+	}
+}
+void fft(comp *a,int f){
+	for(int i=0;i<base;i++) if(i<rev[i]) swap(a[i],a[rev[i]]);
+	for(int l=1;l<base;l<<=1){
+		int W=base/(l<<1)*f;
+		for(int i=0;i<base;i+=l<<1){
+			int w=f==1?0:base;
+			for(int j=0;j<l;j++,w+=W){
+				comp x=a[i+j],y=initW[w]*a[i+j+l];
+				a[i+j]=x+y;
+				a[i+j+l]=x-y;
+			}
+		}
+	}
+	if(f==-1){
+		for(int i=0;i<base;i++) a[i]/=base;
+	}
+}
+
+ll ans;
+
+int n,m,blocks,a[maxN];
+
+int tot[N];
+comp tot_[N];
+int cnt[N],cnt2[N];
+comp cnt_[N],cnt2_[N],res_[N];
+ll res[N];
+
+int main(){
+	scanf("%d",&n);
+	for(int i=0;i<n;i++) scanf("%d",&a[i]),m=max(m,a[i]);
+	base=getbase(m*2);
+	init();
+	for(int i=0;i<n;i++) tot[a[i]]++;
+	for(int i=0;i<base;i++) tot_[i]=tot[i];
+	fft(tot_,+1);
+	for(int st=0,en;st<n;st=en){
+		en=min(n,st+S);
+		for(int i=0;i<base;i++) cnt2[i]=cnt[i];
+		for(int j=st;j<en;j++){
+			for(int k=j+1;k<en;k++){
+				if(2*a[j]-a[k]>=0&&2*a[j]-a[k]<=m)
+					ans+=cnt2[2*a[j]-a[k]];
+			}
+			cnt2[a[j]]++;
+		}
+		for(int j=st;j<en;j++){
+			for(int k=st;k<j;k++){
+				if(2*a[j]-a[k]>=0&&2*a[j]-a[k]<=m)
+					ans+=tot[2*a[j]-a[k]]-cnt2[2*a[j]-a[k]];
+			}
+		}
+		for(int i=0;i<base;i++) cnt2_[i]=cnt2[i];
+		fft(cnt2_,+1);
+		for(int i=0;i<base;i++) res_[i]=cnt_[i]*(tot_[i]-cnt2_[i]);
+		fft(res_,-1);
+		for(int i=0;i<base;i++) res[i]=ll(round(db(res_[i])));
+		for(int j=st;j<en;j++){
+			ans+=res[2*a[j]];
+		}
+		for(int i=0;i<base;i++) cnt[i]=cnt2[i],cnt_[i]=cnt2_[i];
+	}
+	printf("%lld\n",ans);
+}

@@ -1,0 +1,24 @@
+#include<bits/stdc++.h>
+#define LL long long int
+using namespace std;
+int main(){
+	int T;
+	LL N,i;
+	cin>>T;
+	LL a[100001],b[100001];
+	while(T--){
+		cin>>N;
+		for(i=0;i<N;i++){
+			cin>>b[i];
+			a[i]=1;
+		}
+		for(i=N-2;i>=0;i--){
+			if(b[i+1]*b[i]<0)
+				a[i]=a[i+1]+1;
+		}
+		for(i=0;i<N;i++)
+			cout<<a[i]<<" ";
+		cout<<endl;
+	}
+return 0;
+}

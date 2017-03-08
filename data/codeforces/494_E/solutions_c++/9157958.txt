@@ -1,0 +1,106 @@
+#include<cstdio>
+#include<cstdlib>
+#include<algorithm>
+#include<cstring>
+#include<vector>
+#define MAXN 100005
+#define MAXL 50
+#define MAXP 6000005
+using namespace std ;
+typedef long long LL ;
+
+int N, M, K, T ;
+int good[MAXN] ;
+int pt, root ;
+int sum[MAXP], add[MAXP], son[MAXP][2] ;
+int ql, qr, q1 ;
+LL cnt[MAXL], ans ;
+
+struct Matrix {
+	int x1, y1, x2, y2 ;
+} p[MAXN] ;
+struct Event { // 0:Delete, 1:Add
+	int x, y1, y2 ;
+	int type ;
+	Event(int x=0, int y1=0, int y2=0, int type=0):x(x), y1(y1), y2(y2), type(type) {}
+	bool operator < (Event b) const {
+		return x < b.x || x == b.x && type < b.type ;
+	}
+} ;
+vector<Event> have ;
+
+void Update(int now, int l, int r)
+{
+	if(add[now]) sum[now] = r-l+1 ;
+	else sum[now] = sum[son[now][0]]+sum[son[now][1]] ;
+}
+int Add(int now, int l, int r)
+{
+	int mid = (l+r)/2 ;
+	if(!now) now = ++pt, sum[now] = add[now] = son[now][0] = son[now][1] = 0 ;
+	if(ql <= l && r <= qr) add[now] += q1 ;
+	else 
+	{
+		if(ql <= mid) son[now][0] = Add(son[now][0], l, mid) ;
+		if(qr > mid) son[now][1] = Add(son[now][1], mid+1, r) ;
+	}
+	Update(now, l, r) ;
+	return now ;
+}
+
+LL Work()
+{
+	LL ret = 0 ;
+	int i, j ;
+	have.resize(0) ;
+	for(i = 1; i <= M; i ++)
+		if(good[i]) 
+		{
+			have.push_back(Event(p[i].x1, p[i].y1, p[i].y2, 1)) ;
+			have.push_back(Event(p[i].x2+1, p[i].y1, p[i].y2, 0)) ;			
+		}
+	sort(have.begin(), have.end()) ;
+	for(i = 0, root = pt = 0; i < have.size(); i ++)
+	{
+		if(i) ret += (LL)sum[root]*(have[i].x-have[i-1].x) ;
+		ql = have[i].y1, qr = have[i].y2 ;
+		q1 = have[i].type*2-1 ;
+		root = Add(root, 1, N) ;
+	}
+	return ret ;
+}
+int main()
+{
+	int i, j, flag = 0 ;
+	//freopen("1.in", "r", stdin) ;
+	//freopen("1.out", "w", stdout) ;
+	scanf("%d %d %d", &N, &M, &K) ;
+	for(i = 1; i <= M; i ++)
+		scanf("%d %d %d %d", &p[i].x1, &p[i].y1, &p[i].x2, &p[i].y2), good[i] = 1 ;
+	for(T = 0;; T ++)
+	{
+		cnt[T] = Work(), flag = 0 ;
+		for(i = 1; i <= M; i ++)
+			if(good[i])
+			{
+				if(p[i].x1&1) p[i].x1 ++ ;
+				if(p[i].y1&1) p[i].y1 ++ ;
+				if(p[i].x2&1) p[i].x2 -- ;
+				if(p[i].y2&1) p[i].y2 -- ;
+				p[i].x1 /= 2, p[i].y1 /= 2 ;
+				p[i].x2 /= 2, p[i].y2 /= 2 ;
+				if(p[i].x1 > p[i].x2 || p[i].y1 > p[i].y2) good[i] = 0 ;
+				else flag = 1 ;
+			}
+		if(!flag) break ;
+	}
+	for(i = 1; i <= T; i ++) cnt[i-1] -= cnt[i] ;
+	for(T; T > 0; T --)
+		if((1<<T) > K) cnt[T-1] += cnt[T] ;
+		else break ;
+	for(i = 0; i <= T; i ++)
+		ans |= (cnt[i]&1) ;
+	printf("%s\n", ans?"Hamed":"Malek") ; 
+	//system("pause") ;
+	return 0 ;
+}

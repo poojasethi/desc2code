@@ -1,0 +1,102 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <queue>
+#ifdef WIN32
+#define TAT "%I64d"
+#else
+#define TAT "%lld"
+#endif 
+#define int64 long long
+
+using namespace std;
+struct Node{
+	int i,j,k,over,can1,can2,v;
+};
+struct NNode{
+	int i,j,k,over,can1,can2,v1,v2,v3;
+}fa[15][15][15][2][2][2];
+int v1,v2,sum;
+int f[15][15][15][2][2][2];  //i,j,k,over,can1,can2.  can = 1 => must be 0
+int s1[110],s2[110],s3[110],top1,top2,top3;
+string ans1,ans2,ans3;
+bool vis[15][15][15][2][2][2];
+priority_queue <Node> Q;
+
+bool operator < (Node x,Node y){return x.v > y.v;}
+int read()
+{
+	int x = 0;     char ch = getchar();
+	while (!(ch >= '0' && ch <= '9'))    ch = getchar();
+	while (ch >= '0' && ch <= '9')    x = x * 10 + ch - '0',ch = getchar();
+	return x;
+}
+void devide(int x,int *s,int &cnt)
+{
+	while (x)    s[++cnt] = x % 10,x /= 10;
+}
+void dfs(NNode x,int fir)
+{
+	if (fir)   {
+		if (!x.can1)  ans1 += x.v1 + '0';
+		if (!x.can2)  ans2 += x.v2 + '0';
+		ans3 += x.v3 + '0';
+	}
+	if (x.i == top1 && x.j == top2 && x.k == top3 && x.over == 0)    return ;
+	dfs(fa[x.i][x.j][x.k][x.over][x.can1][x.can2],1);
+}
+void work()
+{
+	devide(v1,s1,top1);   devide(v2,s2,top2);    devide(sum,s3,top3);
+	for (int i = 1;i + i <= top1;i++)   swap(s1[i],s1[top1 - i + 1]);
+	for (int i = 1;i + i <= top2;i++)   swap(s2[i],s2[top2 - i + 1]);
+	for (int i = 1;i + i <= top3;i++)   swap(s3[i],s3[top3 - i + 1]);
+	memset(f,127,sizeof (f));
+  	f[top1][top2][top3][0][0][0] = 0;   Q.push((Node){top1,top2,top3,0,0,0,0});
+	while (!Q.empty())
+		{
+			Node x = Q.top();     Q.pop();
+			while (vis[x.i][x.j][x.k][x.over][x.can1][x.can2] == 1 && !Q.empty())
+				x = Q.top(),Q.pop();
+			if (vis[x.i][x.j][x.k][x.over][x.can1][x.can2] == 1)     break ;
+			vis[x.i][x.j][x.k][x.over][x.can1][x.can2] = 1;
+			for (int v1 = 0;v1 <= 9;v1++)
+				for (int v2 = 0;v2 <= 9;v2++)
+					{
+						int i = x.i,j = x.j,k = x.k,over = x.over,can1 = x.can1,can2 = x.can2,v = x.v + 3 - can1 - can2;
+						if ((v1 && can1) || (v2 && can2))    continue ;
+						int v3 = v1 + v2 + over;    over = 0;
+						if (v3 >= 10)    v3 -= 10,over = 1;
+						if (v3 == s3[k] && k)    k--,v--;
+						if (v1 == s1[i] && i)    i--,v--;
+						if (v2 == s2[j] && j)    j--,v--;
+						for (int ccan1 = can1;ccan1 <= 1;ccan1++)
+							for (int ccan2 = can2;ccan2 <= 1;ccan2++)
+								if (f[i][j][k][over][ccan1][ccan2] > v)  {
+									if ((i && ccan1) || (j && ccan2))   continue ;
+									f[i][j][k][over][ccan1][ccan2] = v;
+									fa[i][j][k][over][ccan1][ccan2] = (NNode){x.i,x.j,x.k,x.over,x.can1,x.can2,v1,v2,v3};
+									Q.push((Node){i,j,k,over,ccan1,ccan2,v});
+								}
+					}
+		}
+	NNode x;   int v = 1 << 30;
+	for (int i = 0;i <= 1;i++)
+		for (int j = 0;j <= 1;j++)
+			{
+				if (f[0][0][0][0][i][j] < v)
+					v = f[0][0][0][0][i][j],x = (NNode){0,0,0,0,i,j,0,0,0};
+			}
+	dfs(x,0);
+}
+
+int main()
+{
+	v1 = read(),v2 = read(),sum = read();
+	work();
+	cout << ans1 << "+" << ans2 << "=" << ans3;
+}
+  

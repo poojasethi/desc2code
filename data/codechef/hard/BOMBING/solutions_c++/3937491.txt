@@ -1,0 +1,103 @@
+// url: http://www.codechef.com/problems/BOMBING/
+
+#include <cstdio>
+#include <vector>
+#include <iostream>
+#include <algorithm>
+
+using std::sort; using std::unique;
+using std::endl; using std::cerr;
+using std::vector;
+using std::pair;
+using std::make_pair;
+using std::lower_bound;
+using std::fill;
+
+#define forn(i, n)      for(int i = 0; i < (int)(n); i ++)
+#define foreach(it, c)  for(__typeof((c).begin()) it = (c).begin(); it != \
+                        (c).end(); it ++) // c should be container
+
+const int MAXM = 250000;
+int n, m;
+
+char opt[MAXM];
+int argA[MAXM], argB[MAXM];
+
+vector< pair<int, int> > seg;
+vector<int> see;
+
+void disjoint_index() {
+
+    see.push_back(-1); // avoid 0-idx use for qeury
+
+    // use seg
+    forn(i, m) {
+        if(opt[i] == 'P') {
+            seg.push_back(make_pair(argA[i], argB[i]));
+            see.push_back(argA[i]); see.push_back(argB[i]);
+        } else if(opt[i] == 'M') {
+            int idx = argA[i] - 1;
+            seg[idx].first += argB[i]; seg[idx].second += argB[i];
+            see.push_back(seg[idx].first); see.push_back(seg[idx].second);
+        } else {
+            see.push_back(argA[i]);
+        }
+    }
+    //cerr << opt << endl;
+    //foreach(it, see) cerr << *it << " "; cerr << endl;
+    sort(see.begin(), see.end());
+    see.resize(unique(see.begin(), see.end()) - see.begin());
+}
+
+int val[MAXM * 2];
+
+int inline low_bit(int mask) { return mask & (mask ^ (mask - 1)); }
+
+int inline find_idx(int key) { return lower_bound(see.begin(), see.end(), key) - see.begin(); }
+void inline update(int idx, int dif) { for(; idx < see.size() + 2; idx += low_bit(idx)) val[idx] += dif; }
+int inline query(int idx) { int res = 0; for(; idx > 0; idx -= low_bit(idx)) res += val[idx]; return res; }
+void solve() {
+    fill(val, val + MAXM * 2, 0);
+    seg.clear();
+
+    forn(i, m) {
+        if(opt[i] == 'P') {
+            seg.push_back(make_pair(argA[i], argB[i]));
+            int a = find_idx(argA[i]), b = find_idx(argB[i]);
+            update(a, 1); update(b + 1, -1);
+        } else if(opt[i] == 'M') {
+            int idx = argA[i] - 1;
+            int a, b;
+            a = find_idx(seg[idx].first), b = find_idx(seg[idx].second);
+            update(a, -1); update(b + 1, 1);
+            seg[idx].first += argB[i]; seg[idx].second += argB[i];
+            a = find_idx(seg[idx].first), b = find_idx(seg[idx].second);
+            update(a, 1); update(b + 1, -1);
+        } else {
+            printf("%d\n", query(find_idx(argA[i])));
+        }
+    }
+
+
+}
+int main(int argc, char **argv) {
+    scanf("%d %d%*c", &n, &m);
+
+    forn(i, m) {
+        char ch = getchar();
+        opt[i] = ch;
+        if(ch == 'P' || ch == 'M') {
+            int a, b; scanf("%d %d%*c", &a, &b);
+            argA[i] = a; argB[i] = b;
+        } else if(ch == 'B') {
+            int a; scanf("%d%*c", &a);
+            argA[i] = a;
+        }
+    }
+
+    disjoint_index();
+
+    solve();
+
+    return 0;
+}

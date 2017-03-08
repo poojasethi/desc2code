@@ -1,0 +1,170 @@
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+#include<cstdlib>
+#include<cmath>
+#include<algorithm>
+#include<vector>
+#define N 200005
+#define LL long long
+#define oo (1<<30)
+#ifdef WIN32
+#define TAT "%I64d"
+#else
+#define TAT "%lld"
+#endif
+using namespace std;
+vector<int>  G[N];
+int cnt,rt,d[N],T;
+int stt[N] ,sti[N] ,top=0;
+int n,m,nu[N],ln[N],rn[N];
+struct segment_tree{
+	LL S[4*N],add[4*N];
+	void clear(){
+		memset(S,0,sizeof(S));
+		memset(add,0,sizeof(add));
+	  }
+	int L(int x){ return (x<<1);}
+	int R(int x){ return (x<<1)|1;}
+	void update(int t){ S[t]=S[L(t)]+S[R(t)];}
+	void ad(int t,int l,int r,LL d){
+		S[t]+=(r-l+1)*d,add[t]+=d;
+	  }
+	void push(int t,int l,int r){
+		int mid=(l+r)>>1;
+		if(!add[t]) return ;
+		ad(L(t),l , mid,add[t]);
+		ad(R(t),mid+1,r,add[t]);
+		add[t]=0;
+	  }
+	void modify(int t,int l,int r,int l1,int r1,LL d){
+		int mid=(l+r)>>1;
+		if(l>r1||r<l1||l>r) return ;
+		if(l>=l1&&r<=r1) return ad(t,l,r,d);
+		push(t,l,r);
+		modify(L(t),l , mid,l1,r1,d);
+		modify(R(t),mid+1,r,l1,r1,d);
+		update(t);
+	  }
+	LL query(int t,int l,int r,int l1,int r1){
+		int mid=(l+r)>>1; LL res=0;
+		if(l>r1||r<l1||l>r) return 0;
+		if(l>=l1&&r<=r1) return S[t];
+		push(t,l,r);
+		res+=query(L(t),l , mid,l1,r1);
+		res+=query(R(t),mid+1,r,l1,r1);
+		update(t); return res;
+	  }
+}Seg;
+struct link_cut_tree{
+	int f[N],son[N][2],rev[N],w[N],lw;
+	void clear(){
+		memset(f,0,sizeof(f));
+		memset(son,0,sizeof(son));
+		memset(rev,0,sizeof(rev));
+		memset(w,0,sizeof(w)),lw=0;
+	  }
+	int L(int x){ return son[x][0];}
+	int R(int x){ return son[x][1];}
+	int T(int x){ return L(f[x])==x ? 0 : 1;}
+	bool ok(int x){ return L(f[x])==x||R(f[x])==x;}
+	void rot(int x){ swap(son[x][0],son[x][1]),rev[x]^=1;}
+	void push(int x){
+		if(!rev[x]) return ;
+		rot(L(x)),rot(R(x));
+		rev[x]=0;
+	}
+	void rotate(int x){
+		int fa=f[x],ff=f[fa],s,k=0;
+		if(L(fa)==x) k=1; s=son[x][k]; f[x]=ff;
+		f[fa]=x,son[x][k]=fa,f[s]=fa,son[fa][k^1]=s;
+		if(L(ff)==fa) son[ff][0]=x;
+		else if(R(ff)==fa) son[ff][1]=x;
+	}
+	int find(int x){ return L(x) ? find(L(x)) : x;}
+	void splay(int x){
+		int i; lw=0;
+		for(i=x;;i=f[i]){
+			w[++lw]=i;
+			if(!ok(i)) break;
+	    }
+		for(i=lw;i>=1;i--)
+	   	push(w[i]);
+		while(ok(x)){
+			if(!ok(f[x])){ rotate(x); break;}
+			if(T(f[x])==T(x)) rotate(f[x]),rotate(x);
+			else rotate(x),rotate(x);
+		  } 
+	}
+	int access(int x){
+		int u,v=0;
+		for(;x;){
+			splay(x);
+		  push (x);
+			u=find(R(x));
+			if(R(x)) Seg.modify(1,1,n,ln[u],rn[u] ,1);
+			son[x][1] =v;
+			u=find(R(x));
+			if(R(x)) Seg.modify(1,1,n,ln[u],rn[u],-1);
+			v=x,x=f[x];
+	    }
+		return v;
+	}
+}Tr;
+void dfs(int S)
+{
+	int x; d[S]=0;
+	stt[top=1]=S;
+	sti[top=1]=0;
+	while(top){
+		while(sti[top]==G[stt[top]].size()&&top)
+			rn[stt[top]]=cnt,top--;
+		if(!top) return ;
+		if(!sti[top]) ln[stt[top]]=nu[stt[top]]=++cnt;
+		if((x=G[stt[top]][sti[top]])!=Tr.f[stt[top]])
+			d[x]=d[stt[top]]+1,Tr.f[x]=stt[top],sti[top]++,stt[++top]=x,sti[top]=0;
+		else sti[top]++;
+	  }
+}
+void Paint()
+{
+	int x;
+	scanf("%d\n",&x),x++;
+	Tr.access(x);
+}
+void Query()
+{
+	int x,sz; LL ans;
+	scanf("%d\n",&x),x++;
+	ans=Seg.query(1,1,n,ln[x],rn[x]);
+	sz=rn[x]-ln[x]+1;
+	printf("%.10lf\n",1.0*ans/sz);
+}
+int main()
+{
+	int i,x,y; char op;
+	scanf("%d",&T);
+	while(T--){
+  	scanf("%d",&n),cnt=0;
+		for(i=1;i<N;i++) G[i].clear();
+		Seg.clear(),Tr.clear();
+  	for(i=1;i<n;i++){
+  		scanf("%d %d",&x,&y),x++,y++;
+  		G[x].push_back(y);
+  		G[y].push_back(x);
+  	  }
+		memset(nu,0,sizeof(nu));
+		memset(ln,0,sizeof(ln));
+		memset(rn,0,sizeof(rn));
+		memset(d,0,sizeof(d));
+  	dfs(1);
+  	scanf("%d\n",&m);
+  	for(i=1;i<=n;i++) Seg.modify(1,1,n,nu[i],nu[i],d[i]);
+  	for(i=1;i<=m;i++){
+   		scanf("%c",&op);
+  		if(op=='O') Paint();
+   		if(op=='q') Query();
+	    }
+	  }
+	return 0;
+}

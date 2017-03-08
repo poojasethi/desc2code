@@ -1,0 +1,131 @@
+#include <cstdio>
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <list>
+#include <map>
+#include <set>
+#include <queue>
+#include <stack>
+#include <bitset>
+#include <algorithm>
+#include <sstream>
+#include <iomanip>
+#include <cmath>
+#include <cstdlib>
+#include <ctype.h>
+#include <cstring>
+#include <string>
+#include <ctime>
+#include <cassert>
+#include <utility>
+#include <tr1/unordered_set>
+#include <tr1/unordered_map>
+
+using namespace std;
+
+#define MAXN 66
+int T, N, K, a, b;
+vector<int> G[MAXN];
+long long w1[MAXN][MAXN];
+long long w2[MAXN][MAXN];
+
+
+long long ways1(int node, int maxDist);
+long long ways2(int node, int maxDist);
+
+long long ways2(int node, int maxDist) {
+    if(w2[node][maxDist] > -1)
+        return w2[node][maxDist];
+    if(maxDist < 0)
+        return 0;
+    if(maxDist == 0)
+        return 1;
+
+    long long &ret = w2[node][maxDist];
+    ret = 0;
+
+    long long prefix[G[node].size()];
+    int ndist = min(maxDist - 2, K - maxDist - 1);
+    for(size_t i = 0; i < G[node].size(); i++) {
+        prefix[i] = ways1(G[node][i], ndist) + 1;
+        if(i > 0)
+            prefix[i] *= prefix[i - 1];
+    }
+
+    long long suffix[G[node].size()];
+    ndist = min(maxDist - 1, K - maxDist - 1);
+    for(int i = (int)G[node].size() - 1; i >= 0; i--) {
+        suffix[i] = ways1(G[node][i], ndist) + 1;
+        if(i + 1 < (int)G[node].size())
+            suffix[i] *= suffix[i + 1];
+    }
+
+    for(int i = 0; i < (int)G[node].size(); i++) {
+        long long crt = ways2(G[node][i], maxDist - 1);
+        if(i > 0)
+            crt *= prefix[i - 1];
+        if(i + 1 < (int)G[node].size())
+            crt *= suffix[i + 1];
+
+        ret += crt;
+    }
+
+    return ret;
+}
+
+long long ways1(int node, int maxDist) {
+    if(w1[node][maxDist] > -1)
+        return w1[node][maxDist];
+    if(maxDist < 0)
+        return 0;
+    if(maxDist == 0)
+        return 1;
+
+    long long ret = ways1(node, maxDist - 1) + ways2(node, maxDist);
+
+    w1[node][maxDist] = ret;
+    return ret;
+}
+
+void dfs(int node, int prev) {
+    if(prev != -1)
+        G[node].erase(find(G[node].begin(), G[node].end(), prev));
+
+    for(vector<int> :: iterator it = G[node].begin(); it != G[node].end(); it++)
+        dfs(*it, node);
+}
+
+long long solve() {
+    memset(w1, -1, sizeof(w1));
+    memset(w2, -1, sizeof(w2));
+
+    long long ans = 0;
+    for(int i = 0; i < N; i++)
+        ans += ways1(i, K);
+
+    return ans;
+}
+
+int main() {
+//	freopen("date.in", "r", stdin);
+//	freopen("date.out","w", stdout);
+
+	scanf("%d", &T);
+	while(T--) {
+        scanf("%d %d", &N, &K);
+        for(int i = 0; i < N; i++)
+            G[i].clear();
+        for(int i = 0; i < N - 1; i++) {
+            scanf("%d %d", &a, &b);
+            G[a].push_back(b);
+            G[b].push_back(a);
+        }
+        dfs(0, -1);
+
+//        printf("%d\n", solve());
+        cout << solve() << '\n';
+	}
+
+	return 0;
+}

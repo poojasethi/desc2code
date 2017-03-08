@@ -1,0 +1,128 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <cstdio>
+#include <algorithm>
+#include <climits>
+#include <limits>
+#include <utility>
+#include <numeric>
+#include <iomanip>
+#include <stack>
+#include <set>
+#include <memory>
+
+const int MOVE = 4;
+const int DX[4] = { +0, +0, -1, +1 };
+const int DY[4] = { +1, -1, +0, +0 };
+const int MAX_N = 128;
+
+class elephant_mouse {
+public:
+	enum direction {
+		FROM_LEFT = 0,
+		FROM_TOP  = 1
+	};
+
+	static const int oo = 1000000000;
+
+private:
+	int R;
+	int C;
+	int mouse[MAX_N][MAX_N];
+	int dp[MAX_N][MAX_N][2];
+
+public:
+	elephant_mouse() {
+
+	}
+
+	void set_maze(const std::vector<std::string> &maze) {
+		R = maze.size();
+		C = maze[0].size();
+		for (int x = 0; x < R; ++x) {
+			for (int y = 0; y < C; ++y) {
+				dp[x][y][FROM_LEFT] = oo;
+				dp[x][y][FROM_TOP] = oo;
+				mouse[x][y] = (maze[x][y] - '0');
+			}
+		}
+	}
+
+	int get_mouse(int x, int y) const {
+		return in_range(x, y) ? mouse[x][y] : 0;
+	}
+
+	int count_mouse() {
+		// cover corner
+		dp[0][1][FROM_LEFT] = mouse[0][0] + mouse[0][1] + mouse[1][0];
+		dp[1][0][FROM_TOP] = mouse[0][0] + mouse[0][1] + mouse[1][0];
+
+		for (int x = 0; x < R; ++x) {
+			for (int y = 0; y < C; ++y) {
+				if (in_range(x, y + 1)) {
+					dp[x][y + 1][FROM_LEFT] =
+						std::min(
+							dp[x][y + 1][FROM_LEFT], dp[x][y][FROM_LEFT] + get_mouse(x, y + 1) + get_mouse(x + 1, y) + get_mouse(x - 1, y + 1));
+				}
+				if (in_range(x + 1, y)) {
+					dp[x + 1][y][FROM_TOP] =
+						std::min(
+							dp[x + 1][y][FROM_TOP], dp[x][y][FROM_LEFT] + get_mouse(x + 1, y) + get_mouse(x, y + 1));
+				}
+				if (in_range(x, y + 1)) {
+					dp[x][y + 1][FROM_LEFT] =
+						std::min(
+							dp[x][y + 1][FROM_LEFT], dp[x][y][FROM_TOP] + get_mouse(x, y + 1) + get_mouse(x + 1, y));
+				}
+				if (in_range(x + 1, y)) {
+					dp[x + 1][y][FROM_TOP] =
+						std::min(
+							dp[x + 1][y][FROM_TOP], dp[x][y][FROM_TOP] + get_mouse(x, y + 1) + get_mouse(x + 1, y) + get_mouse(x + 1, y - 1));
+				}
+			}
+		}
+		return std::min(dp[R - 1][C - 1][FROM_TOP], dp[R - 1][C - 1][FROM_LEFT]);
+	}
+
+private:
+	bool in_range(int x, int y) const {
+		return (0 <= x && x < R && 0 <= y && y < C);
+	}
+
+};
+
+void inout_little_elephant_and_mouses() {
+	int test_cases;
+	std::cin >> test_cases;
+	int r;
+	int c;
+	std::vector<std::string> maze;
+	std::string line;
+	elephant_mouse em;
+	while (test_cases--) {
+		std::cin >> r >> c;
+		for (int i = 0; i < r; ++i) {
+			std::cin >> line;
+			maze.push_back(line);
+		}
+		em.set_maze(maze);
+		std::cout << em.count_mouse() << '\n';
+		maze.clear();
+	}
+}
+
+void test() {
+	std::vector<std::string> maze;
+	maze.push_back("001000001");
+	maze.push_back("111111010");
+	maze.push_back("100100100");
+	elephant_mouse em;
+	em.set_maze(maze);
+	std::cout << em.count_mouse() << '\n';
+}
+
+int main() {
+	inout_little_elephant_and_mouses();
+	return 0;
+}

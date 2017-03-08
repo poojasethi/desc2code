@@ -1,0 +1,149 @@
+#include <cstdio>
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+#include <climits>
+
+using namespace std;
+
+#define rep(i,a,b) for(int i = a; i < b; i++)
+#define REP(i, n) for (int i = 0; i < (int)(n); ++i)
+#define S(x) scanf("%d",&x)
+#define P(x) printf("%d\n",x)
+
+typedef long long LL;
+
+const int MAXN = 100005;
+
+int N;
+int A[100010];
+int D[100010];
+int sa[100010];
+int lcp[100010], rankk[100010];
+
+// Suffix Array and LCP in O(N)
+inline bool leq(int a1, int a2, int b1, int b2)
+{return(a1 < b1 || a1 == b1 && a2 <= b2); }
+inline bool leq(int a1, int a2, int a3, int b1, int b2, int b3)
+{return(a1 < b1 || a1 == b1 && leq(a2,a3, b2,b3)); }
+static void radixPass(int* a, int* b, int* r, int n, int K)
+{
+    int* c = new int[K + 1];
+    for (int i = 0; i <= K; i++) c[i] = 0;
+    for (int i = 0; i < n; i++) c[r[a[i]]]++;
+    for (int i = 0, sum = 0; i <= K; i++)
+    {int t = c[i]; c[i] = sum; sum += t; }
+    for (int i = 0; i < n; i++) b[c[r[a[i]]]++] = a[i];
+    delete [] c;
+
+}
+void suffixArray(int* s, int* SA, int n, int K) {
+    int n0=(n+2)/3, n1=(n+1)/3, n2=n/3, n02=n0+n2;
+    int* s12 = new int[n02 + 3]; s12[n02]= s12[n02+1]= s12[n02+2]=0;
+    int* SA12 = new int[n02 + 3]; SA12[n02]=SA12[n02+1]=SA12[n02+2]=0;
+    int* s0 = new int[n0];
+    int* SA0 = new int[n0];
+    for (int i=0, j=0; i < n+(n0-n1); i++) if (i%3 != 0) s12[j++] = i;
+    radixPass(s12 , SA12, s+2, n02, K);
+    radixPass(SA12, s12 , s+1, n02, K);
+    radixPass(s12 , SA12, s , n02, K);
+    int name = 0, c0 = -1, c1 = -1, c2 = -1;
+    for (int i = 0; i < n02; i++) {
+        if (s[SA12[i]]!=c0 || s[SA12[i]+1]!=c1 || s[SA12[i]+2]!=c2)
+        {name++; c0 = s[SA12[i]]; c1 = s[SA12[i]+1]; c2 = s[SA12[i]+2]; }
+        if (SA12[i] % 3 == 1) { s12[SA12[i]/3] = name; }
+        else {s12[SA12[i]/3 + n0] = name; }
+    }
+    if (name < n02) {
+        suffixArray(s12, SA12, n02, name);
+        for (int i = 0; i < n02; i++) s12[SA12[i]] = i + 1;
+    } else
+        for (int i = 0; i < n02; i++) SA12[s12[i] - 1] = i;
+    for (int i=0,j=0;i<n02;i++) if (SA12[i] < n0) s0[j++] = 3*SA12[i];
+    radixPass(s0, SA0, s, n0, K);
+    for (int p=0, t=n0-n1, k=0; k < n; k++) {
+#define GetI() (SA12[t]<n0?SA12[t]*3 + 1 : (SA12[t]-n0)*3 + 2)
+        int i = GetI();
+        int j = SA0[p];
+        if (SA12[t] < n0 ?
+                leq(s[i], s12[SA12[t] + n0], s[j], s12[j/3]) :
+                leq(s[i],s[i+1],s12[SA12[t]-n0+1], s[j],s[j+1],s12[j/3+n0]))
+        { SA[k] = i; t++;
+            if (t == n02)
+                for (k++; p < n0; p++, k++) SA[k] = SA0[p];
+        } else {SA[k] = j; p++; if (p == n0)
+            for (k++; t < n02; t++, k++) SA[k] = GetI();
+        }
+    }
+    delete [] s12;
+    delete [] SA12;
+    delete [] SA0;
+    delete [] s0;
+}
+
+
+void buildLCP(int S[], int sa[], int N) {
+    for (int i = 0; i < N; i++)
+        rankk[sa[i]] = i;
+    for (int i = 0, h = 0; i < N; i++) {
+        if (rankk[i] < N - 1) {
+            for (int j = sa[rankk[i] + 1]; S[i + h] == S[j + h]; ++h)
+                ;
+            lcp[rankk[i]] = h;
+            if (h > 0)
+                --h;
+        }
+    }
+}
+void LCP(int S[], int sa[], int n)
+{
+    rep(i,0,n) rankk[sa[i]] = i;
+    int l = 0;
+    rep(j,0,n)
+    {
+        l = max(0,l-1);
+        int i = rankk[j];
+        if(i)
+        {
+            int J = sa[i-1];
+            while (j+l < n && J+l < n && S[j+l] == S[J+l]) l++;
+        }
+        else l = 0;
+        lcp[i] = l;
+    }
+    lcp[n] = 0;
+}
+
+int main()
+{
+    #ifndef ONLINE_JUDGE
+        freopen("in.txt","r",stdin);
+    #endif
+    int T;
+    scanf("%d",&T);
+    while(T--) {
+        scanf("%d",&N);
+        rep(i,0,N) {
+            scanf("%d",&A[i]);
+        }
+        if(N == 1) {printf("0\n"); continue; }
+        if(N == 2) {printf("1\n"); continue; }
+        rep(i,1,N) D[i-1] = A[i]-A[i-1];
+
+        int mi = 101, ma = -101;
+        rep(i,0,N-1) if(D[i] < mi) mi = D[i];
+        rep(i,0,N-1) {
+            D[i] -= mi-1;
+            if(D[i] > ma) ma = D[i];
+        }
+        suffixArray(D,sa,N-1,ma);
+        buildLCP(D,sa,N-1);
+        int res = 0;
+        rep(i,0,N-1) {
+            res += (N-1)-sa[i]-lcp[i];
+            res %= 1000000009;
+        }
+        printf("%d\n",res);
+    }
+    return 0;
+}

@@ -1,0 +1,144 @@
+#include <cstdio>
+#include <vector>
+#include <set>
+#include <algorithm>
+#include <cmath>
+#include <iostream>
+
+using namespace std;
+
+typedef long long int64;
+
+int64 power(int64 x,int64 k) {
+  int r=1;
+  while (k) {
+    if (k&1)
+      r*=x;
+    k>>=1;
+    x*=x;
+  }
+  return r;
+}
+
+int64 power(int64 x,int64 k,int64 p) {
+  int r=1;
+  while (k) {
+    if (k&1)
+      r=((int64)r*x)%p;
+    k>>=1;
+    x=((int64)x*x)%p;
+  }
+  return r;
+}
+
+int64 alfa,beta;
+
+int64 gcd(int64 a,int64 b) {
+  if (!b) {
+    alfa=1;
+    beta=0;
+    return a;
+  }
+  int64 d=gcd(b,a%b),z=beta;
+  //alfa*b+(a-a/b*b)*beta=beta*a+(alfa-a/b*beta)*b
+  beta=alfa-a/b*beta;
+  alfa=z;
+  return d;
+}
+
+int64 inverse(int64 a,int64 n) {
+  gcd(a,n);
+  return (n+alfa%n)%n;
+}
+
+int64 abs(int64 x) { return x>0?x:-x; }
+
+#define INF 1000000000000000000LL
+
+// combines x=r1 (mod m1) x=r2 (mod m2)
+int64 chinese(int64 r1,int64 m1,int64 r2,int64 m2) {
+  int64 d=gcd(m1,m2),a,m;
+  
+  if (r1%d!=r2%d)
+    return INF;
+  m=m1/d*m2;
+  a=m1/d*alfa*(r2-r1)+r1;
+  a=(m+a%m)%m;
+  return a;
+}
+
+int64 generator(int p,int k){
+  int x=1,mod=power(p,k),phi=mod/p*(p-1);
+  vector<int> d;
+  for(int i=2;i*i<=phi;i++)if(phi%i==0){
+    d.push_back(i);
+    while(phi%i==0)phi/=i;
+  }
+  if(phi>1)d.push_back(phi);
+  phi=mod/p*(p-1);
+  while(1){
+    bool ok=1;
+    for(int i=0;i<d.size();i++)ok&=power(x,phi/d[i],mod)!=1;
+    if(ok)break;
+    x++;
+  }
+  // x^{p^{k-1} p-1}
+  return x;
+}
+
+int exponent[200000],tab[200000];
+
+int64 calc(int64 n,int p,int k){
+  int ans=0;
+  int mod=power(p,k);
+  if(k>1)for(int x=1;p*x<=n&&p*x<k;x++)ans=(ans+power(p*x,p*x,mod))%mod;
+  if(p>2){
+    int g=generator(p,k),cur=1,order=0;
+    do{
+      tab[order]=cur;
+      exponent[cur]=order;
+      order++;
+      cur=cur*g%mod;
+    }while(cur!=1);
+    for(int r=1;r<mod&&r<=n;r++)if(r%p){
+      int64 upper=(n-r)/mod;
+      int64 t=tab[(int64)exponent[r]*mod%order];
+      int64 mult=tab[(int64)exponent[r]*r%order];
+      if(t==1)ans=(ans+mult*(upper+1))%mod;
+      else ans=(ans+mult*((int64)tab[exponent[t]*(upper+1)%order]+mod-1)%mod*tab[(order-exponent[t-1])%order])%mod;
+    }
+  }else{
+    for(int r=1;r<mod&&r<=n;r++)if(r%p){
+      int64 upper=(n-r)/mod;
+      int64 mult=power(r,r,mod);
+      ans=(ans+mult*(upper+1))%mod;
+    }
+  }
+  return ans;
+}
+
+int64 calc(int64 n,int m){
+  int d=2,cur_res=0,cur_mod=0;
+  while(d*d<=m){
+    if(m%d==0){
+      int cnt=0,mod=1;
+      while(m%d==0){cnt++;m/=d;mod*=d;}
+      if(!cur_mod){cur_mod=mod;cur_res=calc(n,d,cnt);}
+      else{cur_res=chinese(cur_res,cur_mod,calc(n,d,cnt),mod);cur_mod*=mod;}
+    }
+    d++;
+  }
+  if(m>1){
+    if(!cur_mod)cur_res=calc(n,m,1);
+    else cur_res=chinese(cur_res,cur_mod,calc(n,m,1),m); 
+  }
+  return cur_res;
+}
+
+main(){
+  int64 t,n,m;
+  cin>>t;while(t--){
+    cin>>n>>m;
+    cout<<calc(n,m)<<endl;
+  }
+}

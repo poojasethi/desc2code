@@ -1,0 +1,213 @@
+#include<bits/stdc++.h>
+using namespace std;
+
+typedef pair<long long,long long> PII;
+typedef vector<long long> VI;
+
+int faltu;
+long long arr[3010][3010];
+vector<long long> primes;
+long long p[3010];
+vector< pair<long long,long long> >options;
+long long n,m;
+long long given_primes[400];
+long long sz;
+long long tot_sz;
+long long ans_found[1123456];
+
+long long find_ans(long long val)
+{
+    if(val == 0)
+    {
+        ans_found[0] = 1;
+        return 1;
+    }
+    if(ans_found[val] != -1)
+        return ans_found[val];
+    long long sel = -1;
+    long long currprod = 1;
+    ans_found[val] = 0;
+//    ans_tot[val] = 0;
+    for(long long x=sz-1 ; x>=0 ; x--)
+    {
+        //cout<<(val & (1<<x))<<" !!!!!!!!!!\n";
+        if((val & (1<<x))>0)
+        {
+            sel = 1<<x;
+            currprod *= given_primes[x];
+            break;
+        }
+    }
+    //cout<<sz<<" ! "<<val<<" !!!! "<<sel<<endl;
+    long long rest;
+    //long long ways = 0;
+    for(long long x=0;x<options.size();x++)
+    {
+        if((options[x].first * currprod)>n)break;
+        rest = options[x].second;
+        if((rest|val)!=val)continue;
+        if((sel & rest) == 0)
+        {
+            sel = sel ^ rest;
+            //cout<<val<<" !!! "<<sel<<endl;
+            find_ans(val^sel) ;
+            ans_found[val] += ans_found[val^sel];
+
+            if(ans_found[val] >= m)ans_found[val] %= m;
+
+            sel = sel ^ rest;
+        }
+    }
+    //ans_found[val] = ways;
+    //cout<<"Ans : for "<<val <<" "<<ans_found[val]<<endl;;
+    return ans_found[val];
+}
+long long fin_ans[(1<<16)+100][300];
+long long tot_ways(int i , long long j)
+{
+    //cout<<i<<" !!!! "<<j<<endl;
+    if(i == (sz-1))
+        return ans_found[j];
+    if(fin_ans[j][i] != -1)
+    {
+        //cout<<"Aisa kaise\n";
+       /* if(fin_ans[j][i] < 0)
+        {
+            cout<<i<<" "<<j<<" "<<fin_ans[j][i]<<endl;
+            cin>>faltu;
+        }*/
+        return fin_ans[j][i];
+    }
+    fin_ans[j][i] = 0;
+    if(j == 0)
+    {
+        fin_ans[j][i] = tot_ways(i-1 , j);
+        /*if(fin_ans[j][i] < 0)
+        {
+            cout<<i<<" "<<j<<" "<<fin_ans[j][i]<<endl;
+            cin>>faltu;
+        }*/
+        //cout<<i<<" "<<j<<" "<<fin_ans[j][i]<<endl;
+        return fin_ans[j][i] ;
+    }
+    long long curr_prod = given_primes[i];
+    long long rest;
+    for(long long x=0;x<options.size();x++)
+    {
+        if((options[x].first * curr_prod)>n)break;
+        rest = options[x].second;
+        //if(i == 6)cout<<rest<<endl;
+        if((rest|j)!=j)continue;
+        //if(i == 6)cout<<rest<<" "<<j<<" "<<(j^rest)<<endl;
+        //cout<<(j^rest)<<" "<<(rest&(j^rest))<<"   ";;
+        fin_ans[j][i] += tot_ways(i-1 , (j^rest));
+        //if(i == 6) cout<< tot_ways(i-1 , (j^rest)) <<endl;
+        if(fin_ans[j][i] >= m)fin_ans[j][i] %= m;
+    }
+    //cout<<i<<" "<<j<<" "<<fin_ans[j][i]<<endl;
+    /*if(fin_ans[j][i] < 0)
+        {
+            cout<<i<<" "<<j<<" "<<fin_ans[j][i]<<endl;
+            cin>>faltu;
+        }*/
+    return fin_ans[j][i];
+}
+int main()
+{
+    long long INF = 1000000000LL;
+    long long inf = INF * 100000LL;
+    for(long long i=2;i<3010;i++)
+    {
+        if(p[i] == 0)
+        {
+            primes.push_back(i);
+            for(long long j=i;i*j<3010;j++)
+            {
+                p[i*j] = 1;
+            }
+        }
+    }
+    //cout<<primes.size()<<endl;
+    long long maxi = -1;
+    for(long long i=2;i<=3000;i++)
+    {
+        long long totcnt = 0;
+        for(long long j=0;j<primes.size();j++)
+        {
+            long long tmp = i;
+            long long cnt = 0;
+            while(tmp%primes[j] == 0)
+            {
+                tmp /= primes[j];
+                cnt++;
+            }
+            arr[i][j] = (arr[i-1][j] + cnt)%2;
+            if(arr[i][j] == 1)
+            {
+                if(primes[j]*primes[j] <= 3000)totcnt++;
+                maxi = max(maxi , totcnt);
+            }
+        }
+    }
+    //cout<<maxi<<endl;
+    long long t;
+    cin>>t;
+    while(t--)
+    {
+        cin>>n>>m;
+        sz = 0;
+        tot_sz = 0;
+        for(long long j=0;j<primes.size();j++)
+        {
+            if(arr[n][j] == 1 )
+            {
+                if((primes[j] * primes[j]) <= n)sz++;
+                given_primes[tot_sz++] = primes[j];
+            }
+        }
+        //cout<<sz<<endl;
+        //cout<<tot_sz<<endl;
+        for(long long i=0;i<(1<<sz);i++)
+        {
+            long long prod = 1;
+            ans_found[i] = -1;
+//            ans_tot[i] = -1;
+            for(long long j=0;j<sz;j++)
+            {
+                if(i&(1<<j))
+                {
+                    prod*=given_primes[j];
+                }
+                if(prod > n)break;
+            }
+            if(prod <= n)
+            {
+                options.push_back(make_pair(prod , i));
+                //cout<<prod<<" "<<i<<endl;
+            }
+        }
+        //cout<<options.size()<<endl;
+        sort(options.begin(),options.end());
+        ans_found[0] = 1;
+		for(int i=(1<<sz)-1 ; i>=0; i--)
+        	find_ans(i);
+        for(int i=0;i<tot_sz;i++)
+        {
+            for(int j=0;j<(1<<sz);j++)
+            {
+                fin_ans[j][i] = -1;
+            }
+        }
+        if(tot_sz == 0 || sz == 0)
+        {
+            cout<<2%m<<endl;
+            options.clear();
+            continue;
+        }
+        long long res = tot_ways(tot_sz-1 , (1<<sz)-1) ;
+        //if(sz == 0)cout<<1%m<<endl;
+        cout<<(2LL*res)%m<<endl;
+        //else cout<<1%m<<endl;
+        options.clear();
+    }
+}

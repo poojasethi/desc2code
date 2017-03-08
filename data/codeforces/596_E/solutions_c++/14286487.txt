@@ -1,0 +1,128 @@
+#include<bits/stdc++.h>
+using namespace std;
+typedef long long int uli;
+const int mx=210;
+const int mxs=1e6+10;
+char s[mx][mx];
+char t[mxs];
+int len;
+int f[mxs];
+int nr[mx][mx],nc[mx][mx];
+vector<int>gr[mx][mx],gc[mx][mx];
+bool cycle[mx][mx];
+
+int digs[mx*mx];
+int vr[mx*mx],vc[mx*mx];
+bool vis[mx][mx];
+
+int dr[12],dc[12];
+int cnt;
+
+void dfs(int r,int c){
+   vis[r][c]=true;
+   for(int i=0;i<int(gr[r][c].size());i++){
+      int nr=gr[r][c][i];
+      int nc=gc[r][c][i];
+      if(!cycle[nr][nc])dfs(nr,nc);
+   }
+}
+bool down(int r,int c,int idx){
+   if(s[r][c]==t[idx])idx--;
+   if(idx<0)return true;
+   for(int i=0;i<int(gr[r][c].size());i++){
+      int nr=gr[r][c][i];
+      int nc=gc[r][c][i];
+      if(!cycle[nr][nc])
+         if(down(nr,nc,idx))
+            return true;
+   }
+   return false;
+}
+int bat(int b,int i){
+   if(b&(1<<i))return 1;
+   return 0;
+}
+void nxt(int &r,int &c){
+   int x=nr[r][c],y=nc[r][c];
+   r=x,c=y;
+}
+bool check(int tree){
+   int l=0,r=len-1,x,idx=len,c; 
+   while(l<=r){
+      x=(l+r)>>1;
+      bool ok=true; 
+      for(int i=0;i<10 && ok;i++)
+         if(bat(f[x],i)==1 && bat(digs[tree],i)==0)
+            ok=false;
+      if(ok)r=x-1,idx=x;
+      else l=x+1;
+   }
+   if(idx==0)return true;
+   if(idx>mx*mx)return false; 
+   idx--;
+
+   r=vr[tree],c=vc[tree];
+   if(down(r,c,idx))return true;
+   nxt(r,c);
+   while(r!=vr[tree] || c!=vc[tree]){
+      if(down(r,c,idx))return true;
+      nxt(r,c);
+   }
+   return false;
+}
+int main(){
+   int n,m,q,u,v;
+   scanf("%d %d %d",&n,&m,&q);
+   for(int i=0;i<n;i++)
+      scanf("%s",s[i]);   
+   for(int i=0;i<10;i++)
+      scanf("%d %d",dr+i,dc+i);
+
+   for(int i=0;i<n;i++){
+      for(int j=0;j<m;j++){
+         int ni=i+dr[s[i][j]-'0'];
+         int nj=j+dc[s[i][j]-'0'];
+         if(0<=ni && ni<n && 0<=nj && nj<m){}
+         else ni=i,nj=j;
+         nr[i][j]=ni,nc[i][j]=nj;
+         gr[ni][nj].push_back(i);
+         gc[ni][nj].push_back(j);
+      }
+   }
+   cnt=0;
+   for(int i=0;i<n;i++){
+      for(int j=0;j<m;j++){
+         if(!vis[i][j]){            
+            int r=i,c=j;  
+            while(!vis[r][c]){
+               vis[r][c]=true;
+               nxt(r,c);
+            }
+            int b=(1<<(s[r][c]-'0'));
+            cycle[r][c]=true;
+            u=nr[r][c],v=nc[r][c];
+            while(u!=r || v!=c){
+               cycle[u][v]=true;
+               b|=(1<<(s[u][v]-'0'));
+               nxt(u,v);
+            }
+            dfs(r,c);
+            vr[cnt]=r,vc[cnt]=c;
+            digs[cnt++]=b;
+         }
+      }
+   }
+   while(q--){
+      scanf("%s",t);
+      len=strlen(t);
+      f[len]=0;
+      for(int i=len-1;i>=0;i--)
+         f[i]=(f[i+1]|(1<<(t[i]-'0')));
+      bool ans=false;
+      for(int i=0;i<cnt && !ans;i++)
+         ans=check(i);
+      if(ans)puts("YES");
+      else puts("NO");
+   }
+   return 0;
+}

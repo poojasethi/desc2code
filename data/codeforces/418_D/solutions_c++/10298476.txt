@@ -1,0 +1,160 @@
+#include <bits/stdc++.h>
+#define FOR(i,a,b) for(int i=a; i<=b; i++)
+#define FRO(i,a,b) for(int i=a; i>=b; i--)
+#define filein(t) freopen(t, "r", stdin)
+#define fileout(t) freopen(t, "w", stdout)
+#define ll long long
+#define rep(i,n) for(int i=0; i<n; i++)
+#define mp make_pair
+#define f first
+#define s second
+#define cs 10
+#define maxn 100005
+#define BIT(i, n) ( (n >> i) & 1 )
+#define ln 1000000000
+#define oo 1000000
+
+using namespace std;
+
+vector <int> a[maxn];
+int tang[maxn], h, n, c[maxn];
+typedef int mang[maxn][30];
+mang L, R, p;
+pair <int, int> d[maxn][3];
+
+void DFS(int u)
+{
+    c[u] = tang[u];
+    d[u][0] = mp(tang[u], u);
+    for(int i=0; i<a[u].size() ;i++)
+    {
+        int v = a[u][i];
+        if(tang[v]) continue;
+        tang[v] = tang[u] + 1;
+        DFS(v);
+        c[u] = max(c[u], c[v]);
+        p[v][0] = u;
+        pair <int, int> w = mp(c[v], v);
+        for(int i=0; i<=2; i++)
+            if(d[u][i] < w)
+                swap(d[u][i], w);
+    }
+    h = max(tang[u], h);
+}
+
+void taoLCA()
+{
+    h = log2(h);
+    for(int j=1; j<=h; j++)
+        for(int i=1; i<=n; i++)
+            p[i][j] = p[p[i][j-1]][j-1];
+    for(int i=0; i<=n; i++)
+        for(int j=0; j<=h; j++)
+            L[i][j] = R[i][j] = -ln;
+    for(int i=2; i<=n; i++)
+    {
+        int ww, cha = p[i][0];
+        if(d[cha][0].s == i) ww = d[cha][1].f;
+        else  ww = d[cha][0].f;
+        L[i][0] = ww - 2 * tang[cha];
+        R[i][0] = ww;
+    }
+    for(int j=1; j<= h; j++)
+        for(int i=2; i<=n; i++)
+        {
+            L[i][j] = max(L[i][j-1], L[p[i][j-1]][j-1]);
+            R[i][j] = max(R[i][j-1], R[p[i][j-1]][j-1]);
+        }
+}
+
+int duave(int u, int hi)
+{
+    int lo = log2(hi);
+    for(int i=0; i<=lo; i++)
+        if(BIT(i, hi)) u = p[u][i];
+    return u;
+}
+
+int LCA(int u, int v)
+{
+    if(tang[u] < tang[v]) swap(u, v);
+    u = duave(u , tang[u] - tang[v]);
+    if(u == v) return u;
+    for(int i=h; i>=0; i--)
+        if(p[u][i] != p[v][i])
+        {
+            u = p[u][i];
+            v = p[v][i];
+        }
+    return p[u][0];
+}
+
+int get_l(int u, int hi)
+{
+    int lo = log2(hi);
+    int ee = -ln;
+    for(int i=0; i<=lo; i++)
+        if(BIT(i, hi))
+        {
+            ee = max(ee, L[u][i]);
+            u = p[u][i];
+        }
+    return ee;
+}
+
+int get_r(int u, int hi)
+{
+    int lo = log2(hi);
+    int ee = -ln;
+    for(int i=0; i<=lo; i++)
+        if(BIT(i, hi))
+        {
+            ee = max(ee, R[u][i]);
+            u = p[u][i];
+        }
+    return ee;
+}
+
+int main()
+{
+    ios_base::sync_with_stdio(0);
+    //filein("inp.txt");
+    //fileout("out.txt");
+    int u, v, m, x, y, ans;
+    cin >> n;
+    for(int i=1; i<n; i++)
+    {
+        cin >> u >> v;
+        a[u].push_back(v);
+        a[v].push_back(u);
+    }
+    tang[1] = 1;    DFS(1);
+    taoLCA();
+    cin >> m;
+    FOR(i,1,m)
+    {
+        ans = 0;
+        cin >> x >> y;
+        if(tang[x] > tang[y]) swap(x, y);
+        int cha = LCA(x, y);
+        int kc = (tang[x] - tang[cha] + tang[y] - tang[cha] - 1) / 2;
+        int g = duave(y, kc);
+        ans = c[y] - tang[y];
+        ans = max(ans, get_l(cha, tang[cha]-1) + tang[x]);
+        ans = max(ans, get_l(y, tang[y] - tang[g]) + tang[y] );
+        if(cha != x)
+        {
+            ans = max(ans, get_l(x, tang[x] - tang[cha] - 1) + tang[x]);
+            ans = max(ans, c[x] - tang[x]);
+            ans = max(ans, get_r(g, tang[g] - tang[cha] -1) + tang[x] - 2 * tang[cha] );
+            int xx = duave(x, tang[x] - tang[cha] - 1);
+            int yy = duave(y, tang[y] - tang[cha] - 1);
+            for(int j=0; j<=2; j++)
+                if(d[cha][j].s != xx && d[cha][j].s != yy)
+                    ans = max(ans, d[cha][j].f + tang[x] - 2 * tang[cha]);
+        }
+        else
+            ans = max(ans, get_r(g, tang[g] - tang[x]) - tang[x]);
+        cout << ans << endl;
+    }
+}

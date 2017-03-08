@@ -1,0 +1,134 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+using namespace std;
+typedef double LD;
+typedef long long LL;
+const LD Pi=atan2(0,-1);
+const int Maxn=50005,mod=2003,MaxF=1005,Maxl=1<<17;
+int T,fac[Maxn],fac2[Maxn],ifac[Maxn];
+int N,K,L,F,f[MaxF],len;
+int bitrev[Maxl];
+
+int Pow(int a,int x) {
+	int ret=1;
+	for (a%=mod;x;x>>=1,a=a*a%mod)
+		if (x&1) ret=ret*a%mod;
+	return ret;
+}
+
+void init() {
+	fac[0]=1;
+	for (int i=1;i<=50000;i++) {
+		int tmp=i,tmp2=0;
+		while (tmp%2003==0) tmp/=2003,tmp2++;
+		ifac[i-1]=tmp;
+		fac[i]=fac[i-1]*tmp%mod;
+		fac2[i]=fac2[i-1]+tmp2;
+	}
+	ifac[50000]=Pow(fac[50000],mod-2);
+	for (int i=49999;i>=0;i--)
+		ifac[i]=ifac[i+1]*ifac[i]%mod;
+}
+
+int C(int n,int k) {
+	if (fac2[n]-fac2[k]-fac2[n-k]) return 0;
+	return fac[n]*ifac[k]%mod*ifac[n-k]%mod;
+}
+
+struct Complex{
+	LD r,i;
+	Complex() {}
+	Complex(LD r,LD i):r(r),i(i) {}
+	Complex operator +(const Complex &rhs)const{
+		return Complex(r+rhs.r,i+rhs.i);
+	}
+	Complex operator -(const Complex &rhs)const{
+		return Complex(r-rhs.r,i-rhs.i);
+	}
+	Complex operator *(const Complex &rhs)const{
+		return Complex(r*rhs.r-i*rhs.i,r*rhs.i+i*rhs.r);
+	}
+}a[Maxl],ret[Maxl];
+
+void FFT(Complex *a,int sig=1) {
+	for (int i=0;i<len;i++)
+		if (bitrev[i]<i)
+			swap(a[i],a[bitrev[i]]);
+	for (int d=1;d<len;d<<=1) {
+		Complex r,r0=Complex(cos(Pi/d*sig),sin(Pi/d*sig)),u,v;
+		for (int j=0,k;j<len;j+=d<<1)
+			for (k=j,r=Complex(1,0);k<j+d;k++,r=r*r0) {
+				u=a[k]; v=a[k+d]*r;
+				a[k]=u+v;
+				a[k+d]=u-v;
+			}
+	}
+	if (sig!=-1) return;
+	for (int i=0;i<len;i++) a[i].r/=len;
+}
+
+void solve(int L) {
+	if (L==1) {
+		memcpy(ret,a,sizeof(Complex)*len);
+		FFT(a);
+		return;
+	}
+	solve(L/2);
+	FFT(ret);
+	for (int i=0;i<len;i++)
+		ret[i]=ret[i]*ret[i];
+	FFT(ret,-1);
+	for (int i=0;i<=L*F;i++) {
+		ret[i].r=LL(ret[i].r+0.5)%mod;
+		ret[i].i=0;
+	}
+	for (int i=L*F+1;i<len;i++)
+		ret[i].r=ret[i].i=0;
+	if (L&1) {
+		FFT(ret);
+		for (int i=0;i<len;i++)
+			ret[i]=ret[i]*a[i];
+		FFT(ret,-1);
+		for (int i=0;i<=L*F;i++) {
+			ret[i].r=LL(ret[i].r+0.5)%mod;
+			ret[i].i=0;
+		}
+		for (int i=L*F+1;i<len;i++)
+			ret[i].r=ret[i].i=0;
+	}
+	
+}
+
+int main() {
+	init();
+	for (cin>>T;T;T--) {
+		cin>>N>>K>>L>>F;
+		for (int i=1;i<=F;i++) {
+			f[i]=Pow(i,F);
+			for (int j=1;j<i;j++)
+				f[i]=(f[i]-f[j]*C(i,j))%mod;
+			if (f[i]<0) f[i]+=mod;
+		}
+		for (len=1;len<(L*F+1)*2;len<<=1);
+		memset(ret,0,sizeof ret);
+		memset(a,0,sizeof a);
+		for (int i=1;i<len;i++)
+			bitrev[i]=(bitrev[i>>1]>>1)|((i&1)*(len>>1));
+		for (int i=0;i<=F;i++)
+			a[i].r=f[i]*(i>=mod?0:Pow(fac[i],mod-2))%mod;
+		solve(L);
+		int ans=0,Cn=1,ik=Pow(K,mod-2),fk=1;
+		for (int i=1;i<=L*F&&i<=N;i++) {
+			fk=fk*ik%mod;
+			Cn=Cn*LL(N-i+1)%mod*Pow(i,mod-2)%mod;
+			ans=(ans+int(ret[i].r+0.5)*(i>=mod?0:fac[i])%mod*Cn%mod*fk)%mod;
+		}
+		cout<<ans<<endl;
+	}
+	return 0;
+}

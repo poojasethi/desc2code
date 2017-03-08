@@ -1,0 +1,242 @@
+/*
+***************************************************************************************************************
+
+							Author : Yash Sadhwani
+
+**************************************************************************************************************
+*/
+#include<stdio.h>
+#include<iostream>
+#include<vector>
+#include<string.h>
+#include<algorithm>
+#include<deque>
+#include<map>
+#include<set>
+#include<stdlib.h>
+#include<math.h>
+#include<queue>
+#include<stack>
+#include<functional>
+using namespace std;
+#define ll long long
+#define si(x) scanf("%d",&x)
+#define sl(x) scanf("%lld",&x)
+#define sd(x) scanf("%lf",&x)
+#define sc(x) scanf("%c",&x)
+#define ss(x) scanf("%s",x)
+#define vl vector<ll>
+#define vi vector<int>
+#define vvl vector< vl >
+#define vvi vector< vi >
+#define pb push_back
+#define mod 1000000007
+#define mem(x,y) memset(x,y,sizeof(x))
+#define f(i,a,b) for(int i=(a);i<(b);i++)
+#define max_int_value 2147483647
+#define max_long_value 9223372036854775807
+#define ub(X,v) upper_bound(X.begin(),X.end(),v)
+#define lb(X,v) lower_bound(X.begin(),X.end(),v)
+
+
+
+//qsort(ww,cc,sizeof(tp),compare);
+/*int compare(const void *a,const void *b){
+	ll y=((((tp*)a)->w)-(((tp*)b)->w));
+	if(y>0)return 1;
+	else if(y==0)return 0;
+	else return -1;
+}
+bool way(ii x,ii y){
+	return x.first<y.first or x.first==y.first and x.second<y.second;
+}
+
+ll modpow(ll base, ll exponent,ll modulus){
+	if(base==0&&exponent==0)return 0;
+	ll result = 1;
+	while (exponent > 0){
+		if (exponent % 2 == 1)
+		    result = (result * base) % modulus;
+		exponent = exponent >> 1;
+		base = (base * base) % modulus;
+	}
+	return result;
+}
+
+#define getchar_unlocked getchar
+using namespace std;
+inline int scan(){
+    char c = getchar_unlocked();
+    int x = 0;
+    while(c<'0'||c>'9'){
+        c=getchar_unlocked();
+    }
+    while(c>='0'&&c<='9'){
+        x=(x<<1)+(x<<3)+c-'0';
+        c=getchar_unlocked();
+    }
+    return x;
+}
+
+*/
+
+
+#define MAXN 100010
+#define ls (node<<1)
+#define rs ((node<<1)+1)
+#define ii pair<int,int>
+
+vi G[MAXN],GR[MAXN];
+
+
+/******************************************************************************************************
+
+		Palindrome Tree Part Starts
+
+		Copied from https://github.com/ADJA/algos/blob/master/Strings/PalindromeTree.cpp
+
+*********************************************************************************************************/
+
+struct nodes{	
+	int next[26];	//edges to the next existing palindrome via i
+	int len;		//length of the curr palindrome
+	int sufflink;	//index of the largest proper suffix palindrome
+	int num;		//total number of valid suffix palindromes
+};
+
+char str[MAXN];
+
+nodes tree[MAXN];
+
+int num;		//total nodes(palindromes) yet
+
+int suff;		//current max suffix palindrome(from where to begin while adding)
+
+
+//true implies new node added
+//false implies no new node added
+bool addLetter(int pos){
+	int curr = suff, currlen = 0;
+	int let = str[pos] - 'a';
+
+	while(1){	//loop to find out the max suffix palindrome
+		currlen = tree[curr].len;
+		if(pos - 1 - currlen >=0 and str[pos - 1 - currlen] == str[pos])break;
+		curr = tree[curr].sufflink;
+	}
+	if(tree[curr].next[let]){
+		suff=tree[curr].next[let];
+		return false;
+	}
+
+	//new node to be added
+	num++;
+	suff=num;
+	tree[num].len = tree[curr].len + 2;
+	tree[curr].next[let] =  num;
+	
+	//initialise the new node at num
+	//base case when it is of length 1
+	if(tree[num].len == 1){
+		tree[num].sufflink = 2;
+		tree[num].num = 1;
+		return true;
+	}
+
+	while(1){
+		curr = tree[curr].sufflink;
+		currlen = tree[curr].len;
+		if(pos - 1 - currlen >=0 and str[pos - 1 - currlen] == str[pos]){
+			tree[num].sufflink = tree[curr].next[let];
+			break;
+		}
+	}
+	tree[num].num = 1 + tree[tree[num].sufflink].num;
+	G[tree[num].sufflink].pb(num);
+	GR[num].pb(tree[num].sufflink);
+	return true;
+}
+
+void initTree(void){
+	num = 2; suff = 2;
+	tree[1].len = -1;	tree[1].sufflink = 1;	
+	tree[2].len = 0;	tree[2].sufflink = 1;	
+}
+
+/******************************************************************************************************
+
+		Palindrome Tree Part Ends
+
+*********************************************************************************************************/
+
+int cnt[MAXN];
+
+bool visited[MAXN];
+
+void dfs1(int node){
+	visited[node]=true;
+	for(int i=0;i<G[node].size();i++){
+		if(!visited[G[node][i]]){
+			dfs1(G[node][i]);
+			cnt[node] += cnt[G[node][i]];
+		}
+	}
+}	
+
+ll dp[MAXN];
+
+void dfs2(int node){
+	visited[node]=true;
+	dp[node]=cnt[node];
+	for(int i=0;i<GR[node].size();i++){
+		if(!visited[GR[node][i]]){
+			dfs2(GR[node][i]);
+		}
+		dp[node] += dp[GR[node][i]];
+		if(dp[node]>=mod)dp[node] -= mod;
+	}
+}
+
+int N;
+
+inline void ReadInput(void){
+	ss(str);
+}
+
+inline void solve(void){
+	N=strlen(str);
+	initTree();
+	ll ans=0;
+	for(int i=0;i<N;i++){
+		addLetter(i);
+		if(suff>2)cnt[suff]++;
+	}
+	fill(visited,visited+MAXN,false);
+	for(int i=3;i<MAXN;i++){
+		if(!visited[i])dfs1(i);
+	}
+	fill(visited,visited+MAXN,false);
+	for(int i=3;i<MAXN;i++){
+		if(!visited[i])dfs2(i);
+	}
+    //for(int i=1;i<=num;i++)cout<<cnt[i]<<" ";
+    //cout<<endl;
+	for(int i=3;i<MAXN;i++){
+		ll foo = dp[i] - cnt[i];
+		if(foo<0)foo += mod;
+		ans+=(foo * cnt[i]);
+		ans%=mod;
+	}
+	printf("%lld\n",ans );
+}
+
+inline void Refresh(void){
+	
+}
+
+int main()
+{	
+	ReadInput();
+	solve();
+    return 0;
+}

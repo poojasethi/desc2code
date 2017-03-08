@@ -1,0 +1,89 @@
+#include <iostream>
+#include <algorithm>
+using namespace std;
+
+const int INFTY = 1<<29;
+
+struct NODE
+{
+	int d[2][2];
+	NODE()
+	{
+		d[0][0] = d[0][1] = d[1][0] = d[1][1] = 0;
+	}
+};
+
+const int MAXN = (1<<19)+5;
+int N, M;
+char grid[2][200005];
+NODE seg[MAXN];
+
+NODE update(NODE left, NODE right)
+{
+	NODE ret;
+	for (int i = 0; i < 2; i++)
+		for (int j = 0; j < 2; j++)
+		{
+			ret.d[i][j] = min(INFTY, left.d[i][0] + 1 + right.d[0][j]);
+			ret.d[i][j] = min(ret.d[i][j], left.d[i][1] + 1 + right.d[1][j]);
+		}
+	return ret;
+}
+
+void build_tree(int node, int left, int right)
+{
+	if (left == right)
+	{
+		if (grid[0][left] == 'X')
+			seg[node].d[0][0] = seg[node].d[0][1] = seg[node].d[1][0] = INFTY;
+		if (grid[1][left] == 'X')
+			seg[node].d[1][1] = seg[node].d[0][1] = seg[node].d[1][0] = INFTY;
+		if (grid[0][left] == '.' && grid[1][left] == '.')
+			seg[node].d[0][1] = seg[node].d[1][0] = 1;
+
+		return;
+	}
+
+	build_tree(2*node, left, (left+right)/2);
+	build_tree(2*node+1, (left+right)/2+1, right);
+	seg[node] = update(seg[2*node], seg[2*node+1]);
+}
+
+NODE query(int node, int left, int right, int ql, int qr)
+{
+	if (ql <= left && right <= qr)
+		return seg[node];
+
+	int mid = (left+right)/2;
+	if (mid+1 > qr)
+		return query(2*node, left, mid, ql, qr);
+	if (mid < ql)
+		return query(2*node+1, mid+1, right, ql, qr);
+	return update(query(2*node, left, mid, ql, qr), query(2*node+1, mid+1, right, ql, qr));
+}
+
+int main()
+{
+	cin >> N >> M >> grid[0] >> grid[1];
+
+	build_tree(1, 0, N-1);
+
+	for (int i = 0; i < M; i++)
+	{
+		int a, b;
+		cin >> a >> b;
+		a--;
+		b--;
+		if (a % N > b % N)
+			swap(a, b);
+
+		NODE ans = query(1, 0, N-1, a % N, b % N);
+		int len = ans.d[a/N][b/N];
+		if (len == INFTY)
+			cout << "-1\n";
+		else
+			cout << len << "\n";
+	}
+
+	return 0;
+}

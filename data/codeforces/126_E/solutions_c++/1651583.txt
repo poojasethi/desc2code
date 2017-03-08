@@ -1,0 +1,281 @@
+#include <iostream>
+#include <string>
+#include <vector>
+#include <cmath>
+
+using namespace std;
+
+int canal[34][34];
+int g[34][16];
+int midag[34];
+
+int anterior[34];
+int llega[34];
+int q[34];
+int qini,qfin;
+
+int camino()
+{
+  qini=0;qfin=0;
+  q[qfin++]=32;
+  anterior[32]=-2;
+  llega[32]=28;
+  while (qini!=qfin and anterior[33]==-1) {
+    int u=q[qini++];
+    int (&ar)[16]=g[u];
+    int mida=midag[u];
+    for (int i=0;i<mida;i++) {
+      int v=ar[i];
+      if (canal[u][v]!=0 and anterior[v]==-1) {
+	anterior[v]=u;
+	llega[v]=min(llega[u],canal[u][v]);
+	q[qfin++]=v;
+      }
+    }
+  }
+  int flujo=0;
+  if (anterior[33]!=-1) {
+    flujo=llega[33];
+    int index=33;
+    while (index!=32) {
+      canal[index][anterior[index]]+=flujo;
+      canal[anterior[index]][index]-=flujo;
+      index=anterior[index];
+    }
+  }
+  for (int i=0;i<qfin;i++) {
+    anterior[q[i]]=-1;
+    llega[q[i]]=0;
+  }
+  return flujo;
+}
+
+int maxflow()
+{
+  int fant;
+  int f=0;
+  do {
+    fant=f;
+    f+=camino();
+  } while (f!=fant);
+  return f;
+}
+
+int codigo(int a,int b)
+{
+  if (a>b) swap(a,b);
+  return (a<<2)|b;
+}
+
+int uso[16];
+int usoini[16];
+
+int calcula()
+{
+  for (int k=0;k<34;k++)
+    midag[k]=0;
+  for (int i=0;i<4;i++) {
+    for (int j=i;j<4;j++) {
+      int c1=codigo(i,j);
+      if (uso[c1]!=0) {
+	g[c1][midag[c1]++]=32;canal[c1][32]=0;
+	g[32][midag[32]++]=c1;canal[32][c1]=uso[c1];
+      }
+      if (usoini[c1]!=0) {
+	g[16+c1][midag[16+c1]++]=33;canal[16+c1][33]=usoini[c1];
+	g[33][midag[33]++]=16+c1;canal[33][16+c1]=0;
+      }
+    }
+  }
+  for (int i=0;i<4;i++) {
+    for (int j=0;j<4;j++) {
+      int c1=codigo(i,j);
+      if (uso[c1]!=0) {
+	for (int k=0;k<4;k++) {
+	  int c2=codigo(i,k);
+	  if (usoini[c2]!=0) {
+	    g[c1][midag[c1]++]=16+c2;canal[c1][16+c2]=28;
+	    g[16+c2][midag[16+c2]++]=c1;canal[16+c2][c1]=0;
+	  }
+	}
+      }
+    }
+  }
+  return maxflow();
+}
+
+int amount[16];
+int amountini[16];
+int maximo=-1;
+
+void computa()
+{
+  int count=0;
+  for (int i=0;i<16;i++) {
+    int mi=min(amount[i],amountini[i]);
+    count+=mi+mi;
+    uso[i]=amount[i]-mi;
+    usoini[i]=amountini[i]-mi;
+  }
+  count+=calcula();
+  maximo=max(maximo,count);
+}
+
+int eleccion[30];
+int t[9][10];
+int p[9][10];
+
+void cuantos(int i,int j,int ieleccion)
+{
+  if (i==7 and j>=8) {
+    computa();
+    return;
+  }
+  if (j==9)
+    cuantos(i+1,1,ieleccion);
+  else if (p[i][j]==1)
+    cuantos(i,j+1,ieleccion);
+  else {
+    p[i][j]=1;
+    if (p[i][j+1]==0) {
+      p[i][j+1]=1;
+      int cod=codigo(t[i][j],t[i][j+1]);
+      amount[cod]++;
+      int maximoactual=maximo;
+      cuantos(i,j+2,ieleccion+1);
+      if (maximoactual<maximo) eleccion[ieleccion]=0;
+      amount[cod]--;
+      p[i][j+1]=0;
+    }
+    if (p[i+1][j]==0) {
+      p[i+1][j]=1;
+      int cod=codigo(t[i][j],t[i+1][j]);
+      amount[cod]++;
+      int maximoactual=maximo;
+      cuantos(i,j+1,ieleccion+1);
+      if (maximoactual<maximo) eleccion[ieleccion]=1;
+      amount[cod]--;
+      p[i+1][j]=0;
+    }
+    p[i][j]=0;
+  }
+}
+
+int main()
+{
+  for (int i=0;i<34;i++) {
+    anterior[i]=-1;
+    llega[i]=0;
+  }
+  for (int k=0;k<16;k++)
+    amount[k]=amountini[k]=0;
+  for (int i=0;i<9;i++)
+    for (int j=0;j<10;j++)
+      if (i==0 or i==8 or j==0 or j==9)
+	p[i][j]=1;
+      else
+	p[i][j]=0;
+  for (int i=1;i<=7;i++) {
+    for (int j=1;j<=8;j++) {
+      char c;
+      cin>>c;
+      if (c=='B')
+	t[i][j]=0;
+      else if(c=='R')
+	t[i][j]=1;
+      else if (c=='W')
+	t[i][j]=2;
+      else if (c=='Y')
+	t[i][j]=3;
+    }
+  }
+  for (int i=0;i<4;i++)
+    for (int j=3;j>=i;j--)
+      cin>>amountini[(i<<2)|j];
+  cuantos(1,1,0);
+  int ieleccion=0;
+  for (int pos=0;pos<56;pos++) {
+    int i=(pos/8)+1;
+    int j=(pos%8)+1;
+    if (p[i][j]==0) {
+      if (eleccion[ieleccion++]==0) {
+	p[i][j]=2;
+	p[i][j+1]=1;
+	int cod=codigo(t[i][j],t[i][j+1]);
+	amount[cod]++;
+      } else {
+	p[i][j]=3;
+	p[i+1][j]=1;
+	int cod=codigo(t[i][j],t[i+1][j]);
+	amount[cod]++;
+      }
+    }
+  }
+  vector<vector<int> > asigna(16);
+  for (int i=0;i<16;i++) {
+    int mi=min(amount[i],amountini[i]);
+    for (int j=0;j<mi;j++)
+      asigna[i].push_back(i);
+  }
+  computa();
+  for (int i=0;i<16;i++) {
+    int v=16+i;
+    int (&ar)[16]=g[v];
+    int mida=midag[v];
+    for (int j=0;j<mida;j++) {
+      int u=ar[j];
+      if (u<16 and canal[v][u]>0) {
+	usoini[i]-=canal[v][u];
+	for (int k=0;k<canal[v][u];k++)
+	  asigna[u].push_back(i);
+      }
+    }
+  }
+  vector<int> romanent;
+  for (int i=0;i<16;i++)
+    for (int j=0;j<usoini[i];j++)
+      romanent.push_back(i);
+  vector<string> sol(13,string(15,'.'));
+  char buff[]="BRWY";
+  int conteo=0;
+  for (int pos=0;pos<56;pos++) {
+    int i=(pos/8)+1;
+    int j=(pos%8)+1;
+    int cod=-1;
+    int a0=t[i][j];
+    int b0;
+    if (p[i][j]==2) {
+      cod=codigo(t[i][j],t[i][j+1]);
+      b0=t[i][j+1];
+    } else if (p[i][j]==3) {
+      cod=codigo(t[i][j],t[i+1][j]);
+      b0=t[i+1][j];
+    }
+    if (cod!=-1) {
+      int nextcod;
+      if (int(asigna[cod].size())>0) {
+	nextcod=asigna[cod].back();
+	asigna[cod].pop_back();
+      } else {
+	nextcod=romanent.back();
+	romanent.pop_back();
+      }
+      int a1=nextcod/4;
+      int b1=nextcod%4;
+      if (a0!=a1 and b0!=b1) swap(a1,b1);
+      if (a0==a1) conteo++;
+      if (b0==b1) conteo++;
+      sol[2*(i-1)][2*(j-1)]=buff[a1];
+      if (p[i][j]==2) {
+	sol[2*(i-1)][2*j]=buff[b1];
+	sol[2*(i-1)][2*j-1]='-';
+      } else {
+	sol[2*i][2*(j-1)]=buff[b1];
+	sol[2*i-1][2*(j-1)]='|';
+      }
+    }
+  }
+  cout<<maximo<<endl;
+  for (int i=0;i<int(sol.size());i++)
+    cout<<sol[i]<<endl;
+}

@@ -1,0 +1,149 @@
+#include <cstdio>
+#include <algorithm>
+#include <queue>
+using namespace std;
+
+const int N = 55;
+int decyph[300], revdecyph[N], K;
+int wag[N][N];
+bool G[N][N], vis[2*N], pok[2*N];
+
+int mate[2*N];
+char slo[2][2000*1000+3];
+queue <int> kol;
+
+void pokrycie()
+{
+//	printf("pokrycie\n");
+	for (int i=0;i<2*K;i++)
+		vis[i] = pok[i] = 0;
+	for (int i=0;i<2*K;i++)
+		if ( mate[i] == -1 )
+		{
+			vis[i] = 1;
+			kol.push(i);
+		}
+	while(!kol.empty())
+	{
+		int x = kol.front();
+		kol.pop();
+		int d;
+		if ( x < K ) d = K;
+		else d = 0;
+		if ( mate[x] == -1 || vis[ mate[x] ] )
+			for (int i=0;i<K;i++)
+				if ( (d?G[x%K][i]:G[i][x%K]) && vis[i+d]==0)
+				{
+					vis[i+d] = 1;
+					kol.push(i+d);
+				}
+		if ( mate[x] > -1 && vis[ mate[x] ] == 0 )
+		{
+			pok[x] = 1;
+			vis[ mate[x] ] = 1;
+			kol.push( mate[x] );
+		}
+	}
+	for (int i=0;i<K;i++)
+		if (vis[i] == 0 && mate[i] > -1 && vis[ mate[i] ] == 0 ) pok[i] = 1;
+}
+
+bool dfs(int x)
+{
+	if (vis[x]) return 0;
+	vis[x] = 1;
+	for (int i=0;i<K;i++)
+		if (G[x][i])
+			if ( mate[i+K] == -1 || dfs( mate[i+K] ) )
+			{
+				mate[x] = i+K;
+				mate[i+K] = x;
+				return 1;
+			}
+	return 0;
+}
+
+int main()
+{
+	int n;
+	scanf("%d%d",&n,&K);
+	scanf("%s%s",slo[0],slo[1]);
+
+	for (int i='a';i<='z';i++)
+	{
+		revdecyph[i-'a'] = i;
+		decyph[i] = i-'a';
+	}
+	for (int i='A';i<='Z';i++)
+	{
+		revdecyph['z'-'a'+1+i-'A'] = i;
+		decyph[i] = 'z'-'a'+1+i-'A';
+	}
+	for (int i=0;i<n;i++)
+		wag[ decyph[ slo[0][i] ] ][ decyph[ slo[1][i] ] ] ++;
+	for (int i=0;i<K;i++)
+		for (int j=0;j<K;j++)
+			wag[i][j] = n - wag[i][j];
+	for (int i=0;i<K;i++) mate[i] = mate[i+K] = -1;
+	//step 0
+	for (int i=0;i<K;i++)
+	{
+		int war = wag[i][0];
+		for (int j=0;j<K;j++)
+			war = min( war, wag[i][j] );
+		for (int j=0;j<K;j++)
+			wag[i][j] -= war;
+	}
+	for (int i=0;i<K;i++)
+	{
+		int war = wag[0][i];
+		for (int j=0;j<K;j++)
+			war = min( war, wag[j][i] );
+		for (int j=0;j<K;j++)
+			wag[j][i] -= war;
+	}
+	while(1)
+	{
+//		printf("loop\n");
+		for (int i=0;i<K;i++)
+			for (int j=0;j<K;j++)
+			{
+				if (wag[i][j] == 0) G[i][j] = 1;
+				else G[i][j] = 0;
+			}
+		bool nadal = true;
+		//step 1
+		while( nadal )
+		{
+			for (int i=0;i<K;i++) vis[i] = 0;
+			nadal = false;
+			for (int x=0;x<K;x++)
+				if ( mate[x] == -1 && dfs(x) ) nadal = 1;
+		}
+		for (int i=0;i<K;i++)
+			if ( mate[i] == -1 ) nadal = true;
+		if ( nadal == 0 ) break;
+		pokrycie();
+		//step 2
+		int war = n;
+		for (int i=0;i<K;i++)
+			for (int j=0;j<K;j++)
+				if (pok[i]==0 && pok[j+K]==0)
+					war = min( war, wag[i][j] );
+		for (int i=0;i<K;i++)
+			for (int j=0;j<K;j++)
+			{
+				if (pok[i]==1 && pok[j+K]==1) wag[i][j] += war;
+				if (pok[i]==0 && pok[j+K]==0) wag[i][j] -= war;
+			}
+	}
+	int wynik = 0;
+	for (int i=0;i<n;i++)
+	{
+		slo[0][i] = revdecyph[ mate[ decyph[ slo[0][i] ] ]-K ];
+		if (slo[0][i] == slo[1][i]) wynik++;
+	}
+	printf("%d\n",wynik);
+	for (int i=0;i<K;i++)
+		printf("%c",revdecyph[ mate[i]-K ]);
+}

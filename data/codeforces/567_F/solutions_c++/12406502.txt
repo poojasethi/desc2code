@@ -1,0 +1,73 @@
+#include <cassert>
+#include <iostream>
+#include <cstdio>
+#include <vector>
+#include <algorithm>
+#include <string>
+
+using namespace std;
+typedef long long ll;
+#define err(...) fprintf(stderr,__VA_ARGS__)
+
+int N,K;
+ll dp[36][71];
+int x[100];
+int y[100];
+int sgn[100];
+
+bool cont(int m, int v, int x) {
+	return (x < v || x >= v+2*(N-m));
+}
+
+bool blocked(int m, int v, int dv, int i) {
+	bool xjoins = cont(m+1,v+dv,x[i]) && !cont(m,v,x[i]);
+	bool yjoins = cont(m+1,v+dv,y[i]) && !cont(m,v,y[i]);
+	switch (sgn[i]) {
+		case 0: return xjoins ^ yjoins;
+		case 2: return !cont(m,v,y[i]) && xjoins;
+		case -2: return !cont(m,v,x[i]) && yjoins;
+		case 1: return !cont(m+1,v+dv,y[i]) && xjoins;
+		case -1: return !cont(m+1,v+dv,x[i]) && yjoins;
+		default: assert(false);
+	}
+}
+
+int main() {
+	scanf("%d %d",&N,&K);
+	for (int i=0; i<K; i++) {
+		char c[3];
+		scanf("%d %s %d",x+i,c,y+i);
+		x[i]--; y[i]--; //Indices from 0
+		if (c[0] == '=') sgn[i] = 0;
+		else if (c[0] == '<') {
+			if (c[1] == '=') sgn[i] = -1;
+			else sgn[i] = -2;
+		} else if (c[0] == '>') {
+			if (c[1] == '=') sgn[i] = 1;
+			else sgn[i] = 2;
+		} else assert(false);
+	}
+
+	for (int v=0; v<=2*N; v++) dp[N][v] = 1;
+	for (int m=N-1; m>=0; m--) for (int v=0; v<=2*m; v++) {
+		ll val = 0;
+		int upper = (m == (N-1))? 0 : 2; //All options are same for m = N-1.
+		for (ll dv=0; dv<=upper; dv++) {
+			bool block = false;
+			for (int i=0; i<K; i++) {
+				if (blocked(m,v,dv,i)) {
+					block = true;
+				}
+			}
+			if (!block) {
+				val += dp[m+1][v+dv];
+				
+				int pl1 = (dv > 0)? v : v+2*(N-m)-2;
+				int pl2 = (dv < 2)? v+2*(N-m)-1 : v+1;
+				//err("Can place %d at positions %d and %d.\n",m+1,pl1+1,pl2+1);
+			}
+		}
+		dp[m][v] = val;
+	}
+	cout << dp[0][0] << endl;
+}

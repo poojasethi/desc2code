@@ -1,0 +1,110 @@
+#include<cstdio>
+#include<iostream>
+using namespace std;
+
+void readInt(int &n) {
+    n=0;
+    char c=getchar();
+    while(!(c>='0' && c<='9')) c=getchar();
+    while(c>='0' && c<='9') {
+        n=(n<<3)+(n<<1)+(c-'0');
+        c=getchar();
+    }
+}
+
+typedef pair<int, int> PI;
+typedef long long LL;
+
+#define sz 100005
+#define MP(a, b) make_pair(a, b)
+
+struct NODE {
+    PI val;
+    NODE *left, *right;
+    NODE() { val=MP(-1, -1); left=NULL; right=NULL; }
+};
+
+NODE *Root[sz];
+int v[sz];
+
+PI foo(PI a, PI b) {
+    PI ret(-1, -1);
+    if(a.first>=b.first) ret.first=a.first, ret.second=b.first;
+    else ret.first=b.first, ret.second=a.first;
+    ret.second=max(ret.second, max(a.second, b.second));
+    return ret;
+}
+
+void build(NODE* ptr, int beg, int end) {
+    if(beg==end) {
+        ptr->val=MP(v[beg], -1);
+        return ;
+    }
+
+    int mid=(beg+end)>>1;
+    ptr->left=new NODE; ptr->right=new NODE;
+    build(ptr->left, beg, mid);
+    build(ptr->right, mid+1, end);
+
+    ptr->val=foo(ptr->left->val, ptr->right->val);
+
+    return;
+}
+
+PI query(NODE* ptr, int a, int b, int beg, int end) {
+    if(a>end || b<beg) return PI(-1, -1);
+    if(beg>=a && end<=b) return ptr->val;
+    int mid=(beg+end)>>1;
+    return foo( query(ptr->left, a, b, beg, mid),
+                query(ptr->right, a, b, mid+1, end));
+}
+
+void update(NODE* ptr, NODE* prev, int idx, int beg, int end) {
+
+    if(beg==end) {
+        ptr->val=MP(v[idx], -1);
+        return;
+    }
+
+    int mid=(beg+end)>>1;
+    ptr->left=new NODE; ptr->right=new NODE;
+    if(idx<=mid) {
+        update(ptr->left, prev->left, idx, beg, mid);
+        ptr->right=prev->right;
+    } else {
+        ptr->left=prev->left;
+        update(ptr->right, prev->right, idx, mid+1, end);
+    }
+    ptr->val=foo(ptr->left->val, ptr->right->val);
+    return;
+}
+
+int main() {
+    int n, m, a, b, c, d;
+    readInt(n); readInt(m);
+    readInt(a); readInt(b); readInt(c); readInt(d);
+
+    for(int i=0; i<n; i++)
+    readInt(v[i]);
+
+    Root[0]=new NODE;
+    build(Root[0], 0, n-1);
+
+    PI r(0, 0);
+    int q; readInt(q);
+
+    for(int k=1; k<=q; k++) {
+        int t=(LL)((LL)a*r.first+d)%k;
+//        cout<<"t="<<t<<endl;
+        int q1, q2;
+        readInt(q1); readInt(q2);
+        r=query(Root[t], q1, q2, 0, n-1);
+        printf("%d %d\n", r.first, r.second);
+        int idx=(LL)((LL)b*r.first+d)%n, key=(LL)((LL)c*r.second+d)%m;
+//        cout<<"idx="<<idx<<", key="<<key<<endl;
+        v[idx]=key;
+        Root[k]=new NODE;
+        update(Root[k], Root[k-1], idx, 0, n-1);
+    }
+
+}

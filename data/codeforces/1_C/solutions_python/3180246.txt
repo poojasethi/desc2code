@@ -1,0 +1,10 @@
+from math import *
+
+def gcd(a, b): return a if b < pi/100 else gcd(b, fmod(a, b))
+
+p = [map(float, raw_input().split()) for i in xrange(3)]
+a, b, c = [hypot((x2-x1), (y2-y1)) for (x1, y1), (x2, y2) in [(p[0], p[1]), (p[1], p[2]), (p[2], p[0])]]
+ta, tb, tc = [acos((y*y+z*z-x*x)/2.0/y/z) for x, y, z in [(a, b, c), (b, c, a), (c, a, b)]]
+R = a/2.0/sin(ta)
+t = 2.0*gcd(ta, gcd(tb, tc))
+print R**2*pi/t*sin(t)

@@ -1,0 +1,17 @@
+#include <cstring>
+#include <cstdio>
+int a[100010],b[100010],f[100010],i,j,len,ans=0;
+char s[100010];
+int main()
+{
+//	freopen("ex.in","r",stdin);
+	scanf("%s",s+1);len=strlen(s+1);
+	f[0]=j=-1;
+	for (i=1;i<=len;f[i++]=++j)
+		for (;j>=0 && s[j+1]!=s[i];j=f[j]);
+	for (j=len;j;--j) a[f[j]]+=++a[j];
+	ans=0;
+	for (j=len;j;j=f[j]) b[++ans]=j;
+	printf("%d\n",ans);
+	for (i=ans;i;--i) printf("%d %d\n",b[i],a[b[i]]);
+}

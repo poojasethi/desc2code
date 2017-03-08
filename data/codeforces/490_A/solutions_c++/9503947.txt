@@ -1,0 +1,18 @@
+#include<cstdio>
+#include<algorithm>
+using namespace std;
+int a1[3][5000],l[3];
+int main()
+{
+	int n,a;
+	scanf("%d",&n);
+	for(int i=1;i<=n;++i)
+	{
+		scanf("%d",&a);--a;
+		a1[a][l[a]++]=i;
+	}
+	a=min(l[0],min(l[1],l[2]));
+	printf("%d\n",a);
+	for(int i=0;i<a;++i)
+		printf("%d %d %d\n",a1[0][i],a1[1][i],a1[2][i]);
+}

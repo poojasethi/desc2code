@@ -1,0 +1,10 @@
+#include<iostream>
+using namespace std;
+
+int main()
+{
+    int n;
+    cin >> n;
+    cout << "023121"[n];
+    return 0;
+}

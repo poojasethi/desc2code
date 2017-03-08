@@ -1,0 +1,168 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+#define dbgs(x) cerr << (#x) << " --> " << (x) << ' '
+#define dbg(x) cerr << (#x) << " --> " << (x) << endl
+
+#define foreach(i,x) for(type(x)i=x.begin();i!=x.end();i++)
+#define FOR(ii,aa,bb) for(int ii=aa;ii<=bb;ii++)
+#define ROF(ii,aa,bb) for(int ii=aa;ii>=bb;ii--)
+
+#define type(x) __typeof(x.begin())
+
+#define orta (bas + son >> 1)
+#define sag (k + k + 1)
+#define sol (k + k)
+
+#define pb push_back
+#define mp make_pair
+
+#define nd second
+#define st first
+
+#define endl '\n'
+
+typedef pair < int ,int > pii;
+
+typedef long long ll;
+
+const long long linf = 1e18+5;
+int mod = (int) 1e9 + 7;
+const int logN = 18;
+const int SQ = 250;
+const int inf = 1e9;
+const int N = 5e4 + 5;
+
+ll all, ch[N], path[N];
+int size[N], ok[N], dp[N], n, m, P[N], p[N], x, y, z, t, val[N], C[N];
+vector< pair< int , pii > > q;
+vector< int > v[N], nodes;
+char c;
+
+int up(int x, int y) {
+    if(!x) return 0;
+    int &r = dp[x];
+    if(r != -1) return r;
+    if(P[x] == y) return r = x;
+    return r = up(P[x], y);
+}
+
+int up2(int x) {
+    if(ok[x]) return x;
+    int &r = dp[x];
+    if(r != -1) return r;
+    return r = up2(P[x]);
+}
+
+int dfs1(int node) {
+    size[node] = 1;
+    int s = ok[node] ? 2 : 0;
+    ch[node] = 0;
+    foreach(it, v[node]) {
+        s += dfs1(*it);
+        size[node] += size[*it];
+        ch[node] -= size[*it] * (ll) size[*it];
+    } ch[node] += size[node] * (ll) size[node];
+    if(s >= 2) ok[node] = 1;
+    all += ch[node] * (ll) val[node];
+    return s != 0;
+}
+
+void dfs2(int node, int last, int root, int bef = 0) {
+    path[node] = path[root] + (size[root] - size[node]) * (ll) val[root];
+    C[node] = size[bef];
+    if(ok[node]) { nodes.pb(node); P[node] = last; last = node; bef = -1; }
+    foreach(it, v[node]) {
+        if(bef == -1) dfs2(*it, node, node, *it);
+        else dfs2(*it, last, node, bef);
+    }
+}
+
+int ctr(int x, int y) {
+    while(x) {
+        if(x == y) return 1;
+        x = P[x];
+    } return 0;
+}
+
+int main() {
+
+    scanf("%d", &n);
+    FOR(i, 2, n) scanf("%d", &p[i]);
+    FOR(i, 1, n) scanf("%d", &val[i]);
+
+    scanf("%d", &m);
+
+    FOR(i, 1, m) {
+        scanf(" %c %d %d", &c, &y, &z);
+        if(c == 'P') { ok[y] = ok[z] = 1; q.pb(mp(0, mp(y, z))); }
+        if(c == 'V') { ok[y] = 1; q.pb(mp(1, mp(y, z))); }
+        if(i == m || i % SQ == 0) {
+            FOR(i, 1, n) v[i].clear();
+            FOR(i, 2, n) v[p[i]].pb(i);
+            nodes.clear();
+            ok[1] = 1; all = 0;
+            dfs1(1), dfs2(1, 0, 0, 1);
+            memset(ok, 0, sizeof ok);
+            foreach(it, q) {
+                printf("%.12lf\n", all / (1.0 * n * n));
+                foreach(it3, nodes) ok[*it3] = 0;
+                if(it->st == 1) {
+                    int node = it->nd.st, val = it->nd.nd - ::val[node];
+                    all += val * ch[it->nd.st];
+                    foreach(it3, nodes) dp[*it3] = -1;
+                    foreach(it3, nodes) {
+                        int take = up(*it3, node);
+                        if(take == 0) continue;
+                        path[*it3] += val * (ll) (size[node] - C[take]);
+                    } :: val[node] += val;
+                }
+                else {
+                    if(ctr(it->nd.nd, it->nd.st)) swap(it->nd.nd, it->nd.st);
+                    p[it->nd.st] = it->nd.nd;
+                    int node = it->nd.st, par = P[it->nd.st], sz = size[node];
+                    all -= 2 * sz * path[node];
+                    while(par) {
+                        ok[par] = ok[node] = 1;
+                        ch[par] -= 2LL * sz * (size[par] - C[node]);
+                        size[par] -= sz; C[node] -= sz;
+                        node = P[node]; par = P[par];
+                    } C[1] -= sz; C[it->nd.st] = sz;
+                    ll ggg = path[it->nd.st];
+                    foreach(it3, nodes) dp[*it3] = -1;
+                    foreach(it3, nodes) {
+                        if(!ok[*it3] || *it3 == it->nd.st) {
+                            int take = up2(*it3);
+                            if(take == it->nd.st) path[*it3] -= ggg;
+                            else path[*it3] -= val[take] * (ll) sz;
+                        }
+                    }
+                    foreach(it3, nodes) dp[*it3] = -1, ok[*it3] = 0; C[it->nd.st] = 0;
+                    node = it->nd.st, par = it->nd.nd, P[node] = par;
+                    while(par) {
+                        ok[par] = ok[node] = 1;
+                        size[par] += sz; C[node] += sz;
+                        ch[par] += 2LL * sz * (size[par] - C[node]);
+                        node = P[node]; par = P[par];
+                    } C[1] += sz;
+                    foreach(it3, nodes) dp[*it3] = -1;
+                    ggg = path[it->nd.nd] + (ll) (size[it->nd.nd] - sz) * val[it->nd.nd];
+                    foreach(it3, nodes) {
+                       if(!ok[*it3] || *it3 == it->nd.st) {
+                            int take = up2(*it3);
+                            if(take == it->nd.st) path[*it3] += ggg;
+                            else path[*it3] += val[take] * (ll) sz;
+                        }
+                    }
+                    all += 2 * path[it->nd.st] * size[it->nd.st];
+                    foreach(it3, nodes) dp[*it3] = -1, ok[*it3] = 0;
+                }
+            }
+            q.clear();
+            memset(ok, 0, sizeof ok);
+        }
+    }
+    printf("%.12lf\n", all / (1.0 * n * n));
+    return 0;
+}

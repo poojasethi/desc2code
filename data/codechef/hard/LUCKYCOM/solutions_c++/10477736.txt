@@ -1,0 +1,131 @@
+#include <bits/stdc++.h>
+using namespace std;
+int n;
+int tot;
+#define N 10000
+string s[N];
+#define M 401000
+int mn[M], son[M][2], len[N];
+int root[N];
+vector<int> fou[N], foq[N], sev[N], seq[N];
+
+void push_up(int id) {
+    int l = son[id][0];
+    int r = son[id][1];
+    mn[id] = max(mn[l], mn[r]);
+    return ;
+}
+
+int build(int id, int st, int en) {
+    ++tot;
+    int x = tot;
+    if(st == en) {
+        mn[tot] = fou[id][st] + sev[id][st + 1];
+        return tot;
+    }
+    int mid = (st + en) >> 1;
+    int y = build(id, st, mid);
+    int z = build(id, mid + 1, en);
+    son[x][0] = y;
+    son[x][1] = z;
+    push_up(x);
+    return x;
+}
+
+int calc(int l, int r, int st, int en, int id) {
+    if(l > en || r < st) return 0;
+    if(l <= st && en <= r) return mn[id];
+    int mid = (st + en) >> 1;
+    int x = calc(l, r, st, mid, son[id][0]);
+    int y = calc(l, r, mid + 1, en, son[id][1]);
+    return max(x, y);
+}
+
+bool can(int num, int num1, int gas) {
+    int va = 0;
+    for(int i = 1; i <= n; i ++) {
+        if(!num) {
+            if(num1 <= sev[i][len[i] - 1]) continue;
+            if(num1 > seq[i][len[i] - 1]) return false;
+            va += num1 - sev[i][len[i] - 1];
+            if(va > gas) return false;
+            continue;
+        }
+        if(!num1) {
+            if(num <= fou[i][len[i] - 1]) continue;
+            if(num > foq[i][len[i] - 1]) return false;
+            va += num - fou[i][len[i] - 1];
+            if(va > gas) return false;
+            continue;
+        }
+        if(num1 > seq[i][len[i] - 1]) return false;
+        if(num > foq[i][len[i] - 1]) return false;
+        int st = lower_bound(foq[i].begin(), foq[i].end(), num) - foq[i].begin();
+        int en = lower_bound(fou[i].begin(), fou[i].end(), num) - fou[i].begin();
+        int st1 = lower_bound(sev[i].begin(), sev[i].end(), num1) - sev[i].begin();
+        int en1 = lower_bound(seq[i].begin(), seq[i].end(), num1) - seq[i].begin();
+        st1 = len[i] - 1 - st1;
+        en1 = len[i] - 1 - en1;
+        st1 --;
+        en1 --;
+
+        if(st1 >= en) continue;
+        if(st > en1) return false;
+        st = max(st, st1);
+        en = min(en, en1);
+        va += num + num1 - calc(st, en, 0, len[i] - 1, root[i]);
+        if(va > gas) return false;
+    }
+    return true;
+}
+
+int main() {
+    //freopen("3.in", "r", stdin);
+    int k;
+    tot = 0;
+    scanf("%d%d", &n, &k);
+    for(int i = 1; i <= n; i ++) {
+        cin >> s[i];
+        len[i] = s[i].length();
+    }
+    int mn = 0;
+    for(int i = 1; i <= n; i ++) {
+        if(mn == 0) mn = len[i];
+        else if(mn > len[i]) mn = len[i];
+    }
+    for(int i = 1; i <= n; i ++) {
+        fou[i].resize(len[i]);
+        sev[i].resize(len[i]);
+        foq[i].resize(len[i]);
+        seq[i].resize(len[i]);
+        for(int j = 0; j < len[i]; j ++) {
+            int x = 0;
+            int y = 0;
+            if(j) x = fou[i][j - 1], y = foq[i][j - 1];
+            fou[i][j] = x + (s[i][j] == '4');
+            foq[i][j] = y + (s[i][j] == '4');
+            foq[i][j] += (s[i][j] == '?');
+        }
+        for(int j = len[i] - 1; j >= 0; j --) {
+            int x = 0, y = 0;
+            if(j < len[i] - 1) x = sev[i][j + 1], y = seq[i][j + 1];
+            sev[i][j] = x + (s[i][j] == '7');
+            seq[i][j] = y + (s[i][j] == '7');
+            seq[i][j] += (s[i][j] == '?');
+        }
+        root[i] = build(i, 0, len[i] - 1);
+        reverse(sev[i].begin(), sev[i].end());
+        reverse(seq[i].begin(), seq[i].end());
+    }
+    int gas = mn;
+    long long ans = 0;
+    for(int i = 0; i <= mn; i ++) {
+        int x = min(gas, mn - i);
+        while(x >= 0 && !can(i, x, k)) x --;
+        //printf("%d %d\n", i, x);
+        ans += x + 1;
+        gas = x;
+    }
+    cout << ans - 1<< endl;
+    return 0;
+}

@@ -1,0 +1,99 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
+#include <iostream>
+using namespace std;
+#define x first
+#define y second
+#define sqr(_) ((_)*(_))
+#define	 REP(i,j,k) for(register int i=(j),_end_=(k);i<=_end_;++i)
+#define REPD(i,j,k) for(register int i=(j),_end_=(k);i>=_end_;--i)
+
+const int MAXN = 800100;
+struct square
+{
+	int x1,y1,x2,y2;
+};
+struct note		// -1 delete 1 add
+{
+	int x,y1,y2,opera;
+	bool operator < (const note a) const
+	{
+		return a.x==x?opera<a.opera:x<a.x;
+	}
+};
+square P[MAXN<<1];
+note E[MAXN<<1];
+int n,m,K,E_tot,whe[MAXN<<1];
+int seg_tot,root,seg_l[MAXN<<2],seg_r[MAXN<<2],seg_add[MAXN<<2],seg_sum[MAXN<<2];
+
+void add(int &u,int l,int r,int ll,int rr,int ope)
+{
+	if(!u) u=++seg_tot,seg_l[u]=seg_r[u]=seg_add[u]=seg_sum[u]=0;
+	if(ll<=l && r<=rr) seg_add[u]+=ope;
+	else
+	{
+		if( ll <= ((l+r)>>1) ) add(seg_l[u],l,(l+r)>>1,ll,rr,ope);
+		if( ((l+r)>>1) < rr ) add(seg_r[u],((l+r)>>1)+1,r,ll,rr,ope);
+	}
+	if(seg_add[u]) seg_sum[u]=r-l+1;
+	else seg_sum[u]=seg_sum[seg_l[u]]+seg_sum[seg_r[u]];
+	return ;
+}
+
+long long calc()
+{
+	root=E_tot=seg_tot=0;
+	REP(i,1,m)
+		if(!whe[i])
+			E[++E_tot]=note{P[i].x1,P[i].y1,P[i].y2,1},E[++E_tot]=note{P[i].x2+1,P[i].y1,P[i].y2,-1};
+	if(E_tot==0) return 0;
+	sort(E+1,E+E_tot+1);
+	long long ans(0);
+	REP(i,1,E_tot)
+	{
+		if(i) ans+=(long long)seg_sum[root]*(E[i].x-E[i-1].x);
+		add(root,1,n,E[i].y1,E[i].y2,E[i].opera);
+	}
+	return ans;
+}
+long long S[100];
+string work()
+{
+	int lim(0),flag;
+	for(;;++lim)
+	{
+		S[lim]=calc();
+		if(!S[lim]) break;
+		REP(i,1,m)
+			if(!whe[i])
+			{
+				if(P[i].x1&1) ++P[i].x1;
+				if(P[i].y1&1) ++P[i].y1;
+				P[i].x1>>=1,P[i].x2>>=1,P[i].y1>>=1,P[i].y2>>=1;
+				if(P[i].x1>P[i].x2 || P[i].y1>P[i].y2) whe[i]=1;
+			}
+	}
+	--lim;
+	REP(i,0,lim-1)
+		S[i]-=S[i+1];
+	while((1<<lim)>K)
+		--lim,S[lim]+=S[lim+1];
+	REP(i,0,lim)
+		if(S[i]&1) return "Hamed";
+	return "Malek";
+}
+void init()
+{
+	scanf("%d%d%d",&n,&m,&K);
+	REP(i,1,m)
+		scanf("%d%d%d%d",&P[i].x1,&P[i].y1,&P[i].x2,&P[i].y2);
+}
+int main()
+{
+	init();
+	cout<<work();
+	return 0;
+}

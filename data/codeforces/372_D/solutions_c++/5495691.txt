@@ -1,0 +1,86 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<iostream>
+#include<vector>
+#include<set>
+using namespace std;
+#define N 100005
+int FA[17][N],n,m,pos[N],sta[N],tot,dep[N],now,log[N],ans;
+vector<int>G[N];
+void dfs(int u)
+{
+	pos[u]=++tot;sta[tot]=u;
+	for(int i=0;i<G[u].size();i++)
+		if(G[u][i]!=FA[0][u])
+			FA[0][G[u][i]]=u,dep[G[u][i]]=dep[u]+1,dfs(G[u][i]);
+}int dis(int x,int y)
+{
+	if(x==y)return 0;
+	int ans=dep[x]+dep[y];
+	if(dep[x]>dep[y])swap(x,y);
+	for(int i=log[dep[y]];i>=0;i--)
+		if(dep[FA[i][y]]>dep[x])y=FA[i][y];
+	if(dep[x]<dep[y])y=FA[0][y];
+	if(x==y)return ans-2*dep[x];
+	for(int i=log[dep[x]];i>=0;i--)
+		if(FA[i][x]!=FA[i][y])x=FA[i][x],y=FA[i][y];
+	return ans-2*dep[FA[0][x]];
+}
+set<int>S;
+typedef set<int>::iterator Ite;
+void Insert(int p)
+{
+	Ite it=S.insert(pos[p]).first,pre=it,nex=++it;
+	if(S.size()==1)return;
+	if(pre==S.begin())pre=S.end();pre--;
+	if(nex==S.end())nex=S.begin();
+	int u=sta[*pre],v=sta[*nex];
+	now+=dis(u,p)+dis(p,v)-dis(u,v);
+}void Delete(int p)
+{
+	Ite it=S.find(pos[p]),pre=it,nex=++it;
+	if(pre==S.begin())pre=S.end();pre--;
+	if(nex==S.end())nex=S.begin();
+	S.erase(--it);if(S.empty())return;
+	int u=sta[*pre],v=sta[*nex];
+	now-=dis(u,p)+dis(p,v)-dis(u,v);
+}
+int main(){
+	scanf("%d%d",&n,&m);m=m*2-2;
+	for(int i=2;i<=n;i++)log[i]=log[i-1]+((i&(-i))==i);
+	for(int u,v,i=1;i<n;i++)
+	{
+		scanf("%d%d",&u,&v);G[u].push_back(v);
+		G[v].push_back(u);
+	}dfs(1);
+	for(int i=1;i<=log[n];i++)
+		for(int j=1;j<=n;j++)
+			FA[i][j]=FA[i-1][FA[i-1][j]];
+	//Insert(1);
+	/*for(int i=1,j=1;i<=n;++i)
+    {
+        while(j<=n)
+        {
+            Insert(pos[j]);
+            if(now>m)
+                break;
+            ++j;
+        }
+        ans=max(ans,j-i);
+        if(j>n)
+            break;
+        Delete(pos[j]),Delete(pos[i]);
+    }*/dis(11,12);
+	for(int l=1,r=1;l<=n;l++)
+	{
+		while(r<=n)
+		{		
+			Insert(r++);
+			if(now>m){Delete(--r);break;}
+			else ans=max(r-l,ans);
+		}
+		if(r>n)break;
+		Delete(l);
+	}cout<<ans<<endl;
+}

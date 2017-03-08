@@ -1,0 +1,109 @@
+#include<cstdio>
+#include<vector>
+#include<algorithm>
+#define pb push_back
+#define prt(i) {printf("%d\n",i);continue;}
+#define rep(i,n) for(int i=0;i<n;i++)
+#define For(i,n) for(int i=1;i<=n;i++)
+#define FORD(i,a,b) for(int i=a;i>=b;i--)
+using namespace std;
+const int N=100010,SZ=N*18;
+int n,m,cmd,x,y,c,k,p,t,T,up,dn,Root,sz,sum,
+    d[N],L[N],R[N],atk[N],root[N],lt[SZ],rt[SZ],s[SZ],fa[N][17];
+vector <int> e[N];
+int LCA(int x,int y)
+{
+    if (d[x]<d[y]) swap(x,y);
+    FORD(i,16,0)
+        if (d[fa[x][i]]>=d[y]) x=fa[x][i];
+    FORD(i,16,0)
+        if (fa[x][i] != fa[y][i]) x=fa[x][i],y=fa[y][i];
+    return (x==y)?x:fa[x][0];
+}
+void dfs(int x)
+{
+    L[x]=++sz;
+    d[x]=d[fa[x][0]]+1;
+    For(i,16) fa[x][i]=fa[fa[x][i-1]][i-1];
+    rep(i,e[x].size())
+    {
+        int v=e[x][i];
+        dfs(v);
+    }
+    R[x]=sz+1;
+}
+int Modify(int x,int l,int r,int p,int d)
+{
+    int now=++sz,m=l+r >>1;
+    lt[now]=lt[x];rt[now]=rt[x];
+    s[now]=s[x]+d;
+    if (l==r) return now;
+    if (p<=m) lt[now]=Modify(lt[x],l,m,p,d);
+         else rt[now]=Modify(rt[x],m+1,r,p,d);
+    return now;
+}
+int Query(int x,int l,int r,int p)
+{
+    if (p==0) return 0;
+    if (p==r) return s[x];
+    int m=l+r >>1;
+    if (p<=m) return Query(lt[x],l,m,p);
+    return s[lt[x]]+Query(rt[x],m+1,r,p);
+}
+int Calc(int a,int b,int x,int y)
+{
+    x=fa[x][0];
+    return d[y]-d[x]-Query(root[a],1,n,L[y])+Query(root[a],1,n,L[x])
+                    +Query(root[b],1,n,L[y])-Query(root[b],1,n,L[x]);
+}
+int Solve(int a,int b,int c,int x,int k)
+{
+    FORD(i,16,0)
+    {
+        t=fa[x][i];
+        if (d[t]>d[c])
+        {
+            T=Calc(a,b,t,x);
+            if (T<k)
+                k-=T,x=fa[t][0];
+        }
+    }
+    if (Calc(a,b,x,x)<k) x=fa[x][0];
+    return x;
+}
+int main()
+{
+    scanf("%d",&n);
+    For(i,n)
+    {
+        scanf("%d",&fa[i][0]);
+        if (fa[i][0]) e[fa[i][0]].pb(i); else Root=i;
+    }
+    dfs(Root);
+    sz=0;
+    scanf("%d",&m);
+    For(i,m)
+    {
+        scanf("%d",&cmd);
+        if (cmd==1)
+        {
+            scanf("%d",&x);
+            atk[x]=i;
+            root[i]=Modify(root[i-1],1,n,L[x],1);
+            if (R[x]<=n) root[i]=Modify(root[i],1,n,R[x],-1);
+        }else
+        {
+            root[i]=root[i-1];
+            scanf("%d%d%d%d",&x,&y,&k,&p);
+            k+=(atk[x]<=p);
+            c=LCA(x,y);
+            up=Calc(i,p,c,x);
+            dn=Calc(i,p,c,y);
+            sum=up+dn-(atk[c]<=p);
+            if (sum-(atk[y]<=p)<k) prt(-1);
+            if (up>=k) prt(Solve(i,p,c,x,k));
+            prt(Solve(i,p,c,y,sum-k+1));
+        }
+    }
+    return 0;
+}

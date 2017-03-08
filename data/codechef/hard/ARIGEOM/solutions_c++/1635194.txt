@@ -1,0 +1,313 @@
+#undef _GLIBCXX_DEBUG
+#undef DEBUG
+
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <ctime>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <list>
+#include <map>
+#include <numeric>
+#include <queue>
+#include <set>
+#include <sstream>
+#include <valarray>
+#include <vector>
+
+using namespace std;
+
+#define foreach(iter,cont) for(typeof((cont).begin()) iter = (cont).begin(); iter != (cont).end(); ++iter)
+#define min3(a, b, c) min(a, min(b, c))
+#define max3(a, b, c) max(a, max(b, c))
+#define inf 1000000008
+#define eps 1.0e-10L
+#define divisible(a, b) (((a) / (b)) * (b) == (a))
+static const long long p = 1000000007;
+__attribute__((unused)) static bool eqf(long double a, long double b)  { return (a == b ? true : (a * b == 0 ? abs(a - b) < eps : abs(a - b) / (abs(a) + abs(b)) < eps));  }
+__attribute__((unused)) static bool ltf(long double a, long double b)  { return a < b - eps; }
+__attribute__((unused)) static bool gtf(long double a, long double b)  { return a > b + eps; }
+__attribute__((unused)) static long long modp(long long n, long long m) { long long r = n % m; return r >= 0 ? r : r + m; }
+__attribute__((unused)) static long long gcd(long long a, long long b) { return (a < 0 ? gcd(-a, b) : (b < 0 ? gcd(a, -b) : (!a && !b ? 1 : (b ? gcd(b, a % b) : a)))); }
+template<class T> static int len(const T& cont) { return (int) cont.size(); }
+
+// BEGIN CUT HERE
+template<class T, class U> ostream &operator<<(ostream &os, const pair<T, U> &p) { return os << "(" << p.first << ", " << p.second << ")"; }
+template<class T> ostream &operator<<(ostream& os, const vector<T> &vec) { os << "[ "; for(size_t i = 0; i < vec.size(); i++) { os << vec[i]; if(i != vec.size() - 1) { os << ", "; } } return os << " ]"; }
+template<class T> ostream &operator<<(ostream& os, const list<T> &l) { os << "[ "; bool first = true; for(typename list<T>::const_iterator lstIt = l.begin(); lstIt != l.end(); ++lstIt) { if(!first) { os << ", "; } first = false; os << *lstIt; } return os << " ]"; }
+template<class T> ostream &operator<<(ostream& os, const deque<T> &d) { os << "[ "; bool first = true; for(typename deque<T>::const_iterator dIt = d.begin(); dIt != d.end(); ++dIt) { if(!first) { os << ", "; } first = false; os << *dIt; } return os << " ]"; }
+template<class T> ostream &operator<<(ostream& os, const vector<vector<T> > &mat) { for(size_t i = 0; i < mat.size(); i++) { if(i) os << endl; os << mat[i]; } return os; }
+template<class T> ostream &operator<<(ostream &os, const set<T> &s) { os << "{ "; bool first = true; for(typename set<T>::const_iterator setIt = s.begin(); setIt != s.end(); ++setIt) { if(!first) { os << ", "; } first = false; os << *setIt; } return os << " }"; }
+template<class T, class U> ostream &operator<<(ostream &os, const map<T, U> &m) { os << "{ "; bool first = true; for(typename map<T, U>::const_iterator mapIt = m.begin(); mapIt != m.end(); ++mapIt) { if(!first) { os << ", "; } first = false; os << mapIt->first << " = " << mapIt->second; } return os << " }"; }
+// END CUT HERE
+
+static const int MAX_VAL = 100000;
+
+int n;
+int f[10000];
+vector<int> fIdx;
+vector<bool> covered;
+
+int a1, a2, aDiff;
+int g1, g2, gRatio, gNumer, gDenom;
+
+void printAnswer() {
+#ifdef DEBUG
+	cout << "Found answer with arithmetic sequence diff = " << aDiff << " starting at " << f[a1] << " and geo ratio = " << gNumer << "/" << gDenom << " starting at " << f[g1] << endl;
+#endif
+	long long curValue = f[a1];
+	bool aFirst = true;
+	while(curValue <= MAX_VAL && fIdx[curValue] != -1) {
+		if(!aFirst) {
+			printf(" ");
+		}
+		aFirst = false;
+		printf("%d", curValue);
+		curValue += aDiff;
+	}
+	printf("\n");
+
+	curValue = f[g1];
+	bool gFirst = true;
+	while(curValue <= MAX_VAL && fIdx[curValue] != -1) {
+		if(!gFirst) {
+			printf(" ");
+		}
+		gFirst = false;
+		printf("%d", curValue);
+		curValue *= (long long) gNumer;
+		if(!divisible(curValue, gDenom)) {
+			break;
+		}
+		curValue /= (long long) gDenom;
+	}
+	printf("\n");
+}
+
+void gSimp() {
+	int g = gcd(gNumer, gDenom);
+	gNumer /= g;
+	gDenom /= g;
+}
+
+bool checkGeo() {
+	vector<bool> curCovered = covered;
+	long long curValue = f[g1];
+	while(curValue <= MAX_VAL && fIdx[curValue] != -1) {
+		curCovered[fIdx[curValue]] = true;
+		curValue *= (long long) gNumer;
+		if(!divisible(curValue, (long long) gDenom)) {
+			break;
+		}
+		curValue /= (long long) gDenom;
+	}
+	for(int i = 0; i < n; i++) {
+		if(!curCovered[i]) {
+#ifdef DEBUG
+			cout << "    Can't be valid because doesn't cover " << f[i] << " @ " << i << endl;
+#endif
+			return false;
+		}
+	}
+	return true;
+}
+
+bool checkArith() {
+	vector<bool> curCovered = covered;
+	long long curValue = f[a1];
+	while(curValue <= MAX_VAL && fIdx[curValue] != -1) {
+		curCovered[fIdx[curValue]] = true;
+		curValue += aDiff;
+	}
+	for(int i = 0; i < n; i++) {
+		if(!curCovered[i]) {
+#ifdef DEBUG
+			cout << "    Can't be valid because doesn't cover " << f[i] << " @ " << i << endl;
+#endif
+			return false;
+		}
+	}
+	return true;
+}
+
+
+bool tryArith(int a1, int a2) {
+#ifdef DEBUG
+	cout << "Trying arithmetic with a1 = " << f[a1] << ", a2 = " << f[a2] << endl;
+#endif
+	::a1 = a1;
+	::a2 = a2;
+	aDiff = f[a2] - f[a1];
+
+	covered.assign(n, false);
+	covered[a1] = true;
+	int curValue = f[a2];
+	while(curValue <= MAX_VAL && fIdx[curValue] != -1) {
+		covered[fIdx[curValue]] = true;
+		curValue += aDiff;
+	}
+
+	g1 = -1;
+	g2 = -1;
+
+	for(int i = 0; i < n; i++) {
+		if(!covered[i]) {
+			if(g1 == -1) {
+				g1 = i;
+			} else {
+				g2 = i;
+				break;
+			}
+		}
+	}
+
+	if(g2 == -1) {
+		if(g1 == -1) {
+			g1 = 0;
+#ifdef DEBUG
+			cout << "  Covered all elements, so success!" << endl;
+#endif
+		} else {
+#ifdef DEBUG
+			cout << "  Covered everything except " << f[g1] << ", so success!" << endl;
+#endif
+		}
+
+		if(g1 == n - 1) {
+			g1--;
+		}
+		g2 = g1 + 1;
+		gNumer = f[g2];
+		gDenom = f[g1];
+		gSimp();
+		return true;
+	} else {
+		// Don't worry, this will only be called like 2 or three times
+		for(; g1 < g2; g2--) {
+#ifdef DEBUG
+			cout << "  Trying geo with g1 = " << f[g1] << ", g2 = " << f[g2] << endl;
+#endif
+			gNumer = f[g2];
+			gDenom = f[g1];
+			gSimp();
+			
+			if(checkGeo()) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
+
+bool tryGeo(int g1, int g2) {
+#ifdef DEBUG
+	cout << "Trying geometric with g1 = " << f[g1] << ", g2 = " << f[g2] << endl;
+#endif
+	::g1 = g1;
+	::g2 = g2;
+	gNumer = f[g2];
+	gDenom = f[g1];
+	gSimp();
+
+	covered.assign(n, false);
+	covered[g1] = true;
+	long long curValue = f[g2];
+	while(curValue <= MAX_VAL && fIdx[curValue] != -1) {
+#ifdef DEBUG
+		cout << "  Covers " << curValue << endl;
+#endif
+		covered[fIdx[curValue]] = true;
+		curValue *= (long long) gNumer;
+		if(!divisible(curValue, gDenom)) {
+			break;
+		}
+		curValue /= (long long) gDenom;
+	}
+
+	a1 = -1;
+	a2 = -1;
+
+	for(int i = 0; i < n; i++) {
+		if(!covered[i]) {
+			if(a1 == -1) {
+				a1 = i;
+			} else {
+				a2 = i;
+				break;
+			}
+		}
+	}
+
+	if(a2 == -1) {
+		if(a1 == -1) {
+#ifdef DEBUG
+			cout << "  Covered all elements, so success!" << endl;
+#endif
+			a1 = 0;
+		} else {
+#ifdef DEBUG
+			cout << "  Unly uncovered element is " << f[a1] << ", so success!" << endl;
+#endif
+		}
+
+		if(a1 == n - 1) {
+			a1--;
+		}
+		a2 = a1 + 1;
+		aDiff = f[a2] - f[a1];
+		return true;
+	} else {
+		// Don't worry, this will only be called like 2 or three times
+		for(; a1 < a2; a2--) {
+#ifdef DEBUG
+			cout << a1 << " " << a2 << endl;
+			cout << "  Trying arith with a1 = " << f[a1] << ", a2 = " << f[a2] << endl;
+#endif
+			aDiff = f[a2] - f[a1];
+			
+			if(checkArith()) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
+
+int main(__attribute__((unused)) int argc, __attribute__((unused)) char **argv) {
+	int numTc;
+	scanf("%d", &numTc);
+	for(int tcNum = 1; tcNum <= numTc; tcNum++) {
+		scanf("%d", &n);
+		fIdx.assign(MAX_VAL + 1, -1);
+		for(int i = 0; i < n; i++) {
+			scanf("%d", &f[i]);
+			fIdx[f[i]] = i;
+		}
+
+		// Try various ways of adjacent arithmetic sequences
+		if(tryArith(0, 1)) {
+			printAnswer();
+		} else if(tryArith(0, 2)) {
+			printAnswer();
+		} else if(tryArith(1, 2)) {
+			printAnswer();
+		} else if(tryGeo(0, 1)) {
+			printAnswer();
+		} else if(tryGeo(0, 2)) {
+			printAnswer();
+		} else if(tryGeo(1, 2)) {
+			printAnswer();
+		}
+#ifdef DEBUG
+		cout << "Done with " << tcNum << endl;
+#endif
+	}
+
+	return 0;
+}

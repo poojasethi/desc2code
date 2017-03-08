@@ -1,0 +1,102 @@
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#define maxn 100010
+
+using namespace std;
+
+int st[maxn],aim[maxn<<1],nxt[maxn<<1],ln;
+void in_edge(int x,int y){
+	aim[ln]=y;
+	nxt[ln]=st[x];
+	st[x]=ln++;
+}
+int father[maxn];
+int fp[maxn][17];
+int level[maxn];
+int belong[maxn],tag[maxn];
+int n,m;
+int Find(int *father,int x){
+	return father[x]= father[x]==x?x:Find(father,father[x]);
+}
+void dfs(int fx,int x){
+	for (int j=1;j<17 && (1<<j)<=level[x];j++)
+		fp[x][j]=fp[fp[x][j-1]][j-1];
+	belong[x]=x;
+	for (int i=st[x];i!=-1;i=nxt[i])
+		if (aim[i]!=fx){
+			int v=aim[i];
+			if (level[v]==-1){
+				level[v]=level[x]+1;
+				fp[v][0]=x;
+				dfs(x,v);
+				if (Find(belong,v)==Find(belong,x)) tag[x]|=tag[v];
+			}else
+			if (level[v]<level[x]){
+				int p=Find(belong,x);
+//				int d=Find(belong,v);
+				while (level[p]>level[v]+1){
+					belong[p]=fp[p][0];
+					p=Find(belong,p);
+				}
+				if ((level[x]-level[v])%2==0) tag[x]=1;
+			}
+		}
+}
+int sum[maxn];
+void dfs2(int fx,int x){
+	if (tag[Find(belong,x)]) ++sum[x];
+	for (int i=st[x];i!=-1;i=nxt[i])
+		if (fp[aim[i]][0]==x){
+			int v=aim[i];
+			sum[v]=sum[x];
+			if (Find(belong,v)==Find(belong,x)) tag[v]|=tag[x];
+			dfs2(x,v);
+		}
+}
+int lca(int x,int y){
+	if (level[x]<level[y]) swap(x,y);
+	for (int i=16;i>=0;i--)
+		if (level[x]-(1<<i)>=level[y]) x=fp[x][i];
+	if (x==y) return x;
+	for (int i=16;i>=0;i--)
+		if (fp[x][i]!=fp[y][i]){
+			x=fp[x][i];
+			y=fp[y][i];
+		}
+	return fp[x][0];
+}
+int check(int u,int v){
+	if (Find(father,u)!=Find(father,v)) return 0;
+	int r=lca(u,v);
+	if ((level[u]-level[v])%2) return 1;
+	return sum[u]+sum[v]-2*sum[r]>0;
+}
+int main(){
+	memset(st,-1,sizeof(st));
+	ln=0;
+	scanf("%d%d",&n,&m);
+	for (int i=1;i<=n;i++) father[i]=i;
+	for (int i=0;i<m;i++){
+		int u,v;
+		scanf("%d%d",&u,&v);
+		in_edge(u,v);
+		in_edge(v,u);
+		father[Find(father,u)]=Find(father,v);
+	}
+	memset(level,-1,sizeof(level));
+	for (int i=1;i<=n;i++)
+		if (level[i]==-1){
+			level[i]=0;
+			dfs(-1,i);
+			dfs2(-1,i);
+		}
+	int qn;
+	scanf("%d",&qn);
+	for (int t=0;t<qn;t++){
+		int u,v;
+		scanf("%d%d",&u,&v);
+		puts(check(u,v)?"Yes":"No");
+	}
+	return 0;
+}

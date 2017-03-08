@@ -1,0 +1,79 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+const int maxn = 555, maxp = 255;
+const int maxm = 200005, inf = 1000000000;
+struct Tedge { int u, v, f, c; Tedge *op, *p; };
+Tedge *head[maxn], *pre[maxn], edbuf[maxm], *edptr = edbuf;
+int dis[maxn], que[maxn], used[maxn];
+int f[maxp][maxp], ea[maxm], eb[maxm], ec[maxm];
+int ans[maxn], sum[maxn];
+int n, m, K, nn, tot, ss, tt;
+
+void doit(int u, int v, int f, int c) {
+    *edptr = (Tedge){u, v, f, c, edptr + 1, head[u]}; head[u] = edptr++;
+    *edptr = (Tedge){v, u, 0, -c, edptr - 1, head[v]}; head[v] = edptr++;
+}
+
+bool spfa() {
+    int h, t; Tedge *p;
+    memset(used, 0, sizeof used);
+    memset(dis, 127, sizeof dis);
+    h = 0; t = 1; pre[tt] = NULL;
+    dis[ss] = 0; que[1] = ss; used[ss] = true;
+    while (h != t) {
+        h = h % nn + 1; used[que[h]] = false;
+        for (p = head[que[h]]; p; p = p->p)
+            if (p->f && dis[que[h]] + p->c < dis[p->v]) {
+                dis[p->v] = dis[que[h]] + p->c; pre[p->v] = p;
+                if (!used[p->v] && dis[p->v] <= dis[tt]) {
+                    t = t % nn + 1; que[t] = p->v; used[p->v] = true;
+                }
+            }
+    }
+    return pre[tt] != NULL;
+}
+
+int main() {
+    int i, j, k, v;
+    scanf("%d%d%d", &n, &m, &K);
+    for (i = 1; i <= n; ++i)
+        for (j = 1; j <= n; ++j)
+            f[i][j] = inf;
+    for (i = 1; i <= n; ++i) f[i][i] = 0;
+    for (i = 1; i <= m; ++i) {
+        scanf("%d%d%d", ea + i, eb + i, ec + i);
+        f[ea[i]][eb[i]] = min(f[ea[i]][eb[i]], ec[i]);
+    }
+    for (k = 1; k <= n; ++k)
+        for (i = 1; i <= n; ++i)
+            for (j = 1; j <= n; ++j)
+                f[i][j] = min(f[i][j], f[i][k] + f[k][j]);
+    ss = n * 2 + 1; tt = ss + 1; nn = tt;
+    for (i = 1; i <= n; ++i)
+        doit(ss, i, 1, 0), doit(i + n, tt, 1, 0);
+    for (i = 1; i <= m; ++i)
+        for (k = 1; k <= n; ++k)
+            if (f[k][ea[i]] + ec[i] == f[k][eb[i]]) {
+                doit(ea[i], eb[i], inf, ec[i]);
+                doit(ea[i], eb[i] + n, 1, ec[i]);
+                break;
+            }
+    while (spfa()) {
+        ++tot;
+        ans[tot] = dis[tt];
+        sum[tot] = sum[tot - 1] + ans[tot];
+        for (v = tt; v != ss; v = pre[v]->u)
+            --pre[v]->f, ++pre[v]->op->f;
+    }
+    while (K--) {
+        scanf("%d", &v);
+        i = lower_bound(ans + 1, ans + tot + 1, v) - ans;
+        printf("%d\n", sum[i - 1] + (n - i + 1) * v);
+    }
+    return 0;
+}
+    

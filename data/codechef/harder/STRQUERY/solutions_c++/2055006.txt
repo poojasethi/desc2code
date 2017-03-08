@@ -1,0 +1,400 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <cstdlib>
+
+using namespace std;
+
+struct Node {
+  int y;
+  int l, r, p;
+  int size;
+
+  Node(): y(rand()), l(-1), r(-1), p(-1), size(1) {};
+};
+
+struct Stack {
+  vector<char> str;
+  vector<Node> nodes;
+  int root;
+
+  Stack() {
+    nodes.push_back(Node());
+    root = 0;
+  }
+
+  void push(char c) {
+    str.push_back(c);
+    nodes.push_back(Node());
+    root = setP(insert(root, str.size(), getIndex(str.size() - 1)), -1);
+  }
+
+  void debug() {
+    debug(root, -1);
+    cout << "---" << endl;
+  }
+
+  void debug(int tree, int p) {
+    if (tree == -1) {
+      return;
+    }
+    if (nodes[tree].p != p) {
+      throw 42;
+    }
+    debug(nodes[tree].l, tree);
+    string s = "";
+    for (int i = 0; i < tree; ++i) {
+      s += str[i];
+    }
+    cout << tree << " " << s << " " << nodes[tree].p << " " << nodes[tree].l
+         << " " << nodes[tree].r << " " << nodes[tree].size << " "
+         << nodes[tree].y << endl;
+    debug(nodes[tree].r, tree);
+  }
+
+  char pop() {
+    root = setP(remove(root, getIndex(str.size())), -1);
+    nodes.pop_back();
+    char back = str.back();
+    str.pop_back();
+    return back;
+  }
+
+  int size() {
+    return str.size();
+  }
+
+  void reset() {
+    str.resize(0);
+    nodes.resize(0);
+    nodes.push_back(Node());
+    root = 0;
+  }
+
+  int match(const string& q, bool rev) {
+    return match(root, q, false, false, rev);
+  }
+
+// tree
+
+  int size(int id) {
+    return id == -1 ? 0 : nodes[id].size;
+  }
+
+  int setP(int node, int p) {
+    if (node == -1) {
+      return -1;
+    }
+    nodes[node].p = p;
+    return node;
+  }
+
+  int fixSize(int node) {
+    if (node == -1) {
+      return -1;
+    }
+    nodes[node].size = 1 + size(nodes[node].l) + size(nodes[node].r);
+    return node;
+  }
+
+  int getIndex(int id) {
+    int r = size(nodes[id].l);
+    while (nodes[id].p != -1) {
+      int p = nodes[id].p;
+      if (id == nodes[p].r) {
+        r += size(nodes[p].l) + 1;
+      }
+      id = p;
+    }
+    return r;
+  }
+
+  int compare(int tree, int node, int indexNode1) {
+    int cmp;
+    if (tree == 0) {
+      cmp = 1;
+    } else {
+      cmp = str[node - 1] - str[tree - 1];
+    }
+    if (cmp == 0) {
+      cmp = indexNode1 - getIndex(tree - 1);
+    }
+    return cmp;
+  }
+
+  int insert(int tree, int node, int indexNode1) {
+    if (tree == -1) {
+      return node;
+    }
+    if (nodes[tree].y < nodes[node].y) {
+      split(tree, node, indexNode1);
+      setP(nodes[node].l, node);
+      setP(nodes[node].r, node);
+      return fixSize(node);
+    }
+    int cmp = compare(tree, node, indexNode1);
+    if (cmp < 0) {
+      nodes[tree].l = setP(insert(nodes[tree].l, node, indexNode1), tree);
+    } else if (cmp > 0) {
+      nodes[tree].r = setP(insert(nodes[tree].r, node, indexNode1), tree);
+    } else {
+      cout << tree << " " << node << " " << indexNode1 << endl;
+      throw 42;
+    }
+    return fixSize(tree);
+  }
+
+  void split(int tree, int node, int indexNode1) {
+    if (tree == -1) {
+      return;
+    }
+    int cmp = compare(tree, node, indexNode1);
+    if (cmp < 0) {
+      split(nodes[tree].l, node, indexNode1);
+      nodes[tree].l = setP(nodes[node].r, tree);
+      nodes[node].r = tree;
+    } else if (cmp > 0) {
+      split(nodes[tree].r, node, indexNode1);
+      nodes[tree].r = setP(nodes[node].l, tree);
+      nodes[node].l = tree;
+    } else {
+      cout << tree << " " << node << " " << indexNode1 << " " << cmp << endl;
+      throw 42;
+    }
+    fixSize(tree);
+  }
+
+  int remove(int tree, int pos) {
+    if (tree == -1) {
+      throw 42;
+    }
+    int sl = size(nodes[tree].l);
+    if (pos < sl) {
+      nodes[tree].l = setP(remove(nodes[tree].l, pos), tree);
+    } else if (pos > sl) {
+      nodes[tree].r = setP(remove(nodes[tree].r, pos - sl - 1), tree);
+    } else {
+      //cout << "del " << tree << " " << str.size() << endl;
+      return merge(nodes[tree].l, nodes[tree].r);
+    }
+    return fixSize(tree);
+  }
+
+  int merge(int l, int r) {
+    if (l == -1) {
+      return r;
+    } else if (r == -1) {
+      return l;
+    } else if (nodes[l].y < nodes[r].y) {
+      nodes[r].l = setP(merge(l, nodes[r].l), r);
+      return fixSize(r);
+    } else {
+      nodes[l].r = setP(merge(nodes[l].r, r), l);
+      return fixSize(l);
+    }
+  }
+
+  int match(int tree, const string& q, bool matchLeft, bool matchRight, bool rev) {
+    if (matchLeft && matchRight) {
+      return size(tree);
+    }
+    if (tree == -1) {
+      return 0;
+    }
+    for (int i = 0; i < q.size(); ++i) {
+      if (i == tree || str[tree - i - 1] < q[rev ? i : q.size() - i - 1]) {
+        return match(nodes[tree].r, q, false, matchRight, rev);
+      } else if (str[tree - i - 1] > q[rev ? i : q.size() - i - 1]) {
+        return match(nodes[tree].l, q, matchLeft, false, rev);
+      }
+    }
+    return 1 +
+      match(nodes[tree].l, q, matchLeft, true, rev) +
+      match(nodes[tree].r, q, true, matchRight, rev);
+  }
+};
+
+struct Deque {
+  Stack a, b;
+
+  void pushLeft(char c) {
+    a.push(c);
+  }
+
+  char popLeft() {
+    if (!a.size()) {
+      equalize(a, b);
+    }
+    return a.pop();
+  }
+
+  void pushRight(char c) {
+    b.push(c);
+  }
+
+  char popRight() {
+    if (!b.size()) {
+      equalize(b, a);
+    }
+    return b.pop();
+  }
+
+  void equalize(Stack& a, Stack& b) {
+    string tmp = "";
+    int n = b.size();
+    for (int i = 0; i < n / 2; ++i) {
+      tmp += b.pop();
+    }
+    while (b.size()) {
+      a.push(b.pop());
+    }
+    for (int i = tmp.size() - 1; i >= 0; --i) {
+      b.push(tmp[i]);
+    }
+  }
+
+  int size() {
+    return a.size() + b.size();
+  }
+
+  string toString() {
+    string s = "";
+    for (int i = a.size() - 1; i >= 0; --i) {
+      s += a.str[i];
+    }
+    s += "^";
+    for (int i = 0; i < b.size(); ++i) {
+      s += b.str[i];
+    }
+    return s;
+  }
+
+  char at(int i) {
+    if (i < a.size()) {
+      return a.str[a.size() - i - 1];
+    } else {
+      return b.str[i - a.size()];
+    }
+  }
+
+  int match(const string& q, int* pf) {
+    int ret = a.match(q, true) + b.match(q, false);
+    int pr = 0;
+    for (int i = min(a.size() - 1, (int)q.size() - 2); i >= 0; --i) {
+      char c = a.str[i];
+      while (pr > 0 && q[pr] != c) {
+        pr = pf[pr - 1];
+      }
+      if (q[pr] == c) pr++;
+    }
+    for (int i = 0; i < q.size() - 1 && i < b.size(); ++i) {
+      char c = b.str[i];
+      while (pr > 0 && q[pr] != c) {
+        pr = pf[pr - 1];
+      }
+      if (q[pr] == c) pr++;
+      if (pr == q.size()) {
+        ret++;
+        pr = pf[pr - 1];
+      }
+    }
+    return ret;
+  }
+};
+
+void evalPf(const string& s, int* pf) {
+  int n = s.size();
+  pf[0] = 0;
+  for (int i = 1; i < n; ++i) {
+    pf[i] = pf[i - 1];
+    while (pf[i] && s[i] != s[pf[i]]) {
+      pf[i] = pf[pf[i] - 1];
+    }
+    if (s[i] == s[pf[i]]) {
+      pf[i]++;
+    }
+  }
+}
+
+Deque deque1;
+Deque deque2;
+
+int main() {
+  ios_base::sync_with_stdio(false);
+  string str0;
+  cin >> str0;
+  for (int i = 0; i < 5; ++i) {
+    deque1.pushRight(str0[i]);
+  }
+  for (int i = 5; i < 10; ++i) {
+    deque2.pushRight(str0[i]);
+  }
+  int n;
+  cin >> n;
+  for (int it = 0; it < n; ++it) {
+    string op;
+    cin >> op;
+    if (op == "INSERT_LEFT") {
+      char c;
+      cin >> c;
+      deque1.pushLeft(c);
+    } else if (op == "INSERT_RIGHT") {
+      char c;
+      cin >> c;
+      deque2.pushRight(c);
+    } else if (op == "INSERT_MIDDLE") {
+      char c;
+      cin >> c;
+      deque1.pushRight(c);
+    } else if (op == "DELETE_LEFT") {
+      deque1.popLeft();
+    } else if (op == "DELETE_RIGHT") {
+      deque2.popRight();
+    } else if (op == "DELETE_MIDDLE") {
+      deque2.popLeft();
+    } else if (op == "QUERY") {
+      string q;
+      cin >> q;
+      int pf[q.size()];
+      evalPf(q, pf);
+      int ans = deque1.match(q, pf) + deque2.match(q, pf);
+      int pr = 0;
+      for (int i = max(0, deque1.size() - (int)q.size() + 1); i < deque1.size(); ++i) {
+        char c = deque1.at(i);
+        while (pr > 0 && q[pr] != c) {
+          pr = pf[pr - 1];
+        }
+        if (q[pr] == c) pr++;
+      }
+      for (int i = 0; i < deque2.size() && i < q.size() - 1; ++i) {
+        char c = deque2.at(i);
+        while (pr > 0 && q[pr] != c) {
+          pr = pf[pr - 1];
+        }
+        if (q[pr] == c) pr++;
+        if (pr == q.size()) {
+          ans++;
+          pr = pf[pr - 1];
+        }
+      }
+      cout << ans << '\n';
+    } else if (op == "PRINT") {
+      cout << deque1.toString() << ":" << deque2.toString() << endl;
+    } else if (op == "DEBUG") {
+      deque1.a.debug();
+      deque1.b.debug();
+      deque2.a.debug();
+      deque2.b.debug();
+    } else {
+      throw 42;
+    }
+    while (deque1.size() <= deque2.size() - 2) {
+      deque1.pushRight(deque2.popLeft());
+    }
+    while (deque1.size() > deque2.size()) {
+      deque2.pushLeft(deque1.popRight());
+    }
+    //cout << deque1.toString() << ":" << deque2.toString() << '\n';
+  }
+  return 0;
+}

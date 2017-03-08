@@ -1,0 +1,10 @@
+from math import ceil
+from math import sqrt
+t=input()
+for _ in xrange(t):
+    n=input()
+    if n==1:
+        print "0"
+    else:
+        ans=ceil((-1+sqrt(1+4*2*(n-1)))/2)
+        print int(ans)

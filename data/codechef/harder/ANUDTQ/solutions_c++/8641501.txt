@@ -1,0 +1,184 @@
+#include <stdio.h>
+#include <stdlib.h>
+using namespace std;
+ 
+long long BST[500005],add[500005],sum[500005],ans,u,v;
+int l[500005],r[500005],fa[500005],size[500005],st[500005],root;
+int n,m,i,j,k,tot,opt,x,y;
+int id[500005],son[500005],next[1000005],ed[1000005];
+bool vis[500005];
+ 
+void splay_updata(int x)
+{
+	size[x]=size[l[x]]+size[r[x]]+1;
+	sum[x]=BST[x]+sum[l[x]]+sum[r[x]];
+}
+ 
+void zig(int x)
+{
+	int y=fa[x],z=fa[y];
+	if(l[z]==y)l[z]=x;else r[z]=x;
+	fa[x]=z,fa[y]=x,fa[r[x]]=y;
+	l[y]=r[x],r[x]=y;
+	splay_updata(y);
+}
+ 
+void zag(int x)
+{
+	int y=fa[x],z=fa[y];
+	if(l[z]==y)l[z]=x;else r[z]=x;
+	fa[x]=z,fa[y]=x,fa[l[x]]=y;
+	r[y]=l[x];l[x]=y;
+	splay_updata(y);
+}
+ 
+void Add(int x,long long y)
+{
+	BST[x]+=y;
+	add[x]+=y;
+	sum[x]+=y*size[x];
+}
+ 
+void splay_down(int x)
+{
+	if(add[x])
+	{
+		if(l[x])Add(l[x],add[x]);
+		if(r[x])Add(r[x],add[x]);
+		add[x]=0;
+	}
+}
+ 
+void splay(int x)
+{
+	int y,z;
+	y=x;z=1;st[1]=x;
+	while(fa[y])
+	{
+		++z;
+		y=fa[y];
+		st[z]=y;
+	}
+	for(y=z;y>=1;--y)splay_down(st[y]);
+	while(fa[x])
+	{
+		y=fa[x],z=fa[y];
+		if((z)&&(y!=root))
+		{
+			if(l[z]==y){if(l[y]==x)zig(y),zig(x);else zag(x),zig(x);}
+			else{if(l[y]==x)zig(x),zag(x);else zag(y),zag(x);}
+		}
+		else{if(l[y]==x)zig(x);else zag(x);}
+	}
+	root=x;
+	splay_updata(root);
+}
+ 
+int BST_K(int K)
+{
+	int x=root;
+	while(x)
+	{
+		splay_down(x);
+		if(size[l[x]]+1==K)return x;
+		if(size[l[x]]+1>K)
+		x=l[x];
+		else 
+		{
+			K=K-1-size[l[x]];
+			x=r[x];
+		}
+	}
+}
+ 
+void splay_get(int x,int y)
+{
+    int p1,p2;
+    p1=BST_K(x-1);p2=BST_K(y+1);
+    splay(p1);fa[r[p1]]=0;root=r[p1];r[p1]=0;
+    splay(p2);root=p1;fa[p2]=p1;r[root]=p2;
+}
+ 
+int splay_build(int p,int q,int f)
+{
+    int mid;
+    mid=(p+q)>>1;
+    fa[id[mid]]=f;
+    if(mid!=p)l[id[mid]]=splay_build(p,mid-1,id[mid]);
+    if(mid!=q)r[id[mid]]=splay_build(mid+1,q,id[mid]);
+    splay_updata(id[mid]);
+    return id[mid];
+}
+ 
+void dfs(int x)
+{
+	vis[x]=true;
+	id[++tot]=x;
+	for(int i=son[x];i;i=next[i])
+	if(!vis[ed[i]])dfs(ed[i]);
+	id[++tot]=x+200000;
+}
+ 
+int main()
+{
+	scanf("%d",&n);
+	for(i=1;i<=n;++i)scanf("%lld",&BST[i]),BST[i+200000]=BST[i];
+	for(i=1;i<n;++i)
+	{
+		scanf("%d%d",&u,&v);++u;++v;
+		++tot;next[tot]=son[u];son[u]=tot;ed[tot]=v;
+		++tot;next[tot]=son[v];son[v]=tot;ed[tot]=u;
+	}
+	tot=1;id[1]=450000;
+	dfs(1);
+	id[++tot]=450001;
+	root=splay_build(1,tot,0);
+	scanf("%d",&m);
+	for(;m;--m)
+	{
+		scanf("%d",&opt);
+		if(opt==1)
+		{
+			++n;
+			scanf("%lld%lld",&u,&BST[n]);++u;u+=ans;
+			BST[n+200000]=BST[n];
+			splay(u);
+			r[n+200000]=r[u];fa[r[n+200000]]=n+200000;
+			r[u]=n;fa[n]=u;
+			r[n]=n+200000;fa[n+200000]=n;
+			splay_updata(n+200000);
+			splay_updata(n);
+			splay_updata(u);
+			splay(n+200000);
+		}
+		if(opt==2)
+		{
+			scanf("%lld%lld",&u,&v);++u;u+=ans;
+			splay(u);x=size[l[u]]+1;
+			splay(u+200000);y=size[l[u+200000]]+1;
+			splay_get(x,y);
+			Add(l[r[root]],v);
+			splay_updata(r[root]);
+			splay_updata(root);
+		}
+		if(opt==3)
+		{
+			scanf("%lld",&u);++u;u+=ans;
+			splay(u);x=size[l[u]]+1;
+			splay(u+200000);y=size[l[u+200000]]+1;
+			splay_get(x,y);
+			l[r[root]]=0;
+			splay_updata(r[root]);
+			splay_updata(root);
+		}
+		if(opt==4)
+		{
+			scanf("%lld",&u);++u;u+=ans;
+			splay(u);x=size[l[u]]+1;
+			splay(u+200000);y=size[l[u+200000]]+1;
+			splay_get(x,y);
+			ans=sum[l[r[root]]]/2;
+			printf("%lld\n",ans);
+		}
+	}
+} 

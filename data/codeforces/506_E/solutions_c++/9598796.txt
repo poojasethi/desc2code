@@ -1,0 +1,122 @@
+#include<cstdio>
+#include<cstring>
+
+
+const int MAX_N = 200;
+const int MOD = 10007;
+
+char str[MAX_N + 10];
+int n, len;
+
+#define inc(a, b) { \
+    (a) += (b); \
+    if((a) >= MOD) \
+        (a) -= MOD; \
+}
+
+struct Matrix{
+    int h, w;
+    short mat[MAX_N * 2 + 10][MAX_N * 2 + 10];
+};
+
+Matrix operator * (const Matrix& a, const Matrix& b){
+    Matrix ans;
+    ans.h = a.h;
+    ans.w = b.w;
+    memset(ans.mat, 0, sizeof(ans.mat));
+    for(int k = 0; k < a.w; k ++)
+        for(int i = k; i < ans.h; i ++)
+            for(int j = 0; j <= k; j ++)
+                inc(ans.mat[i][j], (int)a.mat[i][k] * b.mat[k][j] % MOD)
+    return ans;
+}
+
+Matrix gen(int n){
+    Matrix ans;
+    memset(ans.mat, 0, sizeof(ans.mat));
+    ans.h = ans.w = n;
+    for(int i = 0; i < n; i ++)
+        ans.mat[i][i] = 1;
+    return ans;
+}
+
+Matrix fastPow(Matrix b, int p){
+    Matrix ans = gen(b.h);
+    while(p){
+        if(p & 1)
+            ans = ans * b;
+        b = b * b;
+        p >>= 1;
+    }
+    return ans;
+}
+
+int f[MAX_N + 10][MAX_N + 10][MAX_N + 10];
+int g[MAX_N + 10];
+Matrix cg, cg1, cg2;
+
+int main(){
+#ifdef LOCAL
+    freopen("test.in", "r", stdin);
+    freopen("test.out", "w", stdout);
+#endif
+    scanf("%s%d", str + 1, &n);
+    len = strlen(str + 1);
+    n += len;
+    f[1][len][0] = 1;
+    int bound = len / 2 + 1;
+    for(int gap = len; gap >= 1; gap --){
+        for(int l = 1; l + gap - 1 <= len; l ++){
+            int r = l + gap - 1;
+            for(int i = 0; i <= len; i ++){
+                if(f[l][r][i] == 0)
+                    continue;
+                if(str[l] == str[r]){
+                    if(gap <= 2)
+                        inc(g[i], f[l][r][i])
+                    else
+                        inc(f[l + 1][r - 1][i], f[l][r][i])
+                } else{
+                    inc(f[l + 1][r][i + 1], f[l][r][i])
+                    inc(f[l][r - 1][i + 1], f[l][r][i])
+                }
+            }
+        }
+    }
+    cg.h = cg.w = len + bound + bound + 1;
+    for(int i = 0; i < len; i ++){
+        cg.mat[i + 1][i] = 1;
+        cg.mat[i][i] = 24;
+        if(i == len - 1){
+            cg.mat[len + bound][i] = 1;
+            cg.mat[len + bound][len + bound] = 26;
+        }
+    }
+    for(int i = 0; i < bound; i ++){
+        if(i < bound - 1)
+            cg.mat[len + i + 1][len + i] = 1;
+        cg.mat[len + i][len + i] = 25;
+        cg.mat[i + len + bound + 1][i + len] = 1;
+        cg.mat[i + len + bound + 1][i + len + bound + 1] = 26;
+    }
+    cg1 = fastPow(cg, (n >> 1) + (n & 1) - 1);
+    cg2 = cg * cg1;
+    int ans = 0;
+    for(int i = 0; i <= len; i ++){
+        int b = ((len - i) >> 1) + ((len - i) & 1);
+//      if((i + b) * 2 > (n - len))
+//          continue;
+//      if((len - i) & 1)
+        inc(ans, cg2.mat[len + bound + b][len - i] * g[i] % MOD)
+        if((n & 1) && !((len - i) & 1)){
+            ans -= cg1.mat[len + b - 1][len - i] * g[i] % MOD;
+            if(ans < 0)
+                ans += MOD;
+        }
+    }
+    printf("%d\n", ans);
+
+    return 0;
+}
+
+

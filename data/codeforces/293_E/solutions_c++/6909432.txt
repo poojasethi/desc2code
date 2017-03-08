@@ -1,0 +1,101 @@
+//In the name of God
+//...
+#include <bits/stdc++.h>
+using namespace std;
+typedef pair<long long, int> pii;
+const int N = 1e5 + 5, oo = 2e9 + 10;
+
+int n, c, l, f[N], sub[N];
+bool flag, mark[N];
+long long ans;
+vector<pii> adj[N], all[N], cur[N];
+
+int query(int m) { m++;
+	int res = 0;
+	while (m)
+		res += f[m], m -= m & -m;
+	return res;
+}
+void update(int m, int c) { m++;
+	while (m < N)
+		f[m] += c, m += m & -m;
+}
+void dfs(int v, int par, int l, long long w, vector<pii> &cur) {
+	cur.push_back(pii(w, l));
+	for (int i = 0; i < (int) adj[v].size(); i++)
+		if (!mark[adj[v][i].first] && adj[v][i].first != par)
+			dfs(adj[v][i].first, v, l + 1, w + adj[v][i].second, cur);
+}
+long long cal(vector<pii> &v) {
+	long long res = 0;
+	sort(v.begin(), v.end());
+	int n = v.size(), pt = 0;
+	for (int i = n - 1; i >= 0; i--) {
+		int a = v[i].first, b = v[i].second;
+		while (pt < n && a + v[pt].first <= c) {
+			update(v[pt].second, 1);
+			pt++;
+		}
+		if (b <= l) {
+			res += query(l - b);
+			if (2 * a <= c && 2 * b <= l)
+				res--;
+		}
+		
+	}
+	for (int i = 0; i < pt; i++)
+		update(v[i].second, -1);
+	return res / 2;
+}
+void solve(int v, int par, int n) {
+	sub[v] = 1;
+	for (int i = 0; i < (int) adj[v].size() && !flag; i++) {
+		int u = adj[v][i].first;
+		if (u != par && !mark[u]) {
+			solve(u, v, n);
+			sub[v] += sub[u];
+		}
+	}
+	if (flag)
+		return;
+	long long res = 0;
+	if (2 * sub[v] >= n) {
+		mark[v] = true;
+		for (int i = 0; i < (int) adj[v].size(); i++) {
+			int u = adj[v][i].first;
+			if (!mark[u]) {
+				dfs(adj[v][i].first, v, 1, adj[v][i].second, cur[v]);
+				res -= cal(cur[v]);
+				copy(cur[v].begin(), cur[v].end(), back_inserter(all[v]));
+				vector<pii>().swap(cur[v]);
+				solve(u, v, u == par? n - sub[v]: sub[u]);
+				flag = false;
+			}
+		}
+		all[v].push_back(pii(0, 0));
+		res += cal(all[v]);
+/*		cerr << n << ':' << v + 1 << '\n';
+		for (int i = 0; i < (int) all[v].size(); i++)
+			cerr << '(' << all[v][i].first << ',' << all[v][i].second << ')';
+		cerr << "-> " << res << '\n';
+		*/
+		ans += res;
+		vector<pii>().swap(all[v]);
+		flag = true;
+	}
+}
+
+int main() {
+	ios_base::sync_with_stdio(false);
+	cin >> n >> l >> c;
+	for (int i = 1; i < n; i++) {
+		int par, w;
+		cin >> par >> w;
+		par--;
+		adj[par].push_back(pii(i, w));
+		adj[i].push_back(pii(par, w));
+	}
+	solve(0, -1, n);
+	cout << ans << '\n';
+	return 0;
+}

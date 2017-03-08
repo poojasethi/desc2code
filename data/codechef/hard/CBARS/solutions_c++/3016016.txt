@@ -1,0 +1,118 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<math.h>
+#include<string.h>
+#include<assert.h>
+#define REP(i,a,b) for(i=a;i<b;i++)
+#define rep(i,n) REP(i,0,n)
+
+#define ll long long
+#define ull unsigned ll
+
+#define M 1000000007
+
+/* matrix library begin */
+
+typedef struct ll_matrix{
+    int r,c;
+    ll **data;
+}llMatrix;
+
+llMatrix newLLMatrix(int r,int c){
+    int i; llMatrix res;
+    res.r=r; res.c=c;
+    res.data    = (ll**) malloc(r*sizeof(ll*));
+    res.data[0] = (ll*) malloc(r*c*sizeof(ll));
+    REP(i,1,r) res.data[i] = res.data[i-1]+c;
+    return res;
+}
+
+void* setMemoryLLMatrix(llMatrix *a,int r,int c,void *WorkMemory){
+    int i;
+    a->r=r; a->c=c;
+    a->data = (ll**)WorkMemory; WorkMemory = (void*)(a->data + r);
+    rep(i,r){a->data[i] = (ll*)WorkMemory; WorkMemory = (void*) (a->data[i] + c);}
+    return WorkMemory;
+}
+
+void deleteLLMatrix(llMatrix *a){
+    free(a->data[0]); free(a->data);
+}
+
+void llMatrixSetZero(llMatrix *a){
+    int i,j;
+    rep(i,a->r) rep(j,a->c) a->data[i][j]=0;
+}
+
+void llMatrixSetIdentity(llMatrix *a){
+    int i,mx;
+    mx=a->r; if(mx>a->c) mx=a->c;
+    llMatrixSetZero(a); rep(i,mx) a->data[i][i]=1;
+}
+
+void llMatrixMultipleMod(llMatrix *a,llMatrix *b,llMatrix *res,ll m){
+    int i,j,k;
+    llMatrixSetZero(res);
+    rep(i,res->r) rep(k,b->r) if(a->data[i][k]) rep(j,res->c) {
+        res->data[i][j]+=a->data[i][k]*b->data[k][j];
+        if(res->data[i][j]>=m) res->data[i][j]%=m;
+    }
+}
+
+void llMatrixPowerMod(llMatrix *a,llMatrix *res,ull k,ll m,void *WorkMemory){
+    int i,j,n=a->r;
+    llMatrix tmp1,tmp2;
+    
+    res->r=res->c=n;
+    if(k==0){ llMatrixSetIdentity(res); return; }
+    if(k==1){ rep(i,n)rep(j,n)res->data[i][j]=a->data[i][j]; return; }
+    if(k==2){ llMatrixMultipleMod(a,a,res,m); return; }
+    
+    WorkMemory = setMemoryLLMatrix(&tmp1,n,n,WorkMemory);
+    llMatrixPowerMod(a, &tmp1, k/2, m, WorkMemory);
+    if(k%2==0) llMatrixMultipleMod(&tmp1,&tmp1,res,m);
+    else {
+        WorkMemory = setMemoryLLMatrix(&tmp2,n,n,WorkMemory);
+        llMatrixMultipleMod(&tmp1,&tmp1,&tmp2,m);
+        llMatrixMultipleMod(a,&tmp2,res,m);
+    }
+}
+
+/* matrix library end */
+
+
+int main(){
+    int a; ull b;
+    
+    int i, j, k, res;
+    llMatrix mt = newLLMatrix(130,130);
+    llMatrix pw = newLLMatrix(130,130);
+    void *mem = malloc(10000000);
+    
+    for(;;){
+        if(scanf("%d%llu\n",&a,&b) != 2) break;
+        assert( 1<=a && a<=7 );
+        assert( 1ULL<=b && b<(1ULL<<63) );
+        
+        /* creating matrix */
+        rep(i,1<<a) rep(j,1<<a) mt.data[i][j] = 0;
+        rep(i,1<<a) rep(j,1<<a){ /* i denotes the previous line, j denotes the corrent line */
+            REP(k,1,a){ /* if 2*2 block with the same color are found, break! */
+                if(  (i&1<<(k-1)) &&  (i&1<<k) &&  (j&1<<(k-1)) &&  (j&1<<k) ) break;
+                if( !(i&1<<(k-1)) && !(i&1<<k) && !(j&1<<(k-1)) && !(j&1<<k) ) break;
+            }
+            if(k==a) mt.data[i][j]++;
+        }
+        
+        llMatrixPowerMod(&mt, &pw, b-1, M, mem); /* pw = mt^(b-1) mod M */
+        res = 0;
+        rep(i,1<<a) rep(j,1<<a){
+            res += pw.data[i][j];
+            if(res >= M) res -= M; /* mod M */
+        }
+        printf("%d\n",res);
+        break;
+    }
+    
+    return 0;
+}

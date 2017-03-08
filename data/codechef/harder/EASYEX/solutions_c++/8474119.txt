@@ -1,0 +1,128 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+#include <algorithm>
+#define p 2003
+#define pi 3.141592653589793238462643383
+using namespace std;
+
+struct complex
+{
+	double num,inum;
+	complex(double A=0.0,double B=0.0){num=A,inum=B;}
+}a[2000005],b[2000005],w[2][2000005];
+int n,rev[2000005];
+
+complex operator +(const complex &A,const complex &B){return complex(A.num+B.num,A.inum+B.inum);}
+complex operator -(const complex &A,const complex &B){return complex(A.num-B.num,A.inum-B.inum);}
+complex operator *(const complex &A,const complex &B){return complex(A.num*B.num-A.inum*B.inum,A.num*B.inum+A.inum*B.num);}
+
+void FFT(complex *a,int f)
+{
+	int i,j,k,t,l;
+	complex x,y;
+	for(i=0;i<n;++i)if(i<rev[i])swap(a[i],a[rev[i]]);
+	for(i=1;i<n;i<<=1)
+	for(j=0,t=n/(i<<1);j<n;j+=i<<1)
+	for(k=l=0;k<i;++k,l+=t)
+	{
+		x=w[f][l]*a[j+k+i];
+		y=a[j+k];
+		a[j+k]=y+x;
+		a[j+k+i]=y-x;
+	}
+	if(f)for(i=0;i<n;++i)a[i].num/=n;
+}
+
+void prepare()
+{
+	int i,j,x,y;
+	for(i=0;i<n;++i)
+	{
+		x=i;y=0;
+		for(j=1;j<n;x>>=1,j<<=1)(y<<=1)|=x&1;
+		rev[i]=y;
+	}
+	for(i=0;i<n;++i)
+	{
+		w[0][i]=complex(cos(2*pi*i/n),sin(2*pi*i/n));
+		w[1][i]=complex(cos(2*pi*i/n),-sin(2*pi*i/n));
+	}
+}
+
+void mult()
+{
+	int i;
+	FFT(a,0);
+	FFT(b,0);
+	for(i=0;i<n;++i)a[i]=a[i]*b[i];
+	FFT(a,1);
+}
+
+void Mult(int *A,int *B)
+{
+	int i;
+	for(i=0;i<n;++i)a[i]=complex(A[i],0);
+	for(i=0;i<n;++i)b[i]=complex(B[i],0);
+	mult();
+	for(i=0;i<n;++i)A[i]=((long long)(a[i].num+0.1))%p;
+}
+
+int T,N,K,L,F,ans,tmp,inv,i,j,k;
+int fac[50005],fac_inv[50005],S[1005][1005];
+int f[1000005],g[1000005];
+
+int Power(int a,int b)
+{
+	int ans=1;
+	for(;b;b>>=1,a=a*a%p)if(b&1)ans=ans*a%p;
+	return ans;
+}
+
+int C(int n,int m)
+{
+	if(n<m)return 0;
+	return fac[n]*fac_inv[m]%p*fac_inv[n-m]%p;
+}
+
+int Lucas(int n,int m)
+{
+	if(n<p&&m<p)return C(n,m);
+	return C(n%p,m%p)*Lucas(n/p,m/p)%p;
+}
+
+int main()
+{
+	fac[0]=1;
+	for(i=1;i<=50000;++i)fac[i]=fac[i-1]*i%p;
+	for(i=0;i<=50000;++i)fac_inv[i]=Power(fac[i],p-2);
+	S[0][0]=1;
+	for(i=1;i<=1000;++i)
+	for(j=1;j<=i;++j)
+	S[i][j]=(S[i-1][j]*j+S[i-1][j-1])%p;
+	
+	scanf("%d",&T);
+	for(;T;--T)
+	{
+		scanf("%d%d%d%d",&N,&K,&L,&F);
+		if(K%p==0){printf("0\n");continue;}
+		k=L*F;
+		for(n=1;n<=k;n<<=1);prepare();
+		for(i=0;i<n;++i)f[i]=g[i]=0;
+		if(F==1)f[L]=1;
+		else
+		{
+			f[0]=1;
+			for(i=1;i<=F;++i)g[i]=S[F][i];
+			for(;L;L>>=1,Mult(g,g))if(L&1)Mult(f,g);
+		}
+		ans=0;tmp=1;inv=Power(K%p,p-2);
+		for(i=1;i<=k&&i<=p;++i)
+		{
+			tmp=tmp*inv%p;
+			ans=(ans+f[i]*fac[i]%p*Lucas(N,i)%p*tmp%p)%p;
+		}
+		printf("%d\n",ans);
+	}
+}

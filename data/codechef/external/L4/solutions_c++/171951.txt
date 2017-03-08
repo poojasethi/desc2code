@@ -1,0 +1,267 @@
+#include<iostream>
+#include<vector>
+#include<deque>
+#include<map>
+#include<algorithm>
+#include<cstdlib>
+#include<time.h>
+#include<stdio.h>
+#include <unistd.h>
+ 
+ 
+#define TIMER_ON 0
+#if TIMER_ON == 1
+#define TIMER(x) x
+#else
+#define TIMER(x)
+#endif
+ 
+#define DEBUG_LEVEL 0
+#if DEBUG_LEVEL > 0
+#define DEBUG_LVL(LEVEL, STATEMENT) if((LEVEL+1)>DEBUG_LEVEL) STATEMENT
+#else
+#define DEBUG_LVL(LEVEL, STATEMENT)
+#endif
+ 
+#define DEBUG_SPECIFIC 0
+#if DEBUG_SPECIFIC == 0
+#define DEBUG_SPF(LEVEL, STATEMENT) if(LEVEL==DEBUG_SPECIFIC) STATEMENT
+#else
+#define DEBUG_SPF(LEVEL, STATEMENT)
+#endif
+ 
+ 
+
+ 
+typedef   std::pair< unsigned int /*index*/, unsigned long /*height*/ > SkyScraper;
+#define bldIndex first
+#define bldHeight second
+ 
+bool compareHeight(const SkyScraper& a, const SkyScraper& b) { return a.bldHeight < b.bldHeight; }
+bool compareIndex(const SkyScraper& a, const SkyScraper& b) { return a.bldIndex < b.bldIndex; }
+ 
+class CitySkyLine : public std::deque< SkyScraper >
+{
+    SkyScraper _check;
+public:
+    CitySkyLine():_check(0,0){}
+   
+    inline void check_push_back(const unsigned int iii, const unsigned long height)
+    {
+       DEBUG_LVL(1, std::cout << "CitySkyLine::[height("<<height<<")+iii("<<iii<<")+1] > [check.bldHeight("<<_check.bldHeight<<")+check.bldIndex("<<_check.bldIndex<<")]"<<std::endl);
+       if((height+iii+1)> (_check.bldHeight+_check.bldIndex) )
+       {
+           DEBUG_LVL(1, std::cout << "true" << std::endl);
+           while(size()>0)
+           {
+               _check=back();
+               if(height > _check.bldHeight && (iii-_check.bldIndex) < (height-_check.bldHeight) )
+               {
+                   DEBUG_LVL(2, std::cout << "-----pop_back(idx="<<_check.bldIndex<<", hgt="<<_check.bldHeight<<")"<<std::endl);
+                   pop_back();
+               }
+               else
+                   break;
+           }
+           DEBUG_LVL(2, std::cout << "+++++push_back(idx="<<iii<<", hgt="<<height<<")"<<std::endl);
+           _check=SkyScraper(iii,height);
+           push_back(_check);
+       }
+    }
+};
+ 
+ 
+//typedef   std::map<unsigned int /* 2*Height */, CitySkyLine > City;
+class City : public std::map<unsigned int /* 2*Height */, CitySkyLine >
+{
+    unsigned long _delta;
+    unsigned long _minNextHeight;
+	const unsigned int _nSkyscrapers;
+public:
+    City(const unsigned int n_Skyscrapers):_minNextHeight(0),_nSkyscrapers(n_Skyscrapers),_delta(0){}
+    const unsigned int citySize() const { return _nSkyscrapers; }
+
+    inline void check_push_back(const unsigned int iii, const unsigned long height)
+    {
+        DEBUG_LVL(1, std::cout << "[height("<<height<<")+iii("<<iii<<")+1] > [check.bldHeight("<<check.bldHeight<<")+check.bldIndex("<<check.bldIndex<<")]"<<std::endl);
+        if(height>_minNextHeight)
+        {
+           (*this)[(height<<1)/_nSkyscrapers].check_push_back(iii,height);
+           if( size() > 2 )
+           {
+               erase(begin());
+           }
+           _minNextHeight = (  ( _nSkyscrapers * (begin()->first) )>>1  );
+        }
+	}
+
+	inline void cleanFrontBack()
+	{
+		unsigned int diffIdx;
+		City::iterator iter;
+		for(iter=begin(); iter != end(); iter++)
+		{
+			CitySkyLine& inLevel = iter->second;
+			diffIdx = _nSkyscrapers + inLevel.front().bldIndex - inLevel.back().bldIndex;
+			while(  inLevel.size()>2
+					&& diffIdx < abs( long(inLevel.front().bldHeight) - inLevel.back().bldHeight) )
+			{
+			   if(inLevel.front().bldHeight > inLevel.back().bldHeight)
+			   {
+				   inLevel.pop_back();
+			   }
+			   else
+			   {
+				   inLevel.pop_front();
+			   }
+			   diffIdx = _nSkyscrapers + inLevel.front().bldIndex - inLevel.back().bldIndex;
+			}
+		}
+	}
+
+	void cleanOnHeight()
+	{
+		if(size() < 2) return;
+        City::iterator iter2 = begin();
+		iter2++;
+		CitySkyLine::iterator maxHeight = std::max_element(iter2->second.begin(),iter2->second.end(), compareHeight);
+		City tmp(_nSkyscrapers);
+		tmp._delta = (iter2->first + 1) * (_nSkyscrapers>>1) - maxHeight->bldHeight -1;
+		for(iter2=begin(); iter2!=end(); iter2++)
+		{
+			for (CitySkyLine::iterator skyIter=iter2->second.begin(); skyIter!=iter2->second.end(); ++skyIter)
+			{
+				tmp.check_push_back(skyIter->bldIndex, skyIter->bldHeight);
+			}
+		}
+		tmp.cleanFrontBack();
+		(std::map<unsigned int /* 2*Height */, CitySkyLine >)(*this) = (std::map<unsigned int /* 2*Height */, CitySkyLine >)tmp;
+	}
+};
+
+//typedef   std::vector< SkyScraper > CityAll;
+class CityAll : public std::vector< SkyScraper >
+{
+	const unsigned int _nSkyscrapers;
+	const unsigned int _halfLen;
+	unsigned long _distance(const SkyScraper& a, const SkyScraper& b)
+	{
+		DEBUG_LVL(1, std::cout << "a.idx=" << a.bldIndex << ", b.idx=" << b.bldIndex << ",  a.hgt=" << a.bldHeight << ", b.hgt=" << b.bldHeight);
+		unsigned int bldgDistance = (a.bldIndex > b.bldIndex) ? (a.bldIndex - b.bldIndex) : (b.bldIndex - a.bldIndex);
+		if(bldgDistance > _halfLen) bldgDistance = _nSkyscrapers - bldgDistance;
+		DEBUG_LVL(1, std::cout <<", bldDist="<< bldgDistance << std::endl);
+		return a.bldHeight+b.bldHeight+bldgDistance;
+	}
+
+public:
+    CityAll(const City& city):_nSkyscrapers(city.citySize()),_halfLen(city.citySize()/2)
+	{
+		City::const_iterator iter=city.begin();
+		if(city.size()==1)
+		{
+			reserve(city.size());
+			insert(end(), iter->second.begin(), iter->second.end() );
+		}
+		else
+		{
+			City::const_iterator iter2 = iter;
+			iter2++;
+			resize(iter->second.size()+iter2->second.size());
+			std::merge(iter->second.begin(), iter->second.end(), iter2->second.begin(),iter2->second.end(), begin(), compareIndex);
+		}
+	}
+    const unsigned int citySize() const { return _nSkyscrapers; }
+
+	unsigned long getMaxDistanceBrute()
+	{
+		CityAll::iterator iterAll = begin();
+		unsigned long maxDistance=0;
+		while(iterAll != end())
+		{
+			CityAll::iterator iterAll2 = iterAll;
+			iterAll2++;
+			while(iterAll2 != end())
+			{
+				if( maxDistance < _distance((*iterAll), (*iterAll2)) ) maxDistance = _distance((*iterAll), (*iterAll2));
+				iterAll2++;
+			}
+			iterAll++;
+		}
+		return maxDistance;
+	}
+};
+ 
+void printCity(const City& city)
+{
+    int lev=0;
+    std::cout << "#######start########" << std::endl;
+    for(City::const_iterator iter=city.begin(); iter != city.end(); iter++,lev++)
+        for(CitySkyLine::const_iterator blg=iter->second.begin(); blg != iter->second.end(); blg++)
+            std::cout <<"level="<<lev<< ", blg.idx="<< blg->bldIndex << ", blg.hgt=" << blg->bldHeight << std::endl;
+    std::cout << "#######end########" << std::endl;
+}
+ 
+void printCity(const CityAll& cityAll)
+{
+    std::cout << "*********start*********" << std::endl;
+        for(CityAll::const_iterator blg=cityAll.begin(); blg != cityAll.end(); blg++)
+            std::cout << "*blg.idx="<< blg->bldIndex << ", blg.hgt=" << blg->bldHeight << std::endl;
+    std::cout << "*********end*********" << std::endl;
+}
+ 
+ int main()
+{
+    TIMER(time_t startTime=time(NULL));
+    TIMER(std::cerr<<"start ="<<startTime<<std::endl);
+    unsigned int arrIdx=0;
+    int readSize;
+    char input[1000000];
+    unsigned int nSkyscrapers;
+    
+    unsigned int iii=0;
+    unsigned long height;
+    readSize = read(0, input, sizeof(input)-1);
+    input[readSize]='\0';
+    for (nSkyscrapers = 0; input[arrIdx] >= '0'; ++arrIdx)  nSkyscrapers = nSkyscrapers * 10 + (input[arrIdx] - '0');
+    for (;arrIdx<readSize && input[arrIdx] < '0'; ++arrIdx);
+ 
+    City city(nSkyscrapers);
+    while(iii<nSkyscrapers)
+    {
+        height = 0;
+        for (; arrIdx<readSize && input[arrIdx] >= '0'; ++arrIdx)  height = height * 10 + (input[arrIdx] - '0');
+        if(arrIdx==readSize)
+        {
+            readSize = read(0, input, sizeof(input)-1);
+            if(readSize < 0) exit(1);
+            input[readSize]='\0';
+            arrIdx=0;
+            for (; arrIdx<readSize && input[arrIdx] >= '0'; ++arrIdx)  height = height * 10 + (input[arrIdx] - '0');
+        }
+        for (;arrIdx<readSize && input[arrIdx] < '0'; ++arrIdx);
+        
+        DEBUG_LVL(2, std::cout << ">>>>height="<<height<<", minNextHeight="<<minNextHeight<<std::endl);
+		city.check_push_back(iii,height);
+        iii++;
+    }
+    TIMER(time_t endTime=time(NULL));
+    TIMER(std::cerr<<"read end="<<endTime<<", runTime="<<endTime-startTime<<std::endl);
+    DEBUG_LVL(3, printCity(city));
+    
+	city.cleanFrontBack();
+	city.cleanOnHeight();
+    
+    DEBUG_LVL(3, printCity(city));
+    
+    CityAll cityAll(city);
+    
+    DEBUG_LVL(3, printCity(cityAll));
+    
+    std::cout<<cityAll.getMaxDistanceBrute()<<std::endl;
+ 
+    TIMER(endTime=time(NULL));
+    TIMER(std::cerr<<"cal end ="<<endTime<<", runTime="<<endTime-startTime<<std::endl);
+    return 0;
+ 
+}
+

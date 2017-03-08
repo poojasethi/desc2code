@@ -1,0 +1,178 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<set>
+#include<map>
+#include<vector>
+#define rep(i,j,k) for(int i=(int)j;i<=(int)k;i++)
+#define per(i,j,k) for(int i=(int)j;i>=(int)k;i--)
+using namespace std;
+typedef long long LL;
+typedef double db;
+const int N=210000;
+inline void read(unsigned int &x){
+	x=0;char p=getchar();
+	while(!(p<='9'&&p>='0'))p=getchar();
+	while(p<='9'&&p>='0')x*=10,x+=p-48,p=getchar();
+}
+inline void read(int &x){
+	x=0;char p=getchar();
+	while(!(p<='9'&&p>='0'))p=getchar();
+	while(p<='9'&&p>='0')x*=10,x+=p-48,p=getchar();
+}
+int n;
+unsigned int tmpw[N];int M;
+inline int get(unsigned int x){
+	return lower_bound(tmpw+1,tmpw+1+M,x)-tmpw;
+}
+struct opt{
+	int ty;
+	unsigned int u,v;
+}a[N];
+//seg
+unsigned int mik[N*4];
+int sz[N*4];
+int ans[N*4];
+int work_a(int me,int l,int r,unsigned int aft){
+	if(!sz[me])return 0;
+	if(l==r)return mik[me]<=aft;
+	int mid=(l+r)>>1;
+	if(mik[me*2]>aft)return work_a(me*2+1,mid+1,r,aft);
+	return work_a(me*2,l,mid,aft)+ans[me*2+1];
+}
+int work_p(int me,int l,int r,unsigned int aft){
+	if(!sz[me])return 0;
+	if(l==r)return mik[me]<=aft;
+	int mid=(l+r)>>1;
+	if(mik[me*2+1]>aft)return work_p(me*2,l,mid,aft);
+	return work_p(me*2+1,mid+1,r,aft)+ans[me*2];
+}
+void updata(int me,int l,int r){
+	sz[me]=sz[me*2]+sz[me*2+1];
+	if(!sz[me*2])mik[me]=mik[me*2+1];
+	else if(!sz[me*2+1])mik[me]=mik[me*2];
+	else{
+		if(mik[me*2]<mik[me*2+1])mik[me]=mik[me*2];
+		else mik[me]=mik[me*2+1];
+	}
+	
+	int mid=(l+r)>>1;
+	ans[me*2]=work_p(me*2,l,mid,mik[me*2+1]);
+	ans[me*2+1]=work_a(me*2+1,mid+1,r,mik[me*2]);
+}
+void insert(int me,int l,int r,int x,unsigned int ky){
+	if(l==r){
+		sz[me]=1;
+		mik[me]=ky;
+		return;
+	}
+	int mid=(l+r)>>1;
+	if(x<=mid)insert(me*2,l,mid,x,ky);
+	else insert(me*2+1,mid+1,r,x,ky);
+	updata(me,l,r);
+}
+void del(int me,int l,int r,int x){
+	if(l==r){
+		sz[me]=0;
+		mik[me]=-1;
+		return;
+	}
+	int mid=(l+r)>>1;
+	if(x<=mid)del(me*2,l,mid,x);
+	else del(me*2+1,mid+1,r,x);
+	updata(me,l,r);
+}
+int qu[N][3];int top;
+void diver(int me,int l,int r,int x,int y){
+	if(x<=l&&r<=y){
+		++top;
+		qu[top][0]=me;
+		qu[top][1]=l;
+		qu[top][2]=r;
+		return;
+	}
+	int mid=(l+r)>>1;
+	if(x<=mid)diver(me*2,l,mid,x,y);
+	if(y>mid)diver(me*2+1,mid+1,r,x,y);
+}
+unsigned int mi(int me,int l,int r,int x,int y){
+	if(x<=l&&r<=y){
+		return mik[me];
+	}
+	int mid=(l+r)>>1;
+	unsigned int gg=-1;
+	if(x<=mid){
+		unsigned int cg=mi(me*2,l,mid,x,y);
+		if(cg<gg)gg=cg;
+	}
+	if(y>mid){
+		unsigned int cg=mi(me*2+1,mid+1,r,x,y);
+		if(cg<gg)gg=cg;
+	}
+	return gg;
+}
+inline int dep(int x){
+	top=0;
+	diver(1,1,M,1,x);
+	unsigned int aft;
+	aft=-1;
+	int ans=0;
+	per(i,top,1){
+		ans+=work_p(qu[i][0],qu[i][1],qu[i][2],aft);
+		if(mik[qu[i][0]]<aft)aft=mik[qu[i][0]];
+	}
+	//printf("fir %d %d\n",x,ans);
+	top=0;
+	diver(1,1,M,x,M);
+	aft=-1;
+	rep(i,1,top){
+		ans+=work_a(qu[i][0],qu[i][1],qu[i][2],aft);
+		if(mik[qu[i][0]]<aft)aft=mik[qu[i][0]];
+	}
+	//printf("sec %d %d\n",x,ans-1);
+	return ans-1;
+}
+//
+map<unsigned int,unsigned int>idx;
+int main(){
+	read(n);
+	memset(mik,-1,sizeof mik);
+	rep(i,1,n){
+		read(a[i].ty);
+		if(a[i].ty==0){
+			read(a[i].u);read(a[i].v);
+			a[i].v=-1-a[i].v;
+			tmpw[++M]=a[i].u;
+		}
+		else
+		if(a[i].ty==1){
+			read(a[i].u);
+		}
+		else{
+			read(a[i].u);read(a[i].v);
+		}
+	}
+	sort(tmpw+1,tmpw+1+M);
+	M=unique(tmpw+1,tmpw+1+M)-tmpw-1;
+	
+	rep(i,1,n){
+		if(a[i].ty==0){
+			insert(1,1,M,get(a[i].u),a[i].v);
+			idx[a[i].v]=get(a[i].u);
+		}
+		else
+		if(a[i].ty==1){
+			del(1,1,M,get(a[i].u));
+		}
+		else{
+			int u=get(a[i].u);
+			int v=get(a[i].v);
+			if(u>v)swap(u,v);
+			int lc=idx[mi(1,1,M,u,v)];
+			//printf("%d %d %d\n",u,v,lc);
+			printf("%d\n",dep(u)+dep(v)-dep(lc)*2);
+		}
+	}
+	return 0;
+}
+

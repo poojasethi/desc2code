@@ -1,0 +1,131 @@
+#include<stdio.h>
+#include<map>
+#include<stdlib.h>
+#include<time.h>
+typedef unsigned long long ULL;
+using namespace std;
+typedef map<ULL, int> MAP;
+
+
+ULL getState(ULL a[], int n)
+{
+	ULL state = 0;
+	for(int i = 0;i<n;i++)
+	{
+		state = state|a[i];
+		state<<=1;
+	}
+	state>>=1;
+	return state;
+}
+
+inline int ith(ULL state, int i)
+{
+	return ((state&(1<<i))>>i);
+}
+
+inline ULL reverse(ULL state, int n)
+{
+	ULL tmp = state,rev = 0;
+	for(int i = 0;i<n;i++)
+	{
+		rev = rev|(tmp&1);
+		rev<<=1;
+		tmp>>=1;
+	}
+	return rev;
+	
+}
+
+int minOps(ULL a,int n, MAP& mp)
+{
+	int maxCnt=0;
+
+	ULL z=a;
+	int n1 = 0;
+	while(z)
+	{
+		z = z&(z-1);
+		n1++;	
+	}
+	if(n1 == n)
+		return 0;
+	if((n1<<1)>=n)
+		return 1;
+
+	if(mp.find(a)!=mp.end())
+		return mp[a];
+
+	ULL tmp = reverse(a,n);
+	if(mp.find(tmp)!=mp.end())
+		return mp[tmp];
+
+	int minops = n;
+	int maxj = 0;
+	maxCnt = 0;
+	for(int i = 0;i<n-1;i++)
+	{
+		if(ith(a,i) == 1)
+			maxCnt = 1;
+		else
+			maxCnt = 0;
+		int maxj = i+1;
+		bool found = false;
+		for(int j = i+1;j<n;j++)
+		{
+			if(ith(a,j) == 1)
+				maxCnt++;
+			if((maxCnt<<1)== (j-i+1) && maxCnt != j-i+1)
+			{
+				found = true;
+				maxj = j;
+			}
+				
+		}
+		if(found){
+		ULL b = a;
+		ULL mask = ((1<<(maxj+1))-1)^((1<<i)-1);
+		b = b|mask;
+		int ops = 1 + minOps(b, n, mp);
+		if(ops< minops)
+			minops = ops;
+		}
+	}
+	mp[a] = minops;
+	return minops;
+}
+
+
+int main()
+{
+	srand(time(NULL));
+	int t = 1;
+	scanf("%d", &t);
+	ULL a[30];// = {0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0};
+	while(t--)
+	{
+		int n = 25;
+		scanf("%d", &n);
+		ULL max = 0;
+		for(int i = 0;i<n;i++)
+		{
+			scanf("%llu", &a[i]);
+			//a[i] = rand()%100000000 + 1;
+			if(a[i]>max)
+				max = a[i];
+		}
+		for(int i = 0;i<n;i++)
+		{
+			if(a[i] == max) a[i] = 1;
+			else a[i] = 0;
+		}
+		MAP mp;
+		ULL st = 1;
+		st = st<<n;
+		st-=1;
+		mp[st] = 0;
+		ULL state = getState(a,n);
+		printf("%d\n", minOps(state, n, mp));
+	}
+
+}

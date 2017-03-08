@@ -1,0 +1,92 @@
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
+#include <algorithm>
+using namespace std;
+
+int N,M,S,T,ans,flow,off,head[205],next[2005],lk[2005],c[2005],cc[2005],a[205],f[205][205],d[205],p[205],q[205];
+bool b[205];
+
+void add(int u,int v,int x,int t) {lk[t]=v,c[t]=x,next[t]=head[u],head[u]=t;}
+
+void init()
+{
+    scanf("%d%d",&N,&M);
+    for (int i=1,u,v,w,t=1; i<=M; i++) scanf("%d%d%d",&u,&v,&w),add(u,v,w,++t),add(v,u,w,++t);
+    memcpy(cc,c,sizeof(c)),memset(f,63,sizeof(f));
+}
+
+void dinic(int u)
+{
+    if (u==T)
+    {
+        int f=1e9;
+        for (int i=T; i!=S; i=lk[p[i]^1]) f=min(f,c[p[i]]);
+        for (int i=T; i!=S; i=lk[p[i]^1]) {c[p[i]^1]+=f; if (!(c[p[i]]-=f)) off=lk[p[i]^1];}
+        flow+=f;
+        return;
+    }
+    for (int i=head[u],v; v=lk[i],i; i=next[i]) if (c[i]&&d[v]==d[u]+1)
+    {
+        p[v]=i,dinic(v);
+        if (d[u]>d[off]) return;
+        off=T;
+    }
+    d[u]=-1;
+}
+
+bool bfs()
+{
+    memset(d,0,sizeof(d));
+    d[S]=1,q[1]=S;
+    for (int l=1,r=1; l<=r; l++)
+        for (int u=q[l],i=head[u],v; v=lk[i],i; i=next[i]) if (c[i]&&!d[v]) {d[v]=d[u]+1,q[++r]=v; if (v==T) return 1;}
+    return 0;
+}
+
+void work1()
+{
+    bool dd[205],bb[205];
+    for (S=1; S<=N; S++) if (b[S]) break;
+    for (T=S+1; T<=N; T++) if (b[T]) break;
+    if (T>N) return;
+    memcpy(c,cc,sizeof(cc));
+    for (flow=0,off=T; bfs();) dinic(S);
+    for (int i=1; i<=N; i++) dd[i]=!d[i],bb[i]=b[i];
+    for (int i=1; i<=N; i++)
+        for (int j=1; j<i; j++) if (dd[i]^dd[j]) f[i][j]=f[j][i]=min(f[i][j],flow);
+    for (int i=1; i<=N; i++) if (bb[i]&&dd[i]) b[i]=1; else b[i]=0; work1();
+    for (int i=1; i<=N; i++) if (bb[i]&&!dd[i]) b[i]=1; else b[i]=0; work1();
+}
+
+void work2()
+{
+    bool dd[205],bb[205];
+    for (S=1; S<=N; S++) if (b[S]) break;
+    for (T=S+1; T<=N; T++) if (b[T]) break;
+    if (T>N) {a[++a[0]]=S; return;}
+    flow=1e9;
+    for (int i=1; i<=N; i++) if (b[i]&&f[S][i]<flow) flow=f[S][i],T=i;
+    ans+=flow,memcpy(c,cc,sizeof(cc));
+    for (flow=0,off=T; bfs();) dinic(S);
+    for (int i=1; i<=N; i++) dd[i]=!d[i],bb[i]=b[i];
+    for (int i=1; i<=N; i++) if (bb[i]&&dd[i]) b[i]=1; else b[i]=0; work2();
+    for (int i=1; i<=N; i++) if (bb[i]&&!dd[i]) b[i]=1; else b[i]=0; work2();
+}
+
+void doit()
+{
+    memset(b,1,sizeof(b)),work1();
+    memset(b,1,sizeof(b)),work2();
+    printf("%d\n",ans);
+    for (int i=1; i<=N; i++) printf("%d%c",a[i],i==N?'\n':' ');
+}
+
+int main()
+{
+    init();
+    doit();
+    return 0;
+}

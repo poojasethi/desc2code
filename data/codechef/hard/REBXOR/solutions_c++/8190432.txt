@@ -1,0 +1,161 @@
+//"Tell me i will forget,show me i may remember,involve me and i will understand"
+#include<iostream>
+#include<map>
+#include<stdio.h>
+#include<stack>
+#include<algorithm>
+#include<vector>
+using namespace std;
+#define mod 1000000007
+#define i_long long long
+#define max_int 29
+#define N 4*100000+10
+#define gc getchar_unlocked
+inline void read_int(int &x)
+{
+    register int c = gc();
+    x = 0;
+    for(;(c<48 || c>57);c = gc());
+    for(;c>47 && c<58;c = gc()) {x = (x<<1) + (x<<3) + c - 48;}
+}
+//trie node
+struct trie_node{
+	
+	int child[2];
+	};
+struct trie_node root[(max_int+1)*N];
+int count_node=0; //every time a new node is inserted we increment this
+inline void init_func()
+{
+	for(int i=0;i<(max_int+1)*N;i++)
+	{
+		
+			root[i].child[0]=-1;
+			root[i].child[1]=-1;
+			
+		}
+	}
+inline void insert(int cur,int key)
+{
+	//each integer is represented in 30 binary digits initail parts of this representation are zero
+	
+	int pow=1<<max_int;
+	for(int i=0;i<=max_int;i++)
+	{
+		int next;
+		if(pow&key)
+		{next=1;}
+		else{next=0;}
+		//cout<<next<<endl;
+		//cout<<"currently we are on this array index  "<<cur<<" inserting the key "<<key<<endl;
+		if(root[cur].child[next]==-1)
+		{
+			
+			root[cur].child[next]=count_node;
+			count_node++;
+			}
+		cur=root[cur].child[next];
+		pow=pow>>1;
+		}
+	}
+inline int query(int cur,int q)
+{
+	int ans=0;
+	int pow=1<<max_int;
+	for(int i=0;i<=max_int;i++)
+	{
+		int next;
+		if(pow&q)
+		{next=1;}
+		else{next=0;}
+		if(root[cur].child[(1+next)%2]!=-1)
+		{
+			ans=ans^pow;
+			//iter=iter->child[(1+next)%2];
+			cur=root[cur].child[(1+next)%2];
+			}
+		else
+		{
+			//iter=iter->child[next];
+			cur=root[cur].child[next];
+			}
+			pow>>=1;
+		}
+		return ans;
+		
+	}
+inline void clear_trie()
+{
+	
+	for(int i=0;i<=count_node;i++)
+	{
+		root[i].child[0]=-1;
+		root[i].child[1]=-1;
+		}
+		count_node=0;
+	}
+int arr[N];
+int lmax[N]={0};
+int rmax[N]={0};
+int main()
+{
+	int n;
+	//cin>>n;
+	//read_int(n);
+	scanf("%d",&n);
+	for(int i=1;i<=n;i++)
+	{
+		//cin>>arr[i];
+		//read_int(arr[i]);
+		scanf("%d",&arr[i]);
+		}
+	int cont_xor=0;
+	int root_L;
+	count_node++;
+	init_func();
+	insert(0,0);
+	for(int i=1;i<=n;i++)
+	{
+		cont_xor=cont_xor^arr[i];
+		//cout<<"printing the continous xor till ith element  "<<cont_xor<<endl;
+		insert(0,cont_xor);
+		//cout<<query(0,cont_xor)<<endl;
+		//max value of xor subarray including ith index 
+		lmax[i]=max((i-1)==0?0:lmax[i-1],query(0,cont_xor));
+		
+		}
+		//lmax[1]=0;
+	/*for(int i=1;i<=n;i++)
+	{cout<<lmax[i]<<"  ";}
+	cout<<endl;
+	cout<<endl;*/
+	//after getting the lmax values for all values of i we clear the trie to fill the trie from values of last getting the rmax
+	//actually i am also not able to get what language i am writing at this point :P
+	//clear_trie(root);
+	//insert(root,0);
+	clear_trie();
+	cont_xor=0;
+	int root_R;
+	count_node++;
+	insert(0,0);
+	for(int i=n;i>=1;i--)
+	{
+		cont_xor=cont_xor^arr[i];
+		
+		rmax[i-1]=max((i+1)>n?0:rmax[i+1],query(0,cont_xor));
+		insert(0,cont_xor);
+		}
+		/*cout<<"printing the right max values of each index"<<endl;
+		
+	for(int i=1;i<=n;i++)
+	{cout<<rmax[i]<<"  ";}
+	cout<<endl;*/
+	int ans=0;
+	for(int i=1;i<=n;i++)
+	{
+		ans=max(ans,lmax[i]+rmax[i]);
+		}
+	cout<<ans;
+	return 0;
+	}
+//got tle in one test case using this implementation of dynamic node allocation switching to use an array for storing all the nodes and maintaininga pointer to the newest node.

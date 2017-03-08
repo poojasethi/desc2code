@@ -1,0 +1,210 @@
+#include <iostream>
+#include <stdio.h>
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <cstring>
+#include <limits.h>
+
+#define ULL unsigned long long
+#define LL long long
+
+using namespace std;
+
+const int MAXD=1005,DIG=9,BASE=1000000000;
+const ULL BOUND=ULLONG_MAX-(ULL)(BASE*BASE);
+
+struct bignum
+{
+	int D,digits[MAXD/DIG+2];
+
+	inline void trim()
+	{
+		while(D>1 && digits[D-1]== 0)
+			D--;
+	}
+
+	inline void init(long long x)
+	{
+		memset(digits,0,sizeof(digits));
+		D=0;
+
+		do
+		{
+			digits[D++]=x%BASE;
+			x/=BASE;
+		} while(x>0);
+	}
+
+	inline bignum(long long x)
+	{
+		init(x);
+	}
+
+	inline bignum(int x=0)
+	{
+		init(x);
+	}
+
+	inline bignum(char *s)
+	{
+		memset(digits,0,sizeof(digits));
+		int len=strlen(s),first=(len+DIG-1)%DIG+1;
+		D=(len+DIG-1)/DIG;
+
+		for(int i=0;i<first;i++)
+			digits[D-1]=digits[D-1]*10+s[i]-'0';
+
+		for(int i=first,d=D-2;i<len;i+=DIG,d--)
+			for(int j=i;j<i+DIG;j++)
+				digits[d]=digits[d]*10+s[j]-'0';
+
+		trim();
+	}
+
+	inline char *toStr()
+	{
+		trim();
+		char *buf=new char[DIG*D+1];
+		int pos=0,d=digits[D-1];
+
+		do
+		{
+			buf[pos++]=d%10+'0';
+			d/=10;
+		} while(d>0);
+
+		reverse(buf,buf+pos);
+
+		for(int i=D-2;i>=0;i--,pos+=DIG)
+			for(int j=DIG-1,t=digits[i];j>=0;j--){
+				buf[pos+j]=t%10+'0';
+				t/=10;
+			}
+
+		buf[pos]='\0';
+		return buf;
+	}
+
+	inline bignum range(int a,int b) const
+	{
+		bignum temp=0;
+		temp.D=b-a;
+
+		for(int i=0;i<temp.D;i++)
+			temp.digits[i]=digits[i+a];
+
+		return temp;
+	}
+
+	inline bignum operator + (const bignum &o) const
+	{
+		bignum sum=o;
+		int carry=0;
+
+		for(sum.D=0;sum.D<D || carry>0;sum.D++){
+			sum.digits[sum.D]+=(sum.D<D?digits[sum.D]:0)+carry;
+
+			if(sum.digits[sum.D]>=BASE){
+				sum.digits[sum.D]-=BASE;
+				carry=1;
+			} else
+				carry=0;
+		}
+
+		sum.D=max(sum.D,o.D);
+		sum.trim();
+		return sum;
+	}
+
+	inline bignum operator - (const bignum &o) const
+	{
+		bignum diff=*this;
+
+		for(int i=0,carry=0;i<o.D || carry>0;i++){
+			diff.digits[i]-=(i<o.D?o.digits[i]:0)+carry;
+
+			if(diff.digits[i]<0){
+				diff.digits[i]+=BASE;
+				carry=1;
+			} else
+				carry=0;
+		}
+
+		diff.trim();
+		return diff;
+	}
+
+	inline bignum operator * (const bignum &o) const
+	{
+		bignum prod=0;
+		ULL sum=0,carry=0;
+
+		for(prod.D=0;prod.D<D+o.D-1 || carry>0;prod.D++){
+			sum=carry%BASE;
+			carry/=BASE;
+
+			for(int j=max(prod.D-o.D+1,0);j<=min(D-1,prod.D);j++){
+				sum+=(ULL)digits[j]*o.digits[prod.D-j];
+
+				if(sum>=BOUND){
+					carry+=sum/BASE;
+					sum%=BASE;
+				}
+			}
+
+			carry+=sum/BASE;
+			prod.digits[prod.D]=sum%BASE;
+		}
+
+		prod.trim();
+		return prod;
+	}
+
+};
+
+int main(int argc, char** argv) {
+	int tc;
+	scanf("%d", &tc);
+	long long m, n, tmp;
+	bignum sum, tmp2, bn;
+	while (tc--) {
+		scanf("%lld %lld", &m, &n);
+		if (m > n) {
+			tmp = m;
+			m = n;
+			n = tmp;
+		}
+		
+		if (!m || (m==1 && n==1)) {
+			printf("0\n");
+			continue;
+		}
+		tmp2 = (long long) m*n;
+		bn = tmp2 * tmp2;
+		switch (m) {
+			case 1:
+				sum = tmp2;
+				break;
+			case 2:
+				sum = 4 + (6*(n-2));
+				break;
+			case 3:
+				sum = 25 + (15*(n-3));
+				break;
+			case 4: 
+				sum = 64 + (24*(n-4));
+				break;
+			case 5:
+				sum = 121 + (33*(n-5));
+				break;
+			default:
+				sum = ((9*(m-4)*(n-4)) + (24*(m+n-8)) + 64);
+				break;
+		}
+		bn = bn - sum;
+		printf("%s\n", bn.toStr());	
+	}
+		
+	return 0;
+}

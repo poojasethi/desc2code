@@ -1,0 +1,168 @@
+#include <vector>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <iostream>
+using namespace std;
+
+const int maxpow = 12;
+
+long long bk[maxpow][maxpow], b[maxpow][maxpow], pom[maxpow][maxpow], pkmatrix[43][maxpow][maxpow];
+long long N, K, M;
+vector <long long> prosti;
+
+long long mul_LLmod(long long x, long long y) {
+	long long mllm = 0;
+	while (y) {
+		if (y&1) {
+			mllm+=x;
+			if (mllm>=M) mllm-=M;
+		}
+		x<<=1;
+		if (x>=M) x-=M;
+		y>>=1;
+	}
+	return mllm;
+}
+void binomni_koeficijenti(int power) { // pripremam binomne koeficijente do stepena k
+	bk[0][0]=1;
+	for (int i=1; i<=power; i++) {
+		bk[i][0]=1;
+		for (int j=1; j<=i; j++) {
+			bk[i][j]=bk[i-1][j-1]+bk[i-1][j];
+			if (bk[i][j]>=M) bk[i][j]-=M;
+		}
+	}
+	for (int j=0; j<=power; j++) bk[power+1][j]=bk[power][j];
+	bk[power+1][power+1]=1;
+}
+
+void faktorisi(long long broj) { // pronalazim razlicite proste cinioce broja
+	prosti.clear();
+	long long i=2LL;
+	while (i*i<=broj) {
+      if (broj%i==0) {
+		prosti.push_back(i);
+		while (broj%i==0) broj/=i;
+	  }
+	  i++;
+	}
+	if (broj>1) prosti.push_back(broj);
+}
+void pomnozi_matrice_pom_b() {
+	long long c[maxpow][maxpow];
+	memset(c, 0, sizeof(c));
+	for (int i=0; i<=K+1; i++) {
+		for (int j=0; j<=K+1; j++) {
+			for (int l=0; l<=K+1; l++) {
+				c[i][j]+=mul_LLmod(pom[i][l], b[l][j]);
+				if (c[i][j]>=M) c[i][j]-=M;
+			}
+		}
+	}
+	memcpy(pom, c, sizeof(c));
+}
+void kvadriraj_matricu_b() {
+	long long c[maxpow][maxpow];
+	memset(c, 0, sizeof(c));
+	for (int i=0; i<=K+1; i++) {
+		for (int j=0; j<=K+1; j++) {
+			for (int l=0; l<=K+1; l++) {
+				c[i][j]+=mul_LLmod(b[i][l], b[l][j]);
+				if (c[i][j]>=M) c[i][j]-=M;
+			}
+		}
+	}
+	memcpy(b, c, sizeof(c));
+}
+void kvadriraj_matricu(int pow2) {
+	long long c[maxpow][maxpow];
+	memset(c, 0, sizeof(c));
+	for (int i=0; i<=K+1; i++) {
+		for (int j=0; j<=K+1; j++) {
+			for (int l=0; l<=K+1; l++) {
+				c[i][j]+=mul_LLmod(pkmatrix[pow2][i][l], pkmatrix[pow2][l][j]);
+				if (c[i][j]>=M) c[i][j]-=M;
+			}
+		}
+	}
+	memcpy(pkmatrix[pow2], c, sizeof(c));
+}
+
+long long brzo_stepenuj_matricu(long long stepen) {
+   memcpy(b, bk, sizeof(bk));
+   memset(pom, 0, sizeof(pom));                //
+   for (int i=0; i<=K+1; i++) pom[i][i]=1LL;   // pom je u pocetku jedinicna matrica
+   while (stepen) {
+       if (stepen&1) pomnozi_matrice_pom_b();
+       stepen/=2;
+       kvadriraj_matricu_b();
+   }
+	return pom[K+1][0];
+}
+
+void prekalkulacija_matrice() {
+    binomni_koeficijenti(K);
+	memcpy(pkmatrix[1], bk, sizeof(bk));
+/*        printf("stepen matrice je %d\n", 1);
+	    for (int ii=1; ii<=K+1; ii++) {
+    	  for (int j=0; j<=K+1; ++j) printf("%10lld",bk[ii][j]);
+    	  printf("\n");
+	    }*/
+	for (int i = 2; i < 41; ++ i) {
+		memcpy(pkmatrix[i], pkmatrix[i-1], sizeof(pkmatrix[i-1]));
+		kvadriraj_matricu(i);
+		if ((1<<(i-1))>=N) break;
+/*        printf("stepen matrice je %d\n", i);
+	    for (int ii=1; ii<=K+1; ii++) {
+    	  for (int j=0; j<=K+1; ++j) printf("%10lld",pkmatrix[i][ii][j]);
+    	  printf("\n");
+	    }*/
+	}
+}
+
+long long stepenuj_matricu_iz_prekalkulacije(long long x) {
+	long long  temp [maxpow];
+	memset(temp, 0, sizeof(temp));
+	temp[0] = 1;
+	for (int p2=1; x; x>>=1, p2++) {
+		if (x&1) {
+			long long tmp[maxpow];
+			for (int i=0; i<=K+1; i++) {
+				tmp[i]=0;
+				for (int j=0; j<=K+1; j++) {
+					tmp[i]+=mul_LLmod(pkmatrix[p2][i][j], temp[j]);
+					if (tmp[i]>=M) tmp[i]-=M;
+				}
+			}
+			memcpy(temp, tmp, sizeof(tmp));
+		}
+	}
+	return temp[K+1];
+}
+
+int main() {
+//    freopen("sf.in", "r", stdin);
+//    freopen("ddd.out", "w", stdout);
+	cin >> N >> K >> M;
+	prekalkulacija_matrice();
+	faktorisi(N);
+	long long sol = 0;
+	for (int bitmask=0; bitmask<(1<<prosti.size()); bitmask++) {       // 2*3*5*7*11*13*17*19*23*29*31 <10^12
+		long long prodprost=1, sign=1;                                 // biggest bitmask <= 2048 for this task
+		for (int i=0; i < prosti.size(); i++) {                        // maska sluzi da se iskombinuju proizvodi prostih brojeva
+			if ((bitmask>>i)&1) prodprost*=prosti[i], sign*=-1;        // kako bi se odradio princip inkluzije ekskluzije
+		}
+//		long long temp=brzo_stepenuj_matricu(N/prodprost);             // TLE on 4th set of tests
+		long long temp=stepenuj_matricu_iz_prekalkulacije(N/prodprost);
+//		cout << "temp= " << temp << " bitmask = " << bitmask << " prodprost= " << prodprost << " sign= " << sign << endl;
+		for (int i=1; i<=K; i++) {
+                temp = mul_LLmod(temp, prodprost);
+		}
+		sol+=sign*temp;
+		if (sol< 0) sol+=M;
+		if (sol>=M) sol-=M;
+	}
+	cout << sol;
+	return 0;
+}

@@ -1,0 +1,237 @@
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+#include <vector>
+#include <string>
+#include <queue>
+#include <map>
+#include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <sstream>
+#include <set>
+using namespace std;
+ 
+const int mmod = 998244353;
+ 
+int inv_mod(int a, int b) {
+  if (a == 1) return b;
+  int div = mmod / a + 1;
+  return inv_mod((a * (long long)div) % mmod, (b * (long long)div) % mmod);
+}
+ 
+vector<int> get_combi(int N, int M) {
+  vector<int> mult_from_N(M+1, 1);
+  vector<int> mult_down_N(M+1, 1);
+  vector<int> mult_from_1(M+1, 1);
+  vector<int> inv_from_1(M+1, 1);
+  vector<int> combo1(M+1, 1);
+  vector<int> combo2(M+1, 1);
+  for (int i=1; i<=M; i++) {
+    mult_from_N[i] = (1LL * mult_from_N[i-1] * (N-1+i)) % mmod;
+    mult_down_N[i] = (1LL * mult_down_N[i-1] * (N+1-i)) % mmod;
+    mult_from_1[i] = (1LL * mult_from_1[i-1] * i) % mmod;
+    inv_from_1[i] = inv_mod(mult_from_1[i], 1);
+ 
+    combo1[i] = (1LL * mult_from_N[i] * inv_from_1[i]) % mmod;
+    combo2[i] = (1LL * mult_down_N[i] * inv_from_1[i]) % mmod;
+  }
+ 
+  vector<int> res;
+ 
+  for (int m=0; m<=M; m++) {
+    int mult = 1;
+    int now = 0;
+ 
+    for (int i=0; i*10<=m && i<=N; i++) {
+      int o1 = combo1[m-i*10];//(1LL * mult_from_N[m-i*10] * inv_from_1[m-i*10]) % mmod;//C(m-i*10+N-1, m-i*10);//H(m+1-i*10, N-1);
+      int o2 = combo2[i];//(1LL * mult_down_N[i] * inv_from_1[i]) % mmod;//C(N, i)
+      now = (now + 1LL * mult * o1 * o2) % mmod;
+      if (now < 0) now += mmod;
+ 
+      mult = -mult;
+    }
+    res.push_back(now);
+  }
+  return res;
+}
+ 
+int tmp[11111111];
+ 
+void mult2(int a_start, int b_start, int idx, int step) {
+/*  printf("%d %d %d %d : ", a_start, b_start, idx, step);
+  for (int i=0; i<step; i++) printf("%d ", tmp[a_start+i]); printf(" / ");
+  for (int i=0; i<step; i++) printf("%d ", tmp[b_start+i]); printf("\n");*/
+  tmp[idx+step*2-1] = 0;
+ 
+  if (step == 1) {
+    tmp[idx] = (1LL * tmp[a_start] * tmp[b_start]) % mmod;
+    return;
+  }
+ 
+  int all_zero = 1;
+  for (int i=0; i<step; i++) if (tmp[a_start+i]) { all_zero = 0; break; }
+  if (all_zero) {
+    for (int i=0; i<step*2-1; i++) tmp[idx+i] = 0;
+    return;
+  }
+  all_zero = 1;
+  for (int i=0; i<step; i++) if (tmp[b_start+i]) { all_zero = 0; break; }
+  if (all_zero) {
+    for (int i=0; i<step*2-1; i++) tmp[idx+i] = 0;
+    return;
+  }
+ 
+  int half = step/2;
+ 
+  // z0 = x0*y0
+  mult2(a_start, b_start, idx, half);
+ 
+  // z2 = x1*y1
+  mult2(a_start + half, b_start + half, idx+step, half);
+ 
+  // z1 = (x1+x0)*(y1+y0) - z2 - z0
+  for (int i=0; i<half; i++) {
+    tmp[idx+2*step+i] = tmp[a_start+i] + tmp[a_start+half+i];
+    tmp[idx+2*step+half+i] = tmp[b_start+i] + tmp[b_start+half+i];
+    if (tmp[idx+2*step+i] >= mmod) tmp[idx+2*step+i] -= mmod;
+    if (tmp[idx+2*step+half+i] >= mmod) tmp[idx+2*step+half+i] -= mmod;
+  }
+  mult2(idx+2*step, idx+2*step+half, idx+3*step, half);
+  for (int i=0; i<step-1; i++) {
+    int* c = &tmp[idx+3*step+i];
+    *c -= tmp[idx+step+i] + tmp[idx+i];
+  }
+ 
+  // add all
+  for (int i=0; i<step-1; i++) {
+    tmp[idx+half+i] += tmp[idx+3*step+i];
+    if (tmp[idx+half+i] >= mmod) tmp[idx+half+i] -= mmod;
+    else if (tmp[idx+half+i] < 0) {
+      tmp[idx+half+i] += mmod;
+      if (tmp[idx+half+i] < 0)
+        tmp[idx+half+i] += mmod;
+    }
+  }
+//  printf("%d %d %d %d : ", a_start, b_start, idx, step); for (int i=0; i<step*2; i++) printf("%d ", tmp[idx+i]); printf("\n");
+}
+ 
+vector<int> mult(int* a, int *b, int MM) {
+/*  vector<int> nxt2(MM);
+  for (int k=0; k<MM; k++)
+    for (int l=0; l<MM-k; l++)
+      nxt2[k+l] = (nxt2[k+l] + 1LL * a[k] * b[l]) % mmod;
+  return nxt2;*/
+ 
+/*  printf("mult A = "); for (int i=0; i<MM; i++) printf("%d ", a[i]); printf("\n");
+  printf("mult B = "); for (int i=0; i<MM; i++) printf("%d ", b[i]); printf("\n");*/
+ 
+  int eff_MM = 1;
+  while (eff_MM < MM) eff_MM *= 2;
+ 
+  for (int i=0; i<eff_MM*2; i++) tmp[i] = 0;
+  for (int i=0; i<MM; i++) {
+    tmp[i] = a[i];
+    tmp[i+eff_MM] = b[i];
+  }
+  mult2(0, eff_MM, 2*eff_MM, eff_MM);
+  vector<int> res(MM);
+  for (int i=0; i<MM; i++)
+    res[i] = tmp[2*eff_MM + i];
+ 
+//  printf("res = "); for (int i=0; i<MM; i++) printf("%d ", res[i]); printf("\n");
+ 
+  return res;
+}
+ 
+const int max_mm = 16384;
+const int max_p = 50;
+int prv[max_mm+1][max_p];
+ 
+int main()
+{
+  int N, P, MM;
+  cin >> N >> P >> MM;
+ 
+  // 1. get each digit's value
+  vector<int> occ(P);
+ 
+  {
+    vector<int> prv(P, -1);
+    int pp = 1 % P;
+    prv[pp] = 0;
+    occ[pp] ++;
+    for (int i=1; i<N; i++) {
+      pp = (pp * 10) % P;
+      if (prv[pp] > -1 && (N-i)%(i-prv[pp]) == 0) {
+        int rep = (N-i) / (i-prv[pp]);
+        for (int j=0; j<P; j++)
+          if (prv[j] >= prv[pp]) occ[j] += rep;
+        break;
+      }
+      prv[pp] = i;
+      occ[pp] ++;
+    }
+  }
+ 
+  for (int i=0; i<P; i++) fprintf(stderr, "%d ", occ[i]); fprintf(stderr, "\n");
+ 
+  // 2. Get the same value's counts.
+  int combi[max_p][max_mm] = {0};
+  for (int i=0; i<P; i++) {
+    int same = 0;
+    for (int j=0; j<i; j++)
+      if (occ[i] == occ[j]) {
+        for (int k=0; k<=MM; k++)
+          combi[i][k] = combi[j][k];
+        same = 1;
+        break;
+      }
+    if (!same) {
+      vector<int> a = get_combi(occ[i], MM);
+      for (int j=0; j<=MM; j++) combi[i][j] = a[j];
+    }
+//    for (int j=0; j<combi[i].size(); j++) printf("%d ", combi[i][j]); printf("\n");
+  }
+ 
+  // 3. combine with counts
+  prv[0][0] = 1;
+  int first = 1;
+  for (int i=0; i<P; i++) {
+    if (!occ[i]) continue;
+    fprintf(stderr, "%d\n", i);
+    if (first) {
+      prv[0][0] = 0;
+      for (int j=0; j<=MM; j++)
+        prv[j][(i*j)%P] = combi[i][j];
+      first = 0;
+      continue;
+    }
+ 
+    int nxt[max_mm+1][max_p];
+    for (int j=0; j<P; j++) {
+      int prv2[max_mm+1];
+      for (int k=0; k<=MM; k++)
+        prv2[k] = prv[k][(k*i+j)%P];
+/*      vector<int> nxt2(MM+1);
+      for (int k=0; k<=MM; k++)
+        for (int l=0; l<=MM-k; l++)
+          nxt2[k+l] = (nxt2[k+l] + 1LL * prv2[k] * combi[i][l]) % mmod;*/
+      vector<int> nxt2 = mult(prv2, combi[i], MM+1);
+      for (int k=0; k<=MM; k++)
+        nxt[k][(k*i+j)%P] = nxt2[k];
+    }
+    for (int j=0; j<=MM; j++)
+      for (int k=0; k<P; k++)
+        prv[j][k] = nxt[j][k];
+  }
+ 
+  // Print!
+  int res = 0;
+  for (int i=0; i<=MM; i++) {
+    res = (res + prv[i][0]) % mmod;
+    printf("%d ", res);
+  }
+  printf("\n");
+}
+ 

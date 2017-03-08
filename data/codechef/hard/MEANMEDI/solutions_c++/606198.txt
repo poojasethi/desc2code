@@ -1,0 +1,244 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <memory.h>
+#include <ctime>
+#include <iostream>
+#include <algorithm>
+#include <set>
+#include <map>
+#include <queue>
+#include <vector>
+#include <string> 
+#include <sstream>
+ 
+using namespace std;
+ 
+void ASS(bool b)
+{
+	if (!b)
+	{
+		++*(int*)0;
+	}
+}
+ 
+typedef long long LL;
+typedef vector<int> vi;
+ 
+#define CL(x) memset(x, 0, sizeof(x))
+#define CLX(x, v) memset(x, v, sizeof(x))
+#define FOR(i, x) for (int i = 0; i < (int)(x); i++)
+ 
+int read()
+{
+	int x;
+	scanf("%d", &x);
+	return x;
+}
+ 
+const int N = 1400;
+ 
+int a[64];
+ 
+unsigned d[2][40][N];
+ 
+struct Res
+{
+	unsigned f[64][N];
+	void clear()
+	{
+		CL(f);
+	}
+};
+ 
+Res r0, r1;
+ 
+void DP(Res& r, int n, int K)
+{
+	r.clear();
+	CL(d);
+	int c0 = 0;
+	int c1 = 1;
+	d[c0][0][0] |= 1;
+	FOR(i, n - K + 2)
+	{
+		FOR(j, N)
+			r.f[i][j] = d[c0][K][j];
+ 
+		FOR(c, K + 1)
+		{
+			FOR(j, N)
+				d[c1][c][j] = d[c0][c][j];
+		}
+		for (int c = 0; c < K; c++)
+		{
+			unsigned a0 = a[i] >> 5;
+			unsigned a1 = a[i] - (a0 << 5);
+			FOR(val, 1300)
+				d[c1][c + 1][val + a0] |= d[c0][c][val] << a1;
+			if (a1)
+			{
+				a0++;
+				a1 = 32 - a1;
+				FOR(val, 1300)
+					d[c1][c + 1][val + a0] |= d[c0][c][val] >> a1;
+			}
+		}
+		swap(c0, c1);
+	}
+}
+
+double mabs(double x)
+{
+	return max(x, -x);
+}
+ 
+double F(int val, vector<int>& va, vector<int>& vb, int k)
+{
+	double res = 1 << 30;
+	ASS(vb.size() > 0);
+	ASS(va.size() > 0);
+	int pb = vb.size() - 1;
+	FOR(i, va.size())
+	{
+		int B = val * k - val - va[i];
+		while (pb > 0 && vb[pb] > B)
+			pb--;
+
+		res = min(res, mabs((va[i] + vb[pb] + val) / (double) k - val));
+		if (pb > 0)
+			res = min(res, mabs((va[i] + vb[pb - 1] + val) / (double) k - val));
+		if (pb + 1 < (int)vb.size())
+			res = min(res, mabs((va[i] + vb[pb + 1] + val) / (double) k - val));
+	}
+	return res;
+}
+ 
+void Build(unsigned *a, int na, vi& v)
+{
+	v.clear();
+	FOR(i, na)
+		if (a[i >> 5] & (1 << (i & 31)))
+			v.push_back(i);
+}
+
+double MySolve(vi v, int k)
+{
+	int n = (int)v.size();
+	CL(a);
+	FOR(i, n)
+		a[i] = v[i];
+ 
+	sort(a, a + n);
+ 
+	int K0 = k / 2;
+	if (k % 2 == 0)
+		K0--;
+ 
+	int K1 = k - 1 - K0;
+ 
+	DP(r0, n, K0);
+	reverse(a, a + n);
+	DP(r1, n, K1);
+	reverse(a, a + n);
+ 
+	double res = 1e30;
+	vi va, vb;
+//	for (int i = K0; i + K1 < n; i++)
+	FOR(i, n)
+	{
+		if (i < K0) continue;
+		if (n - 1 - i < K1) continue;
+
+		Build(r0.f[i], (K0 + 1) * 1200 + 1, va);
+		Build(r1.f[n - 1 - i], (K1 + 1) * 1200 + 1, vb);
+		res = min(res, F(a[i], va, vb, k));
+	}
+	return res;
+}
+
+void Solve()
+{
+	int n, k;
+	cin >> n >> k;
+
+	vi v(n);
+	FOR(i, n)
+		cin >> v[i];
+
+	double res = MySolve(v, k);
+
+	printf("%0.3lf\n", res + 1e-12);
+}
+
+double Ans(vi a, int k)
+{
+	sort(a.begin(), a.end());
+	double res = 1e30;
+	int ind = k / 2;
+	if (k % 2 == 0)
+		ind--;
+	FOR(i, 1 << a.size())
+	{
+		int mid = -1;
+		int bc = 0;
+		double sum = 0;
+		FOR(j, a.size())
+			if ((i >> j) & 1)
+			{
+				if (bc == ind)
+					mid = a[j];
+				bc++;
+				sum += a[j];
+			}
+		if (bc == k)
+		{
+			res = min(res, fabs(sum / k - mid));
+			if (res < 0.3)
+				res = res;
+		}
+	}
+	return res;
+}
+
+void rndTest()
+{
+	FOR(z, 1000)
+	{
+		int n = rand() % 6 + 1;
+		int k = rand() % n + 1;
+		vi a;
+		FOR(i, n)
+			a.push_back(rand() % 80 + 1);
+		if (z == 177)
+		{
+			n = n;
+		}
+		double a0 = Ans(a, k);
+		double a1 = MySolve(a, k);
+		if (fabs(a0 - a1) > 1e-6)
+		{
+			cout << z << " ppc" << endl;
+			cout << n << endl;
+			FOR(i, n)
+				cout << a[i] << " ";
+			cout << endl;
+			exit(0);
+			n = n;
+		}
+	}
+}
+int main()
+{
+	//int x;
+	//cin >> x;
+	//srand(x);
+	//rndTest();
+	//return 0;
+	int t = read();
+	FOR(i, t)
+		Solve();
+ 
+	return 0;
+} 

@@ -1,0 +1,234 @@
+#include <iostream>
+#include <string>
+#include <cstring>
+#include <cstdio>
+#include <algorithm>
+#include <cmath>
+#include <vector>
+#include <map>
+#include <bitset>
+#include <queue>
+#pragma comment(linker, "/STACK:102400000,102400000")
+using namespace std;
+
+#define LL long long
+#define ULL unsigned long long
+#define eps 1e-9
+#define N (2000000 + 10)
+#define M (8000000 + 10)
+#define pii pair<int,int>
+#define MP make_pair
+#define inf 0x3f3f3f3f
+#define lson ll, md, ls
+#define rson md + 1, rr, rs
+#define mod 1000000007
+
+int n,m;
+struct Query{
+	int l, r, id;
+	Query() {}
+	Query(int l, int r, int id) :l(l), r(r), id(id) {}
+};
+
+struct state {
+	int val, id;
+	state *son[27], *par[30];
+	vector<Query> Que;
+	int rt;
+}que[N], *root, *last;
+int tot;
+
+void extend(int w, int id) {
+	state *p = last;
+	state *np = &que[tot++];
+	np->val = p->val + 1;
+	while(p && p->son[w] == 0) {
+		p->son[w] = np, p = p->par[0];
+	}
+	if(p == 0) {
+		np->par[0] = root;
+	}
+	else {
+		state *q = p->son[w];
+		if(q->val == p->val + 1) 
+			np->par[0] = q;
+		else {
+			state *nq = &que[tot++];
+			memcpy(nq->son, q->son, sizeof q->son);
+			nq->par[0] = q->par[0];
+			nq->val = p->val + 1;
+			np->par[0] = q->par[0] = nq;
+			while(p && p->son[w] == q) {
+				p->son[w] = nq, p = p->par[0];
+			}
+		}
+	}
+	np->id = id;
+	last = np;
+}
+char s[N], t[N];
+state * match[N]; int mlen[N];
+pii ans[N];
+int rk[N], cnt[N];
+
+
+void par_init() {
+	for(int j = 1; j <= 20; ++j) 
+		for(int i = 0; i < tot; ++i)
+			if(que[i].par[j-1])
+				que[i].par[j] = que[i].par[j-1]->par[j-1];
+}
+
+void s_init() {
+	state *cur = root;
+	int tl = 0;
+	for(int i = 0; i < n; ++i) {
+		int c = s[i]-'a'+1;
+		while(cur && cur->son[c] == NULL) {
+			cur = cur->par[0];
+			if(cur)
+				tl = cur->val;
+			else tl = 0;
+		}
+		if(cur && cur->son[c]) {
+			
+			mlen[i] = ++tl;
+			cur = cur->son[c];
+			match[i] = cur;
+		}
+		else match[i] = NULL, cur = root;
+	}
+}
+
+state * find(state *st, int len) {
+	state *cur = st;
+	for(int i = 20; i >= 0; --i) {
+		if(cur->par[i] && cur->par[i]->val >= len) 
+			cur = cur->par[i];
+	}
+	return cur;
+}
+int tcnt;
+int mx[M], ls[M], rs[M], who[N];
+
+void up(int i) {
+	if(mx[ls[i]] > mx[rs[i]]) {
+		mx[i] = mx[ls[i]];
+		who[i] = who[ls[i]];
+	}
+	else if(mx[ls[i]] == mx[rs[i]]) {
+		mx[i] = mx[ls[i]];
+		who[i] = min(who[ls[i]], who[rs[i]]);
+	}
+	else {
+		mx[i] = mx[rs[i]];
+		who[i] = who[rs[i]];
+	}
+
+}
+
+int update(int u, int l, int r, int id) {
+	if(u == 0) u = ++tcnt;
+	if(l == r) {
+		mx[u] += 1;
+		who[u] = id;
+		return u;
+	}
+	int mid = l + r >> 1;
+	if(id <= mid) ls[u] = update(ls[u], l, mid, id);
+	else rs[u] = update(rs[u], mid+1, r, id);
+	up(u);
+	return u;
+}
+
+pii query(int u, int l, int r, int ll, int rr) {
+	if(u == 0) return MP(ll, 0);
+	if(l == ll && r == rr) {
+		return MP(who[u], mx[u]);
+	}
+	int md = l+r >> 1;
+	pii ret;
+	if(rr <= md) ret = query(ls[u], l, md, ll, rr);
+	else if(ll > md) ret = query(rs[u], md+1,r, ll, rr);
+	else {
+		pii ts = query(ls[u], l, md, ll, md);
+		pii rt = query(rs[u], md+1, r, md+1, rr);
+		if(ts.second >= rt.second) ret = ts;
+		else ret = rt;
+	}
+	return ret;
+}
+
+int merge(int u, int v, int l, int r) {
+	if(u == 0 || v == 0) return u ^ v;
+	if(l == r) {
+		mx[u] += mx[v];
+		who[u] = l;
+		return u;
+	}
+	int md = l + r >> 1;
+	ls[u] = merge(ls[u], ls[v], l, md);
+	rs[u] = merge(rs[u], rs[v], md+1, r);
+	up(u);
+	return u;
+}
+
+state * check(int l, int r) {
+	state *cur = root;
+	for(int i = l; i <= r; ++i)
+		cur = cur->son[s[i]-'a'+1];
+	return cur;
+}
+
+int main() {
+	//freopen("in.txt", "r", stdin);
+	scanf("%s", s);
+	n = strlen(s);
+	scanf("%d", &m);
+	root = last = &que[tot++];
+	for(int i = 1; i <= m; ++i)
+	{
+		scanf("%s", t);
+		int len = strlen(t);
+		for(int j = 0; j < len; ++j)
+			extend(t[j]-'a'+1, i);
+		extend(0, 0);
+	}
+
+	par_init();
+	s_init();
+	int q;
+	scanf("%d", &q);
+
+	for(int i = 1; i <= q; ++i) {
+		int l, r, sl,sr;
+		scanf("%d%d%d%d", &l, &r, &sl, &sr);
+		--sl, --sr;
+		state *cur = NULL;
+		if(mlen[sr] >= sr-sl+1) cur = find(match[sr], sr-sl+1);
+		
+		if(cur == NULL) ans[i] = MP(l, 0);
+		else cur->Que.push_back(Query(l, r, i));
+	}
+
+	//topo
+	for(int i = 0; i < tot; ++i) ++cnt[que[i].val];
+	for(int i = 1; i <= tot; ++i) cnt[i] += cnt[i-1];
+	for(int i = 0; i < tot; ++i) rk[--cnt[que[i].val]] = i;
+
+	//cal
+	for(int u = tot-1; u > 0; -- u) {
+		int i = rk[u];
+		if(que[i].id != 0) 
+			que[i].rt = update(que[i].rt, 1, m, que[i].id);
+		for(int j = 0; j < que[i].Que.size(); ++j) {
+			Query tmp = que[i].Que[j];
+			ans[tmp.id] = query(que[i].rt, 1, m, tmp.l, tmp.r);
+		}
+		if(que[i].par[0]) 
+			que[i].par[0]->rt = merge(que[i].par[0]->rt, que[i].rt, 1, m);
+	}
+
+	for(int i = 1; i <= q; ++i)
+		printf("%d %d\n", ans[i].first, ans[i].second);
+}

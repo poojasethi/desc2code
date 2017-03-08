@@ -1,0 +1,264 @@
+// buyingland.cpp -- Ashutosh Mehra Sat Mar  5 2011
+// http://www.codechef.com/MARCH11/problems/BUYLAND/
+// http://www.codechef.com/submit/BUYLAND/
+#include <stdio.h>
+#include <assert.h>
+#include <memory.h>
+#include <set>
+#include <ctype.h>
+#include <algorithm>
+#include <stdlib.h>
+#include <math.h>
+ 
+#define myassert(x) /* Nothing */
+// #define myassert assert
+ 
+#define MAX_RC 700
+#define MAX_K 1000
+#define MAX_CHAR_PER_LINE (11*MAX_RC+1)
+#define BUFSIZE ((MAX_RC*2+4)*MAX_CHAR_PER_LINE)
+#define OUTBUFSIZE ((12*3)*MAX_K)
+#define MAX_HEIGHT_VAL 30
+#define MAX_HEIGHT_DIFF (MAX_HEIGHT_VAL*2)
+#define MAX_TWO_POW 1048576
+ 
+char output_char_buf[OUTBUFSIZE];
+int output_buf_index = -1;
+#define OutputChar(cc) (output_char_buf[++output_buf_index] = (cc))
+void FlushOutputBuf(void) {
+	--output_buf_index;
+	OutputChar('\0');
+	puts(output_char_buf);
+	output_buf_index = -1;
+}
+inline void OutputInt(int u) {
+	myassert(u >= 0);
+	static signed dig[32];
+	signed j = 0;
+	do dig[j++] = u%10, u/=10; while(u);
+	do OutputChar(dig[--j] + '0'); while(j);
+}
+ 
+char inpbuf[BUFSIZE], *buf_ptr = NULL;
+#define myisdigit(ch) (((ch) >= '0') && ((ch) <= '9'))
+void FillInputBuffer(void) {
+	size_t bytesread = fread(inpbuf, 1, sizeof(inpbuf), stdin);
+	inpbuf[bytesread] = '\0';
+	buf_ptr = inpbuf;
+}
+inline int ReadInt() {
+	int t = 0, sign = +1, ch;
+	do ch = *buf_ptr++; while(!myisdigit(ch) && ch != '+' && ch != '-');
+	if(ch == '-') sign = -1, ch = *buf_ptr++;
+	else if(ch == '+') sign = +1, ch = *buf_ptr++;
+	while(myisdigit(ch)) t = t*10 + (ch - '0'), ch = *buf_ptr++;
+	return t*sign;
+}
+ 
+int plot[MAX_RC][MAX_RC];
+int running_sum[MAX_RC][MAX_RC];
+int running_sum_sq[MAX_RC][MAX_RC];
+int layout[MAX_RC/2][MAX_RC/2];
+ 
+struct LocationRec {
+	int r, c;
+	int score;
+	LocationRec() { }
+	LocationRec(int r_, int c_, int score_) : r(r_), c(c_), score(score_) { }
+	LocationRec(const LocationRec &x) : r(x.r), c(x.c), score(x.score) { }
+	LocationRec& operator=(const LocationRec &x) { r=x.r, c=x.c, score=x.score; return *this; }
+};
+ 
+LocationRec best_solutions[MAX_RC*MAX_RC];
+ 
+// Lower ordered rec is preferred.
+bool operator<(const LocationRec &lhs, const LocationRec &rhs) {
+	if(lhs.score != rhs.score)
+		return lhs.score < rhs.score; // Lower score is better
+	else if(lhs.r != rhs.r)
+		return lhs.r < rhs.r; // First sort by north-ness
+	else
+		return lhs.c < rhs.c;
+}
+ 
+inline int BlockSum(const int table[MAX_RC][MAX_RC], int start_r, int start_c, int num_rows, int num_cols) {
+	int end_r = start_r+num_rows, end_c = start_c+num_cols;
+	return
+		table[end_r][end_c]
+		+ table[start_r][start_c]
+		- table[end_r][start_c]
+		- table[start_r][end_c]
+		;
+}
+ 
+struct Complex_t {
+	double r, i;
+};
+ 
+void BitReverseOrderInplace(Complex_t *a, int n) {
+	for(int j = 1, k = 0, nby2 = n >> 1; j < n; ++j) {
+		int bit = nby2;
+		for( ; k >= bit; bit >>= 1) k -= bit;
+		k += bit;
+		if(j < k) {
+			// using namespace std; swap(a[j], a[k]);
+			double t;
+			t = a[j].r, a[j].r = a[k].r, a[k].r = t;
+			t = a[j].i, a[j].i = a[k].i, a[k].i = t;
+		}
+	}
+}
+ 
+// For implementation, see CLRS pp 917 ITERATIVE-FFT
+void FastFourierTransform(Complex_t *a, int n, bool inverse) {
+	BitReverseOrderInplace(a, n);
+	myassert((n&(n-1)) == 0); // n is a power of 2.
+	int multiplier = inverse ? -1 : +1;
+	for(int m = 2; m <= n; m <<= 1) {
+		double angle = (2*M_PI/m)*multiplier;
+		double omega_r = cos(angle), omega_i = sin(angle);
+		for(int k = 0; k < n; k += m) {
+			double omega_power_r = 1, omega_power_i = 0;
+			int mby2 = m >> 1;
+			Complex_t *v0ptr = a+k;
+			Complex_t *v1ptr = a+k+mby2;
+			for(int j = 0; j < mby2; ++j, ++v0ptr, ++v1ptr) {
+				Complex_t &v0 = *v0ptr;
+				Complex_t &v1 = *v1ptr;
+				// Complex_t t = omega_power*v1;
+				double tr = omega_power_r*v1.r - omega_power_i*v1.i, ti = omega_power_r*v1.i + omega_power_i*v1.r;
+				// v1 = v0-t;
+				v1.r = v0.r - tr, v1.i = v0.i - ti;
+				// v0 = v0+t;
+				v0.r += tr, v0.i += ti;
+				// omega_power *= omega;
+				tr = omega_power_r*omega_r - omega_power_i*omega_i;
+				ti = omega_power_r*omega_i + omega_power_i*omega_r;
+				omega_power_r = tr, omega_power_i = ti;
+			}
+		}
+	}
+	if(inverse) {
+		for(int j = 0; j < n; ++j) a[j].r /= n;
+	}
+}
+ 
+void MultiplyPolynomialsFast(Complex_t *__restrict a, Complex_t *__restrict b, Complex_t *__restrict product, int n) {
+	FastFourierTransform(a, n, false);
+	FastFourierTransform(b, n, false);
+	for(int j = 0; j < n; ++j) {
+		// product[j] = a[j]*b[j];
+		product[j].r = a[j].r*b[j].r - a[j].i*b[j].i;
+		product[j].i = a[j].r*b[j].i + a[j].i*b[j].r;
+	}
+	FastFourierTransform(product, n, true);
+}
+ 
+Complex_t plot_polynomial[MAX_TWO_POW];
+Complex_t layout_polynomial[MAX_TWO_POW];
+Complex_t product_polynomial[MAX_TWO_POW];
+ 
+int main(int argc, char *argv[]) {
+#if AMEHRAHOME
+	stdin = freopen("buyingland.in.large.2.txt", "r", stdin);
+	// stdin = freopen("buyingland.in.txt", "r", stdin);
+#endif	
+	FillInputBuffer();
+	const int plot_rows = ReadInt();
+	const int plot_cols = ReadInt();
+	// memset(running_sum, 0, sizeof(running_sum));
+	// memset(running_sum_sq, 0, sizeof(running_sum_sq));
+	for(int r = 0; r < plot_rows; ++r) {
+		for(int c = 0; c < plot_cols; ++c) {
+			const int v = ReadInt();
+			int vsq = v; vsq *= v;
+			plot[r][c] = v;
+			running_sum[r+1][c+1] = v + running_sum[r][c+1] + running_sum[r+1][c] - running_sum[r][c];
+			running_sum_sq[r+1][c+1] = vsq + running_sum_sq[r][c+1] + running_sum_sq[r+1][c] - running_sum_sq[r][c];
+		}
+	}
+ 
+	const int layout_rows = ReadInt();
+	const int layout_cols = ReadInt();
+	const int total_layout_elems = layout_rows*layout_cols;
+	int layout_elems_sum = 0;
+	int layout_elems_sum_sq = 0;
+	for(int r = 0; r < layout_rows; ++r) {
+		for(int c = 0; c < layout_cols; ++c) {
+			int v = ReadInt();
+			layout[r][c] = v;
+			layout_elems_sum += v;
+			int vsq = v; vsq *= v;
+			layout_elems_sum_sq += vsq;
+		}
+	}
+ 
+	// Compute each "block product" via FFT.
+	// Every contestant but me seems to know of this. Oh well... (;-)
+	// See for instance Oleg's beautiful solution
+	int total_elems = plot_rows * plot_cols;
+ 
+	// Smallest power of 2 >= twice (because of polynomial multiplication)
+	// the total_elems
+	int twopow = 1;
+	for(int target = total_elems; twopow < target; )
+		twopow <<= 1;
+ 
+	// Set the plot values in reverse
+	for(int r = 0, poly_idx = total_elems-1; r < plot_rows; ++r) {
+		for(int c = 0; c < plot_cols; ++c, --poly_idx) {
+			plot_polynomial[poly_idx].r = plot[r][c];
+		}
+	}
+ 
+	// Set the layout values in sequence, but leaving padding
+	// to align with the plot rows
+	// Basically, assign each (i,j) something like x^(i*plot_cols+j).
+	for(int r = 0, poly_idx = 0, col_delta = plot_cols-layout_cols; r < layout_rows; ++r, poly_idx += col_delta) {
+		for(int c = 0; c < layout_cols; ++c, ++poly_idx) {
+			layout_polynomial[poly_idx].r = layout[r][c];
+		}
+	}
+ 
+	MultiplyPolynomialsFast(plot_polynomial, layout_polynomial, product_polynomial, twopow);
+ 
+	const int hotel_row_pos = ReadInt() - 1;
+	const int hotel_col_pos = ReadInt() - 1;
+	const int desired_num_sols = ReadInt();
+ 
+	int sol_cnt = 0;
+	for(int r = 0, r_times_cols = 0; r <= plot_rows-layout_rows; ++r, r_times_cols += plot_cols) {
+		for(int c = 0, prod_idx = total_elems-1-r_times_cols; c <= plot_cols-layout_cols; ++c, ++sol_cnt, --prod_idx) {
+ 
+			int lev = plot[r+hotel_row_pos][c+hotel_col_pos]; // Normalize plot with this.
+			int asum_sq = BlockSum(running_sum_sq, r, c, layout_rows, layout_cols);
+			int asum = BlockSum(running_sum, r, c, layout_rows, layout_cols);
+			// prod_idx = total_elems - 1 - (r*plot_cols+c)
+			double prod = product_polynomial[prod_idx].r;
+			int layout_plot_mul = static_cast<int>(round(prod));
+			// int layout_plot_mul = static_cast<int>(prod > 0 ? (prod + 0.5) : (prod - 0.5));
+ 
+			int sum =
+				+ asum_sq
+				+ layout_elems_sum_sq
+				+ total_layout_elems * lev * lev
+				+ 2 * lev * (layout_elems_sum - asum)
+				- 2 * layout_plot_mul
+				;
+			LocationRec &l(best_solutions[sol_cnt]);
+			l.r = r, l.c = c, l.score = sum;
+		}
+	}
+	
+	std::nth_element(best_solutions, best_solutions+desired_num_sols, best_solutions+sol_cnt);
+	std::sort(best_solutions, best_solutions+desired_num_sols);
+ 
+	for(int j = 0; j < desired_num_sols; ++j) {
+		const LocationRec &l(best_solutions[j]);
+		OutputInt(l.r+1), OutputChar(' '), OutputInt(l.c+1), OutputChar(' '), OutputInt(l.score), OutputChar('\n');
+	}
+	FlushOutputBuf();
+	
+	return 0;
+}
+ 

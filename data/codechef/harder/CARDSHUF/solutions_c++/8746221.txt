@@ -1,0 +1,136 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+using namespace std;
+const int Maxn=100005;
+int n,m;
+
+inline int get() {
+	char ch;
+	while (!isdigit(ch=getchar()));
+	int v=ch-48;
+	while (isdigit(ch=getchar())) v=v*10+ch-48;
+	return v;
+}
+
+struct node{
+	node *lc,*rc;
+	int k,i,size;
+	bool flag;
+	void update() {
+		size=lc->size+rc->size+1;
+	}
+	void rev() {
+		flag^=1;
+		swap(lc,rc);
+	}
+	void push_down() {
+		if (flag) {
+			lc->rev();
+			rc->rev();
+			flag=false;
+		}
+	}
+}po[Maxn],*null=po;
+
+class Treap{
+	node *root;
+	void build(node *&x,int l,int r) {
+		if (l>r) {
+			x=null;
+			return;
+		}
+		int mid=l;
+		for (int i=l;i<=r;i++)
+			if (po[mid].k>po[i].k)
+				mid=i;
+		x=po+mid;
+		build(x->lc,l,mid-1);
+		build(x->rc,mid+1,r);
+		x->update();
+	}
+	void merge(node *&x,node *lp,node *rp) {
+		if (lp==null||rp==null) {
+			x=lp==null?rp:lp;
+			return;
+		}
+		if (lp->k<rp->k) {
+			x=lp;
+			x->push_down();
+			merge(x->rc,lp->rc,rp);
+		}
+		else {
+			x=rp;
+			x->push_down();
+			merge(x->lc,lp,rp->lc);
+		}
+		x->update();
+	}
+	void split(node *x,int num,node *&lp,node *&rp) {
+		if (x==null) {
+			lp=rp=null;
+			return;
+		}
+		x->push_down();
+		if (x->lc->size<num) {
+			lp=x;
+			split(x->rc,num-x->lc->size-1,lp->rc,rp);
+		}
+		else {
+			rp=x;
+			split(x->lc,num,lp,rp->lc);
+		}
+		x->update();
+	}
+	void op(node *x) {
+		if (x==null) return;
+		x->push_down();
+		op(x->lc);
+		printf("%d ",x->i);
+		op(x->rc);
+	}
+	public:
+		void build() {
+			null->lc=null->rc=null;
+			for (int i=1;i<=n;i++) {
+				po[i].k=rand();
+				po[i].i=i;
+			}
+			build(root,1,n);
+		}
+		void merge(Treap &lt,Treap &rt) {
+			merge(root,lt.root,rt.root);
+		}
+		void split(int num,Treap &lt,Treap &rt) {
+			split(root,num,lt.root,rt.root);
+		}
+		void rev() {
+			root->rev();
+		}
+		void op() {
+			op(root);
+		}
+}T;
+
+int main() {
+	n=get(); m=get();
+	srand(208);
+	T.build();
+	for (int i=1;i<=m;i++) {
+		int a=get(),b=get(),c=get();
+		Treap T1,T2,T3,T4;
+		T.split(a,T1,T2);
+		T2.split(b,T3,T4);
+		T.merge(T1,T4);
+		T.split(c,T1,T2);
+		T3.rev();
+		T4.merge(T3,T2);
+		T.merge(T1,T4);
+	}
+	T.op();
+	return 0;
+}

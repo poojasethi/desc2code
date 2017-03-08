@@ -1,0 +1,19 @@
+#include<iostream>
+#include<stdio.h>
+#include<algorithm>
+using namespace std;
+long long a,s,d[55],f,g,h,j,k,l,i,n,m;
+main(){
+cin>>n>>m>>k;
+for(i=0;i<n;i++){
+cin>>d[i];
+}
+
+sort(d,d+n);
+for(i=n-1;i>=0;i--){
+if(k>=m) {cout<<j;return 0;}
+k=k+d[i]-1;j++;
+}if(k>=m) {cout<<j;return 0;}
+cout<<-1;
+
+}

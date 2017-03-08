@@ -1,0 +1,128 @@
+#include <algorithm>
+#include <iostream>
+#include <cassert>
+#include <vector>
+#include <cstdio>
+#include <cmath>
+using namespace std;
+
+const int N = 500;
+int edgeCount[N][N];
+int degree[N];
+int n;
+int m;
+int k;
+bool hasTrap[N];
+double coef[N][N];
+double a[N][N];
+double b[N][N];
+
+int nextInt() {
+	int res;
+	assert(cin >> res);
+	return res;
+}
+
+vector<vector<double> > matrixMultiply(const vector<vector<double> > &a, const vector<vector<double> > &b) {
+	int m = a.size(), n = a[0].size(), p = b[0].size();
+	vector<vector<double> > res (m, vector<double>(p, 0));
+	for (int i = 0; i < m; ++i)
+		for (int j = 0; j < n; ++j)
+			for (int k = 0; k < p; ++k)
+				res[i][k] += a[i][j] * b[j][k];
+	return res;
+}
+
+vector<vector<double> > unitMatrix(int n) {
+	vector<vector<double> > res (n, vector<double>(n, 0));
+	for (int i = 0; i < n; ++i)
+		res[i][i] = 1;
+	return res;
+}
+
+vector<vector<double> > matrixPow(vector<vector<double> > a, int n) {
+	vector<vector<double> > res = unitMatrix(a.size());
+	for (; n > 0; n >>= 1) {
+		if ((n & 1) == 1)
+			res = matrixMultiply(res, a);
+		a = matrixMultiply(a, a);
+	}
+	return res;
+}
+
+void enter() {
+	n = nextInt();
+	m = nextInt();
+	k = nextInt();
+	for (int i = 0; i < n; ++i)
+		hasTrap[i] = nextInt() == 1;
+	for (int i = 0; i < m; ++i) {
+		int u = nextInt() - 1;
+		int v = nextInt() - 1;
+		++edgeCount[u][v];
+		++edgeCount[v][u];
+		++degree[u];
+		++degree[v];
+	}
+}
+
+void gaussianEliminate() {
+	for (int i = 0; i < n; ++i) {
+		a[i][i] = b[i][i] = 1;
+		for (int j = 0; j < n; ++j)
+			if (!hasTrap[j])
+				a[i][j] += -1.0 * edgeCount[i][j] / degree[i];
+	}
+	for (int v = 0; v < n; ++v) {
+		for (int e = v + 1; e < n; ++e) {
+			double coef = -a[e][v] / a[v][v];
+			for (int p = v; p < n; ++p)
+				a[e][p] += coef * a[v][p];
+			for (int p = 0; p < n; ++p)
+				b[e][p] += coef * b[v][p];
+		}
+	}
+	for (int e = n - 1; e >= 0; --e) {
+		copy(b[e], b[e] + n, coef[e]);
+		for (int v = e + 1; v < n; ++v)
+			for (int p = 0; p < n; ++p)
+				coef[e][p] -= a[e][v] * coef[v][p];
+		for (int p = 0; p < n; ++p)
+			coef[e][p] /= a[e][e];
+	}
+}
+
+void solve() {
+	int trapCount = count(hasTrap, hasTrap + n, true);
+	vector<vector<double> > base (trapCount, vector<double>(trapCount));
+	vector<vector<double> > first (trapCount, vector<double>(1));
+	for (int u = 0, x = 0; u < n; ++u)
+		if (hasTrap[u]) {
+			for (int v = 0, y = 0; v < n; ++v)
+				if (hasTrap[v]) {
+					for (int k = 0; k < n; ++k) {
+						base[y][x] += coef[u][k] * edgeCount[k][v] / degree[k];
+					}
+					++y;
+				}
+			++x;
+		}
+	for (int u = 0, x = 0; u < n; ++u)
+		if (hasTrap[u]) {
+			for (int k = 0; k < n; ++k)
+				first[x][0] += coef[0][k] * edgeCount[k][u] / degree[k];
+			++x;
+		}
+	printf("%.12lf\n", matrixMultiply(matrixPow(base, k - 2), first).back().front());
+}
+
+int main() {
+#ifndef ONLINE_JUDGE
+	assert(freopen("D.in", "r", stdin));
+#endif
+	ios::sync_with_stdio(false);
+	enter();
+	gaussianEliminate();
+	solve();
+	return 0;
+}

@@ -1,0 +1,191 @@
+#include <iostream>
+#include <fstream>
+#include <cstdio>
+#include <cmath>
+#include <cstring>
+#include <cstdlib>
+#include <algorithm>
+#include <map>
+using namespace std;
+
+const int maxN = 100005;
+int n1, n2, m;
+
+struct Tque{int t, u, L;}q[maxN];
+struct Tnode{Tnode *son[27];}node[maxN], *nod[maxN];
+int nodes;
+
+int lev[maxN], r[maxN];
+int up[maxN][20], lg[maxN];
+
+int wa[maxN], wb[maxN], sum[maxN], Jum[maxN], sa[maxN], rank[maxN];
+
+int tree[2][maxN];
+
+struct Region{int L, R;}reg[maxN];
+int sta[maxN], Last[maxN];
+
+Tnode *newnode(){
+    nodes++;
+    return node+nodes;
+}
+
+void Readln(){
+    scanf( "%d\n", &m );    
+    n1 = n2 = 1;
+    lev[n2] = 1;
+    nod[n1] = newnode();
+    for (int i=1; i<=m; i++){
+        int t, u, let;
+        char ch;
+        scanf( "%d%d ", &t, &u );
+        scanf( "%c", &ch );
+        let = ch-97+1;
+        q[i].t = t;
+        q[i].L = let;
+        if (t==1){
+            if (nod[u] -> son[let] == NULL){
+                nod[u] -> son[let] = newnode();
+            }
+            n1++;
+            nod[n1] = nod[u] -> son[let];
+            q[i].u = n1;
+        }else{
+            n2++;
+            up[n2][0] = u;
+            r[n2] = let;
+            lev[n2] = lev[u]+1;
+            q[i].u = n2;
+        }
+    }
+}
+
+bool cmp(int *r, int a, int b){
+    return r[a] == r[b] && r[Jum[a]] == r[Jum[b]];
+}
+
+void da(int *r, int *sa, int n, int m){
+    int i, j, p, *x=wa, *y=wb, *t, cal = 1;
+    for (i=1; i<=n; i++) sum[x[i] = r[i]]++;
+    for (i=1; i<=m; i++) sum[i] += sum[i-1];
+    for (i=n; i>=1; i--) sa[sum[x[i]]--] = i;
+    for (i=1; i<=n; i++) Jum[i] = up[i][0];
+    for (j=1, p=1; j<=2*n; j*=2, m=p){
+        for (p=0, i=1; i<=n; i++) if (lev[i]<=j) y[++p] = i;
+        for (i=0; i<=m; i++) sum[i] = 0;
+        for (i=1; i<=n; i++) if (lev[i] > j) sum[x[Jum[i]]]++;
+        for (i=1; i<=m; i++) sum[i] += sum[i-1];
+        for (i=n; i>=1; i--)
+        if (lev[i] > j){
+            y[p+sum[x[Jum[i]]]] = i;
+            sum[x[Jum[i]]]--;
+        }
+        p = n;
+        for (i=0; i<=m; i++) sum[i] = 0;
+        for (i=1; i<=n; i++) sum[x[y[i]]]++;
+        for (i=1; i<=m; i++) sum[i] += sum[i-1];
+        for (i=n; i>=1; i--) sa[sum[x[y[i]]]--] = y[i];
+        for (t = x, x = y, y = t, p = 1, x[sa[1]] = 1, i = 2; i <= n; i++)
+        x[sa[i]] = cmp(y, sa[i-1], sa[i])?p:++p;
+        for (i=1; i<=n; i++) y[i] = Jum[Jum[i]];
+        for (i=1; i<=n; i++) Jum[i] = y[i];
+    }
+}
+
+int lowbit(int a){return a & (-a);}
+
+int Jump(int now, int stp){
+    for (int i=stp; i>0; i-=lowbit(i)){
+        now = up[now][lg[lowbit(i)]];
+    }
+    return r[now];
+}
+
+void inserttree(int now, int val, int t){
+    for (int i=now; i<=n2; i+=lowbit(i)) tree[t][i] += val;
+}
+
+int asktree(int now, int t){
+    int ret = 0;
+    for (int i=now; i>0; i-=lowbit(i)) ret += tree[t][i];
+    return ret;
+}
+
+int findpred(int lef, int rig, int p, int val){
+    lef--;rig++;
+    while (lef +1 < rig){
+        int mid = (lef+rig)/2;
+        if (Jump(sa[mid], p) >= val) rig = mid; else lef = mid;
+    }
+    return rig;
+}
+
+int findsucc(int lef, int rig, int p, int val){
+    lef--;rig++;
+    while (lef+1 < rig){
+        int mid = (lef+rig)/2;
+        if (Jump(sa[mid], p) <= val) lef = mid; else rig = mid;
+    }
+    return lef;
+}
+
+void Match(){
+    int tot = 1;
+    sta[1] = 1;
+    reg[1].L = 1;
+    reg[1].R = n2;
+    Last[1] = 1;
+    
+    while (tot > 0){
+        int now = sta[tot];
+        while (Last[now] < 27 && node[now].son[Last[now]] == NULL) Last[now]++;
+        if (Last[now] >= 27) {tot--; continue;}
+        tot++;
+        sta[tot] = node[now].son[Last[now]] - node;
+        int nex = sta[tot];
+        Last[nex] = 1;
+        if (reg[now].L > reg[now].R) {
+            reg[nex] = reg[now];
+        }else{
+            reg[nex].L = findpred(reg[now].L, reg[now].R, tot-2, Last[now]);
+            reg[nex].R = findsucc(reg[now].L, reg[now].R, tot-2, Last[now]);
+        }
+        Last[now]++;
+    }
+}
+
+void Solve(){
+    lg[1] = 0;
+    for (int i=1; (1<<i) <=n2; i++){
+        for (int j=1; j<=n2; j++) up[j][i] = up[up[j][i-1]][i-1];
+        lg[(1<<i)] = i;
+    }
+    r[0] = r[1] = 0;
+    da(r, sa, n2, 30);
+    Match();
+    long long ans = 1;
+    inserttree(1, 1, 0);
+    inserttree(1, 1, 1);
+    for (int i=1; i<=n2; i++) rank[sa[i]] = i;
+    for (int i=1; i<=m; i++){
+        if (q[i].t == 1){
+            int now = nod[q[i].u]-node;
+            if (reg[now].L <= reg[now].R){
+                inserttree(reg[now].L, 1, 0);
+                inserttree(reg[now].R+1, -1, 0);
+                ans += asktree(reg[now].R, 1)-asktree(reg[now].L-1, 1);
+            }
+        }else{
+            int now = rank[q[i].u];
+            ans += asktree(now, 0);
+            inserttree(now, 1, 1);
+        }
+        printf( "%I64d\n", ans );
+    }
+}
+
+int main(){
+    Readln();
+    Solve();
+    return 0;
+}

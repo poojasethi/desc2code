@@ -1,0 +1,242 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<iostream>
+#include<cmath>
+#include<cstdlib>
+#include<ctime>
+#include<cassert>
+#include<cctype>
+#include<climits>
+#include<bitset>
+#include<deque>
+#include<list>
+#include<map>
+#include<queue>
+#include<set>
+#include<stack>
+#include<vector>
+#include<complex>
+#include<functional>
+#include<utility>
+#include<sstream>
+#include<fstream>
+using namespace std;
+
+template<typename T>
+inline bool maxit(T& a,const T& b) {
+    if(a<b) {
+        a=b;
+        return true;
+    }
+    return false;
+}
+
+template<typename T>
+inline bool minit(T& a,const T& b) {
+    if(a>b) {
+        a=b;
+        return true;
+    }
+    return false;
+}
+
+typedef long long LL;
+
+inline LL gint() {
+    char c=getchar();
+    int f=1;
+    while(c<'0'||c>'9') {
+        if(c=='-') {
+            f=-1;
+        }
+        c=getchar();
+    }
+    LL a=c-'0';
+    while((c=getchar())>='0'&&c<='9') {
+        a=a*10+c-'0';
+    }
+    return a*f;
+}
+
+#define MP make_pair
+#define PB push_back
+#define fi first
+#define se second
+#define foreach(it,x) for(typeof((x).begin()) it=(x).begin(),_end_=(x).end();it!=_end_;++it)
+#define REP(i,n) for(int i=0,_end_=(n);i<_end_;i++)
+#define FOR(i,l,r) for(int i=(l),_end_=(r);i<=_end_;i++)
+#define PER(i,r,l) for(int i=(r),_beg_=(l);i>=_beg_;i--)
+#define Sz(x) (int((x).size()))
+#define Al(x) (x).begin(),(x).end()
+#define wa(x) cerr<<#x<<" "<<x<<endl
+#define _Poi const Poi&
+#define _Vec const Vec&
+#define _Line const Line&
+#define clr(x) memset((x),0,sizeof((x)))
+#define low(x) ((x)&(-(x)))
+#define Ret(x,y) if(x<y)return 1; else if(x>y)return 0
+
+const int maxn=50010;
+
+int ch[maxn][2],p[maxn];
+
+LL val[maxn];//该点的值
+LL cnt[maxn];//以这个点为根的方案数
+LL siz[maxn];//这个点除去重儿子的size（在access时精心维护）
+LL tree_siz[maxn];//这个点的子树大小（修改时由儿子更新到根的一条链）
+LL lazy[maxn];
+LL sum[maxn];//这棵splay的path值之和（参见官方题解的解释）
+
+inline void update(int x) {
+    sum[x]=sum[ch[x][0]]+sum[ch[x][1]]+siz[x]*val[x];
+}
+
+inline void inc(int x,LL w) {
+    if(!x) {
+        return;
+    }
+    lazy[x]+=w;
+    tree_siz[x]+=w;
+    cnt[x]+=2LL*w*siz[x];
+    //siz[x]在这时不更新
+}
+
+inline void down(int x) {
+    if(lazy[x]) {
+        inc(ch[x][0],lazy[x]);
+        inc(ch[x][1],lazy[x]);
+        lazy[x]=0;
+    }
+}
+
+inline bool isroot(int x) {
+    return ch[p[x]][0]!=x&&ch[p[x]][1]!=x;
+}
+
+inline void rotate(int x) {
+    int y=p[x],z=p[y];
+    if(!isroot(y)) {
+        ch[z][ch[z][1]==y]=x;
+    }
+    int l=ch[y][1]==x,r=l^1;
+    p[ch[x][r]]=y;
+    p[y]=x;
+    p[x]=z;
+    ch[y][l]=ch[x][r];
+    ch[x][r]=y;
+    update(y);
+    update(x);
+}
+
+inline void splay(int x) {
+    static int stk[maxn];
+    int top=0;
+    stk[++top]=x;
+    for(int i=x;!isroot(i);i=p[i]) {
+        stk[++top]=p[i];
+    }
+    while(top>0) {
+        down(stk[top--]);
+    }
+    while(!isroot(x)) {
+        int y=p[x],z=p[y];
+        if(!isroot(y)) {
+            if((ch[y][1]==x)^(ch[z][1]==y)) {
+                rotate(x);
+            } else {
+                rotate(y);
+            }
+        }
+        rotate(x);
+    }
+}
+
+inline void access(int x) {
+    int t=0;
+    while(x) {
+        if(t) {
+            while(ch[t][0]) {
+                t=ch[t][0];
+            }
+            splay(t);//找到重儿子并旋至splay的根部,为了下传所有和tree_siz[t]有关的标记
+        }
+        splay(x);
+        ch[x][1]=t;
+        siz[x]=tree_siz[x]-tree_siz[t];
+        update(x);
+        t=x;
+        x=p[x];
+    }
+}
+
+//sum 和 cnt 分别维护，没多大关系
+
+LL ans;
+vector<int>G[maxn];
+
+void dfs(int u) {
+    cnt[u]=tree_siz[u]=1;
+    foreach(it,G[u]) {
+        int v=*it;
+        dfs(v);
+        cnt[u]+=2LL*tree_siz[u]*tree_siz[v];
+        tree_siz[u]+=tree_siz[v];
+    }
+    ans+=cnt[u]*val[u];
+    siz[u]=tree_siz[u];//此时重儿子为0
+    sum[u]=siz[u]*val[u];
+}
+
+int n,m;
+
+int main() {
+    n=gint();
+    for(int i=2;i<=n;i++) {
+        p[i]=gint();
+        G[p[i]].PB(i);
+    }
+    for(int i=1;i<=n;i++) {
+        val[i]=gint();
+    }
+    dfs(1);
+    double tot=(double)n*n;
+    printf("%.10lf\n",ans/tot);
+    m=gint();
+    while(m--) {
+        char op=getchar();
+        while(op!='P'&&op!='V') {
+            op=getchar();
+        }
+        int v=gint(),u=gint();
+        if(op=='P') {
+            access(u);
+            splay(u);
+            splay(v);
+            if(!isroot(u)) {//如果splay（v）产生了影响，说明v在u到根的链上
+                swap(u,v);
+            }
+            access(v);
+            splay(v);
+            int x=ch[v][0];
+            ans-=2LL*sum[x]*tree_siz[v];
+            inc(x,-tree_siz[v]);
+            ch[v][0]=p[x]=0;
+            update(v);
+            access(u);
+            splay(u);
+            ans+=2LL*sum[u]*tree_siz[v];
+            inc(u,tree_siz[v]);
+            p[v]=u;
+        } else {
+            access(v);
+            splay(v);
+            ans+=(LL)(u-val[v])*cnt[v];
+            val[v]=u;
+            update(v);
+        }
+        printf("%.10lf\n",ans/tot);
+    }
+    return 0;
+}
+

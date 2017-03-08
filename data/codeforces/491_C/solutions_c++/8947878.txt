@@ -1,0 +1,118 @@
+#include <iostream>
+#include <cstdio>
+using namespace std;
+
+const int N = 2222222;
+
+struct Edge {
+    int v, f, c;
+    Edge *next;
+} *head[222], edge[222 * 222], *pool = edge;
+
+#define Opt(x) (((x - pool) ^ 1) + pool)
+
+inline void add_edge(int u, int v, int f, int c) {
+//cout << u << ' ' << v << ' ' << f << ' ' << c << endl;
+    pool->v = v;
+    pool->f = f;
+    pool->c = c;
+    pool->next = head[u];
+    head[u] = pool++;
+    pool->v = u;
+    pool->f = 0;
+    pool->c = -c;
+    pool->next = head[v];
+    head[v] = pool++;
+}
+
+int n, k;
+char s1[N], s2[N];
+int ctb[60][60];
+int st, en;
+Edge *cho[N];
+int fa[N], dis[N];
+int que[N], ql, qr;
+
+int id(char ch) {
+    if ('a' <= ch && ch <= 'z') return ch - 'a' + 1;
+    else return ch - 'A' + 26 + 1;
+}
+
+void set_graph() {
+    st = 0, en = k + k + 1;
+    for (int i = 1; i <= k; ++i) add_edge(st, i, 1, 0);
+    for (int i = k + 1; i <= k + k; ++i) {
+        add_edge(i, en, 1, 0);
+    }
+    for (int i = 1; i <= k; ++i) {
+        for (int j = k + 1; j <= k + k; ++j) {
+            add_edge(i, j, 1, ctb[i][j - k]);
+        }
+    }
+}
+
+bool spfa() {
+    for (int i = st; i <= en; ++i) dis[i] = -0x7f7f7f7f;
+    ql = qr = 0;
+    que[qr++] = st;
+    dis[st] = 0;
+    while (ql != qr) {
+        int u = que[ql++];
+//cout << u << endl;
+        for (Edge *p = head[u]; p; p = p->next) if (p->f) {
+            int v = p->v, w = p->c;
+            if (dis[v] < dis[u] + w) {
+                que[qr++] = v;
+                dis[v] = dis[u] + w;
+                fa[v] = u;
+                cho[v] = p;
+            }
+        }
+    }
+    return dis[en] != -0x7f7f7f7f;
+}
+
+int mcmf() {
+    int ret = 0;
+    while (spfa()) {
+        int delta = 99999999;
+        for (int p = en; p != st; p = fa[p]) {
+            delta = min(delta, cho[p]->f);
+        }
+        for (int p = en; p != st; p = fa[p]) {
+            cho[p]->f -= delta;
+            Opt(cho[p])->f += delta;
+        }
+        ret += delta * dis[en];
+    }
+    return ret;
+}
+
+inline char trans(int x) {
+    if (x <= 26) return x + 'a' - 1;
+    else return x + 'A' - 26 - 1;
+}
+
+int main() {
+    scanf("%d %d", &n, &k);
+    scanf("%s", s1 + 1);
+    scanf("%s", s2 + 1);
+    for (int i = 1; i <= k; ++i) {
+        for (int j = 1; j <= k; ++j) {
+            ctb[i][j] = 0;
+        }
+    }
+    for (int i = 1; i <= n; ++i) {
+        ++ctb[id(s1[i])][id(s2[i])];
+    }
+    set_graph();
+    printf("%d\n", mcmf());
+    for (int i = 1; i <= k; ++i) {
+        for (Edge *p = head[i]; p; p = p->next) if (!p->f) {
+            putchar(trans(p->v - k));
+            break;
+        }
+    }
+    puts("");
+    return 0;
+}

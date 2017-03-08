@@ -1,0 +1,121 @@
+#include <cstdio>
+#include <vector>
+#include <cstdlib>
+#include <cstring>
+#include <algorithm>
+#include <iostream>
+#include <queue>
+#include <sstream>
+
+#define SZ(x) ((int)((x).size()))
+#define foreach(i,x) for (__typeof((x).begin()) i=(x).begin();i!=(x).end();i++)
+
+using namespace std;
+
+const int MAXN = 100000;
+int S,T,t,ans,d[MAXN],p[MAXN],c[MAXN],next[MAXN],w[MAXN],b[MAXN],fa[MAXN],f[MAXN],o[MAXN];
+
+void link(int i,int j,int k,int l)
+{
+  next[++t]=d[i],d[i]=t,p[t]=j,c[t]=k,w[t]=l,b[t]=t+1;
+  next[++t]=d[j],d[j]=t,p[t]=i,c[t]=0,w[t]=-l,b[t]=t-1;
+}
+
+void imp()
+{
+  int i=T,flow=1<<20;
+  while (i!=S)
+    {
+      flow=min(flow,c[fa[i]]);
+      i=p[b[fa[i]]];
+    }
+  i=T,ans+=flow;
+  while (i!=S)
+    {
+      c[fa[i]]-=flow;
+      c[b[fa[i]]]+=flow;
+      i=p[b[fa[i]]];
+    }
+}
+
+bool spfa()
+{
+  for(int i = 0; i <= T; i++) f[i]=1<<20,o[i]=0;
+  f[0]=0;
+  queue<int> q;
+  q.push(0);
+  o[0]=1;
+  while (!q.empty())
+    {
+      int i=q.front();
+      q.pop();o[i]=0;
+      for (int k=d[i],j=p[k];k;k=next[k],j=p[k])
+	if (c[k] && w[k]+f[i]<f[j])
+	  {
+	    f[j]=f[i]+w[k];
+	    fa[j]=k;
+	    if (!o[j]) o[j]=1,q.push(j);
+	  }
+    }
+  return (f[T]<=(1<<15));
+}
+
+string CG(int a)
+{
+  stringstream s;
+  s<<a;return s.str();
+}
+
+int cal(int x)
+{
+  int ans=0;
+  for(int i = 0;i <= 30;i++) ans+=(x>>i)&1;
+  return ans;
+}
+
+int main()
+{
+  int n,m;
+  cin>>n>>m;
+  int a[300];
+  for(int i = 1; i <= n; i++) cin>>a[i];
+  S=0,T=n+n+2;
+  link(S,T-1,m,0);
+  for(int i = 1; i <= n; i++)
+    {
+      link(S,i,1,0);
+      link(i+n,T,1,0);
+      link(T-1,i+n,1,cal(a[i]));
+      for(int j = i + 1; j <= n; j++) link(i,j+n,1,cal(a[j])*(a[i]!=a[j]));
+    }
+  while (spfa()) imp();
+  char b[300],tt='a'+m-1;
+  int ans2=0;
+  vector<string> ans;
+  for(int i = 1; i <= n; i++)
+    {
+      int cs=0;
+      for (int k=d[i+n];k;k=next[k])
+	if (c[k] && p[k]==T-1)
+	  {
+	    cs=1;
+	    b[i]=tt--;
+	  }
+	else
+	  if (c[k] && p[k]>0 && p[k]<=n)
+	    {
+	      cs=!!w[k];
+	      b[i]=b[p[k]];
+	    }
+      if (cs)
+	{
+	  ans.push_back(string("")+b[i]+'='+CG(a[i]));
+	  for(int x = 0;x <= 30;x++) ans2+=(a[i]>>x)&1;
+	}
+      ans.push_back(string("print(")+b[i]+')');
+    }
+  cout<<SZ(ans)<<' '<<ans2<<endl;
+  foreach(x,ans)
+    cout<<*x<<endl;
+  return 0;
+}

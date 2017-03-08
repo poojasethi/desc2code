@@ -1,0 +1,79 @@
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+const int MAXN = 112345;
+const long long INFTY = 0x3f3f3f3f3f3f3f3fLL;
+struct seg{
+    long long v[4], resp;
+} tree[4*MAXN], nada;
+long long xx[MAXN], yy[MAXN];
+
+seg merge(seg a, seg b) {
+    seg c;
+    for (int i=0; i<4; i++) c.v[i] = max(a.v[i],b.v[i]);
+    c.resp = max( max(a.v[0]+b.v[1],a.v[1]+b.v[0]), max(a.v[2]+b.v[3],a.v[3]+b.v[2]) );
+    c.resp = max( c.resp, max(a.resp,b.resp) );
+    return c;
+}
+
+seg build(int idx, int ini, int fim) {
+    if (ini == fim) {
+        tree[idx].v[0] = xx[ini]+yy[ini];
+        tree[idx].v[1] = -xx[ini]-yy[ini];
+        tree[idx].v[2] = xx[ini]-yy[ini];
+        tree[idx].v[3] = -xx[ini]+yy[ini];
+        tree[idx].resp = 0;
+        return tree[idx];
+    }
+    int mid = (ini+fim)/2;
+    tree[idx] = merge(build(2*idx,ini,mid),build(2*idx+1,mid+1,fim));
+    return tree[idx];
+}
+
+seg update(int idx, int ini, int fim, int pos, long long x, long long y) {
+    if (ini > pos || fim < pos) return tree[idx];
+    if (ini == fim) {
+        tree[idx].v[0] = x+y;
+        tree[idx].v[1] = -x-y;
+        tree[idx].v[2] = x-y;
+        tree[idx].v[3] = -x+y;
+        tree[idx].resp = 0;
+        return tree[idx];
+    }
+    int mid = (ini+fim)/2;
+    return tree[idx] = merge(update(2*idx,ini,mid,pos,x,y),update(2*idx+1,mid+1,fim,pos,x,y));
+}
+
+seg query(int idx, int ini, int fim, int l, int r) {
+    if (ini > r || fim < l) return nada;
+    if (l <= ini && fim <= r) return tree[idx];
+    int mid = (ini+fim)/2;
+    return merge(query(2*idx,ini,mid,l,r),query(2*idx+1,mid+1,fim,l,r));
+}
+
+int main() {
+    for (int i=0; i<4; i++) nada.v[i] = -INFTY;
+    nada.resp = -INFTY;
+    int N, Q, l, r, p;
+    char c;
+    long long x, y;
+    scanf("%d",&N);
+    for (int i=1; i<=N; i++) scanf("%lld %lld",&xx[i],&yy[i]);
+    build(1,1,N);
+    scanf("%d",&Q);
+    while (Q--) {
+        scanf(" %c",&c);
+        if (c == 'U') {
+            scanf("%d %lld %lld",&p,&x,&y);
+            p++;
+            update(1,1,N,p,x,y);
+        }
+        else {
+            scanf("%d %d",&l,&r);
+            l++; r++;
+            printf("%lld\n",query(1,1,N,l,r).resp);
+        }
+    }
+    return 0;
+}

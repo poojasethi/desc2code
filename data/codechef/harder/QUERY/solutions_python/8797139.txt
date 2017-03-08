@@ -1,0 +1,223 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <algorithm>
+#include <cstring>
+#include <cmath>
+#include <string>
+#ifdef WIN32
+	#define CH64 "%I64d\n"
+#else
+	#define CH64 "%lld\n"
+#endif
+using namespace std;
+typedef long long LL;
+const int Maxn=100005;
+int n,m,totv=0;
+int head[Maxn],next[Maxn*2],to[Maxn*2],En=0;
+int fa[Maxn],depth[Maxn],lv[Maxn],top[Maxn],in[Maxn],ou[Maxn];
+LL ans=0;
+
+inline int get() {
+	char ch;
+	while (!isdigit(ch=getchar()));
+	int v=ch-48;
+	while (isdigit(ch=getchar())) v=v*10+ch-48;
+	return v;
+}
+
+void build() {
+	static int Q[Maxn],size[Maxn],w[Maxn],ne[Maxn*2];
+	int l=1,r=2;
+	depth[Q[1]=1]=1;
+	while (l<r) {
+		int x=Q[l++];
+		ne[x<<1]=x<<1|1;
+		for (int k=head[x];k;k=next[k])
+			if (fa[x]!=to[k]) {
+				Q[r++]=to[k];
+				fa[to[k]]=x;
+				depth[to[k]]=depth[x]+1;
+			}
+	}
+	for (int i=n,x=Q[i];i>1;x=Q[--i]) {
+		size[fa[x]]+=++size[x];
+		if (size[w[fa[x]]]<size[x])
+			w[fa[x]]=x;
+	}
+	for (int i=1,x=Q[i];i<=n;x=Q[++i]) {
+		if (!top[x]) top[x]=x;
+		for (int k=head[x];k;k=next[k])
+			if (fa[x]!=to[k]&&w[x]!=to[k]) {
+				ne[to[k]<<1|1]=ne[x<<1];
+				ne[x<<1]=to[k]<<1;
+			}
+		if (w[x]) {
+			top[w[x]]=top[x];
+			ne[w[x]<<1|1]=ne[x<<1];
+			ne[x<<1]=w[x]<<1;
+		}
+	}
+	for (int p=2,tot=0;p;p=ne[p])
+		if (p&1) ou[p>>1]=tot;
+		else in[p>>1]=++tot;
+}
+
+struct node;
+node *NewNode(node *p);
+
+struct node{
+	node *lc,*rc;
+	LL sum,a,b;
+	void update() {
+		sum=lc->sum+rc->sum;
+	}
+	void add(LL x,LL y,int len) {
+		sum+=x*len+y*(len-1)*len/2;
+		a+=x; b+=y;
+	}
+	void PushDown(int l,int r) {
+		if (a==0&&b==0) return;
+		int mid=(l+r)>>1;
+		lc=NewNode(lc);
+		rc=NewNode(rc);
+		lc->add(a,b,mid-l+1);
+		rc->add(a+(mid-l+1)*b,b,r-mid);
+		a=b=0;
+	}
+}Po,*pn,*null;
+
+node *NewNode(node *p=&Po) {
+	static const int N=100000;
+	if (!pn) {
+		pn=new node[N];
+		for (int i=0;i+1<N;i++)
+			(pn+i)->lc=pn+i+1;
+	}
+	node *ret=pn;
+	pn=pn->lc;
+	*ret=*p;
+	return ret;
+}
+
+class SegmentTree{
+	node *root;
+	LL ret;
+	node *modify(node *o,int l,int r,int s,int t,int x,int y) {
+		node *p=NewNode(o);
+		if (s==l&&t==r) {
+			p->add(x,y,r-l+1);
+			return p;
+		}
+		p->PushDown(l,r);
+		int mid=(l+r)>>1;
+		if (t<=mid) p->lc=modify(p->lc,l,mid,s,t,x,y);
+		else if (s>mid) p->rc=modify(p->rc,mid+1,r,s,t,x,y);
+		else {
+			p->lc=modify(p->lc,l,mid,s,mid,x,y);
+			p->rc=modify(p->rc,mid+1,r,mid+1,t,x+y*(mid-s+1),y);
+		}
+		p->update();
+		return p;
+	}
+	node *query(node *o,int l,int r,int s,int t) {
+		if (s<=l&&t>=r) {
+			ret+=o->sum;
+			return o;
+		}
+		node *p=NewNode(o);
+		p->PushDown(l,r);
+		int mid=(l+r)>>1;
+		if (s<=mid) p->lc=query(p->lc,l,mid,s,t);
+		if (t>mid) p->rc=query(p->rc,mid+1,r,s,t);
+		return p;
+	}
+	public:
+		void build() {
+			null=NewNode();
+			null->lc=null->rc=null;
+			root=null;
+		}
+		void modify(int s,int t,int a,int b) {
+			root=modify(root,1,n,s,t,a,b);
+		}
+		LL query(int s,int t) {
+			ret=0;
+			root=query(root,1,n,s,t);
+			return ret;
+		}
+}T[Maxn],Tr;
+
+int Lca(int u,int v) {
+	while (top[u]!=top[v])
+		if (depth[top[u]]>depth[top[v]]) u=fa[top[u]];
+		else v=fa[top[v]];
+	return depth[u]<depth[v]?u:v;
+}
+
+void modify(int x,int y,int a,int b) {
+	int z=Lca(x,y),s=0,t=depth[x]+depth[y]-2*depth[z]+1;
+	while (top[x]!=top[z]) {
+		s+=depth[x]-depth[top[x]]+1;
+		Tr.modify(in[top[x]],in[x],a+b*(s-1),-b);
+		x=fa[top[x]];
+	}
+	s+=depth[x]-depth[z]+1;
+	Tr.modify(in[z],in[x],a+b*(s-1),-b);
+	while (top[y]!=top[z]) {
+		t-=depth[y]-depth[top[y]]+1;
+		Tr.modify(in[top[y]],in[y],a+b*t,b);
+		y=fa[top[y]];
+	}
+	if (y!=z) {
+		t-=depth[y]-depth[z];
+		Tr.modify(in[z]+1,in[y],a+b*t,b);
+	}
+}
+
+LL query(int x,int y) {
+	LL ret=0;
+	while (top[x]!=top[y]) {
+		if (depth[top[x]]>depth[top[y]]) {
+			ret+=Tr.query(in[top[x]],in[x]);
+			x=fa[top[x]];
+		}
+		else {
+			ret+=Tr.query(in[top[y]],in[y]);
+			y=fa[top[y]];
+		}
+	}
+	if (depth[x]>depth[y]) swap(x,y);
+	return ret+Tr.query(in[x],in[y]);
+}
+
+int main() {
+	n=get(); m=get();
+	for (int i=1,x,y;i<n;i++) {
+		x=get(); y=get();
+		next[++En]=head[x]; head[x]=En; to[En]=y;
+		next[++En]=head[y]; head[y]=En; to[En]=x;
+	}
+	build();
+	T[0].build();
+	Tr=T[0];
+	for (int i=1;i<=m;i++) {
+		char opx;
+		while (!islower(opx=getchar()));
+		if (opx=='c') {
+			int x=(get()+ans)%n+1,y=(get()+ans)%n+1,a=get(),b=get();
+			modify(x,y,a,b);
+			T[++totv]=Tr;
+		}
+		if (opx=='q') {
+			int x=(get()+ans)%n+1,y=(get()+ans)%n+1;
+			ans=query(x,y);
+			printf(CH64,ans);
+		}
+		if (opx=='l') {
+			int x=(get()+ans)%(totv+1);
+			Tr=T[x];
+		}
+	}
+	return 0;
+}

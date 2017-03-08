@@ -1,0 +1,183 @@
+#include <iostream>
+#include <fstream>
+#include <set>
+#include <stdio.h>
+#include <algorithm>
+using namespace std;
+const long long Q=-(1ll<<60);
+ 
+struct line{
+	long long m,p;
+	mutable set<line>::iterator prev;
+};
+set<line>::iterator null;
+bool operator<(const line &a,const line &b){
+	if(b.p!=Q && a.p!=Q){
+		return a.m>b.m;
+	}
+	if(b.p==Q){
+		if(a.prev==null)return true;
+		bool ok=true;
+		if((a.prev->m-a.m)<0)ok=!ok;
+		if(ok)
+			return (a.p-a.prev->p)<(a.prev->m-a.m)*b.m;
+		else
+			return (a.p-a.prev->p)>(a.prev->m-a.m)*b.m;
+	} else {
+		if(b.prev==null)return false;
+		bool ok=true;
+		if((b.prev->m-b.m)<0)ok=!ok;
+		if(ok)
+			return !((b.p-b.prev->p)<a.m*(b.prev->m-b.m));
+		else
+			return !((b.p-b.prev->p)>a.m*(b.prev->m-b.m));
+	}
+}
+class convex_hull{
+public:
+	set<line> convex;
+	set<line>::iterator next(set<line>::iterator ii){
+		set<line>::iterator gg=ii;
+		gg++;
+		return gg;
+	}
+	set<line>::iterator prev(set<line>::iterator ii){
+		set<line>::iterator gg=ii;
+		gg--;
+		return gg;
+	}
+	bool bad(set<line>::iterator jj){
+		set<line>::iterator ii,kk;
+		if(jj==convex.begin())return false;
+		kk=next(jj);
+		if(kk==convex.end())return false;
+		ii=prev(jj);
+	
+		line a=*ii,c=*kk,b=*jj;
+		bool ok=true;
+		if((b.m-a.m)<0)ok=!ok;
+		if((b.m-c.m)<0)ok=!ok;
+		if(ok)
+			return (c.p-b.p)*(b.m-a.m)<=(a.p-b.p)*(b.m-c.m);
+		else 
+			return (c.p-b.p)*(b.m-a.m)>=(a.p-b.p)*(b.m-c.m);
+	}
+	void del(set<line>::iterator ii){
+		set<line>::iterator jj=next(ii);
+		if(jj!=convex.end()){
+			jj->prev=ii->prev;
+		}
+		convex.erase(ii);
+	}
+	void add(long long m,long long p){
+		null=convex.end();
+		line g;
+		g.m=m;
+		g.p=p;
+		set<line>::iterator ii=convex.find(g);
+		if(ii!=convex.end()){
+			if(ii->p>=p)return;
+			del(ii);
+		}
+		convex.insert(g);
+		ii=convex.find(g);
+		set<line>::iterator jj=next(ii);
+		if(jj!=convex.end())
+			jj->prev=ii;
+		if(ii!=convex.begin())
+			ii->prev=prev(ii);
+		else 
+			ii->prev=convex.end();
+		if(bad(ii)){
+			del(ii);
+			return;
+		}
+		jj=next(ii);
+		while(jj!=convex.end() && bad(jj)){
+			del(jj);
+			jj=next(ii);
+		}
+		if(ii!=convex.begin()){
+			jj=prev(ii);
+			while(ii!=convex.begin() && bad(jj)){
+				del(jj);
+				jj=prev(ii);
+			}
+		}
+	}
+	long long query(long long x){
+		null=convex.end();
+		line y;
+		y.m=x;
+		y.p=Q;
+		if(convex.size()==0){
+			return (1ll<<61);
+		}
+		set<line>::iterator iii=convex.lower_bound(y);
+		iii--;
+		return iii->m*x+iii->p;
+	}
+};
+ 
+long long A[600200];
+long long B[600200];
+long long C[600200];
+int N;
+long long dp[600200];
+convex_hull sgt[2400800];
+void add(int nd,int l,int r,int ind,long long m,long long p){
+	sgt[nd].add(m,p);
+	if(l!=r){
+		int mid=(r+l)/2;
+		if(ind<=mid)
+			add(2*nd,l,mid,ind,m,p);
+		else 
+			add(2*nd+1,mid+1,r,ind,m,p);
+	}
+}
+ 
+long long query(int nd,int l,int r,int s,int e,long long x){
+	if(s<=l && r<=e){
+		return sgt[nd].query(x);
+	}
+	long long ret=(1ll<<60);
+	int m=(r+l)/2;
+	if(s<=m){
+		ret=min(ret,query(2*nd,l,m,s,e,x));
+	} 
+	if(m+1<=e){
+		ret=min(ret,query(2*nd+1,1+m,r,s,e,x));
+	}
+	return ret;
+}
+int _a,_b;
+int ii[600300];
+int ttt;
+int main(){
+	//cin.sync_with_stdio(false);
+	cin>>N;
+	//scanf("%d",&N);
+	for(int i=1;i<=N;i++){
+		cin>>ii[i];
+		//scanf("%d",&ii[i]);
+	}
+	for(int i=1;i<=N;i++){
+		cin>>ttt;
+		//scanf("%d",&ttt);
+		A[ii[i]]=i;
+		B[ii[i]]=ttt;
+	}
+	for(int i=1;i<=N;i++){
+		cin>>ttt;
+		//scanf("%d",&ttt);
+		C[ii[i]]=ttt;
+	}
+	add(1,1,N,1,-2*C[1],B[1]+C[1]*C[1]);
+	for(int i=2;i<=N;i++){
+		long long hhh=query(1,1,N,1,A[i]-1,C[i]);
+		dp[i]=C[i]*C[i]+B[i]+hhh;
+		add(1,1,N,A[i],-2*C[i],dp[i]+C[i]*C[i]);
+	}
+	//printf("%lld\n",dp[N]);
+	cout<<dp[N]<<endl;
+} 

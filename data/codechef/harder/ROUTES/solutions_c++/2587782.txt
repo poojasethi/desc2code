@@ -1,0 +1,126 @@
+#include<cstdio>
+#include<algorithm>
+#include<vector>
+#include<queue>
+#include<iostream>
+
+using namespace std;
+
+const int N = 1000000;
+
+int n, m;
+long long ret;
+vector<int> adj[N];
+int father[N], size[N], jump[N], con[N], depth[N], cnt[N];
+int e[N][2];
+
+int getf(int u, int *father)
+{
+	int v = u;
+	for( ; v != father[v]; v = father[v]);
+	for( ; u != v; ) {
+		int tmp = father[u];
+		father[u] = v;
+		u = tmp;
+	}
+	return v;
+}
+
+void bfs(int s)
+{
+	queue<int> que;
+	que.push(s);
+	depth[s] = 0;
+	for( ; ! que.empty(); ) {
+		int u = que.front(); que.pop();
+		for(int i = 0; i < (int)adj[u].size(); ++ i) {
+			int v = adj[u][i];
+			if (jump[u] == v) continue;
+			jump[v] = u;
+			depth[v] = depth[u] + 1;
+			que.push(v);
+		}
+	}
+}
+
+void work(int u, int v)
+{
+	vector<int> sqn;
+	for( ; ; ) {
+		int fu = getf(u, con), fv = getf(v, con);
+		if (fu == fv) {
+			sqn.push_back(cnt[fu]);
+			break;
+		}
+		if (depth[fu] > depth[fv]) {
+			sqn.push_back(cnt[fu]);
+			con[fu] = jump[fu];
+			u = jump[fu];
+		} else {
+			sqn.push_back(cnt[fv]);
+			con[fv] = jump[fv];
+			v = jump[fv];
+		}
+	}
+	int sum = 0;
+	for(int i = 0; i < (int)sqn.size(); ++ i) {
+		ret -= (long long )sum * sqn[i];
+		sum += sqn[i];
+	}
+	cnt[getf(u, con)] = sum;
+}
+
+void solve()
+{
+	scanf("%d%d", &n, &m);
+	for(int i = 0; i < n; ++ i) {
+		father[i] = i;
+		adj[i].clear();
+	}
+	int u, v;
+	for(int i = 0; i < m; ++ i) {
+		scanf("%d%d", &u, &v);
+		-- u, -- v;
+		e[i][0] = u; e[i][1] = v;
+		int fu = getf(e[i][0], father), fv = getf(e[i][1], father);
+		if (fu == fv) continue;
+		adj[u].push_back(v); adj[v].push_back(u);
+		father[fu] = fv;
+	}
+
+	for(int i = 0; i < n; ++ i) {
+		jump[i] = -1;
+	}
+	for(int i = 0; i < n; ++ i) {
+		if (jump[i] == -1) {
+			bfs(i);
+		}
+	}
+
+	for(int i = 0; i < n; ++ i) {
+		size[i] = 1;
+		cnt[i] = 1;
+		father[i] = i;
+		con[i] = i;
+	}
+
+	ret = 0;
+	for(int i = 0; i < m; ++ i) {
+		u = e[i][0]; v = e[i][1];
+		int fu = getf(u, father), fv = getf(v, father);
+		if (fu != fv) {
+			ret += (long long)size[fu] * size[fv];
+			father[fu] = fv;
+			size[fv] += size[fu];
+		} else {
+			work(u, v);
+		}
+		printf("%lld\n", ret);
+	}
+}
+
+int main()
+{
+	solve();
+	return 0;
+}

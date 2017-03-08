@@ -1,0 +1,271 @@
+#include <iostream>
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <cmath>
+#include <algorithm>
+#include <vector>
+
+#define pb push_back
+#define mp make_pair
+#define fs first
+#define sc second
+
+typedef long long int int64;
+typedef long double ext;
+
+#ifdef LOCALD
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
+#else
+#define eprintf(...) {}
+#endif
+
+using namespace std;
+
+const int inf = 1000000000;
+
+const int maxn = 300010;
+const int maxt = 300010;
+
+struct tree{
+	int y, cnt;
+	int64 v, sum;
+	pair<int, int> x;
+	tree *l, *r;
+};
+
+int tcnt;
+tree forest[maxt];
+tree *sfree[maxt];
+
+inline tree *mktree(pair<int, int> x, int y, int v){
+	tree *a = sfree[--tcnt];
+	a->x = x;
+	a->y = y;
+	a->sum = a->v = v;
+	a->l = a->r = NULL;
+	a->cnt = 1;
+	return a;
+}
+
+inline int cnt(tree *rt){
+	return rt ? rt->cnt : 0;
+}
+
+inline int64 sum(tree *rt){
+//	return rt ? rt->sum + rt->cnt * rt->add : 0;
+	return rt ? rt->sum : 0;
+}
+
+/*inline void push(tree *rt){
+	if (!rt)
+		return;
+	rt->sum += rt->cnt * rt->add;
+	rt->v += rt->add;
+	if (rt->l)
+		rt->l->add += rt->add;
+	if (rt->r)
+		rt->r->add += rt->add;
+	rt->add = 0;
+}*/
+
+inline void update(tree *rt){
+	if (!rt)
+		return;
+	rt->cnt = 1;
+	rt->sum = rt->v;
+	if (rt->l){
+		rt->cnt += rt->l->cnt;
+		rt->sum += rt->l->sum;// + rt->l->cnt * rt->l->add;
+	}
+	if (rt->r){
+		rt->cnt += rt->r->cnt;
+		rt->sum += rt->r->sum;// + rt->r->cnt * rt->r->add;
+	}
+}
+
+void split(tree *rt, tree *&l, tree *&r, pair<int, int> x){
+	//push(rt);
+	if (!rt)
+		l = r = NULL;
+	else if (x < rt->x){
+		split(rt->l, l, rt->l, x);
+		r = rt;
+	}
+	else{
+		split(rt->r, rt->r, r, x);
+		l = rt;
+	}
+	update(l);
+	update(r);
+}
+
+void merge(tree *&rt, tree *l, tree *r){
+	//push(l);
+	//push(r);
+	if ((!l) || (!r))
+		rt = l ? l : r;
+	else if (l->y < r->y){
+		merge(l->r, l->r, r);
+		rt = l;
+	}
+	else{
+		merge(r->l, l, r->l);
+		rt = r;
+	}
+	update(rt);
+}
+
+void insert(tree *&rt, tree *a){
+	//push(rt);
+	if (!rt){
+		rt = a;
+		a->l = a->r = NULL;
+	}
+	else if (a->y < rt->y){
+		tree *l, *r;
+		split(rt, l, r, a->x);
+		rt = a;
+		rt->l = l;
+		rt->r = r;
+	} else if (a->x < rt->x)
+		insert(rt->l, a);
+	else
+		insert(rt->r, a);
+	update(rt);
+}
+
+inline int64 more(tree *rt, int x, int a, int p){
+	tree *l, *r;
+	split(rt, l, r, mp(x, inf));
+	int64 res = sum(r) + int64(cnt(r)) * int64(p + a);
+	merge(rt, l, r);
+	return res;
+}
+
+int n;
+vector<int> g[maxn];
+int cool[maxn];
+int add[maxn], addv[maxn];
+tree *t[maxn];
+int64 ans;
+
+void calc(tree *&to, tree *f, int add, int vt, int vf){
+	//push(f);
+	if (!f)
+		return;
+	calc(to, f->l, add, vt, vf);
+	calc(to, f->r, add, vt, vf);
+	ans += int64(more(to, -f->x.fs - add - 1, vt, f->v + vf - 1));
+}
+
+void move(tree *&to, tree *f, int add, int vt, int vf){
+	//push(f);
+	if (!f)
+		return;
+	move(to, f->l, add, vt, vf);
+	move(to, f->r, add, vt, vf);
+	f->x.fs += add;
+	f->v += vf - vt;
+	insert(to, f);
+}
+
+void merge(int u, int v, int c){
+	if (cnt(t[u]) < cnt(t[v])){
+		swap(t[u], t[v]);
+		swap(add[v], add[u]);
+		swap(addv[v], addv[u]);
+	}
+	calc(t[u], t[v], add[u] + add[v] + c, addv[u], addv[v]);
+	move(t[u], t[v], -add[u] + add[v], addv[u], addv[v]);
+}
+
+void print(tree *rt, string s){
+	if (!rt)
+		return;
+	//push(rt);
+	print(rt->l, s + "||");
+	eprintf("%s X: %d CNT: %d V: %I64d SUM: %I64d\n", s.c_str(), rt->x.fs, rt->cnt, rt->v, rt->sum);
+	print(rt->r, s + "||");
+}
+
+void out(int v){
+	eprintf("VERTEX: %d ADD: %d ADDV: %d\n%I64d\n", v, add[v], addv[v], ans);
+	print(t[v], "");
+	eprintf("\n");
+}
+
+
+int par[maxn];
+pair<int, int> st[maxn];
+int scnt;
+
+void dfs(int u){
+	scnt = 0;
+	st[scnt++] = mp(u, 0);
+	t[u] = NULL;
+	add[u] = 0;
+	while (scnt > 0){
+		u = st[scnt - 1].fs;
+		int i = st[scnt - 1].sc;
+		st[scnt - 1].sc++;
+		if (i < int(g[u].size())){
+			int v = g[u][i];
+			if (v != par[u])
+			{
+				add[v] = 0;
+				t[v] = NULL;
+				par[v] = u;
+				st[scnt++] = mp(v, 0);
+			}
+		}
+		else{
+			add[u] += cool[u];
+			insert(t[u], mktree(mp(cool[u] - add[u], u), rand() + (rand() << 16), 1 - addv[u]));
+			ans += more(t[u], -add[u] - 1, addv[u], 0);
+			#ifdef LOCALD
+			out(u);
+			#endif
+			addv[u]++;
+			if (par[u] != -1)
+				merge(par[u], u, cool[par[u]]);
+			scnt--;
+		}
+	}
+}
+
+int main()
+{
+	#ifdef LOCALD
+    assert(freopen("input.txt", "rt", stdin));
+    assert(freopen("output.txt", "wt", stdout));
+    assert(freopen("debug.txt", "wt", stderr));
+    #endif
+    for (int i = 0; i < maxt; i++)
+		sfree[i] = &forest[i];
+	tcnt = maxt;
+    scanf("%d", &n);
+	srand(n * n - 1);
+    for (int i = 0; i < n - 1; i++){
+    	int v, u;
+    	scanf("%d %d", &v, &u);
+		v--; u--;
+    	g[v].pb(u);
+    	g[u].pb(v);
+    }
+	for (int i = 0; i < n; i++){
+		par[i] = -1;
+		int s;
+		scanf("%d", &s);
+		while (!(s & 1))
+			s >>= 1;
+		int r = int(sqrt(double(s)));
+		cool[i] = (r * r == s) ? 1 : -1;
+	}
+	ans = 0;
+	dfs(0);
+	cout << ans << "\n";
+    return 0;
+}

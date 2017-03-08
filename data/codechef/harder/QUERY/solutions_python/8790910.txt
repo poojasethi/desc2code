@@ -1,0 +1,233 @@
+#include <iostream>
+#include <cstdio>
+#include <cassert>
+#define lld long long
+using namespace std;
+const int MaxN = 100000 + 10;
+int n, m, head[MaxN], nxt[MaxN << 1], to[MaxN << 1], top;
+void addedge(int fr, int tt)
+{
+	top ++;
+	nxt[top] = head[fr];
+	to[top] = tt;
+	head[fr] = top;
+}
+int que[MaxN];
+bool vis[MaxN];
+int deep[MaxN], fa[MaxN], up[MaxN], sons[MaxN], bson[MaxN], id[MaxN];
+
+void init()
+{
+	scanf("%d%d", &n, &m);
+	int u, v;
+	for(int i = 1; i < n; ++ i)
+	{
+		scanf("%d%d", &u, &v);
+		addedge(u, v);
+		addedge(v, u);
+	}
+}
+
+#ifdef TSINSEN
+	void printLLD(lld x)
+	{
+		printf("%I64d\n", x);
+	}
+#else
+	void printLLD(lld x)
+	{
+		printf("%lld\n", x);
+	}
+#endif
+
+namespace SegmentTree
+{
+	const int MaxNodes = 100000 * 18 * 18;
+	int tree[MaxNodes][2], sl, size;
+	lld sum[MaxNodes], a[MaxNodes], d[MaxNodes];
+	void newnode(int &t, int ot)
+	{
+	   assert(sl + 1 < MaxNodes);
+		t = ++ sl;
+		tree[t][0] = tree[ot][0];
+		tree[t][1] = tree[ot][1];
+		sum[t] = sum[ot];
+		a[t] = a[ot];
+		d[t] = d[ot];
+	}
+	void update(int t,int len)
+	{
+		sum[t] = sum[tree[t][0]] + sum[tree[t][1]] + 
+				((a[t] * 2ll) + (d[t] * (lld)(len - 1))) * (lld)len / 2ll;
+	}
+	int ql, qr;
+	lld qa, qd;
+	void setlazy(int t,int st,int en)
+	{
+		lld da = qa + (lld)(st - ql) * qd;
+		sum[t] += (da * 2ll + (lld)(en - st) * qd) * (lld)(en - st + 1) / 2ll;
+		a[t] += da;
+		d[t] += qd;
+	}
+	void add(int &t,int st,int en,int ot)
+	{
+		newnode(t, ot);
+		if(ql <= st && en <= qr) {setlazy(t, st, en);return;}
+		int mid = (st + en) >> 1;
+		if(ql <= mid) add(tree[t][0], st, mid, tree[ot][0]);
+		if(qr > mid) add(tree[t][1], mid + 1, en, tree[ot][1]);
+		update(t, en - st + 1);
+	}
+	lld _qry(int t,int st,int en)
+	{
+		if(ql <= st && en <= qr) return sum[t];
+		int mid = (st + en) >> 1, pl = max(st, ql) - st, pr = min(en, qr) - st;
+		lld ret = (a[t] + d[t] * (lld)pl + a[t] + d[t] * (lld)pr) * (lld)(pr - pl + 1) / 2ll;
+		if(ql <= mid) ret += _qry(tree[t][0], st, mid);
+		if(qr > mid) ret += _qry(tree[t][1], mid + 1, en);
+		return ret;
+	}
+	void init(int _size)
+	{
+		size = _size;
+	}
+	void add(int l,int r,lld a,lld d,int &t,int ot)
+	{
+		ql = l;qr = r;qa = a;qd = d;
+		add(t, 1, size, ot);
+	}
+	lld qry(int l,int r,int t)
+	{
+		assert(l <= r);
+		ql = l;qr = r;
+		return _qry(t, 1, size);
+	}
+}
+void dfs1(int x)
+{
+	vis[x] = true;
+	sons[x] = 1;bson[x] = 0;
+	for(int i = head[x]; i; i = nxt[i])
+		if(!vis[to[i]])
+		{
+			deep[to[i]] = deep[x] + 1;
+			fa[to[i]] = x;
+			dfs1(to[i]);
+			sons[x] += sons[to[i]];
+			if(!bson[x] || sons[bson[x]] < sons[to[i]]) bson[x] = to[i];
+		}
+}
+void dfs2(int x)
+{
+	id[x] = ++id[0];
+	if(bson[x])
+	{
+		up[bson[x]] = up[x];
+		dfs2(bson[x]);
+	}
+	for(int i = head[x]; i; i = nxt[i])
+		if(fa[to[i]] == x && to[i] != bson[x])
+		{
+			up[to[i]] = to[i];
+			dfs2(to[i]);
+		}
+}
+
+int alterSum, rt[MaxN];
+char cz[15];
+lld qry(int u,int v,int t)
+{
+	lld ret = 0;
+	int nxu, nxv;
+	while(up[u] != up[v])
+	{
+		nxu = up[u];
+		nxv = up[v];
+		if(deep[nxu] >= deep[nxv])
+		{
+			ret += SegmentTree::qry(id[nxu], id[u], t);
+			u = fa[nxu];
+		}
+		else
+		{
+			ret += SegmentTree::qry(id[nxv], id[v], t);
+			v = fa[nxv];
+		}
+	}
+	if(deep[u] > deep[v]) ret += SegmentTree::qry(id[v], id[u], t);
+	else ret += SegmentTree::qry(id[u], id[v], t);
+	return ret;
+}
+
+int lca(int u,int v)
+{
+	if(up[u] == up[v]) return deep[u] > deep[v] ? v : u;
+	if(deep[up[u]] > deep[up[v]]) return lca(fa[up[u]], v);
+	return lca(u, fa[up[v]]);
+}
+
+void add(int u,int v,int a,int d,int &t,int od)
+{
+	t = od;
+	int nxu, nxv, len = deep[u] + deep[v] - 2 * deep[lca(u, v)] + 1;
+	lld ua = a, va = (lld)a + (lld)d * (lld)len;
+	while(up[u] != up[v])
+	{
+		nxu = up[u];
+		nxv = up[v];
+		if(deep[nxu] >= deep[nxv])
+		{
+			ua += (lld)d * (lld)(id[u] - id[nxu] + 1);
+			SegmentTree::add(id[nxu], id[u], ua - d, -d, t, t);
+			u = fa[nxu];
+		}
+		else
+		{
+			va -= (lld)d * (lld)(id[v] - id[nxv] + 1);
+			SegmentTree::add(id[nxv], id[v], va, d, t, t);
+			v = fa[nxv]; 
+		}
+	}
+	if(deep[u] > deep[v]) SegmentTree::add(id[v], id[u], va - d, -d, t, t);
+	else SegmentTree::add(id[u], id[v], ua, d, t, t);
+}
+void solve()
+{
+	deep[1] = 1;
+	dfs1(1);
+	up[1] = 1;
+	dfs2(1);
+	assert(id[0] == n);
+	SegmentTree::init(n);
+	int nw = rt[0], x1, x2, a, b;
+	lld last_ans = 0;
+	for(int i = 1; i <= m; ++i)
+	{
+		scanf("%s%d", cz, &x1);
+		if(cz[0] == 'l')
+		{
+			x1 = ((lld)x1 + last_ans) % (alterSum + 1);
+			nw = rt[x1];
+		}
+		else
+		{
+			scanf("%d", &x2);
+			x1 = ((lld)x1 + last_ans) % n + 1;
+			x2 = ((lld)x2 + last_ans) % n + 1;
+			if(cz[0] == 'q') printLLD(last_ans = qry(x1, x2, nw));
+			else
+			{
+				scanf("%d%d", &a, &b);
+				add(x1, x2, a, b, rt[++ alterSum], nw);
+				nw = rt[alterSum];
+			}
+		}
+	}
+}
+
+int main()
+{
+	init();
+	solve();
+	return 0;
+}

@@ -1,0 +1,127 @@
+#include<cstdio>
+#include<vector>
+#include<algorithm>
+#define fo(i,a,b) for(i=a;i<=b;++i)
+#define pb push_back
+using namespace std;
+typedef long long LL;
+const int mn=201000,mo=1e9+7;
+vector<int>e[mn],e1[mn];
+int n,s[mn],D[mn],son[4],sons[2];
+int f[mn],h[mn],next[mn];
+bool vis[mn];
+void dfs(int r,int fa)
+{
+    s[r]=1;
+    for(int p=0,i;p<e[r].size();++p)
+    {
+        i=e[r][p];
+        if(i==fa)continue;
+        h[i]=h[r]+1;
+        dfs(i,r);
+        e1[r].pb(i),s[r]+=s[i];
+        next[r]=next[i];
+    }
+    if(D[r]!=2)next[r]=r;
+}
+int dp(int a,int b);
+int dp(int v)
+{
+    if(vis[v]) return f[v];
+    if(s[v]%2 == 1)return 0;
+    if(!v)return 1;
+    if(D[next[v]]==1)
+        return s[v]/2;
+    int ans=0;
+    int w=next[v];
+    int d=h[w]-h[v];
+    int i,j;
+    fo(i,0,1)
+    {
+        int x=e1[w][0];
+        if(D[next[x]]<=1&&s[x]==d-1)
+            ans=(ans+dp(e1[w][1]))%mo;
+        else fo(j,0,1)
+        {
+            int l=e1[x][0],r=e1[x][1];
+            if(D[next[l]]<=1&&s[l]==d&&(j==0||l!=r))
+            {
+                ans=(ans+dp(r,e1[w][1]))%mo;
+            }
+            swap(e1[x][0],e1[x][1]);
+        }
+        swap(e1[w][0],e1[w][1]);
+    }
+    if(D[v]==2)
+    {
+        if(D[e1[v][0]]<=2)
+            ans=(ans+dp(e1[e1[v][0]][0]))%mo;
+    }
+    f[v]=ans,vis[v]=1;
+    return ans;
+}
+int dp(int a,int b)
+{
+    if((s[a]+s[b])%2!=0)return 0;
+    if(a==0)return dp(b);
+    if(b==0)return dp(a);
+    if(D[a]>2||D[b]>2)return 0;
+    return dp(e1[a][0],e1[b][0]);
+}
+int main()
+{
+    scanf("%d",&n);
+    if(n==1)
+    {
+        printf("2\n");
+        return 0;
+    }
+    n+=n;
+    int i,j,k,r,ans;
+    fo(i,1,n-1)
+    {
+        scanf("%d%d",&j,&k);
+        e[j].pb(k),e[k].pb(j);
+        ++D[j],++D[k];
+    }
+    fo(i,1,n)
+        if(D[i]>3)
+        {
+            printf("0\n");
+            return 0;
+        }
+    bool flag=0;
+    fo(r,1,n)
+    {
+        if(D[r]==3)
+        {
+            flag=1;
+            ans=0;
+            dfs(r,0);
+            fo(i,1,n)fo(j,1,2)e1[i].pb(0);
+            fo(k,0,2)son[k]=e[r][k];
+            sort(son,son+3);
+            do
+            {
+                if(D[son[1]]==1)
+                {
+                    ans=(ans+(LL)dp(son[0])*dp(son[2]))%mo;
+                }
+                else
+                {
+                    fo(k,0,1)sons[k]=e1[son[1]][k];
+                    fo(k,0,1)
+                    {
+                        ans=(ans+(LL)dp(son[0],sons[0])*dp(son[2],sons[1]))%mo;
+                        swap(sons[0],sons[1]);
+                    }
+                }
+            }while(next_permutation(son,son+3));
+            ans=(ans*2)%mo;
+            break;
+        }
+    }
+    if(!flag)ans=(2LL*(n/2)*((n/2)-1)+4)%mo;
+    printf("%d\n",ans);
+    return 0;
+}

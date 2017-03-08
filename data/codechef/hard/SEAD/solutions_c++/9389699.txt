@@ -1,0 +1,143 @@
+/**
+* He who forgives and acknowledges himself... that is what it truly means to be strong!
+*/
+#include <iostream>
+#include <iomanip>
+#include <algorithm>
+#include <vector>
+#include <map>
+#include <set>
+#include <stack>
+#include <queue>
+#include <climits>
+#include <cstdio>
+#include <cstring>
+#include <cctype>
+#include <cassert>
+#include <cmath>
+using namespace std;
+
+#define trace(x) {cerr << #x << "=" << x <<endl;}
+#define trace2(x, y) {cerr << #x << "=" << x << " " << #y << "=" << y <<endl;}
+#define track(x) {cerr << #x << ":" << endl; for (int q = 0; q < x.size(); q++) {cerr << x[q] << " ";} cerr << endl;}
+#define trackarr(x, n) {cerr << #x << ":" << endl; for (int q = 0; q < n; q++) {cerr << x[q] << " ";} cerr << endl;}
+#define trackvv(x) {cerr << #x << ":" << endl; for (int i = 0; i < x.size(); i++) { cerr << "i:" << i << endl; for (int j = 0; j < x[i].size(); j++){cerr << x[i][j] << " ";} cerr << endl;} cerr << endl;}
+#define trackcr(x) {cerr << #x << ":" << endl; for (auto i = x.begin(); i != x.end(); i++) {cerr << *i << " ";} cerr << endl;}
+template <typename Tk, typename Tv> ostream& operator<<(ostream& os, const pair<Tk, Tv> &p){os << "{" << p.first << ',' << p.second << "}";return os;}
+
+typedef long long ll;
+typedef pair<int,int> ii;
+
+const int MAX = 100005;
+const int MOD = 1000000000+7;
+const int INF = 1000000000;
+
+vector<int> a, d;
+vector<ii> st[4*MAX];
+vector<int> maxUpto[4*MAX];
+
+void merge(int currentX, int leftX, int rightX) {
+    vector<ii> &current = st[currentX];
+    vector<ii> &left = st[leftX], &right = st[rightX];
+
+    int l = 0, r = 0, cur = 0;
+    while ((l < left.size()) or (r < right.size())) {
+        if (l == left.size()) current[cur++]=right[r++];
+        else if (r == right.size()) current[cur++]=left[l++];
+        else {
+            if (left[l] <= right[r]) {
+                current[cur++] = left[l++];
+            } else {
+                current[cur++] = right[r++];
+            }
+        }
+    }
+
+    int sz = maxUpto[currentX].size();
+    maxUpto[currentX][sz-1] = current[sz-1].second;
+    for (int i = sz-2; i >= 0; i--) {
+        maxUpto[currentX][i]=max(maxUpto[currentX][i+1], current[i].second);
+    }
+
+}
+
+void construct(vector<int> &a, int n, int ll, int rl) {
+    if (ll==rl) {
+        st[n].push_back(make_pair(a[ll], ll));
+        maxUpto[n].push_back(ll);
+    } else {
+        int mid = (ll+rl)/2;
+        construct(a, 2*n+1, ll, mid);
+        construct(a, 2*n+2, mid+1, rl);
+        st[n].resize(rl-ll+1);
+        maxUpto[n].resize(rl-ll+1);
+        merge(n, 2*n+1, 2*n+2);
+    }
+}
+
+int query(int n, int ll, int rl, int ql, int qr, int d) {
+    if (ll >= ql && rl <= qr) {
+        vector<ii>::iterator it = upper_bound(st[n].begin(), st[n].end(), make_pair(d, INF));
+        if (it == st[n].begin()) {
+            return rl;
+        } else if (it == st[n].end()) {
+            return -1;
+        } else {
+            int p = it-st[n].begin();
+            return maxUpto[n][p];
+        }
+    } else {
+        int mid = (ll+rl)/2;
+        if (qr <= mid) return query(2*n+1, ll, mid, ql, qr, d);
+        else if (ql > mid) return query(2*n+2, mid+1, rl, ql, qr, d);
+        else {
+            int left = query(2*n+1, ll, mid, ql, qr, d);
+            int right = query(2*n+2, mid+1, rl, ql, qr, d);
+            return max(left, right);
+        }
+    }
+}
+
+
+int main() {
+    int n;
+    scanf("%d", &n);
+    a.resize(n), d.resize(n);
+    for (int i = 0; i < n; i++) {
+        scanf("%d", &a[i]);
+    }
+    d[0]=INF;
+    for (int i = 1; i < n; i++) d[i] = a[i]-a[i-1];
+
+    construct(d, 0, 0, n-1);
+
+    /*for (int i = 0; i < 4*n; i++) {
+        for (int j = 0; j < st[i].size(); j++) {
+            cerr << st[i][j] << " ";
+        }
+        cerr << endl;
+        for (int j = 0; j < st[i].size(); j++) {
+            cerr << maxUpto[i][j] << " ";
+        }
+        cerr << endl;
+    }*/
+    int m;
+    scanf("%d", &m);
+    while (m--) {
+        int t, d;
+        scanf("%d%d", &t, &d);
+        vector<int>::iterator it = upper_bound(a.begin(), a.end(), t);
+        if (it == a.begin()) {
+            //yet to figure this out
+        } else {
+            it--;
+            int p = it-a.begin();
+            //trace(p);
+            if (p==0) printf("%d\n", 1);
+            else {
+                int ans = query(0, 0, n-1, 0, p, d);
+                printf("%d\n", ans+1);
+            }
+        }
+    }
+}

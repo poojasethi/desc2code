@@ -1,0 +1,137 @@
+#include <set>
+#include <map>
+#include <cmath>
+#include <ctime>
+#include <cctype>
+#include <cstdio>
+#include <vector>
+#include <cassert>
+#include <cstring>
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+#define fi first
+#define se second
+#define mk make_pair
+#define pb push_back
+#define For(i,a,n)  for(int i=(int)a;i<=(int)n;i++)
+#define Forn(i,a,n) for(int i=(int)a;i>=(int)n;i--)
+#define nc() getchar()
+#define pend(x) ((x)=='\n'||(x)=='\r'||(x)=='\t'||(x)==' ')
+using namespace std;
+typedef long long ll;
+typedef long double db;
+const int INF=1e9;
+
+inline int IN(){
+	char ch=nc(); int f=1,x=0;
+	while(pend(ch)) ch=nc();
+	if(ch=='-') f=-1,ch=nc();
+	while(!pend(ch)) x=x*10+ch-'0',ch=nc();
+	return x*=f;
+}
+
+int n,m,dis[205],Q[205],r;
+struct edge{
+	int u,v,w,pre;
+}e[2005];int dex,adj[205];
+int cap[2005],fa[2005],Len[2005],Bid[2005];
+
+void addedge(int u,int v,int w){
+	e[++dex]=(edge){u,v,w,adj[u]};adj[u]=dex; cap[dex]=w;
+	e[++dex]=(edge){v,u,w,adj[v]};adj[v]=dex; cap[dex]=w;
+}
+
+void Clear(){
+	For(i,1,dex) e[i].w=cap[i];
+}
+
+int Min,xu[2005];
+void DFS(int x,int pre){
+	for(int i=adj[x];i;i=e[i].pre){
+		int v=e[i].v;
+		if(v==pre)continue;
+		if(Bid[i])continue;
+		if(e[i].w<e[Min].w) Min=i;
+		DFS(e[i].v,x);
+	}
+}
+
+void dfs(int x){
+	Min=0;
+	DFS(x,0);
+	if(!Min){
+		xu[++*xu]=x;
+		return;
+	}
+	int u=e[Min].u,v=e[Min].v;
+	Bid[Min]=Bid[Min^1]=1;
+	dfs(u);dfs(v);
+}
+
+int bfs(int S,int T){
+	For(i,1,n) dis[i]=-1;
+	dis[Q[r=1]=S]=0;
+	For(l,1,r){
+		int u=Q[l];
+		for(int i=adj[u];i;i=e[i].pre){
+			if(!e[i].w)continue;
+			int v=e[i].v;
+			if(dis[v]==-1) dis[Q[++r]=v]=dis[u]+1;
+			if(v==T) return 1;
+		}
+	}return 0;
+}
+
+int dinic(int x,int f,int T){
+	if(x==T) return f;
+	int ret=0;
+	for(int i=adj[x];i;i=e[i].pre){
+		int v=e[i].v;
+		if(!e[i].w || dis[v]!=dis[x]+1) continue;
+		int flow=dinic(v,min(f-ret,e[i].w),T);
+		ret+=flow;
+		e[i].w-=flow;
+		e[i^1].w+=flow;
+		if(ret==f) return ret;
+	}
+	if(!ret) dis[x]=-1;
+	return ret;
+}
+
+int main(){
+	scanf("%d%d",&n,&m);dex=1;
+	
+	For(i,1,m){
+		int u=IN(),v=IN(),w=IN();
+		addedge(u,v,w);
+	}
+	
+	For(i,1,n) fa[i]=1;
+	For(i,2,n){
+		int S=i,T=fa[i]; Len[i]=0;
+		Clear();
+		while(bfs(S,T))
+			Len[i]+=dinic(S,INF,T);
+		bfs(S,T);
+		For(j,i+1,n) if(dis[j]!=-1 && fa[j]==fa[i]) fa[j]=i;
+	}
+	
+
+	For(i,1,dex) e[i].u=e[i].v=e[i].w=e[i].pre=0;
+	dex=1; memset(adj,0,sizeof adj);e[0].w=2100000000;
+
+
+	int an=0;	
+	For(i,2,n){
+		int u=fa[i];
+		e[++dex]=(edge){u,i,Len[i],adj[u]};adj[u]=dex;
+		e[++dex]=(edge){i,u,Len[i],adj[i]};adj[i]=dex;
+		an+=Len[i];
+	}
+	
+	dfs(1);
+	printf("%d\n",an);
+	For(i,1,n) printf("%d ",xu[i]);
+	return 0;
+}

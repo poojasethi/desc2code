@@ -1,0 +1,125 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+#define DEBUG(x)	cerr << #x << " = " << x << endl;
+#define INPUT		freopen("Data.inp", "r", stdin);
+#define OUTPUT		freopen("Data.out", "w", stdout);
+
+typedef long long LL;
+typedef pair<int, int> II;
+struct Query {
+	int type;
+	int u, l, r;
+};
+
+const int N = 200000 + 10;
+const int B = 400;
+const int P = (int) 1e9 + 7;
+
+int n, m, k, ans[N], a[N], s[2][N], pw[N];
+string S[N];
+Query q[N];
+vector<int> Length, H[N], QueryList[N];
+map<II, int> pos;
+
+int Block(int i)	{ return (i - 1) / B + 1; 	}
+int Start(int i)	{ return (i - 1) * B + 1; 	}
+int End(int i)		{ return i * B;				}
+
+void Add(int i) {
+	int x = Block(i); a[i]++;
+	s[0][x] = s[0][x] + (a[i] == 1);
+	s[1][x] = s[1][x] + 1;
+}
+
+void Reset(int i) {
+	a[i] = 0;
+	s[0][Block(i)] = s[1][Block(i)] = 0;
+}
+
+int Sum(int k, int l, int r) {
+	if (Block(l) == Block(r)) {
+		int ans = 0;
+		for (int i = l; i <= r; ++i) ans += (k == 0) ? (a[i] > 0) : a[i];
+		return ans;
+	}
+	int x = Block(l) + 1, y = Block(r) - 1;
+	int ans = 0;
+	for (int i = l; i <= End(x - 1); ++i) 	ans += (k == 0) ? (a[i] > 0) : a[i];
+	for (int i = Start(y + 1); i <= r; ++i)	ans += (k == 0) ? (a[i] > 0) : a[i];
+	for (int i = x; i <= y; ++i) 			ans += s[k][i];
+	return ans;
+}
+
+void Solve(int p) {
+	vector<int> Log;
+	for (int z = 0; z < (int) QueryList[p].size(); ++z) {
+		int x = QueryList[p][z];
+		if (q[x].type == 0) {
+			int u = q[x].u;
+			Add(u); Log.push_back(u);
+		}
+		else ans[x] = Sum(q[x].type - 1, q[x].l, q[x].r);
+	}
+	for (int i = 0; i < (int) Log.size(); ++i) Reset(Log[i]);
+}
+
+int HashValue(string S) {
+	int ans = 0;
+	for (int i = 0; i < (int) S.size(); ++i) ans = (ans * 31ll + S[i] - 'a') % P;
+	return ans;
+}
+
+int HashValue(int k, int l, int r) {
+	return (H[k][r] - H[k][l - 1] * (LL) pw[r - l + 1] + (LL) P * P) % P;
+}
+
+int main() {
+	#ifdef LOCAL
+		INPUT;
+		OUTPUT;
+	#else
+		ios_base::sync_with_stdio(false);
+		cin.tie(0);
+	#endif
+
+	cin >> n >> m >> k;
+	for (int i = 1; i <= m; ++i) {
+		string S; cin >> S;
+		reverse(S.begin(), S.end());
+		Length.push_back((int) S.size());
+		pos[II((int) S.size(), HashValue(S))] = i;
+	}
+	sort(Length.begin(), Length.end());
+	Length.resize(unique(Length.begin(), Length.end()) - Length.begin());
+
+	pw[0] = 1;
+	for (int i = 1; i <= 1 << 16; ++i) pw[i] = pw[i - 1] * 31ll % P;
+	for (int i = 1; i <= n; ++i) {
+		S[i] = " ";
+		H[i].push_back(0);
+	}
+	for (int i = 1; i <= k; ++i) {
+		cin >> q[i].type;
+		if (q[i].type == 0) {
+			int u; string c; cin >> u >> c; q[i].u = u;
+			S[u].push_back(c[0]);
+			H[u].push_back((H[u].back() * 31ll + c[0] - 'a') % P);
+
+			int curLength = (int) S[u].size() - 1;
+			for (int t = 0; t < (int) Length.size(); ++t) {
+				int L = Length[t]; if (L > curLength) break;
+				II f(L, HashValue(u, curLength - L + 1, curLength));
+				if (pos.count(f)) QueryList[pos[f]].push_back(i);
+			}
+		}
+		else {
+			int p; cin >> q[i].l >> q[i].r >> p;
+			QueryList[p].push_back(i);
+		}
+	}
+
+	for (int p = 1; p <= m; ++p) Solve(p);
+	for (int i = 1; i <= k; ++i) if (q[i].type) cout << ans[i] << "\n";
+	return 0;
+}

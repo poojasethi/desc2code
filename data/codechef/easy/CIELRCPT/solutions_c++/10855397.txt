@@ -1,0 +1,23 @@
+#include <iostream>
+#include <cmath>
+using namespace std;
+
+int main() {
+ // your code goes here
+ int t, p, arr[12], count;
+ for(int i=0; i<12; i++) arr[i]=pow(2, i);
+ cin>>t;
+ while(t--) {
+  count=0;
+  cin>>p;
+  while(p>0) {
+   for(int i=11; i>=0; i--) {
+    if(p>=arr[i]) {
+     p=p-arr[i]; count++; i++;
+    }
+   }
+  }
+  cout<<count<<endl;
+ }
+ return 0;
+}

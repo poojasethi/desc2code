@@ -1,0 +1,132 @@
+#include <set>
+#include <cstdio>
+#include <vector>
+#include <cstring>
+#include <algorithm>
+using namespace std;
+
+typedef long long LL;
+typedef pair<int, int> PI;
+typedef vector<int>::iterator Vi;
+typedef set<int>::iterator Si;
+
+const int N = int(2e5 + 5);
+
+int T[N], n, m, total, ord[N];
+int u[N], v[N], t[N];
+LL ans[N];
+
+vector<int> wait_list[N], urge_list[N];
+
+int next[N+N], f[N+N];
+int wend[N], uend[N], tms;
+
+set<int> wait, urge;
+
+int cmp(int x, int y){return t[x]<t[y];}
+
+void pos_ins(int x, int d)
+{
+	total += d;
+	for(; x<=m; x+=x&(-x)) T[x]+=d;
+}
+
+int pos_ask(int x)
+{
+	int r(0);
+	for(; x; x-=x&(-x)) r+=T[x];
+	return r;
+}
+
+void qs(int &x)
+{
+	int c, neg(0); while(c=getchar(), c<'-');
+	if(c=='-') neg=1, x=0; else x=c-'0';
+	while(c=getchar(), c>='0') x=x*10+c-'0';
+	if(neg) x=-x;
+}
+
+LL min(LL x, LL y){return x<y?x:y;}
+
+int main()
+{
+	qs(n), qs(m);
+	for(int i=1; i<=n; i++) qs(t[i]), qs(u[i]), qs(v[i]), ord[i] = i;
+	sort(ord+1, ord+n+1, cmp);
+	
+	LL now = 1, x = 1, ccc(0);
+	for(int i=1, p; ;)
+	{
+		if(now == 1e18) puts("Alert!");
+		++ccc;
+		int flag(1);
+		// add waiting
+		for(; i<=n && t[ord[i]]==now; i++)
+		{
+			p = ord[i];
+			f[++tms]=p, next[tms]=wend[u[p]], wend[u[p]]=tms;
+			wait.insert(u[p]);
+			pos_ins(u[p], 1);
+		}
+		
+		// up
+		if(wend[x])
+		{
+			int cnt(0);
+			for(int c=wend[x]; c; c=next[c])
+			{
+				p = f[c], ++cnt;
+				f[++tms]=p, next[tms]=uend[v[p]], uend[v[p]]=tms;
+				urge.insert(v[p]);
+				pos_ins(v[p], 1);
+			}
+			pos_ins(x, -cnt);
+			wait.erase(x);
+			wend[x]=0;
+		}
+		
+		// down
+		if(uend[x])
+		{
+			int cnt(0);
+			for(int c=uend[x]; c; c=next[c], ++cnt) ans[f[c]] = now;
+			pos_ins(x, -cnt);
+			urge.erase(x);
+			uend[x]=0;
+		}
+		
+		// if over
+		if(i>n && urge.empty() && wait.empty()) break; 
+		
+		// how to move
+		
+		// stay
+		if(urge.empty() && wait.empty())
+		{
+			now = t[ord[i]];
+			continue;
+		}
+		
+		Si c = wait.lower_bound(x);
+		Si d = urge.lower_bound(x);
+		LL next = (i <= n) ? t[ord[i]] : 1e18;
+		
+		// go down
+		if(2 * pos_ask(x) > total)
+		{
+			if(c != wait.begin()) next = min(next, now + x - (*(--c)));
+			if(d != urge.begin()) next = min(next, now + x - (*(--d)));
+			x -= next - now, now = next;
+			continue;
+		}
+		
+		if(c != wait.end()) next = min(next, now + (*(c)) - x);
+		if(d != urge.end()) next = min(next, now + (*(d)) - x);
+		x += next - now, now = next;
+	}
+	
+	//printf("%d %I64d\n", ccc, now);
+	for(int i=1; i<=n; i++) printf("%I64d\n", ans[i]);
+	
+	return 0;
+}

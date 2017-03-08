@@ -1,0 +1,159 @@
+#define _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_DEPRECATE
+
+/* in code we trust */
+
+#include <cstdlib>
+#include <cstdio>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+
+#include <algorithm>
+#include <bitset>
+#include <vector>
+#include <set>
+#include <map>
+#include <string>
+#include <deque>
+#include <queue>
+#include <stack>
+
+#include <cmath>
+#include <cassert>
+#include <utility>
+#include <climits>
+
+using namespace std;
+
+#define eol << "\n"
+#define eol_ << "\n" << 
+#define __ << " " <<
+#define _ << " "
+#define prec(v) fixed << setprecision(v) <<
+
+#define  forx(i, n) for (int i = 0;   i < (n); i++)
+#define rforx(n, i) for (int i = (n); i >= 0; i--)
+#define allx(obj) (obj).begin(), (obj).end()
+#define rallx(obj) (obj).rbegin(), (obj).rend()
+#define pb push_back
+#define mp make_pair
+#define root(x) ((double) sqrt((double) (x)))
+#define sqr(x) ((x) * (x))
+
+#define oint long long
+#define uint unsigned int
+#define lod long double
+#define eps (1.0e-9)
+
+#define pii pair <int, int> 
+
+template <class _Ty, class _Less>
+	class sgtree
+	{
+	public:
+		_Ty value;
+		sgtree<_Ty, _Less> *left, *right;
+		sgtree (_Ty _val = _Ty(), sgtree <_Ty, _Less>* _left = NULL, sgtree <_Ty, _Less>* _right = NULL)
+		{	value = _val, left = _left, right = _right; }
+	};
+
+template <class _Ty, class _Less> 
+	sgtree <_Ty, _Less>* build(vector <_Ty> &basic, int left, int right)
+{
+	if (left == right)
+		return new sgtree <_Ty, _Less> (basic[left]);
+	sgtree <_Ty, _Less>* res = new sgtree <_Ty, _Less> ();
+	int mid = (left + right) / 2;
+	res->left  = build <_Ty, _Less> (basic, left, mid);
+	res->right = build <_Ty, _Less> (basic, mid + 1, right);
+	res->value = _Less()(res->left->value, res->right->value);
+	return res;
+}
+
+template <class _Ty, class _Less>
+	_Ty handle (sgtree <_Ty, _Less>* cur, int ql, int qr, int left, int right)
+{
+	if (ql == left && qr == right)
+		return cur->value;
+	if (qr < left || right < ql)
+		return _Ty();
+	int mid = (left + right) / 2;
+	return _Less()(
+		handle <_Ty, _Less> (cur->left, ql, min(mid, qr), left, mid),
+		handle <_Ty, _Less> (cur->right, max(mid + 1, ql), qr, mid + 1, right)
+		);
+}
+
+template <class _Ty, class _Less>
+	sgtree <_Ty, _Less>* change (sgtree <_Ty, _Less>* cur, int index, int value, int left, int right)
+{
+	if (left == right)
+		return new sgtree <_Ty, _Less> (make_pair(value, -1));
+
+	sgtree <_Ty, _Less>* res = new sgtree <_Ty, _Less> ();
+	int mid = (left + right) / 2;
+	if (index <= mid)
+	{
+		res->left  = change <_Ty, _Less> (cur->left, index, value, left, mid);
+		res->right = cur->right;
+	}
+	else
+	{
+		res->left  = cur->left;
+		res->right = change <_Ty, _Less> (cur->right, index, value, mid + 1, right);
+	}
+	res->value = _Less()(res->left->value, res->right->value);
+	return res;
+}
+
+class Best
+{
+public:
+	Best () {}
+	pair <int, int> operator () (pair <int, int> a, pair <int, int> b)
+	{
+		vector <int> r(4);
+		r[0] = a.first, r[1] = a.second, r[2] = b.first, r[3] = b.second;
+		sort(r.begin(), r.end());
+		return make_pair(r[3], r[2]);
+	}
+};
+int main()
+{
+#ifndef ONLINE_JUDGE
+	freopen("input.txt", "r", stdin);
+	freopen("output.txt", "w", stdout);
+	freopen("log.txt", "w", stderr);
+#endif
+	int n, m;
+	long long A, B, C, D; 
+	cin >> n >> m >> A >> B >> C >> D;
+	vector <pair <int, int> > init_rat(n, make_pair(-1, -1));
+	for (int i = 0; i < n; i++)
+		cin >> init_rat[i].first;
+
+	vector <sgtree <pair <int, int>, Best>* > roots;
+	roots.push_back(build <pair <int, int>, Best> (init_rat, 0, n - 1));
+	
+	int q;
+	pair <int, int> r = make_pair(0, 0);
+	cin >> q;
+	for (int K = 1; K <= q; K++)
+	{
+		int qi, qj;
+		int t = (A * r.first + D) % K;
+		
+		cin >> qi >> qj;
+		
+		r = handle(roots[t], qi, qj, 0, n - 1);
+		
+		cout << r.first << " " << r.second << "\n";
+		
+		int index = (B * r.first  + D) % n;
+		int value = (C * r.second + D) % m;
+		roots.push_back(change <pair <int, int>, Best> (roots[K - 1], index, value, 0, n - 1));
+	}
+	return 0;
+}

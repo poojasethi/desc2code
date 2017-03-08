@@ -1,0 +1,131 @@
+#include<bits/stdc++.h>
+using namespace std;
+
+const int N=400010;
+const int LOGN=20;
+
+int parent[N], boom[N], st[N], ft[N], depth[N], purvaj[N][LOGN], timer;
+
+vector<int> adj[N];
+
+void dfs(int par, int u) {
+    depth[u]=(par==-1)?0:depth[par]+1;
+    parent[u]=par;
+    boom[u]=1;
+    st[u]=timer++;
+    for(int i=0;i<(int)adj[u].size();i++) {
+        int w=adj[u][i];
+        if(!boom[w]) {
+            dfs(u, w);
+        }
+    }
+    ft[u]=timer++;
+}
+
+void prepare(int n) {
+    for(int i=0;i<n;i++) {
+        purvaj[i][0]=parent[i];
+    }
+    for(int j=1;j<LOGN;j++) {
+        for(int i=0;i<n;i++) {
+            purvaj[i][j]=purvaj[purvaj[i][j-1]][j-1];
+        }
+    }
+}
+
+inline bool anc(int x, int y) {
+    return (st[x]<=st[y] && ft[x]>=ft[y]);
+}
+
+int lca(int x, int y) {
+    if(anc(x, y)) {
+        return x;
+    }
+    for(int i=LOGN-1;i>=0;i--) {
+        if(!anc(purvaj[x][i], y)) {
+            x=purvaj[x][i];
+        }
+    }
+    return purvaj[x][0];
+}
+
+int main() {
+    int test;
+    scanf("%d", &test);
+    while(test--) {
+        int n;
+        scanf("%d", &n);
+        for(int i=0;i<n;i++) {
+            adj[i].clear();
+        }
+        for(int i=1;i<n;i++) {
+            int u, v;
+            scanf("%d %d", &u, &v);
+            u--;
+            v--;
+            adj[u].push_back(v);
+            adj[v].push_back(u);
+        }
+        memset(purvaj, 0, sizeof(purvaj));
+        memset(boom, 0, sizeof(boom));
+        timer=0;
+        dfs(-1, 0);
+        parent[0]=0;
+        prepare(n);
+        int q;
+        scanf("%d", &q);
+        while(q--) {
+            int k;
+            scanf("%d", &k);
+            vector<int> a(k);
+            for(int i=0;i<k;i++) {
+                scanf("%d", &a[i]);
+                a[i]--;
+            }
+            int root=a[0];
+            for(int i=1;i<k;i++) {
+                root=lca(root, a[i]);
+            }
+            int deepest=a[0];
+            for(int i=1;i<k;i++) {
+                if(depth[a[i]]>depth[deepest]) {
+                    deepest=a[i];
+                }
+            }
+            int nxt=deepest;
+            for(int i=LOGN-1;i>=0;i--) {
+                if(!anc(purvaj[nxt][i], root)) {
+                    nxt=purvaj[nxt][i];
+                }
+            }
+            //cout<<root+1<<" "<<deepest+1<<" "<<nxt+1<<endl;
+            bool ok=true;
+            vector<int> b;
+            for(int i=0;i<k;i++) {
+                if(!anc(a[i], deepest)) {
+                    if(anc(nxt, a[i])) {
+                        ok=false;
+                        break;
+                    }
+                    b.push_back(a[i]);
+                }
+            }
+            if(ok) {
+                deepest=root;
+                for(int i=0;i<(int)b.size();i++) {
+                    if(depth[b[i]]>depth[deepest]) {
+                        deepest=b[i];
+                    }
+                }
+                for(int i=0;i<(int)b.size();i++) {
+                    if(!anc(b[i], deepest)) {
+                        ok=false;
+                        break;
+                    }
+                }
+            }
+            puts(ok?"Yes":"No");
+        }
+    }
+}
+

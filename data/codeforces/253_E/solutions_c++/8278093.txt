@@ -1,0 +1,104 @@
+#include <queue>
+#include <vector>
+#include <cstdio>
+#include <algorithm>
+
+using namespace std;
+
+typedef long long int64;
+
+const int N = 50050;
+const int INF = 1e9;
+
+int n, ix;
+int vr[N], vp;
+
+struct task {
+	int s, p;
+} ta[N];
+
+int p[N], rest[N];
+
+int64 T, ans[N];
+
+struct event {
+	int t, d;
+} ev[N];
+
+int evt;
+
+struct compare {
+	bool operator () (int i, int j) {
+		return ta[i].p < ta[j].p;
+	}
+};
+
+bool cmp_ev(const event& a, const event& b) {
+	return a.t < b.t;
+}
+int64 check(int tp, bool final = 0) {
+	ta[ix].p = tp;
+
+	priority_queue<int, vector<int>, compare> Q;
+	for (int i = 1; i <= n; ++i) {
+		rest[i] = ta[i].s;
+	}
+	
+	int64 t = 0, last_t = 0;
+	int evq = 1;
+	while (!Q.empty() || evq <= evt) {
+		if (t && !Q.empty()) {
+			int i = Q.top();
+			rest[i] -= t - last_t;
+			if (!rest[i]) {
+				Q.pop();
+				ans[i] = t;
+				if (i == ix && !final) return t;
+			}
+		}
+		while (evq <= evt && ev[evq].t <= t) {
+			Q.push(ev[evq].d);
+			++evq;
+		}
+		int dt = INF;
+		if (!Q.empty()) dt = min(dt, rest[Q.top()]);
+		if (evq <= evt) dt = min(dt, ev[evq].t - (int)t);
+		last_t = t, t += dt;
+	}
+}
+int main() {
+	freopen("input.txt", "r", stdin), freopen("output.txt", "w", stdout);
+
+	scanf("%d", &n);
+	for (int i = 1; i <= n; ++i) {
+		int t;
+		scanf("%d %d %d", &t, &ta[i].s, &ta[i].p);
+		if (ta[i].p == -1) ix = i;
+		ev[++evt] = (event) {t, i};
+	}
+	sort(ev + 1, ev + evt + 1, cmp_ev);
+	scanf("%I64d", &T);
+
+	for (int i = 1; i <= n; ++i) p[i] = ta[i].p;
+	sort(p + 1, p + n + 1);
+	p[1] = 0;
+	for (int i = 2; i <= n; ++i)
+		if (p[i] - p[i - 1] > 1) {
+			vr[++vp] = p[i - 1] + 1;
+		}
+	if (p[n] != INF) vr[++vp] = p[n] + 1;
+
+	int ll = 1, rr = vp;
+	while (ll < rr) {
+		int mid = (ll + rr) >> 1;
+		if (check(vr[mid]) <= T)
+			rr = mid;
+		else
+			ll = mid + 1;
+	}
+	printf("%d\n", vr[ll]);
+	check(vr[ll], 1);
+	for (int i = 1; i <= n; ++i) {
+		printf("%I64d%c", ans[i], i < n? ' ': '\n');
+	}
+}

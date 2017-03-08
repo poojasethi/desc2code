@@ -1,0 +1,110 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define FREP(b) for(int i=0;i<b;i++)
+#define REP(a,b,c) for(int a=b;a<c;a++)
+#define asd(x) cout << "Here for " << #x << " :" <<x << endl;
+#define asdf(x, y)  cout << "Here FOR " << #x << " :" << x << " " << #y  << " :" << y << endl;
+typedef pair<int,int> ii;
+typedef long long LL;
+const int SZ = 2010;
+struct Line{
+    int x, y;
+    int minx, maxx, miny, maxy;
+    bool intersects(Line a){
+        if(minx > a.maxx) return false;
+        if(maxx < a.minx) return false;
+        if(miny > a.maxy) return false;
+        if(maxy < a.miny) return false;
+        return true;
+    }
+    void makeu(Line b){
+        minx = min(minx, b.minx), maxx = max(maxx, b.maxx);
+        miny = min(miny, b.miny), maxy = max(maxy, b.maxy);
+    }
+    void input(){
+        int xx,  yy;
+        scanf("%d %d",&xx,&yy);
+        minx = maxx = x = xx+yy, miny = maxy = y = xx-yy;
+    }
+} RED[SZ], BLUE[SZ];
+
+int n, m, DS[SZ], cnt[SZ][SZ];
+void init(int N){
+    FREP(N+2) DS[i] = i;
+}
+void make_union(int x, int y){
+    DS[DS[x]] = DS[y];
+}
+int parent(int x){
+    return (DS[x] == x) ? x : (DS[x] = parent(DS[x]));
+}
+vector<int> X, Y, touched;
+bool solve(int t){
+    FREP(n) BLUE[i].maxy = 4*t + (BLUE[i].miny = BLUE[i].y - 2*t);
+    FREP(m) RED[i].maxx = 4*t + (RED[i].minx = RED[i].x - 2*t);
+
+    X.clear(), Y.clear();
+    memset(cnt, 0, sizeof cnt);
+    init(n);
+    FREP(n){
+        REP(j,i+1,n){
+            if(BLUE[i].x != BLUE[j].x) continue;
+            if(BLUE[i].intersects(BLUE[j])){
+                BLUE[parent(i)].makeu(BLUE[parent(j)]);
+                BLUE[parent(j)].makeu(BLUE[parent(i)]);
+                make_union(i, j);
+            }
+        }
+    }
+    FREP(n) if(parent(i) == i){
+        Y.push_back(i);
+    }
+
+    init(m);
+    FREP(m){
+        REP(j,i+1,m){
+            if(RED[i].y != RED[j].y) continue;
+            if(RED[i].intersects(RED[j])){
+                RED[parent(j)].makeu(RED[parent(i)]);
+                RED[parent(i)].makeu(RED[parent(j)]);
+                make_union(i, j);
+            }
+        }
+    }
+    FREP(m) if(parent(i) == i){
+        X.push_back(i);
+    }
+
+
+    int ya = Y.size(), xa = X.size();
+    FREP(xa){ // iterate on X .. 
+        touched.clear();
+        REP(j,0,ya){
+            if(RED[X[i]].intersects(BLUE[Y[j]])) touched.push_back(j);
+        }
+        int ta = touched.size();
+        REP(j,0,ta) REP(k,j+1,ta){
+            cnt[touched[j]][touched[k]]++;
+            if(cnt[touched[j]][touched[k]] == 2) return true;
+        }
+    }
+    return false;
+}
+
+int main(){
+    scanf("%d %d",&n, &m);
+    FREP(n) BLUE[i].input();
+    FREP(m) RED[i].input();
+    int low = 1, high = 10000000, mid;
+
+    while(low < high - 1){
+        mid = low + (high-low+1)/2;
+        if(solve(mid)) high = mid;
+        else low = mid+1;
+    }
+    if(solve(low)) high = min(low, high);
+    if(!solve(high)){
+        printf("Poor Sereja!\n");
+    }
+    else cout << high << endl;
+}

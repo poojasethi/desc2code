@@ -1,0 +1,79 @@
+#include<cstdio>
+#include<cstring>
+#include<algorithm>
+#include<ctime>
+using namespace std;
+const int nn=505;
+const int nq=600005;
+struct state{int a[20];}f[nn][nn],g[nn][nn];
+char c[nn][nn];
+int n,m,q,p[nq];
+int x1[nq],y1[nq],x2[nq],y2[nq];
+bool ok[nq];
+inline void clear(state &x){
+	for(int i=0;i<=(m>>5);++i)x.a[i]=0;
+}
+inline void operator|=(state &x,const state &y){
+	for(int i=0;i<=(m>>5);++i)x.a[i]|=y.a[i];
+}
+inline bool judge(const state &x,const state &y){
+	for(int i=0;i<=(m>>5);++i)
+		if(x.a[i]&y.a[i])return 1;
+	return 0;
+}
+void init(){
+	scanf("%d%d",&n,&m);
+	for(int i=1;i<=n;++i)
+		scanf("%s",c[i]+1);
+	for(int i=0;i<=n+1;++i)
+		for(int j=0;j<=m+1;++j)
+			if(i<1||j<1||i>n||j>m)c[i][j]='#';
+	scanf("%d",&q);
+	for(int i=1;i<=q;++i)
+		scanf("%d%d%d%d",&x1[i],&y1[i],&x2[i],&y2[i]);
+}
+void work(int u,int v,int x,int y){
+	int w=(u+v)>>1;
+	for(int i=m;i;--i)
+		if(c[w][i]=='.'){
+			clear(f[w][i]);
+			f[w][i].a[i>>5]|=1<<(i&31);
+			if(c[w][i+1]=='.')f[w][i]|=f[w][i+1];
+		}
+	for(int i=w-1;i>=u;--i)
+		for(int j=m;j;--j){
+			clear(f[i][j]);
+			if(c[i+1][j]=='.')f[i][j]|=f[i+1][j];
+			if(c[i][j+1]=='.')f[i][j]|=f[i][j+1];
+		}
+	for(int i=1;i<=m;++i)
+		if(c[w][i]=='.'){
+			clear(g[w][i]);
+			g[w][i].a[i>>5]|=1<<(i&31);
+			if(c[w][i-1]=='.')g[w][i]|=g[w][i-1];
+		}
+	for(int i=w+1;i<=v;++i)
+		for(int j=1;j<=m;++j){
+			clear(g[i][j]);
+			if(c[i-1][j]=='.')g[i][j]|=g[i-1][j];
+			if(c[i][j-1]=='.')g[i][j]|=g[i][j-1];
+		}
+	int j=x,k=y;
+	for(int i=x;i<=k;++i)
+		if(x2[p[i]]<w&&i>=j)swap(p[i--],p[j++]);
+		else if(x1[p[i]]>w&&i<=k)swap(p[i--],p[k--]);
+	for(int i=j;i<=k;++i){
+		int z=p[i];
+		ok[z]=judge(f[x1[z]][y1[z]],g[x2[z]][y2[z]]);
+	}
+	if(x<j)work(u,w-1,x,j-1);
+	if(k<y)work(w+1,v,k+1,y);
+}
+int main(){
+	init();
+	for(int i=1;i<=q;++i)p[i]=i;
+	work(1,n,1,q);
+	for(int i=1;i<=q;++i)
+		if(ok[i])puts("Yes");else puts("No");
+	return 0;
+}

@@ -1,0 +1,144 @@
+#include <bits/stdc++.h>
+
+using namespace std;
+
+const int inf=0x7f7f7f7f;
+struct cans
+{
+    int b,c,e1,e2;
+    cans():b(inf){}
+    void g(int _b,int _c=0,int _e1=0,int _e2=0)
+    {
+        if(b<_b) return;
+        b=_b;
+        c=_c;
+        e1=_e1;
+        e2=_e2;
+    }
+    void print()
+    {
+        if(b==-1)
+        {
+            puts("-1");
+            return;
+        }
+        printf("%d\n%d\n",b,c);
+        switch(c)
+        {
+        case 1:
+            printf("%d\n",e1);
+            break;
+        case 2:
+            printf("%d %d\n",e1,e2);
+            break;
+        }
+    }
+} ans;
+struct link
+{
+    int to;
+    int ei;
+    link* next;
+} G[1001];
+struct edgeinfo
+{
+    int w;
+} E[30001];
+int dfn[1001],low[1001],times;
+void add_edge(int x,int y,int w,int ei)
+{
+    link* p1=G[x].next;
+    G[x].next=new link;
+    G[x].next->to=y;
+    G[x].next->ei=ei;
+    G[x].next->next=p1;
+    //
+    link* p2=G[y].next;
+    G[y].next=new link;
+    G[y].next->to=x;
+    G[y].next->ei=ei;
+    G[y].next->next=p2;
+    //
+    E[ei].w=w;
+}
+inline void update(int& a,int b)
+{
+    if(b<a) a=b;
+}
+int par[1001],pre[1001],ban;
+void tarjan(int pos)
+{
+    dfn[pos]=low[pos]=++times;
+    for(link* p=G[pos].next;p;p=p->next)
+    {
+        int& to=p->to;
+        int& ei=p->ei;
+        if(ei==ban) continue;
+        if(!dfn[to])
+        {
+            par[to]=ei;
+            pre[to]=pos;
+            tarjan(to);
+            update(low[pos],low[to]);
+        }else if(ei!=par[pos]) update(low[pos],dfn[to]);
+    }
+}
+int n,m,s,t;
+void solve()
+{
+    tarjan(s);
+    if(!dfn[t])
+    {
+        ans.g(0,0);
+        return;
+    }
+    list<int> line;
+    for(int i=t;i!=s;i=pre[i])
+    {
+        int& ei=par[i];
+        if(dfn[i]==low[i]) ans.g(E[ei].w,1,ei);
+        else line.push_back(ei);
+    }
+    for(list<int>::iterator it=line.begin(),ed=line.end();it!=ed;++it)
+    {
+        int ei=*it;
+        ban=ei;
+        memset(dfn,0,sizeof(dfn));
+        memset(low,0,sizeof(low));
+        memset(par,0,sizeof(par));
+        memset(pre,0,sizeof(pre));
+        times=0;
+        tarjan(s);
+        if(dfn[t])
+        for(int i=t;i!=s;i=pre[i])
+        {
+            int& ej=par[i];
+            if(dfn[i]==low[i]) ans.g(E[ei].w+E[ej].w,2,ei,ej);
+        }
+    }
+    if(ans.b==inf) ans.g(-1);
+}
+int main()
+{
+    //freopen("input.txt","r",stdin);
+    scanf(" %d %d %d %d",&n,&m,&s,&t);
+    for(int i=1;i<=m;++i)
+    {
+        static int x,y,w;
+        scanf(" %d %d %d",&x,&y,&w);
+        add_edge(x,y,w,i);
+    }
+    solve();
+    ans.print();
+    for(int i=1;i<=n;++i)
+    {
+        static link* p;
+        while(G[i].next)
+        {
+            p=G[i].next;
+            G[i].next=p->next;
+            delete p;
+        }
+    }
+    return 0;
+}

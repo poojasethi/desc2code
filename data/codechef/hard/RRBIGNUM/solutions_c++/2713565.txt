@@ -1,0 +1,340 @@
+#include<iostream>
+#include<cstdio>
+#include<cstdlib>
+#include<cstring>
+#include<cmath>
+#define M 1000000007
+
+using namespace std;
+
+int * f, * fp,* maxs,x;
+
+
+// 2 power
+
+
+int cst_initu(int * st,int node, int s,int e, int arr[],int n)
+{
+	if(s==e)
+	{
+		st[node]=arr[s];
+		return st[node];
+	}
+	else
+	{
+		st[node]= ((long long)cst_initu(st,node*2+1,s,((s+e)/2),arr,n) + cst_initu(st,node*2+2,((s+e)/2)+1,e,arr,n))%M ;
+		return st[node];
+	}
+}
+
+// arr = array storing element
+// n=size of array
+// return pointer to created st
+int * cst_init(int arr[], int n)
+{
+	int l=(double)log(n)/log(2);
+//	test=2*(int)pow(2,l+1);
+	int * st=new int[2*(int)pow(2,l+1)];
+	cst_initu(st,0,0,n-1,arr,n);
+	return st;
+}
+
+int cst_qu(int * st,int node,int s,int e,int qs,int qe,int flip)
+{
+	// completely out of intersection
+	if(e<qs || qe<s)
+		return 0;
+	// complete intersection
+	else if(qs<=s && qe>=e)
+	{
+		if((flip+fp[node])%2==0)
+		return st[node];
+		else
+		{
+			if(e==x)
+			{
+				if(maxs[s]>st[node])
+				return maxs[s]-st[node];
+				else
+				return M-(st[node]-maxs[s]);
+			}
+			else
+			{
+				int temp;
+				if(maxs[s]>maxs[e+1])
+				temp=maxs[s]-maxs[e+1];
+				else
+				temp=M-(maxs[e+1]-maxs[s]);
+				if(temp>st[node])
+				return temp-st[node];
+				else
+				return M-(st[node]-temp);
+			}
+		}
+	}
+	//semi intersection
+	else
+	{
+		return ((long long)cst_qu(st,node*2+1,s,((s+e)/2),qs,qe,(flip+fp[node])%2) + cst_qu(st,node*2+2,((s+e)/2)+1,e,qs,qe,(flip+fp[node])%2))%M;
+	}
+}
+
+// st=pointer to segment tree array
+// n=size of array || i,j = starting & ending index starting from 0
+int cst_q(int * st,int n,int i,int j)
+{
+	return cst_qu(st,0,0,n-1,i,j,0); 
+}
+
+
+int cst_upru(int * st,int node,int s, int e,int i,int j,int flip)
+{
+	// completely out of intersection
+	if(e<i || j<s)
+	{
+		fp[node]=(fp[node]+flip)%2;
+		if(fp[node]%2==0)
+		return st[node];
+		else
+		{
+			if(e==x)
+			{
+				if(maxs[s]>st[node])
+				return maxs[s]-st[node];
+				else
+				return M-(st[node]-maxs[s]);
+			}
+			else
+			{
+				int temp;
+				if(maxs[s]>maxs[e+1])
+				temp=maxs[s]-maxs[e+1];
+				else
+				temp=M-(maxs[e+1]-maxs[s]);
+				if(temp>st[node])
+				return temp-st[node];
+				else
+				return M-(st[node]-temp);
+			}
+		}
+	}
+	// complete intersection
+	else if(i<=s && j>=e)
+	{
+		fp[node]=(fp[node]+1+flip)%2;
+		
+		if(fp[node]%2==0)
+		return st[node];
+		else
+		{
+			if(e==x)
+			{
+				if(maxs[s]>st[node])
+				return maxs[s]-st[node];
+				else
+				return M-(st[node]-maxs[s]);
+			}
+			else
+			{
+				int temp;
+				if(maxs[s]>maxs[e+1])
+				temp=maxs[s]-maxs[e+1];
+				else
+				temp=M-(maxs[e+1]-maxs[s]);
+				if(temp>st[node])
+				return temp-st[node];
+				else
+				return M-(st[node]-temp);
+			}
+		}
+	}
+	//semi intersection
+	else
+	{
+		st[node]=((long long)cst_upru(st,node*2+1,s,((s+e)/2),i,j,(flip+fp[node])%2) + cst_upru(st,node*2+2,((s+e)/2)+1,e,i,j,(flip+fp[node])%2))%M;
+		fp[node]=0;
+		return st[node];
+	}
+}
+
+// st=pointer to segment tree array
+// n=size of array || i= index of arr to be updated
+// val= new value || arr= array storing no.
+void cst_upr(int * st,int n,int i,int j)
+{
+	cst_upru(st,0,0,n-1,i,j,0);
+}
+
+
+//flip
+
+
+
+
+int st_initu(int * st,int node, int s,int e, int arr[],int n)
+{
+	if(s==e)
+	{
+		st[node]=arr[s];
+		return st[node];
+	}
+	else
+	{
+		st[node]= st_initu(st,node*2+1,s,((s+e)/2),arr,n) + st_initu(st,node*2+2,((s+e)/2)+1,e,arr,n) ;
+		return st[node];
+	}
+}
+
+// arr = array storing element
+// n=size of array
+// return pointer to created st
+int * st_init(int arr[], int n)
+{
+	int l=(double)log(n)/log(2);
+//	test=2*(int)pow(2,l+1);
+	int * st=new int[2*(int)pow(2,l+1)];
+	st_initu(st,0,0,n-1,arr,n);
+	return st;
+}
+
+int st_qu(int * st,int node,int s,int e,int qs,int qe,int flip)
+{
+	// completely out of intersection
+	if(e<qs || qe<s)
+		return 0;
+	// complete intersection
+	else if(qs<=s && qe>=e)
+	{
+		if((flip+f[node])%2==0)
+		return st[node];
+		else
+		return (e-s+1-st[node]);
+	}
+	//semi intersection
+	else
+	{
+		return (st_qu(st,node*2+1,s,((s+e)/2),qs,qe,(flip+f[node])%2) + st_qu(st,node*2+2,((s+e)/2)+1,e,qs,qe,(flip+f[node])%2));
+	}
+}
+
+// st=pointer to segment tree array
+// n=size of array || i,j = starting & ending index starting from 0
+int st_q(int * st,int n,int i,int j)
+{
+	return st_qu(st,0,0,n-1,i,j,0); 
+}
+
+
+int st_upru(int * st,int node,int s, int e,int i,int j,int flip)
+{
+	// completely out of intersection
+	if(e<i || j<s)
+	{
+		f[node]=(f[node]+flip)%2;
+		if(f[node]%2==0)
+		return st[node];
+		else
+		return (e-s+1-st[node]);
+	}
+	// complete intersection
+	else if(i<=s && j>=e)
+	{
+		f[node]=(f[node]+1+flip)%2;
+		
+		if(f[node]%2==0)
+		return st[node];
+		else
+		return (e-s+1-st[node]);
+	}
+	//semi intersection
+	else
+	{
+		st[node]=(st_upru(st,node*2+1,s,((s+e)/2),i,j,(flip+f[node])%2) + st_upru(st,node*2+2,((s+e)/2)+1,e,i,j,(flip+f[node])%2));
+		f[node]=0;
+		return st[node];
+	}
+}
+
+// st=pointer to segment tree array
+// n=size of array || i= index of arr to be updated
+// val= new value || arr= array storing no.
+void st_upr(int * st,int n,int i,int j)
+{
+	st_upru(st,0,0,n-1,i,j,0);
+}
+
+int main()
+{
+	int n,q;
+	char b[1000005];
+	scanf("%s",b);
+	n=strlen(b);
+	x=n-1;
+	int * arr = new int[1000005];
+	int *  ap = new int[1000005];
+	int l=(double)log(n)/log(2);
+	int high=2*(int)pow(2,l+1);
+	f = new int[high];
+	fp = new int[high];
+	maxs = new int[high];
+	maxs[n-1]=0;
+	maxs[n-2]=1;
+	ap[n-1]=0;
+	if(b[n-2]=='1')
+		ap[n-2]=1;
+	else
+		ap[n-2]=0;
+	long long p=1;
+	for(int i=n-3;i>=0;i--)
+	{
+		p=(p*2)%M;
+		maxs[i]=(maxs[i+1]+ p ) % M;
+		
+		if(b[i]=='1')
+		ap[i]=p;
+		else
+		ap[i]=0;
+	}
+//	cout<<ap[0];
+//	cout<<n<<endl;
+	for(int i=0;i<n;i++)
+	{
+		arr[i]=b[i]-48;
+//		cout<<ap[i]<<' ';
+	}
+//	cout<<endl;
+	int lp=arr[n-1];
+	int * st=st_init(arr,n);
+	int * cst=cst_init(ap,n);
+	for(int i=0;i<high;i++)
+	{
+		f[i]=0;
+		fp[i]=0;
+	}
+	cin>>q;
+	if(st_q(st,n,0,n-1)%2==0 || lp==1)
+		printf("%d\n",(cst_q(cst,n,0,n-1)+1)%M);
+	else
+		printf("%d\n",cst_q(cst,n,0,n-1));
+	while(q--)
+	{
+		int l,r;
+		scanf("%d %d",&l,&r);
+			l--;r--;
+			if(r==x)
+			{
+				if(lp==0)
+					lp=1;
+				else
+					lp=0;
+			}
+			st_upr(st,n,l,r);
+			cst_upr(cst,n,l,r);
+			//cout<<cst_q(st,n,0,n-1)<<' ';
+			if(st_q(st,n,0,n-1)%2==0 || lp==1)
+				printf("%d\n",(cst_q(cst,n,0,n-1)+1)%M);
+			else
+				printf("%d\n",cst_q(cst,n,0,n-1));
+	}
+	return 0;
+}

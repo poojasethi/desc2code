@@ -1,0 +1,150 @@
+#ifdef DEBUG
+#define _GLIBCXX_DEBUG
+#endif
+
+#include <cstring>
+#include <iostream>
+#include <sstream>
+#include <cstdio>
+#include <vector>
+#include <map>
+#include <set>
+#include <algorithm>
+#include <complex>
+#include <ctime>
+#include <iomanip>
+#include <cmath>
+#include <cassert>
+#include <queue>
+#include <iterator>
+
+typedef long long LL;
+typedef long double LD;
+
+using namespace std;
+
+const int MAX_N = 100010;
+
+int n, m;
+vector<int> g [MAX_N];
+
+int col [MAX_N], ans [MAX_N];
+int num [2];
+
+void dfs(int u, int c) {
+    col[u] = c;
+    num[c]++;
+        
+    for (int i = 0; i < g[u].size(); i++) {
+        int v = g[u][i];
+        if (col[v] == -1)
+            dfs(v, c ^ 1);
+    }
+}
+
+void finish(int cur) {
+    int k = 0;
+    for (int c = 0; c < 2; c++) {
+        assert(k == 0);
+        for (int i = 0; i < n; i++)
+            if (col[i] == c && ans[i] == -1) {
+                ans[i] = cur;
+                k++;
+                if (k == 3) {
+                    k = 0;
+                    cur++;
+                }
+            }
+    }
+
+    cout << "YES\n";
+    for (int i = 0; i < n; i++) {
+        if (i)
+            cout << ' ';
+        cout << ans[i] + 1;
+    }
+    cout << '\n';
+    exit(0);
+}
+
+map< pair<int, int>, int> e;
+
+int main() {
+#ifndef LOCAL
+//  freopen(".in", "r", stdin);
+//  freopen(".out", "w", stdout);
+#endif
+
+    scanf("%d%d", &n, &m);
+    for (int i = 0; i < m; i++) {
+        int u, v;
+        scanf("%d%d", &u, &v);
+        u--, v--;
+
+        g[u].push_back(v);
+        g[v].push_back(u);
+        e[make_pair(u, v)] = 1;
+        e[make_pair(v, u)] = 1;
+    }
+
+    memset(col, -1, sizeof(col));
+    for (int i = 0; i < n; i++)
+        if (col[i] == -1)
+            dfs(i, 0);
+
+    memset(ans, -1, sizeof(ans));
+    if (num[0] % 3 == 0)
+        finish(0);
+
+    for (int i = 0; i < n; i++) {
+        int c = col[i];
+        if (num[c] % 3 == 1 && g[i].size() + 2 <= num[c ^ 1]) {
+            vector<bool> can(n, true);
+            for (int j = 0; j < g[i].size(); j++) {
+                int v = g[i][j];
+                can[v] = false;
+            }
+            vector<int> who;    
+            for (int j = 0; j < n; j++)
+                if (can[j] && col[j] != c)
+                    who.push_back(j);
+
+            ans[who[0]] = 0;
+            ans[who[1]] = 0;
+            ans[i] = 0;
+            finish(1);
+        }
+    }
+        
+    int c = 0;
+    if (num[c] % 3 == 1)
+       c = c ^ 1; 
+    
+    vector<int> other;
+    for (int i = 0; i < n; i++)
+        if (col[i] != c)
+            other.push_back(i);
+
+    int did = 0;
+    for (int i = 0; did < 2 && i < n; i++)
+        if (col[i] == c) {
+            vector<int> who;
+            for (int j = 0; j < other.size() && who.size() < 2; j++) {
+                int v = other[j];
+                if (ans[v] == -1 && e.count(make_pair(i, v)) == 0)
+                    who.push_back(v);
+            }
+            if (who.size() >= 2) { 
+                ans[who[0]] = did;
+                ans[who[1]] = did;
+                ans[i] = did++;
+            }
+        }
+    if (did == 2)
+        finish(2);
+
+    cout << "NO\n";
+    return 0;
+}
+
+
