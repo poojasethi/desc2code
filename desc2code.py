@@ -59,10 +59,10 @@ tf.app.flags.DEFINE_integer("from_vocab_size", 40000, "English vocabulary size."
 tf.app.flags.DEFINE_integer("to_vocab_size", 40000, "French vocabulary size.")
 tf.app.flags.DEFINE_string("data_dir", "/tmp", "Data directory")
 tf.app.flags.DEFINE_string("train_dir", "/tmp", "Training directory.")
-tf.app.flags.DEFINE_string("from_train_data", None, "Training data.")
-tf.app.flags.DEFINE_string("to_train_data", None, "Training data.")
-tf.app.flags.DEFINE_string("from_dev_data", None, "Training data.")
-tf.app.flags.DEFINE_string("to_dev_data", None, "Training data.")
+tf.app.flags.DEFINE_string("from_train_data", "my_data/train/descriptions.txt", "Training data.")
+tf.app.flags.DEFINE_string("to_train_data", "my_data/train/code.txt", "Training data.")
+tf.app.flags.DEFINE_string("from_dev_data", "my_data/dev/descriptions.txt", "Training data.")
+tf.app.flags.DEFINE_string("to_dev_data", "my_data/dev/code.txt", "Training data.")
 tf.app.flags.DEFINE_integer("max_train_data_size", 0,
                             "Limit on the size of training data (0: no limit).")
 tf.app.flags.DEFINE_integer("steps_per_checkpoint", 200,
@@ -146,31 +146,18 @@ def create_model(session, forward_only):
 
 def train():
   """Train a en->fr translation model using WMT data."""
-  from_train = None
-  to_train = None
-  from_dev = None
-  to_dev = None
-  if FLAGS.from_train_data and FLAGS.to_train_data:
-    from_train_data = FLAGS.from_train_data
-    to_train_data = FLAGS.to_train_data
-    from_dev_data = from_train_data
-    to_dev_data = to_train_data
-    if FLAGS.from_dev_data and FLAGS.to_dev_data:
-      from_dev_data = FLAGS.from_dev_data
-      to_dev_data = FLAGS.to_dev_data
-    from_train, to_train, from_dev, to_dev, _, _ = data_utils.prepare_data(
-        FLAGS.data_dir,
-        from_train_data,
-        to_train_data,
-        from_dev_data,
-        to_dev_data,
-        FLAGS.from_vocab_size,
-        FLAGS.to_vocab_size)
-  else:
-      # Prepare WMT data.
-      print("Preparing WMT data in %s" % FLAGS.data_dir)
-      from_train, to_train, from_dev, to_dev, _, _ = data_utils.prepare_wmt_data(
-          FLAGS.data_dir, FLAGS.from_vocab_size, FLAGS.to_vocab_size)
+  from_train_data = FLAGS.from_train_data
+  to_train_data = FLAGS.to_train_data
+  from_dev_data = FLAGS.from_dev_data
+  to_dev_data = FLAGS.to_dev_data
+  from_train, to_train, from_dev, to_dev, _, _ = data_utils.prepare_data(
+      FLAGS.data_dir,
+      from_train_data,
+      to_train_data,
+      from_dev_data,
+      to_dev_data,
+      FLAGS.from_vocab_size,
+      FLAGS.to_vocab_size)
 
   with tf.Session() as sess:
     # Create model.
