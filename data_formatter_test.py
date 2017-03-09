@@ -2,6 +2,7 @@ import data_formatter
 
 def run_tests():
 	data_formatter.format_training_data()
+	data_formatter.convert_sentences_back_to_code()
 
 def main():
 	run_tests()
