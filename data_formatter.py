@@ -16,10 +16,10 @@ def format_training_data():
 	with open(os.path.join(DATA_DIR, 'description.txt'), 'w') as description_output:
 		with open(os.path.join(DATA_DIR, 'code.txt'), 'w') as code_output:
 
+			description_sentence = None
+			solution_sentence = None
+			
 			for root, dirs, files in os.walk(code_chef_path):
-				description_sentence = None
-				solution_sentence = None
-
 				if root.endswith('description'):
 					description_file = files[0] if files else None
 					description_sentence = format_description_into_sentence(root, description_file)
@@ -31,10 +31,9 @@ def format_training_data():
 					solution_sentence = format_code_into_sentence(root, first_solution_file)
 
 				# Sometimes there isn't a solution for the given problem. Ignore such problems.
-				if description_sentence: # and solution_sentence:
-					print 'Writing to output'
+				if description_sentence and solution_sentence:
 					description_output.write(description_sentence + '\n')
-					# code_output.write(solution_sentence + '\n')
+					code_output.write(solution_sentence + '\n')
 
 def format_description_into_sentence(root, description_file):
 	"""
@@ -44,11 +43,9 @@ def format_description_into_sentence(root, description_file):
 		return None
 
 	with open(os.path.join(root, description_file), 'r') as description:
-		print os.path.join(root, description_file)
 		output_sentence = ''
 		for line in description:
 			output_sentence += line.rstrip() + ' '
-		print 'Output sentence: ', output_sentence
 		return output_sentence
 
 def format_code_into_sentence(root, solution_file):
@@ -58,5 +55,19 @@ def format_code_into_sentence(root, solution_file):
 	if not root or not solution_file:
 		return None
 
-	return ''
+	with open(os.path.join(root, solution_file), 'r') as solution:
+		output_sentence = ''
+		for line in solution:
+			output_sentence += format_code_line(line) + ' '
+		print output_sentence
+		return output_sentence
+
+def format_code_line(code_line):
+	"""
+	Edit code line with special _NEWLINE and _INDENT characters
+	"""
+	new_line = code_line.replace('\n', _NEWLINE)
+	new_line_and_indent = new_line.replace('  ', _INDENT)
+	return new_line_and_indent
+
 	
