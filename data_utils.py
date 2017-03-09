@@ -44,10 +44,6 @@ UNK_ID = 3
 _WORD_SPLIT = re.compile(b"([.,!?\"':;)(])")
 _DIGIT_RE = re.compile(br"\d")
 
-# URLs for WMT data.
-_WMT_ENFR_TRAIN_URL = "http://www.statmt.org/wmt10/un.en-fr.tgz"
-_WMT_ENFR_DEV_URL = "http://www.statmt.org/wmt15/dev-v2.tgz"
-
 def basic_tokenizer(sentence):
   """Very basic tokenizer: split the sentence into a list of tokens."""
   words = []
