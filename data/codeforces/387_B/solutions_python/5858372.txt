@@ -1,8 +1,0 @@
-def R():
-        return map(int,raw_input().split())
-R(); a = R(); b = R(); ans = len(a)
-for val in a:
-        while b and b[0]<val: del b[0]
-        if len(b)==0: break
-        del b[0]; ans -= 1
-print ans
