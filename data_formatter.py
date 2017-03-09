@@ -8,17 +8,64 @@ _C_PLUS_PLUS = 'c++'
 DATA_DIR = 'data'
 LANGUAGE = _PYTHON
 
-TRAINING_RATIO = 0.6
-DEV_RATIO = 0.2
+TRAINING_RATIO = 0.5
+DEV_RATIO = 0.25
 
-# def create_data_set():
-# 	with open(os.path.join(DATA_DIR, 'description.train.txt'), 'w') as description_output:
-# 		with open(os.path.join(DATA_DIR, 'code.train.txt'), 'w') as code_output:
+def create_data_set():
+	num_examples = _format_training_data()
 
+	num_examples_in_training_set = int(TRAINING_RATIO * num_examples)
+	num_examples_in_dev_set = int(DEV_RATIO * num_examples)
 
-def format_training_data():
+	with open(os.path.join(DATA_DIR, 'description.txt'), 'r') as description_all_data:
+		with open(os.path.join(DATA_DIR, 'description.train.txt'), 'w') as description_training, \
+			open(os.path.join(DATA_DIR, 'description.dev.txt'), 'w') as description_dev, \
+			open(os.path.join(DATA_DIR, 'description.test.txt'), 'w') as description_test:
+
+			num_examples_seen_so_far = 0
+			for line in description_all_data:
+				# Write to the training set.
+				if num_examples_seen_so_far < num_examples_in_training_set:
+					description_training.write(line)
+				# Write to the dev set.
+				elif num_examples_seen_so_far < num_examples_in_training_set + num_examples_in_dev_set:
+					description_dev.write(line)
+				# Write to the test set.
+				else:
+					description_test.write(line)
+				num_examples_seen_so_far += 1
+
+	with open(os.path.join(DATA_DIR, 'code.txt'), 'r') as code_all_data:
+		with open(os.path.join(DATA_DIR, 'code.train.txt'), 'w') as code_training, \
+			open(os.path.join(DATA_DIR, 'code.dev.txt'), 'w') as code_dev, \
+			open(os.path.join(DATA_DIR, 'code.test.txt'), 'w') as code_test:
+
+			num_examples_seen_so_far = 0
+			for line in code_all_data:
+				# Write to the training set.
+				if num_examples_seen_so_far < num_examples_in_training_set:
+					code_training.write(line)
+				# Write to the dev set.
+				elif num_examples_seen_so_far < num_examples_in_training_set + num_examples_in_dev_set:
+					code_dev.write(line)
+				# Write to the test set.
+				else:
+					code_test.write(line)
+				num_examples_seen_so_far += 1
+
+def convert_sentences_back_to_code():
+	with open(os.path.join(DATA_DIR, 'code_decoded.txt'), 'w') as output: 
+		with open(os.path.join(DATA_DIR, 'code.txt'), 'r') as solution:
+			for line in solution:
+				line = line.replace(' ' + _INDENT + ' ', '  ')
+				line = line.replace(' ' + _NEWLINE + ' ', '\n')
+				output.write(line)
+
+def _format_training_data():
 	code_chef_path = os.path.join(DATA_DIR, 'codechef')
 	code_forces_path = os.path.join(DATA_DIR, 'codeforces')
+
+	num_examples = 0
 
 	# Create description.txt and code.txt files
 	with open(os.path.join(DATA_DIR, 'description.txt'), 'w') as description_output:
@@ -30,20 +77,23 @@ def format_training_data():
 			for root, dirs, files in os.walk(code_chef_path):
 				if root.endswith('description'):
 					description_file = files[0] if files else None
-					description_sentence = format_description_into_sentence(root, description_file)
+					description_sentence = _format_description_into_sentence(root, description_file)
 
 				elif root.endswith('solutions_' + LANGUAGE):
 					# Take the first code solution provided and pair it with the description.
 					# TODO: Later we can try using more than one solution.
 					first_solution_file = files[0] if files else None
-					solution_sentence = format_code_into_sentence(root, first_solution_file)
+					solution_sentence = _format_code_into_sentence(root, first_solution_file)
 
 					# Sometimes there isn't a solution for the given problem. Ignore such problems.
 					if description_sentence and solution_sentence:
 						description_output.write(description_sentence + '\n')
 						code_output.write(solution_sentence + '\n')
+						num_examples += 1
 
-def format_description_into_sentence(root, description_file):
+	return num_examples
+
+def _format_description_into_sentence(root, description_file):
 	"""
 	Convert description file into a single sentence string.
 	"""
@@ -56,7 +106,7 @@ def format_description_into_sentence(root, description_file):
 			output_sentence += line.rstrip() + ' '
 		return output_sentence
 
-def format_code_into_sentence(root, solution_file):
+def _format_code_into_sentence(root, solution_file):
 	"""
 	Convert code solution file into a single sentence string.
 	"""
@@ -66,13 +116,13 @@ def format_code_into_sentence(root, solution_file):
 	with open(os.path.join(root, solution_file), 'r') as solution:
 		output_sentence = ''
 		for line in solution:
-			formatted_code_line = format_code_line(line)
+			formatted_code_line = _format_code_line(line)
 			if formatted_code_line is None:
 				return None
 			output_sentence += formatted_code_line
 		return output_sentence
 
-def format_code_line(code_line):
+def _format_code_line(code_line):
 	"""
 	Edit code line with special _NEWLINE and _INDENT characters
 	"""
@@ -81,13 +131,3 @@ def format_code_line(code_line):
 	code_line = code_line.replace('\n', ' ' + _NEWLINE + ' ')
 	code_line = code_line.replace('  ', ' ' + _INDENT + ' ')
 	return code_line
-
-def convert_sentences_back_to_code():
-	with open(os.path.join(DATA_DIR, 'code_decoded.txt'), 'w') as output: 
-		with open(os.path.join(DATA_DIR, 'code.txt'), 'r') as solution:
-			for line in solution:
-				line = line.replace(' ' + _INDENT + ' ', '  ')
-				line = line.replace(' ' + _NEWLINE + ' ', '\n')
-				output.write(line)
-
-	
