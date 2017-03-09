@@ -18,7 +18,7 @@ def format_training_data():
 
 			description_sentence = None
 			solution_sentence = None
-			
+
 			for root, dirs, files in os.walk(code_chef_path):
 				if root.endswith('description'):
 					description_file = files[0] if files else None
@@ -30,10 +30,10 @@ def format_training_data():
 					first_solution_file = files[0] if files else None
 					solution_sentence = format_code_into_sentence(root, first_solution_file)
 
-				# Sometimes there isn't a solution for the given problem. Ignore such problems.
-				if description_sentence and solution_sentence:
-					description_output.write(description_sentence + '\n')
-					code_output.write(solution_sentence + '\n')
+					# Sometimes there isn't a solution for the given problem. Ignore such problems.
+					if description_sentence and solution_sentence:
+						description_output.write(description_sentence + '\n')
+						code_output.write(solution_sentence + '\n')
 
 def format_description_into_sentence(root, description_file):
 	"""
@@ -69,5 +69,15 @@ def format_code_line(code_line):
 	new_line = code_line.replace('\n', _NEWLINE)
 	new_line_and_indent = new_line.replace('  ', _INDENT)
 	return new_line_and_indent
+
+def convert_sentences_back_to_code():
+	with open(os.path.join(DATA_DIR, 'code_decoded.txt'), 'w') as output: 
+		with open(os.path.join(DATA_DIR, 'code.txt'), 'r') as solution:
+			for line in solution:
+				line = line.replace(_INDENT, '  ')
+				line = line.replace(_NEWLINE, '\n')
+				output.write(line)
+
+
 
 	
