@@ -8,6 +8,14 @@ _C_PLUS_PLUS = 'c++'
 DATA_DIR = 'data'
 LANGUAGE = _PYTHON
 
+TRAINING_RATIO = 0.6
+DEV_RATIO = 0.2
+
+# def create_data_set():
+# 	with open(os.path.join(DATA_DIR, 'description.train.txt'), 'w') as description_output:
+# 		with open(os.path.join(DATA_DIR, 'code.train.txt'), 'w') as code_output:
+
+
 def format_training_data():
 	code_chef_path = os.path.join(DATA_DIR, 'codechef')
 	code_forces_path = os.path.join(DATA_DIR, 'codeforces')
@@ -58,26 +66,28 @@ def format_code_into_sentence(root, solution_file):
 	with open(os.path.join(root, solution_file), 'r') as solution:
 		output_sentence = ''
 		for line in solution:
-			output_sentence += format_code_line(line) + ' '
-		print output_sentence
+			formatted_code_line = format_code_line(line)
+			if formatted_code_line is None:
+				return None
+			output_sentence += formatted_code_line
 		return output_sentence
 
 def format_code_line(code_line):
 	"""
 	Edit code line with special _NEWLINE and _INDENT characters
 	"""
-	new_line = code_line.replace('\n', _NEWLINE)
-	new_line_and_indent = new_line.replace('  ', _INDENT)
-	return new_line_and_indent
+	if '\0' in code_line:
+		return None
+	code_line = code_line.replace('\n', ' ' + _NEWLINE + ' ')
+	code_line = code_line.replace('  ', ' ' + _INDENT + ' ')
+	return code_line
 
 def convert_sentences_back_to_code():
 	with open(os.path.join(DATA_DIR, 'code_decoded.txt'), 'w') as output: 
 		with open(os.path.join(DATA_DIR, 'code.txt'), 'r') as solution:
 			for line in solution:
-				line = line.replace(_INDENT, '  ')
-				line = line.replace(_NEWLINE, '\n')
+				line = line.replace(' ' + _INDENT + ' ', '  ')
+				line = line.replace(' ' + _NEWLINE + ' ', '\n')
 				output.write(line)
-
-
 
 	
