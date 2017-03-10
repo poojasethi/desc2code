@@ -6,7 +6,7 @@ _PYTHON = 'python'
 _C_PLUS_PLUS = 'c++'
 
 DATA_DIR = 'data'
-LANGUAGE = _PYTHON
+LANGUAGE = _C_PLUS_PLUS
 
 TRAINING_RATIO = 0.5
 DEV_RATIO = 0.25
@@ -53,13 +53,13 @@ def create_data_set():
 					code_test.write(line)
 				num_examples_seen_so_far += 1
 
-def convert_sentences_back_to_code():
-	with open(os.path.join(DATA_DIR, 'code_decoded.txt'), 'w') as output: 
-		with open(os.path.join(DATA_DIR, 'code.txt'), 'r') as solution:
-			for line in solution:
-				line = line.replace(' ' + _INDENT + ' ', '  ')
-				line = line.replace(' ' + _NEWLINE + ' ', '\n')
-				output.write(line)
+# def convert_sentences_back_to_code():
+# 	with open(os.path.join(DATA_DIR, 'code_decoded.txt'), 'w') as output: 
+# 		with open(os.path.join(DATA_DIR, 'code.txt'), 'r') as solution:
+# 			for line in solution:
+# 				# line = line.replace(' ' + _INDENT + ' ', '  ')
+# 				line = line.replace(' ' + _NEWLINE + ' ', '\n')
+# 				output.write(line)
 
 def _format_training_data():
 	code_chef_path = os.path.join(DATA_DIR, 'description2code_current', 'codechef')
@@ -128,6 +128,6 @@ def _format_code_line(code_line):
 	"""
 	if '\0' in code_line:
 		return None
-	code_line = code_line.replace('\n', ' ' + _NEWLINE + ' ')
-	code_line = code_line.replace('  ', ' ' + _INDENT + ' ')
+	code_line = code_line.replace('\n', ' ')
+	# code_line = code_line.replace('  ', ' ' + _INDENT + ' ')
 	return code_line

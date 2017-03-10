@@ -122,6 +122,7 @@ def read_data(source_path, target_path, max_size=None):
 def create_model(session, forward_only):
   """Create translation model and initialize or load parameters in session."""
   dtype = tf.float16 if FLAGS.use_fp16 else tf.float32
+  print("Creating model.")
   model = seq2seq_model.Seq2SeqModel(
       FLAGS.from_vocab_size,
       FLAGS.to_vocab_size,
@@ -134,6 +135,7 @@ def create_model(session, forward_only):
       FLAGS.learning_rate_decay_factor,
       forward_only=forward_only,
       dtype=dtype)
+  print("Finished creating model.")
   ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
   if ckpt and tf.train.checkpoint_exists(ckpt.model_checkpoint_path):
     print("Reading model parameters from %s" % ckpt.model_checkpoint_path)
