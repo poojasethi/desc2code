@@ -62,8 +62,8 @@ def convert_sentences_back_to_code():
 				output.write(line)
 
 def _format_training_data():
-	code_chef_path = os.path.join(DATA_DIR, 'codechef')
-	code_forces_path = os.path.join(DATA_DIR, 'codeforces')
+	code_chef_path = os.path.join(DATA_DIR, 'description2code_current', 'codechef')
+	code_forces_path = os.path.join(DATA_DIR, 'description2code_current', 'codeforces')
 
 	num_examples = 0
 
