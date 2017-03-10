@@ -54,11 +54,11 @@ tf.app.flags.DEFINE_float("max_gradient_norm", 5.0,
 tf.app.flags.DEFINE_integer("batch_size", 64,
                             "Batch size to use during training.")
 tf.app.flags.DEFINE_integer("size", 10, "Size of each model layer.")
-tf.app.flags.DEFINE_integer("num_layers", 3, "Number of layers in the model.")
+tf.app.flags.DEFINE_integer("num_layers", 2, "Number of layers in the model.")
 tf.app.flags.DEFINE_integer("from_vocab_size", 10000, "Description vocabulary size.")
 tf.app.flags.DEFINE_integer("to_vocab_size", 10000, "Code vocabulary size.")
 tf.app.flags.DEFINE_string("data_dir", "data", "Data directory")
-tf.app.flags.DEFINE_string("train_dir", "train", "Training directory.")
+tf.app.flags.DEFINE_string("train_dir", "ckpt", "Training directory.")
 tf.app.flags.DEFINE_string("from_train_data", "data/description.train.txt", "Training data.")
 tf.app.flags.DEFINE_string("to_train_data", "data/code.train.txt", "Training data.")
 tf.app.flags.DEFINE_string("from_dev_data", "data/description.dev.txt", "Training data.")
@@ -78,7 +78,7 @@ FLAGS = tf.app.flags.FLAGS
 
 # We use a number of buckets and pad to the closest one for efficiency.
 # See seq2seq_model.Seq2SeqModel for details of how they work.
-_buckets = [(5, 10), (10, 15), (20, 25), (40, 50)]
+_buckets = [(250, 300), (300, 350), (400, 450), (450, 500), (500, 550), (600, 650)]
 
 
 def read_data(source_path, target_path, max_size=None):
