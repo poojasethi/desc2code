@@ -25,6 +25,6 @@ def main():
 		from_train_data + " --to_train_data " + to_train_data + " --from_dev_data " + from_dev_data + \
 		" --to_dev_data " + to_dev_data + " --num_layers " + num_layers + " --size " + size
 	os.system("python3 desc2code.py " + endOfString)
-	os.system("python3 desc2code.py --decode " + endOfString)
+	# os.system("python3 desc2code.py --decode " + endOfString)
 
 main()
