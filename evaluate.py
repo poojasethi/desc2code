@@ -73,15 +73,29 @@ def getAverageNumberOfSimilarCharacters(tuples):
 
 	result = 0.0
 
+	# for t in tuples:
+	# 	description = t[0]
+	# 	realOutput = t[1]
+	# 	predictedOutput = t[2]
+
+	# 	temp = 0
+	# 	for c in realOutput:
+
+def getAverageLengthOfOutputs(tuples):
+	numOfTuples = len(tuples)
+
+	resultReal = 0.0
+	resultPred = 0.0
 	for t in tuples:
-		description = tuples[0]
-		realOutput = tuples[1]
-		predictedOutput = tuples[2]
+		description = t[0]
+		realOutput = t[1]
+		predictedOutput = t[2]
 
-		temp = 0
-		for c in realOutput:
+		resultReal += len(realOutput)
+		resultPred += len(predictedOutput)
 
-
+	print("Average length of predicted outputs: " + str(resultPred / numOfTuples))
+	print("Average length of real outputs: " + str(resultReal / numOfTuples))
 
 def analyze():
 	directory = sys.argv[1]
@@ -98,6 +112,7 @@ def analyze():
 			tuples.append( (descriptionsAndRealOutputTuples[i][0], descriptionsAndRealOutputTuples[i][1], predictedOutputTuples[i]) )
 
 		print(outputFile)
-		print(str(getAverageEditDistance(tuples)))
+		getAverageEditDistance(tuples)
+		#etAverageLengthOfOutputs(tuples)
 
 analyze()
